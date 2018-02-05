@@ -72,7 +72,7 @@ public:
         }
     }
 
-    // called when the curren operation is completed,
+    // called when the current operation is completed,
     // which triggers further round of operations as returned
     T *on_work_completed(T *running, void *ctx)
     {

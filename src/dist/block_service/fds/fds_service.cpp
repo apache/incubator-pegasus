@@ -127,26 +127,28 @@ error_code fds_service::initialize(const std::vector<std::string> &args)
 #define FDS_EXCEPTION_HANDLE(ERR_REFERENCE, OPERATION, INPUT_PARAMETER)                            \
     catch (const Poco::TimeoutException &ex)                                                       \
     {                                                                                              \
-        derror("fds %s timeout: code(%d), msg(%s), parameter(%s)",                                 \
+        derror("fds %s timeout: parameter(%s), code(%d), msg(%s)",                                 \
                OPERATION,                                                                          \
+               INPUT_PARAMETER,                                                                    \
                ex.code(),                                                                          \
-               ex.message().c_str(),                                                               \
-               INPUT_PARAMETER);                                                                   \
+               ex.message().c_str());                                                              \
         ERR_REFERENCE = ERR_TIMEOUT;                                                               \
     }                                                                                              \
     catch (const Poco::Exception &ex)                                                              \
     {                                                                                              \
-        derror("fds %s get poco exception: code(%d), msg(%s), what(%s), parameter(%s)",            \
+        derror("fds %s get poco exception: parameter(%s), code(%d), msg(%s), what(%s)",            \
                OPERATION,                                                                          \
+               INPUT_PARAMETER,                                                                    \
                ex.code(),                                                                          \
                ex.message().c_str(),                                                               \
-               ex.what(),                                                                          \
-               INPUT_PARAMETER);                                                                   \
+               ex.what());                                                                         \
         ERR_REFERENCE = ERR_FS_INTERNAL;                                                           \
     }                                                                                              \
     catch (...)                                                                                    \
     {                                                                                              \
-        derror("fds %s get unknown exception", OPERATION);                                         \
+        derror("fds %s get unknown exception: parameter(%s)",                                      \
+               OPERATION,                                                                          \
+               INPUT_PARAMETER);                                                                   \
         ERR_REFERENCE = ERR_FS_INTERNAL;                                                           \
     }
 
@@ -197,10 +199,10 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
                 }
             }
         } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-            derror("fds listObjects failed: code(%d), msg(%s), parameter(%s)",
+            derror("fds listObjects failed: parameter(%s), code(%d), msg(%s)",
+                   req.dir_name.c_str(),
                    ex.code(),
-                   ex.what(),
-                   req.dir_name.c_str());
+                   ex.what());
             resp.err = ERR_FS_INTERNAL;
         }
         FDS_EXCEPTION_HANDLE(resp.err, "listObject", req.dir_name.c_str())
@@ -209,16 +211,20 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
             try {
                 if (_client->doesObjectExist(_bucket_name,
                                              utils::path_to_fds(req.dir_name, false))) {
+                    derror("fds list_dir failed: path not dir, parameter(%s)",
+                           req.dir_name.c_str());
                     resp.err = ERR_INVALID_PARAMETERS;
                 } else {
+                    derror("fds list_dir failed: path not found, parameter(%s)",
+                           req.dir_name.c_str());
                     resp.err = ERR_OBJECT_NOT_FOUND;
                 }
             } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-                resp.err = ERR_FS_INTERNAL;
-                derror("fds doesObjectExist failed: code(%d), msg(%s), parameter(%s)",
+                derror("fds doesObjectExist failed: parameter(%s), code(%d), msg(%s)",
+                       req.dir_name.c_str(),
                        ex.code(),
-                       ex.what(),
-                       req.dir_name.c_str());
+                       ex.what());
+                resp.err = ERR_FS_INTERNAL;
             }
             FDS_EXCEPTION_HANDLE(resp.err, "doesObjectExist", req.dir_name.c_str())
         }
@@ -276,10 +282,10 @@ dsn::task_ptr fds_service::create_file(const create_file_request &req,
                     resp.err = dsn::ERR_OK;
                     resp.file_handle = new fds_file_object(this, req.file_name, fds_path, "", 0);
                 } else {
-                    derror("fds getObjectMetadata failed: code(%d), msg(%s), parameter(%s)",
+                    derror("fds getObjectMetadata failed: parameter(%s), code(%d), msg(%s)",
+                           req.file_name.c_str(),
                            ex.code(),
-                           ex.what(),
-                           req.file_name.c_str());
+                           ex.what());
                     resp.err = ERR_FS_INTERNAL;
                 }
             }
@@ -307,12 +313,14 @@ dsn::task_ptr fds_service::delete_file(const delete_file_request &req,
             resp.err = ERR_OK;
         } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
             if (ex.code() == Poco::Net::HTTPResponse::HTTP_NOT_FOUND) {
+                derror("fds deleteObject failed: file not found, parameter(%s)",
+                       req.file_name.c_str());
                 resp.err = ERR_OBJECT_NOT_FOUND;
             } else {
-                derror("fds deleteObject failed: code(%d), msg(%s), parameter(%s)",
+                derror("fds deleteObject failed: parameter(%s), code(%d), msg(%s)",
+                       req.file_name.c_str(),
                        ex.code(),
-                       ex.what(),
-                       req.file_name.c_str());
+                       ex.what());
                 resp.err = ERR_FS_INTERNAL;
             }
         }
@@ -352,15 +360,17 @@ dsn::task_ptr fds_service::exist(const exist_request &req,
                 if (_client->doesObjectExist(_bucket_name, utils::path_to_fds(req.path, false))) {
                     resp.err = ERR_OK;
                 } else {
+                    derror("fds exist failed: path not found, parameter(%s)",
+                           req.path.c_str());
                     resp.err = ERR_OBJECT_NOT_FOUND;
                 }
             }
         } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-            resp.err = ERR_FS_INTERNAL;
-            derror("fds exist failed: code(%d), msg(%s), parameter(%s)",
+            derror("fds exist failed: parameter(%s), code(%d), msg(%s)",
+                   req.path.c_str(),
                    ex.code(),
-                   ex.what(),
-                   req.path.c_str());
+                   ex.what());
+            resp.err = ERR_FS_INTERNAL;
         }
         FDS_EXCEPTION_HANDLE(resp.err, "exist", req.path.c_str());
         call_safe_late_task(callback, std::move(resp));
@@ -399,37 +409,45 @@ dsn::task_ptr fds_service::remove_path(const remove_path_request &req,
                 if (req.recursive) {
                     should_remove_path = true;
                 } else {
+                    derror("fds remove_path failed: dir not empty, parameter(%s)",
+                           req.path.c_str());
                     resp.err = ERR_DIR_NOT_EMPTY;
                 }
             } else {
                 if (_client->doesObjectExist(_bucket_name, utils::path_to_fds(req.path, false))) {
                     should_remove_path = true;
                 } else {
+                    derror("fds remove_path failed: path not found, parameter(%s)",
+                           req.path.c_str());
                     resp.err = ERR_OBJECT_NOT_FOUND;
                 }
             }
         } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-            resp.err = ERR_FS_INTERNAL;
-            derror("fds remove_path failed: code(%d), msg(%s), parameter(%s)",
+            derror("fds remove_path failed: parameter(%s), code(%d), msg(%s)",
+                   req.path.c_str(),
                    ex.code(),
-                   ex.what(),
-                   req.path.c_str());
+                   ex.what());
+            resp.err = ERR_FS_INTERNAL;
         }
         FDS_EXCEPTION_HANDLE(resp.err, "remove_path", req.path.c_str());
 
         if (resp.err == ERR_OK && should_remove_path) {
             fds_path = utils::path_to_fds(req.path, false);
             try {
-                if (_client->deleteObjects(_bucket_name, fds_path)->countFailedObjects() <= 0) {
+                auto deleting = _client->deleteObjects(_bucket_name, fds_path);
+                if (deleting->countFailedObjects() <= 0) {
                     resp.err = ERR_OK;
                 } else {
+                    derror("fds remove_path failed: countFailedObjects = %d, parameter(%s)",
+                           deleting->countFailedObjects(),
+                           req.path.c_str());
                     resp.err = ERR_FS_INTERNAL;
                 }
             } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-                derror("fds remove_path failed: code(%d), msg(%s), parameter(%s)",
+                derror("fds remove_path failed: parameter(%s), code(%d), msg(%s)",
+                       req.path.c_str(),
                        ex.code(),
-                       ex.what(),
-                       req.path.c_str());
+                       ex.what());
                 resp.err = ERR_FS_INTERNAL;
             }
             FDS_EXCEPTION_HANDLE(resp.err, "remove_path", req.path.c_str());
@@ -518,17 +536,17 @@ dsn::error_code fds_file_object::get_content(uint64_t pos,
             transfered_bytes += utils::copy_stream(is, os, PIECE_SIZE);
             err = dsn::ERR_OK;
         } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-            derror("fds getObject error: code(%d), msg(%s), remote_file(%s)",
+            derror("fds getObject error: remote_file(%s), code(%d), msg(%s)",
+                   file_name().c_str(),
                    ex.code(),
-                   ex.what(),
-                   file_name().c_str());
+                   ex.what());
             if (!_has_meta_synced && ex.code() == Poco::Net::HTTPResponse::HTTP_NOT_FOUND) {
                 _has_meta_synced = true;
                 _md5sum = "";
                 _size = 0;
                 err = dsn::ERR_OBJECT_NOT_FOUND;
             } else {
-                err = ERR_FS_INTERNAL;
+                err = dsn::ERR_FS_INTERNAL;
             }
         }
         FDS_EXCEPTION_HANDLE(err, "getObject", file_name().c_str())
@@ -550,13 +568,14 @@ dsn::error_code fds_file_object::put_content(/*in-out*/ std::istream &is,
     try {
         c->putObject(_service->get_bucket_name(), _fds_path, is, galaxy::fds::FDSObjectMetadata());
     } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-        derror("fds putObject error: error_code(%d), message(%s), remote_file(%s)",
+        derror("fds putObject error: remote_file(%s), code(%d), msg(%s)",
+               file_name().c_str(),
                ex.code(),
-               ex.what(),
-               file_name().c_str());
+               ex.what());
         err = ERR_FS_INTERNAL;
     }
     FDS_EXCEPTION_HANDLE(err, "putObject", file_name().c_str())
+
     if (err != dsn::ERR_OK) {
         return err;
     }
@@ -584,10 +603,10 @@ dsn::error_code fds_file_object::put_content(/*in-out*/ std::istream &is,
         _size = (uint64_t)atoll(iter->second.c_str());
         transfered_bytes = _size;
     } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-        derror("fds getObjectMetadata after put failed: error(%d), message(%s), remote_file(%s)",
+        derror("fds getObjectMetadata after put failed: remote_file(%s), code(%d), msg(%s)",
+               file_name().c_str(),
                ex.code(),
-               ex.what(),
-               file_name().c_str());
+               ex.what());
         err = ERR_FS_INTERNAL;
     }
     FDS_EXCEPTION_HANDLE(err, "getObjectMetadata_after_put", file_name().c_str())
@@ -636,7 +655,7 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
         if (!is.is_open()) {
             char buffer[256];
             char *ptr = strerror_r(errno, buffer, 256);
-            derror("open local file(%s) failed in upload to(%s), error(%s)",
+            derror("fds upload failed: open local file(%s) failed when upload to(%s), error(%s)",
                    local_file.c_str(),
                    file_name().c_str(),
                    ptr);
@@ -662,6 +681,8 @@ dsn::task_ptr fds_file_object::read(const read_request &req,
     dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
     read_response resp;
     if (_has_meta_synced && _md5sum.empty()) {
+        derror("fds read failed: meta not synced or md5sum empty when read (%s)",
+               _fds_path.c_str());
         resp.err = dsn::ERR_OBJECT_NOT_FOUND;
         call_safe_late_task(t, std::move(resp));
         return t;
@@ -696,6 +717,8 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
     dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
     download_response resp;
     if (_has_meta_synced && _md5sum.empty()) {
+        derror("fds download failed: meta not synced or md5sum empty when download (%s)",
+               _fds_path.c_str());
         resp.err = dsn::ERR_OBJECT_NOT_FOUND;
         resp.downloaded_size = 0;
         call_safe_late_task(t, std::move(resp));
@@ -707,7 +730,7 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
     if (!handle->is_open()) {
         char buffer[512];
         char *ptr = strerror_r(errno, buffer, 512);
-        derror("fail to open localfile(%s) when download(%s), error(%s)",
+        derror("fds download failed: fail to open localfile(%s) when download(%s), error(%s)",
                req.output_local_name.c_str(),
                _fds_path.c_str(),
                ptr);

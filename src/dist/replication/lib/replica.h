@@ -189,6 +189,7 @@ private:
     void on_learn_reply(error_code err, learn_request &&req, learn_response &&resp);
     void on_copy_remote_state_completed(error_code err,
                                         size_t size,
+                                        uint64_t copy_start_time,
                                         learn_request &&req,
                                         learn_response &&resp);
     void on_learn_remote_state_completed(error_code err);

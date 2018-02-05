@@ -640,8 +640,10 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             _potential_secondary_states.learn_remote_files_task = tasking::create_task(
                 LPC_LEARN_REMOTE_DELTA_FILES,
                 this,
-                [ this, err, req_cap = std::move(req), resp_cap = std::move(resp) ]() mutable {
-                    on_copy_remote_state_completed(err, 0, std::move(req_cap), std::move(resp_cap));
+                [ this, err, copy_start = _potential_secondary_states.duration_ms(),
+                req_cap = std::move(req), resp_cap = std::move(resp) ]() mutable {
+                    on_copy_remote_state_completed(err, 0, copy_start,
+                        std::move(req_cap), std::move(resp_cap));
                 });
             _potential_secondary_states.learn_remote_files_task->enqueue();
             return;
@@ -802,8 +804,10 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         _potential_secondary_states.learn_remote_files_task = tasking::create_task(
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
-            [ this, err, req_cap = std::move(req), resp_cap = std::move(resp) ]() mutable {
-                on_copy_remote_state_completed(err, 0, std::move(req_cap), std::move(resp_cap));
+            [ this, err, copy_start = _potential_secondary_states.duration_ms(),
+            req_cap = std::move(req), resp_cap = std::move(resp) ]() mutable {
+                on_copy_remote_state_completed(err, 0, copy_start,
+                    std::move(req_cap), std::move(resp_cap));
             });
         _potential_secondary_states.learn_remote_files_task->enqueue();
     }
@@ -824,9 +828,10 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             _potential_secondary_states.learn_remote_files_task = tasking::create_task(
                 LPC_LEARN_REMOTE_DELTA_FILES,
                 this,
-                [ this, err, req_cap = std::move(req), resp_cap = std::move(resp) ]() mutable {
-                    on_copy_remote_state_completed(
-                        ERR_FILE_OPERATION_FAILED, 0, std::move(req_cap), std::move(resp_cap));
+                [ this, err, copy_start = _potential_secondary_states.duration_ms(),
+                req_cap = std::move(req), resp_cap = std::move(resp) ]() mutable {
+                    on_copy_remote_state_completed(ERR_FILE_OPERATION_FAILED, 0, copy_start,
+                        std::move(req_cap), std::move(resp_cap));
                 });
             _potential_secondary_states.learn_remote_files_task->enqueue();
             return;
@@ -851,15 +856,19 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             high_priority,
             LPC_REPLICATION_COPY_REMOTE_FILES,
             this,
-            [ this, req_cap = std::move(req), resp_copy = resp ](error_code err, int sz) mutable {
-                on_copy_remote_state_completed(err, sz, std::move(req_cap), std::move(resp_copy));
+            [ this, copy_start = _potential_secondary_states.duration_ms(),
+            req_cap = std::move(req), resp_copy = resp ](error_code err, size_t sz) mutable {
+                on_copy_remote_state_completed(err, sz, copy_start,
+                    std::move(req_cap), std::move(resp_copy));
             });
     } else {
         _potential_secondary_states.learn_remote_files_task = tasking::create_task(
             LPC_LEARN_REMOTE_DELTA_FILES,
             this,
-            [ this, req_cap = std::move(req), resp_cap = std::move(resp) ]() mutable {
-                on_copy_remote_state_completed(ERR_OK, 0, std::move(req_cap), std::move(resp_cap));
+            [ this, copy_start = _potential_secondary_states.duration_ms(),
+            req_cap = std::move(req), resp_cap = std::move(resp) ]() mutable {
+                on_copy_remote_state_completed(ERR_OK, 0, copy_start,
+                    std::move(req_cap), std::move(resp_cap));
             });
         _potential_secondary_states.learn_remote_files_task->enqueue();
     }
@@ -867,6 +876,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
 void replica::on_copy_remote_state_completed(error_code err,
                                              size_t size,
+                                             uint64_t copy_start_time,
                                              learn_request &&req,
                                              learn_response &&resp)
 {
@@ -877,7 +887,8 @@ void replica::on_copy_remote_state_completed(error_code err,
 
     ddebug("%s: on_copy_remote_state_completed[%016" PRIx64
            "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-           "copy remote state done, err = %s, copy_file_count = %d, copy_file_size = %" PRId64 ", "
+           "copy remote state done, err = %s, copy_file_count = %d, "
+           "copy_file_size = %" PRIu64 ", copy_time_used = %" PRIu64 " ms, "
            "local_committed_decree = %" PRId64 ", app_committed_decree = %" PRId64
            ", app_durable_decree = %" PRId64 ", "
            "prepare_start_decree = %" PRId64 ", current_learning_status = %s",
@@ -887,7 +898,8 @@ void replica::on_copy_remote_state_completed(error_code err,
            _potential_secondary_states.duration_ms(),
            err.to_string(),
            static_cast<int>(resp.state.files.size()),
-           static_cast<int64_t>(size),
+           static_cast<uint64_t>(size),
+           _potential_secondary_states.duration_ms() - copy_start_time,
            last_committed_decree(),
            _app->last_committed_decree(),
            _app->last_durable_decree(),
