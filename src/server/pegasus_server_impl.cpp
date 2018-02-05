@@ -1514,10 +1514,16 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
                    ci);
             auto err = async_checkpoint(false);
             if (err != ::dsn::ERR_OK) {
-                derror("%s: create checkpoint failed, error = %s", replica_name(), err.to_string());
-                delete _db;
-                _db = nullptr;
-                return err;
+                dwarn("%s: create checkpoint failed, error = %s, retry again",
+                      replica_name(), err.to_string());
+                err = async_checkpoint(false);
+                if (err != ::dsn::ERR_OK) {
+                    derror("%s: create checkpoint failed, error = %s",
+                            replica_name(), err.to_string());
+                    delete _db;
+                    _db = nullptr;
+                    return err;
+                }
             }
             dassert(ci == last_durable_decree(),
                     "last durable decree mismatch after checkpoint: %" PRId64 " vs %" PRId64,
@@ -1562,8 +1568,8 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
         rocksdb::FlushOptions options;
         options.wait = true;
         auto status = _db->Flush(options);
-        if (!status.ok()) {
-            derror("%s: flush memtable failed: %s",
+        if (!status.ok() && !status.IsNoNeedOperate()) {
+            derror("%s: flush memtable on close failed: %s",
                    replica_name(), status.ToString().c_str());
         }
     }

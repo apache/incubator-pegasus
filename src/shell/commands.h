@@ -2180,7 +2180,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     }
 
     int sleep_seconds = 0;
-    int last_total_rows = 0;
+    long last_total_rows = 0;
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         sleep_seconds++;
