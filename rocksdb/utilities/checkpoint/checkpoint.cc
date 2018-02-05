@@ -337,6 +337,7 @@ Status CheckpointImpl::CreateCheckpointQuick(const std::string& checkpoint_dir,
 
   std::string full_private_path = checkpoint_dir + ".tmp";
   std::string manifest_file_path;
+  uint64_t manifest_file_number = 0;
 
   // create snapshot directory
   s = db_->GetEnv()->CreateDir(full_private_path);
@@ -354,7 +355,13 @@ Status CheckpointImpl::CreateCheckpointQuick(const std::string& checkpoint_dir,
     assert(type == kTableFile || type == kDescriptorFile ||
            type == kCurrentFile);
     assert(live_files[i].size() > 0 && live_files[i][0] == '/');
-    std::string src_fname = live_files[i];
+    const std::string& src_fname = live_files[i];
+
+    // do not copy current file because it may have been updated to
+    // point to a new manifest file, so we create it by ourselves
+    if (type == kCurrentFile) {
+      continue;
+    }
 
     // rules:
     // * if it's kTableFile, then it's shared
@@ -377,6 +384,7 @@ Status CheckpointImpl::CreateCheckpointQuick(const std::string& checkpoint_dir,
     }
     if (type == kDescriptorFile) {
       manifest_file_path = full_private_path + src_fname;
+      manifest_file_number = number;
     }
   }
 
@@ -389,6 +397,12 @@ Status CheckpointImpl::CreateCheckpointQuick(const std::string& checkpoint_dir,
     assert(!manifest_file_path.empty());
     s = ModifyMenifestFileLastSeq(db_->GetEnv(), db_->GetOptions(),
                                   manifest_file_path, last_sequence);
+  }
+  if (s.ok()) {
+    // make current file
+    assert(manifest_file_number != 0);
+    s = SetCurrentFile(db_->GetEnv(), full_private_path,
+                       manifest_file_number, nullptr);
   }
   if (s.ok()) {
     // move tmp private backup to real snapshot directory

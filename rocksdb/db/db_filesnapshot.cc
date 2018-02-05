@@ -58,10 +58,12 @@ Status DBImpl::EnableFileDeletions(bool force) {
       --disable_delete_obsolete_files_;
     }
     if (disable_delete_obsolete_files_ == 0)  {
-      Log(InfoLogLevel::INFO_LEVEL, db_options_.info_log,
-          "File Deletions Enabled");
       should_purge_files = true;
+      const uint64_t start_micros = env_->NowMicros();
       FindObsoleteFiles(&job_context, true);
+      Log(InfoLogLevel::INFO_LEVEL, db_options_.info_log,
+          "File Deletions Enabled, find obsoleted files elapsed: " PRIu64 "ns",
+          env_->NowMicros() - start_micros);
     } else {
       Log(InfoLogLevel::WARN_LEVEL, db_options_.info_log,
           "File Deletions Enable, but not really enabled. Counter: %d",
@@ -178,14 +180,16 @@ Status DBImpl::GetLiveFilesQuick(std::vector<std::string>& ret,
   ret.clear();
   ret.reserve(live.size() + 2); //*.sst + CURRENT + MANIFEST
 
+  // Put current and manifest files firstly to make them copied quickly,
+  // because the manifest file may be deleted when copying sstables.
+  ret.push_back(CurrentFileName(""));
+  ret.push_back(DescriptorFileName("", versions_->manifest_file_number()));
+
   // create names of the live files. The names are not absolute
   // paths, instead they are relative to dbname_;
   for (auto live_file : live) {
     ret.push_back(MakeTableFileName("", live_file.GetNumber()));
   }
-
-  ret.push_back(CurrentFileName(""));
-  ret.push_back(DescriptorFileName("", versions_->manifest_file_number()));
 
   // find length of manifest file while holding the mutex lock
   *manifest_file_size = versions_->manifest_file_size();

@@ -2223,7 +2223,7 @@ Status VersionSet::LogAndApply(ColumnFamilyData* column_family_data,
     if (new_descriptor_log) {
       Log(InfoLogLevel::INFO_LEVEL, db_options_->info_log,
         "Deleting manifest %" PRIu64 " current manifest %" PRIu64 "\n",
-        manifest_file_number_, pending_manifest_file_number_);
+        pending_manifest_file_number_, manifest_file_number_);
       descriptor_log_.reset();
       env_->DeleteFile(
           DescriptorFileName(dbname_, pending_manifest_file_number_));
