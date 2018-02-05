@@ -1564,7 +1564,7 @@ void replica_stub::on_disk_stat()
     int error_replica_dir_count = 0;
     int garbage_replica_dir_count = 0;
     for (auto &fpath : sub_list) {
-        auto &&name = dsn::utils::filesystem::get_file_name(fpath);
+        auto name = dsn::utils::filesystem::get_file_name(fpath);
         // don't delete ".bak" directory because it is backed by administrator.
         if (name.length() >= 4 && (name.substr(name.length() - 4) == ".err" ||
                                    name.substr(name.length() - 4) == ".gar")) {
@@ -1585,7 +1585,7 @@ void replica_stub::on_disk_stat()
             uint64_t interval_seconds = (name.substr(name.length() - 4) == ".err"
                                              ? _options.gc_disk_error_replica_interval_seconds
                                              : _options.gc_disk_garbage_replica_interval_seconds);
-            if (last_write_time + interval_seconds < current_time_ms / 1000) {
+            if (last_write_time + interval_seconds <= current_time_ms / 1000) {
                 if (!dsn::utils::filesystem::remove_path(fpath)) {
                     dwarn("gc_disk: failed to delete directory '%s', time_used_ms = %" PRIu64,
                           fpath.c_str(),
@@ -1597,6 +1597,11 @@ void replica_stub::on_disk_stat()
                           dsn_now_ms() - current_time_ms);
                     _counter_replicas_recent_replica_remove_dir_count->increment();
                 }
+            }
+            else {
+                ddebug("gc_disk: reserve directory '%s', wait_seconds = %" PRIu64,
+                        fpath.c_str(),
+                        last_write_time + interval_seconds - current_time_ms / 1000);
             }
         }
     }
@@ -1616,12 +1621,20 @@ void replica_stub::on_disk_stat()
     _replicas_lock.lock();
     if (_replicas.find(gpid) != _replicas.end()) {
         _replicas_lock.unlock();
+        ddebug("open replica '%s.%d.%d' failed coz replica is already opened",
+                app.app_type.c_str(),
+                gpid.get_app_id(),
+                gpid.get_partition_index());
         return nullptr;
     }
 
     auto it = _opening_replicas.find(gpid);
     if (it != _opening_replicas.end()) {
         _replicas_lock.unlock();
+        ddebug("open replica '%s.%d.%d' failed coz replica is under opening",
+               app.app_type.c_str(),
+               gpid.get_app_id(),
+               gpid.get_partition_index());
         return nullptr;
     } else {
         auto it2 = _closing_replicas.find(gpid);
@@ -1637,21 +1650,23 @@ void replica_stub::on_disk_stat()
                 // unlock here to avoid dead lock
                 _replicas_lock.unlock();
 
-                ddebug("open replica which is to be closed '%s.%d.%d'",
+                ddebug("open replica '%s.%d.%d' which is to be closed",
                        app.app_type.c_str(),
                        gpid.get_app_id(),
                        gpid.get_partition_index());
 
+                // open by add learner
                 if (req != nullptr) {
                     on_add_learner(*req);
                 }
+
                 return nullptr;
             } else {
                 _replicas_lock.unlock();
-                dwarn("open replica '%s.%d.%d' failed coz replica is under closing",
-                      app.app_type.c_str(),
-                      gpid.get_app_id(),
-                      gpid.get_partition_index());
+                ddebug("open replica '%s.%d.%d' failed coz replica is under closing",
+                       app.app_type.c_str(),
+                       gpid.get_app_id(),
+                       gpid.get_partition_index());
                 return nullptr;
             }
         } else {
@@ -1705,7 +1720,7 @@ void replica_stub::open_replica(const app_info &app,
 
         if (!restore_if_necessary && ::dsn::utils::filesystem::directory_exists(dir)) {
             if (!::dsn::utils::filesystem::remove_path(dir)) {
-                dassert(false, "remove use directory(%s) failed", dir.c_str());
+                dassert(false, "remove useless directory(%s) failed", dir.c_str());
                 return;
             }
         }
@@ -1713,6 +1728,10 @@ void replica_stub::open_replica(const app_info &app,
     }
 
     if (rep == nullptr) {
+        ddebug("%d.%d@%s: open replica failed, erase from opening replicas",
+               gpid.get_app_id(),
+               gpid.get_partition_index(),
+               _primary_address.to_string());
         _counter_replicas_opening_count->decrement();
         zauto_lock l(_replicas_lock);
         _opening_replicas.erase(gpid);
