@@ -88,7 +88,11 @@ replica::newr(replica_stub *stub, gpid gpid, const app_info &app, bool restore_i
     replica *rep = new replica(stub, gpid, app, dir.c_str(), restore_if_necessary);
     error_code err;
     if (restore_if_necessary && (err = rep->restore_checkpoint()) != dsn::ERR_OK) {
-        ddebug("try to restore replica %s failed, error(%s)", rep->name(), err.to_string());
+        derror("try to restore replica %s failed, error(%s)", rep->name(), err.to_string());
+        rep->close();
+        delete rep;
+        rep = nullptr;
+
         // clear work on failure
         utils::filesystem::remove_path(dir);
         stub->_fs_manager.remove_replica(gpid);
