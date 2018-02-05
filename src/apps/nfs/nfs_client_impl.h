@@ -34,7 +34,8 @@
  */
 #pragma once
 #include "nfs_client.h"
-#include <queue>
+#include <vector>
+#include <deque>
 #include <dsn/tool-api/nfs.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 
@@ -52,6 +53,8 @@ struct nfs_opts
     int file_close_expire_time_ms;
     int file_close_timer_interval_ms_on_server;
     int max_file_copy_request_count_per_file;
+    int max_retry_count_per_copy_request;
+    int64_t rpc_timeout_ms;
 
     void init()
     {
@@ -66,7 +69,7 @@ struct nfs_opts
             50,
             "max concurrent remote copy to the same server on nfs client");
         max_concurrent_local_writes = (int)dsn_config_get_value_uint64(
-            "nfs", "max_concurrent_local_writes", 5, "max local file writes on nfs client");
+            "nfs", "max_concurrent_local_writes", 50, "max local file writes on nfs client");
         max_buffered_local_writes = (int)dsn_config_get_value_uint64(
             "nfs", "max_buffered_local_writes", 500, "max buffered file writes on nfs client");
         high_priority_speed_rate = (int)dsn_config_get_value_uint64(
@@ -87,9 +90,17 @@ struct nfs_opts
         max_file_copy_request_count_per_file = (int)dsn_config_get_value_uint64(
             "nfs",
             "max_file_copy_request_count_per_file",
-            10,
+            2,
             "maximum concurrent remote copy requests for the same file on nfs client"
             "to limit each file copy speed");
+        max_retry_count_per_copy_request = (int)dsn_config_get_value_uint64(
+            "nfs", "max_retry_count_per_copy_request", 2, "maximum retry count when copy failed");
+        rpc_timeout_ms =
+            (int)dsn_config_get_value_uint64("nfs",
+                                             "rpc_timeout_ms",
+                                             10000,
+                                             "rpc timeout in milliseconds for nfs copy, "
+                                             "0 means use default timeout of rpc engine");
     }
 };
 
@@ -98,9 +109,31 @@ class nfs_client_impl : public ::dsn::service::nfs_client
 public:
     struct user_request;
     struct file_context;
+    struct copy_request_ex;
+    struct file_wrapper;
+
+    typedef ::dsn::ref_ptr<user_request> user_request_ptr;
+    typedef ::dsn::ref_ptr<file_context> file_context_ptr;
+    typedef ::dsn::ref_ptr<copy_request_ex> copy_request_ex_ptr;
+    typedef ::dsn::ref_ptr<file_wrapper> file_wrapper_ptr;
+
+    struct file_wrapper : public ::dsn::ref_counter
+    {
+        dsn_handle_t file_handle;
+
+        file_wrapper() { file_handle = nullptr; }
+        ~file_wrapper()
+        {
+            if (file_handle != nullptr) {
+                auto err = dsn_file_close(file_handle);
+                dassert(err == ERR_OK, "dsn_file_close failed, err = %s", err.to_string());
+            }
+        }
+    };
+
     struct copy_request_ex : public ::dsn::ref_counter
     {
-        file_context *file_ctx;
+        file_context_ptr file_ctx; // reference to the owner
         int index;
         uint64_t offset;
         uint32_t size;
@@ -110,64 +143,144 @@ public:
         ::dsn::task_ptr local_write_task;
         bool is_ready_for_write;
         bool is_valid;
-        zlock lock;
+        int retry_count;
+        zlock lock; // to protect is_valid
 
-        copy_request_ex(file_context *file, int idx)
+        copy_request_ex(const file_context_ptr &file, int idx, int try_count)
         {
             file_ctx = file;
             index = idx;
             offset = 0;
             size = 0;
             is_last = false;
-            remote_copy_task = nullptr;
-            local_write_task = nullptr;
             is_ready_for_write = false;
             is_valid = true;
+            retry_count = try_count;
         }
     };
 
-    struct file_context
+    struct file_context : public ::dsn::ref_counter
     {
-        user_request *user_req;
+        user_request_ptr user_req; // reference to the owner
 
         std::string file_name;
         uint64_t file_size;
 
-        std::atomic<dsn_handle_t> file;
+        file_wrapper_ptr file_holder;
         int current_write_index;
         int finished_segments;
-        std::vector<::dsn::ref_ptr<copy_request_ex>> copy_requests;
+        std::vector<copy_request_ex_ptr> copy_requests;
 
-        file_context(user_request *req, const std::string &file_nm, uint64_t sz)
+        file_context(const user_request_ptr &req, const std::string &file_nm, uint64_t sz)
         {
             user_req = req;
             file_name = file_nm;
             file_size = sz;
-            file = nullptr;
-
+            file_holder = new file_wrapper();
             current_write_index = -1;
             finished_segments = 0;
         }
     };
 
-    struct user_request
+    struct user_request : public ::dsn::ref_counter
     {
         zlock user_req_lock;
 
         bool high_priority;
+        int low_queue_index;
         get_file_size_request file_size_req;
         ::dsn::ref_ptr<aio_task> nfs_task;
         std::atomic<int> finished_files;
+        std::atomic<int> concurrent_copy_count;
         bool is_finished;
 
-        std::vector<file_context *> file_context_vec;
+        std::vector<file_context_ptr> file_contexts;
 
         user_request()
         {
             high_priority = false;
+            low_queue_index = -1;
             finished_files = 0;
+            concurrent_copy_count = 0;
             is_finished = false;
         }
+    };
+
+    struct random_robin_queue
+    {
+        int max_concurrent_copy_count_per_queue;
+        size_t total_count;
+        // each queue represents all requests for one user_request
+        std::list<std::deque<copy_request_ex_ptr>> queue_list;
+        // the next queue to pop request
+        std::list<std::deque<copy_request_ex_ptr>>::iterator pop_it;
+
+        random_robin_queue(int max_concurrent_copy_count_per_queue_)
+        {
+            max_concurrent_copy_count_per_queue = max_concurrent_copy_count_per_queue_;
+            total_count = 0;
+            pop_it = queue_list.end();
+        }
+
+        // push request queue as an unique sub-queue.
+        void push(std::deque<copy_request_ex_ptr> &&q)
+        {
+            total_count += q.size();
+            queue_list.emplace_back(std::move(q));
+        }
+
+        // push retry request to this queue.
+        // if the original sub-queue is exist, push to front of it,
+        // else push to a new sub-queue.
+        void push_retry(const copy_request_ex_ptr &p)
+        {
+            total_count++;
+            for (auto it = queue_list.begin(); it != queue_list.end(); ++it) {
+                if (it->front()->file_ctx->user_req.get() == p->file_ctx->user_req.get()) {
+                    // belong the the same user_request
+                    it->push_front(p);
+                    return;
+                }
+            }
+            queue_list.emplace_back(std::deque<copy_request_ex_ptr>({p}));
+        }
+
+        // pop one request from this queue.
+        // return nullptr if no valid request found.
+        copy_request_ex_ptr pop()
+        {
+            copy_request_ex_ptr p;
+            if (total_count == 0)
+                return p;
+            if (pop_it == queue_list.end())
+                pop_it = queue_list.begin();
+            auto start_it = pop_it;
+            while (true) {
+                if (pop_it->front()->file_ctx->user_req->concurrent_copy_count <
+                    max_concurrent_copy_count_per_queue) {
+                    // ok, find one, pop from queue, and forward pop_it
+                    p = pop_it->front();
+                    pop_it->pop_front();
+                    if (pop_it->empty()) {
+                        pop_it = queue_list.erase(pop_it);
+                    } else {
+                        pop_it++;
+                    }
+                    total_count--;
+                    break;
+                }
+                // forward pop_it
+                pop_it++;
+                if (pop_it == queue_list.end())
+                    pop_it = queue_list.begin();
+                // iterate for a round
+                if (pop_it == start_it)
+                    break;
+            }
+            return p;
+        }
+
+        bool empty() { return total_count == 0; }
     };
 
 public:
@@ -177,26 +290,21 @@ public:
     // copy file request entry
     void begin_remote_copy(std::shared_ptr<remote_copy_request> &rci, aio_task *nfs_task);
 
-    // write file callback
-    void
-    local_write_callback(error_code err, size_t sz, const ::dsn::ref_ptr<copy_request_ex> &reqc);
-
 private:
-    // rewrite end_copy function
-    void end_copy(::dsn::error_code err, const copy_response &resp, void *context);
-
-    // rewrite end_get_file_size function
     void end_get_file_size(::dsn::error_code err,
                            const ::dsn::service::get_file_size_response &resp,
-                           void *context);
+                           const user_request_ptr &ureq);
 
-    void continue_copy(int done_count);
+    void continue_copy();
 
-    void write_copy(::dsn::ref_ptr<copy_request_ex> reqc);
+    void
+    end_copy(::dsn::error_code err, const copy_response &resp, const copy_request_ex_ptr &reqc);
 
     void continue_write();
 
-    void handle_completion(user_request *req, error_code err);
+    void end_write(error_code err, size_t sz, const copy_request_ex_ptr &reqc);
+
+    void handle_completion(const user_request_ptr &req, error_code err);
 
 private:
     nfs_opts &_opts;
@@ -209,12 +317,12 @@ private:
                                                      // by max_buffered_local_writes.
 
     zlock _copy_requests_lock;
-    std::queue<::dsn::ref_ptr<copy_request_ex>> _copy_requests_high;
-    std::queue<::dsn::ref_ptr<copy_request_ex>> _copy_requests_low;
+    std::deque<copy_request_ex_ptr> _copy_requests_high;
+    random_robin_queue _copy_requests_low;
     int _high_priority_remaining_time;
 
     zlock _local_writes_lock;
-    std::queue<::dsn::ref_ptr<copy_request_ex>> _local_writes;
+    std::deque<copy_request_ex_ptr> _local_writes;
 
     perf_counter_wrapper _recent_copy_data_size;
     perf_counter_wrapper _recent_copy_fail_count;

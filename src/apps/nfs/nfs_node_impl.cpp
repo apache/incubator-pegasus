@@ -37,6 +37,11 @@
 #include "nfs_client_impl.h"
 #include "nfs_server_impl.h"
 
+#ifdef __TITLE__
+#undef __TITLE__
+#endif
+#define __TITLE__ "nfs.node.impl"
+
 namespace dsn {
 namespace service {
 
