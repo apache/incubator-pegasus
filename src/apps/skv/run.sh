@@ -7,13 +7,13 @@ fi
 
 ./clear.sh
 
-echo "running dsn.replication.simple_kv for 30 seconds ..."
+echo "running dsn.replication.simple_kv for 20 seconds ..."
 ./dsn.replication.simple_kv config.ini &>out &
 PID=$!
-sleep 30
+sleep 20
 kill $PID
 
-if [ -f core ] || ! grep ERR_OK out; then
+if [ -f core ] || ! grep ERR_OK out > /dev/null ; then
     echo "run dsn.replication.simple_kv failed"
     echo "---- ls ----"
     ls -l

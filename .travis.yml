@@ -9,24 +9,21 @@ compiler:
     - gcc
 
 before_install:
-    # - sudo apt-get install php5-cli
-    # - sudo wget https://raw.githubusercontent.com/shengofsun/packages/master/source.list
-    # - sudo cp source.list /etc/apt/sources.list
-    # - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y 
-    # - sudo apt-get update -qq
     - wget https://raw.githubusercontent.com/shengofsun/packages/master/build-depends.tar.gz
     - tar xf build-depends.tar.gz
     - cd packages
     - ls | xargs sudo dpkg -i --force-depends
     - cd ..
-    - sudo aptitude install mono-xbuild -y
-    - sudo aptitude install php5 -y
 
 install:
-    - ./run.sh format
+    # - ./run.sh format
 
 before_script:
-    - ./run.sh start_zk
+    - cd thirdparty
+    - wget https://raw.githubusercontent.com/shengofsun/packages/master/pegasus-thirdparty-prebuild.tar.gz
+    - tar xf pegasus-thirdparty-prebuild.tar.gz
+    - rm -rf pegasus-thirdparty-prebuild.tar.gz
+    - cd ..
     - ulimit -c unlimited -S
 
 script:
@@ -36,4 +33,4 @@ after_script:
     - ./run.sh stop_zk
 
 notifications:
-  email: false
+    email: false

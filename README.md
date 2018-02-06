@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/imzhenyu/rDSN.svg?branch=master)](https://travis-ci.org/imzhenyu/rDSN) [![Build status](https://ci.appveyor.com/api/projects/status/c0uqfq0k6ep7qote?svg=true)](https://ci.appveyor.com/project/imzhenyu/rdsn)
+[![Build Status](https://travis-ci.org/XiaoMi/rdsn.svg?branch=master)](https://travis-ci.org/XiaoMi/rdsn)
 
 All pull requests please now go to https://github.com/imzhenyu/rdsn for automatic integration with latest version. We will preriodically update this repo. Thank you.
 

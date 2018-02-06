@@ -1,10 +1,10 @@
 #!/bin/bash
 #
 # Options:
-#    INSTALL_DIR    <dir>
+#    DOWNLOADED_DIR    <dir>
 #    PORT           <port>
 
-if [ -z "$INSTALL_DIR" ]
+if [ -z "$DOWNLOADED_DIR" ]
 then
     echo "ERROR: no INSTALL_DIR specified"
     exit -1
@@ -16,45 +16,9 @@ then
     exit -1
 fi
 
-if [ -z "$GIT_SOURCE" -o "$GIT_SOURCE" == "github" ]
-then
-    download_url="https://github.com/shengofsun/packages/raw/master/zookeeper-3.4.6.tar.gz"
-elif [ "$GIT_SOURCE" == "xiaomi" ]
-then
-    download_url="http://git.n.xiaomi.com/pegasus/packages/raw/master/zookeeper-3.4.6.tar.gz"
-else
-    echo "ERROR: invalid git source '$GIT_SOURCE', should be github or xiaomi"
-    exit -1
-fi
+cd $DOWNLOADED_DIR
 
-mkdir -p $INSTALL_DIR
-if [ $? -ne 0 ]
-then
-    echo "ERROR: mkdir $PREFIX failed"
-    exit -1
-fi
-
-cd $INSTALL_DIR
-
-if [ ! -f zookeeper-3.4.6.tar.gz ]; then
-    echo "Downloading zookeeper..."
-    wget $download_url
-    if [ $? -ne 0 ]; then
-        echo "ERROR: download zookeeper failed"
-        exit -1
-    fi
-fi
-
-if [ ! -d zookeeper-3.4.6 ]; then
-    echo "Decompressing zookeeper..."
-    tar xfz zookeeper-3.4.6.tar.gz
-    if [ $? -ne 0 ]; then
-        echo "ERROR: decompress zookeeper failed"
-        exit -1
-    fi
-fi
-
-ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.6
+ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.10
 ZOOKEEPER_PORT=$PORT
 
 cp $ZOOKEEPER_HOME/conf/zoo_sample.cfg $ZOOKEEPER_HOME/conf/zoo.cfg
@@ -72,4 +36,3 @@ else
     echo "ERROR: start zookeeper failed"
     exit -1
 fi
- 

@@ -143,7 +143,7 @@ function run_build()
         exit -1
     fi
     if [ "$ONLY_BUILD" == "NO" ]; then
-        run_start_zk -g $GIT_SOURCE
+        run_start_zk
     fi
     BUILD_TYPE="$BUILD_TYPE" ONLY_BUILD="$ONLY_BUILD" \
         CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
@@ -198,17 +198,18 @@ function usage_start_zk()
 {
     echo "Options for subcommand 'start_zk':"
     echo "   -h|--help         print the help info"
-    echo "   -d|--install_dir <dir>"
-    echo "                     zookeeper install directory,"
-    echo "                     if not set, then default is './.zk_install'"
     echo "   -p|--port <port>  listen port of zookeeper, default is 12181"
-    echo "   -g|--git          git source to download zookeeper: github|xiaomi, default is xiaomi"
 }
 function run_start_zk()
 {
-    INSTALL_DIR=`pwd`/.zk_install
+    # download zk before start zk service
+    # as zk is a 3rdparty dependency of rdsn project,
+    # so we simply download the whole thirdparty for simplicity
+    `pwd`/thirdparty/download-thirdparty.sh
+    exit_if_fail $?
+
+    DOWNLOADED_DIR=`pwd`/thirdparty/src
     PORT=12181
-    GIT_SOURCE="xiaomi"
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -216,16 +217,8 @@ function run_start_zk()
                 usage_start_zk
                 exit 0
                 ;;
-            -d|--install_dir)
-                INSTALL_DIR=$2
-                shift
-                ;;
             -p|--port)
                 PORT=$2
-                shift
-                ;;
-            -g|--git)
-                GIT_SOURCE=$2
                 shift
                 ;;
             *)
@@ -237,7 +230,7 @@ function run_start_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" GIT_SOURCE="$GIT_SOURCE" $scripts_dir/start_zk.sh
+    DOWNLOADED_DIR="$DOWNLOADED_DIR" PORT="$PORT" $scripts_dir/start_zk.sh
 }
 
 #####################
@@ -247,23 +240,16 @@ function usage_stop_zk()
 {
     echo "Options for subcommand 'stop_zk':"
     echo "   -h|--help         print the help info"
-    echo "   -d|--install_dir <dir>"
-    echo "                     zookeeper install directory,"
-    echo "                     if not set, then default is './.zk_install'"
 }
 function run_stop_zk()
 {
-    INSTALL_DIR=`pwd`/.zk_install
+    DOWNLOADED_DIR=`pwd`/thirdparty/src
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
             -h|--help)
                 usage_stop_zk
                 exit 0
-                ;;
-            -d|--install_dir)
-                INSTALL_DIR=$2
-                shift
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -274,7 +260,7 @@ function run_stop_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $scripts_dir/stop_zk.sh
+    DOWNLOADED_DIR="$DOWNLOADED_DIR" $scripts_dir/stop_zk.sh
 }
 
 #####################
@@ -284,23 +270,16 @@ function usage_clear_zk()
 {
     echo "Options for subcommand 'clear_zk':"
     echo "   -h|--help         print the help info"
-    echo "   -d|--install_dir <dir>"
-    echo "                     zookeeper install directory,"
-    echo "                     if not set, then default is './.zk_install'"
 }
 function run_clear_zk()
 {
-    INSTALL_DIR=`pwd`/.zk_install
+    DOWNLOADED_DIR=`pwd`/thirdparty/src
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
             -h|--help)
                 usage_clear_zk
                 exit 0
-                ;;
-            -d|--install_dir)
-                INSTALL_DIR=$2
-                shift
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -311,7 +290,7 @@ function run_clear_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $scripts_dir/clear_zk.sh
+    DOWNLOADED_DIR="$DOWNLOADED_DIR" $scripts_dir/clear_zk.sh
 }
 
 #####################
