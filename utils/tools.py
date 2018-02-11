@@ -34,6 +34,9 @@ def convert_error_type(rdb_err):
 
 
 class ScanOptions(object):
+    """
+    configurable options for scan.
+    """
 
     def __init__(self):
         self.timeout_millis = 5000
