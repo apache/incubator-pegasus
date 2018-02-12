@@ -271,7 +271,7 @@ class MetaSessionManager(SessionManager):
                               None,
                               self,
                               self.timeout
-                              ).connectTCP(host, port, DEFAULT_TIMEOUT)
+                              ).connectTCP(host, port, self.timeout)
             d.addCallbacks(self.got_conn, self.got_err)
             d.addCallbacks(self.query_one, self.got_err)
             ds.append(d)
@@ -322,7 +322,7 @@ class Table(SessionManager):
                               None,
                               self.container,
                               self.timeout
-                              ).connectTCP(host, port, DEFAULT_TIMEOUT)
+                              ).connectTCP(host, port, self.timeout)
             connected_rpc_addrs[rpc_addr] = 1
             d.addCallbacks(self.got_conn, self.got_err)
             ds.append(d)
@@ -632,7 +632,7 @@ class Pegasus(object):
             logger.error('table: %s, ignore ec: %s:%s',
                          self.name, ec.name, ec.value)
 
-    def ttl(self, hash_key, sort_key, timeout=DEFAULT_TIMEOUT):
+    def ttl(self, hash_key, sort_key, timeout=0):
         """
         Get ttl(time to live) of the data.
         :param hash_key: which hash key used for this API.
@@ -654,7 +654,7 @@ class Pegasus(object):
 
         return session.operate(op, timeout)
 
-    def exist(self, hash_key, sort_key, timeout=DEFAULT_TIMEOUT):
+    def exist(self, hash_key, sort_key, timeout=0):
         """
         Check value exist.
         :param hash_key: which hash key used for this API.
@@ -668,7 +668,7 @@ class Pegasus(object):
         """
         return self.ttl(hash_key, sort_key, timeout)
 
-    def get(self, hash_key, sort_key, timeout=DEFAULT_TIMEOUT):
+    def get(self, hash_key, sort_key, timeout=0):
         """
         Get value stored in <hash_key, sort_key>.
         :param hash_key: which hash key used for this API.
@@ -690,7 +690,7 @@ class Pegasus(object):
 
         return session.operate(op, timeout)
 
-    def set(self, hash_key, sort_key, value, ttl=0, timeout=DEFAULT_TIMEOUT):
+    def set(self, hash_key, sort_key, value, ttl=0, timeout=0):
         """
         Set value to be stored in <hash_key, sort_key>.
         :param hash_key: which hash key used for this API.
@@ -714,7 +714,7 @@ class Pegasus(object):
 
         return session.operate(op, timeout)
 
-    def remove(self, hash_key, sort_key, timeout=DEFAULT_TIMEOUT):
+    def remove(self, hash_key, sort_key, timeout=0):
         """
         Remove the entire <hash_key, sort_key>-value in pegasus.
         :param hash_key: which hash key used for this API.
@@ -736,7 +736,7 @@ class Pegasus(object):
 
         return session.operate(op, timeout)
 
-    def sort_key_count(self, hash_key, timeout=DEFAULT_TIMEOUT):
+    def sort_key_count(self, hash_key, timeout=0):
         """
         Get the total sort key count under the hash_key.
         :param hash_key: which hash key used for this API.
@@ -756,7 +756,7 @@ class Pegasus(object):
 
         return session.operate(op, timeout)
 
-    def multi_set(self, hash_key, sortkey_value_dict, ttl=0, timeout=DEFAULT_TIMEOUT):
+    def multi_set(self, hash_key, sortkey_value_dict, ttl=0, timeout=0):
         """
         Set multiple sort_keys-values under hash_key to be stored.
         :param hash_key: which hash key used for this API.
@@ -786,7 +786,7 @@ class Pegasus(object):
                   max_kv_count=100,
                   max_kv_size=1000000,
                   no_value=False,
-                  timeout=DEFAULT_TIMEOUT):
+                  timeout=0):
         """
         Get multiple values stored in <hash_key, sortkey> pairs.
         :param hash_key: which hash key used for this API.
@@ -824,7 +824,7 @@ class Pegasus(object):
     def get_sort_keys(self, hash_key,
                       max_kv_count=100,
                       max_kv_size=1000000,
-                      timeout=DEFAULT_TIMEOUT):
+                      timeout=0):
         """
         Get multiple sort keys under hash_key.
         :param hash_key: which hash key used for this API.
@@ -842,7 +842,7 @@ class Pegasus(object):
                               max_kv_count, max_kv_size,
                               True, timeout)
 
-    def multi_del(self, hash_key, sortkey_set, timeout=DEFAULT_TIMEOUT):
+    def multi_del(self, hash_key, sortkey_set, timeout=0):
         """
         Remove multiple entire <hash_key, sort_key>-values in pegasus.
         :param hash_key: which hash key used for this API.
