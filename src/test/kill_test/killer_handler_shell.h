@@ -14,6 +14,7 @@ class killer_handler_shell : public killer_handler
 {
 public:
     killer_handler_shell();
+    virtual ~killer_handler_shell() {}
     // index begin from 1, not zero
     // kill one
     virtual bool kill_meta(int index) override;

@@ -50,11 +50,8 @@ kill_testor::kill_testor()
     std::string killer_name =
         dsn_config_get_value_string(section, "killer_handler", "", "killer handler");
     dassert(killer_name.size() > 0, "");
-    if (killer_name == "shell")
-        _killer_handler.reset(new killer_handler_shell());
-    else {
-        dassert(false, "invalid killer_handler, name = %s", killer_name.c_str());
-    }
+    _killer_handler.reset(killer_handler::new_handler(killer_name.c_str()));
+    dassert(_killer_handler.get() != nullptr, "invalid killer_name(%s)", killer_name.c_str());
 
     _job_types = {META, REPLICA, ZOOKEEPER};
     _job_index_to_kill.resize(JOB_LENGTH);

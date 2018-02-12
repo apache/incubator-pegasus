@@ -17,7 +17,7 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
 
-#include "killer_handler_shell.h"
+#include "killer_registry.h"
 #include "kill_testor.h"
 #include "process_killer.h"
 
@@ -122,6 +122,7 @@ bool check_cluster_status()
 
 void killer_initialize(const char *config_file)
 {
+    register_kill_handlers();
     const char *section = "pegasus.killtest";
     // initialize the _client.
     if (!pegasus_client_factory::initialize(config_file)) {
