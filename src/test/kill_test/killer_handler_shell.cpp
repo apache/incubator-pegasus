@@ -10,8 +10,6 @@
 #include <fstream>
 #include <dsn/c/api_utilities.h>
 
-#include "../function_test/global_env.h"
-
 #ifdef __TITLE__
 #undef __TITLE__
 #endif
@@ -39,7 +37,7 @@ bool killer_handler_shell::has_meta_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    global_env::instance().pipe_execute(find_core, output);
+    assert(dsn::utils::pipe_execute(find_core, output) == 0);
     output >> core_count;
 
     return core_count != 0;
@@ -56,7 +54,7 @@ bool killer_handler_shell::has_replica_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    global_env::instance().pipe_execute(find_core, output);
+    assert(dsn::utils::pipe_execute(find_core, output) == 0);
     output >> core_count;
 
     return core_count != 0;

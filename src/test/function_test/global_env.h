@@ -15,7 +15,6 @@ public:
     std::string _host_ip;
 
     static global_env &instance() { return inst; }
-    static void pipe_execute(const char *command, std::stringstream &output);
 
 private:
     global_env();

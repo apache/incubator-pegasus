@@ -243,7 +243,7 @@ public:
                                                "tail -n 1 restore_app_from_backup_test_tmp; "
                                                "rm restore_app_from_backup_test_tmp";
         std::stringstream ss;
-        global_env::pipe_execute(cmd.c_str(), ss);
+        assert(dsn::utils::pipe_execute(cmd.c_str(), ss) == 0);
         std::string result = ss.str();
         // should remove \n character
         int32_t index = result.size();

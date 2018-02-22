@@ -8,6 +8,8 @@
 #include <cassert>
 #include <memory>
 
+#include <dsn/utility/utils.h>
+
 #include "global_env.h"
 global_env global_env::inst;
 
@@ -22,7 +24,7 @@ void global_env::get_dirs()
 {
     const char *cmd1 = "ps aux | grep pegasus_server | grep meta1 | awk '{print $2}'";
     std::stringstream ss1;
-    pipe_execute(cmd1, ss1);
+    assert(dsn::utils::pipe_execute(cmd1, ss1) == 0);
     int meta1_pid;
     ss1 >> meta1_pid;
     std::cout << "meta1 pid: " << meta1_pid << std::endl;
@@ -31,7 +33,7 @@ void global_env::get_dirs()
     char cmd2[512];
     sprintf(cmd2, "readlink /proc/%d/cwd", meta1_pid);
     std::stringstream ss2;
-    pipe_execute(cmd2, ss2);
+    assert(dsn::utils::pipe_execute(cmd2, ss2) == 0);
     std::string meta1_dir;
     ss2 >> meta1_dir;
     std::cout << "meta1 dir: " << meta1_dir << std::endl;
@@ -49,19 +51,7 @@ void global_env::get_dirs()
 void global_env::get_hostip()
 {
     std::stringstream output;
-    pipe_execute("hostname -i", output);
+    assert(dsn::utils::pipe_execute("hostname -i", output) == 0);
     output >> _host_ip;
     std::cout << "host ip: " << _host_ip << std::endl;
-}
-
-/*static*/
-void global_env::pipe_execute(const char *command, std::stringstream &output)
-{
-    std::array<char, 256> buffer;
-
-    std::shared_ptr<FILE> command_pipe(popen(command, "r"), pclose);
-    while (!feof(command_pipe.get())) {
-        if (fgets(buffer.data(), 256, command_pipe.get()) != NULL)
-            output << buffer.data();
-    }
 }

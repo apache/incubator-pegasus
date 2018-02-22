@@ -33,7 +33,7 @@ static void truncate_recent_file(const std::string &path)
     snprintf(command, 512, "ls -lcrt %s | tail -n 1 | awk \'{print $5,$9}\'", path.c_str());
     std::cout << command << std::endl;
     std::stringstream ss;
-    global_env::pipe_execute(command, ss);
+    assert(dsn::utils::pipe_execute(command, ss) == 0);
     size_t file_length;
     std::string file_name;
     ss >> file_length >> file_name;
@@ -48,7 +48,7 @@ static void truncate_recent_file(const std::string &path)
 
     snprintf(command, 512, "ls -l %s/%s | awk '{print $5}'", path.c_str(), file_name.c_str());
     std::stringstream ss2;
-    global_env::pipe_execute(command, ss2);
+    assert(dsn::utils::pipe_execute(command, ss2) == 0);
     size_t new_file_length;
     ss2 >> new_file_length;
 

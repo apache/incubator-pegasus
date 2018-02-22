@@ -21,8 +21,6 @@
 #include "kill_testor.h"
 #include "process_killer.h"
 
-#include "../function_test/global_env.h"
-
 #ifdef __TITLE__
 #undef __TITLE__
 #endif
@@ -172,7 +170,7 @@ bool verifier_process_alive()
     std::stringstream output;
     int process_count;
 
-    global_env::instance().pipe_execute(command, output);
+    assert(dsn::utils::pipe_execute(command, output) == 0);
     output >> process_count;
 
     // one for the verifier, one for command
