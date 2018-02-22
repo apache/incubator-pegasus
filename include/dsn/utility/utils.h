@@ -83,5 +83,10 @@ inline int get_current_tid()
 }
 
 inline int get_invalid_tid() { return -1; }
+
+// execute command in a seperate process,
+// read it's stdout to output
+// and return the retcode of command
+int pipe_execute(const char *command, std::ostream &output);
 }
 }

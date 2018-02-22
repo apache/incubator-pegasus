@@ -38,6 +38,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <random>
+#include <iostream>
+#include <memory>
+#include <array>
 
 #if defined(__linux__)
 #include <sys/syscall.h>
@@ -120,6 +123,22 @@ void time_ms_to_date_time(uint64_t ts_ms, int32_t &hour, int32_t &min, int32_t &
     hour = ret->tm_hour;
     min = ret->tm_min;
     sec = ret->tm_sec;
+}
+
+int pipe_execute(const char *command, std::ostream &output)
+{
+    std::array<char, 256> buffer;
+    int retcode = 0;
+
+    {
+        std::shared_ptr<FILE> command_pipe(popen(command, "r"),
+                                           [&retcode](FILE *p) { retcode = pclose(p); });
+        while (!feof(command_pipe.get())) {
+            if (fgets(buffer.data(), 256, command_pipe.get()) != NULL)
+                output << buffer.data();
+        }
+    }
+    return retcode;
 }
 }
 }
