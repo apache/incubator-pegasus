@@ -60,9 +60,9 @@ Status DBImpl::EnableFileDeletions(bool force) {
     if (disable_delete_obsolete_files_ == 0)  {
       should_purge_files = true;
       const uint64_t start_micros = env_->NowMicros();
-      FindObsoleteFiles(&job_context, true);
+      FindObsoleteFiles(&job_context, false);
       Log(InfoLogLevel::INFO_LEVEL, db_options_.info_log,
-          "File Deletions Enabled, find obsoleted files elapsed: " PRIu64 "ns",
+          "File Deletions Enabled, find obsoleted files elapsed: %" PRIu64 "ns",
           env_->NowMicros() - start_micros);
     } else {
       Log(InfoLogLevel::WARN_LEVEL, db_options_.info_log,
