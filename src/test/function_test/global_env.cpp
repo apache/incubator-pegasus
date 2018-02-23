@@ -22,7 +22,8 @@ global_env::global_env()
 
 void global_env::get_dirs()
 {
-    const char *cmd1 = "ps aux | grep pegasus_server | grep meta1 | awk '{print $2}'";
+    const char *cmd1 =
+        "ps aux | grep pegasus_server | grep '/meta1/pegasus_server' | awk '{print $2}'";
     std::stringstream ss1;
     assert(dsn::utils::pipe_execute(cmd1, ss1) == 0);
     int meta1_pid;

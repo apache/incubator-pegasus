@@ -214,7 +214,7 @@ function run_test()
         pushd $ROOT/src/builder/bin/$module
         REPORT_DIR=$REPORT_DIR ./run.sh
         if [ $? != 0 ]; then
-            echo "run test \"$module\" in $pwd failed"
+            echo "run test \"$module\" in `pwd` failed"
             exit
         fi
         popd
