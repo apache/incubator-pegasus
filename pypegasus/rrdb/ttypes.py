@@ -7,8 +7,8 @@
 #
 
 from thrift.Thrift import TType, TMessageType, TException, TApplicationException
-import base.ttypes
-import replication.ttypes
+import pypegasus.base.ttypes
+import pypegasus.replication.ttypes
 
 
 from thrift.transport import TTransport
@@ -30,8 +30,8 @@ class update_request:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
-    (2, TType.STRUCT, 'value', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 2
+    (1, TType.STRUCT, 'key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
+    (2, TType.STRUCT, 'value', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 2
     (3, TType.I32, 'expire_ts_seconds', None, None, ), # 3
   )
 
@@ -51,13 +51,13 @@ class update_request:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.key = base.ttypes.blob()
+          self.key = pypegasus.base.ttypes.blob()
           self.key.read(iprot)
         else:
           iprot.skip(ftype)
       elif fid == 2:
         if ftype == TType.STRUCT:
-          self.value = base.ttypes.blob()
+          self.value = pypegasus.base.ttypes.blob()
           self.value.read(iprot)
         else:
           iprot.skip(ftype)
@@ -243,7 +243,7 @@ class read_response:
   thrift_spec = (
     None, # 0
     (1, TType.I32, 'error', None, None, ), # 1
-    (2, TType.STRUCT, 'value', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 2
+    (2, TType.STRUCT, 'value', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 2
     (3, TType.I32, 'app_id', None, None, ), # 3
     (4, TType.I32, 'partition_index', None, None, ), # 4
     None, # 5
@@ -273,7 +273,7 @@ class read_response:
           iprot.skip(ftype)
       elif fid == 2:
         if ftype == TType.STRUCT:
-          self.value = base.ttypes.blob()
+          self.value = pypegasus.base.ttypes.blob()
           self.value.read(iprot)
         else:
           iprot.skip(ftype)
@@ -594,8 +594,8 @@ class key_value:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
-    (2, TType.STRUCT, 'value', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 2
+    (1, TType.STRUCT, 'key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
+    (2, TType.STRUCT, 'value', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 2
   )
 
   def __init__(self, key=None, value=None,):
@@ -613,13 +613,13 @@ class key_value:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.key = base.ttypes.blob()
+          self.key = pypegasus.base.ttypes.blob()
           self.key.read(iprot)
         else:
           iprot.skip(ftype)
       elif fid == 2:
         if ftype == TType.STRUCT:
-          self.value = base.ttypes.blob()
+          self.value = pypegasus.base.ttypes.blob()
           self.value.read(iprot)
         else:
           iprot.skip(ftype)
@@ -675,7 +675,7 @@ class multi_put_request:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'hash_key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
+    (1, TType.STRUCT, 'hash_key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
     (2, TType.LIST, 'kvs', (TType.STRUCT,(key_value, key_value.thrift_spec)), None, ), # 2
     (3, TType.I32, 'expire_ts_seconds', None, None, ), # 3
   )
@@ -696,7 +696,7 @@ class multi_put_request:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.hash_key = base.ttypes.blob()
+          self.hash_key = pypegasus.base.ttypes.blob()
           self.hash_key.read(iprot)
         else:
           iprot.skip(ftype)
@@ -776,8 +776,8 @@ class multi_remove_request:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'hash_key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
-    (2, TType.LIST, 'sork_keys', (TType.STRUCT,(base.ttypes.blob, base.ttypes.blob.thrift_spec)), None, ), # 2
+    (1, TType.STRUCT, 'hash_key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
+    (2, TType.LIST, 'sork_keys', (TType.STRUCT,(pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec)), None, ), # 2
     (3, TType.I64, 'max_count', None, None, ), # 3
   )
 
@@ -797,7 +797,7 @@ class multi_remove_request:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.hash_key = base.ttypes.blob()
+          self.hash_key = pypegasus.base.ttypes.blob()
           self.hash_key.read(iprot)
         else:
           iprot.skip(ftype)
@@ -806,7 +806,7 @@ class multi_remove_request:
           self.sork_keys = []
           (_etype10, _size7) = iprot.readListBegin()
           for _i11 in xrange(_size7):
-            _elem12 = base.ttypes.blob()
+            _elem12 = pypegasus.base.ttypes.blob()
             _elem12.read(iprot)
             self.sork_keys.append(_elem12)
           iprot.readListEnd()
@@ -1009,8 +1009,8 @@ class multi_get_request:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'hash_key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
-    (2, TType.LIST, 'sork_keys', (TType.STRUCT,(base.ttypes.blob, base.ttypes.blob.thrift_spec)), None, ), # 2
+    (1, TType.STRUCT, 'hash_key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
+    (2, TType.LIST, 'sork_keys', (TType.STRUCT,(pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec)), None, ), # 2
     (3, TType.I32, 'max_kv_count', None, None, ), # 3
     (4, TType.I32, 'max_kv_size', None, None, ), # 4
     (5, TType.BOOL, 'no_value', None, None, ), # 5
@@ -1034,7 +1034,7 @@ class multi_get_request:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.hash_key = base.ttypes.blob()
+          self.hash_key = pypegasus.base.ttypes.blob()
           self.hash_key.read(iprot)
         else:
           iprot.skip(ftype)
@@ -1043,7 +1043,7 @@ class multi_get_request:
           self.sork_keys = []
           (_etype17, _size14) = iprot.readListBegin()
           for _i18 in xrange(_size14):
-            _elem19 = base.ttypes.blob()
+            _elem19 = pypegasus.base.ttypes.blob()
             _elem19.read(iprot)
             self.sork_keys.append(_elem19)
           iprot.readListEnd()
@@ -1263,8 +1263,8 @@ class get_scanner_request:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'start_key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
-    (2, TType.STRUCT, 'stop_key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 2
+    (1, TType.STRUCT, 'start_key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
+    (2, TType.STRUCT, 'stop_key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 2
     (3, TType.BOOL, 'start_inclusive', None, None, ), # 3
     (4, TType.BOOL, 'stop_inclusive', None, None, ), # 4
     (5, TType.I32, 'batch_size', None, None, ), # 5
@@ -1288,13 +1288,13 @@ class get_scanner_request:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.start_key = base.ttypes.blob()
+          self.start_key = pypegasus.base.ttypes.blob()
           self.start_key.read(iprot)
         else:
           iprot.skip(ftype)
       elif fid == 2:
         if ftype == TType.STRUCT:
-          self.stop_key = base.ttypes.blob()
+          self.stop_key = pypegasus.base.ttypes.blob()
           self.stop_key.read(iprot)
         else:
           iprot.skip(ftype)

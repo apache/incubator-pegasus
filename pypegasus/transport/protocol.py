@@ -12,11 +12,11 @@ from thrift.transport import TTwisted
 from thrift.transport import TTransport
 
 from twisted.internet.protocol import connectionDone
-
-import sys
-sys.path.append("..")
-
-import base.ttypes as base
+from pypegasus.base import ttypes
+# import sys
+# sys.path.append("..")
+#
+# import base.ttypes as base
 
 
 class TPegasusTransport(TTwisted.TCallbackTransport):
@@ -114,7 +114,7 @@ class TPegasusThriftClientProtocol(TTwisted.ThriftClientProtocol):
     def stringReceived(self, frame):
         tr = TTransport.TMemoryBuffer(frame)
         iprot = self._iprot_factory.getProtocol(tr)
-        ec = base.error_code()
+        ec = ttypes.error_code()
         ec.read(iprot)
         (fname, mtype, rseqid) = iprot.readMessageBegin()
         try:

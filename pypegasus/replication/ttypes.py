@@ -7,7 +7,7 @@
 #
 
 from thrift.Thrift import TType, TMessageType, TException, TApplicationException
-import base.ttypes
+import pypegasus.base.ttypes
 
 
 from thrift.transport import TTransport
@@ -33,12 +33,12 @@ class partition_configuration:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'pid', (base.ttypes.gpid, base.ttypes.gpid.thrift_spec), None, ), # 1
+    (1, TType.STRUCT, 'pid', (pypegasus.base.ttypes.gpid, pypegasus.base.ttypes.gpid.thrift_spec), None, ), # 1
     (2, TType.I64, 'ballot', None, None, ), # 2
     (3, TType.I32, 'max_replica_count', None, None, ), # 3
-    (4, TType.STRUCT, 'primary', (base.ttypes.rpc_address, base.ttypes.rpc_address.thrift_spec), None, ), # 4
-    (5, TType.LIST, 'secondaries', (TType.STRUCT,(base.ttypes.rpc_address, base.ttypes.rpc_address.thrift_spec)), None, ), # 5
-    (6, TType.LIST, 'last_drops', (TType.STRUCT,(base.ttypes.rpc_address, base.ttypes.rpc_address.thrift_spec)), None, ), # 6
+    (4, TType.STRUCT, 'primary', (pypegasus.base.ttypes.rpc_address, pypegasus.base.ttypes.rpc_address.thrift_spec), None, ), # 4
+    (5, TType.LIST, 'secondaries', (TType.STRUCT,(pypegasus.base.ttypes.rpc_address, pypegasus.base.ttypes.rpc_address.thrift_spec)), None, ), # 5
+    (6, TType.LIST, 'last_drops', (TType.STRUCT,(pypegasus.base.ttypes.rpc_address, pypegasus.base.ttypes.rpc_address.thrift_spec)), None, ), # 6
     (7, TType.I64, 'last_committed_decree', None, None, ), # 7
   )
 
@@ -62,7 +62,7 @@ class partition_configuration:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.pid = base.ttypes.gpid()
+          self.pid = pypegasus.base.ttypes.gpid()
           self.pid.read(iprot)
         else:
           iprot.skip(ftype)
@@ -78,7 +78,7 @@ class partition_configuration:
           iprot.skip(ftype)
       elif fid == 4:
         if ftype == TType.STRUCT:
-          self.primary = base.ttypes.rpc_address()
+          self.primary = pypegasus.base.ttypes.rpc_address()
           self.primary.read(iprot)
         else:
           iprot.skip(ftype)
@@ -87,7 +87,7 @@ class partition_configuration:
           self.secondaries = []
           (_etype3, _size0) = iprot.readListBegin()
           for _i4 in xrange(_size0):
-            _elem5 = base.ttypes.rpc_address()
+            _elem5 = pypegasus.base.ttypes.rpc_address()
             _elem5.read(iprot)
             self.secondaries.append(_elem5)
           iprot.readListEnd()
@@ -98,7 +98,7 @@ class partition_configuration:
           self.last_drops = []
           (_etype9, _size6) = iprot.readListBegin()
           for _i10 in xrange(_size6):
-            _elem11 = base.ttypes.rpc_address()
+            _elem11 = pypegasus.base.ttypes.rpc_address()
             _elem11.read(iprot)
             self.last_drops.append(_elem11)
           iprot.readListEnd()
@@ -280,7 +280,7 @@ class query_cfg_response:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'err', (base.ttypes.error_code, base.ttypes.error_code.thrift_spec), None, ), # 1
+    (1, TType.STRUCT, 'err', (pypegasus.base.ttypes.error_code, pypegasus.base.ttypes.error_code.thrift_spec), None, ), # 1
     (2, TType.I32, 'app_id', None, None, ), # 2
     (3, TType.I32, 'partition_count', None, None, ), # 3
     (4, TType.BOOL, 'is_stateful', None, None, ), # 4
@@ -305,7 +305,7 @@ class query_cfg_response:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.err = base.ttypes.error_code()
+          self.err = pypegasus.base.ttypes.error_code()
           self.err.read(iprot)
         else:
           iprot.skip(ftype)

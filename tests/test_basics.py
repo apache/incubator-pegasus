@@ -1,8 +1,7 @@
 #! /usr/bin/env python
 # coding=utf-8
 
-
-from pgclient import *
+from pypegasus.pgclient import *
 from twisted.trial import unittest
 import uuid
 
@@ -28,7 +27,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def test_set_timeout(self):
-        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE*100000, 0, 10)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE*1000000, 0, 10)
         self.assertEqual(ret, error_types.ERR_TIMEOUT.value)
 
     @inlineCallbacks

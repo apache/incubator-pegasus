@@ -279,7 +279,7 @@ class rpc_address:
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+    return other.__class__.__name__ == "rpc_address" and self.__dict__ == other.__dict__
 
   def __ne__(self, other):
     return not (self == other)

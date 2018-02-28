@@ -935,7 +935,7 @@ class remove_args:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
+    (1, TType.STRUCT, 'key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
   )
 
   def __init__(self, key=None,):
@@ -952,7 +952,7 @@ class remove_args:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.key = base.ttypes.blob()
+          self.key = pypegasus.base.ttypes.blob()
           self.key.read(iprot)
         else:
           iprot.skip(ftype)
@@ -1197,7 +1197,7 @@ class get_args:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
+    (1, TType.STRUCT, 'key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
   )
 
   def __init__(self, key=None,):
@@ -1214,7 +1214,7 @@ class get_args:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.key = base.ttypes.blob()
+          self.key = pypegasus.base.ttypes.blob()
           self.key.read(iprot)
         else:
           iprot.skip(ftype)
@@ -1459,7 +1459,7 @@ class sortkey_count_args:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'hash_key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
+    (1, TType.STRUCT, 'hash_key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
   )
 
   def __init__(self, hash_key=None,):
@@ -1476,7 +1476,7 @@ class sortkey_count_args:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.hash_key = base.ttypes.blob()
+          self.hash_key = pypegasus.base.ttypes.blob()
           self.hash_key.read(iprot)
         else:
           iprot.skip(ftype)
@@ -1590,7 +1590,7 @@ class ttl_args:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'key', (base.ttypes.blob, base.ttypes.blob.thrift_spec), None, ), # 1
+    (1, TType.STRUCT, 'key', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 1
   )
 
   def __init__(self, key=None,):
@@ -1607,7 +1607,7 @@ class ttl_args:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.key = base.ttypes.blob()
+          self.key = pypegasus.base.ttypes.blob()
           self.key.read(iprot)
         else:
           iprot.skip(ftype)
