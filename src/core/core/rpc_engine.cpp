@@ -738,7 +738,7 @@ void rpc_engine::call_uri(rpc_address addr, message_ex *request, rpc_response_ta
                    uint64_t timeout_ts_ms) {
                     auto req2 = (message_ex *)(req);
                     if (req2->header->gpid.value != 0 && err != ERR_OK &&
-                        err != ERR_HANDLER_NOT_FOUND) {
+                        err != ERR_HANDLER_NOT_FOUND && err != ERR_APP_NOT_EXIST) {
                         auto resolver = req2->server_address.uri_address()->get_resolver();
                         if (nullptr != resolver) {
                             resolver->on_access_failure(req2->header->gpid.u.partition_index, err);

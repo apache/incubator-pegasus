@@ -395,6 +395,8 @@ void partition_resolver_simple::handle_pending_requests(std::deque<request_conte
             }
         } else if (err == ERR_HANDLER_NOT_FOUND) {
             end_request(std::move(req), err, rpc_address());
+        } else if (err == ERR_APP_NOT_EXIST) {
+            end_request(std::move(req), err, rpc_address());
         } else {
             call(std::move(req), true);
         }
