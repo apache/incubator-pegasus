@@ -119,8 +119,7 @@ inline bool query_app(command_executor *e, shell_context *sc, arguments args)
     if (err == ::dsn::ERR_OK)
         std::cout << "list app " << app_name << " succeed" << std::endl;
     else
-        std::cout << "list app " << app_name << " failed, error=" << err.to_string()
-                  << std::endl;
+        std::cout << "list app " << app_name << " failed, error=" << err.to_string() << std::endl;
     return true;
 }
 
@@ -277,8 +276,7 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
     if (err == ::dsn::ERR_OK)
         std::cout << "create app " << app_name << " succeed" << std::endl;
     else
-        std::cout << "create app " << app_name << " failed, error=" << err.to_string()
-                  << std::endl;
+        std::cout << "create app " << app_name << " failed, error=" << err.to_string() << std::endl;
     return true;
 }
 
@@ -317,8 +315,7 @@ inline bool drop_app(command_executor *e, shell_context *sc, arguments args)
     if (err == ::dsn::ERR_OK)
         std::cout << "drop app " << app_name << " succeed" << std::endl;
     else
-        std::cout << "drop app " << app_name << " failed, error=" << err.to_string()
-                  << std::endl;
+        std::cout << "drop app " << app_name << " failed, error=" << err.to_string() << std::endl;
     return true;
 }
 
@@ -1225,7 +1222,7 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
             if (scan_ret != pegasus::PERR_SCAN_COMPLETE && scan_ret != pegasus::PERR_OK) {
                 fprintf(file,
                         "ERROR: scan data failed: %s {app_id=%d, partition_index=%d, server=%s}\n",
-                        sc->pg_client->get_error_string(ret),
+                        sc->pg_client->get_error_string(scan_ret),
                         info.app_id,
                         info.partition_index,
                         info.server.c_str());
@@ -1233,7 +1230,7 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
                     fprintf(
                         stderr,
                         "ERROR: scan data failed: %s {app_id=%d, partition_index=%d, server=%s}\n",
-                        sc->pg_client->get_error_string(ret),
+                        sc->pg_client->get_error_string(scan_ret),
                         info.app_id,
                         info.partition_index,
                         info.server.c_str());
