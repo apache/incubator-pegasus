@@ -13,10 +13,6 @@ from thrift.transport import TTransport
 
 from twisted.internet.protocol import connectionDone
 from pypegasus.base import ttypes
-# import sys
-# sys.path.append("..")
-#
-# import base.ttypes as base
 
 
 class TPegasusTransport(TTwisted.TCallbackTransport):

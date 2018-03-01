@@ -10,7 +10,7 @@ from pypegasus.pgclient import *
 
 
 class ServerOperator(object):
-    shell_path = '/home/mi/dev/pegasus_1.6'
+    shell_path = '/home/mi/git.xiaomi/Pegasus/pegasus'
 
     @classmethod
     def modify_conf(cls, old_conf, new_conf):
