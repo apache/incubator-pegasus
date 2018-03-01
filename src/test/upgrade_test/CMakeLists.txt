@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME "pegasus_kill_test")
+set(MY_PROJ_NAME "pegasus_upgrade_test")
 project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
