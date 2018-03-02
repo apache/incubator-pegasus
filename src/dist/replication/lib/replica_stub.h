@@ -137,9 +137,7 @@ public:
     //
     // common routines for inquiry
     //
-    replica_ptr
-    get_replica(gpid gpid, bool new_when_possible = false, const app_info *app = nullptr);
-    replica_ptr get_replica(int32_t app_id, int32_t partition_index);
+    replica_ptr get_replica(gpid gpid);
     replication_options &options() { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
 
@@ -180,8 +178,6 @@ private:
                       std::shared_ptr<configuration_update_request> req2);
     ::dsn::task_ptr begin_close_replica(replica_ptr r);
     void close_replica(replica_ptr r);
-    void add_replica(replica_ptr r);
-    bool remove_replica(replica_ptr r);
     void notify_replica_state_update(const replica_configuration &config, bool is_closing);
     void trigger_checkpoint(replica_ptr r, bool is_emergency);
     void handle_log_failure(error_code err);
@@ -190,8 +186,8 @@ private:
     dsn::error_code on_kill_replica(gpid pid);
 
     void get_replica_info(/*out*/ replica_info &info, /*in*/ replica_ptr r);
-    void get_local_replicas(/*out*/ std::vector<replica_info> &replicas, bool lock_protected);
-    replica_life_cycle get_replica_life_cycle(const dsn::gpid &pid, bool lock_protected);
+    void get_local_replicas(/*out*/ std::vector<replica_info> &replicas);
+    replica_life_cycle get_replica_life_cycle(const dsn::gpid &pid);
     void on_gc_replica(replica_stub_ptr this_, gpid pid);
 
 private:
@@ -205,7 +201,7 @@ private:
     typedef std::map<gpid, std::pair<app_info, replica_info>>
         closed_replicas; // <gpid, <app_info, replica_info> >
 
-    mutable zlock _replicas_lock;
+    mutable zrwlock_nr _replicas_lock;
     replicas _replicas;
     opening_replicas _opening_replicas;
     closing_replicas _closing_replicas;
@@ -215,6 +211,7 @@ private:
     ::dsn::rpc_address _primary_address;
 
     ::dsn::dist::slave_failure_detector_with_multimaster *_failure_detector;
+    mutable zlock _state_lock;
     volatile replica_node_state _state;
 
     // constants

@@ -54,7 +54,6 @@ bool replica_stub::s_not_exit_on_log_failure = false;
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
                            bool is_long_subscriber /* = true*/)
     : serverlet("replica_stub"),
-      _replicas_lock(true),
       _kill_partition_command(nullptr),
       _deny_client_command(nullptr),
       _verbose_client_log_command(nullptr),
@@ -578,7 +577,7 @@ void replica_stub::initialize_start()
             tasking::enqueue_timer(LPC_QUERY_CONFIGURATION_ALL,
                                    this,
                                    [this]() {
-                                       zauto_lock l(_replicas_lock);
+                                       zauto_lock l(_state_lock);
                                        this->query_configuration_by_node();
                                    },
                                    std::chrono::milliseconds(_options.config_sync_interval_ms),
@@ -612,7 +611,7 @@ dsn::error_code replica_stub::on_kill_replica(gpid pid)
     if (pid.get_app_id() == -1 || pid.get_partition_index() == -1) {
         replicas rs;
         {
-            zauto_lock l(_replicas_lock);
+            zauto_read_lock l(_replicas_lock);
             rs = _replicas;
         }
         for (auto it = rs.begin(); it != rs.end(); ++it) {
@@ -635,45 +634,19 @@ dsn::error_code replica_stub::on_kill_replica(gpid pid)
     }
 }
 
-replica_ptr replica_stub::get_replica(gpid gpid, bool new_when_possible, const app_info *app)
+replica_ptr replica_stub::get_replica(gpid gpid)
 {
-    zauto_lock l(_replicas_lock);
+    zauto_read_lock l(_replicas_lock);
     auto it = _replicas.find(gpid);
     if (it != _replicas.end())
         return it->second;
-    else {
-        if (!new_when_possible)
-            return nullptr;
-        else if (_opening_replicas.find(gpid) != _opening_replicas.end()) {
-            ddebug("cannot create new replica coz it is under open");
-            return nullptr;
-        } else if (_closing_replicas.find(gpid) != _closing_replicas.end()) {
-            ddebug("cannot create new replica coz it is under close");
-            return nullptr;
-        } else {
-            dassert(app, "");
-            replica *rep = replica::newr(this, gpid, *app, false);
-            if (rep != nullptr) {
-                add_replica(rep);
-                _closed_replicas.erase(gpid);
-            }
-            return rep;
-        }
-    }
+    else
+        return nullptr;
 }
 
-replica_ptr replica_stub::get_replica(int32_t app_id, int32_t partition_index)
+replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle(const gpid &pid)
 {
-    gpid gpid;
-    gpid.set_app_id(app_id);
-    gpid.set_partition_index(partition_index);
-    return get_replica(gpid);
-}
-
-replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle(const gpid &pid,
-                                                                      bool lock_protected)
-{
-    dassert(lock_protected, "this can only be visited in the _replicas_lock");
+    zauto_read_lock l(_replicas_lock);
     if (_opening_replicas.find(pid) != _opening_replicas.end())
         return replica_stub::RL_creating;
     if (_replicas.find(pid) != _replicas.end())
@@ -732,7 +705,7 @@ void replica_stub::on_config_proposal(const configuration_update_request &propos
            enum_to_string(proposal.type),
            proposal.node.to_string());
 
-    replica_ptr rep = get_replica(proposal.config.pid, false, &proposal.info);
+    replica_ptr rep = get_replica(proposal.config.pid);
     if (rep == nullptr) {
         if (proposal.type == config_type::CT_ASSIGN_PRIMARY) {
             std::shared_ptr<configuration_update_request> req2(new configuration_update_request);
@@ -772,7 +745,7 @@ void replica_stub::on_query_replica_info(const query_replica_info_request &req,
 {
     std::set<gpid> visited_replicas;
     {
-        zauto_lock l(_replicas_lock);
+        zauto_read_lock l(_replicas_lock);
         for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {
             replica_ptr r = it->second;
             replica_info info;
@@ -809,7 +782,7 @@ void replica_stub::on_query_app_info(const query_app_info_request &req,
     resp.err = dsn::ERR_OK;
     std::set<app_id> visited_apps;
     {
-        zauto_lock l(_replicas_lock);
+        zauto_read_lock l(_replicas_lock);
         for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {
             replica_ptr r = it->second;
             const app_info &info = *r->get_app_info();
@@ -907,7 +880,7 @@ void replica_stub::on_group_check(const group_check_request &request,
            enum_to_string(request.config.status),
            request.last_committed_decree);
 
-    replica_ptr rep = get_replica(request.config.pid, false, &request.app);
+    replica_ptr rep = get_replica(request.config.pid);
     if (rep != nullptr) {
         rep->on_group_check(request, response);
     } else {
@@ -984,7 +957,7 @@ void replica_stub::on_add_learner(const group_check_request &request)
            enum_to_string(request.config.status),
            request.last_committed_decree);
 
-    replica_ptr rep = get_replica(request.config.pid, false, &request.app);
+    replica_ptr rep = get_replica(request.config.pid);
     if (rep != nullptr) {
         rep->on_add_learner(request);
     } else {
@@ -1018,10 +991,9 @@ void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
     }
 }
 
-void replica_stub::get_local_replicas(std::vector<replica_info> &replicas, bool lock_protected)
+void replica_stub::get_local_replicas(std::vector<replica_info> &replicas)
 {
-    dassert(lock_protected, "this should be visited in the protection of replica_lock");
-
+    zauto_read_lock l(_replicas_lock);
     // local_replicas = replicas + closing_replicas + closed_replicas
     int total_replicas = _replicas.size() + _closing_replicas.size() + _closed_replicas.size();
     replicas.reserve(total_replicas);
@@ -1044,6 +1016,8 @@ void replica_stub::get_local_replicas(std::vector<replica_info> &replicas, bool 
     }
 }
 
+// run in THREAD_POOL_META_SERVER
+// assert(_state_lock.locked())
 void replica_stub::query_configuration_by_node()
 {
     if (_state == NS_Disconnected) {
@@ -1060,7 +1034,7 @@ void replica_stub::query_configuration_by_node()
     req.node = _primary_address;
 
     // TODO: send stored replicas may cost network, we shouldn't config the frequency
-    get_local_replicas(req.stored_replicas, true);
+    get_local_replicas(req.stored_replicas);
     req.__isset.stored_replicas = true;
 
     ::dsn::marshall(msg, req);
@@ -1079,20 +1053,24 @@ void replica_stub::on_meta_server_connected()
 {
     ddebug("meta server connected");
 
-    zauto_lock l(_replicas_lock);
+    zauto_lock l(_state_lock);
     if (_state == NS_Disconnected) {
         _state = NS_Connecting;
-        query_configuration_by_node();
+        tasking::enqueue(LPC_QUERY_CONFIGURATION_ALL, this, [this]() {
+            zauto_lock l(_state_lock);
+            this->query_configuration_by_node();
+        });
     }
 }
 
+// run in THREAD_POOL_META_SERVER
 void replica_stub::on_node_query_reply(error_code err,
                                        dsn_message_t request,
                                        dsn_message_t response)
 {
     ddebug("query node partitions replied, err = %s", err.to_string());
 
-    zauto_lock l(_replicas_lock);
+    zauto_lock l(_state_lock);
     _config_query_task = nullptr;
     if (err != ERR_OK) {
         if (_state == NS_Connecting) {
@@ -1117,9 +1095,9 @@ void replica_stub::on_node_query_reply(error_code err,
             _config_query_task = tasking::enqueue(LPC_QUERY_CONFIGURATION_ALL,
                                                   this,
                                                   [this]() {
-                                                      zauto_lock l(_replicas_lock);
+                                                      zauto_lock l(_state_lock);
                                                       _config_query_task = nullptr;
-                                                      query_configuration_by_node();
+                                                      this->query_configuration_by_node();
                                                   },
                                                   0,
                                                   std::chrono::milliseconds(delay_ms));
@@ -1135,7 +1113,12 @@ void replica_stub::on_node_query_reply(error_code err,
                (int)resp.partitions.size(),
                (int)resp.gc_replicas.size());
 
-        replicas rs = _replicas;
+        replicas rs;
+        {
+            zauto_read_lock l(_replicas_lock);
+            rs = _replicas;
+        }
+
         for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it) {
             rs.erase(it->config.pid);
             tasking::enqueue(LPC_QUERY_NODE_CONFIGURATION_SCATTER,
@@ -1147,7 +1130,7 @@ void replica_stub::on_node_query_reply(error_code err,
         // for rps not exist on meta_servers
         for (auto it = rs.begin(); it != rs.end(); ++it) {
             tasking::enqueue(
-                LPC_QUERY_NODE_CONFIGURATION_SCATTER,
+                LPC_QUERY_NODE_CONFIGURATION_SCATTER2,
                 this,
                 std::bind(&replica_stub::on_node_query_reply_scatter2, this, this, it->first),
                 gpid_to_thread_hash(it->first));
@@ -1156,7 +1139,7 @@ void replica_stub::on_node_query_reply(error_code err,
         // handle the replicas which need to be gc
         if (resp.__isset.gc_replicas) {
             for (replica_info &rep : resp.gc_replicas) {
-                replica_stub::replica_life_cycle lc = get_replica_life_cycle(rep.pid, true);
+                replica_stub::replica_life_cycle lc = get_replica_life_cycle(rep.pid);
                 if (lc == replica_stub::RL_closed) {
                     tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
                                      this,
@@ -1171,7 +1154,7 @@ void replica_stub::on_node_query_reply(error_code err,
 void replica_stub::set_meta_server_connected_for_test(
     const configuration_query_by_node_response &resp)
 {
-    zauto_lock l(_replicas_lock);
+    zauto_lock l(_state_lock);
     dassert(_state != NS_Connected, "");
     _state = NS_Connected;
 
@@ -1266,13 +1249,19 @@ void replica_stub::on_meta_server_disconnected()
 {
     ddebug("meta server disconnected");
 
-    zauto_lock l(_replicas_lock);
+    zauto_lock l(_state_lock);
     if (NS_Disconnected == _state)
         return;
 
     _state = NS_Disconnected;
 
-    for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {
+    replicas rs;
+    {
+        zauto_read_lock l(_replicas_lock);
+        rs = _replicas;
+    }
+
+    for (auto it = rs.begin(); it != rs.end(); ++it) {
         tasking::enqueue(
             LPC_CM_DISCONNECTED_SCATTER,
             this,
@@ -1286,7 +1275,7 @@ void replica_stub::on_meta_server_disconnected()
 void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, gpid gpid)
 {
     {
-        zauto_lock l(_replicas_lock);
+        zauto_lock l(_state_lock);
         if (_state != NS_Disconnected)
             return;
     }
@@ -1343,7 +1332,7 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
     std::pair<app_info, replica_info> closed_info;
 
     {
-        zauto_lock l(_replicas_lock);
+        zauto_write_lock l(_replicas_lock);
         auto iter = _closed_replicas.find(pid);
         if (iter == _closed_replicas.end())
             return;
@@ -1372,7 +1361,7 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
             "gc_replica: failed to move directory '%s' to '%s'", replica_path.c_str(), rename_path);
 
         // if gc the replica failed, add it back
-        zauto_lock l(_replicas_lock);
+        zauto_write_lock l(_replicas_lock);
         _fs_manager.add_replica(pid, replica_path);
         _closed_replicas.emplace(pid, closed_info);
     } else {
@@ -1388,7 +1377,7 @@ void replica_stub::on_gc()
     uint64_t start = dsn_now_ns();
     replicas rs;
     {
-        zauto_lock l(_replicas_lock);
+        zauto_read_lock l(_replicas_lock);
         rs = _replicas;
     }
     ddebug("start to garbage collection, replica_count = %d", (int)rs.size());
@@ -1519,10 +1508,9 @@ void replica_stub::on_gc()
                    reserved_log_count,
                    (int)prevent_gc_replicas.size(),
                    oss.str().c_str());
-            zauto_lock l(_replicas_lock);
             for (auto &id : prevent_gc_replicas) {
-                auto find = _replicas.find(id);
-                if (find != _replicas.end()) {
+                auto find = rs.find(id);
+                if (find != rs.end()) {
                     tasking::enqueue(
                         LPC_PER_REPLICA_CHECKPOINT_TIMER,
                         this,
@@ -1613,19 +1601,19 @@ void replica_stub::on_disk_stat()
                                                  std::shared_ptr<group_check_request> req,
                                                  std::shared_ptr<configuration_update_request> req2)
 {
-    _replicas_lock.lock();
+    _replicas_lock.lock_write();
     if (_replicas.find(gpid) != _replicas.end()) {
-        _replicas_lock.unlock();
+        _replicas_lock.unlock_write();
         ddebug("open replica '%s.%d.%d' failed coz replica is already opened",
-                app.app_type.c_str(),
-                gpid.get_app_id(),
-                gpid.get_partition_index());
+               app.app_type.c_str(),
+               gpid.get_app_id(),
+               gpid.get_partition_index());
         return nullptr;
     }
 
     auto it = _opening_replicas.find(gpid);
     if (it != _opening_replicas.end()) {
-        _replicas_lock.unlock();
+        _replicas_lock.unlock_write();
         ddebug("open replica '%s.%d.%d' failed coz replica is under opening",
                app.app_type.c_str(),
                gpid.get_app_id(),
@@ -1640,10 +1628,14 @@ void replica_stub::on_disk_stat()
                 _closing_replicas.erase(it2);
                 _counter_replicas_closing_count->decrement();
 
-                add_replica(r);
+                auto pr = _replicas.insert(replicas::value_type(gpid, r));
+                dassert(pr.second, "replica %s is already in the collection", r->name());
+                _counter_replicas_count->increment();
+
+                _closed_replicas.erase(gpid);
 
                 // unlock here to avoid dead lock
-                _replicas_lock.unlock();
+                _replicas_lock.unlock_write();
 
                 ddebug("open replica '%s.%d.%d' which is to be closed",
                        app.app_type.c_str(),
@@ -1657,7 +1649,7 @@ void replica_stub::on_disk_stat()
 
                 return nullptr;
             } else {
-                _replicas_lock.unlock();
+                _replicas_lock.unlock_write();
                 ddebug("open replica '%s.%d.%d' failed coz replica is under closing",
                        app.app_type.c_str(),
                        gpid.get_app_id(),
@@ -1670,10 +1662,10 @@ void replica_stub::on_disk_stat()
                 this,
                 std::bind(&replica_stub::open_replica, this, app, gpid, req, req2));
 
-            _counter_replicas_opening_count->increment();
             _opening_replicas[gpid] = task;
+            _counter_replicas_opening_count->increment();
             _closed_replicas.erase(gpid);
-            _replicas_lock.unlock();
+            _replicas_lock.unlock_write();
             return task;
         }
     }
@@ -1727,19 +1719,25 @@ void replica_stub::open_replica(const app_info &app,
                gpid.get_app_id(),
                gpid.get_partition_index(),
                _primary_address.to_string());
+        zauto_write_lock l(_replicas_lock);
+        auto ret = _opening_replicas.erase(gpid);
+        dassert(ret > 0, "replica %s is not in _opening_replicas", rep->name());
         _counter_replicas_opening_count->decrement();
-        zauto_lock l(_replicas_lock);
-        _opening_replicas.erase(gpid);
         return;
     }
 
     {
+        zauto_write_lock l(_replicas_lock);
+        auto ret = _opening_replicas.erase(gpid);
+        dassert(ret > 0, "replica %s is not in _opening_replicas", rep->name());
         _counter_replicas_opening_count->decrement();
-        zauto_lock l(_replicas_lock);
+
         auto it = _replicas.find(gpid);
-        dassert(it == _replicas.end(), "");
-        add_replica(rep);
-        _opening_replicas.erase(gpid);
+        dassert(it == _replicas.end(), "replica %s is already in _replicas", rep->name());
+        _replicas.insert(replicas::value_type(rep->get_gpid(), rep));
+        _counter_replicas_count->increment();
+
+        _closed_replicas.erase(gpid);
     }
 
     if (nullptr != req) {
@@ -1759,9 +1757,11 @@ void replica_stub::open_replica(const app_info &app,
             r->name(),
             enum_to_string(r->status()));
 
-    zauto_lock l(_replicas_lock);
+    zauto_write_lock l(_replicas_lock);
 
-    if (remove_replica(r)) {
+    if (_replicas.erase(r->get_gpid()) > 0) {
+        _counter_replicas_count->decrement();
+
         int delay_ms = 0;
         if (r->status() == partition_status::PS_INACTIVE) {
             delay_ms = _options.gc_memory_replica_interval_ms;
@@ -1793,33 +1793,14 @@ void replica_stub::close_replica(replica_ptr r)
     r->close();
 
     {
+        zauto_write_lock l(_replicas_lock);
+        auto ret = _closing_replicas.erase(r->get_gpid());
+        dassert(ret > 0, "replica %s is not in _closing_replicas", r->name());
         _counter_replicas_closing_count->decrement();
-        zauto_lock l(_replicas_lock);
-        _closing_replicas.erase(r->get_gpid());
         _closed_replicas.emplace(r_info.pid, std::make_pair(std::move(a_info), std::move(r_info)));
     }
 
     ddebug("%s: replica closed", r->name());
-}
-
-void replica_stub::add_replica(replica_ptr r)
-{
-    _counter_replicas_count->increment();
-    zauto_lock l(_replicas_lock);
-    auto pr = _replicas.insert(replicas::value_type(r->get_gpid(), r));
-    dassert(pr.second, "replica %s is already in the collection", r->name());
-    _closed_replicas.erase(r->get_gpid());
-}
-
-bool replica_stub::remove_replica(replica_ptr r)
-{
-    zauto_lock l(_replicas_lock);
-    if (_replicas.erase(r->get_gpid()) > 0) {
-        _counter_replicas_count->decrement();
-        return true;
-    } else {
-        return false;
-    }
 }
 
 void replica_stub::notify_replica_state_update(const replica_configuration &config, bool is_closing)
@@ -1925,7 +1906,7 @@ void replica_stub::open_service()
             ddebug("start to trigger checkpoint by remote command");
             replicas rs;
             {
-                zauto_lock l(_replicas_lock);
+                zauto_read_lock l(_replicas_lock);
                 rs = _replicas;
             }
             for (auto it = rs.begin(); it != rs.end(); ++it) {
@@ -1985,15 +1966,15 @@ void replica_stub::close()
     }
 
     {
-        zauto_lock l(_replicas_lock);
+        zauto_write_lock l(_replicas_lock);
         while (_closing_replicas.empty() == false) {
             task_ptr task = _closing_replicas.begin()->second.first;
             gpid tmp_gpid = _closing_replicas.begin()->first;
-            _replicas_lock.unlock();
+            _replicas_lock.unlock_write();
 
             task->wait();
 
-            _replicas_lock.lock();
+            _replicas_lock.lock_write();
             // task will automatically remove this replica from _closing_replicas
             if (false == _closing_replicas.empty()) {
                 dassert((tmp_gpid == _closing_replicas.begin()->first) == false,
@@ -2005,12 +1986,12 @@ void replica_stub::close()
 
         while (_opening_replicas.empty() == false) {
             task_ptr task = _opening_replicas.begin()->second;
-            _replicas_lock.unlock();
+            _replicas_lock.unlock_write();
 
             task->cancel(true);
 
             _counter_replicas_opening_count->decrement();
-            _replicas_lock.lock();
+            _replicas_lock.lock_write();
             _opening_replicas.erase(_opening_replicas.begin());
         }
 

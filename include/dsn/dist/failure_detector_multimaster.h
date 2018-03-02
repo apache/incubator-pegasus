@@ -37,6 +37,7 @@
 
 #include <dsn/dist/failure_detector.h>
 #include <dsn/cpp/zlocks.h>
+#include <functional>
 
 namespace dsn {
 namespace dist {
