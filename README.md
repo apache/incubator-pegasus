@@ -9,14 +9,9 @@ Installation
 ------------
 Python 2.x
 
-It uses *setuptools* to retrieve and build the package as well as all dependent modules. So you
-must make sure that setuptools is available on your system. Or else you can install it as this:
+pypegasus can be installed via pip as follows:
 
-`$ sudo apt-get install python-setuptools`
-
-Then install pegasus python client:
-
-`$ sudo python setup.py install`
+`pip install python_redis`
 
 Usage
 -----
