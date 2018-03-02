@@ -559,6 +559,29 @@ bool message_ex::read_next(void **ptr, size_t *size)
     }
 }
 
+bool message_ex::read_next(blob &data)
+{
+    // printf("%p %s %d\n", this, __FUNCTION__, utils::get_current_tid());
+    dassert(this->_is_read && this->_rw_committed,
+            "there are pending msg read not committed"
+            ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
+
+    int idx = this->_rw_index;
+    if (-1 == idx || this->_rw_offset == static_cast<int>(this->buffers[idx].length())) {
+        idx = ++this->_rw_index;
+        this->_rw_offset = 0;
+    }
+
+    if (idx < (int)this->buffers.size()) {
+        this->_rw_committed = false;
+        data = this->buffers[idx].range(this->_rw_offset);
+        return true;
+    } else {
+        data = blob();
+        return false;
+    }
+}
+
 void message_ex::read_commit(size_t size)
 {
     // printf("%p %s\n", this, __FUNCTION__);

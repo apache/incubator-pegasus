@@ -106,6 +106,7 @@ public:
     static int max();
     static bool is_exist(const char *name);
     static task_code try_get(const char *name, task_code default_value);
+    static task_code try_get(const std::string &name, task_code default_value);
 
 private:
     task_code(const char *name);

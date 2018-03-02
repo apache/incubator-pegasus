@@ -9,6 +9,7 @@ class binary_reader
 public:
     // given bb on ctor
     binary_reader(const blob &blob);
+    binary_reader(blob &&blob);
 
     // or delayed init
     binary_reader() {}
@@ -16,6 +17,7 @@ public:
     virtual ~binary_reader() {}
 
     void init(const blob &bb);
+    void init(blob &&bb);
 
     template <typename T>
     int read_pod(/*out*/ T &val);
@@ -39,6 +41,7 @@ public:
     int read(/*out*/ std::string &s);
     int read(char *buffer, int sz);
     int read(blob &blob);
+    int read(blob &blob, int len);
 
     bool next(const void **data, int *size);
     bool skip(int count);

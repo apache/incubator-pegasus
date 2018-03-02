@@ -836,7 +836,7 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size,
         return err;
     }
 
-    std::shared_ptr<binary_reader> reader(new binary_reader(bb));
+    std::shared_ptr<binary_reader> reader(new binary_reader(std::move(bb)));
     end_offset += sizeof(log_block_header);
 
     // read file header
@@ -873,7 +873,7 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size,
             break;
         }
 
-        reader.reset(new binary_reader(bb));
+        reader.reset(new binary_reader(std::move(bb)));
         end_offset += sizeof(log_block_header);
     }
 
@@ -1952,7 +1952,7 @@ log_file::~log_file() { close(); }
         return nullptr;
     }
 
-    binary_reader reader(hdr_blob);
+    binary_reader reader(std::move(hdr_blob));
     lf->read_file_header(reader);
     if (!lf->is_right_header()) {
         std::string removed = std::string(path) + ".removed";

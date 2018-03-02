@@ -253,8 +253,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
                     break;
                 }
                 _offset += sizeof(header) + header.size;
-                blob blob_wrapper(buffer, (int)header.size);
-                binary_reader reader(blob_wrapper);
+                binary_reader reader(blob(buffer, (int)header.size));
                 int op_type;
                 reader.read(op_type);
 

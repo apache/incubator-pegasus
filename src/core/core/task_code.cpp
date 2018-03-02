@@ -21,6 +21,15 @@ task_code task_code::try_get(const char *name, task_code default_value)
     return task_code(code);
 }
 
+/*static*/
+task_code task_code::try_get(const std::string &name, task_code default_value)
+{
+    int code = task_code_mgr::instance().get_id(name);
+    if (code == -1)
+        return default_value;
+    return task_code(code);
+}
+
 task_code::task_code(const char *name) : _internal_code(task_code_mgr::instance().register_id(name))
 {
 }

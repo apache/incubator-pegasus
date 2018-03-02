@@ -50,7 +50,7 @@ extern counter_info *counter_info_ptr[PREF_COUNTER_COUNT];
 
 static int find_task_id(const std::string &name)
 {
-    return dsn::task_code::try_get(name.c_str(), TASK_CODE_INVALID).code();
+    return dsn::task_code::try_get(name, TASK_CODE_INVALID).code();
 }
 
 static dsn_perf_counter_percentile_type_t find_percentail_type(const std::string &name)

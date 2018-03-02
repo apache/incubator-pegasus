@@ -149,6 +149,7 @@ char *message_reader::read_buffer_ptr(unsigned int read_next)
 
         // copy
         if (rb.length() > 0) {
+            // every read buffer_block_size data may cause one copy
             memcpy((void *)_buffer.data(), (const void *)rb.data(), rb.length());
             _buffer_occupied = rb.length();
         }

@@ -1,15 +1,25 @@
 #include <dsn/utility/utils.h>
 #include <dsn/utility/binary_reader.h>
+#include <dsn/c/api_utilities.h>
 
 namespace dsn {
 
-binary_reader::binary_reader(const blob &blob) { init(blob); }
+binary_reader::binary_reader(const blob &bb) { init(bb); }
+binary_reader::binary_reader(blob &&bb) { init(std::move(bb)); }
 
 void binary_reader::init(const blob &bb)
 {
     _blob = bb;
     _size = bb.length();
     _ptr = bb.data();
+    _remaining_size = _size;
+}
+
+void binary_reader::init(blob &&bb)
+{
+    _blob = std::move(bb);
+    _size = _blob.length();
+    _ptr = _blob.data();
     _remaining_size = _size;
 }
 
@@ -35,6 +45,11 @@ int binary_reader::read(blob &blob)
     if (0 == read(len))
         return 0;
 
+    return read(blob, len);
+}
+
+int binary_reader::read(blob &blob, int len)
+{
     if (len <= get_remaining_size()) {
         blob = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
 

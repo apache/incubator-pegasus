@@ -186,7 +186,7 @@ void mutation::write_to(binary_writer &writer, dsn_message_t /*to*/) const
     for (int i = 0; i < size; ++i) {
         std::string name;
         reader.read(name);
-        ::dsn::task_code code = dsn::task_code::try_get(name.c_str(), TASK_CODE_INVALID);
+        ::dsn::task_code code = dsn::task_code::try_get(name, TASK_CODE_INVALID);
         dassert(code != TASK_CODE_INVALID, "invalid mutation task code: %s", name.c_str());
         mu->data.updates[i].code = code;
 
@@ -197,11 +197,7 @@ void mutation::write_to(binary_writer &writer, dsn_message_t /*to*/) const
         reader.read_pod(lengths[i]);
     }
     for (int i = 0; i < size; ++i) {
-        int len = lengths[i];
-        std::shared_ptr<char> holder((char *)dsn_transient_malloc(len),
-                                     [](char *ptr) { dsn_transient_free((void *)ptr); });
-        reader.read(holder.get(), len);
-        mu->data.updates[i].data.assign(holder, 0, len);
+        reader.read(mu->data.updates[i].data, lengths[i]);
     }
 
     mu->client_requests.resize(mu->data.updates.size());

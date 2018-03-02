@@ -434,7 +434,7 @@ inline uint32_t task_code::read(apache::thrift::protocol::TProtocol *iprot)
 
         xfer += iprot->readStructEnd();
     }
-    _internal_code = try_get(task_code_string.c_str(), TASK_CODE_INVALID);
+    _internal_code = try_get(task_code_string, TASK_CODE_INVALID);
     return xfer;
 }
 
@@ -518,7 +518,7 @@ inline uint32_t error_code::read(apache::thrift::protocol::TProtocol *iprot)
 
         xfer += iprot->readStructEnd();
     }
-    *this = error_code::try_get(ec_string.c_str(), ERR_UNKNOWN);
+    *this = error_code::try_get(ec_string, ERR_UNKNOWN);
     return xfer;
 }
 

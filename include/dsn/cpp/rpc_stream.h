@@ -38,6 +38,7 @@
 #include <dsn/utility/utils.h>
 #include <dsn/utility/binary_reader.h>
 #include <dsn/utility/binary_writer.h>
+#include <dsn/tool-api/rpc_message.h>
 #include <dsn/service_api_c.h>
 #include <dsn/cpp/auto_codes.h>
 
@@ -62,13 +63,11 @@ public:
     {
         assign(msg, false);
 
-        void *ptr;
-        size_t size;
-        bool r = dsn_msg_read_next(msg, &ptr, &size);
+        ::dsn::blob bb;
+        bool r = ((::dsn::message_ex *)msg)->read_next(bb);
         dassert(r, "read msg must have one segment of buffer ready");
 
-        blob bb((const char *)ptr, 0, (int)size);
-        init(bb);
+        init(std::move(bb));
     }
 
     ~rpc_read_stream()

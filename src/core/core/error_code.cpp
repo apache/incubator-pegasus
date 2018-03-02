@@ -19,6 +19,14 @@ error_code error_code::try_get(const char *name, error_code default_value)
         return default_value;
     return error_code(ans);
 }
+/*static*/
+error_code error_code::try_get(const std::string &name, error_code default_value)
+{
+    int ans = dsn::utils::customized_id_mgr<dsn::error_code>::instance().get_id(name);
+    if (ans == -1)
+        return default_value;
+    return error_code(ans);
+}
 
 error_code::error_code(const char *name)
 {

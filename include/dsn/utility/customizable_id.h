@@ -58,7 +58,9 @@ template <typename T>
 class customized_id_mgr : public dsn::utils::singleton<customized_id_mgr<T>>
 {
 public:
+    customized_id_mgr() : _names(199) {}
     int get_id(const char *name) const;
+    int get_id(const std::string &name) const;
     const char *get_name(int id) const;
     int register_id(const char *name);
     int max_value() const { return static_cast<int>(_names2.size()) - 1; }
@@ -168,6 +170,16 @@ template <typename T>
 int customized_id_mgr<T>::get_id(const char *name) const
 {
     auto it = _names.find(std::string(name));
+    if (it == _names.end())
+        return -1;
+    else
+        return it->second;
+}
+
+template <typename T>
+int customized_id_mgr<T>::get_id(const std::string &name) const
+{
+    auto it = _names.find(name);
     if (it == _names.end())
         return -1;
     else

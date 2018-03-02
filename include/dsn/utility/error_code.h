@@ -33,6 +33,7 @@ public:
     static int max();
     static bool is_exist(const char *name);
     static error_code try_get(const char *name, error_code default_value);
+    static error_code try_get(const std::string &name, error_code default_value);
 
 private:
     int _internal_code;
