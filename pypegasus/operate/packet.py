@@ -1,17 +1,17 @@
 import struct
 import ctypes
-import base.ttypes
-import utils
 
 from thrift.Thrift import TMessageType
 
-from utils import tools
-from rrdb import (
+from pypegasus import utils
+from pypegasus.rrdb import (
         meta,
         rrdb)
-from base.ttypes import (
-        error_code,
-        gpid)
+from pypegasus.base.ttypes import (
+    rocksdb_error_types,
+    error_code,
+    gpid)
+from pypegasus.utils import tools
 
 
 class ThriftHeader(object):
@@ -127,8 +127,8 @@ class RrdbMultiGetOperator(ClientOperator):
     @staticmethod
     def parse_result(resp):
         data = {}
-        if resp.error == base.ttypes.rocksdb_error_types.kOk.value\
-           or resp.error == base.ttypes.rocksdb_error_types.kIncomplete.value:
+        if resp.error == rocksdb_error_types.kOk.value\
+           or resp.error == rocksdb_error_types.kIncomplete.value:
             for kv in resp.kvs:
                 data[kv.key.data] = kv.value.data
 

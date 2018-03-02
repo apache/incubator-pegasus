@@ -1,9 +1,12 @@
 #! /usr/bin/env python
 # coding=utf-8
 
+import time
 import commands
-from pgclient import *
+
 from twisted.trial import unittest
+
+from pypegasus.pgclient import *
 
 
 class ServerOperator(object):

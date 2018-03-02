@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # coding:utf-8
-from pgclient import *
-from utils.tools import ScanOptions
+
+from pypegasus.pgclient import Pegasus
+from pypegasus.utils.tools import ScanOptions
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, Deferred

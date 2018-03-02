@@ -117,7 +117,7 @@ class query_cfg_args:
 
   thrift_spec = (
     None, # 0
-    (1, TType.STRUCT, 'query', (replication.ttypes.query_cfg_request, replication.ttypes.query_cfg_request.thrift_spec), None, ), # 1
+    (1, TType.STRUCT, 'query', (pypegasus.replication.ttypes.query_cfg_request, pypegasus.replication.ttypes.query_cfg_request.thrift_spec), None, ), # 1
   )
 
   def __init__(self, query=None,):
@@ -134,7 +134,7 @@ class query_cfg_args:
         break
       if fid == 1:
         if ftype == TType.STRUCT:
-          self.query = replication.ttypes.query_cfg_request()
+          self.query = pypegasus.replication.ttypes.query_cfg_request()
           self.query.read(iprot)
         else:
           iprot.skip(ftype)
@@ -182,7 +182,7 @@ class query_cfg_result:
   """
 
   thrift_spec = (
-    (0, TType.STRUCT, 'success', (replication.ttypes.query_cfg_response, replication.ttypes.query_cfg_response.thrift_spec), None, ), # 0
+    (0, TType.STRUCT, 'success', (pypegasus.replication.ttypes.query_cfg_response, pypegasus.replication.ttypes.query_cfg_response.thrift_spec), None, ), # 0
   )
 
   def __init__(self, success=None,):
@@ -199,7 +199,7 @@ class query_cfg_result:
         break
       if fid == 0:
         if ftype == TType.STRUCT:
-          self.success = replication.ttypes.query_cfg_response()
+          self.success = pypegasus.replication.ttypes.query_cfg_response()
           self.success.read(iprot)
         else:
           iprot.skip(ftype)

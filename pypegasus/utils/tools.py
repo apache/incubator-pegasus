@@ -2,7 +2,7 @@
 
 import time
 import struct
-from base.ttypes import (
+from pypegasus.base.ttypes import (
     rocksdb_error_types,
     error_types
 )
