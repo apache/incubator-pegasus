@@ -194,7 +194,7 @@ function make_patch
     carrot_execute "git commit -am \"Release $project_name $new_version\""
     carrot_execute "git tag -a v$new_version -m \"Release $project_name $new_version\""
     carrot_execute "git push -u origin $current_branch"
-    carrot_execute "git push --tags"
+    carrot_execute "git push origin v$new_version"
 
     if [ $current_branch != $old_branch ]; then
         carrot_execute "git checkout $old_branch"
@@ -248,7 +248,7 @@ function release_minor
     carrot_execute "git push -u origin v$this_version"
     # then make tag
     carrot_execute "git tag -a v$new_version -m \"Release $project_name $new_version\""
-    carrot_execute "git push --tags"
+    carrot_execute "git push origin v$new_version"
 
     # update the staging branch's version
     carrot_execute "git checkout $this_branch"
