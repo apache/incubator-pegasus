@@ -695,6 +695,7 @@ void mutation_log::close()
 error_code mutation_log::create_new_log_file()
 {
     // create file
+    uint64_t start = dsn_now_ns();
     log_file_ptr logf =
         log_file::create_write(_dir.c_str(), _last_file_index + 1, _global_end_offset);
     if (logf == nullptr) {
@@ -709,7 +710,9 @@ error_code mutation_log::create_new_log_file()
             "%" PRId64 " VS %" PRId64 "",
             _global_end_offset,
             logf->start_offset());
-    ddebug("create new log file %s succeed", logf->path().c_str());
+    ddebug("create new log file %s succeed, time_used = %" PRIu64 " ns",
+           logf->path().c_str(),
+           dsn_now_ns() - start);
 
     // update states
     _last_file_index++;
