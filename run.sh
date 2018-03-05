@@ -54,7 +54,7 @@ function usage_build()
 {
     echo "Options for subcommand 'build':"
     echo "   -h|--help         print the help info"
-    echo "   -t|--type         build type: debug|release, default is debug"
+    echo "   -t|--type         build type: debug|release, default is release"
     echo "   -s|--serialize    serialize type: dsn|thrift|proto, default is thrift"
     echo "   -c|--clear        clear the environment before building"
     echo "   -cc|--half-clear  only clear the environment of replication before building"
@@ -68,7 +68,7 @@ function usage_build()
 }
 function run_build()
 {
-    BUILD_TYPE="debug"
+    BUILD_TYPE="release"
     CLEAR=NO
     PART_CLEAR=NO
     JOB_NUM=8
@@ -161,6 +161,9 @@ function run_build()
         echo "ERROR: build pegasus failed"
         exit -1
     fi
+
+    cd $ROOT
+    chmod +x scripts/*.sh
 }
 
 #####################

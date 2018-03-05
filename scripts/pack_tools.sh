@@ -1,34 +1,6 @@
 #!/bin/bash
 
-function get_boost_lib()
-{
-    libname=`ldd ./DSN_ROOT/bin/pegasus_shell/pegasus_shell 2>/dev/null | grep boost_$2`
-    libname=`echo $libname | cut -f1 -d" "`
-    if [ $1 = "true" ]; then
-        echo $BOOST_DIR/lib/$libname
-    else
-        echo `ldconfig -p|grep $libname|awk '{print $NF}'`
-    fi
-}
-
-function get_stdcpp_lib()
-{
-    libname=`ldd ./DSN_ROOT/bin/pegasus_shell/pegasus_shell 2>/dev/null | grep libstdc++`
-    libname=`echo $libname | cut -f1 -d" "`
-    if [ $1 = "true" ]; then
-        gcc_path=`which gcc`
-        echo `dirname $gcc_path`/../lib64/$libname
-    else
-        echo `ldconfig -p|grep $libname|awk '{print $NF}'`
-    fi
-}
-
-function get_lib()
-{
-    libname=`ldd ./DSN_ROOT/bin/pegasus_shell/pegasus_shell 2>/dev/null | grep $1`
-    libname=`echo $libname | cut -f1 -d" "`
-    echo `ldconfig -p | grep $libname | head -n 1 | awk '{print $NF}'`
-}
+source $(dirname $0)/pack_common.sh
 
 function usage()
 {
@@ -122,11 +94,10 @@ cp -v ./run.sh ${pack}/
 cp -v `get_boost_lib $custom_boost_lib system` ${pack}/DSN_ROOT/lib/
 cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/DSN_ROOT/lib/
 cp -v `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
-cp -v `get_lib libreadline.so` ${pack}/DSN_ROOT/lib/
-cp -v `get_lib libbz2.so` ${pack}/DSN_ROOT/lib/
-cp -v `get_lib libz.so` ${pack}/DSN_ROOT/lib/
-cp -v `get_lib libsnappy.so` ${pack}/DSN_ROOT/lib/
-cp -v `get_lib libaio.so` ${pack}/DSN_ROOT/lib/
+cp -v `get_system_lib shell readline` ${pack}/DSN_ROOT/lib/
+cp -v `get_system_lib shell snappy` ${pack}/DSN_ROOT/lib/
+cp -v `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/
+cp -v `get_system_lib shell bz2` ${pack}/DSN_ROOT/lib/
 
 mkdir -p ${pack}/scripts
 cp -v ./scripts/pegasus_kill_test.sh ${pack}/scripts/
