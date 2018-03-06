@@ -94,6 +94,7 @@ cp -v ./DSN_ROOT/lib/libdsn_layer2_stateful_type1.so ${pack}/bin
 cp -v ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/bin
 cp -v ./rdsn/scripts/linux/learn_stat.py ${pack}/bin
 cp -v ./scripts/sendmail.sh ${pack}/bin
+cp -v ./src/server/config.ini ${pack}/bin
 
 cp -v `get_boost_lib $custom_boost_lib system` ${pack}/bin
 cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/bin

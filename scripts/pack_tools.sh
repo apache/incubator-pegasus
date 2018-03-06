@@ -100,10 +100,8 @@ cp -v `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell bz2` ${pack}/DSN_ROOT/lib/
 
 mkdir -p ${pack}/scripts
-cp -v ./scripts/pegasus_kill_test.sh ${pack}/scripts/
-cp -v ./scripts/*_zk.sh ${pack}/scripts/
-cp -v ./scripts/scp-no-interactive ${pack}/scripts/
-cp -v ./rdsn/scripts/linux/learn_stat.py ${pack}/scripts/
+cp -v ./scripts/* ${pack}/scripts/
+chmod +x ${pack}/scripts/*.sh
 
 mkdir -p ${pack}/src/server
 cp -v ./src/server/config-server.ini ${pack}/src/server/
