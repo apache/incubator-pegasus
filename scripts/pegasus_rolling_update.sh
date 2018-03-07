@@ -181,7 +181,11 @@ do
       exit -1
     fi
     rep_count=$((serving_count + opening_count + closing_count))
-    if [ $rep_count -eq 0 -o $sleeped -gt 20 ]; then
+    if [ $rep_count -eq 0 ]; then
+      echo "Close done."
+      break
+    elif [ $sleeped -gt 20 ]; then
+      echo "Close timeout."
       break
     else
       echo "Still $rep_count replicas not closed on $node"
