@@ -24,9 +24,9 @@ then
   exit -1
 fi
 
-echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/pegasus.set_meta_level
+echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.set_meta_level
 
-echo ls | ./run.sh shell --cluster $cluster &>/tmp/pegasus.ls
+echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.ls
 
 while read app_line
 do
@@ -40,7 +40,7 @@ do
       continue
     fi
 
-    echo "app $app -d" | ./run.sh shell --cluster $cluster &>/tmp/pegasus.app.$app
+    echo "app $app -d" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.app.$app
 
     while read line
     do
@@ -51,16 +51,16 @@ do
         to=`echo $line | awk '{print $5}' | grep -o '\[.*\]' | grep -o '[0-9.:,]*' | cut -d, -f$((RANDOM%2+1))`
         echo "balance --gpid ${gid}.${pid} --type move_pri -f $node -t $to"
       fi
-    done </tmp/pegasus.app.$app >/tmp/pegasus.cmd.$app
+    done </tmp/$UID.pegasus.app.$app >/tmp/$UID.pegasus.cmd.$app
 
     if [ "$type" = "run" ]
     then
-      cat /tmp/pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
+      cat /tmp/$UID.pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
       echo
       echo
     else
-      cat /tmp/pegasus.cmd.$app
+      cat /tmp/$UID.pegasus.cmd.$app
     fi
   fi
-done </tmp/pegasus.ls
+done </tmp/$UID.pegasus.ls
 

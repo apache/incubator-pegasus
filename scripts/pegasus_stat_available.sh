@@ -29,7 +29,7 @@ if [ "$detect_table" == "" ]; then
 fi
 
 result_file="pegasus.stat_available.scan_result"
-tmp_file="/tmp/pegasus.stat_available.scan.$UID"
+tmp_file="/tmp/$UID.pegasus.stat_available.scan"
 echo -e "use $detect_table\nhash_scan detect_available_day '' '' -s prefix -y \"$filter\" -o $result_file" | ./run.sh shell -n $cluster &>$tmp_file
 scan_ok=`grep 'key-value pairs got' $tmp_file | wc -l`
 if [ $scan_ok -ne 1 ]; then

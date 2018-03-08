@@ -49,43 +49,43 @@ echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
 
-echo "Generating /tmp/pegasus.rolling_update.minos.show..."
+echo "Generating /tmp/$UID.pegasus.rolling_update.minos.show..."
 cd $minos_client_dir
-./deploy show pegasus $cluster &>/tmp/pegasus.rolling_update.minos.show
+./deploy show pegasus $cluster &>/tmp/$UID.pegasus.rolling_update.minos.show
 
-echo "Generating /tmp/pegasus.rolling_update.rs.list..."
-grep 'Showing task [0-9][0-9]* of replica' /tmp/pegasus.rolling_update.minos.show | awk '{print $5,$9}' | sed 's/(.*)$//' >/tmp/pegasus.rolling_update.rs.list
-replica_server_count=`cat /tmp/pegasus.rolling_update.rs.list | wc -l`
+echo "Generating /tmp/$UID.pegasus.rolling_update.rs.list..."
+grep 'Showing task [0-9][0-9]* of replica' /tmp/$UID.pegasus.rolling_update.minos.show | awk '{print $5,$9}' | sed 's/(.*)$//' >/tmp/$UID.pegasus.rolling_update.rs.list
+replica_server_count=`cat /tmp/$UID.pegasus.rolling_update.rs.list | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
   exit -1
 fi
 cd $shell_dir
 
-echo "Generating /tmp/pegasus.rolling_update.cluster_info..."
-echo cluster_info | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.cluster_info
-cname=`grep zookeeper_root /tmp/pegasus.rolling_update.cluster_info | grep -o '/[^/]*$' | grep -o '[^/]*$'`
+echo "Generating /tmp/$UID.pegasus.rolling_update.cluster_info..."
+echo cluster_info | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.cluster_info
+cname=`grep zookeeper_root /tmp/$UID.pegasus.rolling_update.cluster_info | grep -o '/[^/]*$' | grep -o '[^/]*$'`
 if [ "$cname" != "$cluster" ]; then
   echo "ERROR: cluster name and meta list not matched"
   exit -1
 fi
-pmeta=`grep primary_meta_server /tmp/pegasus.rolling_update.cluster_info | grep -o '[0-9.:]*$'`
+pmeta=`grep primary_meta_server /tmp/$UID.pegasus.rolling_update.cluster_info | grep -o '[0-9.:]*$'`
 if [ "$pmeta" == "" ]; then
   echo "ERROR: extract primary_meta_server by shell failed"
   exit -1
 fi
 
-echo "Generating /tmp/pegasus.rolling_update.nodes..."
-echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.nodes
-rs_port=`grep '^[0-9.]*:' /tmp/pegasus.rolling_update.nodes | head -n 1 | grep -o ':[0-9]*' | grep -o '[0-9]*'`
+echo "Generating /tmp/$UID.pegasus.rolling_update.nodes..."
+echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.nodes
+rs_port=`grep '^[0-9.]*:' /tmp/$UID.pegasus.rolling_update.nodes | head -n 1 | grep -o ':[0-9]*' | grep -o '[0-9]*'`
 if [ "$rs_port" == "" ]; then
   echo "ERROR: extract replica server port by shell failed"
   exit -1
 fi
 
 echo "Set meta level to steady..."
-echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.set_meta_level
-set_ok=`grep 'control meta level ok' /tmp/pegasus.rolling_update.set_meta_level | wc -l`
+echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.set_meta_level
+set_ok=`grep 'control meta level ok' /tmp/$UID.pegasus.rolling_update.set_meta_level | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set meta level to steady failed"
   exit -1
@@ -114,17 +114,17 @@ do
   echo
 
   echo "Set lb.add_secondary_max_count_for_one_node to 0..."
-  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 0" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node
-  set_ok=`grep OK /tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
+  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 0" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.add_secondary_max_count_for_one_node
+  set_ok=`grep OK /tmp/$UID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
   if [ $set_ok -ne 1 ]; then
     echo "ERROR: set lb.add_secondary_max_count_for_one_node to 0 failed"
     exit -1
   fi
 
   echo "Migrating primary replicas out of node..."
-  ./run.sh migrate_node -c $meta_list -n $node -t run &>/tmp/pegasus.rolling_update.migrate_node
+  ./run.sh migrate_node -c $meta_list -n $node -t run &>/tmp/$UID.pegasus.rolling_update.migrate_node
   echo "Wait [$node] to migrate done..."
-  echo "Refer to /tmp/pegasus.rolling_update.migrate_node for details"
+  echo "Refer to /tmp/$UID.pegasus.rolling_update.migrate_node for details"
   while true
   do
     pri_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $4}'`
@@ -140,9 +140,9 @@ do
   sleep 1
 
   echo "Downgrading replicas on node..."
-  ./run.sh downgrade_node -c $meta_list -n $node -t run &>/tmp/pegasus.rolling_update.downgrade_node
+  ./run.sh downgrade_node -c $meta_list -n $node -t run &>/tmp/$UID.pegasus.rolling_update.downgrade_node
   echo "Wait [$node] to downgrade done..."
-  echo "Refer to /tmp/pegasus.rolling_update.downgrade_node for details"
+  echo "Refer to /tmp/$UID.pegasus.rolling_update.downgrade_node for details"
   while true
   do
     rep_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $3}'`
@@ -157,14 +157,14 @@ do
   echo
   sleep 1
 
-  echo "Send kill_partition to node..."
-  grep '^propose ' /tmp/pegasus.rolling_update.downgrade_node >/tmp/pegasus.rolling_update.downgrade_node.propose
+  echo "Send kill_partition commands to node..."
+  grep '^propose ' /tmp/$UID.pegasus.rolling_update.downgrade_node >/tmp/$UID.pegasus.rolling_update.downgrade_node.propose
   while read line2 
   do
     gpid=`echo $line2 | awk '{print $3}' | sed 's/\./ /'`
-    echo "remote_command -l $node replica.kill_partition $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.kill_partition
-  done </tmp/pegasus.rolling_update.downgrade_node.propose
-  echo "Sent kill_partition to `cat /tmp/pegasus.rolling_update.downgrade_node.propose | wc -l` partitions"
+    echo "remote_command -l $node replica.kill_partition $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.kill_partition
+  done </tmp/$UID.pegasus.rolling_update.downgrade_node.propose
+  echo "Sent to `cat /tmp/$UID.pegasus.rolling_update.downgrade_node.propose | wc -l` partitions."
   echo
   sleep 1
 
@@ -172,10 +172,10 @@ do
   sleeped=0
   while true
   do
-    echo "remote_command -l $node perf-counters '.*replica(Count)'" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.replica_count_perf_counters
-    serving_count=`grep -o 'replica_stub.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
-    opening_count=`grep -o 'replica_stub.opening.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
-    closing_count=`grep -o 'replica_stub.closing.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
+    echo "remote_command -l $node perf-counters '.*replica(Count)'" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.replica_count_perf_counters
+    serving_count=`grep -o 'replica_stub.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/$UID.pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
+    opening_count=`grep -o 'replica_stub.opening.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/$UID.pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
+    closing_count=`grep -o 'replica_stub.closing.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/$UID.pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
     if [ "$serving_count" = "" -o "$opening_count" = "" -o "$closing_count" = "" ]; then
       echo "ERROR: extract replica count from perf counters failed"
       exit -1
@@ -199,8 +199,8 @@ do
   echo "remote_command -l $node flush-log" | ./run.sh shell --cluster $meta_list &>/dev/null
 
   echo "Set lb.add_secondary_max_count_for_one_node to 100..."
-  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 100" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node
-  set_ok=`grep OK /tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
+  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 100" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.add_secondary_max_count_for_one_node
+  set_ok=`grep OK /tmp/$UID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
   if [ $set_ok -ne 1 ]; then
     echo "ERROR: set lb.add_secondary_max_count_for_one_node to 100 failed"
     exit -1
@@ -250,11 +250,11 @@ do
   if [ "$type" = "one" ]; then
     break
   fi
-done </tmp/pegasus.rolling_update.rs.list
+done </tmp/$UID.pegasus.rolling_update.rs.list
 
 echo "Set lb.add_secondary_max_count_for_one_node to DEFAULT..."
-echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node
-set_ok=`grep OK /tmp/pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
+echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.add_secondary_max_count_for_one_node
+set_ok=`grep OK /tmp/$UID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.add_secondary_max_count_for_one_node to DEFAULT failed"
   exit -1
@@ -267,6 +267,28 @@ if [ "$type" = "all" ]; then
   cd $minos_client_dir
   ./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 10 $update_options --job meta collector
   cd $shell_dir
+  echo
+
+  echo "Set meta level to lively..."
+  echo "set_meta_level lively" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.set_meta_level
+  set_ok=`grep 'control meta level ok' /tmp/$UID.pegasus.rolling_update.set_meta_level | wc -l`
+  if [ $set_ok -ne 1 ]; then
+    echo "ERROR: set meta level to lively failed"
+    exit -1
+  fi
+  echo
+
+  echo "Wait for 3 minutes to do load balance..."
+  sleep 180
+  echo
+
+  echo "Set meta level to steady..."
+  echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.rolling_update.set_meta_level
+  set_ok=`grep 'control meta level ok' /tmp/$UID.pegasus.rolling_update.set_meta_level | wc -l`
+  if [ $set_ok -ne 1 ]; then
+    echo "ERROR: set meta level to steady failed"
+    exit -1
+  fi
   echo
 fi
 

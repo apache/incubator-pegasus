@@ -38,51 +38,51 @@ echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
 
-echo "Generating /tmp/pegasus.offline_node.minos.show..."
+echo "Generating /tmp/$UID.pegasus.offline_node.minos.show..."
 cd $minos_client_dir
-./deploy show pegasus $cluster &>/tmp/pegasus.offline_node.minos.show
+./deploy show pegasus $cluster &>/tmp/$UID.pegasus.offline_node.minos.show
 
-echo "Generating /tmp/pegasus.offline_node.rs.list..."
-grep 'Showing task [0-9][0-9]* of replica' /tmp/pegasus.offline_node.minos.show | awk '{print $5,$9}' | sed 's/(.*)$//' >/tmp/pegasus.offline_node.rs.list
-replica_server_count=`cat /tmp/pegasus.offline_node.rs.list | wc -l`
+echo "Generating /tmp/$UID.pegasus.offline_node.rs.list..."
+grep 'Showing task [0-9][0-9]* of replica' /tmp/$UID.pegasus.offline_node.minos.show | awk '{print $5,$9}' | sed 's/(.*)$//' >/tmp/$UID.pegasus.offline_node.rs.list
+replica_server_count=`cat /tmp/$UID.pegasus.offline_node.rs.list | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
   exit -1
 fi
 cd $shell_dir
 
-echo "Generating /tmp/pegasus.offline_node.cluster_info..."
-echo cluster_info | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.offline_node.cluster_info
-cname=`grep zookeeper_root /tmp/pegasus.offline_node.cluster_info | grep -o '/[^/]*$' | grep -o '[^/]*$'`
+echo "Generating /tmp/$UID.pegasus.offline_node.cluster_info..."
+echo cluster_info | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.offline_node.cluster_info
+cname=`grep zookeeper_root /tmp/$UID.pegasus.offline_node.cluster_info | grep -o '/[^/]*$' | grep -o '[^/]*$'`
 if [ "$cname" != "$cluster" ]; then
   echo "ERROR: cluster name and meta list not matched"
   exit -1
 fi
-pmeta=`grep primary_meta_server /tmp/pegasus.offline_node.cluster_info | grep -o '[0-9.:]*$'`
+pmeta=`grep primary_meta_server /tmp/$UID.pegasus.offline_node.cluster_info | grep -o '[0-9.:]*$'`
 if [ "$pmeta" == ""]; then
   echo "ERROR: extract primary_meta_server by shell failed"
   exit -1
 fi
 
-echo "Generating /tmp/pegasus.offline_node.nodes..."
-echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.offline_node.nodes
-rs_port=`grep '^[0-9.]*:' /tmp/pegasus.offline_node.nodes | head -n 1 | grep -o ':[0-9]*' | grep -o '[0-9]*'`
+echo "Generating /tmp/$UID.pegasus.offline_node.nodes..."
+echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.offline_node.nodes
+rs_port=`grep '^[0-9.]*:' /tmp/$UID.pegasus.offline_node.nodes | head -n 1 | grep -o ':[0-9]*' | grep -o '[0-9]*'`
 if [ "$rs_port" == "" ]; then
   echo "ERROR: extract replica server port by shell failed"
   exit -1
 fi
 
 echo "Set meta level to steady..."
-echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.offline_node.set_meta_level
-set_ok=`grep 'control meta level ok' /tmp/pegasus.offline_node.set_meta_level | wc -l`
+echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.offline_node.set_meta_level
+set_ok=`grep 'control meta level ok' /tmp/$UID.pegasus.offline_node.set_meta_level | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set meta level to steady failed"
   exit -1
 fi
 
 echo "Set lb.assign_delay_ms to 10..."
-echo "remote_command -l $pmeta meta.lb.assign_delay_ms 10" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.offline_node.assign_delay_ms
-set_ok=`grep OK /tmp/pegasus.offline_node.assign_delay_ms | wc -l`
+echo "remote_command -l $pmeta meta.lb.assign_delay_ms 10" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.offline_node.assign_delay_ms
+set_ok=`grep OK /tmp/$UID.pegasus.offline_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to 10 failed"
   exit -1
@@ -110,9 +110,9 @@ do
   echo
 
   echo "Migrating primary replicas out of node..."
-  ./run.sh migrate_node -c $meta_list -n $node -t run &>/tmp/pegasus.offline_node.migrate_node
+  ./run.sh migrate_node -c $meta_list -n $node -t run &>/tmp/$UID.pegasus.offline_node.migrate_node
   echo "Wait [$node] to migrate done..."
-  echo "Refer to /tmp/pegasus.offline_node.migrate_node for details"
+  echo "Refer to /tmp/$UID.pegasus.offline_node.migrate_node for details"
   while true
   do
     pri_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $4}'`
@@ -128,9 +128,9 @@ do
   sleep 1
 
   echo "Downgrading replicas on node..."
-  ./run.sh downgrade_node -c $meta_list -n $node -t run &>/tmp/pegasus.offline_node.downgrade_node
+  ./run.sh downgrade_node -c $meta_list -n $node -t run &>/tmp/$UID.pegasus.offline_node.downgrade_node
   echo "Wait [$node] to downgrade done..."
-  echo "Refer to /tmp/pegasus.offline_node.downgrade_node for details"
+  echo "Refer to /tmp/$UID.pegasus.offline_node.downgrade_node for details"
   while true
   do
     rep_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $3}'`
@@ -146,13 +146,13 @@ do
   sleep 1
 
   echo "Send kill_partition to node..."
-  grep '^propose ' /tmp/pegasus.offline_node.downgrade_node >/tmp/pegasus.offline_node.downgrade_node.propose
+  grep '^propose ' /tmp/$UID.pegasus.offline_node.downgrade_node >/tmp/$UID.pegasus.offline_node.downgrade_node.propose
   while read line2 
   do
     gpid=`echo $line2 | awk '{print $3}' | sed 's/\./ /'`
-    echo "remote_command -l $node replica.kill_partition $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.offline_node.kill_partition
-  done </tmp/pegasus.offline_node.downgrade_node.propose
-  echo "Sent kill_partition to `cat /tmp/pegasus.offline_node.downgrade_node.propose | wc -l` partitions"
+    echo "remote_command -l $node replica.kill_partition $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.offline_node.kill_partition
+  done </tmp/$UID.pegasus.offline_node.downgrade_node.propose
+  echo "Sent kill_partition to `cat /tmp/$UID.pegasus.offline_node.downgrade_node.propose | wc -l` partitions"
   echo
   sleep 1
 
@@ -178,11 +178,11 @@ do
   done
   echo
   sleep 1
-done </tmp/pegasus.offline_node.rs.list
+done </tmp/$UID.pegasus.offline_node.rs.list
 
 echo "Set lb.assign_delay_ms to DEFAULT..."
-echo "remote_command -l $pmeta meta.lb.assign_delay_ms DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.offline_node.assign_delay_ms
-set_ok=`grep OK /tmp/pegasus.offline_node.assign_delay_ms | wc -l`
+echo "remote_command -l $pmeta meta.lb.assign_delay_ms DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.offline_node.assign_delay_ms
+set_ok=`grep OK /tmp/$UID.pegasus.offline_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to DEFAULT failed"
   exit -1

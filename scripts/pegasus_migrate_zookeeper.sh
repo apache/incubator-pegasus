@@ -80,7 +80,7 @@ sed -i "s/ hosts_list = .*/ hosts_list = ${target_zk}/" $minos_config
 
 echo ">>>> Stopping all meta-servers..."
 cd $minos_client_dir
-./deploy stop pegasus $cluster --skip_confirm --job meta 2>&1 | tee /tmp/pegasus.migrate_zookeeper.minos.stop.meta.all
+./deploy stop pegasus $cluster --skip_confirm --job meta 2>&1 | tee /tmp/$UID.pegasus.migrate_zookeeper.minos.stop.meta.all
 cd $shell_dir
 
 echo ">>>> Sleep for 15 seconds..."
@@ -90,9 +90,9 @@ function rolling_update_meta()
 {
   task_id=$1
   cd $minos_client_dir
-  ./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 10 --update_config --job meta --task $task_id 2>&1 | tee /tmp/pegasus.migrate_zookeeper.minos.rolling.meta.$task_id
-  if [ `cat /tmp/pegasus.migrate_zookeeper.minos.rolling.meta.$task_id | grep "Start task $task_id of meta .* success" | wc -l` -ne 1 ]; then
-    echo "ERROR: rolling update meta-servers task $task_id failed, refer to /tmp/pegasus.migrate_zookeeper.minos.rolling.meta.$task_id"
+  ./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 10 --update_config --job meta --task $task_id 2>&1 | tee /tmp/$UID.pegasus.migrate_zookeeper.minos.rolling.meta.$task_id
+  if [ `cat /tmp/$UID.pegasus.migrate_zookeeper.minos.rolling.meta.$task_id | grep "Start task $task_id of meta .* success" | wc -l` -ne 1 ]; then
+    echo "ERROR: rolling update meta-servers task $task_id failed, refer to /tmp/$UID.pegasus.migrate_zookeeper.minos.rolling.meta.$task_id"
     cd $shell_dir
     return 1
   fi
@@ -116,26 +116,26 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ">>>> Sending recover command..."
-echo "recover -f ${cluster}.recover.nodes" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.migrate_zookeeper.shell.recover
-cat /tmp/pegasus.migrate_zookeeper.shell.recover
-if [ `cat /tmp/pegasus.migrate_zookeeper.shell.recover | grep "Recover result: ERR_OK" | wc -l` -ne 1 ]; then
-  echo "ERROR: recover failed, refer to /tmp/pegasus.migrate_zookeeper.shell.recover"
+echo "recover -f ${cluster}.recover.nodes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.migrate_zookeeper.shell.recover
+cat /tmp/$UID.pegasus.migrate_zookeeper.shell.recover
+if [ `cat /tmp/$UID.pegasus.migrate_zookeeper.shell.recover | grep "Recover result: ERR_OK" | wc -l` -ne 1 ]; then
+  echo "ERROR: recover failed, refer to /tmp/$UID.pegasus.migrate_zookeeper.shell.recover"
   undo
   exit 1
 fi
 
-echo ">>>> Checking recover result, refer to /tmp/pegasus.migrate_zookeeper.diff..."
-awk '{print $1,$2,$3}' ${cluster}.nodes >/tmp/pegasus.migrate_zookeeper.diff.old
+echo ">>>> Checking recover result, refer to /tmp/$UID.pegasus.migrate_zookeeper.diff..."
+awk '{print $1,$2,$3}' ${cluster}.nodes >/tmp/$UID.pegasus.migrate_zookeeper.diff.old
 while true
 do
-  rm -f /tmp/pegasus.migrate_zookeeper.shell.nodes
-  echo "nodes -d -o /tmp/pegasus.migrate_zookeeper.shell.nodes" | ./run.sh shell --cluster $meta_list &>/tmp/pegasus.migrate_zookeeper.shell.nodes.log
-  if [ `cat /tmp/pegasus.migrate_zookeeper.shell.nodes | wc -l` -eq 0 ]; then
-    echo "ERROR: get node list failed, refer to /tmp/pegasus.migrate_zookeeper.shell.nodes.log"
+  rm -f /tmp/$UID.pegasus.migrate_zookeeper.shell.nodes
+  echo "nodes -d -o /tmp/$UID.pegasus.migrate_zookeeper.shell.nodes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.pegasus.migrate_zookeeper.shell.nodes.log
+  if [ `cat /tmp/$UID.pegasus.migrate_zookeeper.shell.nodes | wc -l` -eq 0 ]; then
+    echo "ERROR: get node list failed, refer to /tmp/$UID.pegasus.migrate_zookeeper.shell.nodes.log"
     exit -1
   fi
-  awk '{print $1,$2,$3}' /tmp/pegasus.migrate_zookeeper.shell.nodes >/tmp/pegasus.migrate_zookeeper.diff.new
-  diff /tmp/pegasus.migrate_zookeeper.diff.old /tmp/pegasus.migrate_zookeeper.diff.new &>/tmp/pegasus.migrate_zookeeper.diff
+  awk '{print $1,$2,$3}' /tmp/$UID.pegasus.migrate_zookeeper.shell.nodes >/tmp/$UID.pegasus.migrate_zookeeper.diff.new
+  diff /tmp/$UID.pegasus.migrate_zookeeper.diff.old /tmp/$UID.pegasus.migrate_zookeeper.diff.new &>/tmp/$UID.pegasus.migrate_zookeeper.diff
   if [ $? -eq 0 ]; then
     break
   fi
