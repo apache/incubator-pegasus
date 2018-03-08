@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include "job.h"
-#include "upgrader_handler.h"
-#include "upgrader_handler_shell.h"
 #include <fstream>
 #include <vector>
 #include <unordered_map>
 #include <string>
 #include <memory>
+
+#include "job.h"
+#include "upgrader_handler.h"
 
 namespace pegasus {
 namespace test {

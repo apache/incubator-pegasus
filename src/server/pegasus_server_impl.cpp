@@ -13,11 +13,6 @@
 #include <boost/lexical_cast.hpp>
 #include <algorithm>
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.server.impl"
-
 namespace pegasus {
 namespace server {
 
@@ -612,7 +607,7 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                        ", code = %s, hash_key = \"%s\", sort_key = \"%s\"",
                        replica_name(),
                        decree,
-                       dsn_task_code_to_string(msg->local_rpc_code),
+                       msg->local_rpc_code.to_string(),
                        ::pegasus::utils::c_escape_string(hash_key).c_str(),
                        ::pegasus::utils::c_escape_string(sort_key).c_str());
             }
@@ -1515,10 +1510,18 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
                    ci);
             auto err = async_checkpoint(false);
             if (err != ::dsn::ERR_OK) {
-                derror("%s: create checkpoint failed, error = %s", replica_name(), err.to_string());
-                delete _db;
-                _db = nullptr;
-                return err;
+                dwarn("%s: create checkpoint failed, error = %s, retry again",
+                      replica_name(),
+                      err.to_string());
+                err = async_checkpoint(false);
+                if (err != ::dsn::ERR_OK) {
+                    derror("%s: create checkpoint failed, error = %s",
+                           replica_name(),
+                           err.to_string());
+                    delete _db;
+                    _db = nullptr;
+                    return err;
+                }
             }
             dassert(ci == last_durable_decree(),
                     "last durable decree mismatch after checkpoint: %" PRId64 " vs %" PRId64,
@@ -1559,6 +1562,17 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
         return ::dsn::ERR_OK;
     }
 
+    if (!clear_state) {
+        rocksdb::FlushOptions options;
+        options.wait = true;
+        auto status = _db->Flush(options);
+        if (!status.ok() && !status.IsNoNeedOperate()) {
+            derror("%s: flush memtable on close failed: %s",
+                   replica_name(),
+                   status.ToString().c_str());
+        }
+    }
+
     _context_cache.clear();
 
     // when stop the, should stop the timer_task.
@@ -1585,6 +1599,8 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
         _pfc_sst_size->set(0);
     }
 
+    ddebug(
+        "%s: close app succeed, clear_state = %s", replica_name(), clear_state ? "true" : "false");
     return ::dsn::ERR_OK;
 }
 

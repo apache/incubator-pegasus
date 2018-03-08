@@ -45,11 +45,6 @@ static const long stat_p999_pos = stat_batch - stat_batch / 1000 - 1;
 static const long stat_p9999_pos = stat_batch - stat_batch / 10000 - 1;
 static const long stat_max_pos = stat_batch - 1;
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.verifier"
-
 // return time in us.
 long get_time()
 {
@@ -68,7 +63,6 @@ long long get_min_thread_setting_id()
     return id;
 }
 
-// 每个线程set各自的数据
 void do_set(int thread_id)
 {
     char buf[1024];
@@ -84,7 +78,7 @@ void do_set(int thread_id)
     while (true) {
         if (try_count == 0) {
             id = set_next++;
-            set_thread_setting_id[thread_id] = id;              // 记录当前已写数据的最大id
+            set_thread_setting_id[thread_id] = id;
             sprintf(buf, "%s%lld", hash_key_prefix, id);
             hash_key.assign(buf);
             sprintf(buf, "%s%lld", sort_key_prefix, id);
@@ -317,7 +311,6 @@ void do_check(int thread_count)
     }
 }
 
-// 标记当前的set任务已经完成的最大id
 void do_mark()
 {
     char buf[1024];
@@ -351,7 +344,6 @@ void do_mark()
     }
 }
 
-// 初始化verify的client以及读写线程数
 void verifier_initialize(const char *config_file)
 {
     const char *section = "pegasus.upgradetest";

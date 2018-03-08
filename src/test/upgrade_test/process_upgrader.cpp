@@ -17,16 +17,9 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
 
-#include "upgrader_handler_shell.h"
+#include "upgrader_registry.h"
 #include "upgrade_testor.h"
 #include "process_upgrader.h"
-
-#include "../function_test/global_env.h"
-
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "pegasus.upgrader"
 
 using namespace std;
 using namespace ::pegasus;
@@ -91,7 +84,6 @@ get_partition_info(bool debug_unhealthy, int &healthy_partition_cnt, int &unheal
     return err;
 }
 
-// 检查集群的健康状况
 // false == partition unhealth, true == health
 bool check_cluster_status()
 {
@@ -121,9 +113,9 @@ bool check_cluster_status()
     return false;
 }
 
-// 初始化ddl_client/upgradetestor
 void upgrader_initialize(const char *config_file)
 {
+    register_upgrade_handlers();
     const char *section = "pegasus.upgradetest";
     // initialize the _client.
     if (!pegasus_client_factory::initialize(config_file)) {
@@ -167,14 +159,13 @@ void upgrader_initialize(const char *config_file)
     }
 }
 
-// 检查verifier进程的存活状态
 bool verifier_process_alive()
 {
     const char *command = "ps aux | grep pegasus | grep verifier | wc -l";
     std::stringstream output;
     int process_count;
 
-    global_env::instance().pipe_execute(command, output);
+    assert(dsn::utils::pipe_execute(command, output) == 0);
     output >> process_count;
 
     // one for the verifier, one for command

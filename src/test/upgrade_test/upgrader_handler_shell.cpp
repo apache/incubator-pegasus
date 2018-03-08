@@ -11,13 +11,6 @@
 #include <unistd.h>
 #include <dsn/c/api_utilities.h>
 
-#include "../function_test/global_env.h"
-
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "upgrader.handler.shell"
-
 namespace pegasus {
 namespace test {
 
@@ -35,7 +28,6 @@ upgrader_handler_shell::upgrader_handler_shell()
     dassert(_old_version_path.size() > 0, "");
 }
 
-// 查看相应的meta是否有core文件
 bool upgrader_handler_shell::has_meta_dumped_core(int index)
 {
     char find_core[1024];
@@ -47,13 +39,12 @@ bool upgrader_handler_shell::has_meta_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    global_env::instance().pipe_execute(find_core, output);
+    assert(dsn::utils::pipe_execute(find_core, output) == 0);
     output >> core_count;
 
     return core_count != 0;
 }
 
-// 查看相应的replica是否有core文件
 bool upgrader_handler_shell::has_replica_dumped_core(int index)
 {
     char find_core[1024];
@@ -65,7 +56,7 @@ bool upgrader_handler_shell::has_replica_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    global_env::instance().pipe_execute(find_core, output);
+    assert(dsn::utils::pipe_execute(find_core, output) == 0);
     output >> core_count;
 
     return core_count != 0;
@@ -89,7 +80,7 @@ bool upgrader_handler_shell::upgrade_replica(int index)
                 ddebug("upgrade meta encounter error(%s)", strerror(errno));
                 return false;
             }
-            usleep(5000000);
+            sleep(5);
         }
         if (check("replica", index, "upgrade"))
             return true;
@@ -122,9 +113,9 @@ bool upgrader_handler_shell::downgrade_replica(int index)
                 ddebug("upgrade meta encounter error(%s)", strerror(errno));
                 return false;
             }
-            usleep(5000000);
+            sleep(5);
         }
-        if (check("replica", index, "upgrade"))
+        if (check("replica", index, "downgrade"))
             return true;
     } while (++try_times < 3);
     return false;
@@ -195,13 +186,13 @@ upgrader_handler_shell::generate_cmd(int index, const std::string &job, const st
         version_path = _new_version_path;
     else
         version_path = _old_version_path;
-    res << "ln -s -f " << _run_script_path << "/" << version_path << "/pegasus_server; ";
-    res << "export LD_LIBRARY_PATH=" << _run_script_path << "/" << version_path << ":$LD_LIBRARY_PATH; ";
-    res << "./pegasus_server config.ini -app_list ";
+    res << "ln -s -f " << version_path << "/pegasus_server; ";
+    res << "export LD_LIBRARY_PATH=" << version_path << ":$LD_LIBRARY_PATH; ";
+    res << "../replica" << index << "/pegasus_server config.ini -app_list ";
     if (job == "replica")
-        res << "replica@" << index << " &>result &";
+        res << "replica" << " &>result &";
     else
-        res << "meta@" << index << " &>result &";
+        res << "meta" << " &>result &";
     lst.push_back(res.str());
 
     return lst;
@@ -211,12 +202,16 @@ upgrader_handler_shell::generate_cmd(int index, const std::string &job, const st
 bool upgrader_handler_shell::check(const std::string &job, int index, const std::string &type)
 {
     std::stringstream command;
-    command << "ps aux | grep pegasus | grep " << job << "@" << index << " | grep -v grep | wc -l";
+    command << "ps aux | grep pegasus | grep " << job << index << " | grep -v grep | wc -l";
     std::stringstream output;
-    int process_count;
+    int process_count = 0;
 
-    global_env::instance().pipe_execute(command.str().c_str(), output);
-    output >> process_count;
+    int check_times = 5;
+    do {
+        sleep(1);
+        dsn::utils::pipe_execute(command.str().c_str(), output);
+        output >> process_count;
+    } while (check_times-- > 0 and process_count == 1);
 
     return process_count == 1;
 }
