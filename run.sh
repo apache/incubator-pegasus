@@ -1106,7 +1106,7 @@ function run_shell()
     CONFIG_SPECIFIED=0
     CLUSTER=127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603
     CLUSTER_SPECIFIED=0
-    CLUSTER_NAME=mycluster
+    CLUSTER_NAME=onebox
     CLUSTER_NAME_SPECIFIED=0
     while [[ $# > 0 ]]; do
         key="$1"
@@ -1147,6 +1147,10 @@ function run_shell()
         exit -1
     fi
 
+    if [ ${CLUSTER_SPECIFIED} -eq 1 ]; then
+        CLUSTER_NAME="unknown"
+    fi
+
     if [ $CLUSTER_NAME_SPECIFIED -eq 1 ]; then
         meta_section="/tmp/minos.config.cluster.meta.section.$UID"
         pegasus_config_file=$(dirname $MINOS_CONFIG_FILE)/xiaomi-config/conf/pegasus/pegasus-${CLUSTER_NAME}.cfg
@@ -1167,8 +1171,6 @@ function run_shell()
                     OLD_IFS="$IFS"
                     IFS="," && CLUSTER="${meta_list[*]}" && IFS="$OLD_IFS"
                     echo "parse meta_list $CLUSTER from $pegasus_config_file"
-                    # TODO: remove cluster_name from pegasus_shell
-                    CLUSTER_NAME="mycluster"
                 else
                     echo "parse meta_list from $pegasus_config_file failed"
                 fi
@@ -1179,7 +1181,7 @@ function run_shell()
     fi
 
     if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
-        sed "s/@CLUSTER@/$CLUSTER/g" ${ROOT}/src/shell/config.ini >${CONFIG}
+        sed "s/@CLUSTER_NAME@/$CLUSTER_NAME/g;s/@CLUSTER_ADDRESS@/$CLUSTER/g" ${ROOT}/src/shell/config.ini >${CONFIG}
     fi
 
     cd ${ROOT}
