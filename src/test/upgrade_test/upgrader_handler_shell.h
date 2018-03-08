@@ -15,6 +15,7 @@ class upgrader_handler_shell : public upgrader_handler
 {
 public:
     upgrader_handler_shell();
+    virtual ~upgrader_handler_shell() {}
     // index begin from 1, not zero
     // upgrade one
     virtual bool upgrade_meta(int index) override;

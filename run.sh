@@ -217,7 +217,7 @@ function run_test()
         pushd $ROOT/src/builder/bin/$module
         REPORT_DIR=$REPORT_DIR ./run.sh
         if [ $? != 0 ]; then
-            echo "run test \"$module\" in $pwd failed"
+            echo "run test \"$module\" in `pwd` failed"
             exit
         fi
         popd
@@ -424,13 +424,13 @@ function run_start_onebox()
         echo "ERROR: file ${SERVER_PATH}/pegasus_server not exist"
         exit -1
     fi
-    if ps -ef | grep ' \./pegasus_server config.ini' | grep -E 'app_list meta@|app_list replica@'; then
+    if ps -ef | grep ' /pegasus_server config.ini' | grep -E 'app_list meta|app_list replica'; then
         echo "ERROR: some onebox processes are running, start failed"
         exit -1
     fi
     ln -s -f ${SERVER_PATH}/pegasus_server
     run_start_zk
-    sed "s/@LOCAL_IP@/`hostname -i`/g;s/@META_COUNT@/${META_COUNT}/g;s/@REPLICA_COUNT@/${REPLICA_COUNT}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
+    sed "s/@LOCAL_IP@/`hostname -i`/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
         ${ROOT}/src/server/config-server.ini >${ROOT}/config-server.ini
     echo "starting server"
     ld_library_path=${SERVER_PATH}:$LD_LIBRARY_PATH
@@ -439,26 +439,28 @@ function run_start_onebox()
     cd onebox
     for i in $(seq ${META_COUNT})
     do
+        meta_port=$((34600+i))
         mkdir -p meta$i;
         cd meta$i
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
-        ln -s -f ${ROOT}/config-server.ini config.ini
-        echo "cd `pwd` && ./pegasus_server config.ini -app_list meta@$i &>result &"
-        ./pegasus_server config.ini -app_list meta@$i &>result &
+        sed "s/@META_PORT@/$meta_port/;s/@REPLICA_PORT@/34800/" ${ROOT}/config-server.ini >config.ini
+        echo "cd `pwd` && ../meta$i/pegasus_server config.ini -app_list meta &>result &"
+        ../meta$i/pegasus_server config.ini -app_list meta &>result &
         PID=$!
-        ps -ef | grep ' \./pegasus_server config.ini' | grep "\<$PID\>"
+        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
     done
     for j in $(seq ${REPLICA_COUNT})
     do
+        replica_port=$((34800+j))
         mkdir -p replica$j
         cd replica$j
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
-        ln -s -f ${ROOT}/config-server.ini config.ini
-        echo "cd `pwd` && ./pegasus_server config.ini -app_list replica@$j &>result &"
-        ./pegasus_server config.ini -app_list replica@$j &>result &
+        sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/$replica_port/" ${ROOT}/config-server.ini >config.ini
+        echo "cd `pwd` && ../replica$j/pegasus_server config.ini -app_list replica &>result &"
+        ../replica$j/pegasus_server config.ini -app_list replica &>result &
         PID=$!
-        ps -ef | grep ' \./pegasus_server config.ini' | grep "\<$PID\>"
+        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
     done
 }
@@ -490,7 +492,7 @@ function run_stop_onebox()
         esac
         shift
     done
-    ps -ef | grep ' \./pegasus_server config.ini' | grep -E 'app_list meta@|app_list replica@' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica' | awk '{print $2}' | xargs kill &>/dev/null
 }
 
 #####################
@@ -520,7 +522,7 @@ function run_list_onebox()
         esac
         shift
     done
-    ps -ef | grep ' \./pegasus_server config.ini' | grep -E 'app_list meta@|app_list replica@' | sort -k11
+    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica' | sort -k11
 }
 
 #####################
@@ -610,17 +612,17 @@ function run_start_onebox_instance()
             echo "ERROR: invalid meta_id"
             exit -1
         fi
-        if ps -ef | grep ' \./pegasus_server config.ini' | grep "app_list meta@$META_ID\>" ; then
+        if ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" ; then
             echo "INFO: meta@$META_ID already running"
             exit -1
         fi
         cd $dir
-        echo "cd `pwd` && ./pegasus_server config.ini -app_list meta@$META_ID &>result &"
-        ./pegasus_server config.ini -app_list meta@$META_ID &>result &
+        echo "cd `pwd` && ../meta$META_ID/pegasus_server config.ini -app_list meta &>result &"
+        ../meta$META_ID/pegasus_server config.ini -app_list meta &>result &
         PID=$!
-        ps -ef | grep ' \./pegasus_server config.ini' | grep "\<$PID\>"
+        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
-        echo "INFO: meta@$META started"
+        echo "INFO: meta@$META_ID started"
     fi
     if [ $REPLICA_ID != "0" ]; then
         dir=onebox/replica$REPLICA_ID
@@ -628,15 +630,15 @@ function run_start_onebox_instance()
             echo "ERROR: invalid replica_id"
             exit -1
         fi
-        if ps -ef | grep ' \./pegasus_server config.ini' | grep "app_list replica@$REPLICA_ID\>" ; then
+        if ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" ; then
             echo "INFO: replica@$REPLICA_ID already running"
             exit -1
         fi
         cd $dir
-        echo "cd `pwd` && ./pegasus_server config.ini -app_list replica@$REPLICA_ID &>result &"
-        ./pegasus_server config.ini -app_list replica@$REPLICA_ID &>result &
+        echo "cd `pwd` && ../replica$REPLICA_ID/pegasus_server config.ini -app_list replica &>result &"
+        ../replica$REPLICA_ID/pegasus_server config.ini -app_list replica &>result &
         PID=$!
-        ps -ef | grep ' \./pegasus_server config.ini' | grep "\<$PID\>"
+        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
         echo "INFO: replica@$REPLICA_ID started"
     fi
@@ -697,11 +699,11 @@ function run_stop_onebox_instance()
             echo "ERROR: invalid meta_id"
             exit -1
         fi
-        if ! ps -ef | grep ' \./pegasus_server config.ini' | grep "app_list meta@$META_ID\>" ; then
+        if ! ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" ; then
             echo "INFO: meta@$META_ID is not running"
             exit -1
         fi
-        ps -ef | grep ' \./pegasus_server config.ini' | grep "app_list meta@$META_ID\>" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" | awk '{print $2}' | xargs kill &>/dev/null
         echo "INFO: meta@$META_ID stopped"
     fi
     if [ $REPLICA_ID != "0" ]; then
@@ -710,11 +712,11 @@ function run_stop_onebox_instance()
             echo "ERROR: invalid replica_id"
             exit -1
         fi
-        if ! ps -ef | grep ' \./pegasus_server config.ini' | grep "app_list replica@$REPLICA_ID\>" ; then
+        if ! ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" ; then
             echo "INFO: replica@$REPLICA_ID is not running"
             exit -1
         fi
-        ps -ef | grep ' \./pegasus_server config.ini' | grep "app_list replica@$REPLICA_ID\>" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" | awk '{print $2}' | xargs kill &>/dev/null
         echo "INFO: replica@$REPLICA_ID stopped"
     fi
 }
@@ -892,7 +894,6 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
     sleep 0.2
     echo
     cd ${ROOT}
-
     run_list_kill_test
 }
 

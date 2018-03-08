@@ -8,11 +8,6 @@
 
 #include "upgrade_testor.h"
 
-#ifdef __TITLE__
-#undef __TITLE__
-#endif
-#define __TITLE__ "upgrade.testor"
-
 namespace pegasus {
 namespace test {
 
@@ -51,11 +46,8 @@ upgrade_testor::upgrade_testor()
     std::string upgrader_name =
         dsn_config_get_value_string(section, "upgrade_handler", "", "upgrade handler");
     dassert(upgrader_name.size() > 0, "");
-    if (upgrader_name == "shell")
-        _upgrader_handler.reset(new upgrader_handler_shell());
-    else {
-        dassert(false, "invalid upgrader_handler, name = %s", upgrader_name.c_str());
-    }
+    _upgrader_handler.reset(upgrader_handler::new_handler(upgrader_name.c_str()));
+    dassert(_upgrader_handler.get() != nullptr, "invalid upgrader_name(%s)", upgrader_name.c_str());
 
     _job_types = {META, REPLICA, ZOOKEEPER};
     _job_index_to_upgrade.resize(JOB_LENGTH);
@@ -84,7 +76,6 @@ upgrade_testor::upgrade_testor()
 
 upgrade_testor::~upgrade_testor() {}
 
-// 结束verifier进程，并退出upgrader进程
 void upgrade_testor::stop_verifier_and_exit(const char *msg)
 {
     system("ps aux | grep verifier | grep -v grep| awk '{print $2}' | xargs kill -9");
@@ -115,7 +106,6 @@ bool upgrade_testor::check_coredump()
 
 void upgrade_testor::run()
 {
-    // 有core文件就结束
     if (check_coredump()) {
         stop_verifier_and_exit("detect core dump in pegasus cluster");
     }
