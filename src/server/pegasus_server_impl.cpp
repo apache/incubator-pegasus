@@ -50,11 +50,16 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                              "rocksdb_verbose_log",
                                              false,
                                              "print verbose log for debugging, default is false");
-    _abnormal_get_threshold_ns =
-        1000000 * dsn_config_get_value_uint64("pegasus.server",
-                                              "abnormal_get_threshold_ms",
-                                              10,
-                                              "abnormal_get_threshold_ms, default is 10");
+    _abnormal_get_time_threshold_ns = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_abnormal_get_time_threshold_ns",
+        0,
+        "rocksdb_abnormal_get_time_threshold_ns, default is 0, means no check");
+    _abnormal_get_size_threshold = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_abnormal_get_size_threshold",
+        0,
+        "rocksdb_abnormal_get_size_threshold, default is 0, means no check");
 
     // init db options
 
@@ -756,17 +761,22 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         }
     }
 
-    uint64_t get_time = dsn_now_ns() - start_time;
-    if (get_time >= _abnormal_get_threshold_ns) {
-        ::dsn::blob hash_key, sort_key;
-        pegasus_restore_key(key, hash_key, sort_key);
-        dwarn("%s: rocksdb abnormal get: "
-              "hash_key = \"%s\", sort_key = \"%s\", value_size = %d, time_used = %" PRIu64 " ns",
-              replica_name(),
-              ::pegasus::utils::c_escape_string(hash_key).c_str(),
-              ::pegasus::utils::c_escape_string(sort_key).c_str(),
-              (int)value->size(),
-              get_time);
+    if (_abnormal_get_time_threshold_ns || _abnormal_get_size_threshold) {
+        uint64_t time_used = dsn_now_ns() - start_time;
+        if ((_abnormal_get_time_threshold_ns && time_used >= _abnormal_get_time_threshold_ns) ||
+            (_abnormal_get_size_threshold && value->size() >= _abnormal_get_size_threshold)) {
+            ::dsn::blob hash_key, sort_key;
+            pegasus_restore_key(key, hash_key, sort_key);
+            dwarn("%s: rocksdb abnormal get: "
+                  "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
+                  "value_size = %d, time_used = %" PRIu64 " ns",
+                  replica_name(),
+                  ::pegasus::utils::c_escape_string(hash_key).c_str(),
+                  ::pegasus::utils::c_escape_string(sort_key).c_str(),
+                  status.ToString().c_str(),
+                  (int)value->size(),
+                  time_used);
+        }
     }
 
     resp.error = status.code();
