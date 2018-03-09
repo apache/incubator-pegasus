@@ -50,6 +50,11 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                              "rocksdb_verbose_log",
                                              false,
                                              "print verbose log for debugging, default is false");
+    _abnormal_get_threshold_ns =
+        1000000 * dsn_config_get_value_uint64("pegasus.server",
+                                              "abnormal_get_threshold_ms",
+                                              10,
+                                              "abnormal_get_threshold_ms, default is 10");
 
     // init db options
 
@@ -131,8 +136,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _db_opts.level0_slowdown_writes_trigger = (int)dsn_config_get_value_uint64(
         "pegasus.server",
         "rocksdb_level0_slowdown_writes_trigger",
-        10,
-        "rocksdb options.level0_slowdown_writes_trigger, default 10");
+        20,
+        "rocksdb options.level0_slowdown_writes_trigger, default 20");
 
     // rocksdb default: 24
     _db_opts.level0_stop_writes_trigger =
@@ -749,6 +754,19 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                    replica_name(),
                    status.ToString().c_str());
         }
+    }
+
+    uint64_t get_time = dsn_now_ns() - start_time;
+    if (get_time >= _abnormal_get_threshold_ns) {
+        ::dsn::blob hash_key, sort_key;
+        pegasus_restore_key(key, hash_key, sort_key);
+        dwarn("%s: rocksdb abnormal get: "
+              "hash_key = \"%s\", sort_key = \"%s\", value_size = %d, time_used = %" PRIu64 " ns",
+              replica_name(),
+              ::pegasus::utils::c_escape_string(hash_key).c_str(),
+              ::pegasus::utils::c_escape_string(sort_key).c_str(),
+              (int)value->size(),
+              get_time);
     }
 
     resp.error = status.code();

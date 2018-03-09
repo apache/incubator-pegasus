@@ -192,6 +192,7 @@ private:
     dsn::gpid _gpid;
     std::string _primary_address;
     bool _verbose_log;
+    uint64_t _abnormal_get_threshold_ns;
 
     KeyWithTTLCompactionFilter _key_ttl_compaction_filter;
     rocksdb::Options _db_opts;
