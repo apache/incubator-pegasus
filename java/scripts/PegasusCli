@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-
-java -classpath ./*:library/* -Dlog4j.configuration="file:log4j.properties" com.xiaomi.infra.pegasus.client.PegasusCli "$@"
-
