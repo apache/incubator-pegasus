@@ -64,6 +64,14 @@ The following diagram shows the data model of Pegasus:
 
 You may want to refer to the [installation guide](docs/installation.md).
 
+## Related Projects
+
+* [Pegasus Java client](https://github.com/xiaomi/pegasus-java-client)
+* [Pegasus Python Client](https://github.com/xiaomi/pegasus-python-client)
+* [Pegasus Go Client](https://github.com/xiaomi/pegasus-go-client)
+* [Pegasus Node.js client](https://github.com/xiaomi/pegasus-nodejs-client)
+* [Pegasus YCSB](https://github.com/xiaomi/pegasus-YCSB)
+
 ## How to contibute
 
 We open source this project because we known that the system is far from mature and needs lots of
