@@ -66,37 +66,6 @@ perf_counters::perf_counters(void)
 
 perf_counters::~perf_counters(void) {}
 
-perf_counter_ptr perf_counters::new_app_counter(const char *section,
-                                                const char *name,
-                                                dsn_perf_counter_type_t flags,
-                                                const char *dsptr)
-{
-    return new_global_counter(
-        service_app::current_service_app_info().full_name.c_str(), section, name, flags, dsptr);
-}
-
-perf_counter_ptr perf_counters::new_global_counter(const char *app,
-                                                   const char *section,
-                                                   const char *name,
-                                                   dsn_perf_counter_type_t flags,
-                                                   const char *dsptr)
-{
-    std::string full_name;
-    perf_counter::build_full_name(app, section, name, full_name);
-    {
-        utils::auto_write_lock l(_lock);
-        auto it = _counters.find(full_name);
-        if (it == _counters.end()) {
-            perf_counter_ptr counter = _factory(app, section, name, flags, dsptr);
-            _counters.emplace(std::piecewise_construct,
-                              std::forward_as_tuple(full_name),
-                              std::forward_as_tuple(counter));
-            return counter;
-        } else
-            return nullptr;
-    }
-}
-
 perf_counter_ptr perf_counters::get_app_counter(const char *section,
                                                 const char *name,
                                                 dsn_perf_counter_type_t flags,
@@ -118,59 +87,51 @@ perf_counter_ptr perf_counters::get_global_counter(const char *app,
     std::string full_name;
     perf_counter::build_full_name(app, section, name, full_name);
 
+    utils::auto_write_lock l(_lock);
     if (create_if_not_exist) {
-        utils::auto_write_lock l(_lock);
-
         auto it = _counters.find(full_name);
         if (it == _counters.end()) {
             perf_counter_ptr counter = _factory(app, section, name, flags, dsptr);
-            _counters.emplace(std::piecewise_construct,
-                              std::forward_as_tuple(full_name),
-                              std::forward_as_tuple(counter));
+            _counters.emplace(full_name, counter_object{counter, 1});
             return counter;
         } else {
-            dassert(it->second->type() == flags,
+            dassert(it->second.counter->type() == flags,
                     "counters with the same name %s with differnt types, (%d) vs (%d)",
                     full_name.c_str(),
-                    it->second->type(),
+                    it->second.counter->type(),
                     flags);
-            return it->second;
+            ++it->second.user_reference;
+            return it->second.counter;
         }
     } else {
-        utils::auto_read_lock l(_lock);
-
         auto it = _counters.find(full_name);
         if (it == _counters.end())
             return nullptr;
-        else
-            return it->second;
+        else {
+            ++it->second.user_reference;
+            return it->second.counter;
+        }
     }
-}
-
-perf_counter_ptr perf_counters::get_counter(const char *full_name)
-{
-    utils::auto_read_lock l(_lock);
-
-    auto it = _counters.find(full_name);
-    if (it == _counters.end())
-        return nullptr;
-    else
-        return it->second;
 }
 
 bool perf_counters::remove_counter(const char *full_name)
 {
+    int remain_ref;
     {
         utils::auto_write_lock l(_lock);
         auto it = _counters.find(full_name);
         if (it == _counters.end())
             return false;
         else {
-            _counters.erase(it);
+            counter_object &c = it->second;
+            remain_ref = (--c.user_reference);
+            if (remain_ref == 0) {
+                _counters.erase(it);
+            }
         }
     }
 
-    dinfo("performance counter %s is removed", full_name);
+    dinfo("performance counter %s is removed, remaining reference (%d)", full_name, remain_ref);
     return true;
 }
 
@@ -180,7 +141,7 @@ void perf_counters::get_all_counters(std::vector<perf_counter_ptr> *counter_vec)
     utils::auto_read_lock l(_lock);
     counter_vec->reserve(_counters.size());
     for (auto &cp : _counters) {
-        counter_vec->push_back(cp.second);
+        counter_vec->push_back(cp.second.counter);
     }
 }
 
@@ -233,14 +194,14 @@ std::string perf_counters::list_counter_internal(const std::vector<std::string> 
             pp = &counters
                       .insert(
                           std::map<std::string, std::map<std::string, std::vector<counter_info>>>::
-                              value_type(c.second->app(), empty_m))
+                              value_type(c.second.counter->app(), empty_m))
                       .first->second;
 
             pv = &pp->insert(std::map<std::string, std::vector<counter_info>>::value_type(
-                                 c.second->section(), empty_v))
+                                 c.second.counter->section(), empty_v))
                       .first->second;
 
-            pv->push_back({c.second->name()});
+            pv->push_back({c.second.counter->name()});
         }
     }
 
@@ -297,6 +258,17 @@ std::string perf_counters::get_counter_sample(const std::vector<std::string> &ar
     ts = dsn_now_ns();
     sample_resp{sample, ts, args[0]}.encode_json_state(ss);
     return ss.str();
+}
+
+perf_counter_ptr perf_counters::get_counter(const char *full_name)
+{
+    utils::auto_read_lock l(_lock);
+
+    auto it = _counters.find(full_name);
+    if (it == _counters.end())
+        return nullptr;
+    else
+        return it->second.counter;
 }
 
 } // end namespace

@@ -52,11 +52,6 @@ namespace dsn {
 // all the initialized counters are stored in the singleton dsn::perf_counters,
 // users can collect all counters of the process and intergrate it with monitor system.
 //
-// after the init_xxx_counter is called, the counter constructed with the (app, section, name) is
-// OWNED by object of type A.
-// if user declare another perf_counter_wrapper variable and initialized with same
-// (app, section, name) will get nullptr of _counter.
-//
 class perf_counter_wrapper
 {
 public:
@@ -89,7 +84,7 @@ public:
                           const char *dsptr)
     {
         dsn::perf_counter_ptr c =
-            dsn::perf_counters::instance().new_app_counter(section, name, type, dsptr);
+            dsn::perf_counters::instance().get_app_counter(section, name, type, dsptr, true);
         _counter = c.get();
     }
 
@@ -100,8 +95,8 @@ public:
                              dsn_perf_counter_type_t type,
                              const char *dsptr)
     {
-        dsn::perf_counter_ptr c =
-            dsn::perf_counters::instance().new_global_counter(app, section, name, type, dsptr);
+        dsn::perf_counter_ptr c = dsn::perf_counters::instance().get_global_counter(
+            app, section, name, type, dsptr, true);
         _counter = c.get();
     }
 

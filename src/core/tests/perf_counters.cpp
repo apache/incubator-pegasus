@@ -76,16 +76,22 @@ TEST(core, perf_counters)
     ASSERT_FALSE(perf_counters::instance().remove_counter("unexist_counter"));
 
     ASSERT_TRUE(perf_counters::instance().remove_counter("app*test*number_counter"));
+    ASSERT_TRUE(perf_counters::instance().remove_counter("app*test*number_counter"));
+    ASSERT_FALSE(perf_counters::instance().remove_counter("app*test*number_counter"));
     p = perf_counters::instance().get_global_counter(
         "app", "test", "number_counter", COUNTER_TYPE_NUMBER, "", false);
     ASSERT_EQ(nullptr, p);
 
     ASSERT_TRUE(perf_counters::instance().remove_counter("app*test*volatile_number_counter"));
+    ASSERT_TRUE(perf_counters::instance().remove_counter("app*test*volatile_number_counter"));
+    ASSERT_FALSE(perf_counters::instance().remove_counter("app*test*volatile_number_counter"));
     p = perf_counters::instance().get_global_counter(
         "app", "test", "volatile_number_counter", COUNTER_TYPE_VOLATILE_NUMBER, "", false);
     ASSERT_EQ(nullptr, p);
 
     ASSERT_TRUE(perf_counters::instance().remove_counter("app*test*rate_counter"));
+    ASSERT_TRUE(perf_counters::instance().remove_counter("app*test*rate_counter"));
+    ASSERT_FALSE(perf_counters::instance().remove_counter("app*test*rate_counter"));
     p = perf_counters::instance().get_global_counter(
         "app", "test", "rate_counter", COUNTER_TYPE_RATE, "", false);
     ASSERT_EQ(nullptr, p);

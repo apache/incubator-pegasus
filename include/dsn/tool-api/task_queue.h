@@ -36,7 +36,7 @@
 #pragma once
 
 #include <dsn/tool-api/task.h>
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
 #include <dsn/utility/dlib.h>
 
 namespace dsn {
@@ -109,7 +109,7 @@ private:
     admission_controller *_controller;
     int _worker_count;
     std::atomic<int> _queue_length;
-    mutable perf_counter_ptr _queue_length_counter;
+    dsn::perf_counter_wrapper _queue_length_counter;
     threadpool_spec *_spec;
     volatile int _virtual_queue_length;
 };
