@@ -110,10 +110,10 @@ public:
     const service_app_spec &spec() const { return _app_spec; }
     const service_app_info &get_service_app_info() const { return _info; }
     const service_app *get_service_app() const { return _entity.get(); }
-    bool rpc_register_handler(rpc_handler_info *handler, dsn_gpid gpid);
-    rpc_handler_info *rpc_unregister_handler(dsn::task_code rpc_code, dsn_gpid gpid);
+    bool rpc_register_handler(rpc_handler_info *handler, dsn::gpid gpid);
+    rpc_handler_info *rpc_unregister_handler(dsn::task_code rpc_code, dsn::gpid gpid);
 
-    void handle_intercepted_request(dsn_gpid gpid, bool is_write, dsn_message_t req);
+    void handle_intercepted_request(dsn::gpid gpid, bool is_write, dsn_message_t req);
     rpc_request_task *generate_intercepted_request_task(message_ex *req);
 
 private:

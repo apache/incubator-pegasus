@@ -38,6 +38,7 @@
 
 #include <dsn/c/api_common.h>
 #include <dsn/c/api_task.h>
+#include <dsn/tool-api/gpid.h>
 
 /*!
  @defgroup service-api-c Core Service API
@@ -667,21 +668,6 @@ typedef union dsn_msg_context_t
     uint64_t context; ///< msg_context is of sizeof(uint64_t)
 } dsn_msg_context_t;
 
-typedef union dsn_global_partition_id
-{
-    struct
-    {
-        int32_t app_id;          ///< 1-based app id (0 for invalid)
-        int32_t partition_index; ///< zero-based partition index
-    } u;
-    uint64_t value;
-} dsn_gpid;
-
-inline int dsn_gpid_to_thread_hash(dsn_gpid gpid)
-{
-    return gpid.u.app_id * 7919 + gpid.u.partition_index;
-}
-
 #define DSN_MSGM_TIMEOUT (0x1 << 0)        ///< msg timeout is to be set/get
 #define DSN_MSGM_THREAD_HASH (0x1 << 1)    ///< thread hash is to be set/get
 #define DSN_MSGM_PARTITION_HASH (0x1 << 2) ///< partition hash is to be set/get
@@ -695,7 +681,7 @@ typedef struct dsn_msg_options_t
     int thread_hash; ///< thread hash on RPC server
     ///< if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
     uint64_t partition_hash;   ///< partition hash for calculating partition index
-    dsn_gpid gpid;             ///< virtual node id, 0 for none
+    dsn::gpid gpid;            ///< virtual node id, 0 for none
     dsn_msg_context_t context; ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;
 
@@ -708,8 +694,8 @@ inline void dsn_address_size_checker()
     static_assert(sizeof(dsn_msg_context_t) == sizeof(uint64_t),
                   "sizeof(dsn_msg_context_t) must equal to sizeof(uint64_t)");
 
-    static_assert(sizeof(dsn_gpid) == sizeof(uint64_t),
-                  "sizeof(dsn_gpid) must equal to sizeof(uint64_t)");
+    static_assert(sizeof(dsn::gpid) == sizeof(uint64_t),
+                  "sizeof(dsn::gpid) must equal to sizeof(uint64_t)");
 }
 
 /*!
@@ -803,12 +789,12 @@ extern DSN_API bool dsn_rpc_register_handler(dsn::task_code code,
                                              const char *name,
                                              dsn_rpc_request_handler_t cb,
                                              void *context,
-                                             dsn_gpid gpid DEFAULT(dsn_gpid{0}));
+                                             dsn::gpid gpid DEFAULT(dsn::gpid()));
 
 /*! unregister callback to handle RPC request, and returns void* context upon \ref
  * dsn_rpc_register_handler  */
 extern DSN_API void *dsn_rpc_unregiser_handler(dsn::task_code code,
-                                               dsn_gpid gpid DEFAULT(dsn_gpid{0}));
+                                               dsn::gpid gpid DEFAULT(dsn::gpid()));
 
 /*! reply with a response which is created using dsn_msg_create_response */
 extern DSN_API void dsn_rpc_reply(dsn_message_t response, dsn::error_code err DEFAULT(dsn::ERR_OK));

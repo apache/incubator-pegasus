@@ -76,7 +76,7 @@ typedef struct message_header
     uint64_t trace_id; // used for tracking source
     char rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
     fast_code rpc_code; // dsn::task_code
-    dsn_gpid gpid;      // global partition id
+    dsn::gpid gpid;      // global partition id
     dsn_msg_context_t context;
 
     // always ipv4/v6 address,

@@ -138,7 +138,7 @@ void replica::init_checkpoint(bool is_emergency)
                               on_copy_checkpoint_ack(err_local, rc, response_alloc);
                           },
                           std::chrono::milliseconds(0),
-                          gpid_to_thread_hash(get_gpid()));
+                          get_gpid().thread_hash());
         }
     }
 
@@ -155,7 +155,7 @@ void replica::init_checkpoint(bool is_emergency)
                 tasking::create_task(LPC_CHECKPOINT_REPLICA,
                                      this,
                                      [this] { background_checkpoint(); },
-                                     gpid_to_thread_hash(get_gpid()));
+                                     get_gpid().thread_hash());
             _secondary_states.checkpoint_task->enqueue();
         }
     }
@@ -255,7 +255,7 @@ void replica::on_copy_checkpoint_ack(error_code err,
                                 [this, resp, ldir](error_code err, size_t sz) {
                                     this->on_copy_checkpoint_file_completed(err, sz, resp, ldir);
                                 },
-                                gpid_to_thread_hash(get_gpid()));
+                                get_gpid().thread_hash());
 }
 
 void replica::on_copy_checkpoint_file_completed(error_code err,
@@ -303,7 +303,7 @@ void replica::background_checkpoint()
         tasking::enqueue(LPC_CHECKPOINT_REPLICA_COMPLETED,
                          this,
                          [this, err]() { this->on_checkpoint_completed(err); },
-                         gpid_to_thread_hash(get_gpid()));
+                         get_gpid().thread_hash());
 }
 
 // run in background thread
@@ -330,7 +330,7 @@ void replica::background_async_checkpoint(bool is_emergency)
         tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
                          this,
                          [this] { init_checkpoint(false); },
-                         gpid_to_thread_hash(get_gpid()),
+                         get_gpid().thread_hash(),
                          std::chrono::seconds(10));
     } else if (err == ERR_WRONG_TIMING || err == ERR_NO_NEED_OPERATE) {
         // do nothing
@@ -374,14 +374,14 @@ void replica::catch_up_with_private_logs(partition_status::type s)
             tasking::create_task(LPC_CHECKPOINT_REPLICA_COMPLETED,
                                  this,
                                  [this, err]() { this->on_learn_remote_state_completed(err); },
-                                 gpid_to_thread_hash(get_gpid()));
+                                 get_gpid().thread_hash());
         _potential_secondary_states.learn_remote_files_completed_task->enqueue();
     } else {
         _secondary_states.checkpoint_completed_task =
             tasking::create_task(LPC_CHECKPOINT_REPLICA_COMPLETED,
                                  this,
                                  [this, err]() { this->on_checkpoint_completed(err); },
-                                 gpid_to_thread_hash(get_gpid()));
+                                 get_gpid().thread_hash());
         _secondary_states.checkpoint_completed_task->enqueue();
     }
 }
@@ -433,7 +433,7 @@ void replica::on_checkpoint_completed(error_code err)
                 LPC_CATCHUP_WITH_PRIVATE_LOGS,
                 this,
                 [this]() { this->catch_up_with_private_logs(partition_status::PS_SECONDARY); },
-                gpid_to_thread_hash(get_gpid()));
+                get_gpid().thread_hash());
             _secondary_states.catchup_with_private_log_task->enqueue();
         }
     }

@@ -69,7 +69,7 @@ TEST(core, message_ex)
         ASSERT_EQ(next_id, h.id);
         ASSERT_EQ(0, h.trace_id); ///////////////////
         ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST).to_string(), h.rpc_name);
-        ASSERT_EQ(0, h.gpid.value);
+        ASSERT_EQ(0, h.gpid.value());
         ASSERT_EQ(ctx0.context, h.context.context);
         ASSERT_EQ(100, h.client.timeout_ms);
         ASSERT_EQ(1, h.client.thread_hash);
@@ -101,7 +101,7 @@ TEST(core, message_ex)
         ASSERT_EQ(request->header->id, h.id);
         ASSERT_EQ(request->header->trace_id, h.trace_id); ///////////////////
         ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST_ACK).to_string(), h.rpc_name);
-        ASSERT_EQ(0, h.gpid.value);
+        ASSERT_EQ(0, h.gpid.value());
         ASSERT_EQ(ctx1.context, h.context.context);
         ASSERT_EQ(0, h.server.error_code.local_code);
 
@@ -184,7 +184,7 @@ TEST(core, message_ex)
         dsn_msg_options_t opts;
 
         opts.context.context = 444;
-        opts.gpid.value = 333;
+        opts.gpid.set_value(333);
 
         dsn_msg_set_options(request, &opts, DSN_MSGM_CONTEXT | DSN_MSGM_VNID);
         message_ex *m = (message_ex *)request;
@@ -195,7 +195,7 @@ TEST(core, message_ex)
         ASSERT_EQ(100, opts.timeout_ms);
         ASSERT_EQ(1, opts.thread_hash);
         ASSERT_EQ(2, opts.partition_hash);
-        ASSERT_EQ(333u, opts.gpid.value);
+        ASSERT_EQ(333u, opts.gpid.value());
         ASSERT_EQ(444u, opts.context.context);
 
         ASSERT_EQ(rpc_address("127.0.0.1", 8080), rpc_address(dsn_msg_from_address(request)));

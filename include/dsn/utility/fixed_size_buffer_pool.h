@@ -23,19 +23,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include <dsn/service_api_cpp.h>
-#include <dsn/dist/replication/replication.types.h>
-#include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/dist/replication/replication.codes.h>
+///
+/// A simple buffer pool designed for efficiently formatting
+/// frequently used types (like gpid, rpc_address) into string,
+/// without dynamic memory allocation.
+///
+/// It's not suitable to be used in multi-threaded environment,
+/// unless when it's declared as thread local.
+///
+/// \see dsn_address_to_string
+/// \see dsn::gpid::to_string
+///
+template <unsigned int PoolCapacity, unsigned int ChunkSize>
+class fixed_size_buffer_pool
+{
+private:
+    char buffer[PoolCapacity][ChunkSize];
+    unsigned int index;
+
+public:
+    constexpr unsigned int get_chunk_size() const { return ChunkSize; }
+    char *next()
+    {
+        // we must update index first, coz the index may be uninitialized
+        // the reason we don't initialize the buffer/index in constructor
+        // is that the round_buffer may be declared as thread_local variable
+        index = (index + 1) % PoolCapacity;
+        return buffer[index];
+    }
+};

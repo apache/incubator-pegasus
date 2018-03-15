@@ -169,8 +169,7 @@ void replica::send_backup_request_to_secondary(const backup_request &request)
     for (const auto &target_address : _primary_states.membership.secondaries) {
         // primary will send backup_request to secondary periodically
         // so, we shouldn't handler the response
-        rpc::call_one_way_typed(
-            target_address, RPC_COLD_BACKUP, request, gpid_to_thread_hash(get_gpid()));
+        rpc::call_one_way_typed(target_address, RPC_COLD_BACKUP, request, get_gpid().thread_hash());
     }
 }
 
@@ -191,16 +190,12 @@ static std::string backup_get_dir_name(const std::string &policy_name,
 }
 
 // backup/backup_tmp.<policy_name>.<backup_id>.<timestamp>
-static std::string backup_get_tmp_dir_name(const std::string &policy_name,
-                                           int64_t backup_id,
-                                           int64_t timestamp)
+static std::string
+backup_get_tmp_dir_name(const std::string &policy_name, int64_t backup_id, int64_t timestamp)
 {
     char buffer[256];
-    sprintf(buffer,
-            "backup_tmp.%s.%" PRId64 ".%" PRId64 "",
-            policy_name.c_str(),
-            backup_id,
-            timestamp);
+    sprintf(
+        buffer, "backup_tmp.%s.%" PRId64 ".%" PRId64 "", policy_name.c_str(), backup_id, timestamp);
     return std::string(buffer);
 }
 
@@ -409,7 +404,7 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
                                  backup_response response;
                                  on_cold_backup(backup_context->request, response);
                              },
-                             gpid_to_thread_hash(get_gpid()));
+                             get_gpid().thread_hash());
         } else {
             backup_context->fail_checkpoint("statistic file info under checkpoint failed");
             return;
@@ -421,7 +416,7 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
             LPC_REPLICATION_COLD_BACKUP,
             this,
             [this, backup_context]() { trigger_async_checkpoint_for_backup(backup_context); },
-            gpid_to_thread_hash(get_gpid()));
+            get_gpid().thread_hash());
     }
 
     // clear related but not valid checkpoint
@@ -464,12 +459,11 @@ void replica::trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup
     }
 
     decree durable_decree = last_durable_decree();
-    if (backup_context->checkpoint_decree > 0
-            && durable_decree >= backup_context->checkpoint_decree) {
+    if (backup_context->checkpoint_decree > 0 &&
+        durable_decree >= backup_context->checkpoint_decree) {
         // checkpoint done
-    }
-    else if (backup_context->checkpoint_decree > 0
-            && backup_context->durable_decree_when_checkpoint == durable_decree) {
+    } else if (backup_context->checkpoint_decree > 0 &&
+               backup_context->durable_decree_when_checkpoint == durable_decree) {
         // already triggered, just wait
         char time_buf[20];
         dsn::utils::time_ms_to_date_time(backup_context->checkpoint_timestamp, time_buf, 20);
@@ -550,7 +544,7 @@ void replica::wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_co
             LPC_REPLICATION_COLD_BACKUP,
             this,
             [this, backup_context]() { trigger_async_checkpoint_for_backup(backup_context); },
-            gpid_to_thread_hash(get_gpid()),
+            get_gpid().thread_hash(),
             std::chrono::seconds(10));
     } else {
         ddebug("%s: async checkpoint done, last_durable_decree = %" PRId64
@@ -656,7 +650,7 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
                              backup_response response;
                              on_cold_backup(backup_context->request, response);
                          },
-                         gpid_to_thread_hash(get_gpid()));
+                         get_gpid().thread_hash());
     }
 }
 
@@ -680,10 +674,7 @@ void replica::set_backup_context_pause()
     }
 }
 
-void replica::clear_cold_backup_state()
-{
-    _cold_backup_contexts.clear();
-}
+void replica::clear_cold_backup_state() { _cold_backup_contexts.clear(); }
 
 void replica::collect_backup_info()
 {

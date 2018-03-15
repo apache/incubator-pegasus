@@ -144,7 +144,7 @@ void replica::init_learn(uint64_t signature)
                                                      this->catch_up_with_private_logs(
                                                          partition_status::PS_POTENTIAL_SECONDARY);
                                                  },
-                                                 gpid_to_thread_hash(get_gpid()));
+                                                 get_gpid().thread_hash());
                         _potential_secondary_states.catchup_with_private_log_task->enqueue();
 
                         return; // incomplete
@@ -219,7 +219,7 @@ void replica::init_learn(uint64_t signature)
 
     _potential_secondary_states.learning_task =
         rpc::create_message(
-            RPC_LEARN, request, std::chrono::milliseconds(0), gpid_to_thread_hash(get_gpid()))
+            RPC_LEARN, request, std::chrono::milliseconds(0), get_gpid().thread_hash())
             .call(_config.primary,
                   this,
                   [ this, req_cap = std::move(request) ](error_code err,
@@ -535,7 +535,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                 tasking::create_task(LPC_DELAY_LEARN,
                                      this,
                                      std::bind(&replica::init_learn, this, req.signature),
-                                     gpid_to_thread_hash(get_gpid()));
+                                     get_gpid().thread_hash());
             _potential_secondary_states.delay_learning_task->enqueue(std::chrono::seconds(1));
         } else {
             handle_learning_error(resp.err, false);
@@ -1080,7 +1080,7 @@ void replica::on_copy_remote_state_completed(error_code err,
         tasking::create_task(LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
                              this,
                              [this, err]() { on_learn_remote_state_completed(err); },
-                             gpid_to_thread_hash(get_gpid()));
+                             get_gpid().thread_hash());
     _potential_secondary_states.learn_remote_files_completed_task->enqueue();
 }
 
@@ -1203,7 +1203,7 @@ void replica::notify_learn_completion()
         rpc::create_message(RPC_LEARN_COMPLETION_NOTIFY,
                             report,
                             std::chrono::milliseconds(0),
-                            gpid_to_thread_hash(get_gpid()))
+                            get_gpid().thread_hash())
             .call(_config.primary, this, [
                 this,
                 report = std::move(report)
@@ -1313,7 +1313,7 @@ void replica::on_learn_completion_notification_reply(error_code err,
                 LPC_DELAY_LEARN,
                 this,
                 std::bind(&replica::init_learn, this, report.learner_signature),
-                gpid_to_thread_hash(get_gpid()));
+                get_gpid().thread_hash());
             _potential_secondary_states.delay_learning_task->enqueue(std::chrono::seconds(1));
         } else {
             handle_learning_error(resp.err, false);

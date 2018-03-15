@@ -41,6 +41,7 @@
 #include <dsn/utility/error_code.h>
 #include <dsn/tool-api/threadpool_code.h>
 #include <dsn/tool-api/task_code.h>
+#include <dsn/tool-api/gpid.h>
 #include <memory>
 #include <atomic>
 
@@ -93,51 +94,5 @@ private:
 private:
     void *_handle;
     bool _is_owner;
-};
-
-class gpid
-{
-private:
-    dsn_gpid _value;
-
-public:
-    gpid(int app_id, int pidx)
-    {
-        _value.u.app_id = app_id;
-        _value.u.partition_index = pidx;
-    }
-
-    gpid(dsn_gpid gd) { _value = gd; }
-
-    gpid(const gpid &gd) { _value.value = gd._value.value; }
-
-    gpid() { _value.value = 0; }
-
-    uint64_t value() const { return _value.value; }
-
-    operator dsn_gpid() const { return _value; }
-
-    bool operator<(const gpid &r) const
-    {
-        return _value.u.app_id < r._value.u.app_id ||
-               (_value.u.app_id == r._value.u.app_id &&
-                _value.u.partition_index < r._value.u.partition_index);
-    }
-
-    bool operator==(const gpid &r) const { return value() == r.value(); }
-
-    bool operator!=(const gpid &r) const { return value() != r.value(); }
-
-    int32_t get_app_id() const { return _value.u.app_id; }
-    int32_t get_partition_index() const { return _value.u.partition_index; }
-    void set_app_id(int32_t v) { _value.u.app_id = v; }
-    void set_partition_index(int32_t v) { _value.u.partition_index = v; }
-    dsn_gpid &raw() { return _value; }
-    const dsn_gpid &raw() const { return _value; }
-
-#ifdef DSN_USE_THRIFT_SERIALIZATION
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-#endif
 };
 }

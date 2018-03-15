@@ -167,7 +167,7 @@ void replica::init_prepare(mutation_ptr &mu)
                                                        mu,
                                                        std::placeholders::_1,
                                                        std::placeholders::_2),
-                                             gpid_to_thread_hash(get_gpid()));
+                                             get_gpid().thread_hash());
         dassert(nullptr != mu->log_task(), "");
     }
 
@@ -188,7 +188,7 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
                                    int64_t learn_signature)
 {
     dsn_message_t msg =
-        dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, gpid_to_thread_hash(get_gpid()));
+        dsn_msg_create_request(RPC_PREPARE, timeout_milliseconds, get_gpid().thread_hash());
     replica_configuration rconfig;
     _primary_states.get_replica_config(status, rconfig, learn_signature);
 
@@ -206,7 +206,7 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
                   [=](error_code err, dsn_message_t request, dsn_message_t reply) {
                       on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
                   },
-                  gpid_to_thread_hash(get_gpid()));
+                  get_gpid().thread_hash());
 
     dinfo("%s: mutation %s send_prepare_message to %s as %s",
           name(),
@@ -381,7 +381,7 @@ void replica::on_prepare(dsn_message_t request)
                                                    mu,
                                                    std::placeholders::_1,
                                                    std::placeholders::_2),
-                                         gpid_to_thread_hash(get_gpid()));
+                                         get_gpid().thread_hash());
     dassert(nullptr != mu->log_task(), "");
 }
 
@@ -571,7 +571,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
                                 node, target_status, mu, prepare_timeout_ms, learn_signature);
                         }
                     },
-                    gpid_to_thread_hash(get_gpid()),
+                    get_gpid().thread_hash(),
                     std::chrono::milliseconds(delay_time_ms));
                 return;
             }

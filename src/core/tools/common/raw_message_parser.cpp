@@ -50,7 +50,7 @@ void raw_message_parser::notify_rpc_session_disconnected(rpc_session *sp)
         header->context.u.is_request = 1;
         header->context.u.is_forwarded = 0;
         header->from_address = sp->remote_address();
-        header->gpid.value = 0;
+        header->gpid.set_value(0);
 
         strncpy(header->rpc_name, "RPC_CALL_RAW_SESSION_DISCONNECT", DSN_MAX_TASK_CODE_NAME_LENGTH);
         special_msg->local_rpc_code = RPC_CALL_RAW_SESSION_DISCONNECT;
@@ -93,7 +93,7 @@ message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
         header->hdr_length = sizeof(*header);
         header->body_length = msg_length;
         strncpy(header->rpc_name, "RPC_CALL_RAW_MESSAGE", DSN_MAX_TASK_CODE_NAME_LENGTH);
-        header->gpid.value = 0;
+        header->gpid.set_value(0);
         header->context.u.is_request = 1;
         header->context.u.is_forwarded = 0;
         header->context.u.is_forward_supported = 0;

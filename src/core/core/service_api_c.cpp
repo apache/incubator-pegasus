@@ -465,7 +465,7 @@ DSN_API dsn_address_t dsn_primary_address()
 }
 
 DSN_API bool dsn_rpc_register_handler(
-    dsn::task_code code, const char *name, dsn_rpc_request_handler_t cb, void *param, dsn_gpid gpid)
+    dsn::task_code code, const char *name, dsn_rpc_request_handler_t cb, void *param, dsn::gpid gpid)
 {
     ::dsn::rpc_handler_info *h(new ::dsn::rpc_handler_info(code));
     h->name = std::string(name);
@@ -481,7 +481,7 @@ DSN_API bool dsn_rpc_register_handler(
     return r;
 }
 
-DSN_API void *dsn_rpc_unregiser_handler(dsn::task_code code, dsn_gpid gpid)
+DSN_API void *dsn_rpc_unregiser_handler(dsn::task_code code, dsn::gpid gpid)
 {
     auto h = ::dsn::task::get_current_node()->rpc_unregister_handler(code, gpid);
     void *param = nullptr;

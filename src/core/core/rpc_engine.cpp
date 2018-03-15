@@ -646,7 +646,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
         rpc_request_task *tsk = nullptr;
 
         // handle replication
-        if (msg->header->gpid.u.app_id > 0) {
+        if (msg->header->gpid.get_app_id() > 0) {
             tsk = _node->generate_intercepted_request_task(msg);
         }
 
@@ -737,11 +737,12 @@ void rpc_engine::call_uri(rpc_address addr, message_ex *request, rpc_response_ta
                    void *context,
                    uint64_t timeout_ts_ms) {
                     auto req2 = (message_ex *)(req);
-                    if (req2->header->gpid.value != 0 && err != ERR_OK &&
+                    if (req2->header->gpid.value() != 0 && err != ERR_OK &&
                         err != ERR_HANDLER_NOT_FOUND && err != ERR_APP_NOT_EXIST) {
                         auto resolver = req2->server_address.uri_address()->get_resolver();
                         if (nullptr != resolver) {
-                            resolver->on_access_failure(req2->header->gpid.u.partition_index, err);
+                            resolver->on_access_failure(req2->header->gpid.get_partition_index(),
+                                                        err);
 
                             // still got time, retry
                             uint64_t nms = dsn_now_ms();
@@ -791,14 +792,13 @@ void rpc_engine::call_uri(rpc_address addr, message_ex *request, rpc_response_ta
                               if (result.err == ERR_OK) {
                                   // update gpid when necessary
                                   auto &hdr2 = request->header;
-                                  if (hdr2->gpid.value != result.pid.value) {
-                                      dassert(hdr2->gpid.value == 0, "inconsistent gpid");
+                                  if (hdr2->gpid.value() != result.pid.value()) {
+                                      dassert(hdr2->gpid.value() == 0, "inconsistent gpid");
                                       hdr2->gpid = result.pid;
 
                                       // update thread hash if not assigned by applications
                                       if (hdr2->client.thread_hash == 0) {
-                                          hdr2->client.thread_hash =
-                                              dsn_gpid_to_thread_hash(result.pid);
+                                          hdr2->client.thread_hash = result.pid.thread_hash();
                                       }
                                   }
 

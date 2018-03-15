@@ -78,7 +78,7 @@ error_code replication_service_app::stop(bool cleanup)
     return ERR_OK;
 }
 
-void replication_service_app::on_intercepted_request(dsn_gpid gpid,
+void replication_service_app::on_intercepted_request(dsn::gpid gpid,
                                                      bool is_write,
                                                      dsn_message_t msg)
 {

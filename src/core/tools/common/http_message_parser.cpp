@@ -175,7 +175,7 @@ http_message_parser::http_message_parser()
         }
         case parsing_app_id: {
             char *end;
-            header->gpid.u.app_id = std::strtol(at, &end, 10);
+            header->gpid.set_app_id(std::strtol(at, &end, 10));
             if (end != at + length) {
                 derror("invalid header.app_id '%.*s'", length, at);
                 return 1;
@@ -184,7 +184,7 @@ http_message_parser::http_message_parser()
         }
         case parsing_partition_index: {
             char *end;
-            header->gpid.u.partition_index = std::strtol(at, &end, 10);
+            header->gpid.set_partition_index(std::strtol(at, &end, 10));
             if (end != at + length) {
                 derror("invalid header.partition_index '%.*s'", length, at);
                 return 1;
@@ -353,8 +353,8 @@ void http_message_parser::prepare_on_send(message_ex *msg)
         ss << "id: " << header->id << "\r\n";
         ss << "trace_id: " << header->trace_id << "\r\n";
         ss << "rpc_name: " << header->rpc_name << "\r\n";
-        ss << "app_id: " << header->gpid.u.app_id << "\r\n";
-        ss << "partition_index: " << header->gpid.u.partition_index << "\r\n";
+        ss << "app_id: " << header->gpid.get_app_id() << "\r\n";
+        ss << "partition_index: " << header->gpid.get_partition_index() << "\r\n";
         ss << "serialize_format: "
            << enum_to_string((dsn_msg_serialize_format)header->context.u.serialize_format)
            << "\r\n";

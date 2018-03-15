@@ -430,7 +430,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
 mutation_log::mutation_log(const std::string &dir, int32_t max_log_file_mb, gpid gpid, replica *r)
 {
     _dir = dir;
-    _is_private = (gpid.raw().value != 0);
+    _is_private = (gpid.value() != 0);
     _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
     _min_log_file_size_in_bytes = _max_log_file_size_in_bytes / 10;
     _owner_replica = r;

@@ -35,6 +35,8 @@
 #pragma once
 
 #include <cctype>
+#include <string>
+#include <map>
 #include <dsn/dist/replication.h>
 
 namespace dsn {

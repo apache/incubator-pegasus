@@ -114,26 +114,26 @@ protected:
     bool register_rpc_handler(dsn::task_code rpc_code,
                               const char *rpc_name_,
                               void (T::*handler)(const TRequest &),
-                              dsn_gpid gpid = dsn_gpid{0});
+                              dsn::gpid gpid = dsn::gpid());
 
     template <typename TRequest, typename TResponse>
     bool register_rpc_handler(dsn::task_code rpc_code,
                               const char *rpc_name_,
                               void (T::*handler)(const TRequest &, TResponse &),
-                              dsn_gpid gpid = dsn_gpid{0});
+                              dsn::gpid gpid = dsn::gpid());
 
     template <typename TRequest, typename TResponse>
     bool register_async_rpc_handler(dsn::task_code rpc_code,
                                     const char *rpc_name_,
                                     void (T::*handler)(const TRequest &, rpc_replier<TResponse> &),
-                                    dsn_gpid gpid = dsn_gpid{0});
+                                    dsn::gpid gpid = dsn::gpid());
 
     bool register_rpc_handler(dsn::task_code rpc_code,
                               const char *rpc_name_,
                               void (T::*handler)(dsn_message_t),
-                              dsn_gpid gpid = dsn_gpid{0});
+                              dsn::gpid gpid = dsn::gpid());
 
-    bool unregister_rpc_handler(dsn::task_code rpc_code, dsn_gpid gpid = dsn_gpid{0});
+    bool unregister_rpc_handler(dsn::task_code rpc_code, dsn::gpid gpid = dsn::gpid());
 
     template <typename TResponse>
     void reply(dsn_message_t request, const TResponse &resp);
@@ -169,7 +169,7 @@ template <typename TRequest>
 inline bool serverlet<T>::register_rpc_handler(dsn::task_code rpc_code,
                                                const char *rpc_name_,
                                                void (T::*handler)(const TRequest &),
-                                               dsn_gpid gpid)
+                                               dsn::gpid gpid)
 {
     typedef handler_context<void (T::*)(const TRequest &)> hc_type1;
     auto hc = (hc_type1 *)malloc(sizeof(hc_type1));
@@ -192,7 +192,7 @@ template <typename TRequest, typename TResponse>
 inline bool serverlet<T>::register_rpc_handler(dsn::task_code rpc_code,
                                                const char *rpc_name_,
                                                void (T::*handler)(const TRequest &, TResponse &),
-                                               dsn_gpid gpid)
+                                               dsn::gpid gpid)
 {
     typedef handler_context<void (T::*)(const TRequest &, TResponse &)> hc_type2;
     auto hc = (hc_type2 *)malloc(sizeof(hc_type2));
@@ -221,7 +221,7 @@ inline bool serverlet<T>::register_async_rpc_handler(dsn::task_code rpc_code,
                                                      const char *rpc_name_,
                                                      void (T::*handler)(const TRequest &,
                                                                         rpc_replier<TResponse> &),
-                                                     dsn_gpid gpid)
+                                                     dsn::gpid gpid)
 {
     typedef handler_context<void (T::*)(const TRequest &, rpc_replier<TResponse> &)> hc_type3;
     auto hc = (hc_type3 *)malloc(sizeof(hc_type3));
@@ -245,7 +245,7 @@ template <typename T>
 inline bool serverlet<T>::register_rpc_handler(dsn::task_code rpc_code,
                                                const char *rpc_name_,
                                                void (T::*handler)(dsn_message_t),
-                                               dsn_gpid gpid)
+                                               dsn::gpid gpid)
 {
     typedef handler_context<void (T::*)(dsn_message_t)> hc_type4;
     auto hc = (hc_type4 *)malloc(sizeof(hc_type4));
@@ -261,7 +261,7 @@ inline bool serverlet<T>::register_rpc_handler(dsn::task_code rpc_code,
 }
 
 template <typename T>
-inline bool serverlet<T>::unregister_rpc_handler(dsn::task_code rpc_code, dsn_gpid gpid)
+inline bool serverlet<T>::unregister_rpc_handler(dsn::task_code rpc_code, dsn::gpid gpid)
 {
     auto cb = (void *)dsn_rpc_unregiser_handler(rpc_code, gpid);
     if (cb != nullptr)

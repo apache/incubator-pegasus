@@ -87,10 +87,6 @@ struct __tls_dsn__
     int last_worker_queue_size;
     uint64_t node_pool_thread_ids; // 8,8,16 bits
     uint32_t last_lower32_task_id; // 32bits
-
-    char scratch_buffer[4][256]; // for temp to_string() etc., 4 buffers in maximum
-    int scratch_buffer_index;
-    char *scratch_next() { return scratch_buffer[++scratch_buffer_index % 4]; }
 };
 
 extern __thread struct __tls_dsn__ tls_dsn;

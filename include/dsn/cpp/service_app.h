@@ -82,7 +82,7 @@ public:
     virtual ~service_app() {}
     virtual error_code start(const std::vector<std::string> &args) { return dsn::ERR_OK; }
     virtual error_code stop(bool cleanup = false) { return dsn::ERR_OK; }
-    virtual void on_intercepted_request(dsn_gpid pid, bool is_write, dsn_message_t msg)
+    virtual void on_intercepted_request(dsn::gpid pid, bool is_write, dsn_message_t msg)
     {
         dassert(false, "not supported");
     }

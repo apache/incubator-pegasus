@@ -1124,7 +1124,7 @@ void replica_stub::on_node_query_reply(error_code err,
             tasking::enqueue(LPC_QUERY_NODE_CONFIGURATION_SCATTER,
                              this,
                              std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
-                             gpid_to_thread_hash(it->config.pid));
+                             it->config.pid.thread_hash());
         }
 
         // for rps not exist on meta_servers
@@ -1133,7 +1133,7 @@ void replica_stub::on_node_query_reply(error_code err,
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER2,
                 this,
                 std::bind(&replica_stub::on_node_query_reply_scatter2, this, this, it->first),
-                gpid_to_thread_hash(it->first));
+                it->first.thread_hash());
         }
 
         // handle the replicas which need to be gc
@@ -1162,7 +1162,7 @@ void replica_stub::set_meta_server_connected_for_test(
         tasking::enqueue(LPC_QUERY_NODE_CONFIGURATION_SCATTER,
                          this,
                          std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
-                         gpid_to_thread_hash(it->config.pid));
+                         it->config.pid.thread_hash());
     }
 }
 
@@ -1266,7 +1266,7 @@ void replica_stub::on_meta_server_disconnected()
             LPC_CM_DISCONNECTED_SCATTER,
             this,
             std::bind(&replica_stub::on_meta_server_disconnected_scatter, this, this, it->first),
-            gpid_to_thread_hash(it->first));
+            it->first.thread_hash());
     }
 }
 
@@ -1487,7 +1487,7 @@ void replica_stub::on_gc()
                     LPC_PER_REPLICA_CHECKPOINT_TIMER,
                     this,
                     std::bind(&replica_stub::trigger_checkpoint, this, it->second, true),
-                    gpid_to_thread_hash(it->first),
+                    it->first.thread_hash(),
                     std::chrono::milliseconds(
                         dsn_random32(0, 3000)) // delay random to avoid write compete
                     );
@@ -1515,7 +1515,7 @@ void replica_stub::on_gc()
                         LPC_PER_REPLICA_CHECKPOINT_TIMER,
                         this,
                         std::bind(&replica_stub::trigger_checkpoint, this, find->second, true),
-                        gpid_to_thread_hash(id),
+                        id.thread_hash(),
                         std::chrono::milliseconds(
                             dsn_random32(0, 3000)) // delay random to avoid write compete
                         );
@@ -1742,10 +1742,10 @@ void replica_stub::open_replica(const app_info &app,
 
     if (nullptr != req) {
         rpc::call_one_way_typed(
-            _primary_address, RPC_LEARN_ADD_LEARNER, *req, gpid_to_thread_hash(req->config.pid));
+            _primary_address, RPC_LEARN_ADD_LEARNER, *req, req->config.pid.thread_hash());
     } else if (nullptr != req2) {
         rpc::call_one_way_typed(
-            _primary_address, RPC_CONFIG_PROPOSAL, *req2, gpid_to_thread_hash(req2->config.pid));
+            _primary_address, RPC_CONFIG_PROPOSAL, *req2, req2->config.pid.thread_hash());
     }
 }
 
@@ -1914,7 +1914,7 @@ void replica_stub::open_service()
                     LPC_PER_REPLICA_CHECKPOINT_TIMER,
                     this,
                     std::bind(&replica_stub::trigger_checkpoint, this, it->second, true),
-                    gpid_to_thread_hash(it->first),
+                    it->first.thread_hash(),
                     std::chrono::milliseconds(
                         dsn_random32(0, 3000)) // delay random to avoid write compete
                     );

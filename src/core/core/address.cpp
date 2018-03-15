@@ -56,6 +56,7 @@
 #endif
 
 #include <dsn/utility/ports.h>
+#include <dsn/utility/fixed_size_buffer_pool.h>
 #include <dsn/service_api_c.h>
 #include <dsn/cpp/address.h>
 #include <dsn/tool-api/task.h>
@@ -149,10 +150,11 @@ DSN_API uint32_t dsn_ipv4_local(const char *network_interface)
     return ret;
 }
 
+static __thread fixed_size_buffer_pool<8, 256> bf;
 DSN_API const char *dsn_address_to_string(dsn_address_t addr)
 {
-    char *p = dsn::tls_dsn.scratch_next();
-    auto sz = sizeof(dsn::tls_dsn.scratch_buffer[0]);
+    char *p = bf.next();
+    auto sz = bf.get_chunk_size();
     struct in_addr net_addr;
 #ifdef _WIN32
     char *ip_str;

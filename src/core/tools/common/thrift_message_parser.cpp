@@ -266,8 +266,8 @@ dsn::message_ex *thrift_message_parser::parse_message(const thrift_message_heade
 
     dsn_hdr->id = seqid;
     strncpy(dsn_hdr->rpc_name, fname.c_str(), DSN_MAX_TASK_CODE_NAME_LENGTH);
-    dsn_hdr->gpid.u.app_id = thrift_header.app_id;
-    dsn_hdr->gpid.u.partition_index = thrift_header.partition_index;
+    dsn_hdr->gpid.set_app_id(thrift_header.app_id);
+    dsn_hdr->gpid.set_partition_index(thrift_header.partition_index);
     dsn_hdr->client.timeout_ms = thrift_header.client_timeout;
     dsn_hdr->client.thread_hash = thrift_header.client_thread_hash;
     dsn_hdr->client.partition_hash = thrift_header.client_partition_hash;

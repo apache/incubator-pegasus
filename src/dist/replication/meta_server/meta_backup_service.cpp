@@ -441,8 +441,7 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
             req.policy = *(static_cast<const policy_info *>(&_policy));
             req.backup_id = _cur_backup.backup_id;
             req.app_name = _policy.app_names.at(pid.get_app_id());
-            dsn_message_t request =
-                dsn_msg_create_request(RPC_COLD_BACKUP, 0, gpid_to_thread_hash(pid));
+            dsn_message_t request = dsn_msg_create_request(RPC_COLD_BACKUP, 0, pid.thread_hash());
             dsn::marshall(request, req);
             dsn::task_ptr rpc_callback = rpc::create_rpc_response_task(
                 request,

@@ -213,7 +213,7 @@ void replica::add_potential_secondary(configuration_update_request &proposal)
            state.signature);
 
     rpc::call_one_way_typed(
-        proposal.node, RPC_LEARN_ADD_LEARNER, request, gpid_to_thread_hash(get_gpid()));
+        proposal.node, RPC_LEARN_ADD_LEARNER, request, get_gpid().thread_hash());
 }
 
 void replica::upgrade_to_secondary_on_primary(::dsn::rpc_address node)
@@ -414,7 +414,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
                   [=](error_code err, dsn_message_t reqmsg, dsn_message_t response) {
                       on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
                   },
-                  gpid_to_thread_hash(get_gpid()));
+                  get_gpid().thread_hash());
 }
 
 void replica::on_update_configuration_on_meta_server_reply(
@@ -458,12 +458,12 @@ void replica::on_update_configuration_on_meta_server_reply(
                             on_update_configuration_on_meta_server_reply(
                                 err, request, response, std::move(req2));
                         },
-                        gpid_to_thread_hash(get_gpid()));
+                        get_gpid().thread_hash());
                     dsn_rpc_call(target.c_addr(),
                                  _primary_states.reconfiguration_task->native_handle());
                     dsn_msg_release_ref(request);
                 },
-                gpid_to_thread_hash(get_gpid()),
+                get_gpid().thread_hash(),
                 std::chrono::seconds(1));
             return;
         }
@@ -513,7 +513,7 @@ void replica::on_update_configuration_on_meta_server_reply(
                 replica_configuration rconfig;
                 replica_helper::get_replica_config(resp.config, req->node, rconfig);
                 rpc::call_one_way_typed(
-                    req->node, RPC_REMOVE_REPLICA, rconfig, gpid_to_thread_hash(get_gpid()));
+                    req->node, RPC_REMOVE_REPLICA, rconfig, get_gpid().thread_hash());
             }
             break;
         case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:

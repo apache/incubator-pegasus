@@ -218,7 +218,7 @@ void mutation::write_to(binary_writer &writer, dsn_message_t /*to*/) const
                                                 const mutation_header &header)
 {
     writer.write_pod((int64_t)0);
-    writer.write_pod(header.pid.raw().value);
+    writer.write_pod(header.pid.value());
     writer.write_pod(header.ballot);
     writer.write_pod(header.decree);
     writer.write_pod(header.log_offset);
@@ -249,7 +249,9 @@ void mutation::write_to(binary_writer &writer, dsn_message_t /*to*/) const
     //   - timestamp
     int64_t version;
     reader.read_pod(version);
-    reader.read_pod(header.pid.raw().value);
+    uint64_t pid_value;
+    reader.read_pod(pid_value);
+    header.pid.set_value(pid_value);
     reader.read_pod(header.ballot);
     reader.read_pod(header.decree);
     reader.read_pod(header.log_offset);
@@ -294,7 +296,7 @@ mutation_queue::mutation_queue(gpid gpid,
     _current_op_count = 0;
     _pending_mutation = nullptr;
     dassert(gpid.get_app_id() != 0, "invalid gpid");
-    _pcount = dsn_task_queue_virtual_length_ptr(RPC_PREPARE, gpid_to_thread_hash(gpid));
+    _pcount = dsn_task_queue_virtual_length_ptr(RPC_PREPARE, gpid.thread_hash());
 }
 
 mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, replica *r)

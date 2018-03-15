@@ -338,18 +338,13 @@ ENUM_TYPE_SERIALIZATION(dsn::app_status::type, dsn::app_status::AS_INVALID)
 
 inline void json_encode(std::stringstream &out, const dsn::gpid &pid)
 {
-    out << "\"" << pid.get_app_id() << "." << pid.get_partition_index() << "\"";
+    out << "\"" << pid.to_string() << "\"";
 }
 inline bool json_decode(dsn::json::string_tokenizer &in, dsn::gpid &pid)
 {
     std::string gpid_message;
     dverify(json_decode(in, gpid_message));
-    dsn_global_partition_id c_gpid;
-    int ans = sscanf(gpid_message.c_str(), "%d.%d", &c_gpid.u.app_id, &c_gpid.u.partition_index);
-    if (ans < 2)
-        return false;
-    pid = dsn::gpid(c_gpid);
-    return true;
+    return pid.parse_from(gpid_message.c_str());
 }
 
 inline void json_encode(std::stringstream &out, const dsn::rpc_address &address)

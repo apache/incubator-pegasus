@@ -1284,7 +1284,7 @@ void server_state::send_proposal(rpc_address target, const configuration_update_
            target.to_string(),
            proposal.node.to_string());
     dsn_message_t msg =
-        dsn_msg_create_request(RPC_CONFIG_PROPOSAL, 0, gpid_to_thread_hash(proposal.config.pid));
+        dsn_msg_create_request(RPC_CONFIG_PROPOSAL, 0, proposal.config.pid.thread_hash());
     ::marshall(msg, proposal);
     _meta_svc->send_message(target, msg);
 }

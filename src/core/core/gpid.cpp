@@ -23,19 +23,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <dsn/utility/fixed_size_buffer_pool.h>
+#include <dsn/tool-api/gpid.h>
+#include <cstring>
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
+namespace dsn {
 
-#pragma once
+bool gpid::parse_from(const char *str)
+{
+    return sscanf(str, "%d.%d", &_value.u.app_id, &_value.u.partition_index) == 2;
+}
 
-#include <dsn/service_api_cpp.h>
-#include <dsn/dist/replication/replication.types.h>
-#include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/dist/replication/replication.codes.h>
+static __thread fixed_size_buffer_pool<8, 64> bf;
+const char *gpid::to_string() const
+{
+    char *b = bf.next();
+    snprintf(b, bf.get_chunk_size(), "%d.%d", _value.u.app_id, _value.u.partition_index);
+    return b;
+}
+}
