@@ -1,0 +1,60 @@
+# Case Description:
+#   if primary crash and return with potential state, and its commit decree A is bigger than new primary's decree B(A > B),
+#   new primary will not accept old primary as a learner until it's commit decree reach A
+#
+# NOTICE: 
+#   run this case, should disable group check through set replication.group_check_disable = true
+
+set:load_balance_for_test=1,not_exit_on_log_failure=1
+
+# wait server ok
+state:{{r1,pri,3,0}{r2,sec,3,0}{r3,sec,3,0}}
+
+# write data
+client:begin_write:id=1,key=k1,value=v1,timeout=0
+client:begin_write:id=2,key=k2,value=v2,timeout=0
+client:begin_write:id=3,key=k3,value=v3,timeout=0
+client:begin_write:id=4,key=k4,value=v4,timeout=0
+client:begin_write:id=5,key=k5,value=v5,timeout=0
+client:begin_write:id=6,key=k6,value=v6,timeout=0
+
+# primary commit to decree 6, but secondary commit to 1
+state:{{r1,pri,3,6,6},{r2,sec,3,1,1},{r3,sec,3,1,1}}
+
+
+set:disable_load_balance=1
+# change primary from r1 to r2
+client:replica_config:receiver=r1,type=downgrade_to_inactive,node=r1
+config:{4,-,[r2,r3]}
+state:{{r1,ina,4,6},{r2,sec,4,1},{r3,sec,4,1}}
+
+client:replica_config:receiver=r2,type=upgrade_to_primary,node=r2
+config:{5,r2,[r3]}
+
+# kick r3 make ballot increase
+inject:on_rpc_call:rpc_name=RPC_PREPARE,from=r2,to=r3
+state:{{r1,ina,4,6},{r2,pri,5,1},{r3,sec,5,1}}
+config:{6,r2,[]}
+
+# delay the r2's replay prepare list, give r3 chance to learn before prepare list[2,6] to commit on r2
+modify:on_aio_enqueue:node=r2,task_code=LPC_WRITE_REPLICATION_LOG_SHARED,modify_delay=100
+
+# add r3 as sec
+client:replica_config:receiver=r2,type=add_secondary,node=r3
+
+wait:on_rpc_call:rpc_name=RPC_PREPARE,from=r2,to=r3
+
+state:{{r1,ina,4,6},{r2,pri,7,1},{r3,sec,7,1}}
+
+# delay r3 write share log task, this will lead mutation with decree = 2 will not commit on node 3
+modify:on_aio_enqueue:node=r3,task_code=LPC_WRITE_REPLICATION_LOG,modify_delay=100
+
+# add r1 to ps, then new pirmary r2's commit decree will commit to decree 6 without tell secondary r3
+# (r3's commit decree is 1, and mutation with decree 2 is waitting for logging)
+client:replica_config:receiver=r2,type=add_secondary,node=r1
+
+# write a new data
+client:begin_write:id=7,key=k7,value=v7,timeout=0
+
+# at last all r1 & r2 will come back
+state:{{r1,sec,8,7},{r2,pri,8,7},{r3,sec,8,2}}

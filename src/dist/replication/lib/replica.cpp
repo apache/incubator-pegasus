@@ -337,7 +337,7 @@ void replica::execute_mutation(mutation_ptr &mu)
             static_cast<int>(_prepare_list->max_decree() - d));
 
         if (next) {
-            init_prepare(next);
+            init_prepare(next, false);
         }
     }
 }

@@ -50,6 +50,9 @@ namespace replication {
 class mutation;
 typedef dsn::ref_ptr<mutation> mutation_ptr;
 
+// mutation is the 2pc unit of PacificA, which wraps one or more client requests and add
+// header informations related to PacificA algorithm for them.
+// both header and client request content are put into "data" member.
 class mutation : public ref_counter
 {
 public:
@@ -158,6 +161,16 @@ private:
 };
 
 class replica;
+// mutation queue are queues for mutations waiting to send.
+// more precisely: for client requests waiting to send.
+// mutations are queued as "_hdr + _pending_mutation". that is to say, _hdr.first is the first
+// element in the queue, and pending_mutations is the last.
+//
+// we keep 2 structure "hdr" and "pending_mutation" coz:
+// 1. as a container of client requests, capacity of a mutation is limited, so incoming client
+//    requets should be packed into different mutations
+// 2. number of preparing mutations is also limited, so we should queue new created mutations and
+//    try to send them as soon as the concurrent condition satisfies.
 class mutation_queue
 {
 public:

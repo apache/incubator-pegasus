@@ -168,7 +168,7 @@ private:
 
     /////////////////////////////////////////////////////////////////
     // 2pc
-    void init_prepare(mutation_ptr &mu);
+    void init_prepare(mutation_ptr &mu, bool reconciliation);
     void send_prepare_message(::dsn::rpc_address addr,
                               partition_status::type status,
                               const mutation_ptr &mu,

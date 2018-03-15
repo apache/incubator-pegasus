@@ -124,7 +124,7 @@ void replica::broadcast_group_check()
         dsn_now_ms() >= _primary_states.last_prepare_ts_ms + _options->group_check_interval_ms) {
         mutation_ptr mu = new_mutation(invalid_decree);
         mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
-        init_prepare(mu);
+        init_prepare(mu, false);
     }
 }
 

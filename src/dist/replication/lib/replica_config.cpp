@@ -900,7 +900,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
         mutation_ptr next = _primary_states.write_queue.check_possible_work(
             static_cast<int>(_prepare_list->max_decree() - last_committed_decree()));
         if (next) {
-            init_prepare(next);
+            init_prepare(next, false);
         }
 
         if (_primary_states.membership.secondaries.size() + 1 <
@@ -1000,8 +1000,7 @@ void replica::replay_prepare_list()
                    mu->tid());
         }
 
-        // ATTENTION: init_prepare() may do nothing if NOT_ENOUGH_MEMBER
-        init_prepare(mu);
+        init_prepare(mu, true);
     }
 }
 }

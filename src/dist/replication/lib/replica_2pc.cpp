@@ -72,11 +72,11 @@ void replica::on_client_write(task_code code, dsn_message_t request)
           dsn_address_to_string(dsn_msg_from_address(request)));
     auto mu = _primary_states.write_queue.add_work(code, request, this);
     if (mu) {
-        init_prepare(mu);
+        init_prepare(mu, false);
     }
 }
 
-void replica::init_prepare(mutation_ptr &mu)
+void replica::init_prepare(mutation_ptr &mu, bool reconciliation)
 {
     dassert(partition_status::PS_PRIMARY == status(),
             "invalid partition_status, status = %s",
@@ -110,9 +110,12 @@ void replica::init_prepare(mutation_ptr &mu)
         goto ErrOut;
     }
 
-    // stop prepare if there are too few replicas
+    // stop prepare if there are too few replicas unless it's a reconciliation
+    // for reconciliation, we should ensure every prepared mutation to be committed
+    // please refer to PacificA paper
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 <
-        _options->mutation_2pc_min_replica_count) {
+            _options->mutation_2pc_min_replica_count &&
+        !reconciliation) {
         err = ERR_NOT_ENOUGH_MEMBER;
         goto ErrOut;
     }
