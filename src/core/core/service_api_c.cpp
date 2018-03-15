@@ -691,8 +691,10 @@ DSN_API void dsn_file_write_vector(dsn_handle_t file,
     callback->aio()->file_offset = offset;
     callback->aio()->type = ::dsn::AIO_Write;
     for (int i = 0; i < buffer_count; i++) {
-        callback->_unmerged_write_buffers.push_back(buffers[i]);
-        callback->aio()->buffer_size += buffers[i].size;
+        if (buffers[i].size > 0) {
+            callback->_unmerged_write_buffers.push_back(buffers[i]);
+            callback->aio()->buffer_size += buffers[i].size;
+        }
     }
 
     ::dsn::task::get_current_disk()->write(callback);

@@ -679,7 +679,11 @@ aio_task::aio_task(dsn::task_code code,
     _aio = disk->prepare_aio_context(this);
 }
 
-aio_task::~aio_task() { delete _aio; }
+aio_task::~aio_task()
+{
+    delete _aio;
+    _aio = nullptr;
+}
 
 void aio_task::enqueue(error_code err, size_t transferred_size)
 {
