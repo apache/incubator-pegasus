@@ -9,6 +9,8 @@
 #include <memory>
 
 #include <dsn/utility/utils.h>
+#include <dsn/c/api_layer1.h>
+#include <arpa/inet.h>
 
 #include "global_env.h"
 global_env global_env::inst;
@@ -22,8 +24,7 @@ global_env::global_env()
 
 void global_env::get_dirs()
 {
-    const char *cmd1 =
-        "ps aux | grep pegasus_server | grep '/meta1/pegasus_server' | awk '{print $2}'";
+    const char *cmd1 = "ps aux | grep '/meta1/pegasus_server' | grep -v grep | awk '{print $2}'";
     std::stringstream ss1;
     assert(dsn::utils::pipe_execute(cmd1, ss1) == 0);
     int meta1_pid;
@@ -51,8 +52,11 @@ void global_env::get_dirs()
 
 void global_env::get_hostip()
 {
-    std::stringstream output;
-    assert(dsn::utils::pipe_execute("hostname -i", output) == 0);
-    output >> _host_ip;
-    std::cout << "host ip: " << _host_ip << std::endl;
+    uint32_t ip = dsn_ipv4_local("");
+    uint32_t ipnet = htonl(ip);
+    char buffer[512];
+    memset(buffer, 0, sizeof(buffer));
+    assert(inet_ntop(AF_INET, &ipnet, buffer, sizeof(buffer)));
+    _host_ip = buffer;
+    std::cout << "get ip: " << _host_ip << std::endl;
 }

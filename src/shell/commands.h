@@ -393,7 +393,7 @@ inline bool propose(command_executor *e, shell_context *sc, arguments args)
     dsn::rpc_address target, node;
     std::string proposal_type = "CT_";
     request.force = false;
-    int ans;
+    bool ans;
 
     optind = 0;
     while (true) {
@@ -407,11 +407,8 @@ inline bool propose(command_executor *e, shell_context *sc, arguments args)
             request.force = true;
             break;
         case 'g':
-            ans = sscanf(optarg,
-                         "%d.%d",
-                         &request.gpid.raw().u.app_id,
-                         &request.gpid.raw().u.partition_index);
-            verify_logged(ans >= 2, "parse %s as gpid failed\n", optarg);
+            ans = request.gpid.parse_from(optarg);
+            verify_logged(ans, "parse %s as gpid failed\n", optarg);
             break;
         case 'p':
             proposal_type += optarg;
@@ -457,7 +454,7 @@ inline bool balance(command_executor *e, shell_context *sc, arguments args)
     request.gpid.set_app_id(-1);
     std::string balance_type;
     dsn::rpc_address from, to;
-    int ans;
+    bool ans;
 
     optind = 0;
     while (true) {
@@ -468,11 +465,8 @@ inline bool balance(command_executor *e, shell_context *sc, arguments args)
             break;
         switch (c) {
         case 'g':
-            ans = sscanf(optarg,
-                         "%d.%d",
-                         &request.gpid.raw().u.app_id,
-                         &request.gpid.raw().u.partition_index);
-            if (ans < 2) {
+            ans = request.gpid.parse_from(optarg);
+            if (!ans) {
                 fprintf(stderr, "parse %s as gpid failed\n", optarg);
                 return false;
             }

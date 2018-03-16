@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ROOT=`pwd`
+LOCAL_IP=`scripts/get_local_ip`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export DSN_THIRDPARTY_ROOT=$ROOT/rdsn/thirdparty/output
@@ -210,8 +211,8 @@ function run_test()
 
     ./run.sh clear_onebox #clear the onebox before test
     ./run.sh start_onebox 
-    echo "sleep 20 to wait for the onebox to start all partitions ..."
-    sleep 20
+    echo "sleep 30 to wait for the onebox to start all partitions ..."
+    sleep 30
 
     for module in `echo $test_modules`; do
         pushd $ROOT/src/builder/bin/$module
@@ -375,6 +376,8 @@ function usage_start_onebox()
     echo "                     default app partition count, default is 8"
     echo "   -s|--server_path <str>"
     echo "                     server binary path, default is ${DSN_ROOT}/bin/pegasus_server"
+    echo "   --use_product_config"
+    echo "                     use the product config template: ./src/server/config.ini"
 }
 
 function run_start_onebox()
@@ -384,6 +387,7 @@ function run_start_onebox()
     APP_NAME=temp
     PARTITION_COUNT=8
     SERVER_PATH=${DSN_ROOT}/bin/pegasus_server
+    USE_PRODUCT_CONFIG=false
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -411,6 +415,10 @@ function run_start_onebox()
                 SERVER_PATH="$2"
                 shift
                 ;;
+            --use_product_config)
+                USE_PRODUCT_CONFIG=true
+                shift
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -430,8 +438,36 @@ function run_start_onebox()
     fi
     ln -s -f ${SERVER_PATH}/pegasus_server
     run_start_zk
-    sed "s/@LOCAL_IP@/`hostname -i`/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
-        ${ROOT}/src/server/config-server.ini >${ROOT}/config-server.ini
+
+    if [ $USE_PRODUCT_CONFIG == "true" ]; then
+      cp -f ${ROOT}/src/server/config.ini ${ROOT}/config-server.ini
+      sed -i 's/\<34601\>/@META_PORT@/' ${ROOT}/config-server.ini
+      sed -i 's/\<34801\>/@REPLICA_PORT@/' ${ROOT}/config-server.ini
+      sed -i 's/%{cluster.name}/onebox/g' ${ROOT}/config-server.ini
+      sed -i 's/%{network.interface}/eth0/g' ${ROOT}/config-server.ini
+      sed -i 's/%{email.address}//g' ${ROOT}/config-server.ini
+      sed -i 's/%{app.dir}/.\/data/g' ${ROOT}/config-server.ini
+      sed -i 's/%{slog.dir}//g' ${ROOT}/config-server.ini
+      sed -i 's/%{data.dirs}//g' ${ROOT}/config-server.ini
+      sed -i 's@%{home.dir}@'"$HOME"'@g' ${ROOT}/config-server.ini
+      for i in $(seq ${META_COUNT})
+      do
+          meta_port=$((34600+i))
+          if [ $i -eq 1 ]; then
+              meta_list="${LOCAL_IP}:$meta_port"
+          else
+              meta_list="$meta_list,${LOCAL_IP}:$meta_port"
+          fi
+      done
+      sed -i 's/%{meta.server.list}/'"$meta_list"'/g' ${ROOT}/config-server.ini
+      sed -i 's/%{zk.server.list}/'"${LOCAL_IP}"':22181/g' ${ROOT}/config-server.ini
+      sed -i 's/app_name = .*$/app_name = '"$APP_NAME"'/' ${ROOT}/config-server.ini
+      sed -i 's/partition_count = .*$/partition_count = '"$PARTITION_COUNT"'/' ${ROOT}/config-server.ini
+    else
+      sed "s/@LOCAL_IP@/${LOCAL_IP}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
+          ${ROOT}/src/server/config-server.ini >${ROOT}/config-server.ini
+    fi
+
     echo "starting server"
     ld_library_path=${SERVER_PATH}:$LD_LIBRARY_PATH
     export LD_LIBRARY_PATH=$ld_library_path
@@ -867,7 +903,7 @@ function run_start_kill_test()
     cd $ROOT
     CONFIG=config-kill-test.ini
 
-    sed "s/@LOCAL_IP@/`hostname -i`/g;\
+    sed "s/@LOCAL_IP@/${LOCAL_IP}/g;\
 s/@META_COUNT@/${META_COUNT}/g;\
 s/@REPLICA_COUNT@/${REPLICA_COUNT}/g;\
 s/@ZK_COUNT@/1/g;s/@APP_NAME@/${APP_NAME}/g;\

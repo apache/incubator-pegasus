@@ -68,14 +68,14 @@ Some notes on the above response:
 
 ## write/read request process
 
-You can refer to [TableHandler.java](../java/src/main/java/dsn/rpc/async/TableHandler.java) for the detailed RPC process in write/read request RPCs.
+You can refer to [TableHandler.java](https://github.com/XiaoMi/pegasus-java-client/blob/thrift-0.11.0-inlined/src/main/java/com/xiaomi/infra/pegasus/rpc/async/TableHandler.java) for the detailed RPC process in write/read request RPCs.
 
 ## how to generate code in thrift
 
-There are [3 IDL files](../java/idl) for RPC client:
+There are [3 IDL files](https://github.com/XiaoMi/pegasus-java-client/tree/thrift-0.11.0-inlined/idl) for RPC client:
 * base.thrift: a placeholder for rDSN specific structures(blob, error\_code, task\_code, RPC_address, gpid), you may use thrift to generate a sketch, and implement the details all by yourself.
 * replication.thrift: messages and RPCs used for communicate with meta server. Using generated code is ok.
 * rrdb.thrift: messages and RPCs used for communicate with replica server. Using generated code is ok.
 
-Due to some history reasons, RPC names defined in the IDL can't be reconginzed by server right now. A proper name should be set manually, please refer to [operators](../java/src/main/java/dsn/operator) for details. Besides, you may also need to refer
-to [base](..//java/src/main/java/dsn/base) for how to implement serialization for rDSN specific structures.
+Due to some history reasons, RPC names defined in the IDL can't be reconginzed by server right now. A proper name should be set manually, please refer to [operators](https://github.com/XiaoMi/pegasus-java-client/tree/thrift-0.11.0-inlined/src/main/java/com/xiaomi/infra/pegasus/operator) for details. Besides, you may also need to refer
+to [base](https://github.com/XiaoMi/pegasus-java-client/tree/thrift-0.11.0-inlined/src/main/java/com/xiaomi/infra/pegasus/base) for how to implement serialization for rDSN specific structures.
