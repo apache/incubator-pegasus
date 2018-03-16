@@ -580,7 +580,11 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
 
     configuration_proposal_action action;
     bool is_emergency = false;
-    if (replica_count(pc) < mutation_2pc_min_replica_count) {
+    if (cc.config_owner->max_replica_count > mutation_2pc_min_replica_count &&
+        replica_count(pc) < mutation_2pc_min_replica_count) {
+        // ATTENTION:
+        // when max_replica_count == 2, even if there is only 1 replica alive now, we will still
+        // wait for replica_assign_delay_ms_for_dropouts before recover the second replica.
         is_emergency = true;
         ddebug("gpid(%d.%d): is emergency due to too few replicas",
                gpid.get_app_id(),

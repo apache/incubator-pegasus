@@ -221,8 +221,8 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
         return ERR_INVALID_PARAMETERS;
     }
 
-    if (replica_count < 3) {
-        std::cout << "create app " << app_name << " failed: replica_count should >= 3" << std::endl;
+    if (replica_count < 2) {
+        std::cout << "create app " << app_name << " failed: replica_count should >= 2" << std::endl;
         return ERR_INVALID_PARAMETERS;
     }
 
