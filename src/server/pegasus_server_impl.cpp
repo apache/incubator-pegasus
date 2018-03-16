@@ -123,12 +123,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     10 * 64 * 1024 * 1024,
                                     "rocksdb options.max_bytes_for_level_base, default 640MB");
 
-    // rocksdb default: 10
-    _db_opts.max_grandparent_overlap_factor = (int)dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_max_grandparent_overlap_factor",
-        10,
-        "rocksdb options.max_grandparent_overlap_factor, default 10");
+// Deprecated
+//    // rocksdb default: 10
+//    _db_opts.max_grandparent_overlap_factor = (int)dsn_config_get_value_uint64(
+//        "pegasus.server",
+//        "rocksdb_max_grandparent_overlap_factor",
+//        10,
+//        "rocksdb options.max_grandparent_overlap_factor, default 10");
 
     // rocksdb default: 4
     _db_opts.level0_file_num_compaction_trigger =

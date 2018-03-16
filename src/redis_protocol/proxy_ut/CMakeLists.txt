@@ -24,4 +24,6 @@ set(MY_PROJ_LIBS pegasus.rproxylib pegasus.base ${MY_PROJ_LIBS})
 
 set(MY_BINPLACES "config.ini" "run.sh")
 
+add_compile_options("-Wno-dangling-else")
+
 dsn_add_executable()
