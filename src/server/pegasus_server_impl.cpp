@@ -81,8 +81,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _db_opts.write_buffer_size =
         (size_t)dsn_config_get_value_uint64("pegasus.server",
                                             "rocksdb_write_buffer_size",
-                                            16777216,
-                                            "rocksdb options.write_buffer_size, default 16MB");
+                                            64 * 1024 * 1024,
+                                            "rocksdb options.write_buffer_size, default 64MB");
 
     // rocksdb default: 2
     _db_opts.max_write_buffer_number =
@@ -95,8 +95,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _db_opts.max_background_flushes =
         (int)dsn_config_get_value_uint64("pegasus.server",
                                          "rocksdb_max_background_flushes",
-                                         2,
-                                         "rocksdb options.max_background_flushes, default 2");
+                                         1,
+                                         "rocksdb options.max_background_flushes, default 1");
 
     // rocksdb default: 1
     _db_opts.max_background_compactions =
@@ -113,15 +113,15 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _db_opts.target_file_size_base =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_target_file_size_base",
-                                    16777216,
-                                    "rocksdb options.target_file_size_base, default 16MB");
+                                    64 * 1024 * 1024,
+                                    "rocksdb options.target_file_size_base, default 64MB");
 
     // rocksdb default: 10MB
     _db_opts.max_bytes_for_level_base =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_max_bytes_for_level_base",
-                                    83886080,
-                                    "rocksdb options.max_bytes_for_level_base, default 80MB");
+                                    10 * 64 * 1024 * 1024,
+                                    "rocksdb options.max_bytes_for_level_base, default 640MB");
 
     // rocksdb default: 10
     _db_opts.max_grandparent_overlap_factor = (int)dsn_config_get_value_uint64(
@@ -134,22 +134,22 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _db_opts.level0_file_num_compaction_trigger =
         (int)dsn_config_get_value_uint64("pegasus.server",
                                          "rocksdb_level0_file_num_compaction_trigger",
-                                         4,
-                                         "rocksdb options.level0_file_num_compaction_trigger, 4");
+                                         10,
+                                         "rocksdb options.level0_file_num_compaction_trigger, 10");
 
     // rocksdb default: 20
     _db_opts.level0_slowdown_writes_trigger = (int)dsn_config_get_value_uint64(
         "pegasus.server",
         "rocksdb_level0_slowdown_writes_trigger",
-        20,
-        "rocksdb options.level0_slowdown_writes_trigger, default 20");
+        30,
+        "rocksdb options.level0_slowdown_writes_trigger, default 30");
 
     // rocksdb default: 24
     _db_opts.level0_stop_writes_trigger =
         (int)dsn_config_get_value_uint64("pegasus.server",
                                          "rocksdb_level0_stop_writes_trigger",
-                                         30,
-                                         "rocksdb options.level0_stop_writes_trigger, default 30");
+                                         60,
+                                         "rocksdb options.level0_stop_writes_trigger, default 60");
 
     // disable table block cache, default: false
     if ((bool)dsn_config_get_value_bool(

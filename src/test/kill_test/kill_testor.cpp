@@ -77,7 +77,7 @@ kill_testor::~kill_testor() {}
 
 void kill_testor::stop_verifier_and_exit(const char *msg)
 {
-    system("ps aux | grep verifier | awk '{print $2}' | xargs kill -9");
+    system("ps aux | grep pegasus | grep verifier | awk '{print $2}' | xargs kill -9");
     dassert(false, "%s", msg);
 }
 
