@@ -464,6 +464,7 @@ RrdbMultiPutOperator.prototype.handleResult = function(err, op){
 
 module.exports = {
     ThriftHeader : ThriftHeader,
+    Operator : Operator,
     QueryCfgOperator : QueryCfgOperator,
     RrdbGetOperator : RrdbGetOperator,
     RrdbPutOperator : RrdbPutOperator,

@@ -4,25 +4,32 @@ Official NodeJS client for [xiaomi/pegasus](https://github.com/XiaoMi/pegasus)
 ## Installation
 
 ## Usage
-### Create pegasus client `create(configs)`
+### Create pegasus client:  `create(configs)`
 ```
 let pegasusClient = require('../');
 let configs = {
-    metaList: ['127.0.0.1:34601', 
-               '127.0.0.1:34602', 
-               '127.0.0.1:34603'],  //required - meta server address array
-    rpcTimeOut : 5000,              //optional - operation timeout(ms) - default value: 1000ms
+    'metaList'   : ['127.0.0.1:34601',
+                    '127.0.0.1:34602',
+                    '127.0.0.1:34603'], // required - meta server address array
+    'rpcTimeOut' : 5000,                // optional - operation timeout in millisecond - default value: 1000ms
 };
 let client = pegasusClient.create(configs);
 
 ```
 
+### Close pegasus client:  `close()`
+```
+// we strongly recommend that you should close client when you finish your operations
+client.close();
+```
+
+
 ### Get value: `get(tableName, args, callback)`
 ```
 let getArgs = {
-    'hashKey' : '1',    //required (String or Buffer)
-    'sortKey' : '1',    //required (String or Buffer)
-    'timeout' : 2000,   //optional - operation timeout(ms) - default: client timeout
+    'hashKey' : '1',    // required (String or Buffer)
+    'sortKey' : '1',    // required (String or Buffer)
+    'timeout' : 2000,   // optional - operation timeout in millisecond - default: timeout set in client config
 };
 client.get('temp', getArgs, function(err, result){
     // err will be null, result will be value when succeed
@@ -33,7 +40,7 @@ client.get('temp', getArgs, function(err, result){
 > Notice:<br/>
 > If pegasus can't get value according to hashKey and sortKey in args, client DO NOT consider it as an error.<br/>
 > ```
-> client.get(tableName, {'hashKey':404,'sortKey':'not-found',}, function(err, result){
+> client.get(tableName, {'hashKey':'not-exist','sortKey':'not-found',}, function(err, result){
 >      assert(null, err);
 >      assert('', result);
 >  });
@@ -42,14 +49,14 @@ client.get('temp', getArgs, function(err, result){
 ### Set value: `set(tableName, args, callback)`
 ```
 let setArgs = {
-    'hashKey' : '1',  //required
-    'sortKey' : '1',  //required
-    'value'   : '1',  //required
-    'ttl'     : 100,  //optional - value lifetime(s) - default: 0
-    'timeout' : 2000, //optional - operation timeout - default: client timeout
+    'hashKey' : '1',  // required (String or Buffer)
+    'sortKey' : '1',  // required (String or Buffer)
+    'value'   : '1',  // required (String or Buffer)
+    'ttl'     : 100,  // optional - value lifetime in second - default: 0
+    'timeout' : 2000, // optional - operation timeout in millisecond - default: timeout set in client config
 };
 client.set(tableName, setArgs, function(err){
-    //err will be null when succeed, otherwise instanceof PException
+    // err will be null when succeed, otherwise instanceof PException
 });
 ```
 > Notice: ttl is different with timeout<br/>
@@ -58,27 +65,27 @@ client.set(tableName, setArgs, function(err){
 ### Delete value:  `del(tableName, args, callback)`
 ```
 let delArgs = {
-    'hashKey' : '1',  //required
-    'sortKey' : '1',  //required
-    'timeout' : 2000, //optional - default: client timeout
+    'hashKey' : '1',  // required (String or Buffer)
+    'sortKey' : '1',  // required (String or Buffer)
+    'timeout' : 2000, // optional - operation timeout in millisecond - default: timeout set in client config
 };
 client.del(tableName, delArgs, function(err){
-    //err will be null when succeed, otherwise instanceof PException
+    // err will be null when succeed, otherwise instanceof PException
 });
 ```
 
 ### MultiGet: `MultiGet(tableName, args, callback)`
 ```
 let multiGetArgs = {
-    'hashKey' : '1',            //required
-    'sortKeyArray' : ['1', '11', '22'], //required
-    'timeout' : 2000,           //optional - default: client timeout
-    'max_kv_count' : 100,       //optional - default: 100
-    'max_kv_size' : 1000000,    //optional(Byte) - default: 1000000
+    'hashKey'       : '1',               // required (String or Buffer)
+    'sortKeyArray'  : ['1', '11', '22'], // required (Array)
+    'timeout'       : 2000,              // optional - operation timeout in millisecond - default: timeout set in client config
+    'max_kv_count'  : 100,               // optional - default: 100
+    'max_kv_size'   : 1000000,           // optional(Byte) - default: 1000000
 };
 client.multiGet(tableName, multiGetArgs, function(err, result){
     // err will be null, result will be value array when all operations succeed
-    // NOTICE: result[i].key.data is sortKey, result[i].value.data is the value
+    // result[i].key.data is sortKey, result[i].value.data is value
 });
 ```
 > Notice: multiGet is used for getting values under same hashKey, params and result in multiGetArgs:
@@ -90,9 +97,9 @@ client.multiGet(tableName, multiGetArgs, function(err, result){
 ```
 let batchGetArgArray = [];
 batchGetArgArray[0] = {
-    'hashKey' : '1',
-    'sortKey' : '11',
-    'timeout' : 2000,
+    'hashKey' : '1',    // required (String or Buffer)
+    'sortKey' : '11',   // required (String or Buffer)
+    'timeout' : 2000,   // optional - operation timeout in millisecond - default: timeout set in client config
 };
 batchGetArgArray[1] = {
     'hashKey' : '1',
@@ -100,7 +107,7 @@ batchGetArgArray[1] = {
     'timeout' : 2000,
 };
 client.batchGet(tableName, batchGetArgArray, function(err, result){
-    // err will be null, result will be array when all operations succeed
+    // err will be null, result will be value array when all operations succeed
     // result[i].hashKey is hashKey, result[i].sortKey is sortKey, result[i].value is value
     // batchGet is not atomic, if any get operation failed, batchGet will stop
 });
@@ -113,22 +120,22 @@ client.batchGet(tableName, batchGetArgArray, function(err, result){
 ```
 let array = [];
 array[0] = {
-    'key' : '11',       //required - sortKey
-    'value' : '111',    //required
+    'key'   : '11',     // required - sortKey (String or Buffer)
+    'value' : '111',    // required (String or Buffer)
 };
 array[1] = {
-    'key' : '22',
+    'key'   : '22',
     'value' : '222',
 };
 
 let args = {
-    'hashKey' : '1',    //required
-    'sortKeyValueArray' : array,    //required
-    'ttl' : 0,          //optional
-    'timeout' : 2000,   //optional
+    'hashKey'           : '1',      // required (String or Buffer)
+    'sortKeyValueArray' : array,    // required (Array)
+    'ttl'               : 0,        // optional - value lifetime in second - default: 0
+    'timeout'           : 2000,     // optional - operation timeout in millisecond - default: timeout set in client config
 };
 client.multiSet(tableName, args, function(err){
-    //err will be null when succeed, otherwise instanceof PException
+    // err will be null when succeed, otherwise instanceof PException
 });
 ```
 
@@ -136,10 +143,10 @@ client.multiSet(tableName, args, function(err){
 ```
 let argArray = [];
 argArray[0] = {
-    'hashKey' : '1',    //required
-    'sortKey' : '11',   //required
-    'value'   : '11',   //required
-    'timeout' : 2000,   //optional
+    'hashKey' : '1',    // required (String or Buffer)
+    'sortKey' : '11',   // required (String or Buffer)
+    'value'   : '11',   // required (String or Buffer)
+    'timeout' : 2000,   // optional - operation timeout in millisecond - default: timeout set in client config
 };
 argArray[1] = {
     'hashKey' : '1',
@@ -154,6 +161,8 @@ client.batchSet(tableName, argArray, function(err){
 ```
 
 ## Exception
+All errors callback returns are instance of PException, basic exception in pegasus client.
+
 
 ## Test
 Tests rely on pegasus onebox cluster, referring to [Using pegasus onebox](https://github.com/XiaoMi/pegasus/wiki/%E4%BD%93%E9%AA%8Conebox%E9%9B%86%E7%BE%A4)

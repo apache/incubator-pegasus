@@ -7,8 +7,8 @@
 const EventEmitter = require('events').EventEmitter;
 const util = require('util');
 const Cluster = require('./session').Cluster;
-const TableHandler = require('./tableHandler').TableHandler;
-const TableInfo = require('./tableHandler').TableInfo;
+const TableHandler = require('./table_handler').TableHandler;
+const TableInfo = require('./table_handler').TableInfo;
 // const log = require('../log');
 
 const _OPERATION_TIMEOUT = 1000;

@@ -16,7 +16,10 @@ const META_DELAY = 500;
 
 /**
  * Constructor of Cluster
- * @param {Object}  args
+ * @param {Object}  args                required
+ *        {Array}   args.metaList       required
+ *        {String}  args.metaList[i]    required
+ *        {Number}  args.timeout(ms)    required
  * @constructor
  */
 function Cluster(args){
@@ -47,7 +50,8 @@ Cluster.prototype.close = function(){
 
 /**
  * Constructor of Session
- * @param {object}  args
+ * @param {Object}  args
+ *        {Number}  args.timeout(ms)    required
  * @constructor
  */
 function Session(args){
@@ -57,8 +61,9 @@ function Session(args){
 
 /**
  * Create new Connection by rpc_address
- * @param {object}   args
- * @param {function} callback
+ * @param {Object}      args
+ *        {rpc_address} args.rpc_address    required
+ * @param {Function}    callback
  */
 Session.prototype.getConnection = function(args, callback){
     let rpc_addr = args.rpc_address;
@@ -78,7 +83,10 @@ Session.prototype.getConnection = function(args, callback){
 
 /**
  * Constructor of MetaSession
- * @param {object}  args
+ * @param {Object}  args
+ *        {Array}   args.metaList       required
+ *        {String}  args.metaList[i]    required
+ *        {Number}  args.timeout(ms)    required
  * @constructor
  * @extends Session
  */
@@ -203,7 +211,9 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
 
 /**
  * Constructor of ReplicaSession
- * @param {object}  args
+ * @param   {Object}    args
+ *          {string}    args.address        required
+ *          {Number}    args.timeout(ms)    required
  * @constructor
  * @extends Session
  */
@@ -269,7 +279,9 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
             op.pid.get_app_id(),
             op.pid.get_pidx(),
             op.rpc_error.errno);
-        round.callback(err, op);
+        round.callback(new Exception.RPCException('ERR_INVALID_DATA',
+            'Failed to query replica server, error is ' + 'ERR_INVALID_DATA'
+        ), op);
         return;
     case ErrorType.ERR_SESSION_RESET:
     case ErrorType.ERR_OBJECT_NOT_FOUND: // replica server doesn't serve this gpid
@@ -295,7 +307,10 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
             op.pid.get_app_id(),
             op.pid.get_pidx(),
             op.rpc_error.errno);
-        round.callback(err, op);
+        round.callback(new Exception.RPCException(ErrorType[op.rpc_error.errno],
+            'Failed to query replica server, error is ' + ErrorType[op.rpc_error.errno]
+        ), op);
+        //round.callback(err, op);
         return;
     }
 
@@ -313,7 +328,7 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
     }else{
         let err_type = 'ERR_TIMEOUT';
         round.callback(new Exception.RPCException(err_type,
-            'Failed to query meta server, error is ' + err_type
+            'Failed to query server, error is ' + err_type
         ), op);
     }
 
@@ -332,10 +347,10 @@ function RequestEntry(operator, callback){
 
 /**
  * Constructor of MetaRequestRound
- * @param {Operator} operator
- * @param {Function} callback
- * @param {number} maxQueryCount
- * @param {Connection} lastConnection
+ * @param   {Operator}    operator
+ * @param   {Function}    callback
+ * @param   {Number}      maxQueryCount
+ * @param   {Connection}  lastConnection
  * @constructor
  */
 function MetaRequestRound(operator, callback, maxQueryCount, lastConnection){
@@ -347,9 +362,9 @@ function MetaRequestRound(operator, callback, maxQueryCount, lastConnection){
 
 /**
  * Constructor of ClientRequestRound
- * @param {TableHandler} tableHandler
- * @param {Operator} operator
- * @param {Function} callback
+ * @param   {TableHandler}  tableHandler
+ * @param   {Operator}      operator
+ * @param   {Function}      callback
  * @constructor
  */
 function ClientRequestRound(tableHandler, operator, callback){
@@ -363,7 +378,6 @@ module.exports = {
     Cluster : Cluster,
     MetaSession : MetaSession,
     ReplicaSession : ReplicaSession,
-
     RequestEntry : RequestEntry,
     MetaRequestRound: MetaRequestRound,
     ClientRequestRound : ClientRequestRound,
