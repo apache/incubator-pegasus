@@ -6,6 +6,7 @@
 #include <pegasus_key_schema.h>
 #include <pegasus_value_schema.h>
 #include <pegasus_utils.h>
+#include <dsn/cpp/smart_pointers.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <rocksdb/utilities/checkpoint.h>
@@ -955,27 +956,45 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             resp.error = rocksdb::Status::kIncomplete;
         }
     } else {
-        rocksdb::Status status;
+        bool error_occurred = false;
+        rocksdb::Status final_status;
         int32_t count = 0;
         int32_t size = 0;
         bool exceed_limit = false;
-        bool error_occurred = false;
+        std::vector<::dsn::blob> keys_holder;
+        std::vector<rocksdb::Slice> keys;
+        std::vector<std::string> values;
+        keys_holder.reserve(request.sort_keys.size());
+        keys.reserve(request.sort_keys.size());
         for (auto &sort_key : request.sort_keys) {
-            // if exceed limit
-            if (count >= max_kv_count || size >= max_kv_size) {
-                exceed_limit = true;
-                break;
-            }
-
             ::dsn::blob raw_key;
             pegasus_generate_key(raw_key, request.hash_key, sort_key);
-            rocksdb::Slice skey(raw_key.data(), raw_key.length());
-            std::unique_ptr<std::string> value(new std::string());
-            status = _db->Get(_rd_opts, skey, value.get());
+            keys.emplace_back(raw_key.data(), raw_key.length());
+            keys_holder.emplace_back(std::move(raw_key));
+        }
 
+        std::vector<rocksdb::Status> statuses = _db->MultiGet(_rd_opts, keys, &values);
+        for (int i = 0; i < keys.size(); i++) {
+            rocksdb::Status& status = statuses[i];
+            std::string& value = values[i];
+            // print log
+            if (!status.ok()) {
+                if (_verbose_log) {
+                    derror("%s: rocksdb get failed for multi_get: "
+                           "hash_key = \"%s\", sort_key = \"%s\", error = %s",
+                           replica_name(),
+                           ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
+                           ::pegasus::utils::c_escape_string(request.sort_keys[i]).c_str(),
+                           status.ToString().c_str());
+                } else if (!status.IsNotFound()) {
+                    derror("%s: rocksdb get failed for multi_get: error = %s",
+                           replica_name(),
+                           status.ToString().c_str());
+                }
+            }
             // check ttl
             if (status.ok()) {
-                uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, *value);
+                uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, value);
                 if (expire_ts > 0 && expire_ts <= epoch_now) {
                     expire_count++;
                     if (_verbose_log) {
@@ -984,44 +1003,34 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                     status = rocksdb::Status::NotFound();
                 }
             }
-
-            // print log
-            if (!status.ok()) {
-                if (_verbose_log) {
-                    derror("%s: rocksdb get failed for multi_get: "
-                           "hash_key = \"%s\", sort_key = \"%s\", error = %s",
-                           replica_name(),
-                           ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
-                           ::pegasus::utils::c_escape_string(sort_key).c_str(),
-                           status.ToString().c_str());
-                } else if (!status.IsNotFound()) {
-                    derror("%s: rocksdb get failed for multi_get: error = %s",
-                           replica_name(),
-                           status.ToString().c_str());
-                }
-            }
-
             // extract value
             if (status.ok()) {
-                ::dsn::apps::key_value kv;
-                kv.key = sort_key;
-                if (!request.no_value) {
-                    pegasus_extract_user_data(_value_schema_version, std::move(value), kv.value);
+                // check if exceed limit
+                if (count >= max_kv_count || size >= max_kv_size) {
+                    exceed_limit = true;
+                    break;
                 }
-                resp.kvs.emplace_back(kv);
+                ::dsn::apps::key_value kv;
+                kv.key = request.sort_keys[i];
+                if (!request.no_value) {
+                    pegasus_extract_user_data(_value_schema_version,
+                                              ::dsn::make_unique<std::string>(std::move(value)),
+                                              kv.value);
+                }
                 count++;
                 size += kv.key.length() + kv.value.length();
+                resp.kvs.emplace_back(std::move(kv));
             }
-
             // if error occurred
             if (!status.ok() && !status.IsNotFound()) {
                 error_occurred = true;
+                final_status = status;
                 break;
             }
         }
 
         if (error_occurred) {
-            resp.error = status.code();
+            resp.error = final_status.code();
             resp.kvs.clear();
         } else if (exceed_limit) {
             resp.error = rocksdb::Status::kIncomplete;
@@ -2154,7 +2163,7 @@ int pegasus_server_impl::append_key_value_for_scan(
         pegasus_extract_user_data(_value_schema_version, std::move(value_buf), kv.value);
     }
 
-    kvs.emplace_back(kv);
+    kvs.emplace_back(std::move(kv));
     return 1;
 }
 
@@ -2198,7 +2207,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
         pegasus_extract_user_data(_value_schema_version, std::move(value_buf), kv.value);
     }
 
-    kvs.emplace_back(kv);
+    kvs.emplace_back(std::move(kv));
     return 1;
 }
 

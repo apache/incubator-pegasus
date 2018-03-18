@@ -603,7 +603,40 @@ TEST(basic, multi_set_get_del)
     ASSERT_EQ("basic_test_sort_key_4", it->first);
     ASSERT_EQ("basic_test_value_4", it->second);
 
-    // multi_get with limit count
+    // multi_get with limit count 4
+    new_kvs.clear();
+    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 4);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(4, new_kvs.size());
+    it = new_kvs.begin();
+    ASSERT_EQ("basic_test_sort_key_1", it->first);
+    ASSERT_EQ("basic_test_value_1", it->second);
+    it++;
+    ASSERT_EQ("basic_test_sort_key_2", it->first);
+    ASSERT_EQ("basic_test_value_2", it->second);
+    it++;
+    ASSERT_EQ("basic_test_sort_key_3", it->first);
+    ASSERT_EQ("basic_test_value_3", it->second);
+    it++;
+    ASSERT_EQ("basic_test_sort_key_4", it->first);
+    ASSERT_EQ("basic_test_value_4", it->second);
+
+    // multi_get with limit count 3
+    new_kvs.clear();
+    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 3);
+    ASSERT_EQ(PERR_INCOMPLETE, ret);
+    ASSERT_EQ(3, new_kvs.size());
+    it = new_kvs.begin();
+    ASSERT_EQ("basic_test_sort_key_1", it->first);
+    ASSERT_EQ("basic_test_value_1", it->second);
+    it++;
+    ASSERT_EQ("basic_test_sort_key_2", it->first);
+    ASSERT_EQ("basic_test_value_2", it->second);
+    it++;
+    ASSERT_EQ("basic_test_sort_key_3", it->first);
+    ASSERT_EQ("basic_test_value_3", it->second);
+
+    // multi_get with limit count 1
     new_kvs.clear();
     ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 1);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
