@@ -4,6 +4,7 @@
 package com.xiaomi.infra.pegasus.rpc.async;
 
 import com.xiaomi.infra.pegasus.tools.tools;
+import com.xiaomi.infra.pegasus.tools.Toollet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Before; 
@@ -34,17 +35,17 @@ public class MetaSessionTest {
     public void after() throws Exception {
         rpc_address addr = new rpc_address();
         addr.fromString("127.0.0.1:34602");
-        com.xiaomi.infra.pegasus.tools.Toollet.tryStartServer(addr);
+        Toollet.tryStartServer(addr);
     }
 
     private static void ensureNotLeader(rpc_address addr) {
-        com.xiaomi.infra.pegasus.tools.Toollet.closeServer(addr);
+        Toollet.closeServer(addr);
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        com.xiaomi.infra.pegasus.tools.Toollet.tryStartServer(addr);
+        Toollet.tryStartServer(addr);
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
@@ -85,7 +86,7 @@ public class MetaSessionTest {
             session.asyncQuery(op, callback, 10);
         }
 
-        com.xiaomi.infra.pegasus.tools.Toollet.closeServer(addr);
+        Toollet.closeServer(addr);
         for (FutureTask<Void> cb: callbacks) {
             try {
                 tools.waitUninterruptable(cb, Integer.MAX_VALUE);
@@ -94,5 +95,7 @@ public class MetaSessionTest {
                 Assert.fail();
             }
         }
+
+        manager.close();
     }
 }

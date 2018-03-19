@@ -46,10 +46,10 @@ public class TableHandlerTest {
     public void after() throws Exception {
     }
 
-    private com.xiaomi.infra.pegasus.base.rpc_address getValidWrongServer(final com.xiaomi.infra.pegasus.base.rpc_address right_address) {
-        ArrayList<com.xiaomi.infra.pegasus.base.rpc_address> replicas = new ArrayList<rpc_address>();
+    private rpc_address getValidWrongServer(final rpc_address right_address) {
+        ArrayList<rpc_address> replicas = new ArrayList<rpc_address>();
         for (int i=0; i<replica_servers.length; ++i) {
-            com.xiaomi.infra.pegasus.base.rpc_address a = new com.xiaomi.infra.pegasus.base.rpc_address();
+            rpc_address a = new rpc_address();
             boolean ans = a.fromString(replica_servers[i]);
             assert ans;
 

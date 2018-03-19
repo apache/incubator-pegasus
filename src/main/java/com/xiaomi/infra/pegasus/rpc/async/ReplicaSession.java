@@ -100,6 +100,20 @@ public class ReplicaSession {
         return entry.sequenceId;
     }
 
+    public void closeSession() {
+        VolatileFields f = fields;
+        if (f.state == ConnState.CONNECTED && f.nettyChannel != null) {
+            try {
+                f.nettyChannel.close().sync();
+                logger.info("channel to {} closed", address.toString());
+            } catch (Exception ex) {
+                logger.warn("close channel {} failed: ", address.toString(), ex);
+            }
+        } else {
+            logger.info("channel {} not connected, skip the close", address.toString());
+        }
+    }
+
     public RequestEntry getAndRemoveEntry(int seqID) {
         return pendingResponse.remove(new Integer(seqID));
     }

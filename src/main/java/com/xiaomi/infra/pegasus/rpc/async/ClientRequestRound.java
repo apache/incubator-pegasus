@@ -16,7 +16,7 @@ public final class ClientRequestRound {
 
     client_operator operator;
     Table.ClientOPCallback callback;
-    int timeoutMs;
+    long timeoutMs;
 
     boolean enableCounter;
     long createNanoTime;
@@ -29,14 +29,14 @@ public final class ClientRequestRound {
     public ClientRequestRound(client_operator op,
                               Table.ClientOPCallback cb,
                               boolean enableCounter,
-                              int timeoutInMilliseconds) {
+                              long timeoutInMilliseconds) {
         operator = op;
         callback = cb;
         timeoutMs = timeoutInMilliseconds;
 
         this.enableCounter = enableCounter;
         createNanoTime = System.nanoTime();
-        expireNanoTime = createNanoTime + timeoutMs * 1000000;
+        expireNanoTime = createNanoTime + timeoutMs * 1000000L;
     }
 
     public com.xiaomi.infra.pegasus.operator.client_operator getOperator() {

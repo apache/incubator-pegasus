@@ -16,7 +16,7 @@ import java.util.*;
 public class TestPing {
     @Test
     public void testPing() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+        PegasusClientInterface client = PegasusClientFactory.createClient("resource:///pegasus.properties");
         String tableName = "temp";
 
         byte[] hashKey = "hello".getBytes();
@@ -110,6 +110,7 @@ public class TestPing {
             Assert.assertTrue(false);
         }
 
-        PegasusClientFactory.closeSingletonClient();
+        client.close();
+        client.close();
     }
 }

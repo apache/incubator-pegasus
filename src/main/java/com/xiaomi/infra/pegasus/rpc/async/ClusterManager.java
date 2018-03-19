@@ -14,8 +14,10 @@ import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
 import org.slf4j.Logger;
 
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -93,7 +95,7 @@ public class ClusterManager extends Cluster {
 
     public int getTimeout() { return operationTimeout; }
 
-    public int getRetryDelay(int timeoutMs) { return (timeoutMs < 3 ? 1: timeoutMs/3); }
+    public long getRetryDelay(long timeoutMs) { return (timeoutMs < 3 ? 1: timeoutMs/3); }
 
     public int getRetryDelay() { return retryDelay; }
 
@@ -133,11 +135,35 @@ public class ClusterManager extends Cluster {
         if (enableCounter) {
             MetricsManager.finish();
         }
-        metaGroup.shutdownGracefully();
-        logger.info("close meta group");
-        replicaGroup.shutdownGracefully();
-        logger.info("close replica group");
-        tableGroup.shutdownGracefully();
-        logger.info("close table group");
+
+        metaSession.closeSession();
+        for (Map.Entry<rpc_address, ReplicaSession> entry: replicaSessions.entrySet()) {
+            entry.getValue().closeSession();
+        }
+
+        Future metaGroupFuture = metaGroup.shutdownGracefully();
+        Future replicaGroupFuture = replicaGroup.shutdownGracefully();
+        Future tableGroupFuture = tableGroup.shutdownGracefully();
+
+        try {
+            metaGroupFuture.sync();
+            logger.info("meta group has closed");
+        } catch (Exception ex) {
+            logger.warn("close meta group failed: ", ex);
+        }
+
+        try {
+            replicaGroupFuture.sync();
+            logger.info("replica group has closed");
+        } catch (Exception ex) {
+            logger.warn("close replica group failed: ", ex);
+        }
+
+        try {
+            tableGroupFuture.sync();
+            logger.info("table group has closed");
+        } catch (Exception ex) {
+            logger.warn("close table group failed: ", ex);
+        }
     }
 }

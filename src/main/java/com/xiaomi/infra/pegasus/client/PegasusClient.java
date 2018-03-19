@@ -26,9 +26,9 @@ public class PegasusClient implements PegasusClientInterface {
     private static final Logger LOGGER = LoggerFactory.getLogger(PegasusClient.class);
 
     private final Properties config;
-    private final Cluster cluster;
     private final ConcurrentHashMap<String, PegasusTable> tableMap;
     private final Object tableMapLock;
+    private Cluster cluster;
 
     private static class PegasusHasher implements KeyHasher {
         @Override
@@ -83,6 +83,11 @@ public class PegasusClient implements PegasusClientInterface {
         this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
         this.tableMapLock = new Object();
         LOGGER.info(getConfigurationString());
+    }
+
+    @Override
+    public void finalize() {
+        close();
     }
 
     // generate rocksdb key.
@@ -174,7 +179,12 @@ public class PegasusClient implements PegasusClientInterface {
 
     @Override
     public void close() {
-        cluster.close();
+        synchronized (this) {
+            if (cluster != null) {
+                cluster.close();
+                cluster = null;
+            }
+        }
     }
 
     @Override

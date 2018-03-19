@@ -47,8 +47,10 @@ public final class MetricsManager {
 
     public static final void finish() {
         synchronized (logger) {
-            reporter.stop();
-            started = false;
+            if (started) {
+                reporter.stop();
+                started = false;
+            }
         }
     }
 

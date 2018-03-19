@@ -14,6 +14,7 @@ import io.netty.util.CharsetUtil;
 import org.json.JSONException;
 import org.slf4j.Logger;
 
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,7 +24,7 @@ public class MetricsReporter {
     public MetricsReporter(int reportSecs, MetricsPool pool) {
         falconAgentIP = "127.0.0.1";
         falconAgentPort = 1988;
-        falconAgentSocket = falconAgentIP + String.valueOf(falconAgentPort);
+        falconAgentSocket = falconAgentIP + ":" + String.valueOf(falconAgentPort);
 
         reportIntervalSecs = reportSecs;
         falconRequestPath = "/v1/push";
@@ -45,14 +46,46 @@ public class MetricsReporter {
                         p.addLast(new HttpClientHandler());
                     }
                 });
+
+        actionLater = null;
+        reportStopped = true;
+        reportTarget = null;
     }
 
     public void start() {
+        reportStopped = false;
         tryConnect();
     }
 
     public void stop() {
-        httpClientGroup.shutdownGracefully();
+        httpClientGroup.execute(new Runnable() {
+            @Override
+            public void run() {
+                reportStopped = true;
+                if (actionLater != null) {
+                    actionLater.cancel(false);
+                }
+                if (reportTarget != null) {
+                    reportTarget.close().addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                            if (channelFuture.isSuccess()) {
+                                logger.info("close channel to {} succeed", falconAgentSocket);
+                            } else {
+                                logger.warn("close channel to {} failed: ", channelFuture.cause());
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        try {
+            httpClientGroup.shutdownGracefully().sync();
+            logger.info("close metrics reporter");
+        } catch (Exception ex) {
+            logger.warn("close metrics report failed: ", ex);
+        }
     }
 
     public void tryConnect() {
@@ -60,6 +93,7 @@ public class MetricsReporter {
             @Override
             public void operationComplete(ChannelFuture channelFuture) throws Exception {
                 if (channelFuture.isSuccess()) {
+                    reportTarget = channelFuture.channel();
                     logger.info("create channel with {} succeed, wait it active", falconAgentSocket);
                 } else {
                     logger.error("create channel with {} failed, connect later: ",
@@ -72,7 +106,9 @@ public class MetricsReporter {
     }
 
     public void scheduleNextConnect() {
-        httpClientGroup.schedule(new Runnable() {
+        if (reportStopped)
+            return;
+        actionLater = httpClientGroup.schedule(new Runnable() {
             @Override
             public void run() {
                 tryConnect();
@@ -81,7 +117,9 @@ public class MetricsReporter {
     }
 
     public void scheduleNextReport(final Channel channel) {
-        httpClientGroup.schedule(new Runnable() {
+        if (reportStopped)
+            return;
+        actionLater = httpClientGroup.schedule(new Runnable() {
             @Override
             public void run() {
                 reportMetrics(channel);
@@ -159,6 +197,7 @@ public class MetricsReporter {
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
             logger.info("channel {} is inactive", ctx.channel().toString());
+            reportTarget = null;
             scheduleNextConnect();
         }
     }
@@ -173,6 +212,10 @@ public class MetricsReporter {
 
     private Bootstrap boot;
     private EventLoopGroup httpClientGroup;
+
+    private ScheduledFuture actionLater;
+    private boolean reportStopped;
+    private Channel reportTarget;
 
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(MetricsReporter.class);
 }

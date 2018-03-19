@@ -268,7 +268,7 @@ public class TableHandler extends Table {
     }
 
     void tryDelayCall(final ClientRequestRound round, final int tryId) {
-        long nanoDelay = manager_.getRetryDelay(round.timeoutMs) * 1000000;
+        long nanoDelay = manager_.getRetryDelay(round.timeoutMs) * 1000000L;
         if (round.expireNanoTime - System.nanoTime() > nanoDelay) {
             executor_.schedule(new Runnable() {
                 @Override
@@ -365,7 +365,7 @@ public class TableHandler extends Table {
                 op,
                 callback,
                 manager_.counterEnabled(),
-                timeoutMs);
+                (long)timeoutMs);
         call(round, 1);
     }
 }

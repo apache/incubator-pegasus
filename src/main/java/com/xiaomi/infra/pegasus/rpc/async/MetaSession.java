@@ -82,6 +82,12 @@ public class MetaSession {
         }
     }
 
+    public final void closeSession() {
+        for (ReplicaSession rs: metaList) {
+            rs.closeSession();
+        }
+    }
+
     private final void asyncCall(final MetaRequestRound round) {
         round.lastSession.asyncSend(round.op, new Runnable() {
             @Override

@@ -4,8 +4,12 @@
 package com.xiaomi.infra.pegasus.rpc.async;
 
 import com.xiaomi.infra.pegasus.base.error_code;
+import com.xiaomi.infra.pegasus.base.rpc_address;
+import com.xiaomi.infra.pegasus.base.blob;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import com.xiaomi.infra.pegasus.tools.tools;
+import com.xiaomi.infra.pegasus.apps.*;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Before; 
@@ -37,7 +41,8 @@ public class ReplicaSessionTest {
     }
     
     @After
-    public void after() throws Exception { 
+    public void after() throws Exception {
+        manager.close();
     } 
 
     /**
@@ -46,7 +51,7 @@ public class ReplicaSessionTest {
     @Test
     public void testConnect() throws Exception {
         //test1: connect to a invalid address
-        com.xiaomi.infra.pegasus.base.rpc_address addr = new com.xiaomi.infra.pegasus.base.rpc_address();
+        rpc_address addr = new rpc_address();
         addr.fromString("127.0.0.1:12345");
         ReplicaSession rs = manager.getReplicaSession(addr);
 
@@ -92,20 +97,20 @@ public class ReplicaSessionTest {
         for (int i=0; i<20; ++i) {
             // we send query request to replica server. We expect it to discard it.
             final int index = i;
-            com.xiaomi.infra.pegasus.apps.update_request req = new com.xiaomi.infra.pegasus.apps.update_request(
-                    new com.xiaomi.infra.pegasus.base.blob("hello".getBytes()),
-                    new com.xiaomi.infra.pegasus.base.blob("world".getBytes()),
+            update_request req = new update_request(
+                    new blob("hello".getBytes()),
+                    new blob("world".getBytes()),
                     0);
 
             final client_operator op = new Toollet.test_operator(new com.xiaomi.infra.pegasus.base.gpid(-1, -1), req);
-            final com.xiaomi.infra.pegasus.base.rpc_address cp_addr = addr;
+            final rpc_address cp_addr = addr;
             final FutureTask<Void> cb = new FutureTask<Void>(new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
                     Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, op.rpc_error.errno);
                     // for the last request, we kill the server
                     if (index == 19) {
-                        com.xiaomi.infra.pegasus.tools.Toollet.closeServer(cp_addr);
+                        Toollet.closeServer(cp_addr);
                     }
                     return null;
                 }
@@ -117,9 +122,9 @@ public class ReplicaSessionTest {
 
         for (int i=0; i<80; ++i) {
             // then we still send query request to replica server. But the timeout is longer.
-            com.xiaomi.infra.pegasus.apps.update_request req = new com.xiaomi.infra.pegasus.apps.update_request(
-                    new com.xiaomi.infra.pegasus.base.blob("hello".getBytes()),
-                    new com.xiaomi.infra.pegasus.base.blob("world".getBytes()),
+            update_request req = new update_request(
+                    new blob("hello".getBytes()),
+                    new blob("world".getBytes()),
                     0);
             final client_operator op = new Toollet.test_operator(new com.xiaomi.infra.pegasus.base.gpid(-1, -1), req);
             final FutureTask<Void> cb = new FutureTask<Void>(new Callable<Void>() {
@@ -144,6 +149,6 @@ public class ReplicaSessionTest {
             }
         }
 
-        com.xiaomi.infra.pegasus.tools.Toollet.tryStartServer(addr);
+        Toollet.tryStartServer(addr);
     }
 }

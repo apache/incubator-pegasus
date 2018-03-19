@@ -6,6 +6,7 @@ package com.xiaomi.infra.pegasus.rpc.async;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.base.error_code;
+import com.xiaomi.infra.pegasus.base.rpc_address;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Before;
@@ -39,7 +40,7 @@ public class ClusterManagerTest {
                 null, 60, address_list);
 
         // input an invalid rpc address
-        com.xiaomi.infra.pegasus.base.rpc_address address = new com.xiaomi.infra.pegasus.base.rpc_address();
+        rpc_address address = new rpc_address();
         ReplicaSession session = testManager.getReplicaSession(address);
         Assert.assertNull(session);
     }
@@ -62,6 +63,7 @@ public class ClusterManagerTest {
         } finally {
             Assert.assertNull(result);
         }
+        testManager.close();
 
         // test partially invalid meta list
         String[] addr_list2 = {"127.0.0.1:123", "127.0.0.1:34603", "127.0.0.1:34601", "127.0.0.1:34602"};
@@ -85,5 +87,6 @@ public class ClusterManagerTest {
             // in onebox, we create a table named temp with 8 partitions in default.
             Assert.assertEquals(8, result.getPartitionCount());
         }
+        testManager.close();
     }
 }
