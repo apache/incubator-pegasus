@@ -886,68 +886,130 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         }
 
         std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(_rd_opts));
-        it->Seek(start);
         bool complete = false;
-        bool first_exclusive = !start_inclusive;
         int32_t count = 0;
         int32_t size = 0;
-        while (count < max_kv_count && size < max_kv_size && it->Valid()) {
-            // check stop sort key
-            int c = it->key().compare(stop);
-            if (c > 0 || (c == 0 && !stop_inclusive)) {
-                // out of range
-                complete = true;
-                break;
+        if (!request.reverse) {
+            it->Seek(start);
+            bool first_exclusive = !start_inclusive;
+            while (count < max_kv_count && size < max_kv_size && it->Valid()) {
+                // check stop sort key
+                int c = it->key().compare(stop);
+                if (c > 0 || (c == 0 && !stop_inclusive)) {
+                    // out of range
+                    complete = true;
+                    break;
+                }
+
+                // check start sort key
+                if (first_exclusive) {
+                    first_exclusive = false;
+                    if (it->key().compare(start) == 0) {
+                        // discard start_sortkey
+                        it->Next();
+                        continue;
+                    }
+                }
+
+                // extract value
+                int r = append_key_value_for_multi_get(resp.kvs,
+                                                       it->key(),
+                                                       it->value(),
+                                                       request.sort_key_filter_type,
+                                                       request.sort_key_filter_pattern,
+                                                       epoch_now,
+                                                       request.no_value);
+                if (r == 1) {
+                    count++;
+                    auto &kv = resp.kvs.back();
+                    size += kv.key.length() + kv.value.length();
+                } else if (r == 2) {
+                    expire_count++;
+                } else { // r == 3
+                    filter_count++;
+                }
+
+                if (c == 0) {
+                    // if arrived to the last position
+                    complete = true;
+                    break;
+                }
+
+                it->Next();
+            }
+        } else { // reverse
+            it->SeekForPrev(stop);
+            bool first_exclusive = !stop_inclusive;
+            std::vector<::dsn::apps::key_value> reverse_kvs;
+            while (count < max_kv_count && size < max_kv_size && it->Valid()) {
+                // check start sort key
+                int c = it->key().compare(start);
+                if (c < 0 || (c == 0 && !start_inclusive)) {
+                    // out of range
+                    complete = true;
+                    break;
+                }
+
+                // check stop sort key
+                if (first_exclusive) {
+                    first_exclusive = false;
+                    if (it->key().compare(stop) == 0) {
+                        // discard stop_sortkey
+                        it->Prev();
+                        continue;
+                    }
+                }
+
+                // extract value
+                int r = append_key_value_for_multi_get(reverse_kvs,
+                                                       it->key(),
+                                                       it->value(),
+                                                       request.sort_key_filter_type,
+                                                       request.sort_key_filter_pattern,
+                                                       epoch_now,
+                                                       request.no_value);
+                if (r == 1) {
+                    count++;
+                    auto &kv = reverse_kvs.back();
+                    size += kv.key.length() + kv.value.length();
+                } else if (r == 2) {
+                    expire_count++;
+                } else { // r == 3
+                    filter_count++;
+                }
+
+                if (c == 0) {
+                    // if arrived to the last position
+                    complete = true;
+                    break;
+                }
+
+                it->Prev();
             }
 
-            // check start sort key
-            if (first_exclusive) {
-                first_exclusive = false;
-                if (it->key().compare(start) == 0) {
-                    // discard start_sortkey
-                    it->Next();
-                    continue;
+            if (it->status().ok() && !reverse_kvs.empty()) {
+                // revert order to make resp.kvs ordered in sort_key
+                resp.kvs.reserve(reverse_kvs.size());
+                for (int i = reverse_kvs.size() - 1; i >= 0; i--) {
+                    resp.kvs.emplace_back(std::move(reverse_kvs[i]));
                 }
             }
-
-            // extract value
-            int r = append_key_value_for_multi_get(resp.kvs,
-                                                   it->key(),
-                                                   it->value(),
-                                                   request.sort_key_filter_type,
-                                                   request.sort_key_filter_pattern,
-                                                   epoch_now,
-                                                   request.no_value);
-            if (r == 1) {
-                count++;
-                auto &kv = resp.kvs.back();
-                size += kv.key.length() + kv.value.length();
-            } else if (r == 2) {
-                expire_count++;
-            } else { // r == 3
-                filter_count++;
-            }
-
-            if (c == 0) {
-                // if arrived to the last position
-                complete = true;
-                break;
-            }
-
-            it->Next();
         }
 
         resp.error = it->status().code();
         if (!it->status().ok()) {
             // error occur
             if (_verbose_log) {
-                derror("%s: rocksdb scan failed for multi_get: hash_key = \"%s\", error = %s",
+                derror("%s: rocksdb scan failed for multi_get: hash_key = \"%s\", "
+                       "reverse = %s, error = %s",
                        replica_name(),
                        ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
+                       request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
             } else {
-                derror("%s: rocksdb scan failed for multi_get: error = %s",
+                derror("%s: rocksdb scan failed for multi_get: reverse = %s, error = %s",
                        replica_name(),
+                       request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
             }
             resp.kvs.clear();

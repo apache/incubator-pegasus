@@ -96,12 +96,13 @@ struct multi_get_request
     9:bool          stop_inclusive;
     10:filter_type  sort_key_filter_type;
     11:dsn.blob     sort_key_filter_pattern;
+    12:bool         reverse; // if search in reverse direction
 }
 
 struct multi_get_response
 {
     1:i32           error;
-    2:list<key_value> kvs; // sort_key => value
+    2:list<key_value> kvs; // sort_key => value; ascending ordered by sort_key
     3:i32           app_id;
     4:i32           partition_index;
     6:string        server;

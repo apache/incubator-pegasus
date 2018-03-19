@@ -761,12 +761,13 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
                                            {"sort_key_filter_pattern", required_argument, 0, 'y'},
                                            {"max_count", required_argument, 0, 'n'},
                                            {"no_value", no_argument, 0, 'i'},
+                                           {"reverse", no_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "a:b:s:y:n:i", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "a:b:s:y:n:ir", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -803,6 +804,9 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
         case 'i':
             options.no_value = true;
             break;
+        case 'r':
+            options.reverse = true;
+            break;
         default:
             return false;
         }
@@ -824,6 +828,7 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
     }
     fprintf(stderr, "max_count: %d\n", max_count);
     fprintf(stderr, "no_value: %s\n", options.no_value ? "true" : "false");
+    fprintf(stderr, "reverse: %s\n", options.reverse ? "true" : "false");
     fprintf(stderr, "\n");
 
     std::map<std::string, std::string> kvs;

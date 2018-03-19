@@ -115,7 +115,7 @@ TEST(basic, multi_get)
     ASSERT_EQ("6", new_values["6"]);
     ASSERT_EQ("7", new_values["7"]);
 
-    // [null, null)
+    // [null, null]
     options = pegasus::pegasus_client::multi_get_options();
     options.start_inclusive = true;
     options.stop_inclusive = true;
@@ -536,6 +536,16 @@ TEST(basic, multi_get)
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
     ASSERT_EQ("2", new_values["2"]);
 
+    // maxCount = 1
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get", "5", "6", options, new_values, 1, -1);
+    ASSERT_EQ(PERR_INCOMPLETE, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("5", new_values["5"]);
+
     // multi_del
     std::set<std::string> sortkeys;
     sortkeys.insert("");
@@ -558,6 +568,551 @@ TEST(basic, multi_get)
 
     // sortkey_count
     ret = client->sortkey_count("basic_test_multi_get", count);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, count);
+}
+
+TEST(basic, multi_get_reverse)
+{
+    // multi_set
+    std::map<std::string, std::string> kvs;
+    kvs[""] = "0";
+    kvs["1"] = "1";
+    kvs["1-abcdefg"] = "1-abcdefg";
+    kvs["2"] = "2";
+    kvs["2-abcdefg"] = "2-abcdefg";
+    kvs["3"] = "3";
+    kvs["3-efghijk"] = "3-efghijk";
+    kvs["4"] = "4";
+    kvs["4-hijklmn"] = "4-hijklmn";
+    kvs["5"] = "5";
+    kvs["5-hijklmn"] = "5-hijklmn";
+    kvs["6"] = "6";
+    kvs["7"] = "7";
+    int ret = client->multi_set("basic_test_multi_get_reverse", kvs);
+    ASSERT_EQ(PERR_OK, ret);
+
+    // sortkey_count
+    int64_t count;
+    ret = client->sortkey_count("basic_test_multi_get_reverse", count);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(13, count);
+
+    // [null, null)
+    pegasus::pegasus_client::multi_get_options options;
+    ASSERT_TRUE(options.start_inclusive);
+    ASSERT_FALSE(options.stop_inclusive);
+    options.reverse = true;
+    std::map<std::string, std::string> new_values;
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(13, (int)new_values.size());
+    ASSERT_EQ("0", new_values[""]);
+    ASSERT_EQ("1", new_values["1"]);
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    ASSERT_EQ("2", new_values["2"]);
+    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+    ASSERT_EQ("3", new_values["3"]);
+    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
+    ASSERT_EQ("4", new_values["4"]);
+    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
+    ASSERT_EQ("5", new_values["5"]);
+    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    ASSERT_EQ("6", new_values["6"]);
+    ASSERT_EQ("7", new_values["7"]);
+
+    // [null, null]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(13, (int)new_values.size());
+    ASSERT_EQ("0", new_values[""]);
+    ASSERT_EQ("1", new_values["1"]);
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    ASSERT_EQ("2", new_values["2"]);
+    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+    ASSERT_EQ("3", new_values["3"]);
+    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
+    ASSERT_EQ("4", new_values["4"]);
+    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
+    ASSERT_EQ("5", new_values["5"]);
+    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    ASSERT_EQ("6", new_values["6"]);
+    ASSERT_EQ("7", new_values["7"]);
+
+    // (null, null)
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = false;
+    options.stop_inclusive = false;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(12, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    ASSERT_EQ("2", new_values["2"]);
+    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+    ASSERT_EQ("3", new_values["3"]);
+    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
+    ASSERT_EQ("4", new_values["4"]);
+    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
+    ASSERT_EQ("5", new_values["5"]);
+    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    ASSERT_EQ("6", new_values["6"]);
+    ASSERT_EQ("7", new_values["7"]);
+
+    // (null, null]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = false;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(12, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    ASSERT_EQ("2", new_values["2"]);
+    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+    ASSERT_EQ("3", new_values["3"]);
+    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
+    ASSERT_EQ("4", new_values["4"]);
+    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
+    ASSERT_EQ("5", new_values["5"]);
+    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    ASSERT_EQ("6", new_values["6"]);
+    ASSERT_EQ("7", new_values["7"]);
+
+    // [null, 1]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(2, (int)new_values.size());
+    ASSERT_EQ("0", new_values[""]);
+    ASSERT_EQ("1", new_values["1"]);
+
+    // [null, 1)
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = true;
+    options.stop_inclusive = false;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("0", new_values[""]);
+
+    // (null, 1]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = false;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+
+    // (null, 1)
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = false;
+    options.stop_inclusive = false;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // [1, 1]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+
+    // [1, 1)
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = true;
+    options.stop_inclusive = false;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // (1, 1]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = false;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // (1, 1)
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = false;
+    options.stop_inclusive = false;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // [2, 1]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "2", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-anywhere("-")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+    options.sort_key_filter_pattern = "-";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(5, (int)new_values.size());
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
+    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
+    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+
+    // match-anywhere("1")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+    options.sort_key_filter_pattern = "1";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(2, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+
+    // match-anywhere("1-")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+    options.sort_key_filter_pattern = "1-";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+
+    // match-anywhere("abc")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+    options.sort_key_filter_pattern = "abc";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(2, (int)new_values.size());
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+
+    // match-prefix("1")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(2, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+
+    // match-prefix("1") in [0, 1)
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = true;
+    options.stop_inclusive = false;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("1") in [0, 1]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+
+    // match-prefix("1") in [1, 2]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(2, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+
+    // match-prefix("1") in (1, 2]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = false;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+
+    // match-prefix("1") in (1-abcdefg, 2]
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1";
+    options.start_inclusive = false;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "1-abcdefg", "2", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("1-")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1-";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+
+    // match-prefix("1-x")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "1-x";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("abc")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "abc";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("efg")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "efg";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("ijk")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "ijk";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("lmn")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "lmn";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("5-hijklmn")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+    options.sort_key_filter_pattern = "5-hijklmn";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+
+    // match-prefix("1")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+    options.sort_key_filter_pattern = "1";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+
+    // match-prefix("1-")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+    options.sort_key_filter_pattern = "1-";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("1-x")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+    options.sort_key_filter_pattern = "1-x";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("abc")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+    options.sort_key_filter_pattern = "abc";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(0, (int)new_values.size());
+
+    // match-prefix("efg")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+    options.sort_key_filter_pattern = "efg";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(2, (int)new_values.size());
+    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+
+    // match-prefix("ijk")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+    options.sort_key_filter_pattern = "ijk";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
+
+    // match-prefix("lmn")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+    options.sort_key_filter_pattern = "lmn";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(2, (int)new_values.size());
+    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
+    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+
+    // match-prefix("5-hijklmn")
+    options = pegasus::pegasus_client::multi_get_options();
+    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+    options.sort_key_filter_pattern = "5-hijklmn";
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+
+    // maxCount = 4
+    options = pegasus::pegasus_client::multi_get_options();
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values, 4, -1);
+    ASSERT_EQ(PERR_INCOMPLETE, ret);
+    ASSERT_EQ(4, (int)new_values.size());
+    ASSERT_EQ("5", new_values["5"]);
+    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    ASSERT_EQ("6", new_values["6"]);
+    ASSERT_EQ("7", new_values["7"]);
+
+    // maxCount = 1
+    options = pegasus::pegasus_client::multi_get_options();
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+    options.reverse = true;
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get_reverse", "5", "6", options, new_values, 1, -1);
+    ASSERT_EQ(PERR_INCOMPLETE, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("6", new_values["6"]);
+
+    // multi_del
+    std::set<std::string> sortkeys;
+    sortkeys.insert("");
+    sortkeys.insert("1");
+    sortkeys.insert("1-abcdefg");
+    sortkeys.insert("2");
+    sortkeys.insert("2-abcdefg");
+    sortkeys.insert("3");
+    sortkeys.insert("3-efghijk");
+    sortkeys.insert("4");
+    sortkeys.insert("4-hijklmn");
+    sortkeys.insert("5");
+    sortkeys.insert("5-hijklmn");
+    sortkeys.insert("6");
+    sortkeys.insert("7");
+    int64_t deleted_count;
+    ret = client->multi_del("basic_test_multi_get_reverse", sortkeys, deleted_count);
+    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(13, deleted_count);
+
+    // sortkey_count
+    ret = client->sortkey_count("basic_test_multi_get_reverse", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, count);
 }

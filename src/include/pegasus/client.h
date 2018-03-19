@@ -79,11 +79,13 @@ public:
         filter_type sort_key_filter_type;
         std::string sort_key_filter_pattern;
         bool no_value; // only fetch hash_key and sort_key, but not fetch value
+        bool reverse;  // if search in reverse direction
         multi_get_options()
             : start_inclusive(true),
               stop_inclusive(false),
               sort_key_filter_type(FT_NO_FILTER),
-              no_value(false)
+              no_value(false),
+              reverse(false)
         {
         }
         multi_get_options(const multi_get_options &o)
@@ -91,7 +93,8 @@ public:
               stop_inclusive(o.stop_inclusive),
               sort_key_filter_type(o.sort_key_filter_type),
               sort_key_filter_pattern(o.sort_key_filter_pattern),
-              no_value(o.no_value)
+              no_value(o.no_value),
+              reverse(o.reverse)
         {
         }
     };
@@ -450,7 +453,6 @@ public:
     /// the multi-get options.
     /// \param values
     /// the returned <sortkey,value> pairs will be put into it.
-    /// if data is not found for some <hashkey,sortkey>, then it will not appear in the map.
     /// \param max_fetch_count
     /// max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
     /// \param max_fetch_size

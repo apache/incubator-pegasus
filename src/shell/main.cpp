@@ -146,7 +146,7 @@ command_executor commands[] = {
         "[--start_inclusive|-a <true|false>] [--stop_inclusive|-b <true|false>] "
         "[--sort_key_filter_type|-s <anywhere|prefix|postfix>] "
         "[--sort_key_filter_pattern|-y <str>] "
-        "[--max_count|-n <num>] [--no_value|-i]",
+        "[--max_count|-n <num>] [--no_value|-i] [--reverse|-r]",
         data_operations,
     },
     {

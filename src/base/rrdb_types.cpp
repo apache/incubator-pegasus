@@ -1547,6 +1547,8 @@ void multi_get_request::__set_sort_key_filter_pattern(const ::dsn::blob &val)
     this->sort_key_filter_pattern = val;
 }
 
+void multi_get_request::__set_reverse(const bool val) { this->reverse = val; }
+
 uint32_t multi_get_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -1667,6 +1669,14 @@ uint32_t multi_get_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 12:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->reverse);
+                this->__isset.reverse = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -1738,6 +1748,10 @@ uint32_t multi_get_request::write(::apache::thrift::protocol::TProtocol *oprot) 
     xfer += this->sort_key_filter_pattern.write(oprot);
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("reverse", ::apache::thrift::protocol::T_BOOL, 12);
+    xfer += oprot->writeBool(this->reverse);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -1757,6 +1771,7 @@ void swap(multi_get_request &a, multi_get_request &b)
     swap(a.stop_inclusive, b.stop_inclusive);
     swap(a.sort_key_filter_type, b.sort_key_filter_type);
     swap(a.sort_key_filter_pattern, b.sort_key_filter_pattern);
+    swap(a.reverse, b.reverse);
     swap(a.__isset, b.__isset);
 }
 
@@ -1773,6 +1788,7 @@ multi_get_request::multi_get_request(const multi_get_request &other55)
     stop_inclusive = other55.stop_inclusive;
     sort_key_filter_type = other55.sort_key_filter_type;
     sort_key_filter_pattern = other55.sort_key_filter_pattern;
+    reverse = other55.reverse;
     __isset = other55.__isset;
 }
 multi_get_request::multi_get_request(multi_get_request &&other56)
@@ -1788,6 +1804,7 @@ multi_get_request::multi_get_request(multi_get_request &&other56)
     stop_inclusive = std::move(other56.stop_inclusive);
     sort_key_filter_type = std::move(other56.sort_key_filter_type);
     sort_key_filter_pattern = std::move(other56.sort_key_filter_pattern);
+    reverse = std::move(other56.reverse);
     __isset = std::move(other56.__isset);
 }
 multi_get_request &multi_get_request::operator=(const multi_get_request &other57)
@@ -1803,6 +1820,7 @@ multi_get_request &multi_get_request::operator=(const multi_get_request &other57
     stop_inclusive = other57.stop_inclusive;
     sort_key_filter_type = other57.sort_key_filter_type;
     sort_key_filter_pattern = other57.sort_key_filter_pattern;
+    reverse = other57.reverse;
     __isset = other57.__isset;
     return *this;
 }
@@ -1819,6 +1837,7 @@ multi_get_request &multi_get_request::operator=(multi_get_request &&other58)
     stop_inclusive = std::move(other58.stop_inclusive);
     sort_key_filter_type = std::move(other58.sort_key_filter_type);
     sort_key_filter_pattern = std::move(other58.sort_key_filter_pattern);
+    reverse = std::move(other58.reverse);
     __isset = std::move(other58.__isset);
     return *this;
 }
@@ -1847,6 +1866,8 @@ void multi_get_request::printTo(std::ostream &out) const
         << "sort_key_filter_type=" << to_string(sort_key_filter_type);
     out << ", "
         << "sort_key_filter_pattern=" << to_string(sort_key_filter_pattern);
+    out << ", "
+        << "reverse=" << to_string(reverse);
     out << ")";
 }
 

@@ -680,7 +680,8 @@ typedef struct _multi_get_request__isset
           start_inclusive(false),
           stop_inclusive(false),
           sort_key_filter_type(false),
-          sort_key_filter_pattern(false)
+          sort_key_filter_pattern(false),
+          reverse(false)
     {
     }
     bool hash_key : 1;
@@ -694,6 +695,7 @@ typedef struct _multi_get_request__isset
     bool stop_inclusive : 1;
     bool sort_key_filter_type : 1;
     bool sort_key_filter_pattern : 1;
+    bool reverse : 1;
 } _multi_get_request__isset;
 
 class multi_get_request
@@ -709,7 +711,8 @@ public:
           no_value(0),
           start_inclusive(0),
           stop_inclusive(0),
-          sort_key_filter_type((filter_type::type)0)
+          sort_key_filter_type((filter_type::type)0),
+          reverse(0)
     {
     }
 
@@ -725,6 +728,7 @@ public:
     bool stop_inclusive;
     filter_type::type sort_key_filter_type;
     ::dsn::blob sort_key_filter_pattern;
+    bool reverse;
 
     _multi_get_request__isset __isset;
 
@@ -750,6 +754,8 @@ public:
 
     void __set_sort_key_filter_pattern(const ::dsn::blob &val);
 
+    void __set_reverse(const bool val);
+
     bool operator==(const multi_get_request &rhs) const
     {
         if (!(hash_key == rhs.hash_key))
@@ -773,6 +779,8 @@ public:
         if (!(sort_key_filter_type == rhs.sort_key_filter_type))
             return false;
         if (!(sort_key_filter_pattern == rhs.sort_key_filter_pattern))
+            return false;
+        if (!(reverse == rhs.reverse))
             return false;
         return true;
     }
