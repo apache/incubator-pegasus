@@ -103,16 +103,26 @@ public class MetricsPoolTest {
         StringBuilder builder = new StringBuilder();
         MetricsPool.oneMetricToJson(metric, builder);
 
-        String expect = "{\"tags\":\"cluster=onebox,app=new\",\"timestamp\":12343455,\"metric\":\"simple_metric\"," +
-                "\"value\":50,\"counterType\":\"GAUGE\",\"step\":30,\"endpoint\":\"1.2.3.4\"}";
-        Assert.assertEquals(expect, builder.toString());
+        JSONObject obj = new JSONObject(builder.toString());
+        Assert.assertEquals(metric.endpoint, obj.getString("endpoint"));
+        Assert.assertEquals(metric.metric, obj.getString("metric"));
+        Assert.assertEquals(metric.timestamp, obj.getLong("timestamp"));
+        Assert.assertEquals(metric.step, obj.getInt("step"));
+        Assert.assertEquals(metric.value, obj.getDouble("value"));
+        Assert.assertEquals(metric.counterType, obj.getString("counterType"));
+        Assert.assertEquals(metric.tags, obj.getString("tags"));
 
         builder.setLength(0);
         metric.tags = "";
         MetricsPool.oneMetricToJson(metric, builder);
-        expect = "{\"tags\":\"\",\"timestamp\":12343455,\"metric\":\"simple_metric\"," +
-                "\"value\":50,\"counterType\":\"GAUGE\",\"step\":30,\"endpoint\":\"1.2.3.4\"}";
-        Assert.assertEquals(expect, builder.toString());
+        obj = new JSONObject(builder.toString());
+        Assert.assertEquals(metric.endpoint, obj.getString("endpoint"));
+        Assert.assertEquals(metric.metric, obj.getString("metric"));
+        Assert.assertEquals(metric.timestamp, obj.getLong("timestamp"));
+        Assert.assertEquals(metric.step, obj.getInt("step"));
+        Assert.assertEquals(metric.value, obj.getDouble("value"));
+        Assert.assertEquals(metric.counterType, obj.getString("counterType"));
+        Assert.assertEquals(metric.tags, obj.getString("tags"));
     }
 
     @Test
