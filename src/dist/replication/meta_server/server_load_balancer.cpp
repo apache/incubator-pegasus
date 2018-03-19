@@ -15,6 +15,8 @@ public:
     newly_partitions();
     newly_partitions(node_state *ns);
     node_state *owner;
+    int total_primaries;
+    int total_partitions;
     std::map<int32_t, int32_t> primaries;
     std::map<int32_t, int32_t> partitions;
 
@@ -26,6 +28,9 @@ public:
     {
         return owner->partition_count(app_id) + partitions[app_id];
     }
+
+    int32_t primary_count() { return total_primaries + owner->primary_count(); }
+    int32_t partition_count() { return total_partitions + owner->partition_count(); }
 
     bool less_primaries(newly_partitions &another, int32_t app_id);
     bool less_partitions(newly_partitions &another, int32_t app_id);
@@ -43,7 +48,10 @@ typedef dsn::object_extension_helper<newly_partitions, node_state> newly_partiti
 
 newly_partitions::newly_partitions() : newly_partitions(nullptr) {}
 
-newly_partitions::newly_partitions(node_state *ns) : owner(ns) {}
+newly_partitions::newly_partitions(node_state *ns)
+    : owner(ns), total_primaries(0), total_partitions(0)
+{
+}
 
 void *newly_partitions::s_create(void *related_ns)
 {
@@ -62,24 +70,42 @@ bool newly_partitions::less_primaries(newly_partitions &another, int32_t app_id)
 
     newly_p1 = partition_count(app_id);
     newly_p2 = another.partition_count(app_id);
-    return newly_p1 < newly_p2;
+    if (newly_p1 != newly_p2)
+        return newly_p1 < newly_p2;
+
+    newly_p1 = primary_count();
+    newly_p2 = another.primary_count();
+    if (newly_p1 != newly_p2)
+        return newly_p1 < newly_p2;
+
+    return partition_count() < another.partition_count();
 }
 
 bool newly_partitions::less_partitions(newly_partitions &another, int32_t app_id)
 {
     int newly_p1 = partition_count(app_id);
     int newly_p2 = another.partition_count(app_id);
-    return newly_p1 < newly_p2;
+    if (newly_p1 != newly_p2)
+        return newly_p1 < newly_p2;
+
+    return partition_count() < another.partition_count();
 }
 
 void newly_partitions::newly_add_primary(int32_t app_id, bool only_primary)
 {
     ++primaries[app_id];
-    if (!only_primary)
+    ++total_primaries;
+    if (!only_primary) {
         ++partitions[app_id];
+        ++total_partitions;
+    }
 }
 
-void newly_partitions::newly_add_partition(int32_t app_id) { ++partitions[app_id]; }
+void newly_partitions::newly_add_partition(int32_t app_id)
+{
+    ++partitions[app_id];
+    ++total_partitions;
+}
 
 void newly_partitions::newly_remove_primary(int32_t app_id, bool only_primary)
 {
@@ -90,13 +116,11 @@ void newly_partitions::newly_remove_primary(int32_t app_id, bool only_primary)
         primaries.erase(iter);
     }
 
+    dassert(total_primaries > 0, "invalid total primaires = %d", total_primaries);
+    --total_primaries;
+
     if (!only_primary) {
-        auto iter2 = partitions.find(app_id);
-        dassert(iter2 != partitions.end(), "invalid app_id, app_id = %d", app_id);
-        dassert(iter2->second > 0, "invalid partition count, cnt = %d", iter2->second);
-        if (0 == (--iter2->second)) {
-            partitions.erase(iter2);
-        }
+        newly_remove_partition(app_id);
     }
 }
 
@@ -108,6 +132,9 @@ void newly_partitions::newly_remove_partition(int32_t app_id)
     if ((--iter->second) == 0) {
         partitions.erase(iter);
     }
+
+    dassert(total_partitions > 0, "invalid total partitions = ", total_partitions);
+    --total_partitions;
 }
 
 inline newly_partitions *get_newly_partitions(node_mapper &mapper, const dsn::rpc_address &addr)
