@@ -12,11 +12,12 @@ const log = bunyan.createLogger({
             stream: process.stdout,
         },
         {
-            type: 'rotating-file',
-            level: 'error',
-            period : '1d',
-            count : 3,
+            // type: 'rotating-file',
+            // level: 'error',
+            // period : '1d',
+            // count : 3,
             path: 'error.log',
+            level : 'error',
         }
     ],
     src : true,

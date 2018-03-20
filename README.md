@@ -176,8 +176,6 @@ client.batchSet(tableName, argArray, function(err){
 
 ## Log and Exception
 File `error.log` will record error logs, we use [bunyan](https://www.npmjs.com/package/bunyan) as logging library.  
-We configure error log written into a new file every day, and we remain at most three files.  
-The log order is reversed, `error.log` is the newest log, 'error.log.x' is history log file, the smaller x means the fresher log.
 
 All errors callback returns are instance of PException, basic exception in pegasus client.  
 
