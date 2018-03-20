@@ -24,8 +24,8 @@ function Client(configs) {
     }
     EventEmitter.call(this);
 
-    this.rpcTimeOut = configs.rpcTimeOut || _OPERATION_TIMEOUT;
-    this.metaList = configs.metaList;
+    this.rpcTimeOut = configs.operationTimeout || _OPERATION_TIMEOUT;
+    this.metaList = configs.metaServers;
     this.cachedTableInfo = {};          //tableName -> tableInfo
     this.cluster = new Cluster({        //Current connections
         'metaList' : this.metaList,
@@ -37,9 +37,9 @@ util.inherits(Client, EventEmitter);
 /**
  * Create a client instance
  * @param   {Object}  configs
- *          {Array}   configs.metaList       required
- *          {String}  configs.metaList[i]    required
- *          {number}  configs.rpcTimeOut(ms) optional
+ *          {Array}   configs.metaServers          required
+ *          {String}  configs.metaServers[i]       required
+ *          {Number}  configs.operationTimeout(ms) optional
  * @return  {Client}  client instance
  */
 Client.create = function(configs) {
@@ -55,12 +55,12 @@ Client.prototype.close = function(){
 
 /**
  * Get value
- * @param {String}        tableName
- * @param {Object}        args
- *        {Buffer|String} args.hashKey      required
- *        {Buffer|String} args.sortKey      required
- *        {number}        args.timeout(ms)  optional
- * @param {Function}      callback
+ * @param {String}      tableName
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey      required
+ *        {Buffer}      args.sortKey      required
+ *        {Number}      args.timeout(ms)  optional
+ * @param {Function}    callback
  */
 Client.prototype.get = function(tableName, args, callback){
     this.getTable(tableName, function(err, tableInfo){
@@ -74,14 +74,14 @@ Client.prototype.get = function(tableName, args, callback){
 
 /**
  * Set Value
- * @param {String}        tableName
- * @param {Object}        args
- *        {Buffer|String} args.hashKey      required
- *        {Buffer|String} args.sortKey      required
- *        {Buffer|String} args.value        required
- *        {number}        args.ttl(s)       optional
- *        {number}        args.timeout(ms)  optional
- * @param {function}      callback
+ * @param {String}      tableName
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey      required
+ *        {Buffer}      args.sortKey      required
+ *        {Buffer}      args.value        required
+ *        {Number}      args.ttl(s)       optional
+ *        {Number}      args.timeout(ms)  optional
+ * @param {Function}    callback
  */
 Client.prototype.set = function(tableName, args, callback){
     this.getTable(tableName, function(err, tableInfo){
@@ -95,14 +95,14 @@ Client.prototype.set = function(tableName, args, callback){
 
 /**
  * Batch Set value
- * @param {String}        tableName
- * @param {Array}         argsArray
- *        {Buffer|String} argsArray[i].hashKey      required
- *        {Buffer|String} argsArray[i].sortKey      required
- *        {Buffer|String} argsArray[i].value        required
- *        {number}        argsArray[i].ttl          optional
- *        {number}        argsArray[i].timeout(ms)  optional
- * @param {function}      callback
+ * @param {String}      tableName
+ * @param {Array}       argsArray
+ *        {Buffer}      argsArray[i].hashKey      required
+ *        {Buffer}      argsArray[i].sortKey      required
+ *        {Buffer}      argsArray[i].value        required
+ *        {Number}      argsArray[i].ttl          optional
+ *        {Number}      argsArray[i].timeout(ms)  optional
+ * @param {Function}    callback
  */
 Client.prototype.batchSet = function(tableName, argsArray, callback){
     this.getTable(tableName, function(err, tableInfo){
@@ -116,12 +116,12 @@ Client.prototype.batchSet = function(tableName, argsArray, callback){
 
 /**
  * Batch Get value
- * @param {String}        tableName
- * @param {Array}         argsArray
- *        {Buffer|String} argsArray[i].hashKey      required
- *        {Buffer|String} argsArray[i].sortKey      required
- *        {number}        argsArray[i].timeout(ms)  optional
- * @param {function}      callback
+ * @param {String}      tableName
+ * @param {Array}       argsArray
+ *        {Buffer}      argsArray[i].hashKey      required
+ *        {Buffer}      argsArray[i].sortKey      required
+ *        {Number}      argsArray[i].timeout(ms)  optional
+ * @param {Function}    callback
  */
 Client.prototype.batchGet = function(tableName, argsArray, callback){
     this.getTable(tableName, function(err, tableInfo){
@@ -135,12 +135,12 @@ Client.prototype.batchGet = function(tableName, argsArray, callback){
 
 /**
  * Delete value
- * @param {String}        tableName
- * @param {Object}        args
- *        {Buffer|String} args.hashKey      required
- *        {Buffer|String} args.sortKey      required
- *        {number}        args.timeout(ms)  optional
- * @param {Function}      callback
+ * @param {String}      tableName
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey      required
+ *        {Buffer}      args.sortKey      required
+ *        {Number}      args.timeout(ms)  optional
+ * @param {Function}    callback
  */
 Client.prototype.del = function(tableName, args, callback){
     this.getTable(tableName, function(err, tableInfo){
@@ -154,14 +154,14 @@ Client.prototype.del = function(tableName, args, callback){
 
 /**
  * Multi Get
- * @param {String}        tableName
- * @param {Object}        args
- *        {Buffer|String} args.hashKey        required
- *        {Array}         args.sortKeyArray   required
- *        {number}        args.timeout(ms)    optional
- *        {number}        args.max_kv_count   optional
- *        {number}        args.max_kv_size    optional
- * @param {Function}      callback
+ * @param {String}      tableName
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey        required
+ *        {Array}       args.sortKeyArray   required
+ *        {Number}      args.timeout(ms)    optional
+ *        {Number}      args.maxFetchCount  optional
+ *        {Number}      args.maxFetchSize   optional
+ * @param {Function}    callback
  */
 Client.prototype.multiGet = function(tableName, args, callback){
     this.getTable(tableName, function(err, tableInfo){
@@ -175,14 +175,14 @@ Client.prototype.multiGet = function(tableName, args, callback){
 
 /**
  * Multi Get
- * @param {String}        tableName
- * @param {Object}        args
- *        {Buffer|String} args.hashKey           required
- *        {Array}         args.sortKeyValueArray required
- *                        {'key' : sortKey, 'value' : value}
- *        {number}        args.timeout(ms)       optional
- *        {number}        args.ttl(s)            optional
- * @param {Function}      callback
+ * @param {String}      tableName
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey           required
+ *        {Array}       args.sortKeyValueArray required
+ *                      {'key' : sortKey, 'value' : value}
+ *        {Number}      args.timeout(ms)       optional
+ *        {Number}      args.ttl(s)            optional
+ * @param {Function}    callback
  */
 Client.prototype.multiSet = function(tableName, args, callback){
     this.getTable(tableName, function(err, tableInfo){

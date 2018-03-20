@@ -1,0 +1,4 @@
+.idea
+.arcconfig
+*.log*
+node_modules

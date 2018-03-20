@@ -14,8 +14,8 @@ describe('test/client.test.js', function(){
 
     before(function(){
         client = pegasusClient.create({
-            metaList: ['127.0.0.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'],
-            rpcTimeOut : 5000,
+            metaServers: ['127.0.0.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'],
+            operationTimeout : 5000,
         });
     });
     after(function(){
@@ -43,10 +43,10 @@ describe('test/client.test.js', function(){
     describe('set', function(){
         it('simple set', function(done){
             let args = {
-                'hashKey' : '1',
-                'sortKey' : '1',
-                'value'   : '1',
-                'timeout' : 500,
+                'hashKey' : new Buffer('1'),
+                'sortKey' : new Buffer('1'),
+                'value'   : new Buffer('1'),
+                'timeout' : 5000,
             };
             client.set(tableName, args, function(err){
                 assert.equal(null, err);
@@ -58,51 +58,26 @@ describe('test/client.test.js', function(){
     describe('get', function(){
         it('simple get', function(done){
             let args = {
-                'hashKey' : '1',
-                'sortKey' : '1',
-            };
-            client.get(tableName, args, function(err, result){
-                assert.equal(null, err);
-                assert.equal('1', result);
-                //console.log('result is %s', result);
-                done();
-            });
-        });
-        it('buffer params', function(done){
-            let args = {
                 'hashKey' : new Buffer('1'),
                 'sortKey' : new Buffer('1'),
             };
             client.get(tableName, args, function(err, result){
                 assert.equal(null, err);
-                assert.deepEqual(new Buffer('1'), result);
-                //console.log('result is %s', result);
+                assert.deepEqual(new Buffer('1'), result.hashKey);
+                assert.deepEqual(new Buffer('1'), result.sortKey);
+                assert.deepEqual(new Buffer('1'), result.value);
                 done();
             });
         });
 
         it('no value', function(done){
             let args = {
-                'hashKey' : '404',
-                'sortKey' : 'not-found',
+                'hashKey' : new Buffer('404'),
+                'sortKey' : new Buffer('not-found'),
             };
             client.get(tableName, args, function(err, result){
                 assert.equal(null, err);
-                assert.equal('', result);
-                done();
-            });
-        });
-
-        it('wrong table' ,function(done){
-            let args = {
-                'hashKey' : '1',
-                'sortKey' : '1',
-            };
-            client.get('404', args, function(err, result){
-                assert.equal(null, result);
-                assert(err instanceof Exception.MetaException);
-                assert.equal(ErrorType.ERR_OBJECT_NOT_FOUND, err.err_code);
-                //console.log(err.message);
+                assert.deepEqual(new Buffer(''), result.value);
                 done();
             });
         });
@@ -112,16 +87,16 @@ describe('test/client.test.js', function(){
         it('simple batch set', function(done){
             let argArray = [];
             argArray[0] = {
-                'hashKey' : '1',
-                'sortKey' : '11',
-                'value'   : '11',
-                'timeout' : 300,
+                'hashKey' : new Buffer('1'),
+                'sortKey' : new Buffer('11'),
+                'value'   : new Buffer('11'),
+                'timeout' : 3000,
             };
             argArray[1] = {
-                'hashKey' : '1',
-                'sortKey' : '22',
-                'value'   : '22',
-                'timeout' : 300,
+                'hashKey' : new Buffer('1'),
+                'sortKey' : new Buffer('22'),
+                'value'   : new Buffer('22'),
+                'timeout' : 3000,
             };
             client.batchSet(tableName, argArray, function(err){
                 assert.equal(null, err);
@@ -134,26 +109,28 @@ describe('test/client.test.js', function(){
         it('simple batch get', function(done){
             let argArray = [];
             argArray[0] = {
-                'hashKey' : '1',
-                'sortKey' : '11',
-                'timeout' : 200,
+                'hashKey' : new Buffer('1'),
+                'sortKey' : new Buffer('11'),
+                'timeout' : 2000,
+                'maxFetchCount' : 100,
+                'maxFetchSize'  : 1000000
             };
             argArray[1] = {
-                'hashKey' : '1',
-                'sortKey' : '22',
-                'timeout' : 200,
+                'hashKey' : new Buffer('1'),
+                'sortKey' : new Buffer('22'),
+                'timeout' : 2000,
+                'maxFetchCount' : 100,
+                'maxFetchSize'  : 1000000
             };
             client.batchGet(tableName, argArray, function(err, result){
                 assert.equal(null, err);
                 assert.equal(2, result.length);
-                assert.equal('1', result[0].hashKey);
-                assert.equal('11', result[0].sortKey);
-                assert.equal('11', result[0].value);
-                assert.equal('1', result[1].hashKey);
-                assert.equal('22', result[1].sortKey);
-                assert.equal('22', result[1].value);
-                // assert.equal('11', result[0]);
-                // assert.equal('22', result[1]);
+                assert.deepEqual(new Buffer('1'), result[0].hashKey);
+                assert.deepEqual(new Buffer('11'), result[0].sortKey);
+                assert.deepEqual(new Buffer('11'), result[0].value);
+                assert.deepEqual(new Buffer('1'), result[1].hashKey);
+                assert.deepEqual(new Buffer('22'), result[1].sortKey);
+                assert.deepEqual(new Buffer('22'), result[1].value);
                 done();
             });
         });
@@ -163,17 +140,17 @@ describe('test/client.test.js', function(){
         it('simple multi set', function(done){
             let array = [];
             array[0] = {
-                'key' : '11',
-                'value' : '111',
+                'key' : new Buffer('11'),
+                'value' : new Buffer('111'),
             };
             array[1] = {
-                'key' : '22',
-                'value' : '222',
+                'key' : new Buffer('22'),
+                'value' : new Buffer('222'),
             };
 
 
             let args = {
-                'hashKey' : '1',
+                'hashKey' : new Buffer('1'),
                 'sortKeyValueArray' : array,
             };
             client.multiSet(tableName, args, function(err){
@@ -187,14 +164,22 @@ describe('test/client.test.js', function(){
     describe('multi get', function(){
         it('simple multi get', function(done){
             let args = {
-                'hashKey' : '1',
-                'sortKeyArray' : ['1', '11', '22'],
+                'hashKey' : new Buffer('1'),
+                'sortKeyArray' : [
+                    new Buffer('1'),
+                    new Buffer('11'),
+                    new Buffer('22'),
+                ],
             };
             client.multiGet(tableName, args, function(err, result){
                 assert.equal(null, err);
-                assert.equal('1', result[0].value.data);
-                assert.equal('111', result[1].value.data);
-                assert.equal('222', result[2].value.data);
+                assert.deepEqual(new Buffer('1'), result[0].hashKey);
+                assert.deepEqual(new Buffer('1'), result[0].sortKey);
+                assert.deepEqual(new Buffer('1'), result[0].value);
+                assert.deepEqual(new Buffer('11'), result[1].sortKey);
+                assert.deepEqual(new Buffer('111'), result[1].value);
+                assert.deepEqual(new Buffer('22'), result[2].sortKey);
+                assert.deepEqual(new Buffer('222'), result[2].value);
                 done();
             });
         });
@@ -203,8 +188,8 @@ describe('test/client.test.js', function(){
     describe('delete', function(){
         it('simple delete', function(done){
             let args = {
-                'hashKey' : '1',
-                'sortKey' : '22',
+                'hashKey' : new Buffer('1'),
+                'sortKey' : new Buffer('22'),
             };
             client.del(tableName, args, function(err){
                 assert.equal(null, err);

@@ -24,7 +24,7 @@ const META_TIMEOUT = 1000;  //ms
 
 /**
  * Constructor of thrift header
- * @param gpid
+ * @param {gpid}    gpid
  * @constructor
  */
 function ThriftHeader(gpid){
@@ -62,7 +62,7 @@ ThriftHeader.prototype.toBuffer = function(){
 
 /**
  * Constructor of base operator
- * @param {gpid} gpid
+ * @param {gpid}    gpid
  * @constructor
  */
 function Operator(gpid){
@@ -75,7 +75,7 @@ function Operator(gpid){
 
 /**
  * Set body_length and thread_hash params in header and return header
- * @param body_length
+ * @param  {Number} body_length
  * @return {Buffer}
  */
 Operator.prototype.prepare_thrift_header = function(body_length){
@@ -86,8 +86,8 @@ Operator.prototype.prepare_thrift_header = function(body_length){
 
 /**
  * Constructor of queryCfgOperator
- * @param gpid
- * @param request
+ * @param  gpid
+ * @param  request
  * @constructor
  * @extends Operator
  */
@@ -127,16 +127,20 @@ QueryCfgOperator.prototype.recv_data = function(protocol){
 
 /**
  * Constructor of RrdbGetOperator
- * @param gpid
- * @param request
- * @param timeout
- * @param {Function} callback
+ * @param  gpid
+ * @param  request
+ * @param  hashKey
+ * @param  sortKey
+ * @param  timeout
+ * @param  callback
  * @constructor
  * @extends Operator
  */
-function RrdbGetOperator(gpid, request, timeout, callback){
+function RrdbGetOperator(gpid, request, hashKey, sortKey, timeout, callback){
     RrdbGetOperator.super_.call(this, gpid, this.constructor);
     this.request = request;
+    this.hashKey = hashKey;
+    this.sortKey = sortKey;
     this.timeout = timeout;
     this.userCallback = callback;
 }
@@ -182,7 +186,12 @@ RrdbGetOperator.prototype.handleResult = function(err, op){
             err = new Exception.RocksDBException(result.error, 'Failed to get result');
             result = null;
         }else{
-            result = result.value.data;
+            let value = result.value.data;
+            result = {
+                'hashKey' : this.hashKey,
+                'sortKey' : this.sortKey,
+                'value' : value,
+            };
         }
     }
 
@@ -330,13 +339,15 @@ RrdbRemoveOperator.prototype.handleResult = function(err, op){
  * Constructor of RrdbMultiGetOperator
  * @param gpid
  * @param request
+ * @param hashKey
  * @param timeout
  * @param callback
  * @constructor
  */
-function RrdbMultiGetOperator(gpid, request, timeout, callback){
+function RrdbMultiGetOperator(gpid, request, hashKey, timeout, callback){
     RrdbMultiGetOperator.super_.call(this, gpid, this.constructor);
     this.request = request;
+    this.hashKey = hashKey;
     this.timeout = timeout;
     this.userCallback = callback;
 }
@@ -375,17 +386,26 @@ RrdbMultiGetOperator.prototype.recv_data = function(protocol){
  * @param op
  */
 RrdbMultiGetOperator.prototype.handleResult = function(err, op){
-    let result = op.response;
+    let result = op.response, data = [];
     // rpc request succeed
     if(err === null){
         if(result.error !== 0){
             err = new Exception.RocksDBException(result.error, 'Failed to set result');
             result = null;
+        }else{
+            let kvs = result.kvs, len = kvs.length, i;
+            for(i = 0; i < len; ++i){
+                data.push({
+                    'hashKey' : this.hashKey,
+                    'sortKey' : kvs[i].key.data,
+                    'value'   : kvs[i].value.data,
+                });
+            }
         }
     }
 
     if(this.userCallback instanceof Function){
-        this.userCallback(err, result.kvs);
+        this.userCallback(err, data);
     }else{
         //todo: check
         log.error('Can not handle result, lack of callback');

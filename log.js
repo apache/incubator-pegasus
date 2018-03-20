@@ -3,7 +3,6 @@
  */
 
 const bunyan = require('bunyan');
-//const PATH = '/home/heyuchen/work/pegasus-nodejs-client/logs/errors.log';
 
 const log = bunyan.createLogger({
     name: 'pegasus-node-client',
@@ -11,9 +10,17 @@ const log = bunyan.createLogger({
         {
             level: 'info',
             stream: process.stdout,
+        },
+        {
+            type: 'rotating-file',
+            level: 'error',
+            period : '1d',
+            count : 3,
+            path: 'error.log',
         }
     ],
     src : true,
+    serializers: {err: bunyan.stdSerializers.err},
 });
 
 module.exports = log;

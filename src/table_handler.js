@@ -46,8 +46,8 @@ function TableHandler(cluster, tableName, callback){
 
 /**
  * create operator and round object, and send request to session
- * @param {String} tableName
- * @param {Function} callback
+ * @param {String}      tableName
+ * @param {Function}    callback
  */
 TableHandler.prototype.queryMeta = function(tableName, callback){
     let session = this.cluster.metaSession;
@@ -63,8 +63,8 @@ TableHandler.prototype.queryMeta = function(tableName, callback){
 
 /**
  * Handle err and response
- * @param err
- * @param op
+ * @param {Error}       err
+ * @param {Operator}    op
  */
 TableHandler.prototype.onUpdateResponse = function(err, op){
     let response = op.response;
@@ -85,8 +85,8 @@ TableHandler.prototype.onUpdateResponse = function(err, op){
 
 /**
  * Update current config according to metaCfgResponse
- * @param oldResp
- * @param newResp
+ * @param   oldResp
+ * @param   newResp
  */
 TableHandler.prototype.updateResponse = function(oldResp, newResp){
     this.app_id = newResp.app_id;
@@ -121,8 +121,8 @@ TableHandler.prototype.updateResponse = function(oldResp, newResp){
 
 /**
  * Create round and send request to session
- * @param {gpid} gpid
- * @param op
+ * @param {gpid}        gpid
+ * @param {Operation}   op
  */
 TableHandler.prototype.operate = function(gpid, op){
     let pidx = gpid.get_pidx();
@@ -141,7 +141,7 @@ TableHandler.prototype.operate = function(gpid, op){
  * Constructor of TableInfo
  * @param   {Client}        client
  * @param   {TableHandler}  tableHandler
- * @param   {number}        timeout
+ * @param   {Number}        timeout
  * @constructor
  */
 function TableInfo(client, tableHandler, timeout){
@@ -152,8 +152,8 @@ function TableInfo(client, tableHandler, timeout){
 
 /**
  * Create Gpid object by blob_key Calculated by hashKey and sortKey
- * @param  {blob} blob_key
- * @return {gpid} gpid
+ * @param  {blob}   blob_key
+ * @return {gpid}   gpid
  */
 TableInfo.prototype.getGpid = function(blob_key){
     let hash_value = this.tableHandler.keyHash.hash(blob_key.data);
@@ -171,8 +171,8 @@ TableInfo.prototype.getGpid = function(blob_key){
 
 /**
  * Create Gpid object by hashKey
- * @param  {String|Buffer} hash_key
- * @return {gpid} gpid
+ * @param  {Buffer} hash_key
+ * @return {gpid}   gpid
  */
 TableInfo.prototype.get_hash_key_pid = function(hash_key){
     let hash_value = this.tableHandler.keyHash.default_hash(hash_key);
@@ -190,11 +190,11 @@ TableInfo.prototype.get_hash_key_pid = function(hash_key){
 
 /**
  * Get value
- * @param {Object}        args
- *        {Buffer|String} args.hashKey
- *        {Buffer|String} args.sortKey
- *        {number}        args.timeout
- * @param {Function}      callback
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey
+ *        {Buffer}      args.sortKey
+ *        {Number}      args.timeout
+ * @param {Function}    callback
  */
 TableInfo.prototype.get = function(args, callback){
     let timeout = args.timeout || this.timeout;
@@ -202,16 +202,16 @@ TableInfo.prototype.get = function(args, callback){
         'data': tools.generateKey(args.hashKey, args.sortKey),
     });
     let gpid = this.getGpid(request);
-    let op = new Operator.RrdbGetOperator(gpid, request, timeout, callback);
+    let op = new Operator.RrdbGetOperator(gpid, request, args.hashKey, args.sortKey, timeout, callback);
     this.tableHandler.operate(gpid, op);
 };
 
 /**
  * Sync get value
- * @param  {Object}        args
- *         {Buffer|String} args.hashKey
- *         {Buffer|String} args.sortKey
- *         {number}        args.timeout
+ * @param  {Object} args
+ *         {Buffer} args.hashKey
+ *         {Buffer} args.sortKey
+ *         {Number} args.timeout
  * @return {{err: *, result: *}}
  */
 TableInfo.prototype.syncGet = function(args){
@@ -224,18 +224,17 @@ TableInfo.prototype.syncGet = function(args){
     while(sync){deasync.sleep(100);}
     return {
         'err' : error,
-        'result' : {
-            'hashKey' : args.hashKey,
-            'sortKey' : args.sortKey,
-            'value' : data,
-        },
+        'result' : data,
     };
 };
 
 /**
- * Batch get value
- * @param {Array} argsArray
- * @param {Function} callback
+ * Batch Get value
+ * @param {Array}       argsArray
+ *        {Buffer}      argsArray[i].hashKey
+ *        {Buffer}      argsArray[i].sortKey
+ *        {Number}      argsArray[i].timeout(ms)
+ * @param {Function}    callback
  */
 TableInfo.prototype.batchGet = function(argsArray, callback){
     let i, len = argsArray.length, data;
@@ -259,13 +258,13 @@ TableInfo.prototype.batchGet = function(argsArray, callback){
 
 /**
  * Set value
- * @param {Object}        args
- *        {Buffer|String} args.hashKey
- *        {Buffer|String} args.sortKey
- *        {Buffer|String} args.value
- *        {number}        args.ttl
- *        {number}        args.timeout
- * @param {function}      callback
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey
+ *        {Buffer}      args.sortKey
+ *        {Buffer}      args.value
+ *        {Number}      args.ttl
+ *        {Number}      args.timeout
+ * @param {Function}    callback
  */
 TableInfo.prototype.set = function(args, callback){
     //set ttl
@@ -291,12 +290,12 @@ TableInfo.prototype.set = function(args, callback){
 
 /**
  * Sync set value
- * @param {Object}        args
- *        {Buffer|String} args.hashKey
- *        {Buffer|String} args.sortKey
- *        {Buffer|String} args.value
- *        {number}        args.ttl
- *        {number}        args.timeout
+ * @param {Object}  args
+ *        {Buffer}  args.hashKey
+ *        {Buffer}  args.sortKey
+ *        {Buffer}  args.value
+ *        {Number}  args.ttl
+ *        {Number}  args.timeout
  * @return {{err: *, result: *}}
  */
 TableInfo.prototype.syncSet = function(args){
@@ -311,9 +310,14 @@ TableInfo.prototype.syncSet = function(args){
 };
 
 /**
- * Batch set
- * @param {Array}    argsArray
- * @param {Function} callback
+ * Batch Set value
+ * @param {Array}       argsArray
+ *        {Buffer}      argsArray[i].hashKey
+ *        {Buffer}      argsArray[i].sortKey
+ *        {Buffer}      argsArray[i].value
+ *        {Number}      argsArray[i].ttl
+ *        {Number}      argsArray[i].timeout(ms)
+ * @param {Function}    callback
  */
 TableInfo.prototype.batchSet = function(argsArray, callback){
     let i, len = argsArray.length, result;
@@ -335,11 +339,11 @@ TableInfo.prototype.batchSet = function(argsArray, callback){
 
 /**
  * Delete value
- * @param {Object}        args
- *        {Buffer|String} args.hashKey
- *        {Buffer|String} args.sortKey
- *        {number}        args.timeout
- * @param {function}      callback
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey
+ *        {Buffer}      args.sortKey
+ *        {Number}      args.timeout
+ * @param {Function}    callback
  */
 TableInfo.prototype.del = function(args, callback){
     let timeout = args.timeout || this.timeout;
@@ -354,18 +358,18 @@ TableInfo.prototype.del = function(args, callback){
 
 /**
  * Multi Get
- * @param {Object}        args
- *        {Buffer|String} args.hashKey
- *        {Array}         args.sortKeyArray
- *        {number}        args.timeout(ms)
- *        {number}        args.max_kv_count
- *        {number}        args.max_kv_size
- * @param {Function}      callback
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey
+ *        {Array}       args.sortKeyArray
+ *        {Number}      args.timeout(ms)
+ *        {Number}      args.maxFetchCount
+ *        {Number}      args.maxFetchSize
+ * @param {Function}    callback
  */
 TableInfo.prototype.multiGet = function(args, callback){
     let timeout = args.timeout || this.timeout,
-        max_kv_count = args.max_kv_count || DEFAULT_MULTI_COUNT,
-        max_kv_size = args.max_kv_size || DEFAULT_MULTI_SIZE,
+        maxFetchCount = args.maxFetchCount || DEFAULT_MULTI_COUNT,
+        maxFetchSize = args.maxFetchSize || DEFAULT_MULTI_SIZE,
         no_value = false;
 
     let gpid = this.get_hash_key_pid(args.hashKey);
@@ -382,22 +386,23 @@ TableInfo.prototype.multiGet = function(args, callback){
     let request = new RrdbType.multi_get_request({
         'hash_key' : hashKeyBlob,
         'sork_keys' : sortKeyBlobs,
-        'max_kv_count' : max_kv_count,
-        'max_kv_size' : max_kv_size,
+        'max_kv_count' : maxFetchCount,
+        'max_kv_size' : maxFetchSize,
         'no_value' : no_value
     });
-    let op = new Operator.RrdbMultiGetOperator(gpid, request, timeout, callback);
+    let op = new Operator.RrdbMultiGetOperator(gpid, request, args.hashKey, timeout, callback);
     this.tableHandler.operate(gpid, op);
 };
 
 /**
  * Multi Get
- * @param {Object}        args
- *        {Buffer|String} args.hashKey
- *        {Array}         args.sortKeyValueArray {'key' : sortKey, 'value' : value}
- *        {number}        args.timeout(ms)
- *        {number}        args.ttl(s)
- * @param {Function}      callback
+ * @param {Object}      args
+ *        {Buffer}      args.hashKey
+ *        {Array}       args.sortKeyValueArray
+ *                      {'key' : sortKey, 'value' : value}
+ *        {Number}      args.timeout(ms)
+ *        {Number}      args.ttl(s)
+ * @param {Function}    callback
  */
 TableInfo.prototype.multiSet = function(args, callback){
     if(!args.ttl || typeof(args.ttl) !== 'number' || args.ttl < 0){
@@ -502,8 +507,8 @@ function PegasusHash(){
 /**
  * Calculate crc64
  * @param   {Buffer}    buf
- * @param   {number}    offset
- * @param   {number}    len
+ * @param   {Number}    offset
+ * @param   {Number}    len
  * @return  {Long}      crc64
  */
 PegasusHash.prototype.crc64 = function(buf, offset, len){
@@ -521,7 +526,7 @@ PegasusHash.prototype.crc64 = function(buf, offset, len){
 
 /**
  * Convert crc64_table[index] from String to Long
- * @param   {number}    index
+ * @param   {Number}    index
  * @return  {Long}      result
  */
 PegasusHash.prototype.toLong = function(index){
@@ -557,8 +562,8 @@ PegasusHash.prototype.hash = function(blob_key){
 
 /**
  * Calculate hash only by hashKey
- * @param hashKey
- * @return {Long}
+ * @param   {Buffer}    hashKey
+ * @return  {Long}      crc64
  */
 PegasusHash.prototype.default_hash = function(hashKey){
     if(!Buffer.isBuffer(hashKey)){
