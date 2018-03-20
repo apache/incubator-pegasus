@@ -446,7 +446,7 @@ TEST(basic, multi_get)
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
 
-    // match-prefix("1")
+    // match-postfix("1")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "1";
@@ -456,7 +456,7 @@ TEST(basic, multi_get)
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
 
-    // match-prefix("1-")
+    // match-postfix("1-")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "1-";
@@ -465,7 +465,7 @@ TEST(basic, multi_get)
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
-    // match-prefix("1-x")
+    // match-postfix("1-x")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "1-x";
@@ -474,7 +474,7 @@ TEST(basic, multi_get)
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
-    // match-prefix("abc")
+    // match-postfix("abc")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "abc";
@@ -483,7 +483,7 @@ TEST(basic, multi_get)
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
-    // match-prefix("efg")
+    // match-postfix("efg")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "efg";
@@ -494,7 +494,7 @@ TEST(basic, multi_get)
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
     ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
 
-    // match-prefix("ijk")
+    // match-postfix("ijk")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "ijk";
@@ -504,7 +504,7 @@ TEST(basic, multi_get)
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
 
-    // match-prefix("lmn")
+    // match-postfix("lmn")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "lmn";
@@ -515,7 +515,7 @@ TEST(basic, multi_get)
     ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
     ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
 
-    // match-prefix("5-hijklmn")
+    // match-postfix("5-hijklmn")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "5-hijklmn";
@@ -981,7 +981,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
 
-    // match-prefix("1")
+    // match-postfix("1")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "1";
@@ -992,7 +992,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
 
-    // match-prefix("1-")
+    // match-postfix("1-")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "1-";
@@ -1002,7 +1002,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
-    // match-prefix("1-x")
+    // match-postfix("1-x")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "1-x";
@@ -1012,7 +1012,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
-    // match-prefix("abc")
+    // match-postfix("abc")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "abc";
@@ -1022,7 +1022,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
-    // match-prefix("efg")
+    // match-postfix("efg")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "efg";
@@ -1034,7 +1034,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
     ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
 
-    // match-prefix("ijk")
+    // match-postfix("ijk")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "ijk";
@@ -1045,7 +1045,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
 
-    // match-prefix("lmn")
+    // match-postfix("lmn")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "lmn";
@@ -1057,7 +1057,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
     ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
 
-    // match-prefix("5-hijklmn")
+    // match-postfix("5-hijklmn")
     options = pegasus::pegasus_client::multi_get_options();
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "5-hijklmn";
