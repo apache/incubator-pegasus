@@ -174,8 +174,8 @@ public interface PegasusTableInterface {
         /**
          * return value for multiGet
          * @param allFetched true if all data on the server are fetched; false if only partial data are fetched.
-         * @param values the got values. If sortKey in the input sortKeys is not found, it won't be in values.
-         *               The output values are ordered by the sortKey.
+         * @param values the got values. if sortKey in the input sortKeys is not found, it won't be in values.
+         *               if sortKeys is null or empty, then the returned values will be ascending ordered by sortKey.
          */
         public boolean allFetched;
         public List<Pair<byte[], byte[]>> values;

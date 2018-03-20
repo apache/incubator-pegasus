@@ -98,6 +98,7 @@ struct multi_get_request
     9:bool          stop_inclusive;
     10:filter_type  sort_key_filter_type;
     11:base.blob    sort_key_filter_pattern;
+    12:bool         reverse; // if search in reverse direction
 }
 
 struct multi_get_response

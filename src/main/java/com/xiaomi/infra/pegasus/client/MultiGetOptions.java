@@ -14,6 +14,7 @@ public class MultiGetOptions {
     public FilterType sortKeyFilterType = FilterType.FT_NO_FILTER; // filter type for sort key
     public byte[] sortKeyFilterPattern = null; // filter pattern for sort key
     public boolean noValue = false; // only fetch hash_key and sort_key, but not fetch value
+    public boolean reverse = false; // if search in reverse direction
     public MultiGetOptions() {}
 
     public MultiGetOptions(MultiGetOptions o) {
@@ -22,5 +23,6 @@ public class MultiGetOptions {
         sortKeyFilterType = o.sortKeyFilterType;
         sortKeyFilterPattern = o.sortKeyFilterPattern;
         noValue = o.noValue;
+        reverse = o.reverse;
     }
 }

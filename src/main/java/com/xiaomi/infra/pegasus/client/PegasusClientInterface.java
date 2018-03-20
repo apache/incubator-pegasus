@@ -120,8 +120,8 @@ public interface PegasusClientInterface {
      *                      max_fetch_count <= 0 means no limit. default value is 100.
      * @param maxFetchSize max size of k-v pairs to be fetched.
      *                     max_fetch_size <= 0 means no limit. default value is 1000000.
-     * @param values output values; if sortKey is not found, then it will not appear in values.
-     *               the returned sortKey is just the same one in incoming sortKeys.
+     * @param values output values; if sortKey in the input sortKeys is not found, it won't be in values.
+     *               if sortKeys is null or empty, then the returned values will be ascending ordered by sortKey.
      * @return true if all data is fetched; false if only partial data is fetched.
      * @throws PException
      */
@@ -145,8 +145,7 @@ public interface PegasusClientInterface {
      *                      maxFetchCount <= 0 means no limit. default value is 100
      * @param maxFetchSize max size of kv pairs to be fetched.
      *                     maxFetchSize <= 0 means no limit. default value is 1000000.
-     * @param values output values; if sortKey is not found, then it will not appear in values.
-     *               the returned sortKey is just the same one in incoming sortKeys.
+     * @param values output values; the returned values will be ascending ordered by sortKey.
      * @return true if all data is fetched; false if only partial data is fetched.
      * @throws PException
      */

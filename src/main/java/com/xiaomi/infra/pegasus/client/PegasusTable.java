@@ -200,7 +200,7 @@ public class PegasusTable implements PegasusTableInterface {
 
         multi_get_request request = new multi_get_request(
                 hashKeyBlob, sortKeyBlobs, maxFetchCount, maxFetchSize, noValue,
-                null, null, true, false, filter_type.FT_NO_FILTER, null);
+                null, null, true, false, filter_type.FT_NO_FILTER, null, false);
         gpid gpid = table.getHashKeyGpid(request.hash_key.data);
         rrdb_multi_get_operator op = new rrdb_multi_get_operator(gpid, table.getTableName(), request);
         final Map<ByteBuffer, byte[]> finalSetKeyMap = setKeyMap;
@@ -276,7 +276,8 @@ public class PegasusTable implements PegasusTableInterface {
         multi_get_request request = new multi_get_request(
                 hashKeyBlob, null, maxFetchCount, maxFetchSize, options.noValue,
                 startSortKeyBlob, stopSortKeyBlob, options.startInclusive, options.stopInclusive,
-                filter_type.findByValue(options.sortKeyFilterType.getValue()), sortKeyFilterPatternBlob);
+                filter_type.findByValue(options.sortKeyFilterType.getValue()), sortKeyFilterPatternBlob,
+                options.reverse);
         gpid gpid = table.getHashKeyGpid(request.hash_key.data);
         rrdb_multi_get_operator op = new rrdb_multi_get_operator(gpid, table.getTableName(), request);
 
