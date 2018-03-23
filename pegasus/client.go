@@ -15,12 +15,21 @@ import (
 type Client interface {
 	Close() error
 
+	// Get retrieves the entry for "hashKey" + "sortKey".
 	Get(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) ([]byte, error)
 
+	// Set the entry for "hashKey" + "sortKey" to "value".
 	Set(ctx context.Context, tableName string, hashKey []byte, sortKey []byte, value []byte) error
 
+	// Delete the entry for "hashKey" + "sortKey".
 	Del(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) error
 
+	MultiGet(ctx context.Context, tableName string, hashKey []byte) error
+
+	GetScanner(ctx context.Context, tableName string, hashKey []byte, startSortKey []byte, stopSortKey []byte) (error, Scanner)
+
+	// Open the specific pegasus table. If the table was opened before,
+	// it will reuse the previous connection to the table.
 	OpenTable(ctx context.Context, tableName string) (TableConnector, error)
 }
 
@@ -82,8 +91,6 @@ func (p *pegasusClient) Del(ctx context.Context, tableName string, hashKey []byt
 	return tb.Del(ctx, hashKey, sortKey)
 }
 
-// Open the specific pegasus table. If the table was opened before,
-// it will reuse the previous connection to the table.
 func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableConnector, error) {
 	tb, err := func() (TableConnector, error) {
 		// ensure there's only one goroutine trying to connect this table.

@@ -125,7 +125,7 @@ func TestPegasusClient_ConcurrentMetaQueries(t *testing.T) {
 
 // Produce larger workload and test if anything goes wrong.
 func TestPegasusClient_SequentialOperations(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer leaktest.CheckTimeout(t, time.Second*20)
 
 	cfg := Config{
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
@@ -134,7 +134,7 @@ func TestPegasusClient_SequentialOperations(t *testing.T) {
 	client := NewClient(cfg)
 	defer client.Close()
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 100000; i++ {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 		hashKey := []byte(fmt.Sprintf("h%d", i))
 		sortKey := []byte(fmt.Sprintf("s%d", i))
@@ -147,8 +147,8 @@ func TestPegasusClient_SequentialOperations(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, actual, value)
 
-		err = client.Del(ctx, "temp", hashKey, sortKey)
-		assert.Nil(t, err)
+		//err = client.Del(ctx, "temp", hashKey, sortKey)
+		//assert.Nil(t, err)
 	}
 }
 
