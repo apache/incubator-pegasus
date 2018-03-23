@@ -4,7 +4,7 @@
 CXX = g++
 CXXFLAGS = -std=c++11 -g
 INCLUDE = -I../include
-LIBRARY = -Wl,-rpath-link,../lib -L../../DSN_ROOT/lib -lpegasus_client_static -lpthread -lrt -ldl -laio -lboost_system -lboost_filesystem
+LIBRARY = -Wl,-rpath-link,../lib -L../lib -L../../DSN_ROOT/lib -lpegasus_client_static -lcrypto -lpthread -lrt -ldl -laio -lboost_system -lboost_filesystem
 CPPS = $(wildcard vad_stdaln/*.cpp) $(wildcard ./*.cpp)
 OBJS = $(patsubst %.cpp,%.o,$(CPPS))
 

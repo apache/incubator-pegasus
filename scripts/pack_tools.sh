@@ -86,33 +86,46 @@ while [[ $# > 0 ]]; do
     shift
 done
 
-mkdir -p ${pack}/DSN_ROOT
-cp -v -r ./DSN_ROOT/* ${pack}/DSN_ROOT
-cp -v ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib
+mkdir -p ${pack}
 cp -v ./run.sh ${pack}/
 
+mkdir -p ${pack}/DSN_ROOT/bin
+cp -v -r ./DSN_ROOT/bin/pegasus_server ${pack}/DSN_ROOT/bin/
+cp -v -r ./DSN_ROOT/bin/pegasus_shell ${pack}/DSN_ROOT/bin/
+cp -v -r ./DSN_ROOT/bin/pegasus_bench ${pack}/DSN_ROOT/bin/
+cp -v -r ./DSN_ROOT/bin/pegasus_kill_test ${pack}/DSN_ROOT/bin/
+cp -v -r ./DSN_ROOT/bin/pegasus_rproxy ${pack}/DSN_ROOT/bin/
+cp -v -r ./DSN_ROOT/bin/pegasus_pressureclient ${pack}/DSN_ROOT/bin/
+
+mkdir -p ${pack}/DSN_ROOT/lib
+cp -v -r ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
+cp -v ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib/
 cp -v `get_boost_lib $custom_boost_lib system` ${pack}/DSN_ROOT/lib/
 cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/DSN_ROOT/lib/
 cp -v `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell readline` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell snappy` ${pack}/DSN_ROOT/lib/
+cp -v `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/
+cp -v `get_system_lib shell ssl` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell bz2` ${pack}/DSN_ROOT/lib/
+cp -v `get_system_lib shell gflags` ${pack}/DSN_ROOT/lib/
+cp -v `get_system_lib shell tcmalloc` ${pack}/DSN_ROOT/lib/
 
 mkdir -p ${pack}/scripts
 cp -v ./scripts/* ${pack}/scripts/
 chmod +x ${pack}/scripts/*.sh
 
 mkdir -p ${pack}/src/server
-cp -v ./src/server/config-server.ini ${pack}/src/server/
+cp -v ./src/server/*.ini ${pack}/src/server/
 
 mkdir -p ${pack}/src/shell
-cp -v ./src/shell/config.ini ${pack}/src/shell/
+cp -v ./src/shell/*.ini ${pack}/src/shell/
 
 mkdir -p ${pack}/src/test/kill_test
-cp -v ./src/test/kill_test/config.ini ${pack}/src/test/kill_test/
+cp -v ./src/test/kill_test/*.ini ${pack}/src/test/kill_test/
 
-cp -v ./src/config-bench.ini ${pack}/src/
+cp -v ./src/*.ini ${pack}/src/
 
 echo "Pegasus Tools $version ($commit_id) $platform $build_type" >${pack}/VERSION
 
