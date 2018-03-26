@@ -11,6 +11,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -18,10 +19,7 @@ type PegasusCodec struct {
 }
 
 func (p PegasusCodec) Marshal(v interface{}) ([]byte, error) {
-	r, ok := v.(*rpcCall)
-	if !ok {
-		panic("unexpected type")
-	}
+	r, _ := v.(*rpcCall)
 
 	header := &thriftHeader{
 		headerLength:   uint32(thriftHeaderBytesLen),
@@ -57,10 +55,7 @@ func (p PegasusCodec) Marshal(v interface{}) ([]byte, error) {
 }
 
 func (p PegasusCodec) Unmarshal(data []byte, v interface{}) error {
-	r, ok := v.(*rpcCall)
-	if !ok {
-		panic("r is not rpcCall")
-	}
+	r, _ := v.(*rpcCall)
 
 	iprot := thrift.NewTBinaryProtocolTransport(thrift.NewStreamTransportR(bytes.NewBuffer(data)))
 	ec := &base.ErrorCode{}
@@ -72,9 +67,12 @@ func (p PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 		// convert string to base.ErrType
 		err, parseErr := base.ErrTypeString(ec.Errno)
 		if parseErr != nil {
-			panic(parseErr)
+			pegalog.GetLogger().Println("failed to unmarshal the heading error code of rpc response: ", parseErr)
+			return parseErr
 		}
-		return err
+		if err != base.ERR_OK {
+			return err
+		}
 	}
 
 	// read response body
@@ -88,7 +86,7 @@ func (p PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 
 	nameToResultFunc, ok := nameToResultMap[name]
 	if !ok {
-		panic(fmt.Sprint("failed to find rpc name: ", name))
+		return fmt.Errorf("failed to find rpc name: %s", name)
 	}
 	r.result = nameToResultFunc()
 

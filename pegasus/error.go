@@ -50,7 +50,7 @@ func (op OpType) String() string {
 }
 
 func (e *PError) Error() string {
-	estr := fmt.Sprintf("pegasus-client %s failed: [%s]", e.Op, e.Code)
+	estr := fmt.Sprintf("pegasus-go-client %s failed: [%s]", e.Op, e.Code)
 	if e.Err != nil {
 		estr += " " + e.Err.Error()
 	}

@@ -48,13 +48,8 @@ func TestPegasusTableConnector_Del(t *testing.T) {
 	tb, _ := client.OpenTable(context.Background(), "temp")
 	assert.Nil(t, tb.Del(context.Background(), []byte("h1"), []byte("s1")))
 
-	value, err := tb.Get(context.Background(), []byte("h1"), []byte("s1"))
-
-	_, ok := err.(*PError)
-	assert.True(t, ok)
-
-	assert.Equal(t, base.ERR_UNKNOWN, err.(*PError).Code)
-	assert.Nil(t, value)
+	value, _ := tb.Get(context.Background(), []byte("h1"), []byte("s1"))
+	assert.Empty(t, value)
 }
 
 func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {

@@ -17,6 +17,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"gopkg.in/tomb.v2"
 )
@@ -41,6 +42,8 @@ type pegasusTableConnector struct {
 	meta    *session.MetaManager
 	replica *session.ReplicaManager
 
+	logger pegalog.Logger
+
 	tableName string
 	appId     int32
 	parts     []*replicaNode
@@ -64,6 +67,7 @@ func connectTable(ctx context.Context, tableName string, meta *session.MetaManag
 		meta:         meta,
 		replica:      replica,
 		confUpdateCh: make(chan bool, 1),
+		logger:       pegalog.GetLogger(),
 	}
 
 	if err := p.updateConf(ctx); err != nil {
@@ -138,7 +142,7 @@ func wrapError(err error, op OpType) error {
 }
 
 func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error) {
-	bytes, err := func() ([]byte, error) {
+	b, err := func() ([]byte, error) {
 		if err := validateHashKey(hashKey); err != nil {
 			return nil, err
 		}
@@ -153,7 +157,7 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 			return resp.Value.Data, nil
 		}
 	}()
-	return bytes, wrapError(err, OpGet)
+	return b, wrapError(err, OpGet)
 }
 
 func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error {
@@ -367,8 +371,10 @@ func (p *pegasusTableConnector) selfUpdate() bool {
 	}
 
 	// ignore the returned error
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*2)
-	p.updateConf(ctx)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	if err := p.updateConf(ctx); err != nil {
+		p.logger.Println("self update failed [table: %s]: %s", p.tableName, err.Error())
+	}
 
 	// flush confUpdateCh
 	select {
