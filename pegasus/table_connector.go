@@ -5,16 +5,19 @@
 package pegasus
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
-	"github.com/pegasus-kv/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/pegasus-go-client/idl/replication"
-	"github.com/pegasus-kv/pegasus-go-client/session"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/replication"
+	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	"github.com/XiaoMi/pegasus-go-client/session"
 	"gopkg.in/tomb.v2"
 )
 
@@ -24,6 +27,12 @@ type TableConnector interface {
 	Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error
 
 	Del(ctx context.Context, hashKey []byte, sortKey []byte) error
+
+	MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte, options MultiGetOptions) ([]KeyValue, error)
+
+	MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options MultiGetOptions) ([]KeyValue, error)
+
+	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error
 
 	Close() error
 }
@@ -96,8 +105,11 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 }
 
 func validateHashKey(hashKey []byte) error {
+	if len(hashKey) == 0 || hashKey == nil {
+		return fmt.Errorf("InvalidParameter: hash key must not be empty")
+	}
 	if len(hashKey) > math.MaxUint16 {
-		return fmt.Errorf("length of hash key (%d) must be less than %d", len(hashKey), math.MaxUint16)
+		return fmt.Errorf("InvalidParameter: length of hash key (%d) must be less than %d", len(hashKey), math.MaxUint16)
 	}
 	return nil
 }
@@ -179,6 +191,92 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 		return p.handleError(err, gpid, part)
 	}()
 	return wrapError(err, OpDel)
+}
+
+func setRequestByOption(options MultiGetOptions, request *rrdb.MultiGetRequest) {
+	request.MaxKvCount = int32(options.MaxFetchCount)
+	request.MaxKvSize = int32(options.MaxFetchSize)
+	request.StartInclusive = options.StartInclusive
+	request.StopInclusive = options.StopInclusive
+	request.SortKeyFilterType = rrdb.FilterType(options.SortKeyFilter.Type)
+	request.SortKeyFilterPattern = &base.Blob{Data: options.SortKeyFilter.Pattern}
+}
+
+func (p *pegasusTableConnector) MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte, options MultiGetOptions) ([]KeyValue, error) {
+	request := rrdb.NewMultiGetRequest()
+	request.HashKey = &base.Blob{Data: hashKey}
+	request.SorkKeys = make([]*base.Blob, len(sortKeys))
+	request.StartSortkey = &base.Blob{}
+	request.StopSortkey = &base.Blob{}
+	for i, sortKey := range sortKeys {
+		request.SorkKeys[i] = &base.Blob{Data: sortKey}
+	}
+	setRequestByOption(options, request)
+
+	kvs, err := p.doMultiGet(ctx, hashKey, request)
+	return kvs, wrapError(err, OpMultiGet)
+}
+
+func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options MultiGetOptions) ([]KeyValue, error) {
+	request := rrdb.NewMultiGetRequest()
+	request.HashKey = &base.Blob{Data: hashKey}
+	request.StartSortkey = &base.Blob{Data: startSortKey}
+	request.StopSortkey = &base.Blob{Data: stopSortKey}
+	setRequestByOption(options, request)
+
+	kvs, err := p.doMultiGet(ctx, hashKey, request)
+	return kvs, wrapError(err, OpMultiGetRange)
+}
+
+func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, request *rrdb.MultiGetRequest) ([]KeyValue, error) {
+	if err := validateHashKey(hashKey); err != nil {
+		return nil, err
+	}
+
+	gpid, part := p.getPartition(hashKey)
+	resp, err := part.MultiGet(ctx, gpid, request)
+
+	if err == nil {
+		err = base.NewDsnErrFromInt(resp.Error)
+	}
+	if err = p.handleError(err, gpid, part); err == nil {
+		kvs := make([]KeyValue, len(resp.Kvs))
+		for i, blobKv := range resp.Kvs {
+			kvs[i].SortKey = blobKv.Key.Data
+			kvs[i].Value = blobKv.Value.Data
+		}
+
+		sort.Slice(kvs, func(i, j int) bool {
+			return bytes.Compare(kvs[i].SortKey, kvs[j].SortKey) < 0
+		})
+
+		return kvs, nil
+	}
+	return nil, err
+}
+
+func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error {
+	err := func() error {
+		if err := validateHashKey(hashKey); err != nil {
+			return err
+		}
+
+		gpid, part := p.getPartition(hashKey)
+
+		request := rrdb.NewMultiRemoveRequest()
+		request.HashKey = &base.Blob{Data: hashKey}
+		for i, sortKey := range sortKeys {
+			request.SorkKeys[i] = &base.Blob{Data: sortKey}
+		}
+
+		resp, err := part.MultiDelete(ctx, gpid, request)
+
+		if err == nil {
+			err = base.NewDsnErrFromInt(resp.Error)
+		}
+		return p.handleError(err, gpid, part)
+	}()
+	return wrapError(err, OpMultiDel)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {

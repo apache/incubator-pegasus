@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/fortytw2/leaktest"
-	"github.com/pegasus-kv/pegasus-go-client/idl/base"
 	"github.com/stretchr/testify/assert"
 )
 

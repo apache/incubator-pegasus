@@ -7,7 +7,7 @@ package pegasus
 import (
 	"fmt"
 
-	"github.com/pegasus-kv/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 )
 
 type PError struct {
@@ -28,15 +28,21 @@ const (
 	OpGet
 	OpSet
 	OpDel
+	OpMultiDel
+	OpMultiGet
+	OpMultiGetRange
 	OpClose
 )
 
 var opTypeToStringMap = map[OpType]string{
-	OpQueryConfig: "table configuration query",
-	OpGet:         "GET",
-	OpSet:         "SET",
-	OpDel:         "DEL",
-	OpClose:       "Close",
+	OpQueryConfig:   "table configuration query",
+	OpGet:           "GET",
+	OpSet:           "SET",
+	OpDel:           "DEL",
+	OpMultiGet:      "MULTI_GET",
+	OpMultiGetRange: "MULTI_GET_RANGE",
+	OpMultiDel:      "MULTI_DEL",
+	OpClose:         "Close",
 }
 
 func (op OpType) String() string {

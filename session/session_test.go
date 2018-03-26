@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/replication"
+	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	"github.com/XiaoMi/pegasus-go-client/rpc"
 	"github.com/fortytw2/leaktest"
-	"github.com/pegasus-kv/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/pegasus-go-client/idl/replication"
-	"github.com/pegasus-kv/pegasus-go-client/idl/rrdb"
-	"github.com/pegasus-kv/pegasus-go-client/rpc"
 	"github.com/stretchr/testify/assert"
 )
 

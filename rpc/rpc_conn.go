@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pegasus-kv/pegasus-go-client/pegalog"
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"gopkg.in/tomb.v2"
 )
 

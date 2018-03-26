@@ -18,7 +18,7 @@ thrift lib is in version **0.9.3**.
     import (
         "context"
         
-    	"github.com/pegasus-kv/pegasus-go-client/pegasus"
+    	"github.com/XiaoMi/pegasus-go-client/pegasus"
     )
     
     cfg := Config{

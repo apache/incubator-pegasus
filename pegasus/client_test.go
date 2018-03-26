@@ -218,3 +218,136 @@ func TestPegasusClient_ConcurrentSetAndDel(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestPegasusClient_ConcurrentSetAndMultiGetRange(t *testing.T) {
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+
+	client := NewClient(cfg)
+	defer client.Close()
+
+	hashKey := []byte(fmt.Sprintf("h1"))
+
+	///// clear up
+	var wg sync.WaitGroup
+	wg.Add(100)
+	for i := 0; i < 100; i++ {
+		id := i /// copy to prevent value changed while routine executed. It's necessary.
+		go func() {
+			sortKey := []byte(fmt.Sprintf("s%d", id))
+			assert.Nil(t, client.Del(context.Background(), "temp", hashKey, sortKey))
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	/// insert
+	wg.Add(100)
+	for i := 0; i < 100; i++ {
+		id := i
+		go func() {
+			sortKey := []byte(fmt.Sprintf("s%d", id))
+			value := []byte(fmt.Sprintf("v%d", id))
+
+			err := client.Set(context.Background(), "temp", hashKey, sortKey, value)
+			assert.Nil(t, err)
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	/// get range
+	wg.Add(8)
+	for i := 1; i < 9; i++ {
+		id := i
+		go func() {
+			startSortKey := []byte(fmt.Sprintf("s%d", id)) // start from i to i+1: s1 s10 s11 ... s2, in total 11 entries
+			stopSortKey := []byte(fmt.Sprintf("s%d", id+1))
+			options := MultiGetOptions{StartInclusive: true, StopInclusive: false}
+
+			kvs, err := client.MultiGetRangeOpt(context.Background(), "temp", hashKey, startSortKey, stopSortKey, options)
+			assert.Nil(t, err)
+			assert.Equal(t, len(kvs), 11)
+
+			for _, kv := range kvs {
+				value, err := client.Get(context.Background(), "temp", hashKey, kv.SortKey)
+
+				assert.Nil(t, err)
+				assert.Equal(t, kv.Value, value)
+			}
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
+
+func TestPegasusClient_ConcurrentSetAndMultiGet(t *testing.T) {
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+
+	client := NewClient(cfg)
+	defer client.Close()
+
+	hashKey := []byte(fmt.Sprintf("h1"))
+
+	/// clear up
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+
+		id := i
+		go func() {
+			sortKey := []byte(fmt.Sprintf("s%d", id))
+			assert.Nil(t, client.Del(context.Background(), "temp", hashKey, sortKey))
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	/// insert
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+
+		id := i
+		go func() {
+			sortKey := []byte(fmt.Sprintf("s%d", id))
+			value := []byte(fmt.Sprintf("v%d", id))
+
+			err := client.Set(context.Background(), "temp", hashKey, sortKey, value)
+			assert.Nil(t, err)
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	/// get
+	{
+		wg.Add(1)
+
+		go func() {
+			sortKeys := make([][]byte, 10)
+			for i := 0; i < 10; i++ {
+				sortKeys[i] = []byte(fmt.Sprintf("s%d", i))
+			}
+
+			kvs, err := client.MultiGet(context.Background(), "temp", hashKey, sortKeys)
+			assert.Nil(t, err)
+			assert.Equal(t, len(kvs), 10)
+
+			for i := 0; i < 10; i++ {
+				assert.Equal(t, kvs[i].SortKey, []byte(fmt.Sprintf("s%d", i)))
+				assert.Equal(t, kvs[i].Value, []byte(fmt.Sprintf("v%d", i)))
+			}
+
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}

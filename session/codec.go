@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/replication"
+	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/pegasus-kv/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/pegasus-go-client/idl/replication"
-	"github.com/pegasus-kv/pegasus-go-client/idl/rrdb"
 )
 
 type PegasusCodec struct {
@@ -125,6 +125,16 @@ var nameToResultMap = map[string]func() rpcResponseResult{
 	"RPC_RRDB_RRDB_REMOVE_ACK": func() rpcResponseResult {
 		return &rrdb.RrdbRemoveResult{
 			Success: rrdb.NewUpdateResponse(),
+		}
+	},
+	"RPC_RRDB_RRDB_MULTI_GET_ACK": func() rpcResponseResult {
+		return &rrdb.RrdbMultiGetResult{
+			Success: rrdb.NewMultiGetResponse(),
+		}
+	},
+	"RPC_RRDB_RRDB_MULTI_REMOVE_ACK": func() rpcResponseResult {
+		return &rrdb.RrdbMultiRemoveResult{
+			Success: rrdb.NewMultiRemoveResponse(),
 		}
 	},
 }

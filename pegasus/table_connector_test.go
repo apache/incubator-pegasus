@@ -7,10 +7,11 @@ package pegasus
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/fortytw2/leaktest"
-	"github.com/pegasus-kv/pegasus-go-client/idl/base"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -112,4 +113,17 @@ func TestPegasusTableConnector_SubsequentSelfUpdate(t *testing.T) {
 		}
 	}
 	assert.Equal(t, count, 0)
+}
+
+func TestPegasusTableConnector_ValidateHashKey(t *testing.T) {
+	var hashKey []byte
+
+	hashKey = nil
+	assert.NotNil(t, validateHashKey(hashKey))
+
+	hashKey = make([]byte, 0)
+	assert.NotNil(t, validateHashKey(hashKey))
+
+	hashKey = make([]byte, math.MaxUint16+1)
+	assert.NotNil(t, validateHashKey(hashKey))
 }

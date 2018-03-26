@@ -8,10 +8,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/pegasus-kv/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/pegasus-go-client/idl/replication"
-	"github.com/pegasus-kv/pegasus-go-client/idl/rrdb"
-	"github.com/pegasus-kv/pegasus-go-client/pegalog"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/replication"
+	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 )
 
 // MetaManager manages the list of metas, but only the leader will it requests to.

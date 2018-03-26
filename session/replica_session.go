@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/pegasus-kv/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/pegasus-go-client/idl/rrdb"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 )
 
 // ReplicaSession represents the network session between client and
@@ -57,6 +57,28 @@ func (rs *ReplicaSession) Del(ctx context.Context, gpid *base.Gpid, key *base.Bl
 	}
 
 	ret, _ := result.(*rrdb.RrdbRemoveResult)
+	return ret.GetSuccess(), nil
+}
+
+func (rs *ReplicaSession) MultiGet(ctx context.Context, gpid *base.Gpid, request *rrdb.MultiGetRequest) (*rrdb.MultiGetResponse, error) {
+	args := &rrdb.RrdbMultiGetArgs{Request: request}
+	result, err := rs.callWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_MULTI_GET")
+	if err != nil {
+		return nil, err
+	}
+
+	ret, _ := result.(*rrdb.RrdbMultiGetResult)
+	return ret.GetSuccess(), nil
+}
+
+func (rs *ReplicaSession) MultiDelete(ctx context.Context, gpid *base.Gpid, request *rrdb.MultiRemoveRequest) (*rrdb.MultiRemoveResponse, error) {
+	args := &rrdb.RrdbMultiRemoveArgs{Request: request}
+	result, err := rs.callWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_MULTI_REMOVE")
+	if err != nil {
+		return nil, err
+	}
+
+	ret, _ := result.(*rrdb.RrdbMultiRemoveResult)
 	return ret.GetSuccess(), nil
 }
 
