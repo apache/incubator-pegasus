@@ -1850,8 +1850,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                                            timeout_ms,
                                                            scanners[i]->get_smart_wrapper(),
                                                            target_client,
-                                                           &error_occurred,
-                                                           false);
+                                                           &error_occurred);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
@@ -2013,8 +2012,7 @@ inline bool clear_data(command_executor *e, shell_context *sc, arguments args)
                                                            timeout_ms,
                                                            scanners[i]->get_smart_wrapper(),
                                                            sc->pg_client,
-                                                           &error_occurred,
-                                                           false);
+                                                           &error_occurred);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
@@ -2084,18 +2082,20 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
                                            {"stat_size", no_argument, 0, 'z'},
+                                           {"top_count", required_argument, 0, 'c'},
                                            {0, 0, 0, 0}};
 
     int max_split_count = 100000000;
     int max_batch_count = 500;
     int timeout_ms = sc->timeout_ms;
     bool stat_size = false;
+    int top_count = 0;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "s:b:t:z", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "s:b:t:zc:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -2119,6 +2119,12 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'z':
             stat_size = true;
+            break;
+        case 'c':
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), top_count)) {
+                fprintf(stderr, "parse %s as top_count failed\n", optarg);
+                return false;
+            }
             break;
         default:
             return false;
@@ -2146,6 +2152,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "INFO: max_batch_count = %d\n", max_batch_count);
     fprintf(stderr, "INFO: timeout_ms = %d\n", timeout_ms);
     fprintf(stderr, "INFO: stat_size = %s\n", stat_size ? "true" : "false");
+    fprintf(stderr, "INFO: top_count = %d\n", top_count);
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
     pegasus::pegasus_client::scan_options options;
@@ -2170,7 +2177,8 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            scanners[i]->get_smart_wrapper(),
                                                            sc->pg_client,
                                                            &error_occurred,
-                                                           stat_size);
+                                                           stat_size,
+                                                           top_count);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
@@ -2279,11 +2287,6 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    for (int i = 0; i < scanners.size(); i++) {
-        delete contexts[i];
-    }
-    contexts.clear();
-
     fprintf(stderr,
             "\nCount %s, total %ld rows.\n",
             error_occurred.load() ? "terminated" : "done",
@@ -2307,7 +2310,35 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "[row].size_sum = %ld\n", row_size_sum);
         fprintf(stderr, "[row].size_max = %ld\n", row_size_max);
         fprintf(stderr, "[row].size_avg = %.2f\n", row_size_avg);
+        if (top_count > 0) {
+            top_container::top_heap heap;
+            for (int i = 0; i < scanners.size(); i++) {
+                top_container::top_heap &h = contexts[i]->top_rows.all();
+                while (!h.empty()) {
+                    heap.push(h.top());
+                    h.pop();
+                }
+            }
+            for (int i = 1; i <= top_count && !heap.empty(); i++) {
+                const top_container::top_heap_item &item = heap.top();
+                fprintf(stderr,
+                        "[top][%d].hash_key = \"%s\"\n",
+                        i,
+                        pegasus::utils::c_escape_string(item.hash_key, sc->escape_all).c_str());
+                fprintf(stderr,
+                        "[top][%d].sort_key = \"%s\"\n",
+                        i,
+                        pegasus::utils::c_escape_string(item.sort_key, sc->escape_all).c_str());
+                fprintf(stderr, "[top][%d].row_size = %ld\n", i, item.row_size);
+                heap.pop();
+            }
+        }
     }
+
+    for (int i = 0; i < scanners.size(); i++) {
+        delete contexts[i];
+    }
+    contexts.clear();
 
     return true;
 }
