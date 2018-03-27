@@ -20,7 +20,6 @@ const Exception = require('./errors');
 
 const HEADER_LEN = 48;
 const HEADER_TYPE = 'THFT';
-const META_TIMEOUT = 1000;  //ms
 
 /**
  * Constructor of thrift header
@@ -88,13 +87,14 @@ Operator.prototype.prepare_thrift_header = function(body_length){
  * Constructor of queryCfgOperator
  * @param  gpid
  * @param  request
+ * @param  timeout
  * @constructor
  * @extends Operator
  */
-function QueryCfgOperator(gpid, request){
+function QueryCfgOperator(gpid, request, timeout){
     QueryCfgOperator.super_.call(this, gpid, this.constructor);
     this.request = request;
-    this.timeout = META_TIMEOUT;
+    this.timeout = timeout;
 }
 util.inherits(QueryCfgOperator, Operator);
 

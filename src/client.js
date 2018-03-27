@@ -9,13 +9,13 @@ const util = require('util');
 const Cluster = require('./session').Cluster;
 const TableHandler = require('./table_handler').TableHandler;
 const TableInfo = require('./table_handler').TableInfo;
-// const log = require('../log');
+const tools = require('./tools');
 
 const _OPERATION_TIMEOUT = 1000;
 
 /**
  * Constructor of client
- * @param   {Object} configs configs.metaList is required
+ * @param   {Object} configs
  * @constructor
  */
 function Client(configs) {
@@ -41,8 +41,10 @@ util.inherits(Client, EventEmitter);
  *          {String}  configs.metaServers[i]       required
  *          {Number}  configs.operationTimeout(ms) optional
  * @return  {Client}  client instance
+ * @throws  {InvalidParamException}
  */
 Client.create = function(configs) {
+    tools.validateClientConfigs(configs);
     return new Client(configs);
 };
 
@@ -61,8 +63,14 @@ Client.prototype.close = function(){
  *        {Buffer}      args.sortKey      required
  *        {Number}      args.timeout(ms)  optional
  * @param {Function}    callback
+ * @throws{InvalidParamException} callback is not function
  */
 Client.prototype.get = function(tableName, args, callback){
+    tools.validateFunction(callback, 'callback');
+    if( tools.validateParam(args.hashKey, 'hashKey', Buffer, true, callback) ||
+        tools.validateParam(args.sortKey, 'sortKey', Buffer, true, callback)){
+        return;
+    }
     this.getTable(tableName, function(err, tableInfo){
         if(err === null && tableInfo !== null) {
             tableInfo.get(args, callback);
@@ -82,8 +90,15 @@ Client.prototype.get = function(tableName, args, callback){
  *        {Number}      args.ttl(s)       optional
  *        {Number}      args.timeout(ms)  optional
  * @param {Function}    callback
+ * @throws{InvalidParamException} callback is not function
  */
 Client.prototype.set = function(tableName, args, callback){
+    tools.validateFunction(callback, 'callback');
+    if( tools.validateParam(args.hashKey, 'hashKey', Buffer, true, callback) ||
+        tools.validateParam(args.sortKey, 'sortKey', Buffer, true, callback) ||
+        tools.validateParam(args.value, 'value', Buffer, true, callback)){
+        return;
+    }
     this.getTable(tableName, function(err, tableInfo){
         if(err === null && tableInfo !== null){
             tableInfo.set(args, callback);
@@ -103,8 +118,19 @@ Client.prototype.set = function(tableName, args, callback){
  *        {Number}      argsArray[i].ttl          optional
  *        {Number}      argsArray[i].timeout(ms)  optional
  * @param {Function}    callback
+ * @throws{InvalidParamException} callback is not function
  */
 Client.prototype.batchSet = function(tableName, argsArray, callback){
+    tools.validateFunction(callback, 'callback');
+    if(tools.validateParam(argsArray, 'argsArray', Array, true, callback)){return;}
+    let i, len = argsArray.length;
+    for(i = 0; i < len; ++i){
+        if( tools.validateParam(argsArray[i].hashKey, 'hashKey', Buffer, true, callback) ||
+            tools.validateParam(argsArray[i].sortKey, 'sortKey', Buffer, true, callback) ||
+            tools.validateParam(argsArray[i].value, 'value', Buffer, true, callback)){
+            return;
+        }
+    }
     this.getTable(tableName, function(err, tableInfo){
         if(err === null && tableInfo !== null){
             tableInfo.batchSet(argsArray, callback);
@@ -122,8 +148,18 @@ Client.prototype.batchSet = function(tableName, argsArray, callback){
  *        {Buffer}      argsArray[i].sortKey      required
  *        {Number}      argsArray[i].timeout(ms)  optional
  * @param {Function}    callback
+ * @throws{InvalidParamException} callback is not function
  */
 Client.prototype.batchGet = function(tableName, argsArray, callback){
+    tools.validateFunction(callback, 'callback');
+    if(tools.validateParam(argsArray, 'argsArray', Array, true, callback)){return;}
+    let i, len = argsArray.length;
+    for(i = 0; i < len; ++i){
+        if( tools.validateParam(argsArray[i].hashKey, 'hashKey', Buffer, true, callback) ||
+            tools.validateParam(argsArray[i].sortKey, 'sortKey', Buffer, true, callback)){
+            return;
+        }
+    }
     this.getTable(tableName, function(err, tableInfo){
         if(err === null && tableInfo !== null){
             tableInfo.batchGet(argsArray, callback);
@@ -141,8 +177,14 @@ Client.prototype.batchGet = function(tableName, argsArray, callback){
  *        {Buffer}      args.sortKey      required
  *        {Number}      args.timeout(ms)  optional
  * @param {Function}    callback
+ * @throws{InvalidParamException} callback is not function
  */
 Client.prototype.del = function(tableName, args, callback){
+    tools.validateFunction(callback, 'callback');
+    if( tools.validateParam(args.hashKey, 'hashKey', Buffer, true, callback) ||
+        tools.validateParam(args.sortKey, 'sortKey', Buffer, true, callback)){
+        return;
+    }
     this.getTable(tableName, function(err, tableInfo){
         if(err === null && tableInfo !== null) {
             tableInfo.del(args, callback);
@@ -156,14 +198,23 @@ Client.prototype.del = function(tableName, args, callback){
  * Multi Get
  * @param {String}      tableName
  * @param {Object}      args
- *        {Buffer}      args.hashKey        required
- *        {Array}       args.sortKeyArray   required
- *        {Number}      args.timeout(ms)    optional
- *        {Number}      args.maxFetchCount  optional
- *        {Number}      args.maxFetchSize   optional
+ *        {Buffer}      args.hashKey         required
+ *        {Array}       args.sortKeyArray    required
+ *        {Buffer}      args.sortKeyArray[i] required
+ *        {Number}      args.timeout(ms)     optional
+ *        {Number}      args.maxFetchCount   optional
+ *        {Number}      args.maxFetchSize    optional
  * @param {Function}    callback
+ * @throws{InvalidParamException} callback is not function
  */
 Client.prototype.multiGet = function(tableName, args, callback){
+    tools.validateFunction(callback, 'callback');
+    if(tools.validateParam(args.hashKey, 'hashKey', Buffer, true, callback)){return;}
+    if(tools.validateParam(args.sortKeyArray, 'sortKeyArray', Array, true, callback)){return;}
+    let i, len = args.sortKeyArray.length;
+    for(i = 0; i < len; ++i){
+        if( tools.validateParam(args.sortKeyArray[i], 'sortKey', Buffer, true, callback)){return;}
+    }
     this.getTable(tableName, function(err, tableInfo){
         if(err === null && tableInfo !== null) {
             tableInfo.multiGet(args, callback);
@@ -183,8 +234,19 @@ Client.prototype.multiGet = function(tableName, args, callback){
  *        {Number}      args.timeout(ms)       optional
  *        {Number}      args.ttl(s)            optional
  * @param {Function}    callback
+ * @throws{InvalidParamException} callback is not function
  */
 Client.prototype.multiSet = function(tableName, args, callback){
+    tools.validateFunction(callback, 'callback');
+    if(tools.validateParam(args.hashKey, 'hashKey', Buffer, true, callback)){return;}
+    if(tools.validateParam(args.sortKeyValueArray, 'sortKeyValueArray', Array, true, callback)){return;}
+    let i, len = args.sortKeyValueArray.length;
+    for(i = 0; i < len; ++i){
+        if( tools.validateParam(args.sortKeyValueArray[i].key, 'sortKey', Buffer, true, callback) ||
+            tools.validateParam(args.sortKeyValueArray[i].value, 'value', Buffer, true, callback)){
+            return;
+        }
+    }
     this.getTable(tableName, function(err, tableInfo){
         if(err === null && tableInfo !== null) {
             tableInfo.multiSet(args, callback);
@@ -200,6 +262,7 @@ Client.prototype.multiSet = function(tableName, args, callback){
  * @param {Function}    callback
  */
 Client.prototype.getTable = function(tableName, callback){
+    if(tools.validateParam(tableName, 'tableName', 'string', false, callback)) {return;}
     let self = this;
     let tableInfo = self.cachedTableInfo[tableName];
     if(!tableInfo){

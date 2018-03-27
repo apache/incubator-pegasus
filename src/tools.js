@@ -4,7 +4,8 @@
 
 "use strict";
 
-//let InvalidParamException = require('./errors').InvalidParamException;
+const InvalidParamException = require('./errors').InvalidParamException;
+const net = require('net');
 
 /**
  * Calculate hash by app_id and partition_index
@@ -77,11 +78,78 @@ function generateKey(hashKey, sortKey){
     return Buffer.concat([lenBuf, hashKey, sortKey], (2+hashLen+sortLen));
 }
 
+/**
+ * Validate configs while creating client
+ * @param   {Object}  configs
+ *          {Array}   configs.metaServers
+ *          {String}  configs.metaServers[i]    ipv4:port
+ * @throws  {InvalidParamException}
+ */
+function validateClientConfigs(configs){
+    if(!(configs instanceof Object)){
+        throw new InvalidParamException('configs should be instanceof Object');
+    }
+    if(!(configs.metaServers instanceof Array)){
+        throw new InvalidParamException('configs.metaServers should be instanceof Array');
+    }
+    let i, len = configs.metaServers.length;
+    for(i = 0; i < len; ++i){
+        let ip_port = configs.metaServers[i].split(':');
+        if(ip_port.length !== 2){
+            throw new InvalidParamException(configs.metaServers[i] + ' is not valid, correct format is ip_address:port');
+        }
+        if(!net.isIPv4(ip_port[0])){
+            throw new InvalidParamException(ip_port[0] + ' is not valid ipv4 address');
+        }
+        if(isNaN(ip_port[1]) || ip_port[1] < 0 || ip_port[1] > 65535){
+            throw new InvalidParamException(ip_port[1] + ' is not valid port');
+        }
+    }
+}
+
+/**
+ * Check if obj is instance of Function, if not throw error
+ * @param   {Object}    obj
+ * @param   {String}    name
+ * @throws  {InvalidParamException}
+ */
+function validateFunction(obj, name){
+    if(!(obj instanceof Function)){
+        throw new InvalidParamException('lack of '+name+' or '+name+' is not function');
+    }
+}
+
+/**
+ * Check if param is instanceof type(when isObject=true) or typeof(param)=type(when isObject=false)
+ * @param   {Object}        param
+ * @param   {String}        name
+ * @param   {String|Object} type
+ * @param   {Boolean}       isObject
+ * @param   {Function}      callback
+ * @return  {Boolean}       true means return callee function at once
+ */
+function validateParam(param, name, type, isObject, callback){
+    let flag = true;
+    if(isObject){
+        flag = (param instanceof type);
+        type = type.name;
+    }else{
+        flag = (typeof(param) === type);
+    }
+    if(!flag){
+        callback(new InvalidParamException(name+':'+param+' is not '+type), null);
+    }
+    return (!flag);
+}
+
 module.exports = {
     dsn_gpid_to_thread_hash : dsn_gpid_to_thread_hash,
     isAddrExist : isAddrExist,
     findSessionByAddr : findSessionByAddr,
     generateKey : generateKey,
+    validateClientConfigs : validateClientConfigs,
+    validateFunction : validateFunction,
+    validateParam : validateParam,
 };
 
 

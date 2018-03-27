@@ -15,12 +15,18 @@ const ErrorCode = require('./dsn/base_types').error_code;
 const ErrorType = require('./dsn/base_types').error_type;
 
 const thrift = require('thrift');
+const InputBufferUnderrunError = require('thrift/lib/nodejs/lib/thrift/input_buffer_underrun_error');
 
 let _seq_id = 0;
 
 /**
  * Constructor of Connection
- * @param options
+ * @param {Object}  options
+ *        {String}  options.host            required
+ *        {Number}  options.port            required
+ *        {Number}  options.rpcTimeOut(ms)  required
+ *        {Object}  options.transport       optional
+ *        {Object}  options.protocol        optional
  * @constructor
  */
 function Connection (options) {
@@ -63,6 +69,10 @@ Connection.prototype.setupConnection = function(){
     this.on('close', this._close.bind(this));
 };
 
+/**
+ * Handle socket timeout
+ * @private
+ */
 Connection.prototype._handleTimeout = function(){
     this._close(new Exception.ConnectionClosedException('%s socket closed by timeout', this.name));
 };
@@ -77,7 +87,6 @@ Connection.prototype._handleClose = function(){
     this.emit('close');
     let err = this._closeError || this._socketError;
     if (!err) {
-        //log.debug('%s close with no error', this.name);
         err = new Exception.ConnectionClosedException(this.name + ' closed with no error.');
         log.debug(err.message);
     }
@@ -88,15 +97,12 @@ Connection.prototype._handleClose = function(){
  * Handle socket error
  * @param err
  * @private
+ * @emit {ConnectionClosedException} socket error
  */
 Connection.prototype._handleError = function (err) {
-    log.error('%s error event emit: %s', this.name, err);
-    if (err.message.indexOf('ECONNREFUSED') >= 0) {
-        err.name = 'ConnectionRefusedException';
-    }
-    if (err.message.indexOf('ECONNRESET') >= 0 || err.message.indexOf('This socket is closed') >= 0) {
-        err.name = 'ConnectionClosedException';
-    }
+    log.info(err);
+    err = new Exception.ConnectionClosedException(this.name + ' error: ' + err.message);
+    log.error(err.message);
     this._socketError = err;
     if (!this._connected) {
         this.emit('connectError', err);
@@ -126,7 +132,7 @@ Connection.prototype._cleanupRequests = function(err){
 
 /**
  * Close connection and destroy socket
- * @param err
+ * @param {ConnectionClosedException} err
  * @private
  */
 Connection.prototype._close = function(err){
@@ -142,27 +148,40 @@ Connection.prototype._close = function(err){
 Connection.prototype.getResponse = function(){
     let self = this;
     this.socket.on('data', self.transport.receiver(function(transport_with_data){
-        let ec = new ErrorCode();
-        let protocol = new self.protocol(transport_with_data);
+        try {
+            while (true) {
+                let ec = new ErrorCode();
+                let protocol = new self.protocol(transport_with_data);
 
-        //Response structure: total length + error code structure + TMessage
-        let len = protocol.readI32();
-        ec.read(protocol);
+                //Response structure: total length + error code structure + TMessage
+                let len = protocol.readI32();
+                ec.read(protocol);
 
-        let msgHeader = protocol.readMessageBegin();
-        let request = self.requests[msgHeader.rseqid];
+                let msgHeader = protocol.readMessageBegin();
+                let request = self.requests[msgHeader.rseqid];
+                //console.log(msgHeader);
 
-        if (request) {
-            let entry = request.entry;
-            entry.operator.rpc_error = ec;
-            if (ErrorType[ec.errno] === ErrorType.ERR_OK) {
-                entry.operator.recv_data(protocol);
-            } else {
-                log.error('Request failed, error code is %s', entry.operator.rpc_error.errno);
+                if (request) {
+                    let entry = request.entry;
+                    entry.operator.rpc_error = ec;
+                    if (ErrorType[ec.errno] === ErrorType.ERR_OK) {
+                        entry.operator.recv_data(protocol);
+                    } else {
+                        log.error('Request failed, error code is %s', entry.operator.rpc_error.errno);
+                    }
+                    request.setResponse(entry.operator.response);
+                } else {
+                    log.error('%s Request#%d does not exist, maybe timeout', self.name, msgHeader.rseqid);
+                }
             }
-            request.setResponse(entry.operator.response);
-        } else {
-            log.error('%s Request#%d does not exist, maybe timeout', self.name, msgHeader.rseqid);
+
+        } catch(e){
+            if (e instanceof InputBufferUnderrunError) {
+                transport_with_data.rollbackPosition();
+            }
+            else {
+                self.emit('error', e);
+            }
         }
     }));
 };
@@ -208,12 +227,11 @@ Connection.prototype.call = function(entry){
         return this._handleClose();
     }
 
-    rpcRequest.on('timeout', function(){  //todo: test
-        delete self.requests[rpcRequest.id];
-    });
+    // rpcRequest.on('timeout', function(){
+    //     delete self.requests[rpcRequest.id];
+    // });
 
     this.sendRequest(rpcRequest);
-    log.debug('%s send request#%s request data', self.name, rpcRequest.id);
 };
 
 /**
@@ -282,6 +300,7 @@ function Request(connection, seqid, entry, timeout) {
     this.timeout = timeout;
 
     if(timeout && timeout > 0){
+        log.debug('%s-request%d, timeout %d', this.connection.name, this.id, this.timeout);
         this.timer = setTimeout(this.handleTimeout.bind(this), parseInt(timeout));
     }
 }
@@ -291,7 +310,7 @@ util.inherits(Request, EventEmitter);
  * Handle request timeout
  */
 Request.prototype.handleTimeout = function(){
-    let msg = this.connection.name + ' request#' + this.id + ' timeout, use ' + this.timeout + 'ms';
+    let msg = this.connection.name + ' request#' + this.id + ' timeout, use ' + (Date.now()-this.startTime) + 'ms';
     this.entry.operator.rpc_error = new ErrorCode({'errno' : 'ERR_TIMEOUT'});
 
     let err = new Exception.RPCException('ERR_TIMEOUT', msg);
@@ -327,8 +346,8 @@ Request.prototype.callComplete = function(){
 
     let usedTime = Date.now()-this.startTime;
     this.entry.operator.timeout -= usedTime;
-    log.debug('connection#%d-request#%d use %dms, remain timeout %d',
-        this.connection.id,
+    log.debug('%s-request#%d use %dms, remain timeout %dms',
+        this.connection.name,
         this.id,
         usedTime,
         this.entry.operator.timeout);
@@ -340,7 +359,7 @@ Request.prototype.callComplete = function(){
  * @param response
  */
 Request.prototype.setResponse = function(response){
-    this.entry.operator.reponse = response;
+    this.entry.operator.response = response;
     this.callComplete();
 };
 

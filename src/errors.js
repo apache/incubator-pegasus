@@ -86,13 +86,6 @@ function ConnectionClosedException(msg){
 }
 util.inherits(ConnectionClosedException, IOException);
 
-//RemoteCallTimeoutException
-// function RemoteCallTimeoutException(msg){
-//     RemoteCallTimeoutException.super_.call(this, msg, this.constructor);
-//     this.name = 'RemoteCallTimeoutException';
-// }
-// util.inherits(RemoteCallTimeoutException, IOException);
-
 //ThriftException
 function ThriftException(msg){
     ThriftException.super_.call(this, msg, this.constructor);
@@ -108,6 +101,5 @@ module.exports = {
     MetaException : MetaException,
     RocksDBException : RocksDBException,
     ConnectionClosedException : ConnectionClosedException,
-    //RemoteCallTimeoutException : RemoteCallTimeoutException,
 };
 

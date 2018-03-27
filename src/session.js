@@ -10,8 +10,8 @@ const Connection = require('./connection');
 const log = require('../log');
 const util = require('util');
 const Exception = require('./errors');
-
-//let _timeout = 1000;  //unit:ms
+// const EventEmitter = require('events').EventEmitter;
+const deasync = require('deasync');
 const META_DELAY = 500;
 
 /**
@@ -68,7 +68,6 @@ function Session(args){
 Session.prototype.getConnection = function(args, callback){
     let rpc_addr = args.rpc_address;
     if(rpc_addr.invalid()){
-        //TODO: check
         log.error('invalid rpc address');
     }
     let connection = new Connection({
@@ -76,8 +75,21 @@ Session.prototype.getConnection = function(args, callback){
         'port' : rpc_addr.port,
         'rpcTimeOut' : this.timeout,
     });
-    if(callback){
-        callback(connection);
+
+    let sync = true, error = null;
+    connection.once('connectError', function(err){
+        connection.emit('close');
+        sync = false;
+        error = err;
+    });
+    connection.once('connect', function(){
+        sync = false;
+    });
+    while(sync){deasync.sleep(100);}
+    if(error === null){
+        callback(null, connection);
+    }else{
+        callback(error, null);
     }
 };
 
@@ -90,7 +102,7 @@ Session.prototype.getConnection = function(args, callback){
  * @constructor
  * @extends Session
  */
-function MetaSession(args){
+function MetaSession(args){ //todo: getConnection callback
     MetaSession.super_.call(this, args, this.constructor);
 
     this.metaList = [];
@@ -105,17 +117,22 @@ function MetaSession(args){
         if(address.fromString(args.metaList[i])){
             self.getConnection({
                 'rpc_address' : address,
-            }, function(connection){
-                self.metaList.push(connection);
+            }, function(err, connection){
+                if(err === null && connection !== null) {
+                    self.metaList.push(connection);
+                    log.debug('Finish to get session to meta %s:%s', address.host, address.port);
+                }else{
+                    log.error('Failed to get meta connection, %s', err.message);
+                }
             });
-            log.debug('Finish to get session to meta %s:%s', address.host, address.port);
         }else{
-            //todo: check
-            log.error('invalid address %s', args.metaList[i]);
+            log.error('invalid meta server address %s', args.metaList[i]);
         }
     }
     if(this.metaList.length <= 0){
-        log.error('meta rpc address is empty');
+        log.error('No meta connection exist!');
+        this.connectionError = new Exception.MetaException('ERR_NO_META_SERVER',
+            'Failed to connect to meta server, error is ERR_NO_META_SERVER');
     }
 }
 util.inherits(MetaSession, Session);
@@ -146,15 +163,15 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
     let needSwitch = false, needDelay = false;
     let self = this;
 
-    if(op.timeout <= 0){
-        let err_type = 'ERR_TIMEOUT';
-        round.callback(new Exception.MetaException(err_type,
-            'Failed to query meta server, error is ' + err_type
-        ), op); //todo:ing
-        return;
-    }
+    // if(op.timeout <= 0){
+    //     let err_type = 'ERR_TIMEOUT';
+    //     round.callback(new Exception.MetaException(err_type,
+    //         'Failed to query meta server, error is ' + err_type
+    //     ), op);
+    //     return;
+    // }
 
-    // todo: test for timeout query meta
+    //todo: test for timeout query meta
     // if(round.maxQueryCount === 5){
     //     op.rpc_error.errno = 'ERR_TIMEOUT';
     // }
@@ -229,8 +246,12 @@ function ReplicaSession(args){
     let addr = new RpcAddress(args.address);
     this.getConnection({
         'rpc_address' : addr,
-    },function(connection){
-        self.connection = connection;
+    },function(err, connection){
+        if(err === null && connection !== null) {
+            self.connection = connection;
+        }else{
+            log.error('Failed to get replica connection, %s', err.message);
+        }
     });
 }
 util.inherits(ReplicaSession, Session);
@@ -257,9 +278,11 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
     let needQueryMeta = false;
     let op = round.operator;
 
+    //todo:delete
     // round.count++;
     // if(round.count === 1){
-    //     op.rpc_error.errno = 'ERR_OBJECT_NOT_FOUND';
+    //     op.rpc_error.errno = 'ERR_TIMEOUT';
+    //     op.timeout = 3;
     // }
 
     switch (ErrorType[op.rpc_error.errno]) {

@@ -5,7 +5,7 @@
 "use strict";
 let assert = require('assert');
 let pegasusClient = require('../');
-let Exception = require('../src/errors');
+let PException = require('../src/errors').PException;
 let ErrorType = require('../src/dsn/base_types').error_type;
 
 describe('test/client.test.js', function(){
@@ -22,18 +22,69 @@ describe('test/client.test.js', function(){
         client.close();
     });
 
+    describe('create client failure', function(){
+        it('lack of metaServers', function(done){
+            try{
+                pegasusClient.create({});
+            }catch(e){
+                assert(e instanceof PException);
+                console.log(e.message);
+            }
+            done();
+        });
+
+        it('invalid ip:port', function(done){
+            try{
+                pegasusClient.create({metaServers: ['127.0.0.1.34601', '127.0.0.1:34602']});
+            }catch(e){
+                assert(e instanceof PException);
+                console.log(e.message);
+            }
+            done();
+        });
+
+        it('invalid ipv4 address', function(done){
+            try{
+                pegasusClient.create({metaServers: ['127.0.0.1:34601', '485.0.0.1:34602']});
+            }catch(e){
+                assert(e instanceof PException);
+                console.log(e.message);
+            }
+            done();
+        });
+
+        it('invalid ipv4 address', function(done){
+            try{
+                pegasusClient.create({metaServers: ['127.0.0.1:34601', '127.0.0.1:99999']});
+            }catch(e){
+                assert(e instanceof PException);
+                console.log(e.message);
+            }
+            done();
+        });
+    });
+
     describe('get table', function(){
         it('ok', function(done){
-            client.getTable(tableName, function(err, tableInfo){
+            client.getTable(tableName, function(err){
                 assert.equal(null, err);
                 done();
             });
         });
+
+        it('invalid table name', function(done){
+            client.getTable(123654, function(err, tableInfo){
+                assert(err instanceof PException);
+                assert.equal(null, tableInfo);
+                console.log(err.message);
+                done();
+            });
+        });
+
         it('wrong table name', function(done){
             client.getTable('404', function(err, tableInfo){
                 assert.equal(ErrorType.ERR_OBJECT_NOT_FOUND, err.err_code);
                 assert.equal(null, tableInfo);
-                //console.log(err.message);
                 done();
             });
         });
@@ -50,6 +101,19 @@ describe('test/client.test.js', function(){
             };
             client.set(tableName, args, function(err){
                 assert.equal(null, err);
+                done();
+            });
+        });
+        it('invalid param', function(done){
+            let args = {
+                'hashKey' : '1',
+                'sortKey' : '1',
+                'value'   : '1',
+                'timeout' : 5000,
+            };
+            client.set(tableName, args, function(err){
+                assert(err instanceof PException);
+                console.log(err.message);
                 done();
             });
         });
@@ -100,6 +164,36 @@ describe('test/client.test.js', function(){
             };
             client.batchSet(tableName, argArray, function(err){
                 assert.equal(null, err);
+                done();
+            });
+        });
+
+        it('lack param array', function(done){
+            let argArray = {};
+            client.batchSet(tableName, argArray, function(err){
+                assert(err instanceof PException);
+                console.log(err.message);
+                done();
+            });
+        });
+
+        it('wrong param', function(done){
+            let argArray = [];
+            argArray[0] = {
+                'hashKey' : new Buffer('1'),
+                'sortKey' : new Buffer('11'),
+                'value'   : new Buffer('11'),
+                'timeout' : 3000,
+            };
+            argArray[1] = {
+                'hashKey' : new Buffer('1'),
+                'sortKey' : new Buffer('22'),
+                'value'   : '22',
+                'timeout' : 3000,
+            };
+            client.batchSet(tableName, argArray, function(err){
+                assert(err instanceof PException);
+                console.log(err.message);
                 done();
             });
         });
@@ -180,6 +274,26 @@ describe('test/client.test.js', function(){
                 assert.deepEqual(new Buffer('111'), result[1].value);
                 assert.deepEqual(new Buffer('22'), result[2].sortKey);
                 assert.deepEqual(new Buffer('222'), result[2].value);
+                done();
+            });
+        });
+
+        it('multi get all sortKey-value', function(done){
+            let args = {
+                'hashKey' : new Buffer('1'),
+                'sortKeyArray' : [],
+            };
+            client.multiGet(tableName, args, function(err, result){
+                assert.equal(null, err);
+                assert.deepEqual(new Buffer('1'), result[0].hashKey);
+                assert.deepEqual(new Buffer('1'), result[0].sortKey);
+                assert.deepEqual(new Buffer('1'), result[0].value);
+                assert.deepEqual(new Buffer('11'), result[1].sortKey);
+                assert.deepEqual(new Buffer('111'), result[1].value);
+                assert.deepEqual(new Buffer('2'), result[2].sortKey);
+                assert.deepEqual(new Buffer('3'), result[2].value);
+                assert.deepEqual(new Buffer('22'), result[3].sortKey);
+                assert.deepEqual(new Buffer('222'), result[3].value);
                 done();
             });
         });

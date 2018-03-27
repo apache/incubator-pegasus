@@ -41,7 +41,12 @@ function TableHandler(cluster, tableName, callback){
     this.partition_count = 0;
     this.partitions = {};       //partition pid -> primary rpc_address
 
-    this.queryMeta(tableName, this.onUpdateResponse.bind(this));
+    if(this.cluster.metaSession.connectionError){
+        //Failed to get meta sessions
+        callback(this.cluster.metaSession.connectionError, null);
+    }else {
+        this.queryMeta(tableName, this.onUpdateResponse.bind(this));
+    }
 }
 
 /**
@@ -51,9 +56,9 @@ function TableHandler(cluster, tableName, callback){
  */
 TableHandler.prototype.queryMeta = function(tableName, callback){
     let session = this.cluster.metaSession;
-    let queryCfgOperator = new Operator.QueryCfgOperator(new Gpid(-1, -1), new replica.query_cfg_request({
-        'app_name': tableName
-    }));
+    let queryCfgOperator = new Operator.QueryCfgOperator(new Gpid(-1, -1),
+        new replica.query_cfg_request({'app_name': tableName}),
+        this.cluster.timeout);
     let round = new MetaRequestRound(queryCfgOperator,
         callback,
         session.maxRetryCounter,
@@ -122,7 +127,7 @@ TableHandler.prototype.updateResponse = function(oldResp, newResp){
 /**
  * Create round and send request to session
  * @param {gpid}        gpid
- * @param {Operation}   op
+ * @param {Operator}   op
  */
 TableHandler.prototype.operate = function(gpid, op){
     let pidx = gpid.get_pidx();
