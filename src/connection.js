@@ -159,7 +159,6 @@ Connection.prototype.getResponse = function(){
 
                 let msgHeader = protocol.readMessageBegin();
                 let request = self.requests[msgHeader.rseqid];
-                //console.log(msgHeader);
 
                 if (request) {
                     let entry = request.entry;
@@ -180,7 +179,7 @@ Connection.prototype.getResponse = function(){
                 transport_with_data.rollbackPosition();
             }
             else {
-                self.emit('error', e);
+                self.socket.emit('error', e);
             }
         }
     }));
