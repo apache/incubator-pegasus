@@ -182,6 +182,8 @@ private:
 
     void updating_rocksdb_sstsize();
 
+    virtual void manual_compact();
+
     // get the absolute path of restore directory and the flag whether force restore from env
     // return
     //      std::pair<std::string, bool>, pair.first is the path of the restore dir; pair.second is
