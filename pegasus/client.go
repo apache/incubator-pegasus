@@ -8,6 +8,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
@@ -82,6 +83,11 @@ type pegasusClient struct {
 }
 
 func NewClient(cfg Config) Client {
+	if len(cfg.MetaServers) == 0 {
+		pegalog.GetLogger().Fatalln("pegasus-go-client: meta sever list should not be empty")
+		return nil
+	}
+
 	c := &pegasusClient{
 		tables:     make(map[string]TableConnector),
 		metaMgr:    session.NewMetaManager(cfg.MetaServers),
