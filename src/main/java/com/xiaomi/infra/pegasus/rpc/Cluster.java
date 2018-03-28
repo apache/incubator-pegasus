@@ -60,6 +60,7 @@ public abstract class Cluster {
                 address);
     }
 
+    public abstract String[] getMetaList();
     public abstract Table openTable(String name, KeyHasher function) throws ReplicationException, TException;
     public abstract void close();
 }

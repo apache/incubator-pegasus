@@ -7,6 +7,7 @@ import com.xiaomi.infra.pegasus.rpc.Cluster;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.tools.tools;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -181,8 +182,11 @@ public class PegasusClient implements PegasusClientInterface {
     public void close() {
         synchronized (this) {
             if (cluster != null) {
+                String metaList = StringUtils.join(cluster.getMetaList(), ",");
+                LOGGER.info("start to close pegasus client for [{}]", metaList);
                 cluster.close();
                 cluster = null;
+                LOGGER.info("finish to close pegasus client for [{}]", metaList);
             }
         }
     }

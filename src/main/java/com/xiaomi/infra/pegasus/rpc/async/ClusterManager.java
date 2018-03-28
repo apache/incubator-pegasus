@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Created by sunweijie@xiaomi.com on 16-11-11.
  */
 public class ClusterManager extends Cluster {
+    private static final Logger logger = org.slf4j.LoggerFactory.getLogger(ClusterManager.class);
+
     private int operationTimeout;
     private int retryDelay;
     private boolean enableCounter;
@@ -33,13 +35,12 @@ public class ClusterManager extends Cluster {
     private EventLoopGroup metaGroup; // group used for handle meta logic
     private EventLoopGroup replicaGroup; // group used for handle io with replica servers
     private EventLoopGroup tableGroup; // group used for handle table logic
+    private String[] metaList;
     private MetaSession metaSession;
 
-    private static final Logger logger;
     private static final String osName;
     private static final String Linux = "Linux";
     static {
-        logger = org.slf4j.LoggerFactory.getLogger(ClusterManager.class);
         Properties p = System.getProperties();
         osName = p.getProperty("os.name");
         logger.info("operating system name: {}", osName);
@@ -63,6 +64,7 @@ public class ClusterManager extends Cluster {
         metaGroup = getEventLoopGroupInstance(1);
         tableGroup = getEventLoopGroupInstance(1);
 
+        metaList = address_list;
         // the constructor of meta session is depend on the replicaSessions,
         // so the replicaSessions should be initialized earlier
         metaSession = new MetaSession(this, address_list, timeout, 10, metaGroup);
@@ -126,6 +128,9 @@ public class ClusterManager extends Cluster {
     }
 
     @Override
+    public String[] getMetaList() { return metaList; }
+
+    @Override
     public TableHandler openTable(String name, KeyHasher h) throws ReplicationException {
         return new TableHandler(this, name, h);
     }
@@ -165,5 +170,7 @@ public class ClusterManager extends Cluster {
         } catch (Exception ex) {
             logger.warn("close table group failed: ", ex);
         }
+
+        logger.info("cluster manager has closed");
     }
 }
