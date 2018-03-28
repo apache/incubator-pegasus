@@ -66,10 +66,14 @@ You may want to refer to the [installation guide](docs/installation.md).
 
 ## Related Projects
 
+Client libs:
 * [Pegasus Java client](https://github.com/xiaomi/pegasus-java-client)
 * [Pegasus Python Client](https://github.com/xiaomi/pegasus-python-client)
 * [Pegasus Go Client](https://github.com/xiaomi/pegasus-go-client)
-* [Pegasus Node.js client](https://github.com/xiaomi/pegasus-nodejs-client)
+* [Pegasus Node.js Client](https://github.com/xiaomi/pegasus-nodejs-client)
+* [Pegasus Scala Client](https://github.com/xiaomi/pegasus-scala-client)
+
+Test tools:
 * [Pegasus YCSB](https://github.com/xiaomi/pegasus-YCSB)
 
 ## How to contibute

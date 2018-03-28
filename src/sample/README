@@ -6,6 +6,8 @@ Run
 ===
 ./run.sh <cluster_name> <app_name>
 
-for example:
+For example:
 ./run.sh onebox temp
+
+To change cluster, please modify the last line of `config.ini'.
 

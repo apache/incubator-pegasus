@@ -109,8 +109,6 @@ cp -v `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell ssl` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell bz2` ${pack}/DSN_ROOT/lib/
-cp -v `get_system_lib shell gflags` ${pack}/DSN_ROOT/lib/
-cp -v `get_system_lib shell tcmalloc` ${pack}/DSN_ROOT/lib/
 
 mkdir -p ${pack}/scripts
 cp -v ./scripts/* ${pack}/scripts/
