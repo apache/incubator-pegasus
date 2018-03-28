@@ -9,7 +9,7 @@ endif()
 include("${DSN_ROOT}/bin/dsn.cmake")
 
 set(DSN_BUILD_RUNTIME FALSE)
-
+add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
 dsn_common_setup()
 
 add_subdirectory(base)

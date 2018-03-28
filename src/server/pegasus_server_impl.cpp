@@ -2372,5 +2372,18 @@ std::pair<std::string, bool> pegasus_server_impl::get_restore_dir_from_env(int a
     res.first = ::dsn::utils::filesystem::path_combine(parent_dir, os.str());
     return res;
 }
+
+void pegasus_server_impl::manual_compact()
+{
+    ddebug("%s: start to CompactRange", replica_name());
+    rocksdb::CompactRangeOptions options;
+    options.exclusive_manual_compaction = true;
+    options.change_level = true;
+    options.target_level = -1;
+    options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
+    _db->CompactRange(options, nullptr, nullptr);
+    ddebug("%s: CompactRange finished", replica_name());
+}
+
 }
 } // namespace
