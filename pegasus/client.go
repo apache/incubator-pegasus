@@ -56,6 +56,18 @@ type Client interface {
 
 	// Open the specific pegasus table. If the table was opened before,
 	// it will reuse the previous connection to the table.
+	//
+	// NOTE: The following two examples have the same effect. But the former is recommended.
+	//
+	// ```
+	//   tb, err := client.OpenTable(context.Background(), "temp")
+	//   err = tb.Set(context.Background(), []byte("h1"), []byte("s1"), []byte("v1"))
+	// ```
+	//
+	// ```
+	//  err := client.Set(context.Background(), "temp", []byte("h1"), []byte("s1"), []byte("v1"))
+	// ```
+	//
 	OpenTable(ctx context.Context, tableName string) (TableConnector, error)
 }
 

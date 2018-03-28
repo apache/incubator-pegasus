@@ -5,8 +5,6 @@ import:
 - package: gopkg.in/tomb.v2
 testImport:
 - package: github.com/fortytw2/leaktest
-  version: 1.1.0
 - package: github.com/stretchr/testify
-  version: 1.1.4
   subpackages:
   - assert
