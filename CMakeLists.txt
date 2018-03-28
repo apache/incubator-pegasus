@@ -7,7 +7,7 @@ include(bin/dsn.cmake)
 #project(dsn VERSION 1.0 LANGUAGES C CXX)
 project(dsn C CXX)
 set(DSN_BUILD_RUNTIME TRUE)
-
+add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
 if(DEFINED WARNING_ALL)
     #add_compile_options("-Wall")
     SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")

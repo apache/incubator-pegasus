@@ -41,5 +41,5 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/clear.cmd"
                  "${CMAKE_CURRENT_SOURCE_DIR}/gtest.filter"
 )
-
+add_definitions(-Wno-dangling-else)
 dsn_add_executable()

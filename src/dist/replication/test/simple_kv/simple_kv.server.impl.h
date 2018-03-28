@@ -81,6 +81,8 @@ public:
     virtual ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
                                                        const learn_state &state) override;
 
+    virtual void manual_compact() {};
+
 private:
     void recover();
     void recover(const std::string &name, int64_t version);

@@ -52,6 +52,9 @@ replica::replica(
       _cold_backup_running_count(0),
       _cold_backup_max_duration_time_ms(0),
       _cold_backup_max_upload_file_size(0),
+      _last_compact_enqueue_time_ms(0),
+      _last_compact_finish_time_ms(0),
+
       _chkpt_total_size(0),
       _cur_download_size(0),
       _restore_progress(0),
@@ -432,5 +435,44 @@ void replica::close()
 
     _counter_private_log_size.clear();
 }
+
+bool replica::could_start_manual_compact() {
+    uint64_t not_start = 0;
+    return (_last_compact_finish_time_ms.load() == 0 ||
+            now_ms() - _last_compact_finish_time_ms.load() > 3600*1000) &&
+           _last_compact_enqueue_time_ms.compare_exchange_strong(not_start, now_ms());
+}
+
+void replica::manual_compact()
+{
+    if (_app != nullptr) {
+        ddebug("%s: manual compact start to execute", name());
+        _app->manual_compact();
+        _last_compact_finish_time_ms.store(now_ms());
+        _last_compact_enqueue_time_ms.store(0);
+    }
+}
+
+std::string replica::get_compact_state()
+{
+    uint64_t last_compact_enqueue_time_ms = _last_compact_enqueue_time_ms.load();
+    uint64_t last_compact_finish_time_ms = _last_compact_finish_time_ms.load();
+    std::stringstream state;
+    state << "\n" << name() << ": ";
+    if (last_compact_enqueue_time_ms != 0) {
+        char str[24];
+        utils::time_ms_to_string(last_compact_enqueue_time_ms, str);
+        state << "compact task enqueue at " << str;
+    } else if (last_compact_finish_time_ms != 0) {
+        char str[24];
+        utils::time_ms_to_string(last_compact_finish_time_ms, str);
+        state << "compact finish at " << str;
+    } else {
+        state << "not happen";
+    }
+
+    return state.str();
+}
+
 }
 } // namespace

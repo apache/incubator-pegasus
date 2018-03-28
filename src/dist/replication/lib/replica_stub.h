@@ -190,6 +190,8 @@ private:
     replica_life_cycle get_replica_life_cycle(const dsn::gpid &pid);
     void on_gc_replica(replica_stub_ptr this_, gpid pid);
 
+    void manual_compact(gpid pid);
+
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -231,6 +233,8 @@ private:
     dsn_handle_t _verbose_client_log_command;
     dsn_handle_t _verbose_commit_log_command;
     dsn_handle_t _trigger_chkpt_command;
+    dsn_handle_t _manual_compact_command;
+    dsn_handle_t _query_compact_command;
 
     bool _deny_client;
     bool _verbose_client_log;

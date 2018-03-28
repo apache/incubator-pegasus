@@ -210,6 +210,8 @@ public:
                                           dsn_message_t *requests,
                                           int request_length);
 
+    virtual void manual_compact() = 0;
+
 public:
     //
     // utility functions to be used by app

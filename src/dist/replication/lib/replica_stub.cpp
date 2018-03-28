@@ -59,6 +59,8 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _verbose_client_log_command(nullptr),
       _verbose_commit_log_command(nullptr),
       _trigger_chkpt_command(nullptr),
+      _manual_compact_command(nullptr),
+      _query_compact_command(nullptr),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
@@ -1822,6 +1824,14 @@ void replica_stub::trigger_checkpoint(replica_ptr r, bool is_emergency)
     r->init_checkpoint(is_emergency);
 }
 
+void replica_stub::manual_compact(gpid pid)
+{
+    replica_ptr r = get_replica(pid);
+    if (r != nullptr) {
+        r->manual_compact();
+    }
+}
+
 void replica_stub::handle_log_failure(error_code err)
 {
     derror("handle log failure: %s", err.to_string());
@@ -1921,6 +1931,83 @@ void replica_stub::open_service()
             }
             return "OK";
         });
+
+    _manual_compact_command = ::dsn::command_manager::instance().register_command(
+        {"manual-compact"},
+        "manual compact - full compact on rocksdb",
+        "manual compact",
+        [this](const std::vector<std::string> &args) {
+            if (args.empty()) {
+                return std::string("invalid arguments");
+            }
+            std::vector<std::string> app_id_strs;
+            utils::split_args(args[0].c_str(), app_id_strs, ',');
+
+            replicas rs;
+            {
+                zauto_read_lock l(_replicas_lock);
+                rs = _replicas;
+            }
+            std::stringstream compact_state;
+            for (auto app_id_str : app_id_strs) {
+                bool found = false;
+                int32_t app_id = atoi(app_id_str.c_str());
+                for (auto gpid_rep : rs) {
+                    if (gpid_rep.second->get_app_info()->app_id == app_id) {
+                        found = true;
+                        if (gpid_rep.second->could_start_manual_compact()) {
+                            compact_state << "\n" << gpid_rep.second->name() << " start manual compaction";
+                            tasking::enqueue(
+                                    LPC_MANUAL_COMPACT,
+                                    this,
+                                    std::bind(&replica_stub::manual_compact, this, gpid_rep.first));
+                        } else {
+                            compact_state << "\n" << gpid_rep.second->name() << " too frequently manual compaction";
+                        }
+                    }
+                }
+                if (!found) {
+                    compact_state << "\napp id " << app_id << " not found";
+                }
+            }
+            return compact_state.str();
+        });
+
+    _query_compact_command = ::dsn::command_manager::instance().register_command(
+        {"query-compact"},
+        "query compact - query full compact state on rocksdb",
+        "query compact",
+        [this](const std::vector<std::string> &args) {
+            if (args.empty()) {
+                return std::string("invalid arguments");
+            }
+            std::vector<std::string> app_id_strs;
+            if (args.size() > 0) {
+                utils::split_args(args[0].c_str(), app_id_strs, ',');
+            }
+
+            replicas rs;
+            {
+                zauto_read_lock l(_replicas_lock);
+                rs = _replicas;
+            }
+
+            std::stringstream compact_state;
+            for (auto arg : app_id_strs) {
+                bool found = false;
+                int32_t app_id = atoi(arg.c_str());
+                for (auto gpid_rep : rs) {
+                    if (gpid_rep.second->get_app_info()->app_id == app_id) {
+                        found = true;
+                        compact_state << gpid_rep.second->get_compact_state();
+                    }
+                }
+                if (!found) {
+                    compact_state << "\napp id " << app_id << " not found";
+                }
+            }
+            return compact_state.str();
+        });
 }
 
 void replica_stub::close()
@@ -1937,12 +2024,16 @@ void replica_stub::close()
     dsn::command_manager::instance().deregister_command(_verbose_client_log_command);
     dsn::command_manager::instance().deregister_command(_verbose_commit_log_command);
     dsn::command_manager::instance().deregister_command(_trigger_chkpt_command);
+    dsn::command_manager::instance().deregister_command(_manual_compact_command);
+    dsn::command_manager::instance().deregister_command(_query_compact_command);
 
     _kill_partition_command = nullptr;
     _deny_client_command = nullptr;
     _verbose_client_log_command = nullptr;
     _verbose_commit_log_command = nullptr;
     _trigger_chkpt_command = nullptr;
+    _manual_compact_command = nullptr;
+    _query_compact_command = nullptr;
 
     if (_config_sync_timer_task != nullptr) {
         _config_sync_timer_task->cancel(true);
