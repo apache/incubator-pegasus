@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <dsn/cpp/smart_pointers.h>
+#include <dsn/utility/smart_pointers.h>
 
 #include <gtest/gtest.h>
 

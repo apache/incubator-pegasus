@@ -163,6 +163,18 @@ else
     echo "skip build libevent"
 fi
 
+# build fmtlib
+if [ ! -d $TP_OUTPUT/include/fmt ]; then
+    cd $TP_SRC/fmt-4.0.0
+    mkdir -p build && cd build
+    cmake .. -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT -DFMT_TEST=false
+    make -j8 && make install
+    cd $TP_DIR
+    exit_if_fail "fmtlib" $?
+else
+    echo "skip build fmtlib"
+fi
+
 # build poco
 if [ ! -d $TP_OUTPUT/include/Poco ]; then
     mkdir -p $TP_BUILD/poco-1.7.8-release

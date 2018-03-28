@@ -40,7 +40,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/crc.h>
 #include <dsn/service_api_c.h>
-#include <dsn/cpp/smart_pointers.h>
+#include <dsn/utility/smart_pointers.h>
 #include <fstream>
 #include <sstream>
 #include <memory>
