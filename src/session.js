@@ -85,7 +85,7 @@ Session.prototype.getConnection = function(args, callback){
     connection.once('connect', function(){
         sync = false;
     });
-    while(sync){deasync.sleep(100);}
+    while(sync){deasync.sleep(1);}
     if(error === null){
         callback(null, connection);
     }else{

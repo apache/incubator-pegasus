@@ -212,28 +212,6 @@ TableInfo.prototype.get = function(args, callback){
 };
 
 /**
- * Sync get value
- * @param  {Object} args
- *         {Buffer} args.hashKey
- *         {Buffer} args.sortKey
- *         {Number} args.timeout
- * @return {{err: *, result: *}}
- */
-TableInfo.prototype.syncGet = function(args){
-    let sync = true, error = null, data = null;
-    this.get(args, function(err, result){
-        error = err;
-        data = result;
-        sync = false;
-    });
-    while(sync){deasync.sleep(100);}
-    return {
-        'err' : error,
-        'result' : data,
-    };
-};
-
-/**
  * Batch Get value
  * @param {Array}       argsArray
  *        {Buffer}      argsArray[i].hashKey
@@ -242,24 +220,27 @@ TableInfo.prototype.syncGet = function(args){
  * @param {Function}    callback
  */
 TableInfo.prototype.batchGet = function(argsArray, callback){
-    let i, len = argsArray.length, data;
-    let resultArray = [];
+    let i, len = argsArray.length;
+    let error = null, resultArray = [], sync = true;
 
-    for (i = 0; i < len; ++i) {
+    for(i = 0; i < len; ++i){
         let args = argsArray[i];
-        data = this.syncGet(args);
-        if(data.err !== null){
-            break;
-        }
-        resultArray[i] = data.result;
+        this.get(args, function(err, result){
+            if(err !== null){
+                error = err;
+                sync =false;
+            }else{
+                resultArray.push(result);
+            }
+            if(resultArray.length === len){
+                sync =false;
+            }
+        });
     }
-
-    if(i === len){
-        callback(null, resultArray);
-    }else{
-        callback(data.err, null);
-    }
+    while(sync){deasync.sleep(1);}
+    callback(error, resultArray);
 };
+
 
 /**
  * Set value
@@ -294,27 +275,6 @@ TableInfo.prototype.set = function(args, callback){
 };
 
 /**
- * Sync set value
- * @param {Object}  args
- *        {Buffer}  args.hashKey
- *        {Buffer}  args.sortKey
- *        {Buffer}  args.value
- *        {Number}  args.ttl
- *        {Number}  args.timeout
- * @return {{err: *, result: *}}
- */
-TableInfo.prototype.syncSet = function(args){
-    let sync = true, error = null, data = null;
-    this.set(args, function(err, result){
-        error = err;
-        data = result;
-        sync = false;
-    });
-    while(sync){deasync.sleep(100);}
-    return {'err' : error, 'result' : data};
-};
-
-/**
  * Batch Set value
  * @param {Array}       argsArray
  *        {Buffer}      argsArray[i].hashKey
@@ -325,22 +285,27 @@ TableInfo.prototype.syncSet = function(args){
  * @param {Function}    callback
  */
 TableInfo.prototype.batchSet = function(argsArray, callback){
-    let i, len = argsArray.length, result;
+    let i, len = argsArray.length;
+    let error = null, resultArray = [], sync = true;
 
-    for (i = 0; i < len; ++i) {
+    for(i = 0; i < len; ++i){
         let args = argsArray[i];
-        result = this.syncSet(args);
-        if(result.err !== null){
-            break;
-        }
+        this.set(args, function(err, result){
+            if(err !== null){
+                error = err;
+                sync =false;
+            }else{
+                resultArray.push(result);
+            }
+            if(resultArray.length === len){
+                sync =false;
+            }
+        });
     }
-    if(i === len){
-        //all request succeed
-        callback(null, i);
-    }else{
-        callback(result.err, i);
-    }
+    while(sync){deasync.sleep(1);}
+    callback(error, resultArray);
 };
+
 
 /**
  * Delete value
