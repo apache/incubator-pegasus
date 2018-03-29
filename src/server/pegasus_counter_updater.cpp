@@ -36,6 +36,8 @@ static const char *s_brief_stat_mapper[] = {
     "closing_replica_count", "replica*eon.replica_stub*closing.replica(Count)",
     "commit_throughput", "replica*eon.replica_stub*replicas.commit.qps",
     "learning_count", "replica*eon.replica_stub*replicas.learning.count",
+    "manual_compact_running_count", "replica*eon.replica_stub*manual.compact.running.count",
+    "manual_compact_queue_count", "replica*eon.replica_stub*manual.compact.queue.count",
     "shared_log_size(MB)", "replica*eon.replica_stub*shared.log.size(MB)",
     "memused_virt(MB)", "replica*server*memused.virt(MB)",
     "memused_res(MB)", "replica*server*memused.res(MB)",
