@@ -342,9 +342,11 @@ private:
     std::atomic<uint64_t> _cold_backup_max_duration_time_ms;
     std::atomic<uint64_t> _cold_backup_max_upload_file_size;
 
-    // compact state
-    std::atomic<uint64_t> _last_compact_enqueue_time_ms;
-    std::atomic<uint64_t> _last_compact_finish_time_ms;
+    // manual compact state
+    std::atomic<uint64_t> _manual_compact_enqueue_time_ms;
+    std::atomic<uint64_t> _manual_compact_start_time_ms;
+    std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
+    std::atomic<uint64_t> _manual_compact_last_time_used_ms;
 
     // record the progress of restore
     int64_t _chkpt_total_size;

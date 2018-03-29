@@ -210,6 +210,7 @@ public:
                                           dsn_message_t *requests,
                                           int request_length);
 
+    // do full compaction manually.
     virtual void manual_compact() = 0;
 
 public:

@@ -253,6 +253,15 @@ void replica_stub::install_perf_counters()
         "cold.backup.max.upload.file.size",
         COUNTER_TYPE_NUMBER,
         "current cold backup max upload file size");
+
+    _counter_manual_compact_running_count.init_app_counter("eon.replica_stub",
+                                                           "manual.compact.running.count",
+                                                           COUNTER_TYPE_NUMBER,
+                                                           "current manual compact running count");
+    _counter_manual_compact_queue_count.init_app_counter("eon.replica_stub",
+                                                         "manual.compact.queue.count",
+                                                         COUNTER_TYPE_NUMBER,
+                                                         "current manual compact in queue count");
 }
 
 void replica_stub::initialize(bool clear /* = false*/)
@@ -1391,6 +1400,8 @@ void replica_stub::on_gc()
     uint64_t cold_backup_running_count = 0;
     uint64_t cold_backup_max_duration_time_ms = 0;
     uint64_t cold_backup_max_upload_file_size = 0;
+    uint64_t manual_compact_running_count = 0;
+    uint64_t manual_compact_queue_count = 0;
     for (auto it = rs.begin(); it != rs.end(); ++it) {
         replica_ptr &r = it->second;
         if (r->status() == partition_status::PS_POTENTIAL_SECONDARY) {
@@ -1409,6 +1420,13 @@ void replica_stub::on_gc()
             cold_backup_max_upload_file_size = std::max(
                 cold_backup_max_upload_file_size, r->_cold_backup_max_upload_file_size.load());
         }
+        if (r->_manual_compact_enqueue_time_ms.load() > 0) {
+            if (r->_manual_compact_start_time_ms.load() > 0) {
+                manual_compact_running_count++;
+            } else {
+                manual_compact_queue_count++;
+            }
+        }
     }
 
     _counter_replicas_learning_count->set(learning_count);
@@ -1417,6 +1435,9 @@ void replica_stub::on_gc()
     _counter_cold_backup_running_count->set(cold_backup_running_count);
     _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
     _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);
+    _counter_manual_compact_running_count->set(manual_compact_running_count);
+    _counter_manual_compact_queue_count->set(manual_compact_queue_count);
+
     // gc shared prepare log
     //
     // Now that checkpoint is very important for gc, we must be able to trigger checkpoint when
@@ -1934,79 +1955,160 @@ void replica_stub::open_service()
 
     _manual_compact_command = ::dsn::command_manager::instance().register_command(
         {"manual-compact"},
-        "manual compact - full compact on rocksdb",
-        "manual compact",
+        "manual-compact <app_id,app_id.partition_id,...>",
+        "manual-compact - full compact on rocksdb",
         [this](const std::vector<std::string> &args) {
             if (args.empty()) {
                 return std::string("invalid arguments");
             }
-            std::vector<std::string> app_id_strs;
-            utils::split_args(args[0].c_str(), app_id_strs, ',');
+
+            std::vector<std::string> arg_strs;
+            utils::split_args(args[0].c_str(), arg_strs, ',');
+            if (arg_strs.empty()) {
+                return std::string("invalid arguments");
+            }
 
             replicas rs;
             {
                 zauto_read_lock l(_replicas_lock);
                 rs = _replicas;
             }
-            std::stringstream compact_state;
-            for (auto app_id_str : app_id_strs) {
-                bool found = false;
-                int32_t app_id = atoi(app_id_str.c_str());
-                for (auto gpid_rep : rs) {
-                    if (gpid_rep.second->get_app_info()->app_id == app_id) {
-                        found = true;
-                        if (gpid_rep.second->could_start_manual_compact()) {
-                            compact_state << "\n" << gpid_rep.second->name() << " start manual compaction";
-                            tasking::enqueue(
-                                    LPC_MANUAL_COMPACT,
-                                    this,
-                                    std::bind(&replica_stub::manual_compact, this, gpid_rep.first));
-                        } else {
-                            compact_state << "\n" << gpid_rep.second->name() << " too frequently manual compaction";
+
+            std::map<gpid, bool> ids; // gpid -> found
+            for (const std::string &arg : arg_strs) {
+                if (arg.empty())
+                    continue;
+                gpid id;
+                int pid;
+                if (id.parse_from(arg.c_str())) {
+                    if (rs.count(id) > 0) {
+                        ids[id] = true;
+                    } else {
+                        ids[id] = false;
+                    }
+                } else if (sscanf(arg.c_str(), "%d", &pid) == 1) {
+                    for (auto r : rs) {
+                        id = r.second->get_gpid();
+                        if (id.get_app_id() == pid) {
+                            ids[id] = true;
                         }
                     }
-                }
-                if (!found) {
-                    compact_state << "\napp id " << app_id << " not found";
+                } else {
+                    return std::string("invalid arguments");
                 }
             }
-            return compact_state.str();
+
+            std::stringstream compact_state;
+            int started = 0;
+            int ignored = 0;
+            int not_found = 0;
+            for (auto kv : ids) {
+                if (!kv.second) {
+                    compact_state << "\n    " << kv.first.to_string() << "@"
+                                  << _primary_address.to_string() << " : not found";
+                    not_found++;
+                    continue;
+                }
+                const replica_ptr &r = rs[kv.first];
+                partition_status::type status = r->status();
+                if (status != partition_status::PS_PRIMARY &&
+                    status != partition_status::PS_SECONDARY) {
+                    compact_state << "\n    " << r->name()
+                                  << " : ignored because not primary or secondary";
+                    ignored++;
+                } else if (r->could_start_manual_compact()) {
+                    tasking::enqueue(LPC_MANUAL_COMPACT,
+                                     this,
+                                     std::bind(&replica_stub::manual_compact, this, kv.first));
+                    compact_state << "\n    " << r->name() << " : started";
+                    started++;
+                } else {
+                    compact_state << "\n    " << r->name() << " : ignored because too frequently";
+                    ignored++;
+                }
+            }
+
+            std::stringstream total_state;
+            total_state << started << " started, " << ignored << " ignored, " << not_found
+                        << " not found";
+            return total_state.str() + compact_state.str();
         });
 
     _query_compact_command = ::dsn::command_manager::instance().register_command(
         {"query-compact"},
-        "query compact - query full compact state on rocksdb",
-        "query compact",
+        "query-compact [app_id,app_id.partition_id,...]",
+        "query-compact - query full compact state on rocksdb",
         [this](const std::vector<std::string> &args) {
-            if (args.empty()) {
-                return std::string("invalid arguments");
-            }
-            std::vector<std::string> app_id_strs;
-            if (args.size() > 0) {
-                utils::split_args(args[0].c_str(), app_id_strs, ',');
-            }
-
             replicas rs;
             {
                 zauto_read_lock l(_replicas_lock);
                 rs = _replicas;
             }
 
-            std::stringstream compact_state;
-            for (auto arg : app_id_strs) {
-                bool found = false;
-                int32_t app_id = atoi(arg.c_str());
-                for (auto gpid_rep : rs) {
-                    if (gpid_rep.second->get_app_info()->app_id == app_id) {
-                        found = true;
-                        compact_state << gpid_rep.second->get_compact_state();
+            std::map<gpid, bool> ids; // gpid -> found
+            if (!args.empty()) {
+                std::vector<std::string> arg_strs;
+                utils::split_args(args[0].c_str(), arg_strs, ',');
+                if (arg_strs.empty()) {
+                    return std::string("invalid arguments");
+                }
+
+                for (const std::string &arg : arg_strs) {
+                    if (arg.empty())
+                        continue;
+                    gpid id;
+                    int pid;
+                    if (id.parse_from(arg.c_str())) {
+                        if (rs.count(id) > 0) {
+                            ids[id] = true;
+                        } else {
+                            ids[id] = false;
+                        }
+                    } else if (sscanf(arg.c_str(), "%d", &pid) == 1) {
+                        for (auto r : rs) {
+                            id = r.second->get_gpid();
+                            if (id.get_app_id() == pid) {
+                                ids[id] = true;
+                            }
+                        }
+                    } else {
+                        return std::string("invalid arguments");
                     }
                 }
-                if (!found) {
-                    compact_state << "\napp id " << app_id << " not found";
+            } else {
+                for (auto kv : rs) {
+                    ids[kv.first] = true;
                 }
             }
-            return compact_state.str();
+
+            std::stringstream query_state;
+            int queried = 0;
+            int ignored = 0;
+            int not_found = 0;
+            for (auto kv : ids) {
+                if (!kv.second) {
+                    query_state << "\n    " << kv.first.to_string() << "@"
+                                << _primary_address.to_string() << " : not found";
+                    not_found++;
+                    continue;
+                }
+                const replica_ptr &r = rs[kv.first];
+                partition_status::type status = r->status();
+                if (status != partition_status::PS_PRIMARY &&
+                    status != partition_status::PS_SECONDARY) {
+                    query_state << "\n    " << r->name()
+                                << " : ignored because not primary or secondary";
+                    ignored++;
+                } else {
+                    query_state << "\n    " << r->name() << " : " << r->get_compact_state();
+                    queried++;
+                }
+            }
+
+            std::stringstream total_state;
+            total_state << queried << " queried, " << ignored << " ignored, " << not_found
+                        << " not found";
+            return total_state.str() + query_state.str();
         });
 }
 

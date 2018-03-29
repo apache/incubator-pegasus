@@ -52,9 +52,10 @@ replica::replica(
       _cold_backup_running_count(0),
       _cold_backup_max_duration_time_ms(0),
       _cold_backup_max_upload_file_size(0),
-      _last_compact_enqueue_time_ms(0),
-      _last_compact_finish_time_ms(0),
-
+      _manual_compact_enqueue_time_ms(0),
+      _manual_compact_start_time_ms(0),
+      _manual_compact_last_finish_time_ms(0),
+      _manual_compact_last_time_used_ms(0),
       _chkpt_total_size(0),
       _cur_download_size(0),
       _restore_progress(0),
@@ -436,43 +437,63 @@ void replica::close()
     _counter_private_log_size.clear();
 }
 
-bool replica::could_start_manual_compact() {
+bool replica::could_start_manual_compact()
+{
     uint64_t not_start = 0;
-    return (_last_compact_finish_time_ms.load() == 0 ||
-            now_ms() - _last_compact_finish_time_ms.load() > 3600*1000) &&
-           _last_compact_enqueue_time_ms.compare_exchange_strong(not_start, now_ms());
+    uint64_t now = dsn_now_ms();
+    if (_options->manual_compact_min_interval_seconds > 0 &&
+        (_manual_compact_last_finish_time_ms.load() == 0 ||
+         now - _manual_compact_last_finish_time_ms.load() >
+             (uint64_t)_options->manual_compact_min_interval_seconds * 1000)) {
+        return _manual_compact_enqueue_time_ms.compare_exchange_strong(not_start, now);
+    } else {
+        return false;
+    }
 }
 
 void replica::manual_compact()
 {
     if (_app != nullptr) {
-        ddebug("%s: manual compact start to execute", name());
+        ddebug("%s: start to execute manual compaction", name());
+        uint64_t start = dsn_now_ms();
+        _manual_compact_start_time_ms.store(start);
         _app->manual_compact();
-        _last_compact_finish_time_ms.store(now_ms());
-        _last_compact_enqueue_time_ms.store(0);
+        uint64_t finish = dsn_now_ms();
+        ddebug("%s: finish to execute manual compaction, time_used = %" PRId64 "ms",
+               name(),
+               finish - start);
+        _manual_compact_last_finish_time_ms.store(finish);
+        _manual_compact_last_time_used_ms.store(finish - start);
+        _manual_compact_start_time_ms.store(0);
+        _manual_compact_enqueue_time_ms.store(0);
     }
 }
 
 std::string replica::get_compact_state()
 {
-    uint64_t last_compact_enqueue_time_ms = _last_compact_enqueue_time_ms.load();
-    uint64_t last_compact_finish_time_ms = _last_compact_finish_time_ms.load();
+    uint64_t enqueue_time_ms = _manual_compact_enqueue_time_ms.load();
+    uint64_t start_time_ms = _manual_compact_start_time_ms.load();
+    uint64_t last_finish_time_ms = _manual_compact_last_finish_time_ms.load();
+    uint64_t last_time_used_ms = _manual_compact_last_time_used_ms.load();
     std::stringstream state;
-    state << "\n" << name() << ": ";
-    if (last_compact_enqueue_time_ms != 0) {
+    if (last_finish_time_ms > 0) {
         char str[24];
-        utils::time_ms_to_string(last_compact_enqueue_time_ms, str);
-        state << "compact task enqueue at " << str;
-    } else if (last_compact_finish_time_ms != 0) {
-        char str[24];
-        utils::time_ms_to_string(last_compact_finish_time_ms, str);
-        state << "compact finish at " << str;
+        utils::time_ms_to_string(last_finish_time_ms, str);
+        state << "last finish at [" << str << "], last used " << last_time_used_ms << " ms";
     } else {
-        state << "not happen";
+        state << "last finish at [-]";
     }
-
+    if (enqueue_time_ms > 0) {
+        char str[24];
+        utils::time_ms_to_string(enqueue_time_ms, str);
+        state << ", recent enqueue at [" << str << "]";
+    }
+    if (start_time_ms > 0) {
+        char str[24];
+        utils::time_ms_to_string(start_time_ms, str);
+        state << ", recent start at [" << str << "]";
+    }
     return state.str();
 }
-
 }
 } // namespace
