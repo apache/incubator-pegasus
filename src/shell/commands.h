@@ -3509,18 +3509,15 @@ inline bool query_backup_policy(command_executor *e, shell_context *sc, argument
 
 inline bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"add_app", required_argument, 0, 'a'},
+    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
+                                           {"add_app", required_argument, 0, 'a'},
                                            {"remove_app", required_argument, 0, 'r'},
                                            {"backup_interval_seconds", required_argument, 0, 'i'},
                                            {"backup_history_count", required_argument, 0, 'c'},
                                            {"start_time", required_argument, 0, 's'},
                                            {0, 0, 0, 0}};
-    if (args.argc < 2) {
-        fprintf(stderr, "invalid parameter\n");
-        return false;
-    }
 
-    std::string policy_name = args.argv[1];
+    std::string policy_name;
     std::vector<int32_t> add_appids;
     std::vector<int32_t> remove_appids;
     int64_t backup_interval_seconds = 0;
@@ -3528,19 +3525,17 @@ inline bool modify_backup_policy(command_executor *e, shell_context *sc, argumen
     std::string start_time;
     std::vector<std::string> app_id_strs;
 
-    if (policy_name.empty()) {
-        fprintf(stderr, "empty policy name\n");
-        return false;
-    }
-
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "a:r:i:c:s:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "p:a:r:i:c:s:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
+        case 'p':
+            policy_name = optarg;
+            break;
         case 'a':
             app_id_strs.clear();
             ::dsn::utils::split_args(optarg, app_id_strs, ',');
@@ -3591,6 +3586,11 @@ inline bool modify_backup_policy(command_executor *e, shell_context *sc, argumen
         }
     }
 
+    if (policy_name.empty()) {
+        fprintf(stderr, "empty policy name\n");
+        return false;
+    }
+
     if (!start_time.empty()) {
         int32_t hour = 0, min = 0;
         if (sscanf(start_time.c_str(), "%d:%d", &hour, &min) != 2 || hour > 24 || hour < 0 ||
@@ -3618,12 +3618,25 @@ inline bool modify_backup_policy(command_executor *e, shell_context *sc, argumen
 
 inline bool disable_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    if (args.argc != 2) {
-        fprintf(stderr, "invalid parameter\n");
-        return false;
-    }
+    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
+                                           {0, 0, 0, 0}};
 
-    std::string policy_name = args.argv[1];
+    std::string policy_name;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "p:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'p':
+            policy_name = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
 
     if (policy_name.empty()) {
         fprintf(stderr, "empty policy name\n");
@@ -3641,12 +3654,24 @@ inline bool disable_backup_policy(command_executor *e, shell_context *sc, argume
 
 inline bool enable_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    if (args.argc != 2) {
-        fprintf(stderr, "invalid parameter\n");
-        return false;
+    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
+                                           {0, 0, 0, 0}};
+    std::string policy_name;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "p:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'p':
+            policy_name = optarg;
+            break;
+        default:
+            return false;
+        }
     }
-
-    std::string policy_name = args.argv[1];
 
     if (policy_name.empty()) {
         fprintf(stderr, "empty policy name\n");
