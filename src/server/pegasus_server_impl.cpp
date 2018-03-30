@@ -61,6 +61,21 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "rocksdb_abnormal_get_size_threshold",
         0,
         "rocksdb_abnormal_get_size_threshold, default is 0, means no check");
+    _abnormal_multi_get_time_threshold_ns = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_abnormal_multi_get_time_threshold_ns",
+        0,
+        "rocksdb_abnormal_multi_get_time_threshold_ns, default is 0, means no check");
+    _abnormal_multi_get_size_threshold = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_abnormal_multi_get_size_threshold",
+        0,
+        "rocksdb_abnormal_multi_get_size_threshold, default is 0, means no check");
+    _abnormal_multi_get_iterate_count_threshold = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_abnormal_multi_get_iterate_count_threshold",
+        0,
+        "rocksdb_abnormal_multi_get_iterate_count_threshold, default is 0, means no check");
 
     // init db options
 
@@ -787,6 +802,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     }
 
     _pfc_get_latency->set(dsn_now_ns() - start_time);
+
     reply(resp);
 }
 
@@ -815,8 +831,11 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     int32_t max_kv_count = request.max_kv_count > 0 ? request.max_kv_count : INT_MAX;
     int32_t max_kv_size = request.max_kv_size > 0 ? request.max_kv_size : INT_MAX;
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
-    uint64_t expire_count = 0;
-    uint64_t filter_count = 0;
+    int32_t count = 0;
+    int64_t size = 0;
+    int32_t iterate_count = 0;
+    int32_t expire_count = 0;
+    int32_t filter_count = 0;
 
     if (request.sort_keys.empty()) {
         ::dsn::blob range_start_key, range_stop_key;
@@ -887,12 +906,12 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
 
         std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(_rd_opts));
         bool complete = false;
-        int32_t count = 0;
-        int32_t size = 0;
         if (!request.reverse) {
             it->Seek(start);
             bool first_exclusive = !start_inclusive;
             while (count < max_kv_count && size < max_kv_size && it->Valid()) {
+                iterate_count++;
+
                 // check stop sort key
                 int c = it->key().compare(stop);
                 if (c > 0 || (c == 0 && !stop_inclusive)) {
@@ -942,6 +961,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             bool first_exclusive = !stop_inclusive;
             std::vector<::dsn::apps::key_value> reverse_kvs;
             while (count < max_kv_count && size < max_kv_size && it->Valid()) {
+                iterate_count++;
+
                 // check start sort key
                 int c = it->key().compare(start);
                 if (c < 0 || (c == 0 && !start_inclusive)) {
@@ -1020,8 +1041,6 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     } else {
         bool error_occurred = false;
         rocksdb::Status final_status;
-        int32_t count = 0;
-        int32_t size = 0;
         bool exceed_limit = false;
         std::vector<::dsn::blob> keys_holder;
         std::vector<rocksdb::Slice> keys;
@@ -1101,14 +1120,37 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         }
     }
 
+    if (_abnormal_multi_get_time_threshold_ns || _abnormal_multi_get_size_threshold ||
+        _abnormal_multi_get_iterate_count_threshold) {
+        uint64_t time_used = dsn_now_ns() - start_time;
+        if ((_abnormal_multi_get_time_threshold_ns &&
+             time_used >= _abnormal_multi_get_time_threshold_ns) ||
+            (_abnormal_multi_get_size_threshold &&
+             (uint64_t)size >= _abnormal_multi_get_size_threshold) ||
+            (_abnormal_multi_get_iterate_count_threshold &&
+             (uint64_t)iterate_count >= _abnormal_multi_get_iterate_count_threshold)) {
+            dwarn("%s: rocksdb abnormal multi_get: hash_key = \"%s\", "
+                  "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
+                  "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns",
+                  replica_name(),
+                  ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
+                  count,
+                  size,
+                  iterate_count,
+                  expire_count,
+                  filter_count,
+                  time_used);
+        }
+    }
+
     if (expire_count > 0) {
         _pfc_recent_expire_count->add(expire_count);
     }
     if (filter_count > 0) {
         _pfc_recent_filter_count->add(filter_count);
     }
-
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
+
     reply(resp);
 }
 
