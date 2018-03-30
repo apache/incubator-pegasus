@@ -1953,7 +1953,7 @@ void replica_stub::open_service()
             return "OK";
         });
 
-    _manual_compact_command = ::dsn::command_manager::instance().register_command(
+    _manual_compact_command = ::dsn::command_manager::instance().register_app_command(
         {"manual-compact"},
         "manual-compact <app_id,app_id.partition_id,...>",
         "manual-compact - full compact on rocksdb",
@@ -2034,7 +2034,7 @@ void replica_stub::open_service()
             return total_state.str() + compact_state.str();
         });
 
-    _query_compact_command = ::dsn::command_manager::instance().register_command(
+    _query_compact_command = ::dsn::command_manager::instance().register_app_command(
         {"query-compact"},
         "query-compact [app_id,app_id.partition_id,...]",
         "query-compact - query full compact state on rocksdb",
