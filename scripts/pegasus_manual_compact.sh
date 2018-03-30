@@ -51,12 +51,18 @@ do
       queue_count=`grep 'recent enqueue at' /tmp/$UID.pegasus.query_compact.$app | grep -v 'recent start at' | wc -l`
       running_count=`grep 'recent start at' /tmp/$UID.pegasus.query_compact.$app | wc -l`
       not_finish_count=$((queue_count+running_count))
+      finish_count=$((started_count - not_finish_count))
       if [ $not_finish_count -eq 0 ]; then
-          echo "All finished."
-          break
+        echo "All finished."
+        break
       else
-          echo "Still $not_finish_count replicas not finished: $queue_count in queue, $running_count in running."
-          sleep 10
+        left_time=unknown
+        if [ $finish_count -gt 0 ]; then
+          left_time=$((sleeped * started_count / finish_count - sleeped))
+        fi
+        echo "[${sleeped}s] $finish_count finished, $not_finish_count not finished ($queue_count in queue, $running_count in running), estimate remaining $left_time seconds."
+        sleep 5
+        sleeped=$((sleeped + 5))
       fi
     done
     echo
