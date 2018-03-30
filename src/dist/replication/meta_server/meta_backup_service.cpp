@@ -1496,23 +1496,25 @@ void backup_service::modify_policy(dsn_message_t msg)
     if (request.__isset.is_disable) {
         if (request.is_disable) {
             if (is_under_backup) {
-                ddebug("%s: policy is under backuping, not allow to dropped",
+                ddebug("%s: policy is under backuping, not allow to disable",
                        cur_policy.policy_name.c_str());
                 response.err = ERR_BUSY;
             } else if (!cur_policy.is_disable) {
-                ddebug("%s: policy is marked to drop", cur_policy.policy_name.c_str());
+                ddebug("%s: policy is marked to disable", cur_policy.policy_name.c_str());
                 cur_policy.is_disable = true;
                 have_modify_policy = true;
+            } else { // cur_policy.is_disable = true
+                ddebug("%s: policy is already disabled", cur_policy.policy_name.c_str());
             }
         } else {
             if (cur_policy.is_disable) {
                 cur_policy.is_disable = false;
-                ddebug("%s: policy is marked to drop", cur_policy.policy_name.c_str());
+                ddebug("%s: policy is marked to enable", cur_policy.policy_name.c_str());
                 have_modify_policy = true;
             } else {
-                ddebug("%s: policy has been already enabled", cur_policy.policy_name.c_str());
+                ddebug("%s: policy is already enabled", cur_policy.policy_name.c_str());
                 response.err = ERR_OK;
-                response.hint_message = std::string("policy has been already enabled");
+                response.hint_message = std::string("policy is already enabled");
             }
         }
     }
