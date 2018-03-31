@@ -3164,7 +3164,8 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         << std::setw(15) << std::right << "REMOVE" << std::setw(15) << std::right << "MULTI_REMOVE"
         << std::setw(15) << std::right << "SCAN" << std::setw(15) << std::right << "expire_count"
         << std::setw(15) << std::right << "filter_count" << std::setw(15) << std::right
-        << "storage(MB)" << std::setw(15) << std::right << "sst_count" << std::endl;
+        << "abmornal_count" << std::setw(15) << std::right << "storage(MB)" << std::setw(15)
+        << std::right << "sst_count" << std::endl;
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
     for (int i = 0; i < rows.size() - 1; ++i) {
@@ -3178,6 +3179,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.scan_qps += row.scan_qps;
         sum.recent_expire_count += row.recent_expire_count;
         sum.recent_filter_count += row.recent_filter_count;
+        sum.recent_abnormal_count += row.recent_abnormal_count;
         sum.storage_mb += row.storage_mb;
         sum.storage_count += row.storage_count;
     }
@@ -3200,6 +3202,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         PRINT_QPS(scan_qps);
         out << std::setw(15) << std::right << (int64_t)row.recent_expire_count << std::setw(15)
             << std::right << (int64_t)row.recent_filter_count << std::setw(15) << std::right
+            << (int64_t)row.recent_abnormal_count << std::setw(15) << std::right
             << (int64_t)row.storage_mb << std::setw(15) << std::right << (int64_t)row.storage_count
             << std::endl;
     }

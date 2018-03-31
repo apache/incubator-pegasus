@@ -338,6 +338,7 @@ struct row_data
     double scan_qps;
     double recent_expire_count;
     double recent_filter_count;
+    double recent_abnormal_count;
     double storage_mb;
     double storage_count;
     row_data()
@@ -350,6 +351,7 @@ struct row_data
           scan_qps(0),
           recent_expire_count(0),
           recent_filter_count(0),
+          recent_abnormal_count(0),
           storage_mb(0),
           storage_count(0)
     {
@@ -376,6 +378,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.recent_expire_count += value;
     else if (counter_name == "recent.filter.count")
         row.recent_filter_count += value;
+    else if (counter_name == "recent.abnormal.count")
+        row.recent_abnormal_count += value;
     else if (counter_name == "disk.storage.sst(MB)")
         row.storage_mb += value;
     else if (counter_name == "disk.storage.sst.count")

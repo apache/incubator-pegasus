@@ -286,6 +286,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                               COUNTER_TYPE_VOLATILE_NUMBER,
                                               "statistic the recent filtered value read count");
 
+    snprintf(buf, 255, "recent.abnormal.count@%s", str_gpid);
+    _pfc_recent_abnormal_count.init_app_counter("app.pegasus",
+                                                buf,
+                                                COUNTER_TYPE_VOLATILE_NUMBER,
+                                                "statistic the recent abnormal read count");
+
     snprintf(buf, 255, "disk.storage.sst.count@%s", str_gpid);
     _pfc_sst_count.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
@@ -793,6 +799,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                   status.ToString().c_str(),
                   (int)value->size(),
                   time_used);
+            _pfc_recent_abnormal_count->increment();
         }
     }
 
@@ -1140,6 +1147,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                   expire_count,
                   filter_count,
                   time_used);
+            _pfc_recent_abnormal_count->increment();
         }
     }
 

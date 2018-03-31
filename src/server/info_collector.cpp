@@ -104,6 +104,7 @@ void info_collector::on_app_stat()
             counters->scan_qps->set(row.scan_qps);
             counters->recent_expire_count->set(row.recent_expire_count);
             counters->recent_filter_count->set(row.recent_filter_count);
+            counters->recent_abnormal_count->set(row.recent_abnormal_count);
             counters->storage_mb->set(row.storage_mb);
             counters->storage_count->set(row.storage_count);
             counters->read_qps->set(read_qps[i]);
@@ -144,6 +145,7 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNER(scan_qps);
     INIT_COUNER(recent_expire_count);
     INIT_COUNER(recent_filter_count);
+    INIT_COUNER(recent_abnormal_count);
     INIT_COUNER(storage_mb);
     INIT_COUNER(storage_count);
     INIT_COUNER(read_qps);

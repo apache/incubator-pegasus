@@ -37,6 +37,7 @@ public:
         ::dsn::perf_counter_wrapper scan_qps;
         ::dsn::perf_counter_wrapper recent_expire_count;
         ::dsn::perf_counter_wrapper recent_filter_count;
+        ::dsn::perf_counter_wrapper recent_abnormal_count;
         ::dsn::perf_counter_wrapper storage_mb;
         ::dsn::perf_counter_wrapper storage_count;
         ::dsn::perf_counter_wrapper read_qps;
