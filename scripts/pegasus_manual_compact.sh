@@ -36,7 +36,7 @@ do
     fi
 
     echo "Send remote command manual-compact to replica servers, logging in /tmp/$UID.pegasus.manual_compact.$app"
-    echo "remote_command -t replica-server manual-compact $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.manual_compact.$app
+    echo "remote_command -t replica-server replica.manual-compact $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.manual_compact.$app
     not_found_count=`grep '^    .*not found' /tmp/$UID.pegasus.manual_compact.$app | wc -l`
     started_count=`grep '^    .*started' /tmp/$UID.pegasus.manual_compact.$app | wc -l`
     ignored_count=`grep '^    .*ignored' /tmp/$UID.pegasus.manual_compact.$app | wc -l`
@@ -47,7 +47,7 @@ do
     sleeped=0
     while true
     do
-      echo "remote_command -t replica-server query-compact $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.query_compact.$app
+      echo "remote_command -t replica-server replica.query-compact $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.query_compact.$app
       queue_count=`grep 'recent enqueue at' /tmp/$UID.pegasus.query_compact.$app | grep -v 'recent start at' | wc -l`
       running_count=`grep 'recent start at' /tmp/$UID.pegasus.query_compact.$app | wc -l`
       not_finish_count=$((queue_count+running_count))
