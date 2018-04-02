@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/pegasus"
-	"path/filepath"
 )
 
 func main() {
