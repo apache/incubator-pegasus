@@ -133,7 +133,7 @@ Client.prototype.batchSet = function(tableName, argsArray, callback){
     }
     this.getTable(tableName, function(err, tableInfo){
         if(err === null && tableInfo !== null){
-            tableInfo.batchSet(argsArray, callback);
+            tableInfo.batchSetPromise(argsArray, callback);
         }else{
             callback(err, null);
         }
@@ -162,7 +162,7 @@ Client.prototype.batchGet = function(tableName, argsArray, callback){
     }
     this.getTable(tableName, function(err, tableInfo){
         if(err === null && tableInfo !== null){
-            tableInfo.batchGet(argsArray, callback);
+            tableInfo.batchGetPromise(argsArray, callback);
         }else{
             callback(err, null);
         }

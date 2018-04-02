@@ -148,10 +148,10 @@ Connection.prototype._close = function(err){
 Connection.prototype.getResponse = function(){
     let self = this;
     this.socket.on('data', self.transport.receiver(function(transport_with_data){
+        let protocol = new self.protocol(transport_with_data);
         try {
             while (true) {
                 let ec = new ErrorCode();
-                let protocol = new self.protocol(transport_with_data);
 
                 //Response structure: total length + error code structure + TMessage
                 let len = protocol.readI32();
@@ -168,6 +168,7 @@ Connection.prototype.getResponse = function(){
                     } else {
                         log.error('Request failed, error code is %s', entry.operator.rpc_error.errno);
                     }
+                    transport_with_data.commitPosition();
                     request.setResponse(entry.operator.response);
                 } else {
                     log.error('%s Request#%d does not exist, maybe timeout', self.name, msgHeader.rseqid);
@@ -216,6 +217,7 @@ Connection.prototype.call = function(entry){
     self.requests[rpcRequest.id] = rpcRequest;
 
     rpcRequest.on('done', function(err, operator){
+        delete self.requests[rpcRequest.id];
         if(err){
             log.error(err.message);
         }

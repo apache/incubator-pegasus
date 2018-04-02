@@ -219,12 +219,12 @@ describe('test/client.test.js', function(){
             client.batchGet(tableName, argArray, function(err, result){
                 assert.equal(null, err);
                 assert.equal(2, result.length);
-                assert.deepEqual(new Buffer('1'), result[0].hashKey);
-                assert.deepEqual(new Buffer('11'), result[0].sortKey);
-                assert.deepEqual(new Buffer('11'), result[0].value);
-                assert.deepEqual(new Buffer('1'), result[1].hashKey);
-                assert.deepEqual(new Buffer('22'), result[1].sortKey);
-                assert.deepEqual(new Buffer('22'), result[1].value);
+                assert.deepEqual(new Buffer('1'), result[0].data.hashKey);
+                assert.deepEqual(new Buffer('11'), result[0].data.sortKey);
+                assert.deepEqual(new Buffer('11'), result[0].data.value);
+                assert.deepEqual(new Buffer('1'), result[1].data.hashKey);
+                assert.deepEqual(new Buffer('22'), result[1].data.sortKey);
+                assert.deepEqual(new Buffer('22'), result[1].data.value);
                 done();
             });
         });

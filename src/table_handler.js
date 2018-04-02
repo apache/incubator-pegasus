@@ -241,6 +241,28 @@ TableInfo.prototype.batchGet = function(argsArray, callback){
     callback(error, resultArray);
 };
 
+/**
+ * Batch Get value using promise
+ * @param {Array}       argsArray
+ *        {Buffer}      argsArray[i].hashKey
+ *        {Buffer}      argsArray[i].sortKey
+ *        {Number}      argsArray[i].timeout(ms)
+ * @param {Function}    callback
+ */
+TableInfo.prototype.batchGetPromise = function(argsArray, callback){
+    let tasks = [], i, len = argsArray.length, self = this;
+    for(i = 0; i < len; ++i){
+        tasks.push(new Promise(function(resolve){
+            self.get(argsArray[i], function(err, result){
+                resolve({'error' : err, 'data' : result});
+            });
+        }));
+    }
+    Promise.all(tasks).then(function(values){
+        callback(null, values);
+    });
+};
+
 
 /**
  * Set value
@@ -306,6 +328,29 @@ TableInfo.prototype.batchSet = function(argsArray, callback){
     callback(error, resultArray);
 };
 
+/**
+ * Batch Set value using promise
+ * @param {Array}       argsArray
+ *        {Buffer}      argsArray[i].hashKey
+ *        {Buffer}      argsArray[i].sortKey
+ *        {Buffer}      argsArray[i].value
+ *        {Number}      argsArray[i].ttl
+ *        {Number}      argsArray[i].timeout(ms)
+ * @param {Function}    callback
+ */
+TableInfo.prototype.batchSetPromise = function(argsArray, callback){
+    let tasks = [], i, len = argsArray.length, self = this;
+    for(i = 0; i < len; ++i){
+        tasks.push(new Promise(function(resolve){
+            self.set(argsArray[i], function(err, result){
+                resolve({'error' : err, 'data' : result});
+            });
+        }));
+    }
+    Promise.all(tasks).then(function(values){
+        callback(null, values);
+    });
+};
 
 /**
  * Delete value
