@@ -7,7 +7,7 @@
 #include <string>
 #include <stdint.h>
 
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb.types.h>
