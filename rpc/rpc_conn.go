@@ -80,12 +80,14 @@ type RpcConn struct {
 	logger pegalog.Logger
 }
 
+// thread-safe
 func (rc *RpcConn) GetState() ConnState {
 	rc.mu.RLock()
 	defer rc.mu.RUnlock()
 	return rc.cstate
 }
 
+// thread-safe
 func (rc *RpcConn) setState(state ConnState) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()

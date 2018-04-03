@@ -59,6 +59,8 @@ type nodeType string
 const (
 	kNodeTypeMeta    nodeType = "meta"
 	kNodeTypeReplica          = "replica"
+
+	kDialInterval = time.Second * 60
 )
 
 func newNodeSessionAddr(addr string, ntype nodeType) *nodeSession {
@@ -91,6 +93,7 @@ func newNodeSession(addr string, ntype nodeType) *nodeSession {
 	return n
 }
 
+// thread-safe
 func (n *nodeSession) ConnState() rpc.ConnState {
 	return n.conn.GetState()
 }
@@ -143,9 +146,9 @@ func (n *nodeSession) tryDial() {
 // If the dialing ended successfully, it will start loopForRequest and
 // loopForResponse which handle the data communications.
 func (n *nodeSession) dial() {
-	if time.Now().Sub(n.lastDialTime) < time.Second*2 {
+	if time.Now().Sub(n.lastDialTime) < kDialInterval {
 		select {
-		case <-time.After(time.Second * 2):
+		case <-time.After(kDialInterval):
 		case <-n.tom.Dying():
 			return
 		}
