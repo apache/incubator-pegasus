@@ -27,7 +27,8 @@ func TestPegasusTableConnector_Get(t *testing.T) {
 	client := NewClient(cfg)
 	defer client.Close()
 
-	tb, _ := client.OpenTable(context.Background(), "temp")
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
 
 	assert.Nil(t, tb.Set(context.Background(), []byte("h1"), []byte("s1"), []byte("v1")))
 
@@ -45,7 +46,9 @@ func TestPegasusTableConnector_Del(t *testing.T) {
 	client := NewClient(cfg)
 	defer client.Close()
 
-	tb, _ := client.OpenTable(context.Background(), "temp")
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+
 	assert.Nil(t, tb.Del(context.Background(), []byte("h1"), []byte("s1")))
 
 	value, _ := tb.Get(context.Background(), []byte("h1"), []byte("s1"))

@@ -42,3 +42,7 @@ func (r *RPCAddress) getPort() int {
 func (r *RPCAddress) GetAddress() string {
 	return fmt.Sprintf("%s:%d", r.getIp(), r.getPort())
 }
+
+func (r *RPCAddress) GetRawAddress() int64 {
+	return r.address
+}

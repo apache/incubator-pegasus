@@ -169,7 +169,7 @@ func (p *pegasusClient) MultiDel(ctx context.Context, tableName string, hashKey 
 
 func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableConnector, error) {
 	tb, err := func() (TableConnector, error) {
-		// ensure there's only one goroutine trying to connect this table.
+		// ensure only one goroutine is fetching the routing table.
 		p.mu.Lock()
 		defer p.mu.Unlock()
 

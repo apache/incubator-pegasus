@@ -88,8 +88,10 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 		return fmt.Errorf("connect table(%s): %s", p.tableName, err)
 	}
 	if resp.Err.Errno != base.ERR_OK.String() {
-		// TODO(wutao1): convert Errno(type string) to base.ErrType
 		return fmt.Errorf("connect table(%s): %s", p.tableName, resp.Err.Errno)
+	}
+	if resp.PartitionCount == 0 && len(resp.Partitions) != int(resp.PartitionCount) {
+		return fmt.Errorf("failed to query config [appid: %d]: response [%v]", p.appId, resp)
 	}
 
 	p.mu.Lock()
@@ -97,6 +99,9 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	p.parts = make([]*replicaNode, len(resp.Partitions))
 	// TODO(wutao1): make sure PartitionIndex are continuous
 	for _, pconf := range resp.Partitions {
+		if pconf == nil || pconf.Primary == nil || pconf.Primary.GetRawAddress() == 0 {
+			return fmt.Errorf("unable to resolve routing table [appid: %d]: [%v]", p.appId, pconf)
+		}
 		r := &replicaNode{
 			pconf:   pconf,
 			session: p.replica.GetReplica(pconf.Primary.GetAddress()),
