@@ -66,8 +66,8 @@ type DialerFunc func(ctx context.Context, address string) (net.Conn, error)
 type RpcConn struct {
 	Endpoint string
 
-	wstream *RpcWriteStream
-	rstream *RpcReadStream
+	wstream *WriteStream
+	rstream *ReadStream
 	conn    net.Conn
 
 	cstate ConnState
@@ -202,8 +202,8 @@ func NewRpcConn(parent *tomb.Tomb, addr string) *RpcConn {
 
 func (rc *RpcConn) setReady(reader io.Reader, writer io.Writer) {
 	rc.cstate = ConnStateReady
-	rc.rstream = NewRpcReadStream(reader)
-	rc.wstream = NewRpcWriteStream(writer)
+	rc.rstream = NewReadStream(reader)
+	rc.wstream = NewWriteStream(writer)
 }
 
 // Create a fake client with specified reader and writer.

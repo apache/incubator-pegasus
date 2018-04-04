@@ -105,6 +105,7 @@ func TestNodeSession_LoopForDialingCancelled(t *testing.T) {
 	n.conn.Close()
 }
 
+// Ensure that `dial()` will retry if the last attempt failed.
 func TestNodeSession_LoopForDialingRetry(t *testing.T) {
 	defer leaktest.CheckTimeout(t, rpc.RpcConnDialTimeout*2)()
 
@@ -112,14 +113,18 @@ func TestNodeSession_LoopForDialingRetry(t *testing.T) {
 	n := newNodeSessionAddr(addr, "meta")
 	n.conn = rpc.NewRpcConn(n.tom, addr)
 
-	n.tom.Go(n.loopForDialing)
+	n.tryDial()
+
+	n.tom.Go(func() error {
+		n.dial()
+		return nil
+	})
 
 	time.Sleep(rpc.RpcConnDialTimeout + 100*time.Millisecond)
 	assert.Equal(t, rpc.ConnStateTransientFailure, n.conn.GetState())
 
-	// Ensure that dial will reconnect if the last try failed.
-	time.Sleep(time.Second * 2)
-	assert.Equal(t, rpc.ConnStateConnecting, n.conn.GetState())
+	// block until redialc has incoming signal
+	<-n.redialc
 
 	n.conn.Close()
 }
@@ -153,6 +158,12 @@ func TestNodeSession_WriteFailed(t *testing.T) {
 	arg := rrdb.NewMetaQueryCfgArgs()
 	arg.Query = replication.NewQueryCfgRequest()
 
+	mockCodec := &MockCodec{}
+	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
+		return []byte("a"), nil
+	})
+	n.codec = mockCodec
+
 	_, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
 	assert.Equal(t, err, base.ERR_CLIENT_FAILED)
 	assert.Equal(t, n.conn.GetState(), rpc.ConnStateTransientFailure)
@@ -174,41 +185,6 @@ func TestNodeSession_ReadFailed(t *testing.T) {
 	_, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
 	assert.Equal(t, err, context.Canceled)
 	assert.Equal(t, n.conn.GetState(), rpc.ConnStateTransientFailure)
-}
-
-func TestCodec_Marshal(t *testing.T) {
-	expected := []byte{
-		0x54, 0x48, 0x46, 0x54, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x30, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x80, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x26,
-		0x52, 0x50, 0x43, 0x5f, 0x43, 0x4d, 0x5f, 0x51,
-		0x55, 0x45, 0x52, 0x59, 0x5f, 0x50, 0x41, 0x52,
-		0x54, 0x49, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x43,
-		0x4f, 0x4e, 0x46, 0x49, 0x47, 0x5f, 0x42, 0x59,
-		0x5f, 0x49, 0x4e, 0x44, 0x45, 0x58, 0x00, 0x00,
-		0x00, 0x01, 0x0c, 0x00, 0x01, 0x0b, 0x00, 0x01,
-		0x00, 0x00, 0x00, 0x04, 0x74, 0x65, 0x6d, 0x70,
-		0x0f, 0x00, 0x02, 0x08, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00,
-	}
-	arg := rrdb.NewMetaQueryCfgArgs()
-	arg.Query = replication.NewQueryCfgRequest()
-	arg.Query.AppName = "temp"
-	arg.Query.PartitionIndices = []int32{}
-
-	r := &rpcCall{
-		args:  arg,
-		name:  "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
-		gpid:  &base.Gpid{0, 0},
-		seqId: 1,
-	}
-
-	actual, _ := PegasusCodec{}.Marshal(r)
-	assert.Equal(t, expected, actual)
 }
 
 // In this test we send the rpc request to an echo server,
@@ -318,25 +294,6 @@ func TestNodeSession_GracefulShutdown(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 500)
 	meta.Close()
-}
-
-func TestNodeSession_RedialTooOften(t *testing.T) {
-	defer leaktest.CheckTimeout(t, time.Second*3+rpc.RpcConnDialTimeout*2)
-
-	addr := "www.baidu.com:12321"
-	n := newNodeSessionAddr(addr, "meta")
-	n.conn = rpc.NewRpcConn(n.tom, addr)
-
-	t1 := time.Now()
-	n.dial() // the first call must fail
-
-	n.dial() // wait 2 secs
-	t2 := time.Now()
-
-	assert.True(t, t2.Sub(t1) > time.Second*2+rpc.RpcConnDialTimeout*2)
-	assert.True(t, t2.Sub(t1) < time.Second*3+rpc.RpcConnDialTimeout*2)
-
-	n.Close()
 }
 
 func TestNodeSession_RestartConnection(t *testing.T) {

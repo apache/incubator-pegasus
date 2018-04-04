@@ -18,7 +18,7 @@ func TestRpcWriteStream_WriteAndFlush(t *testing.T) {
 
 	expectedBytes := []byte("hello world")
 	buf := bytes.NewBuffer(make([]byte, 0))
-	stream := NewRpcWriteStream(buf)
+	stream := NewWriteStream(buf)
 
 	// call write on each byte
 	for _, b := range expectedBytes {
@@ -34,10 +34,10 @@ func TestRpcReadStream_Read(t *testing.T) {
 
 	buf := bytes.NewBuffer(make([]byte, 0))
 
-	in := NewRpcReadStream(buf)
+	in := NewReadStream(buf)
 
 	expectedBytes := []byte("hello world")
-	out := NewRpcWriteStream(buf)
+	out := NewWriteStream(buf)
 	for _, b := range expectedBytes {
 		err := out.Write([]byte{b})
 		assert.Nil(t, err)

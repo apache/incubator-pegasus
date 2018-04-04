@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	cfgPath, _ := filepath.Abs("./pegasus-client-config.json")
+	cfgPath, _ := filepath.Abs("./example/pegasus-client-config.json")
 	rawCfg, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
 		fmt.Println(err)

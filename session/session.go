@@ -334,6 +334,7 @@ func (n *nodeSession) readResponse() (*rpcCall, error) {
 }
 
 func (n *nodeSession) Close() <-chan struct{} {
+	n.logger.Printf("Close session with [%s, %s]\n", n.ntype, n.addr)
 	n.conn.Close()
 	n.tom.Kill(errors.New("nodeSession closed"))
 	return n.tom.Dead()
