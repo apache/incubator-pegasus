@@ -96,7 +96,15 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 
 	p.mu.Lock()
 	p.appId = resp.AppID
-	p.parts = make([]*replicaNode, len(resp.Partitions))
+
+	if len(resp.Partitions) > len(p.parts) {
+		// during partition split or initialization of client.
+		for _, part := range p.parts {
+			part.session.Close()
+		}
+		p.parts = make([]*replicaNode, len(resp.Partitions))
+	}
+
 	// TODO(wutao1): make sure PartitionIndex are continuous
 	for _, pconf := range resp.Partitions {
 		if pconf == nil || pconf.Primary == nil || pconf.Primary.GetRawAddress() == 0 {
@@ -110,7 +118,17 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	}
 	p.mu.Unlock()
 
+	p.removeUnusedReplicaConnections(resp.Partitions)
 	return nil
+}
+
+// Remove unused connection to replica server according to routing table.
+func (p *pegasusTableConnector) removeUnusedReplicaConnections(pconfs []*replication.PartitionConfiguration) {
+	primaries := make(map[string]bool)
+	for _, pconf := range pconfs {
+		primaries[pconf.Primary.GetAddress()] = true
+	}
+	p.replica.RemoveUnused(primaries)
 }
 
 func validateHashKey(hashKey []byte) error {
