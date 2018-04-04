@@ -8,20 +8,31 @@ import (
 	"io"
 )
 
-type RpcWriteStream struct {
+// low-level rpc writer.
+type WriteStream struct {
 	writer io.Writer
 }
 
-// NewRpcWriteStream always receives a *net.TcpConn as `writer`, except in
+// NewWriteStream always receives a *net.TcpConn as `writer`, except in
 // testing it can accept a buffer as the fake writer.
-func NewRpcWriteStream(writer io.Writer) *RpcWriteStream {
-	return &RpcWriteStream{
+func NewWriteStream(writer io.Writer) *WriteStream {
+	return &WriteStream{
 		writer: writer,
 	}
 }
 
 // invoke an asynchronous write for message.
-func (s *RpcWriteStream) Write(msgBytes []byte) error {
-	_, err := s.writer.Write(msgBytes)
+func (s *WriteStream) Write(msgBytes []byte) error {
+	var err error
+	var total = 0
+	var written = 0
+
+	toWrite := len(msgBytes)
+
+	for total < toWrite && err == nil {
+		written, err = s.writer.Write(msgBytes[total:])
+		total += written
+	}
+
 	return err
 }

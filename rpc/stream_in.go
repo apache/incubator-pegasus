@@ -8,20 +8,30 @@ import (
 	"io"
 )
 
-type RpcReadStream struct {
+// low-level rpc reader.
+type ReadStream struct {
 	reader io.Reader
 }
 
-func (r *RpcReadStream) Next(size int) ([]byte, error) {
-	buf := make([]byte, size)
-	if _, err := r.reader.Read(buf); err != nil {
+func (r *ReadStream) Next(toRead int) ([]byte, error) {
+	buf := make([]byte, toRead)
+	var total = 0
+
+	readSz, err := r.reader.Read(buf)
+	total += readSz
+	for total < toRead && err == nil {
+		readSz, err = r.reader.Read(buf[total:])
+		total += readSz
+	}
+
+	if err != nil {
 		return nil, err
 	}
 	return buf, nil
 }
 
-func NewRpcReadStream(reader io.Reader) *RpcReadStream {
-	return &RpcReadStream{
+func NewReadStream(reader io.Reader) *ReadStream {
+	return &ReadStream{
 		reader: reader,
 	}
 }
