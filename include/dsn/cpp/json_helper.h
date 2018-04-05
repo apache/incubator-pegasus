@@ -44,7 +44,7 @@
 #include <type_traits>
 #include <cctype>
 #include <dsn/utility/autoref_ptr.h>
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 #include <dsn/utility/utils.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_enums.h>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/utility/error_code.h>
 
 #ifdef __cplusplus
 extern "C" {

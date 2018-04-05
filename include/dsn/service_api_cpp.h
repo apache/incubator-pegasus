@@ -37,7 +37,7 @@
 
 #include <dsn/service_api_c.h>
 //# include <dsn/utility/ports.h>
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 #include <dsn/cpp/config_helper.h>
 #include <dsn/cpp/serialization.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2.types.h>

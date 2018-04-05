@@ -34,7 +34,7 @@
 
 #include <zookeeper/zookeeper.h>
 #include <dsn/utility/error_code.h>
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 
 #include "zookeeper_error.h"
 namespace dsn {

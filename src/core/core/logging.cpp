@@ -39,7 +39,7 @@
 #include <dsn/tool-api/logging_provider.h>
 #include <dsn/tool_api.h>
 #include "service_engine.h"
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 
 DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMATION;
 
