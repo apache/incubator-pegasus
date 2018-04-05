@@ -84,21 +84,28 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	defer func() {
 		p.lastConfUpdateTime = time.Now()
 	}()
+	if err == nil {
+		err = p.handleQueryConfigResp(resp)
+	}
 	if err != nil {
-		return fmt.Errorf("connect table(%s): %s", p.tableName, err)
+		return fmt.Errorf("failed to connect table(%s): %s", p.tableName, err)
 	}
+	return nil
+}
+
+func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfgResponse) error {
 	if resp.Err.Errno != base.ERR_OK.String() {
-		return fmt.Errorf("connect table(%s): %s", p.tableName, resp.Err.Errno)
+		return errors.New(resp.Err.Errno)
 	}
-	if resp.PartitionCount == 0 && len(resp.Partitions) != int(resp.PartitionCount) {
-		return fmt.Errorf("failed to query config [appid: %d]: response [%v]", p.appId, resp)
+	if resp.PartitionCount == 0 || len(resp.Partitions) != int(resp.PartitionCount) {
+		return fmt.Errorf("invalid configuration: response [%v]", resp)
 	}
 
 	p.mu.Lock()
 	p.appId = resp.AppID
 
 	if len(resp.Partitions) > len(p.parts) {
-		// during partition split or initialization of client.
+		// during partition split or first configuration update of client.
 		for _, part := range p.parts {
 			part.session.Close()
 		}
