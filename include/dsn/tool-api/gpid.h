@@ -50,9 +50,9 @@ public:
                 _value.u.partition_index < r._value.u.partition_index);
     }
 
-    bool operator==(const gpid &r) const { return value() == r.value(); }
+    constexpr bool operator==(const gpid &r) const { return value() == r.value(); }
 
-    bool operator!=(const gpid &r) const { return value() != r.value(); }
+    constexpr bool operator!=(const gpid &r) const { return value() != r.value(); }
 
     constexpr int32_t get_app_id() const { return _value.u.app_id; }
 

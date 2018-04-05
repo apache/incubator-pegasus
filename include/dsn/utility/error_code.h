@@ -18,10 +18,11 @@ public:
 
     const char *to_string() const;
 
-    bool operator==(const error_code &r) { return _internal_code == r._internal_code; }
-    bool operator!=(const error_code &r) { return !(*this == r); }
+    constexpr bool operator==(const error_code &r) { return _internal_code == r._internal_code; }
 
-    operator int() const { return _internal_code; }
+    constexpr bool operator!=(const error_code &r) { return !(*this == r); }
+
+    constexpr operator int() const { return _internal_code; }
 
 #ifdef DSN_USE_THRIFT_SERIALIZATION
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);

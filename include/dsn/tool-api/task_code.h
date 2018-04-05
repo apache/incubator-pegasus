@@ -101,11 +101,11 @@ public:
 
     constexpr bool operator==(const task_code &r) { return _internal_code == r._internal_code; }
 
-    bool operator!=(const task_code &r) { return !(*this == r); }
+    constexpr bool operator!=(const task_code &r) { return !(*this == r); }
 
-    operator int() const { return _internal_code; }
+    constexpr operator int() const { return _internal_code; }
 
-    int code() const { return _internal_code; }
+    constexpr int code() const { return _internal_code; }
 
 #ifdef DSN_USE_THRIFT_SERIALIZATION
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
