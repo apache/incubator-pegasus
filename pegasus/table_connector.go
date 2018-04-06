@@ -84,19 +84,34 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	defer func() {
 		p.lastConfUpdateTime = time.Now()
 	}()
+	if err == nil {
+		err = p.handleQueryConfigResp(resp)
+	}
 	if err != nil {
-		return fmt.Errorf("connect table(%s): %s", p.tableName, err)
+		return fmt.Errorf("failed to connect table(%s): %s", p.tableName, err)
 	}
+	return nil
+}
+
+func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfgResponse) error {
 	if resp.Err.Errno != base.ERR_OK.String() {
-		return fmt.Errorf("connect table(%s): %s", p.tableName, resp.Err.Errno)
+		return errors.New(resp.Err.Errno)
 	}
-	if resp.PartitionCount == 0 && len(resp.Partitions) != int(resp.PartitionCount) {
-		return fmt.Errorf("failed to query config [appid: %d]: response [%v]", p.appId, resp)
+	if resp.PartitionCount == 0 || len(resp.Partitions) != int(resp.PartitionCount) {
+		return fmt.Errorf("invalid configuration: response [%v]", resp)
 	}
 
 	p.mu.Lock()
 	p.appId = resp.AppID
-	p.parts = make([]*replicaNode, len(resp.Partitions))
+
+	if len(resp.Partitions) > len(p.parts) {
+		// during partition split or first configuration update of client.
+		for _, part := range p.parts {
+			part.session.Close()
+		}
+		p.parts = make([]*replicaNode, len(resp.Partitions))
+	}
+
 	// TODO(wutao1): make sure PartitionIndex are continuous
 	for _, pconf := range resp.Partitions {
 		if pconf == nil || pconf.Primary == nil || pconf.Primary.GetRawAddress() == 0 {
@@ -110,7 +125,17 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	}
 	p.mu.Unlock()
 
+	p.removeUnusedReplicaConnections(resp.Partitions)
 	return nil
+}
+
+// Remove unused connection to replica server according to routing table.
+func (p *pegasusTableConnector) removeUnusedReplicaConnections(pconfs []*replication.PartitionConfiguration) {
+	primaries := make(map[string]bool)
+	for _, pconf := range pconfs {
+		primaries[pconf.Primary.GetAddress()] = true
+	}
+	p.replica.RemoveUnused(primaries)
 }
 
 func validateHashKey(hashKey []byte) error {

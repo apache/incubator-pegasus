@@ -128,3 +128,22 @@ func (rm *ReplicaManager) ReplicaCount() int {
 
 	return len(rm.replicas)
 }
+
+func (rm *ReplicaManager) RemoveUnused(inused map[string]bool) {
+	rm.Lock()
+	defer rm.Unlock()
+
+	unused := make([]string, 0)
+
+	for addr, r := range rm.replicas {
+		if _, ok := inused[addr]; !ok {
+			// close if it's not inused.
+			r.Close()
+			unused = append(unused, addr)
+		}
+	}
+
+	for _, addr := range unused {
+		delete(rm.replicas, addr)
+	}
+}

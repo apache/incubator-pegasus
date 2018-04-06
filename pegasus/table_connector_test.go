@@ -13,6 +13,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
+	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 )
 
 // This is the integration test of the client. Please start the pegasus onebox
@@ -124,4 +125,46 @@ func TestPegasusTableConnector_ValidateHashKey(t *testing.T) {
 
 	hashKey = make([]byte, math.MaxUint16+1)
 	assert.NotNil(t, validateHashKey(hashKey))
+}
+
+func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	p := &pegasusTableConnector{
+		tableName: "temp",
+	}
+
+	{
+		resp := replication.NewQueryCfgResponse()
+		resp.Err = &base.ErrorCode{Errno: "ERR_BUSY"}
+
+		err := p.handleQueryConfigResp(resp)
+		assert.NotNil(t, err)
+		assert.Equal(t, err.Error(), "ERR_BUSY")
+	}
+
+	{
+		resp := replication.NewQueryCfgResponse()
+		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
+
+		err := p.handleQueryConfigResp(resp)
+		assert.NotNil(t, err)
+
+		resp.Partitions = make([]*replication.PartitionConfiguration, 10)
+		resp.PartitionCount = 5
+		err = p.handleQueryConfigResp(resp)
+		assert.NotNil(t, err)
+	}
+
+	{
+		resp := replication.NewQueryCfgResponse()
+		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
+
+		resp.Partitions = make([]*replication.PartitionConfiguration, 4)
+		resp.PartitionCount = 4
+
+		err := p.handleQueryConfigResp(resp)
+		assert.NotNil(t, err)
+		assert.Equal(t, len(p.parts), 4)
+	}
 }

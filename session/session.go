@@ -145,6 +145,7 @@ func (n *nodeSession) tryDial() {
 
 // If the dialing ended successfully, it will start loopForRequest and
 // loopForResponse which handle the data communications.
+// If the last attempt failed, it will retry again.
 func (n *nodeSession) dial() {
 	if time.Now().Sub(n.lastDialTime) < kDialInterval {
 		select {
@@ -268,6 +269,10 @@ func (n *nodeSession) loopForResponse() error {
 // Invoke a rpc call.
 // The call will be cancelled if any io error encountered.
 func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rpcRequestArgs, name string) (result rpcResponseResult, err error) {
+	if cstate := n.ConnState(); cstate != rpc.ConnStateReady {
+		return nil, fmt.Errorf("failed to send request to this node [%s, %s, state: %s]", n.ntype, n.addr, cstate)
+	}
+
 	rcall := &rpcCall{}
 	rcall.args = args
 	rcall.name = name
@@ -322,7 +327,7 @@ func (n *nodeSession) readResponse() (*rpcCall, error) {
 
 	// read data field
 	buf, err := n.conn.Read(int(resplen))
-	if err != nil && len(buf) != int(resplen) {
+	if err != nil || len(buf) != int(resplen) {
 		return nil, err
 	}
 
@@ -334,8 +339,14 @@ func (n *nodeSession) readResponse() (*rpcCall, error) {
 }
 
 func (n *nodeSession) Close() <-chan struct{} {
-	n.logger.Printf("Close session with [%s, %s]\n", n.ntype, n.addr)
-	n.conn.Close()
-	n.tom.Kill(errors.New("nodeSession closed"))
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if n.ConnState() != rpc.ConnStateClosed {
+		n.logger.Printf("Close session with [%s, %s]\n", n.ntype, n.addr)
+		n.conn.Close()
+		n.tom.Kill(errors.New("nodeSession closed"))
+	}
+
 	return n.tom.Dead()
 }
