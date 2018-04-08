@@ -26,8 +26,9 @@
 
 #pragma once
 
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/utility/error_code.h>
 #include <dsn/utility/smart_pointers.h>
+#include <dsn/utility/string_view.h>
 
 #include <sstream>
 
@@ -68,7 +69,7 @@ public:
     error_s(error_s &&rhs) noexcept = default;
     error_s &operator=(error_s &&) noexcept = default;
 
-    static inline error_s make(error_code code, std::string reason)
+    static inline error_s make(error_code code, dsn::string_view reason)
     {
         return error_s(code, reason);
     }
@@ -89,27 +90,27 @@ public:
 
     inline bool is_ok() const
     {
-        if (info_) {
-            return info_->code == ERR_OK;
+        if (_info) {
+            return _info->code == ERR_OK;
         }
         return true;
     }
 
     std::string description() const
     {
-        if (!info_) {
+        if (!_info) {
             return ERR_OK.to_string();
         }
-        std::string code = info_->code.to_string();
-        return info_->msg.empty() ? code : code + ": " + info_->msg;
+        std::string code = _info->code.to_string();
+        return _info->msg.empty() ? code : code + ": " + _info->msg;
     }
 
-    error_code code() const { return info_ ? error_code(info_->code) : ERR_OK; }
+    error_code code() const { return _info ? error_code(_info->code) : ERR_OK; }
 
     error_s &operator<<(const char str[])
     {
-        if (info_) {
-            info_->msg.append(str);
+        if (_info) {
+            _info->msg.append(str);
             // It's fine for operator<< being applied to an OK Status.
         }
         return (*this);
@@ -118,7 +119,7 @@ public:
     template <class T>
     error_s &operator<<(T v)
     {
-        if (info_) {
+        if (_info) {
             std::ostringstream oss;
             oss << v;
             (*this) << oss.str().c_str();
@@ -133,30 +134,33 @@ public:
     }
 
 private:
-    error_s(const error_code &code, std::string &msg) noexcept : info_(new error_info(code, msg)) {}
+    error_s(error_code code, dsn::string_view msg) noexcept : _info(new error_info(code, msg)) {}
 
     struct error_info
     {
         error_code code;
-        std::string msg;
+        std::string msg; // TODO(wutao1): use raw char* to improve performance?
 
-        error_info(const error_code &c, std::string &s) : code(c), msg(std::move(s)) {}
+        error_info(error_code c, dsn::string_view s) : code(c), msg(s) {}
     };
 
-    void copy(const error_s &rhs)
+    inline void copy(const error_s &rhs)
     {
-        if (!rhs.info_) {
-            info_.release();
-        } else if (!info_) {
-            info_ = make_unique<error_info>(rhs.info_->code, rhs.info_->msg);
+        if (rhs._info == _info) {
+            return;
+        }
+        if (!rhs._info) {
+            _info.reset();
+        } else if (!_info) {
+            _info = make_unique<error_info>(rhs._info->code, rhs._info->msg);
         } else {
-            info_->code = rhs.info_->code;
-            info_->msg = rhs.info_->msg;
+            _info->code = rhs._info->code;
+            _info->msg = rhs._info->msg;
         }
     }
 
 private:
-    std::unique_ptr<error_info> info_;
+    std::unique_ptr<error_info> _info;
 };
 
 // error_with is used to return an error or a value.
