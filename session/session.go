@@ -209,7 +209,7 @@ func (n *nodeSession) loopForRequest() error {
 				n.notifyCallerAndDrop(item)
 
 				// don give up if there's still hope
-				if !rpc.IsRetryableError(err) {
+				if !rpc.IsNetworkTimeoutErr(err) {
 					return err
 				}
 			}
@@ -231,7 +231,7 @@ func (n *nodeSession) loopForResponse() error {
 
 		call, err := n.readResponse()
 		if err != nil {
-			if rpc.IsRetryableError(err) {
+			if rpc.IsNetworkTimeoutErr(err) {
 				select {
 				case <-time.After(time.Second):
 					continue

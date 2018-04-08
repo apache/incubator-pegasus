@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"sort"
 	"sync"
 	"time"
@@ -49,9 +50,11 @@ type pegasusTableConnector struct {
 	parts     []*replicaNode
 	mu        sync.RWMutex
 
-	confUpdateCh       chan bool
-	lastConfUpdateTime time.Time
-	tom                tomb.Tomb
+	confUpdateCh            chan bool
+	lastConfUpdateTime      time.Time
+	randomConfUpdateTimeout time.Duration
+
+	tom tomb.Tomb
 }
 
 type replicaNode struct {
@@ -83,6 +86,9 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	resp, err := p.meta.QueryConfig(ctx, p.tableName)
 	defer func() {
 		p.lastConfUpdateTime = time.Now()
+
+		// randomly pick from 30s to 40s to protect meta server from heavy workload.
+		p.randomConfUpdateTimeout = time.Duration(rand.Intn(10)+30) * time.Second
 	}()
 	if err == nil {
 		err = p.handleQueryConfigResp(resp)
@@ -355,7 +361,7 @@ func (p *pegasusTableConnector) tryConfUpdate() {
 //  - When a table operation encountered error, it will trigger a
 //    new round of self update if there's no one in progress.
 //  - The interval of two subsequent config updates should be larger
-//	  than 5 sec.
+//	  than `randomConfUpdateTimeout`.
 //
 func (p *pegasusTableConnector) loopForAutoUpdate() error {
 	for {
@@ -377,7 +383,7 @@ func (p *pegasusTableConnector) loopForAutoUpdate() error {
 }
 
 func (p *pegasusTableConnector) selfUpdate() bool {
-	if time.Now().Sub(p.lastConfUpdateTime) < 5*time.Second {
+	if time.Now().Sub(p.lastConfUpdateTime) < p.randomConfUpdateTimeout {
 		return false
 	}
 
