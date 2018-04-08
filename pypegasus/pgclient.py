@@ -501,7 +501,7 @@ class PegasusHash(object):
 
     @classmethod
     def crc64(cls, data, offset, length):
-        crc = -1
+        crc = 0xffffffffffffffff
         end = offset + length
         for c in data[offset:end:1]:
             crc = cls.table_forward[(ord(c) ^ crc) & 0xFF] ^ (crc >> 8)
