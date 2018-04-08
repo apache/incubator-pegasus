@@ -269,10 +269,6 @@ func (n *nodeSession) loopForResponse() error {
 // Invoke a rpc call.
 // The call will be cancelled if any io error encountered.
 func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rpcRequestArgs, name string) (result rpcResponseResult, err error) {
-	if cstate := n.ConnState(); cstate != rpc.ConnStateReady {
-		return nil, fmt.Errorf("failed to send request to this node [%s, %s, state: %s]", n.ntype, n.addr, cstate)
-	}
-
 	rcall := &rpcCall{}
 	rcall.args = args
 	rcall.name = name
