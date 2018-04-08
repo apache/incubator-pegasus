@@ -9,11 +9,13 @@ import (
 	"errors"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/replication"
+	"github.com/XiaoMi/pegasus-go-client/rpc"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
-	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 )
 
 // This is the integration test of the client. Please start the pegasus onebox
@@ -167,4 +169,27 @@ func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, len(p.parts), 4)
 	}
+}
+
+func TestPegasusTableConnector_Close(t *testing.T) {
+	// Ensure loopForAutoUpdate will be closed.
+	defer leaktest.Check(t)()
+
+	// Ensure: Closing table doesn't close the connections.
+
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+
+	client := NewClient(cfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	ptb, _ := tb.(*pegasusTableConnector)
+	ptb.replica.GetReplica("0.0.0.0:34801")
+	time.Sleep(time.Second) // wait 1sec for connection ready.
+
+	ptb.Close()
+	assert.Equal(t, ptb.replica.GetReplica("0.0.0.0:34801").ConnState(), rpc.ConnStateReady)
 }

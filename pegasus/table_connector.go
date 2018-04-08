@@ -102,6 +102,8 @@ func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfg
 	}
 
 	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.appId = resp.AppID
 
 	if len(resp.Partitions) > len(p.parts) {
@@ -123,19 +125,7 @@ func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfg
 		}
 		p.parts[pconf.Pid.PartitionIndex] = r
 	}
-	p.mu.Unlock()
-
-	p.removeUnusedReplicaConnections(resp.Partitions)
 	return nil
-}
-
-// Remove unused connection to replica server according to routing table.
-func (p *pegasusTableConnector) removeUnusedReplicaConnections(pconfs []*replication.PartitionConfiguration) {
-	primaries := make(map[string]bool)
-	for _, pconf := range pconfs {
-		primaries[pconf.Primary.GetAddress()] = true
-	}
-	p.replica.RemoveUnused(primaries)
 }
 
 func validateHashKey(hashKey []byte) error {
@@ -332,16 +322,7 @@ func (p *pegasusTableConnector) getPartition(hashKey []byte) (*base.Gpid, *sessi
 
 func (p *pegasusTableConnector) Close() error {
 	p.tom.Kill(errors.New("table closed"))
-	err := func() error {
-		err := p.meta.Close()
-		if err == nil {
-			for _, r := range p.parts {
-				<-r.session.Close()
-			}
-		}
-		return err
-	}()
-	return wrapError(err, OpClose)
+	return nil
 }
 
 func (p *pegasusTableConnector) handleError(err error, gpid *base.Gpid, replica *session.ReplicaSession) error {

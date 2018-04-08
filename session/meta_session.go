@@ -15,7 +15,7 @@ import (
 )
 
 // MetaManager manages the list of metas, but only the leader will it requests to.
-// If the one is not the actual leader, it will retry with another one.
+// If the one is not the actual leader, it will retry with another.
 type MetaManager struct {
 	logger pegalog.Logger
 
