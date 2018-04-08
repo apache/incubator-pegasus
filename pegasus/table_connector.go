@@ -49,9 +49,8 @@ type pegasusTableConnector struct {
 	parts     []*replicaNode
 	mu        sync.RWMutex
 
-	confUpdateCh       chan bool
-	lastConfUpdateTime time.Time
-	tom                tomb.Tomb
+	confUpdateCh chan bool
+	tom          tomb.Tomb
 }
 
 type replicaNode struct {
@@ -81,9 +80,6 @@ func connectTable(ctx context.Context, tableName string, meta *session.MetaManag
 // Update configuration of this table.
 func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	resp, err := p.meta.QueryConfig(ctx, p.tableName)
-	defer func() {
-		p.lastConfUpdateTime = time.Now()
-	}()
 	if err == nil {
 		err = p.handleQueryConfigResp(resp)
 	}
@@ -327,11 +323,24 @@ func (p *pegasusTableConnector) Close() error {
 
 func (p *pegasusTableConnector) handleError(err error, gpid *base.Gpid, replica *session.ReplicaSession) error {
 	if err != nil {
-		// when err != nil, it means the network connection between client and replicas
-		// may be illed, hence we need to check if there's newer configuration.
+		confUpdate := false
 
-		// trigger configuration update
-		p.tryConfUpdate()
+		switch err {
+		case base.ERR_TIMEOUT:
+		case context.DeadlineExceeded:
+			// timeout will not trigger a configuration update
+
+		case base.ERR_NOT_ENOUGH_MEMBER:
+		case base.ERR_CAPACITY_EXCEEDED:
+
+		default:
+			confUpdate = true
+		}
+
+		if confUpdate {
+			// we need to check if there's newer configuration.
+			p.tryConfUpdate()
+		}
 
 		// add gpid and remote address to error
 		perr := wrapError(err, 0).(*PError)
@@ -341,6 +350,7 @@ func (p *pegasusTableConnector) handleError(err error, gpid *base.Gpid, replica 
 	return nil
 }
 
+/// Don't bother if there's ongoing attempt.
 func (p *pegasusTableConnector) tryConfUpdate() {
 	select {
 	case p.confUpdateCh <- true:
@@ -348,15 +358,6 @@ func (p *pegasusTableConnector) tryConfUpdate() {
 	}
 }
 
-// For each table there's a background worker pulling down the latest
-// version of configuration from meta server automatically.
-// The configuration update strategy can be stated as follow:
-//
-//  - When a table operation encountered error, it will trigger a
-//    new round of self update if there's no one in progress.
-//  - The interval of two subsequent config updates should be larger
-//	  than 5 sec.
-//
 func (p *pegasusTableConnector) loopForAutoUpdate() error {
 	for {
 		select {
@@ -377,10 +378,6 @@ func (p *pegasusTableConnector) loopForAutoUpdate() error {
 }
 
 func (p *pegasusTableConnector) selfUpdate() bool {
-	if time.Now().Sub(p.lastConfUpdateTime) < 5*time.Second {
-		return false
-	}
-
 	// ignore the returned error
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 	if err := p.updateConf(ctx); err != nil {

@@ -9,7 +9,7 @@ import (
 )
 
 // err requires to be non-nil
-func IsRetryableError(err error) bool {
+func IsNetworkTimeoutErr(err error) bool {
 	// if it's a network timeout error
 	opErr, ok := err.(*net.OpError)
 	if ok {

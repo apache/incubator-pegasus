@@ -127,10 +127,10 @@ func TestRpcConn_WriteAndRead(t *testing.T) {
 	assert.Equal(t, data, actual)
 }
 
-func Test_IsRetryableError(t *testing.T) {
+func Test_IsNetworkTimeoutErr(t *testing.T) {
 	// timeout error but not a network error
-	assert.False(t, IsRetryableError(context.DeadlineExceeded))
+	assert.False(t, IsNetworkTimeoutErr(context.DeadlineExceeded))
 
 	err := NewRpcConn(&tomb.Tomb{}, "www.baidu.com:12321").TryConnect()
-	assert.True(t, IsRetryableError(err))
+	assert.True(t, IsNetworkTimeoutErr(err))
 }

@@ -184,7 +184,7 @@ func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
 		return bytes, err
 	}()
 
-	if err != nil && !IsRetryableError(err) {
+	if err != nil && !IsNetworkTimeoutErr(err) {
 		rc.setState(ConnStateTransientFailure)
 	}
 	return bytes, err

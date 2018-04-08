@@ -7,7 +7,6 @@ package pegasus
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -134,7 +133,7 @@ func TestPegasusClient_SequentialOperations(t *testing.T) {
 	client := NewClient(cfg)
 	defer client.Close()
 
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 5000; i++ {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 		hashKey := []byte(fmt.Sprintf("h%d", i))
 		sortKey := []byte(fmt.Sprintf("s%d", i))
@@ -147,8 +146,8 @@ func TestPegasusClient_SequentialOperations(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, actual, value)
 
-		//err = client.Del(ctx, "temp", hashKey, sortKey)
-		//assert.Nil(t, err)
+		err = client.Del(ctx, "temp", hashKey, sortKey)
+		assert.Nil(t, err)
 	}
 }
 
@@ -195,10 +194,6 @@ func TestPegasusClient_ConcurrentSetAndDel(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := 0; i < 1000; i++ {
 		wg.Add(1)
-
-		// sleep from 50ms to 150ms
-		randTime := time.Duration((rand.Intn(3) + 1) * 50)
-		time.Sleep(randTime * time.Millisecond)
 
 		id := i
 		go func() {
