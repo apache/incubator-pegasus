@@ -84,36 +84,20 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	ptb.handleError(base.ERR_INVALID_STATE, nil, nil)
 	<-ptb.confUpdateCh
 
-	// self update can not be triggered by other error codes.
-	ptb.handleError(base.ERR_CLIENT_FAILED, nil, nil)
-	select {
-	case <-ptb.confUpdateCh:
-	default:
-		assert.True(t, true)
-	}
-}
+	{ // Ensure: The following errors should not trigger configuration update
+		errorTypes := []error{base.ERR_TIMEOUT, context.DeadlineExceeded, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER}
 
-func TestPegasusTableConnector_SubsequentSelfUpdate(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	cfg := Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	}
-
-	client := NewClient(cfg)
-	defer client.Close()
-
-	tb, err := client.OpenTable(context.Background(), "temp")
-	assert.Nil(t, err)
-	ptb, _ := tb.(*pegasusTableConnector)
-
-	count := 0
-	for i := 0; i < 10; i++ {
-		if ptb.selfUpdate() {
-			count++
+		for _, err := range errorTypes {
+			channelEmpty := false
+			ptb.handleError(err, nil, nil)
+			select {
+			case <-ptb.confUpdateCh:
+			default:
+				channelEmpty = true
+			}
+			assert.True(t, channelEmpty)
 		}
 	}
-	assert.Equal(t, count, 0)
 }
 
 func TestPegasusTableConnector_ValidateHashKey(t *testing.T) {
