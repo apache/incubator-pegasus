@@ -30,10 +30,12 @@
 #include <dsn/c/api_layer1.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/cpp/clientlet.h>
-#include <dsn/cpp/smart_pointers.h>
-#include <dsn/tool-api/task_code.h>
+#include <dsn/utility/smart_pointers.h>
+#include <dsn/utility/chrono_literals.h>
 
 namespace dsn {
+
+using literals::chrono_literals::operator"" _ms;
 
 //
 // rpc_holder is mainly designed for RAII of dsn_message_t.
@@ -70,15 +72,28 @@ template <typename TRequest, typename TResponse>
 class rpc_holder
 {
 public:
+    using request_type = TRequest;
+    using response_type = TResponse;
+
+public:
     explicit rpc_holder(dsn_message_t req = nullptr)
     {
         if (req != nullptr) {
             _i = std::make_shared<internal>(req);
         }
     }
-    rpc_holder(std::unique_ptr<TRequest> req, dsn::task_code code) : _i(new internal(req, code)) {}
+
+    rpc_holder(std::unique_ptr<TRequest> req,
+               dsn::task_code code,
+               std::chrono::milliseconds timeout = 0_ms,
+               uint64_t partition_hash = 0)
+        : _i(new internal(req, code, timeout, partition_hash))
+    {
+    }
 
     // copyable and movable
+    // Copying an rpc_holder doesn't produce a deep copy, the new instance will
+    // reference the same rpc internal data. So, just feel free to copy :)
     rpc_holder(const rpc_holder &) = default;
     rpc_holder(rpc_holder &&) noexcept = default;
     rpc_holder &operator=(const rpc_holder &) = default;
@@ -90,6 +105,12 @@ public:
     {
         dassert(_i, "rpc_holder is uninitialized");
         return *(_i->thrift_request);
+    }
+
+    TRequest *mutable_request() const
+    {
+        dassert(_i, "rpc_holder is uninitialized");
+        return _i->thrift_request.get();
     }
 
     TResponse &response() const
@@ -105,6 +126,8 @@ public:
     }
 
     // TCallback = void(dsn::error_code)
+    // NOTE that the `error_code` is not the error carried by response. Users should
+    // check the responded error themselves.
     template <typename TCallback>
     task_ptr
     call(::dsn::rpc_address server, clientlet *svc, TCallback &&callback, int reply_thread_hash = 0)
@@ -116,7 +139,7 @@ public:
                                    dsn::error_code>::value,
                       "the first argument of TCallback must be dsn::error_code");
 
-        if (_mail_box) {
+        if (dsn_unlikely(_mail_box != nullptr)) {
             _mail_box->emplace_back(request());
             return nullptr;
         }
@@ -125,18 +148,25 @@ public:
             dsn_request(),
             svc,
             [ cb_fwd = std::forward<TCallback>(callback),
-              this ](error_code err, dsn_message_t req, dsn_message_t resp) mutable {
+              rpc = *this ](error_code err, dsn_message_t req, dsn_message_t resp) mutable {
                 if (err == ERR_OK) {
-                    ::dsn::unmarshall(resp, response());
-                }
-                if (response().err) {
-                    err = response().err;
+                    ::dsn::unmarshall(resp, rpc.response());
                 }
                 cb_fwd(err);
             },
             reply_thread_hash);
         dsn_rpc_call(server.c_addr(), t->native_handle());
         return t;
+    }
+
+    // Returns an rpc_holder that will reply the request after its lifetime ends.
+    // By default rpc_holder never replies.
+    // SEE: serverlet<T>::register_rpc_handler_with_rpc_holder
+    static inline rpc_holder auto_reply(dsn_message_t req)
+    {
+        rpc_holder rpc(req);
+        rpc._i->auto_reply = true;
+        return rpc;
     }
 
     // Only use this function when testing.
@@ -168,7 +198,7 @@ private:
     struct internal
     {
         explicit internal(dsn_message_t req)
-            : dsn_request(req), thrift_request(make_unique<TRequest>())
+            : dsn_request(req), thrift_request(make_unique<TRequest>()), auto_reply(false)
         {
             // we must hold one reference for the request, or rdsn will delete it after
             // the rpc call ends.
@@ -176,21 +206,41 @@ private:
             dsn::unmarshall(req, *thrift_request);
         }
 
-        internal(std::unique_ptr<TRequest> &req, dsn::task_code code)
-            : thrift_request(std::move(req))
+        internal(std::unique_ptr<TRequest> &req,
+                 dsn::task_code code,
+                 std::chrono::milliseconds timeout,
+                 uint64_t partition_hash)
+            : thrift_request(std::move(req)), auto_reply(false)
         {
             dassert(thrift_request != nullptr, "req should not be null");
 
-            dsn_request = dsn_msg_create_request(code);
+            // leave thread_hash to 0
+            dsn_request =
+                dsn_msg_create_request(code, static_cast<int>(timeout.count()), 0, partition_hash);
             dsn_msg_add_ref(dsn_request);
             dsn::marshall(dsn_request, *thrift_request);
         }
 
-        ~internal() { dsn_msg_release_ref(dsn_request); }
+        void reply()
+        {
+            dsn_message_t dsn_response = dsn_msg_create_response(dsn_request);
+            ::dsn::marshall(dsn_response, thrift_response);
+            dsn_rpc_reply(dsn_response);
+        }
+
+        ~internal()
+        {
+            if (auto_reply) {
+                reply();
+            }
+            dsn_msg_release_ref(dsn_request);
+        }
 
         dsn_message_t dsn_request;
         std::unique_ptr<TRequest> thrift_request;
         TResponse thrift_response;
+
+        bool auto_reply;
     };
 
     std::shared_ptr<internal> _i;

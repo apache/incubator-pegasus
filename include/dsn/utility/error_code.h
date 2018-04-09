@@ -10,20 +10,19 @@ namespace dsn {
 class error_code
 {
 public:
-    error_code() { _internal_code = 0; }
-    error_code(const error_code &err) { _internal_code = err._internal_code; }
     explicit error_code(const char *name);
-    explicit error_code(int err) { _internal_code = err; }
+
+    explicit constexpr error_code(int err) : _internal_code(err) {}
+
+    constexpr error_code() = default;
+
     const char *to_string() const;
 
-    error_code &operator=(const error_code &source)
-    {
-        _internal_code = source._internal_code;
-        return *this;
-    }
-    bool operator==(const error_code &r) { return _internal_code == r._internal_code; }
-    bool operator!=(const error_code &r) { return !(*this == r); }
-    operator int() const { return _internal_code; }
+    constexpr bool operator==(const error_code &r) { return _internal_code == r._internal_code; }
+
+    constexpr bool operator!=(const error_code &r) { return !(*this == r); }
+
+    constexpr operator int() const { return _internal_code; }
 
 #ifdef DSN_USE_THRIFT_SERIALIZATION
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
@@ -36,7 +35,7 @@ public:
     static error_code try_get(const std::string &name, error_code default_value);
 
 private:
-    int _internal_code;
+    int _internal_code{0};
 };
 
 #define DEFINE_ERR_CODE(x) __selectany const dsn::error_code x(#x);

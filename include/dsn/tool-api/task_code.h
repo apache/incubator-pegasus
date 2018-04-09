@@ -69,13 +69,22 @@ ENUM_REG(TASK_PRIORITY_HIGH)
 ENUM_END(dsn_task_priority_t)
 
 namespace dsn {
-// task code is an index for a specific kind of task. with the index, you can
-// get properties of this kind of task: name, type, priority, etc. you may want to refer to
-// task_spec.h for the detailed task properties.
-//
-// for performance, task_code is represented as an integer in memory; and for compatibility,
-// task_code is serialized as it's string representation when transfered by network and stored in
-// disk.
+
+/// task code is an index for a specific kind of task. with the index, you can
+/// get properties of this kind of task: name, type, priority, etc. you may want to refer to
+/// task_spec.h for the detailed task properties.
+///
+/// Like dsn::blob, task_code is a special thrift primitive type that's defined
+/// by the rDSN framework. Internally as a C++ object, it's is represented as an integer,
+/// but in thrift representation it's serialized as a string.
+///
+/// It should be noted that a task_code may have different code number in two different
+/// clusters. So DO NOT use a integer as task_code.
+///
+///  **.thrift
+///    x: 1: i32  task_code;
+///    ✓: 1: dsn.task_code  task_code;
+///
 class task_code
 {
 public:
@@ -83,21 +92,21 @@ public:
               dsn_task_type_t tt,
               dsn_task_priority_t pri,
               dsn::threadpool_code pool);
-    task_code() { _internal_code = 0; }
-    task_code(const task_code &r) { _internal_code = r._internal_code; }
-    explicit task_code(int code) { _internal_code = code; }
+
+    constexpr task_code() = default;
+
+    constexpr explicit task_code(int code) : _internal_code(code) {}
 
     const char *to_string() const;
 
-    task_code &operator=(const task_code &source)
-    {
-        _internal_code = source._internal_code;
-        return *this;
-    }
-    bool operator==(const task_code &r) { return _internal_code == r._internal_code; }
-    bool operator!=(const task_code &r) { return !(*this == r); }
-    operator int() const { return _internal_code; }
-    int code() const { return _internal_code; }
+    constexpr bool operator==(const task_code &r) { return _internal_code == r._internal_code; }
+
+    constexpr bool operator!=(const task_code &r) { return !(*this == r); }
+
+    constexpr operator int() const { return _internal_code; }
+
+    constexpr int code() const { return _internal_code; }
+
 #ifdef DSN_USE_THRIFT_SERIALIZATION
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
@@ -110,7 +119,7 @@ public:
 
 private:
     task_code(const char *name);
-    int _internal_code;
+    int _internal_code{0};
 };
 
 // you can define task_cods by the following macros

@@ -106,4 +106,8 @@ else
     echo "fds has already downloaded, skip it"
 fi
 
+# fmtlib
+check_and_download "fmt-4.0.0.tar.gz" "https://codeload.github.com/fmtlib/fmt/tar.gz/4.0.0"
+exit_if_fail $?
+
 cd $TP_DIR
