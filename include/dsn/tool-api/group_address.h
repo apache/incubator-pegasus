@@ -59,14 +59,14 @@ public:
     rpc_address random_member() const
     {
         alr_t l(_lock);
-        return _members.empty() ? rpc_address::sInvalid
+        return _members.empty() ? rpc_address::s_invalid_address
                                 : _members[dsn_random32(0, (uint32_t)_members.size() - 1)];
     }
     rpc_address next(rpc_address current) const;
     rpc_address leader() const
     {
         alr_t l(_lock);
-        return _leader_index >= 0 ? _members[_leader_index] : rpc_address::sInvalid;
+        return _leader_index >= 0 ? _members[_leader_index] : rpc_address::s_invalid_address;
     }
     void leader_forward();
     rpc_address possible_leader();
@@ -156,7 +156,7 @@ inline rpc_address rpc_group_address::possible_leader()
 {
     alr_t l(_lock);
     if (_members.empty())
-        return rpc_address::sInvalid;
+        return rpc_address::s_invalid_address;
     if (_leader_index == -1)
         _leader_index = dsn_random32(0, (uint32_t)_members.size() - 1);
     return _members[_leader_index];
@@ -192,7 +192,7 @@ inline rpc_address rpc_group_address::next(rpc_address current) const
 {
     alr_t l(_lock);
     if (_members.empty())
-        return rpc_address::sInvalid;
+        return rpc_address::s_invalid_address;
     if (current.is_invalid())
         return _members[dsn_random32(0, (uint32_t)_members.size() - 1)];
     else {

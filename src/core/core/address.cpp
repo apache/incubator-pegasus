@@ -66,7 +66,8 @@
 #include <dsn/tool-api/task.h>
 
 namespace dsn {
-const rpc_address rpc_address::sInvalid;
+
+const rpc_address rpc_address::s_invalid_address;
 
 #ifdef _WIN32
 static void net_init()
@@ -155,7 +156,7 @@ DSN_API uint32_t rpc_address::ipv4_from_network_interface(const char *network_in
     return ret;
 }
 
-rpc_address::~rpc_address() { clear(); }
+rpc_address::~rpc_address() { set_invalid(); }
 
 rpc_address::rpc_address(const rpc_address &another) { *this = another; }
 
@@ -165,7 +166,7 @@ rpc_address &rpc_address::operator=(const rpc_address &another)
         // avoid memory leak
         return *this;
     }
-    clear();
+    set_invalid();
     _addr = another._addr;
     switch (another.type()) {
     case HOST_TYPE_GROUP:
@@ -182,7 +183,7 @@ rpc_address &rpc_address::operator=(const rpc_address &another)
 
 void rpc_address::assign_uri(const char *host_uri)
 {
-    clear();
+    set_invalid();
     _addr.uri.type = HOST_TYPE_URI;
     dsn::rpc_uri_address *addr = new dsn::rpc_uri_address(host_uri);
     // take the lifetime of rpc_uri_address, release_ref when change value or call deconstruct
@@ -192,7 +193,7 @@ void rpc_address::assign_uri(const char *host_uri)
 
 void rpc_address::assign_group(const char *name)
 {
-    clear();
+    set_invalid();
     _addr.group.type = HOST_TYPE_GROUP;
     dsn::rpc_group_address *addr = new dsn::rpc_group_address(name);
     // take the lifetime of rpc_uri_address, release_ref when change value or call deconstruct
@@ -217,13 +218,13 @@ rpc_address rpc_address::clone() const
         new_address._addr.group.group = (uint64_t)addr;
         new_address._addr.group.type = HOST_TYPE_GROUP;
     } else {
-        new_address.clear();
+        new_address.set_invalid();
     }
 
     return new_address;
 }
 
-void rpc_address::clear()
+void rpc_address::set_invalid()
 {
     switch (type()) {
     case HOST_TYPE_GROUP:

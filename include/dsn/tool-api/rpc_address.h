@@ -23,17 +23,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-/*
- * Description:
- *     define address helper routines
- *
- * Revision history:
- *     July, 2015, @imzhenyu (Zhenyu Guo), first version
- *     Aug., 2015, @imzhenyu (Zhenyu Guo), add group and uri address support
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <unordered_map>
@@ -63,12 +52,13 @@ class rpc_uri_address;
 class rpc_address
 {
 public:
-    static const rpc_address sInvalid;
+    static const rpc_address s_invalid_address;
     static uint32_t ipv4_from_host(const char *hostname);
     static uint32_t ipv4_from_network_interface(const char *network_interface);
+
     ~rpc_address();
 
-    rpc_address() = default;
+    constexpr rpc_address() = default;
 
     rpc_address(const rpc_address &another);
 
@@ -85,9 +75,11 @@ public:
 
     rpc_address(const char *host, uint16_t port) { assign_ipv4(host, port); }
 
+    rpc_address clone() const;
+
     void assign_ipv4(uint32_t ip, uint16_t port)
     {
-        clear();
+        set_invalid();
         _addr.v4.type = HOST_TYPE_IPV4;
         _addr.v4.ip = ip;
         _addr.v4.port = port;
@@ -95,7 +87,7 @@ public:
 
     void assign_ipv4(const char *host, uint16_t port)
     {
-        clear();
+        set_invalid();
         _addr.v4.type = HOST_TYPE_IPV4;
         _addr.v4.ip = rpc_address::ipv4_from_host(host);
         _addr.v4.port = port;
@@ -103,22 +95,23 @@ public:
 
     void assign_ipv4_local_address(const char *network_interface, uint16_t port)
     {
-        clear();
+        set_invalid();
         _addr.v4.type = HOST_TYPE_IPV4;
         _addr.v4.ip = rpc_address::ipv4_from_network_interface(network_interface);
         _addr.v4.port = port;
     }
 
     void assign_uri(const char *host_uri);
+
     void assign_group(const char *name);
 
-    rpc_address clone() const;
     const char *to_string() const;
 
     std::string to_std_string() const { return std::string(to_string()); }
+
     bool from_string_ipv4(const char *s)
     {
-        clear();
+        set_invalid();
         std::string str = std::string(s);
         auto pos = str.find_last_of(':');
         if (pos == std::string::npos)
@@ -140,16 +133,25 @@ public:
     uint64_t &value() { return _addr.value; }
 
     dsn_host_type_t type() const { return (dsn_host_type_t)_addr.v4.type; }
+
     uint32_t ip() const { return (uint32_t)_addr.v4.ip; }
+
     uint16_t port() const { return (uint16_t)_addr.v4.port; }
+
     void set_port(uint16_t port) { _addr.v4.port = port; }
+
     rpc_group_address *group_address() const
     {
         return (rpc_group_address *)(uintptr_t)_addr.group.group;
     }
+
     rpc_uri_address *uri_address() const { return (rpc_uri_address *)(uintptr_t)_addr.uri.uri; }
+
     bool is_invalid() const { return _addr.v4.type == HOST_TYPE_INVALID; }
-    void set_invalid() { clear(); }
+
+    // before you assign new value, must call set_invalid() to release original value
+    // and you MUST ensure that _addr is INITIALIZED before you call this function
+    void set_invalid();
 
     bool operator==(::dsn::rpc_address r) const
     {
@@ -191,11 +193,6 @@ public:
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 #endif
-
-private:
-    // before you assign new value, must call clear() to release original value
-    // and you MUST ensure that _addr is INITIALIZED before you call this function
-    void clear();
 
 private:
     union
