@@ -67,10 +67,10 @@ uint32_t rpc_address::ipv4_from_host(const char *name)
     return (uint32_t)ntohl(addr.sin_addr.s_addr);
 }
 
-/*static*/
 // if network_interface is "", then return the first
 // site-local ipv4 address: 10.*.*.*, 172.16.*.*, 192.168.*.*
-DSN_API uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
+/*static*/
+uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
 {
     uint32_t ret = 0;
 
@@ -140,7 +140,7 @@ void rpc_address::assign_uri(const char *host_uri)
     set_invalid();
     _addr.uri.type = HOST_TYPE_URI;
     dsn::rpc_uri_address *addr = new dsn::rpc_uri_address(host_uri);
-    // take the lifetime of rpc_uri_address, release_ref when change value or call deconstruct
+    // take the lifetime of rpc_uri_address, release_ref when change value or call destructor
     addr->add_ref();
     _addr.uri.uri = (uint64_t)addr;
 }
@@ -150,7 +150,7 @@ void rpc_address::assign_group(const char *name)
     set_invalid();
     _addr.group.type = HOST_TYPE_GROUP;
     dsn::rpc_group_address *addr = new dsn::rpc_group_address(name);
-    // take the lifetime of rpc_uri_address, release_ref when change value or call deconstruct
+    // take the lifetime of rpc_uri_address, release_ref when change value or call destructor
     addr->add_ref();
     _addr.group.group = (uint64_t)addr;
 }
