@@ -75,8 +75,6 @@ public:
 
     rpc_address(const char *host, uint16_t port) { assign_ipv4(host, port); }
 
-    rpc_address clone() const;
-
     void assign_ipv4(uint32_t ip, uint16_t port)
     {
         set_invalid();

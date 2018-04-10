@@ -201,29 +201,6 @@ void rpc_address::assign_group(const char *name)
     _addr.group.group = (uint64_t)addr;
 }
 
-rpc_address rpc_address::clone() const
-{
-    rpc_address new_address;
-
-    if (type() == HOST_TYPE_IPV4) {
-        new_address._addr = _addr;
-    } else if (type() == HOST_TYPE_URI) {
-        dsn::rpc_uri_address *addr = new dsn::rpc_uri_address(*uri_address());
-        addr->add_ref();
-        new_address._addr.uri.uri = (uint64_t)addr;
-        new_address._addr.uri.type = HOST_TYPE_URI;
-    } else if (type() == HOST_TYPE_GROUP) {
-        dsn::rpc_group_address *addr = new dsn::rpc_group_address(*group_address());
-        addr->add_ref();
-        new_address._addr.group.group = (uint64_t)addr;
-        new_address._addr.group.type = HOST_TYPE_GROUP;
-    } else {
-        new_address.set_invalid();
-    }
-
-    return new_address;
-}
-
 void rpc_address::set_invalid()
 {
     switch (type()) {
