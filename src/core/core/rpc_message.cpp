@@ -221,8 +221,9 @@ message_ex::~message_ex()
     // so if old_request releases header,
     // then new request's header will be invalid.
     //
-    // so we don't release_buffer_header().
-    // however, this won't lead to any memory leak problems as long as the header is a POD type
+    // so we don't call release_buffer_header().
+    // however, this won't lead to any memory leak problems coz we can TREAT message_header
+    // as a POD type (the constructors of gpid and rpc_address are trival)
     // see@ Attention of message_header
 
     // release_buffer_header();
@@ -478,15 +479,17 @@ void message_ex::prepare_buffer_header()
     this->_rw_offset = (int)sizeof(message_header);
     this->buffers.push_back(buffer);
 
-    // here, we should call placement new, because message_header contain variable that is not
-    // POD-type, such as rpc_address, so we should call these variable's construct
+    // here we should call placement new,
+    // so the gpid & rpc_address can be initialized
     new (ptr)(message_header);
+
     header = (message_header *)ptr;
 }
 
 void message_ex::release_buffer_header()
 {
-    // message_header contain variable that is not POD-type, so we call these variable's destructor
+    // we should call destructor explicitly
+    // as the header is constructed with placement new, see@prepare_buffer_header
     header->~message_header();
 }
 
