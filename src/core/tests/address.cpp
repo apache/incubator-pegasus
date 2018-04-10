@@ -78,11 +78,9 @@ TEST(core, rpc_address_ipv4_from_host)
 
 TEST(core, rpc_address_ipv4_from_network_interface)
 {
-#ifndef _WIN32
     ASSERT_EQ(host_ipv4(127, 0, 0, 1), rpc_address::ipv4_from_network_interface("lo"));
     ASSERT_EQ(host_ipv4(0, 0, 0, 0),
               rpc_address::ipv4_from_network_interface("not_exist_interface"));
-#endif
 }
 
 TEST(core, rpc_address_to_string)

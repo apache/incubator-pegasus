@@ -24,36 +24,11 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#ifdef _WIN32
-
-#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
-
-#include <Winsock2.h>
-#include <ws2tcpip.h>
-#include <Windows.h>
-#pragma comment(lib, "ws2_32.lib")
-
-#else
 #include <sys/socket.h>
 #include <netdb.h>
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#if defined(__FreeBSD__)
-#include <netinet/in.h>
-#endif
-
-#endif
 
 #include <dsn/utility/ports.h>
 #include <dsn/utility/fixed_size_buffer_pool.h>
@@ -69,21 +44,6 @@ namespace dsn {
 
 const rpc_address rpc_address::s_invalid_address;
 
-#ifdef _WIN32
-static void net_init()
-{
-    static std::once_flag flag;
-    static bool flag_inited = false;
-    if (!flag_inited) {
-        std::call_once(flag, [&]() {
-            WSADATA wsaData;
-            WSAStartup(MAKEWORD(2, 2), &wsaData);
-            flag_inited = true;
-        });
-    }
-}
-#endif
-
 /*static*/
 uint32_t rpc_address::ipv4_from_host(const char *name)
 {
@@ -93,13 +53,7 @@ uint32_t rpc_address::ipv4_from_host(const char *name)
     addr.sin_family = AF_INET;
     if ((addr.sin_addr.s_addr = inet_addr(name)) == (unsigned int)(-1)) {
         hostent *hp = ::gethostbyname(name);
-        int err =
-#ifdef _WIN32
-            (int)::WSAGetLastError()
-#else
-            h_errno
-#endif
-            ;
+        int err = h_errno;
 
         if (hp == nullptr) {
             derror("gethostbyname failed, name = %s, err = %d.", name, err);
@@ -222,23 +176,14 @@ const char *rpc_address::to_string() const
     char *p = bf.next();
     auto sz = bf.get_chunk_size();
     struct in_addr net_addr;
-#ifdef _WIN32
-    char *ip_str;
-#else
     int ip_len;
-#endif
 
     switch (_addr.v4.type) {
     case HOST_TYPE_IPV4:
         net_addr.s_addr = htonl(ip());
-#ifdef _WIN32
-        ip_str = inet_ntoa(net_addr);
-        snprintf_p(p, sz, "%s:%hu", ip_str, (uint16_t)addr.u.v4.port);
-#else
         inet_ntop(AF_INET, &net_addr, p, sz);
         ip_len = strlen(p);
         snprintf_p(p + ip_len, sz - ip_len, ":%hu", port());
-#endif
         break;
     case HOST_TYPE_URI:
         p = (char *)uri_address()->uri();

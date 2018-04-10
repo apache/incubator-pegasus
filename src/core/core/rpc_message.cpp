@@ -214,11 +214,16 @@ message_ex::message_ex()
 
 message_ex::~message_ex()
 {
-    // when recv a request, message_header is hidden ahead of buffer(see@create_receive_message
-    // function), if you call copy_and_prepare_send() function, then a new request will be create,
-    // but new request share the same header with the old_request, so if old_request release header,
-    // then new request's header is invalid, so we don't release_buffer_header(), and there will not
-    // lead any problem, see@ Attention of message_header
+    // when receiving a request, the lifetime of message_header object is managed by
+    // vector "buffers" (see@create_receive_message function).
+    // if you call copy_and_prepare_send() function, then a new request will be created,
+    // but new request shares the same header with the old_request.
+    // so if old_request releases header,
+    // then new request's header will be invalid.
+    //
+    // so we don't release_buffer_header().
+    // however, this won't lead to any memory leak problems as long as the header is a POD type
+    // see@ Attention of message_header
 
     // release_buffer_header();
     if (!_is_read) {
