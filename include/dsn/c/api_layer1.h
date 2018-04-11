@@ -39,6 +39,7 @@
 #include <dsn/c/api_common.h>
 #include <dsn/c/api_task.h>
 #include <dsn/tool-api/gpid.h>
+#include <dsn/tool-api/rpc_address.h>
 
 /*!
  @defgroup service-api-c Core Service API
@@ -434,123 +435,6 @@ replace the underneath implementation of the network (e.g., RDMA, simulated netw
 */
 
 /*!
-@defgroup rpc-addr RPC Address Utilities
-
-RPC Address Utilities
-
-@{
-*/
-
-/*! rpc address host type */
-typedef enum dsn_host_type_t {
-    HOST_TYPE_INVALID = 0,
-    HOST_TYPE_IPV4 = 1,  ///< 4 bytes for IPv4
-    HOST_TYPE_GROUP = 2, ///< reference to an address group object
-    HOST_TYPE_URI = 3,   ///< universal resource identifier as a string
-} dsn_host_type_t;
-
-/*! rpc address, which is always encoded into a 64-bit integer */
-typedef struct dsn_address_t
-{
-    union u_t
-    {
-        struct
-        {
-            unsigned long long type : 2;
-            unsigned long long padding : 14;
-            unsigned long long port : 16;
-            unsigned long long ip : 32;
-        } v4; ///< \ref HOST_TYPE_IPV4
-        struct
-        {
-            unsigned long long type : 2;
-            unsigned long long uri : 62;
-        } uri; ///< \ref HOST_TYPE_URI
-        struct
-        {
-            unsigned long long type : 2;
-            unsigned long long group : 62; ///< dsn_group_t
-        } group;                           ///< \ref HOST_TYPE_GROUP
-        uint64_t value;
-    } u;
-} dsn_address_t;
-
-/*! translate from hostname to ipv4 in host machine order */
-extern DSN_API uint32_t dsn_ipv4_from_host(const char *name);
-
-/*! get local ipv4 according to the given network interface name */
-extern DSN_API uint32_t dsn_ipv4_local(const char *network_interface);
-
-/*! build a RPC address from given host name or IPV4 string, and port */
-extern DSN_API dsn_address_t dsn_address_build(const char *host, uint16_t port);
-
-/*! build a RPC address from a given ipv4 in host machine order and port */
-extern DSN_API dsn_address_t dsn_address_build_ipv4(uint32_t ipv4, uint16_t port);
-
-/*! build a RPC address from a group address (created using \ref dsn_group_build) */
-extern DSN_API dsn_address_t dsn_address_build_group(dsn_group_t g);
-
-/*! build a RPC address from a URI address (created using \ref dsn_uri_build) */
-extern DSN_API dsn_address_t dsn_address_build_uri(dsn_uri_t uri);
-
-/*! dump a RPC address to a meaningful string for logging purpose */
-extern DSN_API const char *dsn_address_to_string(dsn_address_t addr);
-
-/*! build URI address from a string URL, must be destroyed later using \ref dsn_uri_destroy */
-extern DSN_API dsn_uri_t dsn_uri_build(const char *url);
-
-/*! build URI address from another, must be destroyed later using \ref dsn_uri_destroy */
-extern DSN_API dsn_uri_t dsn_uri_clone(dsn_uri_t uri);
-
-/*! destroy a URI address */
-extern DSN_API void dsn_uri_destroy(dsn_uri_t uri);
-
-/*! build a group address with a name, must be destroyed later using \ref dsn_group_destroy */
-extern DSN_API dsn_group_t dsn_group_build(const char *name);
-
-/*! clone a group address from another, must be destroyed later using \ref dsn_group_destroy */
-extern DSN_API dsn_group_t dsn_group_clone(dsn_group_t g);
-
-/*! get the RPC address count contained in the group address */
-extern DSN_API int dsn_group_count(dsn_group_t g);
-
-/*! add an RPC address into the group address */
-extern DSN_API bool dsn_group_add(dsn_group_t g, dsn_address_t ep);
-
-/*! remove an RPC address into the group address */
-extern DSN_API bool dsn_group_remove(dsn_group_t g, dsn_address_t ep);
-
-/*! set an RPC address as the leader in the group address */
-extern DSN_API void dsn_group_set_leader(dsn_group_t g, dsn_address_t ep);
-
-/*! get leader from the group address */
-extern DSN_API dsn_address_t dsn_group_get_leader(dsn_group_t g);
-
-/*! check whether the given endpoint is the leader in the group */
-extern DSN_API bool dsn_group_is_leader(dsn_group_t g, dsn_address_t ep);
-
-/*! whether auto-update of the leader in rDSN runtime is allowed, default is true */
-extern DSN_API bool dsn_group_is_update_leader_automatically(dsn_group_t g);
-
-/*! set auto-update mode of the leader in rDSN runtime for this group address, true for yes */
-extern DSN_API void dsn_group_set_update_leader_automatically(dsn_group_t g, bool v);
-
-/*! get the next address in the group right after (circularly) given ep, if ep is invalid, a random
- * member is returned */
-extern DSN_API dsn_address_t dsn_group_next(dsn_group_t g, dsn_address_t ep);
-
-/*! set the next address after (circularly) the current leader as the group leader */
-extern DSN_API dsn_address_t dsn_group_forward_leader(dsn_group_t g);
-
-/*! destroy the group address object */
-extern DSN_API void dsn_group_destroy(dsn_group_t g);
-
-/*! get the primary address of the rpc engine attached to the current thread */
-extern DSN_API dsn_address_t dsn_primary_address();
-
-/*@}*/
-
-/*!
 @defgroup rpc-msg RPC Message Utilities
 
 RPC Message Utilities
@@ -592,6 +476,8 @@ rpc message read/write
 
 @{
 */
+
+extern DSN_API dsn::rpc_address dsn_primary_address();
 
 /*!
  create a rpc request message
@@ -685,19 +571,6 @@ typedef struct dsn_msg_options_t
     dsn_msg_context_t context; ///< see \ref dsn_msg_context_t
 } dsn_msg_options_t;
 
-/*! make sure type sizes match as we simply use uint64_t across language boundaries */
-inline void dsn_address_size_checker()
-{
-    static_assert(sizeof(dsn_address_t) == sizeof(uint64_t),
-                  "sizeof(dsn_address_t) must equal to sizeof(uint64_t)");
-
-    static_assert(sizeof(dsn_msg_context_t) == sizeof(uint64_t),
-                  "sizeof(dsn_msg_context_t) must equal to sizeof(uint64_t)");
-
-    static_assert(sizeof(dsn::gpid) == sizeof(uint64_t),
-                  "sizeof(dsn::gpid) must equal to sizeof(uint64_t)");
-}
-
 /*!
  set options for the given message
 
@@ -727,10 +600,10 @@ extern DSN_API size_t dsn_msg_body_size(dsn_message_t msg);
 extern DSN_API void *dsn_msg_rw_ptr(dsn_message_t msg, size_t offset_begin);
 
 /*! get from-address where the message is sent */
-extern DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg);
+extern DSN_API dsn::rpc_address dsn_msg_from_address(dsn_message_t msg);
 
 /*! get to-address where the message is sent to */
-extern DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg);
+extern DSN_API dsn::rpc_address dsn_msg_to_address(dsn_message_t msg);
 
 /*! get trace id of the message */
 extern DSN_API uint64_t dsn_msg_trace_id(dsn_message_t msg);
@@ -800,7 +673,7 @@ extern DSN_API void *dsn_rpc_unregiser_handler(dsn::task_code code,
 extern DSN_API void dsn_rpc_reply(dsn_message_t response, dsn::error_code err DEFAULT(dsn::ERR_OK));
 
 /*! forward the request to another server instead */
-extern DSN_API void dsn_rpc_forward(dsn_message_t request, dsn_address_t addr);
+extern DSN_API void dsn_rpc_forward(dsn_message_t request, dsn::rpc_address addr);
 
 /*@}*/
 
@@ -853,16 +726,16 @@ dsn_rpc_create_response_task_ex(dsn_message_t request,
                                 dsn_task_tracker_t tracker DEFAULT(nullptr));
 
 /*! client invokes the RPC call */
-extern DSN_API void dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call);
+extern DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn_task_t rpc_call);
 
 /*!
    client invokes the RPC call and waits for its response, note
    returned msg must be explicitly released using \ref dsn_msg_release_ref
  */
-extern DSN_API dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request);
+extern DSN_API dsn_message_t dsn_rpc_call_wait(dsn::rpc_address server, dsn_message_t request);
 
 /*! one-way RPC from client, no rpc response is expected */
-extern DSN_API void dsn_rpc_call_one_way(dsn_address_t server, dsn_message_t request);
+extern DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn_message_t request);
 
 /*!
  get response message from the response task, note
@@ -1006,7 +879,7 @@ extern DSN_API void dsn_file_write_vector(dsn_handle_t file,
  \param high_priority  true means copy in high priority.
  \param cb         callback aio task to be executed on completion
  */
-extern DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote,
+extern DSN_API void dsn_file_copy_remote_directory(dsn::rpc_address remote,
                                                    const char *source_dir,
                                                    const char *dest_dir,
                                                    bool overwrite,
@@ -1025,7 +898,7 @@ extern DSN_API void dsn_file_copy_remote_directory(dsn_address_t remote,
  \param high_priority  true means copy in high priority.
  \param cb           callback aio task to be executed on completion
  */
-extern DSN_API void dsn_file_copy_remote_files(dsn_address_t remote,
+extern DSN_API void dsn_file_copy_remote_files(dsn::rpc_address remote,
                                                const char *source_dir,
                                                const char **source_files,
                                                const char *dest_dir,

@@ -90,10 +90,10 @@ public:
             dsn::rpc_address next_addr = dsn::service_app::primary_address();
             if (next_addr.port() != TEST_PORT_END) {
                 next_addr.assign_ipv4(next_addr.ip(), next_addr.port() + 1);
-                ddebug("test_client_server, talk_to_others: %s", next_addr.to_std_string().c_str());
-                dsn_rpc_forward(message, next_addr.c_addr());
+                ddebug("test_client_server, talk_to_others: %s", next_addr.to_string());
+                dsn_rpc_forward(message, next_addr);
             } else {
-                ddebug("test_client_server, talk_to_me: %s", next_addr.to_std_string().c_str());
+                ddebug("test_client_server, talk_to_me: %s", next_addr.to_string());
                 reply(message, next_addr.to_std_string());
             }
         } else if (command == "expect_no_reply") {

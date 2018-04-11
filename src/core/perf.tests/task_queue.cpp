@@ -32,12 +32,12 @@
  *     2016-01-05, Tianyi Wang, first version
  */
 
-#include <dsn/cpp/address.h>
+#include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/aio_provider.h>
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/utility/priority_queue.h>
-#include "../core/group_address.h"
+#include <dsn/tool-api/group_address.h>
 #include <boost/lexical_cast.hpp>
 #include "test_utils.h"
 #include <mutex>

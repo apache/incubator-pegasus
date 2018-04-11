@@ -45,12 +45,13 @@
 
 #include "rpc_engine.h"
 #include "service_engine.h"
-#include "group_address.h"
-#include "uri_address.h"
-#include <dsn/tool-api/perf_counter.h>
 #include <dsn/utility/factory_store.h>
+#include <dsn/tool-api/perf_counter.h>
+#include <dsn/tool-api/group_address.h>
+#include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/task_queue.h>
 #include <dsn/cpp/serialization.h>
+#include <dsn/cpp/clientlet.h>
 #include <set>
 
 namespace dsn {
@@ -605,8 +606,8 @@ error_code rpc_engine::start(const service_app_spec &aspec, io_modifer &ctx)
     _uri_resolver_mgr.reset(new uri_resolver_manager());
 
     _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
-    _local_primary_address.c_addr_ptr()->u.v4.port =
-        aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id + ctx.port_shift_value;
+    _local_primary_address.set_port(aspec.ports.size() > 0 ? *aspec.ports.begin()
+                                                           : aspec.id + ctx.port_shift_value);
 
     ddebug("=== service_node=[%s], primary_address=[%s] ===",
            _node->full_name(),
@@ -760,15 +761,14 @@ void rpc_engine::call_uri(rpc_address addr, message_ex *request, rpc_response_ta
                                 ctask->add_ref(); // released later after dsn_rpc_call
 
                                 // sleep 10 milliseconds before retry
-                                tasking::enqueue(
-                                    LPC_RPC_DELAY_CALL,
-                                    nullptr,
-                                    [ server = req2->server_address.c_addr(), ctask ]() {
-                                        dsn_rpc_call(server, ctask);
-                                        ctask->release_ref(); // added when set-retry
-                                    },
-                                    0,
-                                    std::chrono::milliseconds(gap));
+                                tasking::enqueue(LPC_RPC_DELAY_CALL,
+                                                 nullptr,
+                                                 [ server = req2->server_address, ctask ]() {
+                                                     dsn_rpc_call(server, ctask);
+                                                     ctask->release_ref(); // added when set-retry
+                                                 },
+                                                 0,
+                                                 std::chrono::milliseconds(gap));
                                 return;
                             } else {
                                 derror("service access failed (%s), no more time for further "

@@ -177,7 +177,7 @@ void replica::response_client_message(bool is_read, dsn_message_t request, error
          "%s: reply client %s to %s, err = %s",
          name(),
          is_read ? "read" : "write",
-         dsn_address_to_string(dsn_msg_from_address(request)),
+         dsn_msg_from_address(request).to_string(),
          error.to_string());
 
     dsn_rpc_reply(dsn_msg_create_response(request), error);

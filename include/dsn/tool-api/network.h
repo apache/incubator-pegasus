@@ -38,7 +38,7 @@
 #include <dsn/tool-api/task.h>
 #include <dsn/utility/synchronize.h>
 #include <dsn/tool-api/message_parser.h>
-#include <dsn/cpp/address.h>
+#include <dsn/tool-api/rpc_address.h>
 #include <dsn/utility/exp_delay.h>
 #include <dsn/utility/dlib.h>
 #include <atomic>

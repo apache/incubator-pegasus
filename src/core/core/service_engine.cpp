@@ -37,7 +37,7 @@
 #include "task_engine.h"
 #include "disk_engine.h"
 #include "rpc_engine.h"
-#include "uri_address.h"
+#include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/env_provider.h>
 #include <dsn/tool-api/memory_provider.h>
 #include <dsn/tool-api/nfs.h>

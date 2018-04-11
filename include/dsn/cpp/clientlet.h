@@ -35,6 +35,7 @@
 
 #pragma once
 
+#include <dsn/service_api_c.h>
 #include <dsn/cpp/task_helper.h>
 #include <dsn/utility/function_traits.h>
 
@@ -274,7 +275,7 @@ task_ptr call(::dsn::rpc_address server,
 {
     task_ptr t = create_rpc_response_task(
         request, svc, std::forward<TCallback>(callback), reply_thread_hash);
-    dsn_rpc_call(server.c_addr(), t->native_handle());
+    dsn_rpc_call(server, t->native_handle());
     return t;
 }
 
@@ -350,7 +351,7 @@ void call_one_way_typed(::dsn::rpc_address server,
 {
     dsn_message_t msg = dsn_msg_create_request(code, 0, thread_hash, partition_hash);
     ::dsn::marshall(msg, req);
-    dsn_rpc_call_one_way(server.c_addr(), msg);
+    dsn_rpc_call_one_way(server, msg);
 }
 
 template <typename TResponse>

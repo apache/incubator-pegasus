@@ -33,6 +33,8 @@
  */
 #include <boost/lexical_cast.hpp>
 #include <dsn/utility/error_code.h>
+
+#include <dsn/tool-api/group_address.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <iostream>
@@ -143,16 +145,13 @@ std::string replication_ddl_client::list_hostname_from_ip_port(const char *ip_po
 
 replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_address> &meta_servers)
 {
-    _meta_server.assign_group(dsn_group_build("meta-servers"));
+    _meta_server.assign_group("meta-servers");
     for (auto &m : meta_servers) {
-        dsn_group_add(_meta_server.group_handle(), m.c_addr());
+        _meta_server.group_address()->add(m);
     }
 }
 
-replication_ddl_client::~replication_ddl_client()
-{
-    dsn_group_destroy(_meta_server.group_handle());
-}
+replication_ddl_client::~replication_ddl_client() {}
 
 dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_name,
                                                        int partition_count,

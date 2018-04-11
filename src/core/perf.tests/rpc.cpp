@@ -32,7 +32,7 @@
  * Revision history:
  *     2016-01-05, Tianyi Wang, first version
  */
-#include <dsn/cpp/address.h>
+#include <dsn/tool-api/rpc_address.h>
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include "test_utils.h"

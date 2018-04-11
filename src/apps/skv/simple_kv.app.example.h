@@ -57,7 +57,7 @@ public:
             return ::dsn::ERR_INVALID_PARAMETERS;
 
         // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
-        _server = url_host_address(args[1].c_str());
+        _server.assign_uri(args[1].c_str());
         _simple_kv_client.reset(new simple_kv_client2(_server));
 
         _timer = ::dsn::tasking::enqueue_timer(
@@ -120,7 +120,7 @@ public:
 
 private:
     ::dsn::task_ptr _timer;
-    ::dsn::url_host_address _server;
+    ::dsn::rpc_address _server;
     std::unique_ptr<simple_kv_client2> _simple_kv_client;
 };
 
@@ -138,7 +138,7 @@ public:
 
         // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
         rpc_address service_addr;
-        service_addr.assign_uri(dsn_uri_build(args[1].c_str()));
+        service_addr.assign_uri(args[1].c_str());
 
         _simple_kv_client.reset(new simple_kv_perf_test_client(service_addr));
         _simple_kv_client->start_test("simple_kv.perf-test.case", 3);

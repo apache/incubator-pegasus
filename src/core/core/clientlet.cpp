@@ -93,12 +93,8 @@ void copy_remote_files_impl(::dsn::rpc_address remote,
                             dsn_task_t native_task)
 {
     if (files.empty()) {
-        dsn_file_copy_remote_directory(remote.c_addr(),
-                                       source_dir.c_str(),
-                                       dest_dir.c_str(),
-                                       overwrite,
-                                       high_priority,
-                                       native_task);
+        dsn_file_copy_remote_directory(
+            remote, source_dir.c_str(), dest_dir.c_str(), overwrite, high_priority, native_task);
     } else {
         const char **ptr = (const char **)alloca(sizeof(const char *) * (files.size() + 1));
         const char **ptr_base = ptr;
@@ -107,7 +103,7 @@ void copy_remote_files_impl(::dsn::rpc_address remote,
         }
         *ptr = nullptr;
 
-        dsn_file_copy_remote_files(remote.c_addr(),
+        dsn_file_copy_remote_files(remote,
                                    source_dir.c_str(),
                                    ptr_base,
                                    dest_dir.c_str(),

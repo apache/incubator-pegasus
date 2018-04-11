@@ -119,14 +119,14 @@ DSN_API void dsn_msg_add_ref(dsn_message_t msg) { ((::dsn::message_ex *)msg)->ad
 
 DSN_API void dsn_msg_release_ref(dsn_message_t msg) { ((::dsn::message_ex *)msg)->release_ref(); }
 
-DSN_API dsn_address_t dsn_msg_from_address(dsn_message_t msg)
+DSN_API dsn::rpc_address dsn_msg_from_address(dsn_message_t msg)
 {
-    return ((::dsn::message_ex *)msg)->header->from_address.c_addr();
+    return ((::dsn::message_ex *)msg)->header->from_address;
 }
 
-DSN_API dsn_address_t dsn_msg_to_address(dsn_message_t msg)
+DSN_API dsn::rpc_address dsn_msg_to_address(dsn_message_t msg)
 {
-    return ((::dsn::message_ex *)msg)->to_address.c_addr();
+    return ((::dsn::message_ex *)msg)->to_address;
 }
 
 DSN_API uint64_t dsn_msg_trace_id(dsn_message_t msg)
@@ -214,6 +214,25 @@ message_ex::message_ex()
 
 message_ex::~message_ex()
 {
+    // coz message_header's memory is managed by vector "buffers", so its memory will be released
+    // after blobs in "buffers" are free.
+    //
+    // however, the message_header's object is constructed with placement new
+    // in prepare_buffer_header, so the destructor won't be called automatically with the
+    // "free of blobs in buffers".
+    //
+    // strictly speaking, we should call release_header_buffer to trigger message_header's
+    // destructor, but we can't do this as the message_header may be shared with other
+    // rpc_message objects if you call "copy_and_prepare_send".
+    //
+    // so here we simply skip the release_header_buffer. Notice this won't lead to any
+    // memory leak problem as the header's destructor is trival:
+    //      gpid -> we can treat it as POD type
+    //      rpc_address -> only ipv4, we can treat it as POD type
+    //
+    // Please refer to comments on message_header's definition for details
+
+    // release_header_buffer();
     if (!_is_read) {
         dassert(_rw_committed, "message write is not committed");
     }
@@ -288,14 +307,15 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
     dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
 
     // ATTENTION:
-    // - if this message is a written message, set copied message's write pointer to the end, then
-    // you
-    //   can continue to append data to the copied message.
+    // - if this message is a written message, set copied message's write pointer to the end,
+    //   then you can continue to append data to the copied message.
+    //
     // - if this message is a read message, set copied message's read pointer to the beginning,
     //   then you can read data from the beginning.
+    //
     // - if copy_for_receive is set, it means that we want to make a receiving message from a
-    // sending message.
-    //   which is usually useful when you want to write mock for modules which use rpc.
+    //   sending message. which is usually useful when you want to
+    //   write mock for modules which use rpc.
 
     message_ex *msg = new message_ex();
     msg->to_address = to_address;
@@ -465,7 +485,18 @@ void message_ex::prepare_buffer_header()
     this->_rw_offset = (int)sizeof(message_header);
     this->buffers.push_back(buffer);
 
+    // here we should call placement new,
+    // so the gpid & rpc_address can be initialized
+    new (ptr)(message_header);
+
     header = (message_header *)ptr;
+}
+
+void message_ex::release_buffer_header()
+{
+    // we should call destructor explicitly
+    // as the header is constructed with placement new, see@prepare_buffer_header
+    header->~message_header();
 }
 
 void message_ex::write_next(void **ptr, size_t *size, size_t min_size)

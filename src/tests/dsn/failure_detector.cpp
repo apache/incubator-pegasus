@@ -256,7 +256,7 @@ void worker_set_leader(test_worker *worker, int leader_contact)
 
 void clear(test_worker *worker, std::vector<test_master *> masters)
 {
-    rpc_address leader = dsn_group_get_leader(worker->fd()->get_servers().group_handle());
+    rpc_address leader = worker->fd()->get_servers().group_address()->leader();
 
     config_master_message msg;
     msg.master = leader;

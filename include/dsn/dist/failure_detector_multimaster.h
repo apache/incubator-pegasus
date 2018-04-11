@@ -35,6 +35,7 @@
 
 #pragma once
 
+#include <dsn/tool-api/group_address.h>
 #include <dsn/dist/failure_detector.h>
 #include <dsn/cpp/zlocks.h>
 #include <functional>
@@ -81,7 +82,7 @@ private:
 inline ::dsn::rpc_address slave_failure_detector_with_multimaster::current_server_contact() const
 {
     service::zauto_lock l(failure_detector::_lock);
-    return dsn_group_get_leader(_meta_servers.group_handle());
+    return _meta_servers.group_address()->leader();
 }
 }
 } // end namespace

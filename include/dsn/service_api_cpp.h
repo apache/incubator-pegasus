@@ -46,5 +46,5 @@
 #include <dsn/cpp/clientlet.h>
 #include <dsn/cpp/serverlet.h>
 #include <dsn/cpp/service_app.h>
-#include <dsn/cpp/address.h>
+#include <dsn/tool-api/rpc_address.h>
 #include <dsn/cpp/perf_test_helper.h>

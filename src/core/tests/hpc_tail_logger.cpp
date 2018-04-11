@@ -44,7 +44,7 @@
 #include <dsn/utility/priority_queue.h>
 #include <dsn/tool-api/command_manager.h>
 
-#include "../core/group_address.h"
+#include <dsn/tool-api/group_address.h>
 #include "test_utils.h"
 #include "../core/service_engine.h"
 #include "../tools/hpc/hpc_tail_logger.h"

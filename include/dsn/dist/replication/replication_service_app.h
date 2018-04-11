@@ -35,6 +35,7 @@
 
 #pragma once
 
+#include <dsn/utility/autoref_ptr.h>
 #include <dsn/cpp/service_app.h>
 
 dsn::error_code dsn_layer2_stateful_type1_bridge(int argc, char **argv);

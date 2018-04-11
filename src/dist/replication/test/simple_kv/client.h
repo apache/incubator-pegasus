@@ -61,7 +61,7 @@ public:
 private:
     std::unique_ptr<simple_kv_client> _simple_kv_client;
     rpc_address _meta_server_group;
-    url_host_address _service_addr;
+    rpc_address _service_addr;
 };
 }
 }

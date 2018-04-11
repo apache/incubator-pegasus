@@ -160,7 +160,7 @@ bool command_manager::run_command(const std::string &cmd,
             rcmd.cmd = cmd;
             rcmd.arguments = args;
             ::dsn::marshall(msg, rcmd);
-            auto resp = dsn_rpc_call_wait(h->address.c_addr(), msg);
+            auto resp = dsn_rpc_call_wait(h->address, msg);
             if (resp != nullptr) {
                 ::dsn::unmarshall(resp, output);
                 return true;
