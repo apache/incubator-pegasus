@@ -293,12 +293,12 @@ class backup_service
 public:
     struct backup_opt
     {
-        uint64_t meta_retry_delay_ms;
-        uint64_t block_retry_delay_ms;
-        uint64_t app_dropped_retry_delay_ms;
-        uint64_t reconfiguration_retry_delay_ms;
-        uint64_t request_backup_period_ms; // period that meta send backup command to replica
-        uint64_t issue_backup_interval_ms; // interval that meta try to issue a new backup
+        std::chrono::milliseconds meta_retry_delay_ms;
+        std::chrono::milliseconds block_retry_delay_ms;
+        std::chrono::milliseconds app_dropped_retry_delay_ms;
+        std::chrono::milliseconds reconfiguration_retry_delay_ms;
+        std::chrono::milliseconds request_backup_period_ms; // period that meta send backup command to replica
+        std::chrono::milliseconds issue_backup_interval_ms; // interval that meta try to issue a new backup
     };
 
     typedef std::function<std::shared_ptr<policy_context>(backup_service *)> policy_factory;

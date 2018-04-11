@@ -190,9 +190,9 @@ void meta_service_test_app::policy_context_test()
     server_state *state = s->_state.get();
     s->_started = true;
     s->_backup_handler = std::make_shared<backup_service>(s.get(), policy_root, ".", nullptr);
-    s->_backup_handler->backup_option().app_dropped_retry_delay_ms = 500;
-    s->_backup_handler->backup_option().request_backup_period_ms = 20;
-    s->_backup_handler->backup_option().issue_backup_interval_ms = 1000;
+    s->_backup_handler->backup_option().app_dropped_retry_delay_ms = 500_ms;
+    s->_backup_handler->backup_option().request_backup_period_ms = 20_ms;
+    s->_backup_handler->backup_option().issue_backup_interval_ms = 1000_ms;
     s->_storage
         ->create_node(
             policy_root, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
