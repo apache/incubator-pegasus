@@ -214,19 +214,25 @@ message_ex::message_ex()
 
 message_ex::~message_ex()
 {
-    // when receiving a request, the lifetime of message_header object is managed by
-    // vector "buffers" (see@create_receive_message function).
-    // if you call copy_and_prepare_send() function, then a new request will be created,
-    // but new request shares the same header with the old_request.
-    // so if old_request releases header,
-    // then new request's header will be invalid.
+    // coz message_header's memory is managed by vector "buffers", so its memory will be released
+    // after blobs in "buffers" are free.
     //
-    // so we don't call release_buffer_header().
-    // however, this won't lead to any memory leak problems coz we can TREAT message_header
-    // as a POD type (the constructors of gpid and rpc_address are trival)
-    // see@ Attention of message_header
+    // however, the message_header's object is constructed with placement new
+    // in prepare_buffer_header, so the destructor won't be called automatically with the
+    // "free of blobs in buffers".
+    //
+    // strictly speaking, we should call release_header_buffer to trigger message_header's
+    // destructor, but we can't do this as the message_header may be shared with other
+    // rpc_message objects if you call "copy_and_prepare_send".
+    //
+    // so here we simply skip the release_header_buffer. Notice this won't lead to any
+    // memory leak problem as the header's destructor is trival:
+    //      gpid -> we can treat it as POD type
+    //      rpc_address -> only ipv4, we can treat it as POD type
+    //
+    // Please refer to comments on message_header's definition for details
 
-    // release_buffer_header();
+    // release_header_buffer();
     if (!_is_read) {
         dassert(_rw_committed, "message write is not committed");
     }

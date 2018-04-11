@@ -80,9 +80,9 @@ typedef struct message_header
     dsn_msg_context_t context;
 
     // Attention:
-    //      here, from_address must be IPv4 address, namely we can regard from_address as a
-    //      POD-type structure, so no memory-leak will occur even if we don't call it's
-    //      destructor.
+    // here, from_address must be IPv4 address, namely we can regard from_address as a
+    // POD-type structure, so no memory-leak will occur even if we don't call it's
+    // destructor.
     //
     // generally, it is the from_node's primary address, except the
     // case described in message_ex::create_response()'s ATTENTION comment.
@@ -113,8 +113,13 @@ class message_ex : public ref_counter,
 {
 public:
     message_header *header;
-    std::vector<blob> buffers; // header included for *send* message,
-                               // header not included for *recieved*
+    // "buffers" are used to manage memory allocated for this message.
+    // the memory used by "header" is also mamanged in "buffers".
+    //
+    // please see "create_request", "create_recieve_message",
+    // "create_receive_message_with_standalone_header" for the details on
+    // how the headers managed by buffer
+    std::vector<blob> buffers;
 
     // by rpc and network
     rpc_session_ptr io_session; // send/recv session
