@@ -87,7 +87,8 @@ Connection.prototype._handleClose = function(){
     this.emit('close');
     let err = this._closeError || this._socketError;
     if (!err) {
-        err = new Exception.ConnectionClosedException(this.name + ' closed with no error.');
+        // err = new Exception.ConnectionClosedException(this.name + ' closed with no error.');
+        err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' closed with no error.');
         log.debug(err.message);
     }
     this._cleanupRequests(err);
@@ -100,11 +101,23 @@ Connection.prototype._handleClose = function(){
  * @emit {ConnectionClosedException} socket error
  */
 Connection.prototype._handleError = function (err) {
-    log.info(err);
-    err = new Exception.ConnectionClosedException(this.name + ' error: ' + err.message);
+    let errorName = 'ConnectionError';
+    if (err.message.indexOf('ECONNREFUSED') >= 0) {
+        errorName = 'ConnectionRefusedException';
+        err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
+    }else if (err.message.indexOf('ECONNRESET') >= 0 || err.message.indexOf('This socket is closed') >= 0) {
+        errorName = 'ConnectionResetException';
+        err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
+        // console.log('error code is %d', err.err_code);
+    }else{
+        err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
+        // err = new Exception.ConnectionClosedException(this.name + ' error: ' + errorName + ', ' + err.message);
+    }
+
     log.error(err.message);
     this._socketError = err;
-    if (!this._connected) {
+    if (!this._connected) { //handle connection closed
+        this.connectError = err;
         this.emit('connectError', err);
     }
     this._cleanupRequests(err);
@@ -121,7 +134,7 @@ Connection.prototype._cleanupRequests = function(err){
     if(requests.length === 0){
         return;
     }
-    this.requests = {};
+    this.requests = [];
     for(let id in requests){
         let request = requests[id];
         request.setException(err);
@@ -164,12 +177,31 @@ Connection.prototype.getResponse = function(){
                     let entry = request.entry;
                     entry.operator.rpc_error = ec;
                     if (ErrorType[ec.errno] === ErrorType.ERR_OK) {
+                        // if(self.name === 'Connection(127.0.0.1:34601)#1') {
+                        //     console.log('current time is %d, request id is %d, length is %d', Date.now(), request.id, self.requests.length);
+                        //     console.log(transport_with_data);
+                        // }
                         entry.operator.recv_data(protocol);
                     } else {
                         log.error('Request failed, error code is %s', entry.operator.rpc_error.errno);
                     }
                     transport_with_data.commitPosition();
                     request.setResponse(entry.operator.response);
+
+
+                    // if(self.name === 'Connection(127.0.0.1:34601)#1'){
+                    //
+                    //     let op = entry.operator;
+                    //     let i, len = op.response.partitions.length;
+                    //     for(i = 0; i < len; ++i){
+                    //         let partition = op.response.partitions[i];
+                    //         let primary_addr = partition.primary;
+                    //         console.log('pid %d, address %s:%s',partition.pid.get_pidx(), primary_addr.host, primary_addr.port);
+                    //     }
+                    //
+                    // }
+
+
                 } else {
                     log.error('%s Request#%d does not exist, maybe timeout', self.name, msgHeader.rseqid);
                 }
@@ -328,6 +360,9 @@ Request.prototype.setException = function(err){
         log.error('%s request#%d error %s', this.connection.name, this.id, err.message);
     }
     this.error = err;
+    if(err.err_type === 'ERR_SESSION_RESET'){
+        this.entry.operator.rpc_error = new ErrorCode({'errno' : 'ERR_SESSION_RESET'});
+    }
     this.callComplete();
 };
 

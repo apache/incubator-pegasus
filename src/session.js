@@ -36,14 +36,18 @@ Cluster.prototype.close = function(){
     let connection;
     for(i = 0; i < len; ++i){
         connection = this.replicaSessions[i].value.connection;
-        connection.emit('close');
+        if(connection) {
+            connection.emit('close');
+        }
     }
     log.debug('Finish to close replica sessions');
 
     len = this.metaSession.metaList.length;
     for(i = 0; i < len; ++i){
         connection = this.metaSession.metaList[i];
-        connection.emit('close');
+        if(connection) {
+            connection.emit('close');
+        }
     }
     log.debug('Finish to close meta sessions');
 };
@@ -79,8 +83,8 @@ Session.prototype.getConnection = function(args, callback){
     let sync = true, error = null;
     connection.once('connectError', function(err){
         connection.emit('close');
-        sync = false;
         error = err;
+        sync = false;
     });
     connection.once('connect', function(){
         sync = false;
@@ -108,6 +112,8 @@ function MetaSession(args){ //todo: getConnection callback
     this.metaList = [];
     this.curLeader = 0;
     this.maxRetryCounter = 5;
+    this.roundQueue = [];
+    this.isQuery = false;
 
     let i;
     let self = this;
@@ -148,6 +154,7 @@ MetaSession.prototype.query = function(round){
             this.onFinishQueryMeta(err, round);
         }.bind(this));
         round.lastConnection.call(entry);
+        //console.log('%s will handle querying meta request', round.lastConnection.name);
     }else{
         log.error('There is no meta session exist');
     }
@@ -178,12 +185,19 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
 
     round.maxQueryCount--;
     if(round.maxQueryCount === 0){
-        round.callback(err, op);
+        // round.callback(err, op);
+        this.completeQueryMeta(err, round);
         return;
     }
 
     let rpcErr = op.rpc_error.errno;
     let metaErr = ErrorType.ERR_UNKNOWN;
+
+    // if(ErrorType[rpcErr] !== ErrorType.ERR_OK) {
+    //     console.log(rpcErr);
+    // }
+
+
     if(ErrorType[rpcErr] === ErrorType.ERR_OK){
         metaErr = op.response.err.errno;
         if(ErrorType[metaErr] === ErrorType.ERR_SERVICE_NOT_ACTIVE){   //meta server may be not ready, need to retry later
@@ -193,7 +207,16 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
             needDelay = false;
             needSwitch = true;
         }else{
-            round.callback(err, op);
+            // round.callback(err, op);
+
+            // let i, len = op.response.partitions.length;
+            // for(i = 0; i < len; ++i){
+            //     let partition = op.response.partitions[i];
+            //     let primary_addr = partition.primary;
+            //     console.log('pid %d, address %s:%s',partition.pid.get_pidx(), primary_addr.host, primary_addr.port);
+            // }
+
+            this.completeQueryMeta(err, round);
             return;
         }
     }else if(ErrorType[rpcErr] === ErrorType.ERR_SESSION_RESET || ErrorType[rpcErr] === ErrorType.ERR_TIMEOUT){
@@ -201,7 +224,8 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
         needSwitch = true;
     }else{
         log.error('Unknown error while query meta, %s', rpcErr);
-        round.callback(err, op);
+        // round.callback(err, op);
+        this.completeQueryMeta(err, round);
         return;
     }
 
@@ -211,10 +235,16 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
         rpcErr,
         metaErr);
 
+    // console.log('current leader is %d, connection is %s', this.curLeader, round.lastConnection.name);
+    log.info('current leader is %d, connection is %s', this.curLeader, round.lastConnection.name);
+
     if (needSwitch && this.metaList[this.curLeader] === round.lastConnection) {
         this.curLeader = (this.curLeader + 1) % this.metaList.length;
     }
     round.lastConnection = this.metaList[this.curLeader];
+
+    // console.log('next leader is %d, connection is %s, query count is %d', this.curLeader, round.lastConnection.name, round.maxQueryCount);
+    log.info('next leader is %d, connection is %s, query count is %d', this.curLeader, round.lastConnection.name, round.maxQueryCount);
 
     let fun = function(){
         self.query(round);
@@ -224,6 +254,19 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
     }else{
         this.query(round);
     }
+};
+
+MetaSession.prototype.completeQueryMeta = function(err, round){
+    let op = round.operator;
+    round.callback(err, op);
+
+    let len = this.roundQueue.length, i;
+    // console.log('%d requests for querying meta will return', len);
+    for(i = 0; i < len; ++i){
+        this.roundQueue[i].callback(err, op);
+    }
+    this.roundQueue = [];
+    this.isQuery = false;
 };
 
 /**
@@ -236,6 +279,7 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
  */
 function ReplicaSession(args){
     ReplicaSession.super_.call(this, args, this.constructor);
+    this.operatorQueue  = [];
 
     if(!args || !args.address){
         log.error('Invalid params, Missing rpc address while creating replica session');
@@ -266,6 +310,55 @@ ReplicaSession.prototype.operate = function(round){
         this.onRpcReply(err, round);
     }.bind(this));
     this.connection.call(entry);
+};
+
+//TODO: testing
+ReplicaSession.prototype.handleConnectedError = function(tableHandler, address){
+    // 1. get requests in queue
+    let oriConnection = this.connection, needQueryMeta = false;
+    // if(requests.length > 0){
+    //     for(let id in requests){
+    //         let request = requests[id];
+    //         this.operatorQueue.push(request.entry.operator);
+    //     }
+    // }
+    // console.log('origin queue length is %d, current queue length is %d', requests.length, this.operatorQueue.length);
+    // this.connection.requests = [];
+
+    // 2. create new connection
+    let self = this;
+    this.getConnection({
+        'rpc_address' : address,
+    },function(err, connection){
+        if(err === null && connection !== null) {
+            self.connection = connection;
+            //console.log('%s build!', connection.name);
+            log.info('%s build!', connection.name);
+            self.retryRequests(tableHandler);
+            oriConnection.emit('close');
+        }else{
+            log.error('Failed to get replica connection, %s', err.message);
+            needQueryMeta = true;
+        }
+    });
+
+    // 3. retry = false
+    this.retry = false;
+    return needQueryMeta;
+};
+
+ReplicaSession.prototype.retryRequests = function(tableHandler){
+    let len = this.operatorQueue.length , i;
+    if(len > 0) {
+        // console.log('%d request ready to retry', len);
+        log.info('%d request ready to retry', len);
+        for (i = 0; i < len; ++i) {   //retry requests
+            let opRetry = this.operatorQueue[i];
+            let clientRoundRetry = new ClientRequestRound(tableHandler, opRetry, opRetry.handleResult.bind(opRetry));
+            this.operate(clientRoundRetry);
+        }
+        this.operatorQueue = [];
+    }
 };
 
 
@@ -302,15 +395,19 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
             op.pid.get_app_id(),
             op.pid.get_pidx(),
             op.rpc_error.errno);
-        round.callback(new Exception.RPCException('ERR_INVALID_DATA',
-            'Failed to query replica server, error is ' + 'ERR_INVALID_DATA'
-        ), op);
-        return;
+        break;
+        // round.callback(new Exception.RPCException('ERR_INVALID_DATA',
+        //     'Failed to query replica server, error is ' + 'ERR_INVALID_DATA'
+        // ), op);
+        // return;
     case ErrorType.ERR_SESSION_RESET:
     case ErrorType.ERR_OBJECT_NOT_FOUND: // replica server doesn't serve this gpid
     case ErrorType.ERR_INVALID_STATE:    // replica server is not primary
-        log.warn('Table %s: replica server not serve for gpid(%d, %d), err_code is %s',
+        //console.log(round);
+        log.warn('%d, Table %s: hashKey is %s, replica server not serve for gpid(%d, %d), err_code is %s',
+            Date.now(),
             round.tableHandler.tableName,
+            op.hashKey || new Buffer(''),
             op.pid.get_app_id(),
             op.pid.get_pidx(),
             op.rpc_error.errno);
@@ -330,11 +427,12 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
             op.pid.get_app_id(),
             op.pid.get_pidx(),
             op.rpc_error.errno);
-        round.callback(new Exception.RPCException(ErrorType[op.rpc_error.errno],
-            'Failed to query replica server, error is ' + ErrorType[op.rpc_error.errno]
-        ), op);
-        //round.callback(err, op);
-        return;
+        break;
+        // round.callback(new Exception.RPCException(ErrorType[op.rpc_error.errno],
+        //     'Failed to query replica server, error is ' + ErrorType[op.rpc_error.errno]
+        // ), op);
+        // round.callback(err, op);
+        // return;
     }
 
     if(needQueryMeta){
@@ -346,13 +444,40 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
         round.tableHandler.queryMeta(round.tableHandler.tableName, round.tableHandler.onUpdateResponse.bind(round.tableHandler));
     }
 
-    if(op.timeout > 0) {
-        this.operate(round);
-    }else{
-        let err_type = 'ERR_TIMEOUT';
-        round.callback(new Exception.RPCException(err_type,
-            'Failed to query server, error is ' + err_type
-        ), op);
+    this.tryRetry(err, round);
+    // if(op.timeout > 0) {
+    //     this.operate(round);
+    // }else{
+    //     let err_type = 'ERR_TIMEOUT';
+    //     round.callback(new Exception.RPCException(err_type,
+    //         'Failed to query server, error is ' + err_type
+    //     ), op);
+    // }
+};
+
+ReplicaSession.prototype.tryRetry = function(err, round){
+    let op = round.operator;
+    let self = this;
+    let delayTime = op.timeout > 3 ? op.timeout / 3 : 1;
+    if(op.timeout - delayTime > 0){
+        //console.log('hashKey %s will retry after %dms, error_code is %s', op.hashKey, delayTime, op.rpc_error.errno);
+        //console.log('hashKey %s current timeout is %dms, should be set %dms', op.hashKey, op.timeout, op.timeout-delayTime);
+        op.timeout -= delayTime;
+        round.operator = op;
+        setTimeout(function(){
+            self.operate(round);
+        }, delayTime);
+    }else {
+        if (ErrorType[op.rpc_error.errno] === ErrorType.ERR_UNKNOWN) {
+            op.rpc_error.errno = ErrorType.ERR_TIMEOUT;
+            round.callback(new Exception.RPCException('ERR_TIMEOUT', err.message), op);
+        }
+        // else{
+        //     round.callback(err, op);
+        // }
+        else {
+            round.callback(new Exception.RPCException(op.rpc_error.errno, 'Failed to query server, error is ' + op.rpc_error.errno), op);
+        }
     }
 
 };
