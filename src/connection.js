@@ -43,7 +43,7 @@ function Connection (options) {
     this.out = null;
     this._connected = false;
     this._requestNums = 0;
-    this.requests = []; //current active requests
+    this.requests = {}; //current active requests
 
     this.transport = options.transport || thrift.TBufferedTransport;
     this.protocol = options.protocol || thrift.TBinaryProtocol;
@@ -108,7 +108,6 @@ Connection.prototype._handleError = function (err) {
     }else if (err.message.indexOf('ECONNRESET') >= 0 || err.message.indexOf('This socket is closed') >= 0) {
         errorName = 'ConnectionResetException';
         err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
-        // console.log('error code is %d', err.err_code);
     }else{
         err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
         // err = new Exception.ConnectionClosedException(this.name + ' error: ' + errorName + ', ' + err.message);
@@ -131,10 +130,10 @@ Connection.prototype._handleError = function (err) {
 Connection.prototype._cleanupRequests = function(err){
     let count = 0;
     let requests = this.requests;
-    if(requests.length === 0){
-        return;
-    }
-    this.requests = [];
+    // if(requests.length === 0){
+    //     return;
+    // }
+    this.requests = {};
     for(let id in requests){
         let request = requests[id];
         request.setException(err);
@@ -177,30 +176,12 @@ Connection.prototype.getResponse = function(){
                     let entry = request.entry;
                     entry.operator.rpc_error = ec;
                     if (ErrorType[ec.errno] === ErrorType.ERR_OK) {
-                        // if(self.name === 'Connection(127.0.0.1:34601)#1') {
-                        //     console.log('current time is %d, request id is %d, length is %d', Date.now(), request.id, self.requests.length);
-                        //     console.log(transport_with_data);
-                        // }
                         entry.operator.recv_data(protocol);
                     } else {
                         log.error('Request failed, error code is %s', entry.operator.rpc_error.errno);
                     }
                     transport_with_data.commitPosition();
                     request.setResponse(entry.operator.response);
-
-
-                    // if(self.name === 'Connection(127.0.0.1:34601)#1'){
-                    //
-                    //     let op = entry.operator;
-                    //     let i, len = op.response.partitions.length;
-                    //     for(i = 0; i < len; ++i){
-                    //         let partition = op.response.partitions[i];
-                    //         let primary_addr = partition.primary;
-                    //         console.log('pid %d, address %s:%s',partition.pid.get_pidx(), primary_addr.host, primary_addr.port);
-                    //     }
-                    //
-                    // }
-
 
                 } else {
                     log.error('%s Request#%d does not exist, maybe timeout', self.name, msgHeader.rseqid);
@@ -260,9 +241,9 @@ Connection.prototype.call = function(entry){
         return this._handleClose();
     }
 
-    // rpcRequest.on('timeout', function(){
-    //     delete self.requests[rpcRequest.id];
-    // });
+    rpcRequest.on('timeout', function(){
+        delete self.requests[rpcRequest.id];
+    });
 
     this.sendRequest(rpcRequest);
 };

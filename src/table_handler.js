@@ -66,7 +66,7 @@ TableHandler.prototype.queryMeta = function(tableName, callback){
 
     if(session.isQuery){
         session.roundQueue.push(round);
-        log.info('%d requests is waiting', session.roundQueue.length);
+        // log.info('%d requests is waiting', session.roundQueue.length);
         // console.log('%d requests is waiting', session.roundQueue.length);
     }else{
         session.isQuery = true;
@@ -83,26 +83,15 @@ TableHandler.prototype.queryMeta = function(tableName, callback){
  */
 TableHandler.prototype.onUpdateResponse = function(err, op){
     let response = op.response;
-    //let err_type = response.err.errno;
 
     if(err === null && ErrorType[response.err.errno] === ErrorType.ERR_OK){
         this.updateResponse(this.queryCfgResponse, response);
-        // if(this.callback instanceof Function){
-        //     this.callback(null, this);
-        // }
-        // console.log(this);
         this.callback(null, this);
     }else if(err === null){
-        // console.log('2-----response is not err_ok');
-        // console.log(response);
-
         this.callback(new Exception.MetaException(
             response.err.errno, 'Failed to query meta server, error is ' + response.err.errno
         ), null);
     }else{
-        // console.log('3-----err is not null');
-        // console.log(err);
-
         this.callback(err, null);
     }
 };
@@ -126,7 +115,6 @@ TableHandler.prototype.updateResponse = function(oldResp, newResp){
         let partition = newResp.partitions[i];
         let primary_addr = partition.primary;
         this.partitions[partition.pid.get_pidx()] = primary_addr;
-        //console.log('pid %d, address %s:%s',partition.pid.get_pidx(), primary_addr.host, primary_addr.port);
 
         if(tools.isAddrExist(connected_rpc, primary_addr) === true){
             continue;
@@ -154,59 +142,31 @@ TableHandler.prototype.operate = function(gpid, op){
     let pidx = gpid.get_pidx();
     let address = this.partitions[pidx];
     let session = tools.findSessionByAddr(this.cluster.replicaSessions, address);
-    let self = this;
+    //let self = this;
 
     if(session === null || session === undefined){ //TODO: check when to meet this situation
         log.error('Replica session not exist');
         return;
     }
 
-    let hashKey = op.hashKey;
+    //let hashKey = op.hashKey;
     if(session.retry){ // others are reconnecting this session
         // console.log('%s is waiting', hashKey);
-        log.info('%s is waiting', hashKey);
+        // log.info('%s is waiting', hashKey);
         session.operatorQueue.push(op);
     }else if(session.connection.connectError){ // connection has connected error
         // console.log('%s is retrying', hashKey);
-        log.info('%s is retrying', hashKey);
+        // log.info('%s is retrying', hashKey);
         session.retry = true;
         session.operatorQueue.push(op);
         if(session.handleConnectedError(this, address)){
             this.queryMeta(this.tableName, this.onUpdateResponse.bind(this));
         }
-
-        // let len = session.operatorQueue.length , i;
-        // for(i = 0; i < len; ++i){   //retry requests
-        //     let opRetry = session.operatorQueue[i];
-        //     let clientRoundRetry = new ClientRequestRound(this, opRetry, opRetry.handleResult.bind(opRetry));
-        //     session.operate(clientRoundRetry);
-        // }
     }else {
         // connection is normal
         let clientRound = new ClientRequestRound(this, op, op.handleResult.bind(op));
         session.operate(clientRound);
-        // let len = session.operatorQueue.length , i;
-        // if(len > 0) {
-        //     for (i = 0; i < len; ++i) {   //retry requests
-        //         let opRetry = session.operatorQueue[i];
-        //         let clientRoundRetry = new ClientRequestRound(this, opRetry, opRetry.handleResult.bind(opRetry));
-        //         session.operate(clientRoundRetry);
-        //     }
-        //     session.operatorQueue = [];
-        // }
     }
-
-
-
-    // if(session && !session.connection.connectError){
-    //     let clientRound = new ClientRequestRound(this, op, op.handleResult.bind(op));
-    //     session.operate(clientRound);
-    // }else if(session.connection.connectError){ //connection is unhealthy
-    //     session.handleConnectedError(address);
-    // }else{
-    //     //TODO: handle error
-    //     log.error('Replica session not exist');
-    // }
 };
 
 /**
@@ -321,17 +281,18 @@ TableInfo.prototype.batchGetPromise = function(argsArray, callback){
     for(i = 0; i < len; ++i){
         tasks.push(new Promise(function(resolve){
 
-            let start = Date.now();
-            let hashKey = argsArray[i].hashKey;
+            // let start = Date.now();
+            // let hashKey = argsArray[i].hashKey;
             self.get(argsArray[i], function(err, result){
-                if(err === null){
-                    // console.log('hashKey %s use time %s~%s, %dms', hashKey, start, Date.now(), Date.now()-start);
-                    log.info('hashKey %s use time %s~%s, %dms', hashKey, start, Date.now(), Date.now()-start);
-                }else{
-                    // console.log('hashKey %s', hashKey);
-                    log.info('hashKey %s', hashKey);
-                    log.error('error name is %s, type is %s, message is %s', err.name, err.err_type, err.message);
-                }
+                // if(err === null){
+                //     console.log('hashKey %s use time %s~%s, %dms', hashKey, start, Date.now(), Date.now()-start);
+                //     // log.info('hashKey %s use time %s~%s, %dms', hashKey, start, Date.now(), Date.now()-start);
+                // }else{
+                //     console.log('hashKey %s', hashKey);
+                //     console.log(err);
+                //     // log.info('hashKey %s', hashKey);
+                //     // log.error('error name is %s, type is %s, message is %s', err.name, err.err_type, err.message);
+                // }
                 resolve({'error' : err, 'data' : result});
             });
         }));

@@ -106,7 +106,7 @@ Session.prototype.getConnection = function(args, callback){
  * @constructor
  * @extends Session
  */
-function MetaSession(args){ //todo: getConnection callback
+function MetaSession(args){
     MetaSession.super_.call(this, args, this.constructor);
 
     this.metaList = [];
@@ -170,22 +170,10 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
     let needSwitch = false, needDelay = false;
     let self = this;
 
-    // if(op.timeout <= 0){
-    //     let err_type = 'ERR_TIMEOUT';
-    //     round.callback(new Exception.MetaException(err_type,
-    //         'Failed to query meta server, error is ' + err_type
-    //     ), op);
-    //     return;
-    // }
-
-    //todo: test for timeout query meta
-    // if(round.maxQueryCount === 5){
-    //     op.rpc_error.errno = 'ERR_TIMEOUT';
-    // }
-
     round.maxQueryCount--;
     if(round.maxQueryCount === 0){
         // round.callback(err, op);
+        // console.log('try query meta exceed, current leader is %d, %s',);
         this.completeQueryMeta(err, round);
         return;
     }
@@ -209,13 +197,6 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
         }else{
             // round.callback(err, op);
 
-            // let i, len = op.response.partitions.length;
-            // for(i = 0; i < len; ++i){
-            //     let partition = op.response.partitions[i];
-            //     let primary_addr = partition.primary;
-            //     console.log('pid %d, address %s:%s',partition.pid.get_pidx(), primary_addr.host, primary_addr.port);
-            // }
-
             this.completeQueryMeta(err, round);
             return;
         }
@@ -236,7 +217,7 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
         metaErr);
 
     // console.log('current leader is %d, connection is %s', this.curLeader, round.lastConnection.name);
-    log.info('current leader is %d, connection is %s', this.curLeader, round.lastConnection.name);
+    // log.info('current leader is %d, connection is %s', this.curLeader, round.lastConnection.name);
 
     if (needSwitch && this.metaList[this.curLeader] === round.lastConnection) {
         this.curLeader = (this.curLeader + 1) % this.metaList.length;
@@ -244,7 +225,7 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
     round.lastConnection = this.metaList[this.curLeader];
 
     // console.log('next leader is %d, connection is %s, query count is %d', this.curLeader, round.lastConnection.name, round.maxQueryCount);
-    log.info('next leader is %d, connection is %s, query count is %d', this.curLeader, round.lastConnection.name, round.maxQueryCount);
+    // log.info('next leader is %d, connection is %s, query count is %d', this.curLeader, round.lastConnection.name, round.maxQueryCount);
 
     let fun = function(){
         self.query(round);
@@ -332,8 +313,8 @@ ReplicaSession.prototype.handleConnectedError = function(tableHandler, address){
     },function(err, connection){
         if(err === null && connection !== null) {
             self.connection = connection;
-            //console.log('%s build!', connection.name);
-            log.info('%s build!', connection.name);
+            // console.log('%s build!', connection.name);
+            // log.info('%s build!', connection.name);
             self.retryRequests(tableHandler);
             oriConnection.emit('close');
         }else{
@@ -351,7 +332,7 @@ ReplicaSession.prototype.retryRequests = function(tableHandler){
     let len = this.operatorQueue.length , i;
     if(len > 0) {
         // console.log('%d request ready to retry', len);
-        log.info('%d request ready to retry', len);
+        // log.info('%d request ready to retry', len);
         for (i = 0; i < len; ++i) {   //retry requests
             let opRetry = this.operatorQueue[i];
             let clientRoundRetry = new ClientRequestRound(tableHandler, opRetry, opRetry.handleResult.bind(opRetry));
@@ -404,9 +385,8 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
     case ErrorType.ERR_OBJECT_NOT_FOUND: // replica server doesn't serve this gpid
     case ErrorType.ERR_INVALID_STATE:    // replica server is not primary
         //console.log(round);
-        log.warn('%d, Table %s: hashKey is %s, replica server not serve for gpid(%d, %d), err_code is %s',
-            Date.now(),
-            round.tableHandler.tableName,
+        //TODO: remove timestamp, hashKey
+        log.warn('Table %s: replica server not serve for gpid(%d, %d), err_code is %s',
             op.hashKey || new Buffer(''),
             op.pid.get_app_id(),
             op.pid.get_pidx(),
@@ -438,7 +418,10 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
     if(needQueryMeta){
         round.tableHandler.callback = function(err){
             if(err !== null){
-                round.callback(err, op);
+                //let hashKey = op.hashKey || new Buffer('');
+                // console.log(hashKey);
+                // console.log(err);
+                //round.callback(err, op);
             }
         }.bind(this);
         round.tableHandler.queryMeta(round.tableHandler.tableName, round.tableHandler.onUpdateResponse.bind(round.tableHandler));
