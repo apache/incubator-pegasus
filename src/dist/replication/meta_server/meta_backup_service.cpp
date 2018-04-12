@@ -32,8 +32,8 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
         dwarn("%s: can't encode app_info for app(%d), perhaps removed, treat it as backup finished",
               _backup_sig.c_str(),
               app_id);
-        auto iter = _progress.unfished_partitions_per_app.find(app_id);
-        dassert(iter != _progress.unfished_partitions_per_app.end(),
+        auto iter = _progress.unfinished_partitions_per_app.find(app_id);
+        dassert(iter != _progress.unfinished_partitions_per_app.end(),
                 "%s: can't find app(%d) in unfished_map",
                 _backup_sig.c_str(),
                 app_id);
@@ -120,8 +120,8 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
 
 void policy_context::start_backup_app_partitions_unlocked(int32_t app_id)
 {
-    auto iter = _progress.unfished_partitions_per_app.find(app_id);
-    dassert(iter != _progress.unfished_partitions_per_app.end(),
+    auto iter = _progress.unfinished_partitions_per_app.find(app_id);
+    dassert(iter != _progress.unfinished_partitions_per_app.end(),
             "%s: can't find app(%d) in unfinished apps",
             _backup_sig.c_str(),
             app_id);
@@ -371,10 +371,10 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
                pid.get_app_id(),
                pid.get_partition_index(),
                source.to_string(),
-               _progress.unfished_partitions_per_app[pid.get_app_id()]);
+               _progress.unfinished_partitions_per_app[pid.get_app_id()]);
 
         // let's update the progress-chain: partition => app => current_backup_instance
-        if (--_progress.unfished_partitions_per_app[pid.get_app_id()] == 0) {
+        if (--_progress.unfinished_partitions_per_app[pid.get_app_id()] == 0) {
             dsn::task_ptr task_after_write_finish_flag =
                 tasking::create_task(LPC_DEFAULT_CALLBACK, nullptr, [this, pid]() {
                     zauto_lock l(_lock);
@@ -545,7 +545,7 @@ void policy_context::initialize_backup_progress_unlocked()
         } else {
             // NOTICE: only available apps have entry in
             // unfinished_partitions_per_app & partition_progress & app_chkpt_size
-            _progress.unfished_partitions_per_app[app_id] = app->partition_count;
+            _progress.unfinished_partitions_per_app[app_id] = app->partition_count;
             std::map<int, int64_t> partition_chkpt_size;
             for (const partition_configuration &pc : app->partitions) {
                 _progress.partition_progress[pc.pid] = 0;
@@ -622,8 +622,8 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
 void policy_context::continue_current_backup_unlocked()
 {
     for (const int32_t &app : _cur_backup.app_ids) {
-        if (_progress.unfished_partitions_per_app.find(app) !=
-            _progress.unfished_partitions_per_app.end()) {
+        if (_progress.unfinished_partitions_per_app.find(app) !=
+            _progress.unfinished_partitions_per_app.end()) {
             start_backup_app_meta_unlocked(app);
         } else {
             dsn::task_ptr task_after_write_finish_flag =
@@ -724,7 +724,7 @@ void policy_context::issue_new_backup_unlocked()
 
     prepare_current_backup_on_new_unlocked();
     // if all apps are dropped, we don't issue a new backup
-    if (_progress.unfished_partitions_per_app.empty()) {
+    if (_progress.unfinished_partitions_per_app.empty()) {
         // TODO: just ignore this backup and wait next backup
         dwarn("%s: all apps have been dropped, ignore this backup and retry it later",
               _backup_sig.c_str());

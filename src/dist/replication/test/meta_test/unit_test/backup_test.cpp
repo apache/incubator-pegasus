@@ -241,7 +241,7 @@ void meta_service_test_app::policy_context_test()
             ASSERT_LE(time_before_backup, mp._cur_backup.backup_id);
             ASSERT_EQ(p.app_ids, mp._cur_backup.app_ids);
             ASSERT_NE(0, mp._cur_backup.start_time_ms);
-            ASSERT_TRUE(mp._progress.unfished_partitions_per_app.empty());
+            ASSERT_TRUE(mp._progress.unfinished_partitions_per_app.empty());
             ASSERT_EQ(p.app_ids.size(), mp._progress.unfinished_apps);
             ASSERT_LE(test_policy_name + std::string("@") + std::to_string(time_before_backup),
                       mp._backup_sig);
@@ -274,10 +274,10 @@ void meta_service_test_app::policy_context_test()
         {
             zauto_lock l(mp._lock);
             ASSERT_EQ(p.app_ids.size(), mp._progress.unfinished_apps);
-            ASSERT_EQ(1, mp._progress.unfished_partitions_per_app.size());
-            ASSERT_EQ(info.app_id, mp._progress.unfished_partitions_per_app.begin()->first);
+            ASSERT_EQ(1, mp._progress.unfinished_partitions_per_app.size());
+            ASSERT_EQ(info.app_id, mp._progress.unfinished_partitions_per_app.begin()->first);
             ASSERT_EQ(info.partition_count,
-                      mp._progress.unfished_partitions_per_app.begin()->second);
+                      mp._progress.unfinished_partitions_per_app.begin()->second);
             ASSERT_EQ(info.partition_count, mp._progress.partition_progress.size());
         }
     }
@@ -330,7 +330,7 @@ void meta_service_test_app::policy_context_test()
             ASSERT_EQ(p.app_ids, mp._cur_backup.app_ids);
 
             // every time intialize backup, the progress will be reset
-            ASSERT_TRUE(mp._progress.unfished_partitions_per_app.empty());
+            ASSERT_TRUE(mp._progress.unfinished_partitions_per_app.empty());
             ASSERT_TRUE(mp._progress.partition_progress.empty());
             ASSERT_EQ(p.app_ids.size(), mp._progress.unfinished_apps);
             ASSERT_LE(test_policy_name + "@" + std::to_string(start_time_ms_of_sixth_backup),
@@ -415,7 +415,7 @@ void meta_service_test_app::policy_context_test()
                 ASSERT_EQ(kv.first.get_app_id(), app->app_id);
                 ASSERT_EQ(kv.second, 1000);
             }
-            for (const auto &kv : mp._progress.unfished_partitions_per_app) {
+            for (const auto &kv : mp._progress.unfinished_partitions_per_app) {
                 ASSERT_EQ(0, kv.second);
             }
         }
