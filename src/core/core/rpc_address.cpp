@@ -75,7 +75,7 @@ uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
     uint32_t ret = 0;
 
     static auto is_site_local = [&](uint32_t ip_net) {
-        const char *addr = reinterpret_cast<const char *>(&ip_net);
+        const uint8_t *addr = reinterpret_cast<const uint8_t *>(&ip_net);
         return addr[0] == 10 || (addr[0] == 172 && addr[1] == 16) ||
                (addr[0] == 192 && addr[1] == 168);
     };
