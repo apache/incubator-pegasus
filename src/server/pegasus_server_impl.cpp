@@ -139,13 +139,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     10 * 64 * 1024 * 1024,
                                     "rocksdb options.max_bytes_for_level_base, default 640MB");
 
-// Deprecated
-//    // rocksdb default: 10
-//    _db_opts.max_grandparent_overlap_factor = (int)dsn_config_get_value_uint64(
-//        "pegasus.server",
-//        "rocksdb_max_grandparent_overlap_factor",
-//        10,
-//        "rocksdb options.max_grandparent_overlap_factor, default 10");
+    // Deprecated
+    //    // rocksdb default: 10
+    //    _db_opts.max_grandparent_overlap_factor = (int)dsn_config_get_value_uint64(
+    //        "pegasus.server",
+    //        "rocksdb_max_grandparent_overlap_factor",
+    //        10,
+    //        "rocksdb options.max_grandparent_overlap_factor, default 10");
 
     // rocksdb default: 4
     _db_opts.level0_file_num_compaction_trigger =
@@ -1063,8 +1063,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
 
         std::vector<rocksdb::Status> statuses = _db->MultiGet(_rd_opts, keys, &values);
         for (int i = 0; i < keys.size(); i++) {
-            rocksdb::Status& status = statuses[i];
-            std::string& value = values[i];
+            rocksdb::Status &status = statuses[i];
+            std::string &value = values[i];
             // print log
             if (!status.ok()) {
                 if (_verbose_log) {
@@ -2393,17 +2393,20 @@ std::pair<std::string, bool> pegasus_server_impl::get_restore_dir_from_env(int a
         env_kvs.insert(std::make_pair(key, value));
     }
 
-    auto it = env_kvs.find("force_restore");
+    std::stringstream os;
+    os << "restore.";
+
+    // TODO: using backup_restore_constant to replace
+    // Attention:
+    //      "restore.force_restore" must keep the same with backup_restore_constant::FORCE_RESORE
+    //      "restore.policy_name" must keep the same with backup_restore_constant::POLICY_NAME
+    //      "restore.backup_id" must keep the same with backup_restore_constant::POLICY_NAME
+    auto it = env_kvs.find("restore.force_restore");
     if (it != env_kvs.end()) {
         res.second = true;
     }
 
-    std::stringstream os;
-    os << "restore.";
-    // TODO: using cold_backup_constant to replace
-    // Attention: "policy_name" and "backup_id" must equal to cold_backup_constant::POLICY_NAME
-    //             and cold_backup_constant::BACKUP_ID
-    it = env_kvs.find("policy_name");
+    it = env_kvs.find("restore.policy_name");
     if (it != env_kvs.end()) {
         ddebug(
             "%s: find policy_name from env, policy_name = %s", replica_name(), it->second.c_str());
@@ -2411,7 +2414,8 @@ std::pair<std::string, bool> pegasus_server_impl::get_restore_dir_from_env(int a
     } else {
         return res;
     }
-    it = env_kvs.find("backup_id");
+
+    it = env_kvs.find("restore.backup_id");
     if (it != env_kvs.end()) {
         ddebug("%s: find backup_id from env, backup_id = %s", replica_name(), it->second.c_str());
         os << it->second;
@@ -2434,6 +2438,5 @@ void pegasus_server_impl::manual_compact()
     _db->CompactRange(options, nullptr, nullptr);
     ddebug("%s: CompactRange finished", replica_name());
 }
-
 }
 } // namespace
