@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <dsn/utility/utils.h>
+#include <dsn/tool-api/rpc_address.h>
 #include <dsn/c/api_layer1.h>
 #include <arpa/inet.h>
 
@@ -52,7 +53,7 @@ void global_env::get_dirs()
 
 void global_env::get_hostip()
 {
-    uint32_t ip = dsn_ipv4_local("");
+    uint32_t ip = dsn::rpc_address::ipv4_from_network_interface("");
     uint32_t ipnet = htonl(ip);
     char buffer[512];
     memset(buffer, 0, sizeof(buffer));
