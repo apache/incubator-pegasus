@@ -921,7 +921,8 @@ void policy_context::gc_backup_info_unlocked(const backup_info &info_to_gc)
 void policy_context::issue_gc_backup_info_task_unlocked()
 {
     if (_backup_history.size() > _policy.backup_history_count_to_keep) {
-        const backup_info &info = _backup_history.begin()->second;
+        backup_info &info = _backup_history.begin()->second;
+        info.info_status = backup_info_status::type::DELETING;
         ddebug("%s: start to gc backup info with id(%" PRId64 ")",
                _policy.policy_name.c_str(),
                info.backup_id);
