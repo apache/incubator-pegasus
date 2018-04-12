@@ -172,7 +172,7 @@ struct backup_progress
     int32_t unfinished_apps;
     std::map<gpid, int32_t> partition_progress;
     std::map<gpid, dsn::task_ptr> backup_requests;
-    std::map<app_id, int32_t> unfished_partitions_per_app;
+    std::map<app_id, int32_t> unfinished_partitions_per_app;
     // <app_id, <partition_id, checkpoint size>>
     std::map<app_id, std::map<int, int64_t>> app_chkpt_size;
     // if app is dropped when starting a new backup or under backuping, we just skip backup this app
@@ -185,7 +185,7 @@ struct backup_progress
         unfinished_apps = 0;
         partition_progress.clear();
         backup_requests.clear();
-        unfished_partitions_per_app.clear();
+        unfinished_partitions_per_app.clear();
         app_chkpt_size.clear();
         is_app_skipped.clear();
     }
