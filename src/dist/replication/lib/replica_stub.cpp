@@ -631,8 +631,7 @@ dsn::error_code replica_stub::on_kill_replica(gpid pid)
                 r->inject_error(ERR_INJECTED);
         }
         return ERR_OK;
-    }
-    else {
+    } else {
         error_code err = ERR_INVALID_PARAMETERS;
         replica_ptr r = get_replica(pid);
         if (r == nullptr) {
@@ -1603,11 +1602,10 @@ void replica_stub::on_disk_stat()
                           dsn_now_ms() - current_time_ms);
                     _counter_replicas_recent_replica_remove_dir_count->increment();
                 }
-            }
-            else {
+            } else {
                 ddebug("gc_disk: reserve directory '%s', wait_seconds = %" PRIu64,
-                        fpath.c_str(),
-                        last_write_time + interval_seconds - current_time_ms / 1000);
+                       fpath.c_str(),
+                       last_write_time + interval_seconds - current_time_ms / 1000);
             }
         }
     }
@@ -1722,7 +1720,7 @@ void replica_stub::open_replica(const app_info &app,
 
         bool restore_if_necessary =
             ((req2 != nullptr) && (req2->type == config_type::CT_ASSIGN_PRIMARY) &&
-             (app.envs.find(cold_backup_constant::POLICY_NAME) != app.envs.end()));
+             (app.envs.find(backup_restore_constant::POLICY_NAME) != app.envs.end()));
 
         // NOTICE: when we don't need execute restore-process, we should remove a.b.pegasus
         // directory because it don't contain the valid data dir and also we need create a new
@@ -1891,16 +1889,13 @@ void replica_stub::open_service()
             if (args.size() == 0) {
                 pid.set_app_id(-1);
                 pid.set_partition_index(-1);
-            }
-            else if (args.size() == 1) {
+            } else if (args.size() == 1) {
                 pid.set_app_id(atoi(args[0].c_str()));
                 pid.set_partition_index(-1);
-            }
-            else if (args.size() == 2) {
+            } else if (args.size() == 2) {
                 pid.set_app_id(atoi(args[0].c_str()));
                 pid.set_partition_index(atoi(args[1].c_str()));
-            }
-            else {
+            } else {
                 return std::string(ERR_INVALID_PARAMETERS.to_string());
             }
             dsn::error_code e = this->on_kill_replica(pid);

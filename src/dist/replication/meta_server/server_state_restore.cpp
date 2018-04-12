@@ -133,14 +133,14 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
         }
     }
     // TODO: using one single env to replace
-    app->envs[cold_backup_constant::BLOCK_SERVICE_PROVIDER] = req.backup_provider_name;
-    app->envs[cold_backup_constant::CLUSTER_NAME] = req.cluster_name;
-    app->envs[cold_backup_constant::POLICY_NAME] = req.policy_name;
-    app->envs[cold_backup_constant::APP_NAME] = old_app_name;
-    app->envs[cold_backup_constant::APP_ID] = std::to_string(old_app_id);
-    app->envs[cold_backup_constant::BACKUP_ID] = std::to_string(req.time_stamp);
+    app->envs[backup_restore_constant::BLOCK_SERVICE_PROVIDER] = req.backup_provider_name;
+    app->envs[backup_restore_constant::CLUSTER_NAME] = req.cluster_name;
+    app->envs[backup_restore_constant::POLICY_NAME] = req.policy_name;
+    app->envs[backup_restore_constant::APP_NAME] = old_app_name;
+    app->envs[backup_restore_constant::APP_ID] = std::to_string(old_app_id);
+    app->envs[backup_restore_constant::BACKUP_ID] = std::to_string(req.time_stamp);
     if (req.skip_bad_partition) {
-        app->envs[cold_backup_constant::SKIP_BAD_PARTITION] = std::string("true");
+        app->envs[backup_restore_constant::SKIP_BAD_PARTITION] = std::string("true");
     }
     res.second.swap(app);
     return res;

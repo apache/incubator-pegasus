@@ -136,15 +136,7 @@ public:
     static const std::string APP_BACKUP_STATUS;
     static const std::string CURRENT_CHECKPOINT;
     static const std::string BACKUP_METADATA;
-
-    static const std::string BLOCK_SERVICE_PROVIDER;
-    static const std::string CLUSTER_NAME;
-    static const std::string POLICY_NAME;
-    static const std::string APP_NAME;
-    static const std::string APP_ID;
-    static const std::string BACKUP_ID;
     static const std::string BACKUP_INFO;
-    static const std::string SKIP_BAD_PARTITION;
     static const int32_t PROGRESS_FINISHED;
 };
 
@@ -152,6 +144,13 @@ class backup_restore_constant
 {
 public:
     static const std::string FORCE_RESORE;
+    static const std::string BLOCK_SERVICE_PROVIDER;
+    static const std::string CLUSTER_NAME;
+    static const std::string POLICY_NAME;
+    static const std::string APP_NAME;
+    static const std::string APP_ID;
+    static const std::string BACKUP_ID;
+    static const std::string SKIP_BAD_PARTITION;
 };
 
 namespace cold_backup {
