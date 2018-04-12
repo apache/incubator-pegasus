@@ -42,6 +42,7 @@
 // which is binded to this replication partition
 //
 
+#include <dsn/tool-api/uniq_timestamp_us.h>
 #include <dsn/cpp/serverlet.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 #include "dist/replication/client_lib/replication_common.h"
@@ -328,6 +329,19 @@ private:
     replication_options *_options;
     const app_info _app_info;
     std::map<std::string, std::string> _extra_envs;
+
+    // uniq timestamp generator for this replica.
+    //
+    // we use it to generate an increasing timestamp for current replica
+    // and replicate it to secondary in preparing mutations, and secodaries'
+    // timestamp value will also updated if value from primary is larger
+    //
+    // as the timestamp is recorded in mutation log with mutations, we also update the value
+    // when do replaying
+    //
+    // in addition, as a replica can only be accessed by one thread,
+    // so the "thread-unsafe" generator works fine
+    uniq_timestamp_us _uniq_timestamp_us;
 
     // replica status specific states
     primary_context _primary_states;

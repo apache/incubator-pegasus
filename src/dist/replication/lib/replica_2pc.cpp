@@ -42,16 +42,6 @@
 namespace dsn {
 namespace replication {
 
-static int64_t get_uniq_timestamp()
-{
-    static int64_t last = 0;
-    static ::dsn::utils::ex_lock_nr_spin _lock;
-    int64_t time = dsn_now_ns() / 1000;
-    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-    last = std::max(time, last + 1);
-    return last;
-}
-
 void replica::on_client_write(task_code code, dsn_message_t request)
 {
     check_hashed_access();
@@ -93,7 +83,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation)
         if (_options->prepare_decree_gap_for_debug_logging > 0 &&
             mu->get_decree() % _options->prepare_decree_gap_for_debug_logging == 0)
             level = LOG_LEVEL_DEBUG;
-        mu->set_timestamp(get_uniq_timestamp());
+        mu->set_timestamp(_uniq_timestamp_us.next());
     } else {
         mu->set_id(get_ballot(), mu->data.header.decree);
     }
@@ -335,7 +325,7 @@ void replica::on_prepare(dsn_message_t request)
     }
 
     // real prepare start
-
+    _uniq_timestamp_us.try_update(mu->data.header.timestamp);
     auto mu2 = _prepare_list->get_mutation_by_decree(decree);
     if (mu2 != nullptr && mu2->data.header.ballot == mu->data.header.ballot) {
         if (mu2->is_logged()) {
