@@ -27,6 +27,7 @@
 
 #include <cstdint>
 #include <algorithm>
+#include <dsn/utility/ports.h>
 #include <dsn/c/api_layer1.h>
 
 namespace dsn {
@@ -39,20 +40,20 @@ namespace dsn {
 //
 class uniq_timestamp_us {
 private:
-    uint64_t last_ts;
+    uint64_t _last_ts;
 public:
-    uniq_timestamp_us() { last_ts = dsn_now_us(); }
+    uniq_timestamp_us() { _last_ts = dsn_now_us(); }
 
     void try_update(uint64_t new_ts)
     {
-        if (new_ts > last_ts)
-            last_ts = new_ts;
+        if ( dsn_likely(new_ts > _last_ts) )
+            _last_ts = new_ts;
     }
 
     uint64_t next()
     {
-        last_ts = std::max(dsn_now_us(), last_ts+1);
-        return last_ts;
+        _last_ts = std::max(dsn_now_us(), _last_ts+1);
+        return _last_ts;
     }
 };
 }
