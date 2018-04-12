@@ -56,5 +56,5 @@ client:replica_config:receiver=r2,type=add_secondary,node=r1
 # write a new data
 client:begin_write:id=7,key=k7,value=v7,timeout=0
 
-# at last all r1 & r2 will come back
-state:{{r1,sec,8,7},{r2,pri,8,7},{r3,sec,8,2}}
+# at last all r1 & r3 will come back
+config:{8,r2,[r1,r3]}
