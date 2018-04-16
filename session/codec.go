@@ -16,9 +16,10 @@ import (
 )
 
 type PegasusCodec struct {
+	logger pegalog.Logger
 }
 
-func (p PegasusCodec) Marshal(v interface{}) ([]byte, error) {
+func (p *PegasusCodec) Marshal(v interface{}) ([]byte, error) {
 	r, _ := v.(*rpcCall)
 
 	header := &thriftHeader{
@@ -54,7 +55,7 @@ func (p PegasusCodec) Marshal(v interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (p PegasusCodec) Unmarshal(data []byte, v interface{}) error {
+func (p *PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 	r, _ := v.(*rpcCall)
 
 	iprot := thrift.NewTBinaryProtocolTransport(thrift.NewStreamTransportR(bytes.NewBuffer(data)))
@@ -63,19 +64,6 @@ func (p PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 		return err
 	}
 
-	if ec.Errno != base.ERR_OK.String() {
-		// convert string to base.ErrType
-		err, parseErr := base.ErrTypeString(ec.Errno)
-		if parseErr != nil {
-			pegalog.GetLogger().Println("failed to unmarshal the heading error code of rpc response: ", parseErr)
-			return parseErr
-		}
-		if err != base.ERR_OK {
-			return err
-		}
-	}
-
-	// read response body
 	name, _, seqId, err := iprot.ReadMessageBegin()
 	if err != nil {
 		return err
@@ -84,12 +72,25 @@ func (p PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 	r.name = name
 	r.seqId = seqId
 
+	if ec.Errno != base.ERR_OK.String() {
+		// convert string to base.ErrType
+		err, parseErr := base.ErrTypeString(ec.Errno)
+		if parseErr != nil {
+			p.logger.Println("failed to unmarshal the heading error code of rpc response: ", parseErr)
+			return parseErr
+		}
+
+		r.err = err
+		return nil
+	}
+
 	nameToResultFunc, ok := nameToResultMap[name]
 	if !ok {
 		return fmt.Errorf("failed to find rpc name: %s", name)
 	}
 	r.result = nameToResultFunc()
 
+	// read response body
 	if err = r.result.Read(iprot); err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func (p PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 	return nil
 }
 
-func (p PegasusCodec) String() string {
+func (p *PegasusCodec) String() string {
 	return "pegasus"
 }
 
@@ -193,4 +194,6 @@ type rpcCall struct {
 	name   string // the rpc's name
 	seqId  int32
 	gpid   *base.Gpid
+	rawReq []byte // the marshalled request in bytes
+	err    error
 }

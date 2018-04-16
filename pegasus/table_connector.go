@@ -94,7 +94,7 @@ func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfg
 		return errors.New(resp.Err.Errno)
 	}
 	if resp.PartitionCount == 0 || len(resp.Partitions) != int(resp.PartitionCount) {
-		return fmt.Errorf("invalid configuration: response [%v]", resp)
+		return fmt.Errorf("invalid table configuration: response [%v]", resp)
 	}
 
 	p.mu.Lock()
@@ -167,7 +167,10 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 		gpid, part := p.getPartition(hashKey)
 
 		resp, err := part.Get(ctx, gpid, key)
-		if err = p.handleError(err, gpid, part); err != nil {
+		if err == nil {
+			err = base.NewDsnErrFromInt(resp.Error)
+		}
+		if err = p.handleReplicaError(err, gpid, part); err != nil {
 			return nil, err
 		} else {
 			return resp.Value.Data, nil
@@ -190,7 +193,7 @@ func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey
 		if err == nil {
 			err = base.NewDsnErrFromInt(resp.Error)
 		}
-		return p.handleError(err, gpid, part)
+		return p.handleReplicaError(err, gpid, part)
 	}()
 	return wrapError(err, OpSet)
 }
@@ -208,7 +211,7 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 		if err == nil {
 			err = base.NewDsnErrFromInt(resp.Error)
 		}
-		return p.handleError(err, gpid, part)
+		return p.handleReplicaError(err, gpid, part)
 	}()
 	return wrapError(err, OpDel)
 }
@@ -259,7 +262,7 @@ func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, 
 	if err == nil {
 		err = base.NewDsnErrFromInt(resp.Error)
 	}
-	if err = p.handleError(err, gpid, part); err == nil {
+	if err = p.handleReplicaError(err, gpid, part); err == nil {
 		kvs := make([]KeyValue, len(resp.Kvs))
 		for i, blobKv := range resp.Kvs {
 			kvs[i].SortKey = blobKv.Key.Data
@@ -294,7 +297,7 @@ func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, so
 		if err == nil {
 			err = base.NewDsnErrFromInt(resp.Error)
 		}
-		return p.handleError(err, gpid, part)
+		return p.handleReplicaError(err, gpid, part)
 	}()
 	return wrapError(err, OpMultiDel)
 }
@@ -321,7 +324,7 @@ func (p *pegasusTableConnector) Close() error {
 	return nil
 }
 
-func (p *pegasusTableConnector) handleError(err error, gpid *base.Gpid, replica *session.ReplicaSession) error {
+func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, replica *session.ReplicaSession) error {
 	if err != nil {
 		confUpdate := false
 
@@ -344,7 +347,9 @@ func (p *pegasusTableConnector) handleError(err error, gpid *base.Gpid, replica 
 
 		// add gpid and remote address to error
 		perr := wrapError(err, 0).(*PError)
-		perr.Err = fmt.Errorf("%s [%s, %s]", perr.Err, gpid, replica)
+		if perr.Err != nil {
+			perr.Err = fmt.Errorf("%s [%s, %s]", perr.Err, gpid, replica)
+		}
 		return perr
 	}
 	return nil

@@ -36,22 +36,19 @@ type nodeSession struct {
 
 	tom *tomb.Tomb
 
-	reqc        chan *reqItem
-	pendingResp map[int32]*reqItem
+	reqc        chan *requestListener
+	pendingResp map[int32]*requestListener
 	mu          sync.Mutex
 
 	redialc      chan bool
 	lastDialTime time.Time
 
 	codec rpc.Codec
-
-	onReplyDsnErrFunc func(errType base.ErrType)
 }
 
-type reqItem struct {
-	ch   chan *reqItem
+type requestListener struct {
+	ch   chan bool
 	call *rpcCall
-	err  error
 }
 
 type nodeType string
@@ -68,9 +65,9 @@ func newNodeSessionAddr(addr string, ntype nodeType) *nodeSession {
 		logger:      pegalog.GetLogger(),
 		ntype:       ntype,
 		seqId:       0,
-		codec:       PegasusCodec{},
-		pendingResp: make(map[int32]*reqItem),
-		reqc:        make(chan *reqItem),
+		codec:       &PegasusCodec{},
+		pendingResp: make(map[int32]*requestListener),
+		reqc:        make(chan *requestListener),
 		addr:        addr,
 		tom:         &tomb.Tomb{},
 
@@ -178,14 +175,15 @@ func (n *nodeSession) dial() {
 	n.logger.Printf("stop dialing for %s: %s, connection state: %s", n.ntype, n.addr, n.ConnState())
 }
 
-func (n *nodeSession) notifyCallerAndDrop(item *reqItem) {
+func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
 	select {
 	// notify the caller
-	case item.ch <- item:
+	case req.ch <- true:
 		n.mu.Lock()
-		delete(n.pendingResp, item.call.seqId)
+		delete(n.pendingResp, req.call.seqId)
 		n.mu.Unlock()
-	case <-n.tom.Dying():
+	default:
+		panic("impossible for concurrent notifiers")
 	}
 }
 
@@ -196,17 +194,17 @@ func (n *nodeSession) loopForRequest() error {
 		select {
 		case <-n.tom.Dying():
 			return n.tom.Err()
-		case item := <-n.reqc:
+		case req := <-n.reqc:
 			n.mu.Lock()
-			n.pendingResp[item.call.seqId] = item
+			n.pendingResp[req.call.seqId] = req
 			n.mu.Unlock()
 
-			if err := n.writeRequest(item.call); err != nil {
+			if err := n.writeRequest(req.call); err != nil {
 				n.logger.Printf("failed to send request to [%s, %s]: %s", n.addr, n.ntype, err)
 
 				// notify the rpc caller.
-				item.err = err
-				n.notifyCallerAndDrop(item)
+				req.call.err = err
+				n.notifyCallerAndDrop(req)
 
 				// don give up if there's still hope
 				if !rpc.IsNetworkTimeoutErr(err) {
@@ -238,13 +236,6 @@ func (n *nodeSession) loopForResponse() error {
 				case <-n.tom.Dying():
 					return n.tom.Err()
 				}
-			} else if dsnErr, ok := err.(base.ErrType); ok {
-				if n.onReplyDsnErrFunc != nil {
-					n.onReplyDsnErrFunc(dsnErr)
-				} else {
-					n.logger.Printf("received error replied from [%s, %s]: %s\n", n.addr, n.ntype, err)
-				}
-				return err
 			} else {
 				n.logger.Printf("failed to read response from [%s, %s]: %s", n.addr, n.ntype, err)
 				return err
@@ -252,7 +243,7 @@ func (n *nodeSession) loopForResponse() error {
 		}
 
 		n.mu.Lock()
-		item, ok := n.pendingResp[call.seqId]
+		reqListener, ok := n.pendingResp[call.seqId]
 		n.mu.Unlock()
 
 		if !ok {
@@ -261,8 +252,9 @@ func (n *nodeSession) loopForResponse() error {
 			continue
 		}
 
-		item.call.result = call.result
-		n.notifyCallerAndDrop(item)
+		reqListener.call.err = call.err
+		reqListener.call.result = call.result
+		n.notifyCallerAndDrop(reqListener)
 	}
 }
 
@@ -275,17 +267,22 @@ func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rp
 	rcall.seqId = atomic.AddInt32(&n.seqId, 1) // increment sequence id
 	rcall.gpid = gpid
 
-	item := &reqItem{call: rcall, ch: make(chan *reqItem)}
+	rcall.rawReq, err = n.codec.Marshal(rcall)
+	if err != nil {
+		return nil, err
+	}
+
+	req := &requestListener{call: rcall, ch: make(chan bool, 1)}
 
 	// either the ctx cancelled or the tomb killed will stop this rpc call.
 	ctxWithTomb := n.tom.Context(ctx)
 	select {
 	// passes the request to loopForRequest
-	case n.reqc <- item:
+	case n.reqc <- req:
 		select {
-		// receive from loopForResponse
-		case item = <-item.ch:
-			err = item.err
+		// receive from loopForResponse, or loopRequest failed
+		case <-req.ch:
+			err = rcall.err
 			result = rcall.result
 			return
 		case <-ctxWithTomb.Done():
@@ -301,14 +298,14 @@ func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rp
 }
 
 func (n *nodeSession) writeRequest(r *rpcCall) error {
-	bytes, err := n.codec.Marshal(r)
-	if err != nil {
-		return err
-	}
-	return n.conn.Write(bytes)
+	return n.conn.Write(r.rawReq)
 }
 
-// readResponse returns nil rpcCall if error encountered.
+// readResponse never returns nil `rpcCall` unless the tcp round trip failed.
+// The pegasus node may responds with not-ERR_OK error code (together with
+// sequence id and rpc name) which doesn't mean that it failed due to
+// transport failure. This error should be handled by the upper-level rpc caller.
+// This session will not be closed for it.
 func (n *nodeSession) readResponse() (*rpcCall, error) {
 	// read length field
 	lenBuf, err := n.conn.Read(4)
@@ -339,7 +336,7 @@ func (n *nodeSession) Close() <-chan struct{} {
 	defer n.mu.Unlock()
 
 	if n.ConnState() != rpc.ConnStateClosed {
-		n.logger.Printf("Close session with [%s, %s]\n", n.ntype, n.addr)
+		n.logger.Printf("Close session with [%s, %s]", n.ntype, n.addr)
 		n.conn.Close()
 		n.tom.Kill(errors.New("nodeSession closed"))
 	}

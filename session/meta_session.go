@@ -47,10 +47,10 @@ func (ms *metaSession) queryConfig(ctx context.Context, tableName string) (*repl
 	arg.Query.AppName = tableName
 	arg.Query.PartitionIndices = []int32{}
 
-	ms.logger.Printf("querying configuration of table(%s) from [%s, %s]\n", tableName, ms.addr, ms.ntype)
+	ms.logger.Printf("querying configuration of table(%s) from [%s, %s]", tableName, ms.addr, ms.ntype)
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX")
 	if err != nil {
-		ms.logger.Printf("failed to query configuration from meta %s: %s\n", ms.addr, err)
+		ms.logger.Printf("failed to query configuration from meta %s: %s", ms.addr, err)
 		return nil, err
 	}
 

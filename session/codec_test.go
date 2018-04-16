@@ -40,7 +40,7 @@ func TestCodec_Marshal(t *testing.T) {
 		seqId: 1,
 	}
 
-	actual, _ := PegasusCodec{}.Marshal(r)
+	actual, _ := new(PegasusCodec).Marshal(r)
 	assert.Equal(t, expected, actual)
 }
 
@@ -50,6 +50,7 @@ func TestCodec_UnmarshalErrorCode(t *testing.T) {
 	}
 
 	r := &rpcCall{}
-	err := PegasusCodec{}.Unmarshal(recvBytes, r)
+
+	err := new(PegasusCodec).Unmarshal(recvBytes, r)
 	assert.NotNil(t, err)
 }

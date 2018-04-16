@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 )
@@ -153,6 +153,8 @@ func TestNodeSession_WriteFailed(t *testing.T) {
 
 	reader := bytes.NewBuffer(make([]byte, 0))
 	n := newFakeNodeSession(reader, &IOErrWriter{err: base.ERR_CLIENT_FAILED})
+	defer n.Close()
+
 	n.tom.Go(n.loopForRequest)
 
 	arg := rrdb.NewMetaQueryCfgArgs()
@@ -193,7 +195,7 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	n := newMetaSession("0.0.0.0:7")
+	n := newMetaSession("0.0.0.0:8800")
 	defer n.Close()
 
 	var expected []byte
@@ -201,7 +203,7 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 
 	mockCodec := &MockCodec{}
 	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
-		expected, _ = PegasusCodec{}.Marshal(v)
+		expected, _ = new(PegasusCodec).Marshal(v)
 		buf := make([]byte, len(expected)+4)
 
 		// prefixed with length
@@ -234,12 +236,12 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	meta := newMetaSession("0.0.0.0:7")
+	meta := newMetaSession("0.0.0.0:8800")
 
 	mockCodec := &MockCodec{}
 	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
 		r, _ := v.(*rpcCall)
-		marshaled, _ := PegasusCodec{}.Marshal(r)
+		marshaled, _ := new(PegasusCodec).Marshal(r)
 
 		// prefixed with length
 		buf := make([]byte, 4+len(marshaled))
@@ -272,6 +274,9 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
 		go func() {
+			// to increase concurrency
+			time.Sleep(100 * time.Millisecond)
+
 			meta.queryConfig(context.Background(), "temp")
 			wg.Done()
 		}()
@@ -308,4 +313,35 @@ func TestNodeSession_RestartConnection(t *testing.T) {
 	_, err = meta.queryConfig(context.Background(), "temp")
 	assert.Nil(t, err)
 	meta.Close()
+}
+
+func TestNodeSession_ReceiveErrorCode(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	n := newMetaSession("0.0.0.0:8800")
+	defer n.Close()
+
+	arg := rrdb.NewMetaQueryCfgArgs()
+	arg.Query = replication.NewQueryCfgRequest()
+
+	mockCodec := &MockCodec{}
+	n.codec = mockCodec
+
+	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
+		// prefixed with length
+		buf := make([]byte, 4+1)
+		binary.BigEndian.PutUint32(buf, uint32(len(buf)))
+
+		return buf, nil
+	})
+	mockCodec.MockUnMarshal(func(data []byte, v interface{}) error {
+		r, _ := v.(*rpcCall)
+		r.seqId = 1
+		r.err = base.ERR_INVALID_STATE
+		return nil
+	})
+
+	result, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
+	assert.Equal(t, result, nil)
+	assert.Equal(t, err, base.ERR_INVALID_STATE)
 }

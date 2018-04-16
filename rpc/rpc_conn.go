@@ -60,8 +60,6 @@ func (s ConnState) String() string {
 
 var ErrConnectionNotReady = errors.New("connection is not ready")
 
-type DialerFunc func(ctx context.Context, address string) (net.Conn, error)
-
 // RpcConn maintains a network connection to a particular endpoint.
 type RpcConn struct {
 	Endpoint string

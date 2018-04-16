@@ -72,16 +72,16 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	assert.Nil(t, err)
 	ptb, _ := tb.(*pegasusTableConnector)
 
-	err = ptb.handleError(nil, nil, nil)
+	err = ptb.handleReplicaError(nil, nil, nil)
 	assert.Nil(t, err)
 
-	ptb.handleError(errors.New("not nil"), nil, nil)
+	ptb.handleReplicaError(errors.New("not nil"), nil, nil)
 	<-ptb.confUpdateCh
 
-	ptb.handleError(base.ERR_OBJECT_NOT_FOUND, nil, nil)
+	ptb.handleReplicaError(base.ERR_OBJECT_NOT_FOUND, nil, nil)
 	<-ptb.confUpdateCh
 
-	ptb.handleError(base.ERR_INVALID_STATE, nil, nil)
+	ptb.handleReplicaError(base.ERR_INVALID_STATE, nil, nil)
 	<-ptb.confUpdateCh
 
 	{ // Ensure: The following errors should not trigger configuration update
@@ -89,7 +89,7 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 
 		for _, err := range errorTypes {
 			channelEmpty := false
-			ptb.handleError(err, nil, nil)
+			ptb.handleReplicaError(err, nil, nil)
 			select {
 			case <-ptb.confUpdateCh:
 			default:
