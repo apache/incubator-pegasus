@@ -334,6 +334,15 @@ command_executor commands[] = {
         query_restore_status,
     },
     {
+        "set_app_envs", "set current app envs", "<key1> <value1> <key2> <value2> ...", set_app_envs,
+    },
+    {
+        "del_app_envs", "delete current app envs", "<key1> <key2> ...", del_app_envs,
+    },
+    {
+        "clear_app_envs", "clear current app envs", "<-a|--all> <-p|--prefix str>", clear_app_envs,
+    },
+    {
         "exit", "exit shell", "", exit_shell,
     },
     {
