@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <cinttypes>
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/dist/failure_detector_multimaster.h>
