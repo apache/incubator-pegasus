@@ -3293,10 +3293,8 @@ inline bool restore(command_executor *e, shell_context *sc, arguments args)
                                                        skip_bad_partition);
     if (err != ::dsn::ERR_OK) {
         fprintf(stderr, "restore app failed with err(%s)\n", err.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool query_restore_status(command_executor *e, shell_context *sc, arguments args)
@@ -3335,10 +3333,8 @@ inline bool query_restore_status(command_executor *e, shell_context *sc, argumen
                 "query restore status failed, restore_app_id(%d), err = %s\n",
                 restore_app_id,
                 ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
@@ -3440,10 +3436,8 @@ inline bool add_backup_policy(command_executor *e, shell_context *sc, arguments 
                                                               start_time);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "add backup policy failed, err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
@@ -3503,11 +3497,10 @@ inline bool query_backup_policy(command_executor *e, shell_context *sc, argument
     ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "query backup policy failed, err = %s\n", ret.to_string());
-        return false;
     } else {
         std::cout << std::endl << "query backup policy succeed" << std::endl;
-        return true;
     }
+    return true;
 }
 
 inline bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args)
@@ -3613,10 +3606,8 @@ inline bool modify_backup_policy(command_executor *e, shell_context *sc, argumen
                                                                start_time);
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "modify backup policy failed, with err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool disable_backup_policy(command_executor *e, shell_context *sc, arguments args)
@@ -3649,10 +3640,8 @@ inline bool disable_backup_policy(command_executor *e, shell_context *sc, argume
     ::dsn::error_code ret = sc->ddl_client->disable_backup_policy(policy_name);
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "disable backup policy failed, with err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool enable_backup_policy(command_executor *e, shell_context *sc, arguments args)
@@ -3684,10 +3673,8 @@ inline bool enable_backup_policy(command_executor *e, shell_context *sc, argumen
     ::dsn::error_code ret = sc->ddl_client->enable_backup_policy(policy_name);
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "enable backup policy failed, with err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool exit_shell(command_executor *e, shell_context *sc, arguments args)
@@ -3709,24 +3696,23 @@ inline bool set_app_envs(command_executor *e, shell_context *sc, arguments args)
 
     if (((args.argc - 1) & 0x01) == 1) {
         // key & value count must equal 2*n(n >= 1)
-        return false;
+        fprintf(stderr, "need speficy the value for key = %s\n", args.argv[args.argc - 1]);
+        return true;
     }
     std::vector<std::string> keys;
     std::vector<std::string> values;
     int idx = 1;
     while (idx < args.argc) {
-        keys.emplace_back(std::string(args.argv[idx++]));
-        values.emplace_back(std::string(args.argv[idx++]));
+        keys.emplace_back(args.argv[idx++]);
+        values.emplace_back(args.argv[idx++]);
     }
 
     ::dsn::error_code ret = sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
 
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "set app env failed with err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool del_app_envs(command_executor *e, shell_context *sc, arguments args)
@@ -3742,17 +3728,15 @@ inline bool del_app_envs(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<std::string> keys;
     for (int idx = 1; idx < args.argc; idx++) {
-        keys.emplace_back(std::string(args.argv[idx]));
+        keys.emplace_back(args.argv[idx]);
     }
 
     ::dsn::error_code ret = sc->ddl_client->del_app_envs(sc->current_app_name, keys);
 
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "del app env failed with err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool clear_app_envs(command_executor *e, shell_context *sc, arguments args)
@@ -3786,14 +3770,12 @@ inline bool clear_app_envs(command_executor *e, shell_context *sc, arguments arg
         }
     }
     if (!clear_all && prefix.empty()) {
-        fprintf(stderr, "prefix can't be empty\n");
+        fprintf(stderr, "must specify the prefix when clear_all = false\n");
         return false;
     }
     ::dsn::error_code ret = sc->ddl_client->clear_app_envs(sc->current_app_name, clear_all, prefix);
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "clear app envs failed with err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
