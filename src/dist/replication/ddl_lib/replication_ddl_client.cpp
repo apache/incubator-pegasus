@@ -1329,5 +1329,103 @@ void replication_ddl_client::end_meta_request(
         callback->enqueue_rpc_response(err, resp);
     }
 }
+
+::dsn::error_code replication_ddl_client::set_app_envs(const std::string &app_name,
+                                                       const std::vector<std::string> &keys,
+                                                       const std::vector<std::string> &values)
+{
+    std::shared_ptr<configuration_update_app_env_request> req =
+        std::make_shared<configuration_update_app_env_request>();
+    req->__set_app_name(app_name);
+    req->__set_op(app_env_operation::type::APP_ENV_OP_SET);
+    req->__set_keys(keys);
+    req->__set_values(values);
+
+    auto resp_task = request_meta<configuration_update_app_env_request>(RPC_CM_UPDATE_APP_ENV, req);
+    resp_task->wait();
+
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+    configuration_update_app_env_response response;
+    ::dsn::unmarshall(resp_task->response(), response);
+    if (response.err != ERR_OK) {
+        return response.err;
+    } else {
+        std::cout << "set app env succeed" << std::endl;
+        if (!response.hint_message.empty()) {
+            std::cout << "=============================" << std::endl;
+            std::cout << response.hint_message << std::endl;
+            std::cout << "=============================" << std::endl;
+        }
+    }
+    return ERR_OK;
+}
+
+::dsn::error_code replication_ddl_client::del_app_envs(const std::string &app_name,
+                                                       const std::vector<std::string> &keys)
+{
+    std::shared_ptr<configuration_update_app_env_request> req =
+        std::make_shared<configuration_update_app_env_request>();
+    req->__set_app_name(app_name);
+    req->__set_op(app_env_operation::type::APP_ENV_OP_DEL);
+    req->__set_keys(keys);
+
+    auto resp_task = request_meta<configuration_update_app_env_request>(RPC_CM_UPDATE_APP_ENV, req);
+    resp_task->wait();
+
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+    configuration_update_app_env_response response;
+    ::dsn::unmarshall(resp_task->response(), response);
+    if (response.err != ERR_OK) {
+        return response.err;
+    } else {
+        std::cout << "del app envs succeed" << std::endl;
+        if (!response.hint_message.empty()) {
+            std::cout << "=============================" << std::endl;
+            std::cout << response.hint_message << std::endl;
+            std::cout << "=============================" << std::endl;
+        }
+    }
+    return ERR_OK;
+}
+
+::dsn::error_code replication_ddl_client::clear_app_envs(const std::string &app_name,
+                                                         bool clear_all,
+                                                         const std::string &prefix)
+{
+    std::shared_ptr<configuration_update_app_env_request> req =
+        std::make_shared<configuration_update_app_env_request>();
+    req->__set_app_name(app_name);
+    req->__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
+    if (clear_all) {
+        req->__set_clear_prefix("");
+    } else {
+        dassert(!prefix.empty(), "prefix can not be empty");
+        req->__set_clear_prefix(prefix);
+    }
+
+    auto resp_task = request_meta<configuration_update_app_env_request>(RPC_CM_UPDATE_APP_ENV, req);
+    resp_task->wait();
+
+    if (resp_task->error() != ERR_OK) {
+        return resp_task->error();
+    }
+    configuration_update_app_env_response response;
+    ::dsn::unmarshall(resp_task->response(), response);
+    if (response.err != ERR_OK) {
+        return response.err;
+    } else {
+        std::cout << "clear app envs succeed" << std::endl;
+        if (!response.hint_message.empty()) {
+            std::cout << "=============================" << std::endl;
+            std::cout << response.hint_message << std::endl;
+            std::cout << "=============================" << std::endl;
+        }
+    }
+    return ERR_OK;
+}
 }
 } // namespace

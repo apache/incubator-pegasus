@@ -135,6 +135,20 @@ const char* _kmeta_function_levelNames[] = {
 };
 const std::map<int, const char*> _meta_function_level_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(6, _kmeta_function_levelValues, _kmeta_function_levelNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
+int _kapp_env_operationValues[] = {
+  app_env_operation::APP_ENV_OP_INVALID,
+  app_env_operation::APP_ENV_OP_SET,
+  app_env_operation::APP_ENV_OP_DEL,
+  app_env_operation::APP_ENV_OP_CLEAR
+};
+const char* _kapp_env_operationNames[] = {
+  "APP_ENV_OP_INVALID",
+  "APP_ENV_OP_SET",
+  "APP_ENV_OP_DEL",
+  "APP_ENV_OP_CLEAR"
+};
+const std::map<int, const char*> _app_env_operation_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(4, _kapp_env_operationValues, _kapp_env_operationNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
+
 
 mutation_header::~mutation_header() throw() {
 }
@@ -9941,6 +9955,354 @@ void configuration_query_restore_response::printTo(std::ostream& out) const {
   out << "err=" << to_string(err);
   out << ", " << "restore_status=" << to_string(restore_status);
   out << ", " << "restore_progress=" << to_string(restore_progress);
+  out << ")";
+}
+
+
+configuration_update_app_env_request::~configuration_update_app_env_request() throw() {
+}
+
+
+void configuration_update_app_env_request::__set_app_name(const std::string& val) {
+  this->app_name = val;
+}
+
+void configuration_update_app_env_request::__set_op(const app_env_operation::type val) {
+  this->op = val;
+}
+
+void configuration_update_app_env_request::__set_keys(const std::vector<std::string> & val) {
+  this->keys = val;
+__isset.keys = true;
+}
+
+void configuration_update_app_env_request::__set_values(const std::vector<std::string> & val) {
+  this->values = val;
+__isset.values = true;
+}
+
+void configuration_update_app_env_request::__set_clear_prefix(const std::string& val) {
+  this->clear_prefix = val;
+__isset.clear_prefix = true;
+}
+
+uint32_t configuration_update_app_env_request::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->app_name);
+          this->__isset.app_name = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          int32_t ecast434;
+          xfer += iprot->readI32(ecast434);
+          this->op = (app_env_operation::type)ecast434;
+          this->__isset.op = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->keys.clear();
+            uint32_t _size435;
+            ::apache::thrift::protocol::TType _etype438;
+            xfer += iprot->readListBegin(_etype438, _size435);
+            this->keys.resize(_size435);
+            uint32_t _i439;
+            for (_i439 = 0; _i439 < _size435; ++_i439)
+            {
+              xfer += iprot->readString(this->keys[_i439]);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.keys = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 4:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->values.clear();
+            uint32_t _size440;
+            ::apache::thrift::protocol::TType _etype443;
+            xfer += iprot->readListBegin(_etype443, _size440);
+            this->values.resize(_size440);
+            uint32_t _i444;
+            for (_i444 = 0; _i444 < _size440; ++_i444)
+            {
+              xfer += iprot->readString(this->values[_i444]);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.values = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 5:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->clear_prefix);
+          this->__isset.clear_prefix = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t configuration_update_app_env_request::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("configuration_update_app_env_request");
+
+  xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->app_name);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("op", ::apache::thrift::protocol::T_I32, 2);
+  xfer += oprot->writeI32((int32_t)this->op);
+  xfer += oprot->writeFieldEnd();
+
+  if (this->__isset.keys) {
+    xfer += oprot->writeFieldBegin("keys", ::apache::thrift::protocol::T_LIST, 3);
+    {
+      xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->keys.size()));
+      std::vector<std::string> ::const_iterator _iter445;
+      for (_iter445 = this->keys.begin(); _iter445 != this->keys.end(); ++_iter445)
+      {
+        xfer += oprot->writeString((*_iter445));
+      }
+      xfer += oprot->writeListEnd();
+    }
+    xfer += oprot->writeFieldEnd();
+  }
+  if (this->__isset.values) {
+    xfer += oprot->writeFieldBegin("values", ::apache::thrift::protocol::T_LIST, 4);
+    {
+      xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->values.size()));
+      std::vector<std::string> ::const_iterator _iter446;
+      for (_iter446 = this->values.begin(); _iter446 != this->values.end(); ++_iter446)
+      {
+        xfer += oprot->writeString((*_iter446));
+      }
+      xfer += oprot->writeListEnd();
+    }
+    xfer += oprot->writeFieldEnd();
+  }
+  if (this->__isset.clear_prefix) {
+    xfer += oprot->writeFieldBegin("clear_prefix", ::apache::thrift::protocol::T_STRING, 5);
+    xfer += oprot->writeString(this->clear_prefix);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(configuration_update_app_env_request &a, configuration_update_app_env_request &b) {
+  using ::std::swap;
+  swap(a.app_name, b.app_name);
+  swap(a.op, b.op);
+  swap(a.keys, b.keys);
+  swap(a.values, b.values);
+  swap(a.clear_prefix, b.clear_prefix);
+  swap(a.__isset, b.__isset);
+}
+
+configuration_update_app_env_request::configuration_update_app_env_request(const configuration_update_app_env_request& other447) {
+  app_name = other447.app_name;
+  op = other447.op;
+  keys = other447.keys;
+  values = other447.values;
+  clear_prefix = other447.clear_prefix;
+  __isset = other447.__isset;
+}
+configuration_update_app_env_request::configuration_update_app_env_request( configuration_update_app_env_request&& other448) {
+  app_name = std::move(other448.app_name);
+  op = std::move(other448.op);
+  keys = std::move(other448.keys);
+  values = std::move(other448.values);
+  clear_prefix = std::move(other448.clear_prefix);
+  __isset = std::move(other448.__isset);
+}
+configuration_update_app_env_request& configuration_update_app_env_request::operator=(const configuration_update_app_env_request& other449) {
+  app_name = other449.app_name;
+  op = other449.op;
+  keys = other449.keys;
+  values = other449.values;
+  clear_prefix = other449.clear_prefix;
+  __isset = other449.__isset;
+  return *this;
+}
+configuration_update_app_env_request& configuration_update_app_env_request::operator=(configuration_update_app_env_request&& other450) {
+  app_name = std::move(other450.app_name);
+  op = std::move(other450.op);
+  keys = std::move(other450.keys);
+  values = std::move(other450.values);
+  clear_prefix = std::move(other450.clear_prefix);
+  __isset = std::move(other450.__isset);
+  return *this;
+}
+void configuration_update_app_env_request::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "configuration_update_app_env_request(";
+  out << "app_name=" << to_string(app_name);
+  out << ", " << "op=" << to_string(op);
+  out << ", " << "keys="; (__isset.keys ? (out << to_string(keys)) : (out << "<null>"));
+  out << ", " << "values="; (__isset.values ? (out << to_string(values)) : (out << "<null>"));
+  out << ", " << "clear_prefix="; (__isset.clear_prefix ? (out << to_string(clear_prefix)) : (out << "<null>"));
+  out << ")";
+}
+
+
+configuration_update_app_env_response::~configuration_update_app_env_response() throw() {
+}
+
+
+void configuration_update_app_env_response::__set_err(const  ::dsn::error_code& val) {
+  this->err = val;
+}
+
+void configuration_update_app_env_response::__set_hint_message(const std::string& val) {
+  this->hint_message = val;
+}
+
+uint32_t configuration_update_app_env_response::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->err.read(iprot);
+          this->__isset.err = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->hint_message);
+          this->__isset.hint_message = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t configuration_update_app_env_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("configuration_update_app_env_response");
+
+  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->err.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("hint_message", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeString(this->hint_message);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(configuration_update_app_env_response &a, configuration_update_app_env_response &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.hint_message, b.hint_message);
+  swap(a.__isset, b.__isset);
+}
+
+configuration_update_app_env_response::configuration_update_app_env_response(const configuration_update_app_env_response& other451) {
+  err = other451.err;
+  hint_message = other451.hint_message;
+  __isset = other451.__isset;
+}
+configuration_update_app_env_response::configuration_update_app_env_response( configuration_update_app_env_response&& other452) {
+  err = std::move(other452.err);
+  hint_message = std::move(other452.hint_message);
+  __isset = std::move(other452.__isset);
+}
+configuration_update_app_env_response& configuration_update_app_env_response::operator=(const configuration_update_app_env_response& other453) {
+  err = other453.err;
+  hint_message = other453.hint_message;
+  __isset = other453.__isset;
+  return *this;
+}
+configuration_update_app_env_response& configuration_update_app_env_response::operator=(configuration_update_app_env_response&& other454) {
+  err = std::move(other454.err);
+  hint_message = std::move(other454.hint_message);
+  __isset = std::move(other454.__isset);
+  return *this;
+}
+void configuration_update_app_env_response::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "configuration_update_app_env_response(";
+  out << "err=" << to_string(err);
+  out << ", " << "hint_message=" << to_string(hint_message);
   out << ")";
 }
 

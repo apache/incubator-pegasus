@@ -72,5 +72,7 @@ namespace dsn { namespace replication {
     GENERATED_TYPE_SERIALIZATION(configuration_report_restore_status_response, THRIFT)
     GENERATED_TYPE_SERIALIZATION(configuration_query_restore_request, THRIFT)
     GENERATED_TYPE_SERIALIZATION(configuration_query_restore_response, THRIFT)
+    GENERATED_TYPE_SERIALIZATION(configuration_update_app_env_request, THRIFT)
+    GENERATED_TYPE_SERIALIZATION(configuration_update_app_env_response, THRIFT)
 
 } } 

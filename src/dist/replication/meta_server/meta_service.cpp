@@ -310,6 +310,8 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler(RPC_CM_QUERY_RESTORE_STATUS,
                          "query_restore_status",
                          &meta_service::on_query_restore_status);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_UPDATE_APP_ENV, "update_app_env(set/del/clear)", &meta_service::update_app_env);
 }
 
 int meta_service::check_leader(dsn_message_t req)
@@ -689,6 +691,37 @@ void meta_service::on_query_restore_status(dsn_message_t req)
     tasking::enqueue(LPC_META_STATE_NORMAL,
                      nullptr,
                      std::bind(&server_state::on_query_restore_status, _state.get(), req));
+}
+
+void meta_service::update_app_env(app_env_rpc env_rpc)
+{
+    auto &response = env_rpc.response();
+    RPC_CHECK_STATUS(env_rpc.dsn_request(), response);
+
+    app_env_operation::type op = env_rpc.request().op;
+    switch (op) {
+    case app_env_operation::type::APP_ENV_OP_SET:
+        tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::set_app_envs, _state.get(), env_rpc));
+        break;
+    case app_env_operation::type::APP_ENV_OP_DEL:
+        tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::del_app_envs, _state.get(), env_rpc));
+        break;
+    case app_env_operation::type::APP_ENV_OP_CLEAR:
+        tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::clear_app_envs, _state.get(), env_rpc));
+        break;
+    default: // app_env_operation::type::APP_ENV_OP_INVALID
+        dwarn("recv a invalid update app_env request, just ignore");
+        response.err = ERR_INVALID_PARAMETERS;
+        response.hint_message =
+            "recv a invalid update_app_env request with op = APP_ENV_OP_INVALID";
+        break;
+    }
 }
 }
 }

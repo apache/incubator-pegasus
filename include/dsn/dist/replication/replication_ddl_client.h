@@ -156,6 +156,16 @@ public:
                                          int32_t backup_history_count_to_keep = 0,
                                          const std::string &start_time = std::string());
 
+    dsn::error_code set_app_envs(const std::string &app_name,
+                                 const std::vector<std::string> &keys,
+                                 const std::vector<std::string> &values);
+    dsn::error_code del_app_envs(const std::string &app_name, const std::vector<std::string> &keys);
+    // precondition:
+    //  -- if clear_all = true, just ignore prefix
+    //  -- if clear_all = false, then prefix must not be empty
+    dsn::error_code
+    clear_app_envs(const std::string &app_name, bool clear_all, const std::string &prefix);
+
 private:
     bool static valid_app_char(int c);
 

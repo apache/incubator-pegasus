@@ -45,6 +45,8 @@
 #include "dist/replication/client_lib/replication_common.h"
 #include "dist/replication/meta_server/meta_data.h"
 
+#include "meta_service.h"
+
 class meta_service_test_app;
 
 namespace dsn {
@@ -144,13 +146,18 @@ public:
                                       /*out*/ configuration_query_by_index_response &response);
     bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &config);
 
-    // table options
+    // app operations
     void create_app(dsn_message_t msg);
     void drop_app(dsn_message_t msg);
     void recall_app(dsn_message_t msg);
     void list_apps(const configuration_list_apps_request &request,
                    configuration_list_apps_response &response);
     void restore_app(dsn_message_t msg);
+
+    // app env operations
+    void set_app_envs(const app_env_rpc &env_rpc);
+    void del_app_envs(const app_env_rpc &env_rpc);
+    void clear_app_envs(const app_env_rpc &env_rpc);
 
     // update configuration
     void on_config_sync(dsn_message_t msg);
@@ -178,6 +185,9 @@ public:
     // for test
     void set_config_change_subscriber_for_test(config_change_subscriber subscriber);
     void set_replica_migration_subscriber_for_test(replica_migration_subscriber subscriber);
+
+    clientlet *tracker() { return &_tracker; }
+    void wait_all_task() { dsn_task_tracker_wait_all(_tracker.tracker()); }
 
 private:
     //-1 means waiting forever
@@ -222,6 +232,11 @@ private:
     void do_app_drop(std::shared_ptr<app_state> &app);
     void do_app_recall(std::shared_ptr<app_state> &app);
     void init_app_partition_node(std::shared_ptr<app_state> &app, int pidx, task_ptr callback);
+    // do_update_app_info()
+    //  -- ensure update app_info to remote storage succeed, if timeout, it will retry autoly
+    void do_update_app_info(const std::string &app_path,
+                            const app_info &info,
+                            const std::function<void(error_code)> &cb);
 
     task_ptr
     update_configuration_on_remote(std::shared_ptr<configuration_update_request> &config_request);
@@ -283,6 +298,10 @@ private:
     friend class replication_checker;
     friend class test::test_checker;
     friend class ::meta_service_test_app;
+
+    // ATTENTION:
+    //  DO NOT use this tracker to track timer task
+    clientlet _tracker;
 
     meta_service *_meta_svc;
     std::string _apps_root;
