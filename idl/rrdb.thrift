@@ -3,6 +3,7 @@ include "replication.thrift"
 
 namespace cpp dsn.apps
 namespace java com.xiaomi.infra.pegasus.apps
+namespace py pypegasus.rrdb
 
 enum filter_type
 {

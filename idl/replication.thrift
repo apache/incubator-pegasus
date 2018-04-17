@@ -2,6 +2,7 @@ include "base.thrift"
 
 namespace cpp dsn.replication
 namespace java com.xiaomi.infra.pegasus.replication
+namespace py pypegasus.replication
 
 struct partition_configuration
 {

@@ -1,5 +1,6 @@
 namespace cpp dsn.base
 namespace java com.xiaomi.infra.pegasus.base
+namespace py pypegasus.base
 
 // place holder
 struct blob
