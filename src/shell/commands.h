@@ -3695,3 +3695,105 @@ inline bool exit_shell(command_executor *e, shell_context *sc, arguments args)
     dsn_exit(0);
     return true;
 }
+
+inline bool set_app_envs(command_executor *e, shell_context *sc, arguments args)
+{
+    if (sc->current_app_name.empty()) {
+        fprintf(stderr, "No app is using now\nUSAGE: use [app_name]\n");
+        return true;
+    }
+
+    if (args.argc < 3) {
+        return false;
+    }
+
+    if (((args.argc - 1) & 0x01) == 1) {
+        // key & value count must equal 2*n(n >= 1)
+        return false;
+    }
+    std::vector<std::string> keys;
+    std::vector<std::string> values;
+    int idx = 1;
+    while (idx < args.argc) {
+        keys.emplace_back(std::string(args.argv[idx++]));
+        values.emplace_back(std::string(args.argv[idx++]));
+    }
+
+    ::dsn::error_code ret = sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
+
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "set app env failed with err = %s\n", ret.to_string());
+        return false;
+    } else {
+        return true;
+    }
+}
+
+inline bool del_app_envs(command_executor *e, shell_context *sc, arguments args)
+{
+    if (sc->current_app_name.empty()) {
+        fprintf(stderr, "No app is using now\nUSAGE: use [app_name]\n");
+        return true;
+    }
+
+    if (args.argc <= 1) {
+        return false;
+    }
+
+    std::vector<std::string> keys;
+    for (int idx = 1; idx < args.argc; idx++) {
+        keys.emplace_back(std::string(args.argv[idx]));
+    }
+
+    ::dsn::error_code ret = sc->ddl_client->del_app_envs(sc->current_app_name, keys);
+
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "del app env failed with err = %s\n", ret.to_string());
+        return false;
+    } else {
+        return true;
+    }
+}
+
+inline bool clear_app_envs(command_executor *e, shell_context *sc, arguments args)
+{
+    if (sc->current_app_name.empty()) {
+        fprintf(stderr, "No app is using now\nUSAGE: use [app_name]\n");
+        return true;
+    }
+
+    static struct option long_options[] = {
+        {"all", no_argument, 0, 'a'}, {"prefix", required_argument, 0, 'p'}, {0, 0, 0, 0}};
+
+    bool clear_all = false;
+    std::string prefix;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "ap:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'a':
+            clear_all = true;
+            break;
+        case 'p':
+            prefix = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+    if (!clear_all && prefix.empty()) {
+        fprintf(stderr, "prefix can't be empty\n");
+        return false;
+    }
+    ::dsn::error_code ret = sc->ddl_client->clear_app_envs(sc->current_app_name, clear_all, prefix);
+    if (ret != dsn::ERR_OK) {
+        fprintf(stderr, "clear app envs failed with err = %s\n", ret.to_string());
+        return false;
+    } else {
+        return true;
+    }
+}
