@@ -826,6 +826,48 @@ class Pegasus(object):
 
         return session.operate(op, timeout)
 
+    def multi_get_opt(self, hash_key,
+                      start_sort_key, stop_sort_key,
+                      multi_get_options,
+                      max_kv_count=100,
+                      max_kv_size=1000000,
+                      timeout=0):
+        """
+        Get multiple values stored in hash_key, and sort key range in [start_sort_key, stop_sort_key) as default.
+        :param hash_key: which hash key used for this API.
+        :param start_sort_key: returned k-v pairs is start from start_sort_key.
+        :param stop_sort_key: returned k-v pairs is stop at stop_sort_key.
+        :param multi_get_options: configurable multi_get options, instance of MultiGetOptions.
+        :param max_kv_count: max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
+        :param max_kv_size: max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
+        :param timeout: how long will the operation timeout in milliseconds.
+                        if timeout > 0, it is a timeout value for current operation,
+                        else the timeout value specified to create the instance will be used.
+        :return: (code, kvs) tuple.
+                 code: type of error_types.code.value,
+                       error_types.ERR_OK.value when data got succeed.
+                 kvs: <sort_key, value> pairs in dict.
+        """
+        peer_gpid = self.table.get_hash_key_pid(hash_key)
+        session = self.table.get_session(peer_gpid)
+        req = multi_get_request(blob(hash_key),
+                                None,
+                                max_kv_count,
+                                max_kv_size,
+                                multi_get_options.no_value,
+                                blob(start_sort_key),
+                                blob(stop_sort_key),
+                                multi_get_options.start_inclusive,
+                                multi_get_options.stop_inclusive,
+                                multi_get_options.sortkey_filter_type,
+                                blob(multi_get_options.sortkey_filter_pattern),
+                                multi_get_options.reverse)
+        op = RrdbMultiGetOperator(peer_gpid, req)
+        if not session or not op:
+            return error_types.ERR_INVALID_STATE.value, 0
+
+        return session.operate(op, timeout)
+
     def get_sort_keys(self, hash_key,
                       max_kv_count=100,
                       max_kv_size=1000000,

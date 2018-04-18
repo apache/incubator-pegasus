@@ -1,15 +1,18 @@
 #! /usr/bin/env python
 # coding=utf-8
+import uuid
+
+from twisted.trial import unittest
 
 from pypegasus.pgclient import *
-from twisted.trial import unittest
-import uuid
+from pypegasus.rrdb.ttypes import filter_type
+from pypegasus.utils.tools import MultiGetOptions
 
 
 class TestBasics(unittest.TestCase):
     TEST_HKEY = 'test_hkey_1'
-    TEST_SKEY = 'test_skey_1'
-    TEST_VALUE = 'test_value_1'
+    TEST_SKEY = 'test_skey_1_'
+    TEST_VALUE = 'test_value_1_'
 
     @inlineCallbacks
     def setUp(self):
@@ -139,6 +142,213 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         self.assertEqual(get_kvs, kvs)
+
+    @inlineCallbacks
+    def test_multi_get_opt_ok(self):
+        count = 50
+        rand_key = uuid.uuid1().hex
+        kvs = {self.TEST_SKEY + rand_key + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
+
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        opt = MultiGetOptions()
+        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                   self.TEST_SKEY + rand_key + '_0',
+                                                   self.TEST_SKEY + rand_key + '_' + '9'*len(str(count)),
+                                                   opt)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(len(get_kvs), len(kvs))
+        self.assertEqual(get_kvs, kvs)
+
+    @inlineCallbacks
+    def test_multi_get_opt_prefix_ok(self):
+        count = 50
+        rand_key = uuid.uuid1().hex
+        rand_key2 = uuid.uuid4().hex
+        kvs = {self.TEST_SKEY + rand_key + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
+        kvs2 = {self.TEST_SKEY + rand_key2 + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
+
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs2)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        opt = MultiGetOptions()
+        opt.sortkey_filter_type = filter_type.FT_MATCH_PREFIX
+        opt.sortkey_filter_pattern = self.TEST_SKEY + rand_key
+        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                   '',
+                                                   '',
+                                                   opt)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(len(get_kvs), len(kvs))
+        self.assertEqual(get_kvs, kvs)
+
+    @inlineCallbacks
+    def test_multi_get_opt_postfix_ok(self):
+        count = 50
+        rand_key = uuid.uuid1().hex
+        rand_key2 = uuid.uuid4().hex
+        kvs = {self.TEST_SKEY + str(x) + "_" + rand_key: self.TEST_VALUE + str(x) for x in range(count)}
+        kvs2 = {self.TEST_SKEY + str(x) + "_" + rand_key2: self.TEST_VALUE + str(x) for x in range(count)}
+
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs2)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        opt = MultiGetOptions()
+        opt.sortkey_filter_type = filter_type.FT_MATCH_POSTFIX
+        opt.sortkey_filter_pattern = rand_key
+        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                   '',
+                                                   '',
+                                                   opt)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(len(get_kvs), len(kvs))
+        self.assertEqual(get_kvs, kvs)
+
+    @inlineCallbacks
+    def test_multi_get_opt_anywhere_ok(self):
+        count = 50
+        rand_key = uuid.uuid1().hex
+        rand_key2 = uuid.uuid4().hex
+        kvs = {self.TEST_SKEY + str(x) + "_" + rand_key + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
+        kvs2 = {self.TEST_SKEY + str(x) + "_" + rand_key2 + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
+
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs2)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        opt = MultiGetOptions()
+        opt.sortkey_filter_type = filter_type.FT_MATCH_ANYWHERE
+        opt.sortkey_filter_pattern = rand_key
+        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                   '',
+                                                   '',
+                                                   opt)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(len(get_kvs), len(kvs))
+        self.assertEqual(get_kvs, kvs)
+
+    @inlineCallbacks
+    def test_multi_get_opt_sortkey_inclusive_ok(self):
+        rand_key = uuid.uuid1().hex
+        start_key = self.TEST_SKEY + rand_key + '_start'
+        stop_key = self.TEST_SKEY + rand_key + '_stop'
+        start_value = self.TEST_VALUE + 'start'
+        stop_value = self.TEST_VALUE + 'stop'
+        kvs = {start_key: start_value,
+               stop_key: stop_value
+              }
+
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        opt = MultiGetOptions()
+
+        # False False
+        opt.start_inclusive = False
+        opt.stop_inclusive = False
+        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                   start_key,
+                                                   stop_key,
+                                                   opt)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(len(get_kvs), 0)
+
+        # False True
+        opt.start_inclusive = False
+        opt.stop_inclusive = True
+        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                   start_key,
+                                                   stop_key,
+                                                   opt)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(len(get_kvs), 1)
+        self.assertTrue(stop_key in get_kvs)
+        self.assertEqual(get_kvs[stop_key], stop_value)
+
+        # True False
+        opt.start_inclusive = True
+        opt.stop_inclusive = False
+        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                   start_key,
+                                                   stop_key,
+                                                   opt)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(len(get_kvs), 1)
+        self.assertTrue(start_key in get_kvs)
+        self.assertEqual(get_kvs[start_key], start_value)
+
+        # True True
+        opt.start_inclusive = True
+        opt.stop_inclusive = True
+        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                   start_key,
+                                                   stop_key,
+                                                   opt)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(len(get_kvs), 2)
+        self.assertTrue(start_key in get_kvs)
+        self.assertEqual(get_kvs[start_key], start_value)
+        self.assertTrue(stop_key in get_kvs)
+        self.assertEqual(get_kvs[stop_key], stop_value)
+
+    @inlineCallbacks
+    def test_multi_get_opt_no_value_ok(self):
+        count = 50
+        rand_key = uuid.uuid1().hex
+        kvs = {self.TEST_SKEY + rand_key + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
+
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        opt = MultiGetOptions()
+        opt.no_value = True
+        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                   self.TEST_SKEY + rand_key + '_0',
+                                                   self.TEST_SKEY + rand_key + '_' + '9'*len(str(count)),
+                                                   opt)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(len(get_kvs), len(kvs))
+        for k in kvs.keys():
+            self.assertTrue(k in get_kvs)
+
+    @inlineCallbacks
+    def test_multi_get_opt_reverse_ok(self):
+        count = 50
+        steps = 5
+        self.assertTrue(count % steps == 0)
+        split_count = count / 5
+        rand_key = uuid.uuid1().hex
+        ks = sorted({self.TEST_SKEY + rand_key + "_" + str(x) for x in range(count)})
+        kvs = {self.TEST_SKEY + rand_key + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
+
+        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        stop_key = self.TEST_SKEY + rand_key + '_' + '9'*len(str(count))
+        opt = MultiGetOptions()
+        opt.reverse = True
+        for step in range(steps):
+            (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+                                                       self.TEST_SKEY + rand_key + '_0',
+                                                       stop_key,
+                                                       opt,
+                                                       split_count)
+            if step == steps - 1:
+                self.assertEqual(rc, error_types.ERR_OK.value)
+            else:
+                self.assertEqual(rc, error_types.ERR_INCOMPLETE_DATA.value)
+            self.assertEqual(len(get_kvs), split_count)
+            for _ in range(split_count):
+                k = ks.pop()
+                self.assertTrue(k in get_kvs)
+                self.assertEqual(get_kvs[k], kvs[k])
+                stop_key = k
 
     @inlineCallbacks
     def test_multi_get_1by1_ok(self):

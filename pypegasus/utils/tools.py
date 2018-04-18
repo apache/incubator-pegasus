@@ -6,6 +6,7 @@ from pypegasus.base.ttypes import (
     rocksdb_error_types,
     error_types
 )
+from pypegasus.rrdb.ttypes import filter_type
 
 epoch_begin = 1451606400            # seconds since 2016.01.01-00:00:00 GMT
 
@@ -44,6 +45,25 @@ class ScanOptions(object):
         self.start_inclusive = True
         self.stop_inclusive = False
         self.snapshot = None                   # for future use
+
+    def __repr__(self):
+        lst = ['%s=%r' % (key, value)
+               for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(lst))
+
+
+class MultiGetOptions(object):
+    """
+    configurable options for multi_get.
+    """
+
+    def __init__(self):
+        self.start_inclusive = True
+        self.stop_inclusive = False
+        self.sortkey_filter_type = filter_type.FT_NO_FILTER
+        self.sortkey_filter_pattern = ""
+        self.no_value = False
+        self.reverse = False
 
     def __repr__(self):
         lst = ['%s=%r' % (key, value)

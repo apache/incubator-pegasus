@@ -4,7 +4,7 @@ import pypegasus
 setup(
     name='pypegasus',
     version=pypegasus.__version__,
-    install_requires=['twisted>=17.9.0', 'aenum>=2.0.9', 'thrift==0.9.3', 'pyopenssl>=17.5.0'],
+    install_requires=['twisted>=17.9.0', 'aenum>=2.0.9', 'thrift>=0.9.3', 'pyopenssl>=17.5.0'],
     packages=find_packages(),
     package_data={'': ['logger.conf']},
     platforms='any',

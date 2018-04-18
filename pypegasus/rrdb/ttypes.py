@@ -19,6 +19,26 @@ except:
   fastbinary = None
 
 
+class filter_type:
+  FT_NO_FILTER = 0
+  FT_MATCH_ANYWHERE = 1
+  FT_MATCH_PREFIX = 2
+  FT_MATCH_POSTFIX = 3
+
+  _VALUES_TO_NAMES = {
+    0: "FT_NO_FILTER",
+    1: "FT_MATCH_ANYWHERE",
+    2: "FT_MATCH_PREFIX",
+    3: "FT_MATCH_POSTFIX",
+  }
+
+  _NAMES_TO_VALUES = {
+    "FT_NO_FILTER": 0,
+    "FT_MATCH_ANYWHERE": 1,
+    "FT_MATCH_PREFIX": 2,
+    "FT_MATCH_POSTFIX": 3,
+  }
+
 
 class update_request:
   """
@@ -1005,6 +1025,13 @@ class multi_get_request:
    - max_kv_count
    - max_kv_size
    - no_value
+   - start_sortkey
+   - stop_sortkey
+   - start_inclusive
+   - stop_inclusive
+   - sort_key_filter_type
+   - sort_key_filter_pattern
+   - reverse
   """
 
   thrift_spec = (
@@ -1014,14 +1041,28 @@ class multi_get_request:
     (3, TType.I32, 'max_kv_count', None, None, ), # 3
     (4, TType.I32, 'max_kv_size', None, None, ), # 4
     (5, TType.BOOL, 'no_value', None, None, ), # 5
+    (6, TType.STRUCT, 'start_sortkey', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 6
+    (7, TType.STRUCT, 'stop_sortkey', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 7
+    (8, TType.BOOL, 'start_inclusive', None, None, ), # 8
+    (9, TType.BOOL, 'stop_inclusive', None, None, ), # 9
+    (10, TType.I32, 'sort_key_filter_type', None, None, ), # 10
+    (11, TType.STRUCT, 'sort_key_filter_pattern', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 11
+    (12, TType.BOOL, 'reverse', None, None, ), # 12
   )
 
-  def __init__(self, hash_key=None, sork_keys=None, max_kv_count=None, max_kv_size=None, no_value=None,):
+  def __init__(self, hash_key=None, sork_keys=None, max_kv_count=None, max_kv_size=None, no_value=None, start_sortkey=None, stop_sortkey=None, start_inclusive=None, stop_inclusive=None, sort_key_filter_type=None, sort_key_filter_pattern=None, reverse=None,):
     self.hash_key = hash_key
     self.sork_keys = sork_keys
     self.max_kv_count = max_kv_count
     self.max_kv_size = max_kv_size
     self.no_value = no_value
+    self.start_sortkey = start_sortkey
+    self.stop_sortkey = stop_sortkey
+    self.start_inclusive = start_inclusive
+    self.stop_inclusive = stop_inclusive
+    self.sort_key_filter_type = sort_key_filter_type
+    self.sort_key_filter_pattern = sort_key_filter_pattern
+    self.reverse = reverse
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -1064,6 +1105,44 @@ class multi_get_request:
           self.no_value = iprot.readBool()
         else:
           iprot.skip(ftype)
+      elif fid == 6:
+        if ftype == TType.STRUCT:
+          self.start_sortkey = pypegasus.base.ttypes.blob()
+          self.start_sortkey.read(iprot)
+        else:
+          iprot.skip(ftype)
+      elif fid == 7:
+        if ftype == TType.STRUCT:
+          self.stop_sortkey = pypegasus.base.ttypes.blob()
+          self.stop_sortkey.read(iprot)
+        else:
+          iprot.skip(ftype)
+      elif fid == 8:
+        if ftype == TType.BOOL:
+          self.start_inclusive = iprot.readBool()
+        else:
+          iprot.skip(ftype)
+      elif fid == 9:
+        if ftype == TType.BOOL:
+          self.stop_inclusive = iprot.readBool()
+        else:
+          iprot.skip(ftype)
+      elif fid == 10:
+        if ftype == TType.I32:
+          self.sort_key_filter_type = iprot.readI32()
+        else:
+          iprot.skip(ftype)
+      elif fid == 11:
+        if ftype == TType.STRUCT:
+          self.sort_key_filter_pattern = pypegasus.base.ttypes.blob()
+          self.sort_key_filter_pattern.read(iprot)
+        else:
+          iprot.skip(ftype)
+      elif fid == 12:
+        if ftype == TType.BOOL:
+          self.reverse = iprot.readBool()
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -1097,6 +1176,34 @@ class multi_get_request:
       oprot.writeFieldBegin('no_value', TType.BOOL, 5)
       oprot.writeBool(self.no_value)
       oprot.writeFieldEnd()
+    if self.start_sortkey is not None:
+      oprot.writeFieldBegin('start_sortkey', TType.STRUCT, 6)
+      self.start_sortkey.write(oprot)
+      oprot.writeFieldEnd()
+    if self.stop_sortkey is not None:
+      oprot.writeFieldBegin('stop_sortkey', TType.STRUCT, 7)
+      self.stop_sortkey.write(oprot)
+      oprot.writeFieldEnd()
+    if self.start_inclusive is not None:
+      oprot.writeFieldBegin('start_inclusive', TType.BOOL, 8)
+      oprot.writeBool(self.start_inclusive)
+      oprot.writeFieldEnd()
+    if self.stop_inclusive is not None:
+      oprot.writeFieldBegin('stop_inclusive', TType.BOOL, 9)
+      oprot.writeBool(self.stop_inclusive)
+      oprot.writeFieldEnd()
+    if self.sort_key_filter_type is not None:
+      oprot.writeFieldBegin('sort_key_filter_type', TType.I32, 10)
+      oprot.writeI32(self.sort_key_filter_type)
+      oprot.writeFieldEnd()
+    if self.sort_key_filter_pattern is not None:
+      oprot.writeFieldBegin('sort_key_filter_pattern', TType.STRUCT, 11)
+      self.sort_key_filter_pattern.write(oprot)
+      oprot.writeFieldEnd()
+    if self.reverse is not None:
+      oprot.writeFieldBegin('reverse', TType.BOOL, 12)
+      oprot.writeBool(self.reverse)
+      oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
 
@@ -1111,6 +1218,13 @@ class multi_get_request:
     value = (value * 31) ^ hash(self.max_kv_count)
     value = (value * 31) ^ hash(self.max_kv_size)
     value = (value * 31) ^ hash(self.no_value)
+    value = (value * 31) ^ hash(self.start_sortkey)
+    value = (value * 31) ^ hash(self.stop_sortkey)
+    value = (value * 31) ^ hash(self.start_inclusive)
+    value = (value * 31) ^ hash(self.stop_inclusive)
+    value = (value * 31) ^ hash(self.sort_key_filter_type)
+    value = (value * 31) ^ hash(self.sort_key_filter_pattern)
+    value = (value * 31) ^ hash(self.reverse)
     return value
 
   def __repr__(self):
@@ -1259,6 +1373,11 @@ class get_scanner_request:
    - start_inclusive
    - stop_inclusive
    - batch_size
+   - no_value
+   - hash_key_filter_type
+   - hash_key_filter_pattern
+   - sort_key_filter_type
+   - sort_key_filter_pattern
   """
 
   thrift_spec = (
@@ -1268,14 +1387,24 @@ class get_scanner_request:
     (3, TType.BOOL, 'start_inclusive', None, None, ), # 3
     (4, TType.BOOL, 'stop_inclusive', None, None, ), # 4
     (5, TType.I32, 'batch_size', None, None, ), # 5
+    (6, TType.BOOL, 'no_value', None, None, ), # 6
+    (7, TType.I32, 'hash_key_filter_type', None, None, ), # 7
+    (8, TType.STRUCT, 'hash_key_filter_pattern', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 8
+    (9, TType.I32, 'sort_key_filter_type', None, None, ), # 9
+    (10, TType.STRUCT, 'sort_key_filter_pattern', (pypegasus.base.ttypes.blob, pypegasus.base.ttypes.blob.thrift_spec), None, ), # 10
   )
 
-  def __init__(self, start_key=None, stop_key=None, start_inclusive=None, stop_inclusive=None, batch_size=None,):
+  def __init__(self, start_key=None, stop_key=None, start_inclusive=None, stop_inclusive=None, batch_size=None, no_value=None, hash_key_filter_type=None, hash_key_filter_pattern=None, sort_key_filter_type=None, sort_key_filter_pattern=None,):
     self.start_key = start_key
     self.stop_key = stop_key
     self.start_inclusive = start_inclusive
     self.stop_inclusive = stop_inclusive
     self.batch_size = batch_size
+    self.no_value = no_value
+    self.hash_key_filter_type = hash_key_filter_type
+    self.hash_key_filter_pattern = hash_key_filter_pattern
+    self.sort_key_filter_type = sort_key_filter_type
+    self.sort_key_filter_pattern = sort_key_filter_pattern
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -1313,6 +1442,33 @@ class get_scanner_request:
           self.batch_size = iprot.readI32()
         else:
           iprot.skip(ftype)
+      elif fid == 6:
+        if ftype == TType.BOOL:
+          self.no_value = iprot.readBool()
+        else:
+          iprot.skip(ftype)
+      elif fid == 7:
+        if ftype == TType.I32:
+          self.hash_key_filter_type = iprot.readI32()
+        else:
+          iprot.skip(ftype)
+      elif fid == 8:
+        if ftype == TType.STRUCT:
+          self.hash_key_filter_pattern = pypegasus.base.ttypes.blob()
+          self.hash_key_filter_pattern.read(iprot)
+        else:
+          iprot.skip(ftype)
+      elif fid == 9:
+        if ftype == TType.I32:
+          self.sort_key_filter_type = iprot.readI32()
+        else:
+          iprot.skip(ftype)
+      elif fid == 10:
+        if ftype == TType.STRUCT:
+          self.sort_key_filter_pattern = pypegasus.base.ttypes.blob()
+          self.sort_key_filter_pattern.read(iprot)
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -1343,6 +1499,26 @@ class get_scanner_request:
       oprot.writeFieldBegin('batch_size', TType.I32, 5)
       oprot.writeI32(self.batch_size)
       oprot.writeFieldEnd()
+    if self.no_value is not None:
+      oprot.writeFieldBegin('no_value', TType.BOOL, 6)
+      oprot.writeBool(self.no_value)
+      oprot.writeFieldEnd()
+    if self.hash_key_filter_type is not None:
+      oprot.writeFieldBegin('hash_key_filter_type', TType.I32, 7)
+      oprot.writeI32(self.hash_key_filter_type)
+      oprot.writeFieldEnd()
+    if self.hash_key_filter_pattern is not None:
+      oprot.writeFieldBegin('hash_key_filter_pattern', TType.STRUCT, 8)
+      self.hash_key_filter_pattern.write(oprot)
+      oprot.writeFieldEnd()
+    if self.sort_key_filter_type is not None:
+      oprot.writeFieldBegin('sort_key_filter_type', TType.I32, 9)
+      oprot.writeI32(self.sort_key_filter_type)
+      oprot.writeFieldEnd()
+    if self.sort_key_filter_pattern is not None:
+      oprot.writeFieldBegin('sort_key_filter_pattern', TType.STRUCT, 10)
+      self.sort_key_filter_pattern.write(oprot)
+      oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
 
@@ -1357,6 +1533,11 @@ class get_scanner_request:
     value = (value * 31) ^ hash(self.start_inclusive)
     value = (value * 31) ^ hash(self.stop_inclusive)
     value = (value * 31) ^ hash(self.batch_size)
+    value = (value * 31) ^ hash(self.no_value)
+    value = (value * 31) ^ hash(self.hash_key_filter_type)
+    value = (value * 31) ^ hash(self.hash_key_filter_pattern)
+    value = (value * 31) ^ hash(self.sort_key_filter_type)
+    value = (value * 31) ^ hash(self.sort_key_filter_pattern)
     return value
 
   def __repr__(self):
