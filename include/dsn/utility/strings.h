@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <map>
+#include <iostream>
 
 namespace dsn {
 namespace utils {
@@ -10,6 +12,30 @@ namespace utils {
 void split_args(const char *args, /*out*/ std::vector<std::string> &sargs, char splitter = ' ');
 
 void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter = ' ');
+
+// kv_map sample (when item_splitter = ',' and kv_splitter = ':'):
+//   k1:v1,k2:v2,k3:v3
+// we say that 'k1:v1' is an item.
+// return false if:
+//   - bad format: no kv_splitter found in any non-empty item
+//   - allow_dup_key = false and the same key appears for more than once
+// if allow_dup_key = true and the same key appears for more than once,
+// the last value will be returned.
+bool parse_kv_map(const char *args,
+                  /*out*/ std::map<std::string, std::string> &kv_map,
+                  char item_splitter,
+                  char kv_splitter,
+                  bool allow_dup_key = false);
+
+// format sample (when item_splitter = ',' and kv_splitter = ':'):
+//   k1:v1,k2:v2,k3:v3
+void kv_map_to_stream(const std::map<std::string, std::string> &kv_map,
+                      /*out*/ std::ostream &oss,
+                      char item_splitter,
+                      char kv_splitter);
+std::string kv_map_to_string(const std::map<std::string, std::string> &kv_map,
+                             char item_splitter,
+                             char kv_splitter);
 
 std::string
 replace_string(std::string subject, const std::string &search, const std::string &replace);

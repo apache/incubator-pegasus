@@ -96,7 +96,7 @@ public:
     //    messages and tools from/for meta server
     //
     void on_config_proposal(configuration_update_request &proposal);
-    void on_config_sync(const partition_configuration &config);
+    void on_config_sync(const app_info &info, const partition_configuration &config);
     void on_cold_backup(const backup_request &request, /*out*/ backup_response &response);
 
     //
@@ -227,6 +227,8 @@ private:
                                               partition_status::type news);
 
     // return false when update fails or replica is going to be closed
+    bool update_app_envs(const std::map<std::string, std::string> &envs);
+    bool query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
     bool update_configuration(const partition_configuration &config);
     bool update_local_configuration(const replica_configuration &config, bool same_ballot = false);
 

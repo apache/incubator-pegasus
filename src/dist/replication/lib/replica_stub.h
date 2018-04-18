@@ -235,6 +235,7 @@ private:
     dsn_handle_t _trigger_chkpt_command;
     dsn_handle_t _manual_compact_command;
     dsn_handle_t _query_compact_command;
+    dsn_handle_t _query_app_envs_command;
 
     bool _deny_client;
     bool _verbose_client_log;

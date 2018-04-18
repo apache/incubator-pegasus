@@ -143,7 +143,7 @@ public:
 class backup_restore_constant
 {
 public:
-    static const std::string FORCE_RESORE;
+    static const std::string FORCE_RESTORE;
     static const std::string BLOCK_SERVICE_PROVIDER;
     static const std::string CLUSTER_NAME;
     static const std::string POLICY_NAME;

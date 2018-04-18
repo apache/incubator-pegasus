@@ -550,7 +550,7 @@ const std::string cold_backup_constant::BACKUP_METADATA("backup_metadata");
 const std::string cold_backup_constant::BACKUP_INFO("backup_info");
 const int32_t cold_backup_constant::PROGRESS_FINISHED = 1000;
 
-const std::string backup_restore_constant::FORCE_RESORE("restore.force_restore");
+const std::string backup_restore_constant::FORCE_RESTORE("restore.force_restore");
 const std::string backup_restore_constant::BLOCK_SERVICE_PROVIDER("restore.block_service_provider");
 const std::string backup_restore_constant::CLUSTER_NAME("restore.cluster_name");
 const std::string backup_restore_constant::POLICY_NAME("restore.policy_name");

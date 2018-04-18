@@ -434,23 +434,24 @@ error_code server_state::initialize_default_apps()
 
             default_app.app_name = dsn_config_get_value_string(s, "app_name", "", "app name");
             if (default_app.app_name.length() == 0) {
-                dwarn("'[%s] app_name' not specified, ignore this section", sections[i]);
+                dwarn("'[%s] app_name' not specified, ignore this section", s);
                 continue;
             }
 
-            default_app.app_type = dsn_config_get_value_string(s, "app_type", "", "app type-name");
+            default_app.app_type = dsn_config_get_value_string(s, "app_type", "", "app type name");
             default_app.partition_count = (int)dsn_config_get_value_uint64(
                 s, "partition_count", 1, "how many partitions the app should have");
             default_app.is_stateful =
                 dsn_config_get_value_bool(s, "stateful", true, "whether this is a stateful app");
             default_app.max_replica_count = (int)dsn_config_get_value_uint64(
-                s, "max_replica_count", 3, "max_replica count in app");
-            // TODO: setup envs
+                s, "max_replica_count", 3, "max replica count in app");
+            std::string envs_str = dsn_config_get_value_string(s, "envs", "", "app envs");
+            bool parse = dsn::utils::parse_kv_map(envs_str.c_str(), default_app.envs, ',', '=');
 
             dassert(default_app.app_type.length() > 0, "'[%s] app_type' not specified", s);
-            dassert(default_app.partition_count > 0,
-                    "partition_count should > 0, partition_count = %d",
-                    default_app.partition_count);
+            dassert(default_app.partition_count > 0, "'[%s] partition_count' should > 0", s);
+            dassert(parse, "'[%s] envs' is invalid, envs = %s", s, envs_str.c_str());
+
             std::shared_ptr<app_state> app = app_state::create(default_app);
             _all_apps.emplace(app->app_id, app);
         }
@@ -2630,9 +2631,25 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
             app_path = get_app_path(*app);
         }
     }
+
+    std::ostringstream oss;
+    oss << "deleted keys:";
+    int deleted = 0;
     for (const auto &key : keys) {
-        ainfo.envs.erase(key);
+        if (ainfo.envs.erase(key) > 0) {
+            oss << std::endl << "    " << key;
+            deleted++;
+        }
     }
+
+    if (deleted == 0) {
+        env_rpc.response().hint_message = "no key need to delete";
+        return;
+    }
+    else {
+        env_rpc.response().hint_message = oss.str();
+    }
+
     do_update_app_info(app_path, ainfo, [this, app_name, keys, env_rpc](error_code ec) {
         dassert(
             ec == ERR_OK, "update app_info to remote storage failed with err = %s", ec.to_string());
@@ -2672,10 +2689,20 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
         }
     }
 
-    std::unordered_set<std::string> erase_keys;
+    if (ainfo.envs.empty()) {
+        env_rpc.response().hint_message = "no key need to delete";
+        return;
+    }
+
+    std::set<std::string> erase_keys;
+    std::ostringstream oss;
+    oss << "deleted keys:";
 
     if (prefix.empty()) {
         // ignore prefix
+        for (auto &kv : ainfo.envs) {
+            oss << std::endl << "    " << kv.first;
+        }
         ainfo.envs.clear();
     } else {
         // acquire key
@@ -2690,12 +2717,18 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
         }
         // erase
         for (const auto &key : erase_keys) {
+            oss << std::endl << "    " << key;
             ainfo.envs.erase(key);
         }
     }
+
     if (!prefix.empty() && erase_keys.empty()) {
         // no need update app_info
+        env_rpc.response().hint_message = "no key need to delete";
         return;
+    }
+    else {
+        env_rpc.response().hint_message = oss.str();
     }
 
     do_update_app_info(

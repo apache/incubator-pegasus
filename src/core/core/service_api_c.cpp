@@ -120,6 +120,14 @@ DSN_API uint64_t dsn_config_get_value_uint64(const char *section,
     return dsn_all.config->get_value<uint64_t>(section, key, default_value, dsptr);
 }
 
+DSN_API int64_t dsn_config_get_value_int64(const char *section,
+                                           const char *key,
+                                           int64_t default_value,
+                                           const char *dsptr)
+{
+    return dsn_all.config->get_value<int64_t>(section, key, default_value, dsptr);
+}
+
 DSN_API double dsn_config_get_value_double(const char *section,
                                            const char *key,
                                            double default_value,

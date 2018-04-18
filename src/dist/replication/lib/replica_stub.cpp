@@ -61,6 +61,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _trigger_chkpt_command(nullptr),
       _manual_compact_command(nullptr),
       _query_compact_command(nullptr),
+      _query_app_envs_command(nullptr),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
@@ -1190,7 +1191,7 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_,
 {
     replica_ptr replica = get_replica(req.config.pid);
     if (replica != nullptr) {
-        replica->on_config_sync(req.config);
+        replica->on_config_sync(req.info, req.config);
     } else {
         if (req.config.primary == _primary_address) {
             ddebug("%d.%d@%s: replica not exists on replica server, which is primary, remove it "
@@ -1950,8 +1951,8 @@ void replica_stub::open_service()
 
     _manual_compact_command = ::dsn::command_manager::instance().register_app_command(
         {"manual-compact"},
-        "manual-compact <app_id,app_id.partition_id,...>",
-        "manual-compact - full compact on rocksdb",
+        "manual-compact <id1,id2,...> (where id is 'app_id' or 'app_id.partition_id')",
+        "manual-compact - do full compact on the underlying storage engine",
         [this](const std::vector<std::string> &args) {
             if (args.empty()) {
                 return std::string("invalid arguments");
@@ -2031,8 +2032,8 @@ void replica_stub::open_service()
 
     _query_compact_command = ::dsn::command_manager::instance().register_app_command(
         {"query-compact"},
-        "query-compact [app_id,app_id.partition_id,...]",
-        "query-compact - query full compact state on rocksdb",
+        "query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+        "query-compact - query full compact status on the underlying storage engine",
         [this](const std::vector<std::string> &args) {
             replicas rs;
             {
@@ -2095,7 +2096,90 @@ void replica_stub::open_service()
                                 << " : ignored because not primary or secondary";
                     ignored++;
                 } else {
-                    query_state << "\n    " << r->name() << " : " << r->get_compact_state();
+                    char t = status == partition_status::PS_PRIMARY ? 'P' : 'S';
+                    query_state << "\n    " << r->name() << "@" << t << " : "
+                                << r->get_compact_state();
+                    queried++;
+                }
+            }
+
+            std::stringstream total_state;
+            total_state << queried << " queried, " << ignored << " ignored, " << not_found
+                        << " not found";
+            return total_state.str() + query_state.str();
+        });
+
+    _query_app_envs_command = ::dsn::command_manager::instance().register_app_command(
+        {"query-app-envs"},
+        "query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+        "query-app-envs - query app envs on the underlying storage engine",
+        [this](const std::vector<std::string> &args) {
+            replicas rs;
+            {
+                zauto_read_lock l(_replicas_lock);
+                rs = _replicas;
+            }
+
+            std::map<gpid, bool> ids; // gpid -> found
+            if (!args.empty()) {
+                std::vector<std::string> arg_strs;
+                utils::split_args(args[0].c_str(), arg_strs, ',');
+                if (arg_strs.empty()) {
+                    return std::string("invalid arguments");
+                }
+
+                for (const std::string &arg : arg_strs) {
+                    if (arg.empty())
+                        continue;
+                    gpid id;
+                    int pid;
+                    if (id.parse_from(arg.c_str())) {
+                        if (rs.count(id) > 0) {
+                            ids[id] = true;
+                        } else {
+                            ids[id] = false;
+                        }
+                    } else if (sscanf(arg.c_str(), "%d", &pid) == 1) {
+                        for (auto r : rs) {
+                            id = r.second->get_gpid();
+                            if (id.get_app_id() == pid) {
+                                ids[id] = true;
+                            }
+                        }
+                    } else {
+                        return std::string("invalid arguments");
+                    }
+                }
+            } else {
+                for (auto kv : rs) {
+                    ids[kv.first] = true;
+                }
+            }
+
+            std::stringstream query_state;
+            int queried = 0;
+            int ignored = 0;
+            int not_found = 0;
+            for (auto kv : ids) {
+                if (!kv.second) {
+                    query_state << "\n    " << kv.first.to_string() << "@"
+                                << _primary_address.to_string() << " : not found";
+                    not_found++;
+                    continue;
+                }
+                const replica_ptr &r = rs[kv.first];
+                partition_status::type status = r->status();
+                if (status != partition_status::PS_PRIMARY &&
+                    status != partition_status::PS_SECONDARY) {
+                    query_state << "\n    " << r->name()
+                                << " : ignored because not primary or secondary";
+                    ignored++;
+                } else {
+                    char t = status == partition_status::PS_PRIMARY ? 'P' : 'S';
+                    std::map<std::string, std::string> kv_map;
+                    r->query_app_envs(kv_map);
+                    query_state << "\n    " << r->name() << "@" << t << " : ";
+                    dsn::utils::kv_map_to_stream(kv_map, query_state, ',', '=');
                     queried++;
                 }
             }
@@ -2123,6 +2207,7 @@ void replica_stub::close()
     dsn::command_manager::instance().deregister_command(_trigger_chkpt_command);
     dsn::command_manager::instance().deregister_command(_manual_compact_command);
     dsn::command_manager::instance().deregister_command(_query_compact_command);
+    dsn::command_manager::instance().deregister_command(_query_app_envs_command);
 
     _kill_partition_command = nullptr;
     _deny_client_command = nullptr;
@@ -2131,6 +2216,7 @@ void replica_stub::close()
     _trigger_chkpt_command = nullptr;
     _manual_compact_command = nullptr;
     _query_compact_command = nullptr;
+    _query_app_envs_command = nullptr;
 
     if (_config_sync_timer_task != nullptr) {
         _config_sync_timer_task->cancel(true);

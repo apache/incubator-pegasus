@@ -387,8 +387,8 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         << std::setw(max_app_name_size) << std::left << "app_name" << std::setw(20) << std::left
         << "app_type" << std::setw(20) << std::left << "partition_count" << std::setw(20)
         << std::left << "replica_count" << std::setw(20) << std::left << "is_stateful"
-        << std::setw(20) << std::left << "settings" << std::setw(20) << std::left
-        << "drop_expire_time" << std::endl;
+        << std::setw(20) << std::left << "drop_expire_time" << std::setw(20) << std::left << "envs"
+        << std::endl;
     int available_app_count = 0;
     for (int i = 0; i < apps.size(); i++) {
         dsn::app_info info = apps[i];
@@ -397,15 +397,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         }
         std::string status_str = enum_to_string(info.status);
         status_str = status_str.substr(status_str.find("AS_") + 3);
-        std::string settings = "{";
-        for (auto kv : info.envs) {
-            settings += (kv.first + ":" + kv.second + ",");
-        }
-        if (settings.length() > 1) {
-            settings.back() = '}';
-        } else {
-            settings = "{}";
-        }
+        std::string envs_str = "{" + dsn::utils::kv_map_to_string(info.envs, ',', '=') + "}";
         std::string drop_expire_time = "-";
         if (info.status == app_status::AS_AVAILABLE) {
             available_app_count++;
@@ -418,8 +410,8 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             << std::setw(max_app_name_size) << std::left << info.app_name << std::setw(20)
             << std::left << info.app_type << std::setw(20) << std::left << info.partition_count
             << std::setw(20) << std::left << info.max_replica_count << std::setw(20) << std::left
-            << (info.is_stateful ? "true" : "false") << std::setw(20) << std::left << settings
-            << std::setw(20) << std::left << drop_expire_time << std::endl;
+            << (info.is_stateful ? "true" : "false") << std::setw(20) << std::left
+            << drop_expire_time << std::setw(20) << std::left << envs_str << std::endl;
     }
     out << std::endl << std::flush;
 
@@ -1352,7 +1344,7 @@ void replication_ddl_client::end_meta_request(
     if (response.err != ERR_OK) {
         return response.err;
     } else {
-        std::cout << "set app env succeed" << std::endl;
+        std::cout << "set app envs succeed" << std::endl;
         if (!response.hint_message.empty()) {
             std::cout << "=============================" << std::endl;
             std::cout << response.hint_message << std::endl;

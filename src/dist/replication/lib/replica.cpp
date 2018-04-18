@@ -82,7 +82,7 @@ replica::replica(
     if (need_restore) {
         // add an extra env for restore
         _extra_envs.insert(
-            std::make_pair(backup_restore_constant::FORCE_RESORE, std::string("true")));
+            std::make_pair(backup_restore_constant::FORCE_RESTORE, std::string("true")));
     }
 }
 

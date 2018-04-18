@@ -60,6 +60,10 @@ extern DSN_API uint64_t dsn_config_get_value_uint64(const char *section,
                                                     const char *key,
                                                     uint64_t default_value,
                                                     const char *dsptr);
+extern DSN_API int64_t dsn_config_get_value_int64(const char *section,
+                                                  const char *key,
+                                                  int64_t default_value,
+                                                  const char *dsptr);
 extern DSN_API double dsn_config_get_value_double(const char *section,
                                                   const char *key,
                                                   double default_value,

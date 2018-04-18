@@ -528,6 +528,26 @@ void replica::on_update_configuration_on_meta_server_reply(
     _primary_states.reconfiguration_task = nullptr;
 }
 
+bool replica::update_app_envs(const std::map<std::string, std::string> &envs)
+{
+    if (_app) {
+        _app->update_app_envs(envs);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool replica::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
+{
+    if (_app) {
+        _app->query_app_envs(envs);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool replica::update_configuration(const partition_configuration &config)
 {
     dassert(config.ballot >= get_ballot(),
@@ -927,13 +947,15 @@ bool replica::update_local_configuration_with_no_ballot_change(partition_status:
     return update_local_configuration(config, true);
 }
 
-void replica::on_config_sync(const partition_configuration &config)
+void replica::on_config_sync(const app_info &info, const partition_configuration &config)
 {
     ddebug("%s: configuration sync", name());
 
     // no outdated update
     if (config.ballot < get_ballot())
         return;
+
+    update_app_envs(info.envs);
 
     if (status() == partition_status::PS_PRIMARY ||
         nullptr != _primary_states.reconfiguration_task) {
