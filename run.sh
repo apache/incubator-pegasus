@@ -417,7 +417,6 @@ function run_start_onebox()
                 ;;
             --use_product_config)
                 USE_PRODUCT_CONFIG=true
-                shift
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
