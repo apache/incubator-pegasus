@@ -238,6 +238,7 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"partition_count", required_argument, 0, 'p'},
                                            {"replica_count", required_argument, 0, 'r'},
+                                           {"envs", required_argument, 0, 'e'},
                                            {0, 0, 0, 0}};
 
     if (args.argc < 2)
@@ -246,11 +247,12 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
     std::string app_name = args.argv[1];
 
     int pc = 4, rc = 3;
+    std::map<std::string, std::string> envs;
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "p:r:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "p:r:e:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -266,12 +268,17 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
                 return false;
             }
             break;
+        case 'e':
+            if (!::dsn::utils::parse_kv_map(optarg, envs, ',', '=')) {
+                fprintf(stderr, "invalid envs: %s\n", optarg);
+                return false;
+            }
+            break;
         default:
             return false;
         }
     }
 
-    std::map<std::string, std::string> envs;
     ::dsn::error_code err = sc->ddl_client->create_app(app_name, "pegasus", pc, rc, envs, false);
     if (err == ::dsn::ERR_OK)
         std::cout << "create app " << app_name << " succeed" << std::endl;
@@ -3770,7 +3777,7 @@ inline bool clear_app_envs(command_executor *e, shell_context *sc, arguments arg
         }
     }
     if (!clear_all && prefix.empty()) {
-        fprintf(stderr, "must specify the prefix when clear_all = false\n");
+        fprintf(stderr, "must specify one of --all and --prefix options\n");
         return false;
     }
     ::dsn::error_code ret = sc->ddl_client->clear_app_envs(sc->current_app_name, clear_all, prefix);

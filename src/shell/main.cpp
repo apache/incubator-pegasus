@@ -63,7 +63,8 @@ command_executor commands[] = {
     {
         "create",
         "create an app",
-        "app_name [--partition_count|-p NUMBER] [--replica_count|-r NUMBER]",
+        "app_name [--partition_count|-p NUMBER] [--replica_count|-r NUMBER] "
+        "[--envs|-e k1=v1,k2=v2...]",
         create_app,
     },
     {
