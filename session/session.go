@@ -81,9 +81,10 @@ func newNodeSessionAddr(addr string, ntype nodeType) *nodeSession {
 // Each nodeSession corresponds to an RpcConn.
 func newNodeSession(addr string, ntype nodeType) *nodeSession {
 	logger := pegalog.GetLogger()
-	logger.Printf("create session with %s(%s)", addr, ntype)
 
 	n := newNodeSessionAddr(addr, ntype)
+	logger.Printf("create session with %s", n)
+
 	n.conn = rpc.NewRpcConn(n.tom, addr)
 
 	n.tom.Go(n.loopForDialing)
@@ -96,31 +97,13 @@ func (n *nodeSession) ConnState() rpc.ConnState {
 }
 
 func (n *nodeSession) String() string {
-	return fmt.Sprintf("addr: %s, nodetype: %s, pending rpc: %d", n.addr, n.ntype, len(n.pendingResp))
-}
-
-// Close the session if it's manually closed by user, otherwise it will
-// restart dialing since the loop may end due to some io errors, and
-// we need to wait until the connection recovers.
-func (n *nodeSession) closeOrRestartIfLoopEnded(loop func() error) error {
-	err := loop()
-
-	if n.ConnState() == rpc.ConnStateClosed {
-		n.Close()
-		return err
-	} else {
-		n.tryDial()
-		return nil
-	}
+	return fmt.Sprintf("[%s(%s)]", n.addr, n.ntype)
 }
 
 // Loop in background and keep watching for redialc.
 // Since loopForDialing is the only consumer of redialc, it guarantees
 // only 1 goroutine dialing simultaneously.
 func (n *nodeSession) loopForDialing() error {
-	// the first try never fails.
-	n.tryDial()
-
 	for {
 		select {
 		case <-n.tom.Dying():
@@ -160,19 +143,14 @@ func (n *nodeSession) dial() {
 		n.lastDialTime = time.Now()
 
 		if err != nil {
-			n.logger.Printf("failed to dial %s: %s", n.ntype, err)
-			n.tryDial()
+			n.logger.Printf("failed to dial %s: %s", n, err)
 		} else {
-			n.tom.Go(func() error {
-				return n.closeOrRestartIfLoopEnded(n.loopForRequest)
-			})
-			n.tom.Go(func() error {
-				return n.closeOrRestartIfLoopEnded(n.loopForResponse)
-			})
+			n.tom.Go(n.loopForRequest)
+			n.tom.Go(n.loopForResponse)
 		}
 	}
 
-	n.logger.Printf("stop dialing for %s: %s, connection state: %s", n.ntype, n.addr, n.ConnState())
+	n.logger.Printf("stop dialing for %s, connection state: %s", n, n.ConnState())
 }
 
 func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
@@ -200,7 +178,7 @@ func (n *nodeSession) loopForRequest() error {
 			n.mu.Unlock()
 
 			if err := n.writeRequest(req.call); err != nil {
-				n.logger.Printf("failed to send request to [%s, %s]: %s", n.addr, n.ntype, err)
+				n.logger.Printf("failed to send request to %s: %s", n, err)
 
 				// notify the rpc caller.
 				req.call.err = err
@@ -237,7 +215,7 @@ func (n *nodeSession) loopForResponse() error {
 					return n.tom.Err()
 				}
 			} else {
-				n.logger.Printf("failed to read response from [%s, %s]: %s", n.addr, n.ntype, err)
+				n.logger.Printf("failed to read response from %s: %s", n, err)
 				return err
 			}
 		}
@@ -247,8 +225,8 @@ func (n *nodeSession) loopForResponse() error {
 		n.mu.Unlock()
 
 		if !ok {
-			n.logger.Printf("ignore stale response (seqId: %d) from [%s, %s]: %s",
-				call.seqId, n.ntype, n.addr, call.result)
+			n.logger.Printf("ignore stale response (seqId: %d) from %s: %s",
+				call.seqId, n, call.result)
 			continue
 		}
 
@@ -258,9 +236,45 @@ func (n *nodeSession) loopForResponse() error {
 	}
 }
 
+func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
+	if n.ConnState() != rpc.ConnStateReady {
+		n.tryDial()
+
+		var ready bool
+		for {
+
+			breakLoop := false
+			select {
+			case <-ctx.Done():
+				breakLoop = true
+			case <-time.Tick(100 * time.Millisecond):
+				if n.ConnState() == rpc.ConnStateReady {
+					ready = true
+					breakLoop = true
+				}
+			}
+
+			if breakLoop {
+				break
+			}
+		}
+
+		if !ready {
+			return fmt.Errorf("session %s is not ready", n)
+		}
+	}
+	return nil
+}
+
 // Invoke a rpc call.
 // The call will be cancelled if any io error encountered.
 func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rpcRequestArgs, name string) (result rpcResponseResult, err error) {
+	// either the ctx cancelled or the tomb killed will stop this rpc call.
+	ctxWithTomb := n.tom.Context(ctx)
+	if err := n.waitUntilSessionReady(ctxWithTomb); err != nil {
+		return nil, err
+	}
+
 	rcall := &rpcCall{}
 	rcall.args = args
 	rcall.name = name
@@ -274,8 +288,6 @@ func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rp
 
 	req := &requestListener{call: rcall, ch: make(chan bool, 1)}
 
-	// either the ctx cancelled or the tomb killed will stop this rpc call.
-	ctxWithTomb := n.tom.Context(ctx)
 	select {
 	// passes the request to loopForRequest
 	case n.reqc <- req:
@@ -336,7 +348,7 @@ func (n *nodeSession) Close() <-chan struct{} {
 	defer n.mu.Unlock()
 
 	if n.ConnState() != rpc.ConnStateClosed {
-		n.logger.Printf("Close session with [%s, %s]", n.ntype, n.addr)
+		n.logger.Printf("Close session with %s", n)
 		n.conn.Close()
 		n.tom.Kill(errors.New("nodeSession closed"))
 	}

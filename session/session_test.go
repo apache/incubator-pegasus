@@ -98,34 +98,11 @@ func TestNodeSession_LoopForDialingCancelled(t *testing.T) {
 	n.conn = rpc.NewRpcConn(n.tom, addr)
 
 	n.tom.Go(n.loopForDialing)
+	n.tryDial()
 
 	time.Sleep(time.Second)
 	// time.Second < rpc.RpcConnDialTimeout, it must still be connecting.
 	assert.Equal(t, rpc.ConnStateConnecting, n.conn.GetState())
-	n.conn.Close()
-}
-
-// Ensure that `dial()` will retry if the last attempt failed.
-func TestNodeSession_LoopForDialingRetry(t *testing.T) {
-	defer leaktest.CheckTimeout(t, rpc.RpcConnDialTimeout*2)()
-
-	addr := "www.baidu.com:12321"
-	n := newNodeSessionAddr(addr, "meta")
-	n.conn = rpc.NewRpcConn(n.tom, addr)
-
-	n.tryDial()
-
-	n.tom.Go(func() error {
-		n.dial()
-		return nil
-	})
-
-	time.Sleep(rpc.RpcConnDialTimeout + 100*time.Millisecond)
-	assert.Equal(t, rpc.ConnStateTransientFailure, n.conn.GetState())
-
-	// block until redialc has incoming signal
-	<-n.redialc
-
 	n.conn.Close()
 }
 
@@ -167,7 +144,7 @@ func TestNodeSession_WriteFailed(t *testing.T) {
 	n.codec = mockCodec
 
 	_, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
-	assert.Equal(t, err, base.ERR_CLIENT_FAILED)
+	assert.NotNil(t, err)
 	assert.Equal(t, n.conn.GetState(), rpc.ConnStateTransientFailure)
 }
 
@@ -187,6 +164,29 @@ func TestNodeSession_ReadFailed(t *testing.T) {
 	_, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
 	assert.Equal(t, err, context.Canceled)
 	assert.Equal(t, n.conn.GetState(), rpc.ConnStateTransientFailure)
+}
+
+func TestNodeSession_WaitUntilSessionReady(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	func() {
+		n := newNodeSession("www.baidu.com:12321", "meta")
+		defer n.Close()
+
+		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*50)
+		err := n.waitUntilSessionReady(ctx)
+
+		// timeout waiting for dialing
+		assert.NotNil(t, err)
+	}()
+
+	func() {
+		n := newNodeSession("0.0.0.0:8800", "meta")
+		defer n.Close()
+
+		err := n.waitUntilSessionReady(context.Background())
+		assert.Nil(t, err)
+	}()
 }
 
 // In this test we send the rpc request to an echo server,

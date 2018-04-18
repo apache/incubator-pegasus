@@ -9,7 +9,6 @@ import (
 	"errors"
 	"math"
 	"testing"
-	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
@@ -171,9 +170,11 @@ func TestPegasusTableConnector_Close(t *testing.T) {
 	tb, err := client.OpenTable(context.Background(), "temp")
 	assert.Nil(t, err)
 	ptb, _ := tb.(*pegasusTableConnector)
-	ptb.replica.GetReplica("0.0.0.0:34801")
-	time.Sleep(time.Second) // wait 1sec for connection ready.
+
+	err = tb.Set(context.Background(), []byte("a"), []byte("a"), []byte("a"))
+	assert.Nil(t, err)
 
 	ptb.Close()
-	assert.Equal(t, ptb.replica.GetReplica("0.0.0.0:34801").ConnState(), rpc.ConnStateReady)
+	_, r := ptb.getPartition([]byte("a"))
+	assert.Equal(t, r.ConnState(), rpc.ConnStateReady)
 }

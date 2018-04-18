@@ -386,7 +386,7 @@ func (p *pegasusTableConnector) selfUpdate() bool {
 	// ignore the returned error
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 	if err := p.updateConf(ctx); err != nil {
-		p.logger.Println("self update failed [table: %s]: %s", p.tableName, err.Error())
+		p.logger.Printf("self update failed [table: %s]: %s", p.tableName, err.Error())
 	}
 
 	// flush confUpdateCh
