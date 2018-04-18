@@ -1954,23 +1954,68 @@ void replica_stub::open_service()
         "manual-compact <id1,id2,...> (where id is 'app_id' or 'app_id.partition_id')",
         "manual-compact - do full compact on the underlying storage engine",
         [this](const std::vector<std::string> &args) {
-            if (args.empty()) {
-                return std::string("invalid arguments");
-            }
+            return exec_command_on_replica(args, false, [this](const replica_ptr &rep) {
+                if (rep->could_start_manual_compact()) {
+                    tasking::enqueue(
+                        LPC_MANUAL_COMPACT,
+                        this,
+                        std::bind(&replica_stub::manual_compact, this, rep->get_gpid()));
+                    return std::string("started");
+                } else {
+                    return std::string("ignored because too frequently");
+                }
+            });
+        });
 
+    _query_compact_command = ::dsn::command_manager::instance().register_app_command(
+        {"query-compact"},
+        "query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+        "query-compact - query full compact status on the underlying storage engine",
+        [this](const std::vector<std::string> &args) {
+            return exec_command_on_replica(
+                args, true, [](const replica_ptr &rep) { return rep->get_compact_state(); });
+        });
+
+    _query_app_envs_command = ::dsn::command_manager::instance().register_app_command(
+        {"query-app-envs"},
+        "query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+        "query-app-envs - query app envs on the underlying storage engine",
+        [this](const std::vector<std::string> &args) {
+            return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                std::map<std::string, std::string> kv_map;
+                if (rep->query_app_envs(kv_map)) {
+                    return dsn::utils::kv_map_to_string(kv_map, ',', '=');
+                } else {
+                    return std::string("call replica::query_app_envs() failed");
+                }
+            });
+        });
+}
+
+std::string
+replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
+                                      bool allow_empty_args,
+                                      std::function<std::string(const replica_ptr &rep)> func)
+{
+    if (!allow_empty_args && args.empty()) {
+        return std::string("invalid arguments");
+    }
+
+    replicas rs;
+    {
+        zauto_read_lock l(_replicas_lock);
+        rs = _replicas;
+    }
+
+    std::map<gpid, bool> ids; // gpid -> found in rs
+    if (!args.empty()) {
+        for (int i = 0; i < args.size(); i++) {
             std::vector<std::string> arg_strs;
-            utils::split_args(args[0].c_str(), arg_strs, ',');
+            utils::split_args(args[i].c_str(), arg_strs, ',');
             if (arg_strs.empty()) {
                 return std::string("invalid arguments");
             }
 
-            replicas rs;
-            {
-                zauto_read_lock l(_replicas_lock);
-                rs = _replicas;
-            }
-
-            std::map<gpid, bool> ids; // gpid -> found
             for (const std::string &arg : arg_strs) {
                 if (arg.empty())
                     continue;
@@ -1993,202 +2038,40 @@ void replica_stub::open_service()
                     return std::string("invalid arguments");
                 }
             }
+        }
+    } else {
+        for (auto kv : rs) {
+            ids[kv.first] = true;
+        }
+    }
 
-            std::stringstream compact_state;
-            int started = 0;
-            int ignored = 0;
-            int not_found = 0;
-            for (auto kv : ids) {
-                if (!kv.second) {
-                    compact_state << "\n    " << kv.first.to_string() << "@"
-                                  << _primary_address.to_string() << " : not found";
-                    not_found++;
-                    continue;
-                }
-                const replica_ptr &r = rs[kv.first];
-                partition_status::type status = r->status();
-                if (status != partition_status::PS_PRIMARY &&
-                    status != partition_status::PS_SECONDARY) {
-                    compact_state << "\n    " << r->name()
-                                  << " : ignored because not primary or secondary";
-                    ignored++;
-                } else if (r->could_start_manual_compact()) {
-                    tasking::enqueue(LPC_MANUAL_COMPACT,
-                                     this,
-                                     std::bind(&replica_stub::manual_compact, this, kv.first));
-                    compact_state << "\n    " << r->name() << " : started";
-                    started++;
-                } else {
-                    compact_state << "\n    " << r->name() << " : ignored because too frequently";
-                    ignored++;
-                }
-            }
+    std::stringstream query_state;
+    int processed = 0;
+    int ignored = 0;
+    int not_found = 0;
+    for (auto kv : ids) {
+        if (!kv.second) {
+            query_state << "\n    " << kv.first.to_string() << "@" << _primary_address.to_string()
+                        << " : not found";
+            not_found++;
+            continue;
+        }
+        const replica_ptr &r = rs[kv.first];
+        partition_status::type status = r->status();
+        if (status != partition_status::PS_PRIMARY && status != partition_status::PS_SECONDARY) {
+            query_state << "\n    " << r->name() << " : ignored because not primary or secondary";
+            ignored++;
+        } else {
+            char t = status == partition_status::PS_PRIMARY ? 'P' : 'S';
+            query_state << "\n    " << r->name() << "@" << t << " : " << func(r);
+            processed++;
+        }
+    }
 
-            std::stringstream total_state;
-            total_state << started << " started, " << ignored << " ignored, " << not_found
-                        << " not found";
-            return total_state.str() + compact_state.str();
-        });
-
-    _query_compact_command = ::dsn::command_manager::instance().register_app_command(
-        {"query-compact"},
-        "query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-        "query-compact - query full compact status on the underlying storage engine",
-        [this](const std::vector<std::string> &args) {
-            replicas rs;
-            {
-                zauto_read_lock l(_replicas_lock);
-                rs = _replicas;
-            }
-
-            std::map<gpid, bool> ids; // gpid -> found
-            if (!args.empty()) {
-                std::vector<std::string> arg_strs;
-                utils::split_args(args[0].c_str(), arg_strs, ',');
-                if (arg_strs.empty()) {
-                    return std::string("invalid arguments");
-                }
-
-                for (const std::string &arg : arg_strs) {
-                    if (arg.empty())
-                        continue;
-                    gpid id;
-                    int pid;
-                    if (id.parse_from(arg.c_str())) {
-                        if (rs.count(id) > 0) {
-                            ids[id] = true;
-                        } else {
-                            ids[id] = false;
-                        }
-                    } else if (sscanf(arg.c_str(), "%d", &pid) == 1) {
-                        for (auto r : rs) {
-                            id = r.second->get_gpid();
-                            if (id.get_app_id() == pid) {
-                                ids[id] = true;
-                            }
-                        }
-                    } else {
-                        return std::string("invalid arguments");
-                    }
-                }
-            } else {
-                for (auto kv : rs) {
-                    ids[kv.first] = true;
-                }
-            }
-
-            std::stringstream query_state;
-            int queried = 0;
-            int ignored = 0;
-            int not_found = 0;
-            for (auto kv : ids) {
-                if (!kv.second) {
-                    query_state << "\n    " << kv.first.to_string() << "@"
-                                << _primary_address.to_string() << " : not found";
-                    not_found++;
-                    continue;
-                }
-                const replica_ptr &r = rs[kv.first];
-                partition_status::type status = r->status();
-                if (status != partition_status::PS_PRIMARY &&
-                    status != partition_status::PS_SECONDARY) {
-                    query_state << "\n    " << r->name()
-                                << " : ignored because not primary or secondary";
-                    ignored++;
-                } else {
-                    char t = status == partition_status::PS_PRIMARY ? 'P' : 'S';
-                    query_state << "\n    " << r->name() << "@" << t << " : "
-                                << r->get_compact_state();
-                    queried++;
-                }
-            }
-
-            std::stringstream total_state;
-            total_state << queried << " queried, " << ignored << " ignored, " << not_found
-                        << " not found";
-            return total_state.str() + query_state.str();
-        });
-
-    _query_app_envs_command = ::dsn::command_manager::instance().register_app_command(
-        {"query-app-envs"},
-        "query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-        "query-app-envs - query app envs on the underlying storage engine",
-        [this](const std::vector<std::string> &args) {
-            replicas rs;
-            {
-                zauto_read_lock l(_replicas_lock);
-                rs = _replicas;
-            }
-
-            std::map<gpid, bool> ids; // gpid -> found
-            if (!args.empty()) {
-                std::vector<std::string> arg_strs;
-                utils::split_args(args[0].c_str(), arg_strs, ',');
-                if (arg_strs.empty()) {
-                    return std::string("invalid arguments");
-                }
-
-                for (const std::string &arg : arg_strs) {
-                    if (arg.empty())
-                        continue;
-                    gpid id;
-                    int pid;
-                    if (id.parse_from(arg.c_str())) {
-                        if (rs.count(id) > 0) {
-                            ids[id] = true;
-                        } else {
-                            ids[id] = false;
-                        }
-                    } else if (sscanf(arg.c_str(), "%d", &pid) == 1) {
-                        for (auto r : rs) {
-                            id = r.second->get_gpid();
-                            if (id.get_app_id() == pid) {
-                                ids[id] = true;
-                            }
-                        }
-                    } else {
-                        return std::string("invalid arguments");
-                    }
-                }
-            } else {
-                for (auto kv : rs) {
-                    ids[kv.first] = true;
-                }
-            }
-
-            std::stringstream query_state;
-            int queried = 0;
-            int ignored = 0;
-            int not_found = 0;
-            for (auto kv : ids) {
-                if (!kv.second) {
-                    query_state << "\n    " << kv.first.to_string() << "@"
-                                << _primary_address.to_string() << " : not found";
-                    not_found++;
-                    continue;
-                }
-                const replica_ptr &r = rs[kv.first];
-                partition_status::type status = r->status();
-                if (status != partition_status::PS_PRIMARY &&
-                    status != partition_status::PS_SECONDARY) {
-                    query_state << "\n    " << r->name()
-                                << " : ignored because not primary or secondary";
-                    ignored++;
-                } else {
-                    char t = status == partition_status::PS_PRIMARY ? 'P' : 'S';
-                    std::map<std::string, std::string> kv_map;
-                    r->query_app_envs(kv_map);
-                    query_state << "\n    " << r->name() << "@" << t << " : ";
-                    dsn::utils::kv_map_to_stream(kv_map, query_state, ',', '=');
-                    queried++;
-                }
-            }
-
-            std::stringstream total_state;
-            total_state << queried << " queried, " << ignored << " ignored, " << not_found
-                        << " not found";
-            return total_state.str() + query_state.str();
-        });
+    std::stringstream total_state;
+    total_state << processed << " processed, " << ignored << " ignored, " << not_found
+                << " not found";
+    return total_state.str() + query_state.str();
 }
 
 void replica_stub::close()
