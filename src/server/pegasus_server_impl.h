@@ -184,11 +184,22 @@ private:
 
     virtual void manual_compact();
 
+    virtual void update_app_envs(const std::map<std::string, std::string> &envs);
+
+    virtual void query_app_envs(/*out*/std::map<std::string, std::string> &envs);
+
     // get the absolute path of restore directory and the flag whether force restore from env
     // return
     //      std::pair<std::string, bool>, pair.first is the path of the restore dir; pair.second is
     //      the flag that whether force restore
-    std::pair<std::string, bool> get_restore_dir_from_env(int argc, char **argv);
+    std::pair<std::string, bool>
+    get_restore_dir_from_env(const std::map<std::string, std::string> &env_kvs);
+
+    // return true if successfully changed
+    bool set_usage_scenario(const std::string &usage_scenario);
+
+    // return true if successfully set
+    bool set_options(const std::unordered_map<std::string, std::string> &new_options);
 
 private:
     dsn::gpid _gpid;
@@ -204,6 +215,7 @@ private:
     rocksdb::Options _db_opts;
     rocksdb::WriteOptions _wt_opts;
     rocksdb::ReadOptions _rd_opts;
+    std::string _usage_scenario;
 
     rocksdb::DB *_db;
     volatile bool _is_open;
