@@ -133,7 +133,7 @@ extern DSN_API void dsn_coredump();
 #define dfatal(...) dlog(LOG_LEVEL_FATAL, __VA_ARGS__)
 #define dassert(x, ...)                                                                            \
     do {                                                                                           \
-        if (!(x)) {                                                                                \
+        if (dsn_unlikely(!(x))) {                                                                  \
             dlog(LOG_LEVEL_FATAL, "assertion expression: " #x);                                    \
             dlog(LOG_LEVEL_FATAL, __VA_ARGS__);                                                    \
             dsn_coredump();                                                                        \
