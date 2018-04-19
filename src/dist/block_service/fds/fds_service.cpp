@@ -141,9 +141,7 @@ error_code fds_service::initialize(const std::vector<std::string> &args)
     }                                                                                              \
     catch (...)                                                                                    \
     {                                                                                              \
-        derror("fds %s get unknown exception: parameter(%s)",                                      \
-               OPERATION,                                                                          \
-               INPUT_PARAMETER);                                                                   \
+        derror("fds %s get unknown exception: parameter(%s)", OPERATION, INPUT_PARAMETER);         \
         ERR_REFERENCE = ERR_FS_INTERNAL;                                                           \
     }
 
@@ -304,7 +302,7 @@ dsn::task_ptr fds_service::delete_file(const delete_file_request &req,
         std::string fds_path = utils::path_to_fds(req.file_name, false);
         delete_file_response resp;
         try {
-            _client->deleteObject(_bucket_name, fds_path);
+            _client->deleteObject(_bucket_name, fds_path, false);
             resp.err = ERR_OK;
         } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
             if (ex.code() == Poco::Net::HTTPResponse::HTTP_NOT_FOUND) {
@@ -355,8 +353,7 @@ dsn::task_ptr fds_service::exist(const exist_request &req,
                 if (_client->doesObjectExist(_bucket_name, utils::path_to_fds(req.path, false))) {
                     resp.err = ERR_OK;
                 } else {
-                    derror("fds exist failed: path not found, parameter(%s)",
-                           req.path.c_str());
+                    derror("fds exist failed: path not found, parameter(%s)", req.path.c_str());
                     resp.err = ERR_OBJECT_NOT_FOUND;
                 }
             }
@@ -374,9 +371,6 @@ dsn::task_ptr fds_service::exist(const exist_request &req,
     return callback;
 }
 
-//
-// Attention： if req.path is a directory, this may consume much time, such as many file under dir
-//
 dsn::task_ptr fds_service::remove_path(const remove_path_request &req,
                                        dsn::task_code code,
                                        const remove_path_callback &cb,
@@ -429,7 +423,7 @@ dsn::task_ptr fds_service::remove_path(const remove_path_request &req,
         if (resp.err == ERR_OK && should_remove_path) {
             fds_path = utils::path_to_fds(req.path, false);
             try {
-                auto deleting = _client->deleteObjects(_bucket_name, fds_path);
+                auto deleting = _client->deleteObjects(_bucket_name, fds_path, false);
                 if (deleting->countFailedObjects() <= 0) {
                     resp.err = ERR_OK;
                 } else {
