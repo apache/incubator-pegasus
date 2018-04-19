@@ -1177,7 +1177,7 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
         case 'o':
             file = fopen(optarg, "w");
             if (!file) {
-                fprintf(stderr, "open filename %s failed", optarg);
+                fprintf(stderr, "open filename %s failed\n", optarg);
                 return false;
             }
             break;
@@ -1409,7 +1409,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             file = fopen(optarg, "w");
             if (!file) {
-                fprintf(stderr, "open filename %s failed", optarg);
+                fprintf(stderr, "open filename %s failed\n", optarg);
                 return false;
             }
             break;
@@ -1591,7 +1591,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             file = fopen(optarg, "w");
             if (!file) {
-                fprintf(stderr, "open filename %s failed", optarg);
+                fprintf(stderr, "open filename %s failed\n", optarg);
                 return false;
             }
             break;
@@ -3313,7 +3313,7 @@ inline bool query_restore_status(command_executor *e, shell_context *sc, argumen
 
     int32_t restore_app_id = boost::lexical_cast<int32_t>(args.argv[1]);
     if (restore_app_id <= 0) {
-        fprintf(stderr, "invalid restore_app_id(%d)", restore_app_id);
+        fprintf(stderr, "invalid restore_app_id(%d)\n", restore_app_id);
         return false;
     }
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'}, {0, 0, 0, 0}};
@@ -3479,7 +3479,7 @@ inline bool query_backup_policy(command_executor *e, shell_context *sc, argument
             ::dsn::utils::split_args(optarg, names, ',');
             for (const auto &policy_name : names) {
                 if (policy_name.empty()) {
-                    fprintf(stderr, "invalid, empty policy_name, just ignore");
+                    fprintf(stderr, "invalid, empty policy_name, just ignore\n");
                     continue;
                 } else {
                     policy_names.emplace_back(policy_name);
@@ -3498,7 +3498,7 @@ inline bool query_backup_policy(command_executor *e, shell_context *sc, argument
         }
     }
     if (policy_names.empty()) {
-        fprintf(stderr, "empty policy_name, please assign policy_name you want to query");
+        fprintf(stderr, "empty policy_name, please assign policy_name you want to query\n");
         return false;
     }
     ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
