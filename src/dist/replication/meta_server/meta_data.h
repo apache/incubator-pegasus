@@ -337,6 +337,7 @@ public:
     {
         app_info another = *this;
         another.status = temp_status;
+        // persistent envs to zookeeper
         dsn::blob result = dsn::json::json_forwarder<app_info>::encode(another);
         return result;
     }

@@ -22,7 +22,14 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
         const std::shared_ptr<app_state> &app = state->get_app(app_id);
         if (app != nullptr && app->status == app_status::AS_AVAILABLE) {
             app_available = true;
-            buffer = dsn::json::json_forwarder<app_info>::encode(*app);
+            // do not persistent envs to backup file
+            if (app->envs.empty()) {
+                buffer = dsn::json::json_forwarder<app_info>::encode(*app);
+            } else {
+                app_state tmp = *app;
+                tmp.envs.clear();
+                buffer = dsn::json::json_forwarder<app_info>::encode(tmp);
+            }
         }
     }
 
