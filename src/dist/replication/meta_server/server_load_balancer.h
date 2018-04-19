@@ -37,12 +37,14 @@
 #pragma once
 
 #include <dsn/service_api_cpp.h>
+#include <dsn/cpp/zlocks.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/utility/error_code.h>
 #include <string>
 #include <functional>
 #include <memory>
 #include <algorithm>
+#include <set>
 #include "meta_data.h"
 #include "meta_service.h"
 
@@ -185,14 +187,14 @@ public:
         : server_load_balancer(svc), _ctrl_assign_delay_ms(nullptr)
     {
         if (svc != nullptr) {
-            mutation_2pc_min_replica_count = svc->get_options().mutation_2pc_min_replica_count;
-            replica_assign_delay_ms_for_dropouts =
+            _mutation_2pc_min_replica_count = svc->get_options().mutation_2pc_min_replica_count;
+            _replica_assign_delay_ms_for_dropouts =
                 svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
             config_context::MAX_REPLICA_COUNT_IN_GRROUP =
                 svc->get_meta_options()._lb_opts.max_replicas_in_group;
         } else {
-            mutation_2pc_min_replica_count = 0;
-            replica_assign_delay_ms_for_dropouts = 0;
+            _mutation_2pc_min_replica_count = 0;
+            _replica_assign_delay_ms_for_dropouts = 0;
         }
     }
     virtual ~simple_load_balancer() { UNREGISTER_VALID_HANDLER(_ctrl_assign_delay_ms); }
@@ -234,11 +236,25 @@ protected:
     pc_status on_redundant_secondary(meta_view &view, const dsn::gpid &gpid);
 
     std::string ctrl_assign_delay_ms(const std::vector<std::string> &args);
+    std::string ctrl_assign_secondary_black_list(const std::vector<std::string> &args);
 
-    int32_t mutation_2pc_min_replica_count;
-    uint64_t replica_assign_delay_ms_for_dropouts;
+    bool in_black_list(dsn::rpc_address addr)
+    {
+        dsn::service::zauto_read_lock l(_black_list_lock);
+        return _assign_secondary_black_list.count(addr) != 0;
+    }
+
+    int32_t _mutation_2pc_min_replica_count;
 
     dsn_handle_t _ctrl_assign_delay_ms;
+    uint64_t _replica_assign_delay_ms_for_dropouts;
+
+    dsn_handle_t _ctrl_assign_secondary_black_list;
+    // NOTICE: the command handler is called in THREADPOOL_DEFAULT
+    // but when adding secondary, the black list is accessed in THREADPOOL_META_STATE
+    // so we need a lock to protect it
+    dsn::service::zrwlock_nr _black_list_lock;
+    std::set<dsn::rpc_address> _assign_secondary_black_list;
 };
 }
 }

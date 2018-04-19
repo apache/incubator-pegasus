@@ -607,32 +607,32 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
 
     configuration_proposal_action action;
     bool is_emergency = false;
-    if (cc.config_owner->max_replica_count > mutation_2pc_min_replica_count &&
-        replica_count(pc) < mutation_2pc_min_replica_count) {
+    if (cc.config_owner->max_replica_count > _mutation_2pc_min_replica_count &&
+        replica_count(pc) < _mutation_2pc_min_replica_count) {
         // ATTENTION:
         // when max_replica_count == 2, even if there is only 1 replica alive now, we will still
         // wait for replica_assign_delay_ms_for_dropouts before recover the second replica.
         is_emergency = true;
-        ddebug("gpid(%d.%d): is emergency due to too few replicas",
-               gpid.get_app_id(),
-               gpid.get_partition_index());
+        ddebug("gpid(%s): is emergency due to too few replicas", gpid.to_string());
     } else if (cc.dropped.empty()) {
         is_emergency = true;
-        ddebug("gpid(%d.%d): is emergency due to no dropped candidate",
-               gpid.get_app_id(),
-               gpid.get_partition_index());
+        ddebug("gpid(%s): is emergency due to no dropped candidate", gpid.to_string());
     } else if (has_milliseconds_expired(cc.dropped.back().time +
-                                        replica_assign_delay_ms_for_dropouts)) {
+                                        _replica_assign_delay_ms_for_dropouts)) {
         is_emergency = true;
         char time_buf[30];
         ::dsn::utils::time_ms_to_string(cc.dropped.back().time, time_buf);
-        ddebug("gpid(%d.%d): is emergency due to lose secondary for a long time, "
+        ddebug("gpid(%s): is emergency due to lose secondary for a long time, "
                "last_dropped_node(%s), drop_time(%s), delay_ms(%" PRIu64 ")",
-               gpid.get_app_id(),
-               gpid.get_partition_index(),
+               gpid.to_string(),
                cc.dropped.back().node.to_string(),
                time_buf,
-               replica_assign_delay_ms_for_dropouts);
+               _replica_assign_delay_ms_for_dropouts);
+    } else if (in_black_list(cc.dropped.back().node)) {
+        ddebug("gpid(%s) is emergency due to recent dropped(%s) is in black list",
+               gpid.to_string(),
+               cc.dropped.back().node.to_string());
+        is_emergency = true;
     }
     action.node.set_invalid();
 
@@ -643,17 +643,15 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
                 oss << ",";
             oss << cc.dropped[i].node.to_string();
         }
-        ddebug("gpid(%d.%d): try to choose node in dropped list, dropped_list(%s), "
+        ddebug("gpid(%s): try to choose node in dropped list, dropped_list(%s), "
                "prefered_dropped(%d)",
-               gpid.get_app_id(),
-               gpid.get_partition_index(),
+               gpid.to_string(),
                oss.str().c_str(),
                cc.prefered_dropped);
         if (cc.prefered_dropped < 0 || cc.prefered_dropped >= (int)cc.dropped.size()) {
-            ddebug("gpid(%d.%d): prefered_dropped(%d) is invalid according to drop_list(size %d), "
+            ddebug("gpid(%s): prefered_dropped(%d) is invalid according to drop_list(size %d), "
                    "reset it to %d (drop_list.size - 1)",
-                   gpid.get_app_id(),
-                   gpid.get_partition_index(),
+                   gpid.to_string(),
                    cc.prefered_dropped,
                    (int)cc.dropped.size(),
                    (int)cc.dropped.size() - 1);
@@ -663,10 +661,9 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
         while (cc.prefered_dropped >= 0) {
             const dropped_replica &server = cc.dropped[cc.prefered_dropped];
             if (is_node_alive(*view.nodes, server.node)) {
-                ddebug("gpid(%d.%d): node(%s) at cc.dropped[%d] is alive now, choose it, "
+                ddebug("gpid(%s): node(%s) at cc.dropped[%d] is alive now, choose it, "
                        "and forward prefered_dropped from (%d) to (%d)",
-                       gpid.get_app_id(),
-                       gpid.get_partition_index(),
+                       gpid.to_string(),
                        server.node.to_string(),
                        cc.prefered_dropped,
                        cc.prefered_dropped,
@@ -675,10 +672,9 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
                 cc.prefered_dropped--;
                 break;
             } else {
-                ddebug("gpid(%d.%d): node(%s) at cc.dropped[%d] is not alive now, "
+                ddebug("gpid(%s): node(%s) at cc.dropped[%d] is not alive now, "
                        "changed prefered_dropped from (%d) to (%d)",
-                       gpid.get_app_id(),
-                       gpid.get_partition_index(),
+                       gpid.to_string(),
                        server.node.to_string(),
                        cc.prefered_dropped,
                        cc.prefered_dropped,
@@ -687,11 +683,16 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
             }
         }
 
-        if (action.node.is_invalid()) {
+        if (action.node.is_invalid() || in_black_list(action.node)) {
+            if (!action.node.is_invalid()) {
+                ddebug("gpid(%s) refuse to use selected node(%s) as it is in black list",
+                       gpid.to_string(),
+                       action.node.to_string());
+            }
             newly_partitions *min_server_np = nullptr;
             for (auto &pairs : *view.nodes) {
                 node_state &ns = pairs.second;
-                if (!ns.alive() || is_member(pc, ns.addr()))
+                if (!ns.alive() || is_member(pc, ns.addr()) || in_black_list(ns.addr()))
                     continue;
                 newly_partitions *np = newly_partitions_ext::get_inited(&ns);
                 if (min_server_np == nullptr ||
@@ -702,16 +703,14 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
             }
 
             if (!action.node.is_invalid()) {
-                ddebug("gpid(%d.%d): can't find valid node in dropped list to add as secondary, "
+                ddebug("gpid(%s): can't find valid node in dropped list to add as secondary, "
                        "choose new node(%s) with minimal partitions serving",
-                       gpid.get_app_id(),
-                       gpid.get_partition_index(),
+                       gpid.to_string(),
                        action.node.to_string());
             } else {
-                ddebug("gpid(%d.%d): can't find valid node in dropped list to add as secondary, "
+                ddebug("gpid(%s): can't find valid node in dropped list to add as secondary, "
                        "but also we can't find a new node to add as secondary",
-                       gpid.get_app_id(),
-                       gpid.get_partition_index());
+                       gpid.to_string());
             }
         }
     } else {
@@ -725,16 +724,14 @@ pc_status simple_load_balancer::on_missing_secondary(meta_view &view, const dsn:
         }
 
         if (!action.node.is_invalid()) {
-            ddebug("gpid(%d.%d): choose node(%s) as secondary coz it is last_dropped_node and is "
+            ddebug("gpid(%s): choose node(%s) as secondary coz it is last_dropped_node and is "
                    "alive now",
-                   gpid.get_app_id(),
-                   gpid.get_partition_index(),
+                   gpid.to_string(),
                    server.node.to_string());
         } else {
-            ddebug("gpid(%d.%d): can't add secondary coz last_dropped_node(%s) is not alive now, "
+            ddebug("gpid(%s): can't add secondary coz last_dropped_node(%s) is not alive now, "
                    "ignore this as not in emergency",
-                   gpid.get_app_id(),
-                   gpid.get_partition_index(),
+                   gpid.to_string(),
                    server.node.to_string());
         }
     }
@@ -786,11 +783,20 @@ void simple_load_balancer::register_ctrl_commands()
         "lb.assign_delay_ms [num | DEFAULT]",
         "control the replica_assign_delay_ms_for_dropouts config",
         [this](const std::vector<std::string> &args) { return ctrl_assign_delay_ms(args); });
+
+    _ctrl_assign_secondary_black_list = dsn::command_manager::instance().register_app_command(
+        {"lb.assign_secondary_black_list"},
+        "lb.assign_secondary_black_list [<ip:port,ip:port,ip:port>|clear]",
+        "control the assign secondary black list",
+        [this](const std::vector<std::string> &args) {
+            return ctrl_assign_secondary_black_list(args);
+        });
 }
 
 void simple_load_balancer::unregister_ctrl_commands()
 {
     UNREGISTER_VALID_HANDLER(_ctrl_assign_delay_ms);
+    UNREGISTER_VALID_HANDLER(_ctrl_assign_secondary_black_list);
     server_load_balancer::unregister_ctrl_commands();
 }
 
@@ -798,21 +804,67 @@ std::string simple_load_balancer::ctrl_assign_delay_ms(const std::vector<std::st
 {
     std::string result("OK");
     if (args.size() <= 0) {
-        result = std::to_string(replica_assign_delay_ms_for_dropouts);
+        result = std::to_string(_replica_assign_delay_ms_for_dropouts);
     } else {
         if (args[0] == "DEFAULT") {
-            replica_assign_delay_ms_for_dropouts =
+            _replica_assign_delay_ms_for_dropouts =
                 _svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
         } else {
             int v = atoi(args[0].c_str());
             if (v <= 0) {
                 result = std::string("ERR: invalid arguments");
             } else {
-                replica_assign_delay_ms_for_dropouts = v;
+                _replica_assign_delay_ms_for_dropouts = v;
             }
         }
     }
     return result;
+}
+
+std::string
+simple_load_balancer::ctrl_assign_secondary_black_list(const std::vector<std::string> &args)
+{
+    std::string invalid_arguments("invalid arguments");
+    std::stringstream oss;
+    if (args.size() <= 0) {
+        dsn::service::zauto_read_lock l(_black_list_lock);
+        oss << "get ok: ";
+        for (auto iter = _assign_secondary_black_list.begin();
+             iter != _assign_secondary_black_list.end();
+             ++iter) {
+            if (iter != _assign_secondary_black_list.begin())
+                oss << ",";
+            oss << iter->to_string();
+        }
+        return oss.str();
+    }
+
+    if (args.size() != 1) {
+        return invalid_arguments;
+    }
+
+    dsn::service::zauto_write_lock l(_black_list_lock);
+    if (args[0] == "clear") {
+        _assign_secondary_black_list.clear();
+        return "clear ok";
+    }
+
+    std::vector<std::string> ip_ports;
+    dsn::utils::split_args(args[0].c_str(), ip_ports, ',');
+    if (args.size() == 0) {
+        return invalid_arguments;
+    }
+
+    std::set<dsn::rpc_address> addr_list;
+    for (const std::string &s : ip_ports) {
+        dsn::rpc_address addr;
+        if (!addr.from_string_ipv4(s.c_str())) {
+            return invalid_arguments;
+        }
+        addr_list.insert(addr);
+    }
+    _assign_secondary_black_list = std::move(addr_list);
+    return "set ok";
 }
 
 pc_status simple_load_balancer::cure(meta_view view,
