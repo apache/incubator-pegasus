@@ -64,7 +64,7 @@ function usage_build()
 }
 function run_build()
 {
-    BUILD_TYPE="debug"
+    BUILD_TYPE="release"
     CLEAR=NO
     JOB_NUM=8
     BOOST_DIR=""
