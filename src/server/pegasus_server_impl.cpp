@@ -1600,15 +1600,19 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
     // parse envs for parameters
     // envs is compounded in replication_app_base::open() function
     std::map<std::string, std::string> envs;
-    if (argc <= 0 || ((argc - 1) % 2 != 0) || argv == nullptr) {
-        derror("%s: parse envs failed, because invalid argc = %d", replica_name(), argc);
-        return ::dsn::ERR_INVALID_PARAMETERS;
-    }
-    int idx = 1;
-    while (idx < argc) {
-        const char* key = argv[idx++];
-        const char* value = argv[idx++];
-        envs.emplace(key, value);
+    if (argc > 0) {
+        if (((argc - 1) % 2 != 0) || argv == nullptr) {
+            derror("%s: parse envs failed, because invalid argc = %d or argv = nullptr",
+                   replica_name(),
+                   argc);
+            return ::dsn::ERR_INVALID_PARAMETERS;
+        }
+        int idx = 1;
+        while (idx < argc) {
+            const char *key = argv[idx++];
+            const char *value = argv[idx++];
+            envs.emplace(key, value);
+        }
     }
 
     //
