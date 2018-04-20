@@ -4,7 +4,7 @@
 #
 
 if [ $# -le 2 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <start_task_id>"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id>"
   echo
   echo "For example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 0"
@@ -14,7 +14,7 @@ fi
 
 cluster=$1
 meta_list=$2
-start_task_id=$3
+replica_task_id=$3
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
@@ -59,7 +59,7 @@ if [ "$cname" != "$cluster" ]; then
   exit -1
 fi
 pmeta=`grep primary_meta_server /tmp/$UID.pegasus.offline_node.cluster_info | grep -o '[0-9.:]*$'`
-if [ "$pmeta" == ""]; then
+if [ "$pmeta" == "" ]; then
   echo "ERROR: extract primary_meta_server by shell failed"
   exit -1
 fi
@@ -92,7 +92,7 @@ echo
 while read line
 do
   task_id=`echo $line | awk '{print $1}'`
-  if [ $task_id -ne $start_task_id ]; then
+  if [ $task_id -ne $replica_task_id ]; then
     continue
   fi
   node_str=`echo $line | awk '{print $2}'`
@@ -190,5 +190,5 @@ fi
 echo
 
 all_finish_time=$((`date +%s`))
-echo "Offline replica server task $start_task_id done."
+echo "Offline replica server task $replica_task_id done."
 echo "Elapsed time is $((all_finish_time - all_start_time)) seconds."
