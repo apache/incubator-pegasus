@@ -9,7 +9,7 @@ compiler:
     - gcc
 
 before_install:
-    - wget https://raw.githubusercontent.com/shengofsun/packages/master/build-depends.tar.gz
+    - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/build-depends.tar.gz
     - tar xf build-depends.tar.gz
     - cd packages
     - ls | xargs sudo dpkg -i --force-depends
@@ -20,7 +20,7 @@ install:
 
 before_script:
     - cd thirdparty
-    - wget https://raw.githubusercontent.com/shengofsun/packages/master/pegasus-thirdparty-prebuild.tar.gz
+    - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/pegasus-thirdparty-prebuild.tar.gz
     - tar xf pegasus-thirdparty-prebuild.tar.gz
     - rm -rf pegasus-thirdparty-prebuild.tar.gz
     - cd ..
