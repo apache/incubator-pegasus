@@ -1844,11 +1844,11 @@ void replica_stub::trigger_checkpoint(replica_ptr r, bool is_emergency)
     r->init_checkpoint(is_emergency);
 }
 
-void replica_stub::manual_compact(gpid pid)
+void replica_stub::manual_compact(gpid pid, const std::map<std::string, std::string> &opts)
 {
     replica_ptr r = get_replica(pid);
     if (r != nullptr) {
-        r->manual_compact();
+        r->manual_compact(opts);
     }
 }
 
@@ -1951,15 +1951,33 @@ void replica_stub::open_service()
 
     _manual_compact_command = ::dsn::command_manager::instance().register_app_command(
         {"manual-compact"},
-        "manual-compact <id1,id2,...> (where id is 'app_id' or 'app_id.partition_id')",
+        "manual-compact [opts:k1=v1,k2=v2] <id1,id2,...> (where id is 'app_id' or "
+        "'app_id.partition_id')",
         "manual-compact - do full compact on the underlying storage engine",
         [this](const std::vector<std::string> &args) {
-            return exec_command_on_replica(args, false, [this](const replica_ptr &rep) {
+            // extract opts from args
+            std::map<std::string, std::string> opts;
+            std::vector<std::string> new_args;
+            std::string prefix("opts:");
+            for (int i = 0; i < args.size(); i++) {
+                if (args[i].find(prefix) == 0) {
+                    if (!opts.empty()) {
+                        return std::string("invalid arguments: duplicate opts provided");
+                    }
+                    const std::string &opts_str = args[i].substr(prefix.size());
+                    if (!dsn::utils::parse_kv_map(opts_str.c_str(), opts, ',', '=')) {
+                        return std::string("invalid arguments: bad opts: ") + opts_str;
+                    }
+                } else {
+                    new_args.push_back(args[i]);
+                }
+            }
+            return exec_command_on_replica(new_args, false, [this, opts](const replica_ptr &rep) {
                 if (rep->could_start_manual_compact()) {
                     tasking::enqueue(
                         LPC_MANUAL_COMPACT,
                         this,
-                        std::bind(&replica_stub::manual_compact, this, rep->get_gpid()));
+                        std::bind(&replica_stub::manual_compact, this, rep->get_gpid(), opts));
                     return std::string("started");
                 } else {
                     return std::string("ignored because too frequently");

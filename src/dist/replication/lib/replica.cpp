@@ -451,13 +451,13 @@ bool replica::could_start_manual_compact()
     }
 }
 
-void replica::manual_compact()
+void replica::manual_compact(const std::map<std::string, std::string> &opts)
 {
     if (_app != nullptr) {
         ddebug("%s: start to execute manual compaction", name());
         uint64_t start = dsn_now_ms();
         _manual_compact_start_time_ms.store(start);
-        _app->manual_compact();
+        _app->manual_compact(opts);
         uint64_t finish = dsn_now_ms();
         ddebug("%s: finish to execute manual compaction, time_used = %" PRId64 "ms",
                name(),

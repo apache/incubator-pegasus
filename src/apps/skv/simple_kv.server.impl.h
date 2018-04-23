@@ -84,7 +84,7 @@ public:
     virtual ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
                                                        const learn_state &state) override;
 
-    virtual void manual_compact() {}
+    virtual void manual_compact(const std::map<std::string, std::string> &opts) {}
 
     virtual void update_app_envs(const std::map<std::string, std::string> &envs) {}
 

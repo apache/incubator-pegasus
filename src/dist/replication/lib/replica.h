@@ -296,7 +296,7 @@ private:
 
     bool could_start_manual_compact();
 
-    void manual_compact();
+    void manual_compact(const std::map<std::string, std::string> &opts);
 
     std::string get_compact_state();
 

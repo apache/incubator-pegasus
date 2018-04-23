@@ -204,7 +204,7 @@ private:
     replica_life_cycle get_replica_life_cycle(const dsn::gpid &pid);
     void on_gc_replica(replica_stub_ptr this_, gpid pid);
 
-    void manual_compact(gpid pid);
+    void manual_compact(gpid pid, const std::map<std::string, std::string> &opts);
 
 private:
     friend class ::dsn::replication::replication_checker;
