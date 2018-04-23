@@ -249,8 +249,9 @@ void redis_parser::parse_stream()
             // string content + CR + LF
             if (total_length >= current_str.length + 2) {
                 if (current_str.length > 0) {
-                    char *ptr = reinterpret_cast<char *>(dsn_transient_malloc(current_str.length));
-                    std::shared_ptr<char> str_data(ptr, [](char *ptr) { dsn_transient_free(ptr); });
+                    char *ptr = reinterpret_cast<char *>(dsn::tls_trans_malloc(current_str.length));
+                    std::shared_ptr<char> str_data(ptr,
+                                                   [](char *ptr) { dsn::tls_trans_free(ptr); });
                     eat_all(str_data.get(), current_str.length);
                     current_str.data.assign(std::move(str_data), 0, current_str.length);
                 }
