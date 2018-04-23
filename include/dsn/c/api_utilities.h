@@ -185,20 +185,4 @@ extern DSN_API void dsn_coredump();
             return;                                                                                \
         }                                                                                          \
     } while (0)
-
-/*!
-@defgroup memory Memory Management
-@ingroup service-api-utilities
-
-Memory Management
-
-@{
-*/
-
-/*! high-performance malloc for transient objects, i.e., their life-time is short */
-extern DSN_API void *dsn_transient_malloc(uint32_t size);
-
-/*! high-performance free for transient objects, paired with \ref dsn_transient_malloc */
-extern DSN_API void dsn_transient_free(void *ptr);
-
 /*@}*/

@@ -33,14 +33,18 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/tool-api/rpc_message.h>
 #include <dsn/utility/crc.h>
-#include <../core/transient_memory.h>
+#include <dsn/utility/transient_memory.h>
+#include <dsn/tool-api/rpc_message.h>
 #include <gtest/gtest.h>
 
 using namespace ::dsn;
 
 DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
+namespace dsn {
+extern void tls_trans_mem_alloc(size_t min_size);
+}
 
 TEST(core, message_ex)
 {

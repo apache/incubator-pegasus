@@ -386,8 +386,8 @@ void http_message_parser::prepare_on_send(message_ex *msg)
         header_str = ss.str();
     }
     unsigned int header_len = header_str.size();
-    std::shared_ptr<char> header_holder(static_cast<char *>(dsn_transient_malloc(header_len)),
-                                        [](char *c) { dsn_transient_free(c); });
+    std::shared_ptr<char> header_holder(static_cast<char *>(dsn::tls_trans_malloc(header_len)),
+                                        [](char *c) { dsn::tls_trans_free(c); });
     memcpy(header_holder.get(), header_str.data(), header_len);
 
     unsigned int dsn_size = sizeof(message_header) + header->body_length;

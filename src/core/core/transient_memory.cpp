@@ -33,18 +33,18 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "transient_memory.h"
+#include <cassert>
+#include <memory>
+#include <dsn/utility/utils.h>
+#include <dsn/utility/transient_memory.h>
 
 namespace dsn {
+
 __thread tls_transient_memory_t tls_trans_memory;
 
 static size_t tls_trans_mem_default_block_bytes = 1024 * 1024; // 1 MB
 
-void tls_trans_mem_init(size_t default_per_block_bytes)
-{
-    tls_trans_mem_default_block_bytes = default_per_block_bytes;
-}
-
+// allocate a block from the system, the block size should be at lease "min_size"
 void tls_trans_mem_alloc(size_t min_size)
 {
     // release last buffer if necessary
@@ -63,13 +63,21 @@ void tls_trans_mem_alloc(size_t min_size)
     tls_trans_memory.next = tls_trans_memory.block->get();
 }
 
+///
+/// api of this moudle start from here
+///
+void tls_trans_mem_init(size_t default_per_block_bytes)
+{
+    tls_trans_mem_default_block_bytes = default_per_block_bytes;
+}
+
 void tls_trans_mem_next(void **ptr, size_t *sz, size_t min_size)
 {
     if (tls_trans_memory.magic != 0xdeadbeef)
         tls_trans_mem_alloc(min_size);
     else {
-        dassert(tls_trans_memory.committed == true,
-                "tls_trans_mem_next and tls_trans_mem_commit must be called in pair");
+        // tls_trans_mem_next and tls_trans_mem_commit must be called in pair
+        assert(tls_trans_memory.committed == true);
 
         if (min_size > tls_trans_memory.remain_bytes)
             tls_trans_mem_alloc(min_size);
@@ -82,9 +90,9 @@ void tls_trans_mem_next(void **ptr, size_t *sz, size_t min_size)
 
 void tls_trans_mem_commit(size_t use_size)
 {
-    dbg_dassert(tls_trans_memory.magic == 0xdeadbeef && !tls_trans_memory.committed &&
-                    use_size <= tls_trans_memory.remain_bytes,
-                "invalid use or parameter of tls_trans_mem_commit");
+    // invalid use or parameter of tls_trans_mem_commit
+    assert(tls_trans_memory.magic == 0xdeadbeef && !tls_trans_memory.committed &&
+           use_size <= tls_trans_memory.remain_bytes);
 
     tls_trans_memory.next += use_size;
     tls_trans_memory.remain_bytes -= use_size;
@@ -126,13 +134,10 @@ void *tls_trans_malloc(size_t sz)
 void tls_trans_free(void *ptr)
 {
     ptr = (void *)((char *)ptr - sizeof(uint32_t));
-    dassert(*(uint32_t *)(ptr) == 0xdeadbeef, "invalid transient memory block");
+    // invalid transient memory block
+    assert(*(uint32_t *)(ptr) == 0xdeadbeef);
 
     ptr = (void *)((char *)ptr - sizeof(std::shared_ptr<char>));
     ((std::shared_ptr<char> *)(ptr))->~shared_ptr<char>();
 }
 }
-
-DSN_API void *dsn_transient_malloc(uint32_t size) { return ::dsn::tls_trans_malloc((size_t)size); }
-
-DSN_API void dsn_transient_free(void *ptr) { return ::dsn::tls_trans_free(ptr); }

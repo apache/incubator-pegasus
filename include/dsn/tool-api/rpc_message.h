@@ -41,7 +41,8 @@
 #include <dsn/utility/dlib.h>
 #include <dsn/utility/blob.h>
 #include <dsn/utility/link.h>
-#include <dsn/cpp/callocator.h>
+#include <dsn/utility/callocator.h>
+
 #include <dsn/tool-api/auto_codes.h>
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/global_config.h>

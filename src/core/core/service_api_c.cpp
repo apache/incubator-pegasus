@@ -49,13 +49,13 @@
 
 #include <dsn/utility/configuration.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/transient_memory.h>
 #include <dsn/tool-api/command_manager.h>
 #include "service_engine.h"
 #include "rpc_engine.h"
 #include "disk_engine.h"
 #include "task_engine.h"
 #include "coredump.h"
-#include "transient_memory.h"
 #include <fstream>
 
 #ifndef _WIN32

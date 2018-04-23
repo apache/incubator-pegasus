@@ -79,13 +79,15 @@ message_ex *thrift_message_parser::get_message_on_receive(message_reader *reader
                              : sizeof(thrift_message_header) - reader->_buffer_occupied);
             msg->hdr_format = NET_HDR_THRIFT;
             return msg;
-        } else // buf_len < msg_sz
-        {
+        }
+        // buf_len < msg_sz
+        else {
             read_next = msg_sz - buf_len;
             return nullptr;
         }
-    } else // buf_len < sizeof(thrift_message_header)
-    {
+    }
+    // buf_len < sizeof(thrift_message_header)
+    else {
         read_next = sizeof(thrift_message_header) - buf_len;
         return nullptr;
     }

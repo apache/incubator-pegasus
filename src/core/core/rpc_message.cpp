@@ -35,13 +35,13 @@
 
 #include <dsn/utility/ports.h>
 #include <dsn/utility/crc.h>
+#include <dsn/utility/transient_memory.h>
 #include <dsn/tool-api/rpc_message.h>
 #include <dsn/tool-api/network.h>
 #include <dsn/tool-api/message_parser.h>
 #include <cctype>
 
 #include "task_engine.h"
-#include "transient_memory.h"
 
 using namespace dsn::utils;
 
@@ -287,8 +287,8 @@ message_ex *message_ex::create_receive_message_with_standalone_header(const blob
 {
     message_ex *msg = new message_ex();
     std::shared_ptr<char> header_holder(
-        static_cast<char *>(dsn_transient_malloc(sizeof(message_header))),
-        [](char *c) { dsn_transient_free(c); });
+        static_cast<char *>(dsn::tls_trans_malloc(sizeof(message_header))),
+        [](char *c) { dsn::tls_trans_free(c); });
     msg->header = reinterpret_cast<message_header *>(header_holder.get());
     memset(msg->header, 0, sizeof(message_header));
     msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));

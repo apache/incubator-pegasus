@@ -37,7 +37,7 @@
 #include <dsn/tool-api/perf_counter.h>
 #include <dsn/tool-api/aio_provider.h>
 #include <dsn/utility/utils.h>
-#include "transient_memory.h"
+#include <dsn/utility/transient_memory.h>
 
 using namespace dsn::utils;
 

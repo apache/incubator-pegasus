@@ -40,7 +40,7 @@
 #include <dsn/cpp/rpc_stream.h>
 #include <dsn/cpp/serialization.h>
 #include <dsn/cpp/zlocks.h>
-#include <dsn/cpp/callocator.h>
+#include <dsn/utility/callocator.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/utility/synchronize.h>

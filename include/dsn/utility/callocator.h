@@ -24,42 +24,33 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include <dsn/utility/ports.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/blob.h>
-#include <dsn/service_api_c.h>
+#include <dsn/utility/transient_memory.h>
 
 namespace dsn {
-typedef struct tls_transient_memory_t
+
+typedef void *(*t_allocate)(size_t);
+typedef void (*t_deallocate)(void *);
+
+/// callocate_object overrides the operator "new" and "delete", which may be useful for objects
+/// who want to use custom new/delete to boost performance
+template <t_allocate a, t_deallocate d>
+class callocator_object
 {
-    unsigned int magic;
-    size_t remain_bytes;
-    char block_ptr_buffer[sizeof(std::shared_ptr<char>)];
-    std::shared_ptr<char> *block;
-    char *next;
-    bool committed;
-} tls_transient_memory_t;
+public:
+    void *operator new(size_t size) { return a(size); }
 
-extern __thread tls_transient_memory_t tls_trans_memory;
-extern void tls_trans_mem_init(size_t default_per_block_bytes);
-extern void tls_trans_mem_alloc(size_t min_size);
+    void operator delete(void *p) { d(p); }
 
-extern void tls_trans_mem_next(void **ptr, size_t *sz, size_t min_size);
-extern void tls_trans_mem_commit(size_t use_size);
+    void *operator new[](size_t size) { return a(size); }
 
-extern blob tls_trans_mem_alloc_blob(size_t sz);
+    void operator delete[](void *p) { d(p); }
+};
 
-extern void *tls_trans_malloc(size_t sz);
-extern void tls_trans_free(void *ptr);
+/// transient_object uses tls_trans_malloc/tls_trans_free as custom memory allocate.
+/// in rdsn, serveral frequenctly allocated objects(task, rpc_message, etc.)
+/// are derived from transient_objects,
+/// so that their memory can be mamanged by trans_memory_allocator
+typedef callocator_object<tls_trans_malloc, tls_trans_free> transient_object;
 }

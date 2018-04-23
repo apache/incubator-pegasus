@@ -24,19 +24,14 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for transient memory.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#include "../core/transient_memory.h"
+#include <dsn/utility/transient_memory.h>
 #include <gtest/gtest.h>
 
 using namespace ::dsn;
+
+namespace dsn {
+extern void tls_trans_mem_alloc(size_t min_size);
+}
 
 TEST(core, transient_memory)
 {
