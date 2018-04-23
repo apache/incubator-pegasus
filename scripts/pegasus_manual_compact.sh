@@ -1,9 +1,18 @@
 #!/bin/bash
 
-if [ $# -ne 2 ]
+if [ $# -lt 2 ]
 then
   echo "This tool is for manual compact specified table(app)."
-  echo "USAGE: $0 <cluster-meta-list> <app-name>"
+  echo "USAGE: $0 <cluster-meta-list> <app-name> [opts]"
+  echo "where opts including:"
+  echo "  ============================================================================="
+  echo "  | Name                        | ValueType                         | Default |"
+  echo "  |---------------------------------------------------------------------------|"
+  echo "  | target_level                | number in range of [1,num_levels] | -1      |"
+  echo "  | bottommost_level_compaction | skip or force                     | skip    |"
+  echo "  ============================================================================="
+  echo "for example:"
+  echo "  $0 127.0.0.1:34601,127.0.0.1:34602 temp target_level=2,bottommost_level_compaction=force"
   exit -1
 fi
 
@@ -13,6 +22,9 @@ cd $shell_dir
 
 cluster=$1
 app_name=$2
+if [ $# -ge 3 -a "$3" != "" ]; then
+  opts="opts:$3"
+fi
 
 echo "Start time: `date`"
 all_start_time=$((`date +%s`))
@@ -36,7 +48,7 @@ do
     fi
 
     echo "Send remote command manual-compact to replica servers, logging in /tmp/$UID.pegasus.manual_compact.$app"
-    echo "remote_command -t replica-server replica.manual-compact $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.manual_compact.$app
+    echo "remote_command -t replica-server replica.manual-compact $opts $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.manual_compact.$app
     not_found_count=`grep '^    .*not found' /tmp/$UID.pegasus.manual_compact.$app | wc -l`
     started_count=`grep '^    .*started' /tmp/$UID.pegasus.manual_compact.$app | wc -l`
     ignored_count=`grep '^    .*ignored' /tmp/$UID.pegasus.manual_compact.$app | wc -l`

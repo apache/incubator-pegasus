@@ -134,6 +134,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         10,
         "rocksdb options.rocksdb_max_bytes_for_level_multiplier, default 10");
 
+    // we need set max_compaction_bytes definitely because set_usage_scenario() depends on it.
+    _db_opts.max_compaction_bytes = _db_opts.target_file_size_base * 25;
+
     // rocksdb default: 4
     _db_opts.level0_file_num_compaction_trigger =
         (int)dsn_config_get_value_int64("pegasus.server",
@@ -2445,23 +2448,70 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
     return res;
 }
 
-void pegasus_server_impl::manual_compact()
+// args:
+//   ROCKSDB_ENV_MANUAL_COMPACT_TARGET_LEVEL_KEY (default -1)
+//   ROCKSDB_ENV_BOTTOMMOST_LEVEL_COMPACTION_KEY (default skip)
+void pegasus_server_impl::manual_compact(const std::map<std::string, std::string> &opts)
 {
+    uint64_t start_time;
     rocksdb::Status status;
 
     // wait flush before compact to make all data compacted.
     ddebug("%s: start to Flush", replica_name());
+    start_time = dsn_now_ms();
     status = _db->Flush(rocksdb::FlushOptions());
-    ddebug("%s: Flush finished, status = %s", replica_name(), status.ToString().c_str());
+    ddebug("%s: Flush finished, status = %s, time_used = %" PRIu64 "ms",
+           replica_name(),
+           status.ToString().c_str(),
+           dsn_now_ms() - start_time);
 
-    ddebug("%s: start to CompactRange", replica_name());
     rocksdb::CompactRangeOptions options;
     options.exclusive_manual_compaction = true;
     options.change_level = true;
     options.target_level = -1;
-    options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
+    auto find1 = opts.find(ROCKSDB_MANUAL_COMPACT_TARGET_LEVEL_KEY);
+    if (find1 != opts.end()) {
+        const std::string &argv = find1->second;
+        int target_level;
+        if (pegasus::utils::buf2int(argv.c_str(), argv.size(), target_level) && target_level >= 1 &&
+            target_level <= _db_opts.num_levels) {
+            options.target_level = target_level;
+        } else {
+            derror("%s: invalid option value [%s] for %s, use default value [%d]",
+                   replica_name(),
+                   argv.c_str(),
+                   ROCKSDB_MANUAL_COMPACT_TARGET_LEVEL_KEY.c_str(),
+                   -1);
+        }
+    }
+    options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
+    auto find2 = opts.find(ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY);
+    if (find2 != opts.end()) {
+        const std::string &argv = find2->second;
+        if (argv == ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
+            options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
+        } else if (argv == ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
+            options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
+        } else {
+            derror("%s: invalid option value [%s] for %s, use default value [%s]",
+                   replica_name(),
+                   argv.c_str(),
+                   ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY.c_str(),
+                   ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP.c_str());
+        }
+    }
+    ddebug("%s: start to CompactRange, target_level = %d, bottommost_level_compaction = %s",
+           replica_name(),
+           options.target_level,
+           options.bottommost_level_compaction == rocksdb::BottommostLevelCompaction::kForce
+               ? "force"
+               : "skip");
+    start_time = dsn_now_ms();
     status = _db->CompactRange(options, nullptr, nullptr);
-    ddebug("%s: CompactRange finished, status = %s", replica_name(), status.ToString().c_str());
+    ddebug("%s: CompactRange finished, status = %s, time_used = %" PRIu64 "ms",
+           replica_name(),
+           status.ToString().c_str(),
+           dsn_now_ms() - start_time);
 }
 
 void pegasus_server_impl::update_app_envs(const std::map<std::string, std::string> &envs)
