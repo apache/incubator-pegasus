@@ -182,7 +182,7 @@ private:
 
     void updating_rocksdb_sstsize();
 
-    virtual void manual_compact();
+    virtual void manual_compact(const std::map<std::string, std::string> &opts);
 
     virtual void update_app_envs(const std::map<std::string, std::string> &envs);
 

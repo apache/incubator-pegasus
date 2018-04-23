@@ -16,4 +16,11 @@ const std::string ROCKSDB_ENV_USAGE_SCENARIO_NORMAL("normal");
 const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE("prefer_write");
 const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD("bulk_load");
 
+const std::string
+    ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY("bottommost_level_compaction");
+const std::string ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
+const std::string ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
+
+const std::string ROCKSDB_MANUAL_COMPACT_TARGET_LEVEL_KEY("target_level");
+
 } // namespace
