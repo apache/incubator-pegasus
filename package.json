@@ -1,6 +1,6 @@
 {
   "name": "pegasus-nodejs-client",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "offical pegasus nodejs client",
   "main": "index.js",
   "scripts": {
@@ -22,6 +22,7 @@
   "dependencies": {
     "bunyan": "^1.8.12",
     "deasync": "^0.1.12",
+    "log4js": "^2.5.3",
     "long": "^4.0.0",
     "node-int64": "^0.4.0",
     "thrift": "^0.10.0"
