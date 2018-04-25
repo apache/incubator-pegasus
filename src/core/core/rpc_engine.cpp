@@ -347,9 +347,9 @@ rpc_server_dispatcher::rpc_server_dispatcher()
 {
     _vhandlers.resize(dsn::task_code::max() + 1);
     for (auto &h : _vhandlers) {
-        h = new std::pair<rpc_handler_info *, utils::rw_lock_nr>();
-        h->first = nullptr;
+        h = new std::pair<std::unique_ptr<handler_entry>, utils::rw_lock_nr>();
     }
+    _handlers.clear();
 }
 
 rpc_server_dispatcher::~rpc_server_dispatcher()
@@ -358,111 +358,81 @@ rpc_server_dispatcher::~rpc_server_dispatcher()
         delete h;
     }
     _vhandlers.clear();
-
+    _handlers.clear();
     dassert(_handlers.size() == 0,
             "please make sure all rpc handlers are unregistered at this point");
 }
 
-bool rpc_server_dispatcher::register_rpc_handler(rpc_handler_info *handler)
+bool rpc_server_dispatcher::register_rpc_handler(dsn::task_code code,
+                                                 const char *extra_name,
+                                                 const dsn_rpc_request_handler_t &h)
 {
-    std::string name(handler->code.to_string());
+    std::unique_ptr<handler_entry> ctx(new handler_entry{code, extra_name, h});
 
     utils::auto_write_lock l(_handlers_lock);
-    auto it = _handlers.find(name);
-    auto it2 = _handlers.find(handler->name);
+    auto it = _handlers.find(code.to_string());
+    auto it2 = _handlers.find(extra_name);
     if (it == _handlers.end() && it2 == _handlers.end()) {
-        _handlers[name] = handler;
-        _handlers[handler->name] = handler;
+        _handlers[code.to_string()] = ctx.get();
+        _handlers[ctx->extra_name] = ctx.get();
 
         {
-            utils::auto_write_lock l(_vhandlers[handler->code]->second);
-            _vhandlers[handler->code]->first = handler;
+            utils::auto_write_lock l(_vhandlers[code.code()]->second);
+            _vhandlers[code.code()]->first = std::move(ctx);
         }
         return true;
     } else {
-        dassert(false, "rpc registration confliction for '%s'", name.c_str());
+        dassert(false, "rpc registration confliction for '%s' '%s'", code.to_string(), extra_name);
         return false;
     }
 }
 
-rpc_handler_info *rpc_server_dispatcher::unregister_rpc_handler(dsn::task_code rpc_code)
+bool rpc_server_dispatcher::unregister_rpc_handler(dsn::task_code rpc_code)
 {
-    rpc_handler_info *ret;
     {
         utils::auto_write_lock l(_handlers_lock);
         auto it = _handlers.find(rpc_code.to_string());
         if (it == _handlers.end())
-            return nullptr;
+            return false;
 
-        ret = it->second;
-        std::string name = it->second->name;
+        handler_entry *ctx = it->second;
         _handlers.erase(it);
-        _handlers.erase(name);
+        _handlers.erase(ctx->extra_name);
 
         {
             utils::auto_write_lock l(_vhandlers[rpc_code]->second);
-            _vhandlers[rpc_code]->first = nullptr;
+            _vhandlers[rpc_code]->first.reset();
         }
     }
 
-    ret->unregister();
-    return ret;
+    return true;
 }
 
 rpc_request_task *rpc_server_dispatcher::on_request(message_ex *msg, service_node *node)
 {
-    rpc_handler_info *handler = nullptr;
+    dsn_rpc_request_handler_t handler;
 
     if (TASK_CODE_INVALID != msg->local_rpc_code) {
         utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
-        handler = _vhandlers[msg->local_rpc_code]->first;
-        if (nullptr != handler) {
-            handler->add_ref();
+        handler_entry *ctx = _vhandlers[msg->local_rpc_code]->first.get();
+        if (ctx != nullptr) {
+            handler = ctx->h;
         }
     } else {
         utils::auto_read_lock l(_handlers_lock);
         auto it = _handlers.find(msg->header->rpc_name);
         if (it != _handlers.end()) {
             msg->local_rpc_code = it->second->code;
-            handler = it->second;
-            handler->add_ref();
+            handler = it->second->h;
         }
     }
 
     if (handler) {
-        auto r = new rpc_request_task(msg, handler, node);
+        auto r = new rpc_request_task(msg, std::move(handler), node);
         r->spec().on_task_create.execute(task::get_current_task(), r);
         return r;
     } else
         return nullptr;
-}
-
-bool rpc_server_dispatcher::on_request_with_inline_execution(message_ex *msg, service_node *node)
-{
-    rpc_handler_info *handler = nullptr;
-
-    if (TASK_CODE_INVALID != msg->local_rpc_code) {
-        utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
-        handler = _vhandlers[msg->local_rpc_code]->first;
-        if (nullptr != handler) {
-            handler->add_ref();
-        }
-    } else {
-        utils::auto_read_lock l(_handlers_lock);
-        auto it = _handlers.find(msg->header->rpc_name);
-        if (it != _handlers.end()) {
-            msg->local_rpc_code = it->second->code;
-            handler = it->second;
-            handler->add_ref();
-        }
-    }
-
-    if (handler) {
-        handler->c_handler(msg, handler->parameter);
-        return true;
-    } else {
-        return false;
-    }
 }
 
 //----------------------------------------------------------------------------------------------
@@ -617,12 +587,14 @@ error_code rpc_engine::start(const service_app_spec &aspec, io_modifer &ctx)
     return ERR_OK;
 }
 
-bool rpc_engine::register_rpc_handler(rpc_handler_info *handler)
+bool rpc_engine::register_rpc_handler(dsn::task_code code,
+                                      const char *extra_name,
+                                      const dsn_rpc_request_handler_t &h)
 {
-    return _rpc_dispatcher.register_rpc_handler(handler);
+    return _rpc_dispatcher.register_rpc_handler(code, extra_name, h);
 }
 
-rpc_handler_info *rpc_engine::unregister_rpc_handler(dsn::task_code rpc_code)
+bool rpc_engine::unregister_rpc_handler(dsn::task_code rpc_code)
 {
     return _rpc_dispatcher.unregister_rpc_handler(rpc_code);
 }

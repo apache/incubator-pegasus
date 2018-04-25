@@ -39,10 +39,6 @@
 
 dsn::error_code dsn_layer2_stateful_type1_bridge(int argc, char **argv)
 {
-    dsn::task_code rpc_read(
-        "RPC_L2_CLIENT_READ", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP);
-    dsn::task_code rpc_write(
-        "RPC_L2_CLIENT_WRITE", TASK_TYPE_RPC_REQUEST, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION);
     dsn::service_app::register_factory<::dsn::replication::replication_service_app>("replica");
     return dsn::ERR_OK;
 }

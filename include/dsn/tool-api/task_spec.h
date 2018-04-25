@@ -160,7 +160,6 @@ class rpc_response_task;
 class message_ex;
 class admission_controller;
 typedef void (*task_rejection_handler)(task *, admission_controller *);
-struct rpc_handler_info;
 
 typedef struct __io_mode_modifier__
 {
@@ -178,6 +177,13 @@ public:
                                            dsn_task_priority_t pri,
                                            dsn::threadpool_code pool);
 
+    DSN_API static void register_storage_task_code(dsn::task_code code,
+                                                   dsn_task_type_t type,
+                                                   dsn_task_priority_t pri,
+                                                   dsn::threadpool_code pool,
+                                                   bool is_write_operation,
+                                                   bool allow_batch);
+
 public:
     // not configurable [
     dsn::task_code code;
@@ -185,6 +191,10 @@ public:
     std::string name;
     dsn::task_code rpc_paired_code;
     shared_exp_delay rpc_request_delayer;
+
+    bool rpc_request_for_storage;
+    bool rpc_request_is_write_operation;   // need stateful replication
+    bool rpc_request_is_write_allow_batch; // if write allow batch
     // ]
 
     // configurable [
@@ -207,12 +217,6 @@ public:
     throttling_mode_t rpc_request_throttling_mode;    //
     std::vector<int> rpc_request_delays_milliseconds; // see exp_delay for delaying recving
     bool rpc_request_dropped_before_execution_when_timeout;
-
-    // layer 2 configurations
-    bool rpc_request_layer2_handler_required; // need layer 2 handler
-    bool rpc_request_is_write_operation;      // need stateful replication
-    bool rpc_request_is_write_allow_batch;    // if write allow batch
-    // ]
 
     task_rejection_handler rejection_handler;
 
@@ -346,29 +350,6 @@ CONFIG_FLD(bool,
            false,
            "whether to drop a request right before execution when its queueing time is already "
            "greater than its timeout value")
-
-// layer 2 configurations
-CONFIG_FLD(bool,
-           bool,
-           rpc_request_layer2_handler_required,
-           false,
-           "whether this request needs to "
-           "be handled by a layer2 handler "
-           "(e.g., replicated or "
-           "partitioned)")
-CONFIG_FLD(bool,
-           bool,
-           rpc_request_is_write_operation,
-           false,
-           "whether this request updates app's "
-           "state which needs to be replicated "
-           "using a replication layer2 handler")
-CONFIG_FLD(bool,
-           bool,
-           rpc_request_is_write_allow_batch,
-           true,
-           "whether this write request allows updating app's state in batch mode")
-
 CONFIG_END
 
 struct threadpool_spec

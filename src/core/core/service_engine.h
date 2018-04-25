@@ -110,10 +110,11 @@ public:
     const service_app_spec &spec() const { return _app_spec; }
     const service_app_info &get_service_app_info() const { return _info; }
     const service_app *get_service_app() const { return _entity.get(); }
-    bool rpc_register_handler(rpc_handler_info *handler, dsn::gpid gpid);
-    rpc_handler_info *rpc_unregister_handler(dsn::task_code rpc_code, dsn::gpid gpid);
+    bool rpc_register_handler(dsn::task_code code,
+                              const char *extra_name,
+                              const dsn_rpc_request_handler_t &h);
+    bool rpc_unregister_handler(dsn::task_code rpc_code);
 
-    void handle_intercepted_request(dsn::gpid gpid, bool is_write, dsn_message_t req);
     rpc_request_task *generate_intercepted_request_task(message_ex *req);
 
 private:
@@ -126,9 +127,6 @@ private:
     io_engine _per_node_io;
     std::unordered_map<task_queue *, io_engine> _per_queue_ios;
     std::list<io_engine> _ios; // all ios
-
-    rpc_handler_info _intercepted_read;
-    rpc_handler_info _intercepted_write;
 
 private:
     // the service entity is initialized after the engine
@@ -159,11 +157,12 @@ public:
     void configuration_changed();
 
     service_node *start_node(service_app_spec &app_spec);
+
+    // port == -1 for all nodes
     void register_system_rpc_handler(dsn::task_code code,
                                      const char *name,
-                                     dsn_rpc_request_handler_t cb,
-                                     void *param,
-                                     int port = -1); // -1 for all nodes
+                                     const dsn_rpc_request_handler_t &cb,
+                                     int port = -1);
     const service_nodes_by_app_id &get_all_nodes() const { return _nodes_by_app_id; }
 
 private:

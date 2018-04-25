@@ -108,10 +108,11 @@ public:
     rpc_server_dispatcher();
     ~rpc_server_dispatcher();
 
-    bool register_rpc_handler(rpc_handler_info *handler);
-    rpc_handler_info *unregister_rpc_handler(dsn::task_code rpc_code);
+    bool register_rpc_handler(dsn::task_code code,
+                              const char *extra_name,
+                              const dsn_rpc_request_handler_t &h);
+    bool unregister_rpc_handler(dsn::task_code rpc_code);
     rpc_request_task *on_request(message_ex *msg, service_node *node);
-    bool on_request_with_inline_execution(message_ex *msg, service_node *node);
     int handler_count() const
     {
         utils::auto_read_lock l(_handlers_lock);
@@ -119,11 +120,24 @@ public:
     }
 
 private:
-    typedef std::unordered_map<std::string, rpc_handler_info *> rpc_handlers;
-    rpc_handlers _handlers;
-    mutable utils::rw_lock_nr _handlers_lock;
+    struct handler_entry
+    {
+        task_code code;
+        std::string extra_name;
+        dsn_rpc_request_handler_t h;
+    };
 
-    std::vector<std::pair<rpc_handler_info *, utils::rw_lock_nr> *> _vhandlers;
+    mutable utils::rw_lock_nr _handlers_lock;
+    // there are 2 pairs for each rpc handler: code_name->hander_entry*, extra_name->hander_entry*
+    // the hander_entry pointers are the same for these 2 pairs, and the pointer is owned by
+    // _vhandlers[code_index]->first
+    //
+    // we support an extra name for compatibility to
+    // rpc client of other framework like thrift or grpc
+    std::unordered_map<std::string, handler_entry *> _handlers;
+
+    // there is one entry for each rpc code
+    std::vector<std::pair<std::unique_ptr<handler_entry>, utils::rw_lock_nr> *> _vhandlers;
 };
 
 class rpc_engine
@@ -140,8 +154,10 @@ public:
     //
     // rpc registrations
     //
-    bool register_rpc_handler(rpc_handler_info *handler);
-    rpc_handler_info *unregister_rpc_handler(dsn::task_code rpc_code);
+    bool register_rpc_handler(dsn::task_code code,
+                              const char *extra_name,
+                              const dsn_rpc_request_handler_t &h);
+    bool unregister_rpc_handler(dsn::task_code rpc_code);
 
     //
     // rpc routines

@@ -659,15 +659,12 @@ Server-Side RPC Primitives
 
 /*! register callback to handle RPC request */
 extern DSN_API bool dsn_rpc_register_handler(dsn::task_code code,
-                                             const char *name,
-                                             dsn_rpc_request_handler_t cb,
-                                             void *context,
-                                             dsn::gpid gpid DEFAULT(dsn::gpid()));
+                                             const char *extra_name,
+                                             const dsn_rpc_request_handler_t &cb);
 
-/*! unregister callback to handle RPC request, and returns void* context upon \ref
- * dsn_rpc_register_handler  */
-extern DSN_API void *dsn_rpc_unregiser_handler(dsn::task_code code,
-                                               dsn::gpid gpid DEFAULT(dsn::gpid()));
+/*! unregister callback to handle RPC request, returns true if unregister ok, false if no handler
+    was registered */
+extern DSN_API bool dsn_rpc_unregiser_handler(dsn::task_code code);
 
 /*! reply with a response which is created using dsn_msg_create_response */
 extern DSN_API void dsn_rpc_reply(dsn_message_t response, dsn::error_code err DEFAULT(dsn::ERR_OK));

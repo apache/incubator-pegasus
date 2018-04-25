@@ -43,6 +43,17 @@ task_code::task_code(const char *name,
     task_spec::register_task_code(*this, tt, pri, pool);
 }
 
+task_code::task_code(const char *name,
+                     dsn_task_type_t tt,
+                     dsn_task_priority_t pri,
+                     dsn::threadpool_code pool,
+                     bool is_storage_write,
+                     bool allow_batch)
+    : task_code(name)
+{
+    task_spec::register_storage_task_code(*this, tt, pri, pool, is_storage_write, allow_batch);
+}
+
 const char *task_code::to_string() const
 {
     return task_code_mgr::instance().get_name(_internal_code);

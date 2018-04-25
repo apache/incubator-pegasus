@@ -484,22 +484,22 @@ void timer_task::exec()
     }
 }
 
-rpc_request_task::rpc_request_task(message_ex *request, rpc_handler_info *h, service_node *node)
-    : task(dsn::task_code(h->code), // it is possible that request->local_rpc_code != h->code when
-                                    // it is handled in frameworks
+rpc_request_task::rpc_request_task(message_ex *request,
+                                   dsn_rpc_request_handler_t &&h,
+                                   service_node *node)
+    : task(dsn::task_code(request->rpc_code()),
            nullptr,
            [](void *) { dassert(false, "rpc request task cannot be cancelled"); },
            request->header->client.thread_hash,
            node),
       _request(request),
-      _handler(h),
+      _handler(std::move(h)),
       _enqueue_ts_ns(0)
 {
     dbg_dassert(
         TASK_TYPE_RPC_REQUEST == spec().type,
         "%s is not a RPC_REQUEST task, please use DEFINE_TASK_CODE_RPC to define the task code",
         spec().name.c_str());
-
     _request->add_ref(); // released in dctor
 }
 

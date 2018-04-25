@@ -24,9 +24,10 @@
  * THE SOFTWARE.
  */
 #pragma once
+#include <iostream>
 #include <dsn/dist/replication.h>
 #include "simple_kv.code.definition.h"
-#include <iostream>
+#include "simple_kv.types.h"
 #include "case.h"
 
 namespace dsn {

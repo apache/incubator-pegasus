@@ -49,9 +49,7 @@ typedef void (*dsn_task_handler_t)(void * ///< void* context
                                    );
 
 /*! callback prototype for \ref TASK_TYPE_RPC_REQUEST */
-typedef void (*dsn_rpc_request_handler_t)(dsn_message_t, ///< incoming request
-                                          void *         ///< handler context registered
-                                          );
+typedef std::function<void(dsn_message_t)> dsn_rpc_request_handler_t;
 
 /*! callback prototype for \ref TASK_TYPE_RPC_RESPONSE */
 typedef void (*dsn_rpc_response_handler_t)(

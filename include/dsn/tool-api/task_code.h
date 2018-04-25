@@ -88,14 +88,21 @@ namespace dsn {
 class task_code
 {
 public:
+    constexpr task_code() = default;
+
+    constexpr explicit task_code(int code) : _internal_code(code) {}
+
     task_code(const char *name,
               dsn_task_type_t tt,
               dsn_task_priority_t pri,
               dsn::threadpool_code pool);
 
-    constexpr task_code() = default;
-
-    constexpr explicit task_code(int code) : _internal_code(code) {}
+    task_code(const char *name,
+              dsn_task_type_t tt,
+              dsn_task_priority_t pri,
+              dsn::threadpool_code pool,
+              bool is_storage_write,
+              bool allow_batch);
 
     const char *to_string() const;
 
@@ -122,7 +129,7 @@ private:
     int _internal_code{0};
 };
 
-// you can define task_cods by the following macros
+// you can define task_code by the following macros
 #define DEFINE_NAMED_TASK_CODE(x, name, pri, pool)                                                 \
     __selectany const ::dsn::task_code x(#name, TASK_TYPE_COMPUTE, pri, pool);
 
@@ -137,6 +144,26 @@ private:
 #define DEFINE_TASK_CODE(x, pri, pool) DEFINE_NAMED_TASK_CODE(x, x, pri, pool)
 #define DEFINE_TASK_CODE_AIO(x, pri, pool) DEFINE_NAMED_TASK_CODE_AIO(x, x, pri, pool)
 #define DEFINE_TASK_CODE_RPC(x, pri, pool) DEFINE_NAMED_TASK_CODE_RPC(x, x, pri, pool)
+
+// define a rpc code for storage engine
+//
+// storage engine's rpc code is special because
+// 1. we need to find a proper replica to serve the rpc
+//    then forward it to the storage engine atop of replica.
+// 2. for a write rpc, a primary may also need to replicate it
+//    to secondaries before forwarding to the storage engine.
+// 3. some storage engine's rpc shouldn't be batched,
+//    either for better performance or correctness
+//
+// so we define some specical fields in task_spec to mark these features.
+//
+// please refer to rpc_engine::on_recv_request for the detailes on how storage_engine's rpc
+// is handled
+#define DEFINE_STORAGE_RPC_CODE(x, pri, pool, is_write, allow_batch)                               \
+    __selectany const ::dsn::task_code x(                                                          \
+        #x, TASK_TYPE_RPC_REQUEST, pri, pool, is_write, allow_batch);                              \
+    __selectany const ::dsn::task_code x##_ACK(                                                    \
+        #x "_ACK", TASK_TYPE_RPC_RESPONSE, pri, pool, is_write, allow_batch);
 
 // define a default task code "task_code_invalid", it's mainly used for representing
 // some error status when you want to return task_code in some functions.

@@ -222,46 +222,11 @@ private:
     dsn_task_handler_t _cb;
 };
 
-//----------------- rpc task -------------------------------------------------------
-
-struct rpc_handler_info
-{
-    dsn::task_code code;
-    std::string name;
-    bool unregistered;
-    std::atomic<int> running_count;
-    dsn_rpc_request_handler_t c_handler;
-    void *parameter;
-
-    explicit rpc_handler_info(dsn::task_code code)
-        : code(code), unregistered(false), running_count(0), c_handler(nullptr), parameter(nullptr)
-    {
-    }
-    ~rpc_handler_info() {}
-
-    void add_ref() { running_count.fetch_add(1, std::memory_order_relaxed); }
-
-    int release_ref() { return running_count.fetch_sub(1, std::memory_order_release); }
-
-    void run(dsn_message_t req)
-    {
-        if (!unregistered) {
-            c_handler(req, parameter);
-        }
-
-        if (1 == release_ref()) {
-            delete this;
-        }
-    }
-
-    void unregister() { unregistered = true; }
-};
-
 class service_node;
 class rpc_request_task : public task, public transient_object
 {
 public:
-    rpc_request_task(message_ex *request, rpc_handler_info *h, service_node *node);
+    rpc_request_task(message_ex *request, dsn_rpc_request_handler_t &&h, service_node *node);
     ~rpc_request_task();
 
     message_ex *get_request() const { return _request; }
@@ -273,18 +238,19 @@ public:
         if (0 == _enqueue_ts_ns ||
             dsn_now_ns() - _enqueue_ts_ns <
                 static_cast<uint64_t>(_request->header->client.timeout_ms) * 1000000ULL) {
-            _handler->run(_request);
+            _handler(_request);
         } else {
             dwarn("rpc_request_task(%s) from(%s) stop to execute due to timeout_ms(%d) exceed",
                   spec().name.c_str(),
                   _request->header->from_address.to_string(),
                   _request->header->client.timeout_ms);
         }
+        _handler = nullptr;
     }
 
 protected:
     message_ex *_request;
-    rpc_handler_info *_handler;
+    dsn_rpc_request_handler_t _handler;
     uint64_t _enqueue_ts_ns;
 };
 

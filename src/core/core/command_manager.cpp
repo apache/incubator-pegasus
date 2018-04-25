@@ -172,15 +172,12 @@ bool command_manager::run_command(const std::string &cmd,
     }
 }
 
-void remote_cli_handler(dsn_message_t req, void *)
-{
-    command_manager::instance().on_remote_cli(req);
-}
-
 void command_manager::start_remote_cli()
 {
     ::dsn::service_engine::fast_instance().register_system_rpc_handler(
-        RPC_CLI_CLI_CALL, "dsn.cli", remote_cli_handler, nullptr);
+        RPC_CLI_CLI_CALL, "dsn.cli", [](dsn_message_t req) {
+            command_manager::instance().on_remote_cli(req);
+        });
 }
 
 void command_manager::on_remote_cli(dsn_message_t req)

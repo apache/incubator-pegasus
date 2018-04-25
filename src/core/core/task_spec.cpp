@@ -93,6 +93,20 @@ void task_spec::register_task_code(task_code code,
     }
 }
 
+void task_spec::register_storage_task_code(task_code code,
+                                           dsn_task_type_t type,
+                                           dsn_task_priority_t pri,
+                                           threadpool_code pool,
+                                           bool is_write_operation,
+                                           bool allow_batch)
+{
+    register_task_code(code, type, pri, pool);
+    task_spec *spec = task_spec::get(code);
+    spec->rpc_request_for_storage = true;
+    spec->rpc_request_is_write_operation = is_write_operation;
+    spec->rpc_request_is_write_allow_batch = allow_batch;
+}
+
 task_spec *task_spec::get(int code)
 {
     return dsn::utils::singleton_vector_store<task_spec *, nullptr>::instance().get(code);
@@ -107,6 +121,9 @@ task_spec::task_spec(int code,
       type(type),
       name(name),
       rpc_paired_code(TASK_CODE_INVALID),
+      rpc_request_for_storage(false),
+      rpc_request_is_write_operation(false),
+      rpc_request_is_write_allow_batch(false),
       priority(pri),
       pool_code(pool),
       rpc_call_header_format(NET_HDR_DSN),

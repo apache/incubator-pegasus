@@ -70,7 +70,7 @@ void response_handler(dsn::error_code ec, dsn_message_t req, dsn_message_t resp,
     wait_flag = 1;
 }
 
-void rpc_server_response(dsn_message_t request, void *)
+void rpc_server_response(dsn_message_t request)
 {
     std::string str_command;
     ::dsn::unmarshall(request, str_command);
@@ -109,7 +109,7 @@ TEST(tools_common, asio_net_provider)
         return;
 
     ASSERT_TRUE(dsn_rpc_register_handler(
-        RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response, (void *)101));
+        RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
     asio_network_provider *asio_network =
         new asio_network_provider(task::get_current_rpc(), nullptr);
@@ -147,7 +147,7 @@ TEST(tools_common, asio_net_provider)
 
     rpc_client_session_send(client_session);
 
-    ASSERT_EQ((void *)101, dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
+    ASSERT_TRUE(dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
 
     TEST_PORT++;
 }
@@ -159,7 +159,7 @@ TEST(tools_common, asio_udp_provider)
         return;
 
     ASSERT_TRUE(dsn_rpc_register_handler(
-        RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response, (void *)101));
+        RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
     auto client = new asio_udp_provider(task::get_current_rpc(), nullptr);
     io_modifer modifier;
@@ -187,7 +187,7 @@ TEST(tools_common, asio_udp_provider)
 
     wait_response();
 
-    ASSERT_EQ((void *)101, dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
+    ASSERT_TRUE(dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
     TEST_PORT++;
 }
 
@@ -198,7 +198,7 @@ TEST(tools_common, sim_net_provider)
         return;
 
     ASSERT_TRUE(dsn_rpc_register_handler(
-        RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response, (void *)101));
+        RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
     sim_network_provider *sim_net = new sim_network_provider(task::get_current_rpc(), nullptr);
     io_modifer modifer;
@@ -218,7 +218,7 @@ TEST(tools_common, sim_net_provider)
 
     rpc_client_session_send(client_session);
 
-    ASSERT_EQ((void *)101, dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
+    ASSERT_TRUE(dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
 
     TEST_PORT++;
 }

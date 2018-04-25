@@ -53,69 +53,37 @@ using namespace dsn::utils;
 
 namespace dsn {
 
-DEFINE_TASK_CODE_RPC(RPC_L2_CLIENT_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE_RPC(RPC_L2_CLIENT_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-
 service_node::service_node(service_app_spec &app_spec)
-    : _intercepted_read(RPC_L2_CLIENT_READ), _intercepted_write(RPC_L2_CLIENT_WRITE)
 {
     _computation = nullptr;
     _app_spec = app_spec;
-
-    _intercepted_read.name = "RPC_L2_CLIENT_READ";
-    _intercepted_read.c_handler = [](dsn_message_t req, void *this_) {
-        auto req2 = (message_ex *)req;
-        ((service_node *)this_)->handle_intercepted_request(req2->header->gpid, false, req);
-    };
-    _intercepted_read.parameter = this;
-    _intercepted_read.add_ref(); // release in handler::run
-
-    _intercepted_write.name = "RPC_L2_CLIENT_WRITE";
-    _intercepted_write.c_handler = [](dsn_message_t req, void *this_) {
-        auto req2 = (message_ex *)req;
-        ((service_node *)this_)->handle_intercepted_request(req2->header->gpid, true, req);
-    };
-    _intercepted_write.parameter = this;
-    _intercepted_write.add_ref(); // release in handler::run
 }
 
-bool service_node::rpc_register_handler(rpc_handler_info *handler, dsn::gpid gpid)
+bool service_node::rpc_register_handler(task_code code,
+                                        const char *extra_name,
+                                        const dsn_rpc_request_handler_t &h)
 {
-    if (gpid.value() == 0) {
-        for (auto &io : _ios) {
-            if (io.rpc) {
-                bool r = io.rpc->register_rpc_handler(handler);
-                if (!r)
-                    return false;
-            }
+    for (auto &io : _ios) {
+        if (io.rpc) {
+            bool r = io.rpc->register_rpc_handler(code, extra_name, h);
+            if (!r)
+                return false;
         }
-    } else {
-        dassert(false, "");
     }
     return true;
 }
 
-rpc_handler_info *service_node::rpc_unregister_handler(dsn::task_code rpc_code, dsn::gpid gpid)
+bool service_node::rpc_unregister_handler(dsn::task_code rpc_code)
 {
-    if (gpid.value() == 0) {
-        rpc_handler_info *ret = nullptr;
-
-        for (auto &io : _ios) {
-            if (io.rpc) {
-                auto r = io.rpc->unregister_rpc_handler(rpc_code);
-                if (ret != nullptr) {
-                    dassert(ret == r, "registered context must be the same");
-                } else {
-                    ret = r;
-                }
+    for (auto &io : _ios) {
+        if (io.rpc) {
+            bool r = io.rpc->unregister_rpc_handler(rpc_code);
+            if (!r) {
+                dassert(false, "unregister rpc failed(%s)", rpc_code.to_string());
             }
         }
-
-        return ret;
-    } else {
-        dassert(false, "");
-        return nullptr;
     }
+    return true;
 }
 
 error_code service_node::init_io_engine(io_engine &io, ioe_mode mode)
@@ -411,21 +379,16 @@ void service_node::get_queue_info(
     ss << "]}";
 }
 
-void service_node::handle_intercepted_request(dsn::gpid gpid, bool is_write, dsn_message_t req)
-{
-    _entity->on_intercepted_request(gpid, is_write, req);
-}
-
 rpc_request_task *service_node::generate_intercepted_request_task(message_ex *req)
 {
-    rpc_request_task *t;
-    if (task_spec::get(req->local_rpc_code)->rpc_request_is_write_operation) {
-        _intercepted_write.add_ref(); // release in handler::run
-        t = new rpc_request_task(req, &_intercepted_write, this);
-    } else {
-        _intercepted_read.add_ref(); // release in handler::run
-        t = new rpc_request_task(req, &_intercepted_read, this);
-    }
+    bool is_write = task_spec::get(req->local_rpc_code)->rpc_request_is_write_operation;
+    rpc_request_task *t = new rpc_request_task(req,
+                                               std::bind(&service_app::on_intercepted_request,
+                                                         _entity.get(),
+                                                         req->header->gpid,
+                                                         is_write,
+                                                         std::placeholders::_1),
+                                               this);
     t->spec().on_task_create.execute(nullptr, t);
     return t;
 }
@@ -486,25 +449,18 @@ void service_engine::init_after_toollets()
     tls_dsn.env = _env;
 }
 
+// port == -1 for all node
 void service_engine::register_system_rpc_handler(dsn::task_code code,
                                                  const char *name,
-                                                 dsn_rpc_request_handler_t cb,
-                                                 void *param,
+                                                 const dsn_rpc_request_handler_t &cb,
                                                  int port /*= -1*/
-                                                 )        // -1 for all node
+                                                 )
 {
-    ::dsn::rpc_handler_info *h(new ::dsn::rpc_handler_info(code));
-    h->name = std::string(name);
-    h->c_handler = cb;
-    h->parameter = param;
-    h->add_ref();
-
     if (port == -1) {
         for (auto &n : _nodes_by_app_id) {
             for (auto &io : n.second->ios()) {
                 if (io.rpc) {
-                    h->add_ref();
-                    io.rpc->register_rpc_handler(h);
+                    io.rpc->register_rpc_handler(code, name, cb);
                 }
             }
         }
@@ -513,17 +469,13 @@ void service_engine::register_system_rpc_handler(dsn::task_code code,
         if (it != _nodes_by_app_port.end()) {
             for (auto &io : it->second->ios()) {
                 if (io.rpc) {
-                    h->add_ref();
-                    io.rpc->register_rpc_handler(h);
+                    io.rpc->register_rpc_handler(code, name, cb);
                 }
             }
         } else {
             dwarn("cannot find service node with port %d", port);
         }
     }
-
-    if (1 == h->release_ref())
-        delete h;
 }
 
 service_node *service_engine::start_node(service_app_spec &app_spec)
