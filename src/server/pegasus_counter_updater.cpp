@@ -25,10 +25,10 @@ namespace server {
 
 // clang-format off
 static const char *s_brief_stat_mapper[] = {
-    "write_qps", "zion*profiler*RPC_L2_CLIENT_WRITE.qps",
+    "write_qps", "zion*profiler*RPC_RRDB_RRDB_PUT.qps",
     "PUT_P99(ns)","zion*profiler*RPC_RRDB_RRDB_PUT.latency.server",
     "MULTI_PUT_P99(ns)", "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server",
-    "read_qps", "zion*profiler*RPC_L2_CLIENT_READ.qps",
+    "read_qps", "zion*profiler*RPC_RRDB_RRDB_GET.qps",
     "GET_P99(ns)", "zion*profiler*RPC_RRDB_RRDB_GET.latency.server",
     "MULTI_GET_P99(ns)", "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server",
     "serving_replica_count", "replica*eon.replica_stub*replica(Count)",

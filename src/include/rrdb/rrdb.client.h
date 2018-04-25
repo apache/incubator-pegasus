@@ -1,5 +1,6 @@
 #pragma once
 #include "rrdb.code.definition.h"
+#include "rrdb.types.h"
 #include <iostream>
 
 namespace dsn {
@@ -7,8 +8,14 @@ namespace apps {
 class rrdb_client : public virtual ::dsn::clientlet
 {
 public:
-    rrdb_client() {}
-    explicit rrdb_client(::dsn::rpc_address server) { _server = server; }
+    rrdb_client() { reset_rpc_response_code_threadpool(); }
+
+    explicit rrdb_client(::dsn::rpc_address server)
+    {
+        _server = server;
+        reset_rpc_response_code_threadpool();
+    }
+
     virtual ~rrdb_client() {}
 
     // ---------- call RPC_RRDB_RRDB_PUT ------------
@@ -462,6 +469,30 @@ public:
     }
 
 private:
+    // all the rpc response are defined in replication/local_app threadpool
+    // which are not suitable for clients, so we change them to default
+    void reset_rpc_response_code_threadpool()
+    {
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_PUT_ACK)->pool_code = dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_MULTI_PUT_ACK)->pool_code =
+            dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_REMOVE_ACK)->pool_code =
+            dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE_ACK)->pool_code =
+            dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_GET_ACK)->pool_code = dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_MULTI_GET_ACK)->pool_code =
+            dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_SORTKEY_COUNT_ACK)->pool_code =
+            dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_TTL_ACK)->pool_code = dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_GET_SCANNER_ACK)->pool_code =
+            dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_SCAN_ACK)->pool_code =
+            dsn::THREAD_POOL_DEFAULT;
+        dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_CLEAR_SCANNER_ACK)->pool_code =
+            dsn::THREAD_POOL_DEFAULT;
+    }
     ::dsn::rpc_address _server;
 };
 }
