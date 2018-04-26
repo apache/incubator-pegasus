@@ -506,8 +506,10 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 
         if (update.kvs.empty()) {
             // invalid argument
-            derror("%s: invalid argument for multi_put: decree = %" PRId64 ", error = empty kvs",
+            derror("%s: invalid argument for multi_put from %s: "
+                   "decree = %" PRId64 ", error = empty kvs",
                    replica_name(),
+                   dsn_msg_from_address(request).to_string(),
                    decree);
 
             ::dsn::rpc_replier<::dsn::apps::update_response> replier(
@@ -539,8 +541,10 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
         _wt_opts.given_decree = decree;
         rocksdb::Status status = _db->Write(_wt_opts, &_batch);
         if (!status.ok()) {
-            derror("%s: rocksdb write failed for multi_put: decree = %" PRId64 ", error = %s",
+            derror("%s: rocksdb write failed for multi_put from %s: "
+                   "decree = %" PRId64 ", error = %s",
                    replica_name(),
+                   dsn_msg_from_address(request).to_string(),
                    decree,
                    status.ToString().c_str());
             _physical_error = status.code();
@@ -572,9 +576,10 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 
         if (update.sort_keys.empty()) {
             // invalid argument
-            derror("%s: invalid argument for multi_remove: decree = %" PRId64
-                   ", error = empty sort keys",
+            derror("%s: invalid argument for multi_remove from %s: "
+                   "decree = %" PRId64 ", error = empty sort keys",
                    replica_name(),
+                   dsn_msg_from_address(request).to_string(),
                    decree);
 
             ::dsn::rpc_replier<::dsn::apps::multi_remove_response> replier(
@@ -597,8 +602,10 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
         _wt_opts.given_decree = decree;
         rocksdb::Status status = _db->Write(_wt_opts, &_batch);
         if (!status.ok()) {
-            derror("%s: rocksdb write failed for multi_remove: decree = %" PRId64 ", error = %s",
+            derror("%s: rocksdb write failed for multi_remove from %s: "
+                   "decree = %" PRId64 ", error = %s",
                    replica_name(),
+                   dsn_msg_from_address(request).to_string(),
                    decree,
                    status.ToString().c_str());
             _physical_error = status.code();
@@ -666,15 +673,17 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                 dassert(msg->header->client.partition_hash == partition_hash,
                         "inconsistent partition hash");
                 int thread_hash = _gpid.thread_hash();
-                dassert(msg->header->client.thread_hash == thread_hash, "inconsistent thread hash");
+                dassert(msg->header->client.thread_hash == thread_hash,
+                        "inconsistent thread hash");
             }
 
             if (_verbose_log) {
                 ::dsn::blob hash_key, sort_key;
                 pegasus_restore_key(key, hash_key, sort_key);
-                ddebug("%s: rocksdb write: decree = %" PRId64
-                       ", code = %s, hash_key = \"%s\", sort_key = \"%s\"",
+                ddebug("%s: rocksdb write from %s: "
+                       "decree = %" PRId64 ", code = %s, hash_key = \"%s\", sort_key = \"%s\"",
                        replica_name(),
+                       dsn_msg_from_address(request).to_string(),
                        decree,
                        msg->local_rpc_code.to_string(),
                        ::pegasus::utils::c_escape_string(hash_key).c_str(),
@@ -697,8 +706,12 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     _wt_opts.given_decree = decree;
     auto status = _db->Write(_wt_opts, &_batch);
     if (!status.ok()) {
-        derror("%s: rocksdb write failed: decree = %" PRId64 ", error = %s",
+        dsn::rpc_address from_address;
+        if (count > 0)
+            from_address = dsn_msg_from_address(requests[0]);
+        derror("%s: rocksdb write failed from %s: decree = %" PRId64 ", error = %s",
                replica_name(),
+               from_address.to_string(),
                decree,
                status.ToString().c_str());
         _physical_error = status.code();
@@ -777,7 +790,9 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         if (expire_ts > 0 && expire_ts <= ::pegasus::utils::epoch_now()) {
             _pfc_recent_expire_count->increment();
             if (_verbose_log) {
-                derror("%s: rocksdb data expired for get", replica_name());
+                derror("%s: rocksdb data expired for get from %s",
+                       replica_name(),
+                       reply.to_address().to_string());
             }
             status = rocksdb::Status::NotFound();
         }
@@ -787,15 +802,17 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         if (_verbose_log) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
-            derror("%s: rocksdb get failed for get: "
+            derror("%s: rocksdb get failed for get from %s: "
                    "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    ::pegasus::utils::c_escape_string(sort_key).c_str(),
                    status.ToString().c_str());
         } else if (!status.IsNotFound()) {
-            derror("%s: rocksdb get failed for get: error = %s",
+            derror("%s: rocksdb get failed for get from %s: error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    status.ToString().c_str());
         }
     }
@@ -806,10 +823,11 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             (_abnormal_get_size_threshold && value->size() >= _abnormal_get_size_threshold)) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
-            dwarn("%s: rocksdb abnormal get: "
+            dwarn("%s: rocksdb abnormal get from %s: "
                   "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
                   "value_size = %d, time_used = %" PRIu64 " ns",
                   replica_name(),
+                  reply.to_address().to_string(),
                   ::pegasus::utils::c_escape_string(hash_key).c_str(),
                   ::pegasus::utils::c_escape_string(sort_key).c_str(),
                   status.ToString().c_str(),
@@ -842,8 +860,10 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     resp.server = _primary_address;
 
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
-        derror("%s: filter type %d not supported for multi_get",
+        derror("%s: invalid argument for multi_get from %s: "
+               "sort key filter type %d not supported",
                replica_name(),
+               reply.to_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
@@ -903,11 +923,12 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
             // empty sort key range
             if (_verbose_log) {
-                dwarn("%s: empty sort key range for multi_get: hash_key = \"%s\", "
+                dwarn("%s: empty sort key range for multi_get from %s: hash_key = \"%s\", "
                       "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
                       "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
                       "final_start = \"%s\" (%s), final_stop = \"%s\" (%s)",
                       replica_name(),
+                      reply.to_address().to_string(),
                       ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                       ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
                       request.start_inclusive ? "inclusive" : "exclusive",
@@ -1044,15 +1065,18 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         if (!it->status().ok()) {
             // error occur
             if (_verbose_log) {
-                derror("%s: rocksdb scan failed for multi_get: hash_key = \"%s\", "
-                       "reverse = %s, error = %s",
+                derror("%s: rocksdb scan failed for multi_get from %s: "
+                       "hash_key = \"%s\", reverse = %s, error = %s",
                        replica_name(),
+                       reply.to_address().to_string(),
                        ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                        request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
             } else {
-                derror("%s: rocksdb scan failed for multi_get: reverse = %s, error = %s",
+                derror("%s: rocksdb scan failed for multi_get from %s: "
+                       "reverse = %s, error = %s",
                        replica_name(),
+                       reply.to_address().to_string(),
                        request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
             }
@@ -1084,15 +1108,17 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             // print log
             if (!status.ok()) {
                 if (_verbose_log) {
-                    derror("%s: rocksdb get failed for multi_get: "
+                    derror("%s: rocksdb get failed for multi_get from %s: "
                            "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                            replica_name(),
+                           reply.to_address().to_string(),
                            ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                            ::pegasus::utils::c_escape_string(request.sort_keys[i]).c_str(),
                            status.ToString().c_str());
                 } else if (!status.IsNotFound()) {
-                    derror("%s: rocksdb get failed for multi_get: error = %s",
+                    derror("%s: rocksdb get failed for multi_get from %s: error = %s",
                            replica_name(),
+                           reply.to_address().to_string(),
                            status.ToString().c_str());
                 }
             }
@@ -1102,7 +1128,9 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 if (expire_ts > 0 && expire_ts <= epoch_now) {
                     expire_count++;
                     if (_verbose_log) {
-                        derror("%s: rocksdb data expired for multi_get", replica_name());
+                        derror("%s: rocksdb data expired for multi_get from %s",
+                               replica_name(),
+                               reply.to_address().to_string());
                     }
                     status = rocksdb::Status::NotFound();
                 }
@@ -1152,11 +1180,21 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
              (uint64_t)size >= _abnormal_multi_get_size_threshold) ||
             (_abnormal_multi_get_iterate_count_threshold &&
              (uint64_t)iterate_count >= _abnormal_multi_get_iterate_count_threshold)) {
-            dwarn("%s: rocksdb abnormal multi_get: hash_key = \"%s\", "
+            dwarn("%s: rocksdb abnormal multi_get from %s: hash_key = \"%s\", "
+                  "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
+                  "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
                   "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
                   "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns",
                   replica_name(),
+                  reply.to_address().to_string(),
                   ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
+                  ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
+                  request.start_inclusive ? "inclusive" : "exclusive",
+                  ::pegasus::utils::c_escape_string(request.stop_sortkey).c_str(),
+                  request.stop_inclusive ? "inclusive" : "exclusive",
+                  ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
+                      ->second,
+                  ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
                   count,
                   size,
                   iterate_count,
@@ -1206,7 +1244,9 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
         if (expire_ts > 0 && expire_ts <= epoch_now) {
             expire_count++;
             if (_verbose_log) {
-                derror("%s: rocksdb data expired for sortkey_count", replica_name());
+                derror("%s: rocksdb data expired for sortkey_count from %s",
+                       replica_name(),
+                       reply.to_address().to_string());
             }
         } else {
             resp.count++;
@@ -1221,13 +1261,16 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
     if (!it->status().ok()) {
         // error occur
         if (_verbose_log) {
-            derror("%s: rocksdb scan failed for sortkey_count: hash_key = \"%s\", error = %s",
+            derror("%s: rocksdb scan failed for sortkey_count from %s: "
+                   "hash_key = \"%s\", error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    it->status().ToString().c_str());
         } else {
-            derror("%s: rocksdb scan failed for sortkey_count: error = %s",
+            derror("%s: rocksdb scan failed for sortkey_count from %s: error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    it->status().ToString().c_str());
         }
         resp.count = 0;
@@ -1257,7 +1300,9 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
         if (expire_ts > 0 && expire_ts <= now_ts) {
             _pfc_recent_expire_count->increment();
             if (_verbose_log) {
-                derror("%s: rocksdb data expired for ttl", replica_name());
+                derror("%s: rocksdb data expired for ttl from %s",
+                       replica_name(),
+                       reply.to_address().to_string());
             }
             status = rocksdb::Status::NotFound();
         }
@@ -1267,15 +1312,17 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
         if (_verbose_log) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
-            derror("%s: rocksdb get failed for ttl: "
+            derror("%s: rocksdb get failed for ttl from %s: "
                    "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    ::pegasus::utils::c_escape_string(sort_key).c_str(),
                    status.ToString().c_str());
         } else if (!status.IsNotFound()) {
-            derror("%s: rocksdb get failed for ttl: error = %s",
+            derror("%s: rocksdb get failed for ttl from %s: error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    status.ToString().c_str());
         }
     }
@@ -1307,16 +1354,20 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     resp.server = _primary_address;
 
     if (!is_filter_type_supported(request.hash_key_filter_type)) {
-        derror("%s: filter type %d not supported for get_scanner",
+        derror("%s: invalid argument for get_scanner from %s: "
+               "hash key filter type %d not supported",
                replica_name(),
+               reply.to_address().to_string(),
                request.hash_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         reply(resp);
         return;
     }
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
-        derror("%s: filter type %d not supported for get_scanner",
+        derror("%s: invalid argument for get_scanner from %s: "
+               "sort key filter type %d not supported",
                replica_name(),
+               reply.to_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         reply(resp);
@@ -1347,9 +1398,10 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
         // empty key range
         if (_verbose_log) {
-            dwarn("%s: empty key range for get_scanner: "
+            dwarn("%s: empty key range for get_scanner from %s: "
                   "start_key = \"%s\" (%s), stop_key = \"%s\" (%s)",
                   replica_name(),
+                  reply.to_address().to_string(),
                   ::pegasus::utils::c_escape_string(request.start_key).c_str(),
                   request.start_inclusive ? "inclusive" : "exclusive",
                   ::pegasus::utils::c_escape_string(request.stop_key).c_str(),
@@ -1417,10 +1469,11 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     if (!it->status().ok()) {
         // error occur
         if (_verbose_log) {
-            derror("%s: rocksdb scan failed for get_scanner: "
+            derror("%s: rocksdb scan failed for get_scanner from %s: "
                    "start_key = \"%s\" (%s), stop_key = \"%s\" (%s), "
                    "batch_size = %d, read_count = %d, error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    ::pegasus::utils::c_escape_string(start).c_str(),
                    request.start_inclusive ? "inclusive" : "exclusive",
                    ::pegasus::utils::c_escape_string(stop).c_str(),
@@ -1429,8 +1482,9 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                    count,
                    it->status().ToString().c_str());
         } else {
-            derror("%s: rocksdb scan failed for get_scanner: error = %s",
+            derror("%s: rocksdb scan failed for get_scanner from %s: error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    it->status().ToString().c_str());
         }
         resp.kvs.clear();
@@ -1541,10 +1595,11 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         if (!it->status().ok()) {
             // error occur
             if (_verbose_log) {
-                derror("%s: rocksdb scan failed for scan: "
+                derror("%s: rocksdb scan failed for scan from %s: "
                        "context_id= %" PRId64 ", stop_key = \"%s\" (%s), "
                        "batch_size = %d, read_count = %d, error = %s",
                        replica_name(),
+                       reply.to_address().to_string(),
                        request.context_id,
                        ::pegasus::utils::c_escape_string(stop).c_str(),
                        stop_inclusive ? "inclusive" : "exclusive",
@@ -1552,8 +1607,9 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
                        count,
                        it->status().ToString().c_str());
             } else {
-                derror("%s: rocksdb scan failed for scan: error = %s",
+                derror("%s: rocksdb scan failed for scan from %s: error = %s",
                        replica_name(),
+                       reply.to_address().to_string(),
                        it->status().ToString().c_str());
             }
             resp.kvs.clear();
