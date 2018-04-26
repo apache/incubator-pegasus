@@ -1,5 +1,6 @@
 #pragma once
 #include "rrdb.code.definition.h"
+#include "rrdb.types.h"
 #include <iostream>
 
 namespace dsn {
@@ -9,6 +10,7 @@ class rrdb_client : public virtual ::dsn::clientlet
 public:
     rrdb_client() {}
     explicit rrdb_client(::dsn::rpc_address server) { _server = server; }
+
     virtual ~rrdb_client() {}
 
     // ---------- call RPC_RRDB_RRDB_PUT ------------

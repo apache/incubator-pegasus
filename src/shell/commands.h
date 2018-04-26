@@ -20,6 +20,7 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 #include <rrdb/rrdb.code.definition.h>
+#include <rrdb/rrdb.types.h>
 #include <dsn/tool/cli/cli.client.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
