@@ -26,11 +26,11 @@ namespace server {
 // clang-format off
 static const char *s_brief_stat_mapper[] = {
     "put_qps", "zion*profiler*RPC_RRDB_RRDB_PUT.qps",
-    "PUT_P99(ns)","zion*profiler*RPC_RRDB_RRDB_PUT.latency.server",
-    "MULTI_PUT_P99(ns)", "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server",
+    "put_p99(ns)","zion*profiler*RPC_RRDB_RRDB_PUT.latency.server",
+    "multi_put_p99(ns)", "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server",
     "get_qps", "zion*profiler*RPC_RRDB_RRDB_GET.qps",
-    "GET_P99(ns)", "zion*profiler*RPC_RRDB_RRDB_GET.latency.server",
-    "MULTI_GET_P99(ns)", "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server",
+    "get_p99(ns)", "zion*profiler*RPC_RRDB_RRDB_GET.latency.server",
+    "multi_get_p99(ns)", "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server",
     "serving_replica_count", "replica*eon.replica_stub*replica(Count)",
     "opening_replica_count", "replica*eon.replica_stub*opening.replica(Count)",
     "closing_replica_count", "replica*eon.replica_stub*closing.replica(Count)",
