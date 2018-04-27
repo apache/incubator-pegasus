@@ -239,7 +239,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     return ERR_OK;
 }
 
-::dsn::error_code simple_kv_service_impl::async_checkpoint(bool is_emergency)
+::dsn::error_code simple_kv_service_impl::async_checkpoint(bool flush_memtable)
 {
     return sync_checkpoint();
 }

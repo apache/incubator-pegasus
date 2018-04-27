@@ -144,7 +144,7 @@ public:
     // It is not always necessary for the apps to implement this method,
     // but if it is implemented, the checkpoint logic in replication will be much simpler.
     //
-    virtual ::dsn::error_code async_checkpoint(bool is_emergency) = 0;
+    virtual ::dsn::error_code async_checkpoint(bool flush_memtable) = 0;
     //
     // prepare an app-specific learning request (on learner, to be sent to learnee
     // and used by method get_checkpoint), so that the learning process is more efficient

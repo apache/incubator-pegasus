@@ -246,7 +246,7 @@ private:
     void init_checkpoint(bool is_emergency);
     void background_checkpoint();
     void background_async_checkpoint(bool is_emergency);
-    void sync_checkpoint();
+    error_code sync_checkpoint();
     void catch_up_with_private_logs(partition_status::type s);
     void on_checkpoint_completed(error_code err);
     void on_copy_checkpoint_ack(error_code err,

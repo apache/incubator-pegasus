@@ -2560,6 +2560,8 @@ void server_state::do_update_app_info(const std::string &app_path,
             dassert(false, "we can't handle this, error(%s)", ec.to_string());
         }
     };
+    // TODO(cailiuyang): callback scheduling order may be undefined if multiple requests are
+    // sending to the remote storage concurrently.
     _meta_svc->get_remote_storage()->set_data(
         app_path, value, LPC_META_STATE_NORMAL, std::move(new_cb), tracker());
 }

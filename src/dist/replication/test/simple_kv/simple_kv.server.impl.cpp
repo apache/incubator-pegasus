@@ -206,7 +206,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
         ddebug("simple_kv_service_impl no need to create checkpoint, "
                "checkpoint already the latest, last_durable_decree = %" PRId64 "",
                last_durable_decree());
-        return ERR_NO_NEED_OPERATE;
+        return ERR_OK;
     }
 
     // TODO: should use async write instead
@@ -241,7 +241,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     return ERR_OK;
 }
 
-::dsn::error_code simple_kv_service_impl::async_checkpoint(bool is_emergency)
+::dsn::error_code simple_kv_service_impl::async_checkpoint(bool flush_memtable)
 {
     return sync_checkpoint();
 }

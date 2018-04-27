@@ -468,7 +468,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     bool is_log_complete = true;
     for (auto it = rps.begin(); it != rps.end(); ++it) {
-        it->second->sync_checkpoint();
+        auto err = it->second->sync_checkpoint();
+        dassert(err == ERR_OK, "sync checkpoint failed, err = %s", err.to_string());
+
         it->second->reset_prepare_list_after_replay();
 
         decree smax = _log->max_decree(it->first);
