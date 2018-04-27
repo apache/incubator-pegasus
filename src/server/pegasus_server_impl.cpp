@@ -1744,6 +1744,7 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
 
     auto status = rocksdb::DB::Open(opts, path, &_db);
     if (status.ok()) {
+        _last_committed_decree = _db->GetLastFlushedDecree();
         _value_schema_version = _db->GetValueSchemaVersion();
         if (_value_schema_version > PEGASUS_VALUE_SCHEMA_MAX_VERSION) {
             derror("%s: open app failed, unsupported value schema version %" PRIu32,
@@ -1762,6 +1763,7 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
 
         parse_checkpoints();
 
+        // do checkpoint if necessary to make last_durable_decree() fresh
         int64_t ci = _db->GetLastFlushedDecree();
         if (ci != last_durable_decree()) {
             ddebug("%s: start to do async checkpoint, last_durable_decree = %" PRId64
@@ -1824,10 +1826,8 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
     }
 
     if (!clear_state) {
-        rocksdb::FlushOptions options;
-        options.wait = true;
-        auto status = _db->Flush(options);
-        if (!status.ok() && !status.IsNoNeedOperate()) {
+        auto status = _db->Flush(rocksdb::FlushOptions());
+        if (!status.ok()) {
             derror("%s: flush memtable on close failed: %s",
                    replica_name(),
                    status.ToString().c_str());
@@ -1890,9 +1890,16 @@ private:
     if (!token_helper.token_got())
         return ::dsn::ERR_WRONG_TIMING;
 
+    int64_t last_durable = last_durable_decree();
     int64_t last_commit = last_committed_decree();
-    if (last_durable_decree() == last_commit)
+    dassert(last_durable <= last_commit, "%" PRId64 " VS %" PRId64, last_durable, last_commit);
+
+    if (last_durable == last_commit) {
+        ddebug("%s: no need to checkpoint because last_durable = last_committed = %" PRId64,
+               replica_name(),
+               last_durable);
         return ::dsn::ERR_NO_NEED_OPERATE;
+    }
 
     rocksdb::Checkpoint *chkpt = nullptr;
     auto status = rocksdb::Checkpoint::Create(_db, &chkpt);
@@ -1918,13 +1925,14 @@ private:
         }
     }
 
-    status = chkpt->CreateCheckpoint(chkpt_dir);
+    // CreateCheckpoint() will always flush memtable firstly.
+    status = chkpt->CreateCheckpoint(chkpt_dir, 0);
     if (!status.ok()) {
         // sometimes checkpoint may fail, and try again will succeed
         derror("%s: create checkpoint failed, error = %s, try again",
                replica_name(),
                status.ToString().c_str());
-        status = chkpt->CreateCheckpoint(chkpt_dir);
+        status = chkpt->CreateCheckpoint(chkpt_dir, 0);
     }
 
     // destroy Checkpoint object
@@ -1949,6 +1957,10 @@ private:
                 "%" PRId64 " VS %" PRId64 "",
                 last_commit,
                 last_durable_decree());
+        dassert(last_commit == _db->GetLastFlushedDecree(),
+                "%" PRId64 " VS %" PRId64 "",
+                last_commit,
+                _db->GetLastFlushedDecree());
         if (!_checkpoints.empty()) {
             dassert(last_commit > _checkpoints.back(),
                     "%" PRId64 " VS %" PRId64 "",
@@ -1975,21 +1987,31 @@ private:
     if (!token_helper.token_got())
         return ::dsn::ERR_WRONG_TIMING;
 
-    // last_durable_decree must less than or equal to _db->GetLastFlushedDecree()
-    // if last_durable_decree == _db->GetLastFlushedDecree(), we should flush it first
-    int64_t last_flushed_decree = static_cast<int64_t>(_db->GetLastFlushedDecree());
-    if (last_durable_decree() == last_flushed_decree) {
+    int64_t last_durable = last_durable_decree();
+    int64_t last_flushed = static_cast<int64_t>(_db->GetLastFlushedDecree());
+    int64_t last_commit = last_committed_decree();
+
+    dassert(last_durable <= last_flushed, "%" PRId64 " VS %" PRId64, last_durable, last_flushed);
+    dassert(last_flushed <= last_commit, "%" PRId64 " VS %" PRId64, last_flushed, last_commit);
+
+    if (last_durable == last_commit) {
+        ddebug("%s: no need to checkpoint because last_durable = last_committed = %" PRId64,
+               replica_name(),
+               last_durable);
+        return ::dsn::ERR_NO_NEED_OPERATE;
+    }
+
+    dassert(last_durable <= last_flushed, "%" PRId64 " VS %" PRId64, last_durable, last_flushed);
+
+    if (last_durable == last_flushed) {
         if (is_emergency) {
-            // trigger flushing memtable, but not wait
+            // trigger flushing memtable firstly, but not wait
             rocksdb::FlushOptions options;
             options.wait = false;
             auto status = _db->Flush(options);
             if (status.ok()) {
                 ddebug("%s: trigger flushing memtable succeed", replica_name());
                 return ::dsn::ERR_TRY_AGAIN;
-            } else if (status.IsNoNeedOperate()) {
-                dwarn("%s: trigger flushing memtable failed, no memtable to flush", replica_name());
-                return ::dsn::ERR_NO_NEED_OPERATE;
             } else {
                 derror("%s: trigger flushing memtable failed, error = %s",
                        replica_name(),
@@ -2001,10 +2023,7 @@ private:
         }
     }
 
-    dassert(last_durable_decree() < last_flushed_decree,
-            "%" PRId64 " VS %" PRId64 "",
-            last_durable_decree(),
-            last_flushed_decree);
+    dassert(last_durable < last_flushed, "%" PRId64 " VS %" PRId64, last_durable, last_flushed);
 
     char buf[256];
     sprintf(buf, "checkpoint.tmp.%" PRIu64 "", dsn_now_us());

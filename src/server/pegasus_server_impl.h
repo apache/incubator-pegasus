@@ -75,15 +75,15 @@ public:
         return ::dsn::ERR_OK;
     }
     // returns:
-    //  - ERR_OK
-    //  - ERR_WRONG_TIMING
-    //  - ERR_NO_NEED_OPERATE
-    //  - ERR_LOCAL_APP_FAILURE
-    //  - ERR_FILE_OPERATION_FAILED
+    //  - ERR_OK: checkpoint succeed
+    //  - ERR_WRONG_TIMING: is checkpointing now
+    //  - ERR_NO_NEED_OPERATE: the checkpoint is fresh enough, no need to checkpoint
+    //  - ERR_LOCAL_APP_FAILURE: some internal failure
+    //  - ERR_FILE_OPERATION_FAILED: some file failure
     virtual ::dsn::error_code sync_checkpoint() override;
 
     // returns:
-    //  - ERR_OK
+    //  - ERR_OK: checkpoint succeed
     //  - ERR_WRONG_TIMING: is checkpointing now
     //  - ERR_NO_NEED_OPERATE: the checkpoint is fresh enough, no need to checkpoint
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
