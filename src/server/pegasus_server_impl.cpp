@@ -95,12 +95,21 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                         6,
                                         "rocksdb options.max_write_buffer_number, default 6");
 
-    // rocksdb default: 2
-    _db_opts.max_background_jobs =
+    // rocksdb default: -1
+    // flush threads is shared among all dbs.
+    _db_opts.max_background_flushes =
         (int)dsn_config_get_value_int64("pegasus.server",
-                                        "rocksdb_max_background_jobs",
+                                        "rocksdb_max_background_flushes",
                                         4,
-                                        "rocksdb options.max_background_jobs, default 4");
+                                        "rocksdb options.max_background_flushes, default 4");
+
+    // rocksdb default: -1
+    // compaction threads is shared among all dbs.
+    _db_opts.max_background_compactions =
+        (int)dsn_config_get_value_int64("pegasus.server",
+                                        "rocksdb_max_background_compactions",
+                                        12,
+                                        "rocksdb options.max_background_compactions, default 12");
 
     // rocksdb default: 7
     _db_opts.num_levels = (int)dsn_config_get_value_int64(
