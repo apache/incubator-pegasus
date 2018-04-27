@@ -1763,32 +1763,25 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
 
         parse_checkpoints();
 
-        // do checkpoint if necessary to make last_durable_decree() fresh
-        int64_t ci = _db->GetLastFlushedDecree();
-        if (ci != last_durable_decree()) {
+        // checkpoint if necessary to make last_durable_decree() fresh.
+        // only need async checkpoint because we sure that memtable is empty now.
+        int64_t last_flushed = _db->GetLastFlushedDecree();
+        if (last_flushed != last_durable_decree()) {
             ddebug("%s: start to do async checkpoint, last_durable_decree = %" PRId64
                    ", last_flushed_decree = %" PRId64,
                    replica_name(),
                    last_durable_decree(),
-                   ci);
+                   last_flushed);
             auto err = async_checkpoint(false);
             if (err != ::dsn::ERR_OK) {
-                dwarn("%s: create checkpoint failed, error = %s, retry again",
-                      replica_name(),
-                      err.to_string());
-                err = async_checkpoint(false);
-                if (err != ::dsn::ERR_OK) {
-                    derror("%s: create checkpoint failed, error = %s",
-                           replica_name(),
-                           err.to_string());
-                    delete _db;
-                    _db = nullptr;
-                    return err;
-                }
+                derror("%s: create checkpoint failed, error = %s", replica_name(), err.to_string());
+                delete _db;
+                _db = nullptr;
+                return err;
             }
-            dassert(ci == last_durable_decree(),
+            dassert(last_flushed == last_durable_decree(),
                     "last durable decree mismatch after checkpoint: %" PRId64 " vs %" PRId64,
-                    ci,
+                    last_flushed,
                     last_durable_decree());
         }
 
@@ -1895,10 +1888,11 @@ private:
     dassert(last_durable <= last_commit, "%" PRId64 " VS %" PRId64, last_durable, last_commit);
 
     if (last_durable == last_commit) {
-        ddebug("%s: no need to checkpoint because last_durable = last_committed = %" PRId64,
+        ddebug("%s: no need to checkpoint because "
+               "last_durable_decree = last_committed_decree = %" PRId64,
                replica_name(),
                last_durable);
-        return ::dsn::ERR_NO_NEED_OPERATE;
+        return ::dsn::ERR_OK;
     }
 
     rocksdb::Checkpoint *chkpt = nullptr;
@@ -1981,7 +1975,7 @@ private:
 }
 
 // Must be thread safe.
-::dsn::error_code pegasus_server_impl::async_checkpoint(bool is_emergency)
+::dsn::error_code pegasus_server_impl::async_checkpoint(bool flush_memtable)
 {
     CheckpointingTokenHelper token_helper(_is_checkpointing);
     if (!token_helper.token_got())
@@ -1995,17 +1989,18 @@ private:
     dassert(last_flushed <= last_commit, "%" PRId64 " VS %" PRId64, last_flushed, last_commit);
 
     if (last_durable == last_commit) {
-        ddebug("%s: no need to checkpoint because last_durable = last_committed = %" PRId64,
+        ddebug("%s: no need to checkpoint because "
+               "last_durable_decree = last_committed_decree = %" PRId64,
                replica_name(),
                last_durable);
-        return ::dsn::ERR_NO_NEED_OPERATE;
+        return ::dsn::ERR_OK;
     }
 
     dassert(last_durable <= last_flushed, "%" PRId64 " VS %" PRId64, last_durable, last_flushed);
 
     if (last_durable == last_flushed) {
-        if (is_emergency) {
-            // trigger flushing memtable firstly, but not wait
+        if (flush_memtable) {
+            // trigger flushing memtable, but not wait
             rocksdb::FlushOptions options;
             options.wait = false;
             auto status = _db->Flush(options);
@@ -2019,7 +2014,7 @@ private:
                 return ::dsn::ERR_LOCAL_APP_FAILURE;
             }
         } else {
-            return ::dsn::ERR_NO_NEED_OPERATE;
+            return ::dsn::ERR_OK;
         }
     }
 

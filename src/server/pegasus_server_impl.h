@@ -76,20 +76,18 @@ public:
     }
     // returns:
     //  - ERR_OK: checkpoint succeed
-    //  - ERR_WRONG_TIMING: is checkpointing now
-    //  - ERR_NO_NEED_OPERATE: the checkpoint is fresh enough, no need to checkpoint
+    //  - ERR_WRONG_TIMING: another checkpoint is running now
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
     //  - ERR_FILE_OPERATION_FAILED: some file failure
     virtual ::dsn::error_code sync_checkpoint() override;
 
     // returns:
     //  - ERR_OK: checkpoint succeed
-    //  - ERR_WRONG_TIMING: is checkpointing now
-    //  - ERR_NO_NEED_OPERATE: the checkpoint is fresh enough, no need to checkpoint
+    //  - ERR_WRONG_TIMING: another checkpoint is running now
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
     //  - ERR_FILE_OPERATION_FAILED: some file failure
-    //  - ERR_TRY_AGAIN: need try again later
-    virtual ::dsn::error_code async_checkpoint(bool is_emergency) override;
+    //  - ERR_TRY_AGAIN: flush memtable triggered, need try again later
+    virtual ::dsn::error_code async_checkpoint(bool flush_memtable) override;
 
     //
     // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
