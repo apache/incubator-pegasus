@@ -1996,8 +1996,6 @@ private:
         return ::dsn::ERR_OK;
     }
 
-    dassert(last_durable <= last_flushed, "%" PRId64 " VS %" PRId64, last_durable, last_flushed);
-
     if (last_durable == last_flushed) {
         if (flush_memtable) {
             // trigger flushing memtable, but not wait
