@@ -56,6 +56,9 @@ void replica::on_checkpoint_timer()
                _options->checkpoint_max_interval_hours);
         init_checkpoint(true);
     } else {
+        ddebug("%s: trigger non-emergency checkpoint",
+               name(),
+               _options->checkpoint_max_interval_hours);
         init_checkpoint(false);
     }
 
@@ -306,16 +309,19 @@ void replica::background_async_checkpoint(bool is_emergency)
     uint64_t used_time = dsn_now_ns() - start_time;
     dassert(err != ERR_NOT_IMPLEMENTED, "err == ERR_NOT_IMPLEMENTED");
     if (err == ERR_OK) {
-        ddebug("%s: call app.async_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
-               "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
-               " => %" PRId64 ")",
-               name(),
-               err.to_string(),
-               used_time,
-               _app->last_committed_decree(),
-               old_durable,
-               _app->last_durable_decree());
-        _last_checkpoint_generate_time_ms = now_ms();
+        if (old_durable != _app->last_durable_decree()) {
+            // if no need to generate new checkpoint, async_checkpoint() also returns ERR_OK,
+            // so we should check if a new checkpoint has been generated.
+            ddebug("%s: call app.async_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
+                   "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
+                   " => %" PRId64 ")",
+                   name(),
+                   used_time,
+                   _app->last_committed_decree(),
+                   old_durable,
+                   _app->last_durable_decree());
+            _last_checkpoint_generate_time_ms = now_ms();
+        }
     } else if (err == ERR_TRY_AGAIN) {
         // already triggered memory flushing on async_checkpoint(), then try again later.
         ddebug("%s: call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = %" PRIu64
@@ -350,15 +356,19 @@ error_code replica::sync_checkpoint()
     uint64_t used_time = dsn_now_ns() - start_time;
     dassert(err != ERR_NOT_IMPLEMENTED, "err == ERR_NOT_IMPLEMENTED");
     if (err == ERR_OK) {
-        ddebug("%s: call app.sync_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
-               "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
-               " => %" PRId64 ")",
-               name(),
-               err.to_string(),
-               used_time,
-               _app->last_committed_decree(),
-               old_durable,
-               _app->last_durable_decree());
+        if (old_durable != _app->last_durable_decree()) {
+            // if no need to generate new checkpoint, sync_checkpoint() also returns ERR_OK,
+            // so we should check if a new checkpoint has been generated.
+            ddebug("%s: call app.sync_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
+                   "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
+                   " => %" PRId64 ")",
+                   name(),
+                   used_time,
+                   _app->last_committed_decree(),
+                   old_durable,
+                   _app->last_durable_decree());
+            _last_checkpoint_generate_time_ms = now_ms();
+        }
     } else if (err == ERR_WRONG_TIMING) {
         // do nothing
         ddebug("%s: call app.sync_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = %" PRIu64

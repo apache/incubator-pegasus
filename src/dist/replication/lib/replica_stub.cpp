@@ -1929,26 +1929,16 @@ void replica_stub::open_service()
 
     _trigger_chkpt_command = ::dsn::command_manager::instance().register_app_command(
         {"trigger-checkpoint"},
-        "trigger-checkpoint",
-        "trigger-checkpoint - trigger all replicas to do checkpoints",
+        "trigger-checkpoint [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+        "trigger-checkpoint - trigger replicas to do checkpoint",
         [this](const std::vector<std::string> &args) {
-            ddebug("start to trigger checkpoint by remote command");
-            replicas rs;
-            {
-                zauto_read_lock l(_replicas_lock);
-                rs = _replicas;
-            }
-            for (auto it = rs.begin(); it != rs.end(); ++it) {
-                tasking::enqueue(
-                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                    this,
-                    std::bind(&replica_stub::trigger_checkpoint, this, it->second, true),
-                    it->first.thread_hash(),
-                    std::chrono::milliseconds(
-                        dsn_random32(0, 3000)) // delay random to avoid write compete
-                    );
-            }
-            return "OK";
+            return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
+                tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                                 this,
+                                 std::bind(&replica_stub::trigger_checkpoint, this, rep, true),
+                                 rep->get_gpid().thread_hash());
+                return std::string("triggered");
+            });
         });
 
     _manual_compact_command = ::dsn::command_manager::instance().register_app_command(
