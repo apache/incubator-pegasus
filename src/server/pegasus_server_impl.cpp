@@ -214,8 +214,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _checkpoint_reserve_time_seconds =
         (uint32_t)dsn_config_get_value_uint64("pegasus.server",
                                               "checkpoint_reserve_time_seconds",
-                                              3600,
-                                              "checkpoint_reserve_time_seconds");
+                                              0,
+                                              "checkpoint_reserve_time_seconds, 0 means no check");
 
     // get the _updating_sstsize_inteval_seconds.
     _updating_rocksdb_sstsize_interval_seconds =
@@ -376,23 +376,26 @@ void pegasus_server_impl::gc_checkpoints()
         if (i + _checkpoint_reserve_min_count >= temp_list.size())
             break;
         int64_t d = temp_list[i];
-        // we check last write time of "CURRENT" instead of directory, because the directory's
-        // last write time may be updated by previous incompleted garbage collection.
-        auto cpt_dir = ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(d));
-        auto current_file = ::dsn::utils::filesystem::path_combine(cpt_dir, "CURRENT");
-        if (!::dsn::utils::filesystem::file_exists(current_file)) {
-            max_del_d = d;
-            continue;
-        }
-        time_t tm;
-        if (!dsn::utils::filesystem::last_write_time(current_file, tm)) {
-            dwarn("get last write time of file %s failed", current_file.c_str());
-            break;
-        }
-        uint64_t last_write_time = (uint64_t)tm;
-        if (last_write_time + _checkpoint_reserve_time_seconds >= current_time) {
-            // not expired
-            break;
+        if (_checkpoint_reserve_time_seconds > 0) {
+            // we check last write time of "CURRENT" instead of directory, because the directory's
+            // last write time may be updated by previous incompleted garbage collection.
+            auto cpt_dir =
+                ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(d));
+            auto current_file = ::dsn::utils::filesystem::path_combine(cpt_dir, "CURRENT");
+            if (!::dsn::utils::filesystem::file_exists(current_file)) {
+                max_del_d = d;
+                continue;
+            }
+            time_t tm;
+            if (!dsn::utils::filesystem::last_write_time(current_file, tm)) {
+                dwarn("get last write time of file %s failed", current_file.c_str());
+                break;
+            }
+            uint64_t last_write_time = (uint64_t)tm;
+            if (last_write_time + _checkpoint_reserve_time_seconds >= current_time) {
+                // not expired
+                break;
+            }
         }
         max_del_d = d;
     }
