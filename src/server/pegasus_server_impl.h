@@ -66,7 +66,7 @@ public:
     virtual ::dsn::error_code stop(bool clear_state) override;
 
     virtual int on_batched_write_requests(int64_t decree,
-                                          int64_t timestamp,
+                                          uint64_t timestamp,
                                           dsn_message_t *requests,
                                           int count) override;
 
