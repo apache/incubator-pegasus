@@ -32,6 +32,8 @@ const (
 	OpMultiGet
 	OpMultiGetRange
 	OpClose
+	OpMultiSet
+	OpTTL
 )
 
 var opTypeToStringMap = map[OpType]string{
@@ -43,6 +45,8 @@ var opTypeToStringMap = map[OpType]string{
 	OpMultiGetRange: "MULTI_GET_RANGE",
 	OpMultiDel:      "MULTI_DEL",
 	OpClose:         "Close",
+	OpMultiSet:      "MULTI_SET",
+	OpTTL:           "TTL",
 }
 
 func (op OpType) String() string {

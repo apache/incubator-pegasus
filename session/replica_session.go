@@ -71,6 +71,17 @@ func (rs *ReplicaSession) MultiGet(ctx context.Context, gpid *base.Gpid, request
 	return ret.GetSuccess(), nil
 }
 
+func (rs *ReplicaSession) MultiSet(ctx context.Context, gpid *base.Gpid, request *rrdb.MultiPutRequest) (*rrdb.UpdateResponse, error) {
+	args := &rrdb.RrdbMultiPutArgs{Request: request}
+	result, err := rs.callWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_MULTI_PUT")
+	if err != nil {
+		return nil, err
+	}
+
+	ret, _ := result.(*rrdb.RrdbMultiPutResult)
+	return ret.GetSuccess(), nil
+}
+
 func (rs *ReplicaSession) MultiDelete(ctx context.Context, gpid *base.Gpid, request *rrdb.MultiRemoveRequest) (*rrdb.MultiRemoveResponse, error) {
 	args := &rrdb.RrdbMultiRemoveArgs{Request: request}
 	result, err := rs.callWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_MULTI_REMOVE")
@@ -79,6 +90,17 @@ func (rs *ReplicaSession) MultiDelete(ctx context.Context, gpid *base.Gpid, requ
 	}
 
 	ret, _ := result.(*rrdb.RrdbMultiRemoveResult)
+	return ret.GetSuccess(), nil
+}
+
+func (rs *ReplicaSession) TTL(ctx context.Context, gpid *base.Gpid, key *base.Blob) (*rrdb.TTLResponse, error) {
+	args := &rrdb.RrdbTTLArgs{Key: key}
+	result, err := rs.callWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_TTL")
+	if err != nil {
+		return nil, err
+	}
+
+	ret, _ := result.(*rrdb.RrdbTTLResult)
 	return ret.GetSuccess(), nil
 }
 

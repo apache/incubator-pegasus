@@ -51,6 +51,10 @@ type Client interface {
 	MultiGetRange(ctx context.Context, tableName string, hashKey []byte, startSortKey []byte, stopSortKey []byte) ([]KeyValue, error)
 	MultiGetRangeOpt(ctx context.Context, tableName string, hashKey []byte, startSortKey []byte, stopSortKey []byte, options MultiGetOptions) ([]KeyValue, error)
 
+	// MultiSet sets the multiple entries under `hashKey` all in one operation.
+	MultiSet(ctx context.Context, tableName string, hashKey []byte, sortKeys [][]byte, values [][]byte) error
+	MultiSetOpt(ctx context.Context, tableName string, hashKey []byte, sortKeys [][]byte, values [][]byte, ttlSeconds int) error
+
 	// MultiDel deletes the multiple entries under `hashKey` all in one operation.
 	// Returns sort key of deleted entries.
 	MultiDel(ctx context.Context, tableName string, hashKey []byte, sortKeys [][]byte) error
@@ -70,6 +74,11 @@ type Client interface {
 	// ```
 	//
 	OpenTable(ctx context.Context, tableName string) (TableConnector, error)
+
+	//Check value existence for the entry for `hashKey` + `sortKey`.
+	Exist(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (bool, error)
+
+	TTL(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (int, error)
 }
 
 type pegasusClient struct {
@@ -159,6 +168,20 @@ func (p *pegasusClient) MultiGetRangeOpt(ctx context.Context, tableName string, 
 	return tb.MultiGetRange(ctx, hashKey, startSortKey, stopSortKey, options)
 }
 
+func (p *pegasusClient) MultiSet(ctx context.Context, tableName string, hashKey []byte, sortKeys [][]byte, values [][]byte) error {
+	//return nil
+	return p.MultiSetOpt(ctx, tableName, hashKey, sortKeys, values, 0)
+}
+
+func (p *pegasusClient) MultiSetOpt(ctx context.Context, tableName string, hashKey []byte, sortKeys [][]byte, values [][]byte, ttlSeconds int) error {
+	//return nil
+	tb, err := p.OpenTable(ctx, tableName)
+	if err != nil {
+		return err
+	}
+	return tb.MultiSet(ctx, hashKey, sortKeys, values, ttlSeconds)
+}
+
 func (p *pegasusClient) MultiDel(ctx context.Context, tableName string, hashKey []byte, sortKeys [][]byte) error {
 	tb, err := p.OpenTable(ctx, tableName)
 	if err != nil {
@@ -194,4 +217,20 @@ func (p *pegasusClient) findTable(tableName string) TableConnector {
 		return tb
 	}
 	return nil
+}
+
+func (p *pegasusClient) Exist(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (bool, error) {
+	tb, err := p.OpenTable(ctx, tableName)
+	if err != nil {
+		return false, err
+	}
+	return tb.Exist(ctx, hashKey, sortKey)
+}
+
+func (p *pegasusClient) TTL(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (int, error) {
+	tb, err := p.OpenTable(ctx, tableName)
+	if err != nil {
+		return 0, err
+	}
+	return tb.TTL(ctx, hashKey, sortKey)
 }

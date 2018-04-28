@@ -33,7 +33,13 @@ type TableConnector interface {
 
 	MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options MultiGetOptions) ([]KeyValue, error)
 
+	MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttlSeconds int) error
+
 	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error
+
+	TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error)
+
+	Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error)
 
 	Close() error
 }
@@ -278,6 +284,47 @@ func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, 
 	return nil, err
 }
 
+func (p *pegasusTableConnector) MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttlSeconds int) error {
+	request := rrdb.NewMultiPutRequest()
+	request.HashKey = &base.Blob{Data: hashKey}
+	request.Kvs = make([]*rrdb.KeyValue, len(sortKeys))
+
+	for i := 0; i < len(sortKeys); i++ {
+		request.Kvs[i] = &rrdb.KeyValue{
+			Key:   &base.Blob{Data: sortKeys[i]},
+			Value: &base.Blob{Data: values[i]},
+		}
+	}
+
+	if ttlSeconds == 0 {
+		request.ExpireTsSeconds = 0
+	} else {
+
+		request.ExpireTsSeconds = int32(int64(ttlSeconds) + time.Now().Unix() - 1451606400) // 1451606400 means 2016.01.01-00:00:00 GMT
+	}
+
+	err := p.doMultiSet(ctx, hashKey, request)
+	return wrapError(err, OpMultiSet)
+}
+
+func (p *pegasusTableConnector) doMultiSet(ctx context.Context, hashKey []byte, request *rrdb.MultiPutRequest) error {
+	if err := validateHashKey(hashKey); err != nil {
+		return err
+	}
+
+	gpid, part := p.getPartition(hashKey)
+	resp, err := part.MultiSet(ctx, gpid, request)
+
+	if err == nil {
+		err = base.NewDsnErrFromInt(resp.Error)
+	}
+
+	if err = p.handleReplicaError(err, gpid, part); err == nil {
+		return nil
+	}
+	return err
+}
+
 func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error {
 	err := func() error {
 		if err := validateHashKey(hashKey); err != nil {
@@ -300,6 +347,41 @@ func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, so
 		return p.handleReplicaError(err, gpid, part)
 	}()
 	return wrapError(err, OpMultiDel)
+}
+
+func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error) {
+	ttl, err := func() (int, error) {
+		if err := validateHashKey(hashKey); err != nil {
+			return 0, err
+		}
+
+		key := encodeHashKeySortKey(hashKey, sortKey)
+		gpid, part := p.getPartition(hashKey)
+
+		resp, err := part.TTL(ctx, gpid, key)
+		if err == nil {
+			err = base.NewDsnErrFromInt(resp.Error)
+		}
+		if err = p.handleReplicaError(err, gpid, part); err != nil {
+			return 0, err
+		} else {
+			return int(resp.GetTTLSeconds()), nil
+		}
+	}()
+	return ttl, wrapError(err, OpTTL)
+}
+
+func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error) {
+	ttl, err := p.TTL(ctx, hashKey, sortKey)
+
+	if err == nil {
+		if ttl == -2 {
+			return false, nil
+		} else {
+			return true, nil
+		}
+	}
+	return false, wrapError(err, OpTTL)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {
