@@ -2,16 +2,16 @@
 #include "rrdb.code.definition.h"
 #include "rrdb.types.h"
 #include <iostream>
+#include <dsn/tool-api/task_tracker.h>
 
 namespace dsn {
 namespace apps {
-class rrdb_client : public virtual ::dsn::clientlet
+class rrdb_client
 {
 public:
     rrdb_client() {}
     explicit rrdb_client(::dsn::rpc_address server) { _server = server; }
-
-    virtual ~rrdb_client() {}
+    ~rrdb_client() { _tracker.cancel_outstanding_tasks(); }
 
     // ---------- call RPC_RRDB_RRDB_PUT ------------
     // - synchronous
@@ -27,7 +27,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_PUT,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -48,7 +48,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_PUT,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -70,7 +70,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_MULTI_PUT,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -92,7 +92,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_MULTI_PUT,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -114,7 +114,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_REMOVE,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -136,7 +136,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_REMOVE,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -158,7 +158,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_MULTI_REMOVE,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -180,7 +180,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_MULTI_REMOVE,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -202,7 +202,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_GET,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -223,7 +223,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_GET,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -245,7 +245,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_MULTI_GET,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -267,7 +267,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_MULTI_GET,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -289,7 +289,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_SORTKEY_COUNT,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -311,7 +311,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_SORTKEY_COUNT,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -333,7 +333,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_TTL,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -354,7 +354,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_TTL,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -376,7 +376,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_GET_SCANNER,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -398,7 +398,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_GET_SCANNER,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -420,7 +420,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_RRDB_RRDB_SCAN,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -441,7 +441,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_RRDB_RRDB_SCAN,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 request_thread_hash,
@@ -465,6 +465,7 @@ public:
 
 private:
     ::dsn::rpc_address _server;
+    dsn::task_tracker _tracker;
 };
 }
 }

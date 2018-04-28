@@ -184,7 +184,7 @@ private:
 
     virtual void update_app_envs(const std::map<std::string, std::string> &envs);
 
-    virtual void query_app_envs(/*out*/std::map<std::string, std::string> &envs);
+    virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
 
     // get the absolute path of restore directory and the flag whether force restore from env
     // return
@@ -237,7 +237,8 @@ private:
     pegasus_context_cache _context_cache;
 
     uint32_t _updating_rocksdb_sstsize_interval_seconds;
-    ::dsn::task_ptr _updating_task;
+
+    dsn::task_tracker _tracker;
 
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;

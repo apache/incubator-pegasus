@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <dsn/cpp/clientlet.h>
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/dist/replication.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
@@ -23,7 +23,7 @@
 namespace pegasus {
 namespace server {
 
-class info_collector : public virtual ::dsn::clientlet
+class info_collector
 {
 public:
     struct AppStatCounters
@@ -45,7 +45,7 @@ public:
     };
 
     info_collector();
-    virtual ~info_collector();
+    ~info_collector();
 
     void start();
     void stop();
@@ -54,6 +54,7 @@ public:
     AppStatCounters *get_app_counters(const std::string &app_name);
 
 private:
+    dsn::task_tracker _tracker;
     ::dsn::rpc_address _meta_servers;
     std::string _cluster_name;
 
