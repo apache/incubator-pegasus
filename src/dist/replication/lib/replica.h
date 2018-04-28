@@ -45,6 +45,8 @@
 #include <dsn/tool-api/uniq_timestamp_us.h>
 #include <dsn/cpp/serverlet.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/dist/replication/replica_base.h>
+
 #include "dist/replication/client_lib/replication_common.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -63,7 +65,7 @@ class test_checker;
 
 using namespace ::dsn::service;
 
-class replica : public serverlet<replica>, public ref_counter
+class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:
     ~replica(void);
@@ -130,7 +132,6 @@ public:
     //
     ballot get_ballot() const { return _config.ballot; }
     partition_status::type status() const { return _config.status; }
-    gpid get_gpid() const { return _config.pid; }
     replication_app_base *get_app() { return _app.get(); }
     const app_info *get_app_info() const { return &_app_info; }
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
@@ -142,7 +143,7 @@ public:
     uint64_t create_time_milliseconds() const { return _create_time_ms; }
     uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
     uint64_t last_checkpoint_generate_time_ms() const { return _last_checkpoint_generate_time_ms; }
-    const char *name() const { return _name; }
+    const char *name() const { return replica_name(); }
     mutation_log_ptr private_log() const { return _private_log; }
     const replication_options *options() const { return _options; }
     replica_stub *get_replica_stub() { return _stub; }
@@ -327,7 +328,6 @@ private:
     // constants
     replica_stub *_stub;
     std::string _dir;
-    char _name[256]; // app.index @ host:port
     replication_options *_options;
     const app_info _app_info;
     std::map<std::string, std::string> _extra_envs;

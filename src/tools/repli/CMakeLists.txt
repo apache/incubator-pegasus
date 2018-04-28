@@ -26,6 +26,7 @@ set(MY_PROJ_LIBS dsn_layer2_stateful_type1
                  PocoNetSSL
                  PocoJSON
                  crypto
+                 fmt
                 )
 
 # Extra files that will be installed

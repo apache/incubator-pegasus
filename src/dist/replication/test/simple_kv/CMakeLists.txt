@@ -28,6 +28,7 @@ set(MY_PROJ_LIBS gtest
                  PocoNetSSL
                  PocoJSON
                  crypto
+                 fmt
                  )
 
 set(MY_PROJ_LIB_PATH 

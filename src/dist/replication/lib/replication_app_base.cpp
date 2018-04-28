@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "replica.h"
 #include "mutation.h"
 #include <dsn/dist/replication/replication_app_base.h>
@@ -319,6 +310,7 @@ replication_app_base *replication_app_base::new_storage_instance(const std::stri
 }
 
 replication_app_base::replication_app_base(replica *replica)
+    : replica_base(replica->get_gpid(), replica->name())
 {
     _dir_data = utils::filesystem::path_combine(replica->dir(), "data");
     _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
@@ -329,8 +321,6 @@ replication_app_base::replication_app_base(replica *replica)
     install_perf_counters();
 }
 
-const char *replication_app_base::replica_name() const { return _replica->name(); }
-gpid replication_app_base::get_gpid() const { return _replica->get_gpid(); }
 void replication_app_base::install_perf_counters()
 {
     // TODO: add custom perfcounters for replication_app_base
@@ -453,7 +443,7 @@ error_code replication_app_base::open_new_internal(replica *r,
 }
 
 int replication_app_base::on_batched_write_requests(int64_t decree,
-                                                    int64_t timstamp,
+                                                    uint64_t timestamp,
                                                     dsn_message_t *requests,
                                                     int request_length)
 {

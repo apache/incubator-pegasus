@@ -13,7 +13,7 @@ set(MY_PROJ_INC_PATH "")
 
 set(MY_BOOST_PACKAGES system filesystem)
 
-set(MY_PROJ_LIBS dsn_layer2_stateful_type1 dsn_meta_server)
+set(MY_PROJ_LIBS dsn_layer2_stateful_type1 dsn_meta_server fmt)
 
 set(MY_PROJ_LIB_PATH "")
 

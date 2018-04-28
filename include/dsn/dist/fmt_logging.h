@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include <dsn/cpp/auto_codes.h>
+#include <dsn/tool-api/auto_codes.h>
 #include <dsn/utility/errors.h>
 #include <fmt/format.h>
 
@@ -41,12 +41,12 @@
 #define dfatal_f(...) dfatal(fmt::format(__VA_ARGS__).c_str())
 #define dassert_f(x, ...) dassert(x, fmt::format(__VA_ARGS__).c_str())
 
-// Macros for writing log message prefixed by gpid.
-#define dinfo_replica(...) dinfo_f("[gpid: {}] {}", get_gpid(), fmt::format(__VA_ARGS__));
-#define ddebug_replica(...) ddebug_f("[gpid: {}] {}", get_gpid(), fmt::format(__VA_ARGS__));
-#define dwarn_replica(...) dwarn_f("[gpid: {}] {}", get_gpid(), fmt::format(__VA_ARGS__));
-#define derror_replica(...) derror_f("[gpid: {}] {}", get_gpid(), fmt::format(__VA_ARGS__));
-#define dfatal_replica(...) dfatal_f("[gpid: {}] {}", get_gpid(), fmt::format(__VA_ARGS__));
+// Macros for writing log message prefixed by gpid and address.
+#define dinfo_replica(...) dinfo_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
+#define ddebug_replica(...) ddebug_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
+#define dwarn_replica(...) dwarn_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
+#define derror_replica(...) derror_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
+#define dfatal_replica(...) dfatal_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
 
 // Customized formatter for rDSN basic types, on which
 // users can easily call fmt::format("{}", xxx), without the effort
@@ -72,6 +72,11 @@ inline void format_arg(fmt::BasicFormatter<char> &f, const char *format_str, dsn
 inline void format_arg(fmt::BasicFormatter<char> &f, const char *format_str, dsn::task_code p)
 {
     f.writer().write(p.to_string());
+}
+
+inline void format_arg(fmt::BasicFormatter<char> &f, const char *format_str, dsn::string_view p)
+{
+    f.writer().write(std::string(p));
 }
 
 } // namespace fmt

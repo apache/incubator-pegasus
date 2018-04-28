@@ -15,7 +15,6 @@ set(MY_PROJ_LIBS
     dsn.replication.clientlib
     dsn.failure_detector
     dsn.failure_detector.multimaster
-    fmt
     )
 
 set(MY_PROJ_LIB_PATH "")
