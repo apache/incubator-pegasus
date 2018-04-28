@@ -78,6 +78,14 @@ do
       fi
     done
     echo
+
+    echo "Send remote command trigger-checkpoint to replica servers, logging in /tmp/$UID.pegasus.trigger_checkpoint.$app"
+    echo "remote_command -t replica-server replica.trigger-checkpoint $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.trigger_checkpoint.$app
+    not_found_count=`grep '^    .*not found' /tmp/$UID.pegasus.trigger_checkpoint.$app | wc -l`
+    triggered_count=`grep '^    .*triggered' /tmp/$UID.pegasus.trigger_checkpoint.$app | wc -l`
+    ignored_count=`grep '^    .*ignored' /tmp/$UID.pegasus.trigger_checkpoint.$app | wc -l`
+    echo "Result: total $partition_count partitions, $triggered_count triggered, $ignored_count ignored, $not_found_count not found."
+    echo
   fi
 done </tmp/$UID.pegasus.ls
 
