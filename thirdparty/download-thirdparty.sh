@@ -86,21 +86,36 @@ fi
 
 cd $TP_SRC
 # concurrent queue
-check_and_download "concurrentqueue-v1.0.0-beta.tar.gz" "https://codeload.github.com/cameron314/concurrentqueue/tar.gz/v1.0.0-beta" "761446e2392942aa342f437697ddb72e" "concurrentqueue-1.0.0-beta"
+check_and_download "concurrentqueue-v1.0.0-beta.tar.gz"\
+    "https://codeload.github.com/cameron314/concurrentqueue/tar.gz/v1.0.0-beta"\
+    "761446e2392942aa342f437697ddb72e"\
+    "concurrentqueue-1.0.0-beta"
 exit_if_fail $?
 
 # googletest
-check_and_download "googletest-1.8.0.tar.gz" "https://codeload.github.com/google/googletest/tar.gz/release-1.8.0" "16877098823401d1bf2ed7891d7dce36" "googletest-release-1.8.0"
+check_and_download "googletest-1.8.0.tar.gz"\
+    "https://codeload.github.com/google/googletest/tar.gz/release-1.8.0"\
+    "16877098823401d1bf2ed7891d7dce36"\
+    "googletest-release-1.8.0"
 exit_if_fail $?
 
 ## protobuf
-#check_and_download "protobuf-v3.5.0.tar.gz" "https://codeload.github.com/google/protobuf/tar.gz/v3.5.0" "d95db321e1a9901fffc51ed8994afd36"
+#check_and_download "protobuf-v3.5.0.tar.gz"\
+#    "https://codeload.github.com/google/protobuf/tar.gz/v3.5.0"\
+#    "d95db321e1a9901fffc51ed8994afd36"
 #exit_if_fail $?
 
 #rapidjson
-check_and_download "rapidjson-v1.1.0.tar.gz" "https://codeload.github.com/Tencent/rapidjson/tar.gz/v1.1.0" "badd12c511e081fec6c89c43a7027bce" "rapidjson-1.1.0"
+check_and_download "rapidjson-v1.1.0.tar.gz"\
+    "https://codeload.github.com/Tencent/rapidjson/tar.gz/v1.1.0"\
+    "badd12c511e081fec6c89c43a7027bce"\
+    "rapidjson-1.1.0"
+
 # thrift 0.9.3
-check_and_download "thrift-0.9.3.tar.gz" "http://archive.apache.org/dist/thrift/0.9.3/thrift-0.9.3.tar.gz" "88d667a8ae870d5adeca8cb7d6795442" "thrift-0.9.3"
+check_and_download "thrift-0.9.3.tar.gz"\
+    "http://archive.apache.org/dist/thrift/0.9.3/thrift-0.9.3.tar.gz"\
+    "88d667a8ae870d5adeca8cb7d6795442"\
+    "thrift-0.9.3"
 ret_code=$?
 if [ $ret_code -eq -1 ]; then
     exit -1
@@ -116,15 +131,24 @@ elif [ $ret_code -eq 0 ]; then
 fi
 
 # use zookeeper c client
-check_and_download "zookeeper-3.4.10.tar.gz" "https://mirrors.tuna.tsinghua.edu.cn/apache/zookeeper/stable/zookeeper-3.4.10.tar.gz" "e4cf1b1593ca870bf1c7a75188f09678" "zookeeper-3.4.10"
+check_and_download "zookeeper-3.4.10.tar.gz"\
+    "http://ftp.jaist.ac.jp/pub/apache/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz"\
+    "e4cf1b1593ca870bf1c7a75188f09678"\
+    "zookeeper-3.4.10"
 exit_if_fail $?
 
 # libevent for send http request
-check_and_download "libevent-2.0.22.tar.gz" "https://codeload.github.com/libevent/libevent/tar.gz/release-2.0.22-stable" "8913ef56ec329f2c046007bd634c7201" "libevent-release-2.0.22-stable"
+check_and_download "libevent-2.0.22.tar.gz"\
+    "https://codeload.github.com/libevent/libevent/tar.gz/release-2.0.22-stable"\
+    "8913ef56ec329f2c046007bd634c7201"\
+    "libevent-release-2.0.22-stable"
 exit_if_fail $?
 
-# poco 1.8.0.1-all
-check_and_download "poco-1.7.8.tar.gz" "https://codeload.github.com/pocoproject/poco/tar.gz/poco-1.7.8-release" "4dbf02e14b9f20940ca0e8c70d8f6036" "poco-poco-1.7.8-release"
+# poco 1.7.8
+check_and_download "poco-1.7.8.tar.gz"\
+    "https://codeload.github.com/pocoproject/poco/tar.gz/poco-1.7.8-release"\
+    "4dbf02e14b9f20940ca0e8c70d8f6036"\
+    "poco-poco-1.7.8-release"
 exit_if_fail $?
 
 # fds
@@ -141,7 +165,10 @@ else
 fi
 
 # fmtlib
-check_and_download "fmt-4.0.0.tar.gz" "https://codeload.github.com/fmtlib/fmt/tar.gz/4.0.0" "c9be9a37bc85493d1116b0af59a25eba" "fmt-4.0.0"
+check_and_download "fmt-4.0.0.tar.gz"\
+    "https://codeload.github.com/fmtlib/fmt/tar.gz/4.0.0"\
+    "c9be9a37bc85493d1116b0af59a25eba"\
+    "fmt-4.0.0"
 exit_if_fail $?
 
 cd $TP_DIR
