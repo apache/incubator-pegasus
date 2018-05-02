@@ -245,9 +245,8 @@ private:
     // check timer for gc, checkpointing etc.
     void on_checkpoint_timer();
     void init_checkpoint(bool is_emergency);
-    void background_checkpoint();
-    void background_async_checkpoint(bool is_emergency);
-    error_code sync_checkpoint();
+    error_code background_async_checkpoint(bool is_emergency);
+    error_code background_sync_checkpoint();
     void catch_up_with_private_logs(partition_status::type s);
     void on_checkpoint_completed(error_code err);
     void on_copy_checkpoint_ack(error_code err,
@@ -321,6 +320,10 @@ private:
 
     // local checkpoint timer for gc, checkpoint, etc.
     dsn::task_ptr _checkpoint_timer;
+
+    // background async checkpoint task.
+    mutable ::dsn::service::zlock _async_checkpoint_lock;
+    dsn::task_ptr _async_checkpoint_task;
 
     // application
     std::unique_ptr<replication_app_base> _app;

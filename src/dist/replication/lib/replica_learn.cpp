@@ -1079,7 +1079,7 @@ void replica::on_copy_remote_state_completed(error_code err,
         _app->last_committed_decree() + 1 >=
             _potential_secondary_states.learning_start_prepare_decree &&
         _app->last_committed_decree() > _app->last_durable_decree()) {
-        err = _app->sync_checkpoint();
+        err = background_sync_checkpoint();
 
         ddebug("%s: on_copy_remote_state_completed[%016" PRIx64
                "]: learnee = %s, learn_duration = %" PRIu64 " ms, flush done, err = %s, "

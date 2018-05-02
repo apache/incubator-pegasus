@@ -380,7 +380,27 @@ void replica::close()
             name(),
             enum_to_string(status()));
 
-    if (nullptr != _checkpoint_timer) {
+    // cancel and wait backgroud async checkpoint.
+    // TODO(qinzuoyan): replace code by task_tracker::cancel_outstanding_tasks().
+    while (true) {
+        ::dsn::task_ptr tsk;
+        {
+            ::dsn::service::zauto_lock l(_async_checkpoint_lock);
+            if (_async_checkpoint_task == nullptr)
+                break;
+            if (_async_checkpoint_task->cancel(false)) {
+                // cancel succeed
+                _async_checkpoint_task = nullptr;
+                break;
+            } else {
+                // cancel failed, means already in running
+                tsk = _async_checkpoint_task;
+            }
+        }
+        tsk->wait();
+    }
+
+    if (_checkpoint_timer != nullptr) {
         _checkpoint_timer->cancel(true);
         _checkpoint_timer = nullptr;
     }
@@ -413,9 +433,6 @@ void replica::close()
         _private_log = nullptr;
     }
 
-    // please make sure to clear all the perf-counters when close replica,
-    // because a perf-counter created by perf-counter-wrapper can't be shared among different
-    // objects
     if (_app != nullptr) {
         error_code err = _app->close(false);
         if (err != dsn::ERR_OK)

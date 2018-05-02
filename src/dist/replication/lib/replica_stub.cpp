@@ -468,7 +468,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     bool is_log_complete = true;
     for (auto it = rps.begin(); it != rps.end(); ++it) {
-        auto err = it->second->sync_checkpoint();
+        auto err = it->second->background_sync_checkpoint();
         dassert(err == ERR_OK, "sync checkpoint failed, err = %s", err.to_string());
 
         it->second->reset_prepare_list_after_replay();
