@@ -11,7 +11,7 @@ Python 2.x
 
 pypegasus can be installed via pip as follows:
 
-`pip install python_redis`
+`pip install pypegasus`
 
 Usage
 -----
