@@ -47,6 +47,7 @@ info_collector::info_collector()
 
 info_collector::~info_collector()
 {
+    _tracker.cancel_outstanding_tasks();
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
@@ -56,7 +57,7 @@ void info_collector::start()
 {
     _app_stat_timer_task =
         ::dsn::tasking::enqueue_timer(LPC_PEGASUS_APP_STAT_TIMER,
-                                      this,
+                                      &_tracker,
                                       [this] { on_app_stat(); },
                                       std::chrono::milliseconds(_app_stat_interval_seconds),
                                       0,
