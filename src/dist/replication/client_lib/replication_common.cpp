@@ -97,7 +97,7 @@ replication_options::replication_options()
 
     lb_interval_ms = 10000;
 
-    learn_app_max_concurrent_count = 1;
+    learn_app_max_concurrent_count = 5;
 
     max_concurrent_uploading_file_count = 10;
 

@@ -348,8 +348,8 @@ error_code replication_app_base::open_internal(replica *r)
         }
 
         if (err == ERR_OK && last_durable_decree() < _info.init_durable_decree) {
-            derror("%s: replica data is not complete coz last_durable_decree(" PRId64
-                   ") < init_durable_decree(" PRId64 ")",
+            derror("%s: replica data is not complete coz last_durable_decree(%" PRId64
+                   ") < init_durable_decree(%" PRId64 ")",
                    r->name(),
                    last_durable_decree(),
                    _info.init_durable_decree);
