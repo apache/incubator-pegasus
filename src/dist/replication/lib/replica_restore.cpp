@@ -124,7 +124,7 @@ dsn::error_code replica::download_checkpoint(const configuration_restore_request
         _stub->_block_service_manager.get_block_filesystem(req.backup_provider_name);
 
     dsn::error_code err = dsn::ERR_OK;
-    clientlet tracker(1);
+    dsn::task_tracker tracker;
 
     auto download_file_callback_func = [this, &err, &local_chkpt_dir](
         const download_response &d_resp, block_file_ptr f, const std::string &local_file) {
@@ -249,7 +249,7 @@ dsn::error_code replica::download_checkpoint(const configuration_restore_request
                               std::placeholders::_1,
                               cold_backup_constant::BACKUP_METADATA),
                     &tracker);
-    dsn_task_tracker_wait_all(tracker.tracker());
+    tracker.wait_outstanding_tasks();
 
     if (err != ERR_OK) {
         derror("%s: download backup_metadata failed, file(%s), reason(%s)",
@@ -286,7 +286,7 @@ dsn::error_code replica::download_checkpoint(const configuration_restore_request
                         std::bind(create_file_callback_func, std::placeholders::_1, f_meta.name),
                         &tracker);
     }
-    dsn_task_tracker_wait_all(tracker.tracker());
+    tracker.wait_outstanding_tasks();
 
     if (err == ERR_OK) {
         if (!verify_checkpoint(backup_metadata, local_chkpt_dir)) {
@@ -499,20 +499,21 @@ void replica::tell_meta_to_restore_rollback()
     ::dsn::marshall(msg, request);
 
     rpc_address target(_stub->_failure_detector->get_servers());
-    rpc::call(target, msg, this, [this](error_code err, dsn_message_t request, dsn_message_t resp) {
-        if (err == ERR_OK) {
-            configuration_drop_app_response response;
-            ::dsn::unmarshall(resp, response);
-            if (response.err == ERR_OK) {
-                ddebug("restore rolling backup succeed");
-                return;
-            } else {
+    rpc::call(
+        target, msg, &_tracker, [this](error_code err, dsn_message_t request, dsn_message_t resp) {
+            if (err == ERR_OK) {
+                configuration_drop_app_response response;
+                ::dsn::unmarshall(resp, response);
+                if (response.err == ERR_OK) {
+                    ddebug("restore rolling backup succeed");
+                    return;
+                } else {
+                    tell_meta_to_restore_rollback();
+                }
+            } else if (err == ERR_TIMEOUT) {
                 tell_meta_to_restore_rollback();
             }
-        } else if (err == ERR_TIMEOUT) {
-            tell_meta_to_restore_rollback();
-        }
-    });
+        });
 }
 
 void replica::report_restore_status_to_meta()
@@ -525,19 +526,20 @@ void replica::report_restore_status_to_meta()
     dsn_message_t msg = dsn_msg_create_request(RPC_CM_REPORT_RESTORE_STATUS);
     ::dsn::marshall(msg, request);
     rpc_address target(_stub->_failure_detector->get_servers());
-    rpc::call(target, msg, this, [this](error_code err, dsn_message_t request, dsn_message_t resp) {
-        if (err == ERR_OK) {
-            configuration_report_restore_status_response response;
-            ::dsn::unmarshall(resp, response);
-            if (response.err == ERR_OK) {
-                dinfo("report restore status succeed");
-                return;
+    rpc::call(
+        target, msg, &_tracker, [this](error_code err, dsn_message_t request, dsn_message_t resp) {
+            if (err == ERR_OK) {
+                configuration_report_restore_status_response response;
+                ::dsn::unmarshall(resp, response);
+                if (response.err == ERR_OK) {
+                    dinfo("report restore status succeed");
+                    return;
+                }
+            } else if (err == ERR_TIMEOUT) {
+                // TODO: we should retry to make the result more precisely
+                // report_restore_status_to_meta();
             }
-        } else if (err == ERR_TIMEOUT) {
-            // TODO: we should retry to make the result more precisely
-            // report_restore_status_to_meta();
-        }
-    });
+        });
 }
 
 void replica::update_restore_progress()

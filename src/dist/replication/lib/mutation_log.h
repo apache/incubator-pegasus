@@ -134,7 +134,7 @@ public:
     // thread safe
     virtual ::dsn::task_ptr append(mutation_ptr &mu,
                                    dsn::task_code callback_code,
-                                   clientlet *callback_host,
+                                   dsn::task_tracker *tracker,
                                    aio_handler &&callback,
                                    int hash = 0) = 0;
 
@@ -339,6 +339,8 @@ protected:
     int64_t _min_log_file_size_in_bytes;
     bool _force_flush;
 
+    dsn::task_tracker _tracker;
+
 private:
     ///////////////////////////////////////////////
     //// memory states
@@ -375,14 +377,17 @@ class mutation_log_shared : public mutation_log
 {
 public:
     mutation_log_shared(const std::string &dir, int32_t max_log_file_mb, bool force_flush)
-        : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr), _is_writing(false),
-          _pending_write_start_offset(0), _force_flush(force_flush)
+        : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
+          _is_writing(false),
+          _pending_write_start_offset(0),
+          _force_flush(force_flush)
     {
     }
 
+    virtual ~mutation_log_shared() override { _tracker.cancel_outstanding_tasks(); }
     virtual ::dsn::task_ptr append(mutation_ptr &mu,
                                    dsn::task_code callback_code,
-                                   clientlet *callback_host,
+                                   dsn::task_tracker *tracker,
                                    aio_handler &&callback,
                                    int hash = 0) override;
 
@@ -426,16 +431,18 @@ public:
                          uint32_t batch_buffer_bytes,
                          uint32_t batch_buffer_max_count,
                          uint64_t batch_buffer_flush_interval_ms)
-        : mutation_log(dir, max_log_file_mb, gpid, r), _batch_buffer_bytes(batch_buffer_bytes),
+        : mutation_log(dir, max_log_file_mb, gpid, r),
+          _batch_buffer_bytes(batch_buffer_bytes),
           _batch_buffer_max_count(batch_buffer_max_count),
           _batch_buffer_flush_interval_ms(batch_buffer_flush_interval_ms)
     {
         mutation_log_private::init_states();
     }
 
+    virtual ~mutation_log_private() override { _tracker.cancel_outstanding_tasks(); }
     virtual ::dsn::task_ptr append(mutation_ptr &mu,
                                    dsn::task_code callback_code,
-                                   clientlet *callback_host,
+                                   dsn::task_tracker *tracker,
                                    aio_handler &&callback,
                                    int hash = 0) override;
 
@@ -557,7 +564,7 @@ public:
     ::dsn::task_ptr commit_log_block(log_block &block,
                                      int64_t offset,
                                      dsn::task_code evt,
-                                     clientlet *callback_host,
+                                     dsn::task_tracker *tracker,
                                      aio_handler &&callback,
                                      int hash);
 

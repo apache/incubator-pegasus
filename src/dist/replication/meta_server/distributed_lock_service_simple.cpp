@@ -176,7 +176,7 @@ distributed_lock_service_simple::lock(const std::string &lock_id,
 
     if (is_new) {
         tasking::enqueue_timer(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE,
-                               this,
+                               &_tracker,
                                [=]() { random_lock_lease_expire(lock_id); },
                                std::chrono::minutes(5),
                                0,

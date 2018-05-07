@@ -247,7 +247,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                     [this](int log_length, mutation_ptr &mu) { return replay_mutation(mu, true); },
                     [this](error_code err) {
                         tasking::enqueue(LPC_REPLICATION_ERROR,
-                                         this,
+                                         &_tracker,
                                          [this, err]() { handle_local_failure(err); },
                                          get_gpid().thread_hash());
                     },
@@ -331,7 +331,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
             err = _private_log->open(nullptr, [this](error_code err) {
                 tasking::enqueue(LPC_REPLICATION_ERROR,
-                                 this,
+                                 &_tracker,
                                  [this, err]() { handle_local_failure(err); },
                                  get_gpid().thread_hash());
             });
@@ -340,7 +340,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         if (err == ERR_OK && !_options->checkpoint_disabled && nullptr == _checkpoint_timer) {
             _checkpoint_timer =
                 tasking::enqueue_timer(LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                                       this,
+                                       &_tracker,
                                        [this] { on_checkpoint_timer(); },
                                        std::chrono::seconds(_options->checkpoint_interval_seconds),
                                        get_gpid().thread_hash());
@@ -348,7 +348,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         if (_collect_info_timer == nullptr) {
             _collect_info_timer =
                 tasking::enqueue_timer(LPC_PER_REPLICA_COLLECT_INFO_TIMER,
-                                       this,
+                                       &_tracker,
                                        [this]() { collect_backup_info(); },
                                        std::chrono::milliseconds(_options->gc_interval_ms),
                                        get_gpid().thread_hash());
@@ -398,7 +398,7 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
 
     // fix private log completeness when it is from shared
     if (!is_private && d > _private_log->max_commit_on_disk()) {
-        _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, this, nullptr);
+        _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, &_tracker, nullptr);
     }
 
     if (d <= last_committed_decree()) {

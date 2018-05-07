@@ -93,9 +93,10 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                 backup_context->complete_check(false);
                 if (backup_context->start_checkpoint()) {
                     _stub->_counter_cold_backup_recent_start_count->increment();
-                    tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, this, [this, backup_context]() {
-                        generate_backup_checkpoint(backup_context);
-                    });
+                    tasking::enqueue(
+                        LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, backup_context]() {
+                            generate_backup_checkpoint(backup_context);
+                        });
                 }
             }
             return;
@@ -121,7 +122,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
         } else if (backup_status == ColdBackupChecked && backup_context->start_checkpoint()) {
             // start generating checkpoint
             ddebug("%s: start generating checkpoint, response ERR_BUSY", backup_context->name);
-            tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, this, [this, backup_context]() {
+            tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, backup_context]() {
                 generate_backup_checkpoint(backup_context);
             });
             response.err = ERR_BUSY;
@@ -399,7 +400,7 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
                    total_size);
             // TODO: in primary, this will make the request send to secondary again
             tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
-                             this,
+                             &_tracker,
                              [this, backup_context]() {
                                  backup_response response;
                                  on_cold_backup(backup_context->request, response);
@@ -414,7 +415,7 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
                backup_context->name);
         tasking::enqueue(
             LPC_REPLICATION_COLD_BACKUP,
-            this,
+            &_tracker,
             [this, backup_context]() { trigger_async_checkpoint_for_backup(backup_context); },
             get_gpid().thread_hash());
     }
@@ -542,7 +543,7 @@ void replica::wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_co
                backup_context->checkpoint_decree);
         tasking::enqueue(
             LPC_REPLICATION_COLD_BACKUP,
-            this,
+            &_tracker,
             [this, backup_context]() { trigger_async_checkpoint_for_backup(backup_context); },
             get_gpid().thread_hash(),
             std::chrono::seconds(10));
@@ -552,7 +553,7 @@ void replica::wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_co
                backup_context->name,
                du,
                backup_context->checkpoint_decree);
-        tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, this, [this, backup_context]() {
+        tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, backup_context]() {
             local_create_backup_checkpoint(backup_context);
         });
     }
@@ -593,7 +594,7 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
         dsn::utils::filesystem::remove_path(backup_checkpoint_tmp_dir_path);
         tasking::enqueue(
             LPC_BACKGROUND_COLD_BACKUP,
-            this,
+            &_tracker,
             [this, backup_context]() { local_create_backup_checkpoint(backup_context); },
             0,
             std::chrono::seconds(10));
@@ -645,7 +646,7 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
         backup_context->checkpoint_file_total_size = total_size;
         backup_context->complete_checkpoint();
         tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
-                         this,
+                         &_tracker,
                          [this, backup_context]() {
                              backup_response response;
                              on_cold_backup(backup_context->request, response);

@@ -410,7 +410,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
     _primary_states.reconfiguration_task =
         rpc::call(target,
                   msg,
-                  this,
+                  &_tracker,
                   [=](error_code err, dsn_message_t reqmsg, dsn_message_t response) {
                       on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
                   },
@@ -447,12 +447,12 @@ void replica::on_update_configuration_on_meta_server_reply(
             dsn_msg_add_ref(request); // will be released after recall
             _primary_states.reconfiguration_task = tasking::enqueue(
                 LPC_DELAY_UPDATE_CONFIG,
-                this,
+                &_tracker,
                 [ this, request, req2 = std::move(req) ]() {
                     rpc_address target(_stub->_failure_detector->get_servers());
                     _primary_states.reconfiguration_task = rpc::create_rpc_response_task(
                         request,
-                        this,
+                        &_tracker,
                         [this,
                          req2](error_code err, dsn_message_t request, dsn_message_t response) {
                             on_update_configuration_on_meta_server_reply(

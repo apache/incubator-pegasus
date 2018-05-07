@@ -71,7 +71,7 @@ class test_client : public ::dsn::serverlet<test_client>, public ::dsn::service_
 {
 public:
     test_client(const service_app_info *info)
-        : ::dsn::serverlet<test_client>("test-server", 7), ::dsn::service_app(info)
+        : ::dsn::serverlet<test_client>("test-server"), ::dsn::service_app(info)
     {
     }
 

@@ -91,19 +91,18 @@ void task_tracker::wait_outstanding_tasks()
                     break; // assuming nobody is putting tasks into it anymore
             }
 
-            task *tsk;
             switch (prepare_state) {
             // tracker get the lock
             case trackable_task::OWNER_DELETE_NOT_LOCKED:
                 if (s_hack.under_simulation()) {
-                    tsk = (task *)(tcm->_task);
+                    task *tsk = tcm->_task;
                     tsk->add_ref(); // released after delete commit
                     tcm->owner_delete_commit();
 
                     tsk->wait();        // wait outside the delete spin lock
                     tsk->release_ref(); // added before delete commit
                 } else {
-                    dsn_task_wait(tcm->_task);
+                    tcm->_task->wait();
                     tcm->owner_delete_commit();
                 }
                 break;
@@ -132,18 +131,17 @@ void task_tracker::cancel_outstanding_tasks()
                     break; // assuming nobody is putting tasks into it anymore
             }
 
-            task *tsk;
             switch (prepare_state) {
             case trackable_task::OWNER_DELETE_NOT_LOCKED:
                 if (s_hack.under_simulation()) {
-                    tsk = (task *)(tcm->_task);
+                    task *tsk = tcm->_task;
                     tsk->add_ref(); // released after delete commit
                     tcm->owner_delete_commit();
 
                     tsk->cancel(true);  // cancel outside the delete spin lock
                     tsk->release_ref(); // added before delete commit
                 } else {
-                    dsn_task_cancel(tcm->_task, true);
+                    tcm->_task->cancel(true);
                     tcm->owner_delete_commit();
                 }
                 break;

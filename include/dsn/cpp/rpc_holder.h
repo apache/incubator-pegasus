@@ -29,7 +29,7 @@
 #include <dsn/c/api_common.h>
 #include <dsn/c/api_layer1.h>
 #include <dsn/service_api_cpp.h>
-#include <dsn/cpp/clientlet.h>
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/utility/smart_pointers.h>
 #include <dsn/utility/chrono_literals.h>
 
@@ -129,8 +129,10 @@ public:
     // NOTE that the `error_code` is not the error carried by response. Users should
     // check the responded error themselves.
     template <typename TCallback>
-    task_ptr
-    call(::dsn::rpc_address server, clientlet *svc, TCallback &&callback, int reply_thread_hash = 0)
+    task_ptr call(::dsn::rpc_address server,
+                  dsn::task_tracker *tracker,
+                  TCallback &&callback,
+                  int reply_thread_hash = 0)
     {
         // ensures that TCallback receives exactly one argument, which must be a dsn::error_code.
         static_assert(function_traits<TCallback>::arity == 1,
@@ -146,7 +148,7 @@ public:
 
         task_ptr t = rpc::create_rpc_response_task(
             dsn_request(),
-            svc,
+            tracker,
             [ cb_fwd = std::forward<TCallback>(callback),
               rpc = *this ](error_code err, dsn_message_t req, dsn_message_t resp) mutable {
                 if (err == ERR_OK) {
@@ -273,12 +275,12 @@ namespace rpc {
 template <typename TCallback, typename TRpcHolder>
 task_ptr call(::dsn::rpc_address server,
               TRpcHolder rpc,
-              clientlet *svc,
+              dsn::task_tracker *tracker,
               TCallback &&callback,
               int reply_thread_hash = 0)
 {
     static_assert(is_rpc_holder<TRpcHolder>::value, "TRpcHolder must be an rpc_holder");
-    return rpc.call(server, svc, std::forward<TCallback &&>(callback), reply_thread_hash);
+    return rpc.call(server, tracker, std::forward<TCallback &&>(callback), reply_thread_hash);
 }
 
 } // namespace rpc

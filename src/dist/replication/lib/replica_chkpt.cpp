@@ -68,7 +68,7 @@ void replica::on_checkpoint_timer()
         decree durable_decree = _app->last_durable_decree();
         int64_t valid_start_offset = _app->init_info().init_offset_in_private_log;
         tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
-                         this,
+                         &_tracker,
                          [this, plog, durable_decree, valid_start_offset] {
                              // run in background thread to avoid file deletion operation blocking
                              // replication thread.
@@ -90,8 +90,6 @@ void replica::on_checkpoint_timer()
 // run in replica thread
 void replica::init_checkpoint(bool is_emergency)
 {
-    ::dsn::service::zauto_lock l(_async_checkpoint_lock);
-
     // only applicable to primary and secondary replicas
     if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY) {
         ddebug("%s: ignore doing checkpoint for status = %s, is_emergency = %s",
@@ -101,25 +99,16 @@ void replica::init_checkpoint(bool is_emergency)
         return;
     }
 
-    if (_async_checkpoint_task != nullptr) {
-        ddebug("%s: ignore doing checkpoint for an old checkpoint is running, is_emergency = %s",
-               name(),
-               (is_emergency ? "true" : "false"));
-        return;
-    }
-
     // here we demand that async_checkpoint() is implemented.
     // we delay some time to run background_async_checkpoint() to pass unit test dsn.rep_tests.
-    _async_checkpoint_task =
-        tasking::enqueue(LPC_CHECKPOINT_REPLICA,
-                         this,
-                         [this, is_emergency] {
-                             background_async_checkpoint(is_emergency);
-                             ::dsn::service::zauto_lock l(_async_checkpoint_lock);
-                             _async_checkpoint_task = nullptr;
-                         },
-                         0,
-                         10_ms);
+    //
+    // we may issue a new task to do backgroup_async_checkpoint
+    // even if the old one hasn't finished yet
+    tasking::enqueue(LPC_CHECKPOINT_REPLICA,
+                     &_tracker,
+                     [this, is_emergency] { background_async_checkpoint(is_emergency); },
+                     0,
+                     10_ms);
 }
 
 // @ secondary
@@ -211,7 +200,7 @@ void replica::on_copy_checkpoint_ack(error_code err,
                                 false,
                                 false,
                                 LPC_REPLICA_COPY_LAST_CHECKPOINT_DONE,
-                                this,
+                                &_tracker,
                                 [this, resp, ldir](error_code err, size_t sz) {
                                     this->on_copy_checkpoint_file_completed(err, sz, resp, ldir);
                                 },
@@ -275,7 +264,7 @@ error_code replica::background_async_checkpoint(bool is_emergency)
                name(),
                used_time);
         tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                         this,
+                         &_tracker,
                          [this] { init_checkpoint(false); },
                          get_gpid().thread_hash(),
                          std::chrono::seconds(10));
@@ -342,14 +331,14 @@ void replica::catch_up_with_private_logs(partition_status::type s)
     if (s == partition_status::PS_POTENTIAL_SECONDARY) {
         _potential_secondary_states.learn_remote_files_completed_task =
             tasking::create_task(LPC_CHECKPOINT_REPLICA_COMPLETED,
-                                 this,
+                                 &_tracker,
                                  [this, err]() { this->on_learn_remote_state_completed(err); },
                                  get_gpid().thread_hash());
         _potential_secondary_states.learn_remote_files_completed_task->enqueue();
     } else {
         _secondary_states.checkpoint_completed_task =
             tasking::create_task(LPC_CHECKPOINT_REPLICA_COMPLETED,
-                                 this,
+                                 &_tracker,
                                  [this, err]() { this->on_checkpoint_completed(err); },
                                  get_gpid().thread_hash());
         _secondary_states.checkpoint_completed_task->enqueue();
@@ -400,7 +389,7 @@ void replica::on_checkpoint_completed(error_code err)
         else {
             _secondary_states.catchup_with_private_log_task = tasking::create_task(
                 LPC_CATCHUP_WITH_PRIVATE_LOGS,
-                this,
+                &_tracker,
                 [this]() { this->catch_up_with_private_logs(partition_status::PS_SECONDARY); },
                 get_gpid().thread_hash());
             _secondary_states.catchup_with_private_log_task->enqueue();

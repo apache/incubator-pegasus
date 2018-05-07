@@ -9,7 +9,7 @@
 namespace dsn {
 namespace replication {
 template <typename T>
-class storage_serverlet : public dsn::clientlet
+class storage_serverlet
 {
 protected:
     typedef std::function<void(T *, dsn_message_t req)> rpc_handler;

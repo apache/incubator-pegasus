@@ -36,9 +36,9 @@
 
 #pragma once
 
-#include <dsn/service_api_c.h>
 #include <dsn/utility/link.h>
 #include <dsn/utility/synchronize.h>
+#include <dsn/c/api_utilities.h>
 #include <atomic>
 
 namespace dsn {
@@ -48,6 +48,7 @@ namespace dsn {
 // for tasks so that when the context is gone, the tasks are
 // automatically cancelled to avoid invalid context access
 //
+class task;
 class task_tracker;
 class trackable_task
 {
@@ -55,7 +56,7 @@ public:
     trackable_task() : _task(nullptr), _owner(nullptr), _dl_bucket_id(0) {}
     virtual ~trackable_task() {}
 
-    void set_tracker(task_tracker *owner, dsn_task_t task);
+    void set_tracker(task_tracker *owner, task *tsk);
     void unset_tracker();
     task_tracker *tracker() const { return _owner; }
 
@@ -69,7 +70,7 @@ private:
         OWNER_DELETE_FINISHED = 2
     };
 
-    dsn_task_t _task;
+    task *_task;
     task_tracker *_owner;
     std::atomic<owner_delete_state> _deleting_owner;
 
@@ -83,9 +84,71 @@ private:
 };
 
 //
-// task_tracker is the base class for RPC service and client
-// there can be multiple task_tracker in the system, mostly
-// defined during set_tracker in main
+// task_tracker is used to track one or more unfinished tasks, you may use it to
+// wait or cancel the tasks tracked by the tracker.
+//
+// A classical situation is use tracker to prevent a task from visiting a deleted object.
+//
+// for example:
+// class A
+// {
+//   void func() {
+//     tasking::enqueue(task_code, [this](){ std::cout << this->value; }, seconds_10);
+//   }
+// private:
+//   int value;
+// };
+//
+// if a object of class A is deleted before the enqueued task executed,
+// memory corruption may occur.
+//
+// with task tracker, you may avoid this by declaring a variable of task_tracker in A
+// and use it to track the created task:
+//
+// class A
+// {
+// public:
+//   ~A() { _tracker.cancel_outstanding_tasks(); }
+//   void func()
+//   {
+//     tasking::enqueue(task_code,
+//                      &_tracker,
+//                      [this]() { std::cout << this->value; },
+//                      seconds_10);
+//   }
+//
+// private:
+//   int value;
+//   task_tracker _tracker;
+// };
+//
+// in the example above, calling "_tracker.wait_outstanding_tasks()" still works.
+// the main difference is that:
+//    1. "wait" will wait all tasks to finish
+//    2. as for "cancel", only running tasks will be waited.
+//       a not-started task will be cancelled directly.
+//
+// you may choose either one as you need.
+//
+// Some notices:
+//
+// 1. you may want to call "cancel" or "wait" in the beginning of
+//    of your destructor, so as to ensure all tasks are
+//    canceled/executed before destruction of any objects
+// 2. please ensure the "wait"("cancel") and the created task are running
+//    IN DIFFERENT THREAD, otherwise deadlock may occur
+// 3. when wait_outstanding_task is called, please make sure that no timer tasks are running.
+//    if timer and non-timer are both tracked, you may want to cancel the timer first.
+//
+//    For example:
+//
+//    task_tracker t;
+//    auto tsk1 = tasking::enqueue(task_code, &t, [](){}, seconds_10);
+//    auto tsk2 = tasking::enqueue_timer(task_code, &t, [](){}, delay_10s, period_10s);
+//
+//    t.wait_outstanding_tasks();  <-- wrong, coz tsk2 is a timer
+//    t.cancel_outstanding_tasks(); <-- right, cancel can apply to any tasks.
+//    tsk2.cancel(true); t.wait_out_standing_tasks(); <-- right, first cancel timer, then wait.
 //
 class task_tracker
 {
@@ -104,11 +167,11 @@ private:
 };
 
 // ------- inlined implementation ----------
-inline void trackable_task::set_tracker(task_tracker *owner, dsn_task_t task)
+inline void trackable_task::set_tracker(task_tracker *owner, task *tsk)
 {
     dassert(_owner == nullptr, "task tracker is already set");
     _owner = owner;
-    _task = task;
+    _task = tsk;
     _deleting_owner.store(OWNER_DELETE_NOT_LOCKED, std::memory_order_release);
 
     if (nullptr != _owner) {

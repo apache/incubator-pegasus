@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 //
@@ -310,6 +301,8 @@ private:
 
     perf_counter_wrapper _counter_manual_compact_running_count;
     perf_counter_wrapper _counter_manual_compact_queue_count;
+
+    dsn::task_tracker _tracker;
 
 private:
     void response_client_error(gpid gpid, bool is_read, dsn_message_t request, error_code error);

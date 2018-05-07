@@ -44,6 +44,7 @@ namespace dist {
 class distributed_lock_service_simple : public distributed_lock_service, public clientlet
 {
 public:
+    virtual ~distributed_lock_service_simple() { _tracker.cancel_outstanding_tasks(); }
     // no parameter need
     virtual error_code initialize(const std::vector<std::string> &args) override;
     virtual error_code finalize() override { return ERR_OK; }
@@ -97,6 +98,8 @@ private:
 
     zlock _lock;
     locks _dlocks; // lock -> owner
+
+    dsn::task_tracker _tracker;
 };
 }
 }

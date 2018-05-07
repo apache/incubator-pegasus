@@ -1,5 +1,6 @@
 #pragma once
 
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/dist/replication.h>
 #include <functional>
 
@@ -297,7 +298,7 @@ public:
     virtual dsn::task_ptr list_dir(const ls_request &req,
                                    dsn::task_code code,
                                    const ls_callback &callback,
-                                   clientlet *tracker = nullptr) = 0;
+                                   dsn::task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief create_file
@@ -310,7 +311,7 @@ public:
     virtual dsn::task_ptr create_file(const create_file_request &req,
                                       dsn::task_code code,
                                       const create_file_callback &cb,
-                                      clientlet *tracker = nullptr) = 0;
+                                      dsn::task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief delete_file
@@ -323,7 +324,7 @@ public:
     virtual dsn::task_ptr delete_file(const delete_file_request &req,
                                       dsn::task_code code,
                                       const delete_file_callback &cb,
-                                      clientlet *tracker = nullptr) = 0;
+                                      dsn::task_tracker *tracker = nullptr) = 0;
     /**
      * @brief exist
      * @param req, ref {@link #exist_request}
@@ -335,7 +336,7 @@ public:
     virtual dsn::task_ptr exist(const exist_request &req,
                                 dsn::task_code code,
                                 const exist_callback &cb,
-                                clientlet *tracker = nullptr) = 0;
+                                dsn::task_tracker *tracker = nullptr) = 0;
     /**
      * @brief remove_path
      * @param req, ref {@link #remove_path_request}
@@ -347,7 +348,7 @@ public:
     virtual dsn::task_ptr remove_path(const remove_path_request &req,
                                       dsn::task_code code,
                                       const remove_path_callback &cb,
-                                      clientlet *tracker = nullptr) = 0;
+                                      dsn::task_tracker *tracker = nullptr) = 0;
 
     virtual ~block_filesystem() {}
 };
@@ -392,7 +393,7 @@ public:
     virtual dsn::task_ptr write(const write_request &req,
                                 dsn::task_code code,
                                 const write_callback &cb,
-                                clientlet *tracker = nullptr) = 0;
+                                dsn::task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief read
@@ -405,7 +406,7 @@ public:
     virtual dsn::task_ptr read(const read_request &req,
                                dsn::task_code code,
                                const read_callback &cb,
-                               clientlet *tracker = nullptr) = 0;
+                               dsn::task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief upload
@@ -418,7 +419,7 @@ public:
     virtual dsn::task_ptr upload(const upload_request &req,
                                  dsn::task_code code,
                                  const upload_callback &cb,
-                                 clientlet *tracker = nullptr) = 0;
+                                 dsn::task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief download
@@ -431,7 +432,7 @@ public:
     virtual dsn::task_ptr download(const download_request &req,
                                    dsn::task_code code,
                                    const download_callback &cb,
-                                   clientlet *tracker = nullptr) = 0;
+                                   dsn::task_tracker *tracker = nullptr) = 0;
 
 protected:
     std::string _name;

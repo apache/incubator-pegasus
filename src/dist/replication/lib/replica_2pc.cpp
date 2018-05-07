@@ -57,9 +57,7 @@ void replica::on_client_write(task_code code, dsn_message_t request)
         return;
     }
 
-    dinfo("%s: got write request from %s",
-          name(),
-          dsn_msg_from_address(request).to_string());
+    dinfo("%s: got write request from %s", name(), dsn_msg_from_address(request).to_string());
     auto mu = _primary_states.write_queue.add_work(code, request, this);
     if (mu) {
         init_prepare(mu, false);
@@ -154,7 +152,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation)
         dassert(mu->log_task() == nullptr, "");
         mu->log_task() = _stub->_log->append(mu,
                                              LPC_WRITE_REPLICATION_LOG,
-                                             this,
+                                             &_tracker,
                                              std::bind(&replica::on_append_log_completed,
                                                        this,
                                                        mu,
@@ -195,7 +193,7 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
     mu->remote_tasks()[addr] =
         rpc::call(addr,
                   msg,
-                  this,
+                  &_tracker,
                   [=](error_code err, dsn_message_t request, dsn_message_t reply) {
                       on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
                   },
@@ -368,7 +366,7 @@ void replica::on_prepare(dsn_message_t request)
     dassert(mu->log_task() == nullptr, "");
     mu->log_task() = _stub->_log->append(mu,
                                          LPC_WRITE_REPLICATION_LOG,
-                                         this,
+                                         &_tracker,
                                          std::bind(&replica::on_append_log_completed,
                                                    this,
                                                    mu,
@@ -430,7 +428,7 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
 
     // write local private log if necessary
     if (err == ERR_OK && status() != partition_status::PS_ERROR) {
-        _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, this, nullptr);
+        _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, &_tracker, nullptr);
     }
 }
 
@@ -552,7 +550,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
                 }
                 tasking::enqueue(
                     LPC_DELAY_PREPARE,
-                    this,
+                    &_tracker,
                     [this, node, target_status, mu, prepare_timeout_ms, learn_signature] {
                         // need to check status/ballot/decree before sending prepare message,
                         // because the config may have been changed or the mutation may have been

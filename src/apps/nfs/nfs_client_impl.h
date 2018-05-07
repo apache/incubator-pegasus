@@ -37,6 +37,7 @@
 #include <vector>
 #include <deque>
 #include <dsn/tool-api/nfs.h>
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 
 namespace dsn {
@@ -285,7 +286,7 @@ public:
 
 public:
     nfs_client_impl(nfs_opts &opts);
-    virtual ~nfs_client_impl() {}
+    virtual ~nfs_client_impl() { _tracker.cancel_outstanding_tasks(); }
 
     // copy file request entry
     void begin_remote_copy(std::shared_ptr<remote_copy_request> &rci, aio_task *nfs_task);
@@ -328,6 +329,8 @@ private:
     perf_counter_wrapper _recent_copy_fail_count;
     perf_counter_wrapper _recent_write_data_size;
     perf_counter_wrapper _recent_write_fail_count;
+
+    dsn::task_tracker _tracker;
 };
 }
 }

@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #pragma once
+#include <dsn/tool-api/task_tracker.h>
 #include "echo.client.h"
 #include "echo.client.perf.h"
 #include "echo.server.h"
@@ -77,7 +78,7 @@ public:
         _server.assign_ipv4(args[1].c_str(), (uint16_t)atoi(args[2].c_str()));
         _echo_client.reset(new echo_client(_server));
         _timer = ::dsn::tasking::enqueue_timer(
-            LPC_ECHO_TEST_TIMER, this, [this] { on_test_timer(); }, std::chrono::seconds(1));
+            LPC_ECHO_TEST_TIMER, &_tracker, [this] { on_test_timer(); }, std::chrono::seconds(1));
         return ::dsn::ERR_OK;
     }
 
@@ -104,6 +105,7 @@ public:
     }
 
 private:
+    dsn::task_tracker _tracker;
     ::dsn::task_ptr _timer;
     ::dsn::rpc_address _server;
 

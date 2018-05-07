@@ -75,7 +75,7 @@ meta_service::meta_service()
         "eon.meta_service", "unalive_nodes", COUNTER_TYPE_NUMBER, "current count of unalive nodes");
 }
 
-meta_service::~meta_service() {}
+meta_service::~meta_service() { _tracker.cancel_outstanding_tasks(); }
 
 bool meta_service::check_freeze() const
 {

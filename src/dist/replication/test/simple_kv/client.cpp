@@ -69,13 +69,15 @@ simple_kv_client_app::~simple_kv_client_app() { stop(); }
     _service_addr.assign_uri(args[1].c_str());
     _simple_kv_client.reset(new simple_kv_client(_service_addr));
 
-    dsn::tasking::enqueue(LPC_SIMPLE_KV_TEST, this, std::bind(&simple_kv_client_app::run, this));
+    dsn::tasking::enqueue(
+        LPC_SIMPLE_KV_TEST, &_tracker, std::bind(&simple_kv_client_app::run, this));
 
     return ::dsn::ERR_OK;
 }
 
 dsn::error_code simple_kv_client_app::stop(bool cleanup)
 {
+    _tracker.cancel_outstanding_tasks();
     _simple_kv_client.reset();
     return ::dsn::ERR_OK;
 }

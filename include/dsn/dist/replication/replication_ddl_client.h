@@ -38,15 +38,16 @@
 #include <string>
 #include <map>
 #include <dsn/dist/replication.h>
+#include <dsn/tool-api/task_tracker.h>
 
 namespace dsn {
 namespace replication {
 
-class replication_ddl_client : public clientlet
+class replication_ddl_client
 {
 public:
     replication_ddl_client(const std::vector<dsn::rpc_address> &meta_servers);
-    virtual ~replication_ddl_client();
+    ~replication_ddl_client();
 
     dsn::error_code create_app(const std::string &app_name,
                                const std::string &app_type,
@@ -187,7 +188,7 @@ private:
         ::dsn::marshall(msg, *req);
         rpc::call(_meta_server,
                   msg,
-                  this,
+                  &_tracker,
                   [this, task](error_code err, dsn_message_t request, dsn_message_t response) {
                       end_meta_request(std::move(task), 0, err, request, response);
                   });
@@ -196,6 +197,7 @@ private:
 
 private:
     dsn::rpc_address _meta_server;
+    dsn::task_tracker _tracker;
 };
 }
 } // namespace

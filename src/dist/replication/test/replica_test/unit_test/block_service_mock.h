@@ -3,8 +3,8 @@
 #include <iostream>
 #include <dsn/utility/filesystem.h>
 #include <dsn/tool-api/auto_codes.h>
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/dist/block_service.h>
-#include <dsn/cpp/clientlet.h>
 #include "dist/replication/lib/replica_context.h"
 #include "dist/replication/test/replica_test/unit_test/replication_service_test_app.h"
 
@@ -39,7 +39,7 @@ public:
     virtual dsn::task_ptr write(const write_request &req,
                                 dsn::task_code code,
                                 const write_callback &cb,
-                                clientlet *tracker = nullptr)
+                                dsn::task_tracker *tracker = nullptr)
     {
         write_response resp;
         if (enable_write_fail) {
@@ -56,7 +56,7 @@ public:
     virtual dsn::task_ptr read(const read_request &req,
                                dsn::task_code code,
                                const read_callback &cb,
-                               clientlet *tracker = nullptr)
+                               dsn::task_tracker *tracker = nullptr)
     {
         read_response resp;
         if (enable_read_fail) {
@@ -76,7 +76,7 @@ public:
     virtual dsn::task_ptr upload(const upload_request &req,
                                  dsn::task_code code,
                                  const upload_callback &cb,
-                                 clientlet *tracker = nullptr)
+                                 dsn::task_tracker *tracker = nullptr)
     {
         upload_response resp;
         if (enable_upload_fail) {
@@ -93,7 +93,7 @@ public:
     virtual dsn::task_ptr download(const download_request &req,
                                    dsn::task_code code,
                                    const download_callback &cb,
-                                   clientlet *tracker = nullptr)
+                                   dsn::task_tracker *tracker = nullptr)
     {
         return task_ptr();
     }
@@ -142,7 +142,7 @@ public:
     virtual dsn::task_ptr list_dir(const ls_request &req,
                                    dsn::task_code code,
                                    const ls_callback &callback,
-                                   clientlet *tracker = nullptr)
+                                   dsn::task_tracker *tracker = nullptr)
     {
         ls_response resp;
         if (enable_list_dir_fail) {
@@ -164,7 +164,7 @@ public:
     virtual dsn::task_ptr create_file(const create_file_request &req,
                                       dsn::task_code code,
                                       const create_file_callback &cb,
-                                      clientlet *tracker = nullptr)
+                                      dsn::task_tracker *tracker = nullptr)
     {
         create_file_response resp;
         if (enable_create_file_fail) {
@@ -197,7 +197,7 @@ public:
     virtual dsn::task_ptr delete_file(const delete_file_request &req,
                                       dsn::task_code code,
                                       const delete_file_callback &cb,
-                                      clientlet *tracker = nullptr)
+                                      dsn::task_tracker *tracker = nullptr)
     {
         return task_ptr();
     }
@@ -205,7 +205,7 @@ public:
     dsn::task_ptr remove_path(const remove_path_request &req,
                               dsn::task_code code,
                               const remove_path_callback &cb,
-                              clientlet *tracker)
+                              dsn::task_tracker *tracker)
     {
         return task_ptr();
     }
@@ -213,7 +213,7 @@ public:
     dsn::task_ptr exist(const exist_request &req,
                         dsn::task_code code,
                         const exist_callback &cb,
-                        clientlet *tracker)
+                        dsn::task_tracker *tracker)
     {
         return task_ptr();
     }

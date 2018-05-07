@@ -40,6 +40,7 @@
 #include <dsn/c/api_task.h>
 #include <dsn/tool-api/gpid.h>
 #include <dsn/tool-api/rpc_address.h>
+#include <dsn/tool-api/task_tracker.h>
 
 /*!
  @defgroup service-api-c Core Service API
@@ -293,41 +294,6 @@ extern DSN_API dsn::error_code dsn_task_error(dsn_task_t task);
  */
 extern DSN_API bool dsn_task_is_running_inside(dsn_task_t t);
 
-/*!
- task trackers are used to track task context
-
- When a task executes, it usually accesses certain context. When the context is gone, all tasks
- accessing this context needs to be cancelled automatically to avoid invalid context access.
- To release this burden from developers, rDSN provides task tracker which can be embedded into
- a context, and destroyed when the context is gone.
-
- \param task_bucket_count number of task buckets to reduce thread conflicts
-
- \return task tracker handle
- */
-extern DSN_API dsn_task_tracker_t dsn_task_tracker_create(int task_bucket_count);
-
-/*!
- destroy a task tracker, which cancels all pending tasks as well
-
- \param tracker task tracker handle
- */
-extern DSN_API void dsn_task_tracker_destroy(dsn_task_tracker_t tracker);
-
-/*!
-cancels all pending tasks bound to this tracker
-
-\param tracker task tracker handle
-*/
-extern DSN_API void dsn_task_tracker_cancel_all(dsn_task_tracker_t tracker);
-
-/*!
-wait all pending tasks to be completed bound to this tracker
-
-\param tracker task tracker handle
-*/
-extern DSN_API void dsn_task_tracker_wait_all(dsn_task_tracker_t tracker);
-
 /*@}*/
 
 /*!
@@ -361,7 +327,7 @@ extern DSN_API dsn_task_t dsn_task_create(dsn::task_code code,
                                           dsn_task_handler_t cb,
                                           void *context,
                                           int hash DEFAULT(0),
-                                          dsn_task_tracker_t tracker DEFAULT(nullptr));
+                                          dsn::task_tracker *tracker DEFAULT(nullptr));
 
 /*!
  create a timer task
@@ -388,7 +354,7 @@ extern DSN_API dsn_task_t dsn_task_create_timer(dsn::task_code code,
                                                 void *context,
                                                 int hash,
                                                 int interval_milliseconds,
-                                                dsn_task_tracker_t tracker DEFAULT(nullptr));
+                                                dsn::task_tracker *tracker DEFAULT(nullptr));
 
 /*!
 similar to \ref dsn_task_create, except an on_cancel callback is provided
@@ -400,7 +366,7 @@ extern DSN_API dsn_task_t dsn_task_create_ex(dsn::task_code code,   // task labe
                                              dsn_task_cancelled_handler_t on_cancel,
                                              void *context, // context to the two callbacks above
                                              int hash DEFAULT(0), // hash to callback
-                                             dsn_task_tracker_t tracker DEFAULT(nullptr));
+                                             dsn::task_tracker *tracker DEFAULT(nullptr));
 
 /*!
  similar to \ref dsn_task_create_timer, except an on_cancel callback is provided
@@ -413,7 +379,7 @@ extern DSN_API dsn_task_t dsn_task_create_timer_ex(dsn::task_code code,
                                                    void *context,
                                                    int hash,
                                                    int interval_milliseconds, // timer period
-                                                   dsn_task_tracker_t tracker DEFAULT(nullptr));
+                                                   dsn::task_tracker *tracker DEFAULT(nullptr));
 
 /*!
  start the task
@@ -698,7 +664,7 @@ extern DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request,
                                                        dsn_rpc_response_handler_t cb,
                                                        void *context,
                                                        int reply_thread_hash DEFAULT(0),
-                                                       dsn_task_tracker_t tracker DEFAULT(nullptr));
+                                                       dsn::task_tracker *tracker DEFAULT(nullptr));
 
 /*!
 create a callback task to handle the response message from RPC server, or timeout.
@@ -720,7 +686,7 @@ dsn_rpc_create_response_task_ex(dsn_message_t request,
                                 dsn_task_cancelled_handler_t on_cancel,
                                 void *context,
                                 int reply_thread_hash DEFAULT(0),
-                                dsn_task_tracker_t tracker DEFAULT(nullptr));
+                                dsn::task_tracker *tracker DEFAULT(nullptr));
 
 /*! client invokes the RPC call */
 extern DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn_task_t rpc_call);
@@ -806,7 +772,7 @@ extern DSN_API dsn_task_t dsn_file_create_aio_task(dsn::task_code code,
                                                    dsn_aio_handler_t cb,
                                                    void *context,
                                                    int hash DEFAULT(0),
-                                                   dsn_task_tracker_t tracker DEFAULT(nullptr));
+                                                   dsn::task_tracker *tracker DEFAULT(nullptr));
 
 /*!
  create aio task which is executed on completion of the file operations
@@ -825,7 +791,7 @@ extern DSN_API dsn_task_t dsn_file_create_aio_task_ex(dsn::task_code code,
                                                       dsn_task_cancelled_handler_t on_cancel,
                                                       void *context,
                                                       int hash DEFAULT(0),
-                                                      dsn_task_tracker_t tracker DEFAULT(nullptr));
+                                                      dsn::task_tracker *tracker DEFAULT(nullptr));
 
 /*!
  read file asynchronously

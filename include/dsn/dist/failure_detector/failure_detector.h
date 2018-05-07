@@ -30,32 +30,31 @@
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     Dec., 2015, @shengofsun (Weijie Sun), make service::zlock preoteced, give the subClasses
- * flexibility
+ *     Dec., 2015, @shengofsun (Weijie Sun), make service::zlock preoteced,
+ *                 give the subClasses flexibility
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
 /*
  * Notes on the failure detector:
  *
- * 1. Due to the fact that we can only check the liveness inside check-all-records call, which
- * happens
- *    every "check_interval_seconds" seconds, worker may disconnect from master in the period
- * earlier
- *    that the lease_seconds to ensure the perfect FD. In the worst case, workers may disconnect
- * themselves
- *    after "lease" -  "check_interval_seconds" seconds;
- *    Similarily, master may claim a worker dead more slowly even the workers are dead for longer
- * than
- *    grace_seconds. In the worst case, it will be "grace" + "check_interval_seconds" seconds.
+ * 1. Due to the fact that we can only check the liveness inside check-all-records call,
+ *    which happens every "check_interval_seconds" seconds, worker may disconnect from master
+ *    in the period earlier than the lease_seconds to ensure the perfect FD.
+ *    In the worst case, workers may disconnect themselves
+ *    after "lease"-"check_interval_seconds" seconds;
+ *
+ *    Similarily, master may claim a worker dead more slowly even the workers are dead
+ *    for longer than grace_seconds. In the worst case, it will be
+ *    "grace"+"check_interval_seconds" seconds.
  *
  * 2. In practice, your should set check_interval_seconds a small value for a fine-grained FD.
  *    For client, you may set it as 2 second as it usually connect to a small number of masters.
  *    For master, you may set it as 5 or 10 seconds.
  *
- * 3. We should always use dedicated thread pools for THREAD_POOL_FD, and set thread priority to
- * being
- *    highest so as to minimize the performance interference with other workloads.
+ * 3. We should always use dedicated thread pools for THREAD_POOL_FD,
+ *    and set thread priority to being highest so as to minimize the performance
+ *    interference with other workloads.
  *
  * 4. The lease_periods must be less than the grace_periods, as required by prefect FD.
  *
@@ -216,6 +215,8 @@ private:
 
 protected:
     mutable service::zlock _lock;
+    dsn::task_tracker _tracker;
+
     // subClass can rewrite these method.
     virtual void send_beacon(::dsn::rpc_address node, uint64_t time);
 };

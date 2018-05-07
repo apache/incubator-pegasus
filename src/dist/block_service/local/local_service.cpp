@@ -2,6 +2,7 @@
 
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/error_code.h>
+#include <dsn/tool-api/task_tracker.h>
 #include "local_service.h"
 
 static const int max_length = 2048; // max data length read from file each time
@@ -43,7 +44,7 @@ error_code local_service::initialize(const std::vector<std::string> &args)
 dsn::task_ptr local_service::list_dir(const ls_request &req,
                                       dsn::task_code code,
                                       const ls_callback &callback,
-                                      clientlet *tracker)
+                                      task_tracker *tracker)
 {
     task_ptr tsk = tasking::create_late_task(code, std::move(callback), 0, tracker);
     // process
@@ -100,7 +101,7 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
 dsn::task_ptr local_service::create_file(const create_file_request &req,
                                          dsn::task_code code,
                                          const create_file_callback &cb,
-                                         clientlet *tracker)
+                                         task_tracker *tracker)
 {
     task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
     if (req.ignore_metadata) {
@@ -141,7 +142,7 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
 dsn::task_ptr local_service::delete_file(const delete_file_request &req,
                                          dsn::task_code code,
                                          const delete_file_callback &cb,
-                                         clientlet *tracker)
+                                         task_tracker *tracker)
 {
     task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
 
@@ -169,7 +170,7 @@ dsn::task_ptr local_service::delete_file(const delete_file_request &req,
 dsn::task_ptr local_service::exist(const exist_request &req,
                                    dsn::task_code code,
                                    const exist_callback &cb,
-                                   clientlet *tracker)
+                                   task_tracker *tracker)
 {
     task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
 
@@ -190,7 +191,7 @@ dsn::task_ptr local_service::exist(const exist_request &req,
 dsn::task_ptr local_service::remove_path(const remove_path_request &req,
                                          dsn::task_code code,
                                          const remove_path_callback &cb,
-                                         clientlet *tracker)
+                                         task_tracker *tracker)
 {
     task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
 
@@ -258,7 +259,7 @@ uint64_t local_file_object::get_size()
 dsn::task_ptr local_file_object::write(const write_request &req,
                                        dsn::task_code code,
                                        const write_callback &cb,
-                                       clientlet *tracker)
+                                       task_tracker *tracker)
 {
     add_ref();
 
@@ -296,7 +297,7 @@ dsn::task_ptr local_file_object::write(const write_request &req,
 dsn::task_ptr local_file_object::read(const read_request &req,
                                       dsn::task_code code,
                                       const read_callback &cb,
-                                      clientlet *tracker)
+                                      task_tracker *tracker)
 {
     add_ref();
 
@@ -347,7 +348,7 @@ dsn::task_ptr local_file_object::read(const read_request &req,
 dsn::task_ptr local_file_object::upload(const upload_request &req,
                                         dsn::task_code code,
                                         const upload_callback &cb,
-                                        clientlet *tracker)
+                                        task_tracker *tracker)
 {
     add_ref();
     task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
@@ -408,7 +409,7 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
 dsn::task_ptr local_file_object::download(const download_request &req,
                                           dsn::task_code code,
                                           const download_callback &cb,
-                                          clientlet *tracker)
+                                          task_tracker *tracker)
 {
     // download the whole file
     add_ref();

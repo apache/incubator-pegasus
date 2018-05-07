@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #pragma once
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 #include "nfs_server.h"
 #include "nfs_client_impl.h"
@@ -44,7 +45,7 @@ class nfs_service_impl : public ::dsn::service::nfs_service,
 {
 public:
     nfs_service_impl(nfs_opts &opts);
-    virtual ~nfs_service_impl() {}
+    virtual ~nfs_service_impl() { _tracker.cancel_outstanding_tasks(); }
 
 protected:
     // RPC_NFS_V2_NFS_COPY
@@ -110,6 +111,8 @@ private:
 
     perf_counter_wrapper _recent_copy_data_size;
     perf_counter_wrapper _recent_copy_fail_count;
+
+    dsn::task_tracker _tracker;
 };
 }
 }

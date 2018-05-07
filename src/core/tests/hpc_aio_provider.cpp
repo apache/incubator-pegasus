@@ -62,13 +62,13 @@ TEST(tools_hpc, aio)
     int count = 10;
     sprintf(buffer, "abcdefghij");
     dsn_handle_t file = dsn_file_open("test_hpc_aio.tmp", O_RDWR | O_CREAT, 0666);
-    dsn_task_tracker_t tracker = dsn_task_tracker_create(13);
+    dsn::task_tracker *tracker = new dsn::task_tracker(13);
 
     dsn_task_t cb = dsn_file_create_aio_task(LPC_AIO_TEST, nullptr, nullptr, 0);
     dsn_task_add_ref(cb);
 
     ::dsn::aio_task *callback((::dsn::aio_task *)cb);
-    callback->set_tracker((dsn::task_tracker *)tracker);
+    callback->set_tracker(tracker);
     callback->aio()->buffer = (char *)buffer;
     callback->aio()->buffer_size = count;
     callback->aio()->engine = nullptr;
@@ -83,12 +83,13 @@ TEST(tools_hpc, aio)
     EXPECT_TRUE(err == ERR_OK);
 
     dsn_task_release_ref(cb);
+    delete tracker;
 
     // read from file
     char buffer_read[11];
     buffer_read[10] = '\0';
     file = dsn_file_open("test_hpc_aio.tmp", O_RDWR | O_CREAT, 0666);
-    tracker = dsn_task_tracker_create(13);
+    tracker = new dsn::task_tracker(13);
     cb = dsn_file_create_aio_task(LPC_AIO_TEST, nullptr, nullptr, 0);
     dsn_task_add_ref(cb);
 
@@ -109,7 +110,7 @@ TEST(tools_hpc, aio)
     EXPECT_TRUE(err == ERR_OK);
 
     dsn_task_release_ref(cb);
-
+    delete tracker;
     // invalid operation
 }
 
@@ -131,13 +132,13 @@ TEST(tools_hpc, aio_invalid_type)
     int count = 10;
     sprintf(buffer, "abcdefghi");
     dsn_handle_t file = dsn_file_open("test_hpc_aio2.tmp", O_RDWR | O_CREAT, 0666);
-    dsn_task_tracker_t tracker = dsn_task_tracker_create(13);
+    dsn::task_tracker *tracker = new dsn::task_tracker(13);
 
     dsn_task_t cb = dsn_file_create_aio_task(LPC_AIO_TEST, nullptr, nullptr, 0);
     dsn_task_add_ref(cb);
 
     ::dsn::aio_task *callback((::dsn::aio_task *)cb);
-    callback->set_tracker((dsn::task_tracker *)tracker);
+    callback->set_tracker(tracker);
     callback->aio()->buffer = (char *)buffer;
     callback->aio()->buffer_size = count;
     callback->aio()->engine = nullptr;
@@ -152,4 +153,5 @@ TEST(tools_hpc, aio_invalid_type)
     EXPECT_TRUE(err == ERR_OK);
 
     dsn_task_release_ref(cb);
+    delete tracker;
 }

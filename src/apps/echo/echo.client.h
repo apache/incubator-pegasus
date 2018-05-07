@@ -78,7 +78,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_ECHO_ECHO_PING,
                                 val,
-                                this,
+                                nullptr,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 thread_hash,

@@ -62,7 +62,10 @@ slave_failure_detector_with_multimaster::slave_failure_detector_with_multimaster
     _master_connected_callback = std::move(master_connected_callback);
 }
 
-slave_failure_detector_with_multimaster::~slave_failure_detector_with_multimaster(void) {}
+slave_failure_detector_with_multimaster::~slave_failure_detector_with_multimaster(void)
+{
+    _tracker.cancel_outstanding_tasks();
+}
 
 void slave_failure_detector_with_multimaster::set_leader_for_test(rpc_address meta)
 {

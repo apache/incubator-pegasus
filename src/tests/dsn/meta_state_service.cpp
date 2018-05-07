@@ -196,7 +196,7 @@ void provider_basic_test(const service_creator_func &service_creator,
 }
 
 void recursively_create_node_callback(meta_state_service *service,
-                                      clientlet *tracker,
+                                      dsn::task_tracker *tracker,
                                       const std::string &root,
                                       int current_layer,
                                       error_code ec)
@@ -224,7 +224,7 @@ void provider_recursively_create_delete_test(const service_creator_func &creator
                                              const service_deleter_func &deleter)
 {
     meta_state_service *service = creator();
-    clientlet tracker;
+    dsn::task_tracker tracker;
 
     service
         ->delete_node("/r",
@@ -239,7 +239,7 @@ void provider_recursively_create_delete_test(const service_creator_func &creator
             recursively_create_node_callback, service, &tracker, "/r", 1, std::placeholders::_1),
         blob(),
         &tracker);
-    dsn_task_tracker_wait_all(tracker.tracker());
+    tracker.wait_outstanding_tasks();
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     deleter(service);

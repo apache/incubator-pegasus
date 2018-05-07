@@ -34,16 +34,17 @@
  */
 
 #pragma once
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/tool/cli.h>
 #include <iostream>
 
 namespace dsn {
-class cli_client : public virtual ::dsn::clientlet
+class cli_client
 {
 public:
     cli_client(::dsn::rpc_address server) { _server = server; }
     cli_client() {}
-    virtual ~cli_client() {}
+    virtual ~cli_client() { _tracker.cancel_outstanding_tasks(); }
 
     // ---------- call RPC_CLI_CLI_CALL ------------
     // - synchronous
@@ -58,7 +59,7 @@ public:
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_CLI_CLI_CALL,
                              args,
-                             nullptr,
+                             &_tracker,
                              empty_callback,
                              timeout,
                              thread_hash,
@@ -78,7 +79,7 @@ public:
         return ::dsn::rpc::call(server_addr.unwrap_or(_server),
                                 RPC_CLI_CLI_CALL,
                                 args,
-                                this,
+                                &_tracker,
                                 std::forward<TCallback>(callback),
                                 timeout,
                                 thread_hash,
@@ -88,5 +89,6 @@ public:
 
 private:
     ::dsn::rpc_address _server;
+    dsn::task_tracker _tracker;
 };
 }

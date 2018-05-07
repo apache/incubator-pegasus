@@ -54,7 +54,7 @@ void replica::init_group_check()
     dassert(nullptr == _primary_states.group_check_task, "");
     _primary_states.group_check_task =
         tasking::enqueue_timer(LPC_GROUP_CHECK,
-                               this,
+                               &_tracker,
                                [this] { broadcast_group_check(); },
                                std::chrono::milliseconds(_options->group_check_interval_ms),
                                get_gpid().thread_hash());
@@ -108,7 +108,7 @@ void replica::broadcast_group_check()
             rpc::call(addr,
                       RPC_GROUP_CHECK,
                       *request,
-                      this,
+                      &_tracker,
                       [=](error_code err, group_check_response &&resp) {
                           auto alloc = std::make_shared<group_check_response>(std::move(resp));
                           on_group_check_reply(err, request, alloc);
@@ -220,7 +220,7 @@ void replica::send_group_check_once_for_test(int delay_milliseconds)
 
     _primary_states.group_check_task =
         tasking::enqueue(LPC_GROUP_CHECK,
-                         this,
+                         &_tracker,
                          [this] { broadcast_group_check(); },
                          get_gpid().thread_hash(),
                          std::chrono::milliseconds(delay_milliseconds));
@@ -229,7 +229,7 @@ void replica::send_group_check_once_for_test(int delay_milliseconds)
 void replica::inject_error(error_code err)
 {
     tasking::enqueue(LPC_REPLICATION_ERROR,
-                     this,
+                     &_tracker,
                      [this, err]() { handle_local_failure(err); },
                      get_gpid().thread_hash());
 }

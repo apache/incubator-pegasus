@@ -380,33 +380,16 @@ void replica::close()
             name(),
             enum_to_string(status()));
 
-    // cancel and wait backgroud async checkpoint.
-    // TODO(qinzuoyan): replace code by task_tracker::cancel_outstanding_tasks().
-    while (true) {
-        ::dsn::task_ptr tsk;
-        {
-            ::dsn::service::zauto_lock l(_async_checkpoint_lock);
-            if (_async_checkpoint_task == nullptr)
-                break;
-            if (_async_checkpoint_task->cancel(false)) {
-                // cancel succeed
-                _async_checkpoint_task = nullptr;
-                break;
-            } else {
-                // cancel failed, means already in running
-                tsk = _async_checkpoint_task;
-            }
-        }
-        tsk->wait();
-    }
+    _tracker.cancel_outstanding_tasks();
 
     if (_checkpoint_timer != nullptr) {
-        _checkpoint_timer->cancel(true);
+        dassert(!_checkpoint_timer->cancel(false),
+                "checkpoint timer should already been cancelled");
         _checkpoint_timer = nullptr;
     }
-
     if (_collect_info_timer != nullptr) {
-        _collect_info_timer->cancel(true);
+        dassert(!_collect_info_timer->cancel(false),
+                "collect info timer should already been cancelled");
         _collect_info_timer = nullptr;
     }
 

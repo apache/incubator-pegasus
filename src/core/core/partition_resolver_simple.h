@@ -36,15 +36,15 @@
 #pragma once
 
 #include <dsn/tool-api/partition_resolver.h>
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/service_api_c.h>
 #include <dsn/cpp/zlocks.h>
-#include <dsn/cpp/clientlet.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2.types.h>
 
 namespace dsn {
 namespace dist {
 #pragma pack(push, 4)
-class partition_resolver_simple : public partition_resolver, public virtual clientlet
+class partition_resolver_simple : public partition_resolver
 {
 public:
     partition_resolver_simple(rpc_address meta_server, const char *app_path);
@@ -103,6 +103,9 @@ private:
     std::deque<request_context_ptr> _pending_requests_before_partition_count_unknown;
     task_ptr _query_config_task;
 
+    dsn::task_tracker _tracker;
+
+private:
     // local routines
     rpc_address get_address(const partition_configuration &config) const;
     error_code get_address(int partition_index, /*out*/ rpc_address &addr);

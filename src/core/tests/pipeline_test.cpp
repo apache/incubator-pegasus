@@ -32,7 +32,7 @@ namespace dsn {
 
 TEST(pipeline_test, pause)
 {
-    clientlet tracker;
+    task_tracker tracker;
 
     {
         pipeline::base base;
@@ -59,7 +59,7 @@ TEST(pipeline_test, pause)
 
 TEST(pipeline_test, link_pipe)
 {
-    clientlet tracker;
+    task_tracker tracker;
 
     struct stage2 : pipeline::when<>, pipeline::result<>
     {

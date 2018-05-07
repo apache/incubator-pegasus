@@ -30,12 +30,12 @@ public:
     virtual dsn::task_ptr list_dir(const ls_request &req,
                                    dsn::task_code code,
                                    const ls_callback &callback,
-                                   clientlet *tracker) override;
+                                   dsn::task_tracker *tracker) override;
 
     virtual dsn::task_ptr create_file(const create_file_request &req,
                                       dsn::task_code code,
                                       const create_file_callback &cb,
-                                      clientlet *tracker) override;
+                                      dsn::task_tracker *tracker) override;
     //
     // Attention:
     //  delete file directly on fds, will not enter trash
@@ -43,12 +43,12 @@ public:
     virtual dsn::task_ptr delete_file(const delete_file_request &req,
                                       dsn::task_code code,
                                       const delete_file_callback &cb,
-                                      clientlet *tracker) override;
+                                      dsn::task_tracker *tracker) override;
 
     virtual dsn::task_ptr exist(const exist_request &req,
                                 dsn::task_code code,
                                 const exist_callback &cb,
-                                clientlet *tracker) override;
+                                dsn::task_tracker *tracker) override;
 
     //
     // Attention：
@@ -59,7 +59,7 @@ public:
     virtual dsn::task_ptr remove_path(const remove_path_request &req,
                                       dsn::task_code code,
                                       const remove_path_callback &cb,
-                                      clientlet *tracker) override;
+                                      dsn::task_tracker *tracker) override;
 
 private:
     std::shared_ptr<galaxy::fds::GalaxyFDSClient> _client;
@@ -83,22 +83,22 @@ public:
     virtual dsn::task_ptr write(const write_request &req,
                                 dsn::task_code code,
                                 const write_callback &cb,
-                                clientlet *tracker) override;
+                                dsn::task_tracker *tracker) override;
 
     virtual dsn::task_ptr read(const read_request &req,
                                dsn::task_code code,
                                const read_callback &cb,
-                               clientlet *tracker) override;
+                               dsn::task_tracker *tracker) override;
 
     virtual dsn::task_ptr upload(const upload_request &req,
                                  dsn::task_code code,
                                  const upload_callback &cb,
-                                 clientlet *tracker) override;
+                                 dsn::task_tracker *tracker) override;
 
     virtual dsn::task_ptr download(const download_request &req,
                                    dsn::task_code code,
                                    const download_callback &cb,
-                                   clientlet *tracker) override;
+                                   dsn::task_tracker *tracker) override;
 
 private:
     dsn::error_code get_content(uint64_t pos,

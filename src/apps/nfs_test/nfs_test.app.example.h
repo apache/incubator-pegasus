@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #pragma once
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/dist/replication.h>
 #include <dsn/tool/nfs.h>
 
@@ -76,7 +77,7 @@ public:
 
         // on_request_timer();
         _request_timer = ::dsn::tasking::enqueue_timer(::dsn::service::LPC_NFS_REQUEST_TIMER,
-                                                       this,
+                                                       &_tracker,
                                                        [this] { on_request_timer(); },
                                                        std::chrono::milliseconds(1000));
 
@@ -134,6 +135,8 @@ private:
     ::dsn::rpc_address _server;
     std::atomic<int> _req_index;
     bool _is_copying;
+
+    dsn::task_tracker _tracker;
 };
 }
 }

@@ -148,7 +148,7 @@ error_code fds_service::initialize(const std::vector<std::string> &args)
 dsn::task_ptr fds_service::list_dir(const ls_request &req,
                                     dsn::task_code code,
                                     const ls_callback &callback,
-                                    clientlet *tracker = nullptr)
+                                    dsn::task_tracker *tracker = nullptr)
 {
     dsn::task_ptr t = dsn::tasking::create_late_task(code, callback, 0, tracker);
     auto list_dir_in_background = [this, req, t]() {
@@ -232,7 +232,7 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
 dsn::task_ptr fds_service::create_file(const create_file_request &req,
                                        dsn::task_code code,
                                        const create_file_callback &cb,
-                                       clientlet *tracker = nullptr)
+                                       dsn::task_tracker *tracker = nullptr)
 {
     dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
     if (req.ignore_metadata) {
@@ -295,7 +295,7 @@ dsn::task_ptr fds_service::create_file(const create_file_request &req,
 dsn::task_ptr fds_service::delete_file(const delete_file_request &req,
                                        task_code code,
                                        const delete_file_callback &cb,
-                                       clientlet *tracker)
+                                       dsn::task_tracker *tracker)
 {
     dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, nullptr);
     auto delete_file_in_background = [this, req, t]() {
@@ -334,7 +334,7 @@ dsn::task_ptr fds_service::delete_file(const delete_file_request &req,
 dsn::task_ptr fds_service::exist(const exist_request &req,
                                  dsn::task_code code,
                                  const exist_callback &cb,
-                                 clientlet *tracker)
+                                 dsn::task_tracker *tracker)
 {
     dsn::task_ptr callback = dsn::tasking::create_late_task(code, cb, 0, tracker);
     auto exist_in_background = [this, req, callback]() {
@@ -374,7 +374,7 @@ dsn::task_ptr fds_service::exist(const exist_request &req,
 dsn::task_ptr fds_service::remove_path(const remove_path_request &req,
                                        dsn::task_code code,
                                        const remove_path_callback &cb,
-                                       clientlet *tracker)
+                                       dsn::task_tracker *tracker)
 {
     dsn::task_ptr callback = dsn::tasking::create_late_task(code, cb, 0, tracker);
     auto remove_path_background = [this, req, callback]() {
@@ -605,7 +605,7 @@ dsn::error_code fds_file_object::put_content(/*in-out*/ std::istream &is,
 dsn::task_ptr fds_file_object::write(const write_request &req,
                                      dsn::task_code code,
                                      const write_callback &cb,
-                                     clientlet *tracker = nullptr)
+                                     dsn::task_tracker *tracker = nullptr)
 {
     dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
 
@@ -628,7 +628,7 @@ dsn::task_ptr fds_file_object::write(const write_request &req,
 dsn::task_ptr fds_file_object::upload(const upload_request &req,
                                       dsn::task_code code,
                                       const upload_callback &cb,
-                                      clientlet *tracker = nullptr)
+                                      dsn::task_tracker *tracker = nullptr)
 {
     dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
 
@@ -665,7 +665,7 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
 dsn::task_ptr fds_file_object::read(const read_request &req,
                                     dsn::task_code code,
                                     const read_callback &cb,
-                                    clientlet *tracker = nullptr)
+                                    dsn::task_tracker *tracker = nullptr)
 {
     dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
     read_response resp;
@@ -701,7 +701,7 @@ dsn::task_ptr fds_file_object::read(const read_request &req,
 dsn::task_ptr fds_file_object::download(const download_request &req,
                                         dsn::task_code code,
                                         const download_callback &cb,
-                                        clientlet *tracker = nullptr)
+                                        dsn::task_tracker *tracker = nullptr)
 {
     dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
     download_response resp;

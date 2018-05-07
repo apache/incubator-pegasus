@@ -40,6 +40,7 @@
 
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/dist/block_service.h>
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 
 #include "dist/replication/client_lib/replication_common.h"
@@ -186,8 +187,8 @@ public:
     void set_config_change_subscriber_for_test(config_change_subscriber subscriber);
     void set_replica_migration_subscriber_for_test(replica_migration_subscriber subscriber);
 
-    clientlet *tracker() { return &_tracker; }
-    void wait_all_task() { dsn_task_tracker_wait_all(_tracker.tracker()); }
+    task_tracker *tracker() { return &_tracker; }
+    void wait_all_task() { _tracker.wait_outstanding_tasks(); }
 
 private:
     //-1 means waiting forever
@@ -299,9 +300,7 @@ private:
     friend class test::test_checker;
     friend class ::meta_service_test_app;
 
-    // ATTENTION:
-    //  DO NOT use this tracker to track timer task
-    clientlet _tracker;
+    dsn::task_tracker _tracker;
 
     meta_service *_meta_svc;
     std::string _apps_root;

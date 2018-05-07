@@ -23,16 +23,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/cpp/clientlet.h>
@@ -117,7 +107,7 @@ template <typename T> // where T : serverlet<T>
 class serverlet : public virtual clientlet
 {
 public:
-    serverlet(const char *nm, int task_bucket_count = 1);
+    explicit serverlet(const char *nm);
     virtual ~serverlet();
 
 protected:
@@ -159,8 +149,7 @@ private:
 
 // ------------- inline implementation ----------------
 template <typename T>
-inline serverlet<T>::serverlet(const char *nm, int task_bucket_count)
-    : clientlet(task_bucket_count), _name(nm)
+inline serverlet<T>::serverlet(const char *nm) : _name(nm)
 {
 }
 
@@ -209,7 +198,7 @@ inline bool serverlet<T>::register_rpc_handler_with_rpc_holder(dsn::task_code rp
                                                                void (T::*handler)(TRpcHolder))
 {
     dsn_rpc_request_handler_t cb = [this, handler](dsn_message_t request) {
-        (((T* )this)->*(handler))(TRpcHolder::auto_reply(request));
+        (((T *)this)->*(handler))(TRpcHolder::auto_reply(request));
     };
 
     return dsn_rpc_register_handler(rpc_code, extra_name, cb);

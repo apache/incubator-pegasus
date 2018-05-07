@@ -321,10 +321,6 @@ private:
     // local checkpoint timer for gc, checkpoint, etc.
     dsn::task_ptr _checkpoint_timer;
 
-    // background async checkpoint task.
-    mutable ::dsn::service::zlock _async_checkpoint_lock;
-    dsn::task_ptr _async_checkpoint_task;
-
     // application
     std::unique_ptr<replication_app_base> _app;
 
@@ -384,6 +380,8 @@ private:
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;
+
+    dsn::task_tracker _tracker;
 };
 typedef dsn::ref_ptr<replica> replica_ptr;
 }

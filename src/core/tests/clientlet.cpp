@@ -50,6 +50,7 @@ class test_clientlet : public clientlet
 public:
     std::string str;
     int number;
+    dsn::task_tracker _tracker;
 
 public:
     test_clientlet() : clientlet(), str("before called"), number(0) { global_value = 0; }
@@ -76,7 +77,8 @@ TEST(dev_cpp, clientlet_task)
 {
     /* normal lpc*/
     test_clientlet *cl = new test_clientlet();
-    task_ptr t = tasking::enqueue(LPC_TEST_CLIENTLET, cl, [cl] { cl->callback_function1(); });
+    task_ptr t =
+        tasking::enqueue(LPC_TEST_CLIENTLET, &cl->_tracker, [cl] { cl->callback_function1(); });
     EXPECT_TRUE(t != nullptr);
     t->wait();
     EXPECT_TRUE(cl->str == "after called");
@@ -85,14 +87,20 @@ TEST(dev_cpp, clientlet_task)
     /* task tracking */
     cl = new test_clientlet();
     std::vector<task_ptr> test_tasks;
-    t = tasking::enqueue(
-        LPC_TEST_CLIENTLET, cl, [=] { cl->callback_function1(); }, 0, std::chrono::seconds(30));
+    t = tasking::enqueue(LPC_TEST_CLIENTLET,
+                         &cl->_tracker,
+                         [=] { cl->callback_function1(); },
+                         0,
+                         std::chrono::seconds(30));
     test_tasks.push_back(t);
-    t = tasking::enqueue(
-        LPC_TEST_CLIENTLET, cl, [cl] { cl->callback_function1(); }, 0, std::chrono::seconds(30));
+    t = tasking::enqueue(LPC_TEST_CLIENTLET,
+                         &cl->_tracker,
+                         [cl] { cl->callback_function1(); },
+                         0,
+                         std::chrono::seconds(30));
     test_tasks.push_back(t);
     t = tasking::enqueue_timer(LPC_TEST_CLIENTLET,
-                               cl,
+                               &cl->_tracker,
                                [cl] { cl->callback_function1(); },
                                std::chrono::seconds(20),
                                0,
@@ -119,7 +127,7 @@ TEST(dev_cpp, clientlet_rpc)
     auto t = rpc::call(addr3,
                        RPC_TEST_STRING_COMMAND,
                        *str_command,
-                       cl,
+                       &cl->_tracker,
                        [str_command](error_code ec, std::string &&resp) {
                            if (ERR_OK == ec)
                                EXPECT_TRUE(str_command->substr(5) == resp);
@@ -128,7 +136,7 @@ TEST(dev_cpp, clientlet_rpc)
     t = rpc::call(addr2,
                   RPC_TEST_STRING_COMMAND,
                   std::string(command),
-                  cl,
+                  &cl->_tracker,
                   [](error_code ec, std::string &&resp) { EXPECT_TRUE(ec == ERR_OK); });
     task_vec.push_back(t);
     for (int i = 0; i != task_vec.size(); ++i)

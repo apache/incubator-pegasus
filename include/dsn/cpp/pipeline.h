@@ -27,6 +27,7 @@
 #pragma once
 
 #include <dsn/tool-api/task_code.h>
+#include <dsn/tool-api/task_tracker.h>
 #include <dsn/cpp/clientlet.h>
 #include <dsn/utility/chrono_literals.h>
 #include <dsn/utility/apply.h>
@@ -41,7 +42,7 @@ struct environment
     void schedule(F &&f, std::chrono::milliseconds delay_ms = 0_ms)
     {
         tasking::enqueue(__conf.thread_pool_code,
-                         __conf.task_tracker,
+                         __conf.tracker,
                          std::forward<F>(f),
                          __conf.thread_hash,
                          delay_ms);
@@ -50,7 +51,7 @@ struct environment
     struct
     {
         task_code thread_pool_code;
-        clientlet *task_tracker{nullptr};
+        task_tracker *tracker{nullptr};
         int thread_hash{0};
     } __conf;
 };
@@ -138,7 +139,7 @@ struct base : environment
     bool paused() { return _paused.load(std::memory_order_acquire); }
 
     // Await for all running tasks to complete.
-    void wait_all() { dsn_task_tracker_wait_all(__conf.task_tracker->tracker()); }
+    void wait_all() { __conf.tracker->wait_outstanding_tasks(); }
 
     /// === Environment Configuration === ///
 
@@ -152,9 +153,9 @@ struct base : environment
         __conf.thread_hash = hash;
         return *this;
     }
-    base &task_tracker(clientlet *tracker)
+    base &task_tracker(task_tracker *tracker)
     {
-        __conf.task_tracker = tracker;
+        __conf.tracker = tracker;
         return *this;
     }
 
@@ -280,7 +281,7 @@ private:
 
 inline void base::run_pipeline()
 {
-    dassert(__conf.task_tracker != nullptr, "must configure task tracker");
+    dassert(__conf.tracker != nullptr, "must configure task tracker");
 
     _paused.store(false, std::memory_order_release);
 

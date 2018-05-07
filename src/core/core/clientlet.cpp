@@ -41,13 +41,9 @@
 
 namespace dsn {
 
-clientlet::clientlet(int task_bucket_count)
-{
-    _tracker = dsn_task_tracker_create(task_bucket_count);
-    _access_thread_id_inited = false;
-}
+clientlet::clientlet() { _access_thread_id_inited = false; }
 
-clientlet::~clientlet() { dsn_task_tracker_destroy(_tracker); }
+clientlet::~clientlet() { _access_thread_id_inited = false; }
 
 void clientlet::check_hashed_access()
 {
@@ -61,25 +57,24 @@ void clientlet::check_hashed_access()
 }
 
 task_ptr rpc::create_rpc_response_task(dsn_message_t request,
-                                       clientlet *svc,
+                                       task_tracker *tracker,
                                        empty_callback_t,
                                        int reply_thread_hash)
 {
     task_ptr tsk = new safe_task_handle;
     // do not add_ref here
-    auto t = dsn_rpc_create_response_task(
-        request, nullptr, nullptr, reply_thread_hash, svc ? svc->tracker() : nullptr);
+    auto t = dsn_rpc_create_response_task(request, nullptr, nullptr, reply_thread_hash, tracker);
     tsk->set_task_info(t);
     return tsk;
 }
 
 namespace file {
-task_ptr create_aio_task(dsn::task_code callback_code, clientlet *svc, empty_callback_t, int hash)
+task_ptr
+create_aio_task(dsn::task_code callback_code, task_tracker *tracker, empty_callback_t, int hash)
 {
     task_ptr tsk = new safe_task_handle;
     // do not add_ref here
-    dsn_task_t t = dsn_file_create_aio_task(
-        callback_code, nullptr, nullptr, hash, svc ? svc->tracker() : nullptr);
+    dsn_task_t t = dsn_file_create_aio_task(callback_code, nullptr, nullptr, hash, tracker);
     tsk->set_task_info(t);
     return tsk;
 }

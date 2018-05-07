@@ -98,7 +98,7 @@ void meta_state_service_simple::write_log(blob &&log_blob,
                 log_blob.length(),
                 log_offset,
                 LPC_META_STATE_SERVICE_SIMPLE_INTERNAL,
-                this,
+                &_tracker,
                 [=](error_code err, size_t bytes) {
                     dassert(err == ERR_OK && bytes == log_blob.length(),
                             "we cannot handle logging failure now");
@@ -308,7 +308,7 @@ task_ptr meta_state_service_simple::submit_transaction(
     /*in-out*/ const std::shared_ptr<meta_state_service::transaction_entries> &t_entries,
     task_code cb_code,
     const err_callback &cb_transaction,
-    clientlet *tracker)
+    dsn::task_tracker *tracker)
 {
     // when checking the snapshot, we block all write operations which come later
     zauto_lock l(_log_lock);
@@ -412,7 +412,7 @@ task_ptr meta_state_service_simple::create_node(const std::string &node,
                                                 task_code cb_code,
                                                 const err_callback &cb_create,
                                                 const blob &value,
-                                                clientlet *tracker)
+                                                dsn::task_tracker *tracker)
 {
     task_ptr task = tasking::create_late_task(cb_code, cb_create, 0, tracker);
     write_log(create_node_log::get_log(node, value),
@@ -425,7 +425,7 @@ task_ptr meta_state_service_simple::delete_node(const std::string &node,
                                                 bool recursively_delete,
                                                 task_code cb_code,
                                                 const err_callback &cb_delete,
-                                                clientlet *tracker)
+                                                dsn::task_tracker *tracker)
 {
     task_ptr task = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
     write_log(delete_node_log::get_log(node, recursively_delete),
@@ -437,7 +437,7 @@ task_ptr meta_state_service_simple::delete_node(const std::string &node,
 task_ptr meta_state_service_simple::node_exist(const std::string &node,
                                                task_code cb_code,
                                                const err_callback &cb_exist,
-                                               clientlet *tracker)
+                                               dsn::task_tracker *tracker)
 {
     error_code err;
     {
@@ -451,7 +451,7 @@ task_ptr meta_state_service_simple::node_exist(const std::string &node,
 task_ptr meta_state_service_simple::get_data(const std::string &node,
                                              task_code cb_code,
                                              const err_value_callback &cb_get_data,
-                                             clientlet *tracker)
+                                             dsn::task_tracker *tracker)
 {
     auto path = normalize_path(node);
     zauto_lock _(_state_lock);
@@ -469,7 +469,7 @@ task_ptr meta_state_service_simple::set_data(const std::string &node,
                                              const blob &value,
                                              task_code cb_code,
                                              const err_callback &cb_set_data,
-                                             clientlet *tracker)
+                                             dsn::task_tracker *tracker)
 {
     task_ptr task = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
     write_log(
@@ -480,7 +480,7 @@ task_ptr meta_state_service_simple::set_data(const std::string &node,
 task_ptr meta_state_service_simple::get_children(const std::string &node,
                                                  task_code cb_code,
                                                  const err_stringv_callback &cb_get_children,
-                                                 clientlet *tracker)
+                                                 dsn::task_tracker *tracker)
 {
     auto path = normalize_path(node);
     zauto_lock _(_state_lock);
@@ -498,6 +498,10 @@ task_ptr meta_state_service_simple::get_children(const std::string &node,
     }
 }
 
-meta_state_service_simple::~meta_state_service_simple() { dsn_file_close(_log); }
+meta_state_service_simple::~meta_state_service_simple()
+{
+    _tracker.cancel_outstanding_tasks();
+    dsn_file_close(_log);
+}
 }
 }

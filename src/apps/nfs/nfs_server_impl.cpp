@@ -45,7 +45,7 @@ nfs_service_impl::nfs_service_impl(nfs_opts &opts)
 {
     _file_close_timer = ::dsn::tasking::enqueue_timer(
         LPC_NFS_FILE_CLOSE_TIMER,
-        this,
+        &_tracker,
         [this] { close_file(); },
         std::chrono::milliseconds(opts.file_close_timer_interval_ms_on_server));
 
@@ -115,7 +115,7 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
     cp.size = request.size;
 
     auto buffer_save = cp.bb.buffer().get();
-    file::read(hfile, buffer_save, request.size, request.offset, LPC_NFS_READ, this, [
+    file::read(hfile, buffer_save, request.size, request.offset, LPC_NFS_READ, &_tracker, [
         this,
         cp_cap = std::move(cp)
     ](error_code err, int sz) mutable { internal_read_callback(err, sz, cp_cap); });

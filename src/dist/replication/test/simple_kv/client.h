@@ -62,6 +62,7 @@ private:
     std::unique_ptr<simple_kv_client> _simple_kv_client;
     rpc_address _meta_server_group;
     rpc_address _service_addr;
+    dsn::task_tracker _tracker;
 };
 }
 }
