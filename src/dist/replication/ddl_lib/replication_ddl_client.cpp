@@ -419,9 +419,9 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         out << "[App Healthy Info]" << std::endl;
         out << std::setw(10) << std::left << "app_id" << std::setw(max_app_name_size) << std::left
             << "app_name" << std::setw(20) << std::left << "partition_count" << std::setw(20)
-            << std::left << "fully_healthy_num" << std::setw(20) << std::left
-            << "partly_healthy_num" << std::setw(20) << std::left << "unhealthy_num"
-            << std::setw(20) << std::left << "is_app_healthy" << std::endl;
+            << std::left << "fully_healthy" << std::setw(20) << std::left << "unhealthy"
+            << std::setw(20) << std::left << "write_unhealthy" << std::setw(20) << std::left
+            << "read_unhealthy" << std::endl;
         for (auto &info : apps) {
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
@@ -440,7 +440,8 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                     info.partition_count,
                     partition_count);
             int fully_healthy = 0;
-            int partly_healthy = 0;
+            int write_unhealthy = 0;
+            int read_unhealthy = 0;
             for (int i = 0; i < partitions.size(); i++) {
                 const dsn::partition_configuration &p = partitions[i];
                 int replica_count = 0;
@@ -451,16 +452,18 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                 if (!p.primary.is_invalid()) {
                     if (replica_count >= p.max_replica_count)
                         fully_healthy++;
-                    else if (replica_count >= 2)
-                        partly_healthy++;
+                    else if (replica_count < 2)
+                        write_unhealthy++;
+                } else {
+                    write_unhealthy++;
+                    read_unhealthy++;
                 }
             }
-            int unhealthy = info.partition_count - fully_healthy - partly_healthy;
             out << std::setw(10) << std::left << info.app_id << std::setw(max_app_name_size)
                 << std::left << info.app_name << std::setw(20) << std::left << info.partition_count
                 << std::setw(20) << std::left << fully_healthy << std::setw(20) << std::left
-                << partly_healthy << std::setw(20) << std::left << unhealthy << std::setw(20)
-                << std::left << (unhealthy > 0 ? "false" : "true") << std::endl;
+                << (info.partition_count - fully_healthy) << std::setw(20) << std::left
+                << write_unhealthy << std::setw(20) << std::left << read_unhealthy << std::endl;
         }
         out << std::endl << std::flush;
     }
@@ -701,8 +704,9 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
             << "primary" << std::setw(40) << std::left << "secondaries" << std::endl;
         int total_prim_count = 0;
         int total_sec_count = 0;
-        int total_fully_healthy_partition = 0;
-        int total_partly_healthy_partition = 0;
+        int fully_healthy = 0;
+        int write_unhealthy = 0;
+        int read_unhealthy = 0;
         for (int i = 0; i < partitions.size(); i++) {
             const dsn::partition_configuration &p = partitions[i];
             int replica_count = 0;
@@ -715,9 +719,12 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
             total_sec_count += p.secondaries.size();
             if (!p.primary.is_invalid()) {
                 if (replica_count >= p.max_replica_count)
-                    total_fully_healthy_partition++;
-                else if (replica_count >= 2)
-                    total_partly_healthy_partition++;
+                    fully_healthy++;
+                else if (replica_count < 2)
+                    write_unhealthy++;
+            } else {
+                write_unhealthy++;
+                read_unhealthy++;
             }
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
@@ -746,15 +753,15 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
             << std::setw(10) << std::left << total_sec_count << std::setw(10) << std::left
             << total_prim_count + total_sec_count << std::endl;
         out << std::endl;
-        width = strlen("partly_healthy_partition_count");
+        width = strlen("write_unhealthy_partition_count");
         out << std::setw(width) << std::left << "fully_healthy_partition_count"
-            << " : " << total_fully_healthy_partition << std::endl;
-        out << std::setw(width) << std::left << "partly_healthy_partition_count"
-            << " : " << total_partly_healthy_partition << std::endl;
+            << " : " << fully_healthy << std::endl;
         out << std::setw(width) << std::left << "unhealthy_partition_count"
-            << " : "
-            << (partition_count - total_fully_healthy_partition - total_partly_healthy_partition)
-            << std::endl;
+            << " : " << (partition_count - fully_healthy) << std::endl;
+        out << std::setw(width) << std::left << "write_unhealthy_partition_count"
+            << " : " << write_unhealthy << std::endl;
+        out << std::setw(width) << std::left << "read_unhealthy_partition_count"
+            << " : " << read_unhealthy << std::endl;
     }
     out << std::endl;
     return dsn::ERR_OK;
