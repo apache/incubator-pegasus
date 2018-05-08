@@ -3,8 +3,9 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "info_collector.h"
+#include "base/pegasus_utils.h"
+
 #include <dsn/tool-api/group_address.h>
-#include <pegasus_utils.h>
 #include <iostream>
 #include <functional>
 #include <vector>

@@ -5,6 +5,9 @@
 
 namespace dsn {
 namespace apps {
+
+typedef rpc_holder<duplicate_request, duplicate_response> duplicate_rpc;
+
 class rrdb_client : public virtual ::dsn::clientlet
 {
 public:
@@ -19,7 +22,7 @@ public:
     put_sync(const update_request &args,
              std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
              int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is
-                                  // computed from partition_hash
+             // computed from partition_hash
              uint64_t partition_hash = 0,
              dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -40,7 +43,7 @@ public:
                         TCallback &&callback,
                         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                         int request_thread_hash = 0, // if thread_hash == 0 && partition_hash != 0,
-                                                     // thread_hash is computed from partition_hash
+                        // thread_hash is computed from partition_hash
                         uint64_t request_partition_hash = 0,
                         int reply_thread_hash = 0,
                         dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
@@ -106,7 +109,7 @@ public:
     remove_sync(const ::dsn::blob &args,
                 std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                 int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is
-                                     // computed from partition_hash
+                // computed from partition_hash
                 uint64_t partition_hash = 0,
                 dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -127,8 +130,8 @@ public:
                            TCallback &&callback,
                            std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                            int request_thread_hash = 0, // if thread_hash == 0 && partition_hash !=
-                                                        // 0, thread_hash is computed from
-                                                        // partition_hash
+                           // 0, thread_hash is computed from
+                           // partition_hash
                            uint64_t request_partition_hash = 0,
                            int reply_thread_hash = 0,
                            dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
@@ -150,7 +153,7 @@ public:
     multi_remove_sync(const multi_remove_request &args,
                       std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                       int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0,
-                                           // thread_hash is computed from partition_hash
+                      // thread_hash is computed from partition_hash
                       uint64_t partition_hash = 0,
                       dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -171,8 +174,8 @@ public:
                                  TCallback &&callback,
                                  std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                                  int request_thread_hash = 0, // if thread_hash == 0 &&
-                                                              // partition_hash != 0, thread_hash is
-                                                              // computed from partition_hash
+                                 // partition_hash != 0, thread_hash is
+                                 // computed from partition_hash
                                  uint64_t request_partition_hash = 0,
                                  int reply_thread_hash = 0,
                                  dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
@@ -194,7 +197,7 @@ public:
     get_sync(const ::dsn::blob &args,
              std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
              int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is
-                                  // computed from partition_hash
+             // computed from partition_hash
              uint64_t partition_hash = 0,
              dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -215,7 +218,7 @@ public:
                         TCallback &&callback,
                         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                         int request_thread_hash = 0, // if thread_hash == 0 && partition_hash != 0,
-                                                     // thread_hash is computed from partition_hash
+                        // thread_hash is computed from partition_hash
                         uint64_t request_partition_hash = 0,
                         int reply_thread_hash = 0,
                         dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
@@ -237,7 +240,7 @@ public:
     multi_get_sync(const multi_get_request &args,
                    std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                    int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash
-                                        // is computed from partition_hash
+                   // is computed from partition_hash
                    uint64_t partition_hash = 0,
                    dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -258,8 +261,8 @@ public:
                               TCallback &&callback,
                               std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                               int request_thread_hash = 0, // if thread_hash == 0 && partition_hash
-                                                           // != 0, thread_hash is computed from
-                                                           // partition_hash
+                              // != 0, thread_hash is computed from
+                              // partition_hash
                               uint64_t request_partition_hash = 0,
                               int reply_thread_hash = 0,
                               dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
@@ -281,7 +284,7 @@ public:
     sortkey_count_sync(const ::dsn::blob &args,
                        std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                        int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0,
-                                            // thread_hash is computed from partition_hash
+                       // thread_hash is computed from partition_hash
                        uint64_t partition_hash = 0,
                        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -302,8 +305,8 @@ public:
                                   TCallback &&callback,
                                   std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                                   int request_thread_hash = 0, // if thread_hash == 0 &&
-                                                               // partition_hash != 0, thread_hash
-                                                               // is computed from partition_hash
+                                  // partition_hash != 0, thread_hash
+                                  // is computed from partition_hash
                                   uint64_t request_partition_hash = 0,
                                   int reply_thread_hash = 0,
                                   dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
@@ -325,7 +328,7 @@ public:
     ttl_sync(const ::dsn::blob &args,
              std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
              int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is
-                                  // computed from partition_hash
+             // computed from partition_hash
              uint64_t partition_hash = 0,
              dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -346,7 +349,7 @@ public:
                         TCallback &&callback,
                         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                         int request_thread_hash = 0, // if thread_hash == 0 && partition_hash != 0,
-                                                     // thread_hash is computed from partition_hash
+                        // thread_hash is computed from partition_hash
                         uint64_t request_partition_hash = 0,
                         int reply_thread_hash = 0,
                         dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
@@ -368,7 +371,7 @@ public:
     get_scanner_sync(const get_scanner_request &args,
                      std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                      int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash
-                                          // is computed from partition_hash
+                     // is computed from partition_hash
                      uint64_t partition_hash = 0,
                      dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -389,8 +392,8 @@ public:
                                 TCallback &&callback,
                                 std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                                 int request_thread_hash = 0, // if thread_hash == 0 &&
-                                                             // partition_hash != 0, thread_hash is
-                                                             // computed from partition_hash
+                                // partition_hash != 0, thread_hash is
+                                // computed from partition_hash
                                 uint64_t request_partition_hash = 0,
                                 int reply_thread_hash = 0,
                                 dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
@@ -412,7 +415,7 @@ public:
     scan_sync(const scan_request &args,
               std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
               int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0, thread_hash is
-                                   // computed from partition_hash
+              // computed from partition_hash
               uint64_t partition_hash = 0,
               dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -433,7 +436,7 @@ public:
                          TCallback &&callback,
                          std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
                          int request_thread_hash = 0, // if thread_hash == 0 && partition_hash != 0,
-                                                      // thread_hash is computed from partition_hash
+                         // thread_hash is computed from partition_hash
                          uint64_t request_partition_hash = 0,
                          int reply_thread_hash = 0,
                          dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
@@ -452,7 +455,7 @@ public:
     // ---------- call RPC_RRDB_RRDB_CLEAR_SCANNER ------------
     void clear_scanner(const int64_t &args,
                        int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0,
-                                            // thread_hash is computed from partition_hash
+                       // thread_hash is computed from partition_hash
                        uint64_t partition_hash = 0,
                        dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
@@ -461,6 +464,15 @@ public:
                                        args,
                                        thread_hash,
                                        partition_hash);
+    }
+
+    // ---------- call RPC_RRDB_RRDB_DUPLICATE ------------
+
+    // - asynchronous with on-stack duplicate_request and duplicate_response
+    template <typename TCallback>
+    task_ptr duplicate(duplicate_rpc &rpc, TCallback &&callback, int reply_thread_hash = 0)
+    {
+        return rpc.call(_server, this, callback, reply_thread_hash);
     }
 
 private:
