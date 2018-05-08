@@ -3155,7 +3155,8 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    size_t first_column_width = 15;
+    size_t w = 12;
+    size_t first_column_width = w;
     if (app_name.empty()) {
         for (row_data &row : rows) {
             first_column_width = std::max(first_column_width, row.row_name.size() + 2);
@@ -3164,13 +3165,13 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     } else {
         out << std::setw(first_column_width) << std::left << "pidx";
     }
-    out << std::setw(15) << std::right << "GET" << std::setw(15) << std::right << "MULTI_GET"
-        << std::setw(15) << std::right << "PUT" << std::setw(15) << std::right << "MULTI_PUT"
-        << std::setw(15) << std::right << "REMOVE" << std::setw(15) << std::right << "MULTI_REMOVE"
-        << std::setw(15) << std::right << "SCAN" << std::setw(15) << std::right << "expire_count"
-        << std::setw(15) << std::right << "filter_count" << std::setw(15) << std::right
-        << "abmornal_count" << std::setw(15) << std::right << "storage(MB)" << std::setw(15)
-        << std::right << "sst_count" << std::endl;
+    out << std::setw(w) << std::right << "GET" << std::setw(w) << std::right << "MULTI_GET"
+        << std::setw(w) << std::right << "PUT" << std::setw(w) << std::right << "MULTI_PUT"
+        << std::setw(w) << std::right << "DEL" << std::setw(w) << std::right << "MULTI_DEL"
+        << std::setw(w) << std::right << "SCAN" << std::setw(w) << std::right << "expired"
+        << std::setw(w) << std::right << "filtered" << std::setw(w) << std::right << "abnormal"
+        << std::setw(w) << std::right << "storage_mb" << std::setw(w) << std::right << "file_count"
+        << std::endl;
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
     for (int i = 0; i < rows.size() - 1; ++i) {
@@ -3191,9 +3192,9 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
 #define PRINT_QPS(field)                                                                           \
     do {                                                                                           \
         if (row.field == 0)                                                                        \
-            out << std::setw(15) << std::right << 0;                                               \
+            out << std::setw(w) << std::right << 0;                                                \
         else                                                                                       \
-            out << std::setw(15) << std::right << row.field;                                       \
+            out << std::setw(w) << std::right << row.field;                                        \
     } while (0)
     for (row_data &row : rows) {
         out << std::setw(first_column_width) << std::left << row.row_name << std::fixed
@@ -3205,10 +3206,10 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         PRINT_QPS(remove_qps);
         PRINT_QPS(multi_remove_qps);
         PRINT_QPS(scan_qps);
-        out << std::setw(15) << std::right << (int64_t)row.recent_expire_count << std::setw(15)
-            << std::right << (int64_t)row.recent_filter_count << std::setw(15) << std::right
-            << (int64_t)row.recent_abnormal_count << std::setw(15) << std::right
-            << (int64_t)row.storage_mb << std::setw(15) << std::right << (int64_t)row.storage_count
+        out << std::setw(w) << std::right << (int64_t)row.recent_expire_count << std::setw(w)
+            << std::right << (int64_t)row.recent_filter_count << std::setw(w) << std::right
+            << (int64_t)row.recent_abnormal_count << std::setw(w) << std::right
+            << (int64_t)row.storage_mb << std::setw(w) << std::right << (int64_t)row.storage_count
             << std::endl;
     }
 #undef PRINT_QPS

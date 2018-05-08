@@ -28,6 +28,10 @@ namespace server {
 // not to be applied to rocksdb, they may be deserialized.
 DEFINE_TASK_CODE_RPC(RPC_RRDB_RRDB_INCR, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
+DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
+DEFINE_TASK_CODE(LPC_UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION_LONG)
+
 static std::string chkpt_get_dir_name(int64_t decree)
 {
     char buffer[256];
@@ -1036,7 +1040,6 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
     reply(resp);
 }
 
-DEFINE_TASK_CODE(LOCAL_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request &request,
                                          ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
 {
@@ -1203,8 +1206,8 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         // if the context is used, it will be fetched and re-put into cache,
         // which will change the handle,
         // then the delayed task will fetch null context by old handle, and do nothing.
-        ::dsn::tasking::enqueue(LOCAL_PEGASUS_SERVER_DELAY,
-                                this,
+        ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
+                                &_tracker,
                                 [this, handle]() { _context_cache.fetch(handle); },
                                 0,
                                 std::chrono::minutes(5));
@@ -1313,8 +1316,8 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
             // scan not completed
             int64_t handle = _context_cache.put(std::move(context));
             resp.context_id = handle;
-            ::dsn::tasking::enqueue(LOCAL_PEGASUS_SERVER_DELAY,
-                                    this,
+            ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
+                                    &_tracker,
                                     [this, handle]() { _context_cache.fetch(handle); },
                                     0,
                                     std::chrono::minutes(5));
@@ -1338,8 +1341,6 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
 }
 
 void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache.fetch(args); }
-
-DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION_LONG)
 
 ::dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 {
@@ -1490,10 +1491,9 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
         _is_open = true;
 
         dinfo("%s: start the updating sstsize timer task", replica_name());
-        // using ::dsn::timer_task to updating the rocksdb sstsize.
-        _updating_task = ::dsn::tasking::enqueue_timer(
-            UPDATING_ROCKSDB_SSTSIZE,
-            this,
+        ::dsn::tasking::enqueue_timer(
+            LPC_UPDATING_ROCKSDB_SSTSIZE,
+            &_tracker,
             [this]() { this->updating_rocksdb_sstsize(); },
             std::chrono::seconds(_updating_rocksdb_sstsize_interval_seconds),
             0,
@@ -1527,10 +1527,8 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
     }
 
     _context_cache.clear();
-
-    // when stop the, should stop the timer_task.
-    if (_updating_task != nullptr)
-        _updating_task->cancel(true);
+    // stop all tracked tasks when pegasus server is stopped.
+    _tracker.cancel_outstanding_tasks();
 
     _is_open = false;
     delete _db;
