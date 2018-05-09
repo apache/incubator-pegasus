@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "info_collector.h"
+#include <dsn/tool-api/group_address.h>
 #include <pegasus_utils.h>
 #include <iostream>
 #include <functional>
@@ -26,9 +27,9 @@ info_collector::info_collector()
     std::vector<::dsn::rpc_address> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
 
-    _meta_servers.assign_group(dsn_group_build("meta-servers"));
+    _meta_servers.assign_group("meta-servers");
     for (auto &ms : meta_servers) {
-        dsn_group_add(_meta_servers.group_handle(), ms.c_addr());
+        _meta_servers.group_address()->add(ms);
     }
 
     _cluster_name = dsn_config_get_value_string("pegasus.collector", "cluster", "", "cluster name");
@@ -46,17 +47,17 @@ info_collector::info_collector()
 
 info_collector::~info_collector()
 {
+    _tracker.cancel_outstanding_tasks();
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
-    dsn_group_destroy(_meta_servers.group_handle());
 }
 
 void info_collector::start()
 {
     _app_stat_timer_task =
         ::dsn::tasking::enqueue_timer(LPC_PEGASUS_APP_STAT_TIMER,
-                                      this,
+                                      &_tracker,
                                       [this] { on_app_stat(); },
                                       std::chrono::milliseconds(_app_stat_interval_seconds),
                                       0,
@@ -104,6 +105,7 @@ void info_collector::on_app_stat()
             counters->scan_qps->set(row.scan_qps);
             counters->recent_expire_count->set(row.recent_expire_count);
             counters->recent_filter_count->set(row.recent_filter_count);
+            counters->recent_abnormal_count->set(row.recent_abnormal_count);
             counters->storage_mb->set(row.storage_mb);
             counters->storage_count->set(row.storage_count);
             counters->read_qps->set(read_qps[i]);
@@ -144,6 +146,7 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNER(scan_qps);
     INIT_COUNER(recent_expire_count);
     INIT_COUNER(recent_filter_count);
+    INIT_COUNER(recent_abnormal_count);
     INIT_COUNER(storage_mb);
     INIT_COUNER(storage_count);
     INIT_COUNER(read_qps);

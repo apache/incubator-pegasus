@@ -417,7 +417,6 @@ function run_start_onebox()
                 ;;
             --use_product_config)
                 USE_PRODUCT_CONFIG=true
-                shift
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -1130,7 +1129,7 @@ function run_start_upgrade_test()
     cd $ROOT
     CONFIG=config-upgrade-test.ini
 
-    sed "s/@LOCAL_IP@/`hostname -i`/g;\
+    sed "s/@LOCAL_IP@/${LOCAL_IP}/g;\
 s/@META_COUNT@/${META_COUNT}/g;\
 s/@REPLICA_COUNT@/${REPLICA_COUNT}/g;\
 s/@ZK_COUNT@/1/g;s/@APP_NAME@/${APP_NAME}/g;\

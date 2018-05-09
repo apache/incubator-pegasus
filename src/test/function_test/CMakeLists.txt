@@ -16,7 +16,9 @@ set(MY_BOOST_PACKAGES "system")
 set(MY_PROJ_LIBS
     dsn.replication.ddlclient
     dsn.replication.clientlib
-    pegasus_client_static)
+    pegasus_client_static
+    fmt
+    )
 
 if (UNIX)
     set(MY_PROJ_LIBS ${MY_PROJ_LIBS} gtest pthread)

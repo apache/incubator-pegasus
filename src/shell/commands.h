@@ -20,6 +20,7 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 #include <rrdb/rrdb.code.definition.h>
+#include <rrdb/rrdb.types.h>
 #include <dsn/tool/cli/cli.client.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
@@ -238,6 +239,7 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"partition_count", required_argument, 0, 'p'},
                                            {"replica_count", required_argument, 0, 'r'},
+                                           {"envs", required_argument, 0, 'e'},
                                            {0, 0, 0, 0}};
 
     if (args.argc < 2)
@@ -246,11 +248,12 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
     std::string app_name = args.argv[1];
 
     int pc = 4, rc = 3;
+    std::map<std::string, std::string> envs;
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "p:r:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "p:r:e:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -266,12 +269,17 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
                 return false;
             }
             break;
+        case 'e':
+            if (!::dsn::utils::parse_kv_map(optarg, envs, ',', '=')) {
+                fprintf(stderr, "invalid envs: %s\n", optarg);
+                return false;
+            }
+            break;
         default:
             return false;
         }
     }
 
-    std::map<std::string, std::string> envs;
     ::dsn::error_code err = sc->ddl_client->create_app(app_name, "pegasus", pc, rc, envs, false);
     if (err == ::dsn::ERR_OK)
         std::cout << "create app " << app_name << " succeed" << std::endl;
@@ -1170,7 +1178,7 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
         case 'o':
             file = fopen(optarg, "w");
             if (!file) {
-                fprintf(stderr, "open filename %s failed", optarg);
+                fprintf(stderr, "open filename %s failed\n", optarg);
                 return false;
             }
             break;
@@ -1402,7 +1410,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             file = fopen(optarg, "w");
             if (!file) {
-                fprintf(stderr, "open filename %s failed", optarg);
+                fprintf(stderr, "open filename %s failed\n", optarg);
                 return false;
             }
             break;
@@ -1584,7 +1592,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             file = fopen(optarg, "w");
             if (!file) {
-                fprintf(stderr, "open filename %s failed", optarg);
+                fprintf(stderr, "open filename %s failed\n", optarg);
                 return false;
             }
             break;
@@ -3150,7 +3158,8 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    size_t first_column_width = 15;
+    size_t w = 12;
+    size_t first_column_width = w;
     if (app_name.empty()) {
         for (row_data &row : rows) {
             first_column_width = std::max(first_column_width, row.row_name.size() + 2);
@@ -3159,12 +3168,13 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     } else {
         out << std::setw(first_column_width) << std::left << "pidx";
     }
-    out << std::setw(15) << std::right << "GET" << std::setw(15) << std::right << "MULTI_GET"
-        << std::setw(15) << std::right << "PUT" << std::setw(15) << std::right << "MULTI_PUT"
-        << std::setw(15) << std::right << "REMOVE" << std::setw(15) << std::right << "MULTI_REMOVE"
-        << std::setw(15) << std::right << "SCAN" << std::setw(15) << std::right << "expire_count"
-        << std::setw(15) << std::right << "filter_count" << std::setw(15) << std::right
-        << "storage(MB)" << std::setw(15) << std::right << "sst_count" << std::endl;
+    out << std::setw(w) << std::right << "GET" << std::setw(w) << std::right << "MULTI_GET"
+        << std::setw(w) << std::right << "PUT" << std::setw(w) << std::right << "MULTI_PUT"
+        << std::setw(w) << std::right << "DEL" << std::setw(w) << std::right << "MULTI_DEL"
+        << std::setw(w) << std::right << "SCAN" << std::setw(w) << std::right << "expired"
+        << std::setw(w) << std::right << "filtered" << std::setw(w) << std::right << "abnormal"
+        << std::setw(w) << std::right << "storage_mb" << std::setw(w) << std::right << "file_count"
+        << std::endl;
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
     for (int i = 0; i < rows.size() - 1; ++i) {
@@ -3178,15 +3188,16 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.scan_qps += row.scan_qps;
         sum.recent_expire_count += row.recent_expire_count;
         sum.recent_filter_count += row.recent_filter_count;
+        sum.recent_abnormal_count += row.recent_abnormal_count;
         sum.storage_mb += row.storage_mb;
         sum.storage_count += row.storage_count;
     }
 #define PRINT_QPS(field)                                                                           \
     do {                                                                                           \
         if (row.field == 0)                                                                        \
-            out << std::setw(15) << std::right << 0;                                               \
+            out << std::setw(w) << std::right << 0;                                                \
         else                                                                                       \
-            out << std::setw(15) << std::right << row.field;                                       \
+            out << std::setw(w) << std::right << row.field;                                        \
     } while (0)
     for (row_data &row : rows) {
         out << std::setw(first_column_width) << std::left << row.row_name << std::fixed
@@ -3198,9 +3209,10 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         PRINT_QPS(remove_qps);
         PRINT_QPS(multi_remove_qps);
         PRINT_QPS(scan_qps);
-        out << std::setw(15) << std::right << (int64_t)row.recent_expire_count << std::setw(15)
-            << std::right << (int64_t)row.recent_filter_count << std::setw(15) << std::right
-            << (int64_t)row.storage_mb << std::setw(15) << std::right << (int64_t)row.storage_count
+        out << std::setw(w) << std::right << (int64_t)row.recent_expire_count << std::setw(w)
+            << std::right << (int64_t)row.recent_filter_count << std::setw(w) << std::right
+            << (int64_t)row.recent_abnormal_count << std::setw(w) << std::right
+            << (int64_t)row.storage_mb << std::setw(w) << std::right << (int64_t)row.storage_count
             << std::endl;
     }
 #undef PRINT_QPS
@@ -3290,10 +3302,8 @@ inline bool restore(command_executor *e, shell_context *sc, arguments args)
                                                        skip_bad_partition);
     if (err != ::dsn::ERR_OK) {
         fprintf(stderr, "restore app failed with err(%s)\n", err.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool query_restore_status(command_executor *e, shell_context *sc, arguments args)
@@ -3305,7 +3315,7 @@ inline bool query_restore_status(command_executor *e, shell_context *sc, argumen
 
     int32_t restore_app_id = boost::lexical_cast<int32_t>(args.argv[1]);
     if (restore_app_id <= 0) {
-        fprintf(stderr, "invalid restore_app_id(%d)", restore_app_id);
+        fprintf(stderr, "invalid restore_app_id(%d)\n", restore_app_id);
         return false;
     }
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'}, {0, 0, 0, 0}};
@@ -3332,10 +3342,8 @@ inline bool query_restore_status(command_executor *e, shell_context *sc, argumen
                 "query restore status failed, restore_app_id(%d), err = %s\n",
                 restore_app_id,
                 ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
@@ -3437,10 +3445,8 @@ inline bool add_backup_policy(command_executor *e, shell_context *sc, arguments 
                                                               start_time);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "add backup policy failed, err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
@@ -3475,7 +3481,7 @@ inline bool query_backup_policy(command_executor *e, shell_context *sc, argument
             ::dsn::utils::split_args(optarg, names, ',');
             for (const auto &policy_name : names) {
                 if (policy_name.empty()) {
-                    fprintf(stderr, "invalid, empty policy_name, just ignore");
+                    fprintf(stderr, "invalid, empty policy_name, just ignore\n");
                     continue;
                 } else {
                     policy_names.emplace_back(policy_name);
@@ -3494,33 +3500,29 @@ inline bool query_backup_policy(command_executor *e, shell_context *sc, argument
         }
     }
     if (policy_names.empty()) {
-        fprintf(stderr, "empty policy_name, please assign policy_name you want to query");
+        fprintf(stderr, "empty policy_name, please assign policy_name you want to query\n");
         return false;
     }
     ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "query backup policy failed, err = %s\n", ret.to_string());
-        return false;
     } else {
         std::cout << std::endl << "query backup policy succeed" << std::endl;
-        return true;
     }
+    return true;
 }
 
 inline bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"add_app", required_argument, 0, 'a'},
+    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
+                                           {"add_app", required_argument, 0, 'a'},
                                            {"remove_app", required_argument, 0, 'r'},
                                            {"backup_interval_seconds", required_argument, 0, 'i'},
                                            {"backup_history_count", required_argument, 0, 'c'},
                                            {"start_time", required_argument, 0, 's'},
                                            {0, 0, 0, 0}};
-    if (args.argc < 2) {
-        fprintf(stderr, "invalid parameter\n");
-        return false;
-    }
 
-    std::string policy_name = args.argv[1];
+    std::string policy_name;
     std::vector<int32_t> add_appids;
     std::vector<int32_t> remove_appids;
     int64_t backup_interval_seconds = 0;
@@ -3528,19 +3530,17 @@ inline bool modify_backup_policy(command_executor *e, shell_context *sc, argumen
     std::string start_time;
     std::vector<std::string> app_id_strs;
 
-    if (policy_name.empty()) {
-        fprintf(stderr, "empty policy name\n");
-        return false;
-    }
-
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "a:r:i:c:s:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "p:a:r:i:c:s:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
+        case 'p':
+            policy_name = optarg;
+            break;
         case 'a':
             app_id_strs.clear();
             ::dsn::utils::split_args(optarg, app_id_strs, ',');
@@ -3591,6 +3591,11 @@ inline bool modify_backup_policy(command_executor *e, shell_context *sc, argumen
         }
     }
 
+    if (policy_name.empty()) {
+        fprintf(stderr, "empty policy name\n");
+        return false;
+    }
+
     if (!start_time.empty()) {
         int32_t hour = 0, min = 0;
         if (sscanf(start_time.c_str(), "%d:%d", &hour, &min) != 2 || hour > 24 || hour < 0 ||
@@ -3610,20 +3615,31 @@ inline bool modify_backup_policy(command_executor *e, shell_context *sc, argumen
                                                                start_time);
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "modify backup policy failed, with err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool disable_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    if (args.argc != 2) {
-        fprintf(stderr, "invalid parameter\n");
-        return false;
-    }
+    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
+                                           {0, 0, 0, 0}};
 
-    std::string policy_name = args.argv[1];
+    std::string policy_name;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "p:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'p':
+            policy_name = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
 
     if (policy_name.empty()) {
         fprintf(stderr, "empty policy name\n");
@@ -3633,20 +3649,30 @@ inline bool disable_backup_policy(command_executor *e, shell_context *sc, argume
     ::dsn::error_code ret = sc->ddl_client->disable_backup_policy(policy_name);
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "disable backup policy failed, with err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool enable_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    if (args.argc != 2) {
-        fprintf(stderr, "invalid parameter\n");
-        return false;
+    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
+                                           {0, 0, 0, 0}};
+    std::string policy_name;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "p:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'p':
+            policy_name = optarg;
+            break;
+        default:
+            return false;
+        }
     }
-
-    std::string policy_name = args.argv[1];
 
     if (policy_name.empty()) {
         fprintf(stderr, "empty policy name\n");
@@ -3656,14 +3682,109 @@ inline bool enable_backup_policy(command_executor *e, shell_context *sc, argumen
     ::dsn::error_code ret = sc->ddl_client->enable_backup_policy(policy_name);
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "enable backup policy failed, with err = %s\n", ret.to_string());
-        return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 inline bool exit_shell(command_executor *e, shell_context *sc, arguments args)
 {
     dsn_exit(0);
+    return true;
+}
+
+inline bool set_app_envs(command_executor *e, shell_context *sc, arguments args)
+{
+    if (sc->current_app_name.empty()) {
+        fprintf(stderr, "No app is using now\nUSAGE: use [app_name]\n");
+        return true;
+    }
+
+    if (args.argc < 3) {
+        return false;
+    }
+
+    if (((args.argc - 1) & 0x01) == 1) {
+        // key & value count must equal 2*n(n >= 1)
+        fprintf(stderr, "need speficy the value for key = %s\n", args.argv[args.argc - 1]);
+        return true;
+    }
+    std::vector<std::string> keys;
+    std::vector<std::string> values;
+    int idx = 1;
+    while (idx < args.argc) {
+        keys.emplace_back(args.argv[idx++]);
+        values.emplace_back(args.argv[idx++]);
+    }
+
+    ::dsn::error_code ret = sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
+
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "set app env failed with err = %s\n", ret.to_string());
+    }
+    return true;
+}
+
+inline bool del_app_envs(command_executor *e, shell_context *sc, arguments args)
+{
+    if (sc->current_app_name.empty()) {
+        fprintf(stderr, "No app is using now\nUSAGE: use [app_name]\n");
+        return true;
+    }
+
+    if (args.argc <= 1) {
+        return false;
+    }
+
+    std::vector<std::string> keys;
+    for (int idx = 1; idx < args.argc; idx++) {
+        keys.emplace_back(args.argv[idx]);
+    }
+
+    ::dsn::error_code ret = sc->ddl_client->del_app_envs(sc->current_app_name, keys);
+
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "del app env failed with err = %s\n", ret.to_string());
+    }
+    return true;
+}
+
+inline bool clear_app_envs(command_executor *e, shell_context *sc, arguments args)
+{
+    if (sc->current_app_name.empty()) {
+        fprintf(stderr, "No app is using now\nUSAGE: use [app_name]\n");
+        return true;
+    }
+
+    static struct option long_options[] = {
+        {"all", no_argument, 0, 'a'}, {"prefix", required_argument, 0, 'p'}, {0, 0, 0, 0}};
+
+    bool clear_all = false;
+    std::string prefix;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "ap:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'a':
+            clear_all = true;
+            break;
+        case 'p':
+            prefix = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+    if (!clear_all && prefix.empty()) {
+        fprintf(stderr, "must specify one of --all and --prefix options\n");
+        return false;
+    }
+    ::dsn::error_code ret = sc->ddl_client->clear_app_envs(sc->current_app_name, clear_all, prefix);
+    if (ret != dsn::ERR_OK) {
+        fprintf(stderr, "clear app envs failed with err = %s\n", ret.to_string());
+    }
     return true;
 }

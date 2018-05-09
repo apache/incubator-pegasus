@@ -31,6 +31,7 @@ set(MY_PROJ_LIBS
     PocoNetSSL
     PocoJSON
     crypto
+    fmt
     )
 
 if (UNIX)

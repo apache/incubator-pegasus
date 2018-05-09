@@ -3,10 +3,11 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_server_impl.h"
+#include <pegasus_const.h>
 #include <pegasus_key_schema.h>
 #include <pegasus_value_schema.h>
 #include <pegasus_utils.h>
-#include <dsn/cpp/smart_pointers.h>
+#include <dsn/utility/smart_pointers.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <rocksdb/utilities/checkpoint.h>
@@ -23,6 +24,10 @@ namespace server {
 // not to be applied to rocksdb, they may be deserialized.
 DEFINE_TASK_CODE_RPC(RPC_RRDB_RRDB_INCR, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
+DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
+DEFINE_TASK_CODE(LPC_UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION_LONG)
+
 static std::string chkpt_get_dir_name(int64_t decree)
 {
     char buffer[256];
@@ -38,6 +43,7 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
+      _usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL),
       _db(nullptr),
       _is_open(false),
       _value_schema_version(0),
@@ -61,22 +67,23 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "rocksdb_abnormal_get_size_threshold",
         0,
         "rocksdb_abnormal_get_size_threshold, default is 0, means no check");
+    _abnormal_multi_get_time_threshold_ns = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_abnormal_multi_get_time_threshold_ns",
+        0,
+        "rocksdb_abnormal_multi_get_time_threshold_ns, default is 0, means no check");
+    _abnormal_multi_get_size_threshold = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_abnormal_multi_get_size_threshold",
+        0,
+        "rocksdb_abnormal_multi_get_size_threshold, default is 0, means no check");
+    _abnormal_multi_get_iterate_count_threshold = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_abnormal_multi_get_iterate_count_threshold",
+        0,
+        "rocksdb_abnormal_multi_get_iterate_count_threshold, default is 0, means no check");
 
     // init db options
-
-    // rocksdb default: snappy
-    std::string compression_str = dsn_config_get_value_string(
-        "pegasus.server",
-        "rocksdb_compression_type",
-        "none",
-        "rocksdb options.compression, default none. Supported: snappy, none.");
-    if (compression_str == "none") {
-        _db_opts.compression = rocksdb::kNoCompression;
-    } else if (compression_str == "snappy") {
-        _db_opts.compression = rocksdb::kSnappyCompression;
-    } else {
-        dassert("unsupported compression type: %s", compression_str.c_str());
-    }
 
     // rocksdb default: 4MB
     _db_opts.write_buffer_size =
@@ -87,27 +94,29 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     // rocksdb default: 2
     _db_opts.max_write_buffer_number =
-        (int)dsn_config_get_value_uint64("pegasus.server",
-                                         "rocksdb_max_write_buffer_number",
-                                         4,
-                                         "rocksdb options.max_write_buffer_number, default 4");
+        (int)dsn_config_get_value_int64("pegasus.server",
+                                        "rocksdb_max_write_buffer_number",
+                                        6,
+                                        "rocksdb options.max_write_buffer_number, default 6");
 
-    // rocksdb default: 1
+    // rocksdb default: -1
+    // flush threads are shared among all rocksdb instances in one process.
     _db_opts.max_background_flushes =
-        (int)dsn_config_get_value_uint64("pegasus.server",
-                                         "rocksdb_max_background_flushes",
-                                         1,
-                                         "rocksdb options.max_background_flushes, default 1");
+        (int)dsn_config_get_value_int64("pegasus.server",
+                                        "rocksdb_max_background_flushes",
+                                        4,
+                                        "rocksdb options.max_background_flushes, default 4");
 
-    // rocksdb default: 1
+    // rocksdb default: -1
+    // compaction threads are shared among all rocksdb instances in one process.
     _db_opts.max_background_compactions =
-        (int)dsn_config_get_value_uint64("pegasus.server",
-                                         "rocksdb_max_background_compactions",
-                                         2,
-                                         "rocksdb options.max_background_compactions, default 2");
+        (int)dsn_config_get_value_int64("pegasus.server",
+                                        "rocksdb_max_background_compactions",
+                                        12,
+                                        "rocksdb options.max_background_compactions, default 12");
 
     // rocksdb default: 7
-    _db_opts.num_levels = dsn_config_get_value_uint64(
+    _db_opts.num_levels = (int)dsn_config_get_value_int64(
         "pegasus.server", "rocksdb_num_levels", 6, "rocksdb options.num_levels, default 6");
 
     // rocksdb default: 2MB
@@ -117,6 +126,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     64 * 1024 * 1024,
                                     "rocksdb options.target_file_size_base, default 64MB");
 
+    // rocksdb default: 1
+    _db_opts.target_file_size_multiplier =
+        (int)dsn_config_get_value_int64("pegasus.server",
+                                        "rocksdb_target_file_size_multiplier",
+                                        1,
+                                        "rocksdb options.target_file_size_multiplier, default 1");
+
     // rocksdb default: 10MB
     _db_opts.max_bytes_for_level_base =
         dsn_config_get_value_uint64("pegasus.server",
@@ -124,23 +140,25 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     10 * 64 * 1024 * 1024,
                                     "rocksdb options.max_bytes_for_level_base, default 640MB");
 
-// Deprecated
-//    // rocksdb default: 10
-//    _db_opts.max_grandparent_overlap_factor = (int)dsn_config_get_value_uint64(
-//        "pegasus.server",
-//        "rocksdb_max_grandparent_overlap_factor",
-//        10,
-//        "rocksdb options.max_grandparent_overlap_factor, default 10");
+    // rocksdb default: 10
+    _db_opts.max_bytes_for_level_multiplier = dsn_config_get_value_double(
+        "pegasus.server",
+        "rocksdb_max_bytes_for_level_multiplier",
+        10,
+        "rocksdb options.rocksdb_max_bytes_for_level_multiplier, default 10");
+
+    // we need set max_compaction_bytes definitely because set_usage_scenario() depends on it.
+    _db_opts.max_compaction_bytes = _db_opts.target_file_size_base * 25;
 
     // rocksdb default: 4
     _db_opts.level0_file_num_compaction_trigger =
-        (int)dsn_config_get_value_uint64("pegasus.server",
-                                         "rocksdb_level0_file_num_compaction_trigger",
-                                         10,
-                                         "rocksdb options.level0_file_num_compaction_trigger, 10");
+        (int)dsn_config_get_value_int64("pegasus.server",
+                                        "rocksdb_level0_file_num_compaction_trigger",
+                                        4,
+                                        "rocksdb options.level0_file_num_compaction_trigger, 4");
 
     // rocksdb default: 20
-    _db_opts.level0_slowdown_writes_trigger = (int)dsn_config_get_value_uint64(
+    _db_opts.level0_slowdown_writes_trigger = (int)dsn_config_get_value_int64(
         "pegasus.server",
         "rocksdb_level0_slowdown_writes_trigger",
         30,
@@ -148,21 +166,47 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     // rocksdb default: 24
     _db_opts.level0_stop_writes_trigger =
-        (int)dsn_config_get_value_uint64("pegasus.server",
-                                         "rocksdb_level0_stop_writes_trigger",
-                                         60,
-                                         "rocksdb options.level0_stop_writes_trigger, default 60");
+        (int)dsn_config_get_value_int64("pegasus.server",
+                                        "rocksdb_level0_stop_writes_trigger",
+                                        60,
+                                        "rocksdb options.level0_stop_writes_trigger, default 60");
 
     // disable table block cache, default: false
-    if ((bool)dsn_config_get_value_bool(
-            "pegasus.server",
-            "rocksdb_disable_table_block_cache",
-            false,
-            "rocksdb options.disable_table_block_cache, default false")) {
+    if (dsn_config_get_value_bool("pegasus.server",
+                                  "rocksdb_disable_table_block_cache",
+                                  false,
+                                  "rocksdb options.disable_table_block_cache, default false")) {
         rocksdb::BlockBasedTableOptions table_options;
         table_options.no_block_cache = true;
         table_options.block_restart_interval = 4;
         _db_opts.table_factory.reset(NewBlockBasedTableFactory(table_options));
+    }
+
+    // rocksdb default: snappy
+    std::string compression_str = dsn_config_get_value_string(
+        "pegasus.server",
+        "rocksdb_compression_type",
+        "snappy",
+        "rocksdb options.compression, default snappy. Supported: none, snappy.");
+    if (compression_str == "none") {
+        _db_opts.compression = rocksdb::kNoCompression;
+    } else if (compression_str == "snappy") {
+        _db_opts.compression = rocksdb::kSnappyCompression;
+    } else {
+        dassert("unsupported compression type: %s", compression_str.c_str());
+    }
+
+    if (_db_opts.compression != rocksdb::kNoCompression) {
+        // only compress levels >= 2
+        // refer to ColumnFamilyOptions::OptimizeLevelStyleCompaction()
+        _db_opts.compression_per_level.resize(_db_opts.num_levels);
+        for (int i = 0; i < _db_opts.num_levels; ++i) {
+            if (i < 2) {
+                _db_opts.compression_per_level[i] = rocksdb::kNoCompression;
+            } else {
+                _db_opts.compression_per_level[i] = _db_opts.compression;
+            }
+        }
     }
 
     // disable write ahead logging as replication handles logging instead now
@@ -174,8 +218,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _checkpoint_reserve_time_seconds =
         (uint32_t)dsn_config_get_value_uint64("pegasus.server",
                                               "checkpoint_reserve_time_seconds",
-                                              3600,
-                                              "checkpoint_reserve_time_seconds");
+                                              0,
+                                              "checkpoint_reserve_time_seconds, 0 means no check");
 
     // get the _updating_sstsize_inteval_seconds.
     _updating_rocksdb_sstsize_interval_seconds =
@@ -271,6 +315,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                               COUNTER_TYPE_VOLATILE_NUMBER,
                                               "statistic the recent filtered value read count");
 
+    snprintf(buf, 255, "recent.abnormal.count@%s", str_gpid);
+    _pfc_recent_abnormal_count.init_app_counter("app.pegasus",
+                                                buf,
+                                                COUNTER_TYPE_VOLATILE_NUMBER,
+                                                "statistic the recent abnormal read count");
+
     snprintf(buf, 255, "disk.storage.sst.count@%s", str_gpid);
     _pfc_sst_count.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
@@ -330,23 +380,26 @@ void pegasus_server_impl::gc_checkpoints()
         if (i + _checkpoint_reserve_min_count >= temp_list.size())
             break;
         int64_t d = temp_list[i];
-        // we check last write time of "CURRENT" instead of directory, because the directory's
-        // last write time may be updated by previous incompleted garbage collection.
-        auto cpt_dir = ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(d));
-        auto current_file = ::dsn::utils::filesystem::path_combine(cpt_dir, "CURRENT");
-        if (!::dsn::utils::filesystem::file_exists(current_file)) {
-            max_del_d = d;
-            continue;
-        }
-        time_t tm;
-        if (!dsn::utils::filesystem::last_write_time(current_file, tm)) {
-            dwarn("get last write time of file %s failed", current_file.c_str());
-            break;
-        }
-        uint64_t last_write_time = (uint64_t)tm;
-        if (last_write_time + _checkpoint_reserve_time_seconds >= current_time) {
-            // not expired
-            break;
+        if (_checkpoint_reserve_time_seconds > 0) {
+            // we check last write time of "CURRENT" instead of directory, because the directory's
+            // last write time may be updated by previous incompleted garbage collection.
+            auto cpt_dir =
+                ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(d));
+            auto current_file = ::dsn::utils::filesystem::path_combine(cpt_dir, "CURRENT");
+            if (!::dsn::utils::filesystem::file_exists(current_file)) {
+                max_del_d = d;
+                continue;
+            }
+            time_t tm;
+            if (!dsn::utils::filesystem::last_write_time(current_file, tm)) {
+                dwarn("get last write time of file %s failed", current_file.c_str());
+                break;
+            }
+            uint64_t last_write_time = (uint64_t)tm;
+            if (last_write_time + _checkpoint_reserve_time_seconds >= current_time) {
+                // not expired
+                break;
+            }
         }
         max_del_d = d;
     }
@@ -443,7 +496,7 @@ void pegasus_server_impl::gc_checkpoints()
 }
 
 int pegasus_server_impl::on_batched_write_requests(int64_t decree,
-                                                   int64_t timestamp,
+                                                   uint64_t timestamp,
                                                    dsn_message_t *requests,
                                                    int count)
 {
@@ -469,8 +522,10 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 
         if (update.kvs.empty()) {
             // invalid argument
-            derror("%s: invalid argument for multi_put: decree = %" PRId64 ", error = empty kvs",
+            derror("%s: invalid argument for multi_put from %s: "
+                   "decree = %" PRId64 ", error = empty kvs",
                    replica_name(),
+                   dsn_msg_from_address(request).to_string(),
                    decree);
 
             ::dsn::rpc_replier<::dsn::apps::update_response> replier(
@@ -502,8 +557,10 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
         _wt_opts.given_decree = decree;
         rocksdb::Status status = _db->Write(_wt_opts, &_batch);
         if (!status.ok()) {
-            derror("%s: rocksdb write failed for multi_put: decree = %" PRId64 ", error = %s",
+            derror("%s: rocksdb write failed for multi_put from %s: "
+                   "decree = %" PRId64 ", error = %s",
                    replica_name(),
+                   dsn_msg_from_address(request).to_string(),
                    decree,
                    status.ToString().c_str());
             _physical_error = status.code();
@@ -535,9 +592,10 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 
         if (update.sort_keys.empty()) {
             // invalid argument
-            derror("%s: invalid argument for multi_remove: decree = %" PRId64
-                   ", error = empty sort keys",
+            derror("%s: invalid argument for multi_remove from %s: "
+                   "decree = %" PRId64 ", error = empty sort keys",
                    replica_name(),
+                   dsn_msg_from_address(request).to_string(),
                    decree);
 
             ::dsn::rpc_replier<::dsn::apps::multi_remove_response> replier(
@@ -560,8 +618,10 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
         _wt_opts.given_decree = decree;
         rocksdb::Status status = _db->Write(_wt_opts, &_batch);
         if (!status.ok()) {
-            derror("%s: rocksdb write failed for multi_remove: decree = %" PRId64 ", error = %s",
+            derror("%s: rocksdb write failed for multi_remove from %s: "
+                   "decree = %" PRId64 ", error = %s",
                    replica_name(),
+                   dsn_msg_from_address(request).to_string(),
                    decree,
                    status.ToString().c_str());
             _physical_error = status.code();
@@ -635,9 +695,10 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
             if (_verbose_log) {
                 ::dsn::blob hash_key, sort_key;
                 pegasus_restore_key(key, hash_key, sort_key);
-                ddebug("%s: rocksdb write: decree = %" PRId64
-                       ", code = %s, hash_key = \"%s\", sort_key = \"%s\"",
+                ddebug("%s: rocksdb write from %s: "
+                       "decree = %" PRId64 ", code = %s, hash_key = \"%s\", sort_key = \"%s\"",
                        replica_name(),
+                       dsn_msg_from_address(request).to_string(),
                        decree,
                        msg->local_rpc_code.to_string(),
                        ::pegasus::utils::c_escape_string(hash_key).c_str(),
@@ -660,8 +721,12 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     _wt_opts.given_decree = decree;
     auto status = _db->Write(_wt_opts, &_batch);
     if (!status.ok()) {
-        derror("%s: rocksdb write failed: decree = %" PRId64 ", error = %s",
+        dsn::rpc_address from_address;
+        if (count > 0)
+            from_address = dsn_msg_from_address(requests[0]);
+        derror("%s: rocksdb write failed from %s: decree = %" PRId64 ", error = %s",
                replica_name(),
+               from_address.to_string(),
                decree,
                status.ToString().c_str());
         _physical_error = status.code();
@@ -740,7 +805,9 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         if (expire_ts > 0 && expire_ts <= ::pegasus::utils::epoch_now()) {
             _pfc_recent_expire_count->increment();
             if (_verbose_log) {
-                derror("%s: rocksdb data expired for get", replica_name());
+                derror("%s: rocksdb data expired for get from %s",
+                       replica_name(),
+                       reply.to_address().to_string());
             }
             status = rocksdb::Status::NotFound();
         }
@@ -750,15 +817,17 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         if (_verbose_log) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
-            derror("%s: rocksdb get failed for get: "
+            derror("%s: rocksdb get failed for get from %s: "
                    "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    ::pegasus::utils::c_escape_string(sort_key).c_str(),
                    status.ToString().c_str());
         } else if (!status.IsNotFound()) {
-            derror("%s: rocksdb get failed for get: error = %s",
+            derror("%s: rocksdb get failed for get from %s: error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    status.ToString().c_str());
         }
     }
@@ -769,15 +838,17 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             (_abnormal_get_size_threshold && value->size() >= _abnormal_get_size_threshold)) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
-            dwarn("%s: rocksdb abnormal get: "
+            dwarn("%s: rocksdb abnormal get from %s: "
                   "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
                   "value_size = %d, time_used = %" PRIu64 " ns",
                   replica_name(),
+                  reply.to_address().to_string(),
                   ::pegasus::utils::c_escape_string(hash_key).c_str(),
                   ::pegasus::utils::c_escape_string(sort_key).c_str(),
                   status.ToString().c_str(),
                   (int)value->size(),
                   time_used);
+            _pfc_recent_abnormal_count->increment();
         }
     }
 
@@ -787,6 +858,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     }
 
     _pfc_get_latency->set(dsn_now_ns() - start_time);
+
     reply(resp);
 }
 
@@ -803,8 +875,10 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     resp.server = _primary_address;
 
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
-        derror("%s: filter type %d not supported for multi_get",
+        derror("%s: invalid argument for multi_get from %s: "
+               "sort key filter type %d not supported",
                replica_name(),
+               reply.to_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
@@ -815,8 +889,11 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     int32_t max_kv_count = request.max_kv_count > 0 ? request.max_kv_count : INT_MAX;
     int32_t max_kv_size = request.max_kv_size > 0 ? request.max_kv_size : INT_MAX;
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
-    uint64_t expire_count = 0;
-    uint64_t filter_count = 0;
+    int32_t count = 0;
+    int64_t size = 0;
+    int32_t iterate_count = 0;
+    int32_t expire_count = 0;
+    int32_t filter_count = 0;
 
     if (request.sort_keys.empty()) {
         ::dsn::blob range_start_key, range_stop_key;
@@ -861,11 +938,12 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
             // empty sort key range
             if (_verbose_log) {
-                dwarn("%s: empty sort key range for multi_get: hash_key = \"%s\", "
+                dwarn("%s: empty sort key range for multi_get from %s: hash_key = \"%s\", "
                       "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
                       "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
                       "final_start = \"%s\" (%s), final_stop = \"%s\" (%s)",
                       replica_name(),
+                      reply.to_address().to_string(),
                       ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                       ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
                       request.start_inclusive ? "inclusive" : "exclusive",
@@ -887,12 +965,12 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
 
         std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(_rd_opts));
         bool complete = false;
-        int32_t count = 0;
-        int32_t size = 0;
         if (!request.reverse) {
             it->Seek(start);
             bool first_exclusive = !start_inclusive;
             while (count < max_kv_count && size < max_kv_size && it->Valid()) {
+                iterate_count++;
+
                 // check stop sort key
                 int c = it->key().compare(stop);
                 if (c > 0 || (c == 0 && !stop_inclusive)) {
@@ -942,6 +1020,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             bool first_exclusive = !stop_inclusive;
             std::vector<::dsn::apps::key_value> reverse_kvs;
             while (count < max_kv_count && size < max_kv_size && it->Valid()) {
+                iterate_count++;
+
                 // check start sort key
                 int c = it->key().compare(start);
                 if (c < 0 || (c == 0 && !start_inclusive)) {
@@ -1000,15 +1080,18 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         if (!it->status().ok()) {
             // error occur
             if (_verbose_log) {
-                derror("%s: rocksdb scan failed for multi_get: hash_key = \"%s\", "
-                       "reverse = %s, error = %s",
+                derror("%s: rocksdb scan failed for multi_get from %s: "
+                       "hash_key = \"%s\", reverse = %s, error = %s",
                        replica_name(),
+                       reply.to_address().to_string(),
                        ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                        request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
             } else {
-                derror("%s: rocksdb scan failed for multi_get: reverse = %s, error = %s",
+                derror("%s: rocksdb scan failed for multi_get from %s: "
+                       "reverse = %s, error = %s",
                        replica_name(),
+                       reply.to_address().to_string(),
                        request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
             }
@@ -1020,8 +1103,6 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     } else {
         bool error_occurred = false;
         rocksdb::Status final_status;
-        int32_t count = 0;
-        int32_t size = 0;
         bool exceed_limit = false;
         std::vector<::dsn::blob> keys_holder;
         std::vector<rocksdb::Slice> keys;
@@ -1037,20 +1118,22 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
 
         std::vector<rocksdb::Status> statuses = _db->MultiGet(_rd_opts, keys, &values);
         for (int i = 0; i < keys.size(); i++) {
-            rocksdb::Status& status = statuses[i];
-            std::string& value = values[i];
+            rocksdb::Status &status = statuses[i];
+            std::string &value = values[i];
             // print log
             if (!status.ok()) {
                 if (_verbose_log) {
-                    derror("%s: rocksdb get failed for multi_get: "
+                    derror("%s: rocksdb get failed for multi_get from %s: "
                            "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                            replica_name(),
+                           reply.to_address().to_string(),
                            ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                            ::pegasus::utils::c_escape_string(request.sort_keys[i]).c_str(),
                            status.ToString().c_str());
                 } else if (!status.IsNotFound()) {
-                    derror("%s: rocksdb get failed for multi_get: error = %s",
+                    derror("%s: rocksdb get failed for multi_get from %s: error = %s",
                            replica_name(),
+                           reply.to_address().to_string(),
                            status.ToString().c_str());
                 }
             }
@@ -1060,7 +1143,9 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 if (expire_ts > 0 && expire_ts <= epoch_now) {
                     expire_count++;
                     if (_verbose_log) {
-                        derror("%s: rocksdb data expired for multi_get", replica_name());
+                        derror("%s: rocksdb data expired for multi_get from %s",
+                               replica_name(),
+                               reply.to_address().to_string());
                     }
                     status = rocksdb::Status::NotFound();
                 }
@@ -1101,14 +1186,48 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         }
     }
 
+    if (_abnormal_multi_get_time_threshold_ns || _abnormal_multi_get_size_threshold ||
+        _abnormal_multi_get_iterate_count_threshold) {
+        uint64_t time_used = dsn_now_ns() - start_time;
+        if ((_abnormal_multi_get_time_threshold_ns &&
+             time_used >= _abnormal_multi_get_time_threshold_ns) ||
+            (_abnormal_multi_get_size_threshold &&
+             (uint64_t)size >= _abnormal_multi_get_size_threshold) ||
+            (_abnormal_multi_get_iterate_count_threshold &&
+             (uint64_t)iterate_count >= _abnormal_multi_get_iterate_count_threshold)) {
+            dwarn("%s: rocksdb abnormal multi_get from %s: hash_key = \"%s\", "
+                  "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
+                  "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
+                  "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
+                  "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns",
+                  replica_name(),
+                  reply.to_address().to_string(),
+                  ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
+                  ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
+                  request.start_inclusive ? "inclusive" : "exclusive",
+                  ::pegasus::utils::c_escape_string(request.stop_sortkey).c_str(),
+                  request.stop_inclusive ? "inclusive" : "exclusive",
+                  ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
+                      ->second,
+                  ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
+                  count,
+                  size,
+                  iterate_count,
+                  expire_count,
+                  filter_count,
+                  time_used);
+            _pfc_recent_abnormal_count->increment();
+        }
+    }
+
     if (expire_count > 0) {
         _pfc_recent_expire_count->add(expire_count);
     }
     if (filter_count > 0) {
         _pfc_recent_filter_count->add(filter_count);
     }
-
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
+
     reply(resp);
 }
 
@@ -1140,7 +1259,9 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
         if (expire_ts > 0 && expire_ts <= epoch_now) {
             expire_count++;
             if (_verbose_log) {
-                derror("%s: rocksdb data expired for sortkey_count", replica_name());
+                derror("%s: rocksdb data expired for sortkey_count from %s",
+                       replica_name(),
+                       reply.to_address().to_string());
             }
         } else {
             resp.count++;
@@ -1155,13 +1276,16 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
     if (!it->status().ok()) {
         // error occur
         if (_verbose_log) {
-            derror("%s: rocksdb scan failed for sortkey_count: hash_key = \"%s\", error = %s",
+            derror("%s: rocksdb scan failed for sortkey_count from %s: "
+                   "hash_key = \"%s\", error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    it->status().ToString().c_str());
         } else {
-            derror("%s: rocksdb scan failed for sortkey_count: error = %s",
+            derror("%s: rocksdb scan failed for sortkey_count from %s: error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    it->status().ToString().c_str());
         }
         resp.count = 0;
@@ -1191,7 +1315,9 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
         if (expire_ts > 0 && expire_ts <= now_ts) {
             _pfc_recent_expire_count->increment();
             if (_verbose_log) {
-                derror("%s: rocksdb data expired for ttl", replica_name());
+                derror("%s: rocksdb data expired for ttl from %s",
+                       replica_name(),
+                       reply.to_address().to_string());
             }
             status = rocksdb::Status::NotFound();
         }
@@ -1201,15 +1327,17 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
         if (_verbose_log) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
-            derror("%s: rocksdb get failed for ttl: "
+            derror("%s: rocksdb get failed for ttl from %s: "
                    "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    ::pegasus::utils::c_escape_string(sort_key).c_str(),
                    status.ToString().c_str());
         } else if (!status.IsNotFound()) {
-            derror("%s: rocksdb get failed for ttl: error = %s",
+            derror("%s: rocksdb get failed for ttl from %s: error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    status.ToString().c_str());
         }
     }
@@ -1227,7 +1355,6 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
     reply(resp);
 }
 
-DEFINE_TASK_CODE(LOCAL_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request &request,
                                          ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
 {
@@ -1241,16 +1368,20 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     resp.server = _primary_address;
 
     if (!is_filter_type_supported(request.hash_key_filter_type)) {
-        derror("%s: filter type %d not supported for get_scanner",
+        derror("%s: invalid argument for get_scanner from %s: "
+               "hash key filter type %d not supported",
                replica_name(),
+               reply.to_address().to_string(),
                request.hash_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         reply(resp);
         return;
     }
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
-        derror("%s: filter type %d not supported for get_scanner",
+        derror("%s: invalid argument for get_scanner from %s: "
+               "sort key filter type %d not supported",
                replica_name(),
+               reply.to_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         reply(resp);
@@ -1281,9 +1412,10 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
         // empty key range
         if (_verbose_log) {
-            dwarn("%s: empty key range for get_scanner: "
+            dwarn("%s: empty key range for get_scanner from %s: "
                   "start_key = \"%s\" (%s), stop_key = \"%s\" (%s)",
                   replica_name(),
+                  reply.to_address().to_string(),
                   ::pegasus::utils::c_escape_string(request.start_key).c_str(),
                   request.start_inclusive ? "inclusive" : "exclusive",
                   ::pegasus::utils::c_escape_string(request.stop_key).c_str(),
@@ -1351,10 +1483,11 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     if (!it->status().ok()) {
         // error occur
         if (_verbose_log) {
-            derror("%s: rocksdb scan failed for get_scanner: "
+            derror("%s: rocksdb scan failed for get_scanner from %s: "
                    "start_key = \"%s\" (%s), stop_key = \"%s\" (%s), "
                    "batch_size = %d, read_count = %d, error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    ::pegasus::utils::c_escape_string(start).c_str(),
                    request.start_inclusive ? "inclusive" : "exclusive",
                    ::pegasus::utils::c_escape_string(stop).c_str(),
@@ -1363,8 +1496,9 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                    count,
                    it->status().ToString().c_str());
         } else {
-            derror("%s: rocksdb scan failed for get_scanner: error = %s",
+            derror("%s: rocksdb scan failed for get_scanner from %s: error = %s",
                    replica_name(),
+                   reply.to_address().to_string(),
                    it->status().ToString().c_str());
         }
         resp.kvs.clear();
@@ -1387,8 +1521,8 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         // if the context is used, it will be fetched and re-put into cache,
         // which will change the handle,
         // then the delayed task will fetch null context by old handle, and do nothing.
-        ::dsn::tasking::enqueue(LOCAL_PEGASUS_SERVER_DELAY,
-                                this,
+        ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
+                                &_tracker,
                                 [this, handle]() { _context_cache.fetch(handle); },
                                 0,
                                 std::chrono::minutes(5));
@@ -1475,10 +1609,11 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         if (!it->status().ok()) {
             // error occur
             if (_verbose_log) {
-                derror("%s: rocksdb scan failed for scan: "
+                derror("%s: rocksdb scan failed for scan from %s: "
                        "context_id= %" PRId64 ", stop_key = \"%s\" (%s), "
                        "batch_size = %d, read_count = %d, error = %s",
                        replica_name(),
+                       reply.to_address().to_string(),
                        request.context_id,
                        ::pegasus::utils::c_escape_string(stop).c_str(),
                        stop_inclusive ? "inclusive" : "exclusive",
@@ -1486,8 +1621,9 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
                        count,
                        it->status().ToString().c_str());
             } else {
-                derror("%s: rocksdb scan failed for scan: error = %s",
+                derror("%s: rocksdb scan failed for scan from %s: error = %s",
                        replica_name(),
+                       reply.to_address().to_string(),
                        it->status().ToString().c_str());
             }
             resp.kvs.clear();
@@ -1495,8 +1631,8 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
             // scan not completed
             int64_t handle = _context_cache.put(std::move(context));
             resp.context_id = handle;
-            ::dsn::tasking::enqueue(LOCAL_PEGASUS_SERVER_DELAY,
-                                    this,
+            ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
+                                    &_tracker,
                                     [this, handle]() { _context_cache.fetch(handle); },
                                     0,
                                     std::chrono::minutes(5));
@@ -1521,8 +1657,6 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
 
 void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache.fetch(args); }
 
-DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION_LONG)
-
 ::dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 {
     dassert(!_is_open, "");
@@ -1534,7 +1668,23 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
     opts.compaction_filter = &_key_ttl_compaction_filter;
     opts.default_value_schema_version = PEGASUS_VALUE_SCHEMA_MAX_VERSION;
 
-    auto path = ::dsn::utils::filesystem::path_combine(data_dir(), "rdb");
+    // parse envs for parameters
+    // envs is compounded in replication_app_base::open() function
+    std::map<std::string, std::string> envs;
+    if (argc > 0) {
+        if (((argc - 1) % 2 != 0) || argv == nullptr) {
+            derror("%s: parse envs failed, because invalid argc = %d or argv = nullptr",
+                   replica_name(),
+                   argc);
+            return ::dsn::ERR_INVALID_PARAMETERS;
+        }
+        int idx = 1;
+        while (idx < argc) {
+            const char *key = argv[idx++];
+            const char *value = argv[idx++];
+            envs.emplace(key, value);
+        }
+    }
 
     //
     // here, we must distinguish three cases, such as:
@@ -1549,11 +1699,12 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
     //          2, we can parse restore info from app env, which is stored in argv
     //          3, restore_dir is exist
     //
+    auto path = ::dsn::utils::filesystem::path_combine(data_dir(), "rdb");
     if (::dsn::utils::filesystem::path_exists(path)) {
         // only case 1
         ddebug("%s: rdb is already exist, path = %s", replica_name(), path.c_str());
     } else {
-        std::pair<std::string, bool> restore_info = get_restore_dir_from_env(argc, argv);
+        std::pair<std::string, bool> restore_info = get_restore_dir_from_env(envs);
         const std::string &restore_dir = restore_info.first;
         bool force_restore = restore_info.second;
         if (restore_dir.empty()) {
@@ -1605,6 +1756,7 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
 
     auto status = rocksdb::DB::Open(opts, path, &_db);
     if (status.ok()) {
+        _last_committed_decree = _db->GetLastFlushedDecree();
         _value_schema_version = _db->GetValueSchemaVersion();
         if (_value_schema_version > PEGASUS_VALUE_SCHEMA_MAX_VERSION) {
             derror("%s: open app failed, unsupported value schema version %" PRIu32,
@@ -1619,33 +1771,29 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
         _key_ttl_compaction_filter.SetValueSchemaVersion(_value_schema_version);
         _key_ttl_compaction_filter.EnableFilter();
 
+        update_app_envs(envs);
+
         parse_checkpoints();
 
-        int64_t ci = _db->GetLastFlushedDecree();
-        if (ci != last_durable_decree()) {
+        // checkpoint if necessary to make last_durable_decree() fresh.
+        // only need async checkpoint because we sure that memtable is empty now.
+        int64_t last_flushed = _db->GetLastFlushedDecree();
+        if (last_flushed != last_durable_decree()) {
             ddebug("%s: start to do async checkpoint, last_durable_decree = %" PRId64
                    ", last_flushed_decree = %" PRId64,
                    replica_name(),
                    last_durable_decree(),
-                   ci);
+                   last_flushed);
             auto err = async_checkpoint(false);
             if (err != ::dsn::ERR_OK) {
-                dwarn("%s: create checkpoint failed, error = %s, retry again",
-                      replica_name(),
-                      err.to_string());
-                err = async_checkpoint(false);
-                if (err != ::dsn::ERR_OK) {
-                    derror("%s: create checkpoint failed, error = %s",
-                           replica_name(),
-                           err.to_string());
-                    delete _db;
-                    _db = nullptr;
-                    return err;
-                }
+                derror("%s: create checkpoint failed, error = %s", replica_name(), err.to_string());
+                delete _db;
+                _db = nullptr;
+                return err;
             }
-            dassert(ci == last_durable_decree(),
+            dassert(last_flushed == last_durable_decree(),
                     "last durable decree mismatch after checkpoint: %" PRId64 " vs %" PRId64,
-                    ci,
+                    last_flushed,
                     last_durable_decree());
         }
 
@@ -1658,10 +1806,9 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
         _is_open = true;
 
         dinfo("%s: start the updating sstsize timer task", replica_name());
-        // using ::dsn::timer_task to updating the rocksdb sstsize.
-        _updating_task = ::dsn::tasking::enqueue_timer(
-            UPDATING_ROCKSDB_SSTSIZE,
-            this,
+        ::dsn::tasking::enqueue_timer(
+            LPC_UPDATING_ROCKSDB_SSTSIZE,
+            &_tracker,
             [this]() { this->updating_rocksdb_sstsize(); },
             std::chrono::seconds(_updating_rocksdb_sstsize_interval_seconds),
             0,
@@ -1683,10 +1830,8 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
     }
 
     if (!clear_state) {
-        rocksdb::FlushOptions options;
-        options.wait = true;
-        auto status = _db->Flush(options);
-        if (!status.ok() && !status.IsNoNeedOperate()) {
+        auto status = _db->Flush(rocksdb::FlushOptions());
+        if (!status.ok()) {
             derror("%s: flush memtable on close failed: %s",
                    replica_name(),
                    status.ToString().c_str());
@@ -1694,10 +1839,8 @@ DEFINE_TASK_CODE(UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REP
     }
 
     _context_cache.clear();
-
-    // when stop the, should stop the timer_task.
-    if (_updating_task != nullptr)
-        _updating_task->cancel(true);
+    // stop all tracked tasks when pegasus server is stopped.
+    _tracker.cancel_outstanding_tasks();
 
     _is_open = false;
     delete _db;
@@ -1749,9 +1892,17 @@ private:
     if (!token_helper.token_got())
         return ::dsn::ERR_WRONG_TIMING;
 
+    int64_t last_durable = last_durable_decree();
     int64_t last_commit = last_committed_decree();
-    if (last_durable_decree() == last_commit)
-        return ::dsn::ERR_NO_NEED_OPERATE;
+    dassert(last_durable <= last_commit, "%" PRId64 " VS %" PRId64, last_durable, last_commit);
+
+    if (last_durable == last_commit) {
+        ddebug("%s: no need to checkpoint because "
+               "last_durable_decree = last_committed_decree = %" PRId64,
+               replica_name(),
+               last_durable);
+        return ::dsn::ERR_OK;
+    }
 
     rocksdb::Checkpoint *chkpt = nullptr;
     auto status = rocksdb::Checkpoint::Create(_db, &chkpt);
@@ -1777,13 +1928,14 @@ private:
         }
     }
 
-    status = chkpt->CreateCheckpoint(chkpt_dir);
+    // CreateCheckpoint() will always flush memtable firstly.
+    status = chkpt->CreateCheckpoint(chkpt_dir, 0);
     if (!status.ok()) {
         // sometimes checkpoint may fail, and try again will succeed
         derror("%s: create checkpoint failed, error = %s, try again",
                replica_name(),
                status.ToString().c_str());
-        status = chkpt->CreateCheckpoint(chkpt_dir);
+        status = chkpt->CreateCheckpoint(chkpt_dir, 0);
     }
 
     // destroy Checkpoint object
@@ -1808,6 +1960,10 @@ private:
                 "%" PRId64 " VS %" PRId64 "",
                 last_commit,
                 last_durable_decree());
+        dassert(last_commit == _db->GetLastFlushedDecree(),
+                "%" PRId64 " VS %" PRId64 "",
+                last_commit,
+                _db->GetLastFlushedDecree());
         if (!_checkpoints.empty()) {
             dassert(last_commit > _checkpoints.back(),
                     "%" PRId64 " VS %" PRId64 "",
@@ -1828,17 +1984,29 @@ private:
 }
 
 // Must be thread safe.
-::dsn::error_code pegasus_server_impl::async_checkpoint(bool is_emergency)
+::dsn::error_code pegasus_server_impl::async_checkpoint(bool flush_memtable)
 {
     CheckpointingTokenHelper token_helper(_is_checkpointing);
     if (!token_helper.token_got())
         return ::dsn::ERR_WRONG_TIMING;
 
-    // last_durable_decree must less than or equal to _db->GetLastFlushedDecree()
-    // if last_durable_decree == _db->GetLastFlushedDecree(), we should flush it first
-    int64_t last_flushed_decree = static_cast<int64_t>(_db->GetLastFlushedDecree());
-    if (last_durable_decree() == last_flushed_decree) {
-        if (is_emergency) {
+    int64_t last_durable = last_durable_decree();
+    int64_t last_flushed = static_cast<int64_t>(_db->GetLastFlushedDecree());
+    int64_t last_commit = last_committed_decree();
+
+    dassert(last_durable <= last_flushed, "%" PRId64 " VS %" PRId64, last_durable, last_flushed);
+    dassert(last_flushed <= last_commit, "%" PRId64 " VS %" PRId64, last_flushed, last_commit);
+
+    if (last_durable == last_commit) {
+        ddebug("%s: no need to checkpoint because "
+               "last_durable_decree = last_committed_decree = %" PRId64,
+               replica_name(),
+               last_durable);
+        return ::dsn::ERR_OK;
+    }
+
+    if (last_durable == last_flushed) {
+        if (flush_memtable) {
             // trigger flushing memtable, but not wait
             rocksdb::FlushOptions options;
             options.wait = false;
@@ -1846,9 +2014,6 @@ private:
             if (status.ok()) {
                 ddebug("%s: trigger flushing memtable succeed", replica_name());
                 return ::dsn::ERR_TRY_AGAIN;
-            } else if (status.IsNoNeedOperate()) {
-                dwarn("%s: trigger flushing memtable failed, no memtable to flush", replica_name());
-                return ::dsn::ERR_NO_NEED_OPERATE;
             } else {
                 derror("%s: trigger flushing memtable failed, error = %s",
                        replica_name(),
@@ -1856,14 +2021,11 @@ private:
                 return ::dsn::ERR_LOCAL_APP_FAILURE;
             }
         } else {
-            return ::dsn::ERR_NO_NEED_OPERATE;
+            return ::dsn::ERR_OK;
         }
     }
 
-    dassert(last_durable_decree() < last_flushed_decree,
-            "%" PRId64 " VS %" PRId64 "",
-            last_durable_decree(),
-            last_flushed_decree);
+    dassert(last_durable < last_flushed, "%" PRId64 " VS %" PRId64, last_durable, last_flushed);
 
     char buf[256];
     sprintf(buf, "checkpoint.tmp.%" PRIu64 "", dsn_now_us());
@@ -2323,67 +2485,229 @@ void pegasus_server_impl::updating_rocksdb_sstsize()
     }
 }
 
-std::pair<std::string, bool> pegasus_server_impl::get_restore_dir_from_env(int argc, char **argv)
+std::pair<std::string, bool>
+pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::string> &env_kvs)
 {
     std::pair<std::string, bool> res;
-    res.first = std::string();
-    res.second = false;
-    if (argc <= 0 || ((argc - 1) % 2 != 0) || argv == nullptr) {
-        derror("%s: parse restore info from env failed, because invalid argc = %d",
-               replica_name(),
-               argc);
-        return res;
-    }
-    // env is compounded in replication_app_base::open() function
-    std::map<std::string, std::string> env_kvs;
-    int idx = 1;
-    while (idx < argc) {
-        std::string key = std::string(argv[idx++]);
-        std::string value = std::string(argv[idx++]);
-        env_kvs.insert(std::make_pair(key, value));
-    }
+    std::stringstream os;
+    os << "restore.";
 
-    auto it = env_kvs.find("force_restore");
+    auto it = env_kvs.find(ROCKSDB_ENV_RESTORE_FORCE_RESTORE);
     if (it != env_kvs.end()) {
+        ddebug("%s: found %s in envs", replica_name(), ROCKSDB_ENV_RESTORE_FORCE_RESTORE.c_str());
         res.second = true;
     }
 
-    std::stringstream os;
-    os << "restore.";
-    // TODO: using cold_backup_constant to replace
-    // Attention: "policy_name" and "backup_id" must equal to cold_backup_constant::POLICY_NAME
-    //             and cold_backup_constant::BACKUP_ID
-    it = env_kvs.find("policy_name");
+    it = env_kvs.find(ROCKSDB_ENV_RESTORE_POLICY_NAME);
     if (it != env_kvs.end()) {
-        ddebug(
-            "%s: find policy_name from env, policy_name = %s", replica_name(), it->second.c_str());
+        ddebug("%s: found %s in envs: %s",
+               replica_name(),
+               ROCKSDB_ENV_RESTORE_POLICY_NAME.c_str(),
+               it->second.c_str());
         os << it->second << ".";
     } else {
         return res;
     }
-    it = env_kvs.find("backup_id");
+
+    it = env_kvs.find(ROCKSDB_ENV_RESTORE_BACKUP_ID);
     if (it != env_kvs.end()) {
-        ddebug("%s: find backup_id from env, backup_id = %s", replica_name(), it->second.c_str());
+        ddebug("%s: found %s in envs: %s",
+               replica_name(),
+               ROCKSDB_ENV_RESTORE_BACKUP_ID.c_str(),
+               it->second.c_str());
         os << it->second;
     } else {
         return res;
     }
+
     std::string parent_dir = ::dsn::utils::filesystem::remove_file_name(data_dir());
     res.first = ::dsn::utils::filesystem::path_combine(parent_dir, os.str());
     return res;
 }
 
-void pegasus_server_impl::manual_compact()
+// args:
+//   ROCKSDB_ENV_MANUAL_COMPACT_TARGET_LEVEL_KEY (default -1)
+//   ROCKSDB_ENV_BOTTOMMOST_LEVEL_COMPACTION_KEY (default skip)
+void pegasus_server_impl::manual_compact(const std::map<std::string, std::string> &opts)
 {
-    ddebug("%s: start to CompactRange", replica_name());
+    uint64_t start_time;
+    rocksdb::Status status;
+
+    // wait flush before compact to make all data compacted.
+    ddebug("%s: start to Flush", replica_name());
+    start_time = dsn_now_ms();
+    status = _db->Flush(rocksdb::FlushOptions());
+    ddebug("%s: Flush finished, status = %s, time_used = %" PRIu64 "ms",
+           replica_name(),
+           status.ToString().c_str(),
+           dsn_now_ms() - start_time);
+
     rocksdb::CompactRangeOptions options;
     options.exclusive_manual_compaction = true;
     options.change_level = true;
     options.target_level = -1;
-    options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
-    _db->CompactRange(options, nullptr, nullptr);
-    ddebug("%s: CompactRange finished", replica_name());
+    auto find1 = opts.find(ROCKSDB_MANUAL_COMPACT_TARGET_LEVEL_KEY);
+    if (find1 != opts.end()) {
+        const std::string &argv = find1->second;
+        int target_level;
+        if (pegasus::utils::buf2int(argv.c_str(), argv.size(), target_level) && target_level >= 1 &&
+            target_level <= _db_opts.num_levels) {
+            options.target_level = target_level;
+        } else {
+            derror("%s: invalid option value [%s] for %s, use default value [%d]",
+                   replica_name(),
+                   argv.c_str(),
+                   ROCKSDB_MANUAL_COMPACT_TARGET_LEVEL_KEY.c_str(),
+                   -1);
+        }
+    }
+    options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
+    auto find2 = opts.find(ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY);
+    if (find2 != opts.end()) {
+        const std::string &argv = find2->second;
+        if (argv == ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
+            options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
+        } else if (argv == ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
+            options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
+        } else {
+            derror("%s: invalid option value [%s] for %s, use default value [%s]",
+                   replica_name(),
+                   argv.c_str(),
+                   ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY.c_str(),
+                   ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP.c_str());
+        }
+    }
+    ddebug("%s: start to CompactRange, target_level = %d, bottommost_level_compaction = %s",
+           replica_name(),
+           options.target_level,
+           options.bottommost_level_compaction == rocksdb::BottommostLevelCompaction::kForce
+               ? "force"
+               : "skip");
+    start_time = dsn_now_ms();
+    status = _db->CompactRange(options, nullptr, nullptr);
+    ddebug("%s: CompactRange finished, status = %s, time_used = %" PRIu64 "ms",
+           replica_name(),
+           status.ToString().c_str(),
+           dsn_now_ms() - start_time);
 }
 
+void pegasus_server_impl::update_app_envs(const std::map<std::string, std::string> &envs)
+{
+    // update usage scenario
+    // if not specified, default is normal
+    auto find = envs.find(ROCKSDB_ENV_USAGE_SCENARIO_KEY);
+    std::string new_usage_scenario =
+        (find != envs.end() ? find->second : ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
+    if (new_usage_scenario != _usage_scenario) {
+        std::string old_usage_scenario = _usage_scenario;
+        if (set_usage_scenario(new_usage_scenario)) {
+            ddebug("%s: update app env[%s] from %s to %s succeed",
+                   replica_name(),
+                   ROCKSDB_ENV_USAGE_SCENARIO_KEY.c_str(),
+                   old_usage_scenario.c_str(),
+                   new_usage_scenario.c_str());
+        } else {
+            derror("%s: update app env[%s] from %s to %s failed",
+                   replica_name(),
+                   ROCKSDB_ENV_USAGE_SCENARIO_KEY.c_str(),
+                   old_usage_scenario.c_str(),
+                   new_usage_scenario.c_str());
+        }
+    }
+}
+
+void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
+{
+    envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = _usage_scenario;
+}
+
+bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
+{
+    if (usage_scenario == _usage_scenario)
+        return false;
+    std::unordered_map<std::string, std::string> new_options;
+    if (usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_NORMAL ||
+        usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE) {
+        if (_usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
+            // old usage scenario is bulk load, reset first
+            new_options["level0_file_num_compaction_trigger"] =
+                boost::lexical_cast<std::string>(_db_opts.level0_file_num_compaction_trigger);
+            new_options["level0_slowdown_writes_trigger"] =
+                boost::lexical_cast<std::string>(_db_opts.level0_slowdown_writes_trigger);
+            new_options["level0_stop_writes_trigger"] =
+                boost::lexical_cast<std::string>(_db_opts.level0_stop_writes_trigger);
+            new_options["soft_pending_compaction_bytes_limit"] =
+                boost::lexical_cast<std::string>(_db_opts.soft_pending_compaction_bytes_limit);
+            new_options["hard_pending_compaction_bytes_limit"] =
+                boost::lexical_cast<std::string>(_db_opts.hard_pending_compaction_bytes_limit);
+            new_options["disable_auto_compactions"] = "false";
+            new_options["max_compaction_bytes"] =
+                boost::lexical_cast<std::string>(_db_opts.max_compaction_bytes);
+            new_options["write_buffer_size"] =
+                boost::lexical_cast<std::string>(_db_opts.write_buffer_size);
+            new_options["max_write_buffer_number"] =
+                boost::lexical_cast<std::string>(_db_opts.max_write_buffer_number);
+        }
+        if (usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_NORMAL) {
+            new_options["level0_file_num_compaction_trigger"] =
+                boost::lexical_cast<std::string>(_db_opts.level0_file_num_compaction_trigger);
+        } else {
+            new_options["level0_file_num_compaction_trigger"] =
+                boost::lexical_cast<std::string>(_db_opts.level0_file_num_compaction_trigger * 2);
+        }
+    } else if (usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
+        // refer to Options::PrepareForBulkLoad()
+        new_options["level0_file_num_compaction_trigger"] = "1000000000";
+        new_options["level0_slowdown_writes_trigger"] = "1000000000";
+        new_options["level0_stop_writes_trigger"] = "1000000000";
+        new_options["soft_pending_compaction_bytes_limit"] = "0";
+        new_options["hard_pending_compaction_bytes_limit"] = "0";
+        new_options["disable_auto_compactions"] = "true";
+        new_options["max_compaction_bytes"] =
+            boost::lexical_cast<std::string>(static_cast<uint64_t>(1) << 60);
+        new_options["write_buffer_size"] = boost::lexical_cast<std::string>(
+            std::max(_db_opts.write_buffer_size, (size_t)(256 * 1024 * 1024)));
+        new_options["max_write_buffer_number"] =
+            boost::lexical_cast<std::string>(std::max(_db_opts.max_write_buffer_number, 6));
+    } else {
+        derror("%s: invalid usage scenario: %s", replica_name(), usage_scenario.c_str());
+        return false;
+    }
+    if (set_options(new_options)) {
+        _usage_scenario = usage_scenario;
+        ddebug("%s: set usage scenario to %s succeed", replica_name(), usage_scenario.c_str());
+        return true;
+    } else {
+        derror("%s: set usage scenario to %s failed", replica_name(), usage_scenario.c_str());
+        return false;
+    }
+}
+
+bool pegasus_server_impl::set_options(
+    const std::unordered_map<std::string, std::string> &new_options)
+{
+    std::ostringstream oss;
+    int i = 0;
+    for (auto &kv : new_options) {
+        if (i > 0)
+            oss << ",";
+        oss << kv.first << "=" << kv.second;
+        i++;
+    }
+    rocksdb::Status status = _db->SetOptions(new_options);
+    if (status == rocksdb::Status::OK()) {
+        ddebug("%s: rocksdb set options returns %s: {%s}",
+               replica_name(),
+               status.ToString().c_str(),
+               oss.str().c_str());
+        return true;
+    } else {
+        derror("%s: rocksdb set options returns %s: {%s}",
+               replica_name(),
+               status.ToString().c_str(),
+               oss.str().c_str());
+        return false;
+    }
+}
 }
 } // namespace

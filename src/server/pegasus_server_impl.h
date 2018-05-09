@@ -66,7 +66,7 @@ public:
     virtual ::dsn::error_code stop(bool clear_state) override;
 
     virtual int on_batched_write_requests(int64_t decree,
-                                          int64_t timestamp,
+                                          uint64_t timestamp,
                                           dsn_message_t *requests,
                                           int count) override;
 
@@ -75,21 +75,19 @@ public:
         return ::dsn::ERR_OK;
     }
     // returns:
-    //  - ERR_OK
-    //  - ERR_WRONG_TIMING
-    //  - ERR_NO_NEED_OPERATE
-    //  - ERR_LOCAL_APP_FAILURE
-    //  - ERR_FILE_OPERATION_FAILED
+    //  - ERR_OK: checkpoint succeed
+    //  - ERR_WRONG_TIMING: another checkpoint is running now
+    //  - ERR_LOCAL_APP_FAILURE: some internal failure
+    //  - ERR_FILE_OPERATION_FAILED: some file failure
     virtual ::dsn::error_code sync_checkpoint() override;
 
     // returns:
-    //  - ERR_OK
-    //  - ERR_WRONG_TIMING: is checkpointing now
-    //  - ERR_NO_NEED_OPERATE: the checkpoint is fresh enough, no need to checkpoint
+    //  - ERR_OK: checkpoint succeed
+    //  - ERR_WRONG_TIMING: another checkpoint is running now
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
     //  - ERR_FILE_OPERATION_FAILED: some file failure
-    //  - ERR_TRY_AGAIN: need try again later
-    virtual ::dsn::error_code async_checkpoint(bool is_emergency) override;
+    //  - ERR_TRY_AGAIN: flush memtable triggered, need try again later
+    virtual ::dsn::error_code async_checkpoint(bool flush_memtable) override;
 
     //
     // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
@@ -182,13 +180,24 @@ private:
 
     void updating_rocksdb_sstsize();
 
-    virtual void manual_compact();
+    virtual void manual_compact(const std::map<std::string, std::string> &opts);
+
+    virtual void update_app_envs(const std::map<std::string, std::string> &envs);
+
+    virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
 
     // get the absolute path of restore directory and the flag whether force restore from env
     // return
     //      std::pair<std::string, bool>, pair.first is the path of the restore dir; pair.second is
     //      the flag that whether force restore
-    std::pair<std::string, bool> get_restore_dir_from_env(int argc, char **argv);
+    std::pair<std::string, bool>
+    get_restore_dir_from_env(const std::map<std::string, std::string> &env_kvs);
+
+    // return true if successfully changed
+    bool set_usage_scenario(const std::string &usage_scenario);
+
+    // return true if successfully set
+    bool set_options(const std::unordered_map<std::string, std::string> &new_options);
 
 private:
     dsn::gpid _gpid;
@@ -196,11 +205,15 @@ private:
     bool _verbose_log;
     uint64_t _abnormal_get_time_threshold_ns;
     uint64_t _abnormal_get_size_threshold;
+    uint64_t _abnormal_multi_get_time_threshold_ns;
+    uint64_t _abnormal_multi_get_size_threshold;
+    uint64_t _abnormal_multi_get_iterate_count_threshold;
 
     KeyWithTTLCompactionFilter _key_ttl_compaction_filter;
     rocksdb::Options _db_opts;
     rocksdb::WriteOptions _wt_opts;
     rocksdb::ReadOptions _rd_opts;
+    std::string _usage_scenario;
 
     rocksdb::DB *_db;
     volatile bool _is_open;
@@ -224,7 +237,8 @@ private:
     pegasus_context_cache _context_cache;
 
     uint32_t _updating_rocksdb_sstsize_interval_seconds;
-    ::dsn::task_ptr _updating_task;
+
+    dsn::task_tracker _tracker;
 
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;
@@ -245,6 +259,7 @@ private:
 
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
     ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
+    ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
     ::dsn::perf_counter_wrapper _pfc_sst_count;
     ::dsn::perf_counter_wrapper _pfc_sst_size;
 };
