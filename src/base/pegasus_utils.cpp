@@ -58,6 +58,34 @@ bool buf2int64(const char *buffer, int length, int64_t &result)
     return true;
 }
 
+bool buf2int(dsn::string_view buffer, int &result)
+{
+    if (buffer.empty())
+        return false;
+    char *p = nullptr;
+    long int v = ::strtol(buffer.data(), &p, 10);
+    if (*p != 0)
+        return false;
+    if (v < INT_MIN || v > INT_MAX) // out of range
+        return false;
+    result = (int)v;
+    return true;
+}
+
+bool buf2uint64(dsn::string_view buffer, uint64_t &result)
+{
+    if (buffer.empty())
+        return false;
+    char *p = nullptr;
+    unsigned long long v = ::strtoull(buffer.data(), &p, 10);
+    if (*p != 0)
+        return false;
+    if (v == ULLONG_MAX && errno == ERANGE) // out of range
+        return false;
+    result = v;
+    return true;
+}
+
 bool buf2bool(const char *buffer, int length, bool &result)
 {
     if (length == 4 && strncmp(buffer, "true", 4) == 0) {

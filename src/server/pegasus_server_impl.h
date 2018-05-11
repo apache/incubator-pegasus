@@ -180,8 +180,6 @@ private:
 
     void updating_rocksdb_sstsize();
 
-    virtual void manual_compact(const std::map<std::string, std::string> &opts);
-
     virtual void update_app_envs(const std::map<std::string, std::string> &envs);
 
     virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
@@ -192,6 +190,26 @@ private:
     //      the flag that whether force restore
     std::pair<std::string, bool>
     get_restore_dir_from_env(const std::map<std::string, std::string> &env_kvs);
+
+    void update_usage_scenario(const std::map<std::string, std::string> &envs);
+
+    void check_manual_compact(const std::map<std::string, std::string> &envs);
+
+    bool check_once_compact(const std::map<std::string, std::string> &envs);
+
+    bool check_periodic_compact(const std::map<std::string, std::string> &envs);
+
+    void extract_manual_compact_opts(const std::map<std::string, std::string> &envs,
+                                     const std::string &key_prefix,
+                                     rocksdb::CompactRangeOptions &options);
+
+    bool check_manual_compact_state();
+
+    void manual_compact(const rocksdb::CompactRangeOptions &options);
+
+    void do_manual_compact(const rocksdb::CompactRangeOptions &options);
+
+    std::string query_compact_state() const override;
 
     // return true if successfully changed
     bool set_usage_scenario(const std::string &usage_scenario);
@@ -208,6 +226,7 @@ private:
     uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
+    int32_t _manual_compact_min_interval_seconds;
 
     KeyWithTTLCompactionFilter _key_ttl_compaction_filter;
     rocksdb::Options _db_opts;
@@ -238,6 +257,11 @@ private:
 
     uint32_t _updating_rocksdb_sstsize_interval_seconds;
 
+    // manual compact state
+    std::atomic<uint64_t> _manual_compact_start_time_ms;
+    std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
+    std::atomic<uint64_t> _manual_compact_last_time_used_ms;
+
     dsn::task_tracker _tracker;
 
     // perf counters
@@ -262,6 +286,9 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
     ::dsn::perf_counter_wrapper _pfc_sst_count;
     ::dsn::perf_counter_wrapper _pfc_sst_size;
+
+//    perf_counter_wrapper _counter_manual_compact_running_count;
+//    perf_counter_wrapper _counter_manual_compact_queue_count;
 };
 }
 } // namespace
