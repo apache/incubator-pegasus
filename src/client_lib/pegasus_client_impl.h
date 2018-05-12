@@ -7,8 +7,8 @@
 #include <string>
 #include <pegasus/client.h>
 #include <rrdb/rrdb.client.h>
-#include <pegasus_key_schema.h>
-#include <pegasus_utils.h>
+#include "base/pegasus_key_schema.h"
+#include "base/pegasus_utils.h"
 
 namespace pegasus {
 namespace client {

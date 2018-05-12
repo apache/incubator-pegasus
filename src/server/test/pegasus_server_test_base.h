@@ -33,7 +33,7 @@ public:
         _server->start(0, {});
     }
 
-    ~pegasus_server_test_base()
+    ~pegasus_server_test_base() override
     {
         // do not clear state
         _server->stop(false);

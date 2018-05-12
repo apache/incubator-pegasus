@@ -13,7 +13,6 @@
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb.types.h>
 #include <pegasus/error.h>
-#include <pegasus_utils.h>
 #include "pegasus_client_impl.h"
 
 using namespace ::dsn;

@@ -6,6 +6,7 @@
 
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
+
 #include <rocksdb/db.h>
 #include <rrdb/rrdb.server.h>
 #include <vector>
@@ -134,6 +135,7 @@ public:
     virtual int64_t last_durable_decree() const { return _last_durable_decree.load(); }
 
 private:
+    friend class pegasus_server_compact_test;
     // parse checkpoint directories in the data dir
     // checkpoint directory format is: "checkpoint.{decree}"
     void parse_checkpoints();
@@ -217,6 +219,8 @@ private:
     // return true if successfully set
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
 
+    uint64_t now_timestamp();
+
 private:
     dsn::gpid _gpid;
     std::string _primary_address;
@@ -227,6 +231,10 @@ private:
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
     int32_t _manual_compact_min_interval_seconds;
+
+#ifndef NDEBUG
+    uint64_t _mock_now_timestamp = 0;
+#endif
 
     KeyWithTTLCompactionFilter _key_ttl_compaction_filter;
     rocksdb::Options _db_opts;

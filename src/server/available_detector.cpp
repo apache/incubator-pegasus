@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "available_detector.h"
-#include <pegasus_key_schema.h>
+#include "base/pegasus_key_schema.h"
 
 #include <sstream>
 #include <iomanip>

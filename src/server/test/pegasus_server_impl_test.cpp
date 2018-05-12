@@ -3,107 +3,282 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_server_test_base.h"
-#include "message_utils.h"
-
-#include "server/pegasus_server_write.h"
-#include "base/pegasus_key_schema.h"
 
 namespace pegasus {
 namespace server {
 
-class pegasus_server_write_test : public pegasus_server_test_base
+class pegasus_server_compact_test : public pegasus_server_test_base
 {
-    std::unique_ptr<pegasus_server_write> _server_write;
+public:
+    static const uint64_t compacted_ts = 1500000000;    // 2017.07.14 10:40:00 CST
+    static const std::string compacted_hm;
 
 public:
-    pegasus_server_write_test() : pegasus_server_test_base()
+    void set_compact_time(int64_t ts)
     {
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get());
+        _server->_manual_compact_last_finish_time_ms.store(static_cast<uint64_t >(ts*1000));
     }
 
-    void test_duplicate_not_batched()
+    void set_mock_now(uint64_t mock_now_sec)
     {
-        std::string hash_key = "hash_key";
-        constexpr int kv_num = 100;
-        std::string sort_key[kv_num];
-        std::string value[kv_num];
-
-        for (int i = 0; i < 100; i++) {
-            sort_key[i] = "sort_key_" + std::to_string(i);
-            value[i] = "value_" + std::to_string(i);
-        }
-
-        dsn::apps::duplicate_request duplicate;
-        duplicate.timetag = 1000;
-        dsn::apps::duplicate_response resp;
-
-        {
-            dsn::apps::multi_put_request mput;
-            for (int i = 0; i < 100; i++) {
-                mput.kvs.emplace_back();
-                mput.kvs.back().key.assign(sort_key[i].data(), 0, sort_key[i].size());
-                mput.kvs.back().value.assign(value[i].data(), 0, value[i].size());
-            }
-            dsn_message_t mput_msg = pegasus::create_multi_put_request(mput);
-
-            duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_PUT;
-            duplicate.raw_message = dsn::move_message_to_blob(mput_msg);
-
-            _server_write->on_duplicate_impl(false, duplicate, resp);
-            ASSERT_EQ(resp.error, 0);
-        }
-
-        {
-            dsn::apps::multi_remove_request mremove;
-            for (int i = 0; i < 100; i++) {
-                mremove.sort_keys.emplace_back();
-                mremove.sort_keys.back().assign(sort_key[i].data(), 0, sort_key[i].size());
-            }
-            dsn_message_t mremove_msg = pegasus::create_multi_remove_request(mremove);
-
-            duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
-            duplicate.raw_message = dsn::move_message_to_blob(mremove_msg);
-
-            _server_write->on_duplicate_impl(false, duplicate, resp);
-            ASSERT_EQ(resp.error, 0);
-        }
+        _server->_mock_now_timestamp  = mock_now_sec * 1000;
     }
 
-    void test_duplicate_batched()
+    void check_once_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
-        std::string hash_key = "hash_key";
-        constexpr int kv_num = 100;
-        std::string sort_key[kv_num];
-        std::string value[kv_num];
+        ASSERT_EQ(ok, _server->check_once_compact(envs))
+                 << dsn::utils::kv_map_to_string(envs, ';', '=');
+    }
 
-        for (int i = 0; i < 100; i++) {
-            sort_key[i] = "sort_key_" + std::to_string(i);
-            value[i] = "value_" + std::to_string(i);
-        }
+    void check_periodic_compact(const std::map<std::string, std::string> &envs, bool ok)
+    {
+        ASSERT_EQ(ok, _server->check_periodic_compact(envs))
+                 << dsn::utils::kv_map_to_string(envs, ';', '=');
+    }
 
-        {
-            dsn::apps::duplicate_request duplicate;
-            duplicate.timetag = 1000;
-            dsn::apps::duplicate_response resp;
+    void extract_manual_compact_opts(const std::map<std::string, std::string> &envs,
+                                     const std::string &key_prefix,
+                                     rocksdb::CompactRangeOptions &options)
+    {
+        _server->extract_manual_compact_opts(envs, key_prefix, options);
+    }
 
-            for (int i = 0; i < kv_num; i++) {
-                dsn::apps::update_request request;
-                pegasus::pegasus_generate_key(request.key, hash_key, sort_key[i]);
-                request.value.assign(value[i].data(), 0, value[i].size());
+    void set_num_level(int level)
+    {
+        _server->_db_opts.num_levels = level;
+    }
 
-                duplicate.raw_message =
-                    dsn::move_message_to_blob(pegasus::create_put_request(request));
-                duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
-                _server_write->on_duplicate_impl(true, duplicate, resp);
-                ASSERT_EQ(resp.error, 0);
-            }
-        }
+    void check_manual_compact_state(bool ok, const std::string &msg = "")
+    {
+        ASSERT_EQ(ok, _server->check_manual_compact_state())
+                 << msg;
+    }
+
+    void manual_compact(uint64_t mock_now_sec, uint64_t time_cost_sec)
+    {
+        set_mock_now(mock_now_sec);
+        uint64_t start = _server->now_timestamp();
+        // compacting...
+        set_mock_now(mock_now_sec+time_cost_sec);
+        uint64_t finish = _server->now_timestamp();
+        _server->_manual_compact_last_finish_time_ms.store(finish);
+        _server->_manual_compact_last_time_used_ms.store(finish - start);
+        _server->_manual_compact_start_time_ms.store(0);
+    }
+
+    void set_manual_compact_interval(int sec)
+    {
+        _server->_manual_compact_min_interval_seconds = sec;
     }
 };
 
-TEST_F(pegasus_server_write_test, duplicate_not_batched) { test_duplicate_not_batched(); }
+const std::string pegasus_server_compact_test::compacted_hm = "10:40";
 
-TEST_F(pegasus_server_write_test, duplicate_batched) { test_duplicate_batched(); }
+TEST_F(pegasus_server_compact_test, check_once_compact)
+{
+    // suppose compacted at 1500000000
+    set_compact_time(compacted_ts);
+
+    // invalid trigger time
+    std::map<std::string, std::string> envs;
+    check_once_compact(envs, false);
+
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = "";
+    check_once_compact(envs, false);
+
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = "abc";
+    check_once_compact(envs, false);
+
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = "-1";
+    check_once_compact(envs, false);
+
+    // has been compacted
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts-1);
+    check_once_compact(envs, false);
+
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts);
+    check_once_compact(envs, false);
+
+    // has not been compacted
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts+1);
+    check_once_compact(envs, true);
+
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(dsn_now_ms()/1000);
+    check_once_compact(envs, true);
+}
+
+TEST_F(pegasus_server_compact_test, check_periodic_compact)
+{
+    // disabled
+    std::map<std::string, std::string> envs;
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "";
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "true";
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "1";
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "abc";
+    check_periodic_compact(envs, false);
+
+    // enable
+    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "false";
+
+    // invalid trigger time format
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "";
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = ",";
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "12:oo";
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = std::to_string(compacted_ts);
+    check_periodic_compact(envs, false);
+
+    // suppose compacted at 10:00
+    set_compact_time(dsn::utils::hm_of_day_to_time_s("10:00"));
+
+    // has been compacted
+    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "9:00";
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "3:00,9:00";
+    check_periodic_compact(envs, false);
+
+    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00";
+    check_periodic_compact(envs, false);
+
+    // suppose compacted at 09:00
+    set_compact_time(dsn::utils::hm_of_day_to_time_s("09:00"));
+
+    // single compact time
+    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00";
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("08:00"));
+    check_periodic_compact(envs, false);
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("09:30"));
+    check_periodic_compact(envs, false);
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("10:30"));
+    check_periodic_compact(envs, true);
+
+    // multiple compact time
+    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00,21:00";
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("08:00"));
+    check_periodic_compact(envs, false);
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("09:30"));
+    check_periodic_compact(envs, false);
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("10:30"));
+    check_periodic_compact(envs, true);
+
+    // suppose compacted at 11:00
+    set_compact_time(dsn::utils::hm_of_day_to_time_s("11:00"));
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("11:01"));
+    check_periodic_compact(envs, false);
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("20:30"));
+    check_periodic_compact(envs, false);
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("21:01"));
+    check_periodic_compact(envs, true);
+
+    // suppose compacted at 21:50
+    set_compact_time(dsn::utils::hm_of_day_to_time_s("21:50"));
+
+    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("22:00"));
+    check_periodic_compact(envs, false);
+}
+
+TEST_F(pegasus_server_compact_test, extract_manual_compact_opts)
+{
+    // init _db max level
+    set_num_level(7);
+
+    std::map<std::string, std::string> envs;
+    rocksdb::CompactRangeOptions out;
+
+    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    ASSERT_EQ(out.target_level, -1);
+    ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
+
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_TARGET_LEVEL_KEY] = "2";
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY]
+            = MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
+    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    ASSERT_EQ(out.target_level, 2);
+    ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kForce);
+
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-1";
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY]
+            = MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
+    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    ASSERT_EQ(out.target_level, -1);
+    ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
+
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-2";
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY] = "nonono";
+    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    ASSERT_EQ(out.target_level, -1);
+    ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
+
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_TARGET_LEVEL_KEY] = "8";
+    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    ASSERT_EQ(out.target_level, -1);
+}
+
+TEST_F(pegasus_server_compact_test, check_manual_compact_state_0_interval)
+{
+    set_manual_compact_interval(0);
+
+    uint64_t first_time = 1500000000;
+    set_mock_now(first_time);
+
+    check_manual_compact_state(true, "1st start ok");
+    check_manual_compact_state(false, "1st start not ok");
+
+    manual_compact(first_time, 1);
+
+    check_manual_compact_state(true, "2nd start ok");
+    check_manual_compact_state(false, "2nd start not ok");
+}
+
+TEST_F(pegasus_server_compact_test, check_manual_compact_state_1h_interval)
+{
+    set_manual_compact_interval(3600);
+
+    uint64_t first_time = 1500000000;
+    set_mock_now(first_time);
+    check_manual_compact_state(true, "1st start ok");
+    check_manual_compact_state(false, "1st start not ok");
+
+    manual_compact(first_time, 10);     // cost 10 seconds
+
+    set_mock_now(first_time+1800);
+    check_manual_compact_state(false, "1800s past");
+
+    set_mock_now(first_time+3609);
+    check_manual_compact_state(false, "3609s past");
+
+    set_mock_now(first_time+3610);
+    check_manual_compact_state(false, "3610s past");
+
+    set_mock_now(first_time+3611);
+    check_manual_compact_state(true, "3611s past, start ok");
+    check_manual_compact_state(false, "3611s past, start not ok");
+}
 
 } // namespace server
 } // namespace pegasus

@@ -7,12 +7,9 @@
 #include "command_executor.h"
 #include "command_utils.h"
 #include "command_helper.h"
+
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
-#include <pegasus_key_schema.h>
-#include <pegasus_value_schema.h>
-#include <pegasus_utils.h>
-#include <counter_utils.h>
 #include <pegasus/error.h>
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>

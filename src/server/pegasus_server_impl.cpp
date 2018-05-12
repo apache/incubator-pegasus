@@ -3,11 +3,10 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_server_impl.h"
-#include <pegasus_const.h>
-#include <pegasus_key_schema.h>
-#include <pegasus_value_schema.h>
-#include <pegasus_utils.h>
-#include <dsn/utility/smart_pointers.h>
+#include "base/pegasus_key_schema.h"
+#include "base/pegasus_value_schema.h"
+#include "base/pegasus_utils.h"
+
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/fmt_logging.h>
@@ -2706,8 +2705,9 @@ bool pegasus_server_impl::check_once_compact(const std::map<std::string, std::st
         return false;
     }
 
-    uint64_t trigger_time = 0;
-    if (!pegasus::utils::buf2uint64(find->second, trigger_time)) {
+    int64_t trigger_time = 0;
+    if (!pegasus::utils::buf2int64(find->second, trigger_time) ||
+        trigger_time <= 0) {
         ddebug_f("{}={} is invalid.",
                  MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY,
                  find->second);
@@ -2735,7 +2735,9 @@ bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std
     std::list<std::string> trigger_time_strs;
     dsn::utils::split_args(find->second.c_str(), trigger_time_strs, ',');
     if (trigger_time_strs.empty()) {
-        ddebug_replica("{} is invalid.", MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
+        ddebug_replica("{}={} is invalid.",
+                       MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY,
+                       find->second);
         return false;
     }
 
@@ -2747,19 +2749,32 @@ bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std
         }
     }
     if (trigger_time.empty()) {
-        ddebug_replica("{} is invalid.", MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
+        ddebug_replica("{}={} is invalid.",
+                       MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY,
+                       find->second);
         return false;
     }
 
-    auto now = static_cast<int64_t>(dsn_now_s());
-    for (auto tt : trigger_time) {
-        if (_manual_compact_last_finish_time_ms < tt &&
-            tt < now) {
+    auto now = static_cast<int64_t>(now_timestamp());
+    for (auto t : trigger_time) {
+        auto t_ms = t * 1000;
+        if (_manual_compact_last_finish_time_ms.load() < t_ms &&
+            t_ms < now) {
             return true;
         }
     }
 
-    return true;
+    return false;
+}
+
+uint64_t pegasus_server_impl::now_timestamp()
+{
+#ifdef NDEBUG
+    return dsn_now_ms();
+#else
+    ddebug_replica("_mock_now_timestamp={}", _mock_now_timestamp);
+    return _mock_now_timestamp == 0 ? dsn_now_ms() : _mock_now_timestamp;
+#endif
 }
 
 void pegasus_server_impl::extract_manual_compact_opts(const std::map<std::string, std::string> &envs,
@@ -2805,11 +2820,12 @@ void pegasus_server_impl::extract_manual_compact_opts(const std::map<std::string
 bool pegasus_server_impl::check_manual_compact_state()
 {
     uint64_t not_start = 0;
-    uint64_t now = dsn_now_ms();
-    if (_manual_compact_min_interval_seconds > 0 &&
-        (_manual_compact_last_finish_time_ms.load() == 0 ||
-         now - _manual_compact_last_finish_time_ms.load() >
-             (uint64_t)_manual_compact_min_interval_seconds * 1000)) {
+    uint64_t now = now_timestamp();
+    if (_manual_compact_min_interval_seconds <= 0 ||                // no interval limit
+        _manual_compact_last_finish_time_ms.load() == 0 ||          // has not compacted
+        now - _manual_compact_last_finish_time_ms.load() >
+          (uint64_t)_manual_compact_min_interval_seconds * 1000) {  // interval past
+        ddebug_replica("check ok");
         return _manual_compact_start_time_ms.compare_exchange_strong(not_start, now);
     } else {
         return false;
@@ -2820,9 +2836,9 @@ void pegasus_server_impl::manual_compact(const rocksdb::CompactRangeOptions &opt
 {
     if (check_manual_compact_state()) {
         ddebug_replica("start to execute manual compaction");
-        uint64_t start = dsn_now_ms();
+        uint64_t start = now_timestamp();
         do_manual_compact(options);
-        uint64_t finish = dsn_now_ms();
+        uint64_t finish = now_timestamp();
         ddebug_replica("finish to execute manual compaction, time_used = {}ms", finish - start);
         _manual_compact_last_finish_time_ms.store(finish);
         _manual_compact_last_time_used_ms.store(finish - start);

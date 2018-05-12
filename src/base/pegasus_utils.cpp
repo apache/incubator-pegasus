@@ -72,15 +72,15 @@ bool buf2int(dsn::string_view buffer, int &result)
     return true;
 }
 
-bool buf2uint64(dsn::string_view buffer, uint64_t &result)
+bool buf2int64(dsn::string_view buffer, int64_t &result)
 {
     if (buffer.empty())
         return false;
     char *p = nullptr;
-    unsigned long long v = ::strtoull(buffer.data(), &p, 10);
+    long long int v = ::strtoll(buffer.data(), &p, 10);
     if (*p != 0)
         return false;
-    if (v == ULLONG_MAX && errno == ERANGE) // out of range
+    if ((v == LLONG_MIN || v == LLONG_MAX) && errno == ERANGE) // out of range
         return false;
     result = v;
     return true;
