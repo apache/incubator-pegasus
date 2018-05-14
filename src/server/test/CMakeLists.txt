@@ -34,6 +34,7 @@ set(MY_PROJ_LIBS
         gtest
         z bz2 snappy rt aio pthread
         )
+add_definitions(-DPEGASUS_UNIT_TEST)
 
 set(MY_BOOST_PACKAGES system filesystem)
 

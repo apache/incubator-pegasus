@@ -213,6 +213,10 @@ private:
 
     std::string query_compact_state() const override;
 
+    bool manual_compact_enqueued() const override { return _manual_compact_enqueue_count.load() != 0; }
+
+    bool manual_compact_executing() const override { return _manual_compact_start_time_ms.load() != 0; }
+
     // return true if successfully changed
     bool set_usage_scenario(const std::string &usage_scenario);
 
@@ -232,7 +236,7 @@ private:
     uint64_t _abnormal_multi_get_iterate_count_threshold;
     int32_t _manual_compact_min_interval_seconds;
 
-#ifndef NDEBUG
+#ifdef PEGASUS_UNIT_TEST
     uint64_t _mock_now_timestamp = 0;
 #endif
 
@@ -266,6 +270,7 @@ private:
     uint32_t _updating_rocksdb_sstsize_interval_seconds;
 
     // manual compact state
+    std::atomic<uint64_t> _manual_compact_enqueue_count;
     std::atomic<uint64_t> _manual_compact_start_time_ms;
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
     std::atomic<uint64_t> _manual_compact_last_time_used_ms;
@@ -294,9 +299,6 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
     ::dsn::perf_counter_wrapper _pfc_sst_count;
     ::dsn::perf_counter_wrapper _pfc_sst_size;
-
-//    perf_counter_wrapper _counter_manual_compact_running_count;
-//    perf_counter_wrapper _counter_manual_compact_queue_count;
 };
 }
 } // namespace
