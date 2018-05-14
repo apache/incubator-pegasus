@@ -2671,8 +2671,7 @@ void pegasus_server_impl::check_manual_compact(const std::map<std::string, std::
         compact_rule = MANUAL_COMPACT_ONCE_KEY_PREFIX;
     }
 
-    if (compact_rule.empty() &&
-        check_periodic_compact(envs)) {
+    if (compact_rule.empty() && check_periodic_compact(envs)) {
         compact_rule = MANUAL_COMPACT_PERIODIC_KEY_PREFIX;
     }
 
@@ -2684,13 +2683,10 @@ void pegasus_server_impl::check_manual_compact(const std::map<std::string, std::
     extract_manual_compact_opts(envs, compact_rule, options);
 
     _manual_compact_enqueue_count.fetch_add(1);
-    dsn::tasking::enqueue(
-            LPC_MANUAL_COMPACT,
-            &_tracker,
-            [this, options]() {
-                _manual_compact_enqueue_count.fetch_sub(1);
-                manual_compact(options);
-            });
+    dsn::tasking::enqueue(LPC_MANUAL_COMPACT, &_tracker, [this, options]() {
+        _manual_compact_enqueue_count.fetch_sub(1);
+        manual_compact(options);
+    });
 }
 
 bool pegasus_server_impl::check_once_compact(const std::map<std::string, std::string> &envs)
@@ -2701,11 +2697,8 @@ bool pegasus_server_impl::check_once_compact(const std::map<std::string, std::st
     }
 
     int64_t trigger_time = 0;
-    if (!pegasus::utils::buf2int64(find->second, trigger_time) ||
-        trigger_time <= 0) {
-        ddebug_replica("{}={} is invalid.",
-                       find->first,
-                       find->second);
+    if (!pegasus::utils::buf2int64(find->second, trigger_time) || trigger_time <= 0) {
+        ddebug_replica("{}={} is invalid.", find->first, find->second);
         return false;
     }
 
@@ -2715,9 +2708,7 @@ bool pegasus_server_impl::check_once_compact(const std::map<std::string, std::st
 bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std::string> &envs)
 {
     auto find = envs.find(MANUAL_COMPACT_PERIODIC_DISABLED_KEY);
-    if (find != envs.end() &&
-        find->second != "false" &&
-        find->second != "0") {
+    if (find != envs.end() && find->second != "false" && find->second != "0") {
         ddebug_replica("periodic_compact is disabled now.");
         return false;
     }
@@ -2730,13 +2721,11 @@ bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std
     std::list<std::string> trigger_time_strs;
     dsn::utils::split_args(find->second.c_str(), trigger_time_strs, ',');
     if (trigger_time_strs.empty()) {
-        ddebug_replica("{}={} is invalid.",
-                       find->first,
-                       find->second);
+        ddebug_replica("{}={} is invalid.", find->first, find->second);
         return false;
     }
 
-    std::set<int64_t > trigger_time;
+    std::set<int64_t> trigger_time;
     for (auto &tts : trigger_time_strs) {
         int64_t tt = dsn::utils::hm_of_day_to_time_s(tts);
         if (tt != -1) {
@@ -2744,17 +2733,14 @@ bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std
         }
     }
     if (trigger_time.empty()) {
-        ddebug_replica("{}={} is invalid.",
-                       find->first,
-                       find->second);
+        ddebug_replica("{}={} is invalid.", find->first, find->second);
         return false;
     }
 
     auto now = static_cast<int64_t>(now_timestamp());
     for (auto t : trigger_time) {
         auto t_ms = t * 1000;
-        if (_manual_compact_last_finish_time_ms.load() < t_ms &&
-            t_ms < now) {
+        if (_manual_compact_last_finish_time_ms.load() < t_ms && t_ms < now) {
             return true;
         }
     }
@@ -2772,18 +2758,18 @@ uint64_t pegasus_server_impl::now_timestamp()
 #endif
 }
 
-void pegasus_server_impl::extract_manual_compact_opts(const std::map<std::string, std::string> &envs,
-                                                      const std::string &key_prefix,
-                                                      rocksdb::CompactRangeOptions &options)
+void pegasus_server_impl::extract_manual_compact_opts(
+    const std::map<std::string, std::string> &envs,
+    const std::string &key_prefix,
+    rocksdb::CompactRangeOptions &options)
 {
     options.exclusive_manual_compaction = true;
     options.change_level = true;
     options.target_level = -1;
-    auto find = envs.find(key_prefix+MANUAL_COMPACT_TARGET_LEVEL_KEY);
+    auto find = envs.find(key_prefix + MANUAL_COMPACT_TARGET_LEVEL_KEY);
     if (find != envs.end()) {
         int target_level;
-        if (pegasus::utils::buf2int(find->second, target_level) &&
-            target_level >= 1 &&
+        if (pegasus::utils::buf2int(find->second, target_level) && target_level >= 1 &&
             target_level <= _db_opts.num_levels) {
             options.target_level = target_level;
         } else {
@@ -2795,7 +2781,7 @@ void pegasus_server_impl::extract_manual_compact_opts(const std::map<std::string
     }
 
     options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
-    find = envs.find(key_prefix+MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY);
+    find = envs.find(key_prefix + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY);
     if (find != envs.end()) {
         const std::string &argv = find->second;
         if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
@@ -2803,11 +2789,12 @@ void pegasus_server_impl::extract_manual_compact_opts(const std::map<std::string
         } else if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
             options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
         } else {
-            derror_replica("{}={} is invalid, use default value {}",
-                           find->first,
-                           find->second,
-                           // NOTICE associate with options.bottommost_level_compaction's default value above
-                           MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP);
+            derror_replica(
+                "{}={} is invalid, use default value {}",
+                find->first,
+                find->second,
+                // NOTICE associate with options.bottommost_level_compaction's default value above
+                MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP);
         }
     }
 }
@@ -2816,11 +2803,11 @@ bool pegasus_server_impl::check_manual_compact_state()
 {
     uint64_t not_start = 0;
     uint64_t now = now_timestamp();
-    if (_manual_compact_min_interval_seconds <= 0 ||                                    // no interval limit
-        _manual_compact_last_finish_time_ms.load() == 0 ||                              // has not compacted yet
+    if (_manual_compact_min_interval_seconds <= 0 ||       // no interval limit
+        _manual_compact_last_finish_time_ms.load() == 0 || // has not compacted yet
         now - _manual_compact_last_finish_time_ms.load() >
-          (uint64_t)_manual_compact_min_interval_seconds * 1000) {                      // interval past
-        return _manual_compact_start_time_ms.compare_exchange_strong(not_start, now);   // not start
+            (uint64_t)_manual_compact_min_interval_seconds * 1000) { // interval past
+        return _manual_compact_start_time_ms.compare_exchange_strong(not_start, now); // not start
     } else {
         return false;
     }
@@ -2838,7 +2825,8 @@ void pegasus_server_impl::manual_compact(const rocksdb::CompactRangeOptions &opt
         _manual_compact_last_time_used_ms.store(finish - start);
         _manual_compact_start_time_ms.store(0);
     } else {
-        ddebug_replica("ignored this compact request because last one is on going or finished just now");
+        ddebug_replica(
+            "ignored this compact request because last one is on going or finished just now");
     }
 }
 
@@ -2857,8 +2845,9 @@ void pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &
 
     ddebug_replica("start to CompactRange, target_level = {}, bottommost_level_compaction = {}",
                    options.target_level,
-                   options.bottommost_level_compaction
-                     == rocksdb::BottommostLevelCompaction::kForce ? "force" : "skip");
+                   options.bottommost_level_compaction == rocksdb::BottommostLevelCompaction::kForce
+                       ? "force"
+                       : "skip");
     start_time = dsn_now_ms();
     status = _db->CompactRange(options, nullptr, nullptr);
     ddebug_replica("CompactRange finished, status = {}, time_used = {}ms",
@@ -2892,6 +2881,5 @@ std::string pegasus_server_impl::query_compact_state() const
     }
     return state.str();
 }
-
 }
 } // namespace

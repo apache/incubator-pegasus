@@ -28,8 +28,8 @@ TEST(base, buf2int_string_view)
     ASSERT_TRUE(buf2int(std::to_string(INT_MAX), result));
     ASSERT_EQ(INT_MAX, result);
 
-    ASSERT_FALSE(buf2int(std::to_string(INT_MIN)+"0", result));
-    ASSERT_FALSE(buf2int(std::to_string(INT_MIN)+"0", result));
+    ASSERT_FALSE(buf2int(std::to_string(INT_MIN) + "0", result));
+    ASSERT_FALSE(buf2int(std::to_string(INT_MIN) + "0", result));
     ASSERT_FALSE(buf2int(std::to_string(LLONG_MAX), result));
     ASSERT_FALSE(buf2int("", result));
     ASSERT_FALSE(buf2int("a", result));
@@ -57,8 +57,8 @@ TEST(base, buf2int64_string_view)
 
     ASSERT_FALSE(buf2int64(std::to_string((uint64_t)LLONG_MAX + 1), result));
     ASSERT_FALSE(buf2int64(std::to_string(ULLONG_MAX), result));
-    ASSERT_FALSE(buf2int64(std::to_string(LLONG_MAX)+"0", result));
-    ASSERT_FALSE(buf2int64(std::to_string(LLONG_MIN)+"0", result));
+    ASSERT_FALSE(buf2int64(std::to_string(LLONG_MAX) + "0", result));
+    ASSERT_FALSE(buf2int64(std::to_string(LLONG_MIN) + "0", result));
     ASSERT_FALSE(buf2int64("", result));
     ASSERT_FALSE(buf2int64("a", result));
     ASSERT_FALSE(buf2int64("9a", result));

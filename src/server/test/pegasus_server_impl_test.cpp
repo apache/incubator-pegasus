@@ -10,30 +10,27 @@ namespace server {
 class pegasus_server_compact_test : public pegasus_server_test_base
 {
 public:
-    static const uint64_t compacted_ts = 1500000000;    // 2017.07.14 10:40:00 CST
+    static const uint64_t compacted_ts = 1500000000; // 2017.07.14 10:40:00 CST
     static const std::string compacted_hm;
 
 public:
     void set_compact_time(int64_t ts)
     {
-        _server->_manual_compact_last_finish_time_ms.store(static_cast<uint64_t >(ts*1000));
+        _server->_manual_compact_last_finish_time_ms.store(static_cast<uint64_t>(ts * 1000));
     }
 
-    void set_mock_now(uint64_t mock_now_sec)
-    {
-        _server->_mock_now_timestamp  = mock_now_sec * 1000;
-    }
+    void set_mock_now(uint64_t mock_now_sec) { _server->_mock_now_timestamp = mock_now_sec * 1000; }
 
     void check_once_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
         ASSERT_EQ(ok, _server->check_once_compact(envs))
-                 << dsn::utils::kv_map_to_string(envs, ';', '=');
+            << dsn::utils::kv_map_to_string(envs, ';', '=');
     }
 
     void check_periodic_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
         ASSERT_EQ(ok, _server->check_periodic_compact(envs))
-                 << dsn::utils::kv_map_to_string(envs, ';', '=');
+            << dsn::utils::kv_map_to_string(envs, ';', '=');
     }
 
     void extract_manual_compact_opts(const std::map<std::string, std::string> &envs,
@@ -43,15 +40,11 @@ public:
         _server->extract_manual_compact_opts(envs, key_prefix, options);
     }
 
-    void set_num_level(int level)
-    {
-        _server->_db_opts.num_levels = level;
-    }
+    void set_num_level(int level) { _server->_db_opts.num_levels = level; }
 
     void check_manual_compact_state(bool ok, const std::string &msg = "")
     {
-        ASSERT_EQ(ok, _server->check_manual_compact_state())
-                 << msg;
+        ASSERT_EQ(ok, _server->check_manual_compact_state()) << msg;
     }
 
     void manual_compact(uint64_t mock_now_sec, uint64_t time_cost_sec)
@@ -59,7 +52,7 @@ public:
         set_mock_now(mock_now_sec);
         uint64_t start = _server->now_timestamp();
         // compacting...
-        set_mock_now(mock_now_sec+time_cost_sec);
+        set_mock_now(mock_now_sec + time_cost_sec);
         uint64_t finish = _server->now_timestamp();
         _server->_manual_compact_last_finish_time_ms.store(finish);
         _server->_manual_compact_last_time_used_ms.store(finish - start);
@@ -93,17 +86,17 @@ TEST_F(pegasus_server_compact_test, check_once_compact)
     check_once_compact(envs, false);
 
     // has been compacted
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts-1);
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts - 1);
     check_once_compact(envs, false);
 
     envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts);
     check_once_compact(envs, false);
 
     // has not been compacted
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts+1);
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts + 1);
     check_once_compact(envs, true);
 
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(dsn_now_ms()/1000);
+    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(dsn_now_ms() / 1000);
     check_once_compact(envs, true);
 }
 
@@ -214,27 +207,28 @@ TEST_F(pegasus_server_compact_test, extract_manual_compact_opts)
     ASSERT_EQ(out.target_level, -1);
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
 
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_TARGET_LEVEL_KEY] = "2";
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY]
-            = MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_TARGET_LEVEL_KEY] = "2";
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY] =
+        MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
     extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
     ASSERT_EQ(out.target_level, 2);
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kForce);
 
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-1";
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY]
-            = MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-1";
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY] =
+        MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
     extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
     ASSERT_EQ(out.target_level, -1);
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
 
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-2";
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY] = "nonono";
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-2";
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY] =
+        "nonono";
     extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
     ASSERT_EQ(out.target_level, -1);
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
 
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX+MANUAL_COMPACT_TARGET_LEVEL_KEY] = "8";
+    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_TARGET_LEVEL_KEY] = "8";
     extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
     ASSERT_EQ(out.target_level, -1);
 }
@@ -264,18 +258,18 @@ TEST_F(pegasus_server_compact_test, check_manual_compact_state_1h_interval)
     check_manual_compact_state(true, "1st start ok");
     check_manual_compact_state(false, "1st start not ok");
 
-    manual_compact(first_time, 10);     // cost 10 seconds
+    manual_compact(first_time, 10); // cost 10 seconds
 
-    set_mock_now(first_time+1800);
+    set_mock_now(first_time + 1800);
     check_manual_compact_state(false, "1800s past");
 
-    set_mock_now(first_time+3609);
+    set_mock_now(first_time + 3609);
     check_manual_compact_state(false, "3609s past");
 
-    set_mock_now(first_time+3610);
+    set_mock_now(first_time + 3610);
     check_manual_compact_state(false, "3610s past");
 
-    set_mock_now(first_time+3611);
+    set_mock_now(first_time + 3611);
     check_manual_compact_state(true, "3611s past, start ok");
     check_manual_compact_state(false, "3611s past, start not ok");
 }

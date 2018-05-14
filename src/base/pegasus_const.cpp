@@ -17,11 +17,14 @@ const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE("prefer_write");
 const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD("bulk_load");
 
 const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX("manual_compact.periodic.");
-const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX+"trigger_time");
-const std::string MANUAL_COMPACT_PERIODIC_DISABLED_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX+"disabled");
+const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX +
+                                                           "trigger_time");
+const std::string MANUAL_COMPACT_PERIODIC_DISABLED_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX +
+                                                       "disabled");
 
 const std::string MANUAL_COMPACT_ONCE_KEY_PREFIX("manual_compact.once.");
-const std::string MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY(MANUAL_COMPACT_ONCE_KEY_PREFIX+"trigger_time");
+const std::string MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY(MANUAL_COMPACT_ONCE_KEY_PREFIX +
+                                                       "trigger_time");
 
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY("bottommost_level_compaction");
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");

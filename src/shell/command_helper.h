@@ -440,8 +440,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             dsn::error_code err = sc->ddl_client->list_app(
                 app.app_name, app_id, partition_count, app_partitions[app.app_id]);
             if (err != ::dsn::ERR_OK) {
-                derror(
-                    "list app %s failed, error = %s", app_name.c_str(), err.to_string());
+                derror("list app %s failed, error = %s", app_name.c_str(), err.to_string());
                 return true;
             }
             dassert(app_id == app.app_id, "%d VS %d", app_id, app.app_id);

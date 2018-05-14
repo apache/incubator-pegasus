@@ -213,9 +213,15 @@ private:
 
     std::string query_compact_state() const override;
 
-    bool manual_compact_enqueued() const override { return _manual_compact_enqueue_count.load() != 0; }
+    bool manual_compact_enqueued() const override
+    {
+        return _manual_compact_enqueue_count.load() != 0;
+    }
 
-    bool manual_compact_executing() const override { return _manual_compact_start_time_ms.load() != 0; }
+    bool manual_compact_executing() const override
+    {
+        return _manual_compact_start_time_ms.load() != 0;
+    }
 
     // return true if successfully changed
     bool set_usage_scenario(const std::string &usage_scenario);
