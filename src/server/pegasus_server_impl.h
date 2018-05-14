@@ -205,9 +205,9 @@ private:
                                      const std::string &key_prefix,
                                      rocksdb::CompactRangeOptions &options);
 
-    bool check_manual_compact_state();
-
     void manual_compact(const rocksdb::CompactRangeOptions &options);
+
+    bool check_manual_compact_state();
 
     void do_manual_compact(const rocksdb::CompactRangeOptions &options);
 

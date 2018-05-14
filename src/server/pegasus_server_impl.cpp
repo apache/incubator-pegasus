@@ -2667,7 +2667,6 @@ bool pegasus_server_impl::set_options(
 void pegasus_server_impl::check_manual_compact(const std::map<std::string, std::string> &envs)
 {
     std::string compact_rule;
-    rocksdb::CompactRangeOptions options;
     if (check_once_compact(envs)) {
         compact_rule = MANUAL_COMPACT_ONCE_KEY_PREFIX;
     }
@@ -2681,6 +2680,7 @@ void pegasus_server_impl::check_manual_compact(const std::map<std::string, std::
         return;
     }
 
+    rocksdb::CompactRangeOptions options;
     extract_manual_compact_opts(envs, compact_rule, options);
 
     _manual_compact_enqueue_count.fetch_add(1);
@@ -2703,13 +2703,13 @@ bool pegasus_server_impl::check_once_compact(const std::map<std::string, std::st
     int64_t trigger_time = 0;
     if (!pegasus::utils::buf2int64(find->second, trigger_time) ||
         trigger_time <= 0) {
-        ddebug_f("{}={} is invalid.",
-                 MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY,
-                 find->second);
+        ddebug_replica("{}={} is invalid.",
+                       find->first,
+                       find->second);
         return false;
     }
 
-    return trigger_time > _manual_compact_last_finish_time_ms / 1000;
+    return trigger_time > _manual_compact_last_finish_time_ms.load() / 1000;
 }
 
 bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std::string> &envs)
@@ -2731,7 +2731,7 @@ bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std
     dsn::utils::split_args(find->second.c_str(), trigger_time_strs, ',');
     if (trigger_time_strs.empty()) {
         ddebug_replica("{}={} is invalid.",
-                       MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY,
+                       find->first,
                        find->second);
         return false;
     }
@@ -2745,7 +2745,7 @@ bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std
     }
     if (trigger_time.empty()) {
         ddebug_replica("{}={} is invalid.",
-                       MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY,
+                       find->first,
                        find->second);
         return false;
     }
@@ -2788,7 +2788,7 @@ void pegasus_server_impl::extract_manual_compact_opts(const std::map<std::string
             options.target_level = target_level;
         } else {
             derror_replica("{}={} is invalid, use default value {}",
-                           key_prefix+MANUAL_COMPACT_TARGET_LEVEL_KEY,
+                           find->first,
                            find->second,
                            options.target_level);
         }
@@ -2804,7 +2804,7 @@ void pegasus_server_impl::extract_manual_compact_opts(const std::map<std::string
             options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
         } else {
             derror_replica("{}={} is invalid, use default value {}",
-                           key_prefix+MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY,
+                           find->first,
                            find->second,
                            // NOTICE associate with options.bottommost_level_compaction's default value above
                            MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP);
@@ -2816,11 +2816,11 @@ bool pegasus_server_impl::check_manual_compact_state()
 {
     uint64_t not_start = 0;
     uint64_t now = now_timestamp();
-    if (_manual_compact_min_interval_seconds <= 0 ||                // no interval limit
-        _manual_compact_last_finish_time_ms.load() == 0 ||          // has not compacted
+    if (_manual_compact_min_interval_seconds <= 0 ||                                    // no interval limit
+        _manual_compact_last_finish_time_ms.load() == 0 ||                              // has not compacted yet
         now - _manual_compact_last_finish_time_ms.load() >
-          (uint64_t)_manual_compact_min_interval_seconds * 1000) {  // interval past
-        return _manual_compact_start_time_ms.compare_exchange_strong(not_start, now);
+          (uint64_t)_manual_compact_min_interval_seconds * 1000) {                      // interval past
+        return _manual_compact_start_time_ms.compare_exchange_strong(not_start, now);   // not start
     } else {
         return false;
     }
