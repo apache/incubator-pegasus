@@ -2817,7 +2817,7 @@ void pegasus_server_impl::manual_compact(const rocksdb::CompactRangeOptions &opt
 {
     if (check_manual_compact_state()) {
         ddebug_replica("start to execute manual compaction");
-        uint64_t start = now_timestamp();
+        uint64_t start = _manual_compact_start_time_ms.load();
         do_manual_compact(options);
         uint64_t finish = _db->GetLastManualCompactFinishTime();
         ddebug_replica("finish to execute manual compaction, time_used = {}ms", finish - start);
@@ -2836,7 +2836,7 @@ void pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &
     rocksdb::Status status;
 
     // wait flush before compact to make all data compacted.
-    ddebug_replica("start to Flush", replica_name());
+    ddebug_replica("start to Flush");
     start_time = dsn_now_ms();
     status = _db->Flush(rocksdb::FlushOptions());
     ddebug_replica("Flush finished, status = {}, time_used = {}ms",
