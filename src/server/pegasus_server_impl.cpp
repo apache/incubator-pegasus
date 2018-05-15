@@ -94,7 +94,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "manual_compact_min_interval_seconds",
         0,
         "minimal interval time in seconds to start a new manual compaction, "
-        "<= 0 means disable manual compaction");
+        "<= 0 means no interval limit");
 
     // init db options
 
@@ -2708,7 +2708,7 @@ bool pegasus_server_impl::check_once_compact(const std::map<std::string, std::st
 bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std::string> &envs)
 {
     auto find = envs.find(MANUAL_COMPACT_PERIODIC_DISABLED_KEY);
-    if (find != envs.end() && find->second != "false" && find->second != "0") {
+    if (find != envs.end() && find->second == "true") {
         ddebug_replica("periodic_compact is disabled now.");
         return false;
     }
