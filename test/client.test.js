@@ -7,15 +7,23 @@ let assert = require('assert');
 let pegasusClient = require('../');
 let PException = require('../src/errors').PException;
 let ErrorType = require('../src/dsn/base_types').error_type;
+let log4js = require('log4js');
 
 describe('test/client.test.js', function(){
     this.timeout(10000);
     let client = null, tableName = 'temp';
 
+    log4js.configure({
+        appenders: { pegasus: { type: 'stdout'} },
+        categories: { default: { appenders: ['pegasus'], level: 'INFO' } }
+    });
+    let log = log4js.getLogger('pegasus');
+
     before(function(){
         client = pegasusClient.create({
             metaServers: ['127.0.0.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'],
             operationTimeout : 5000,
+            log : log,
         });
     });
     after(function(){

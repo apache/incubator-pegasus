@@ -8,7 +8,6 @@ const EventEmitter = require('events').EventEmitter;
 const net = require('net');
 const util = require('util');
 
-const log = require('../log');
 const Exception = require('./errors');
 
 const ErrorCode = require('./dsn/base_types').error_code;
@@ -18,6 +17,7 @@ const thrift = require('thrift');
 const InputBufferUnderrunError = require('thrift/lib/nodejs/lib/thrift/input_buffer_underrun_error');
 
 let _seq_id = 0;
+let log = null;
 
 /**
  * Constructor of Connection
@@ -25,11 +25,13 @@ let _seq_id = 0;
  *        {String}  options.host            required
  *        {Number}  options.port            required
  *        {Number}  options.rpcTimeOut(ms)  required
+ *        {Object}  options.log             required
  *        {Object}  options.transport       optional
  *        {Object}  options.protocol        optional
  * @constructor
  */
 function Connection (options) {
+    log = options.log;
     this.id = ++_seq_id;
     this.host = options.host;
     this.port = options.port;
@@ -213,7 +215,7 @@ Connection.prototype.setupStream = function(){
         this._connected = true;
         self.getResponse();
         self.emit('connect');
-        log.debug('Connected to %s', self.name);
+        log.info('Connected to %s', self.name);
     });
 };
 

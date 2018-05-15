@@ -12,6 +12,7 @@ const TableInfo = require('./table_handler').TableInfo;
 const tools = require('./tools');
 
 const _OPERATION_TIMEOUT = 1000;
+const log = require('../log');
 
 /**
  * Constructor of client
@@ -26,10 +27,12 @@ function Client(configs) {
 
     this.rpcTimeOut = configs.operationTimeout || _OPERATION_TIMEOUT;
     this.metaList = configs.metaServers;
+    this.log = configs.log || log;
     this.cachedTableInfo = {};          //tableName -> tableInfo
     this.cluster = new Cluster({        //Current connections
         'metaList' : this.metaList,
         'timeout' : this.rpcTimeOut,
+        'log' : this.log,
     });
 }
 util.inherits(Client, EventEmitter);
@@ -40,6 +43,7 @@ util.inherits(Client, EventEmitter);
  *          {Array}   configs.metaServers          required
  *          {String}  configs.metaServers[i]       required
  *          {Number}  configs.operationTimeout(ms) optional
+ *          {Object}  configs.log                  optional
  * @return  {Client}  client instance
  * @throws  {InvalidParamException}
  */

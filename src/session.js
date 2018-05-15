@@ -7,12 +7,13 @@
 const RpcAddress = require('./dsn/base_types').rpc_address;
 const ErrorType = require('./dsn/base_types').error_type;
 const Connection = require('./connection');
-const log = require('../log');
 const util = require('util');
 const Exception = require('./errors');
 // const EventEmitter = require('events').EventEmitter;
 const deasync = require('deasync');
 const META_DELAY = 500;
+
+let log = null;
 
 /**
  * Constructor of Cluster
@@ -20,9 +21,12 @@ const META_DELAY = 500;
  *        {Array}   args.metaList       required
  *        {String}  args.metaList[i]    required
  *        {Number}  args.timeout(ms)    required
+ *        {Object}  args.log            required
  * @constructor
  */
 function Cluster(args){
+    log = args.log;
+    this.log = args.log;
     this.timeout = args.timeout;
     this.replicaSessions = [];      // {'key' :rpc_addr, 'value': ReplicaSession}
     this.metaSession = new MetaSession(args);
@@ -40,7 +44,7 @@ Cluster.prototype.close = function(){
             connection.emit('close');
         }
     }
-    log.debug('Finish to close replica sessions');
+    log.info('Finish to close replica sessions');
 
     len = this.metaSession.metaList.length;
     for(i = 0; i < len; ++i){
@@ -49,7 +53,7 @@ Cluster.prototype.close = function(){
             connection.emit('close');
         }
     }
-    log.debug('Finish to close meta sessions');
+    log.info('Finish to close meta sessions');
 };
 
 /**
@@ -78,6 +82,7 @@ Session.prototype.getConnection = function(args, callback){
         'host' : rpc_addr.host,
         'port' : rpc_addr.port,
         'rpcTimeOut' : this.timeout,
+        'log' : log,
     });
 
     let sync = true, error = null;
@@ -210,7 +215,7 @@ MetaSession.prototype.onFinishQueryMeta = function(err, round){
         return;
     }
 
-    log.debug('%s, count %d, error is %s, meta error is %s',
+    log.warn('%s, count %d, error is %s, meta error is %s',
         round.lastConnection.name,
         round.maxQueryCount,
         rpcErr,
@@ -387,7 +392,7 @@ ReplicaSession.prototype.onRpcReply = function(err, round){
         //console.log(round);
         //TODO: remove timestamp, hashKey
         log.warn('Table %s: replica server not serve for gpid(%d, %d), err_code is %s',
-            op.hashKey || new Buffer(''),
+            round.tableHandler.tableName,
             op.pid.get_app_id(),
             op.pid.get_pidx(),
             op.rpc_error.errno);

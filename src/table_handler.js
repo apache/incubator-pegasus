@@ -18,10 +18,9 @@ const Long = require('long');
 const tools = require('./tools');
 const deasync = require('deasync');
 
-const log = require('../log');
-
 const DEFAULT_MULTI_COUNT = 100;
 const DEFAULT_MULTI_SIZE = 1000000;
+let log = null;
 
 /**
  * Constructor of tableHandle
@@ -31,6 +30,7 @@ const DEFAULT_MULTI_SIZE = 1000000;
  * @constructor
  */
 function TableHandler(cluster, tableName, callback){
+    log = cluster.log;
     this.cluster = cluster;
     this.tableName = tableName;
     this.keyHash = new PegasusHash();
