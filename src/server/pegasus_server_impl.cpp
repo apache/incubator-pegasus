@@ -52,7 +52,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _last_durable_decree(0),
       _physical_error(0),
       _is_checkpointing(false),
-      _manual_compact_enqueue_count(0),
+      _manual_compact_enqueue_time_ms(0),
       _manual_compact_start_time_ms(0),
       _manual_compact_last_finish_time_ms(0),
       _manual_compact_last_time_used_ms(0)
@@ -341,6 +341,14 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     snprintf(buf, 255, "disk.storage.sst(MB)@%s", str_gpid);
     _pfc_sst_size.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the size of sstable files");
+
+    snprintf(buf, 255, "manual.compact.enqueue.count@%s", str_gpid);
+    _pfc_manual_compact_enqueue_count.init_app_counter(
+        "app.pegasus", buf, COUNTER_TYPE_NUMBER, "current manual compact in queue count");
+
+    snprintf(buf, 255, "manual.compact.running.count@%s", str_gpid);
+    _pfc_manual_compact_running_count.init_app_counter(
+        "app.pegasus", buf, COUNTER_TYPE_NUMBER, "current manual compact running count");
 
     updating_rocksdb_sstsize();
 }
@@ -2679,14 +2687,19 @@ void pegasus_server_impl::check_manual_compact(const std::map<std::string, std::
         return;
     }
 
-    rocksdb::CompactRangeOptions options;
-    extract_manual_compact_opts(envs, compact_rule, options);
+    if (check_manual_compact_state()) {
+        rocksdb::CompactRangeOptions options;
+        extract_manual_compact_opts(envs, compact_rule, options);
 
-    _manual_compact_enqueue_count.fetch_add(1);
-    dsn::tasking::enqueue(LPC_MANUAL_COMPACT, &_tracker, [this, options]() {
-        _manual_compact_enqueue_count.fetch_sub(1);
-        manual_compact(options);
-    });
+        _pfc_manual_compact_enqueue_count->increment();
+        dsn::tasking::enqueue(LPC_MANUAL_COMPACT, &_tracker, [this, options]() {
+            _pfc_manual_compact_enqueue_count->decrement();
+            manual_compact(options);
+        });
+    } else {
+        ddebug_replica(
+            "ignored this compact request because last one is on going or finished just now");
+    }
 }
 
 bool pegasus_server_impl::check_once_compact(const std::map<std::string, std::string> &envs)
@@ -2801,13 +2814,14 @@ void pegasus_server_impl::extract_manual_compact_opts(
 
 bool pegasus_server_impl::check_manual_compact_state()
 {
-    uint64_t not_start = 0;
+    uint64_t not_enqueue = 0;
     uint64_t now = now_timestamp();
     if (_manual_compact_min_interval_seconds <= 0 ||       // no interval limit
         _manual_compact_last_finish_time_ms.load() == 0 || // has not compacted yet
         now - _manual_compact_last_finish_time_ms.load() >
             (uint64_t)_manual_compact_min_interval_seconds * 1000) { // interval past
-        return _manual_compact_start_time_ms.compare_exchange_strong(not_start, now); // not start
+        return _manual_compact_enqueue_time_ms.compare_exchange_strong(not_enqueue,
+                                                                       now); // not enqueue
     } else {
         return false;
     }
@@ -2815,19 +2829,18 @@ bool pegasus_server_impl::check_manual_compact_state()
 
 void pegasus_server_impl::manual_compact(const rocksdb::CompactRangeOptions &options)
 {
-    if (check_manual_compact_state()) {
-        ddebug_replica("start to execute manual compaction");
-        uint64_t start = _manual_compact_start_time_ms.load();
-        do_manual_compact(options);
-        uint64_t finish = _db->GetLastManualCompactFinishTime();
-        ddebug_replica("finish to execute manual compaction, time_used = {}ms", finish - start);
-        _manual_compact_last_finish_time_ms.store(finish);
-        _manual_compact_last_time_used_ms.store(finish - start);
-        _manual_compact_start_time_ms.store(0);
-    } else {
-        ddebug_replica(
-            "ignored this compact request because last one is on going or finished just now");
-    }
+    _pfc_manual_compact_running_count->increment();
+    ddebug_replica("start to execute manual compaction");
+    uint64_t start = now_timestamp();
+    _manual_compact_start_time_ms.store(start);
+    do_manual_compact(options);
+    uint64_t finish = _db->GetLastManualCompactFinishTime();
+    ddebug_replica("finish to execute manual compaction, time_used = {}ms", finish - start);
+    _manual_compact_last_finish_time_ms.store(finish);
+    _manual_compact_last_time_used_ms.store(finish - start);
+    _manual_compact_enqueue_time_ms.store(0);
+    _manual_compact_start_time_ms.store(0);
+    _pfc_manual_compact_running_count->decrement();
 }
 
 void pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options)
@@ -2857,6 +2870,7 @@ void pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &
 
 std::string pegasus_server_impl::query_compact_state() const
 {
+    uint64_t enqueue_time_ms = _manual_compact_enqueue_time_ms.load();
     uint64_t start_time_ms = _manual_compact_start_time_ms.load();
     uint64_t last_finish_time_ms = _manual_compact_last_finish_time_ms.load();
     uint64_t last_time_used_ms = _manual_compact_last_time_used_ms.load();
@@ -2864,14 +2878,19 @@ std::string pegasus_server_impl::query_compact_state() const
     if (last_finish_time_ms > 0) {
         char str[24];
         dsn::utils::time_ms_to_string(last_finish_time_ms, str);
-        state << "last finish at [" << str << "], ";
+        state << "last finish at [" << str << "]";
     } else {
-        state << "last finish at [-], ";
+        state << "last finish at [-]";
     }
+
     if (last_time_used_ms > 0) {
-        state << "last used " << last_time_used_ms << " ms";
-    } else {
-        state << "last used unknown ms";
+        state << ", last used " << last_time_used_ms << " ms";
+    }
+
+    if (enqueue_time_ms > 0) {
+        char str[24];
+        dsn::utils::time_ms_to_string(enqueue_time_ms, str);
+        state << ", recent enqueue at [" << str << "]";
     }
 
     if (start_time_ms > 0) {

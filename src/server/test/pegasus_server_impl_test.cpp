@@ -51,12 +51,13 @@ public:
     {
         set_mock_now(mock_now_sec);
         uint64_t start = _server->now_timestamp();
-        // compacting...
+        _server->_manual_compact_start_time_ms.store(start);
+        // do compacting...
         set_mock_now(mock_now_sec + time_cost_sec);
         uint64_t finish = _server->now_timestamp();
         _server->_manual_compact_last_finish_time_ms.store(finish);
         _server->_manual_compact_last_time_used_ms.store(finish - start);
-        _server->_manual_compact_start_time_ms.store(0);
+        _server->_manual_compact_enqueue_time_ms.store(0);
     }
 
     void set_manual_compact_interval(int sec)
