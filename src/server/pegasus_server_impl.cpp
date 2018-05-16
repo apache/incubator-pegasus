@@ -2740,7 +2740,7 @@ bool pegasus_server_impl::check_periodic_compact(const std::map<std::string, std
 
     std::set<int64_t> trigger_time;
     for (auto &tts : trigger_time_strs) {
-        int64_t tt = dsn::utils::hm_of_day_to_time_s(tts);
+        int64_t tt = dsn::utils::hh_mm_today_to_unix_sec(tts);
         if (tt != -1) {
             trigger_time.emplace(tt);
         }

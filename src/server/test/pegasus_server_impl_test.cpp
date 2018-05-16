@@ -138,7 +138,7 @@ TEST_F(pegasus_server_compact_test, check_periodic_compact)
     check_periodic_compact(envs, false);
 
     // suppose compacted at 10:00
-    set_compact_time(dsn::utils::hm_of_day_to_time_s("10:00"));
+    set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("10:00"));
 
     // has been compacted
     envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "9:00";
@@ -151,48 +151,48 @@ TEST_F(pegasus_server_compact_test, check_periodic_compact)
     check_periodic_compact(envs, false);
 
     // suppose compacted at 09:00
-    set_compact_time(dsn::utils::hm_of_day_to_time_s("09:00"));
+    set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("09:00"));
 
     // single compact time
     envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00";
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("08:00"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("08:00"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("09:30"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("09:30"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("10:30"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("10:30"));
     check_periodic_compact(envs, true);
 
     // multiple compact time
     envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00,21:00";
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("08:00"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("08:00"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("09:30"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("09:30"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("10:30"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("10:30"));
     check_periodic_compact(envs, true);
 
     // suppose compacted at 11:00
-    set_compact_time(dsn::utils::hm_of_day_to_time_s("11:00"));
+    set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("11:00"));
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("11:01"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("11:01"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("20:30"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("20:30"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("21:01"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("21:01"));
     check_periodic_compact(envs, true);
 
     // suppose compacted at 21:50
-    set_compact_time(dsn::utils::hm_of_day_to_time_s("21:50"));
+    set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("21:50"));
 
-    set_mock_now((uint64_t)dsn::utils::hm_of_day_to_time_s("22:00"));
+    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("22:00"));
     check_periodic_compact(envs, false);
 }
 
