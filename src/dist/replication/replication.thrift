@@ -587,6 +587,117 @@ struct configuration_update_app_env_response
     2:string hint_message;
 }
 
+/////////////////// duplication-related structs ////////////////////
+
+//  - INIT  -> START
+//  - START -> PAUSE
+//  - START -> REMOVED
+//  - PAUSE -> START
+//  - PAUSE -> REMOVED
+enum duplication_status
+{
+    DS_INIT = 0,
+    DS_START,
+    DS_PAUSE,
+    DS_REMOVED,
+}
+
+// This request is sent from client to meta.
+struct duplication_add_request
+{
+    1:string                    app_name;
+    2:string                    remote_cluster_address;
+}
+
+struct duplication_add_response
+{
+    // Possible errors:
+    // - ERR_INVALID_PARAMETERS:
+    //   the address of remote cluster is not well configured in meta sever.
+    1:dsn.error_code   err;
+    2:i32              appid;
+    3:i32              dupid;
+}
+
+// This request is sent from client to meta.
+struct duplication_status_change_request
+{
+    1:string                    app_name;
+    2:i32                       dupid;
+    3:duplication_status        status;
+}
+
+struct duplication_status_change_response
+{
+    // Possible errors:
+    // - ERR_APP_NOT_EXIST: app is not found
+    // - ERR_OBJECT_NOT_FOUND: duplication is not found
+    // - ERR_BUSY: busy for updating state
+    // - ERR_INVALID_PARAMETERS: illegal request
+    1:dsn.error_code   err;
+    2:i32              appid;
+}
+
+struct duplication_entry
+{
+    1:i32                  dupid;
+    2:duplication_status   status;
+    3:string               remote_address;
+    4:i64                  create_ts;
+
+    // partition_index => confirmed decree
+    5:map<i32, i64>        progress;
+}
+
+// This request is sent from client to meta.
+struct duplication_query_request
+{
+    1:string                    app_name;
+}
+
+struct duplication_query_response
+{
+    // Possible errors:
+    // - ERR_APP_NOT_EXIST: app is not found
+    1:dsn.error_code             err;
+    3:i32                        appid;
+    4:list<duplication_entry>    entry_list;
+}
+
+struct duplication_confirm_entry {
+    1:i32       dupid;
+    2:i64       confirmed_decree;
+}
+
+// This is an internal RPC sent from replica server to meta.
+// It's a server-level RPC.
+// After starts up, the replica server periodically collects and uploads confirmed points
+// to meta server, so that clients can directly query through meta for the current progress
+// of a duplication.
+// Moreover, if a primary replica is detected to be crashed, the duplication will be restarted
+// on the new primary, continuing from the progress persisted on meta.
+// Another function of this rpc is that it synchronizes duplication metadata updates
+// (like addition or removal of duplication) between meta and replica.
+struct duplication_sync_request
+{
+    // the address of of the replica server who sends this request
+    // TODO(wutao1): remove this field and get the source address by dsn_msg_from_address
+    1:dsn.rpc_address                                   node;
+
+    2:map<dsn.gpid, list<duplication_confirm_entry>>    confirm_list;
+}
+
+struct duplication_sync_response
+{
+    // Possible errors:
+    // - ERR_OBJECT_NOT_FOUND: node is not found
+    1:dsn.error_code                                   err;
+
+    // appid -> list<dup_entry>
+    // this rpc will not return the apps that were not assigned duplication.
+    2:map<i32, list<duplication_entry>>                dup_map;
+}
+
 /*
 service replica_s
 {

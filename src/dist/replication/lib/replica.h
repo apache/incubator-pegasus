@@ -305,6 +305,7 @@ private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
     friend class ::dsn::replication::replica_stub;
+    friend class mock_replica;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;

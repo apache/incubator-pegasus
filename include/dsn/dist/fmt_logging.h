@@ -47,6 +47,7 @@
 #define dwarn_replica(...) dwarn_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
 #define derror_replica(...) derror_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
 #define dfatal_replica(...) dfatal_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
+#define dassert_replica(x, ...) dassert_f(x, "[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
 
 // Customized formatter for rDSN basic types, on which
 // users can easily call fmt::format("{}", xxx), without the effort

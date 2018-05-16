@@ -135,6 +135,20 @@ const char* _kmeta_function_levelNames[] = {
 };
 const std::map<int, const char*> _meta_function_level_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(6, _kmeta_function_levelValues, _kmeta_function_levelNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
+int _kduplication_statusValues[] = {
+  duplication_status::DS_INIT,
+  duplication_status::DS_START,
+  duplication_status::DS_PAUSE,
+  duplication_status::DS_REMOVED
+};
+const char* _kduplication_statusNames[] = {
+  "DS_INIT",
+  "DS_START",
+  "DS_PAUSE",
+  "DS_REMOVED"
+};
+const std::map<int, const char*> _duplication_status_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(4, _kduplication_statusValues, _kduplication_statusNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
+
 int _kapp_env_operationValues[] = {
   app_env_operation::APP_ENV_OP_INVALID,
   app_env_operation::APP_ENV_OP_SET,
@@ -9955,6 +9969,1422 @@ void configuration_query_restore_response::printTo(std::ostream& out) const {
   out << "err=" << to_string(err);
   out << ", " << "restore_status=" << to_string(restore_status);
   out << ", " << "restore_progress=" << to_string(restore_progress);
+  out << ")";
+}
+
+
+duplication_add_request::~duplication_add_request() throw() {
+}
+
+
+void duplication_add_request::__set_app_name(const std::string& val) {
+  this->app_name = val;
+}
+
+void duplication_add_request::__set_remote_cluster_address(const std::string& val) {
+  this->remote_cluster_address = val;
+}
+
+uint32_t duplication_add_request::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->app_name);
+          this->__isset.app_name = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->remote_cluster_address);
+          this->__isset.remote_cluster_address = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_add_request::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_add_request");
+
+  xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->app_name);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("remote_cluster_address", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeString(this->remote_cluster_address);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_add_request &a, duplication_add_request &b) {
+  using ::std::swap;
+  swap(a.app_name, b.app_name);
+  swap(a.remote_cluster_address, b.remote_cluster_address);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_add_request::duplication_add_request(const duplication_add_request& other434) {
+  app_name = other434.app_name;
+  remote_cluster_address = other434.remote_cluster_address;
+  __isset = other434.__isset;
+}
+duplication_add_request::duplication_add_request( duplication_add_request&& other435) {
+  app_name = std::move(other435.app_name);
+  remote_cluster_address = std::move(other435.remote_cluster_address);
+  __isset = std::move(other435.__isset);
+}
+duplication_add_request& duplication_add_request::operator=(const duplication_add_request& other436) {
+  app_name = other436.app_name;
+  remote_cluster_address = other436.remote_cluster_address;
+  __isset = other436.__isset;
+  return *this;
+}
+duplication_add_request& duplication_add_request::operator=(duplication_add_request&& other437) {
+  app_name = std::move(other437.app_name);
+  remote_cluster_address = std::move(other437.remote_cluster_address);
+  __isset = std::move(other437.__isset);
+  return *this;
+}
+void duplication_add_request::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_add_request(";
+  out << "app_name=" << to_string(app_name);
+  out << ", " << "remote_cluster_address=" << to_string(remote_cluster_address);
+  out << ")";
+}
+
+
+duplication_add_response::~duplication_add_response() throw() {
+}
+
+
+void duplication_add_response::__set_err(const  ::dsn::error_code& val) {
+  this->err = val;
+}
+
+void duplication_add_response::__set_appid(const int32_t val) {
+  this->appid = val;
+}
+
+void duplication_add_response::__set_dupid(const int32_t val) {
+  this->dupid = val;
+}
+
+uint32_t duplication_add_response::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->err.read(iprot);
+          this->__isset.err = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->appid);
+          this->__isset.appid = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->dupid);
+          this->__isset.dupid = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_add_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_add_response");
+
+  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->err.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("appid", ::apache::thrift::protocol::T_I32, 2);
+  xfer += oprot->writeI32(this->appid);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("dupid", ::apache::thrift::protocol::T_I32, 3);
+  xfer += oprot->writeI32(this->dupid);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_add_response &a, duplication_add_response &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.appid, b.appid);
+  swap(a.dupid, b.dupid);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_add_response::duplication_add_response(const duplication_add_response& other438) {
+  err = other438.err;
+  appid = other438.appid;
+  dupid = other438.dupid;
+  __isset = other438.__isset;
+}
+duplication_add_response::duplication_add_response( duplication_add_response&& other439) {
+  err = std::move(other439.err);
+  appid = std::move(other439.appid);
+  dupid = std::move(other439.dupid);
+  __isset = std::move(other439.__isset);
+}
+duplication_add_response& duplication_add_response::operator=(const duplication_add_response& other440) {
+  err = other440.err;
+  appid = other440.appid;
+  dupid = other440.dupid;
+  __isset = other440.__isset;
+  return *this;
+}
+duplication_add_response& duplication_add_response::operator=(duplication_add_response&& other441) {
+  err = std::move(other441.err);
+  appid = std::move(other441.appid);
+  dupid = std::move(other441.dupid);
+  __isset = std::move(other441.__isset);
+  return *this;
+}
+void duplication_add_response::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_add_response(";
+  out << "err=" << to_string(err);
+  out << ", " << "appid=" << to_string(appid);
+  out << ", " << "dupid=" << to_string(dupid);
+  out << ")";
+}
+
+
+duplication_status_change_request::~duplication_status_change_request() throw() {
+}
+
+
+void duplication_status_change_request::__set_app_name(const std::string& val) {
+  this->app_name = val;
+}
+
+void duplication_status_change_request::__set_dupid(const int32_t val) {
+  this->dupid = val;
+}
+
+void duplication_status_change_request::__set_status(const duplication_status::type val) {
+  this->status = val;
+}
+
+uint32_t duplication_status_change_request::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->app_name);
+          this->__isset.app_name = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->dupid);
+          this->__isset.dupid = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          int32_t ecast442;
+          xfer += iprot->readI32(ecast442);
+          this->status = (duplication_status::type)ecast442;
+          this->__isset.status = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_status_change_request::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_status_change_request");
+
+  xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->app_name);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("dupid", ::apache::thrift::protocol::T_I32, 2);
+  xfer += oprot->writeI32(this->dupid);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("status", ::apache::thrift::protocol::T_I32, 3);
+  xfer += oprot->writeI32((int32_t)this->status);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_status_change_request &a, duplication_status_change_request &b) {
+  using ::std::swap;
+  swap(a.app_name, b.app_name);
+  swap(a.dupid, b.dupid);
+  swap(a.status, b.status);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_status_change_request::duplication_status_change_request(const duplication_status_change_request& other443) {
+  app_name = other443.app_name;
+  dupid = other443.dupid;
+  status = other443.status;
+  __isset = other443.__isset;
+}
+duplication_status_change_request::duplication_status_change_request( duplication_status_change_request&& other444) {
+  app_name = std::move(other444.app_name);
+  dupid = std::move(other444.dupid);
+  status = std::move(other444.status);
+  __isset = std::move(other444.__isset);
+}
+duplication_status_change_request& duplication_status_change_request::operator=(const duplication_status_change_request& other445) {
+  app_name = other445.app_name;
+  dupid = other445.dupid;
+  status = other445.status;
+  __isset = other445.__isset;
+  return *this;
+}
+duplication_status_change_request& duplication_status_change_request::operator=(duplication_status_change_request&& other446) {
+  app_name = std::move(other446.app_name);
+  dupid = std::move(other446.dupid);
+  status = std::move(other446.status);
+  __isset = std::move(other446.__isset);
+  return *this;
+}
+void duplication_status_change_request::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_status_change_request(";
+  out << "app_name=" << to_string(app_name);
+  out << ", " << "dupid=" << to_string(dupid);
+  out << ", " << "status=" << to_string(status);
+  out << ")";
+}
+
+
+duplication_status_change_response::~duplication_status_change_response() throw() {
+}
+
+
+void duplication_status_change_response::__set_err(const  ::dsn::error_code& val) {
+  this->err = val;
+}
+
+void duplication_status_change_response::__set_appid(const int32_t val) {
+  this->appid = val;
+}
+
+uint32_t duplication_status_change_response::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->err.read(iprot);
+          this->__isset.err = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->appid);
+          this->__isset.appid = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_status_change_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_status_change_response");
+
+  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->err.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("appid", ::apache::thrift::protocol::T_I32, 2);
+  xfer += oprot->writeI32(this->appid);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_status_change_response &a, duplication_status_change_response &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.appid, b.appid);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_status_change_response::duplication_status_change_response(const duplication_status_change_response& other447) {
+  err = other447.err;
+  appid = other447.appid;
+  __isset = other447.__isset;
+}
+duplication_status_change_response::duplication_status_change_response( duplication_status_change_response&& other448) {
+  err = std::move(other448.err);
+  appid = std::move(other448.appid);
+  __isset = std::move(other448.__isset);
+}
+duplication_status_change_response& duplication_status_change_response::operator=(const duplication_status_change_response& other449) {
+  err = other449.err;
+  appid = other449.appid;
+  __isset = other449.__isset;
+  return *this;
+}
+duplication_status_change_response& duplication_status_change_response::operator=(duplication_status_change_response&& other450) {
+  err = std::move(other450.err);
+  appid = std::move(other450.appid);
+  __isset = std::move(other450.__isset);
+  return *this;
+}
+void duplication_status_change_response::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_status_change_response(";
+  out << "err=" << to_string(err);
+  out << ", " << "appid=" << to_string(appid);
+  out << ")";
+}
+
+
+duplication_entry::~duplication_entry() throw() {
+}
+
+
+void duplication_entry::__set_dupid(const int32_t val) {
+  this->dupid = val;
+}
+
+void duplication_entry::__set_status(const duplication_status::type val) {
+  this->status = val;
+}
+
+void duplication_entry::__set_remote_address(const std::string& val) {
+  this->remote_address = val;
+}
+
+void duplication_entry::__set_create_ts(const int64_t val) {
+  this->create_ts = val;
+}
+
+void duplication_entry::__set_progress(const std::map<int32_t, int64_t> & val) {
+  this->progress = val;
+}
+
+uint32_t duplication_entry::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->dupid);
+          this->__isset.dupid = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          int32_t ecast451;
+          xfer += iprot->readI32(ecast451);
+          this->status = (duplication_status::type)ecast451;
+          this->__isset.status = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->remote_address);
+          this->__isset.remote_address = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 4:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->create_ts);
+          this->__isset.create_ts = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 5:
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->progress.clear();
+            uint32_t _size452;
+            ::apache::thrift::protocol::TType _ktype453;
+            ::apache::thrift::protocol::TType _vtype454;
+            xfer += iprot->readMapBegin(_ktype453, _vtype454, _size452);
+            uint32_t _i456;
+            for (_i456 = 0; _i456 < _size452; ++_i456)
+            {
+              int32_t _key457;
+              xfer += iprot->readI32(_key457);
+              int64_t& _val458 = this->progress[_key457];
+              xfer += iprot->readI64(_val458);
+            }
+            xfer += iprot->readMapEnd();
+          }
+          this->__isset.progress = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_entry::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_entry");
+
+  xfer += oprot->writeFieldBegin("dupid", ::apache::thrift::protocol::T_I32, 1);
+  xfer += oprot->writeI32(this->dupid);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("status", ::apache::thrift::protocol::T_I32, 2);
+  xfer += oprot->writeI32((int32_t)this->status);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("remote_address", ::apache::thrift::protocol::T_STRING, 3);
+  xfer += oprot->writeString(this->remote_address);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("create_ts", ::apache::thrift::protocol::T_I64, 4);
+  xfer += oprot->writeI64(this->create_ts);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("progress", ::apache::thrift::protocol::T_MAP, 5);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_I32, ::apache::thrift::protocol::T_I64, static_cast<uint32_t>(this->progress.size()));
+    std::map<int32_t, int64_t> ::const_iterator _iter459;
+    for (_iter459 = this->progress.begin(); _iter459 != this->progress.end(); ++_iter459)
+    {
+      xfer += oprot->writeI32(_iter459->first);
+      xfer += oprot->writeI64(_iter459->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_entry &a, duplication_entry &b) {
+  using ::std::swap;
+  swap(a.dupid, b.dupid);
+  swap(a.status, b.status);
+  swap(a.remote_address, b.remote_address);
+  swap(a.create_ts, b.create_ts);
+  swap(a.progress, b.progress);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_entry::duplication_entry(const duplication_entry& other460) {
+  dupid = other460.dupid;
+  status = other460.status;
+  remote_address = other460.remote_address;
+  create_ts = other460.create_ts;
+  progress = other460.progress;
+  __isset = other460.__isset;
+}
+duplication_entry::duplication_entry( duplication_entry&& other461) {
+  dupid = std::move(other461.dupid);
+  status = std::move(other461.status);
+  remote_address = std::move(other461.remote_address);
+  create_ts = std::move(other461.create_ts);
+  progress = std::move(other461.progress);
+  __isset = std::move(other461.__isset);
+}
+duplication_entry& duplication_entry::operator=(const duplication_entry& other462) {
+  dupid = other462.dupid;
+  status = other462.status;
+  remote_address = other462.remote_address;
+  create_ts = other462.create_ts;
+  progress = other462.progress;
+  __isset = other462.__isset;
+  return *this;
+}
+duplication_entry& duplication_entry::operator=(duplication_entry&& other463) {
+  dupid = std::move(other463.dupid);
+  status = std::move(other463.status);
+  remote_address = std::move(other463.remote_address);
+  create_ts = std::move(other463.create_ts);
+  progress = std::move(other463.progress);
+  __isset = std::move(other463.__isset);
+  return *this;
+}
+void duplication_entry::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_entry(";
+  out << "dupid=" << to_string(dupid);
+  out << ", " << "status=" << to_string(status);
+  out << ", " << "remote_address=" << to_string(remote_address);
+  out << ", " << "create_ts=" << to_string(create_ts);
+  out << ", " << "progress=" << to_string(progress);
+  out << ")";
+}
+
+
+duplication_query_request::~duplication_query_request() throw() {
+}
+
+
+void duplication_query_request::__set_app_name(const std::string& val) {
+  this->app_name = val;
+}
+
+uint32_t duplication_query_request::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->app_name);
+          this->__isset.app_name = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_query_request::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_query_request");
+
+  xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->app_name);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_query_request &a, duplication_query_request &b) {
+  using ::std::swap;
+  swap(a.app_name, b.app_name);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_query_request::duplication_query_request(const duplication_query_request& other464) {
+  app_name = other464.app_name;
+  __isset = other464.__isset;
+}
+duplication_query_request::duplication_query_request( duplication_query_request&& other465) {
+  app_name = std::move(other465.app_name);
+  __isset = std::move(other465.__isset);
+}
+duplication_query_request& duplication_query_request::operator=(const duplication_query_request& other466) {
+  app_name = other466.app_name;
+  __isset = other466.__isset;
+  return *this;
+}
+duplication_query_request& duplication_query_request::operator=(duplication_query_request&& other467) {
+  app_name = std::move(other467.app_name);
+  __isset = std::move(other467.__isset);
+  return *this;
+}
+void duplication_query_request::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_query_request(";
+  out << "app_name=" << to_string(app_name);
+  out << ")";
+}
+
+
+duplication_query_response::~duplication_query_response() throw() {
+}
+
+
+void duplication_query_response::__set_err(const  ::dsn::error_code& val) {
+  this->err = val;
+}
+
+void duplication_query_response::__set_appid(const int32_t val) {
+  this->appid = val;
+}
+
+void duplication_query_response::__set_entry_list(const std::vector<duplication_entry> & val) {
+  this->entry_list = val;
+}
+
+uint32_t duplication_query_response::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->err.read(iprot);
+          this->__isset.err = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->appid);
+          this->__isset.appid = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 4:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->entry_list.clear();
+            uint32_t _size468;
+            ::apache::thrift::protocol::TType _etype471;
+            xfer += iprot->readListBegin(_etype471, _size468);
+            this->entry_list.resize(_size468);
+            uint32_t _i472;
+            for (_i472 = 0; _i472 < _size468; ++_i472)
+            {
+              xfer += this->entry_list[_i472].read(iprot);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.entry_list = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_query_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_query_response");
+
+  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->err.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("appid", ::apache::thrift::protocol::T_I32, 3);
+  xfer += oprot->writeI32(this->appid);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("entry_list", ::apache::thrift::protocol::T_LIST, 4);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->entry_list.size()));
+    std::vector<duplication_entry> ::const_iterator _iter473;
+    for (_iter473 = this->entry_list.begin(); _iter473 != this->entry_list.end(); ++_iter473)
+    {
+      xfer += (*_iter473).write(oprot);
+    }
+    xfer += oprot->writeListEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_query_response &a, duplication_query_response &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.appid, b.appid);
+  swap(a.entry_list, b.entry_list);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_query_response::duplication_query_response(const duplication_query_response& other474) {
+  err = other474.err;
+  appid = other474.appid;
+  entry_list = other474.entry_list;
+  __isset = other474.__isset;
+}
+duplication_query_response::duplication_query_response( duplication_query_response&& other475) {
+  err = std::move(other475.err);
+  appid = std::move(other475.appid);
+  entry_list = std::move(other475.entry_list);
+  __isset = std::move(other475.__isset);
+}
+duplication_query_response& duplication_query_response::operator=(const duplication_query_response& other476) {
+  err = other476.err;
+  appid = other476.appid;
+  entry_list = other476.entry_list;
+  __isset = other476.__isset;
+  return *this;
+}
+duplication_query_response& duplication_query_response::operator=(duplication_query_response&& other477) {
+  err = std::move(other477.err);
+  appid = std::move(other477.appid);
+  entry_list = std::move(other477.entry_list);
+  __isset = std::move(other477.__isset);
+  return *this;
+}
+void duplication_query_response::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_query_response(";
+  out << "err=" << to_string(err);
+  out << ", " << "appid=" << to_string(appid);
+  out << ", " << "entry_list=" << to_string(entry_list);
+  out << ")";
+}
+
+
+duplication_confirm_entry::~duplication_confirm_entry() throw() {
+}
+
+
+void duplication_confirm_entry::__set_dupid(const int32_t val) {
+  this->dupid = val;
+}
+
+void duplication_confirm_entry::__set_confirmed_decree(const int64_t val) {
+  this->confirmed_decree = val;
+}
+
+uint32_t duplication_confirm_entry::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I32) {
+          xfer += iprot->readI32(this->dupid);
+          this->__isset.dupid = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->confirmed_decree);
+          this->__isset.confirmed_decree = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_confirm_entry::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_confirm_entry");
+
+  xfer += oprot->writeFieldBegin("dupid", ::apache::thrift::protocol::T_I32, 1);
+  xfer += oprot->writeI32(this->dupid);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("confirmed_decree", ::apache::thrift::protocol::T_I64, 2);
+  xfer += oprot->writeI64(this->confirmed_decree);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_confirm_entry &a, duplication_confirm_entry &b) {
+  using ::std::swap;
+  swap(a.dupid, b.dupid);
+  swap(a.confirmed_decree, b.confirmed_decree);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_confirm_entry::duplication_confirm_entry(const duplication_confirm_entry& other478) {
+  dupid = other478.dupid;
+  confirmed_decree = other478.confirmed_decree;
+  __isset = other478.__isset;
+}
+duplication_confirm_entry::duplication_confirm_entry( duplication_confirm_entry&& other479) {
+  dupid = std::move(other479.dupid);
+  confirmed_decree = std::move(other479.confirmed_decree);
+  __isset = std::move(other479.__isset);
+}
+duplication_confirm_entry& duplication_confirm_entry::operator=(const duplication_confirm_entry& other480) {
+  dupid = other480.dupid;
+  confirmed_decree = other480.confirmed_decree;
+  __isset = other480.__isset;
+  return *this;
+}
+duplication_confirm_entry& duplication_confirm_entry::operator=(duplication_confirm_entry&& other481) {
+  dupid = std::move(other481.dupid);
+  confirmed_decree = std::move(other481.confirmed_decree);
+  __isset = std::move(other481.__isset);
+  return *this;
+}
+void duplication_confirm_entry::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_confirm_entry(";
+  out << "dupid=" << to_string(dupid);
+  out << ", " << "confirmed_decree=" << to_string(confirmed_decree);
+  out << ")";
+}
+
+
+duplication_sync_request::~duplication_sync_request() throw() {
+}
+
+
+void duplication_sync_request::__set_node(const  ::dsn::rpc_address& val) {
+  this->node = val;
+}
+
+void duplication_sync_request::__set_confirm_list(const std::map< ::dsn::gpid, std::vector<duplication_confirm_entry> > & val) {
+  this->confirm_list = val;
+}
+
+uint32_t duplication_sync_request::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->node.read(iprot);
+          this->__isset.node = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->confirm_list.clear();
+            uint32_t _size482;
+            ::apache::thrift::protocol::TType _ktype483;
+            ::apache::thrift::protocol::TType _vtype484;
+            xfer += iprot->readMapBegin(_ktype483, _vtype484, _size482);
+            uint32_t _i486;
+            for (_i486 = 0; _i486 < _size482; ++_i486)
+            {
+               ::dsn::gpid _key487;
+              xfer += _key487.read(iprot);
+              std::vector<duplication_confirm_entry> & _val488 = this->confirm_list[_key487];
+              {
+                _val488.clear();
+                uint32_t _size489;
+                ::apache::thrift::protocol::TType _etype492;
+                xfer += iprot->readListBegin(_etype492, _size489);
+                _val488.resize(_size489);
+                uint32_t _i493;
+                for (_i493 = 0; _i493 < _size489; ++_i493)
+                {
+                  xfer += _val488[_i493].read(iprot);
+                }
+                xfer += iprot->readListEnd();
+              }
+            }
+            xfer += iprot->readMapEnd();
+          }
+          this->__isset.confirm_list = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_sync_request::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_sync_request");
+
+  xfer += oprot->writeFieldBegin("node", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->node.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("confirm_list", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRUCT, ::apache::thrift::protocol::T_LIST, static_cast<uint32_t>(this->confirm_list.size()));
+    std::map< ::dsn::gpid, std::vector<duplication_confirm_entry> > ::const_iterator _iter494;
+    for (_iter494 = this->confirm_list.begin(); _iter494 != this->confirm_list.end(); ++_iter494)
+    {
+      xfer += _iter494->first.write(oprot);
+      {
+        xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(_iter494->second.size()));
+        std::vector<duplication_confirm_entry> ::const_iterator _iter495;
+        for (_iter495 = _iter494->second.begin(); _iter495 != _iter494->second.end(); ++_iter495)
+        {
+          xfer += (*_iter495).write(oprot);
+        }
+        xfer += oprot->writeListEnd();
+      }
+    }
+    xfer += oprot->writeMapEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_sync_request &a, duplication_sync_request &b) {
+  using ::std::swap;
+  swap(a.node, b.node);
+  swap(a.confirm_list, b.confirm_list);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_sync_request::duplication_sync_request(const duplication_sync_request& other496) {
+  node = other496.node;
+  confirm_list = other496.confirm_list;
+  __isset = other496.__isset;
+}
+duplication_sync_request::duplication_sync_request( duplication_sync_request&& other497) {
+  node = std::move(other497.node);
+  confirm_list = std::move(other497.confirm_list);
+  __isset = std::move(other497.__isset);
+}
+duplication_sync_request& duplication_sync_request::operator=(const duplication_sync_request& other498) {
+  node = other498.node;
+  confirm_list = other498.confirm_list;
+  __isset = other498.__isset;
+  return *this;
+}
+duplication_sync_request& duplication_sync_request::operator=(duplication_sync_request&& other499) {
+  node = std::move(other499.node);
+  confirm_list = std::move(other499.confirm_list);
+  __isset = std::move(other499.__isset);
+  return *this;
+}
+void duplication_sync_request::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_sync_request(";
+  out << "node=" << to_string(node);
+  out << ", " << "confirm_list=" << to_string(confirm_list);
+  out << ")";
+}
+
+
+duplication_sync_response::~duplication_sync_response() throw() {
+}
+
+
+void duplication_sync_response::__set_err(const  ::dsn::error_code& val) {
+  this->err = val;
+}
+
+void duplication_sync_response::__set_dup_map(const std::map<int32_t, std::vector<duplication_entry> > & val) {
+  this->dup_map = val;
+}
+
+uint32_t duplication_sync_response::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->err.read(iprot);
+          this->__isset.err = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->dup_map.clear();
+            uint32_t _size500;
+            ::apache::thrift::protocol::TType _ktype501;
+            ::apache::thrift::protocol::TType _vtype502;
+            xfer += iprot->readMapBegin(_ktype501, _vtype502, _size500);
+            uint32_t _i504;
+            for (_i504 = 0; _i504 < _size500; ++_i504)
+            {
+              int32_t _key505;
+              xfer += iprot->readI32(_key505);
+              std::vector<duplication_entry> & _val506 = this->dup_map[_key505];
+              {
+                _val506.clear();
+                uint32_t _size507;
+                ::apache::thrift::protocol::TType _etype510;
+                xfer += iprot->readListBegin(_etype510, _size507);
+                _val506.resize(_size507);
+                uint32_t _i511;
+                for (_i511 = 0; _i511 < _size507; ++_i511)
+                {
+                  xfer += _val506[_i511].read(iprot);
+                }
+                xfer += iprot->readListEnd();
+              }
+            }
+            xfer += iprot->readMapEnd();
+          }
+          this->__isset.dup_map = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t duplication_sync_response::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("duplication_sync_response");
+
+  xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->err.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("dup_map", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_I32, ::apache::thrift::protocol::T_LIST, static_cast<uint32_t>(this->dup_map.size()));
+    std::map<int32_t, std::vector<duplication_entry> > ::const_iterator _iter512;
+    for (_iter512 = this->dup_map.begin(); _iter512 != this->dup_map.end(); ++_iter512)
+    {
+      xfer += oprot->writeI32(_iter512->first);
+      {
+        xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(_iter512->second.size()));
+        std::vector<duplication_entry> ::const_iterator _iter513;
+        for (_iter513 = _iter512->second.begin(); _iter513 != _iter512->second.end(); ++_iter513)
+        {
+          xfer += (*_iter513).write(oprot);
+        }
+        xfer += oprot->writeListEnd();
+      }
+    }
+    xfer += oprot->writeMapEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(duplication_sync_response &a, duplication_sync_response &b) {
+  using ::std::swap;
+  swap(a.err, b.err);
+  swap(a.dup_map, b.dup_map);
+  swap(a.__isset, b.__isset);
+}
+
+duplication_sync_response::duplication_sync_response(const duplication_sync_response& other514) {
+  err = other514.err;
+  dup_map = other514.dup_map;
+  __isset = other514.__isset;
+}
+duplication_sync_response::duplication_sync_response( duplication_sync_response&& other515) {
+  err = std::move(other515.err);
+  dup_map = std::move(other515.dup_map);
+  __isset = std::move(other515.__isset);
+}
+duplication_sync_response& duplication_sync_response::operator=(const duplication_sync_response& other516) {
+  err = other516.err;
+  dup_map = other516.dup_map;
+  __isset = other516.__isset;
+  return *this;
+}
+duplication_sync_response& duplication_sync_response::operator=(duplication_sync_response&& other517) {
+  err = std::move(other517.err);
+  dup_map = std::move(other517.dup_map);
+  __isset = std::move(other517.__isset);
+  return *this;
+}
+void duplication_sync_response::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "duplication_sync_response(";
+  out << "err=" << to_string(err);
+  out << ", " << "dup_map=" << to_string(dup_map);
   out << ")";
 }
 
