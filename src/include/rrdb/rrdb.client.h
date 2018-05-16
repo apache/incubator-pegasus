@@ -2,6 +2,7 @@
 #include "rrdb.code.definition.h"
 #include "rrdb.types.h"
 #include <iostream>
+#include <dsn/utility/optional.h>
 #include <dsn/tool-api/task_tracker.h>
 
 namespace dsn {
@@ -28,7 +29,7 @@ public:
                              RPC_RRDB_RRDB_PUT,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -71,7 +72,7 @@ public:
                              RPC_RRDB_RRDB_MULTI_PUT,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -115,7 +116,7 @@ public:
                              RPC_RRDB_RRDB_REMOVE,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -159,7 +160,7 @@ public:
                              RPC_RRDB_RRDB_MULTI_REMOVE,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -203,7 +204,7 @@ public:
                              RPC_RRDB_RRDB_GET,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -246,7 +247,7 @@ public:
                              RPC_RRDB_RRDB_MULTI_GET,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -290,7 +291,7 @@ public:
                              RPC_RRDB_RRDB_SORTKEY_COUNT,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -334,7 +335,7 @@ public:
                              RPC_RRDB_RRDB_TTL,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -377,7 +378,7 @@ public:
                              RPC_RRDB_RRDB_GET_SCANNER,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -421,7 +422,7 @@ public:
                              RPC_RRDB_RRDB_SCAN,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
