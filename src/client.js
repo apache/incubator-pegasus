@@ -12,7 +12,7 @@ const TableInfo = require('./table_handler').TableInfo;
 const tools = require('./tools');
 
 const _OPERATION_TIMEOUT = 1000;
-const log = require('../log');
+let log4js = require('log4js');
 
 /**
  * Constructor of client
@@ -27,7 +27,13 @@ function Client(configs) {
 
     this.rpcTimeOut = configs.operationTimeout || _OPERATION_TIMEOUT;
     this.metaList = configs.metaServers;
-    this.log = configs.log || log;
+    if(configs.log){
+        this.log = configs.log;
+    }else{
+        log4js.configure('../log4js_config.json');
+        this.log = log4js.getLogger('pegasus');
+    }
+
     this.cachedTableInfo = {};          //tableName -> tableInfo
     this.cluster = new Cluster({        //Current connections
         'metaList' : this.metaList,

@@ -1,0 +1,13 @@
+{
+  "appenders": {
+    "pegasus": {
+      "type": "file",
+      "filename": "pegasus-nodejs-client.log",
+      "maxLogSize": 104857600,
+      "backups": 5
+    }
+  },
+  "categories": {
+    "default": { "appenders": ["pegasus"], "level": "INFO" }
+  }
+}

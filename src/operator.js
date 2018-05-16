@@ -15,7 +15,6 @@ const rrdb = require('./dsn/rrdb');
 
 const util = require('util');
 const thrift = require('thrift');
-const log = require('../log');
 const Exception = require('./errors');
 
 const HEADER_LEN = 48;
@@ -121,7 +120,7 @@ QueryCfgOperator.prototype.recv_data = function(protocol){
         this.response = result.success;
     }else{
         //TODO: Thrift error check
-        log.error("Fail to receive result while query config from meta.");
+        console.error("Fail to receive result while query config from meta.");
     }
 };
 
@@ -169,7 +168,7 @@ RrdbGetOperator.prototype.recv_data = function(protocol){
         this.response = result.success;
     }else{
         //todo : check
-        log.error('Fail to receive result while get data');
+        console.error('Fail to receive result while get data');
     }
 };
 
@@ -194,13 +193,8 @@ RrdbGetOperator.prototype.handleResult = function(err, op){
             };
         }
     }
+    this.userCallback(err, result);
 
-    if(this.userCallback instanceof Function){
-        this.userCallback(err, result);
-    }else{
-        //todo: check
-        log.error('Can not handle result, lack of callback');
-    }
 };
 
 /**
@@ -242,7 +236,7 @@ RrdbPutOperator.prototype.recv_data = function(protocol){
         this.response = result.success;
     }else{
         //todo: check
-        log.error('Fail to receive result while set data');
+        console.error('Fail to receive result while set data');
     }
 };
 
@@ -260,13 +254,7 @@ RrdbPutOperator.prototype.handleResult = function(err, op){
             result = null;
         }
     }
-
-    if(this.userCallback instanceof Function){
-        this.userCallback(err, result);
-    }else{
-        //todo: check
-        log.error('Can not handle result, lack of callback');
-    }
+    this.userCallback(err, result);
 };
 
 /**
@@ -308,7 +296,7 @@ RrdbRemoveOperator.prototype.recv_data = function(protocol){
         this.response = result.success;
     }else{
         //todo: check
-        log.error('Fail to receive result while set data');
+        console.error('Fail to receive result while set data');
     }
 };
 
@@ -326,13 +314,8 @@ RrdbRemoveOperator.prototype.handleResult = function(err, op){
             result = null;
         }
     }
+    this.userCallback(err, result);
 
-    if(this.userCallback instanceof Function){
-        this.userCallback(err, result);
-    }else{
-        //todo: check
-        log.error('Can not handle result, lack of callback');
-    }
 };
 
 /**
@@ -376,7 +359,7 @@ RrdbMultiGetOperator.prototype.recv_data = function(protocol){
         this.response = result.success;
     }else{
         //todo: check
-        log.error('Fail to receive result while set data');
+        console.error('Fail to receive result while set data');
     }
 };
 
@@ -403,13 +386,7 @@ RrdbMultiGetOperator.prototype.handleResult = function(err, op){
             }
         }
     }
-
-    if(this.userCallback instanceof Function){
-        this.userCallback(err, data);
-    }else{
-        //todo: check
-        log.error('Can not handle result, lack of callback');
-    }
+    this.userCallback(err, data);
 };
 
 
@@ -452,7 +429,7 @@ RrdbMultiPutOperator.prototype.recv_data = function(protocol){
         this.response = result.success;
     }else{
         //todo: check
-        log.error('Fail to receive result while set data');
+        console.error('Fail to receive result while set data');
     }
 };
 
@@ -470,13 +447,7 @@ RrdbMultiPutOperator.prototype.handleResult = function(err, op){
             result = null;
         }
     }
-
-    if(this.userCallback instanceof Function){
-        this.userCallback(err, result);
-    }else{
-        //todo: check
-        log.error('Can not handle result, lack of callback');
-    }
+    this.userCallback(err, result);
 };
 
 
