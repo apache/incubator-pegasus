@@ -205,6 +205,6 @@ TEST(core, ref_ptr)
 
     foo_ptr z = new foo(count);
     EXPECT_TRUE(count == 1);
-    z = std::move(foo_ptr());
+    z = foo_ptr();
     EXPECT_TRUE(count == 0);
 }

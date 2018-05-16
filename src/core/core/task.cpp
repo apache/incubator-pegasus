@@ -122,16 +122,10 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
     }
 }
 
-task::task(dsn::task_code code,
-           void *context,
-           dsn_task_cancelled_handler_t on_cancel,
-           int hash,
-           service_node *node)
+task::task(dsn::task_code code, int hash, service_node *node)
     : _state(TASK_STATE_READY), _wait_event(nullptr)
 {
     _spec = task_spec::get(code);
-    _context = context;
-    _on_cancel = on_cancel;
     _hash = hash;
     _delay_milliseconds = 0;
     _wait_for_cancel = false;
@@ -193,11 +187,16 @@ void task::exec_internal()
         _spec->on_task_begin.execute(this);
 
         exec();
+
+        // after exec(), one shot tasks are still in "running".
+        // other tasks may call "set_retry" to reset tasks to "ready",
+        // like timers and rpc_response_tasks
         if (_state.compare_exchange_strong(RUNNING_STATE,
                                            TASK_STATE_FINISHED,
                                            std::memory_order_release,
                                            std::memory_order_relaxed)) {
             _spec->on_task_end.execute(this);
+            clear_callback();
         } else {
             if (!_wait_for_cancel) {
                 // for retried tasks such as timer or rpc_response_task
@@ -217,23 +216,21 @@ void task::exec_internal()
 
                 // always call on_task_end()
                 _spec->on_task_end.execute(this);
+
+                // for timer task, we must call reset_callback after cancelled, because we don't
+                // reset callback after exec()
+                clear_callback();
             }
         }
 
         tls_dsn.current_task = parent_task;
     }
 
-    // signal_waiters(); [
-    // inline for performance
     if (notify_if_necessary) {
-        void *evt = _wait_event.load();
-        if (evt != nullptr) {
-            auto nevt = (utils::notify_event *)evt;
-            nevt->notify();
+        if (signal_waiters()) {
             spec().on_task_wait_notified.execute(this);
         }
     }
-    // ]
 
     if (!_spec->allow_inline && !_is_null) {
         lock_checker::check_dangling_lock();
@@ -242,24 +239,28 @@ void task::exec_internal()
     this->release_ref(); // added in enqueue(pool)
 }
 
-void task::signal_waiters()
+bool task::signal_waiters()
 {
     void *evt = _wait_event.load();
     if (evt != nullptr) {
         auto nevt = (utils::notify_event *)evt;
         nevt->notify();
+        return true;
     }
+    return false;
 }
 
-// multiple callers may wait on this
-bool task::wait(int timeout_milliseconds, bool on_cancel)
+bool task::wait_on_cancel()
+{
+    lock_checker::check_wait_task(this);
+    return wait(TIME_MS_MAX);
+}
+
+bool task::wait(int timeout_milliseconds)
 {
     dassert(this != task::get_current_task(), "task cannot wait itself");
 
     auto cs = state();
-    if (!on_cancel) {
-        lock_checker::check_wait_task(this);
-    }
 
     if (cs >= TASK_STATE_FINISHED) {
         spec().on_task_wait_post.execute(get_current_task(), this, true);
@@ -290,9 +291,6 @@ bool task::wait(int timeout_milliseconds, bool on_cancel)
     return ret;
 }
 
-//
-// return - whether this cancel succeed
-//
 bool task::cancel(bool wait_until_finished, /*out*/ bool *finished /*= nullptr*/)
 {
     task_state READY_STATE = TASK_STATE_READY;
@@ -300,40 +298,38 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool *finished /*= nullptr*/
     bool finish = false;
     bool succ = false;
 
-    if (current_tsk == this) {
-        // make sure timers are cancelled
-        _wait_for_cancel = true;
-
-        if (finished)
-            *finished = false;
-
-        return false;
-    }
-
-    if (_state.compare_exchange_strong(
-            READY_STATE, TASK_STATE_CANCELLED, std::memory_order_relaxed)) {
-        succ = true;
-        finish = true;
-    } else {
-        task_state old_state = READY_STATE;
-        if (old_state == TASK_STATE_CANCELLED) {
-            succ = false; // this cancellation fails
-            finish = true;
-        } else if (old_state == TASK_STATE_FINISHED) {
-            succ = false;
-            finish = true;
-        } else if (wait_until_finished) {
-            _wait_for_cancel = true;
-            bool r = wait(TIME_MS_MAX, true);
-            dassert(r,
-                    "wait failed, it is only possible when task runs for more than 0x0fffffff ms");
-
-            succ = false;
+    if (current_tsk != this) {
+        if (_state.compare_exchange_strong(
+                READY_STATE, TASK_STATE_CANCELLED, std::memory_order_relaxed)) {
+            succ = true;
             finish = true;
         } else {
-            succ = false;
-            finish = false;
+            task_state old_state = READY_STATE;
+            if (old_state == TASK_STATE_CANCELLED) {
+                succ = false; // this cancellation fails
+                finish = true;
+            } else if (old_state == TASK_STATE_FINISHED) {
+                succ = false;
+                finish = true;
+            } else if (wait_until_finished) {
+                _wait_for_cancel = true;
+                bool r = wait_on_cancel();
+                dassert(
+                    r,
+                    "wait failed, it is only possible when task runs for more than 0x0fffffff ms");
+
+                succ = false;
+                finish = true;
+            } else {
+                succ = false;
+                finish = false;
+            }
         }
+    } else {
+        // task cancel itself
+        // for timer task, we should set _wait_for_cancel flag to
+        // prevent timer task from enqueueing again
+        _wait_for_cancel = true;
     }
 
     if (current_tsk != nullptr) {
@@ -341,16 +337,13 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool *finished /*= nullptr*/
     }
 
     if (succ) {
-        //
-        // TODO: pros and cons of executing on_cancel here
-        // or in exec_internal
-        //
-        if (_on_cancel) {
-            _on_cancel(_context);
-        }
-
         spec().on_task_cancelled.execute(this);
         signal_waiters();
+
+        // we call clear_callback only cancelling succeed.
+        // otherwise, task will successfully exececuted and clear_callback will be called
+        // in "exec_internal".
+        clear_callback();
     }
 
     if (finished)
@@ -370,6 +363,8 @@ void task::enqueue()
     dassert(_node != nullptr, "service node unknown for this task");
     dassert(_spec->type != TASK_TYPE_RPC_RESPONSE,
             "tasks with TASK_TYPE_RPC_RESPONSE type use task::enqueue(caller_pool()) instead");
+    dassert(_error != ERR_IO_PENDING, "task is waiting for IO, can not be enqueue");
+
     auto pool = node()->computation()->get_pool(spec().pool_code);
     enqueue(pool);
 }
@@ -418,45 +413,25 @@ void task::enqueue(task_worker_pool *pool)
             exec_internal();
             return;
         }
-
-        // if (_spec->type == TASK_TYPE_COMPUTE)
-        //{
-        //    if (_node != get_current_node())
-        //    {
-        //        tools::node_scoper ns(_node);
-        //        exec_internal();
-        //        return;
-        //    }
-        //    else
-        //    {
-        //        exec_internal();
-        //        return;
-        //    }
-        //}
-
-        //// io tasks only inlined in io threads
-        // if (get_current_worker2() == nullptr)
-        //{
-        //    dassert(_node == task::get_current_node(), "");
-        //    exec_internal();
-        //    return;
-        //}
     }
 
     // normal path
     pool->enqueue(this);
 }
 
-timer_task::timer_task(dsn::task_code code,
-                       dsn_task_handler_t cb,
-                       void *context,
-                       dsn_task_cancelled_handler_t on_cancel,
-                       uint32_t interval_milliseconds,
-                       int hash,
-                       service_node *node)
-    : task(code, context, on_cancel, hash, node),
-      _interval_milliseconds(interval_milliseconds),
-      _cb(cb)
+timer_task::timer_task(
+    task_code code, const task_handler &cb, int interval_milliseconds, int hash, service_node *node)
+    : task(code, hash, node), _interval_milliseconds(interval_milliseconds), _cb(cb)
+{
+    dassert(
+        TASK_TYPE_COMPUTE == spec().type,
+        "%s is not a computation type task, please use DEFINE_TASK_CODE to define the task code",
+        spec().name.c_str());
+}
+
+timer_task::timer_task(
+    task_code code, task_handler &&cb, int interval_milliseconds, int hash, service_node *node)
+    : task(code, hash, node), _interval_milliseconds(interval_milliseconds), _cb(std::move(cb))
 {
     dassert(
         TASK_TYPE_COMPUTE == spec().type,
@@ -476,22 +451,20 @@ void timer_task::enqueue()
 
 void timer_task::exec()
 {
-    _cb(_context);
-
-    if (_interval_milliseconds > 0) {
-        set_retry();
+    if (dsn_likely(_cb != nullptr)) {
+        _cb();
+    }
+    // valid interval, we reset task state to READY
+    if (dsn_likely(_interval_milliseconds > 0)) {
+        dassert(set_retry(true),
+                "timer task set retry failed, with state = %s",
+                enum_to_string(state()));
         set_delay(_interval_milliseconds);
     }
 }
 
-rpc_request_task::rpc_request_task(message_ex *request,
-                                   dsn_rpc_request_handler_t &&h,
-                                   service_node *node)
-    : task(dsn::task_code(request->rpc_code()),
-           nullptr,
-           [](void *) { dassert(false, "rpc request task cannot be cancelled"); },
-           request->header->client.thread_hash,
-           node),
+rpc_request_task::rpc_request_task(message_ex *request, rpc_request_handler &&h, service_node *node)
+    : task(request->rpc_code(), request->header->client.thread_hash, node),
       _request(request),
       _handler(std::move(h)),
       _enqueue_ts_ns(0)
@@ -517,18 +490,22 @@ void rpc_request_task::enqueue()
 }
 
 rpc_response_task::rpc_response_task(message_ex *request,
-                                     dsn_rpc_response_handler_t cb,
-                                     void *context,
-                                     dsn_task_cancelled_handler_t on_cancel,
+                                     const rpc_response_handler &cb,
+                                     int hash,
+                                     service_node *node)
+    : rpc_response_task(request, rpc_response_handler(cb), hash, node)
+{
+}
+
+rpc_response_task::rpc_response_task(message_ex *request,
+                                     rpc_response_handler &&cb,
                                      int hash,
                                      service_node *node)
     : task(task_spec::get(request->local_rpc_code)->rpc_paired_code,
-           context,
-           on_cancel,
            hash == 0 ? request->header->client.thread_hash : hash,
-           node)
+           node),
+      _cb(std::move(cb))
 {
-    _cb = cb;
     _is_null = (_cb == nullptr);
 
     set_error_code(ERR_IO_PENDING);
@@ -589,83 +566,14 @@ void rpc_response_task::enqueue()
     }
 }
 
-struct hook_context : public transient_object
+aio_task::aio_task(dsn::task_code code, const aio_handler &cb, int hash, service_node *node)
+    : aio_task(code, aio_handler(cb), hash, node)
 {
-    dsn_rpc_response_handler_t old_callback;
-    dsn_task_cancelled_handler_t old_on_cancel;
-    void *old_context;
-
-    dsn_rpc_response_handler_replace_t new_callback;
-    uint64_t new_context;
-};
-
-static void rpc_response_task_hook_callback(dsn::error_code err,
-                                            dsn_message_t req,
-                                            dsn_message_t resp,
-                                            void *ctx)
-{
-    auto nc = (hook_context *)ctx;
-    nc->new_callback(nc->old_callback, err, req, resp, nc->old_context, nc->new_context);
-    delete nc;
-};
-
-static void rpc_response_task_hook_on_cancel(void *ctx)
-{
-    auto nc = (hook_context *)ctx;
-    if (nc->old_on_cancel != nullptr) {
-        nc->old_on_cancel(nc->old_context);
-    }
-    delete nc;
 }
 
-void rpc_response_task::replace_callback(dsn_rpc_response_handler_replace_t callback,
-                                         uint64_t context)
+aio_task::aio_task(dsn::task_code code, aio_handler &&cb, int hash, service_node *node)
+    : task(code, hash, node), _cb(std::move(cb))
 {
-    hook_context *nc = new hook_context();
-    nc->old_callback = _cb;
-    nc->old_context = _context;
-    nc->old_on_cancel = _on_cancel;
-    nc->new_callback = callback;
-    nc->new_context = context;
-
-    _context = nc;
-    _cb = rpc_response_task_hook_callback;
-    _on_cancel = rpc_response_task_hook_on_cancel;
-    _is_null = false;
-}
-
-bool rpc_response_task::reset_callback()
-{
-    if (_cb == rpc_response_task_hook_callback && _on_cancel == rpc_response_task_hook_on_cancel) {
-        if (state() != TASK_STATE_READY && state() != TASK_STATE_RUNNING)
-            return false;
-
-        // ready or running
-        auto nc = (hook_context *)_context;
-        _context = nc->old_context;
-        _cb = nc->old_callback;
-        _on_cancel = nc->old_on_cancel;
-        _is_null = (_cb == nullptr);
-
-        if (state() != TASK_STATE_RUNNING) {
-            delete nc;
-        }
-
-        return true;
-    } else {
-        return false;
-    }
-}
-
-aio_task::aio_task(dsn::task_code code,
-                   dsn_aio_handler_t cb,
-                   void *context,
-                   dsn_task_cancelled_handler_t on_cancel,
-                   int hash,
-                   service_node *node)
-    : task(code, context, on_cancel, hash, node)
-{
-    _cb = cb;
     _is_null = (_cb == nullptr);
 
     dassert(TASK_TYPE_AIO == spec().type,

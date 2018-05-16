@@ -36,6 +36,8 @@
 #pragma once
 #include "fd.code.definition.h"
 #include <iostream>
+#include <dsn/utility/optional.h>
+#include <dsn/cpp/clientlet.h>
 
 namespace dsn {
 namespace fd {
@@ -55,12 +57,12 @@ public:
               uint64_t partition_hash = 0,
               dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
     {
-        return ::dsn::rpc::wait_and_unwrap<beacon_ack>(
+        return dsn::rpc::wait_and_unwrap<beacon_ack>(
             ::dsn::rpc::call(server_addr.unwrap_or(_server),
                              RPC_FD_FAILURE_DETECTOR_PING,
                              beacon,
                              nullptr,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));

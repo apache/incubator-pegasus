@@ -181,7 +181,7 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
         }
 
         dsn::configuration_query_by_index_response query_resp;
-        ::dsn::unmarshall(query_task->response(), query_resp);
+        ::dsn::unmarshall(query_task->get_response(), query_resp);
         if (query_resp.err != dsn::ERR_OK) {
             std::cout << "create app " << app_name
                       << " failed: [query] received server error: " << query_resp.err.to_string()
@@ -260,7 +260,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
     }
 
     dsn::replication::configuration_create_app_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != dsn::ERR_OK) {
         std::cout << "create app " << app_name
                   << " failed: [create] received server error: " << resp.err.to_string()
@@ -296,7 +296,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, in
     }
 
     dsn::replication::configuration_drop_app_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != dsn::ERR_OK) {
         return resp.err;
     }
@@ -321,7 +321,7 @@ dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::st
         return resp_task->error();
 
     dsn::replication::configuration_recall_app_response resp;
-    dsn::unmarshall(resp_task->response(), resp);
+    dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != dsn::ERR_OK)
         return resp.err;
     std::cout << "recall app ok, id(" << resp.info.app_id << "), "
@@ -344,7 +344,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
     }
 
     dsn::replication::configuration_list_apps_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != dsn::ERR_OK) {
         return resp.err;
     }
@@ -485,7 +485,7 @@ dsn::error_code replication_ddl_client::list_nodes(
     }
 
     dsn::replication::configuration_list_nodes_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != dsn::ERR_OK) {
         return resp.err;
     }
@@ -615,7 +615,7 @@ dsn::error_code replication_ddl_client::cluster_info(const std::string &file_nam
     }
 
     configuration_cluster_info_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != dsn::ERR_OK) {
         return resp.err;
     }
@@ -792,7 +792,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
     }
 
     dsn::configuration_query_by_index_response resp;
-    dsn::unmarshall(resp_task->response(), resp);
+    dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != dsn::ERR_OK) {
         return resp.err;
     }
@@ -817,7 +817,7 @@ replication_ddl_client::control_meta_function_level(meta_function_level::type le
     if (response_task->error() != dsn::ERR_OK) {
         resp.err = response_task->error();
     } else {
-        dsn::unmarshall(response_task->response(), resp);
+        dsn::unmarshall(response_task->get_response(), resp);
     }
     return resp;
 }
@@ -833,7 +833,7 @@ replication_ddl_client::send_balancer_proposal(const configuration_balancer_requ
     if (response_task->error() != dsn::ERR_OK)
         return response_task->error();
     dsn::replication::configuration_balancer_response resp;
-    dsn::unmarshall(response_task->response(), resp);
+    dsn::unmarshall(response_task->get_response(), resp);
     return resp.err;
 }
 
@@ -893,13 +893,13 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
             out << "Wait recovery for " << i << " seconds" << std::endl;
     }
 
-    if (!wait_done || response_task->response() == NULL) {
+    if (!wait_done || response_task->get_response() == NULL) {
         out << "Wait recovery failed, administrator should check the meta for progress"
             << std::endl;
         return dsn::ERR_TIMEOUT;
     } else {
         configuration_recovery_response resp;
-        dsn::unmarshall(response_task->response(), resp);
+        dsn::unmarshall(response_task->get_response(), resp);
         out << "Recover result: " << resp.err.to_string() << std::endl;
         if (!resp.hint_message.empty()) {
             out << "=============================" << std::endl;
@@ -942,7 +942,7 @@ dsn::error_code replication_ddl_client::do_restore(const std::string &backup_pro
         return resp_task->error();
     } else {
         configuration_create_app_response resp;
-        dsn::unmarshall(resp_task->response(), resp);
+        dsn::unmarshall(resp_task->get_response(), resp);
         if (resp.err == ERR_OBJECT_NOT_FOUND) {
             std::cout << "app metadata is damaged on cold backup media, restore app failed"
                       << std::endl;
@@ -979,7 +979,7 @@ dsn::error_code replication_ddl_client::add_backup_policy(const std::string &pol
     }
 
     configuration_add_backup_policy_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
 
     if (resp.err != ERR_OK) {
         return resp.err;
@@ -1005,7 +1005,7 @@ dsn::error_code replication_ddl_client::disable_backup_policy(const std::string 
     }
 
     configuration_modify_backup_policy_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
         return resp.err;
     } else {
@@ -1035,7 +1035,7 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
     }
 
     configuration_modify_backup_policy_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
         return resp.err;
     } else if (resp.err == ERR_BUSY) {
@@ -1133,7 +1133,7 @@ dsn::error_code replication_ddl_client::ls_backup_policy()
         return resp_task->error();
     }
     configuration_query_backup_policy_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
 
     if (resp.err != ERR_OK) {
         return resp.err;
@@ -1165,7 +1165,7 @@ replication_ddl_client::query_backup_policy(const std::vector<std::string> &poli
     }
 
     configuration_query_backup_policy_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
 
     if (resp.err != ERR_OK) {
         return resp.err;
@@ -1225,7 +1225,7 @@ replication_ddl_client::update_backup_policy(const std::string &policy_name,
     }
 
     configuration_modify_backup_policy_response resp;
-    ::dsn::unmarshall(resp_task->response(), resp);
+    ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
         return resp.err;
     } else {
@@ -1258,7 +1258,7 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
     }
 
     configuration_query_restore_response response;
-    ::dsn::unmarshall(resp_task->response(), response);
+    ::dsn::unmarshall(resp_task->get_response(), response);
     if (response.err == ERR_OK) {
         int overall_progress = 0;
         for (const auto &p : response.restore_progress) {
@@ -1314,18 +1314,22 @@ bool replication_ddl_client::valid_app_char(int c)
     return (bool)std::isalnum(c) || c == '_' || c == '.' || c == ':';
 }
 
-void replication_ddl_client::end_meta_request(
-    task_ptr callback, int retry_times, error_code err, dsn_message_t request, dsn_message_t resp)
+void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callback,
+                                              int retry_times,
+                                              error_code err,
+                                              dsn_message_t request,
+                                              dsn_message_t resp)
 {
     if (err != dsn::ERR_OK && retry_times < 2) {
-        rpc::call(_meta_server, request, &_tracker, [
-            =,
-            callback_capture = std::move(callback)
-        ](error_code err, dsn_message_t request, dsn_message_t response) {
-            end_meta_request(std::move(callback_capture), retry_times + 1, err, request, response);
-        });
+        rpc::call(_meta_server,
+                  request,
+                  &_tracker,
+                  [this, retry_times, callback](
+                      error_code err, dsn_message_t request, dsn_message_t response) mutable {
+                      end_meta_request(callback, retry_times + 1, err, request, response);
+                  });
     } else {
-        callback->enqueue_rpc_response(err, resp);
+        callback->enqueue(err, (message_ex *)resp);
     }
 }
 
@@ -1347,7 +1351,7 @@ void replication_ddl_client::end_meta_request(
         return resp_task->error();
     }
     configuration_update_app_env_response response;
-    ::dsn::unmarshall(resp_task->response(), response);
+    dsn::unmarshall(resp_task->get_response(), response);
     if (response.err != ERR_OK) {
         return response.err;
     } else {
@@ -1377,7 +1381,7 @@ void replication_ddl_client::end_meta_request(
         return resp_task->error();
     }
     configuration_update_app_env_response response;
-    ::dsn::unmarshall(resp_task->response(), response);
+    ::dsn::unmarshall(resp_task->get_response(), response);
     if (response.err != ERR_OK) {
         return response.err;
     } else {
@@ -1413,7 +1417,7 @@ void replication_ddl_client::end_meta_request(
         return resp_task->error();
     }
     configuration_update_app_env_response response;
-    ::dsn::unmarshall(resp_task->response(), response);
+    ::dsn::unmarshall(resp_task->get_response(), response);
     if (response.err != ERR_OK) {
         return response.err;
     } else {

@@ -217,15 +217,15 @@ void replica::init_learn(uint64_t signature)
            _potential_secondary_states.learning_copy_file_size,
            _potential_secondary_states.learning_copy_buffer_size);
 
-    _potential_secondary_states.learning_task =
-        rpc::create_message(
-            RPC_LEARN, request, std::chrono::milliseconds(0), get_gpid().thread_hash())
-            .call(_config.primary,
-                  &_tracker,
-                  [ this, req_cap = std::move(request) ](error_code err,
-                                                         learn_response && resp) mutable {
-                      on_learn_reply(err, std::move(req_cap), std::move(resp));
-                  });
+    dsn_message_t msg = dsn_msg_create_request(RPC_LEARN, 0, get_gpid().thread_hash());
+    dsn::marshall(msg, request);
+    _potential_secondary_states.learning_task = rpc::call(
+        _config.primary,
+        msg,
+        &_tracker,
+        [ this, req_cap = std::move(request) ](error_code err, learn_response && resp) mutable {
+            on_learn_reply(err, std::move(req_cap), std::move(resp));
+        });
 }
 
 void replica::on_learn(dsn_message_t msg, const learn_request &request)
@@ -1230,17 +1230,18 @@ void replica::notify_learn_completion()
     if (_potential_secondary_states.completion_notify_task != nullptr) {
         _potential_secondary_states.completion_notify_task->cancel(false);
     }
+
+    dsn_message_t msg =
+        dsn_msg_create_request(RPC_LEARN_COMPLETION_NOTIFY, 0, get_gpid().thread_hash());
+    dsn::marshall(msg, report);
+
     _potential_secondary_states.completion_notify_task =
-        rpc::create_message(RPC_LEARN_COMPLETION_NOTIFY,
-                            report,
-                            std::chrono::milliseconds(0),
-                            get_gpid().thread_hash())
-            .call(_config.primary, &_tracker, [
-                this,
-                report = std::move(report)
-            ](error_code err, learn_notify_response && resp) mutable {
-                on_learn_completion_notification_reply(err, std::move(report), std::move(resp));
-            });
+        rpc::call(_config.primary, msg, &_tracker, [
+            this,
+            report = std::move(report)
+        ](error_code err, learn_notify_response && resp) mutable {
+            on_learn_completion_notification_reply(err, std::move(report), std::move(resp));
+        });
 }
 
 void replica::on_learn_completion_notification(const group_check_response &report,
@@ -1390,14 +1391,15 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
     // temp prepare list for learning purpose
     prepare_list plist(_app->last_committed_decree(),
                        _options->max_mutation_count_in_prepare_list,
-                       [this, &err](mutation_ptr &mu) {
+                       [this](mutation_ptr &mu) {
                            if (mu->data.header.decree == _app->last_committed_decree() + 1) {
+                               // TODO: assign the returned error_code to err and check it
                                _app->apply_mutation(mu);
                            }
                        });
 
     err = mutation_log::replay(state.files,
-                               [this, &plist](int log_length, mutation_ptr &mu) {
+                               [&plist](int log_length, mutation_ptr &mu) {
                                    auto d = mu->data.header.decree;
                                    if (d <= plist.last_committed_decree())
                                        return false;

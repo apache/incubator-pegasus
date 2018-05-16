@@ -55,13 +55,12 @@ TEST(core, aio)
     // write
     auto fp = dsn_file_open("tmp", O_RDWR | O_CREAT | O_BINARY, 0666);
 
-    std::list<task_ptr> tasks;
+    std::list<aio_task_ptr> tasks;
     uint64_t offset = 0;
 
     // new write
     for (int i = 0; i < 100; i++) {
-        auto t =
-            ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
+        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr);
         tasks.push_back(t);
         offset += len;
     }
@@ -74,15 +73,14 @@ TEST(core, aio)
     offset = 0;
     tasks.clear();
     for (int i = 0; i < 100; i++) {
-        auto t =
-            ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
+        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr);
         tasks.push_back(t);
         offset += len;
     }
 
     for (auto &t : tasks) {
         t->wait();
-        EXPECT_TRUE(t->io_size() == (size_t)len);
+        EXPECT_TRUE(t->get_transferred_size() == (size_t)len);
     }
 
     // vector write
@@ -94,12 +92,12 @@ TEST(core, aio)
     }
     for (int i = 0; i < 10; i++) {
         tasks.push_back(::dsn::file::write_vector(
-            fp, buffers.get(), 10, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback));
+            fp, buffers.get(), 10, offset, LPC_AIO_TEST, nullptr, nullptr));
         offset += 10 * len;
     }
     for (auto &t : tasks) {
         t->wait();
-        EXPECT_TRUE(t->io_size() == 10 * len);
+        EXPECT_TRUE(t->get_transferred_size() == 10 * len);
     }
     auto err = dsn_file_close(fp);
     EXPECT_TRUE(err == ERR_OK);
@@ -112,15 +110,14 @@ TEST(core, aio)
     offset = 0;
     tasks.clear();
     for (int i = 0; i < 100; i++) {
-        auto t =
-            ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
+        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr);
         tasks.push_back(t);
         offset += len;
     }
 
     for (auto &t : tasks) {
         t->wait();
-        EXPECT_TRUE(t->io_size() == (size_t)len);
+        EXPECT_TRUE(t->get_transferred_size() == (size_t)len);
     }
 
     // sequential read
@@ -128,12 +125,11 @@ TEST(core, aio)
     tasks.clear();
     for (int i = 0; i < 200; i++) {
         buffer2[0] = 'x';
-        auto t =
-            ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, dsn::empty_callback);
+        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr);
         offset += len;
 
         t->wait();
-        EXPECT_TRUE(t->io_size() == (size_t)len);
+        EXPECT_TRUE(t->get_transferred_size() == (size_t)len);
         EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
     }
 

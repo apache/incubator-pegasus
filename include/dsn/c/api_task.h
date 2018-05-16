@@ -44,42 +44,35 @@
 @addtogroup task-common
 @{
  */
-/*! callback prototype for \ref TASK_TYPE_COMPUTE */
-typedef void (*dsn_task_handler_t)(void * ///< void* context
-                                   );
 
-/*! callback prototype for \ref TASK_TYPE_RPC_REQUEST */
-typedef std::function<void(dsn_message_t)> dsn_rpc_request_handler_t;
+namespace dsn {
+typedef std::function<void()> task_handler;
 
-/*! callback prototype for \ref TASK_TYPE_RPC_RESPONSE */
-typedef void (*dsn_rpc_response_handler_t)(
-    dsn::error_code, ///< usually, it is ok, or timeout, or busy
-    dsn_message_t,   ///< sent rpc request
-    dsn_message_t,   ///< incoming rpc response
-    void *           ///< context when rpc is called
-    );
+/// A callback to handle rpc requests.
+///
+/// Parameters:
+///  - dsn_message_t: the received rpc request
+typedef std::function<void(dsn_message_t)> rpc_request_handler;
 
-/*! callback prototype for \ref TASK_TYPE_AIO */
-typedef void (*dsn_aio_handler_t)(dsn::error_code, ///< error code for the io operation
-                                  size_t,          ///< transferred io size
-                                  void *           ///< context when rd/wt is called
-                                  );
-/*!
- callback prototype for task cancellation (called on task-being-cancelled)
+/// A callback to handle rpc responses.
+///
+/// Parameters:
+///  - error_code
+///  - dsn_message_t: the sent rpc request
+///  - dsn_message_t: the received rpc response
+typedef std::function<void(dsn::error_code, dsn_message_t, dsn_message_t)> rpc_response_handler;
 
- in rDSN, tasks can be cancelled. For languages such as C++, when there are explicit resource
- release operations (e.g., ::free, release_ref()) in the task handlers, cancellation will
- cause resource leak due to not-executed task handleers. in order to support such scenario,
- rDSN provides dsn_task_cancelled_handler_t which is executed when a task is cancelled. Note
- this callback does not have thread affinity similar to task handlers above (which are
- configured to be executed in certain thread pools or even a fixed thread). Therefore, it is
- developers' resposibility to ensure this cancallation callback only does thread-insensitive
- operations (e.g., release_ref()).
- */
-typedef void (*dsn_task_cancelled_handler_t)(
-    void * ///< shared with the task handler callbacks, e.g., in \ref dsn_task_handler_t
-    );
+/// Parameters:
+///  - error_code
+///  - size_t: the read or written size of bytes from file.
+typedef std::function<void(dsn::error_code, size_t)> aio_handler;
 
+class task;
+class raw_task;
+class rpc_request_task;
+class rpc_response_task;
+class aio_task;
+}
 /*!
 apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
 the length of a vitual queue (bound to current code + hash) to

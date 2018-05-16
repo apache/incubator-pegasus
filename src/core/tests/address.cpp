@@ -50,23 +50,6 @@ static inline uint32_t host_ipv4(uint8_t sec1, uint8_t sec2, uint8_t sec3, uint8
     return ip;
 }
 
-static inline bool operator==(dsn::rpc_address l, dsn::rpc_address r)
-{
-    if (l.type() != r.type())
-        return false;
-
-    switch (l.type()) {
-    case HOST_TYPE_IPV4:
-        return l.ip() == r.ip() && l.port() == r.port();
-    case HOST_TYPE_URI:
-        return strcmp(l.uri_address()->uri(), r.uri_address()->uri()) == 0;
-    case HOST_TYPE_GROUP:
-        return l.group_address() == r.group_address();
-    default:
-        return true;
-    }
-}
-
 TEST(core, rpc_address_ipv4_from_host)
 {
     // localhost --> 127.0.0.1

@@ -36,6 +36,7 @@
 #include <dsn/cpp/clientlet.h>
 #include <dsn/cpp/service_app.h>
 #include <dsn/utility/singleton.h>
+#include <dsn/tool-api/task.h>
 #include <iostream>
 #include <map>
 
@@ -56,28 +57,7 @@ void clientlet::check_hashed_access()
     }
 }
 
-task_ptr rpc::create_rpc_response_task(dsn_message_t request,
-                                       task_tracker *tracker,
-                                       empty_callback_t,
-                                       int reply_thread_hash)
-{
-    task_ptr tsk = new safe_task_handle;
-    // do not add_ref here
-    auto t = dsn_rpc_create_response_task(request, nullptr, nullptr, reply_thread_hash, tracker);
-    tsk->set_task_info(t);
-    return tsk;
-}
-
 namespace file {
-task_ptr
-create_aio_task(dsn::task_code callback_code, task_tracker *tracker, empty_callback_t, int hash)
-{
-    task_ptr tsk = new safe_task_handle;
-    // do not add_ref here
-    dsn_task_t t = dsn_file_create_aio_task(callback_code, nullptr, nullptr, hash, tracker);
-    tsk->set_task_info(t);
-    return tsk;
-}
 
 void copy_remote_files_impl(::dsn::rpc_address remote,
                             const std::string &source_dir,
@@ -85,11 +65,11 @@ void copy_remote_files_impl(::dsn::rpc_address remote,
                             const std::string &dest_dir,
                             bool overwrite,
                             bool high_priority,
-                            dsn_task_t native_task)
+                            aio_task *tsk)
 {
     if (files.empty()) {
         dsn_file_copy_remote_directory(
-            remote, source_dir.c_str(), dest_dir.c_str(), overwrite, high_priority, native_task);
+            remote, source_dir.c_str(), dest_dir.c_str(), overwrite, high_priority, tsk);
     } else {
         const char **ptr = (const char **)alloca(sizeof(const char *) * (files.size() + 1));
         const char **ptr_base = ptr;
@@ -98,13 +78,8 @@ void copy_remote_files_impl(::dsn::rpc_address remote,
         }
         *ptr = nullptr;
 
-        dsn_file_copy_remote_files(remote,
-                                   source_dir.c_str(),
-                                   ptr_base,
-                                   dest_dir.c_str(),
-                                   overwrite,
-                                   high_priority,
-                                   native_task);
+        dsn_file_copy_remote_files(
+            remote, source_dir.c_str(), ptr_base, dest_dir.c_str(), overwrite, high_priority, tsk);
     }
 }
 }

@@ -184,106 +184,8 @@ dsn_threadpool_code_register.
 
  @{
  */
-
-/*!
- Add reference count for a task created from \ref dsn_task_create etc.
-
- \param task the task handle.
-
- Memory usage of tasks are controlled using reference-count. All returned dsn_task_t
- are NOT add_ref by rDSN, so you DO NOT need to call task_release_ref to release the
- tasks. the decision is made for easier programming, and you may consider the later
- dsn_rpc_xxx calls do the resource gc work for you.
-
- however, before you emit the tasks (e.g., via dsn_task_call, dsn_rpc_call), AND you
- want to hold the task handle further after the emit API, you need to call
- dsn_task_add_ref to ensure the handle is still valid, and also call
- dsn_task_release_ref later to release the handle.
- */
-extern DSN_API void dsn_task_add_ref(dsn_task_t task);
-
-/*!
- release reference for a given task handle
-
- \param task the task handle
-
- See more details of the comment in \ref dsn_task_add_ref
- */
-extern DSN_API void dsn_task_release_ref(dsn_task_t task);
-
-/*!
- get reference for a given task handle
-
- \param task the task handle
-
- See more details of the comment in \ref dsn_task_add_ref
-*/
-extern DSN_API int dsn_task_get_ref(dsn_task_t task);
-
-/*!
- cancel a task
-
- \param task                the task handle
- \param wait_until_finished true if wait until finished is needed
-
- \return true if THIS cancellation succeeds, false if the task is already running
- (when wait_until_finished = false), or completed successfully, or already cancelled.
- */
-extern DSN_API bool dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
-
-/*!
- set delay for a task
-
- \param task                the task handle
- \param delay_ms            the delay milliseconds for a task
- */
-extern DSN_API void dsn_task_set_delay(dsn_task_t task, int delay_ms);
-
-/*!
- cancel a task
-
- \param task                the task handle
- \param wait_until_finished true if wait until finished is needed
- \param finished            after the call, whether the task is finished
- (completed successfully, or cancelled)
-
- \return true if THIS cancellation succeeds, false if the task is already running
- (when wait_until_finished = false), or completed successfully, or cancelled.
- */
-extern DSN_API bool dsn_task_cancel2(dsn_task_t task,
-                                     bool wait_until_finished,
-                                     /*out*/ bool *finished);
-
 /*! cancel the later execution of the timer task inside the timer */
 extern DSN_API void dsn_task_cancel_current_timer();
-
-/*!
- wait until a task is completed
-
- \param task the task handle
-
- \return true if it succeeds, false if it fails.
- */
-extern DSN_API void dsn_task_wait(dsn_task_t task);
-
-/*!
-wait until a task is completed
-
-\param task the task handle
-\param timeout_milliseconds maximum time to wait
-
-\return true if it succeeds, false if it timeouts
-*/
-extern DSN_API bool dsn_task_wait_timeout(dsn_task_t task, int timeout_milliseconds);
-
-/*!
- get result error code of a task
-
- \param task the task handle.
-
- \return the result error code of the task
- */
-extern DSN_API dsn::error_code dsn_task_error(dsn_task_t task);
 
 /*!
  check whether the task is currently running inside the given task
@@ -292,7 +194,7 @@ extern DSN_API dsn::error_code dsn_task_error(dsn_task_t task);
 
  \return true if it is.
  */
-extern DSN_API bool dsn_task_is_running_inside(dsn_task_t t);
+extern DSN_API bool dsn_task_is_running_inside(dsn::task *t);
 
 /*@}*/
 
@@ -303,92 +205,6 @@ extern DSN_API bool dsn_task_is_running_inside(dsn_task_t t);
 
  @{
  */
-
-/*!
- create an asynchronous task.
-
- \param code
- the task code, which defines which thread pool executes the task, see
- \ref dsn_task_code_register for more details.
- \param cb               the callback for executing the task.
- \param context          the context used by the callback.
- \param DEFAULT(0)
-    the hash value, which defines which thread in the target thread pool
-    executes the task, when the pool is partitioned, see remarks for more.
- \param DEFAULT(nullptr) the task tracker handle, see \ref dsn_task_tracker_create for more.
-
- \return task handle
-
- code defines the thread pool which executes the callback, i.e., [task.%code$] pool_code =
- THREAD_POOL_DEFAULT; hash defines the thread with index hash % worker_count in the
- threadpool to execute the callback, when [threadpool.%pool_code%] partitioned = true.
- */
-extern DSN_API dsn_task_t dsn_task_create(dsn::task_code code,
-                                          dsn_task_handler_t cb,
-                                          void *context,
-                                          int hash DEFAULT(0),
-                                          dsn::task_tracker *tracker DEFAULT(nullptr));
-
-/*!
- create a timer task
-
- \param code
- the task code, which defines which thread pool executes the task, see
- \ref dsn_task_code_register for more details.
- \param cb               the callback for executing the task.
- \param context          the context used by the callback.
- \param DEFAULT(0)
-    the hash value, which defines which thread in the target thread pool
-    executes the task, when the pool is partitioned, see remarks for more.
- \param interval_milliseconds timer interval with which the timer executes periodically.
- \param DEFAULT(nullptr) the task tracker handle, see \ref dsn_task_tracker_create for more.
-
- \return task handle
-
- code defines the thread pool which executes the callback, i.e., [task.%code$] pool_code =
- THREAD_POOL_DEFAULT; hash defines the thread with index hash % worker_count in the
- threadpool to execute the callback, when [threadpool.%pool_code%] partitioned = true.
- */
-extern DSN_API dsn_task_t dsn_task_create_timer(dsn::task_code code,
-                                                dsn_task_handler_t cb,
-                                                void *context,
-                                                int hash,
-                                                int interval_milliseconds,
-                                                dsn::task_tracker *tracker DEFAULT(nullptr));
-
-/*!
-similar to \ref dsn_task_create, except an on_cancel callback is provided
-to be executed when the task is cancelled, see \ref dsn_task_cancelled_handler_t for
-more details.
-*/
-extern DSN_API dsn_task_t dsn_task_create_ex(dsn::task_code code,   // task label
-                                             dsn_task_handler_t cb, // callback function
-                                             dsn_task_cancelled_handler_t on_cancel,
-                                             void *context, // context to the two callbacks above
-                                             int hash DEFAULT(0), // hash to callback
-                                             dsn::task_tracker *tracker DEFAULT(nullptr));
-
-/*!
- similar to \ref dsn_task_create_timer, except an on_cancel callback is provided
- to be executed when the task is cancelled, see \ref dsn_task_cancelled_handler_t for
- more details.
- */
-extern DSN_API dsn_task_t dsn_task_create_timer_ex(dsn::task_code code,
-                                                   dsn_task_handler_t cb,
-                                                   dsn_task_cancelled_handler_t on_cancel,
-                                                   void *context,
-                                                   int hash,
-                                                   int interval_milliseconds, // timer period
-                                                   dsn::task_tracker *tracker DEFAULT(nullptr));
-
-/*!
- start the task
-
- \param task                the task handle
- \param delay_milliseconds  delay time before its execution
- */
-extern DSN_API void dsn_task_call(dsn_task_t task, int delay_milliseconds DEFAULT(0));
-/*@}*/
 
 /*!
 @defgroup rpc Remote Procedure Call (RPC)
@@ -626,7 +442,7 @@ Server-Side RPC Primitives
 /*! register callback to handle RPC request */
 extern DSN_API bool dsn_rpc_register_handler(dsn::task_code code,
                                              const char *extra_name,
-                                             const dsn_rpc_request_handler_t &cb);
+                                             const dsn::rpc_request_handler &cb);
 
 /*! unregister callback to handle RPC request, returns true if unregister ok, false if no handler
     was registered */
@@ -647,49 +463,8 @@ Client-Side RPC Primitives
 @{
 */
 
-/*!
-create a callback task to handle the response message from RPC server, or timeout.
-
-\param request          rpc request message
-\param cb               callback to handle rpc response or timeout, unlike the other
- kinds of tasks, response tasks are always executed in the thread pool invoking the rpc
-\param context          context used by cb
-\param reply_thread_hash       if the curren thread pool is partitioned, this specify which thread
- to execute the callback
-\param tracker          task tracker bound to the response task
-
-\return response task handle
-*/
-extern DSN_API dsn_task_t dsn_rpc_create_response_task(dsn_message_t request,
-                                                       dsn_rpc_response_handler_t cb,
-                                                       void *context,
-                                                       int reply_thread_hash DEFAULT(0),
-                                                       dsn::task_tracker *tracker DEFAULT(nullptr));
-
-/*!
-create a callback task to handle the response message from RPC server, or timeout.
-
-\param request          rpc request message
-\param cb               callback to handle rpc response or timeout, unlike the other
- kinds of tasks, response tasks are always executed in the thread pool invoking the rpc
-\param on_cancel        callback executed on task being-cancelled
-\param context          context used by cb
-\param reply_thread_hash       if the curren thread pool is partitioned, this specify which thread
- to execute the callback
-\param tracker          task tracker bound to the response task
-
-\return response task handle
-*/
-extern DSN_API dsn_task_t
-dsn_rpc_create_response_task_ex(dsn_message_t request,
-                                dsn_rpc_response_handler_t cb,
-                                dsn_task_cancelled_handler_t on_cancel,
-                                void *context,
-                                int reply_thread_hash DEFAULT(0),
-                                dsn::task_tracker *tracker DEFAULT(nullptr));
-
 /*! client invokes the RPC call */
-extern DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn_task_t rpc_call);
+extern DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call);
 
 /*!
    client invokes the RPC call and waits for its response, note
@@ -700,15 +475,10 @@ extern DSN_API dsn_message_t dsn_rpc_call_wait(dsn::rpc_address server, dsn_mess
 /*! one-way RPC from client, no rpc response is expected */
 extern DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn_message_t request);
 
-/*!
- get response message from the response task, note
- returned msg must be explicitly released using \ref dsn_msg_release_ref
-*/
-extern DSN_API dsn_message_t dsn_rpc_get_response(dsn_task_t rpc_call);
-
 /*! this is to mimic a response is received when no real rpc is called */
-extern DSN_API void
-dsn_rpc_enqueue_response(dsn_task_t rpc_call, dsn::error_code err, dsn_message_t response);
+extern DSN_API void dsn_rpc_enqueue_response(dsn::rpc_response_task *rpc_call,
+                                             dsn::error_code err,
+                                             dsn_message_t response);
 
 /*@}*/
 
@@ -758,42 +528,6 @@ extern DSN_API dsn::error_code dsn_file_flush(dsn_handle_t file);
 extern DSN_API void *dsn_file_native_handle(dsn_handle_t file);
 
 /*!
- create aio task which is executed on completion of the file operations
-
- \param code             task code
- \param cb               callback to be executed
- \param context          context used by cb
- \param hash             specify which thread to execute cb if target pool is partitioned
- \param tracker          task tracker bound to this aio task
-
- \return aio task handle, nullptr for failure
- */
-extern DSN_API dsn_task_t dsn_file_create_aio_task(dsn::task_code code,
-                                                   dsn_aio_handler_t cb,
-                                                   void *context,
-                                                   int hash DEFAULT(0),
-                                                   dsn::task_tracker *tracker DEFAULT(nullptr));
-
-/*!
- create aio task which is executed on completion of the file operations
-
- \param code             task code
- \param cb               callback to be executed on task completion
- \param on_cancel        callback to be executed on task being-cancelled
- \param context          context used by cb
- \param hash             specify which thread to execute cb if target pool is partitioned
- \param tracker          task tracker bound to this aio task
-
- \return aio task handle, nullptr for failure
- */
-extern DSN_API dsn_task_t dsn_file_create_aio_task_ex(dsn::task_code code,
-                                                      dsn_aio_handler_t cb,
-                                                      dsn_task_cancelled_handler_t on_cancel,
-                                                      void *context,
-                                                      int hash DEFAULT(0),
-                                                      dsn::task_tracker *tracker DEFAULT(nullptr));
-
-/*!
  read file asynchronously
 
  \param file   file handle
@@ -803,7 +537,7 @@ extern DSN_API dsn_task_t dsn_file_create_aio_task_ex(dsn::task_code code,
  \param cb     callback aio task to be executed on completion
  */
 extern DSN_API void
-dsn_file_read(dsn_handle_t file, char *buffer, int count, uint64_t offset, dsn_task_t cb);
+dsn_file_read(dsn_handle_t file, char *buffer, int count, uint64_t offset, dsn::aio_task *cb);
 
 /*!
  write file asynchronously
@@ -814,8 +548,8 @@ dsn_file_read(dsn_handle_t file, char *buffer, int count, uint64_t offset, dsn_t
  \param offset offset in the file to start write
  \param cb     callback aio task to be executed on completion
  */
-extern DSN_API void
-dsn_file_write(dsn_handle_t file, const char *buffer, int count, uint64_t offset, dsn_task_t cb);
+extern DSN_API void dsn_file_write(
+    dsn_handle_t file, const char *buffer, int count, uint64_t offset, dsn::aio_task *cb);
 
 /*!
  write file asynchronously with vector buffers
@@ -830,7 +564,7 @@ extern DSN_API void dsn_file_write_vector(dsn_handle_t file,
                                           const dsn_file_buffer_t *buffers,
                                           int buffer_count,
                                           uint64_t offset,
-                                          dsn_task_t cb);
+                                          dsn::aio_task *cb);
 
 /*!
  copy remote directory to the local machine
@@ -847,7 +581,7 @@ extern DSN_API void dsn_file_copy_remote_directory(dsn::rpc_address remote,
                                                    const char *dest_dir,
                                                    bool overwrite,
                                                    bool high_priority,
-                                                   dsn_task_t cb);
+                                                   dsn::aio_task *cb);
 
 /*!
  copy remote files to the local machine
@@ -867,13 +601,7 @@ extern DSN_API void dsn_file_copy_remote_files(dsn::rpc_address remote,
                                                const char *dest_dir,
                                                bool overwrite,
                                                bool high_priority,
-                                               dsn_task_t cb);
-
-/*! get read/written io size for the given aio task */
-extern DSN_API size_t dsn_file_get_io_size(dsn_task_t cb_task);
-
-/*! mimic io completion when no io operation is really issued */
-extern DSN_API void dsn_file_task_enqueue(dsn_task_t cb_task, dsn::error_code err, size_t size);
+                                               dsn::aio_task *cb);
 
 /*@}*/
 

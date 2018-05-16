@@ -52,7 +52,7 @@ namespace replication {
         if (t != nullptr) {                                                                        \
             bool finished;                                                                         \
             t->cancel(force, &finished);                                                           \
-            if (!finished && !dsn_task_is_running_inside(task_->native_handle()))                  \
+            if (!finished && !dsn_task_is_running_inside(task_.get()))                             \
                 return false;                                                                      \
             task_ = nullptr;                                                                       \
         }                                                                                          \
@@ -64,7 +64,7 @@ namespace replication {
         if (t != nullptr) {                                                                        \
             bool finished;                                                                         \
             t->cancel(false, &finished);                                                           \
-            dassert(finished || dsn_task_is_running_inside(task_->native_handle()),                \
+            dassert(finished || dsn_task_is_running_inside(task_.get()),                           \
                     "task must be finished at this point");                                        \
             task_ = nullptr;                                                                       \
         }                                                                                          \

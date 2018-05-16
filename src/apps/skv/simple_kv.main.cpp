@@ -38,6 +38,7 @@
 #include "simple_kv.server.impl.h"
 
 // framework specific tools
+#include <dsn/utility/optional.h>
 #include <dsn/dist/replication/meta_service_app.h>
 #include <dsn/dist/replication/replication_service_app.h>
 #include <dsn/dist/replication/replication.global_check.h>
@@ -49,9 +50,10 @@ static void dsn_app_registration_simple_kv()
     dsn_meta_server_bridge(0, nullptr);
     dsn_layer2_stateful_type1_bridge(0, nullptr);
 
-    dsn::service_app::register_factory<dsn::replication::application::simple_kv_client_app>("client");
-    dsn::service_app::register_factory<::dsn::replication::application::simple_kv_perf_test_client_app>(
-        "client.perf.test");
+    dsn::service_app::register_factory<dsn::replication::application::simple_kv_client_app>(
+        "client");
+    dsn::service_app::register_factory<
+        ::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
 }
 
 int main(int argc, char **argv)

@@ -127,15 +127,15 @@ void simple_kv_client_app::begin_write(int id,
            key.c_str(),
            value.c_str(),
            timeout_ms);
-    std::unique_ptr<write_context> ctx(new write_context());
+    std::shared_ptr<write_context> ctx(new write_context());
     ctx->id = id;
     ctx->req.key = key;
     ctx->req.value = value;
     ctx->timeout_ms = timeout_ms;
     auto &req = ctx->req;
     _simple_kv_client->write(req,
-                             [ctx_cap = std::move(ctx)](error_code err, int32_t resp) {
-                                 test_case::fast_instance().on_end_write(ctx_cap->id, err, resp);
+                             [ctx](error_code err, int32_t resp) {
+                                 test_case::fast_instance().on_end_write(ctx->id, err, resp);
                              },
                              std::chrono::milliseconds(timeout_ms));
 }
@@ -166,13 +166,13 @@ struct read_context
 void simple_kv_client_app::begin_read(int id, const std::string &key, int timeout_ms)
 {
     ddebug("=== on_begin_read:id=%d,key=%s,timeout=%d", id, key.c_str(), timeout_ms);
-    std::unique_ptr<read_context> ctx(new read_context());
+    std::shared_ptr<read_context> ctx(new read_context());
     ctx->id = id;
     ctx->key = key;
     ctx->timeout_ms = timeout_ms;
     _simple_kv_client->read(key,
-                            [ctx_cap = std::move(ctx)](error_code err, std::string && resp) {
-                                test_case::fast_instance().on_end_read(ctx_cap->id, err, resp);
+                            [ctx](error_code err, std::string &&resp) {
+                                test_case::fast_instance().on_end_read(ctx->id, err, resp);
                             },
                             std::chrono::milliseconds(timeout_ms));
 }

@@ -100,6 +100,13 @@ public:
             _obj->add_ref();
     }
 
+    template <typename U>
+    ref_ptr(U *obj) : _obj(obj)
+    {
+        if (nullptr != _obj)
+            _obj->add_ref();
+    }
+
     ref_ptr(const ref_ptr<T> &r)
     {
         _obj = r.get();
@@ -107,7 +114,21 @@ public:
             _obj->add_ref();
     }
 
+    template <typename U>
+    ref_ptr(const ref_ptr<U> &r)
+    {
+        _obj = r.get();
+        if (nullptr != _obj)
+            _obj->add_ref();
+    }
+
     ref_ptr(ref_ptr<T> &&r) : _obj(r._obj) { r._obj = nullptr; }
+
+    template <typename U>
+    ref_ptr(ref_ptr<U> &&r) : _obj(r._obj)
+    {
+        r._obj = nullptr;
+    }
 
     ~ref_ptr()
     {
@@ -134,14 +155,50 @@ public:
         return *this;
     }
 
+    template <typename U>
+    ref_ptr<T> &operator=(U *obj)
+    {
+        if (_obj == obj)
+            return *this;
+        if (nullptr != _obj) {
+            _obj->release_ref();
+        }
+        _obj = obj;
+        if (_obj != nullptr) {
+            _obj->add_ref();
+        }
+        return *this;
+    }
+
     ref_ptr<T> &operator=(const ref_ptr<T> &obj) { return operator=(obj._obj); }
+
+    template <typename U>
+    ref_ptr<T> &operator=(const ref_ptr<U> &obj)
+    {
+        return operator=(obj._obj);
+    }
 
     ref_ptr<T> &operator=(ref_ptr<T> &&obj)
     {
+        if (this == &obj) {
+            return *this;
+        }
+
         if (nullptr != _obj) {
             _obj->release_ref();
         }
 
+        _obj = obj._obj;
+        obj._obj = nullptr;
+        return *this;
+    }
+
+    template <typename U>
+    ref_ptr<T> &operator=(ref_ptr<U> &&obj)
+    {
+        if (nullptr != _obj) {
+            _obj->release_ref();
+        }
         _obj = obj._obj;
         obj._obj = nullptr;
         return *this;
@@ -161,6 +218,9 @@ public:
 
 private:
     T *_obj;
+
+    template <typename U>
+    friend class ref_ptr;
 };
 
 } // end namespace dsn

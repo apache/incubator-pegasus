@@ -44,9 +44,9 @@
 #include <condition_variable>
 
 // worker = 1
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_TASK_QUEUE_1);
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_TASK_QUEUE_1)
 // worker = 1
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_TASK_QUEUE_2);
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_TASK_QUEUE_2)
 DEFINE_TASK_CODE(LPC_TEST_TASK_QUEUE_1, TASK_PRIORITY_HIGH, THREAD_POOL_TEST_TASK_QUEUE_1)
 DEFINE_TASK_CODE(LPC_TEST_TASK_QUEUE_2, TASK_PRIORITY_HIGH, THREAD_POOL_TEST_TASK_QUEUE_2)
 
@@ -77,14 +77,14 @@ struct auto_timer
     }
 };
 
-void empty_cb(void *) {}
+void empty_cb() {}
 struct self_iterate_context
 {
     std::mutex mut;
     std::condition_variable cv;
     bool done = false;
-    std::vector<task_c *> tsks;
-    std::vector<task_c *>::iterator it;
+    std::vector<raw_task *> tsks;
+    std::vector<raw_task *>::iterator it;
 };
 void iterate_over_preallocated_tasks(void *ctx)
 {
@@ -104,9 +104,9 @@ void iterate_over_preallocated_tasks(void *ctx)
 
 void external_flooding(const int enqueue_time)
 {
-    std::vector<task_c *> tsks;
+    std::vector<raw_task *> tsks;
     for (int i = 0; i < enqueue_time; i++) {
-        auto tsk = new task_c(LPC_TEST_TASK_QUEUE_1, empty_cb, nullptr, nullptr);
+        auto tsk = new raw_task(LPC_TEST_TASK_QUEUE_1, empty_cb);
         tsks.push_back(tsk);
     }
     {
@@ -124,9 +124,9 @@ void external_flooding(const int enqueue_time)
 
 void self_flooding(const int enqueue_time)
 {
-    std::vector<task_c *> tsks;
+    std::vector<raw_task *> tsks;
     for (int i = 0; i < enqueue_time; i++) {
-        auto tsk = new task_c(LPC_TEST_TASK_QUEUE_1, empty_cb, nullptr, nullptr);
+        auto tsk = new raw_task(LPC_TEST_TASK_QUEUE_1, empty_cb);
         tsks.push_back(tsk);
     }
     {
@@ -146,9 +146,9 @@ void self_flooding(const int enqueue_time)
 }
 void external_blocking(const int enqueue_time)
 {
-    std::vector<task_c *> tsks;
+    std::vector<raw_task *> tsks;
     for (int i = 0; i < enqueue_time; i++) {
-        auto tsk = new task_c(LPC_TEST_TASK_QUEUE_1, empty_cb, nullptr, nullptr);
+        auto tsk = new raw_task(LPC_TEST_TASK_QUEUE_1, empty_cb);
         tsks.push_back(tsk);
     }
     {
@@ -165,8 +165,8 @@ void self_iterating(const int enqueue_time)
 {
     self_iterate_context ctx;
     for (int i = 0; i < enqueue_time; i++) {
-        auto tsk =
-            new task_c(LPC_TEST_TASK_QUEUE_1, iterate_over_preallocated_tasks, &ctx, nullptr);
+        auto tsk = new raw_task(LPC_TEST_TASK_QUEUE_1,
+                                [&ctx]() { iterate_over_preallocated_tasks(&ctx); });
         ctx.tsks.push_back(tsk);
     }
     ctx.it = ctx.tsks.begin();
@@ -181,10 +181,8 @@ void tic_tock_iterating(const int enqueue_time)
 {
     self_iterate_context ctx;
     for (int i = 0; i < enqueue_time; i++) {
-        auto tsk = new task_c(i % 2 == 0 ? LPC_TEST_TASK_QUEUE_1 : LPC_TEST_TASK_QUEUE_2,
-                              iterate_over_preallocated_tasks,
-                              &ctx,
-                              nullptr);
+        auto tsk = new raw_task(i % 2 == 0 ? LPC_TEST_TASK_QUEUE_1 : LPC_TEST_TASK_QUEUE_2,
+                                [&ctx] { iterate_over_preallocated_tasks(&ctx); });
         ctx.tsks.push_back(tsk);
     }
     ctx.it = ctx.tsks.begin();

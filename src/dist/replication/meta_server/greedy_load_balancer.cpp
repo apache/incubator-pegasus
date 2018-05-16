@@ -521,7 +521,7 @@ bool greedy_load_balancer::move_primary_based_on_flow_per_app(const std::shared_
         const node_state &ns = t_global_view->nodes->find(from)->second;
         std::list<dsn::gpid> potential_moving;
         int potential_moving_size = 0;
-        ns.for_each_primary(app->app_id, [&, this](const gpid &pid) {
+        ns.for_each_primary(app->app_id, [&](const gpid &pid) {
             const partition_configuration &pc = app->partitions[pid.get_partition_index()];
             if (is_secondary(pc, to)) {
                 potential_moving.push_back(pid);

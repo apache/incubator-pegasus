@@ -34,6 +34,7 @@
  */
 
 #pragma once
+#include <dsn/utility/optional.h>
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/tool/cli.h>
 #include <iostream>
@@ -60,7 +61,7 @@ public:
                              RPC_CLI_CLI_CALL,
                              args,
                              &_tracker,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));

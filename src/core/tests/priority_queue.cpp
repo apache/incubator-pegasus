@@ -105,11 +105,11 @@ TEST(core, blocking_priority_queue)
     ASSERT_EQ(0, q.count());
 
     long ct;
-    ASSERT_EQ(nullptr, q.dequeue(ct, 10));
+    ASSERT_EQ(nullptr, q.dequeue_with_timeout(ct, 10));
     ASSERT_EQ(0, ct);
 
     ASSERT_EQ(1, q.enqueue(new queue_data(0, 10), 0));
-    queue_data *d = q.dequeue(ct, 10);
+    queue_data *d = q.dequeue_with_timeout(ct, 10);
     ASSERT_NE(nullptr, d);
     ASSERT_EQ(0, ct);
     ASSERT_EQ(0, d->priority);
@@ -121,7 +121,7 @@ TEST(core, blocking_priority_queue)
         long ct;
         queue_data *d = nullptr;
 
-        d = q.dequeue(ct, 10);
+        d = q.dequeue_with_timeout(ct, 10);
         ASSERT_EQ(nullptr, d);
         ASSERT_EQ(0, ct);
 
@@ -134,7 +134,7 @@ TEST(core, blocking_priority_queue)
         ASSERT_EQ(20, d->queue_index);
         delete d;
 
-        d = q.dequeue(ct, 10);
+        d = q.dequeue_with_timeout(ct, 10);
         ASSERT_EQ(nullptr, d);
         ASSERT_EQ(0, ct);
     });

@@ -94,7 +94,13 @@ void rpc_client_session_send(rpc_session_ptr client_session)
     ::dsn::marshall(msg, std::string(buf.get()));
 
     wait_flag = 0;
-    rpc_response_task *t = new rpc_response_task(msg, response_handler, buf.get(), nullptr);
+    rpc_response_task *t = new rpc_response_task(msg,
+                                                 std::bind(&response_handler,
+                                                           std::placeholders::_1,
+                                                           std::placeholders::_2,
+                                                           std::placeholders::_3,
+                                                           buf.get()),
+                                                 0);
 
     client_session->net().engine()->matcher()->on_call(msg, t);
     client_session->send_message(msg);
@@ -180,7 +186,13 @@ TEST(tools_common, asio_udp_provider)
     ::dsn::marshall(msg, std::string(buf.get()));
 
     wait_flag = 0;
-    rpc_response_task *t = new rpc_response_task(msg, response_handler, buf.get(), nullptr);
+    rpc_response_task *t = new rpc_response_task(msg,
+                                                 std::bind(&response_handler,
+                                                           std::placeholders::_1,
+                                                           std::placeholders::_2,
+                                                           std::placeholders::_3,
+                                                           buf.get()),
+                                                 0);
 
     client->engine()->matcher()->on_call(msg, t);
     client->send_message(msg);

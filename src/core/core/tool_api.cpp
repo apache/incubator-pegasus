@@ -47,10 +47,7 @@ class service_control_task : public task
 {
 public:
     service_control_task(service_node *node, bool start, bool cleanup = false)
-        : task(LPC_CONTROL_SERVICE_APP, nullptr, nullptr, 0, node),
-          _node(node),
-          _start(start),
-          _cleanup(cleanup)
+        : task(LPC_CONTROL_SERVICE_APP, 0, node), _node(node), _start(start), _cleanup(cleanup)
     {
     }
 

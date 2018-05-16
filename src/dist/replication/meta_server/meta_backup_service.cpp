@@ -443,7 +443,7 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
             req.app_name = _policy.app_names.at(pid.get_app_id());
             dsn_message_t request = dsn_msg_create_request(RPC_COLD_BACKUP, 0, pid.thread_hash());
             dsn::marshall(request, req);
-            dsn::task_ptr rpc_callback = rpc::create_rpc_response_task(
+            dsn::rpc_response_task_ptr rpc_callback = rpc::create_rpc_response_task(
                 request,
                 nullptr,
                 [this, pid, partition_primary](error_code err, backup_response &&response) {

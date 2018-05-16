@@ -106,19 +106,24 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
         return;
     }
 
-    callback_para cp(std::move(reply));
-    cp.bb = blob(dsn::utils::make_shared_array<char>(request.size), request.size);
-    cp.dst_dir = std::move(request.dst_dir);
-    cp.file_path = std::move(file_path);
-    cp.hfile = hfile;
-    cp.offset = request.offset;
-    cp.size = request.size;
+    std::shared_ptr<callback_para> cp = std::make_shared<callback_para>(std::move(reply));
+    cp->bb = blob(dsn::utils::make_shared_array<char>(request.size), request.size);
+    cp->dst_dir = std::move(request.dst_dir);
+    cp->file_path = std::move(file_path);
+    cp->hfile = hfile;
+    cp->offset = request.offset;
+    cp->size = request.size;
 
-    auto buffer_save = cp.bb.buffer().get();
-    file::read(hfile, buffer_save, request.size, request.offset, LPC_NFS_READ, &_tracker, [
-        this,
-        cp_cap = std::move(cp)
-    ](error_code err, int sz) mutable { internal_read_callback(err, sz, cp_cap); });
+    auto buffer_save = cp->bb.buffer().get();
+
+    file::read(
+        hfile,
+        buffer_save,
+        request.size,
+        request.offset,
+        LPC_NFS_READ,
+        &_tracker,
+        [this, cp](error_code err, size_t sz) mutable { internal_read_callback(err, sz, *cp); });
 }
 
 void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callback_para &cp)

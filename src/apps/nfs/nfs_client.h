@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #pragma once
+#include <dsn/utility/optional.h>
 #include <dsn/tool/nfs.h>
 #include <iostream>
 
@@ -59,7 +60,7 @@ public:
                              RPC_NFS_COPY,
                              request,
                              nullptr,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -100,7 +101,7 @@ public:
                              RPC_NFS_GET_FILE_SIZE,
                              request,
                              nullptr,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));

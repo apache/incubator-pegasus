@@ -450,7 +450,7 @@ void replica::on_update_configuration_on_meta_server_reply(
                 &_tracker,
                 [ this, request, req2 = std::move(req) ]() {
                     rpc_address target(_stub->_failure_detector->get_servers());
-                    _primary_states.reconfiguration_task = rpc::create_rpc_response_task(
+                    rpc_response_task_ptr t = rpc::create_rpc_response_task(
                         request,
                         &_tracker,
                         [this,
@@ -459,7 +459,8 @@ void replica::on_update_configuration_on_meta_server_reply(
                                 err, request, response, std::move(req2));
                         },
                         get_gpid().thread_hash());
-                    dsn_rpc_call(target, _primary_states.reconfiguration_task->native_handle());
+                    _primary_states.reconfiguration_task = t;
+                    dsn_rpc_call(target, t.get());
                     dsn_msg_release_ref(request);
                 },
                 get_gpid().thread_hash(),
@@ -659,14 +660,14 @@ bool replica::update_local_configuration(const replica_configuration &config,
         if (config.status != partition_status::PS_SECONDARY &&
             config.status != partition_status::PS_ERROR) {
             if (!_secondary_states.cleanup(false)) {
-                dsn_task_t native_handle;
+                // TODO(sunweijie): totally remove this
+                dsn::task *native_handle;
                 if (_secondary_states.checkpoint_task)
-                    native_handle = _secondary_states.checkpoint_task->native_handle();
+                    native_handle = _secondary_states.checkpoint_task.get();
                 else if (_secondary_states.checkpoint_completed_task)
-                    native_handle = _secondary_states.checkpoint_completed_task->native_handle();
+                    native_handle = _secondary_states.checkpoint_completed_task.get();
                 else if (_secondary_states.catchup_with_private_log_task)
-                    native_handle =
-                        _secondary_states.catchup_with_private_log_task->native_handle();
+                    native_handle = _secondary_states.catchup_with_private_log_task.get();
                 else
                     native_handle = nullptr;
 

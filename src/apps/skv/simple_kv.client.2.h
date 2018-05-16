@@ -2,6 +2,7 @@
 #include "simple_kv.code.definition.h"
 #include "simple_kv.types.h"
 #include <iostream>
+#include <dsn/utility/optional.h>
 
 namespace dsn {
 namespace replication {
@@ -29,7 +30,7 @@ public:
                              RPC_SIMPLE_KV_SIMPLE_KV_READ,
                              key,
                              nullptr,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));
@@ -69,7 +70,7 @@ public:
                                                                      RPC_SIMPLE_KV_SIMPLE_KV_WRITE,
                                                                      pr,
                                                                      nullptr,
-                                                                     empty_callback,
+                                                                     empty_rpc_handler,
                                                                      timeout,
                                                                      thread_hash,
                                                                      partition_hash,
@@ -110,7 +111,7 @@ public:
                                                                      RPC_SIMPLE_KV_SIMPLE_KV_APPEND,
                                                                      pr,
                                                                      nullptr,
-                                                                     empty_callback,
+                                                                     empty_rpc_handler,
                                                                      timeout,
                                                                      thread_hash,
                                                                      partition_hash));

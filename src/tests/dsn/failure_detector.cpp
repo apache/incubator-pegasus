@@ -350,8 +350,7 @@ TEST(fd, master_redirect)
     wait_count.store(2);
     /* although we contact to the first master, but in the end we must connect to the right leader
      */
-    worker->fd()->when_connected(
-        [&wait_count, index](rpc_address leader) mutable { --wait_count; });
+    worker->fd()->when_connected([&wait_count](rpc_address leader) mutable { --wait_count; });
     leader->fd()->when_connected([&wait_count](rpc_address worker_addr) mutable {
         ASSERT_EQ(worker_addr.port(), WPORT);
         --wait_count;

@@ -99,7 +99,6 @@ TEST(core, group_address_talk_to_others)
         EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
         EXPECT_EQ(TEST_PORT_END, addr_got.port());
     };
-
     ::dsn::task_ptr resp = ::dsn::rpc::call(addr,
                                             RPC_TEST_STRING_COMMAND,
                                             std::string("expect_talk_to_others"),

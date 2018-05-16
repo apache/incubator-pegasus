@@ -54,7 +54,7 @@ public:
                            version);
                 },
                 DLOCK_CALLBACK,
-                [this](error_code, const std::string &, int) { dassert(false, "session expired"); },
+                [](error_code, const std::string &, int) { dassert(false, "session expired"); },
                 opt);
             task_pair.first->wait();
             for (int i = 0; i < 1000; ++i) {
@@ -65,7 +65,7 @@ public:
                 result += q[pos++];
             }
             task_ptr unlock_task = _dlock_service->unlock(
-                "test_lock", info().full_name, true, DLOCK_CALLBACK, [this](error_code ec) {
+                "test_lock", info().full_name, true, DLOCK_CALLBACK, [](error_code ec) {
                     EXPECT_TRUE(ERR_OK == ec);
                     ddebug("unlock, error code: %s", ec.to_string());
                 });

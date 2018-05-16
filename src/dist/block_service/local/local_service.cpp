@@ -91,7 +91,7 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
                 }
             }
         }
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(list_dir_background));
@@ -109,7 +109,7 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
         resp.err = ERR_OK;
         resp.file_handle = new local_file_object(
             this, ::dsn::utils::filesystem::path_combine(_root, req.file_name));
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
         return tsk;
     }
 
@@ -132,7 +132,7 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
             }
         }
 
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(create_file_background));
@@ -160,7 +160,7 @@ dsn::task_ptr local_service::delete_file(const delete_file_request &req,
             resp.err = ERR_OBJECT_NOT_FOUND;
         }
 
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(delete_file_background));
@@ -181,7 +181,7 @@ dsn::task_ptr local_service::exist(const exist_request &req,
         } else {
             resp.err = ERR_OBJECT_NOT_FOUND;
         }
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(exist_background));
@@ -224,7 +224,7 @@ dsn::task_ptr local_service::remove_path(const remove_path_request &req,
             }
         }
 
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(remove_path_background));
@@ -287,7 +287,7 @@ dsn::task_ptr local_file_object::write(const write_request &req,
                 _md5_value = compute_md5();
             }
         }
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
         release_ref();
     };
     ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(write_background));
@@ -338,7 +338,7 @@ dsn::task_ptr local_file_object::read(const read_request &req,
             fin.close();
         }
 
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
         release_ref();
     };
     ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(read_func));
@@ -396,7 +396,7 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
                 _md5_value = compute_md5();
             }
         }
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
         ddebug("%s: start to release_ref in upload file", file_name().c_str());
         release_ref();
     };
@@ -453,7 +453,7 @@ dsn::task_ptr local_file_object::download(const download_request &req,
             resp.downloaded_size = static_cast<uint64_t>(total_sz);
         }
 
-        call_safe_late_task(tsk, resp);
+        tasking::call_safe_late_task(tsk, resp);
         release_ref();
     };
     ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(download_file_func));

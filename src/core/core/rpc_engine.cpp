@@ -58,18 +58,17 @@ namespace dsn {
 
 DEFINE_TASK_CODE(LPC_RPC_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-class rpc_timeout_task : public task, public transient_object
+class rpc_timeout_task : public task
 {
 public:
     rpc_timeout_task(rpc_client_matcher *matcher, uint64_t id, service_node *node)
-        : task(LPC_RPC_TIMEOUT, nullptr, nullptr, 0, node)
+        : task(LPC_RPC_TIMEOUT, 0, node)
     {
         _matcher = matcher;
         _id = id;
     }
 
     virtual void exec() { _matcher->on_rpc_timeout(_id); }
-
 private:
     // use the following if the matcher is per rpc session
     // rpc_client_matcher_ptr _matcher;
@@ -88,17 +87,16 @@ rpc_client_matcher::~rpc_client_matcher()
 
 bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *reply, int delay_ms)
 {
-    rpc_response_task *call;
-    task *timeout_task;
+    rpc_response_task_ptr call;
+    task_ptr timeout_task;
     int bucket_index = key % MATCHER_BUCKET_NR;
 
     {
         utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
         auto it = _requests[bucket_index].find(key);
         if (it != _requests[bucket_index].end()) {
-            call = it->second.resp_task;
-            timeout_task = it->second.timeout_task;
-            timeout_task->add_ref(); // released below in the same function
+            call = std::move(it->second.resp_task);
+            timeout_task = std::move(it->second.timeout_task);
             _requests[bucket_index].erase(it);
         } else {
             if (reply) {
@@ -116,7 +114,6 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
     if (timeout_task != task::get_current_task()) {
         timeout_task->cancel(false); // no need to wait
     }
-    timeout_task->release_ref(); // added above in the same function
 
     auto req = call->get_request();
     auto spec = task_spec::get(req->local_rpc_code);
@@ -130,7 +127,6 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
 
         call->set_delay(delay_ms);
         call->enqueue(ERR_NETWORK_FAILURE, reply);
-        call->release_ref(); // added in on_call
         return true;
     }
 
@@ -209,13 +205,12 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
         }
     }
 
-    call->release_ref(); // added in on_call
     return true;
 }
 
 void rpc_client_matcher::on_rpc_timeout(uint64_t key)
 {
-    rpc_response_task *call;
+    rpc_response_task_ptr call;
     int bucket_index = key % MATCHER_BUCKET_NR;
     uint64_t timeout_ts_ms;
     bool resend = false;
@@ -234,10 +229,6 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
             else {
                 // do it in next check so we can do expensive things
                 // outside of the lock
-
-                // call may be eliminated from this container and deleted after its execution
-                // we therefore add_ref here
-                call->add_ref(); // released after re-send
                 resend = true;
             }
         } else {
@@ -250,7 +241,6 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
     // if timeout
     if (!resend) {
         call->enqueue(ERR_TIMEOUT, nullptr);
-        call->release_ref(); // added in on_call
         return;
     }
 
@@ -262,7 +252,10 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
     resend = (now_ts_ms < timeout_ts_ms && call->state() == TASK_STATE_READY);
 
     // TODO: memory pool for this task
-    task *new_timeout_task = resend ? new rpc_timeout_task(this, key, call->node()) : nullptr;
+    task_ptr new_timeout_task;
+    if (resend) {
+        new_timeout_task = new rpc_timeout_task(this, key, call->node());
+    }
 
     {
         utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
@@ -277,8 +270,6 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
             else {
                 // reset timeout task
                 it->second.timeout_task = new_timeout_task;
-                new_timeout_task
-                    ->add_ref(); // make sure later enqueue is valid, released below after enqueue
             }
         }
 
@@ -300,19 +291,11 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
         // use rest of the timeout to resend once only
         new_timeout_task->set_delay(static_cast<int>(timeout_ts_ms - now_ts_ms));
         new_timeout_task->enqueue();
-        new_timeout_task->release_ref(); // added above in the same function
-    } else {
-        if (new_timeout_task) {
-            delete new_timeout_task;
-        }
     }
-
-    call->release_ref(); // added inside the first check of resend
 }
 
-void rpc_client_matcher::on_call(message_ex *request, rpc_response_task *call)
+void rpc_client_matcher::on_call(message_ex *request, const rpc_response_task_ptr &call)
 {
-    task *timeout_task;
     message_header &hdr = *request->header;
     int bucket_index = hdr.id % MATCHER_BUCKET_NR;
     auto sp = task_spec::get(request->local_rpc_code);
@@ -327,7 +310,7 @@ void rpc_client_matcher::on_call(message_ex *request, rpc_response_task *call)
     }
 
     dbg_dassert(call != nullptr, "rpc response task cannot be empty");
-    timeout_task = (new rpc_timeout_task(this, hdr.id, call->node()));
+    task *timeout_task(new rpc_timeout_task(this, hdr.id, call->node()));
 
     {
         utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
@@ -338,8 +321,6 @@ void rpc_client_matcher::on_call(message_ex *request, rpc_response_task *call)
 
     timeout_task->set_delay(timeout_ms);
     timeout_task->enqueue();
-
-    call->add_ref(); // released in on_rpc_timeout or on_recv_reply
 }
 
 //----------------------------------------------------------------------------------------------
@@ -365,7 +346,7 @@ rpc_server_dispatcher::~rpc_server_dispatcher()
 
 bool rpc_server_dispatcher::register_rpc_handler(dsn::task_code code,
                                                  const char *extra_name,
-                                                 const dsn_rpc_request_handler_t &h)
+                                                 const rpc_request_handler &h)
 {
     std::unique_ptr<handler_entry> ctx(new handler_entry{code, extra_name, h});
 
@@ -410,7 +391,7 @@ bool rpc_server_dispatcher::unregister_rpc_handler(dsn::task_code rpc_code)
 
 rpc_request_task *rpc_server_dispatcher::on_request(message_ex *msg, service_node *node)
 {
-    dsn_rpc_request_handler_t handler;
+    rpc_request_handler handler;
 
     if (TASK_CODE_INVALID != msg->local_rpc_code) {
         utils::auto_read_lock l(_vhandlers[msg->local_rpc_code]->second);
@@ -589,7 +570,7 @@ error_code rpc_engine::start(const service_app_spec &aspec, io_modifer &ctx)
 
 bool rpc_engine::register_rpc_handler(dsn::task_code code,
                                       const char *extra_name,
-                                      const dsn_rpc_request_handler_t &h)
+                                      const rpc_request_handler &h)
 {
     return _rpc_dispatcher.register_rpc_handler(code, extra_name, h);
 }
@@ -670,7 +651,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
     }
 }
 
-void rpc_engine::call(message_ex *request, rpc_response_task *call)
+void rpc_engine::call(message_ex *request, const rpc_response_task_ptr &call)
 {
     auto &hdr = *request->header;
     hdr.from_address = primary_address();
@@ -682,7 +663,7 @@ void rpc_engine::call(message_ex *request, rpc_response_task *call)
 
 DEFINE_TASK_CODE(LPC_RPC_DELAY_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-void rpc_engine::call_uri(rpc_address addr, message_ex *request, rpc_response_task *call)
+void rpc_engine::call_uri(rpc_address addr, message_ex *request, const rpc_response_task_ptr &call)
 {
     dbg_dassert(addr.type() == HOST_TYPE_URI, "only URI is now supported");
     auto &hdr = *request->header;
@@ -699,64 +680,62 @@ void rpc_engine::call_uri(rpc_address addr, message_ex *request, rpc_response_ta
             request->add_ref();
             request->release_ref();
         }
-    } else // resolver != nullptr
-    {
+    } else { // resolver != nullptr
         if (call) {
-            call->replace_callback(
-                [](dsn_rpc_response_handler_t callback,
-                   dsn::error_code err,
-                   dsn_message_t req,
-                   dsn_message_t resp,
-                   void *context,
-                   uint64_t timeout_ts_ms) {
-                    auto req2 = (message_ex *)(req);
-                    if (req2->header->gpid.value() != 0 && err != ERR_OK &&
-                        err != ERR_HANDLER_NOT_FOUND && err != ERR_APP_NOT_EXIST) {
-                        auto resolver = req2->server_address.uri_address()->get_resolver();
-                        if (nullptr != resolver) {
-                            resolver->on_access_failure(req2->header->gpid.get_partition_index(),
-                                                        err);
+            uint64_t deadline_ms = dsn_now_ms() + hdr.client.timeout_ms;
+            auto old_callback = call->current_handler();
 
-                            // still got time, retry
-                            uint64_t nms = dsn_now_ms();
-                            uint64_t gap = 8 << req2->send_retry_count;
-                            if (gap > 1000)
-                                gap = 1000;
-                            if (nms + gap < timeout_ts_ms) {
-                                req2->send_retry_count++;
-                                req2->header->client.timeout_ms =
-                                    static_cast<int>(timeout_ts_ms - nms - gap);
-                                auto ctask =
-                                    dynamic_cast<rpc_response_task *>(task::get_current_task());
-                                ctask->reset_callback();
-                                ctask->set_retry(false);
-                                ctask->add_ref(); // released later after dsn_rpc_call
+            auto new_callback = [deadline_ms, old_callback](
+                dsn::error_code err, dsn_message_t req, dsn_message_t resp) {
+                message_ex *req2 = (message_ex *)req;
+                if (req2->header->gpid.value() != 0 && err != ERR_OK &&
+                    err != ERR_HANDLER_NOT_FOUND && err != ERR_APP_NOT_EXIST) {
+                    auto resolver = req2->server_address.uri_address()->get_resolver();
+                    if (nullptr != resolver) {
+                        resolver->on_access_failure(req2->header->gpid.get_partition_index(), err);
 
-                                // sleep 10 milliseconds before retry
-                                tasking::enqueue(LPC_RPC_DELAY_CALL,
-                                                 nullptr,
-                                                 [ server = req2->server_address, ctask ]() {
-                                                     dsn_rpc_call(server, ctask);
-                                                     ctask->release_ref(); // added when set-retry
-                                                 },
-                                                 0,
-                                                 std::chrono::milliseconds(gap));
-                                return;
-                            } else {
-                                derror("service access failed (%s), no more time for further "
-                                       "tries, set error = ERR_TIMEOUT, trace_id = %016" PRIx64,
-                                       error_code(err).to_string(),
-                                       req2->header->trace_id);
-                                err = ERR_TIMEOUT;
-                            }
+                        // still got time, retry
+                        uint64_t nms = dsn_now_ms();
+                        uint64_t gap = 8 << req2->send_retry_count;
+                        if (gap > 1000)
+                            gap = 1000;
+                        if (nms + gap < deadline_ms) {
+                            req2->send_retry_count++;
+                            req2->header->client.timeout_ms =
+                                static_cast<int>(deadline_ms - nms - gap);
+
+                            rpc_response_task_ptr ctask =
+                                dynamic_cast<rpc_response_task *>(task::get_current_task());
+                            dassert(ctask != nullptr, "current task must be rpc_response_task");
+                            ctask->replace_callback(std::move(old_callback));
+                            dassert(ctask->set_retry(false),
+                                    "rpc_response_task set retry failed, state = %s",
+                                    enum_to_string(ctask->state()));
+
+                            // sleep gap milliseconds before retry
+                            tasking::enqueue(LPC_RPC_DELAY_CALL,
+                                             nullptr,
+                                             [ server = req2->server_address, ctask ]() {
+                                                 dsn_rpc_call(server, ctask.get());
+                                             },
+                                             0,
+                                             std::chrono::milliseconds(gap));
+                            return;
+                        } else {
+                            derror("service access failed (%s), no more time for further "
+                                   "tries, set error = ERR_TIMEOUT, trace_id = %016" PRIx64,
+                                   error_code(err).to_string(),
+                                   req2->header->trace_id);
+                            err = ERR_TIMEOUT;
                         }
                     }
+                }
 
-                    // any other cases (except return above)
-                    if (callback)
-                        callback(err, req, resp, context);
-                },
-                dsn_now_ms() + hdr.client.timeout_ms);
+                if (old_callback)
+                    old_callback(err, req, resp);
+            };
+
+            call->replace_callback(std::move(new_callback));
         }
 
         resolver->resolve(hdr.client.partition_hash,
@@ -789,7 +768,9 @@ void rpc_engine::call_uri(rpc_address addr, message_ex *request, rpc_response_ta
     }
 }
 
-void rpc_engine::call_group(rpc_address addr, message_ex *request, rpc_response_task *call)
+void rpc_engine::call_group(rpc_address addr,
+                            message_ex *request,
+                            const rpc_response_task_ptr &call)
 {
     dbg_dassert(addr.type() == HOST_TYPE_GROUP, "only group is now supported");
 
@@ -812,7 +793,7 @@ void rpc_engine::call_group(rpc_address addr, message_ex *request, rpc_response_
 
 void rpc_engine::call_ip(rpc_address addr,
                          message_ex *request,
-                         rpc_response_task *call,
+                         const rpc_response_task_ptr &call,
                          bool reset_request_id,
                          bool set_forwarded)
 {

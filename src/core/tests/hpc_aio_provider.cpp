@@ -64,10 +64,9 @@ TEST(tools_hpc, aio)
     dsn_handle_t file = dsn_file_open("test_hpc_aio.tmp", O_RDWR | O_CREAT, 0666);
     dsn::task_tracker *tracker = new dsn::task_tracker(13);
 
-    dsn_task_t cb = dsn_file_create_aio_task(LPC_AIO_TEST, nullptr, nullptr, 0);
-    dsn_task_add_ref(cb);
+    dsn::aio_task *callback = new dsn::aio_task(LPC_AIO_TEST, nullptr, 0);
+    callback->add_ref();
 
-    ::dsn::aio_task *callback((::dsn::aio_task *)cb);
     callback->set_tracker(tracker);
     callback->aio()->buffer = (char *)buffer;
     callback->aio()->buffer_size = count;
@@ -77,12 +76,12 @@ TEST(tools_hpc, aio)
     callback->aio()->type = ::dsn::AIO_Write;
     ::dsn::task::get_current_disk()->write(callback);
 
-    dsn_task_wait(callback);
+    callback->wait();
 
     dsn::error_code err = dsn_file_close(file);
     EXPECT_TRUE(err == ERR_OK);
 
-    dsn_task_release_ref(cb);
+    callback->release_ref();
     delete tracker;
 
     // read from file
@@ -90,10 +89,9 @@ TEST(tools_hpc, aio)
     buffer_read[10] = '\0';
     file = dsn_file_open("test_hpc_aio.tmp", O_RDWR | O_CREAT, 0666);
     tracker = new dsn::task_tracker(13);
-    cb = dsn_file_create_aio_task(LPC_AIO_TEST, nullptr, nullptr, 0);
-    dsn_task_add_ref(cb);
+    dsn::aio_task *callback_read = new dsn::aio_task(LPC_AIO_TEST, nullptr, 0);
+    callback_read->add_ref();
 
-    ::dsn::aio_task *callback_read((::dsn::aio_task *)cb);
     callback_read->set_tracker((dsn::task_tracker *)tracker);
     callback_read->aio()->buffer = (char *)buffer_read;
     callback_read->aio()->buffer_size = count;
@@ -103,13 +101,13 @@ TEST(tools_hpc, aio)
     callback_read->aio()->type = ::dsn::AIO_Read;
     ::dsn::task::get_current_disk()->read(callback_read);
 
-    dsn_task_wait(callback_read);
+    callback_read->wait();
 
     EXPECT_STREQ(buffer, buffer_read);
     err = dsn_file_close(file);
     EXPECT_TRUE(err == ERR_OK);
+    callback_read->release_ref();
 
-    dsn_task_release_ref(cb);
     delete tracker;
     // invalid operation
 }
@@ -134,10 +132,9 @@ TEST(tools_hpc, aio_invalid_type)
     dsn_handle_t file = dsn_file_open("test_hpc_aio2.tmp", O_RDWR | O_CREAT, 0666);
     dsn::task_tracker *tracker = new dsn::task_tracker(13);
 
-    dsn_task_t cb = dsn_file_create_aio_task(LPC_AIO_TEST, nullptr, nullptr, 0);
-    dsn_task_add_ref(cb);
+    dsn::aio_task *callback = new dsn::aio_task(LPC_AIO_TEST, nullptr, 0);
+    callback->add_ref();
 
-    ::dsn::aio_task *callback((::dsn::aio_task *)cb);
     callback->set_tracker(tracker);
     callback->aio()->buffer = (char *)buffer;
     callback->aio()->buffer_size = count;
@@ -147,11 +144,11 @@ TEST(tools_hpc, aio_invalid_type)
     callback->aio()->type = ::dsn::AIO_Invalid;
     ::dsn::task::get_current_disk()->write(callback);
 
-    dsn_task_wait(callback);
+    callback->wait();
 
     dsn::error_code err = dsn_file_close(file);
     EXPECT_TRUE(err == ERR_OK);
 
-    dsn_task_release_ref(cb);
+    callback->release_ref();
     delete tracker;
 }

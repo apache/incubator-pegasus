@@ -146,7 +146,7 @@ public:
             return nullptr;
         }
 
-        task_ptr t = rpc::create_rpc_response_task(
+        rpc_response_task_ptr t = rpc::create_rpc_response_task(
             dsn_request(),
             tracker,
             [ cb_fwd = std::forward<TCallback>(callback),
@@ -157,7 +157,7 @@ public:
                 cb_fwd(err);
             },
             reply_thread_hash);
-        dsn_rpc_call(server, t->native_handle());
+        dsn_rpc_call(server, t);
         return t;
     }
 

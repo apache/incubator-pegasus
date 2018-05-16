@@ -251,7 +251,7 @@ void simple_load_balancer::reconfig(meta_view view, const configuration_update_r
             cc->record_drop_history(drop_node);
         }
     } else {
-        when_update_replicas(request.type, [cc, pc, &request](bool is_adding) {
+        when_update_replicas(request.type, [cc, &request](bool is_adding) {
             if (is_adding) {
                 cc->remove_from_dropped(request.node);
                 // when some replicas are added to partition_config

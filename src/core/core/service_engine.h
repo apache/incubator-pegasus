@@ -110,10 +110,8 @@ public:
     const service_app_spec &spec() const { return _app_spec; }
     const service_app_info &get_service_app_info() const { return _info; }
     const service_app *get_service_app() const { return _entity.get(); }
-    bool rpc_register_handler(dsn::task_code code,
-                              const char *extra_name,
-                              const dsn_rpc_request_handler_t &h);
-    bool rpc_unregister_handler(dsn::task_code rpc_code);
+    bool rpc_register_handler(task_code code, const char *extra_name, const rpc_request_handler &h);
+    bool rpc_unregister_handler(task_code rpc_code);
 
     rpc_request_task *generate_intercepted_request_task(message_ex *req);
 
@@ -161,7 +159,7 @@ public:
     // port == -1 for all nodes
     void register_system_rpc_handler(dsn::task_code code,
                                      const char *name,
-                                     const dsn_rpc_request_handler_t &cb,
+                                     const rpc_request_handler &cb,
                                      int port = -1);
     const service_nodes_by_app_id &get_all_nodes() const { return _nodes_by_app_id; }
 

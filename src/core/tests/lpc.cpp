@@ -46,16 +46,11 @@ void on_lpc_test(void *p)
     result = ::dsn::task::get_current_worker()->name();
 }
 
-void on_lpc_test2(void *p) {}
-
 TEST(core, lpc)
 {
-    std::string result;
-    auto t = dsn_task_create(LPC_TEST_HASH, on_lpc_test, (void *)&result, 1);
-    dsn_task_add_ref(t);
-    dsn_task_call(t, 0);
-    dsn_task_wait(t);
-    dsn_task_release_ref(t);
-
+    std::string result = "heheh";
+    dsn::task_ptr t(new raw_task(LPC_TEST_HASH, std::bind(&on_lpc_test, (void *)&result), 1));
+    t->enqueue();
+    t->wait();
     EXPECT_TRUE(result.substr(0, result.length() - 2) == "client.THREAD_POOL_TEST_SERVER");
 }

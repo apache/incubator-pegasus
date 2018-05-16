@@ -248,22 +248,22 @@ public:
 
     ~perf_counter_number_percentile_v2_atomic(void) { _timer->cancel(); }
 
-    virtual void increment() { dassert(false, "invalid execution flow"); }
-    virtual void decrement() { dassert(false, "invalid execution flow"); }
-    virtual void add(uint64_t val) { dassert(false, "invalid execution flow"); }
-    virtual void set(uint64_t val)
+    virtual void increment() override { dassert(false, "invalid execution flow"); }
+    virtual void decrement() override { dassert(false, "invalid execution flow"); }
+    virtual void add(uint64_t val) override { dassert(false, "invalid execution flow"); }
+    virtual void set(uint64_t val) override
     {
         uint64_t idx = _tail++;
         _samples[idx % MAX_QUEUE_LENGTH] = val;
     }
 
-    virtual double get_value()
+    virtual double get_value() override
     {
         dassert(false, "invalid execution flow");
         return 0.0;
     }
-    virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
-    virtual double get_percentile(dsn_perf_counter_percentile_type_t type)
+    virtual uint64_t get_integer_value() override { return (uint64_t)get_value(); }
+    virtual double get_percentile(dsn_perf_counter_percentile_type_t type) override
     {
         if ((type < 0) || (type >= COUNTER_PERCENTILE_COUNT)) {
             dassert(false, "send a wrong counter percentile type");

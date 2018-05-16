@@ -133,7 +133,9 @@ class progress_liar : public meta_service
 {
 public:
     // req is held by callback, we don't need to handle the life-time of it
-    virtual void send_request(dsn_message_t req, const rpc_address &target, task_ptr callback)
+    virtual void send_request(dsn_message_t req,
+                              const rpc_address &target,
+                              const rpc_response_task_ptr &callback)
     {
         // need to handle life-time manually
         dsn_message_t recved_req = create_corresponding_receive(req);
@@ -154,7 +156,7 @@ public:
 
         // life time is handled by callback
         dsn_message_t response_for_receive = create_corresponding_receive(response_for_send);
-        callback->enqueue_rpc_response(dsn::ERR_OK, response_for_receive);
+        callback->enqueue(dsn::ERR_OK, (dsn::message_ex *)response_for_receive);
 
         destroy_message(recved_req);
         destroy_message(response_for_send);

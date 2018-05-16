@@ -150,7 +150,7 @@ public:
     {
         std::stringstream ss;
         ss << app << "*" << section << "*" << name;
-        counter_name = std::move(ss.str());
+        counter_name = ss.str();
     }
 
 private:

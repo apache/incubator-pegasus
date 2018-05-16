@@ -34,6 +34,7 @@
  */
 
 #pragma once
+#include <utility>
 
 namespace dsn {
 struct none_placeholder_t

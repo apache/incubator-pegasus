@@ -135,7 +135,7 @@ void meta_server_failure_detector::acquire_leader_lock()
 
             // lease expire
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
-            [this](error_code ec, const std::string &owner, uint64_t version) {
+            [](error_code ec, const std::string &owner, uint64_t version) {
                 derror("leader lock expired callback: err(%s), owner(%s), version(%llu)",
                        ec.to_string(),
                        owner.c_str(),

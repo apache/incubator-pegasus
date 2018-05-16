@@ -100,9 +100,11 @@ public:
     {
         dsn_rpc_call_one_way(target, request);
     }
-    virtual void send_request(dsn_message_t /*req*/, const rpc_address &target, task_ptr callback)
+    virtual void send_request(dsn_message_t /*req*/,
+                              const rpc_address &target,
+                              const rpc_response_task_ptr &callback)
     {
-        dsn_rpc_call(target, callback->native_handle());
+        dsn_rpc_call(target, callback);
     }
 
     // these two callbacks are running in fd's thread_pool, and in fd's lock

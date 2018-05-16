@@ -38,6 +38,7 @@
 #include <dsn/service_api_c.h>
 #include <dsn/tool-api/auto_codes.h>
 #include <dsn/tool-api/rpc_address.h>
+#include <dsn/tool-api/gpid.h>
 #include <dsn/utility/factory_store.h>
 #include <vector>
 #include <string>
@@ -69,8 +70,7 @@ public:
     template <typename T>
     static void register_factory(const char *name)
     {
-        dsn::utils::factory_store<service_app>::register_factory(
-            name, create<T>, dsn::PROVIDER_TYPE_MAIN);
+        utils::factory_store<service_app>::register_factory(name, create<T>, PROVIDER_TYPE_MAIN);
     }
     static service_app *new_service_app(const std::string &type, const service_app_info *info);
 
@@ -80,22 +80,22 @@ public:
 public:
     service_app(const service_app_info *info);
     virtual ~service_app() {}
-    virtual error_code start(const std::vector<std::string> &args) { return dsn::ERR_OK; }
-    virtual error_code stop(bool cleanup = false) { return dsn::ERR_OK; }
-    virtual void on_intercepted_request(dsn::gpid pid, bool is_write, dsn_message_t msg)
+    virtual error_code start(const std::vector<std::string> &args) { return ERR_OK; }
+    virtual error_code stop(bool cleanup = false) { return ERR_OK; }
+    virtual void on_intercepted_request(gpid pid, bool is_write, dsn_message_t msg)
     {
         dassert(false, "not supported");
     }
 
     bool is_started() const { return _started; }
-    dsn::rpc_address primary_address() const { return _address; }
-    void set_address(const dsn::rpc_address &addr) { _address = addr; }
+    rpc_address primary_address() const { return _address; }
+    void set_address(const rpc_address &addr) { _address = addr; }
     void set_started(bool start_flag) { _started = start_flag; }
     const service_app_info &info() const;
 
 protected:
     const service_app_info *const _info;
-    dsn::rpc_address _address;
+    rpc_address _address;
     bool _started;
 };
 

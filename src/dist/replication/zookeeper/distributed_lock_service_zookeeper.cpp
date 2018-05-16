@@ -167,10 +167,8 @@ distributed_lock_service_zookeeper::lock(const std::string &lock_id,
             handle = iter->second;
     }
 
-    auto lock_tsk =
-        tasking::create_late_task<distributed_lock_service::lock_callback>(lock_cb_code, lock_cb);
-    auto expire_tsk = tasking::create_late_task<distributed_lock_service::lock_callback>(
-        lease_expire_code, lease_expire_callback);
+    auto lock_tsk = tasking::create_late_task(lock_cb_code, lock_cb);
+    auto expire_tsk = tasking::create_late_task(lease_expire_code, lease_expire_callback);
 
     task_ptr ref_holder1(lock_tsk), ref_holder2(expire_tsk);
     tasking::enqueue(TASK_CODE_DLOCK,

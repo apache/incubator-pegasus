@@ -35,6 +35,7 @@
 #pragma once
 #include "echo.code.definition.h"
 #include <iostream>
+#include <dsn/utility/optional.h>
 
 namespace dsn {
 namespace example {
@@ -59,7 +60,7 @@ public:
                              RPC_ECHO_ECHO_PING,
                              val,
                              nullptr,
-                             empty_callback,
+                             empty_rpc_handler,
                              timeout,
                              thread_hash,
                              partition_hash));

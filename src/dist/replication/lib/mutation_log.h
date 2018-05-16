@@ -409,7 +409,7 @@ private:
 
 private:
     // bufferring - only one concurrent write is allowed
-    typedef std::vector<task_ptr> callbacks;
+    typedef std::vector<aio_task_ptr> callbacks;
     typedef std::vector<mutation_ptr> mutations;
     mutable zlock _slock;
     std::atomic_bool _is_writing;
@@ -561,12 +561,12 @@ public:
     // returns:
     //   - non-null if io task is in pending
     //   - null if error
-    ::dsn::task_ptr commit_log_block(log_block &block,
-                                     int64_t offset,
-                                     dsn::task_code evt,
-                                     dsn::task_tracker *tracker,
-                                     aio_handler &&callback,
-                                     int hash);
+    dsn::aio_task_ptr commit_log_block(log_block &block,
+                                       int64_t offset,
+                                       dsn::task_code evt,
+                                       dsn::task_tracker *tracker,
+                                       aio_handler &&callback,
+                                       int hash);
 
     //
     // others

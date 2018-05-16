@@ -61,7 +61,7 @@ service_node::service_node(service_app_spec &app_spec)
 
 bool service_node::rpc_register_handler(task_code code,
                                         const char *extra_name,
-                                        const dsn_rpc_request_handler_t &h)
+                                        const rpc_request_handler &h)
 {
     for (auto &io : _ios) {
         if (io.rpc) {
@@ -452,7 +452,7 @@ void service_engine::init_after_toollets()
 // port == -1 for all node
 void service_engine::register_system_rpc_handler(dsn::task_code code,
                                                  const char *name,
-                                                 const dsn_rpc_request_handler_t &cb,
+                                                 const rpc_request_handler &cb,
                                                  int port /*= -1*/
                                                  )
 {

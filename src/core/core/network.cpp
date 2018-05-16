@@ -207,13 +207,6 @@ inline bool rpc_session::unlink_message_for_send()
 
 DEFINE_TASK_CODE(LPC_DELAY_RPC_REQUEST_RATE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-static void __delayed_rpc_session_read_next__(void *ctx)
-{
-    rpc_session *s = (rpc_session *)ctx;
-    s->start_read_next();
-    s->release_ref(); // added in start_read_next
-}
-
 void rpc_session::start_read_next(int read_next)
 {
     // server only
@@ -222,10 +215,12 @@ void rpc_session::start_read_next(int read_next)
 
         // delayed read
         if (delay_ms > 0) {
-            auto delay_task = dsn_task_create(
-                LPC_DELAY_RPC_REQUEST_RATE, __delayed_rpc_session_read_next__, this);
-            this->add_ref(); // released in __delayed_rpc_session_read_next__
-            dsn_task_call(delay_task, delay_ms);
+            this->add_ref();
+            dsn::task_ptr delay_task(new raw_task(LPC_DELAY_RPC_REQUEST_RATE, [this]() {
+                start_read_next();
+                this->release_ref();
+            }));
+            delay_task->enqueue(std::chrono::milliseconds(delay_ms));
         } else {
             do_read(read_next);
         }

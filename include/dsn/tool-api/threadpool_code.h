@@ -28,7 +28,7 @@ private:
 };
 
 /*! define a new thread pool named x*/
-#define DEFINE_THREAD_POOL_CODE(x) __selectany const dsn::threadpool_code x(#x);
+#define DEFINE_THREAD_POOL_CODE(x) __selectany const ::dsn::threadpool_code x(#x);
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_INVALID)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)

@@ -90,7 +90,7 @@ public:
                 std::cout << ", read result: " << resp;
             std::cout << std::endl;
             // async:
-            //_simple_kv_client->read(req, empty_callback);
+            //_simple_kv_client->read(req, empty_rpc_handler);
         }
         {
             kv_pair req;
@@ -103,7 +103,7 @@ public:
             std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_WRITE end, return " << err.to_string()
                       << std::endl;
             // async:
-            //_simple_kv_client->write(req, empty_callback);
+            //_simple_kv_client->write(req, empty_rpc_handler);
         }
         {
             kv_pair req;
@@ -116,7 +116,7 @@ public:
             std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_APPEND end, return " << err.to_string()
                       << std::endl;
             // async:
-            //_simple_kv_client->append(req, empty_callback);
+            //_simple_kv_client->append(req, empty_rpc_handler);
         }
     }
 

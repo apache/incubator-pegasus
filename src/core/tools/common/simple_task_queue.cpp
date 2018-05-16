@@ -68,7 +68,7 @@ void simple_timer_service::add_timer(task *task)
     timer->expires_from_now(boost::posix_time::milliseconds(task->delay_milliseconds()));
     task->set_delay(0);
 
-    timer->async_wait([this, task, timer](const boost::system::error_code &ec) {
+    timer->async_wait([task, timer](const boost::system::error_code &ec) {
         if (!ec) {
             task->enqueue();
         } else if (ec != ::boost::asio::error::operation_aborted) {
