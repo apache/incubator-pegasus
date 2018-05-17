@@ -6,6 +6,7 @@
 
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
+#include "pagasus_manual_compact_service.h"
 
 #include <rocksdb/db.h>
 #include <rrdb/rrdb.server.h>
@@ -135,7 +136,9 @@ public:
     virtual int64_t last_durable_decree() const { return _last_durable_decree.load(); }
 
 private:
-    friend class pegasus_server_compact_test;
+    friend class pagasus_manual_compact_service;
+    friend class manual_compact_service_test;
+
     // parse checkpoint directories in the data dir
     // checkpoint directory format is: "checkpoint.{decree}"
     void parse_checkpoints();
@@ -197,19 +200,8 @@ private:
 
     void check_manual_compact(const std::map<std::string, std::string> &envs);
 
-    bool check_once_compact(const std::map<std::string, std::string> &envs);
-
-    bool check_periodic_compact(const std::map<std::string, std::string> &envs);
-
-    void extract_manual_compact_opts(const std::map<std::string, std::string> &envs,
-                                     const std::string &key_prefix,
-                                     rocksdb::CompactRangeOptions &options);
-
-    void manual_compact(const rocksdb::CompactRangeOptions &options);
-
-    bool check_manual_compact_state();
-
-    void do_manual_compact(const rocksdb::CompactRangeOptions &options);
+    // return finish time recorded in rocksdb
+    uint64_t do_manual_compact(const rocksdb::CompactRangeOptions &options);
 
     std::string query_compact_state() const override;
 
@@ -218,8 +210,6 @@ private:
 
     // return true if successfully set
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
-
-    uint64_t now_timestamp();
 
 private:
     dsn::gpid _gpid;
@@ -230,11 +220,6 @@ private:
     uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
-    int32_t _manual_compact_min_interval_seconds;
-
-#ifdef PEGASUS_UNIT_TEST
-    uint64_t _mock_now_timestamp = 0;
-#endif
 
     KeyWithTTLCompactionFilter _key_ttl_compaction_filter;
     rocksdb::Options _db_opts;
@@ -265,11 +250,7 @@ private:
 
     uint32_t _updating_rocksdb_sstsize_interval_seconds;
 
-    // manual compact state
-    std::atomic<uint64_t> _manual_compact_enqueue_time_ms;
-    std::atomic<uint64_t> _manual_compact_start_time_ms;
-    std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
-    std::atomic<uint64_t> _manual_compact_last_time_used_ms;
+    pagasus_manual_compact_service _manual_compact_svc;
 
     dsn::task_tracker _tracker;
 
@@ -295,9 +276,6 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
     ::dsn::perf_counter_wrapper _pfc_sst_count;
     ::dsn::perf_counter_wrapper _pfc_sst_size;
-
-    ::dsn::perf_counter_wrapper _pfc_manual_compact_enqueue_count;
-    ::dsn::perf_counter_wrapper _pfc_manual_compact_running_count;
 };
 }
 } // namespace

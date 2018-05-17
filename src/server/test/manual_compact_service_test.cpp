@@ -3,33 +3,38 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_server_test_base.h"
+#include "server/pagasus_manual_compact_service.h"
 
 namespace pegasus {
 namespace server {
 
-class pegasus_server_compact_test : public pegasus_server_test_base
+class manual_compact_service_test : public pegasus_server_test_base
 {
 public:
+    pagasus_manual_compact_service mgr;
     static const uint64_t compacted_ts = 1500000000; // 2017.07.14 10:40:00 CST
-    static const std::string compacted_hm;
 
 public:
-    void set_compact_time(int64_t ts)
+    manual_compact_service_test(): mgr(this->_server.get(), this->_server->_gpid, "")
     {
-        _server->_manual_compact_last_finish_time_ms.store(static_cast<uint64_t>(ts * 1000));
     }
 
-    void set_mock_now(uint64_t mock_now_sec) { _server->_mock_now_timestamp = mock_now_sec * 1000; }
+    void set_compact_time(int64_t ts)
+    {
+        mgr._manual_compact_last_finish_time_ms.store(static_cast<uint64_t>(ts * 1000));
+    }
+
+    void set_mock_now(uint64_t mock_now_sec) { mgr._mock_now_timestamp = mock_now_sec * 1000; }
 
     void check_once_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
-        ASSERT_EQ(ok, _server->check_once_compact(envs))
+        ASSERT_EQ(ok, mgr.check_once_compact(envs))
             << dsn::utils::kv_map_to_string(envs, ';', '=');
     }
 
     void check_periodic_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
-        ASSERT_EQ(ok, _server->check_periodic_compact(envs))
+        ASSERT_EQ(ok, mgr.check_periodic_compact(envs))
             << dsn::utils::kv_map_to_string(envs, ';', '=');
     }
 
@@ -37,38 +42,36 @@ public:
                                      const std::string &key_prefix,
                                      rocksdb::CompactRangeOptions &options)
     {
-        _server->extract_manual_compact_opts(envs, key_prefix, options);
+        mgr.extract_manual_compact_opts(envs, key_prefix, options);
     }
 
     void set_num_level(int level) { _server->_db_opts.num_levels = level; }
 
     void check_manual_compact_state(bool ok, const std::string &msg = "")
     {
-        ASSERT_EQ(ok, _server->check_manual_compact_state()) << msg;
+        ASSERT_EQ(ok, mgr.check_manual_compact_state()) << msg;
     }
 
     void manual_compact(uint64_t mock_now_sec, uint64_t time_cost_sec)
     {
         set_mock_now(mock_now_sec);
-        uint64_t start = _server->now_timestamp();
-        _server->_manual_compact_start_time_ms.store(start);
+        uint64_t start = mgr.now_timestamp();
+        mgr._manual_compact_start_time_ms.store(start);
         // do compacting...
         set_mock_now(mock_now_sec + time_cost_sec);
-        uint64_t finish = _server->now_timestamp();
-        _server->_manual_compact_last_finish_time_ms.store(finish);
-        _server->_manual_compact_last_time_used_ms.store(finish - start);
-        _server->_manual_compact_enqueue_time_ms.store(0);
+        uint64_t finish = mgr.now_timestamp();
+        mgr._manual_compact_last_finish_time_ms.store(finish);
+        mgr._manual_compact_last_time_used_ms.store(finish - start);
+        mgr._manual_compact_enqueue_time_ms.store(0);
     }
 
     void set_manual_compact_interval(int sec)
     {
-        _server->_manual_compact_min_interval_seconds = sec;
+        mgr._manual_compact_min_interval_seconds = sec;
     }
 };
 
-const std::string pegasus_server_compact_test::compacted_hm = "10:40";
-
-TEST_F(pegasus_server_compact_test, check_once_compact)
+TEST_F(manual_compact_service_test, check_once_compact)
 {
     // suppose compacted at 1500000000
     set_compact_time(compacted_ts);
@@ -101,7 +104,7 @@ TEST_F(pegasus_server_compact_test, check_once_compact)
     check_once_compact(envs, true);
 }
 
-TEST_F(pegasus_server_compact_test, check_periodic_compact)
+TEST_F(manual_compact_service_test, check_periodic_compact)
 {
     // disabled
     std::map<std::string, std::string> envs;
@@ -196,7 +199,7 @@ TEST_F(pegasus_server_compact_test, check_periodic_compact)
     check_periodic_compact(envs, false);
 }
 
-TEST_F(pegasus_server_compact_test, extract_manual_compact_opts)
+TEST_F(manual_compact_service_test, extract_manual_compact_opts)
 {
     // init _db max level
     set_num_level(7);
@@ -234,7 +237,7 @@ TEST_F(pegasus_server_compact_test, extract_manual_compact_opts)
     ASSERT_EQ(out.target_level, -1);
 }
 
-TEST_F(pegasus_server_compact_test, check_manual_compact_state_0_interval)
+TEST_F(manual_compact_service_test, check_manual_compact_state_0_interval)
 {
     set_manual_compact_interval(0);
 
@@ -250,7 +253,7 @@ TEST_F(pegasus_server_compact_test, check_manual_compact_state_0_interval)
     check_manual_compact_state(false, "2nd start not ok");
 }
 
-TEST_F(pegasus_server_compact_test, check_manual_compact_state_1h_interval)
+TEST_F(manual_compact_service_test, check_manual_compact_state_1h_interval)
 {
     set_manual_compact_interval(3600);
 

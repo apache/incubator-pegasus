@@ -19,5 +19,3 @@ set(MY_PROJ_INC_PATH "../include")
 set(MY_PROJ_LIB_PATH "")
 
 dsn_add_static_library()
-
-add_subdirectory(test)

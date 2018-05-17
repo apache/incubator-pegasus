@@ -3,6 +3,7 @@ set(MY_PROJ_NAME pegasus_unit_test)
 set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
                 "../pegasus_perf_counter.cpp"
                 "../pegasus_counter_updater.cpp"
+                "../pagasus_manual_compact_service.cpp"
 )
 
 set(MY_SRC_SEARCH_MODE "GLOB")
