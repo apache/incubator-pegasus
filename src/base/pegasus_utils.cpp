@@ -58,16 +58,6 @@ bool buf2int64(const char *buffer, int length, int64_t &result)
     return true;
 }
 
-bool buf2int(dsn::string_view buffer, int &result)
-{
-    return buf2int(buffer.data(), (int)buffer.size(), result);
-}
-
-bool buf2int64(dsn::string_view buffer, int64_t &result)
-{
-    return buf2int64(buffer.data(), (int)buffer.size(), result);
-}
-
 bool buf2bool(const char *buffer, int length, bool &result)
 {
     if (length == 4 && strncmp(buffer, "true", 4) == 0) {

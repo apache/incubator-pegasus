@@ -9,6 +9,7 @@
 
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/table.h>
@@ -2710,7 +2711,7 @@ bool pegasus_server_impl::check_once_compact(const std::map<std::string, std::st
     }
 
     int64_t trigger_time = 0;
-    if (!pegasus::utils::buf2int64(find->second, trigger_time) || trigger_time <= 0) {
+    if (!dsn::buf2int64(find->second, trigger_time) || trigger_time <= 0) {
         ddebug_replica("{}={} is invalid.", find->first, find->second);
         return false;
     }
@@ -2781,8 +2782,8 @@ void pegasus_server_impl::extract_manual_compact_opts(
     options.target_level = -1;
     auto find = envs.find(key_prefix + MANUAL_COMPACT_TARGET_LEVEL_KEY);
     if (find != envs.end()) {
-        int target_level;
-        if (pegasus::utils::buf2int(find->second, target_level) && target_level >= 1 &&
+        int32_t target_level;
+        if (dsn::buf2int32(find->second, target_level) && target_level >= 1 &&
             target_level <= _db_opts.num_levels) {
             options.target_level = target_level;
         } else {
