@@ -198,8 +198,6 @@ private:
 
     void update_usage_scenario(const std::map<std::string, std::string> &envs);
 
-    void check_manual_compact(const std::map<std::string, std::string> &envs);
-
     // return finish time recorded in rocksdb
     uint64_t do_manual_compact(const rocksdb::CompactRangeOptions &options);
 

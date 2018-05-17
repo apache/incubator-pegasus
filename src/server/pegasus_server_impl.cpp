@@ -50,7 +50,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _last_durable_decree(0),
       _physical_error(0),
       _is_checkpointing(false),
-      _manual_compact_svc(this, _gpid, replica_name())
+      _manual_compact_svc(this)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -1769,7 +1769,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
 
-        _manual_compact_svc.update_last_finish_time_ms(manual_compact_last_finish_time_ms);
+        _manual_compact_svc.init_last_finish_time_ms(manual_compact_last_finish_time_ms);
 
         // only enable filter after correct value_schema_version set
         _key_ttl_compaction_filter.SetValueSchemaVersion(_value_schema_version);
@@ -2532,7 +2532,7 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
 void pegasus_server_impl::update_app_envs(const std::map<std::string, std::string> &envs)
 {
     update_usage_scenario(envs);
-    check_manual_compact(envs);
+    _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
 void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
@@ -2654,11 +2654,6 @@ bool pegasus_server_impl::set_options(
     }
 }
 
-void pegasus_server_impl::check_manual_compact(const std::map<std::string, std::string> &envs)
-{
-    _manual_compact_svc.check_manual_compact(envs);
-}
-
 uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options)
 {
     uint64_t start_time;
@@ -2690,6 +2685,5 @@ std::string pegasus_server_impl::query_compact_state() const
 {
     return _manual_compact_svc.query_compact_state();
 }
-
 }
 } // namespace

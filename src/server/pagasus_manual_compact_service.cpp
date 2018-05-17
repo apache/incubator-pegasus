@@ -16,9 +16,8 @@ namespace server {
 
 DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
 
-pagasus_manual_compact_service::pagasus_manual_compact_service(pegasus_server_impl *app,
-                                                               dsn::gpid pid, dsn::string_view name):
-      replica_base(pid, name),
+pagasus_manual_compact_service::pagasus_manual_compact_service(pegasus_server_impl *app)
+    : replica_base(*app),
       _app(app),
       _manual_compact_enqueue_time_ms(0),
       _manual_compact_start_time_ms(0),
@@ -33,18 +32,25 @@ pagasus_manual_compact_service::pagasus_manual_compact_service(pegasus_server_im
         "<= 0 means no interval limit");
 
     _pfc_manual_compact_enqueue_count.init_app_counter(
-        "app.pegasus", std::string("manual.compact.enqueue.count@").append(replica_name()).c_str(), COUNTER_TYPE_NUMBER, "current manual compact in queue count");
+        "app.pegasus",
+        std::string("manual.compact.enqueue.count@").append(replica_name()).c_str(),
+        COUNTER_TYPE_NUMBER,
+        "current manual compact in queue count");
 
     _pfc_manual_compact_running_count.init_app_counter(
-        "app.pegasus", std::string("manual.compact.running.count@").append(replica_name()).c_str(), COUNTER_TYPE_NUMBER, "current manual compact running count");
+        "app.pegasus",
+        std::string("manual.compact.running.count@").append(replica_name()).c_str(),
+        COUNTER_TYPE_NUMBER,
+        "current manual compact running count");
 }
 
-void pagasus_manual_compact_service::update_last_finish_time_ms(uint64_t last_finish_time_ms)
+void pagasus_manual_compact_service::init_last_finish_time_ms(uint64_t last_finish_time_ms)
 {
     _manual_compact_last_finish_time_ms.store(last_finish_time_ms);
 }
 
-void pagasus_manual_compact_service::check_manual_compact(const std::map<std::string, std::string> &envs)
+void pagasus_manual_compact_service::start_manual_compact_if_needed(
+    const std::map<std::string, std::string> &envs)
 {
     std::string compact_rule;
     if (check_once_compact(envs)) {
@@ -64,7 +70,7 @@ void pagasus_manual_compact_service::check_manual_compact(const std::map<std::st
         extract_manual_compact_opts(envs, compact_rule, options);
 
         _pfc_manual_compact_enqueue_count->increment();
-        dsn::tasking::enqueue(LPC_MANUAL_COMPACT, &_tracker, [this, options]() {
+        dsn::tasking::enqueue(LPC_MANUAL_COMPACT, &_app->_tracker, [this, options]() {
             _pfc_manual_compact_enqueue_count->decrement();
             manual_compact(options);
         });
@@ -74,7 +80,8 @@ void pagasus_manual_compact_service::check_manual_compact(const std::map<std::st
     }
 }
 
-bool pagasus_manual_compact_service::check_once_compact(const std::map<std::string, std::string> &envs)
+bool pagasus_manual_compact_service::check_once_compact(
+    const std::map<std::string, std::string> &envs)
 {
     auto find = envs.find(MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY);
     if (find == envs.end()) {
@@ -90,7 +97,8 @@ bool pagasus_manual_compact_service::check_once_compact(const std::map<std::stri
     return trigger_time > _manual_compact_last_finish_time_ms.load() / 1000;
 }
 
-bool pagasus_manual_compact_service::check_periodic_compact(const std::map<std::string, std::string> &envs)
+bool pagasus_manual_compact_service::check_periodic_compact(
+    const std::map<std::string, std::string> &envs)
 {
     auto find = envs.find(MANUAL_COMPACT_PERIODIC_DISABLED_KEY);
     if (find != envs.end() && find->second == "true") {
@@ -258,5 +266,5 @@ std::string pagasus_manual_compact_service::query_compact_state() const
     return state.str();
 }
 
-}   // namespace server
-}   // namespace pegasus
+} // namespace server
+} // namespace pegasus

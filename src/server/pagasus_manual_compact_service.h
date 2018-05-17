@@ -15,15 +15,14 @@ namespace server {
 
 class pegasus_server_impl;
 
-class pagasus_manual_compact_service : public dsn::replication::replica_base {
+class pagasus_manual_compact_service : public dsn::replication::replica_base
+{
 public:
-    pagasus_manual_compact_service(pegasus_server_impl *app, dsn::gpid _gpid, dsn::string_view name);
+    explicit pagasus_manual_compact_service(pegasus_server_impl *app);
 
-    ~pagasus_manual_compact_service() { _tracker.cancel_outstanding_tasks(); }
+    void init_last_finish_time_ms(uint64_t last_finish_time_ms);
 
-    void update_last_finish_time_ms(uint64_t last_finish_time_ms);
-
-    void check_manual_compact(const std::map<std::string, std::string> &envs);
+    void start_manual_compact_if_needed(const std::map<std::string, std::string> &envs);
 
     std::string query_compact_state() const;
 
@@ -61,11 +60,9 @@ private:
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
     std::atomic<uint64_t> _manual_compact_last_time_used_ms;
 
-    dsn::task_tracker _tracker;
-
     ::dsn::perf_counter_wrapper _pfc_manual_compact_enqueue_count;
     ::dsn::perf_counter_wrapper _pfc_manual_compact_running_count;
 };
 
-}   // namespace server
-}   // namespace pegasus
+} // namespace server
+} // namespace pegasus
