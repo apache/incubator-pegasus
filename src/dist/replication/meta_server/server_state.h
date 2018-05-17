@@ -210,8 +210,9 @@ private:
                                             bool skip_bad_nodes,
                                             bool skip_lost_partitions,
                                             std::string &hint_message);
-    void sync_app_from_backup_media(const configuration_restore_request &request,
-                                    std::function<void(dsn::error_code, dsn::blob &)> &&callback);
+    void
+    sync_app_from_backup_media(const configuration_restore_request &request,
+                               std::function<void(dsn::error_code, const dsn::blob &)> &&callback);
     std::pair<dsn::error_code, std::shared_ptr<app_state>> restore_app_info(
         dsn_message_t msg, const configuration_restore_request &req, const dsn::blob &app_info);
 

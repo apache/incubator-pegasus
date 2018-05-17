@@ -46,14 +46,8 @@ static void __lock_cb_bind_and_enqueue(task_ptr lock_task,
                                        uint64_t version,
                                        int delay_milliseconds = 0)
 {
-    auto t =
-        dynamic_cast<safe_late_task<distributed_lock_service::lock_callback> *>(lock_task.get());
-
-    t->bind_and_enqueue(
-        [&](distributed_lock_service::lock_callback &cb) {
-            return std::bind(cb, err, owner, version);
-        },
-        delay_milliseconds);
+    auto t = dynamic_cast<lock_future *>(lock_task.get());
+    t->enqueue_with(err, owner, version, delay_milliseconds);
 }
 
 void distributed_lock_service_simple::random_lock_lease_expire(const std::string &lock_id)
@@ -119,10 +113,8 @@ distributed_lock_service_simple::lock(const std::string &lock_id,
                                       const lock_callback &lease_expire_callback,
                                       const lock_options &opt)
 {
-    task_ptr grant_cb = tasking::create_late_task(lock_cb_code, lock_cb, 0, nullptr);
-
-    task_ptr lease_cb =
-        tasking::create_late_task(lease_expire_code, lease_expire_callback, 0, nullptr);
+    task_ptr grant_cb(new lock_future(lock_cb_code, lock_cb, 0));
+    task_ptr lease_cb(new lock_future(lease_expire_code, lease_expire_callback, 0));
 
     error_code err;
     std::string cowner;

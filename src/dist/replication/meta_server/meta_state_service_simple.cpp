@@ -72,10 +72,8 @@ error_code meta_state_service_simple::extract_name_parent_from_path(const std::s
 static void
 __err_cb_bind_and_enqueue(task_ptr lock_task, error_code err, int delay_milliseconds = 0)
 {
-    auto t = dynamic_cast<safe_late_task<meta_state_service::err_callback> *>(lock_task.get());
-
-    t->bind_and_enqueue([&](meta_state_service::err_callback &cb) { return bind(cb, err); },
-                        delay_milliseconds);
+    auto t = dynamic_cast<error_code_future *>(lock_task.get());
+    t->enqueue_with(err, delay_milliseconds);
 }
 
 void meta_state_service_simple::write_log(blob &&log_blob,
@@ -400,7 +398,8 @@ task_ptr meta_state_service_simple::submit_transaction(
             dest += entry.length();
         });
         dassert(dest - batch.get() == total_size, "memcpy error");
-        task_ptr task = tasking::create_late_task(cb_code, cb_transaction, 0, tracker);
+        task_ptr task(new error_code_future(cb_code, cb_transaction, 0));
+        task->set_tracker(tracker);
         write_log(blob(batch, total_size),
                   [this, t_entries] { return apply_transaction(t_entries); },
                   task);
@@ -414,7 +413,8 @@ task_ptr meta_state_service_simple::create_node(const std::string &node,
                                                 const blob &value,
                                                 dsn::task_tracker *tracker)
 {
-    task_ptr task = tasking::create_late_task(cb_code, cb_create, 0, tracker);
+    task_ptr task(new error_code_future(cb_code, cb_create, 0));
+    task->set_tracker(tracker);
     write_log(create_node_log::get_log(node, value),
               [=] { return create_node_internal(node, value); },
               task);
@@ -427,7 +427,8 @@ task_ptr meta_state_service_simple::delete_node(const std::string &node,
                                                 const err_callback &cb_delete,
                                                 dsn::task_tracker *tracker)
 {
-    task_ptr task = tasking::create_late_task(cb_code, cb_delete, 0, tracker);
+    task_ptr task(new error_code_future(cb_code, cb_delete, 0));
+    task->set_tracker(tracker);
     write_log(delete_node_log::get_log(node, recursively_delete),
               [=] { return delete_node_internal(node, recursively_delete); },
               task);
@@ -471,7 +472,8 @@ task_ptr meta_state_service_simple::set_data(const std::string &node,
                                              const err_callback &cb_set_data,
                                              dsn::task_tracker *tracker)
 {
-    task_ptr task = tasking::create_late_task(cb_code, cb_set_data, 0, tracker);
+    task_ptr task(new error_code_future(cb_code, cb_set_data, 0));
+    task->set_tracker(tracker);
     write_log(
         set_data_log::get_log(node, value), [=] { return set_data_internal(node, value); }, task);
     return task;

@@ -40,7 +40,7 @@ namespace replication {
 
 void server_state::sync_app_from_backup_media(
     const configuration_restore_request &request,
-    std::function<void(dsn::error_code, dsn::blob &)> &&callback)
+    std::function<void(error_code, const blob &)> &&callback)
 {
     block_filesystem *blk_fs =
         _meta_svc->get_block_service_manager().get_block_filesystem(request.backup_provider_name);
@@ -65,25 +65,20 @@ void server_state::sync_app_from_backup_media(
         ->wait();
     ddebug("after create app_metadata file(%s)", app_metadata.c_str());
 
-    auto callback_tsk =
-        tasking::create_late_task(LPC_RESTORE_BACKGROUND, std::move(callback), 0, nullptr);
+    dsn::ref_ptr<dsn::future_task<dsn::error_code, dsn::blob>> callback_tsk(
+        new dsn::future_task<dsn::error_code, dsn::blob>(
+            LPC_RESTORE_BACKGROUND, std::move(callback), 0));
 
     if (err != ERR_OK) {
         derror("create file failed for meta entry(%s)", app_metadata.c_str());
-        callback_tsk->bind_and_enqueue([err](std::function<void(dsn::error_code, blob &)> &cb) {
-            return std::bind(cb, err, dsn::blob());
-        });
+        callback_tsk->enqueue_with(err, dsn::blob());
         return;
     }
     dassert(file_handle != nullptr, "create file from backup media ecounter error");
-    file_handle->read(read_request{0, -1},
-                      TASK_CODE_EXEC_INLINED,
-                      [cb_tsk = std::move(callback_tsk)](const read_response &resp) {
-                          cb_tsk->bind_and_enqueue([response = std::move(resp)](
-                              std::function<void(dsn::error_code, blob &)> & cb) {
-                              return std::bind(cb, response.err, response.buffer);
-                          });
-                      });
+    file_handle->read(
+        read_request{0, -1}, TASK_CODE_EXEC_INLINED, [callback_tsk](const read_response &resp) {
+            callback_tsk->enqueue_with(resp.err, resp.buffer);
+        });
     ddebug("after read app_metadata");
     return;
 }
@@ -151,7 +146,7 @@ void server_state::restore_app(dsn_message_t msg)
     configuration_restore_request request;
     dsn::unmarshall(msg, request);
     sync_app_from_backup_media(
-        request, [this, msg, request](dsn::error_code err, dsn::blob &app_info_data) {
+        request, [this, msg, request](dsn::error_code err, const dsn::blob &app_info_data) {
             dsn::error_code ec = ERR_OK;
             // if err != ERR_OK, then sync_app_from_backup_media ecounter some error
             if (err != ERR_OK) {

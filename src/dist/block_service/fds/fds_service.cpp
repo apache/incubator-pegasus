@@ -150,7 +150,9 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
                                     const ls_callback &callback,
                                     dsn::task_tracker *tracker = nullptr)
 {
-    dsn::task_ptr t = dsn::tasking::create_late_task(code, callback, 0, tracker);
+    ls_future_ptr t(new ls_future(code, callback, 0));
+    t->set_tracker(tracker);
+
     auto list_dir_in_background = [this, req, t]() {
         ls_response resp;
         std::string fds_path = utils::path_to_fds(req.dir_name, true);
@@ -222,7 +224,7 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
             FDS_EXCEPTION_HANDLE(resp.err, "doesObjectExist", req.dir_name.c_str())
         }
 
-        tasking::call_safe_late_task(t, std::move(resp));
+        t->enqueue_with(resp);
     };
 
     dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, list_dir_in_background);
@@ -234,13 +236,14 @@ dsn::task_ptr fds_service::create_file(const create_file_request &req,
                                        const create_file_callback &cb,
                                        dsn::task_tracker *tracker = nullptr)
 {
-    dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
+    create_file_future_ptr t(new create_file_future(code, cb, 0));
+    t->set_tracker(tracker);
     if (req.ignore_metadata) {
         create_file_response resp;
         resp.err = dsn::ERR_OK;
         resp.file_handle =
             new fds_file_object(this, req.file_name, utils::path_to_fds(req.file_name, false));
-        tasking::call_safe_late_task(t, std::move(resp));
+        t->enqueue_with(resp);
         return t;
     } else {
         auto create_file_in_background = [this, req, t]() {
@@ -284,7 +287,7 @@ dsn::task_ptr fds_service::create_file(const create_file_request &req,
             }
             FDS_EXCEPTION_HANDLE(resp.err, "getObjectMetadata", req.file_name.c_str());
 
-            tasking::call_safe_late_task(t, std::move(resp));
+            t->enqueue_with(resp);
         };
 
         dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, create_file_in_background);
@@ -297,7 +300,8 @@ dsn::task_ptr fds_service::delete_file(const delete_file_request &req,
                                        const delete_file_callback &cb,
                                        dsn::task_tracker *tracker)
 {
-    dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, nullptr);
+    delete_file_future_ptr t(new delete_file_future(code, cb, 0));
+    t->set_tracker(tracker);
     auto delete_file_in_background = [this, req, t]() {
         std::string fds_path = utils::path_to_fds(req.file_name, false);
         delete_file_response resp;
@@ -318,7 +322,7 @@ dsn::task_ptr fds_service::delete_file(const delete_file_request &req,
             }
         }
         FDS_EXCEPTION_HANDLE(resp.err, "deleteObject", req.file_name.c_str());
-        tasking::call_safe_late_task(t, std::move(resp));
+        t->enqueue_with(resp);
     };
 
     dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, delete_file_in_background);
@@ -336,7 +340,8 @@ dsn::task_ptr fds_service::exist(const exist_request &req,
                                  const exist_callback &cb,
                                  dsn::task_tracker *tracker)
 {
-    dsn::task_ptr callback = dsn::tasking::create_late_task(code, cb, 0, tracker);
+    exist_future_ptr callback(new exist_future(code, cb, 0));
+    callback->set_tracker(tracker);
     auto exist_in_background = [this, req, callback]() {
         exist_response resp;
         std::string fds_path = utils::path_to_fds(req.path, true);
@@ -365,7 +370,7 @@ dsn::task_ptr fds_service::exist(const exist_request &req,
             resp.err = ERR_FS_INTERNAL;
         }
         FDS_EXCEPTION_HANDLE(resp.err, "exist", req.path.c_str());
-        tasking::call_safe_late_task(callback, std::move(resp));
+        callback->enqueue_with(resp);
     };
     tasking::enqueue(LPC_FDS_CALL, nullptr, std::move(exist_in_background));
     return callback;
@@ -376,7 +381,8 @@ dsn::task_ptr fds_service::remove_path(const remove_path_request &req,
                                        const remove_path_callback &cb,
                                        dsn::task_tracker *tracker)
 {
-    dsn::task_ptr callback = dsn::tasking::create_late_task(code, cb, 0, tracker);
+    remove_path_future_ptr callback(new remove_path_future(code, cb, 0));
+    callback->set_tracker(tracker);
     auto remove_path_background = [this, req, callback]() {
         remove_path_response resp;
         resp.err = ERR_OK;
@@ -442,7 +448,7 @@ dsn::task_ptr fds_service::remove_path(const remove_path_request &req,
             FDS_EXCEPTION_HANDLE(resp.err, "remove_path", req.path.c_str());
         }
 
-        tasking::call_safe_late_task(callback, std::move(resp));
+        callback->enqueue_with(resp);
         return;
     };
 
@@ -607,7 +613,8 @@ dsn::task_ptr fds_file_object::write(const write_request &req,
                                      const write_callback &cb,
                                      dsn::task_tracker *tracker = nullptr)
 {
-    dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
+    write_future_ptr t(new write_future(code, cb, 0));
+    t->set_tracker(tracker);
 
     add_ref();
     auto write_in_background = [this, req, t]() {
@@ -616,7 +623,7 @@ dsn::task_ptr fds_file_object::write(const write_request &req,
         is.str(std::string(req.buffer.data(), req.buffer.length()));
         resp.err = put_content(is, resp.written_size);
 
-        tasking::call_safe_late_task(t, resp);
+        t->enqueue_with(resp);
         release_ref();
     };
 
@@ -630,7 +637,8 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
                                       const upload_callback &cb,
                                       dsn::task_tracker *tracker = nullptr)
 {
-    dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
+    upload_future_ptr t(new upload_future(code, cb, 0));
+    t->set_tracker(tracker);
 
     add_ref();
     auto upload_background = [this, req, t]() {
@@ -654,7 +662,7 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
             is.close();
         }
 
-        tasking::call_safe_late_task(t, std::move(resp));
+        t->enqueue_with(resp);
         release_ref();
     };
 
@@ -667,13 +675,14 @@ dsn::task_ptr fds_file_object::read(const read_request &req,
                                     const read_callback &cb,
                                     dsn::task_tracker *tracker = nullptr)
 {
-    dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
+    read_future_ptr t(new read_future(code, cb, 0));
+    t->set_tracker(tracker);
     read_response resp;
     if (_has_meta_synced && _md5sum.empty()) {
         derror("fds read failed: meta not synced or md5sum empty when read (%s)",
                _fds_path.c_str());
         resp.err = dsn::ERR_OBJECT_NOT_FOUND;
-        tasking::call_safe_late_task(t, std::move(resp));
+        t->enqueue_with(resp);
         return t;
     }
 
@@ -689,7 +698,7 @@ dsn::task_ptr fds_file_object::read(const read_request &req,
             std::shared_ptr<char> ptr((char *)output->c_str(), [output](char *) { delete output; });
             resp.buffer.assign(std::move(ptr), 0, output->length());
         }
-        tasking::call_safe_late_task(t, std::move(resp));
+        t->enqueue_with(resp);
         release_ref();
     };
 
@@ -703,14 +712,15 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
                                         const download_callback &cb,
                                         dsn::task_tracker *tracker = nullptr)
 {
-    dsn::task_ptr t = dsn::tasking::create_late_task(code, cb, 0, tracker);
+    download_future_ptr t(new download_future(code, cb, 0));
+    t->set_tracker(tracker);
     download_response resp;
     if (_has_meta_synced && _md5sum.empty()) {
         derror("fds download failed: meta not synced or md5sum empty when download (%s)",
                _fds_path.c_str());
         resp.err = dsn::ERR_OBJECT_NOT_FOUND;
         resp.downloaded_size = 0;
-        tasking::call_safe_late_task(t, std::move(resp));
+        t->enqueue_with(resp);
         return t;
     }
 
@@ -725,7 +735,7 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
                ptr);
         resp.err = ERR_FILE_OPERATION_FAILED;
         resp.downloaded_size = 0;
-        tasking::call_safe_late_task(t, std::move(resp));
+        t->enqueue_with(resp);
         return t;
     }
 
@@ -738,7 +748,7 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
         if (handle->tellp() != -1)
             resp.downloaded_size = handle->tellp();
         handle->close();
-        tasking::call_safe_late_task(t, resp);
+        t->enqueue_with(resp);
         release_ref();
     };
 

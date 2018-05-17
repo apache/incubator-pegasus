@@ -46,7 +46,9 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
                                       const ls_callback &callback,
                                       task_tracker *tracker)
 {
-    task_ptr tsk = tasking::create_late_task(code, std::move(callback), 0, tracker);
+    ls_future_ptr tsk(new ls_future(code, callback, 0));
+    tsk->set_tracker(tracker);
+
     // process
     auto list_dir_background = [this, req, tsk]() {
         std::string dir_path = ::dsn::utils::filesystem::path_combine(_root, req.dir_name);
@@ -91,7 +93,7 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
                 }
             }
         }
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(std::move(resp));
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(list_dir_background));
@@ -103,13 +105,15 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
                                          const create_file_callback &cb,
                                          task_tracker *tracker)
 {
-    task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
+    create_file_future_ptr tsk(new create_file_future(code, cb, 0));
+    tsk->set_tracker(tracker);
+
     if (req.ignore_metadata) {
         create_file_response resp;
         resp.err = ERR_OK;
         resp.file_handle = new local_file_object(
             this, ::dsn::utils::filesystem::path_combine(_root, req.file_name));
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(resp);
         return tsk;
     }
 
@@ -132,7 +136,7 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
             }
         }
 
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(resp);
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(create_file_background));
@@ -144,7 +148,8 @@ dsn::task_ptr local_service::delete_file(const delete_file_request &req,
                                          const delete_file_callback &cb,
                                          task_tracker *tracker)
 {
-    task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
+    delete_file_future_ptr tsk(new delete_file_future(code, cb, 0));
+    tsk->set_tracker(tracker);
 
     auto delete_file_background = [this, req, tsk]() {
         delete_file_response resp;
@@ -160,7 +165,7 @@ dsn::task_ptr local_service::delete_file(const delete_file_request &req,
             resp.err = ERR_OBJECT_NOT_FOUND;
         }
 
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(resp);
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(delete_file_background));
@@ -172,8 +177,8 @@ dsn::task_ptr local_service::exist(const exist_request &req,
                                    const exist_callback &cb,
                                    task_tracker *tracker)
 {
-    task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
-
+    exist_future_ptr tsk(new exist_future(code, cb, 0));
+    tsk->set_tracker(tracker);
     auto exist_background = [this, req, tsk]() {
         exist_response resp;
         if (utils::filesystem::path_exists(req.path)) {
@@ -181,7 +186,7 @@ dsn::task_ptr local_service::exist(const exist_request &req,
         } else {
             resp.err = ERR_OBJECT_NOT_FOUND;
         }
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(resp);
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(exist_background));
@@ -193,7 +198,8 @@ dsn::task_ptr local_service::remove_path(const remove_path_request &req,
                                          const remove_path_callback &cb,
                                          task_tracker *tracker)
 {
-    task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
+    remove_path_future_ptr tsk(new remove_path_future(code, cb, 0));
+    tsk->set_tracker(tracker);
 
     auto remove_path_background = [this, req, tsk]() {
         remove_path_response resp;
@@ -224,7 +230,7 @@ dsn::task_ptr local_service::remove_path(const remove_path_request &req,
             }
         }
 
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(resp);
     };
 
     tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(remove_path_background));
@@ -263,7 +269,8 @@ dsn::task_ptr local_file_object::write(const write_request &req,
 {
     add_ref();
 
-    task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
+    write_future_ptr tsk(new write_future(code, cb, 0));
+    tsk->set_tracker(tracker);
 
     auto write_background = [this, req, tsk]() {
         write_response resp;
@@ -287,7 +294,7 @@ dsn::task_ptr local_file_object::write(const write_request &req,
                 _md5_value = compute_md5();
             }
         }
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(resp);
         release_ref();
     };
     ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(write_background));
@@ -301,7 +308,8 @@ dsn::task_ptr local_file_object::read(const read_request &req,
 {
     add_ref();
 
-    task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
+    read_future_ptr tsk(new read_future(code, cb, 0));
+    tsk->set_tracker(tracker);
 
     auto read_func = [this, req, tsk]() {
         read_response resp;
@@ -338,7 +346,7 @@ dsn::task_ptr local_file_object::read(const read_request &req,
             fin.close();
         }
 
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(resp);
         release_ref();
     };
     ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(read_func));
@@ -351,7 +359,8 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
                                         task_tracker *tracker)
 {
     add_ref();
-    task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
+    upload_future_ptr tsk(new upload_future(code, cb, 0));
+    tsk->set_tracker(tracker);
     auto upload_file_func = [this, req, tsk]() {
         upload_response resp;
         resp.err = ERR_OK;
@@ -396,7 +405,7 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
                 _md5_value = compute_md5();
             }
         }
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(resp);
         ddebug("%s: start to release_ref in upload file", file_name().c_str());
         release_ref();
     };
@@ -413,7 +422,8 @@ dsn::task_ptr local_file_object::download(const download_request &req,
 {
     // download the whole file
     add_ref();
-    task_ptr tsk = tasking::create_late_task(code, cb, 0, tracker);
+    download_future_ptr tsk(new download_future(code, cb, 0));
+    tsk->set_tracker(tracker);
     auto download_file_func = [this, req, tsk]() {
         download_response resp;
         resp.err = ERR_OK;
@@ -453,7 +463,7 @@ dsn::task_ptr local_file_object::download(const download_request &req,
             resp.downloaded_size = static_cast<uint64_t>(total_sz);
         }
 
-        tasking::call_safe_late_task(tsk, resp);
+        tsk->enqueue_with(resp);
         release_ref();
     };
     ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(download_file_func));

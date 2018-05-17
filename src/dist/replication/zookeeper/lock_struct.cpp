@@ -46,7 +46,6 @@
 #include "zookeeper_session.h"
 #include "zookeeper_error.h"
 
-
 namespace dsn {
 namespace dist {
 
@@ -62,22 +61,6 @@ static inline const char *string_state(lock_state state)
 static bool is_zookeeper_timeout(int zookeeper_error)
 {
     return zookeeper_error == ZCONNECTIONLOSS || zookeeper_error == ZOPERATIONTIMEOUT;
-}
-
-static inline void __lock_task_bind_and_enqueue(lock_task_t lock_task,
-                                                error_code ec,
-                                                const std::string &id,
-                                                int version)
-{
-    lock_task->bind_and_enqueue([&](distributed_lock_service::lock_callback &cb) {
-        return std::bind(cb, ec, id, version);
-    });
-}
-
-static inline void __unlock_task_bind_and_enqueue(unlock_task_t unlock_task, error_code ec)
-{
-    unlock_task->bind_and_enqueue(
-        [&](distributed_lock_service::err_callback &cb) { return std::bind(cb, ec); });
 }
 
 #define __check_code(code, allow_list, allow_list_size, code_str)                                  \
@@ -154,8 +137,7 @@ void lock_struct::on_operation_timeout()
     ddebug("zookeeper operation times out, removing the current watching");
     _state = lock_state::uninitialized;
     _dist_lock_service->session()->detach(this);
-    __lock_task_bind_and_enqueue(
-        _lock_callback, ERR_TIMEOUT, _owner._node_value, _owner._sequence_id);
+    _lock_callback->enqueue_with(ERR_TIMEOUT, _owner._node_value, _owner._sequence_id);
 }
 
 void lock_struct::on_expire()
@@ -164,8 +146,7 @@ void lock_struct::on_expire()
         return;
     _state = lock_state::expired;
     remove_lock();
-    __lock_task_bind_and_enqueue(
-        _lease_expire_callback, ERR_EXPIRED, _owner._node_value, _owner._sequence_id);
+    _lease_expire_callback->enqueue_with(ERR_EXPIRED, _owner._node_value, _owner._sequence_id);
     clear();
 }
 
@@ -514,10 +495,8 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
                    _this->_lock_id.c_str(),
                    _this->_myself._node_seq_name.c_str(),
                    _this->_myself._node_value.c_str());
-            __lock_task_bind_and_enqueue(_this->_lock_callback,
-                                         ERR_OK,
-                                         _this->_myself._node_value,
-                                         _this->_myself._sequence_id);
+            _this->_lock_callback->enqueue_with(
+                ERR_OK, _this->_myself._node_value, _this->_myself._sequence_id);
         }
         _this->get_lock_owner(watch_myself);
     }
@@ -653,13 +632,13 @@ void lock_struct::after_create_lockdir(lock_struct_ptr _this, int ec)
 }
 /*static*/
 void lock_struct::try_lock(lock_struct_ptr _this,
-                           lock_task_t lock_callback,
-                           lock_task_t expire_callback)
+                           lock_future_ptr lock_callback,
+                           lock_future_ptr expire_callback)
 {
     _this->check_hashed_access();
 
     if (_this->_state != lock_state::uninitialized) {
-        __lock_task_bind_and_enqueue(lock_callback, ERR_RECURSIVE_LOCK, "", -1);
+        lock_callback->enqueue_with(ERR_RECURSIVE_LOCK, "", -1);
         return;
     }
 
@@ -725,10 +704,10 @@ void lock_struct::after_remove_my_locknode(lock_struct_ptr _this, int ec, bool r
         _this->remove_lock();
 
     if (REMOVE_FOR_UNLOCK == remove_for_unlock)
-        __unlock_task_bind_and_enqueue(_this->_unlock_callback, dsn_ec);
+        _this->_unlock_callback->enqueue_with(dsn_ec);
     else {
-        __lock_task_bind_and_enqueue(
-            _this->_cancel_callback, dsn_ec, _this->_owner._node_value, _this->_owner._sequence_id);
+        _this->_cancel_callback->enqueue_with(
+            dsn_ec, _this->_owner._node_value, _this->_owner._sequence_id);
     }
 
     if (dsn_ec == ERR_OK) {
@@ -765,13 +744,12 @@ void lock_struct::remove_my_locknode(std::string &&znode_path,
 }
 
 /*static*/
-void lock_struct::cancel_pending_lock(lock_struct_ptr _this, lock_task_t cancel_callback)
+void lock_struct::cancel_pending_lock(lock_struct_ptr _this, lock_future_ptr cancel_callback)
 {
     _this->check_hashed_access();
     if (_this->_state != lock_state::uninitialized && _this->_state != lock_state::pending &&
         _this->_state != lock_state::cancelled) {
-        __lock_task_bind_and_enqueue(
-            cancel_callback, ERR_INVALID_PARAMETERS, "", _this->_owner._sequence_id);
+        cancel_callback->enqueue_with(ERR_INVALID_PARAMETERS, "", _this->_owner._sequence_id);
         return;
     }
 
@@ -783,14 +761,14 @@ void lock_struct::cancel_pending_lock(lock_struct_ptr _this, lock_task_t cancel_
                                   REMOVE_FOR_CANCEL);
     else {
         _this->remove_lock();
-        __lock_task_bind_and_enqueue(
-            cancel_callback, ERR_OK, _this->_owner._node_value, _this->_owner._sequence_id);
+        cancel_callback->enqueue_with(
+            ERR_OK, _this->_owner._node_value, _this->_owner._sequence_id);
         _this->clear();
     }
 }
 
 /*static*/
-void lock_struct::unlock(lock_struct_ptr _this, unlock_task_t unlock_callback)
+void lock_struct::unlock(lock_struct_ptr _this, error_code_future_ptr unlock_callback)
 {
     _this->check_hashed_access();
     if (_this->_state != lock_state::locked && _this->_state != lock_state::unlocking) {
@@ -799,7 +777,7 @@ void lock_struct::unlock(lock_struct_ptr _this, unlock_task_t unlock_callback)
                _this->_myself._node_value.c_str(),
                _this->_owner._sequence_id,
                string_state(_this->_state));
-        __unlock_task_bind_and_enqueue(unlock_callback, ERR_INVALID_PARAMETERS);
+        unlock_callback->enqueue_with(ERR_INVALID_PARAMETERS);
         return;
     }
 

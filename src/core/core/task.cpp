@@ -196,7 +196,7 @@ void task::exec_internal()
                                            std::memory_order_release,
                                            std::memory_order_relaxed)) {
             _spec->on_task_end.execute(this);
-            clear_callback();
+            clear_non_trivial_on_task_end();
         } else {
             if (!_wait_for_cancel) {
                 // for retried tasks such as timer or rpc_response_task
@@ -219,7 +219,7 @@ void task::exec_internal()
 
                 // for timer task, we must call reset_callback after cancelled, because we don't
                 // reset callback after exec()
-                clear_callback();
+                clear_non_trivial_on_task_end();
             }
         }
 
@@ -343,7 +343,7 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool *finished /*= nullptr*/
         // we call clear_callback only cancelling succeed.
         // otherwise, task will successfully exececuted and clear_callback will be called
         // in "exec_internal".
-        clear_callback();
+        clear_non_trivial_on_task_end();
     }
 
     if (finished)

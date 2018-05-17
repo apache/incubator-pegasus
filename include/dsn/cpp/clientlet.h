@@ -130,29 +130,6 @@ inline task_ptr enqueue_timer(task_code evt,
     tsk->enqueue();
     return tsk;
 }
-
-template <typename TCallback>
-inline dsn::ref_ptr<dsn::safe_late_task<TCallback>> create_late_task(
-    dsn::task_code code, const TCallback &callback, int hash = 0, task_tracker *tracker = nullptr)
-{
-    using result_task_type = safe_late_task<typename std::remove_cv<TCallback>::type>;
-    dsn::ref_ptr<result_task_type> ptr(
-        new result_task_type(code, std::move(callback), hash, nullptr));
-    ptr->set_tracker(tracker);
-    ptr->spec().on_task_create.execute(::dsn::task::get_current_task(), ptr);
-    return ptr;
-}
-
-template <typename TResponse>
-void call_safe_late_task(const dsn::task_ptr &t, TResponse &&response)
-{
-    typedef std::function<void(const TResponse &)> TCallback;
-    typedef dsn::safe_late_task<TCallback> task_type;
-    task_type *real_task = reinterpret_cast<task_type *>(t.get());
-    real_task->bind_and_enqueue([r = std::move(response)](TCallback & callback) {
-        return std::bind(callback, std::move(r));
-    });
-}
 }
 /*@}*/
 

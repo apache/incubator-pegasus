@@ -43,12 +43,19 @@
 
 #include <dsn/service_api_cpp.h>
 #include <dsn/utility/error_code.h>
+#include <dsn/tool-api/future_types.h>
 #include <string>
 #include <functional>
 #include <utility>
 
 namespace dsn {
 namespace dist {
+
+typedef std::function<void(error_code ec, const std::string &owner_id, uint64_t version)>
+    lock_callback;
+typedef future_task<error_code, std::string, uint64_t> lock_future;
+typedef dsn::ref_ptr<lock_future> lock_future_ptr;
+
 class distributed_lock_service
 {
 public:
@@ -61,10 +68,6 @@ public:
     typedef distributed_lock_service *(*factory)();
 
 public:
-    typedef std::function<void(error_code ec)> err_callback;
-    typedef std::function<void(error_code ec, const std::string &owner_id, uint64_t version)>
-        lock_callback;
-
     struct lock_options
     {
         bool create_if_not_exist;

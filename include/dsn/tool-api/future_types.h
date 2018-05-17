@@ -23,30 +23,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-/*
- * Description:
- *     distributed lock service implemented with zookeeper, some types definition
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
 #pragma once
 
-#include <dsn/utility/autoref_ptr.h>
-#include <dsn/tool-api/auto_codes.h>
-#include <dsn/cpp/clientlet.h>
-#include <dsn/dist/distributed_lock_service.h>
+#include <functional>
+#include <dsn/utility/error_code.h>
+#include <dsn/tool-api/task.h>
 
 namespace dsn {
-namespace dist {
-
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_DLOCK)
-DEFINE_TASK_CODE(TASK_CODE_DLOCK, TASK_PRIORITY_HIGH, THREAD_POOL_DLOCK)
-
-class distributed_lock_service_zookeeper;
-class lock_struct;
-typedef ref_ptr<distributed_lock_service_zookeeper> lock_srv_ptr;
-typedef ref_ptr<lock_struct> lock_struct_ptr;
-}
+typedef std::function<void(dsn::error_code)> err_callback;
+typedef future_task<dsn::error_code> error_code_future;
+typedef dsn::ref_ptr<error_code_future> error_code_future_ptr;
 }

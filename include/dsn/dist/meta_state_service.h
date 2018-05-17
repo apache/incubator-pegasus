@@ -45,11 +45,21 @@
 
 #include <dsn/service_api_cpp.h>
 #include <dsn/utility/error_code.h>
+#include <dsn/tool-api/future_types.h>
 #include <string>
 #include <functional>
 
 namespace dsn {
 namespace dist {
+typedef std::function<void(error_code ec, const blob &val)> err_value_callback;
+typedef future_task<error_code, blob> err_value_future;
+typedef dsn::ref_ptr<err_value_future> err_value_future_ptr;
+
+typedef std::function<void(error_code ec, const std::vector<std::string> &ret_strv)>
+    err_stringv_callback;
+typedef future_task<error_code, std::vector<std::string>> err_stringv_future;
+typedef dsn::ref_ptr<err_stringv_future> err_stringv_future_ptr;
+
 class meta_state_service
 {
 public:
@@ -62,11 +72,6 @@ public:
     typedef meta_state_service *(*factory)();
 
 public:
-    typedef std::function<void(error_code ec, const blob &val)> err_value_callback;
-    typedef std::function<void(error_code ec, const std::vector<std::string> &ret_strv)>
-        err_stringv_callback;
-    typedef std::function<void(error_code ec)> err_callback;
-
     /* providers should implement this to support transaction */
     class transaction_entries
     {

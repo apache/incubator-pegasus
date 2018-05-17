@@ -167,15 +167,14 @@ distributed_lock_service_zookeeper::lock(const std::string &lock_id,
             handle = iter->second;
     }
 
-    auto lock_tsk = tasking::create_late_task(lock_cb_code, lock_cb);
-    auto expire_tsk = tasking::create_late_task(lease_expire_code, lease_expire_callback);
+    lock_future_ptr lock_tsk(new lock_future(lock_cb_code, lock_cb, 0));
+    lock_future_ptr expire_tsk(new lock_future(lease_expire_code, lease_expire_callback, 0));
 
-    task_ptr ref_holder1(lock_tsk), ref_holder2(expire_tsk);
     tasking::enqueue(TASK_CODE_DLOCK,
                      nullptr,
                      std::bind(&lock_struct::try_lock, handle, lock_tsk, expire_tsk),
                      handle->hash());
-    return std::make_pair(ref_holder1, ref_holder2);
+    return std::make_pair(lock_tsk, expire_tsk);
 }
 
 task_ptr distributed_lock_service_zookeeper::unlock(const std::string &lock_id,
@@ -192,14 +191,12 @@ task_ptr distributed_lock_service_zookeeper::unlock(const std::string &lock_id,
             return tasking::enqueue(cb_code, nullptr, std::bind(cb, ERR_OBJECT_NOT_FOUND));
         handle = iter->second;
     }
-    auto unlock_tsk =
-        tasking::create_late_task<distributed_lock_service::err_callback>(cb_code, cb);
-    task_ptr ref_holder(unlock_tsk);
+    error_code_future_ptr unlock_tsk(new error_code_future(cb_code, cb, 0));
     tasking::enqueue(TASK_CODE_DLOCK,
                      nullptr,
                      std::bind(&lock_struct::unlock, handle, unlock_tsk),
                      handle->hash());
-    return ref_holder;
+    return unlock_tsk;
 }
 
 task_ptr distributed_lock_service_zookeeper::cancel_pending_lock(const std::string &lock_id,
@@ -215,14 +212,12 @@ task_ptr distributed_lock_service_zookeeper::cancel_pending_lock(const std::stri
             return tasking::enqueue(cb_code, nullptr, std::bind(cb, ERR_OBJECT_NOT_FOUND, "", -1));
         handle = iter->second;
     }
-    auto cancel_tsk =
-        tasking::create_late_task<distributed_lock_service::lock_callback>(cb_code, cb);
-    task_ptr ref_holder(cancel_tsk);
+    lock_future_ptr cancel_tsk(new lock_future(cb_code, cb, 0));
     tasking::enqueue(TASK_CODE_DLOCK,
                      nullptr,
                      std::bind(&lock_struct::cancel_pending_lock, handle, cancel_tsk),
                      handle->hash());
-    return ref_holder;
+    return cancel_tsk;
 }
 
 task_ptr distributed_lock_service_zookeeper::query_lock(const std::string &lock_id,

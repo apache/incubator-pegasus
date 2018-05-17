@@ -67,9 +67,9 @@ public:
     const int hash() const { return _hash; }
 
     static void
-    try_lock(lock_struct_ptr _this, lock_task_t lock_callback, lock_task_t expire_callback);
-    static void cancel_pending_lock(lock_struct_ptr _this, lock_task_t cancel_callback);
-    static void unlock(lock_struct_ptr _this, unlock_task_t unlock_callback);
+    try_lock(lock_struct_ptr _this, lock_future_ptr lock_callback, lock_future_ptr expire_callback);
+    static void cancel_pending_lock(lock_struct_ptr _this, lock_future_ptr cancel_callback);
+    static void unlock(lock_struct_ptr _this, error_code_future_ptr unlock_callback);
 
     static void lock_expired(lock_struct_ptr _this);
 
@@ -106,10 +106,10 @@ private:
     static void my_lock_removed(lock_struct_ptr _this, int zoo_event);
 
 private:
-    lock_task_t _lock_callback;
-    lock_task_t _lease_expire_callback;
-    lock_task_t _cancel_callback;
-    unlock_task_t _unlock_callback;
+    lock_future_ptr _lock_callback;
+    lock_future_ptr _lease_expire_callback;
+    lock_future_ptr _cancel_callback;
+    error_code_future_ptr _unlock_callback;
 
     std::string _lock_id;
     std::string _lock_dir; // ${lock_root}/${lock_id}

@@ -37,10 +37,12 @@
 #pragma once
 
 #include <functional>
+#include <tuple>
 #include <dsn/utility/ports.h>
 #include <dsn/utility/extensible_object.h>
 #include <dsn/utility/callocator.h>
 #include <dsn/utility/utils.h>
+#include <dsn/utility/apply.h>
 #include <dsn/utility/binary_writer.h>
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/tool-api/task_tracker.h>
@@ -272,9 +274,10 @@ protected:
 
     virtual void exec() = 0;
     //
-    // this function is used for clearing the callback assigned to this task.
-    // as the callback is usually a functor, circular reference may occur if
-    // we don't clear manually, for example:
+    // this function is used for clearing the non-trivial objects assigned to this task, like
+    // callback functors and some task-specific values.
+    //
+    // circular reference may occur if we don't clear them manually, for example:
     //
     // class A: public dsn::ref_counter {
     // public:
@@ -287,18 +290,19 @@ protected:
     //                                   [a_obj](){ std::cout << value << std::endl; });
     //
     // in the case above, a_obj holds a ref_counter for my_task,
-    // my task holds a ref_counter for a_obj because it owns a lambda
+    // my task holds a ref_counter for a_obj because it owns a functor
     // which captures a_obj by value
     //
-    // in order to prevent this case, we let the task to clear the calback functor when
+    // in order to prevent this case, we let the task to clear these non-trival objects when
     // a task is finished or cancelled.
+    //
     // we may call this function in "exec_internal" or "cancel". however, it's still subclass's
     // duty to define "how to clear the callback".
     //
     // don't declare this as pure virtual function, coz it is not necessary for every subclass
-    // to have a callback to clear.
+    // to have non trivial objects to clear.
     //
-    virtual void clear_callback() {}
+    virtual void clear_non_trivial_on_task_end() {}
 
     bool _is_null;
     error_code _error;
@@ -349,7 +353,7 @@ public:
     }
 
 protected:
-    void clear_callback() override { _cb = nullptr; }
+    void clear_non_trivial_on_task_end() override { _cb = nullptr; }
 
 protected:
     task_handler _cb;
@@ -376,7 +380,7 @@ public:
     void enqueue() override;
 
 protected:
-    void clear_callback() override { _cb = nullptr; }
+    void clear_non_trivial_on_task_end() override { _cb = nullptr; }
 
 private:
     // ATTENTION: if _interval_milliseconds <= 0, then timer task will just be executed once;
@@ -385,38 +389,44 @@ private:
     task_handler _cb;
 };
 
-template <typename TCallback>
-class safe_late_task : public raw_task
+template <typename First, typename... Remaining>
+class future_task : public task
 {
 public:
-    typedef std::function<task_handler(TCallback &)> currying;
-    safe_late_task(task_code code, const TCallback &cb, int hash = 0, service_node *node = nullptr)
-        : raw_task(code, nullptr, hash, node), _user_cb(cb)
+    typedef std::function<void(const First, const Remaining &...)> TCallback;
+    future_task(task_code code, const TCallback &cb, int hash, service_node *node = nullptr)
+        : task(code, hash, node), _cb(cb)
     {
     }
-    safe_late_task(task_code code, TCallback &&cb, int hash = 0, service_node *node = nullptr)
-        : raw_task(code, nullptr, hash, node), _user_cb(std::move(cb))
+    future_task(task_code code, TCallback &&cb, int hash, service_node *node = nullptr)
+        : task(code, hash, node), _cb(std::move(cb))
     {
     }
+    virtual void exec() override { dsn::apply(_cb, std::move(_values)); }
 
-    void bind_and_enqueue(const currying &c, int delay_ms = 0)
+    void enqueue_with(const First &t, const Remaining &... r, int delay_ms = 0)
     {
-        if (dsn_likely(_user_cb != nullptr)) {
-            raw_task::_cb = c(_user_cb);
-        }
+        _values = std::make_tuple(t, r...);
+        set_delay(delay_ms);
+        enqueue();
+    }
+    void enqueue_with(First &&t, Remaining &&... r, int delay_ms = 0)
+    {
+        _values = std::make_tuple(std::move(t), std::forward<Remaining>(r)...);
         set_delay(delay_ms);
         enqueue();
     }
 
 protected:
-    void clear_callback() override
+    void clear_non_trivial_on_task_end() override
     {
         _cb = nullptr;
-        _user_cb = nullptr;
+        _values = {};
     }
 
 private:
-    TCallback _user_cb;
+    TCallback _cb;
+    std::tuple<First, Remaining...> _values;
 };
 
 class rpc_request_task : public task
@@ -446,7 +456,7 @@ public:
     }
 
 protected:
-    void clear_callback() override { _handler = nullptr; }
+    void clear_non_trivial_on_task_end() override { _handler = nullptr; }
 
 protected:
     message_ex *_request;
@@ -521,7 +531,7 @@ public:
     void set_caller_pool(task_worker_pool *pl) { _caller_pool = pl; }
 
 protected:
-    void clear_callback() override { _cb = nullptr; }
+    void clear_non_trivial_on_task_end() override { _cb = nullptr; }
 
 private:
     message_ex *_request;
@@ -614,7 +624,7 @@ public:
     blob _merged_write_buffer_holder;
 
 protected:
-    void clear_callback() override { _cb = nullptr; }
+    void clear_non_trivial_on_task_end() override { _cb = nullptr; }
 
 protected:
     disk_aio *_aio;

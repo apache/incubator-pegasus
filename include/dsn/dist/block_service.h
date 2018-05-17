@@ -49,6 +49,8 @@ struct ls_response
     ls_response() : entries(std::make_shared<std::vector<ls_entry>>()) {}
 };
 typedef std::function<void(const ls_response &)> ls_callback;
+typedef future_task<ls_response> ls_future;
+typedef dsn::ref_ptr<ls_future> ls_future_ptr;
 
 /**
  * @brief The create_file_request struct, used to create a block_file_ptr
@@ -83,6 +85,8 @@ struct create_file_response
     block_file_ptr file_handle;
 };
 typedef std::function<void(const create_file_response &)> create_file_callback;
+typedef future_task<create_file_response> create_file_future;
+typedef dsn::ref_ptr<create_file_future> create_file_future_ptr;
 
 /**
  * @brief The delete_file_request struct, use to delete a file
@@ -106,6 +110,8 @@ struct delete_file_response
     dsn::error_code err;
 };
 typedef std::function<void(const delete_file_response &)> delete_file_callback;
+typedef future_task<delete_file_response> delete_file_future;
+typedef dsn::ref_ptr<delete_file_future> delete_file_future_ptr;
 
 /**
  * @brief The exist_request struct
@@ -129,6 +135,8 @@ struct exist_response
     dsn::error_code err;
 };
 typedef std::function<void(const exist_response &)> exist_callback;
+typedef future_task<exist_response> exist_future;
+typedef dsn::ref_ptr<exist_future> exist_future_ptr;
 
 /**
  * @brief The remove_path_request struct
@@ -157,6 +165,8 @@ struct remove_path_response
     dsn::error_code err;
 };
 typedef std::function<void(const remove_path_response &)> remove_path_callback;
+typedef future_task<remove_path_response> remove_path_future;
+typedef dsn::ref_ptr<remove_path_future> remove_path_future_ptr;
 
 /**
  * @brief The read_request struct
@@ -191,6 +201,8 @@ struct read_response
     dsn::blob buffer;
 };
 typedef std::function<void(const read_response &)> read_callback;
+typedef future_task<read_response> read_future;
+typedef dsn::ref_ptr<read_future> read_future_ptr;
 
 /**
  * @brief The write_request struct
@@ -219,6 +231,8 @@ struct write_response
     uint64_t written_size;
 };
 typedef std::function<void(const write_response &)> write_callback;
+typedef future_task<write_response> write_future;
+typedef dsn::ref_ptr<write_future> write_future_ptr;
 
 /**
  * @brief The upload_request struct
@@ -242,6 +256,8 @@ struct upload_response
     uint64_t uploaded_size;
 };
 typedef std::function<void(const upload_response &)> upload_callback;
+typedef future_task<upload_response> upload_future;
+typedef dsn::ref_ptr<upload_future> upload_future_ptr;
 
 /**
  * @brief The download_request struct
@@ -266,6 +282,8 @@ struct download_response
     uint64_t downloaded_size;
 };
 typedef std::function<void(const download_response &)> download_callback;
+typedef future_task<download_response> download_future;
+typedef dsn::ref_ptr<download_future> download_future_ptr;
 
 class block_filesystem
 {
