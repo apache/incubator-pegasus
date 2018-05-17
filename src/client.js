@@ -13,6 +13,7 @@ const tools = require('./tools');
 
 const _OPERATION_TIMEOUT = 1000;
 let log4js = require('log4js');
+let logConfig = require('../log_config');
 
 /**
  * Constructor of client
@@ -30,7 +31,7 @@ function Client(configs) {
     if(configs.log){
         this.log = configs.log;
     }else{
-        log4js.configure('../log4js_config.json');
+        log4js.configure(logConfig);
         this.log = log4js.getLogger('pegasus');
     }
 
