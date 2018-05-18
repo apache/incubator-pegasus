@@ -38,47 +38,6 @@
 #include <dsn/c/api_common.h>
 
 /*!
-@defgroup config Configuration Service
-@ingroup service-api-utilities
-
- Configuration Service (e.g., config.ini)
-
-@{
-*/
-
-extern DSN_API const char *
-dsn_config_get_value_string(const char *section,       ///< [section]
-                            const char *key,           ///< key = value
-                            const char *default_value, ///< if [section] key is not present
-                            const char *dsptr          ///< what it is for, as help-info in config
-                            );
-extern DSN_API bool dsn_config_get_value_bool(const char *section,
-                                              const char *key,
-                                              bool default_value,
-                                              const char *dsptr);
-extern DSN_API uint64_t dsn_config_get_value_uint64(const char *section,
-                                                    const char *key,
-                                                    uint64_t default_value,
-                                                    const char *dsptr);
-extern DSN_API int64_t dsn_config_get_value_int64(const char *section,
-                                                  const char *key,
-                                                  int64_t default_value,
-                                                  const char *dsptr);
-extern DSN_API double dsn_config_get_value_double(const char *section,
-                                                  const char *key,
-                                                  double default_value,
-                                                  const char *dsptr);
-// return all section count (may greater than buffer_count)
-extern DSN_API int dsn_config_get_all_sections(const char **buffers,
-                                               /*inout*/ int *buffer_count);
-// return all key count (may greater than buffer_count)
-extern DSN_API int dsn_config_get_all_keys(const char *section,
-                                           const char **buffers,
-                                           /*inout*/ int *buffer_count);
-extern DSN_API void dsn_config_dump(const char *file);
-/*@}*/
-
-/*!
 @defgroup logging Logging Service
 @ingroup service-api-utilities
 

@@ -74,12 +74,10 @@ void perf_client_helper::start_test(const char *prefix, int max_request_kind_cou
     perf_test_suite s;
     std::vector<perf_test_suite> suits;
 
-    const char *sections[10240];
-    int scount, used_count = sizeof(sections) / sizeof(const char *);
-    scount = dsn_config_get_all_sections(sections, &used_count);
-    dassert(scount == used_count, "too many sections (>10240) defined in config files");
+    std::vector<const char *> sections;
+    dsn_config_get_all_sections(sections);
 
-    for (int i = 0; i < used_count; i++) {
+    for (int i = 0; i < sections.size(); i++) {
         if (strstr(sections[i], prefix) == sections[i]) {
             s.name = sections[i];
             s.config_section = sections[i];
@@ -264,27 +262,6 @@ void perf_client_helper::start_next_case()
             }
 
             dwarn(ss.str().c_str());
-
-            // dump to perf result file
-            if (dsn_config_get_value_bool(
-                    "apps.client.perf.test",
-                    "exit_after_test",
-                    false,
-                    "dump the result and exit the process after the test is finished")) {
-                std::string data_dir(service_app::current_service_app_info().data_dir);
-                std::stringstream fns;
-                fns << "perf-result-" << ts << ".txt";
-                std::string report = ::dsn::utils::filesystem::path_combine(data_dir, fns.str());
-                std::ofstream result_f(report.c_str(), std::ios::out);
-                result_f << ss.str() << std::endl;
-                result_f.close();
-
-                report += ".config.ini";
-                dsn_config_dump(report.c_str());
-
-                dsn_exit(0);
-            }
-
             return;
         }
     }

@@ -24,19 +24,15 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include <dsn/service_api_c.h>
+#include <dsn/utility/config_api.h>
 #include <dsn/utility/strings.h>
+
+/// you can use following macros to implement a function called "read_config"
+/// to initialize a structure from the configuration file quickly
+///
+/// please refer to "task_spec.h". it's a very good example
 
 #define CONFIG_BEGIN(t_struct)                                                                     \
     inline bool read_config(                                                                       \

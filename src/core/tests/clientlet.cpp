@@ -189,8 +189,7 @@ DEFINE_TASK_CODE_RPC(TEST_CODE, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 TEST(dev_cpp, task_destructor)
 {
     {
-        task_ptr t(new simple_task(LPC_TEST_CLIENTLET,
-                                   [=]() { ddebug("the pointer in t is (%p)", t.get()); }));
+        task_ptr t(new simple_task(LPC_TEST_CLIENTLET, nullptr));
         t->enqueue();
         t->wait();
         ASSERT_EQ(1, simple_task::allocate_count);

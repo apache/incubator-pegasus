@@ -47,7 +47,7 @@
 #include <dsn/utility/singleton_store.h>
 #include <dsn/utility/utils.h>
 
-#include <dsn/utility/configuration.h>
+#include <dsn/utility/config_api.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/transient_memory.h>
 #include <dsn/tool-api/command_manager.h>
@@ -74,7 +74,6 @@ static struct _all_info_
     bool engine_ready;
     bool config_completed;
     ::dsn::tools::tool_app *tool;
-    ::dsn::configuration_ptr config;
     ::dsn::service_engine *engine;
     std::vector<::dsn::task_spec *> task_specs;
     ::dsn::memory_provider *memory;
@@ -94,88 +93,6 @@ DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int
 DSN_API bool dsn_task_is_running_inside(dsn::task *t)
 {
     return ::dsn::task::get_current_task() == t;
-}
-
-DSN_API const char *dsn_config_get_value_string(const char *section,
-                                                const char *key,
-                                                const char *default_value,
-                                                const char *dsptr)
-{
-    return dsn_all.config->get_string_value(section, key, default_value, dsptr);
-}
-
-DSN_API bool dsn_config_get_value_bool(const char *section,
-                                       const char *key,
-                                       bool default_value,
-                                       const char *dsptr)
-{
-    return dsn_all.config->get_value<bool>(section, key, default_value, dsptr);
-}
-
-DSN_API uint64_t dsn_config_get_value_uint64(const char *section,
-                                             const char *key,
-                                             uint64_t default_value,
-                                             const char *dsptr)
-{
-    return dsn_all.config->get_value<uint64_t>(section, key, default_value, dsptr);
-}
-
-DSN_API int64_t dsn_config_get_value_int64(const char *section,
-                                           const char *key,
-                                           int64_t default_value,
-                                           const char *dsptr)
-{
-    return dsn_all.config->get_value<int64_t>(section, key, default_value, dsptr);
-}
-
-DSN_API double dsn_config_get_value_double(const char *section,
-                                           const char *key,
-                                           double default_value,
-                                           const char *dsptr)
-{
-    return dsn_all.config->get_value<double>(section, key, default_value, dsptr);
-}
-
-DSN_API int dsn_config_get_all_sections(const char **buffers, /*inout*/ int *buffer_count)
-{
-    std::vector<const char *> sections;
-    dsn_all.config->get_all_section_ptrs(sections);
-    int scount = (int)sections.size();
-
-    if (*buffer_count > scount)
-        *buffer_count = scount;
-
-    for (int i = 0; i < *buffer_count; i++) {
-        buffers[i] = sections[i];
-    }
-
-    return scount;
-}
-
-DSN_API int dsn_config_get_all_keys(
-    const char *section,
-    const char **buffers,
-    /*inout*/ int *buffer_count) // return all key count (may greater than buffer_count)
-{
-    std::vector<const char *> keys;
-    dsn_all.config->get_all_keys(section, keys);
-    int kcount = (int)keys.size();
-
-    if (*buffer_count > kcount)
-        *buffer_count = kcount;
-
-    for (int i = 0; i < *buffer_count; i++) {
-        buffers[i] = keys[i];
-    }
-
-    return kcount;
-}
-
-DSN_API void dsn_config_dump(const char *file)
-{
-    std::ofstream os(file, std::ios::out);
-    dsn_all.config->dump(os);
-    os.close();
 }
 
 DSN_API void dsn_coredump()
@@ -772,20 +689,19 @@ bool run(const char *config_file,
     dsn_all.config_completed = false;
     dsn_all.tool = nullptr;
     dsn_all.engine = &::dsn::service_engine::instance();
-    dsn_all.config.reset(new ::dsn::configuration());
     dsn_all.memory = nullptr;
     dsn_all.magic = 0xdeadbeef;
 
-    if (!dsn_all.config->load(config_file, config_arguments)) {
+    if (!dsn_config_load(config_file, config_arguments)) {
         printf("Fail to load config file %s\n", config_file);
         return false;
     }
 
     // pause when necessary
-    if (dsn_all.config->get_value<bool>("core",
-                                        "pause_on_start",
-                                        false,
-                                        "whether to pause at startup time for easier debugging")) {
+    if (dsn_config_get_value_bool("core",
+                                  "pause_on_start",
+                                  false,
+                                  "whether to pause at startup time for easier debugging")) {
 #if defined(_WIN32)
         printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(::GetCurrentProcessId()));
 #else
@@ -844,7 +760,7 @@ bool run(const char *config_file,
     }
 
     // init tool memory
-    auto tls_trans_memory_KB = (size_t)dsn_all.config->get_value<int>(
+    size_t tls_trans_memory_KB = (size_t)dsn_config_get_value_uint64(
         "core",
         "tls_trans_memory_KB",
         1024, // 1 MB
@@ -895,8 +811,8 @@ bool run(const char *config_file,
 
         bool create_it = false;
 
-        if (app_list == "") // create all apps
-        {
+        // create all apps
+        if (app_list == "") {
             create_it = true;
         } else {
             for (auto &kv : applistkvs) {
@@ -924,7 +840,7 @@ bool run(const char *config_file,
         exit(1);
     }
 
-    if (dsn_all.config->get_value<bool>(
+    if (dsn_config_get_value_bool(
             "core",
             "cli_remote",
             true,
@@ -932,25 +848,24 @@ bool run(const char *config_file,
         ::dsn::command_manager::instance().start_remote_cli();
     }
 
-    // register local cli commands
-    ::dsn::command_manager::instance().register_command({"config-dump"},
-                                                        "config-dump - dump configuration",
-                                                        "config-dump [to-this-config-file]",
-                                                        [](const std::vector<std::string> &args) {
-                                                            std::ostringstream oss;
-                                                            std::ofstream off;
-                                                            std::ostream *os = &oss;
-                                                            if (args.size() > 0) {
-                                                                off.open(args[0]);
-                                                                os = &off;
+    dsn::command_manager::instance().register_command({"config-dump"},
+                                                      "config-dump - dump configuration",
+                                                      "config-dump [to-this-config-file]",
+                                                      [](const std::vector<std::string> &args) {
+                                                          std::ostringstream oss;
+                                                          std::ofstream off;
+                                                          std::ostream *os = &oss;
+                                                          if (args.size() > 0) {
+                                                              off.open(args[0]);
+                                                              os = &off;
 
-                                                                oss << "config dump to file "
-                                                                    << args[0] << std::endl;
-                                                            }
+                                                              oss << "config dump to file "
+                                                                  << args[0] << std::endl;
+                                                          }
 
-                                                            dsn_all.config->dump(*os);
-                                                            return oss.str();
-                                                        });
+                                                          dsn_config_dump(*os);
+                                                          return oss.str();
+                                                      });
 
     // invoke customized init after apps are created
     dsn::tools::sys_init_after_app_created.execute();
@@ -958,7 +873,6 @@ bool run(const char *config_file,
     // start the tool
     dsn_all.tool->run();
 
-    //
     if (sleep_after_init) {
         while (true) {
             std::this_thread::sleep_for(std::chrono::hours(1));
@@ -969,10 +883,6 @@ bool run(const char *config_file,
     memset((void *)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
 
     return true;
-}
-
-namespace dsn {
-configuration_ptr get_main_config() { return dsn_all.config; }
 }
 
 namespace dsn {

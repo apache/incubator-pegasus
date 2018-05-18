@@ -23,17 +23,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-/*
- * Description:
- *     configuration file interface
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     Jul., 2015, @imzhenyu (Zhenyu Guo), add parameter support
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <memory>
@@ -47,12 +36,6 @@
 #include <mutex>
 
 namespace dsn {
-
-class configuration;
-typedef std::shared_ptr<configuration> configuration_ptr;
-typedef void (*config_file_change_notifier)(configuration_ptr);
-
-extern configuration_ptr get_main_config();
 
 class configuration
 {
@@ -83,8 +66,6 @@ public:
     get_string_value_list(const char *section, const char *key, char splitter, const char *dsptr);
 
     void set(const char *section, const char *key, const char *value, const char *dsptr);
-
-    void register_config_change_notification(config_file_change_notifier notifier);
 
     bool has_section(const char *section);
 
@@ -130,7 +111,6 @@ private:
     config_map _configs;
 
     std::string _file_name;
-    std::list<config_file_change_notifier> _notifiers;
     std::string _file_data;
     bool _warning;
 };

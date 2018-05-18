@@ -417,12 +417,9 @@ rpc_request_task *rpc_server_dispatcher::on_request(message_ex *msg, service_nod
 }
 
 //----------------------------------------------------------------------------------------------
-rpc_engine::rpc_engine(configuration_ptr config, service_node *node)
-    : _config(config), _node(node), _rpc_matcher(this)
+rpc_engine::rpc_engine(service_node *node) : _node(node), _rpc_matcher(this)
 {
     dassert(_node != nullptr, "");
-    dassert(_config != nullptr, "");
-
     _is_running = false;
     _is_serving = false;
 }

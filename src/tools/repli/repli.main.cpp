@@ -33,14 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "repli.app.h"
-#include <dsn/utility/utils.h>
-#include <dsn/utility/filesystem.h>
 #include <iostream>
 #include <thread>
-#if !defined(_WIN32)
-#include "unistd.h"
-#endif
+#include <unistd.h>
+
+#include <dsn/utility/utils.h>
+#include <dsn/utility/filesystem.h>
+
+#include "repli.app.h"
 
 bool g_done = false;
 
@@ -56,11 +56,7 @@ int main(int argc, char **argv)
     char buf[4096];
     int slen;
 
-#if defined(_WIN32)
-    slen = ::GetModuleFileNameA(NULL, buf, sizeof(buf));
-#else
     slen = readlink("/proc/self/exe", buf, sizeof(buf));
-#endif
 
     if (slen != -1) {
         dassert(slen < 4906, "invalid slen, slen = %d", slen);

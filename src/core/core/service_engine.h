@@ -152,7 +152,6 @@ public:
 
     void init_before_toollets(const service_spec &spec);
     void init_after_toollets();
-    void configuration_changed();
 
     service_node *start_node(service_app_spec &app_spec);
 

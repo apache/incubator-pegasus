@@ -33,15 +33,16 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "rpc_engine.h"
-#include <dsn/utility/singleton.h>
 #include <unordered_map>
+#include <dsn/utility/singleton.h>
 #include <dsn/utility/synchronize.h>
-#include <dsn/utility/configuration.h>
 #include <dsn/utility/factory_store.h>
+#include <dsn/utility/config_api.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/tool-api/uri_address.h>
+
+#include "rpc_engine.h"
 
 namespace dsn {
 void uri_resolver_manager::setup_resolvers()
@@ -51,7 +52,7 @@ void uri_resolver_manager::setup_resolvers()
     // arguments = %uri-resolver-arguments%
 
     std::vector<std::string> sections;
-    get_main_config()->get_all_sections(sections);
+    dsn_config_get_all_sections(sections);
 
     const int prefix_len = (const int)strlen("uri-resolver.");
     for (auto &s : sections) {

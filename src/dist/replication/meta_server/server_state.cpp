@@ -417,15 +417,12 @@ error_code server_state::restore_from_local_storage(const char *local_path)
 
 error_code server_state::initialize_default_apps()
 {
-    const char *sections[10240];
-    int total_sections;
-    int used_sections = sizeof(sections) / sizeof(const char *);
-    total_sections = dsn_config_get_all_sections(sections, &used_sections);
-    dassert(total_sections == used_sections, "too many sections (>10240) defined in config files");
+    std::vector<const char *> sections;
+    dsn_config_get_all_sections(sections);
     ddebug("start to do initialize");
 
     app_info default_app;
-    for (int i = 0; i < used_sections; i++) {
+    for (int i = 0; i < sections.size(); i++) {
         if (strstr(sections[i], "meta_server.apps") == sections[i] ||
             strcmp(sections[i], "replication.app") == 0) {
             const char *s = sections[i];

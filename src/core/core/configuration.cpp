@@ -33,20 +33,30 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/utility/configuration.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/strings.h>
 #include <cassert>
 #include <errno.h>
 #include <iostream>
 #include <algorithm>
 
+#include <dsn/utility/utils.h>
+#include <dsn/utility/filesystem.h>
+#include <dsn/utility/strings.h>
+#include <dsn/utility/configuration.h>
+
 namespace dsn {
 
 configuration::configuration() { _warning = false; }
 
-configuration::~configuration() {}
+configuration::~configuration()
+{
+    for (auto &section_kv : _configs) {
+        auto &section = section_kv.second;
+        for (auto &kv : section) {
+            delete kv.second;
+        }
+    }
+    _configs.clear();
+}
 
 // arguments: k1=v1;k2=v2;k3=v3; ...
 // e.g.,
@@ -429,12 +439,6 @@ void configuration::set(const char *section, const char *key, const char *value,
     }
 
     _lock.unlock();
-}
-
-void configuration::register_config_change_notification(config_file_change_notifier notifier)
-{
-    printf("ERROR: method register_config_change_notification() not implemented\n");
-    ::abort();
 }
 
 bool configuration::has_section(const char *section)

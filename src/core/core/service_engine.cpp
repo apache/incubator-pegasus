@@ -129,7 +129,7 @@ error_code service_node::init_io_engine(io_engine &io, ioe_mode mode)
             ctx.port_shift_value =
                 spec.get_ports_delta(_app_spec.id, io.pool->spec().pool_code, io.q->index());
         }
-        io.rpc = new rpc_engine(get_main_config(), this);
+        io.rpc = new rpc_engine(this);
     } else
         io.rpc = nullptr;
 
@@ -547,7 +547,5 @@ std::string service_engine::get_queue_info(const std::vector<std::string> &args)
     ss << "]";
     return ss.str();
 }
-
-void service_engine::configuration_changed() { task_spec::init(); }
 
 } // end namespace

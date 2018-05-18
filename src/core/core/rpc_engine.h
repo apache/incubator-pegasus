@@ -35,11 +35,10 @@
 
 #pragma once
 
+#include <dsn/utility/synchronize.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/network.h>
-#include <dsn/utility/synchronize.h>
 #include <dsn/tool-api/global_config.h>
-#include <dsn/utility/configuration.h>
 
 namespace dsn {
 
@@ -141,7 +140,7 @@ private:
 class rpc_engine
 {
 public:
-    rpc_engine(configuration_ptr config, service_node *node);
+    explicit rpc_engine(service_node *node);
 
     //
     // management routines
@@ -195,7 +194,6 @@ private:
                             io_modifer &ctx);
 
 private:
-    configuration_ptr _config;
     service_node *_node;
     std::vector<std::vector<network *>> _client_nets;             // <format, <CHANNEL, network*>>
     std::unordered_map<int, std::vector<network *>> _server_nets; // <port, <CHANNEL, network*>>

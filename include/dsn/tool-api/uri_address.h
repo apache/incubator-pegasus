@@ -36,7 +36,7 @@
 #pragma once
 
 #include <algorithm>
-#include <dsn/utility/configuration.h>
+#include <dsn/utility/config_api.h>
 #include <dsn/utility/synchronize.h>
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/partition_resolver.h>

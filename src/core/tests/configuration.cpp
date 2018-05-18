@@ -33,16 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/utility/configuration.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <fstream>
+#include <gtest/gtest.h>
+
+#include <dsn/utility/configuration.h>
 
 using namespace ::dsn;
 
 TEST(core, configuration)
 {
-    configuration_ptr c;
+    std::shared_ptr<configuration> c;
 
     printf("load not_exist_config_file\n");
     c.reset(new configuration());

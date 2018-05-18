@@ -36,12 +36,10 @@
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/configuration.h>
+#include <iostream>
 
 #include "dist/replication/lib/mutation_log.h"
-
 #include "repli.app.h"
-
-#include <iostream>
 
 namespace dsn {
 namespace service {
@@ -132,14 +130,14 @@ error_code repli_app::start(const std::vector<std::string> &args)
             return ERR_OK;
         }
 
-        ::dsn::configuration_ptr config(new ::dsn::configuration());
-        if (!config->load(s_args[1].c_str(), nullptr)) {
+        ::dsn::configuration config;
+        if (!config.load(s_args[1].c_str(), nullptr)) {
             std::cerr << "ERROR: failed to load config file \"" << s_args[1] << "\"" << std::endl;
             g_done = true;
             return ERR_OK;
         }
-        config->set_warning(true);
-        const char *result = config->get_string_value(s_args[2].c_str(), s_args[3].c_str(), "", "");
+        config.set_warning(true);
+        const char *result = config.get_string_value(s_args[2].c_str(), s_args[3].c_str(), "", "");
         std::cout << result << std::endl;
     } else {
         std::cerr << "ERROR: invalid command: " << cmd << std::endl;
