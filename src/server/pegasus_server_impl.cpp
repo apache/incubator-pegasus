@@ -3,17 +3,18 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_server_impl.h"
-#include "base/pegasus_key_schema.h"
-#include "base/pegasus_value_schema.h"
-#include "base/pegasus_utils.h"
 
+#include <algorithm>
+#include <boost/lexical_cast.hpp>
+#include <rocksdb/table.h>
+#include <rocksdb/utilities/checkpoint.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/fmt_logging.h>
-#include <rocksdb/utilities/checkpoint.h>
-#include <rocksdb/table.h>
-#include <boost/lexical_cast.hpp>
-#include <algorithm>
+
+#include "base/pegasus_key_schema.h"
+#include "base/pegasus_value_schema.h"
+#include "base/pegasus_utils.h"
 
 namespace pegasus {
 namespace server {

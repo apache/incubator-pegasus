@@ -8,7 +8,8 @@
 #include <rocksdb/db.h>
 #include <dsn/tool_api.h>
 
-#include "rrdb/rrdb_types.h"
+#include <rrdb/rrdb_types.h>
+
 #include "base/pegasus_const.h"
 
 namespace pegasus {

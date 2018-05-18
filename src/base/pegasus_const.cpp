@@ -16,6 +16,21 @@ const std::string ROCKSDB_ENV_USAGE_SCENARIO_NORMAL("normal");
 const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE("prefer_write");
 const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD("bulk_load");
 
+/// A task of manual compaction can be triggered by update of app environment variables as follows:
+/// Periodic manual compaction: triggered every day at the given `trigger_time`.
+/// ```
+/// manual_compact.periodic.trigger_time=3:00,21:00
+/// manual_compact.periodic.target_level=-1
+/// manual_compact.periodic.bottommost_level_compaction=skip
+/// manual_compact.periodic.disabled=false
+/// ```
+///
+/// Executed-once manual compaction: Triggered only at the specified unix time.
+/// ```
+/// manual_compact.once.trigger_time=1525930272
+/// manual_compact.once.target_level=-1
+/// manual_compact.once.bottommost_level_compaction=skip
+/// ```
 const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX("manual_compact.periodic.");
 const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX +
                                                            "trigger_time");

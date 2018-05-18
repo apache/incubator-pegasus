@@ -4,30 +4,31 @@
 
 #pragma once
 
-#include "command_executor.h"
-#include "command_utils.h"
+#include <getopt.h>
+#include <thread>
+#include <iomanip>
+#include <fstream>
+#include <queue>
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
+#include <rocksdb/db.h>
+#include <rocksdb/sst_dump_tool.h>
+#include <dsn/tool/cli/cli.client.h>
+#include <dsn/dist/replication/replication_ddl_client.h>
+#include <dsn/dist/replication/mutation_log_tool.h>
+
+#include <rrdb/rrdb.code.definition.h>
+#include <pegasus/version.h>
+#include <pegasus/git_commit.h>
+#include <pegasus/error.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/counter_utils.h"
-#include "rrdb/rrdb.code.definition.h"
 
-#include <pegasus/version.h>
-#include <pegasus/git_commit.h>
-#include <pegasus/error.h>
-#include <rocksdb/db.h>
-#include <rocksdb/sst_dump_tool.h>
-#include <dsn/dist/replication/replication_ddl_client.h>
-#include <dsn/dist/replication/mutation_log_tool.h>
-#include <dsn/tool/cli/cli.client.h>
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp>
-#include <getopt.h>
-#include <fstream>
-#include <iomanip>
-#include <thread>
-#include <queue>
+#include "command_executor.h"
+#include "command_utils.h"
 
 using namespace dsn::replication;
 

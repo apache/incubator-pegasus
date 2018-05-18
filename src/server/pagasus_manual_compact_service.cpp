@@ -3,13 +3,14 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pagasus_manual_compact_service.h"
-#include "pegasus_server_impl.h"
-#include "base/pegasus_const.h"
 
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <dsn/cpp/clientlet.h>
+
+#include "base/pegasus_const.h"
+#include "pegasus_server_impl.h"
 
 namespace pegasus {
 namespace server {

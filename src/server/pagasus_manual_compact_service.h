@@ -5,7 +5,6 @@
 #pragma once
 
 #include <rocksdb/db.h>
-
 #include <dsn/utility/string_view.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>

@@ -4,15 +4,17 @@
 
 #pragma once
 
+#include <vector>
+#include <rocksdb/db.h>
+#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/dist/replication/replication.codes.h>
+
+#include <rrdb/rrdb_types.h>
+#include <rrdb/rrdb.server.h>
+
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
 #include "pagasus_manual_compact_service.h"
-
-#include <rocksdb/db.h>
-#include <rrdb/rrdb.server.h>
-#include <vector>
-#include <dsn/cpp/perf_counter_wrapper.h>
-#include <dsn/dist/replication/replication.codes.h>
 
 namespace pegasus {
 namespace server {
