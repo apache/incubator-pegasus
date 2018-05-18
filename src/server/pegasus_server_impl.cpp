@@ -1758,7 +1758,6 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
     auto status = rocksdb::DB::Open(opts, path, &_db);
     if (status.ok()) {
-        uint64_t manual_compact_last_finish_time_ms = _db->GetLastManualCompactFinishTime();
         _last_committed_decree = _db->GetLastFlushedDecree();
         _value_schema_version = _db->GetValueSchemaVersion();
         if (_value_schema_version > PEGASUS_VALUE_SCHEMA_MAX_VERSION) {
@@ -1770,7 +1769,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
 
-        _manual_compact_svc.init_last_finish_time_ms(manual_compact_last_finish_time_ms);
+        _manual_compact_svc.init_last_finish_time_ms(_db->GetLastManualCompactFinishTime());
 
         // only enable filter after correct value_schema_version set
         _key_ttl_compaction_filter.SetValueSchemaVersion(_value_schema_version);
