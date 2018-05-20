@@ -91,7 +91,7 @@ bool pagasus_manual_compact_service::check_once_compact(
 
     int64_t trigger_time = 0;
     if (!dsn::buf2int64(find->second, trigger_time) || trigger_time <= 0) {
-        ddebug_replica("{}={} is invalid.", find->first, find->second);
+        derror_replica("{}={} is invalid.", find->first, find->second);
         return false;
     }
 
@@ -103,7 +103,7 @@ bool pagasus_manual_compact_service::check_periodic_compact(
 {
     auto find = envs.find(MANUAL_COMPACT_PERIODIC_DISABLED_KEY);
     if (find != envs.end() && find->second == "true") {
-        ddebug_replica("periodic_compact is disabled now.");
+        dwarn_replica("periodic_compact is disabled now.");
         return false;
     }
 
@@ -115,7 +115,7 @@ bool pagasus_manual_compact_service::check_periodic_compact(
     std::list<std::string> trigger_time_strs;
     dsn::utils::split_args(find->second.c_str(), trigger_time_strs, ',');
     if (trigger_time_strs.empty()) {
-        ddebug_replica("{}={} is invalid.", find->first, find->second);
+        derror_replica("{}={} is invalid.", find->first, find->second);
         return false;
     }
 
@@ -127,7 +127,7 @@ bool pagasus_manual_compact_service::check_periodic_compact(
         }
     }
     if (trigger_time.empty()) {
-        ddebug_replica("{}={} is invalid.", find->first, find->second);
+        derror_replica("{}={} is invalid.", find->first, find->second);
         return false;
     }
 
@@ -167,7 +167,7 @@ void pagasus_manual_compact_service::extract_manual_compact_opts(
             target_level <= _app->_db_opts.num_levels) {
             options.target_level = target_level;
         } else {
-            derror_replica("{}={} is invalid, use default value {}",
+            dwarn_replica("{}={} is invalid, use default value {}",
                            find->first,
                            find->second,
                            options.target_level);
@@ -183,7 +183,7 @@ void pagasus_manual_compact_service::extract_manual_compact_opts(
         } else if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
             options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
         } else {
-            derror_replica(
+            dwarn_replica(
                 "{}={} is invalid, use default value {}",
                 find->first,
                 find->second,

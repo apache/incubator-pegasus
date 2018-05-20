@@ -8,8 +8,6 @@ set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
 
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../.././../rocksdb/include")
-
 set(MY_PROJ_LIB_PATH "../../../rocksdb" ${LIBFDS_LIB_DIR} ${POCO_LIB_DIR})
 
 set(MY_PROJ_LIBS

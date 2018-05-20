@@ -14,6 +14,7 @@ dsn_common_setup()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories("../rocksdb/include")
 
 add_subdirectory(base)
 add_subdirectory(client_lib)
