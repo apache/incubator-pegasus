@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_client_impl.h"
-#include <pegasus_const.h>
+#include "base/pegasus_const.h"
 
 using namespace ::dsn;
 using namespace pegasus;

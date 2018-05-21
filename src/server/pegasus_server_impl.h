@@ -4,19 +4,17 @@
 
 #pragma once
 
-#include "key_ttl_compaction_filter.h"
-#include "pegasus_scan_context.h"
-#include "pegasus_write_service.h"
-
-#include "base/string_view.h"
-#include "base/pegasus_value_schema.h"
-#include "base/pegasus_rpc_types.h"
-
-#include <rocksdb/db.h>
-#include <rrdb/rrdb.server.h>
 #include <vector>
+#include <rocksdb/db.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
+#include <rrdb/rrdb_types.h>
+#include <rrdb/rrdb.server.h>
+
+#include "key_ttl_compaction_filter.h"
+#include "pegasus_scan_context.h"
+#include "pagasus_manual_compact_service.h"
+#include "pegasus_write_service.h"
 
 namespace pegasus {
 namespace server {
@@ -150,6 +148,11 @@ public:
     }
 
 private:
+    friend class pagasus_manual_compact_service;
+    friend class manual_compact_service_test;
+    friend class pegasus_server_write;
+    friend class pegasus_write_service;
+
     // parse checkpoint directories in the data dir
     // checkpoint directory format is: "checkpoint.{decree}"
     void parse_checkpoints();
@@ -196,8 +199,6 @@ private:
 
     void updating_rocksdb_sstsize();
 
-    virtual void manual_compact(const std::map<std::string, std::string> &opts);
-
     virtual void update_app_envs(const std::map<std::string, std::string> &envs);
 
     virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
@@ -209,6 +210,13 @@ private:
     std::pair<std::string, bool>
     get_restore_dir_from_env(const std::map<std::string, std::string> &env_kvs);
 
+    void update_usage_scenario(const std::map<std::string, std::string> &envs);
+
+    // return finish time recorded in rocksdb
+    uint64_t do_manual_compact(const rocksdb::CompactRangeOptions &options);
+
+    std::string query_compact_state() const override;
+
     // return true if successfully changed
     bool set_usage_scenario(const std::string &usage_scenario);
 
@@ -216,9 +224,6 @@ private:
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
 
 private:
-    friend class pegasus_server_write;
-    friend class pegasus_write_service;
-
     dsn::gpid _gpid;
     std::string _primary_address;
     bool _verbose_log;
@@ -252,6 +257,8 @@ private:
     pegasus_context_cache _context_cache;
 
     uint32_t _updating_rocksdb_sstsize_interval_seconds;
+
+    pagasus_manual_compact_service _manual_compact_svc;
 
     dsn::task_tracker _tracker;
 

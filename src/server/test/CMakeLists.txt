@@ -1,10 +1,11 @@
 set(MY_PROJ_NAME pegasus_unit_test)
 
 set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
-                "../pegasus_write_service.cpp"
-                "../pegasus_server_write.cpp"
                 "../pegasus_perf_counter.cpp"
                 "../pegasus_counter_updater.cpp"
+                "../pagasus_manual_compact_service.cpp"
+                "../pegasus_write_service.cpp"
+                "../pegasus_server_write.cpp"
 )
 
 set(MY_SRC_SEARCH_MODE "GLOB")
@@ -36,6 +37,7 @@ set(MY_PROJ_LIBS
         gtest
         z bz2 snappy rt aio pthread
         )
+add_definitions(-DPEGASUS_UNIT_TEST)
 
 set(MY_BOOST_PACKAGES system filesystem)
 
