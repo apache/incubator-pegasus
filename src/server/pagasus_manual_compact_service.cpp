@@ -34,13 +34,13 @@ pagasus_manual_compact_service::pagasus_manual_compact_service(pegasus_server_im
 
     _pfc_manual_compact_enqueue_count.init_app_counter(
         "app.pegasus",
-        std::string("manual.compact.enqueue.count@").append(replica_name()).c_str(),
+        "manual.compact.enqueue.count",
         COUNTER_TYPE_NUMBER,
         "current manual compact in queue count");
 
     _pfc_manual_compact_running_count.init_app_counter(
         "app.pegasus",
-        std::string("manual.compact.running.count@").append(replica_name()).c_str(),
+        "manual.compact.running.count",
         COUNTER_TYPE_NUMBER,
         "current manual compact running count");
 }
