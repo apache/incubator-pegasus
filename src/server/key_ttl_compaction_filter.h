@@ -8,8 +8,9 @@
 #include <atomic>
 #include <rocksdb/compaction_filter.h>
 #include <rocksdb/merge_operator.h>
-#include <pegasus_value_schema.h>
-#include <pegasus_utils.h>
+
+#include "base/pegasus_utils.h"
+#include "base/pegasus_value_schema.h"
 
 namespace pegasus {
 namespace server {

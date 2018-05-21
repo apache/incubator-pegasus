@@ -4,28 +4,31 @@
 
 #pragma once
 
-#include "command_executor.h"
-#include "command_utils.h"
-#include <pegasus/version.h>
-#include <pegasus/git_commit.h>
-#include <pegasus_key_schema.h>
-#include <pegasus_value_schema.h>
-#include <pegasus_utils.h>
-#include <counter_utils.h>
-#include <pegasus/error.h>
-#include <rocksdb/db.h>
-#include <rocksdb/sst_dump_tool.h>
-#include <dsn/dist/replication/replication_ddl_client.h>
-#include <dsn/dist/replication/mutation_log_tool.h>
-#include <rrdb/rrdb.code.definition.h>
-#include <dsn/tool/cli/cli.client.h>
+#include <getopt.h>
+#include <thread>
+#include <iomanip>
+#include <fstream>
+#include <queue>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
-#include <getopt.h>
-#include <fstream>
-#include <iomanip>
-#include <thread>
-#include <queue>
+#include <rocksdb/db.h>
+#include <rocksdb/sst_dump_tool.h>
+#include <dsn/tool/cli/cli.client.h>
+#include <dsn/dist/replication/replication_ddl_client.h>
+#include <dsn/dist/replication/mutation_log_tool.h>
+
+#include <rrdb/rrdb.code.definition.h>
+#include <pegasus/version.h>
+#include <pegasus/git_commit.h>
+#include <pegasus/error.h>
+
+#include "base/pegasus_key_schema.h"
+#include "base/pegasus_value_schema.h"
+#include "base/pegasus_utils.h"
+#include "base/counter_utils.h"
+
+#include "command_executor.h"
+#include "command_utils.h"
 
 using namespace dsn::replication;
 
@@ -438,8 +441,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             dsn::error_code err = sc->ddl_client->list_app(
                 app.app_name, app_id, partition_count, app_partitions[app.app_id]);
             if (err != ::dsn::ERR_OK) {
-                derror(
-                    "list app %s failed, error = %s", app_name.c_str(), err.to_string());
+                derror("list app %s failed, error = %s", app_name.c_str(), err.to_string());
                 return true;
             }
             dassert(app_id == app.app_id, "%d VS %d", app_id, app.app_id);
