@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <sstream>
 #include <fstream>
+#include <dsn/utility/config_api.h>
 #include <dsn/c/api_utilities.h>
 
 namespace pegasus {
