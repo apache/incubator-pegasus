@@ -66,7 +66,7 @@ public:
     virtual ::dsn::error_code stop(bool clear_state) override;
 
     /// Each of the write request (specifically, the rpc that's configured as write, see
-    /// option `rpc_request_is_write_operation` in the configuration file) will first be
+    /// option `rpc_request_is_write_operation` in rDSN `task_spec`) will first be
     /// replicated to the replicas through the underlying PacificA protocol in rDSN, and
     /// after being committed, the mutation will be applied into rocksdb by this function.
     ///
