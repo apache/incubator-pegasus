@@ -38,10 +38,13 @@ private:
 
     void manual_compact(const rocksdb::CompactRangeOptions &options);
 
+    // return manual compact start time in ms.
     uint64_t begin_manual_compact();
 
     void end_manual_compact(uint64_t start, uint64_t finish);
 
+    // return true when allow to start a new manual compact,
+    // otherwise return false
     bool check_manual_compact_state();
 
     uint64_t now_timestamp();
@@ -55,7 +58,7 @@ private:
 
     // manual compact state
     std::atomic<uint64_t> _manual_compact_enqueue_time_ms;
-    std::atomic<uint64_t> _manual_compact_start_time_ms;
+    std::atomic<uint64_t> _manual_compact_start_running_time_ms;
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
     std::atomic<uint64_t> _manual_compact_last_time_used_ms;
 

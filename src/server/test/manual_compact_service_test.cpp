@@ -15,16 +15,18 @@ public:
     static const uint64_t compacted_ts = 1500000000; // 2017.07.14 10:40:00 CST
 
 public:
-    manual_compact_service_test(): manual_compact_svc(this->_server.get())
-    {
-    }
+    manual_compact_service_test() : manual_compact_svc(this->_server.get()) {}
 
     void set_compact_time(int64_t ts)
     {
-        manual_compact_svc._manual_compact_last_finish_time_ms.store(static_cast<uint64_t>(ts * 1000));
+        manual_compact_svc._manual_compact_last_finish_time_ms.store(
+            static_cast<uint64_t>(ts * 1000));
     }
 
-    void set_mock_now(uint64_t mock_now_sec) { manual_compact_svc._mock_now_timestamp = mock_now_sec * 1000; }
+    void set_mock_now(uint64_t mock_now_sec)
+    {
+        manual_compact_svc._mock_now_timestamp = mock_now_sec * 1000;
+    }
 
     void check_once_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
@@ -56,7 +58,7 @@ public:
     {
         set_mock_now(mock_now_sec);
         uint64_t start = manual_compact_svc.now_timestamp();
-        manual_compact_svc._manual_compact_start_time_ms.store(start);
+        manual_compact_svc._manual_compact_start_running_time_ms.store(start);
         // do compacting...
         set_mock_now(mock_now_sec + time_cost_sec);
         uint64_t finish = manual_compact_svc.now_timestamp();
@@ -159,43 +161,43 @@ TEST_F(manual_compact_service_test, check_periodic_compact)
     // single compact time
     envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00";
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("08:00"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("08:00"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("09:30"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("09:30"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("10:30"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("10:30"));
     check_periodic_compact(envs, true);
 
     // multiple compact time
     envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00,21:00";
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("08:00"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("08:00"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("09:30"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("09:30"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("10:30"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("10:30"));
     check_periodic_compact(envs, true);
 
     // suppose compacted at 11:00
     set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("11:00"));
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("11:01"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("11:01"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("20:30"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("20:30"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("21:01"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("21:01"));
     check_periodic_compact(envs, true);
 
     // suppose compacted at 21:50
     set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("21:50"));
 
-    set_mock_now((uint64_t) dsn::utils::hh_mm_today_to_unix_sec("22:00"));
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("22:00"));
     check_periodic_compact(envs, false);
 }
 

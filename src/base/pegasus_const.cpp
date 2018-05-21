@@ -19,17 +19,17 @@ const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD("bulk_load");
 /// A task of manual compaction can be triggered by update of app environment variables as follows:
 /// Periodic manual compaction: triggered every day at the given `trigger_time`.
 /// ```
-/// manual_compact.periodic.trigger_time=3:00,21:00
-/// manual_compact.periodic.target_level=-1
-/// manual_compact.periodic.bottommost_level_compaction=skip
-/// manual_compact.periodic.disabled=false
+/// manual_compact.periodic.trigger_time=3:00,21:00             // required
+/// manual_compact.periodic.target_level=-1                     // optional, default -1
+/// manual_compact.periodic.bottommost_level_compaction=force   // optional, default force
+/// manual_compact.periodic.disabled=false                      // optional, default false
 /// ```
 ///
 /// Executed-once manual compaction: Triggered only at the specified unix time.
 /// ```
-/// manual_compact.once.trigger_time=1525930272
-/// manual_compact.once.target_level=-1
-/// manual_compact.once.bottommost_level_compaction=skip
+/// manual_compact.once.trigger_time=1525930272                 // required
+/// manual_compact.once.target_level=-1                         // optional, default -1
+/// manual_compact.once.bottommost_level_compaction=force       // optional, default force
 /// ```
 const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX("manual_compact.periodic.");
 const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX +
@@ -41,9 +41,10 @@ const std::string MANUAL_COMPACT_ONCE_KEY_PREFIX("manual_compact.once.");
 const std::string MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY(MANUAL_COMPACT_ONCE_KEY_PREFIX +
                                                        "trigger_time");
 
+// see more about the following two keys in rocksdb::CompactRangeOptions
+const std::string MANUAL_COMPACT_TARGET_LEVEL_KEY("target_level");
+
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY("bottommost_level_compaction");
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
-
-const std::string MANUAL_COMPACT_TARGET_LEVEL_KEY("target_level");
 } // namespace

@@ -28,9 +28,9 @@ extern const std::string MANUAL_COMPACT_PERIODIC_DISABLED_KEY;
 extern const std::string MANUAL_COMPACT_ONCE_KEY_PREFIX;
 extern const std::string MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY;
 
+extern const std::string MANUAL_COMPACT_TARGET_LEVEL_KEY;
+
 extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY;
 extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
 extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
-
-extern const std::string MANUAL_COMPACT_TARGET_LEVEL_KEY;
 } // namespace
