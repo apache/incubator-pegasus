@@ -15,7 +15,7 @@ set(MY_PROJ_INC_PATH "../include"
 
 set(MY_PROJ_LIBS
     dsn.replication.tool
-    dsn_layer2_stateful_type1
+    dsn_replica_server
     dsn.replication.clientlib
     dsn.replication.ddlclient
     dsn.block_service.local
