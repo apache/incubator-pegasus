@@ -35,6 +35,14 @@ uint64_t dsn_config_get_value_uint64(const char *section,
     return g_config.get_value<uint64_t>(section, key, default_value, dsptr);
 }
 
+int64_t dsn_config_get_value_int64(const char *section,
+                                   const char *key,
+                                   int64_t default_value,
+                                   const char *dsptr)
+{
+    return g_config.get_value<int64_t>(section, key, default_value, dsptr);
+}
+
 double dsn_config_get_value_double(const char *section,
                                    const char *key,
                                    double default_value,

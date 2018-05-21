@@ -92,6 +92,13 @@ uint64_t dsn_config_get_value_uint64(const char *section,
                                      uint64_t default_value,
                                      const char *dsptr);
 
+/// get value of a key in some section, the value should be decimal in range of int64_t
+/// this function is not thread safe if dsn_config_set is concurrently called
+int64_t dsn_config_get_value_int64(const char *section,
+                                   const char *key,
+                                   int64_t default_value,
+                                   const char *dsptr);
+
 /// get value of a key in some section, the value should be decimal in range of double
 /// this function is not thread safe if dsn_config_set is concurrently called
 double dsn_config_get_value_double(const char *section,
