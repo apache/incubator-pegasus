@@ -104,6 +104,38 @@ func (rs *ReplicaSession) TTL(ctx context.Context, gpid *base.Gpid, key *base.Bl
 	return ret.GetSuccess(), nil
 }
 
+func (rs *ReplicaSession) GetScanner(ctx context.Context, gpid *base.Gpid, request *rrdb.GetScannerRequest) (*rrdb.ScanResponse, error) {
+	args := &rrdb.RrdbGetScannerArgs{Request: request}
+	result, err := rs.callWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_GET_SCANNER")
+	if err != nil {
+		return nil, err
+	}
+
+	ret, _ := result.(*rrdb.RrdbGetScannerResult)
+	return ret.GetSuccess(), nil
+}
+
+func (rs *ReplicaSession) Scan(ctx context.Context, gpid *base.Gpid, request *rrdb.ScanRequest) (*rrdb.ScanResponse, error) {
+	args := &rrdb.RrdbScanArgs{Request: request}
+	result, err := rs.callWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_SCAN")
+	if err != nil {
+		return nil, err
+	}
+
+	ret, _ := result.(*rrdb.RrdbScanResult)
+	return ret.GetSuccess(), nil
+}
+
+func (rs *ReplicaSession) ClearScanner(ctx context.Context, gpid *base.Gpid, contextId int64) error {
+	args := &rrdb.RrdbClearScannerArgs{ContextID: contextId}
+	_, err := rs.callWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_CLEAR_SCANNER")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (rs *ReplicaSession) String() string {
 	return fmt.Sprintf("replica(%s)", rs.addr)
 }

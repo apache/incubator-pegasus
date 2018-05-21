@@ -32,6 +32,20 @@ func encodeHashKeySortKey(hashKey []byte, sortKey []byte) *base.Blob {
 	return blob
 }
 
+func encodeNextBytesByKeys(hashKey []byte, sortKey []byte) *base.Blob {
+	key := encodeHashKeySortKey(hashKey, sortKey)
+	array := key.Data
+
+	i := len(array) - 1
+	for ; i >= 2; i-- {
+		if array[i] != 0xFF {
+			array[i]++
+			break
+		}
+	}
+	return &base.Blob{Data: array[:i+1]}
+}
+
 var crc64Table = crc64.MakeTable(0x9a6c9329ac4bc9b5)
 
 func crc64Hash(data []byte) uint64 {

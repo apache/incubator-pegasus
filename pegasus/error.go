@@ -34,19 +34,27 @@ const (
 	OpClose
 	OpMultiSet
 	OpTTL
+	OpGetScanner
+	OpGetUnorderedScanners
+	OpNext
+	OpScannerClose
 )
 
 var opTypeToStringMap = map[OpType]string{
-	OpQueryConfig:   "table configuration query",
-	OpGet:           "GET",
-	OpSet:           "SET",
-	OpDel:           "DEL",
-	OpMultiGet:      "MULTI_GET",
-	OpMultiGetRange: "MULTI_GET_RANGE",
-	OpMultiDel:      "MULTI_DEL",
-	OpClose:         "Close",
-	OpMultiSet:      "MULTI_SET",
-	OpTTL:           "TTL",
+	OpQueryConfig:          "table configuration query",
+	OpGet:                  "GET",
+	OpSet:                  "SET",
+	OpDel:                  "DEL",
+	OpMultiGet:             "MULTI_GET",
+	OpMultiGetRange:        "MULTI_GET_RANGE",
+	OpMultiDel:             "MULTI_DEL",
+	OpClose:                "Close",
+	OpMultiSet:             "MULTI_SET",
+	OpTTL:                  "TTL",
+	OpGetScanner:           "GET_SCANNER",
+	OpGetUnorderedScanners: "GET_UNORDERED_SCANNERS",
+	OpNext:                 "SCAN_NEXT",
+	OpScannerClose:         "SCANNER_CLOSE",
 }
 
 func (op OpType) String() string {
