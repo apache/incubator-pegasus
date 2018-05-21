@@ -1,7 +1,7 @@
+#include "server_load_balancer.h"
 #include <dsn/utility/extensible_object.h>
 #include <dsn/tool-api/command_manager.h>
 #include <boost/lexical_cast.hpp>
-#include "server_load_balancer.h"
 
 namespace dsn {
 namespace replication {
