@@ -3,18 +3,18 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_server_impl.h"
-#include <pegasus_const.h>
-#include <pegasus_key_schema.h>
-#include <pegasus_value_schema.h>
-#include <pegasus_utils.h>
-#include <dsn/utility/config_api.h>
-#include <dsn/utility/smart_pointers.h>
+
+#include <algorithm>
+#include <boost/lexical_cast.hpp>
+#include <rocksdb/table.h>
+#include <rocksdb/utilities/checkpoint.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
-#include <rocksdb/utilities/checkpoint.h>
-#include <rocksdb/table.h>
-#include <boost/lexical_cast.hpp>
-#include <algorithm>
+#include <dsn/dist/fmt_logging.h>
+
+#include "base/pegasus_key_schema.h"
+#include "base/pegasus_value_schema.h"
+#include "base/pegasus_utils.h"
 
 namespace pegasus {
 namespace server {
@@ -50,7 +50,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _value_schema_version(0),
       _last_durable_decree(0),
       _physical_error(0),
-      _is_checkpointing(false)
+      _is_checkpointing(false),
+      _manual_compact_svc(this)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -1768,6 +1769,8 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
 
+        _manual_compact_svc.init_last_finish_time_ms(_db->GetLastManualCompactFinishTime());
+
         // only enable filter after correct value_schema_version set
         _key_ttl_compaction_filter.SetValueSchemaVersion(_value_schema_version);
         _key_ttl_compaction_filter.EnableFilter();
@@ -2526,73 +2529,18 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
     return res;
 }
 
-// args:
-//   ROCKSDB_ENV_MANUAL_COMPACT_TARGET_LEVEL_KEY (default -1)
-//   ROCKSDB_ENV_BOTTOMMOST_LEVEL_COMPACTION_KEY (default skip)
-void pegasus_server_impl::manual_compact(const std::map<std::string, std::string> &opts)
+void pegasus_server_impl::update_app_envs(const std::map<std::string, std::string> &envs)
 {
-    uint64_t start_time;
-    rocksdb::Status status;
-
-    // wait flush before compact to make all data compacted.
-    ddebug("%s: start to Flush", replica_name());
-    start_time = dsn_now_ms();
-    status = _db->Flush(rocksdb::FlushOptions());
-    ddebug("%s: Flush finished, status = %s, time_used = %" PRIu64 "ms",
-           replica_name(),
-           status.ToString().c_str(),
-           dsn_now_ms() - start_time);
-
-    rocksdb::CompactRangeOptions options;
-    options.exclusive_manual_compaction = true;
-    options.change_level = true;
-    options.target_level = -1;
-    auto find1 = opts.find(ROCKSDB_MANUAL_COMPACT_TARGET_LEVEL_KEY);
-    if (find1 != opts.end()) {
-        const std::string &argv = find1->second;
-        int target_level;
-        if (pegasus::utils::buf2int(argv.c_str(), argv.size(), target_level) && target_level >= 1 &&
-            target_level <= _db_opts.num_levels) {
-            options.target_level = target_level;
-        } else {
-            derror("%s: invalid option value [%s] for %s, use default value [%d]",
-                   replica_name(),
-                   argv.c_str(),
-                   ROCKSDB_MANUAL_COMPACT_TARGET_LEVEL_KEY.c_str(),
-                   -1);
-        }
-    }
-    options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
-    auto find2 = opts.find(ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY);
-    if (find2 != opts.end()) {
-        const std::string &argv = find2->second;
-        if (argv == ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
-            options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
-        } else if (argv == ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
-            options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
-        } else {
-            derror("%s: invalid option value [%s] for %s, use default value [%s]",
-                   replica_name(),
-                   argv.c_str(),
-                   ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY.c_str(),
-                   ROCKSDB_MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP.c_str());
-        }
-    }
-    ddebug("%s: start to CompactRange, target_level = %d, bottommost_level_compaction = %s",
-           replica_name(),
-           options.target_level,
-           options.bottommost_level_compaction == rocksdb::BottommostLevelCompaction::kForce
-               ? "force"
-               : "skip");
-    start_time = dsn_now_ms();
-    status = _db->CompactRange(options, nullptr, nullptr);
-    ddebug("%s: CompactRange finished, status = %s, time_used = %" PRIu64 "ms",
-           replica_name(),
-           status.ToString().c_str(),
-           dsn_now_ms() - start_time);
+    update_usage_scenario(envs);
+    _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
-void pegasus_server_impl::update_app_envs(const std::map<std::string, std::string> &envs)
+void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
+{
+    envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = _usage_scenario;
+}
+
+void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std::string> &envs)
 {
     // update usage scenario
     // if not specified, default is normal
@@ -2615,11 +2563,6 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
                    new_usage_scenario.c_str());
         }
     }
-}
-
-void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
-{
-    envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = _usage_scenario;
 }
 
 bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
@@ -2709,6 +2652,38 @@ bool pegasus_server_impl::set_options(
                oss.str().c_str());
         return false;
     }
+}
+
+uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options)
+{
+    uint64_t start_time;
+    rocksdb::Status status;
+
+    // wait flush before compact to make all data compacted.
+    ddebug_replica("start to Flush");
+    start_time = dsn_now_ms();
+    status = _db->Flush(rocksdb::FlushOptions());
+    ddebug_replica("Flush finished, status = {}, time_used = {}ms",
+                   status.ToString().c_str(),
+                   dsn_now_ms() - start_time);
+
+    ddebug_replica("start to CompactRange, target_level = {}, bottommost_level_compaction = {}",
+                   options.target_level,
+                   options.bottommost_level_compaction == rocksdb::BottommostLevelCompaction::kForce
+                       ? "force"
+                       : "skip");
+    start_time = dsn_now_ms();
+    status = _db->CompactRange(options, nullptr, nullptr);
+    ddebug_replica("CompactRange finished, status = {}, time_used = {}ms",
+                   status.ToString().c_str(),
+                   dsn_now_ms() - start_time);
+
+    return _db->GetLastManualCompactFinishTime();
+}
+
+std::string pegasus_server_impl::query_compact_state() const
+{
+    return _manual_compact_svc.query_compact_state();
 }
 }
 } // namespace
