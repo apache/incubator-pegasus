@@ -15,6 +15,7 @@
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
+#include "pegasus_server_write.h"
 
 namespace pegasus {
 namespace server {

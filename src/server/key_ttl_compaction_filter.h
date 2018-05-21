@@ -11,6 +11,7 @@
 
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
+#include "base/string_view.h"
 
 namespace pegasus {
 namespace server {
