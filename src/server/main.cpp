@@ -35,7 +35,7 @@ using namespace dsn::replication;
 
 void dsn_app_registration_pegasus()
 {
-    dsn_meta_sever_register_providers();
+    dsn::service::meta_service_app::register_components();
 
     service_app::register_factory<::pegasus::server::pegasus_replication_service_app>("replica");
     service_app::register_factory<::pegasus::server::pegasus_meta_service_app>("meta");
