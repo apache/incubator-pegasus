@@ -59,7 +59,6 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _verbose_client_log_command(nullptr),
       _verbose_commit_log_command(nullptr),
       _trigger_chkpt_command(nullptr),
-      _manual_compact_command(nullptr),
       _query_compact_command(nullptr),
       _query_app_envs_command(nullptr),
       _deny_client(false),
@@ -254,15 +253,6 @@ void replica_stub::install_perf_counters()
         "cold.backup.max.upload.file.size",
         COUNTER_TYPE_NUMBER,
         "current cold backup max upload file size");
-
-    _counter_manual_compact_running_count.init_app_counter("eon.replica_stub",
-                                                           "manual.compact.running.count",
-                                                           COUNTER_TYPE_NUMBER,
-                                                           "current manual compact running count");
-    _counter_manual_compact_queue_count.init_app_counter("eon.replica_stub",
-                                                         "manual.compact.queue.count",
-                                                         COUNTER_TYPE_NUMBER,
-                                                         "current manual compact in queue count");
 }
 
 void replica_stub::initialize(bool clear /* = false*/)
@@ -1402,10 +1392,8 @@ void replica_stub::on_gc()
     uint64_t cold_backup_running_count = 0;
     uint64_t cold_backup_max_duration_time_ms = 0;
     uint64_t cold_backup_max_upload_file_size = 0;
-    uint64_t manual_compact_running_count = 0;
-    uint64_t manual_compact_queue_count = 0;
-    for (auto it = rs.begin(); it != rs.end(); ++it) {
-        replica_ptr &r = it->second;
+    for (auto &it : rs) {
+        replica_ptr &r = it.second;
         if (r->status() == partition_status::PS_POTENTIAL_SECONDARY) {
             learning_count++;
             learning_max_duration_time_ms = std::max(learning_max_duration_time_ms,
@@ -1422,13 +1410,6 @@ void replica_stub::on_gc()
             cold_backup_max_upload_file_size = std::max(
                 cold_backup_max_upload_file_size, r->_cold_backup_max_upload_file_size.load());
         }
-        if (r->_manual_compact_enqueue_time_ms.load() > 0) {
-            if (r->_manual_compact_start_time_ms.load() > 0) {
-                manual_compact_running_count++;
-            } else {
-                manual_compact_queue_count++;
-            }
-        }
     }
 
     _counter_replicas_learning_count->set(learning_count);
@@ -1437,8 +1418,6 @@ void replica_stub::on_gc()
     _counter_cold_backup_running_count->set(cold_backup_running_count);
     _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
     _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);
-    _counter_manual_compact_running_count->set(manual_compact_running_count);
-    _counter_manual_compact_queue_count->set(manual_compact_queue_count);
 
     // gc shared prepare log
     //
@@ -1846,14 +1825,6 @@ void replica_stub::trigger_checkpoint(replica_ptr r, bool is_emergency)
     r->init_checkpoint(is_emergency);
 }
 
-void replica_stub::manual_compact(gpid pid, const std::map<std::string, std::string> &opts)
-{
-    replica_ptr r = get_replica(pid);
-    if (r != nullptr) {
-        r->manual_compact(opts);
-    }
-}
-
 void replica_stub::handle_log_failure(error_code err)
 {
     derror("handle log failure: %s", err.to_string());
@@ -1941,49 +1912,13 @@ void replica_stub::open_service()
             });
         });
 
-    _manual_compact_command = ::dsn::command_manager::instance().register_app_command(
-        {"manual-compact"},
-        "manual-compact [opts:k1=v1,k2=v2] <id1,id2,...> (where id is 'app_id' or "
-        "'app_id.partition_id')",
-        "manual-compact - do full compact on the underlying storage engine",
-        [this](const std::vector<std::string> &args) {
-            // extract opts from args
-            std::map<std::string, std::string> opts;
-            std::vector<std::string> new_args;
-            std::string prefix("opts:");
-            for (int i = 0; i < args.size(); i++) {
-                if (args[i].find(prefix) == 0) {
-                    if (!opts.empty()) {
-                        return std::string("invalid arguments: duplicate opts provided");
-                    }
-                    const std::string &opts_str = args[i].substr(prefix.size());
-                    if (!dsn::utils::parse_kv_map(opts_str.c_str(), opts, ',', '=')) {
-                        return std::string("invalid arguments: bad opts: ") + opts_str;
-                    }
-                } else {
-                    new_args.push_back(args[i]);
-                }
-            }
-            return exec_command_on_replica(new_args, false, [this, opts](const replica_ptr &rep) {
-                if (rep->could_start_manual_compact()) {
-                    tasking::enqueue(
-                        LPC_MANUAL_COMPACT,
-                        &_tracker,
-                        std::bind(&replica_stub::manual_compact, this, rep->get_gpid(), opts));
-                    return std::string("started");
-                } else {
-                    return std::string("ignored because too frequently");
-                }
-            });
-        });
-
     _query_compact_command = ::dsn::command_manager::instance().register_app_command(
         {"query-compact"},
         "query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
         "query-compact - query full compact status on the underlying storage engine",
         [this](const std::vector<std::string> &args) {
             return exec_command_on_replica(
-                args, true, [](const replica_ptr &rep) { return rep->get_compact_state(); });
+                args, true, [](const replica_ptr &rep) { return rep->query_compact_state(); });
         });
 
     _query_app_envs_command = ::dsn::command_manager::instance().register_app_command(
@@ -2100,7 +2035,6 @@ void replica_stub::close()
     dsn::command_manager::instance().deregister_command(_verbose_client_log_command);
     dsn::command_manager::instance().deregister_command(_verbose_commit_log_command);
     dsn::command_manager::instance().deregister_command(_trigger_chkpt_command);
-    dsn::command_manager::instance().deregister_command(_manual_compact_command);
     dsn::command_manager::instance().deregister_command(_query_compact_command);
     dsn::command_manager::instance().deregister_command(_query_app_envs_command);
 
@@ -2109,7 +2043,6 @@ void replica_stub::close()
     _verbose_client_log_command = nullptr;
     _verbose_commit_log_command = nullptr;
     _trigger_chkpt_command = nullptr;
-    _manual_compact_command = nullptr;
     _query_compact_command = nullptr;
     _query_app_envs_command = nullptr;
 

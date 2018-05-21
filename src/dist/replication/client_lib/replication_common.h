@@ -118,8 +118,6 @@ public:
     std::string cold_backup_root;
     int32_t max_concurrent_uploading_file_count;
 
-    int32_t manual_compact_min_interval_seconds;
-
 public:
     replication_options();
     void initialize();

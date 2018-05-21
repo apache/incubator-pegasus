@@ -100,6 +100,7 @@ public:
         copy,
         learn
     };
+
     template <typename T>
     static replication_app_base *create(replica *r)
     {
@@ -216,8 +217,8 @@ public:
                                           dsn_message_t *requests,
                                           int request_length);
 
-    // do full compaction manually.
-    virtual void manual_compact(const std::map<std::string, std::string> &opts) = 0;
+    // query compact state.
+    virtual std::string query_compact_state() const = 0;
 
     // update app envs.
     virtual void update_app_envs(const std::map<std::string, std::string> &envs) = 0;

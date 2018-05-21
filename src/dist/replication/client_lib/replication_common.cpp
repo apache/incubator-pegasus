@@ -100,8 +100,6 @@ replication_options::replication_options()
     learn_app_max_concurrent_count = 5;
 
     max_concurrent_uploading_file_count = 10;
-
-    manual_compact_min_interval_seconds = 3600;
 }
 
 replication_options::~replication_options() {}
@@ -468,13 +466,6 @@ void replication_options::initialize()
                                              "max_concurrent_uploading_file_count",
                                              max_concurrent_uploading_file_count,
                                              "concurrent uploading file count");
-
-    manual_compact_min_interval_seconds = (int32_t)dsn_config_get_value_uint64(
-        "replication",
-        "manual_compact_min_interval_seconds",
-        manual_compact_min_interval_seconds,
-        "minimal interval time in seconds to start a new manual compaction, "
-        "<= 0 means disable manual compaction");
 
     replica_helper::load_meta_servers(meta_servers);
 

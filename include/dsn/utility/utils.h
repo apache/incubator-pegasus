@@ -38,6 +38,8 @@
 #include <functional>
 #include <memory>
 
+#include <dsn/utility/string_view.h>
+
 #define TIME_MS_MAX 0xffffffff
 
 namespace dsn {
@@ -61,6 +63,20 @@ void time_ms_to_date_time(uint64_t ts_ms,
                           int32_t &sec); // time to hour, min, sec
 
 uint64_t get_current_physical_time_ns();
+
+// get unix timestamp of today's zero o'clock.
+// eg. `1525881600` returned when called on May 10, 2018, CST
+int64_t get_unix_sec_today_midnight();
+
+// `hh:mm` (range in [00:00, 23:59]) to seconds since 00:00:00
+// eg. `01:00` => `3600`
+// Return: -1 when invalid
+int hh_mm_to_seconds(dsn::string_view hhmm);
+
+// local time `hh:mm` to unix timestamp.
+// eg. `18:10` => `1525947000` when called on May 10, 2018, CST
+// Return: -1 when invalid
+int64_t hh_mm_today_to_unix_sec(string_view hhmm_of_day);
 
 extern int get_current_tid_internal();
 

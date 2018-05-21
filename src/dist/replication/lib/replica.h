@@ -294,11 +294,7 @@ private:
 
     void update_restore_progress();
 
-    bool could_start_manual_compact();
-
-    void manual_compact(const std::map<std::string, std::string> &opts);
-
-    std::string get_compact_state();
+    std::string query_compact_state() const;
 
 private:
     friend class ::dsn::replication::replication_checker;
@@ -357,12 +353,6 @@ private:
     std::atomic<uint64_t> _cold_backup_running_count;
     std::atomic<uint64_t> _cold_backup_max_duration_time_ms;
     std::atomic<uint64_t> _cold_backup_max_upload_file_size;
-
-    // manual compact state
-    std::atomic<uint64_t> _manual_compact_enqueue_time_ms;
-    std::atomic<uint64_t> _manual_compact_start_time_ms;
-    std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
-    std::atomic<uint64_t> _manual_compact_last_time_used_ms;
 
     // record the progress of restore
     int64_t _chkpt_total_size;
