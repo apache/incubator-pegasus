@@ -9,6 +9,7 @@
 #include <sstream>
 #include <fstream>
 #include <unistd.h>
+#include <dsn/utility/config_api.h>
 #include <dsn/c/api_utilities.h>
 
 namespace pegasus {
@@ -190,9 +191,11 @@ upgrader_handler_shell::generate_cmd(int index, const std::string &job, const st
     res << "export LD_LIBRARY_PATH=" << version_path << ":$LD_LIBRARY_PATH; ";
     res << "../replica" << index << "/pegasus_server config.ini -app_list ";
     if (job == "replica")
-        res << "replica" << " &>result &";
+        res << "replica"
+            << " &>result &";
     else
-        res << "meta" << " &>result &";
+        res << "meta"
+            << " &>result &";
     lst.push_back(res.str());
 
     return lst;
