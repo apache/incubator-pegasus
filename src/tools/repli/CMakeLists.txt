@@ -14,7 +14,7 @@ set(MY_PROJ_INC_PATH "")
 set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIB_PATH "")
-set(MY_PROJ_LIBS dsn_layer2_stateful_type1
+set(MY_PROJ_LIBS dsn_replica_server
                  dsn.replication.clientlib
                  dsn.block_service.local
                  dsn.block_service.fds

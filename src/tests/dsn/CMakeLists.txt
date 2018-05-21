@@ -17,7 +17,7 @@ endif()
 
 set(MY_PROJ_LIBS 
     dsn_meta_server
-    dsn_layer2_stateful_type1
+    dsn_replica_server
     dsn.replication.clientlib
     dsn.block_service.local
     dsn.block_service.fds

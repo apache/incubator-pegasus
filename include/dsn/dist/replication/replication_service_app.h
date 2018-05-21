@@ -38,8 +38,6 @@
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/cpp/service_app.h>
 
-dsn::error_code dsn_layer2_stateful_type1_bridge(int argc, char **argv);
-
 namespace dsn {
 namespace replication {
 
@@ -54,6 +52,8 @@ typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 class replication_service_app : public ::dsn::service_app
 {
 public:
+    static void register_all();
+
     replication_service_app(const dsn::service_app_info *info);
 
     virtual ~replication_service_app(void);

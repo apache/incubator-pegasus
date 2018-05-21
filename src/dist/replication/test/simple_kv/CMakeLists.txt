@@ -13,7 +13,7 @@ set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIBS gtest
                  dsn_runtime
-                 dsn_layer2_stateful_type1
+                 dsn_replica_server
                  dsn_meta_server
                  dsn.replication.clientlib
                  dsn.block_service.local

@@ -88,7 +88,7 @@ dsn::error_code meta_service_test_app::start(const std::vector<std::string> &arg
 GTEST_API_ int main(int argc, char **argv)
 {
     dsn::service_app::register_factory<meta_service_test_app>("test_meta");
-    dsn_meta_server_bridge(0, nullptr);
+    dsn::service::meta_service_app::register_all();
     if (argc < 2)
         dassert(dsn_run_config("config-test.ini", false), "");
     else

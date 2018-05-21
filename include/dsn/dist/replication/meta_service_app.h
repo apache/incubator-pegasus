@@ -37,9 +37,6 @@
 
 #include <dsn/cpp/service_app.h>
 
-dsn::error_code dsn_meta_server_bridge(int argc, char **argv);
-void dsn_meta_sever_register_providers();
-
 namespace dsn {
 namespace replication {
 
@@ -58,6 +55,9 @@ namespace service {
 class meta_service_app : public service_app
 {
 public:
+    static void register_components();
+    static void register_all();
+
     meta_service_app(const service_app_info *info);
     virtual ~meta_service_app();
 

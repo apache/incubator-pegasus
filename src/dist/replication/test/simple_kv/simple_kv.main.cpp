@@ -43,8 +43,8 @@ void dsn_app_registration_simple_kv()
 {
     dsn::replication::test::simple_kv_service_impl::register_service();
 
-    dsn_meta_server_bridge(0, nullptr);
-    dsn_layer2_stateful_type1_bridge(0, nullptr);
+    dsn::service::meta_service_app::register_all();
+    dsn::replication::replication_service_app::register_all();
 
     dsn::service_app::register_factory<dsn::replication::test::simple_kv_client_app>("client");
     dsn::tools::register_toollet<dsn::replication::test::test_injector>("test_injector");

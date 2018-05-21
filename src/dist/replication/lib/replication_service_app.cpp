@@ -37,14 +37,13 @@
 #include "dist/replication/client_lib/replication_common.h"
 #include "replica_stub.h"
 
-dsn::error_code dsn_layer2_stateful_type1_bridge(int argc, char **argv)
-{
-    dsn::service_app::register_factory<::dsn::replication::replication_service_app>("replica");
-    return dsn::ERR_OK;
-}
-
 namespace dsn {
 namespace replication {
+
+void replication_service_app::register_all()
+{
+    dsn::service_app::register_factory<replication_service_app>("replica");
+}
 
 replication_service_app::replication_service_app(const service_app_info *info) : service_app(info)
 {

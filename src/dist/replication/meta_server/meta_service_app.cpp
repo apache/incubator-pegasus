@@ -48,59 +48,44 @@
 
 #include "meta_service.h"
 
-static bool register_component_provider(const char *name,
-                                        dsn::dist::distributed_lock_service::factory f)
-{
-    return dsn::utils::factory_store<dsn::dist::distributed_lock_service>::register_factory(
-        name, f, dsn::PROVIDER_TYPE_MAIN);
-}
-
-static bool register_component_provider(const char *name, dsn::dist::meta_state_service::factory f)
-{
-    return dsn::utils::factory_store<dsn::dist::meta_state_service>::register_factory(
-        name, f, dsn::PROVIDER_TYPE_MAIN);
-}
-
-static bool register_component_provider(const char *name,
-                                        dsn::replication::server_load_balancer::factory f)
-{
-    return dsn::utils::factory_store<dsn::replication::server_load_balancer>::register_factory(
-        name, f, dsn::PROVIDER_TYPE_MAIN);
-}
-
-void dsn_meta_sever_register_providers()
-{
-    register_component_provider(
-        "distributed_lock_service_simple",
-        dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_simple>);
-    register_component_provider(
-        "meta_state_service_simple",
-        dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_simple>);
-
-    register_component_provider(
-        "distributed_lock_service_zookeeper",
-        dsn::dist::distributed_lock_service::create<dsn::dist::distributed_lock_service_zookeeper>);
-    register_component_provider(
-        "meta_state_service_zookeeper",
-        dsn::dist::meta_state_service::create<dsn::dist::meta_state_service_zookeeper>);
-
-    register_component_provider(
-        "simple_load_balancer",
-        dsn::replication::server_load_balancer::create<dsn::replication::simple_load_balancer>);
-    register_component_provider(
-        "greedy_load_balancer",
-        dsn::replication::server_load_balancer::create<dsn::replication::greedy_load_balancer>);
-}
-
-dsn::error_code dsn_meta_server_bridge(int argc, char **argv)
-{
-    dsn::service_app::register_factory<::dsn::service::meta_service_app>("meta");
-    dsn_meta_sever_register_providers();
-    return dsn::ERR_OK;
-}
-
 namespace dsn {
 namespace service {
+
+#define register_component(name, base_type, derived_type)                                          \
+    do {                                                                                           \
+        utils::factory_store<base_type>::register_factory(                                         \
+            name, base_type::create<derived_type>, PROVIDER_TYPE_MAIN);                            \
+    } while (0)
+
+void meta_service_app::register_components()
+{
+    register_component("distributed_lock_service_simple",
+                       dist::distributed_lock_service,
+                       dist::distributed_lock_service_simple);
+
+    register_component("distributed_lock_service_zookeeper",
+                       dist::distributed_lock_service,
+                       dist::distributed_lock_service_zookeeper);
+
+    register_component(
+        "meta_state_service_simple", dist::meta_state_service, dist::meta_state_service_simple);
+    register_component("meta_state_service_zookeeper",
+                       dist::meta_state_service,
+                       dist::meta_state_service_zookeeper);
+
+    register_component("simple_load_balancer",
+                       replication::server_load_balancer,
+                       replication::simple_load_balancer);
+    register_component("greedy_load_balancer",
+                       replication::server_load_balancer,
+                       replication::greedy_load_balancer);
+}
+
+void meta_service_app::register_all()
+{
+    dsn::service_app::register_factory<meta_service_app>("meta");
+    register_components();
+}
 
 meta_service_app::meta_service_app(const service_app_info *info) : service_app(info)
 {
