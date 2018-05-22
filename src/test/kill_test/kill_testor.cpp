@@ -2,14 +2,61 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
+#include "kill_testor.h"
+
 #include <list>
 #include <dsn/c/api_utilities.h>
 #include <dsn/service_api_cpp.h>
+#include <pegasus/client.h>
+#include <dsn/dist/replication/replication_ddl_client.h>
 
-#include "kill_testor.h"
+#include "killer_handler.h"
+#include "killer_handler_shell.h"
 
 namespace pegasus {
 namespace test {
+
+kill_testor::kill_testor(const char *config_file)
+{
+    const char *section = "pegasus.killtest";
+    // initialize the _client.
+    if (!pegasus_client_factory::initialize(config_file)) {
+        exit(-1);
+    }
+
+    app_name = dsn_config_get_value_string(
+        section, "verify_app_name", "temp", "verify app name"); // default using temp
+    pegasus_cluster_name =
+        dsn_config_get_value_string(section, "pegasus_cluster_name", "", "pegasus cluster name");
+    if (pegasus_cluster_name.empty()) {
+        derror("Should config the cluster name for killer");
+        exit(-1);
+    }
+
+    // load meta_list
+    meta_list.clear();
+    std::string tmp_section = "uri-resolver.dsn://" + pegasus_cluster_name;
+    dsn::replication::replica_helper::load_meta_servers(
+        meta_list, tmp_section.c_str(), "arguments");
+    if (meta_list.empty()) {
+        derror("Should config the meta address for killer");
+        exit(-1);
+    }
+
+    ddl_client.reset(new replication_ddl_client(meta_list));
+    if (ddl_client == nullptr) {
+        derror("Initialize the _ddl_client failed");
+        exit(-1);
+    }
+
+    kill_interval_seconds =
+        (uint32_t)dsn_config_get_value_uint64(section, "kill_interval_seconds", 30, "");
+    max_seconds_for_partitions_recover = (uint32_t)dsn_config_get_value_uint64(
+        section, "max_seconds_for_all_partitions_to_recover", 600, "");
+    srand((unsigned)time(NULL));
+}
+
+kill_testor::~kill_testor() {}
 
 void kill_testor::generate_random(std::vector<int> &res, int cnt, int a, int b)
 {
@@ -36,177 +83,84 @@ int kill_testor::generate_one_number(int a, int b)
     return ((rand() % (b - a + 1)) + a);
 }
 
-kill_testor::kill_testor()
+dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
+                                                int &healthy_partition_cnt,
+                                                int &unhealthy_partition_cnt)
 {
-    const char *section = "pegasus.killtest";
-    kill_round = 0;
+    healthy_partition_cnt = 0, unhealthy_partition_cnt = 0;
+    int32_t app_id;
+    int32_t partition_count;
+    partitions.clear();
+    dsn::error_code err = ddl_client->list_app(app_name, app_id, partition_count, partitions);
 
-    // initialize killer_handler
-    std::string killer_name =
-        dsn_config_get_value_string(section, "killer_handler", "", "killer handler");
-    dassert(killer_name.size() > 0, "");
-    _killer_handler.reset(killer_handler::new_handler(killer_name.c_str()));
-    dassert(_killer_handler.get() != nullptr, "invalid killer_name(%s)", killer_name.c_str());
-
-    _job_types = {META, REPLICA, ZOOKEEPER};
-    _job_index_to_kill.resize(JOB_LENGTH);
-    _sleep_time_before_recover_seconds = (uint32_t)dsn_config_get_value_uint64(
-        section, "sleep_time_before_recover_seconds", 30, "sleep time before recover seconds");
-
-    _total_meta_count =
-        (int32_t)dsn_config_get_value_uint64(section, "total_meta_count", 0, "total meta count");
-    _total_replica_count = (int32_t)dsn_config_get_value_uint64(
-        section, "total_replica_count", 0, "total replica count");
-    _total_zookeeper_count = (int32_t)dsn_config_get_value_uint64(
-        section, "total_zookeeper_count", 0, "total zookeeper count");
-
-    if (_total_meta_count == 0 && _total_replica_count == 0 && _total_zookeeper_count == 0) {
-        dassert(false, "total number of meta/replica/zookeeper is 0");
-    }
-
-    _kill_replica_max_count = (int32_t)dsn_config_get_value_uint64(
-        section, "kill_replica_max_count", _total_replica_count, "replica killed max count");
-    _kill_meta_max_count = (int32_t)dsn_config_get_value_uint64(
-        section, "kill_meta_max_count", _total_meta_count, "meta killed max count");
-    _kill_zk_max_count = (int32_t)dsn_config_get_value_uint64(
-        section, "kill_zookeeper_max_count", _total_zookeeper_count, "zookeeper killed max count");
-    srand((unsigned)time(NULL));
-}
-
-kill_testor::~kill_testor() {}
-
-void kill_testor::stop_verifier_and_exit(const char *msg)
-{
-    system("ps aux | grep pegasus | grep verifier | awk '{print $2}' | xargs kill -9");
-    dassert(false, "%s", msg);
-}
-
-bool kill_testor::check_coredump()
-{
-    bool has_core = false;
-
-    // make sure all generated core are logged
-    for (int i = 1; i <= _total_meta_count; ++i) {
-        if (_killer_handler->has_meta_dumped_core(i)) {
-            derror("meta server %d generate core dump", i);
-            has_core = true;
-        }
-    }
-
-    for (int i = 1; i <= _total_replica_count; ++i) {
-        if (_killer_handler->has_replica_dumped_core(i)) {
-            derror("replica server %d generate core dump", i);
-            has_core = true;
-        }
-    }
-
-    return has_core;
-}
-
-void kill_testor::run()
-{
-    if (check_coredump()) {
-        stop_verifier_and_exit("detect core dump in pegasus cluster");
-    }
-
-    if (kill_round == 0) {
-        ddebug("Number of meta-server: %d", _total_meta_count);
-        ddebug("Number of replica-server: %d", _total_replica_count);
-        ddebug("Number of zookeeper: %d", _total_zookeeper_count);
-    }
-    kill_round += 1;
-    int meta_cnt = 0;
-    int replica_cnt = 0;
-    int zk_cnt = 0;
-    while ((meta_cnt == 0 && replica_cnt == 0 && zk_cnt == 0) ||
-           (meta_cnt == _total_meta_count && replica_cnt == _total_replica_count &&
-            zk_cnt == _total_zookeeper_count)) {
-        meta_cnt = generate_one_number(0, _kill_meta_max_count);
-        replica_cnt = generate_one_number(0, _kill_replica_max_count);
-        zk_cnt = generate_one_number(0, _kill_zk_max_count);
-    }
-    ddebug("************************");
-    ddebug("Round [%d]", kill_round);
-    ddebug("start kill...");
-    ddebug("kill meta number=%d, replica number=%d, zk number=%d", meta_cnt, replica_cnt, zk_cnt);
-
-    if (!kill(meta_cnt, replica_cnt, zk_cnt)) {
-        stop_verifier_and_exit("kill jobs failed");
-    }
-
-    auto sleep_time_random_seconds = generate_one_number(1, _sleep_time_before_recover_seconds);
-    ddebug("sleep %d seconds before recovery", sleep_time_random_seconds);
-    sleep(sleep_time_random_seconds);
-
-    ddebug("start recover...");
-    if (!start()) {
-        stop_verifier_and_exit("recover jobs failed");
-    }
-    ddebug("after recover...");
-    ddebug("************************");
-}
-
-bool kill_testor::kill(int meta_cnt, int replica_cnt, int zookeeper_cnt)
-{
-    std::vector<int> kill_counts = {meta_cnt, replica_cnt, zookeeper_cnt};
-    std::vector<int> total_count = {
-        _total_meta_count, _total_replica_count, _total_zookeeper_count};
-    std::vector<int> random_idxs;
-    generate_random(random_idxs, JOB_LENGTH, META, ZOOKEEPER);
-    for (auto id : random_idxs) {
-        std::vector<int> &job_index_to_kill = _job_index_to_kill[_job_types[id]];
-        job_index_to_kill.clear();
-        generate_random(job_index_to_kill, kill_counts[id], 1, total_count[id]);
-        for (auto index : job_index_to_kill) {
-            ddebug("start to kill %s@%d", job_type_str(_job_types[id]), index);
-            if (!kill_job_by_index(_job_types[id], index)) {
-                ddebug("kill %s@%d failed", job_type_str(_job_types[id]), index);
-                return false;
+    if (err == ::dsn::ERR_OK) {
+        dinfo("access meta and query partition status success");
+        for (int i = 0; i < partitions.size(); i++) {
+            const dsn::partition_configuration &p = partitions[i];
+            int replica_count = 0;
+            if (!p.primary.is_invalid()) {
+                replica_count++;
             }
-            ddebug("kill %s@%d succeed", job_type_str(_job_types[id]), index);
-        }
-    }
-    return true;
-}
-
-bool kill_testor::start()
-{
-    std::vector<int> random_idxs;
-    generate_random(random_idxs, JOB_LENGTH, META, ZOOKEEPER);
-    for (auto id : random_idxs) {
-        std::vector<int> &job_index_to_kill = _job_index_to_kill[_job_types[id]];
-        for (auto index : job_index_to_kill) {
-            ddebug("start to recover %s@%d", job_type_str(_job_types[id]), index);
-            if (!start_job_by_index(_job_types[id], index)) {
-                ddebug("recover %s@%d failed", job_type_str(_job_types[id]), index);
-                return false;
+            replica_count += p.secondaries.size();
+            if (replica_count == p.max_replica_count) {
+                healthy_partition_cnt++;
+            } else {
+                std::stringstream info;
+                info << "gpid=" << p.pid.get_app_id() << "." << p.pid.get_partition_index() << ", ";
+                info << "primay=" << p.primary.to_std_string() << ", ";
+                info << "secondaries=[";
+                for (int idx = 0; idx < p.secondaries.size(); idx++) {
+                    if (idx != 0)
+                        info << "," << p.secondaries[idx].to_std_string();
+                    else
+                        info << p.secondaries[idx].to_std_string();
+                }
+                info << "], ";
+                info << "last_committed_decree=" << p.last_committed_decree;
+                if (debug_unhealthy) {
+                    ddebug("found unhealthy partition, %s", info.str().c_str());
+                } else {
+                    dinfo("found unhealthy partition, %s", info.str().c_str());
+                }
             }
-            ddebug("recover %s@%d succeed", job_type_str(_job_types[id]), index);
         }
+        unhealthy_partition_cnt = partition_count - healthy_partition_cnt;
+    } else {
+        dinfo("access meta and query partition status fail");
+        healthy_partition_cnt = 0;
+        unhealthy_partition_cnt = 0;
     }
-    return true;
+    return err;
 }
 
-bool kill_testor::kill_job_by_index(job_type type, int index)
+// false == partition unhealth, true == health
+bool kill_testor::check_cluster_status()
 {
-    if (type == META)
-        return _killer_handler->kill_meta(index);
-    if (type == REPLICA)
-        return _killer_handler->kill_replica(index);
-    if (type == ZOOKEEPER)
-        return _killer_handler->kill_zookeeper(index);
+    int healthy_partition_cnt = 0;
+    int unhealthy_partition_cnt = 0;
+    int try_count = 1;
+    while (try_count <= max_seconds_for_partitions_recover) {
+        dsn::error_code err = get_partition_info(try_count == max_seconds_for_partitions_recover,
+                                                 healthy_partition_cnt,
+                                                 unhealthy_partition_cnt);
+        if (err == dsn::ERR_OK) {
+            if (unhealthy_partition_cnt > 0) {
+                dinfo("query partition status success, but still have unhealthy partition, "
+                      "healthy_partition_count = %d, unhealthy_partition_count = %d",
+                      healthy_partition_cnt,
+                      unhealthy_partition_cnt);
+                sleep(1);
+            } else
+                return true;
+        } else {
+            ddebug("query partition status fail, try times = %d", try_count);
+            sleep(1);
+        }
+        try_count += 1;
+    }
+
     return false;
 }
 
-bool kill_testor::start_job_by_index(job_type type, int index)
-{
-    if (type == META)
-        return _killer_handler->start_meta(index);
-    if (type == REPLICA)
-        return _killer_handler->start_replica(index);
-    if (type == ZOOKEEPER)
-        return _killer_handler->start_zookeeper(index);
-    return false;
-}
-}
-} // end namespace
+} // namespace test
+} // namespace pegasus
