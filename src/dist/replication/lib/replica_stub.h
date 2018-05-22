@@ -80,8 +80,8 @@ public:
     //
     //    requests from clients
     //
-    void on_client_write(gpid gpid, dsn_message_t request);
-    void on_client_read(gpid gpid, dsn_message_t request);
+    void on_client_write(gpid id, dsn_message_t request);
+    void on_client_read(gpid id, dsn_message_t request);
 
     //
     //    messages from meta server
@@ -130,11 +130,11 @@ public:
     //
     // common routines for inquiry
     //
-    replica_ptr get_replica(gpid gpid);
+    replica_ptr get_replica(gpid id);
     replication_options &options() { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
 
-    std::string get_replica_dir(const char *app_type, gpid gpid, bool create_new = true);
+    std::string get_replica_dir(const char *app_type, gpid id, bool create_new = true);
 
     //
     // helper methods
@@ -168,18 +168,18 @@ private:
 
     void initialize_start();
     void query_configuration_by_node();
-    void on_meta_server_disconnected_scatter(replica_stub_ptr this_, gpid gpid);
+    void on_meta_server_disconnected_scatter(replica_stub_ptr this_, gpid id);
     void on_node_query_reply(error_code err, dsn_message_t request, dsn_message_t response);
     void on_node_query_reply_scatter(replica_stub_ptr this_,
                                      const configuration_update_request &config);
-    void on_node_query_reply_scatter2(replica_stub_ptr this_, gpid gpid);
+    void on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id);
     void remove_replica_on_meta_server(const app_info &info, const partition_configuration &config);
     ::dsn::task_ptr begin_open_replica(const app_info &app,
-                                       gpid gpid,
+                                       gpid id,
                                        std::shared_ptr<group_check_request> req,
                                        std::shared_ptr<configuration_update_request> req2);
     void open_replica(const app_info &app,
-                      gpid gpid,
+                      gpid id,
                       std::shared_ptr<group_check_request> req,
                       std::shared_ptr<configuration_update_request> req2);
     ::dsn::task_ptr begin_close_replica(replica_ptr r);
@@ -189,12 +189,12 @@ private:
     void handle_log_failure(error_code err);
 
     void install_perf_counters();
-    dsn::error_code on_kill_replica(gpid pid);
+    dsn::error_code on_kill_replica(gpid id);
 
     void get_replica_info(/*out*/ replica_info &info, /*in*/ replica_ptr r);
     void get_local_replicas(/*out*/ std::vector<replica_info> &replicas);
-    replica_life_cycle get_replica_life_cycle(const dsn::gpid &pid);
-    void on_gc_replica(replica_stub_ptr this_, gpid pid);
+    replica_life_cycle get_replica_life_cycle(gpid id);
+    void on_gc_replica(replica_stub_ptr this_, gpid id);
 
 private:
     friend class ::dsn::replication::replication_checker;
@@ -300,7 +300,7 @@ private:
     dsn::task_tracker _tracker;
 
 private:
-    void response_client_error(gpid gpid, bool is_read, dsn_message_t request, error_code error);
+    void response_client_error(gpid id, bool is_read, dsn_message_t request, error_code error);
 };
 //------------ inline impl ----------------------
 }
