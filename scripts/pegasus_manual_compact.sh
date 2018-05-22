@@ -75,7 +75,7 @@ function wait_manual_compact()
         not_finish_count=$((queue_count+running_count))
         finish_count=`grep "last finish at" ${query_log_file} | grep -v "recent enqueue at" | grep -v "recent start at" | awk -F"[\[\]]" -v date="$earliest_finish_time_ms" 'BEGIN{count=0}{if(length($2)==23 && $2>=date){count++;}}END{print count}'`
 
-        if [ ${finish_count} -eq ${total_replica_count} ]; then
+        if [ ${not_finish_count} -eq 0 -a ${finish_count} -eq ${total_replica_count} ]; then
             echo "All finished."
             break
         else
