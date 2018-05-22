@@ -92,12 +92,6 @@ void simulator::install(service_spec &spec)
     if (spec.logging_factory_name == "")
         spec.logging_factory_name = "dsn::tools::simple_logger";
 
-    if (spec.memory_factory_name == "")
-        spec.memory_factory_name = "dsn::default_memory_provider";
-
-    if (spec.tools_memory_factory_name == "")
-        spec.tools_memory_factory_name = "dsn::default_memory_provider";
-
     if (spec.lock_factory_name == "")
         spec.lock_factory_name = ("dsn::tools::sim_lock_provider");
 

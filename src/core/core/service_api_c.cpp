@@ -76,7 +76,6 @@ static struct _all_info_
     ::dsn::tools::tool_app *tool;
     ::dsn::service_engine *engine;
     std::vector<::dsn::task_spec *> task_specs;
-    ::dsn::memory_provider *memory;
 
     bool is_config_completed() const { return magic == 0xdeadbeef && config_completed; }
 
@@ -689,7 +688,6 @@ bool run(const char *config_file,
     dsn_all.config_completed = false;
     dsn_all.tool = nullptr;
     dsn_all.engine = &::dsn::service_engine::instance();
-    dsn_all.memory = nullptr;
     dsn_all.magic = 0xdeadbeef;
 
     if (!dsn_config_load(config_file, config_arguments)) {
@@ -766,8 +764,6 @@ bool run(const char *config_file,
         1024, // 1 MB
         "thread local transient memory buffer size (KB), default is 1024");
     ::dsn::tls_trans_mem_init(tls_trans_memory_KB * 1024);
-    dsn_all.memory = ::dsn::utils::factory_store<::dsn::memory_provider>::create(
-        spec.tools_memory_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN);
 
     // prepare minimum necessary
     ::dsn::service_engine::fast_instance().init_before_toollets(spec);

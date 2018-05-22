@@ -39,7 +39,6 @@
 #include "rpc_engine.h"
 #include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/env_provider.h>
-#include <dsn/tool-api/memory_provider.h>
 #include <dsn/tool-api/nfs.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/filesystem.h>
@@ -399,7 +398,6 @@ service_engine::service_engine(void)
 {
     _env = nullptr;
     _logging = nullptr;
-    _memory = nullptr;
 
     ::dsn::command_manager::instance().register_command({"engine"},
                                                         "engine - get engine internal information",
@@ -419,8 +417,6 @@ void service_engine::init_before_toollets(const service_spec &spec)
     // init common providers (first half)
     _logging = factory_store<logging_provider>::create(
         spec.logging_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.dir_log.c_str());
-    _memory = factory_store<memory_provider>::create(spec.memory_factory_name.c_str(),
-                                                     ::dsn::PROVIDER_TYPE_MAIN);
 
     perf_counters::instance().register_factory(
         factory_store<perf_counter>::get_factory<perf_counter::factory>(

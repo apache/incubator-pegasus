@@ -63,7 +63,6 @@ Component providers define the interface for the local components (e.g., network
 #include <dsn/tool-api/zlock_provider.h>
 #include <dsn/tool-api/message_parser.h>
 #include <dsn/tool-api/logging_provider.h>
-#include <dsn/tool-api/memory_provider.h>
 #include <dsn/tool-api/timer_service.h>
 
 namespace dsn {
@@ -161,9 +160,6 @@ DSN_API bool
 register_component_provider(const char *name, perf_counter::factory f, ::dsn::provider_type type);
 DSN_API bool register_component_provider(const char *name,
                                          logging_provider::factory f,
-                                         ::dsn::provider_type type);
-DSN_API bool register_component_provider(const char *name,
-                                         memory_provider::factory f,
                                          ::dsn::provider_type type);
 DSN_API bool
 register_component_provider(const char *name, nfs_node::factory f, ::dsn::provider_type type);

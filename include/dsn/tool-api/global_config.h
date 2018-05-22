@@ -162,8 +162,6 @@ struct service_spec
     std::string nfs_factory_name;
     std::string perf_counter_factory_name;
     std::string logging_factory_name;
-    std::string memory_factory_name;       // for upper applications
-    std::string tools_memory_factory_name; // for rDSN itself and lower tools
 
     std::list<std::string> network_aspects; // toollets compatible to the above network main
                                             // providers in network configs
@@ -220,8 +218,6 @@ CONFIG_FLD_STRING(semaphore_factory_name, "", "semaphore provider")
 CONFIG_FLD_STRING(nfs_factory_name, "", "nfs provider")
 CONFIG_FLD_STRING(perf_counter_factory_name, "", "peformance counter provider")
 CONFIG_FLD_STRING(logging_factory_name, "", "logging provider")
-CONFIG_FLD_STRING(memory_factory_name, "", "memory management provider")
-CONFIG_FLD_STRING(tools_memory_factory_name, "", "memory management provider for tools")
 
 CONFIG_FLD_STRING_LIST(network_aspects, "network aspect providers, usually for tooling purpose")
 CONFIG_FLD_STRING_LIST(aio_aspects, "aio aspect providers, usually for tooling purpose")
