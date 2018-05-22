@@ -18,9 +18,9 @@ function usage()
     echo
     echo "for example:"
     echo "  once type manual compact with default options:"
-    echo "    $0 127.0.0.1:34601,127.0.0.1:34602 -a temp"
+    echo "    $0 -c 127.0.0.1:34601,127.0.0.1:34602 -a temp"
     echo "  periodic type manual compact with specified options:"
-    echo "    $0 127.0.0.1:34601,127.0.0.1:34602 -a temp -t periodic -g 3:00,21:00 --target_level 2 --bottommost_level_compaction force"
+    echo "    $0 -c 127.0.0.1:34601,127.0.0.1:34602 -a temp -t periodic -g 3:00,21:00 --target_level 2 --bottommost_level_compaction force"
 }
 
 # set_env cluster app_name type env_key env_value
