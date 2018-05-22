@@ -13,7 +13,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIB_PATH "../../../rocksdb" ${LIBFDS_LIB_DIR} ${POCO_LIB_DIR})
 
 set(MY_PROJ_LIBS
-        dsn_layer2_stateful_type1
+        dsn_replica_server
         dsn_meta_server
         dsn.replication.clientlib
         dsn.replication.ddlclient
