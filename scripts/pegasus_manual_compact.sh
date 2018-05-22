@@ -43,7 +43,7 @@ function set_env()
     fi
 
     echo "set_app_envs ${env_key}=${env_value}"
-    set_envs_log_file="/tmp/$UID.pegasus.set_app_envs"
+    set_envs_log_file="/tmp/$UID.pegasus.set_app_envs.${app_name}"
     echo -e "use ${app_name}\n set_app_envs ${env_key} ${env_value}" | ./run.sh shell --cluster ${cluster} &>${set_envs_log_file}
     set_ok=`grep 'set app envs succeed' ${set_envs_log_file} | wc -l`
     if [ ${set_ok} -ne 1 ]; then
@@ -52,11 +52,12 @@ function set_env()
     fi
 }
 
-# wait_manual_compact app_id trigger_time
+# wait_manual_compact app_id trigger_time total_replica_count
 function wait_manual_compact()
 {
   app_id=$1
   trigger_time=$2
+  total_replica_count=$3
 
   echo "Checking manual compact progress..."
   query_cmd="remote_command -t replica-server replica.query-compact ${app_id}"
@@ -70,13 +71,13 @@ function wait_manual_compact()
     queue_count=`grep 'recent enqueue at' ${query_log_file} | grep -v 'recent start at' | wc -l`
     running_count=`grep 'recent start at' ${query_log_file} | wc -l`
     not_finish_count=$((queue_count+running_count))
-    finish_count=`grep "last finish at" ${query_log_file} | grep -v "recent enqueue at" | grep -v "recent start at" | awk -F"[\[\]]" 'BEGIN{count=0}{if($2>=$earliest_finish_time_ms){count++;}}END{print count}'`
+    finish_count=`grep "last finish at" ${query_log_file} | grep -v "recent enqueue at" | grep -v "recent start at" | awk -F"[\[\]]" 'BEGIN{count=0}{if(length($2)==23 && $2>=$earliest_finish_time_ms){count++;}}END{print count}'`
 
-    if [ ${not_finish_count} -eq 0 ]; then
+    if [ ${finish_count} -eq ${total_replica_count} ]; then
       echo "All finished."
       break
     else
-      left_time=0
+      left_time="unknown"
       if [ ${finish_count} -gt 0 ]; then
         left_time=$((slept / finish_count * not_finish_count))
       fi
@@ -107,7 +108,7 @@ function create_checkpoint()
 # parse parameters
 cluster="127.0.0.1:34601,127.0.0.1:34602"
 type="once"
-trigger_time=`date +%s`
+trigger_time=""
 app_name=""
 disable_periodic=""
 target_level="-1"
@@ -140,6 +141,7 @@ while [[ $# > 0 ]]; do
             ;;
         -h|--help)
             usage
+            exit 0
             ;;
     esac
     shift
@@ -237,6 +239,7 @@ do
   status=`echo ${app_line} | awk '{print $2}'`
   app=`echo ${app_line} | awk '{print $3}'`
   partition_count=`echo ${app_line} | awk '{print $5}'`
+  replica_count=`echo ${app_line} | awk '{print $6}'`
 
   if [ "${app_name}" != "$app" ]; then
     continue
@@ -247,7 +250,7 @@ do
     exit -1
   fi
 
-  wait_manual_compact ${app_id} ${trigger_time}
+  wait_manual_compact ${app_id} ${trigger_time} $(($partition_count*$replica_count))
 
   create_checkpoint ${cluster} ${app_id}
 done <${ls_log_file}
