@@ -86,7 +86,7 @@ public:
                 "invalid argument for multi_remove: decree = {}, error = empty sort keys",
                 ctx.decree);
 
-            // an invalid operation shoundn't be added to latency calculation
+            // an invalid operation shouldn't be added to latency calculation
             resp.error = rocksdb::Status::kInvalidArgument;
             resp.count = 0;
             return;
@@ -201,7 +201,7 @@ public:
         return 0;
     }
 
-    // Apply the write batch in to rocksdb.
+    // Apply the write batch into rocksdb.
     int db_write(int64_t decree)
     {
         if (_batch.Count() == 0) {

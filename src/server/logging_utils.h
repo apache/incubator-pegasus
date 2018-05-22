@@ -7,7 +7,6 @@
 #include <dsn/dist/fmt_logging.h>
 
 /// Utilities for logging the operation on rocksdb.
-/// It should only be used in pegasus_sever_impl.
 
 #define derror_rocksdb(op, error, ...)                                                             \
     derror_f("{}: rocksdb {} failed: error = {} [{}]",                                             \
