@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
+#include <rocksdb/convenience.h>
 #include <rocksdb/table.h>
 #include <rocksdb/utilities/checkpoint.h>
 #include <dsn/utility/utils.h>
@@ -1810,7 +1811,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _is_open = true;
 
         dinfo("%s: start the updating sstsize timer task", replica_name());
-        ::dsn::tasking::enqueue_timer(
+        _updating_rocksdb_sstsize_timer_task = ::dsn::tasking::enqueue_timer(
             LPC_UPDATING_ROCKSDB_SSTSIZE,
             &_tracker,
             [this]() { this->updating_rocksdb_sstsize(); },
@@ -1823,6 +1824,12 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         derror("%s: open app failed, error = %s", replica_name(), status.ToString().c_str());
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
+}
+
+void pegasus_server_impl::cancel_background_work(bool wait)
+{
+    dassert(_db != nullptr, "");
+    rocksdb::CancelAllBackgroundWork(_db, wait);
 }
 
 ::dsn::error_code pegasus_server_impl::stop(bool clear_state)
@@ -1842,9 +1849,14 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         }
     }
 
-    _context_cache.clear();
     // stop all tracked tasks when pegasus server is stopped.
+    if (_updating_rocksdb_sstsize_timer_task != nullptr) {
+        _updating_rocksdb_sstsize_timer_task->cancel(true);
+        _updating_rocksdb_sstsize_timer_task = nullptr;
+    }
     _tracker.cancel_outstanding_tasks();
+
+    _context_cache.clear();
 
     _is_open = false;
     delete _db;
