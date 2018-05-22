@@ -11,14 +11,16 @@ function usage()
     echo "  -t|--type             manual compact type, should be periodic or once, default is once"
     echo "  -g|--trigger_time     manual compact trigger time"
     echo "                        24-hour format for periodic type, e.g. \"3:00,21:00\" for 3:00 and 21:00 everyday"
-    echo "                        unix timestamp format for once type, e.g. \"1514736000\" for Jan. 1, 00:00:00 CST 2018"
     echo "  -d|--disable_periodic whether to disable periodic manual compact, default is false which is not disable"
     echo "  --target_level        number in range of [1,num_levels], default is -1"
     echo "  --bottommost_level_compaction     skip or force, default is skip"
     echo "                        more details: https://github.com/facebook/rocksdb/wiki/Manual-Compaction"
     echo
     echo "for example:"
-    echo "$0 127.0.0.1:34601,127.0.0.1:34602 -t periodic -g 3:00,21:00 -a temp --target_level 2 --bottommost_level_compaction force"
+    echo "  once type manual compact with default options:"
+    echo "    $0 127.0.0.1:34601,127.0.0.1:34602 -a temp"
+    echo "  periodic type manual compact with specified options:"
+    echo "    $0 127.0.0.1:34601,127.0.0.1:34602 -a temp -t periodic -g 3:00,21:00 --target_level 2 --bottommost_level_compaction force"
 }
 
 # set_env cluster app_name type env_key env_value
@@ -167,14 +169,13 @@ if [ "${app_name}" == "" ]; then
 fi
 
 # check trigger_time
+if [ "${type}" == "once" ]; then
+    trigger_time=`date +%s`
+fi
 if [ "${trigger_time}" == "" ]; then
-    if [ "${type}" == "once" ]; then
-        trigger_time=`date +%s`
-    else
-        echo "invalid trigger_time: ${trigger_time}"
-        usage
-        exit -1
-    fi
+    echo "invalid trigger_time: ${trigger_time}"
+    usage
+    exit -1
 fi
 
 # check disable_periodic
