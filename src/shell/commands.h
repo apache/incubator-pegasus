@@ -3690,6 +3690,35 @@ inline bool exit_shell(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+inline bool get_app_envs(command_executor *e, shell_context *sc, arguments args)
+{
+    if (sc->current_app_name.empty()) {
+        fprintf(stderr, "No app is using now\nUSAGE: use [app_name]\n");
+        return true;
+    }
+
+    if (args.argc != 1) {
+        return false;
+    }
+
+    std::map<std::string, std::string> envs;
+    ::dsn::error_code ret = sc->ddl_client->get_app_envs(sc->current_app_name, envs);
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "get app env failed with err = %s\n", ret.to_string());
+        return true;
+    }
+
+    std::cout << "get app envs succeed, count = " << envs.size() << std::endl;
+    if (!envs.empty()) {
+        std::cout << "=================================" << std::endl;
+        for (auto &kv : envs)
+            std::cout << kv.first << " = " << kv.second << std::endl;
+        std::cout << "=================================" << std::endl;
+    }
+
+    return true;
+}
+
 inline bool set_app_envs(command_executor *e, shell_context *sc, arguments args)
 {
     if (sc->current_app_name.empty()) {
@@ -3740,6 +3769,46 @@ inline bool del_app_envs(command_executor *e, shell_context *sc, arguments args)
 
     ::dsn::error_code ret = sc->ddl_client->del_app_envs(sc->current_app_name, keys);
 
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "del app env failed with err = %s\n", ret.to_string());
+    }
+    return true;
+}
+
+inline bool del_app_envs_by_prefix(command_executor *e, shell_context *sc, arguments args)
+{
+    if (sc->current_app_name.empty()) {
+        fprintf(stderr, "No app is using now\nUSAGE: use [app_name]\n");
+        return true;
+    }
+
+    if (args.argc != 2) {
+        return false;
+    }
+
+    std::string prefix = args.argv[1];
+    if (prefix.empty()) {
+        fprintf(stderr, "prefix should not be empty\n");
+        return false;
+    }
+    if (prefix[prefix.size() - 1] != '.') {
+        prefix.append(".");
+    }
+
+    std::map<std::string, std::string> envs;
+    ::dsn::error_code ret = sc->ddl_client->get_app_envs(sc->current_app_name, envs);
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "get app env failed with err = %s\n", ret.to_string());
+        return true;
+    }
+
+    std::vector<std::string> del_keys;
+    for (auto &kv : envs) {
+        if (kv.first.find(prefix) == 0)
+            del_keys.push_back(kv.first);
+    }
+
+    ret = sc->ddl_client->del_app_envs(sc->current_app_name, del_keys);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "del app env failed with err = %s\n", ret.to_string());
     }
