@@ -61,7 +61,7 @@ void info_collector::start()
         ::dsn::tasking::enqueue_timer(LPC_PEGASUS_APP_STAT_TIMER,
                                       &_tracker,
                                       [this] { on_app_stat(); },
-                                      std::chrono::milliseconds(_app_stat_interval_seconds),
+                                      std::chrono::seconds(_app_stat_interval_seconds),
                                       0,
                                       std::chrono::minutes(1));
 }
@@ -113,8 +113,7 @@ void info_collector::on_app_stat()
             counters->read_qps->set(read_qps[i]);
             counters->write_qps->set(write_qps[i]);
         }
-        ddebug("stat apps succeed, app_count = %d, total_read_qps = %" PRId64
-               ", total_write_qps = %" PRId64,
+        ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
                (int)(rows.size() - 1),
                read_qps[read_qps.size() - 1],
                write_qps[read_qps.size() - 1]);
