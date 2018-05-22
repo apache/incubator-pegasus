@@ -152,4 +152,23 @@ void task_tracker::cancel_outstanding_tasks()
         }
     }
 }
+
+int task_tracker::cancel_but_not_wait_outstanding_tasks()
+{
+    int not_finished = 0;
+    for (int i = 0; i < _task_bucket_count; i++) {
+        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+        auto n = _outstanding_tasks[i].next();
+        if (n != &_outstanding_tasks[i]) {
+            trackable_task *tcm = CONTAINING_RECORD(n, trackable_task, _dl);
+            if (tcm->_task != task::get_current_task()) {
+                bool finished;
+                tcm->_task->cancel(false, &finished);
+                if (!finished)
+                    not_finished++;
+            }
+        }
+    }
+    return not_finished;
+}
 }

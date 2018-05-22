@@ -116,6 +116,12 @@ public:
     // Open the app.
     //
     ::dsn::error_code open();
+
+    //
+    // Cancel all background flush and compaction work.
+    //
+    virtual void cancel_background_work(bool wait) {}
+
     //
     // Close the app.
     // If `clear_state' is true, means clear the app state after close it.
@@ -123,6 +129,7 @@ public:
     // Must be thread safe.
     //
     ::dsn::error_code close(bool clear_state);
+
     ::dsn::error_code apply_checkpoint(chkpt_apply_mode mode, const learn_state &state);
     ::dsn::error_code apply_mutation(const mutation *mu);
 

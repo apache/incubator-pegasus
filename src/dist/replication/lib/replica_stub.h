@@ -39,6 +39,7 @@
 #include <dsn/cpp/perf_counter_wrapper.h>
 #include <dsn/dist/failure_detector_multimaster.h>
 #include <functional>
+#include <tuple>
 
 namespace dsn {
 namespace replication {
@@ -201,8 +202,8 @@ private:
     friend class ::dsn::replication::replica;
     friend class ::dsn::replication::cold_backup_context;
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
-    typedef std::unordered_map<gpid, std::pair<::dsn::task_ptr, replica_ptr>>
-        closing_replicas; // <gpid, <close_task, replica> >
+    typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
+        closing_replicas; // <gpid, <close_task, replica, app_info, replica_info> >
     typedef std::map<gpid, std::pair<app_info, replica_info>>
         closed_replicas; // <gpid, <app_info, replica_info> >
 

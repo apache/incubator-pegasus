@@ -750,7 +750,7 @@ void replica_stub::on_query_replica_info(const query_replica_info_request &req,
     {
         zauto_read_lock l(_replicas_lock);
         for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {
-            replica_ptr r = it->second;
+            replica_ptr &r = it->second;
             replica_info info;
             get_replica_info(info, r);
             if (visited_replicas.find(info.pid) == visited_replicas.end()) {
@@ -759,12 +759,10 @@ void replica_stub::on_query_replica_info(const query_replica_info_request &req,
             }
         }
         for (auto it = _closing_replicas.begin(); it != _closing_replicas.end(); ++it) {
-            replica_ptr r = it->second.second;
-            replica_info info;
-            get_replica_info(info, r);
+            const replica_info &info = std::get<3>(it->second);
             if (visited_replicas.find(info.pid) == visited_replicas.end()) {
                 visited_replicas.insert(info.pid);
-                resp.replicas.push_back(std::move(info));
+                resp.replicas.push_back(info);
             }
         }
         for (auto it = _closed_replicas.begin(); it != _closed_replicas.end(); ++it) {
@@ -787,7 +785,7 @@ void replica_stub::on_query_app_info(const query_app_info_request &req,
     {
         zauto_read_lock l(_replicas_lock);
         for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {
-            replica_ptr r = it->second;
+            replica_ptr &r = it->second;
             const app_info &info = *r->get_app_info();
             if (visited_apps.find(info.app_id) == visited_apps.end()) {
                 resp.apps.push_back(info);
@@ -795,8 +793,7 @@ void replica_stub::on_query_app_info(const query_app_info_request &req,
             }
         }
         for (auto it = _closing_replicas.begin(); it != _closing_replicas.end(); ++it) {
-            replica_ptr r = it->second.second;
-            const app_info &info = *r->get_app_info();
+            const app_info &info = std::get<2>(it->second);
             if (visited_apps.find(info.app_id) == visited_apps.end()) {
                 resp.apps.push_back(info);
                 visited_apps.insert(info.app_id);
@@ -1000,18 +997,16 @@ void replica_stub::get_local_replicas(std::vector<replica_info> &replicas)
     // local_replicas = replicas + closing_replicas + closed_replicas
     int total_replicas = _replicas.size() + _closing_replicas.size() + _closed_replicas.size();
     replicas.reserve(total_replicas);
-    replica_info info;
 
     for (auto &pairs : _replicas) {
         replica_ptr &rep = pairs.second;
+        replica_info info;
         get_replica_info(info, rep);
-        replicas.push_back(info);
+        replicas.push_back(std::move(info));
     }
 
     for (auto &pairs : _closing_replicas) {
-        replica_ptr &rep = pairs.second.second;
-        get_replica_info(info, rep);
-        replicas.push_back(info);
+        replicas.push_back(std::get<3>(pairs.second));
     }
 
     for (auto &pairs : _closed_replicas) {
@@ -1378,46 +1373,32 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid pid)
 void replica_stub::on_gc()
 {
     uint64_t start = dsn_now_ns();
-    replicas rs;
+
+    struct gc_info
+    {
+        replica_ptr rep;
+        partition_status::type status;
+        mutation_log_ptr plog;
+        decree last_durable_decree;
+        int64_t init_offset_in_shared_log;
+    };
+
+    std::unordered_map<gpid, gc_info> rs;
     {
         zauto_read_lock l(_replicas_lock);
-        rs = _replicas;
+        // collect info in lock to prevent the case that the replica is closed in replica::close()
+        for (auto &kv : _replicas) {
+            const replica_ptr &rep = kv.second;
+            gc_info &info = rs[kv.first];
+            info.rep = rep;
+            info.status = rep->status();
+            info.plog = rep->private_log();
+            info.last_durable_decree = rep->last_durable_decree();
+            info.init_offset_in_shared_log = rep->get_app()->init_info().init_offset_in_shared_log;
+        }
     }
+
     ddebug("start to garbage collection, replica_count = %d", (int)rs.size());
-
-    // statistic learning info
-    uint64_t learning_count = 0;
-    uint64_t learning_max_duration_time_ms = 0;
-    uint64_t learning_max_copy_file_size = 0;
-    uint64_t cold_backup_running_count = 0;
-    uint64_t cold_backup_max_duration_time_ms = 0;
-    uint64_t cold_backup_max_upload_file_size = 0;
-    for (auto &it : rs) {
-        replica_ptr &r = it.second;
-        if (r->status() == partition_status::PS_POTENTIAL_SECONDARY) {
-            learning_count++;
-            learning_max_duration_time_ms = std::max(learning_max_duration_time_ms,
-                                                     r->_potential_secondary_states.duration_ms());
-            learning_max_copy_file_size =
-                std::max(learning_max_copy_file_size,
-                         r->_potential_secondary_states.learning_copy_file_size);
-        }
-        if (r->status() == partition_status::PS_PRIMARY ||
-            r->status() == partition_status::PS_SECONDARY) {
-            cold_backup_running_count += r->_cold_backup_running_count.load();
-            cold_backup_max_duration_time_ms = std::max(
-                cold_backup_max_duration_time_ms, r->_cold_backup_max_duration_time_ms.load());
-            cold_backup_max_upload_file_size = std::max(
-                cold_backup_max_upload_file_size, r->_cold_backup_max_upload_file_size.load());
-        }
-    }
-
-    _counter_replicas_learning_count->set(learning_count);
-    _counter_replicas_learning_max_duration_time_ms->set(learning_max_duration_time_ms);
-    _counter_replicas_learning_max_copy_file_size->set(learning_max_copy_file_size);
-    _counter_cold_backup_running_count->set(cold_backup_running_count);
-    _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
-    _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);
 
     // gc shared prepare log
     //
@@ -1445,36 +1426,35 @@ void replica_stub::on_gc()
     //
     if (_log != nullptr) {
         replica_log_info_map gc_condition;
-        for (auto it = rs.begin(); it != rs.end(); ++it) {
+        for (auto &kv : rs) {
             replica_log_info ri;
-            replica_ptr &r = it->second;
-            mutation_log_ptr plog = r->private_log();
+            replica_ptr &rep = kv.second.rep;
+            mutation_log_ptr &plog = kv.second.plog;
             if (plog) {
                 // flush private log to update plog_max_commit_on_disk,
                 // and just flush once to avoid flushing infinitely
                 plog->flush_once();
 
-                ri.max_decree = std::min(r->last_durable_decree(), plog->max_commit_on_disk());
+                decree plog_max_commit_on_disk = plog->max_commit_on_disk();
+                ri.max_decree = std::min(kv.second.last_durable_decree, plog_max_commit_on_disk);
                 ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
-                       ", "
-                       "last_durable_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
-                       r->name(),
-                       enum_to_string(r->status()),
+                       ", last_durable_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
+                       rep->name(),
+                       enum_to_string(kv.second.status),
                        ri.max_decree,
-                       r->last_durable_decree(),
-                       plog->max_commit_on_disk());
+                       kv.second.last_durable_decree,
+                       plog_max_commit_on_disk);
             } else {
-                ri.max_decree = r->last_durable_decree();
+                ri.max_decree = kv.second.last_durable_decree;
                 ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
-                       ", "
-                       "last_durable_decree = %" PRId64 "",
-                       r->name(),
-                       enum_to_string(r->status()),
+                       ", last_durable_decree = %" PRId64 "",
+                       rep->name(),
+                       enum_to_string(kv.second.status),
                        ri.max_decree,
-                       r->last_durable_decree());
+                       kv.second.last_durable_decree);
             }
-            ri.valid_start_offset = r->get_app()->init_info().init_offset_in_shared_log;
-            gc_condition[it->first] = ri;
+            ri.valid_start_offset = kv.second.init_offset_in_shared_log;
+            gc_condition[kv.first] = ri;
         }
 
         std::set<gpid> prevent_gc_replicas;
@@ -1486,12 +1466,12 @@ void replica_stub::on_gc()
                    "checkpoint",
                    _options.log_shared_file_count_limit,
                    reserved_log_count);
-            for (auto it = rs.begin(); it != rs.end(); ++it) {
+            for (auto &kv : rs) {
                 tasking::enqueue(
                     LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                    &_tracker,
-                    std::bind(&replica_stub::trigger_checkpoint, this, it->second, true),
-                    it->first.thread_hash(),
+                    kv.second.rep->tracker(),
+                    std::bind(&replica_stub::trigger_checkpoint, this, kv.second.rep, true),
+                    kv.first.thread_hash(),
                     std::chrono::milliseconds(
                         dsn_random32(0, 3000)) // delay random to avoid write compete
                     );
@@ -1517,8 +1497,8 @@ void replica_stub::on_gc()
                 if (find != rs.end()) {
                     tasking::enqueue(
                         LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                        &_tracker,
-                        std::bind(&replica_stub::trigger_checkpoint, this, find->second, true),
+                        find->second.rep->tracker(),
+                        std::bind(&replica_stub::trigger_checkpoint, this, find->second.rep, true),
                         id.thread_hash(),
                         std::chrono::milliseconds(
                             dsn_random32(0, 3000)) // delay random to avoid write compete
@@ -1529,6 +1509,40 @@ void replica_stub::on_gc()
 
         _counter_shared_log_size->set(_log->size() / (1024 * 1024));
     }
+
+    // statistic learning info
+    uint64_t learning_count = 0;
+    uint64_t learning_max_duration_time_ms = 0;
+    uint64_t learning_max_copy_file_size = 0;
+    uint64_t cold_backup_running_count = 0;
+    uint64_t cold_backup_max_duration_time_ms = 0;
+    uint64_t cold_backup_max_upload_file_size = 0;
+    for (auto &kv : rs) {
+        replica_ptr &rep = kv.second.rep;
+        if (rep->status() == partition_status::PS_POTENTIAL_SECONDARY) {
+            learning_count++;
+            learning_max_duration_time_ms = std::max(
+                learning_max_duration_time_ms, rep->_potential_secondary_states.duration_ms());
+            learning_max_copy_file_size =
+                std::max(learning_max_copy_file_size,
+                         rep->_potential_secondary_states.learning_copy_file_size);
+        }
+        if (rep->status() == partition_status::PS_PRIMARY ||
+            rep->status() == partition_status::PS_SECONDARY) {
+            cold_backup_running_count += rep->_cold_backup_running_count.load();
+            cold_backup_max_duration_time_ms = std::max(
+                cold_backup_max_duration_time_ms, rep->_cold_backup_max_duration_time_ms.load());
+            cold_backup_max_upload_file_size = std::max(
+                cold_backup_max_upload_file_size, rep->_cold_backup_max_upload_file_size.load());
+        }
+    }
+
+    _counter_replicas_learning_count->set(learning_count);
+    _counter_replicas_learning_max_duration_time_ms->set(learning_max_duration_time_ms);
+    _counter_replicas_learning_max_copy_file_size->set(learning_max_copy_file_size);
+    _counter_cold_backup_running_count->set(cold_backup_running_count);
+    _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
+    _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);
 
     ddebug("finish to garbage collection, time_used_ns = %" PRIu64, dsn_now_ns() - start);
 }
@@ -1600,78 +1614,72 @@ void replica_stub::on_disk_stat()
 }
 
 ::dsn::task_ptr replica_stub::begin_open_replica(const app_info &app,
-                                                 gpid gpid,
+                                                 gpid id,
                                                  std::shared_ptr<group_check_request> req,
                                                  std::shared_ptr<configuration_update_request> req2)
 {
     _replicas_lock.lock_write();
-    if (_replicas.find(gpid) != _replicas.end()) {
+
+    if (_replicas.find(id) != _replicas.end()) {
         _replicas_lock.unlock_write();
-        ddebug("open replica '%s.%d.%d' failed coz replica is already opened",
+        ddebug("open replica '%s.%s' failed coz replica is already opened",
                app.app_type.c_str(),
-               gpid.get_app_id(),
-               gpid.get_partition_index());
+               id.to_string());
         return nullptr;
     }
 
-    auto it = _opening_replicas.find(gpid);
-    if (it != _opening_replicas.end()) {
+    if (_opening_replicas.find(id) != _opening_replicas.end()) {
         _replicas_lock.unlock_write();
-        ddebug("open replica '%s.%d.%d' failed coz replica is under opening",
+        ddebug("open replica '%s.%s' failed coz replica is under opening",
                app.app_type.c_str(),
-               gpid.get_app_id(),
-               gpid.get_partition_index());
+               id.to_string());
         return nullptr;
-    } else {
-        auto it2 = _closing_replicas.find(gpid);
-        if (it2 != _closing_replicas.end()) {
-            if (it2->second.second->status() == partition_status::PS_INACTIVE &&
-                it2->second.first->cancel(false)) {
-                replica_ptr r = it2->second.second;
-                _closing_replicas.erase(it2);
-                _counter_replicas_closing_count->decrement();
+    }
 
-                auto pr = _replicas.insert(replicas::value_type(gpid, r));
-                dassert(pr.second, "replica %s is already in the collection", r->name());
-                _counter_replicas_count->increment();
+    auto it = _closing_replicas.find(id);
+    if (it != _closing_replicas.end()) {
+        task_ptr tsk = std::get<0>(it->second);
+        replica_ptr rep = std::get<1>(it->second);
+        if (rep->status() == partition_status::PS_INACTIVE && tsk->cancel(false)) {
+            // reopen it
+            _closing_replicas.erase(it);
+            _counter_replicas_closing_count->decrement();
 
-                _closed_replicas.erase(gpid);
+            _replicas.emplace(id, rep);
+            _counter_replicas_count->increment();
 
-                // unlock here to avoid dead lock
-                _replicas_lock.unlock_write();
+            _closed_replicas.erase(id);
 
-                ddebug("open replica '%s.%d.%d' which is to be closed",
-                       app.app_type.c_str(),
-                       gpid.get_app_id(),
-                       gpid.get_partition_index());
+            // unlock here to avoid dead lock
+            _replicas_lock.unlock_write();
 
-                // open by add learner
-                if (req != nullptr) {
-                    on_add_learner(*req);
-                }
+            ddebug(
+                "open replica '%s.%s' which is to be closed", app.app_type.c_str(), id.to_string());
 
-                return nullptr;
-            } else {
-                _replicas_lock.unlock_write();
-                ddebug("open replica '%s.%d.%d' failed coz replica is under closing",
-                       app.app_type.c_str(),
-                       gpid.get_app_id(),
-                       gpid.get_partition_index());
-                return nullptr;
+            // open by add learner
+            if (req != nullptr) {
+                on_add_learner(*req);
             }
         } else {
-            task_ptr task = tasking::enqueue(
-                LPC_OPEN_REPLICA,
-                &_tracker,
-                std::bind(&replica_stub::open_replica, this, app, gpid, req, req2));
-
-            _opening_replicas[gpid] = task;
-            _counter_replicas_opening_count->increment();
-            _closed_replicas.erase(gpid);
             _replicas_lock.unlock_write();
-            return task;
+            ddebug("open replica '%s.%s' failed coz replica is under closing",
+                   app.app_type.c_str(),
+                   id.to_string());
         }
+        return nullptr;
     }
+
+    task_ptr task =
+        tasking::enqueue(LPC_OPEN_REPLICA,
+                         &_tracker,
+                         std::bind(&replica_stub::open_replica, this, app, id, req, req2));
+
+    _opening_replicas[id] = task;
+    _counter_replicas_opening_count->increment();
+    _closed_replicas.erase(id);
+
+    _replicas_lock.unlock_write();
+    return task;
 }
 
 void replica_stub::open_replica(const app_info &app,
@@ -1760,9 +1768,11 @@ void replica_stub::open_replica(const app_info &app,
             r->name(),
             enum_to_string(r->status()));
 
+    gpid id = r->get_gpid();
+
     zauto_write_lock l(_replicas_lock);
 
-    if (_replicas.erase(r->get_gpid()) > 0) {
+    if (_replicas.erase(id) > 0) {
         _counter_replicas_count->decrement();
 
         int delay_ms = 0;
@@ -1773,12 +1783,15 @@ void replica_stub::open_replica(const app_info &app,
                    delay_ms);
         }
 
+        app_info a_info = *(r->get_app_info());
+        replica_info r_info;
+        get_replica_info(r_info, r);
         task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA,
                                          &_tracker,
                                          [=]() { close_replica(r); },
                                          0,
                                          std::chrono::milliseconds(delay_ms));
-        _closing_replicas[r->get_gpid()] = std::make_pair(task, r);
+        _closing_replicas[id] = std::make_tuple(task, r, std::move(a_info), std::move(r_info));
         _counter_replicas_closing_count->increment();
         return task;
     } else {
@@ -1790,20 +1803,24 @@ void replica_stub::close_replica(replica_ptr r)
 {
     ddebug("%s: start to close replica", r->name());
 
-    replica_info r_info;
-    get_replica_info(r_info, r);
-    app_info a_info = *(r->get_app_info());
+    gpid id = r->get_gpid();
+    std::string name = r->name();
+
     r->close();
 
     {
         zauto_write_lock l(_replicas_lock);
-        auto ret = _closing_replicas.erase(r->get_gpid());
-        dassert(ret > 0, "replica %s is not in _closing_replicas", r->name());
+        auto find = _closing_replicas.find(id);
+        dassert(find != _closing_replicas.end(),
+                "replica %s is not in _closing_replicas",
+                name.c_str());
+        _closed_replicas.emplace(
+            id, std::make_pair(std::get<2>(find->second), std::get<3>(find->second)));
+        _closing_replicas.erase(find);
         _counter_replicas_closing_count->decrement();
-        _closed_replicas.emplace(r_info.pid, std::make_pair(std::move(a_info), std::move(r_info)));
     }
 
-    ddebug("%s: replica closed", r->name());
+    ddebug("%s: finish to close replica", name.c_str());
 }
 
 void replica_stub::notify_replica_state_update(const replica_configuration &config, bool is_closing)
@@ -1905,7 +1922,7 @@ void replica_stub::open_service()
         [this](const std::vector<std::string> &args) {
             return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
                 tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                                 &_tracker,
+                                 rep->tracker(),
                                  std::bind(&replica_stub::trigger_checkpoint, this, rep, true),
                                  rep->get_gpid().thread_hash());
                 return std::string("triggered");
@@ -1952,7 +1969,8 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
         rs = _replicas;
     }
 
-    std::map<gpid, bool> ids; // gpid -> found in rs
+    std::set<gpid> required_ids;
+    replicas choosed_rs;
     if (!args.empty()) {
         for (int i = 0; i < args.size(); i++) {
             std::vector<std::string> arg_strs;
@@ -1967,16 +1985,18 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
                 gpid id;
                 int pid;
                 if (id.parse_from(arg.c_str())) {
-                    if (rs.count(id) > 0) {
-                        ids[id] = true;
-                    } else {
-                        ids[id] = false;
+                    // app_id.partition_index
+                    required_ids.insert(id);
+                    auto find = rs.find(id);
+                    if (find != rs.end()) {
+                        choosed_rs[id] = find->second;
                     }
                 } else if (sscanf(arg.c_str(), "%d", &pid) == 1) {
-                    for (auto r : rs) {
-                        id = r.second->get_gpid();
+                    // app_id
+                    for (auto kv : rs) {
+                        id = kv.second->get_gpid();
                         if (id.get_app_id() == pid) {
-                            ids[id] = true;
+                            choosed_rs[id] = kv.second;
                         }
                     }
                 } else {
@@ -1985,38 +2005,51 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
             }
         }
     } else {
-        for (auto kv : rs) {
-            ids[kv.first] = true;
+        // all replicas
+        choosed_rs = rs;
+    }
+
+    std::vector<task_ptr> tasks;
+    ::dsn::service::zlock results_lock;
+    std::map<gpid, std::string> results; // id => result
+    for (auto kv : choosed_rs) {
+        replica_ptr rep = kv.second;
+        task_ptr tsk = tasking::enqueue(LPC_EXEC_COMMAND_ON_REPLICA,
+                                        rep->tracker(),
+                                        [rep, &func, &results_lock, &results]() {
+                                            partition_status::type status = rep->status();
+                                            if (status != partition_status::PS_PRIMARY &&
+                                                status != partition_status::PS_SECONDARY)
+                                                return;
+                                            std::string result = func(rep);
+                                            ::dsn::service::zauto_lock l(results_lock);
+                                            results[rep->get_gpid()] = result;
+                                        },
+                                        rep->get_gpid().thread_hash());
+        tasks.emplace_back(std::move(tsk));
+    }
+
+    for (auto tsk : tasks) {
+        tsk->wait();
+    }
+
+    int processed = results.size();
+    int not_found = 0;
+    for (auto id : required_ids) {
+        if (results.find(id) == results.end()) {
+            results[id] = "not found";
+            not_found++;
         }
     }
 
     std::stringstream query_state;
-    int processed = 0;
-    int ignored = 0;
-    int not_found = 0;
-    for (auto kv : ids) {
-        if (!kv.second) {
-            query_state << "\n    " << kv.first.to_string() << "@" << _primary_address.to_string()
-                        << " : not found";
-            not_found++;
-            continue;
-        }
-        const replica_ptr &r = rs[kv.first];
-        partition_status::type status = r->status();
-        if (status != partition_status::PS_PRIMARY && status != partition_status::PS_SECONDARY) {
-            query_state << "\n    " << r->name() << " : ignored because not primary or secondary";
-            ignored++;
-        } else {
-            char t = status == partition_status::PS_PRIMARY ? 'P' : 'S';
-            query_state << "\n    " << r->name() << "@" << t << " : " << func(r);
-            processed++;
-        }
+    query_state << processed << " processed, " << not_found << " not found";
+    for (auto kv : results) {
+        query_state << "\n    " << kv.first.to_string() << "@" << _primary_address.to_string()
+                    << " : " << kv.second;
     }
 
-    std::stringstream total_state;
-    total_state << processed << " processed, " << ignored << " ignored, " << not_found
-                << " not found";
-    return total_state.str() + query_state.str();
+    return query_state.str();
 }
 
 void replica_stub::close()
@@ -2070,7 +2103,7 @@ void replica_stub::close()
     {
         zauto_write_lock l(_replicas_lock);
         while (_closing_replicas.empty() == false) {
-            task_ptr task = _closing_replicas.begin()->second.first;
+            task_ptr task = std::get<0>(_closing_replicas.begin()->second);
             gpid tmp_gpid = _closing_replicas.begin()->first;
             _replicas_lock.unlock_write();
 

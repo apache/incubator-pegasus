@@ -156,8 +156,15 @@ public:
     explicit task_tracker(int task_bucket_count = 1);
     virtual ~task_tracker();
 
-    void cancel_outstanding_tasks();
+    // wait all outstanding tasks to finish
     void wait_outstanding_tasks();
+
+    // cancel and wait all outstanding tasks to finish
+    void cancel_outstanding_tasks();
+
+    // cancel but not wait outstanding tasks to finish
+    // return not finished task count
+    int cancel_but_not_wait_outstanding_tasks();
 
 private:
     friend class trackable_task;

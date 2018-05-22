@@ -376,18 +376,23 @@ void replica::close()
             name(),
             enum_to_string(status()));
 
-    _tracker.cancel_outstanding_tasks();
+    uint64_t start_time = dsn_now_ms();
 
     if (_checkpoint_timer != nullptr) {
-        dassert(!_checkpoint_timer->cancel(false),
-                "checkpoint timer should already been cancelled");
+        _checkpoint_timer->cancel(true);
         _checkpoint_timer = nullptr;
     }
+
     if (_collect_info_timer != nullptr) {
-        dassert(!_collect_info_timer->cancel(false),
-                "collect info timer should already been cancelled");
+        _collect_info_timer->cancel(true);
         _collect_info_timer = nullptr;
     }
+
+    if (_app != nullptr) {
+        _app->cancel_background_work(true);
+    }
+
+    _tracker.cancel_outstanding_tasks();
 
     cleanup_preparing_mutations(true);
     dassert(_primary_states.is_cleaned(), "primary context is not cleared");
@@ -413,13 +418,16 @@ void replica::close()
     }
 
     if (_app != nullptr) {
-        error_code err = _app->close(false);
-        if (err != dsn::ERR_OK)
-            ddebug("app close result: %s", err.to_string());
-        _app.reset();
+        std::unique_ptr<replication_app_base> tmp_app = std::move(_app);
+        error_code err = tmp_app->close(false);
+        if (err != dsn::ERR_OK) {
+            dwarn("%s: close app failed, err = %s", name(), err.to_string());
+        }
     }
 
     _counter_private_log_size.clear();
+
+    ddebug("%s: replica closed, time_used = %" PRIu64 "ms", name(), dsn_now_ms() - start_time);
 }
 
 std::string replica::query_compact_state() const

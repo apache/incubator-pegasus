@@ -86,6 +86,8 @@ public:
     void set_inactive_state_transient(bool t);
     void check_state_completeness();
     // error_code check_and_fix_private_log_completeness();
+
+    // close() will wait all traced tasks to finish
     void close();
 
     //
@@ -148,6 +150,7 @@ public:
     const replication_options *options() const { return _options; }
     replica_stub *get_replica_stub() { return _stub; }
     bool verbose_commit_log() const;
+    dsn::task_tracker *tracker() { return &_tracker; }
 
     // void json_state(std::stringstream& out) const;
     void update_commit_statistics(int count);

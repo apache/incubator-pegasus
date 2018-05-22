@@ -337,21 +337,24 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             });
         }
 
-        if (err == ERR_OK && !_options->checkpoint_disabled && nullptr == _checkpoint_timer) {
-            _checkpoint_timer =
-                tasking::enqueue_timer(LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                                       &_tracker,
-                                       [this] { on_checkpoint_timer(); },
-                                       std::chrono::seconds(_options->checkpoint_interval_seconds),
-                                       get_gpid().thread_hash());
-        }
-        if (_collect_info_timer == nullptr) {
-            _collect_info_timer =
-                tasking::enqueue_timer(LPC_PER_REPLICA_COLLECT_INFO_TIMER,
-                                       &_tracker,
-                                       [this]() { collect_backup_info(); },
-                                       std::chrono::milliseconds(_options->gc_interval_ms),
-                                       get_gpid().thread_hash());
+        if (err == ERR_OK) {
+            if (_checkpoint_timer == nullptr && !_options->checkpoint_disabled) {
+                _checkpoint_timer = tasking::enqueue_timer(
+                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                    &_tracker,
+                    [this] { on_checkpoint_timer(); },
+                    std::chrono::seconds(_options->checkpoint_interval_seconds),
+                    get_gpid().thread_hash());
+            }
+
+            if (_collect_info_timer == nullptr) {
+                _collect_info_timer =
+                    tasking::enqueue_timer(LPC_PER_REPLICA_COLLECT_INFO_TIMER,
+                                           &_tracker,
+                                           [this]() { collect_backup_info(); },
+                                           std::chrono::milliseconds(_options->gc_interval_ms),
+                                           get_gpid().thread_hash());
+            }
         }
     }
 
