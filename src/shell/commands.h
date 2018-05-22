@@ -3791,9 +3791,6 @@ inline bool del_app_envs_by_prefix(command_executor *e, shell_context *sc, argum
         fprintf(stderr, "prefix should not be empty\n");
         return false;
     }
-    if (prefix[prefix.size() - 1] != '.') {
-        prefix.append(".");
-    }
 
     std::map<std::string, std::string> envs;
     ::dsn::error_code ret = sc->ddl_client->get_app_envs(sc->current_app_name, envs);
@@ -3806,6 +3803,10 @@ inline bool del_app_envs_by_prefix(command_executor *e, shell_context *sc, argum
     for (auto &kv : envs) {
         if (kv.first.find(prefix) == 0)
             del_keys.push_back(kv.first);
+    }
+    if (del_keys.empty()) {
+        fprintf(stderr, "envs with prefix \"%s\" not found\n", prefix.c_str());
+        return true;
     }
 
     ret = sc->ddl_client->del_app_envs(sc->current_app_name, del_keys);
