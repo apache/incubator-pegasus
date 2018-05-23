@@ -15,6 +15,7 @@ set(MY_PROJ_LIBS dsn_meta_server
                  dsn.replication.clientlib
                  dsn.block_service.local
                  dsn.block_service.fds
+                 fmt
                  gtest)
 
 set(MY_PROJ_LIB_PATH "")

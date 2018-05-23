@@ -39,7 +39,7 @@ namespace pipeline {
 struct environment
 {
     template <typename F>
-    void schedule(F &&f, std::chrono::milliseconds delay_ms = 0_ms)
+    void schedule(F &&f, std::chrono::milliseconds delay_ms = 0_ms) const
     {
         tasking::enqueue(__conf.thread_pool_code,
                          __conf.tracker,
@@ -48,10 +48,27 @@ struct environment
                          delay_ms);
     }
 
+    /// Fluent APIs to specify the environment configuration.
+    environment &thread_pool(task_code tc)
+    {
+        __conf.thread_pool_code = tc;
+        return *this;
+    }
+    environment &thread_hash(int hash)
+    {
+        __conf.thread_hash = hash;
+        return *this;
+    }
+    environment &task_tracker(dsn::task_tracker *tracker)
+    {
+        __conf.tracker = tracker;
+        return *this;
+    }
+
     struct
     {
         task_code thread_pool_code;
-        task_tracker *tracker{nullptr};
+        dsn::task_tracker *tracker{nullptr};
         int thread_hash{0};
     } __conf;
 };
@@ -136,28 +153,10 @@ struct base : environment
 
     void pause() { _paused.store(true, std::memory_order_release); }
 
-    bool paused() { return _paused.load(std::memory_order_acquire); }
+    bool paused() const { return _paused.load(std::memory_order_acquire); }
 
     // Await for all running tasks to complete.
     void wait_all() { __conf.tracker->wait_outstanding_tasks(); }
-
-    /// === Environment Configuration === ///
-
-    base &thread_pool(task_code tc)
-    {
-        __conf.thread_pool_code = tc;
-        return *this;
-    }
-    base &thread_hash(int hash)
-    {
-        __conf.thread_hash = hash;
-        return *this;
-    }
-    base &task_tracker(task_tracker *tracker)
-    {
-        __conf.tracker = tracker;
-        return *this;
-    }
 
     /// === Pipeline Declaration === ///
     /// Declaration of pipeline is not thread-safe.
@@ -263,20 +262,9 @@ struct when : environment
     /// Run this stage asynchronously in its environment.
     void async(Args &&... in) { repeat(std::forward<Args>(in)...); }
 
-    bool paused() { return __pipeline->paused(); }
+    bool paused() const { return __pipeline->paused(); }
 
     base *__pipeline{nullptr};
-};
-
-template <typename... Args>
-struct do_when : when<Args...>
-{
-    explicit do_when(std::function<void(Args &&... args)> &&func) : _cb(std::move(func)) {}
-
-    void run(Args &&... args) override { _cb(std::forward<Args>(args)...); }
-
-private:
-    std::function<void(Args &&...)> _cb;
 };
 
 inline void base::run_pipeline()
@@ -289,6 +277,15 @@ inline void base::run_pipeline()
         // static_cast for downcast, but completely safe.
         stage->run();
     });
+}
+
+/// Runnable must extend from pipeline::environment and implement
+/// a public method: `void run();`
+template <typename Runnable>
+static void repeat(Runnable &&r, std::chrono::milliseconds delay_ms = 0_ms)
+{
+    environment env = r;
+    env.schedule([r = std::move(r)]() mutable { r.run(); }, delay_ms);
 }
 
 } // namespace pipeline

@@ -32,6 +32,11 @@ namespace dsn {
 
 TEST(pipeline_test, pause)
 {
+    struct mock_when : pipeline::when<>
+    {
+        void run() override { repeat(1_s); }
+    };
+
     task_tracker tracker;
 
     {
@@ -41,9 +46,9 @@ TEST(pipeline_test, pause)
         base.pause();
         ASSERT_TRUE(base.paused());
 
-        pipeline::do_when<> s1([&s1]() { s1.repeat(1_s); });
-
-        base.thread_pool(LPC_MUTATION_LOG_PENDING_TIMER).task_tracker(&tracker).from(s1);
+        mock_when s1;
+        base.thread_pool(LPC_MUTATION_LOG_PENDING_TIMER).task_tracker(&tracker);
+        base.from(s1);
 
         {
             base.run_pipeline();
@@ -61,6 +66,11 @@ TEST(pipeline_test, link_pipe)
 {
     task_tracker tracker;
 
+    struct mock_when : pipeline::when<>
+    {
+        void run() override { repeat(1_s); }
+    };
+
     struct stage2 : pipeline::when<>, pipeline::result<>
     {
         void run() override { step_down_next_stage(); }
@@ -68,13 +78,15 @@ TEST(pipeline_test, link_pipe)
 
     {
         pipeline::base base1;
-        pipeline::do_when<> s1([&s1]() { s1.repeat(1_s); });
-        base1.thread_pool(LPC_MUTATION_LOG_PENDING_TIMER).task_tracker(&tracker).from(s1);
+        mock_when s1;
+        base1.thread_pool(LPC_MUTATION_LOG_PENDING_TIMER).task_tracker(&tracker);
+        base1.from(s1);
 
         // base2 executes s2, then executes s1 in another pipeline.
         pipeline::base base2;
         stage2 s2;
-        base2.thread_pool(LPC_REPLICA_SERVER_DELAY_START).task_tracker(&tracker).from(s2).link(s1);
+        base2.thread_pool(LPC_REPLICA_SERVER_DELAY_START).task_tracker(&tracker);
+        base2.from(s2).link(s1);
 
         base2.run_pipeline();
 
