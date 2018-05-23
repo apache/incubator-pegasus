@@ -387,8 +387,8 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         << std::setw(max_app_name_size) << std::left << "app_name" << std::setw(20) << std::left
         << "app_type" << std::setw(20) << std::left << "partition_count" << std::setw(20)
         << std::left << "replica_count" << std::setw(20) << std::left << "is_stateful"
-        << std::setw(20) << std::left << "drop_expire_time" << std::setw(20) << std::left << "envs"
-        << std::endl;
+        << std::setw(20) << std::left << "drop_expire_time" << std::setw(20) << std::left
+        << "envs_count" << std::endl;
     int available_app_count = 0;
     for (int i = 0; i < apps.size(); i++) {
         dsn::app_info info = apps[i];
@@ -397,7 +397,6 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         }
         std::string status_str = enum_to_string(info.status);
         status_str = status_str.substr(status_str.find("AS_") + 3);
-        std::string envs_str = "{" + dsn::utils::kv_map_to_string(info.envs, ',', '=') + "}";
         std::string drop_expire_time = "-";
         if (info.status == app_status::AS_AVAILABLE) {
             available_app_count++;
@@ -411,7 +410,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             << std::left << info.app_type << std::setw(20) << std::left << info.partition_count
             << std::setw(20) << std::left << info.max_replica_count << std::setw(20) << std::left
             << (info.is_stateful ? "true" : "false") << std::setw(20) << std::left
-            << drop_expire_time << std::setw(20) << std::left << envs_str << std::endl;
+            << drop_expire_time << std::setw(20) << std::left << info.envs.size() << std::endl;
     }
     out << std::endl << std::flush;
 
@@ -1331,6 +1330,25 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
     } else {
         callback->enqueue(err, (message_ex *)resp);
     }
+}
+
+dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name,
+                                                     std::map<std::string, std::string> &envs)
+{
+    std::vector<::dsn::app_info> apps;
+    auto r = list_apps(dsn::app_status::AS_INVALID, apps);
+    if (r != dsn::ERR_OK) {
+        return r;
+    }
+
+    for (auto &app : apps) {
+        if (app.app_name == app_name) {
+            envs = app.envs;
+            return dsn::ERR_OK;
+        }
+    }
+
+    return dsn::ERR_OBJECT_NOT_FOUND;
 }
 
 ::dsn::error_code replication_ddl_client::set_app_envs(const std::string &app_name,

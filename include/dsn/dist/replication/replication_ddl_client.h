@@ -157,6 +157,8 @@ public:
                                          int32_t backup_history_count_to_keep = 0,
                                          const std::string &start_time = std::string());
 
+    dsn::error_code get_app_envs(const std::string &app_name,
+                                 std::map<std::string, std::string> &envs);
     dsn::error_code set_app_envs(const std::string &app_name,
                                  const std::vector<std::string> &keys,
                                  const std::vector<std::string> &values);

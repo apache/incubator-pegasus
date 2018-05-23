@@ -1991,8 +1991,8 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
 
     std::vector<task_ptr> tasks;
     ::dsn::service::zlock results_lock;
-    std::map<gpid, std::string> results; // id => result
-    for (auto kv : choosed_rs) {
+    std::map<gpid, std::pair<partition_status::type, std::string>> results; // id => status,result
+    for (auto &kv : choosed_rs) {
         replica_ptr rep = kv.second;
         task_ptr tsk = tasking::enqueue(LPC_EXEC_COMMAND_ON_REPLICA,
                                         rep->tracker(),
@@ -2003,30 +2003,36 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
                                                 return;
                                             std::string result = func(rep);
                                             ::dsn::service::zauto_lock l(results_lock);
-                                            results[rep->get_gpid()] = result;
+                                            auto &value = results[rep->get_gpid()];
+                                            value.first = status;
+                                            value.second = result;
                                         },
                                         rep->get_gpid().thread_hash());
         tasks.emplace_back(std::move(tsk));
     }
 
-    for (auto tsk : tasks) {
+    for (auto &tsk : tasks) {
         tsk->wait();
     }
 
     int processed = results.size();
     int not_found = 0;
-    for (auto id : required_ids) {
+    for (auto &id : required_ids) {
         if (results.find(id) == results.end()) {
-            results[id] = "not found";
+            auto &value = results[id];
+            value.first = partition_status::PS_INVALID;
+            value.second = "not found";
             not_found++;
         }
     }
 
     std::stringstream query_state;
     query_state << processed << " processed, " << not_found << " not found";
-    for (auto kv : results) {
-        query_state << "\n    " << kv.first.to_string() << "@" << _primary_address.to_string()
-                    << " : " << kv.second;
+    for (auto &kv : results) {
+        query_state << "\n    " << kv.first.to_string() << "@" << _primary_address.to_string();
+        if (kv.second.first != partition_status::PS_INVALID)
+            query_state << "@" << (kv.second.first == partition_status::PS_PRIMARY ? "P" : "S");
+        query_state << " : " << kv.second.second;
     }
 
     return query_state.str();
