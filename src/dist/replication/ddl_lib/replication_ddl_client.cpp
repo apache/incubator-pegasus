@@ -1336,7 +1336,7 @@ dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name
                                                      std::map<std::string, std::string> &envs)
 {
     std::vector<::dsn::app_info> apps;
-    auto r = list_apps(dsn::app_status::AS_INVALID, apps);
+    auto r = list_apps(dsn::app_status::AS_AVAILABLE, apps);
     if (r != dsn::ERR_OK) {
         return r;
     }
