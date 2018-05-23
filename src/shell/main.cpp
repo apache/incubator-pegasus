@@ -344,12 +344,6 @@ command_executor commands[] = {
         "del_app_envs", "delete current app envs", "<key1> <key2> ...", del_app_envs,
     },
     {
-        "del_app_envs_by_prefix",
-        "delete current app envs by prefix",
-        "<prefix>",
-        del_app_envs_by_prefix,
-    },
-    {
         "clear_app_envs", "clear current app envs", "<-a|--all> <-p|--prefix str>", clear_app_envs,
     },
     {
