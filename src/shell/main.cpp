@@ -335,7 +335,7 @@ command_executor commands[] = {
         query_restore_status,
     },
     {
-        "get_app_envs", "set current app envs", "", get_app_envs,
+        "get_app_envs", "get current app envs", "", get_app_envs,
     },
     {
         "set_app_envs", "set current app envs", "<key1> <value1> <key2> <value2> ...", set_app_envs,
