@@ -15,7 +15,7 @@
 #include <boost/lexical_cast.hpp>
 #include <dsn/service_api_c.h>
 
-extern std::string s_last_history;
+extern std::string g_last_history;
 
 inline void rl_gets(char *&line_read, bool nextCommand = true)
 {
@@ -32,9 +32,9 @@ inline void rl_gets(char *&line_read, bool nextCommand = true)
     if (!line_read)
         dsn_exit(0);
 
-    if (line_read && *line_read && s_last_history != line_read) {
+    if (line_read && *line_read && g_last_history != line_read) {
         add_history(line_read);
-        s_last_history = line_read;
+        g_last_history = line_read;
     }
 }
 

@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include <pegasus/version.h>
+#include <dsn/utility/strings.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <algorithm>
@@ -10,11 +11,12 @@
 #include "command_executor.h"
 #include "commands.h"
 
-std::string s_last_history;
-const int max_params_count = 10000;
-std::map<std::string, command_executor *> commands_map;
-shell_context global_context;
-size_t max_length = 0;
+std::string g_last_history;
+const int s_max_params_count = 10000;
+std::map<std::string, command_executor *> s_commands_map;
+shell_context s_global_context;
+size_t s_max_name_length = 0;
+size_t s_option_width = 65;
 
 void print_help();
 bool help_info(command_executor *e, shell_context *sc, arguments args)
@@ -36,13 +38,13 @@ command_executor commands[] = {
     {
         "app",
         "get the partition information for some specific app",
-        "<app_name> [-d|--detailed] [-o|--output <out_file>]",
+        "<app_name> [-d|--detailed] [-o|--output file_name]",
         query_app,
     },
     {
         "app_disk",
         "get the disk usage information for some specific app",
-        "<app_name> [-d|--detailed] [-o|--output <out_file>]",
+        "<app_name> [-d|--detailed] [-o|--output file_name]",
         app_disk,
     },
     {
@@ -50,25 +52,25 @@ command_executor commands[] = {
         "list all apps",
         "[-a|-all] [-d|--detailed] [-s|--status "
         "<all|available|creating|dropping|dropped>] "
-        "[-o|--output FILE_PATH]",
+        "[-o|--output file_name]",
         ls_apps,
     },
     {
         "nodes",
         "get the node status for this cluster",
         "[-d|--detailed] [-s|--status <all|alive|unalive>] [-o|--output "
-        "FILE_PATH]",
+        "file_name]",
         ls_nodes,
     },
     {
         "create",
         "create an app",
-        "app_name [--partition_count|-p NUMBER] [--replica_count|-r NUMBER] "
+        "app_name [--partition_count|-p <num>] [--replica_count|-r <num>] "
         "[--envs|-e k1=v1,k2=v2...]",
         create_app,
     },
     {
-        "drop", "drop an app", "app_name [--reserve_seconds|-r NUMBER]", drop_app,
+        "drop", "drop an app", "app_name [--reserve_seconds|-r <num>]", drop_app,
     },
     {
         "recall", "recall an app", "<app_id> [new_app_name]", recall_app,
@@ -76,7 +78,7 @@ command_executor commands[] = {
     {
         "set_meta_level",
         "set the meta function level: stopped, blind, freezed, steady, lively",
-        "<stopped | blind | freezed | steady | lively>",
+        "<stopped|blind|freezed|steady|lively>",
         set_meta_level,
     },
     {
@@ -85,17 +87,17 @@ command_executor commands[] = {
     {
         "balance",
         "send explicit balancer request for the cluster",
-        "-g|--gpid <appid.pidx> -p|--type <move_pri|copy_pri|copy_sec> -f|--from "
-        "<from_address> "
-        "-t|--to <to_address>",
+        "<-g|--gpid appid.pidx> <-p|--type move_pri|copy_pri|copy_sec> <-f|--from "
+        "from_address> "
+        "<-t|--to to_address>",
         balance,
     },
     {
         "propose",
         "send configuration proposals to cluster",
         "[-f|--force] "
-        "-g|--gpid <appid.pidx> -p|--type <ASSIGN_PRIMARY|ADD_SECONDARY|DOWNGRADE_TO_INACTIVE...> "
-        "-t|--target <node_exec_command> -n|--node <node_affected> ",
+        "<-g|--gpid appid.pidx> <-p|--type ASSIGN_PRIMARY|ADD_SECONDARY|DOWNGRADE_TO_INACTIVE|...> "
+        "<-t|--target node_to_exec_command> <-n|--node node_to_be_affected> ",
         propose,
     },
     {
@@ -157,7 +159,7 @@ command_executor commands[] = {
         data_operations,
     },
     {
-        "del", "del a key", "<hash_key> <sort_key>", data_operations,
+        "del", "delete a key", "<hash_key> <sort_key>", data_operations,
     },
     {
         "multi_del",
@@ -210,7 +212,7 @@ command_executor commands[] = {
     {
         "copy_data",
         "copy app data",
-        "-c|--target_cluster_name <str> -a|--target_app_name <str> "
+        "<-c|--target_cluster_name cluster_name> <-a|--target_app_name app_name> "
         "[-s|--max_split_count <num>] "
         "[-b|--max_batch_count <num>] [-t|--timeout_ms <num>]",
         data_operations,
@@ -219,8 +221,7 @@ command_executor commands[] = {
         "clear_data",
         "clear app data",
         "[-f|--force] [-s|--max_split_count <num>] [-b|--max_batch_count <num>] "
-        "[-t|--timeout_ms "
-        "<num>]",
+        "[-t|--timeout_ms <num>]",
         data_operations,
     },
     {
@@ -265,15 +266,15 @@ command_executor commands[] = {
     {
         "sst_dump",
         "dump sstable dir or files",
-        "[--command=check|scan|none|raw] --file=data_dir_OR_sst_file "
+        "[--command=check|scan|none|raw] <--file=data_dir_OR_sst_file> "
         "[--from=<user_key>] "
-        "[--to=<user_key>] [--read_num=NUM] [--show_properties]",
+        "[--to=<user_key>] [--read_num=<num>] [--show_properties]",
         sst_dump,
     },
     {
         "mlog_dump",
         "dump mutation log dir",
-        "-i|--input log_dir [-o|--output file_name] [-d|--detailed]",
+        "<-i|--input log_dir> [-o|--output file_name] [-d|--detailed]",
         mlog_dump,
     },
     {
@@ -282,13 +283,13 @@ command_executor commands[] = {
         "[-f|--node_list_file file_name] [-s|--node_list_str node_str] "
         "[-w|--wait_seconds seconds] "
         "[-b|--skip_bad_nodes] [-l|--skip_lost_partitions] [-o|--output "
-        "FILE_NAME]",
+        "file_name]",
         recover,
     },
     {
         "add_backup_policy",
         "add new cold backup policy",
-        "<-p|--policy_name p1> <-b|--backup_provider_type provider> <-a|--app_ids 1,2,3..> "
+        "<-p|--policy_name p1> <-b|--backup_provider_type provider> <-a|--app_ids 1,2,3...> "
         "<-i|--backup_interval_seconds sec> <-s|--start_time hour:minute> "
         "<-c|--backup_history_cnt count>",
         add_backup_policy,
@@ -338,10 +339,10 @@ command_executor commands[] = {
         "get_app_envs", "get current app envs", "", get_app_envs,
     },
     {
-        "set_app_envs", "set current app envs", "<key1> <value1> <key2> <value2> ...", set_app_envs,
+        "set_app_envs", "set current app envs", "<key1> <value1> [key2 value2 ...]", set_app_envs,
     },
     {
-        "del_app_envs", "delete current app envs", "<key1> <key2> ...", del_app_envs,
+        "del_app_envs", "delete current app envs", "<key1> [key2 ...]", del_app_envs,
     },
     {
         "clear_app_envs", "clear current app envs", "<-a|--all> <-p|--prefix str>", clear_app_envs,
@@ -353,41 +354,69 @@ command_executor commands[] = {
         nullptr, nullptr, nullptr, nullptr,
     }};
 
-void print_help(command_executor *e, size_t length)
+void print_help(command_executor *e, size_t name_width, size_t option_width)
 {
-    int padding = length - strlen(e->name);
-    std::cout << "\t" << e->name << ": ";
-    for (int i = 0; i < padding; ++i)
-        std::cout << " ";
-    std::cout << e->name << " " << e->option_usage << std::endl;
+    std::vector<std::string> lines;
+    std::string options(e->option_usage);
+    int line_start = 0;
+    int i;
+    for (i = 0; i < options.size(); i++) {
+        if ((options[i] == ']' || options[i] == '>') && i < options.size() - 1 &&
+            options[i + 1] == ' ') {
+            if (i - line_start + 1 > option_width) {
+                std::string s = options.substr(line_start, i - line_start + 1);
+                std::string r = dsn::utils::trim_string((char *)s.c_str());
+                if (!r.empty())
+                    lines.push_back(r);
+                line_start = i + 2;
+            }
+        }
+    }
+    if (i > line_start) {
+        std::string s = options.substr(line_start, i - line_start);
+        std::string r = dsn::utils::trim_string((char *)s.c_str());
+        if (!r.empty())
+            lines.push_back(r);
+    }
+
+    std::cout << "\t" << e->name << std::string(name_width + 2 - strlen(e->name), ' ');
+    if (lines.empty())
+        std::cout << std::endl;
+    else {
+        for (int k = 0; k < lines.size(); k++) {
+            if (k != 0)
+                std::cout << "\t" << std::string(name_width + 2, ' ');
+            std::cout << lines[k] << std::endl;
+        }
+    }
 }
 
 void print_help()
 {
     std::cout << "Usage:" << std::endl;
     for (int i = 0; commands[i].name != nullptr; ++i) {
-        print_help(&commands[i], max_length);
+        print_help(&commands[i], s_max_name_length, s_option_width);
     }
 }
 
 void register_all_commands()
 {
     for (int i = 0; commands[i].name != nullptr; ++i) {
-        auto pr = commands_map.emplace(commands[i].name, &commands[i]);
+        auto pr = s_commands_map.emplace(commands[i].name, &commands[i]);
         dassert(pr.second, "the command '%s' is already registered!!!", commands[i].name);
-        max_length = std::max(max_length, strlen(commands[i].name));
+        s_max_name_length = std::max(s_max_name_length, strlen(commands[i].name));
     }
 }
 
 void execute_command(command_executor *e, int argc, std::string str_args[])
 {
-    static char buffer[max_params_count][512]; // 512*32
-    static char *argv[max_params_count];
-    for (int i = 0; i < max_params_count; ++i) {
+    static char buffer[s_max_params_count][512]; // 512*32
+    static char *argv[s_max_params_count];
+    for (int i = 0; i < s_max_params_count; ++i) {
         argv[i] = buffer[i];
     }
 
-    for (int i = 0; i < argc && i < max_params_count; ++i) {
+    for (int i = 0; i < argc && i < s_max_params_count; ++i) {
         if (!str_args[i].empty()) {
             strcpy(argv[i], str_args[i].c_str());
         } else {
@@ -395,9 +424,9 @@ void execute_command(command_executor *e, int argc, std::string str_args[])
         }
     }
 
-    if (!e->exec(e, &global_context, {argc, argv})) {
+    if (!e->exec(e, &s_global_context, {argc, argv})) {
         printf("USAGE: ");
-        print_help(e, max_length);
+        print_help(e, s_max_name_length, s_option_width);
     }
 }
 
@@ -433,16 +462,16 @@ void initialize(int argc, char **argv)
     std::string cluster_name = argc > 2 ? argv[2] : "mycluster";
     std::cout << "The cluster name is: " << cluster_name << std::endl;
 
-    global_context.current_cluster_name = cluster_name;
-    std::string section = "uri-resolver.dsn://" + global_context.current_cluster_name;
+    s_global_context.current_cluster_name = cluster_name;
+    std::string section = "uri-resolver.dsn://" + s_global_context.current_cluster_name;
     std::string key = "arguments";
     std::string server_list = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
     std::cout << "The cluster meta list is: " << server_list << std::endl;
 
     dsn::replication::replica_helper::load_meta_servers(
-        global_context.meta_list, section.c_str(), key.c_str());
-    global_context.ddl_client =
-        new dsn::replication::replication_ddl_client(global_context.meta_list);
+        s_global_context.meta_list, section.c_str(), key.c_str());
+    s_global_context.ddl_client =
+        new dsn::replication::replication_ddl_client(s_global_context.meta_list);
 
     register_all_commands();
 }
@@ -454,8 +483,8 @@ void run()
 
     while (true) {
         int arg_count;
-        std::string args[max_params_count];
-        scanfCommand(arg_count, args, max_params_count);
+        std::string args[s_max_params_count];
+        scanfCommand(arg_count, args, s_max_params_count);
         if (arg_count > 0) {
             int i = 0;
             for (; i < arg_count; ++i) {
@@ -473,8 +502,8 @@ void run()
             }
             if (i < arg_count)
                 continue;
-            auto iter = commands_map.find(args[0]);
-            if (iter != commands_map.end()) {
+            auto iter = s_commands_map.find(args[0]);
+            if (iter != s_commands_map.end()) {
                 execute_command(iter->second, arg_count, args);
             } else {
                 std::cout << "ERROR: invalid subcommand '" << args[0] << "'" << std::endl;
