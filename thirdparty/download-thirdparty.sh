@@ -29,7 +29,7 @@ function check_and_download()
         fi
     else
         echo "download package $package_name"
-        curl $url > $package_name
+        curl -L $url > $package_name
         md5=`md5sum $1 | cut -d ' ' -f1`
         if [ "$md5"x != "$correct_md5sum"x ]; then
             rm $1
@@ -98,6 +98,12 @@ check_and_download "googletest-1.8.0.tar.gz"\
     "16877098823401d1bf2ed7891d7dce36"\
     "googletest-release-1.8.0"
 exit_if_fail $?
+
+# gperftools
+check_and_download "gperftools-2.7.tar.gz"\
+    "https://github.com/gperftools/gperftools/releases/download/gperftools-2.7/gperftools-2.7.tar.gz"\
+    "c6a852a817e9160c79bdb2d3101b4601"\
+    "gperftools-2.7"
 
 ## protobuf
 #check_and_download "protobuf-v3.5.0.tar.gz"\

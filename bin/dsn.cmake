@@ -318,7 +318,7 @@ function(dsn_add_project)
             else()
                 set(TEMP_LIBS dsn_runtime)
             endif()
-            set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${TEMP_LIBS} ${MY_BOOST_LIBS})
+            set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${TEMP_LIBS} ${MY_BOOST_LIBS} -ltcmalloc)
             if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
                 set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${DSN_SYSTEM_LIBS})
             else()
@@ -398,6 +398,19 @@ function(dsn_setup_compiler_flags)
         add_compile_options(-Wno-unused-variable)
         add_compile_options(-Wno-deprecated-declarations)
         add_compile_options(-Wno-inconsistent-missing-override)
+
+        set(CMAKE_EXE_LINKER_FLAGS
+            "${CMAKE_EXE_LINKER_FLAGS} -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free"
+            CACHE
+            STRING
+            ""
+            FORCE)
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free"
+            CACHE
+            STRING
+            ""
+            FORCE)
+
     elseif(MSVC)
         add_definitions(-D_CRT_SECURE_NO_WARNINGS)
         add_definitions(-DWIN32_LEAN_AND_MEAN)

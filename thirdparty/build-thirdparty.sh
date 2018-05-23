@@ -80,6 +80,18 @@ else
     echo "skip build gtest"
 fi
 
+# gperftools
+if [ ! -f $TP_OUTPUT/lib/libtcmalloc.so ]; then
+    cd $TP_SRC/gperftools-2.7
+    ./configure --prefix=$TP_OUTPUT --enable-static=no
+    make -j8 && make install
+    res=$?
+    cd $TP_DIR
+    exit_if_fail "gperftools" $res
+else
+    echo "skip build gperftools"
+fi
+
 ## build protobuf
 #if [ ! -d $TP_OUTPUT/include/google/protobuf ]; then
 #    mkdir -p $TP_BUILD/protobuf
