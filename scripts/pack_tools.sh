@@ -100,6 +100,7 @@ cp -v -r ./DSN_ROOT/bin/pegasus_pressureclient ${pack}/DSN_ROOT/bin/
 mkdir -p ${pack}/DSN_ROOT/lib
 cp -v -r ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
 cp -v ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib/
+cp -v ./rdsn/thirdparty/output/lib/libtcmalloc.so.4 ${pack}/DSN_ROOT/lib/
 cp -v `get_boost_lib $custom_boost_lib system` ${pack}/DSN_ROOT/lib/
 cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/DSN_ROOT/lib/
 cp -v `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
@@ -109,6 +110,7 @@ cp -v `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell ssl` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell bz2` ${pack}/DSN_ROOT/lib/
+chmod -x ${pack}/DSN_ROOT/lib/*
 
 mkdir -p ${pack}/scripts
 cp -v ./scripts/* ${pack}/scripts/

@@ -91,6 +91,7 @@ cp -v ./DSN_ROOT/bin/pegasus_server/pegasus_server ${pack}/bin
 cp -v ./DSN_ROOT/lib/libdsn_meta_server.so ${pack}/bin
 cp -v ./DSN_ROOT/lib/libdsn_replica_server.so ${pack}/bin
 cp -v ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/bin
+cp -v ./rdsn/thirdparty/output/lib/libtcmalloc.so.4 ${pack}/bin
 cp -v ./scripts/sendmail.sh ${pack}/bin
 cp -v ./src/server/config.ini ${pack}/bin
 
