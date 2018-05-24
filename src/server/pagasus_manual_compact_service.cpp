@@ -165,8 +165,9 @@ void pagasus_manual_compact_service::extract_manual_compact_opts(
     auto find = envs.find(key_prefix + MANUAL_COMPACT_TARGET_LEVEL_KEY);
     if (find != envs.end()) {
         int32_t target_level;
-        if (dsn::buf2int32(find->second, target_level) && target_level >= 1 &&
-            target_level <= _app->_db_opts.num_levels) {
+        if (dsn::buf2int32(find->second, target_level) &&
+            (target_level == -1 ||
+             (target_level >= 1 && target_level <= _app->_db_opts.num_levels))) {
             options.target_level = target_level;
         } else {
             dwarn_replica("{}={} is invalid, use default value {}",
