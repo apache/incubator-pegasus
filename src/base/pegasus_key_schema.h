@@ -11,7 +11,6 @@
 #include <dsn/utility/blob.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/crc.h>
-#include <dsn/c/api_utilities.h>
 
 namespace pegasus {
 
