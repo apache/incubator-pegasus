@@ -16,7 +16,6 @@ before_install:
     - cd ..
 
 install:
-    # - ./run.sh format
 
 before_script:
     - cd rdsn/thirdparty
@@ -27,8 +26,8 @@ before_script:
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh build
-    - pushd ./src/builder/bin/pegasus_unit_test && ./pegasus_unit_test && popd
+    - ./run.sh build \
+      pushd ./src/builder/bin/pegasus_unit_test && ./pegasus_unit_test && popd
 
 notifications:
     email: false
