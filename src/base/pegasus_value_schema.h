@@ -29,7 +29,12 @@ inline uint64_t generate_timetag(uint64_t timestamp, uint8_t cluster_id, bool de
 
 inline uint8_t extract_cluster_id_from_timetag(uint64_t timetag)
 {
-    return static_cast<uint8_t>((timetag >> 1) & 0xF);
+    return static_cast<uint8_t>((timetag >> 1) & 0xFF);
+}
+
+inline uint64_t extract_timestamp_from_timetag(uint64_t timetag)
+{
+    return static_cast<uint64_t>(timetag >> 8);
 }
 
 /// Extracts expire_ts from rocksdb value with given version.

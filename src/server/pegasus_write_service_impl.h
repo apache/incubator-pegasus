@@ -152,7 +152,7 @@ public:
 
         if (_verify_timetag) {
             std::string raw_value;
-            rocksdb::Status s = _db->Get(*_rd_opts, to_rocksdb_slice(raw_key), &raw_value);
+            rocksdb::Status s = _db->Get(*_rd_opts, utils::to_rocksdb_slice(raw_key), &raw_value);
             if (s.ok()) {
                 uint64_t local_timetag = pegasus_extract_timetag(_value_schema_version, raw_value);
                 if (local_timetag == new_timetag && is_remote_update) {
@@ -184,7 +184,7 @@ public:
             }
         }
 
-        rocksdb::Slice skey = to_rocksdb_slice(raw_key);
+        rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
         rocksdb::SliceParts skey_parts(&skey, 1);
         rocksdb::SliceParts svalue =
             _value_generator.generate_value(_value_schema_version, value, expire_sec, new_timetag);
@@ -194,7 +194,7 @@ public:
 
     int db_write_batch_delete(dsn::string_view raw_key, const db_write_context &ctx)
     {
-        _batch.Delete(to_rocksdb_slice(raw_key));
+        _batch.Delete(utils::to_rocksdb_slice(raw_key));
         return 0;
     }
 
@@ -215,6 +215,8 @@ public:
     }
 
 private:
+    friend class pegasus_write_service_test;
+
     const std::string _primary_address;
     const int _value_schema_version;
     const bool _verify_timetag;

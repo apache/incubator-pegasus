@@ -32,7 +32,7 @@ public:
     }
     explicit pegasus_server_impl(dsn::replication::replica *r);
 
-    ~pegasus_server_impl() override;
+    virtual ~pegasus_server_impl() override;
 
     // the following methods may set physical error if internal error occurs
     virtual void on_get(const ::dsn::blob &key,
@@ -146,7 +146,7 @@ public:
     inline bool check_if_record_expired(uint32_t epoch_now, rocksdb::Slice raw_value)
     {
         return pegasus::check_if_record_expired(
-            _value_schema_version, epoch_now, to_string_view(raw_value));
+            _value_schema_version, epoch_now, utils::to_string_view(raw_value));
     }
 
 private:

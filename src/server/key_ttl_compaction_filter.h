@@ -11,7 +11,6 @@
 
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
-#include "base/string_view.h"
 
 namespace pegasus {
 namespace server {
@@ -29,7 +28,7 @@ public:
         if (!_enabled.load(std::memory_order_acquire))
             return false;
         return check_if_record_expired(
-            _value_schema_version, utils::epoch_now(), to_string_view(existing_value));
+            _value_schema_version, utils::epoch_now(), utils::to_string_view(existing_value));
     }
     virtual const char *Name() const override { return "KeyWithTTLCompactionFilter"; }
     void SetValueSchemaVersion(uint32_t version) { _value_schema_version = version; }

@@ -19,13 +19,14 @@ TEST(value_schema, generate_and_extract_timetag)
         {1000, 1, true},
         {1000, 1, false},
 
-        {std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint8_t>::max(), true},
-        {std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint8_t>::max(), false},
+        {std::numeric_limits<uint64_t>::max() >> 8, std::numeric_limits<uint8_t>::max(), true},
+        {std::numeric_limits<uint64_t>::max() >> 8, std::numeric_limits<uint8_t>::max(), false},
     };
 
     for (auto &t : tests) {
         uint64_t timetag = generate_timetag(t.timestamp, t.cluster_id, false);
         ASSERT_EQ(t.cluster_id, extract_cluster_id_from_timetag(timetag));
+        ASSERT_EQ(t.timestamp, extract_timestamp_from_timetag(timetag));
     }
 }
 
