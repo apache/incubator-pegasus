@@ -26,7 +26,7 @@ before_script:
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh build \
+    - ./run.sh build && \
       pushd ./src/builder/bin/pegasus_unit_test && ./pegasus_unit_test && popd
 
 notifications:
