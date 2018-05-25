@@ -6,8 +6,10 @@
 
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
+#include <rocksdb/convenience.h>
 #include <rocksdb/table.h>
 #include <rocksdb/utilities/checkpoint.h>
+#include <rocksdb/filter_policy.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/fmt_logging.h>
@@ -90,6 +92,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     // init db options
 
+    // read rocksdb::Options configurations
     // rocksdb default: 4MB
     _db_opts.write_buffer_size =
         (size_t)dsn_config_get_value_uint64("pegasus.server",
@@ -176,17 +179,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                         60,
                                         "rocksdb options.level0_stop_writes_trigger, default 60");
 
-    // disable table block cache, default: false
-    if (dsn_config_get_value_bool("pegasus.server",
-                                  "rocksdb_disable_table_block_cache",
-                                  false,
-                                  "rocksdb options.disable_table_block_cache, default false")) {
-        rocksdb::BlockBasedTableOptions table_options;
-        table_options.no_block_cache = true;
-        table_options.block_restart_interval = 4;
-        _db_opts.table_factory.reset(NewBlockBasedTableFactory(table_options));
-    }
-
     // rocksdb default: snappy
     std::string compression_str = dsn_config_get_value_string(
         "pegasus.server",
@@ -213,6 +205,27 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             }
         }
     }
+
+    // read rocksdb::BlockBasedTableOptions configurations
+    rocksdb::BlockBasedTableOptions tbl_opts;
+    // disable table block cache, default: false
+    if (dsn_config_get_value_bool("pegasus.server",
+                                  "rocksdb_disable_table_block_cache",
+                                  false,
+                                  "rocksdb tbl_opts.no_block_cache, default false")) {
+        tbl_opts.no_block_cache = true;
+        tbl_opts.block_restart_interval = 4;
+    }
+
+    // disable bloom filter, default: false
+    if (!dsn_config_get_value_bool("pegasus.server",
+                                   "rocksdb_disable_bloom_filter",
+                                   false,
+                                   "rocksdb tbl_opts.filter_policy, default nullptr")) {
+        tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+    }
+
+    _db_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
 
     // disable write ahead logging as replication handles logging instead now
     _wt_opts.disableWAL = true;
@@ -1492,7 +1505,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _is_open = true;
 
         dinfo("%s: start the updating sstsize timer task", replica_name());
-        ::dsn::tasking::enqueue_timer(
+        _updating_rocksdb_sstsize_timer_task = ::dsn::tasking::enqueue_timer(
             LPC_UPDATING_ROCKSDB_SSTSIZE,
             &_tracker,
             [this]() { this->updating_rocksdb_sstsize(); },
@@ -1508,6 +1521,12 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         derror("%s: open app failed, error = %s", replica_name(), status.ToString().c_str());
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
+}
+
+void pegasus_server_impl::cancel_background_work(bool wait)
+{
+    dassert(_db != nullptr, "");
+    rocksdb::CancelAllBackgroundWork(_db, wait);
 }
 
 ::dsn::error_code pegasus_server_impl::stop(bool clear_state)
@@ -1527,9 +1546,14 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         }
     }
 
-    _context_cache.clear();
     // stop all tracked tasks when pegasus server is stopped.
+    if (_updating_rocksdb_sstsize_timer_task != nullptr) {
+        _updating_rocksdb_sstsize_timer_task->cancel(true);
+        _updating_rocksdb_sstsize_timer_task = nullptr;
+    }
     _tracker.cancel_outstanding_tasks();
+
+    _context_cache.clear();
 
     _is_open = false;
     delete _db;

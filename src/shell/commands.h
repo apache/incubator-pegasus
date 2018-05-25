@@ -3690,6 +3690,35 @@ inline bool exit_shell(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+inline bool get_app_envs(command_executor *e, shell_context *sc, arguments args)
+{
+    if (sc->current_app_name.empty()) {
+        fprintf(stderr, "No app is using now\nUSAGE: use [app_name]\n");
+        return true;
+    }
+
+    if (args.argc != 1) {
+        return false;
+    }
+
+    std::map<std::string, std::string> envs;
+    ::dsn::error_code ret = sc->ddl_client->get_app_envs(sc->current_app_name, envs);
+    if (ret != ::dsn::ERR_OK) {
+        fprintf(stderr, "get app env failed with err = %s\n", ret.to_string());
+        return true;
+    }
+
+    std::cout << "get app envs succeed, count = " << envs.size() << std::endl;
+    if (!envs.empty()) {
+        std::cout << "=================================" << std::endl;
+        for (auto &kv : envs)
+            std::cout << kv.first << " = " << kv.second << std::endl;
+        std::cout << "=================================" << std::endl;
+    }
+
+    return true;
+}
+
 inline bool set_app_envs(command_executor *e, shell_context *sc, arguments args)
 {
     if (sc->current_app_name.empty()) {

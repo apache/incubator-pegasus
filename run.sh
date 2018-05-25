@@ -479,8 +479,8 @@ function run_start_onebox()
         cd meta$i
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
         sed "s/@META_PORT@/$meta_port/;s/@REPLICA_PORT@/34800/" ${ROOT}/config-server.ini >config.ini
-        echo "cd `pwd` && ../meta$i/pegasus_server config.ini -app_list meta &>result &"
-        ../meta$i/pegasus_server config.ini -app_list meta &>result &
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list meta &>result &"
+        $PWD/pegasus_server config.ini -app_list meta &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
@@ -492,8 +492,8 @@ function run_start_onebox()
         cd replica$j
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
         sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/$replica_port/" ${ROOT}/config-server.ini >config.ini
-        echo "cd `pwd` && ../replica$j/pegasus_server config.ini -app_list replica &>result &"
-        ../replica$j/pegasus_server config.ini -app_list replica &>result &
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list replica &>result &"
+        $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
@@ -652,8 +652,8 @@ function run_start_onebox_instance()
             exit -1
         fi
         cd $dir
-        echo "cd `pwd` && ../meta$META_ID/pegasus_server config.ini -app_list meta &>result &"
-        ../meta$META_ID/pegasus_server config.ini -app_list meta &>result &
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list meta &>result &"
+        $PWD/pegasus_server config.ini -app_list meta &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
@@ -670,8 +670,8 @@ function run_start_onebox_instance()
             exit -1
         fi
         cd $dir
-        echo "cd `pwd` && ../replica$REPLICA_ID/pegasus_server config.ini -app_list replica &>result &"
-        ../replica$REPLICA_ID/pegasus_server config.ini -app_list replica &>result &
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list replica &>result &"
+        $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
