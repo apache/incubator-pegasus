@@ -7,7 +7,6 @@
 
 namespace dsn {
 namespace apps {
-
 class rrdb_client
 {
 public:
