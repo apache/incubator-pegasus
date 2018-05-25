@@ -4,6 +4,7 @@ set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
                 "../pegasus_perf_counter.cpp"
                 "../pegasus_counter_updater.cpp"
                 "../pagasus_manual_compact_service.cpp"
+                "../pegasus_event_listener.cpp"
                 "../pegasus_write_service.cpp"
                 "../pegasus_server_write.cpp"
 )
