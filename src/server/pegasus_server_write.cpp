@@ -18,7 +18,7 @@ namespace pegasus {
 namespace server {
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
-    : replica_base(server), _verbose_log(server->_verbose_log), _cluster_id(server->_cluster_id)
+    : replica_base(*server), _verbose_log(server->_verbose_log)
 {
     _write_svc = dsn::make_unique<pegasus_write_service>(server);
 }

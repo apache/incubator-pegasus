@@ -87,9 +87,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         0,
         "rocksdb_abnormal_multi_get_iterate_count_threshold, default is 0, means no check");
 
-    _cluster_id = static_cast<uint8_t>(dsn_config_get_value_uint64(
-        "pegasus.server", "pegasus_cluster_id", 1, "The ID of this pegasus cluster."));
-
     // init db options
 
     // read rocksdb::Options configurations
@@ -341,7 +338,7 @@ void pegasus_server_impl::parse_checkpoints()
     }
 }
 
-pegasus_server_impl::~pegasus_server_impl() {}
+pegasus_server_impl::~pegasus_server_impl() = default;
 
 void pegasus_server_impl::gc_checkpoints()
 {
@@ -2395,4 +2392,3 @@ std::string pegasus_server_impl::query_compact_state() const
 
 } // namespace server
 } // namespace pegasus
-

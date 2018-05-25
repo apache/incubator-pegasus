@@ -24,7 +24,7 @@ class pegasus_write_service::impl : public dsn::replication::replica_base
 {
 public:
     explicit impl(pegasus_server_impl *server)
-        : replica_base(server),
+        : replica_base(*server),
           _primary_address(server->_primary_address),
           _value_schema_version(server->_value_schema_version),
           _verify_timetag(false),
