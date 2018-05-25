@@ -26,41 +26,27 @@ public:
 private:
     void on_multi_put(multi_put_rpc &rpc)
     {
-        _write_svc->multi_put(_put_ctx, rpc.request(), rpc.response());
+        _write_svc->multi_put(_decree, rpc.request(), rpc.response());
     }
 
     void on_multi_remove(multi_remove_rpc &rpc)
     {
-        _write_svc->multi_remove(_remove_ctx, rpc.request(), rpc.response());
+        _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
     }
-
-    void on_duplicate(duplicate_rpc &rpc)
-    {
-        on_duplicate_impl(false, rpc.request(), rpc.response());
-    }
-
-    void on_duplicate_impl(bool batched,
-                           const dsn::apps::duplicate_request &request,
-                           dsn::apps::duplicate_response &resp);
 
     /// Delay replying for the batched requests until all of them complete.
     int on_batched_writes(dsn_message_t *requests, int count, int64_t decree);
 
     void on_single_put_in_batch(put_rpc &rpc)
     {
-        _write_svc->batch_put(_put_ctx, rpc.request(), rpc.response());
-        request_key_check(_put_ctx.decree, rpc.dsn_request(), rpc.request().key);
+        _write_svc->batch_put(rpc.request(), rpc.response());
+        request_key_check(_decree, rpc.dsn_request(), rpc.request().key);
     }
 
     void on_single_remove_in_batch(remove_rpc &rpc)
     {
-        _write_svc->batch_remove(_remove_ctx, rpc.request(), rpc.response());
-        request_key_check(_remove_ctx.decree, rpc.dsn_request(), rpc.request());
-    }
-
-    void on_single_duplicate_in_batch(duplicate_rpc &rpc)
-    {
-        on_duplicate_impl(true, rpc.request(), rpc.response());
+        _write_svc->batch_remove(rpc.request(), rpc.response());
+        request_key_check(_decree, rpc.dsn_request(), rpc.request());
     }
 
     // Ensure that the write request is directed to the right partition.
@@ -74,9 +60,8 @@ private:
     std::unique_ptr<pegasus_write_service> _write_svc;
     std::vector<put_rpc> _put_rpc_batch;
     std::vector<remove_rpc> _remove_rpc_batch;
-    std::vector<duplicate_rpc> _batched_duplicate_rpc_batch;
-    db_write_context _put_ctx;
-    db_write_context _remove_ctx;
+
+    int64_t _decree;
 
     bool _verbose_log;
     uint8_t _cluster_id;

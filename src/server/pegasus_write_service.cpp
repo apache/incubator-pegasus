@@ -60,44 +60,41 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
 
 pegasus_write_service::~pegasus_write_service() = default;
 
-void pegasus_write_service::multi_put(const db_write_context &ctx,
+void pegasus_write_service::multi_put(int64_t decree,
                                       const dsn::apps::multi_put_request &update,
                                       dsn::apps::update_response &resp)
 {
     uint64_t start_time = dsn_now_ns();
     _pfc_multi_put_qps->increment();
-    _impl->multi_put(ctx, update, resp);
+    _impl->multi_put(decree, update, resp);
     _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
 }
 
-void pegasus_write_service::multi_remove(const db_write_context &ctx,
+void pegasus_write_service::multi_remove(int64_t decree,
                                          const dsn::apps::multi_remove_request &update,
                                          dsn::apps::multi_remove_response &resp)
 {
     uint64_t start_time = dsn_now_ns();
     _pfc_multi_remove_qps->increment();
-    _impl->multi_remove(ctx, update, resp);
+    _impl->multi_remove(decree, update, resp);
     _pfc_multi_remove_latency->set(dsn_now_ns() - start_time);
 }
 
-void pegasus_write_service::batch_put(const db_write_context &ctx,
-                                      const dsn::apps::update_request &update,
+void pegasus_write_service::batch_put(const dsn::apps::update_request &update,
                                       dsn::apps::update_response &resp)
 {
     _pfc_put_qps->increment();
     _batch_perfcounters.push_back(_pfc_put_latency.get());
 
-    _impl->batch_put(ctx, update, resp);
+    _impl->batch_put(update, resp);
 }
 
-void pegasus_write_service::batch_remove(const db_write_context &ctx,
-                                         const dsn::blob &key,
-                                         dsn::apps::update_response &resp)
+void pegasus_write_service::batch_remove(const dsn::blob &key, dsn::apps::update_response &resp)
 {
     _pfc_remove_qps->increment();
     _batch_perfcounters.push_back(_pfc_remove_latency.get());
 
-    _impl->batch_remove(ctx, key, resp);
+    _impl->batch_remove(key, resp);
 }
 
 int pegasus_write_service::batch_commit(int64_t decree)
@@ -124,11 +121,11 @@ void pegasus_write_service::batch_prepare()
     _batch_start_time = dsn_now_ns();
 }
 
-int pegasus_write_service::empty_put(const db_write_context &ctx)
+int pegasus_write_service::empty_put(int64_t decree)
 {
     std::string empty_key, empty_value;
-    _impl->db_write_batch_put(ctx, empty_key, empty_value, 0);
-    return _impl->db_write(ctx.decree);
+    _impl->db_write_batch_put(empty_key, empty_value, 0);
+    return _impl->db_write(decree);
 }
 
 } // namespace server
