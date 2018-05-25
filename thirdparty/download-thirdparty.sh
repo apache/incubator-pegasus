@@ -2,9 +2,9 @@
 
 # check_and_download package_name url md5sum extracted_folder_name
 # return:
-#   1 if already downloaded
 #   0 if download and extract ok
-#  -1 if download or extract fail
+#   1 if already downloaded
+#   2 if download or extract fail
 function check_and_download()
 {
     package_name=$1
@@ -22,7 +22,7 @@ function check_and_download()
             extract_package $package_name
             local ret_code=$?
             if [ $ret_code -ne 0 ]; then
-                return -1
+                return 2
             else
                 return 0
             fi
@@ -30,17 +30,24 @@ function check_and_download()
     else
         echo "download package $package_name"
         curl -L $url > $package_name
+        local ret_code=$?
+        if [ $ret_code -ne 0 ]; then
+            rm -f $1
+            echo "package $package_name download failed"
+            return 2
+        fi
+
         md5=`md5sum $1 | cut -d ' ' -f1`
         if [ "$md5"x != "$correct_md5sum"x ]; then
-            rm $1
+            rm -f $1
             echo "package $package_name is broken, already deleted"
-            return -1
+            return 2
         fi
 
         extract_package $package_name
         local ret_code=$?
         if [ $ret_code -ne 0 ]; then
-            return -1
+            return 2
         else
             return 0
         fi
@@ -53,15 +60,17 @@ function extract_package()
     tar xf $package_name
     local ret_code=$?
     if [ $ret_code -ne 0 ]; then
-        echo "extract $package_name failed,please delete the incomplete folder"
-        return -1
+        rm -f $package_name
+        echo "extract $package_name failed, please delete the incomplete folder"
+        return 2
     else
         return 0
     fi
 }
+
 function exit_if_fail()
 {
-    if [ $1 -eq -1 ]; then
+    if [ $1 -eq 2 ]; then
         exit $1
     fi
 }
@@ -104,6 +113,7 @@ check_and_download "gperftools-2.7.tar.gz"\
     "https://github.com/gperftools/gperftools/releases/download/gperftools-2.7/gperftools-2.7.tar.gz"\
     "c6a852a817e9160c79bdb2d3101b4601"\
     "gperftools-2.7"
+exit_if_fail $?
 
 ## protobuf
 #check_and_download "protobuf-v3.5.0.tar.gz"\
@@ -116,6 +126,7 @@ check_and_download "rapidjson-v1.1.0.tar.gz"\
     "https://codeload.github.com/Tencent/rapidjson/tar.gz/v1.1.0"\
     "badd12c511e081fec6c89c43a7027bce"\
     "rapidjson-1.1.0"
+exit_if_fail $?
 
 # thrift 0.9.3
 check_and_download "thrift-0.9.3.tar.gz"\
@@ -123,7 +134,7 @@ check_and_download "thrift-0.9.3.tar.gz"\
     "88d667a8ae870d5adeca8cb7d6795442"\
     "thrift-0.9.3"
 ret_code=$?
-if [ $ret_code -eq -1 ]; then
+if [ $ret_code -eq 2 ]; then
     exit -1
 elif [ $ret_code -eq 0 ]; then
     echo "make patch to thrift"
