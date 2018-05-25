@@ -284,6 +284,7 @@ private:
     perf_counter_wrapper _counter_replicas_garbage_replica_dir_count;
 
     perf_counter_wrapper _counter_shared_log_size;
+    perf_counter_wrapper _counter_recent_trigger_checkpoint_count;
 
     perf_counter_wrapper _counter_cold_backup_running_count;
     perf_counter_wrapper _counter_cold_backup_recent_start_count;

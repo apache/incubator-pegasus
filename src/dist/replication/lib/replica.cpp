@@ -352,6 +352,8 @@ bool replica::group_configuration(/*out*/ partition_configuration &config) const
 
 decree replica::last_durable_decree() const { return _app->last_durable_decree(); }
 
+decree replica::last_flushed_decree() const { return _app->last_flushed_decree(); }
+
 decree replica::last_prepared_decree() const
 {
     ballot lastBallot = 0;

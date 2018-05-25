@@ -198,6 +198,11 @@ void replica_stub::install_perf_counters()
 
     _counter_shared_log_size.init_app_counter(
         "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
+    _counter_recent_trigger_checkpoint_count.init_app_counter(
+        "eon.replica_stub",
+        "recent.trigger.checkpoint.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "trigger checkpoint count in the recent period");
 
     _counter_cold_backup_running_count.init_app_counter("eon.replica_stub",
                                                         "cold.backup.running.count",
@@ -1360,7 +1365,7 @@ void replica_stub::on_gc()
         replica_ptr rep;
         partition_status::type status;
         mutation_log_ptr plog;
-        decree last_durable_decree;
+        decree last_flushed_decree;
         int64_t init_offset_in_shared_log;
     };
 
@@ -1374,7 +1379,7 @@ void replica_stub::on_gc()
             info.rep = rep;
             info.status = rep->status();
             info.plog = rep->private_log();
-            info.last_durable_decree = rep->last_durable_decree();
+            info.last_flushed_decree = rep->last_flushed_decree();
             info.init_offset_in_shared_log = rep->get_app()->init_info().init_offset_in_shared_log;
         }
     }
@@ -1417,22 +1422,22 @@ void replica_stub::on_gc()
                 plog->flush_once();
 
                 decree plog_max_commit_on_disk = plog->max_commit_on_disk();
-                ri.max_decree = std::min(kv.second.last_durable_decree, plog_max_commit_on_disk);
+                ri.max_decree = std::min(kv.second.last_flushed_decree, plog_max_commit_on_disk);
                 ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
-                       ", last_durable_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
+                       ", last_flushed_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
                        rep->name(),
                        enum_to_string(kv.second.status),
                        ri.max_decree,
-                       kv.second.last_durable_decree,
+                       kv.second.last_flushed_decree,
                        plog_max_commit_on_disk);
             } else {
-                ri.max_decree = kv.second.last_durable_decree;
+                ri.max_decree = kv.second.last_flushed_decree;
                 ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
-                       ", last_durable_decree = %" PRId64 "",
+                       ", last_flushed_decree = %" PRId64 "",
                        rep->name(),
                        enum_to_string(kv.second.status),
                        ri.max_decree,
-                       kv.second.last_durable_decree);
+                       kv.second.last_flushed_decree);
             }
             ri.valid_start_offset = kv.second.init_offset_in_shared_log;
             gc_condition[kv.first] = ri;
@@ -1473,6 +1478,7 @@ void replica_stub::on_gc()
                    reserved_log_count,
                    (int)prevent_gc_replicas.size(),
                    oss.str().c_str());
+            _counter_recent_trigger_checkpoint_count->set(prevent_gc_replicas.size());
             for (auto &id : prevent_gc_replicas) {
                 auto find = rs.find(id);
                 if (find != rs.end()) {

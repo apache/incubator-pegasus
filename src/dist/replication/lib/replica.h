@@ -140,6 +140,7 @@ public:
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
     decree last_prepared_decree() const;
     decree last_durable_decree() const;
+    decree last_flushed_decree() const;
     const std::string &dir() const { return _dir; }
     bool group_configuration(/*out*/ partition_configuration &config) const;
     uint64_t create_time_milliseconds() const { return _create_time_ms; }
