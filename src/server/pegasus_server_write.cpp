@@ -18,7 +18,7 @@ namespace pegasus {
 namespace server {
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
-    : replica_base(*server), _verbose_log(server->_verbose_log), _cluster_id(server->_cluster_id)
+    : replica_base(server), _verbose_log(server->_verbose_log), _cluster_id(server->_cluster_id)
 {
     _write_svc = dsn::make_unique<pegasus_write_service>(server);
 }
@@ -145,6 +145,7 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
         err = _write_svc->batch_commit(decree);
     }
 
+    // reply the batched RPCs
     _put_rpc_batch.clear();
     _remove_rpc_batch.clear();
     _batched_duplicate_rpc_batch.clear();

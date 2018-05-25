@@ -10,47 +10,62 @@ using namespace pegasus;
 
 TEST(value_schema, generate_and_extract_timetag)
 {
-    uint64_t timestamp = 10000;
-    uint8_t cluster_id = 1;
-    uint64_t timetag = generate_timetag(timestamp, cluster_id, false);
+    struct test_case
+    {
+        uint64_t timestamp;
+        uint8_t cluster_id;
+        bool delete_tag;
+    } tests[] = {
+        {1000, 1, true},
+        {1000, 1, false},
 
-    ASSERT_EQ(cluster_id, extract_cluster_id_from_timetag(timetag));
-}
+        {std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint8_t>::max(), true},
+        {std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint8_t>::max(), false},
+    };
 
-TEST(value_schema, generate_and_extract_from_value_v1)
-{
-    uint32_t expire_ts = 1000;
-    uint64_t timetag = generate_timetag(10000, 1, false);
-
-    pegasus_value_generator gen;
-    rocksdb::SliceParts sparts = gen.generate_value(1, dsn::blob(), expire_ts, timetag);
-
-    std::string raw_value;
-    for (int i = 0; i < sparts.num_parts; i++) {
-        raw_value += sparts.parts[i].ToString();
+    for (auto &t : tests) {
+        uint64_t timetag = generate_timetag(t.timestamp, t.cluster_id, false);
+        ASSERT_EQ(t.cluster_id, extract_cluster_id_from_timetag(timetag));
     }
-
-    ASSERT_EQ(expire_ts, pegasus_extract_expire_ts(1, raw_value));
-    ASSERT_EQ(timetag, pegasus_extract_timetag(1, raw_value));
 }
 
-TEST(value_schema, generate_and_extract_user_value)
+TEST(value_schema, generate_and_extract_v1_v0)
 {
-    for (int version = 0; version <= 1; version++) {
-        std::string data = "hello";
+    struct test_case
+    {
+        int value_schema_version;
 
+        uint32_t expire_ts;
+        uint64_t timetag;
+        std::string user_data;
+    } tests[] = {
+        {1, 1000, 10001, ""},
+        {1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint64_t>::max(), "pegasus"},
+        {1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint64_t>::max(), ""},
+
+        {0, 1000, 0, ""},
+        {0, std::numeric_limits<uint32_t>::max(), 0, "pegasus"},
+        {0, std::numeric_limits<uint32_t>::max(), 0, ""},
+    };
+
+    for (auto &t : tests) {
         pegasus_value_generator gen;
         rocksdb::SliceParts sparts =
-            gen.generate_value(version, dsn::blob(data.data(), 0, data.length()), 1000, 10000);
+            gen.generate_value(t.value_schema_version, t.user_data, t.expire_ts, t.timetag);
 
         std::string raw_value;
         for (int i = 0; i < sparts.num_parts; i++) {
             raw_value += sparts.parts[i].ToString();
         }
 
-        dsn::blob user_value;
-        pegasus_extract_user_data(version, std::move(raw_value), user_value);
+        ASSERT_EQ(t.expire_ts, pegasus_extract_expire_ts(t.value_schema_version, raw_value));
 
-        ASSERT_EQ(user_value.to_string(), data);
+        if (t.value_schema_version == 1) {
+            ASSERT_EQ(t.timetag, pegasus_extract_timetag(t.value_schema_version, raw_value));
+        }
+
+        dsn::blob user_data;
+        pegasus_extract_user_data(t.value_schema_version, std::move(raw_value), user_data);
+        ASSERT_EQ(t.user_data, user_data.to_string());
     }
 }

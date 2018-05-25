@@ -24,10 +24,7 @@ class pegasus_write_service::impl : public dsn::replication::replica_base
 {
 public:
     explicit impl(pegasus_server_impl *server)
-        : replica_base(*server),
-          _server(server),
-          _gpid(server->get_gpid()),
-          _verbose_log(server->_verbose_log),
+        : replica_base(server),
           _primary_address(server->_primary_address),
           _value_schema_version(server->_value_schema_version),
           _verify_timetag(false),
@@ -43,8 +40,8 @@ public:
                    const dsn::apps::multi_put_request &update,
                    dsn::apps::update_response &resp)
     {
-        resp.app_id = _gpid.get_app_id();
-        resp.partition_index = _gpid.get_partition_index();
+        resp.app_id = get_gpid().get_app_id();
+        resp.partition_index = get_gpid().get_partition_index();
         resp.decree = ctx.decree;
         resp.server = _primary_address;
 
@@ -53,7 +50,7 @@ public:
             derror_replica("invalid argument for multi_put: decree = {}, error = empty kvs",
                            ctx.decree);
 
-            // an invalid operation shouldn't be added to latency calculation TODO(wutao1): why?
+            // an invalid operation shouldn't be added to latency calculation
             resp.error = rocksdb::Status::kInvalidArgument;
             return;
         }
@@ -75,8 +72,8 @@ public:
                       const dsn::apps::multi_remove_request &update,
                       dsn::apps::multi_remove_response &resp)
     {
-        resp.app_id = _gpid.get_app_id();
-        resp.partition_index = _gpid.get_partition_index();
+        resp.app_id = get_gpid().get_app_id();
+        resp.partition_index = get_gpid().get_partition_index();
         resp.decree = ctx.decree;
         resp.server = _primary_address;
 
@@ -127,8 +124,8 @@ public:
         int err = db_write(decree);
 
         dsn::apps::update_response resp;
-        resp.app_id = _gpid.get_app_id();
-        resp.partition_index = _gpid.get_partition_index();
+        resp.app_id = get_gpid().get_app_id();
+        resp.partition_index = get_gpid().get_partition_index();
         resp.decree = decree;
         resp.server = _primary_address;
 
@@ -218,10 +215,6 @@ public:
     }
 
 private:
-    pegasus_server_impl *_server;
-
-    const dsn::gpid _gpid;
-    const bool _verbose_log;
     const std::string _primary_address;
     const int _value_schema_version;
     const bool _verify_timetag;

@@ -28,7 +28,7 @@ before_script:
 
 script:
     - ./run.sh build
-    - pushd src/builder/bin/pegasus_unit_test && ./pegasus_unit_test && popd
+    - pushd ./src/builder/bin/pegasus_unit_test && ./pegasus_unit_test && popd
 
 notifications:
     email: false

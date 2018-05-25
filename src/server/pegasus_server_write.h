@@ -43,7 +43,7 @@ private:
                            const dsn::apps::duplicate_request &request,
                            dsn::apps::duplicate_response &resp);
 
-    /// Delay replying for the batched requests until all of them completes.
+    /// Delay replying for the batched requests until all of them complete.
     int on_batched_writes(dsn_message_t *requests, int count, int64_t decree);
 
     void on_single_put_in_batch(put_rpc &rpc)

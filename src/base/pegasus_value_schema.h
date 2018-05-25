@@ -168,19 +168,19 @@ public:
     /// record is deleted.
     ///
     /// rocksdb value (ver 1)
-    ///  = [expire_ts(uint32_t)] [tag(uint64_t)] [user_data(bytes)]
+    ///  = [expire_ts(uint32_t)] [timetag(uint64_t)] [user_data(bytes)]
     ///  = [expire_ts(unit32_t)]
     ///    [timestamp in μs (56 bit)] [cluster_id (7 bit)] [delete_tag (1 bit)]
     ///    [user_data(bytes)]
     ///
     /// \internal
     rocksdb::SliceParts
-    generate_value_v1(uint32_t expire_ts, uint64_t tag, dsn::string_view user_data)
+    generate_value_v1(uint32_t expire_ts, uint64_t timetag, dsn::string_view user_data)
     {
         _write_buf.resize(sizeof(uint32_t) + sizeof(uint64_t));
         _write_slices.clear();
 
-        dsn::data_output(_write_buf).write_u32(expire_ts).write_u64(tag);
+        dsn::data_output(_write_buf).write_u32(expire_ts).write_u64(timetag);
         _write_slices.emplace_back(_write_buf.data(), _write_buf.size());
 
         if (user_data.length() > 0) {

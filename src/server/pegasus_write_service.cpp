@@ -58,7 +58,7 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
                                                "statistic the latency of MULTI_REMOVE request");
 }
 
-pegasus_write_service::~pegasus_write_service() {}
+pegasus_write_service::~pegasus_write_service() = default;
 
 void pegasus_write_service::multi_put(const db_write_context &ctx,
                                       const dsn::apps::multi_put_request &update,
