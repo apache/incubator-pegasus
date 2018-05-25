@@ -212,6 +212,24 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                   "rocksdb tbl_opts.no_block_cache, default false")) {
         tbl_opts.no_block_cache = true;
         tbl_opts.block_restart_interval = 4;
+    } else {
+        // block cache capacity, default 10G
+        static size_t capacity = dsn_config_get_value_uint64(
+            "pegasus.server",
+            "rocksdb_block_cache_capacity",
+            10 * 1024 * 1024 * 1024ULL,
+            "block cache capacity for one pegasus server, shared by all rocksdb instances");
+
+        // block cache num shard bits, default -1(auto)
+        static int num_shard_bits = (int)dsn_config_get_value_int64(
+            "pegasus.server",
+            "rocksdb_block_cache_num_shard_bits",
+            -1,
+            "block cache will be sharded into 2^num_shard_bits shards");
+
+        // init block cache
+        static std::shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache(capacity, num_shard_bits);
+        tbl_opts.block_cache = cache;
     }
 
     // disable bloom filter, default: false
