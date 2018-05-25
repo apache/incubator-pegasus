@@ -16,6 +16,7 @@ before_install:
     - cd ..
 
 install:
+    - sudo apt-get -y install libsnappy-dev
 
 before_script:
     - cd rdsn/thirdparty
