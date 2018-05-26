@@ -28,7 +28,7 @@ before_script:
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh build && ./run.sh test -m pegasus_unit_test pegasus_function_test
+    - ./run.sh build && ./run.sh test
 
 notifications:
     email: false
