@@ -10,6 +10,7 @@ include("${DSN_ROOT}/bin/dsn.cmake")
 
 set(DSN_BUILD_RUNTIME FALSE)
 add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
+add_definitions(-D__STDC_FORMAT_MACROS)
 dsn_common_setup()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
