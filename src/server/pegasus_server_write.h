@@ -64,7 +64,6 @@ private:
     int64_t _decree;
 
     bool _verbose_log;
-    uint8_t _cluster_id;
 };
 
 } // namespace server
