@@ -841,7 +841,7 @@ function usage_start_kill_test()
     echo "   -w|--worker_count <num>"
     echo "                     worker count for concurrently setting value, default is 10"
     echo "   -k|--killer_type <str>"
-    echo "                     killer type: process_kill | partition_killer, default is process_killer"
+    echo "                     killer type: process_killer | partition_killer, default is process_killer"
 }
 
 function run_start_kill_test()
@@ -931,10 +931,10 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
     mkdir -p onebox/killer && cd onebox/killer
     ln -s -f ${DSN_ROOT}/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
-    echo "$PWD/pegasus_kill_test config.ini killer &>/dev/null &"
-    $PWD/pegasus_kill_test config.ini killer &>/dev/null &
+    echo "$PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &"
+    $PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &
     PID=$!
-    ps -ef | grep '/pegasus_kill_test config.ini killer' | grep "\<$PID\>"
+    ps -ef | grep '/pegasus_kill_test config.ini $KILLER_TYPE' | grep "\<$PID\>"
     sleep 0.2
     cd ${ROOT}
     run_list_kill_test
