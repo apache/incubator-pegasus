@@ -152,7 +152,6 @@ public:
 private:
     friend class pagasus_manual_compact_service;
     friend class manual_compact_service_test;
-    friend class pegasus_server_write;
     friend class pegasus_write_service;
 
     // parse checkpoint directories in the data dir

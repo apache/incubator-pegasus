@@ -16,7 +16,7 @@ namespace server {
 class pegasus_server_write : public dsn::replication::replica_base
 {
 public:
-    explicit pegasus_server_write(pegasus_server_impl *server);
+    pegasus_server_write(pegasus_server_impl *server, bool verbose_log);
 
     int on_batched_write_requests(dsn_message_t *requests,
                                   int count,
@@ -63,7 +63,7 @@ private:
 
     int64_t _decree;
 
-    bool _verbose_log;
+    const bool _verbose_log;
 };
 
 } // namespace server

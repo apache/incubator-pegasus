@@ -1514,7 +1514,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             std::chrono::seconds(30));
 
         // initialize write service after server being initialized.
-        _server_write = dsn::make_unique<pegasus_server_write>(this);
+        _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
 
         return ::dsn::ERR_OK;
     } else {
