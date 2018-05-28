@@ -1458,9 +1458,7 @@ void replica_stub::on_gc()
                     kv.second.rep->tracker(),
                     std::bind(&replica_stub::trigger_checkpoint, this, kv.second.rep, true),
                     kv.first.thread_hash(),
-                    std::chrono::milliseconds(
-                        dsn_random32(0, 3000)) // delay random to avoid write compete
-                    );
+                    std::chrono::milliseconds(dsn_random32(0, _options.gc_interval_ms / 2)));
             }
         } else if (reserved_log_count > _options.log_shared_file_count_limit) {
             std::ostringstream oss;
@@ -1478,7 +1476,6 @@ void replica_stub::on_gc()
                    reserved_log_count,
                    (int)prevent_gc_replicas.size(),
                    oss.str().c_str());
-            _counter_recent_trigger_checkpoint_count->set(prevent_gc_replicas.size());
             for (auto &id : prevent_gc_replicas) {
                 auto find = rs.find(id);
                 if (find != rs.end()) {
@@ -1487,9 +1484,7 @@ void replica_stub::on_gc()
                         find->second.rep->tracker(),
                         std::bind(&replica_stub::trigger_checkpoint, this, find->second.rep, true),
                         id.thread_hash(),
-                        std::chrono::milliseconds(
-                            dsn_random32(0, 3000)) // delay random to avoid write compete
-                        );
+                        std::chrono::milliseconds(dsn_random32(0, _options.gc_interval_ms / 2)));
                 }
             }
         }
@@ -1825,6 +1820,7 @@ void replica_stub::notify_replica_state_update(const replica_configuration &conf
 
 void replica_stub::trigger_checkpoint(replica_ptr r, bool is_emergency)
 {
+    _counter_recent_trigger_checkpoint_count->increment();
     r->init_checkpoint(is_emergency);
 }
 
