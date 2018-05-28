@@ -206,7 +206,7 @@ function run_test()
     done
 
     if [ "$test_modules" == "" ]; then
-        test_modules="pegasus_rproxy_test pegasus_function_test"
+        test_modules="pegasus_rproxy_test pegasus_function_test pegasus_unit_test"
     fi
 
     ./run.sh clear_onebox #clear the onebox before test

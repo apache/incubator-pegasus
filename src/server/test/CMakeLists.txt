@@ -42,6 +42,6 @@ add_definitions(-DPEGASUS_UNIT_TEST)
 
 set(MY_BOOST_PACKAGES system filesystem)
 
-set(MY_BINPLACES config.ini)
+set(MY_BINPLACES config.ini run.sh)
 
 dsn_add_executable()
