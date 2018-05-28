@@ -934,7 +934,7 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
     echo "$PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &"
     $PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &
     PID=$!
-    ps -ef | grep '/pegasus_kill_test config.ini $KILLER_TYPE' | grep "\<$PID\>"
+    ps -ef | grep '/pegasus_kill_test config.ini p*' | grep "\<$PID\>"
     sleep 0.2
     cd ${ROOT}
     run_list_kill_test
