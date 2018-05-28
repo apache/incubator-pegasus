@@ -46,7 +46,7 @@ bool buf2signed(string_view buf, T &result)
     const int saved_errno = errno;
     errno = 0;
     char *p = nullptr;
-    long long v = std::strtoll(buf.data(), &p, 10);
+    long long v = std::strtoll(buf.data(), &p, 0);
 
     if (p - buf.data() != buf.length()) {
         return false;
@@ -64,19 +64,62 @@ bool buf2signed(string_view buf, T &result)
     return true;
 }
 
+template <typename T>
+bool buf2unsigned(string_view buf, T &result)
+{
+    static_assert(std::is_unsigned<T>::value, "buf2unsigned works only with unsigned integer");
+
+    if (buf.empty()) {
+        return false;
+    }
+
+    const int saved_errno = errno;
+    errno = 0;
+    char *p = nullptr;
+    unsigned long long v = std::strtoull(buf.data(), &p, 0);
+
+    if (p - buf.data() != buf.length()) {
+        return false;
+    }
+
+    if (v > std::numeric_limits<T>::max() || v < std::numeric_limits<T>::min() || errno != 0) {
+        return false;
+    }
+
+    if (errno == 0) {
+        errno = saved_errno;
+    }
+
+    // strtoull() will convert a negative integer to an unsigned integer,
+    // return false in this condition. (but we consider "-0" is correct)
+    if (v != 0 && std::find(buf.begin(), buf.end(), '-') != buf.end()) {
+        return false;
+    }
+
+    result = v;
+    return true;
+}
 } // namespace internal
 
-bool buf2int32(string_view buf, int32_t &result) { return internal::buf2signed(buf, result); }
+/// buf2*: `result` will keep unmodified if false is returned.
 
-bool buf2int64(string_view buf, int64_t &result) { return internal::buf2signed(buf, result); }
+inline bool buf2int32(string_view buf, int32_t &result) { return internal::buf2signed(buf, result); }
 
-bool buf2bool(string_view buf, bool &result)
+inline bool buf2int64(string_view buf, int64_t &result) { return internal::buf2signed(buf, result); }
+
+inline bool buf2uint64(string_view buf, uint64_t &result) { return internal::buf2unsigned(buf, result); }
+
+inline bool buf2bool(string_view buf, bool &result, bool ignore_case = true)
 {
-    if (buf == "true") {
+    std::string data(buf.data(), buf.length());
+    if (ignore_case) {
+        std::transform(data.begin(), data.end(), data.begin(), ::tolower);
+    }
+    if (data == "true") {
         result = true;
         return true;
     }
-    if (buf == "false") {
+    if (data == "false") {
         result = false;
         return true;
     }

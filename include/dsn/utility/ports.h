@@ -70,7 +70,6 @@ __pragma(warning(disable : 4127))
 #include <list>
 #include <algorithm>
 
-#define __STDC_FORMAT_MACROS
 // common c headers
 #include <cassert>
 #include <cstring>
