@@ -25,7 +25,11 @@ namespace pegasus {
 /// \return expire_ts in host endian
 inline uint32_t pegasus_extract_expire_ts(int version, dsn::string_view value)
 {
-    dassert(version == 0, "value schema version(%d) must be v0", version);
+    dassert(version <= PEGASUS_VALUE_SCHEMA_MAX_VERSION,
+            "value schema version(%d) must be <= %d",
+            version,
+            PEGASUS_VALUE_SCHEMA_MAX_VERSION);
+
     return dsn::data_input(value).read_u32();
 }
 
@@ -35,7 +39,10 @@ inline uint32_t pegasus_extract_expire_ts(int version, dsn::string_view value)
 /// \param user_data: the result.
 inline void pegasus_extract_user_data(int version, std::string &&raw_value, ::dsn::blob &user_data)
 {
-    dassert(version == 0, "value schema version(%d) must be v0", version);
+    dassert(version <= PEGASUS_VALUE_SCHEMA_MAX_VERSION,
+            "value schema version(%d) must be <= %d",
+            version,
+            PEGASUS_VALUE_SCHEMA_MAX_VERSION);
 
     dsn::data_input input(raw_value);
     input.skip(sizeof(uint32_t));
