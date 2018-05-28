@@ -220,7 +220,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "rocksdb_block_cache_capacity",
             10 * 1024 * 1024 * 1024ULL,
             "block cache capacity for one pegasus server, shared by all rocksdb instances");
-        dwarn_replica("capacity={}", capacity);
 
         // block cache num shard bits, default -1(auto)
         static int num_shard_bits = (int)dsn_config_get_value_int64(
