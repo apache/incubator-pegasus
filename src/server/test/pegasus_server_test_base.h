@@ -24,7 +24,7 @@ public:
 
         _gpid = dsn::gpid(100, 1);
         dsn::app_info app_info;
-        app_info.app_type = "replica";
+        app_info.app_type = "pegasus";
 
         _replica =
             dsn::replication::create_test_replica(_replica_stub, _gpid, app_info, "./", false);

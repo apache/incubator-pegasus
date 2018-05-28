@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <rocksdb/db.h>
+#include <rocksdb/listener.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <rrdb/rrdb_types.h>
@@ -62,6 +63,8 @@ public:
     //  - ERR_FILE_OPERATION_FAILED
     //  - ERR_LOCAL_APP_FAILURE
     virtual ::dsn::error_code start(int argc, char **argv) override;
+
+    virtual void cancel_background_work(bool wait) override;
 
     // returns:
     //  - ERR_OK
@@ -134,7 +137,9 @@ public:
     storage_apply_checkpoint(chkpt_apply_mode mode,
                              const dsn::replication::learn_state &state) override;
 
-    virtual int64_t last_durable_decree() const { return _last_durable_decree.load(); }
+    virtual int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
+
+    virtual int64_t last_flushed_decree() const override { return _db->GetLastFlushedDecree(); }
 
 private:
     friend class pagasus_manual_compact_service;
@@ -247,6 +252,7 @@ private:
 
     pegasus_context_cache _context_cache;
 
+    ::dsn::task_ptr _updating_rocksdb_sstsize_timer_task;
     uint32_t _updating_rocksdb_sstsize_interval_seconds;
 
     pagasus_manual_compact_service _manual_compact_svc;

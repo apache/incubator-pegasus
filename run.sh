@@ -206,7 +206,7 @@ function run_test()
     done
 
     if [ "$test_modules" == "" ]; then
-        test_modules="pegasus_rproxy_test pegasus_function_test"
+        test_modules="pegasus_rproxy_test pegasus_function_test pegasus_unit_test"
     fi
 
     ./run.sh clear_onebox #clear the onebox before test
@@ -479,8 +479,8 @@ function run_start_onebox()
         cd meta$i
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
         sed "s/@META_PORT@/$meta_port/;s/@REPLICA_PORT@/34800/" ${ROOT}/config-server.ini >config.ini
-        echo "cd `pwd` && ../meta$i/pegasus_server config.ini -app_list meta &>result &"
-        ../meta$i/pegasus_server config.ini -app_list meta &>result &
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list meta &>result &"
+        $PWD/pegasus_server config.ini -app_list meta &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
@@ -492,8 +492,8 @@ function run_start_onebox()
         cd replica$j
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
         sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/$replica_port/" ${ROOT}/config-server.ini >config.ini
-        echo "cd `pwd` && ../replica$j/pegasus_server config.ini -app_list replica &>result &"
-        ../replica$j/pegasus_server config.ini -app_list replica &>result &
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list replica &>result &"
+        $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
@@ -652,8 +652,8 @@ function run_start_onebox_instance()
             exit -1
         fi
         cd $dir
-        echo "cd `pwd` && ../meta$META_ID/pegasus_server config.ini -app_list meta &>result &"
-        ../meta$META_ID/pegasus_server config.ini -app_list meta &>result &
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list meta &>result &"
+        $PWD/pegasus_server config.ini -app_list meta &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
@@ -670,8 +670,8 @@ function run_start_onebox_instance()
             exit -1
         fi
         cd $dir
-        echo "cd `pwd` && ../replica$REPLICA_ID/pegasus_server config.ini -app_list replica &>result &"
-        ../replica$REPLICA_ID/pegasus_server config.ini -app_list replica &>result &
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list replica &>result &"
+        $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
@@ -904,7 +904,6 @@ function run_start_kill_test()
     done
 
     run_start_onebox -m $META_COUNT -r $REPLICA_COUNT -a $APP_NAME -p $PARTITION_COUNT
-    echo
 
     cd $ROOT
     CONFIG=config-kill-test.ini
@@ -921,20 +920,22 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
     mkdir -p onebox/verifier && cd onebox/verifier
     ln -s -f ${DSN_ROOT}/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
-    echo "./pegasus_kill_test config.ini verifier &>/dev/null &"
-    ./pegasus_kill_test config.ini verifier &>/dev/null &
+    echo "$PWD/pegasus_kill_test config.ini verifier &>/dev/null &"
+    $PWD/pegasus_kill_test config.ini verifier &>/dev/null &
+    PID=$!
+    ps -ef | grep '/pegasus_kill_test config.ini verifier' | grep "\<$PID\>"
     sleep 0.2
-    echo
     cd ${ROOT}
 
     #start killer
     mkdir -p onebox/killer && cd onebox/killer
     ln -s -f ${DSN_ROOT}/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
-    echo "./pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &"
-    ./pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &
+    echo "$PWD/pegasus_kill_test config.ini killer &>/dev/null &"
+    $PWD/pegasus_kill_test config.ini killer &>/dev/null &
+    PID=$!
+    ps -ef | grep '/pegasus_kill_test config.ini killer' | grep "\<$PID\>"
     sleep 0.2
-    echo
     cd ${ROOT}
     run_list_kill_test
 }
@@ -967,7 +968,7 @@ function run_stop_kill_test()
         shift
     done
 
-    ps -ef | grep ' \./pegasus_kill_test ' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_kill_test ' | awk '{print $2}' | xargs kill &>/dev/null
     run_stop_onebox
 }
 
@@ -1000,7 +1001,7 @@ function run_list_kill_test()
     done
     echo "------------------------------"
     run_list_onebox
-    ps -ef | grep ' \./pegasus_kill_test ' | grep -v grep
+    ps -ef | grep '/pegasus_kill_test ' | grep -v grep
     echo "------------------------------"
     echo "Server dir: ./onebox"
     echo "------------------------------"

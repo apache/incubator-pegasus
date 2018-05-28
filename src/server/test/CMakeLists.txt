@@ -4,6 +4,7 @@ set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
                 "../pegasus_perf_counter.cpp"
                 "../pegasus_counter_updater.cpp"
                 "../pagasus_manual_compact_service.cpp"
+                "../pegasus_event_listener.cpp"
 )
 
 set(MY_SRC_SEARCH_MODE "GLOB")
@@ -39,6 +40,6 @@ add_definitions(-DPEGASUS_UNIT_TEST)
 
 set(MY_BOOST_PACKAGES system filesystem)
 
-set(MY_BINPLACES config.ini)
+set(MY_BINPLACES config.ini run.sh)
 
 dsn_add_executable()
