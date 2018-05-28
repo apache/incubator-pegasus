@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <rocksdb/db.h>
+#include <rocksdb/listener.h>
 #include <dsn/cpp/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <rrdb/rrdb_types.h>
@@ -136,7 +137,9 @@ public:
     storage_apply_checkpoint(chkpt_apply_mode mode,
                              const dsn::replication::learn_state &state) override;
 
-    virtual int64_t last_durable_decree() const { return _last_durable_decree.load(); }
+    virtual int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
+
+    virtual int64_t last_flushed_decree() const override { return _db->GetLastFlushedDecree(); }
 
 private:
     friend class pagasus_manual_compact_service;

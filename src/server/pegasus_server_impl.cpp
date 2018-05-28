@@ -17,6 +17,7 @@
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
+#include "pegasus_event_listener.h"
 
 namespace pegasus {
 namespace server {
@@ -241,6 +242,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     }
 
     _db_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
+
+    _db_opts.listeners.emplace_back(new pegasus_event_listener());
 
     // disable write ahead logging as replication handles logging instead now
     _wt_opts.disableWAL = true;
