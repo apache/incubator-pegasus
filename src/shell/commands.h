@@ -2424,8 +2424,8 @@ inline bool local_get(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "ERROR: get failed: %s\n", status.ToString().c_str());
     } else {
         uint32_t expire_ts = pegasus::pegasus_extract_expire_ts(0, value);
-        std::string user_data;
-        pegasus::pegasus_extract_user_data(0, value, user_data);
+        dsn::blob user_data;
+        pegasus::pegasus_extract_user_data(0, std::move(value), user_data);
         fprintf(stderr,
                 "%u : \"%s\"\n",
                 expire_ts,
