@@ -2,14 +2,14 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "kill_testor.h"
-
 #include <list>
+
 #include <dsn/c/api_utilities.h>
 #include <dsn/service_api_cpp.h>
-#include <pegasus/client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
+#include <pegasus/client.h>
 
+#include "kill_testor.h"
 #include "killer_handler.h"
 #include "killer_handler_shell.h"
 

@@ -12,9 +12,6 @@
 
 #include <dsn/dist/replication/replication_ddl_client.h>
 
-//#include "job.h"
-//#include "killer_handler.h"
-
 namespace pegasus {
 namespace test {
 using namespace std;

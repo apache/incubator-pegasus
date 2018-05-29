@@ -2,8 +2,6 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "partition_kill_testor.h"
-
 #include <vector>
 #include <bitset>
 #include <thread>
@@ -15,6 +13,8 @@
 #include <atomic>
 #include <memory>
 #include <sys/time.h>
+
+#include "partition_kill_testor.h"
 
 namespace pegasus {
 namespace test {
