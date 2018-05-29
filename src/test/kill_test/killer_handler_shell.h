@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "killer_handler.h"
 #include <memory>
+
+#include "killer_handler.h"
 
 namespace pegasus {
 namespace test {
