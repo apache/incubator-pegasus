@@ -165,10 +165,17 @@ Connection.prototype.getResponse = function(){
         let protocol = new self.protocol(transport_with_data);
         try {
             while (true) {
-                let ec = new ErrorCode();
-
+                let startReadCursor = transport_with_data.readCursor;
                 //Response structure: total length + error code structure + TMessage
                 let len = protocol.readI32();
+
+                // current packet is NOT integrated
+                if(transport_with_data.writeCursor - startReadCursor < len){
+                    transport_with_data.rollbackPosition();
+                    break;
+                }
+
+                let ec = new ErrorCode();
                 ec.read(protocol);
 
                 let msgHeader = protocol.readMessageBegin();
@@ -182,12 +189,14 @@ Connection.prototype.getResponse = function(){
                     } else {
                         log.error('Request failed, error code is %s', entry.operator.rpc_error.errno);
                     }
-                    transport_with_data.commitPosition();
                     request.setResponse(entry.operator.response);
-
                 } else {
                     log.error('%s Request#%d does not exist, maybe timeout', self.name, msgHeader.rseqid);
                 }
+
+                transport_with_data.rollbackPosition();
+                transport_with_data.consume(len);
+                transport_with_data.commitPosition();
             }
 
         } catch(e){
@@ -328,6 +337,7 @@ util.inherits(Request, EventEmitter);
 Request.prototype.handleTimeout = function(){
     let msg = this.connection.name + ' request#' + this.id + ' timeout, use ' + (Date.now()-this.startTime) + 'ms';
     this.entry.operator.rpc_error = new ErrorCode({'errno' : 'ERR_TIMEOUT'});
+    log.info('%s has %d requests now', this.connection.name, Object.keys(this.connection.requests).length);
 
     let err = new Exception.RPCException('ERR_TIMEOUT', msg);
     this.setException(err);

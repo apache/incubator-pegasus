@@ -4,8 +4,9 @@
 
 "use strict";
 
+let filename = "./logs/"+process.pid+"/pegasus-nodejs-client.log";
 let logConfig = {
-    appenders: { pegasus: {type: "file", filename: "pegasus-nodejs-client.log", maxLogSize: 104857600, backups: 5} },
+    appenders: { pegasus: {type: "file", filename: filename, maxLogSize: 104857600, backups: 10} },
     categories: { default: { appenders: ["pegasus"], level: "INFO" } }
 };
 module.exports = logConfig;
