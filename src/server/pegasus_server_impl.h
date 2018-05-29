@@ -224,6 +224,13 @@ private:
     // return true if successfully set
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
 
+    // return random value in range of [0.75,1.25] * base_value
+    inline uint64_t get_random_nearby(uint64_t base_value)
+    {
+        uint64_t gap = base_value / 4;
+        return dsn_random64(base_value - gap, base_value + gap);
+    }
+
 private:
     dsn::gpid _gpid;
     std::string _primary_address;
