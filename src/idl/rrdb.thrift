@@ -143,6 +143,18 @@ struct scan_response
     6:string        server;
 }
 
+struct duplicate_request
+{
+    1:i64                     timetag;
+    2:dsn.task_code           task_code;
+    3:dsn.blob                raw_message;
+}
+
+struct duplicate_response
+{
+    1:i32           error;
+}
+
 service rrdb
 {
     update_response put(1:update_request update);
@@ -157,5 +169,14 @@ service rrdb
     scan_response get_scanner(1:get_scanner_request request);
     scan_response scan(1:scan_request request);
     oneway void clear_scanner(1:i64 context_id);
+
+    // For duplication of a write which may contains multiple updates.
+    // On server side, this rpc will be handled one-by-one. (reply once
+    // the write is applied, no batching, like multi_remove and multi_put)
+    duplicate_response duplicate(1:duplicate_request request);
+
+    // An invariant of duplicate() that will be handled
+    // in batch like put and remove.
+    duplicate_response batched_duplicate(1:duplicate_request request);
 }
 

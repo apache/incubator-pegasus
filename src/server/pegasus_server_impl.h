@@ -143,6 +143,9 @@ public:
 
     virtual int64_t last_flushed_decree() const override { return _db->GetLastFlushedDecree(); }
 
+    // The cluster id of this pegasus cluster.
+    uint8_t cluster_id() const { return _cluster_id; }
+
     inline bool check_if_record_expired(uint32_t epoch_now, rocksdb::Slice raw_value)
     {
         return pegasus::check_if_record_expired(
@@ -240,6 +243,8 @@ private:
     uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
+
+    uint8_t _cluster_id;
 
     KeyWithTTLCompactionFilter _key_ttl_compaction_filter;
     rocksdb::Options _db_opts;

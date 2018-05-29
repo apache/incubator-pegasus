@@ -87,6 +87,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         0,
         "rocksdb_abnormal_multi_get_iterate_count_threshold, default is 0, means no check");
 
+    _cluster_id = static_cast<uint8_t>(dsn_config_get_value_uint64(
+        "pegasus.server", "pegasus_cluster_id", 1, "The ID of this pegasus cluster."));
+
     // init db options
 
     // read rocksdb::Options configurations
@@ -1536,7 +1539,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             std::chrono::seconds(30));
 
         // initialize write service after server being initialized.
-        _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
+        _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log, _cluster_id);
 
         return ::dsn::ERR_OK;
     } else {

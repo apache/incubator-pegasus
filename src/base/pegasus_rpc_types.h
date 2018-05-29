@@ -17,4 +17,6 @@ using multi_remove_rpc =
 
 using remove_rpc = dsn::rpc_holder<dsn::blob, dsn::apps::update_response>;
 
+using duplicate_rpc = dsn::apps::duplicate_rpc;
+
 } // namespace pegasus
