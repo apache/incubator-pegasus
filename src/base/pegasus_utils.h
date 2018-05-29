@@ -9,6 +9,8 @@
 #include <cstring>
 #include <boost/lexical_cast.hpp>
 #include <dsn/tool-api/rpc_address.h>
+#include <dsn/utility/string_view.h>
+#include <rocksdb/slice.h>
 
 namespace pegasus {
 namespace utils {
@@ -76,5 +78,10 @@ std::string c_escape_string(const T &src, bool always_escape = false)
 //    or (-n) if unescape failed, where n is the failure position.
 // ----------------------------------------------------------------------
 int c_unescape_string(const std::string &src, std::string &dest);
+
+inline dsn::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
+
+inline rocksdb::Slice to_rocksdb_slice(dsn::string_view s) { return {s.data(), s.size()}; }
+
 }
 } // namespace

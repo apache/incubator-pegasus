@@ -11,17 +11,14 @@
 
 std::atomic_bool gtest_done{false};
 
-class gtest_app : public ::dsn::replication::replication_service_app
+class gtest_app : public dsn::service_app
 {
 public:
-    explicit gtest_app(const dsn::service_app_info *info)
-        : dsn::replication::replication_service_app::replication_service_app(info)
-    {
-    }
+    explicit gtest_app(const dsn::service_app_info *info) : dsn::service_app(info) {}
 
     dsn::error_code start(const std::vector<std::string> &args) override
     {
-        dsn::replication::replication_service_app::start(args);
+        dsn::service_app::start(args);
         RUN_ALL_TESTS();
         gtest_done = true;
         return dsn::ERR_OK;

@@ -27,10 +27,8 @@ public:
     {
         if (!_enabled.load(std::memory_order_acquire))
             return false;
-        uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, existing_value);
-        if (expire_ts == 0) // 0 means no expire
-            return false;
-        return expire_ts <= ::pegasus::utils::epoch_now();
+        return check_if_record_expired(
+            _value_schema_version, utils::epoch_now(), utils::to_string_view(existing_value));
     }
     virtual const char *Name() const override { return "KeyWithTTLCompactionFilter"; }
     void SetValueSchemaVersion(uint32_t version) { _value_schema_version = version; }
