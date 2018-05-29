@@ -840,6 +840,8 @@ function usage_start_kill_test()
     echo "                     actual sleep time will be a random value in range of [1, sleep_time]"
     echo "   -w|--worker_count <num>"
     echo "                     worker count for concurrently setting value, default is 10"
+    echo "   -k|--killer_type <str>"
+    echo "                     killer type: process_killer | partition_killer, default is process_killer"
 }
 
 function run_start_kill_test()
@@ -851,6 +853,7 @@ function run_start_kill_test()
     KILL_TYPE=all
     SLEEP_TIME=10
     THREAD_COUNT=10
+    KILLER_TYPE=process_killer
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -884,6 +887,10 @@ function run_start_kill_test()
                 ;;
             -w|--worker_count)
                 THREAD_COUNT="$2"
+                shift
+                ;;
+            -k|--killer_type)
+                KILLER_TYPE="$2"
                 shift
                 ;;
             *)
@@ -924,10 +931,10 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
     mkdir -p onebox/killer && cd onebox/killer
     ln -s -f ${DSN_ROOT}/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
-    echo "$PWD/pegasus_kill_test config.ini killer &>/dev/null &"
-    $PWD/pegasus_kill_test config.ini killer &>/dev/null &
+    echo "$PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &"
+    $PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &
     PID=$!
-    ps -ef | grep '/pegasus_kill_test config.ini killer' | grep "\<$PID\>"
+    ps -ef | grep '/pegasus_kill_test config.ini p*' | grep "\<$PID\>"
     sleep 0.2
     cd ${ROOT}
     run_list_kill_test
