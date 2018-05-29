@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/XiaoMi/pegasus.svg?branch=master)](https://travis-ci.org/XiaoMi/pegasus)
+
 ![docs/media-img/pegasus-logo.png](docs/media-img/pegasus-logo.png)
 
 [**中文Wiki**](https://github.com/xiaomi/pegasus/wiki), [**slack channel**](https://join.slack.com/t/pegasus-kv/shared_invite/enQtMjcyMjQzOTk4Njk1LWVkMjlkMGE5Mzg1Y2M3MDc0NGYyYzQ5YzYyMGE0ZjlhMDMyNjU1ZGViYzdjZmUwNjVmNGE0ZDdkMWJiN2Q1MDY)

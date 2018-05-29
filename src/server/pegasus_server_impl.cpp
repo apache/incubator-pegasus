@@ -48,7 +48,6 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
-      _usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL),
       _db(nullptr),
       _is_open(false),
       _value_schema_version(0),
@@ -1483,11 +1482,15 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
 
-        _manual_compact_svc.init_last_finish_time_ms(_db->GetLastManualCompactFinishTime());
-
         // only enable filter after correct value_schema_version set
         _key_ttl_compaction_filter.SetValueSchemaVersion(_value_schema_version);
         _key_ttl_compaction_filter.EnableFilter();
+
+        // update LastManualCompactFinishTime
+        _manual_compact_svc.init_last_finish_time_ms(_db->GetLastManualCompactFinishTime());
+
+        // set default usage scenario
+        set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
 
         update_app_envs(envs);
 
@@ -2318,12 +2321,34 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
             new_options["max_write_buffer_number"] =
                 boost::lexical_cast<std::string>(_db_opts.max_write_buffer_number);
         }
+
         if (usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_NORMAL) {
+            //
+            // write_buffer_size = random_nearby(db_opts.write_buffer_size)
+            //
+            new_options["write_buffer_size"] =
+                boost::lexical_cast<std::string>(get_random_nearby(_db_opts.write_buffer_size));
+
+            //
+            // level0_file_num_compaction_trigger = db_opts.level0_file_num_compaction_trigger
+            //
             new_options["level0_file_num_compaction_trigger"] =
                 boost::lexical_cast<std::string>(_db_opts.level0_file_num_compaction_trigger);
-        } else {
+        } else { // ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE
+            //
+            // write_buffer_size = random_nearby(db_opts.write_buffer_size)
+            //
+            uint64_t buffer_size =
+                dsn_random64(_db_opts.write_buffer_size, _db_opts.write_buffer_size * 2);
+            new_options["write_buffer_size"] = boost::lexical_cast<std::string>(buffer_size);
+
+            //
+            // level0_file_num_compaction_trigger =
+            //     random_nearby(db_opts.max_bytes_for_level_base) / write_buffer_size
+            //
+            uint64_t max_size = get_random_nearby(_db_opts.max_bytes_for_level_base);
             new_options["level0_file_num_compaction_trigger"] =
-                boost::lexical_cast<std::string>(_db_opts.level0_file_num_compaction_trigger * 2);
+                boost::lexical_cast<std::string>(std::max(4UL, max_size / buffer_size));
         }
     } else if (usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
         // refer to Options::PrepareForBulkLoad()
@@ -2335,8 +2360,8 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
         new_options["disable_auto_compactions"] = "true";
         new_options["max_compaction_bytes"] =
             boost::lexical_cast<std::string>(static_cast<uint64_t>(1) << 60);
-        new_options["write_buffer_size"] = boost::lexical_cast<std::string>(
-            std::max(_db_opts.write_buffer_size, (size_t)(256 * 1024 * 1024)));
+        new_options["write_buffer_size"] =
+            boost::lexical_cast<std::string>(get_random_nearby(_db_opts.write_buffer_size * 4));
         new_options["max_write_buffer_number"] =
             boost::lexical_cast<std::string>(std::max(_db_opts.max_write_buffer_number, 6));
     } else {
