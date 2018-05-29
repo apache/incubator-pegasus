@@ -52,8 +52,8 @@ echo "rdsn/src/dist/block_service/local" >>$INCLUDES_OUT
 echo "rdsn/src" >> $INCLUDES_OUT
 echo "rocksdb" >>$INCLUDES_OUT
 echo "rocksdb/include" >>$INCLUDES_OUT
+echo "src" >>$INCLUDES_OUT
 echo "src/include" >>$INCLUDES_OUT
-echo "src/base" >>$INCLUDES_OUT
 echo "src/redis_protocol/proxy_lib" >>$INCLUDES_OUT
 
 # files
