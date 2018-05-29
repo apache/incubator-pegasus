@@ -16,19 +16,19 @@ before_install:
     - cd ..
 
 install:
-    # - ./run.sh format
+    - sudo apt-get -f install
+    - sudo apt-get -y install libsnappy-dev
 
 before_script:
     - cd rdsn/thirdparty
     - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/pegasus-thirdparty-prebuild.tar.gz
     - tar xf pegasus-thirdparty-prebuild.tar.gz
     - rm -rf pegasus-thirdparty-prebuild.tar.gz
-    - cd ..
+    - cd ../..
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh build
-    - pushd ./src/builder/bin/pegasus_unit_test && ./pegasus_unit_test && popd
+    - ./run.sh build && ./run.sh test
 
 notifications:
     email: false

@@ -2,10 +2,6 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif
-
 #include "pagasus_manual_compact_service.h"
 
 #include <dsn/utility/string_conv.h>
@@ -22,7 +18,7 @@ namespace server {
 DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
 
 pagasus_manual_compact_service::pagasus_manual_compact_service(pegasus_server_impl *app)
-    : replica_base(app),
+    : replica_base(*app),
       _app(app),
       _manual_compact_enqueue_time_ms(0),
       _manual_compact_start_running_time_ms(0),

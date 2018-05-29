@@ -17,6 +17,7 @@
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
+#include "pegasus_event_listener.h"
 #include "pegasus_server_write.h"
 
 namespace pegasus {
@@ -215,6 +216,25 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                   "rocksdb tbl_opts.no_block_cache, default false")) {
         tbl_opts.no_block_cache = true;
         tbl_opts.block_restart_interval = 4;
+    } else {
+        // block cache capacity, default 10G
+        static uint64_t capacity = dsn_config_get_value_uint64(
+            "pegasus.server",
+            "rocksdb_block_cache_capacity",
+            10 * 1024 * 1024 * 1024ULL,
+            "block cache capacity for one pegasus server, shared by all rocksdb instances");
+
+        // block cache num shard bits, default -1(auto)
+        static int num_shard_bits = (int)dsn_config_get_value_int64(
+            "pegasus.server",
+            "rocksdb_block_cache_num_shard_bits",
+            -1,
+            "block cache will be sharded into 2^num_shard_bits shards");
+
+        // init block cache
+        static std::shared_ptr<rocksdb::Cache> cache =
+            rocksdb::NewLRUCache(capacity, num_shard_bits);
+        tbl_opts.block_cache = cache;
     }
 
     // disable bloom filter, default: false
@@ -226,6 +246,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     }
 
     _db_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
+
+    _db_opts.listeners.emplace_back(new pegasus_event_listener());
 
     // disable write ahead logging as replication handles logging instead now
     _wt_opts.disableWAL = true;
@@ -341,7 +363,7 @@ void pegasus_server_impl::parse_checkpoints()
     }
 }
 
-pegasus_server_impl::~pegasus_server_impl() {}
+pegasus_server_impl::~pegasus_server_impl() = default;
 
 void pegasus_server_impl::gc_checkpoints()
 {
@@ -1514,7 +1536,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             std::chrono::seconds(30));
 
         // initialize write service after server being initialized.
-        _server_write = dsn::make_unique<pegasus_server_write>(this);
+        _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log, _cluster_id);
 
         return ::dsn::ERR_OK;
     } else {
@@ -2395,4 +2417,3 @@ std::string pegasus_server_impl::query_compact_state() const
 
 } // namespace server
 } // namespace pegasus
-

@@ -24,7 +24,7 @@ class pegasus_write_service::impl : public dsn::replication::replica_base
 {
 public:
     explicit impl(pegasus_server_impl *server)
-        : replica_base(server),
+        : replica_base(*server),
           _primary_address(server->_primary_address),
           _value_schema_version(server->_value_schema_version),
           _verify_timetag(false),
@@ -91,7 +91,7 @@ public:
 
         for (auto &sort_key : update.sort_keys) {
             // TODO(wutao1): check returned error
-            db_write_batch_delete(composite_raw_key(update.hash_key, sort_key), ctx);
+            db_write_batch_delete(ctx, composite_raw_key(update.hash_key, sort_key));
         }
 
         resp.error = db_write(ctx.decree);
@@ -115,7 +115,7 @@ public:
                              const dsn::blob &key,
                              dsn::apps::update_response &resp)
     {
-        resp.error = db_write_batch_delete(key, ctx);
+        resp.error = db_write_batch_delete(ctx, key);
         _update_responses.emplace_back(&resp);
     }
 
@@ -192,7 +192,7 @@ public:
         return 0;
     }
 
-    int db_write_batch_delete(dsn::string_view raw_key, const db_write_context &ctx)
+    int db_write_batch_delete(const db_write_context &ctx, dsn::string_view raw_key)
     {
         _batch.Delete(utils::to_rocksdb_slice(raw_key));
         return 0;

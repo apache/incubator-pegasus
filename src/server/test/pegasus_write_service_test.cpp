@@ -19,7 +19,8 @@ protected:
 public:
     pegasus_write_service_test() : pegasus_server_test_base()
     {
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get());
+        _server_write =
+            dsn::make_unique<pegasus_server_write>(_server.get(), true, _server->cluster_id());
         _write_svc = _server_write->_write_svc.get();
     }
 

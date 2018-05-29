@@ -2,10 +2,6 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
-#endif
-
 #include <dsn/cpp/message_utils.h>
 
 #include "base/pegasus_utils.h"
@@ -17,8 +13,10 @@
 namespace pegasus {
 namespace server {
 
-pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
-    : replica_base(server), _verbose_log(server->_verbose_log), _cluster_id(server->_cluster_id)
+pegasus_server_write::pegasus_server_write(pegasus_server_impl *server,
+                                           bool verbose_log,
+                                           uint8_t cluster_id)
+    : replica_base(*server), _verbose_log(verbose_log), _cluster_id(cluster_id)
 {
     _write_svc = dsn::make_unique<pegasus_write_service>(server);
 }

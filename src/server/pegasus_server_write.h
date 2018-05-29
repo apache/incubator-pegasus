@@ -16,7 +16,7 @@ namespace server {
 class pegasus_server_write : public dsn::replication::replica_base
 {
 public:
-    explicit pegasus_server_write(pegasus_server_impl *server);
+    pegasus_server_write(pegasus_server_impl *server, bool verbose_log, uint8_t cluster_id);
 
     int on_batched_write_requests(dsn_message_t *requests,
                                   int count,
@@ -68,7 +68,7 @@ private:
     void request_key_check(int64_t decree, dsn_message_t m, const dsn::blob &key);
 
 private:
-    friend class pegasus_server_write_test;
+    friend class pegasus_server_impl_test;
     friend class pegasus_write_service_test;
 
     std::unique_ptr<pegasus_write_service> _write_svc;
@@ -78,7 +78,7 @@ private:
     db_write_context _put_ctx;
     db_write_context _remove_ctx;
 
-    bool _verbose_log;
+    const bool _verbose_log;
     uint8_t _cluster_id;
 };
 
