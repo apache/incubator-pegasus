@@ -68,7 +68,7 @@ private:
     void request_key_check(int64_t decree, dsn_message_t m, const dsn::blob &key);
 
 private:
-    friend class pegasus_server_impl_test;
+    friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;
 
     std::unique_ptr<pegasus_write_service> _write_svc;

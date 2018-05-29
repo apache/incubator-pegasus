@@ -18,7 +18,8 @@ class pegasus_server_write_test : public pegasus_server_test_base
 public:
     pegasus_server_write_test() : pegasus_server_test_base()
     {
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get());
+        _server_write =
+            dsn::make_unique<pegasus_server_write>(_server.get(), true, _server->cluster_id());
     }
 
     void test_duplicate_not_batched()
