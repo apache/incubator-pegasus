@@ -1365,7 +1365,7 @@ void replica_stub::on_gc()
         replica_ptr rep;
         partition_status::type status;
         mutation_log_ptr plog;
-        decree last_flushed_decree;
+        decree last_durable_decree;
         int64_t init_offset_in_shared_log;
     };
 
@@ -1379,7 +1379,7 @@ void replica_stub::on_gc()
             info.rep = rep;
             info.status = rep->status();
             info.plog = rep->private_log();
-            info.last_flushed_decree = rep->last_flushed_decree();
+            info.last_durable_decree = rep->last_durable_decree();
             info.init_offset_in_shared_log = rep->get_app()->init_info().init_offset_in_shared_log;
         }
     }
@@ -1422,22 +1422,22 @@ void replica_stub::on_gc()
                 plog->flush_once();
 
                 decree plog_max_commit_on_disk = plog->max_commit_on_disk();
-                ri.max_decree = std::min(kv.second.last_flushed_decree, plog_max_commit_on_disk);
+                ri.max_decree = std::min(kv.second.last_durable_decree, plog_max_commit_on_disk);
                 ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
-                       ", last_flushed_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
+                       ", last_durable_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
                        rep->name(),
                        enum_to_string(kv.second.status),
                        ri.max_decree,
-                       kv.second.last_flushed_decree,
+                       kv.second.last_durable_decree,
                        plog_max_commit_on_disk);
             } else {
-                ri.max_decree = kv.second.last_flushed_decree;
+                ri.max_decree = kv.second.last_durable_decree;
                 ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
-                       ", last_flushed_decree = %" PRId64 "",
+                       ", last_durable_decree = %" PRId64 "",
                        rep->name(),
                        enum_to_string(kv.second.status),
                        ri.max_decree,
-                       kv.second.last_flushed_decree);
+                       kv.second.last_durable_decree);
             }
             ri.valid_start_offset = kv.second.init_offset_in_shared_log;
             gc_condition[kv.first] = ri;
