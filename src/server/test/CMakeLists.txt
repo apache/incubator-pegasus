@@ -36,7 +36,7 @@ set(MY_PROJ_LIBS
         rocksdb
         pegasus.base
         gtest
-        z bz2 snappy rt aio pthread
+        lz4 z bz2 snappy rt aio pthread
         )
 add_definitions(-DPEGASUS_UNIT_TEST)
 
