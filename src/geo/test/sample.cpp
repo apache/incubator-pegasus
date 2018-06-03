@@ -19,6 +19,63 @@
 
 using namespace pegasus;
 
+static const int data_count = 10000;
+static const int test_count = 1;
+static const int min_level = 12; // edge length at about
+static const int max_level = 16; // edge length at about
+
+pegasus_client *client = nullptr;
+
+int scan_data(const std::string &hash_key,
+              const std::string &start_sort_key,
+              const std::string &stop_sort_key,
+              const S2LatLng center,
+              util::units::Meters radius,
+              std::list<std::string> &datas)
+{
+    pegasus_client::scan_options options;
+    options.start_inclusive = true;
+    options.stop_inclusive = true;
+
+    client->async_get_scanner(
+        hash_key,
+        start_sort_key,
+        stop_sort_key,
+        options,
+        [center, radius, &datas](int ret, pegasus_client::pegasus_scanner *scanner) {
+            if (ret == PERR_OK) {
+                pegasus_client::pegasus_scanner_wrapper wrap_scanner = scanner->get_smart_wrapper();
+                wrap_scanner->async_next(
+                    [center, radius, &datas](int ret,
+                                             std::string &&hash_key,
+                                             std::string &&sort_key,
+                                             std::string &&scan_value,
+                                             pegasus::pegasus_client::internal_info &&info) {
+                        if (ret == pegasus::PERR_OK) {
+                            if (radius.value() > 0) {
+                                size_t pos1 = scan_value.find(',', 0);
+                                size_t pos2 = scan_value.find(':', 0);
+                                std::string lat = scan_value.substr(0, pos1);
+                                std::string lng = scan_value.substr(pos1 + 1, pos2 - pos1 - 1);
+                                util::units::Meters meters = S2Earth::GetDistance(
+                                    center,
+                                    S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr),
+                                                          strtod(lng.c_str(), nullptr)));
+                                if (meters.value() <= radius.value()) {
+                                    datas.push_back(std::move(scan_value));
+                                }
+                            } else {
+                                datas.push_back(std::move(scan_value));
+                            }
+                        } else if (ret == pegasus::PERR_SCAN_COMPLETE) {
+                        } else {
+                        }
+                    });
+            }
+        });
+    return PERR_OK;
+}
+
 // ./pegasus_geo_test onebox temp
 int main(int argc, char **argv)
 {
@@ -32,124 +89,92 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    pegasus_client *client = pegasus_client_factory::get_client(argv[1], argv[2]);
+    client = pegasus_client_factory::get_client(argv[1], argv[2]);
 
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),
                       S2LatLng::FromDegrees(40.028697, 116.535087));
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < data_count; ++i) {
         S2LatLng latlng(S2Testing::SamplePoint(rect));
 
         // leaf cell
         S2Cell cell(latlng);
-
-        // leaf(level-30) cell id
         S2CellId cell_id = cell.id();
 
         // convert to a parent level cell
-        S2CellId parent_cell_id = cell_id.parent(10); // level 10 error about 10 km
-
+        S2CellId parent_cell_id = cell_id.parent(min_level);
         S2Cell parent_cell(parent_cell_id);
 
         std::string hash_key(parent_cell_id.ToString());
-        std::string sort_key(cell_id.ToString() + ":" + std::to_string(i));
+        std::string sort_key(cell_id.ToString().substr(hash_key.length()) + ":" +
+                             std::to_string(i));
         std::string value(latlng.ToStringInDegrees() + ":" + std::to_string(i));
-
-        std::cout << " hash_key: " << hash_key
-                  << " sort_key: " << sort_key
-                  << " value: " << value << std::endl;
 
         int ret = client->set(hash_key, sort_key, value);
         if (ret != PERR_OK) {
-            fprintf(stderr, "ERROR: set failed, error=%s\n", client->get_error_string(ret));
+            std::cerr << "ERROR: set failed, error=" << client->get_error_string(ret) << std::endl;
             return -1;
         }
     }
 
-/*    // region cover
-    S2RegionCoverer rc;
-    //  rc.mutable_options()->set_min_level(7);
-    //  rc.mutable_options()->set_max_level(24);
-    rc.mutable_options()->set_min_level(14);
-    rc.mutable_options()->set_max_level(14);
-    rc.mutable_options()->set_max_cells(30);
+    for (int i = 0; i < test_count; ++i) {
+        util::units::Meters radius(5000.0);
+        S2Cap cap(S2Testing::SamplePoint(rect), S2Earth::ToAngle(radius));
 
-    S2CellUnion cell_union;
-    // cap
-    S2Cap cap(S2LatLng::FromDegrees(40.039752, 116.332557).ToPoint(),
-              S2Earth::ToAngle(util::units::Meters(5000.0)));
-
-    int min_level = 10;
-    int max_level = 14;
-    rc.mutable_options()->set_min_level(min_level);
-    rc.mutable_options()->set_max_level(max_level);
-    S2CellUnion cell_union1 = rc.GetCovering(cap); // GetInteriorCovering
-    std::cout << "cap: " << cap << std::endl;
-    std::cout << "cell_union11: " << cell_union1.size()
-              << ", normal: " << cell_union1.IsNormalized() << std::endl;
-    std::vector<S2CellId> cell_ids;
-    for (auto &ci : cell_union1) {
-        if (ci.level() != min_level && ci.level() != max_level) {
-            for (S2CellId c = ci.child_begin(max_level); c != ci.child_end(max_level);
-                 c = c.next()) {
-                cell_ids.push_back(c);
-            }
-        } else {
-            std::cout << ci.level() << ": " << ci.id() << std::endl;
-            cell_ids.push_back(ci);
-        }
-    }
-
-    std::cout << "cell_ids11.size: " << cell_ids.size() << std::endl;
-    //  for (auto ci : cell_ids) {
-    //      if (ci.level() != max_level) {
-    //          std::cout << ci.level() << ": " << ci.id() << std::endl;
-    //      }
-    //  }
-
-    std::cout << "===================" << std::endl;
-    rc.mutable_options()->set_fixed_level(10);
-    S2CellUnion cell_union11 = rc.GetCovering(cap);
-    std::cout << "size: " << cell_union11.size() << std::endl;
-    for (auto &ci : cell_union11) {
-        if (cap.Contains(S2Cell(ci))) {
-            std::cout << "full: " << ci.level() << ": " << ci << std::endl;
-        } else {
-            std::vector<S2CellId> cell_ids11;
-            for (S2CellId c = ci.child_begin(18); c != ci.child_end(18); c = c.next()) {
-                if (cap.MayIntersect(S2Cell(c))) {
-                    cell_ids11.push_back(c);
+        std::list<std::string> datas;
+        // region cover
+        S2RegionCoverer rc;
+        rc.mutable_options()->set_fixed_level(min_level);
+        S2CellUnion cell_union = rc.GetCovering(cap);
+        for (const auto &ci : cell_union) {
+            if (cap.Contains(S2Cell(ci))) {
+                std::cout << "full: " << ci.level() << ": " << ci << std::endl;
+                int ret = scan_data(ci.ToString(), "", "", S2LatLng(cap.center()), radius, datas);
+                if (ret != PERR_OK) {
+                    std::cerr << "ERROR: scan_data failed, error=" << client->get_error_string(ret)
+                              << std::endl;
+                    return -1;
                 }
-            }
-
-            std::pair<std::string, std::string> begin_end;
-            std::list<std::pair<std::string, std::string>> begin_ends;
-
-            S2CellId pre;
-            for (auto &cur : cell_ids11) {
-                if (!pre.is_valid()) {
-                    pre = cur;
-                    begin_end.first = pre.ToString();
-                } else {
-                    if (pre.next() != cur) {
-                        begin_end.second = pre.ToString();
-                        begin_ends.push_back(begin_end);
-                        begin_end.first = cur.ToString();
+            } else {
+                std::string hash_key = ci.parent(min_level).ToString();
+                std::vector<S2CellId> cell_ids;
+                for (S2CellId max_level_cid = ci.child_begin(max_level);
+                     max_level_cid != ci.child_end(max_level);
+                     max_level_cid = max_level_cid.next()) {
+                    if (cap.MayIntersect(S2Cell(max_level_cid))) {
+                        cell_ids.push_back(max_level_cid);
                     }
-                    pre = cur;
                 }
-                // std::cout << cur.level() << ": " << cur << std::endl;
-            }
-            std::cout << "begin_ends size: " << begin_ends.size() << std::endl;
-            for (auto be : begin_ends) {
-                std::cout << be.first << "->" << be.second << std::endl;
+
+                std::pair<std::string, std::string> begin_end;
+                std::list<std::pair<std::string, std::string>> begin_ends;
+
+                S2CellId pre;
+                for (auto &cur : cell_ids) {
+                    if (!pre.is_valid()) {
+                        pre = cur;
+                        begin_end.first = pre.ToString().substr(hash_key.length());
+                    } else {
+                        if (pre.next() != cur) {
+                            begin_end.second = pre.ToString().substr(hash_key.length());
+                            begin_ends.push_back(begin_end);
+                            begin_end.first = cur.ToString().substr(hash_key.length());
+                        }
+                        pre = cur;
+                    }
+                }
+                for (auto &be : begin_ends) {
+                    int ret = scan_data(
+                        hash_key, be.first, be.second, S2LatLng(cap.center()), radius, datas);
+                    if (ret != PERR_OK) {
+                        std::cerr << "ERROR: scan_data failed, error="
+                                  << client->get_error_string(ret) << std::endl;
+                        return -1;
+                    }
+                }
             }
         }
     }
-
-    util::units::Meters meters = S2Earth::GetDistance(S2LatLng::FromDegrees(40.041362, 116.329419),
-                                                      S2LatLng::FromDegrees(40.036918, 116.32929));
-    std::cout << "meters: " << meters << std::endl;*/
 
     return 0;
 }
