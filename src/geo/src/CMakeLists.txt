@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME pegasus_geo_server)
+set(MY_PROJ_NAME pegasus_geo_lib)
 project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
@@ -10,11 +10,14 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "")
+set(MY_PROJ_INC_PATH "../../include")
 
-set(MY_PROJ_LIBS s2)
+set(MY_PROJ_LIBS s2 s2testing pegasus_client_static)
+
+set(MY_BOOST_PACKAGES system filesystem)
+
+add_dependencies(pegasus_client_static clientlib_target)
 
 add_definitions(-Wno-attributes)
-#set(MY_BINPLACES "config.ini")
 
-dsn_add_executable()
+dsn_add_static_library()
