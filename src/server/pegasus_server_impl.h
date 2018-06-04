@@ -14,7 +14,7 @@
 
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
-#include "pagasus_manual_compact_service.h"
+#include "pegasus_manual_compact_service.h"
 #include "pegasus_write_service.h"
 
 namespace pegasus {
@@ -150,7 +150,7 @@ public:
     }
 
 private:
-    friend class pagasus_manual_compact_service;
+    friend class pegasus_manual_compact_service;
     friend class manual_compact_service_test;
     friend class pegasus_write_service;
 
@@ -265,7 +265,7 @@ private:
     ::dsn::task_ptr _updating_rocksdb_sstsize_timer_task;
     uint32_t _updating_rocksdb_sstsize_interval_seconds;
 
-    pagasus_manual_compact_service _manual_compact_svc;
+    pegasus_manual_compact_service _manual_compact_svc;
 
     dsn::task_tracker _tracker;
 

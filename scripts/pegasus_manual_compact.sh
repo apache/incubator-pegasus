@@ -3,86 +3,77 @@
 function usage()
 {
     echo "This tool is for manual compact specified table(app)."
-    echo "USAGE: $0 -c cluster -a app-name [-t periodic|once] [-g trigger_time] [-w] [-d] [...]"
+    echo "USAGE: $0 -c cluster -a app-name [-t periodic|once] [-w] [-g trigger_time] [...]"
     echo "Options:"
-    echo "  -h|--help"
-    echo "  -c|--cluster             cluster meta server list, default is \"127.0.0.1:34601,127.0.0.1:34602\""
-    echo "  -a|--app_name            manual compact target table(app) name"
-    echo "  -t|--type                manual compact type, should be periodic or once, default is once"
-    echo "  -w|--wait_only           this option is only used when the type is once!"
-    echo "                           not trigger but only wait the last once compact to finish, default is false"
-    echo "  -g|--trigger_time        this option is only used when the type is periodic!"
-    echo "                           specify trigger time of periodic compact in 24-hour format,"
-    echo "                           e.g. \"3:00,21:00\" means 3:00 and 21:00 everyday"
-    echo "  -d|--disable_periodic    this option is only used when the type is periodic!"
-    echo "                           whether to disable periodic compact, default is false"
-    echo "  --target_level           number in range of [1,num_levels], default is -1"
-    echo "  --bottommost_level_compaction    skip or force, default is skip"
-    echo "                           more details: https://github.com/facebook/rocksdb/wiki/Manual-Compaction"
+    echo "  -h|--help                   print help message"
+    echo
+    echo "  -c|--cluster <str>          cluster meta server list, default is \"127.0.0.1:34601,127.0.0.1:34602\""
+    echo
+    echo "  -a|--app_name <str>         target table(app) name"
+    echo
+    echo "  -t|--type <str>             manual compact type, should be periodic or once, default is once"
+    echo
+    echo "  -w|--wait_only              this option is only used when the type is once!"
+    echo "                              not trigger but only wait the last once compact to finish"
+    echo
+    echo "  -g|--trigger_time <str>     this option is only used when the type is periodic!"
+    echo "                              specify trigger time of periodic compact in 24-hour format,"
+    echo "                              e.g. \"3:00,21:00\" means 3:00 and 21:00 everyday"
+    echo
+    echo "  --target_level <num>        number in range of [1,num_levels], default is -1"
+    echo
+    echo "  --bottommost_level_compaction <skip|force>"
+    echo "                              skip or force, default is skip"
+    echo "                              more details: https://github.com/facebook/rocksdb/wiki/Manual-Compaction"
     echo
     echo "for example:"
-    echo "  once type manual compact with default options:"
-    echo "    $0 -c 127.0.0.1:34601,127.0.0.1:34602 -a temp"
-    echo "  periodic type manual compact with specified options:"
-    echo "    $0 -c 127.0.0.1:34601,127.0.0.1:34602 -a temp -t periodic -g 3:00,21:00 \\"
-    echo "       --target_level 2 --bottommost_level_compaction force"
+    echo
+    echo "  1) Start once type manual compact with default options:"
+    echo
+    echo "      $0 -c 127.0.0.1:34601,127.0.0.1:34602 -a temp"
+    echo
+    echo "  2) Only wait last once type manual compact to finish:"
+    echo
+    echo "      $0 -c 127.0.0.1:34601,127.0.0.1:34602 -a temp -w"
+    echo
+    echo "  3) Config periodic type manual compact with specified options:"
+    echo
+    echo "      $0 -c 127.0.0.1:34601,127.0.0.1:34602 -a temp -t periodic -g 3:00,21:00 \\"
+    echo "           --target_level 2 --bottommost_level_compaction force"
+    echo
 }
 
-# get_env cluster app_name type env_key
+# get_env cluster app_name key
 function get_env()
 {
     cluster=$1
     app_name=$2
-    type=$3
-    env_key=$4
-    periodic_prefix="manual_compact.periodic."
-    once_prefix="manual_compact.once."
+    key=$3
 
-    if [ "${type}" == "periodic" ]; then
-        full_env_key=${periodic_prefix}${env_key}
-    elif [ "${type}" == "once" ]; then
-        full_env_key=${once_prefix}${env_key}
-    else
-        echo "ERROR: invalid type: ${type}"
-        exit -1
-    fi
-
-    get_envs_log_file="/tmp/$UID.pegasus.get_app_envs.${app_name}"
-    echo -e "use ${app_name}\n get_app_envs" | ./run.sh shell --cluster ${cluster} &>${get_envs_log_file}
-    get_ok=`grep 'get app envs succeed' ${get_envs_log_file} | wc -l`
+    log_file="/tmp/$UID.pegasus.get_app_envs.${app_name}"
+    echo -e "use ${app_name}\n get_app_envs" | ./run.sh shell --cluster ${cluster} &>${log_file}
+    get_ok=`grep 'get app envs succeed' ${log_file} | wc -l`
     if [ ${get_ok} -ne 1 ]; then
-        echo "ERROR: get app envs failed, refer to ${get_envs_log_file}"
+        echo "ERROR: get app envs failed, refer to ${log_file}"
         exit -1
     fi
-    grep "^${full_env_key} =" ${get_envs_log_file} | awk '{print $3}'
+    grep "^${key} =" ${log_file} | awk '{print $3}'
 }
 
-# set_env cluster app_name type env_key env_value
+# set_env cluster app_name key value
 function set_env()
 {
     cluster=$1
     app_name=$2
-    type=$3
-    env_key=$4
-    env_value=$5
-    periodic_prefix="manual_compact.periodic."
-    once_prefix="manual_compact.once."
+    key=$3
+    value=$4
 
-    if [ "${type}" == "periodic" ]; then
-        full_env_key=${periodic_prefix}${env_key}
-    elif [ "${type}" == "once" ]; then
-        full_env_key=${once_prefix}${env_key}
-    else
-        echo "ERROR: invalid type: ${type}"
-        exit -1
-    fi
-
-    echo "set_app_envs ${full_env_key}=${env_value}"
-    set_envs_log_file="/tmp/$UID.pegasus.set_app_envs.${app_name}"
-    echo -e "use ${app_name}\n set_app_envs ${full_env_key} ${env_value}" | ./run.sh shell --cluster ${cluster} &>${set_envs_log_file}
-    set_ok=`grep 'set app envs succeed' ${set_envs_log_file} | wc -l`
+    echo "set_app_envs ${key}=${value}"
+    log_file="/tmp/$UID.pegasus.set_app_envs.${app_name}"
+    echo -e "use ${app_name}\n set_app_envs ${key} ${value}" | ./run.sh shell --cluster ${cluster} &>${log_file}
+    set_ok=`grep 'set app envs succeed' ${log_file} | wc -l`
     if [ ${set_ok} -ne 1 ]; then
-        echo "ERROR: set app envs failed, refer to ${set_envs_log_file}"
+        echo "ERROR: set app envs failed, refer to ${log_file}"
         exit -1
     fi
 }
@@ -152,7 +143,6 @@ type="once"
 trigger_time=""
 app_name=""
 wait_only="false"
-disable_periodic="false"
 target_level="-1"
 bottommost_level_compaction="skip"
 while [[ $# > 0 ]]; do
@@ -176,9 +166,6 @@ while [[ $# > 0 ]]; do
             ;;
         -w|--wait_only)
             wait_only="true"
-            ;;
-        -d|--disable_periodic)
-            disable_periodic="true"
             ;;
         --target_level)
             target_level="$2"
@@ -213,12 +200,6 @@ if [ "${app_name}" == "" ]; then
     exit -1
 fi
 
-# check disable_periodic
-if [ "${disable_periodic}" == "true" -a "${type}" != "periodic" ]; then
-    echo "ERROR: can not specify disable_periodic when type is ${type}"
-    exit -1
-fi
-
 # check wait_only
 if [ "${wait_only}" == "true" -a "${type}" != "once" ]; then
     echo "ERROR: can not specify wait_only when type is ${type}"
@@ -232,7 +213,7 @@ if [ "${type}" == "once" ]; then
         exit -1
     fi
     if [ "${wait_only}" == "true" ]; then
-        trigger_time=`get_env ${cluster} ${app_name} ${type} "trigger_time"`
+        trigger_time=`get_env ${cluster} ${app_name} "manual_compact.once.trigger_time"`
         if [ "${trigger_time}" == "" ]; then
             echo "No once compact triggered previously, nothing to wait"
             exit -1
@@ -264,21 +245,18 @@ all_start_time=`date +%s`
 echo "Start time: `date -d @${all_start_time} +"%Y-%m-%d %H:%M:%S"`"
 echo
 
-# set steady
-echo "set_meta_level steady" | ./run.sh shell --cluster ${cluster} &>/tmp/$UID.pegasus.set_meta_level
+if [ "${type}" == "periodic" ] || [ "${type}" == "once" -a "${wait_only}" == "false" ]; then
+    # set steady
+    echo "set_meta_level steady" | ./run.sh shell --cluster ${cluster} &>/tmp/$UID.pegasus.set_meta_level
 
-if [ "${type}" == "periodic" -o "${wait_only}" == "false" ]; then
     # set manual compact envs
     if [ "${target_level}" != "" ]; then
-        set_env ${cluster} ${app_name} ${type} "target_level" ${target_level}
+        set_env ${cluster} ${app_name} "manual_compact.${type}.target_level" ${target_level}
     fi
     if [ "${bottommost_level_compaction}" != "" ]; then
-        set_env ${cluster} ${app_name} ${type} "bottommost_level_compaction" ${bottommost_level_compaction}
+        set_env ${cluster} ${app_name} "manual_compact.${type}.bottommost_level_compaction" ${bottommost_level_compaction}
     fi
-    if [ "${type}" == "periodic" -a "${disable_periodic}" != "" ]; then
-        set_env ${cluster} ${app_name} ${type} "disabled" ${disable_periodic}
-    fi
-    set_env ${cluster} ${app_name} ${type} "trigger_time" ${trigger_time}
+    set_env ${cluster} ${app_name} "manual_compact.${type}.trigger_time" ${trigger_time}
     echo
 fi
 
@@ -287,10 +265,14 @@ if [ "${type}" != "once" ]; then
     exit 0
 fi
 
+disabled=`get_env ${cluster} ${app_name} "manual_compact.disabled"`
+if [ "${disabled}" == "true" ]; then
+    echo "Manual compact is disabled, not to wait"
+    exit -1
+fi
+
 ls_log_file="/tmp/$UID.pegasus.ls"
 echo ls | ./run.sh shell --cluster ${cluster} &>${ls_log_file}
-# app_id    status              app_name            app_type            partition_count     replica_count       is_stateful         drop_expire_time    envs_count
-# 1         AVAILABLE           temp                pegasus             8                   3                   true                -                   1
 
 while read app_line
 do
