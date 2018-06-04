@@ -77,6 +77,15 @@ replica::replica(
 //    _app->last_durable_decree());
 //}
 
+void replica::update_last_checkpoint_generate_time()
+{
+    _last_checkpoint_generate_time_ms = now_ms();
+    uint64_t max_interval_ms = _options->checkpoint_max_interval_hours * 3600000UL;
+    // use random trigger time to avoid flush peek
+    _next_checkpoint_interval_trigger_time_ms =
+        _last_checkpoint_generate_time_ms + dsn_random64(max_interval_ms / 2, max_interval_ms);
+}
+
 void replica::update_commit_statistics(int count)
 {
     _stub->_counter_replicas_total_commit_throught->add((uint64_t)count);
@@ -98,7 +107,7 @@ void replica::init_state()
     _primary_states.membership.ballot = 0;
     _create_time_ms = now_ms();
     _last_config_change_time_ms = _create_time_ms;
-    _last_checkpoint_generate_time_ms = _create_time_ms;
+    update_last_checkpoint_generate_time();
     _private_log = nullptr;
 }
 

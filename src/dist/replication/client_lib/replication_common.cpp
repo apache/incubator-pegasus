@@ -63,7 +63,7 @@ replication_options::replication_options()
     checkpoint_disabled = false;
     checkpoint_interval_seconds = 100;
     checkpoint_min_decree_gap = 10000;
-    checkpoint_max_interval_hours = 24; // at least one checkpoint per day
+    checkpoint_max_interval_hours = 2;
 
     gc_disabled = false;
     gc_interval_ms = 30 * 1000;                             // 30 seconds

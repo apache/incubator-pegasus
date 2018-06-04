@@ -154,6 +154,7 @@ public:
     dsn::task_tracker *tracker() { return &_tracker; }
 
     // void json_state(std::stringstream& out) const;
+    void update_last_checkpoint_generate_time();
     void update_commit_statistics(int count);
 
     // routine for get extra envs from replica
@@ -312,6 +313,7 @@ private:
     uint64_t _create_time_ms;
     uint64_t _last_config_change_time_ms;
     uint64_t _last_checkpoint_generate_time_ms;
+    uint64_t _next_checkpoint_interval_trigger_time_ms;
 
     // prepare list
     prepare_list *_prepare_list;

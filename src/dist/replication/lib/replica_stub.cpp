@@ -198,11 +198,11 @@ void replica_stub::install_perf_counters()
 
     _counter_shared_log_size.init_app_counter(
         "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
-    _counter_recent_trigger_checkpoint_count.init_app_counter(
+    _counter_recent_trigger_emergency_checkpoint_count.init_app_counter(
         "eon.replica_stub",
-        "recent.trigger.checkpoint.count",
+        "recent.trigger.emergency.checkpoint.count",
         COUNTER_TYPE_VOLATILE_NUMBER,
-        "trigger checkpoint count in the recent period");
+        "trigger emergency checkpoint count in the recent period");
 
     _counter_cold_backup_running_count.init_app_counter("eon.replica_stub",
                                                         "cold.backup.running.count",
@@ -1820,7 +1820,6 @@ void replica_stub::notify_replica_state_update(const replica_configuration &conf
 
 void replica_stub::trigger_checkpoint(replica_ptr r, bool is_emergency)
 {
-    _counter_recent_trigger_checkpoint_count->increment();
     r->init_checkpoint(is_emergency);
 }
 

@@ -49,12 +49,14 @@ void replica::on_checkpoint_timer()
 {
     check_hashed_access();
 
-    if (now_ms() - _last_checkpoint_generate_time_ms >
-        _options->checkpoint_max_interval_hours * 3600 * 1000) {
+    if (now_ms() > _next_checkpoint_interval_trigger_time_ms) {
         // we trigger emergency checkpoint if no checkpoint generated for a long time
-        ddebug("%s: trigger emergency checkpoint by checkpoint_max_interval_hours, interval = %d",
+        ddebug("%s: trigger emergency checkpoint by checkpoint_max_interval_hours, "
+               "config_interval = %dh (%" PRIu64 "ms), random_interval = %" PRIu64 "ms",
                name(),
-               _options->checkpoint_max_interval_hours);
+               _options->checkpoint_max_interval_hours,
+               _options->checkpoint_max_interval_hours * 3600000UL,
+               _next_checkpoint_interval_trigger_time_ms - _last_checkpoint_generate_time_ms);
         init_checkpoint(true);
     } else {
         ddebug("%s: trigger non-emergency checkpoint",
@@ -109,6 +111,9 @@ void replica::init_checkpoint(bool is_emergency)
                      [this, is_emergency] { background_async_checkpoint(is_emergency); },
                      0,
                      10_ms);
+
+    if (is_emergency)
+        _stub->_counter_recent_trigger_emergency_checkpoint_count->increment();
 }
 
 // @ secondary
@@ -255,7 +260,7 @@ error_code replica::background_async_checkpoint(bool is_emergency)
                    _app->last_committed_decree(),
                    old_durable,
                    _app->last_durable_decree());
-            _last_checkpoint_generate_time_ms = now_ms();
+            update_last_checkpoint_generate_time();
         }
     } else if (err == ERR_TRY_AGAIN) {
         // already triggered memory flushing on async_checkpoint(), then try again later.
@@ -303,7 +308,7 @@ error_code replica::background_sync_checkpoint()
                    _app->last_committed_decree(),
                    old_durable,
                    _app->last_durable_decree());
-            _last_checkpoint_generate_time_ms = now_ms();
+            update_last_checkpoint_generate_time();
         }
     } else if (err == ERR_WRONG_TIMING) {
         // do nothing
@@ -382,7 +387,7 @@ void replica::on_checkpoint_completed(error_code err)
 
             // everything is ok now, done checkpointing
             _secondary_states.checkpoint_is_running = false;
-            _last_checkpoint_generate_time_ms = now_ms();
+            update_last_checkpoint_generate_time();
         }
 
         // missed ones need to be loaded via private logs
@@ -400,7 +405,7 @@ void replica::on_checkpoint_completed(error_code err)
     else {
         // everything is ok now, done checkpointing
         _secondary_states.checkpoint_is_running = false;
-        _last_checkpoint_generate_time_ms = now_ms();
+        update_last_checkpoint_generate_time();
     }
 }
 }
