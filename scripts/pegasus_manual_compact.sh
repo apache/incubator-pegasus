@@ -20,7 +20,7 @@ function usage()
     echo "                              specify trigger time of periodic compact in 24-hour format,"
     echo "                              e.g. \"3:00,21:00\" means 3:00 and 21:00 everyday"
     echo
-    echo "  --target_level <num>        number in range of [1,num_levels], default is -1"
+    echo "  --target_level <num>        number in range of [-1,num_levels], -1 means automatically, default is -1"
     echo
     echo "  --bottommost_level_compaction <skip|force>"
     echo "                              skip or force, default is skip"
@@ -138,10 +138,10 @@ if [ $# -eq 0 ]; then
 fi
 
 # parse parameters
-cluster="127.0.0.1:34601,127.0.0.1:34602"
+cluster=""
+app_name=""
 type="once"
 trigger_time=""
-app_name=""
 wait_only="false"
 target_level="-1"
 bottommost_level_compaction="skip"
@@ -188,15 +188,21 @@ pwd="$(cd "$(dirname "$0")" && pwd)"
 shell_dir="$(cd ${pwd}/.. && pwd )"
 cd ${shell_dir}
 
-# check type
-if [ "${type}" != "periodic" -a "${type}" != "once" ]; then
-    echo "ERROR: invalid type: ${type}"
+# check cluster
+if [ "${cluster}" == "" ]; then
+    echo "ERROR: invalid cluster: ${cluster}"
     exit -1
 fi
 
 # check app_name
 if [ "${app_name}" == "" ]; then
     echo "ERROR: invalid app_name: ${app_name}"
+    exit -1
+fi
+
+# check type
+if [ "${type}" != "periodic" -a "${type}" != "once" ]; then
+    echo "ERROR: invalid type: ${type}"
     exit -1
 fi
 
@@ -229,6 +235,11 @@ else # type == periodic
 fi
 
 # check target_level
+expr ${target_level} + 0 &>/dev/null
+if [ $? -ne 0 ]; then
+    echo "ERROR: invalid target_level: ${target_level}"
+    exit -1
+fi
 if [ ${target_level} -lt -1 ]; then
     echo "ERROR: invalid target_level: ${target_level}"
     exit -1
