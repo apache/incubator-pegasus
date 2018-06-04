@@ -103,6 +103,8 @@ func (n *nodeSession) String() string {
 // Loop in background and keep watching for redialc.
 // Since loopForDialing is the only consumer of redialc, it guarantees
 // only 1 goroutine dialing simultaneously.
+// This goroutine will not be killed due to io failure, unless the session
+// is manually closed.
 func (n *nodeSession) loopForDialing() error {
 	for {
 		select {
@@ -186,7 +188,7 @@ func (n *nodeSession) loopForRequest() error {
 
 				// don give up if there's still hope
 				if !rpc.IsNetworkTimeoutErr(err) {
-					return err
+					return nil
 				}
 			}
 		}
@@ -216,7 +218,7 @@ func (n *nodeSession) loopForResponse() error {
 				}
 			} else {
 				n.logger.Printf("failed to read response from %s: %s", n, err)
-				return err
+				return nil
 			}
 		}
 
@@ -267,7 +269,6 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 }
 
 // Invoke a rpc call.
-// The call will be cancelled if any io error encountered.
 func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rpcRequestArgs, name string) (result rpcResponseResult, err error) {
 	// either the ctx cancelled or the tomb killed will stop this rpc call.
 	ctxWithTomb := n.tom.Context(ctx)
@@ -287,6 +288,12 @@ func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rp
 	}
 
 	req := &requestListener{call: rcall, ch: make(chan bool, 1)}
+
+	defer func() {
+		// manually trigger gc
+		rcall = nil
+		req = nil
+	}()
 
 	select {
 	// passes the request to loopForRequest

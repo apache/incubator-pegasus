@@ -345,3 +345,44 @@ func TestNodeSession_ReceiveErrorCode(t *testing.T) {
 	assert.Equal(t, result, nil)
 	assert.Equal(t, err, base.ERR_INVALID_STATE)
 }
+
+// Ensure nodeSession will redial when user calls an rpc through it.
+func TestNodeSession_Redial(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	addr := "0.0.0.0:8800"
+	n := newNodeSessionAddr(addr, "meta")
+	n.conn = rpc.NewRpcConn(n.tom, addr)
+	defer n.Close()
+
+	n.tom.Go(n.loopForDialing)
+
+	// simulate the condition where loopForRequest or loopForResponse died
+	// due to io failure.
+	n.tom.Go(func() error {
+		return nil
+	})
+	time.Sleep(time.Second)
+
+	mockCodec := &MockCodec{}
+	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
+		// prefixed with length
+		buf := make([]byte, 4+1)
+		binary.BigEndian.PutUint32(buf, uint32(len(buf)))
+		return buf, nil
+	})
+	mockCodec.MockUnMarshal(func(data []byte, v interface{}) error {
+		r, _ := v.(*rpcCall)
+		r.seqId = 1
+		r.err = base.ERR_INVALID_STATE
+		return nil
+	})
+	n.codec = mockCodec
+
+	arg := rrdb.NewMetaQueryCfgArgs()
+	arg.Query = replication.NewQueryCfgRequest()
+	_, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
+
+	assert.Equal(t, n.ConnState(), rpc.ConnStateReady)
+	assert.Equal(t, err, base.ERR_INVALID_STATE)
+}

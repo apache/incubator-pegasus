@@ -532,6 +532,8 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 		perr := wrapError(err, 0).(*PError)
 		if perr.Err != nil {
 			perr.Err = fmt.Errorf("%s [%s, %s]", perr.Err, gpid, replica)
+		} else {
+			perr.Err = fmt.Errorf("[%s, %s]", gpid, replica)
 		}
 		return perr
 	}

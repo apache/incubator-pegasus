@@ -6,6 +6,7 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
@@ -73,8 +74,10 @@ func NewMetaManager(addrs []string) *MetaManager {
 	return mm
 }
 
+// Thread-Safe
 func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*replication.QueryCfgResponse, error) {
-	meta := m.metas[m.currentLeader]
+	lead := m.getCurrentLeader()
+	meta := m.metas[lead]
 	resp, err := meta.queryConfig(ctx, tableName)
 
 	if ctx.Err() != nil {
@@ -82,7 +85,7 @@ func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*repli
 		return nil, ctx.Err()
 	}
 	if err != nil || resp.Err.Errno == base.ERR_FORWARD_TO_OTHERS.String() {
-		excluded := m.currentLeader
+		excluded := lead
 
 		// try other nodes, if finally we are unable to find any node that's
 		// available, we will give up and return error.
@@ -100,13 +103,32 @@ func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*repli
 				continue
 			}
 
-			m.currentLeader = i
+			m.setCurrentLeader(i)
 			return resp, nil
+		}
+
+		// when all the responses are ERR_FORWARD_TO_OTHERS
+		if err == nil {
+			err = fmt.Errorf("unable to find the leader of meta servers")
 		}
 		return nil, err
 	} else {
 		return resp, nil
 	}
+}
+
+func (m *MetaManager) getCurrentLeader() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.currentLeader
+}
+
+func (m *MetaManager) setCurrentLeader(lead int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.currentLeader = lead
 }
 
 func (m *MetaManager) Close() error {
