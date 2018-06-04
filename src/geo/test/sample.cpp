@@ -15,16 +15,54 @@
 #include <s2/s2region_coverer.h>
 #include <s2/s2testing.h>
 
+#include <dsn/service_api_cpp.h>
 #include <pegasus/client.h>
-
-using namespace pegasus;
 
 static const int data_count = 10000;
 static const int test_count = 1;
 static const int min_level = 12; // edge length at about
 static const int max_level = 16; // edge length at about
 
-pegasus_client *client = nullptr;
+dsn::task_tracker tracker;
+pegasus::pegasus_client *client = nullptr;
+
+DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
+int scan_next(const S2LatLng center,
+              util::units::Meters radius,
+              std::list<std::string> &datas,
+              const pegasus::pegasus_client::pegasus_scanner_wrapper &wrap_scanner)
+{
+    wrap_scanner->async_next(
+        [center, radius, &datas, wrap_scanner](int ret,
+                                               std::string &&hash_key,
+                                               std::string &&sort_key,
+                                               std::string &&scan_value,
+                                               pegasus::pegasus_client::internal_info &&info) {
+            if (ret == pegasus::PERR_OK) {
+                if (radius.value() > 0) {
+                    size_t pos1 = scan_value.find(',', 0);
+                    size_t pos2 = scan_value.find(':', 0);
+                    std::string lat = scan_value.substr(0, pos1);
+                    std::string lng = scan_value.substr(pos1 + 1, pos2 - pos1 - 1);
+                    util::units::Meters meters =
+                        S2Earth::GetDistance(center,
+                                             S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr),
+                                                                   strtod(lng.c_str(), nullptr)));
+                    if (meters.value() <= radius.value()) {
+                        datas.push_back(std::move(scan_value));
+                    }
+                } else {
+                    datas.push_back(std::move(scan_value));
+                }
+                scan_next(center, radius, datas, wrap_scanner);
+            } else if (ret == pegasus::PERR_SCAN_COMPLETE) {
+            } else {
+            }
+        });
+
+    return 0;
+}
 
 int scan_data(const std::string &hash_key,
               const std::string &start_sort_key,
@@ -33,53 +71,35 @@ int scan_data(const std::string &hash_key,
               util::units::Meters radius,
               std::list<std::string> &datas)
 {
-    pegasus_client::scan_options options;
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
+    dsn::tasking::enqueue(
+        LPC_SCAN_DATA,
+        &tracker,
+        [hash_key, start_sort_key, stop_sort_key, center, radius, &datas]() {
+            pegasus::pegasus_client::scan_options options;
+            options.start_inclusive = true;
+            options.stop_inclusive = true;
+            client->async_get_scanner(
+                hash_key,
+                start_sort_key,
+                stop_sort_key,
+                options,
+                [center, radius, &datas](int ret,
+                                         pegasus::pegasus_client::pegasus_scanner *scanner) {
+                    if (ret == pegasus::PERR_OK) {
+                        pegasus::pegasus_client::pegasus_scanner_wrapper wrap_scanner =
+                            scanner->get_smart_wrapper();
+                        scan_next(center, radius, datas, wrap_scanner);
+                    }
+                });
 
-    client->async_get_scanner(
-        hash_key,
-        start_sort_key,
-        stop_sort_key,
-        options,
-        [center, radius, &datas](int ret, pegasus_client::pegasus_scanner *scanner) {
-            if (ret == PERR_OK) {
-                pegasus_client::pegasus_scanner_wrapper wrap_scanner = scanner->get_smart_wrapper();
-                wrap_scanner->async_next(
-                    [center, radius, &datas](int ret,
-                                             std::string &&hash_key,
-                                             std::string &&sort_key,
-                                             std::string &&scan_value,
-                                             pegasus::pegasus_client::internal_info &&info) {
-                        if (ret == pegasus::PERR_OK) {
-                            if (radius.value() > 0) {
-                                size_t pos1 = scan_value.find(',', 0);
-                                size_t pos2 = scan_value.find(':', 0);
-                                std::string lat = scan_value.substr(0, pos1);
-                                std::string lng = scan_value.substr(pos1 + 1, pos2 - pos1 - 1);
-                                util::units::Meters meters = S2Earth::GetDistance(
-                                    center,
-                                    S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr),
-                                                          strtod(lng.c_str(), nullptr)));
-                                if (meters.value() <= radius.value()) {
-                                    datas.push_back(std::move(scan_value));
-                                }
-                            } else {
-                                datas.push_back(std::move(scan_value));
-                            }
-                        } else if (ret == pegasus::PERR_SCAN_COMPLETE) {
-                        } else {
-                        }
-                    });
-            }
         });
-    return PERR_OK;
+    return pegasus::PERR_OK;
 }
 
 // ./pegasus_geo_test onebox temp
 int main(int argc, char **argv)
 {
-    if (!pegasus_client_factory::initialize("config.ini")) {
+    if (!pegasus::pegasus_client_factory::initialize("config.ini")) {
         std::cerr << "ERROR: init pegasus failed" << std::endl;
         return -1;
     }
@@ -89,7 +109,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    client = pegasus_client_factory::get_client(argv[1], argv[2]);
+    client = pegasus::pegasus_client_factory::get_client(argv[1], argv[2]);
 
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),
@@ -111,7 +131,7 @@ int main(int argc, char **argv)
         std::string value(latlng.ToStringInDegrees() + ":" + std::to_string(i));
 
         int ret = client->set(hash_key, sort_key, value);
-        if (ret != PERR_OK) {
+        if (ret != pegasus::PERR_OK) {
             std::cerr << "ERROR: set failed, error=" << client->get_error_string(ret) << std::endl;
             return -1;
         }
@@ -128,9 +148,8 @@ int main(int argc, char **argv)
         S2CellUnion cell_union = rc.GetCovering(cap);
         for (const auto &ci : cell_union) {
             if (cap.Contains(S2Cell(ci))) {
-                std::cout << "full: " << ci.level() << ": " << ci << std::endl;
                 int ret = scan_data(ci.ToString(), "", "", S2LatLng(cap.center()), radius, datas);
-                if (ret != PERR_OK) {
+                if (ret != pegasus::PERR_OK) {
                     std::cerr << "ERROR: scan_data failed, error=" << client->get_error_string(ret)
                               << std::endl;
                     return -1;
@@ -166,13 +185,19 @@ int main(int argc, char **argv)
                 for (auto &be : begin_ends) {
                     int ret = scan_data(
                         hash_key, be.first, be.second, S2LatLng(cap.center()), radius, datas);
-                    if (ret != PERR_OK) {
+                    if (ret != pegasus::PERR_OK) {
                         std::cerr << "ERROR: scan_data failed, error="
                                   << client->get_error_string(ret) << std::endl;
                         return -1;
                     }
                 }
             }
+        }
+        tracker.cancel_outstanding_tasks();
+
+        std::cout << "count: " << datas.size() << std::endl;
+        for (auto &data : datas) {
+            std::cout << data << std::endl;
         }
     }
 
