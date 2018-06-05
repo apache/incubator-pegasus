@@ -6,20 +6,22 @@
 
 #include <iostream>
 #include <s2/s2testing.h>
+#include <s2/s2cell.h>
 
 static const int data_count = 10000;
 static const int test_count = 1;
+static const double radius = 5000.0;
 
 // ./pegasus_geo_test onebox temp
 int main(int argc, char **argv)
 {
-    if (argc != 3) {
+    if (argc != 4) {
         std::cerr << "USAGE: " << argv[0] << "<cluster-name> <app-name>" << std::endl;
         return -1;
     }
 
     pegasus::geo my_geo;
-    if (pegasus::PERR_OK != my_geo.init("config.ini", argv[1], argv[2])) {
+    if (pegasus::PERR_OK != my_geo.init("config.ini", argv[1], argv[2], argv[3])) {
         std::cerr << "init geo failed" << std::endl;
         return -1;
     }
@@ -27,23 +29,34 @@ int main(int argc, char **argv)
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),
                       S2LatLng::FromDegrees(40.028697, 116.535087));
-    my_geo.TEST_fill_data_in_rect(rect, data_count);
+    for (int i = 0; i < data_count; ++i) {
+        S2LatLng latlng(S2Testing::SamplePoint(rect));
+        std::string id = std::to_string(i);
+        std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
+                            std::to_string(latlng.lat().degrees()) + "|" +
+                            std::to_string(latlng.lng().degrees()) + "|123.456|456.789|0|-1";
+
+        int ret = my_geo.set_with_geo(id, "", value, 1000);
+        if (ret != pegasus::PERR_OK) {
+            std::cerr << "set data failed. error=" << ret << std::endl;
+        }
+    }
 
     for (int i = 0; i < test_count; ++i) {
-        S2Point pt = S2Testing::SamplePoint(rect);
+        S2LatLng latlng(S2Testing::SamplePoint(rect));
 
-        std::list<std::pair<std::string, double>> result;
-        my_geo.search_radial(S2LatLng::Latitude(pt).degrees(),
-                             S2LatLng::Longitude(pt).degrees(),
-                             5000,
+        std::vector<std::pair<std::string, double>> result;
+        my_geo.search_radial(latlng.lat().degrees(),
+                             latlng.lng().degrees(),
+                             radius,
                              -1,
-                             0,
+                             pegasus::geo::SortType::nearest,
                              result);
 
         std::cout << "count: " << result.size() << std::endl;
-        for (auto &data : result) {
-            std::cout << data.first << " => " << data.second << std::endl;
-        }
+        //        for (auto &data : result) {
+        //            std::cout << data.first << " => " << data.second << std::endl;
+        //        }
     }
 
     return 0;
