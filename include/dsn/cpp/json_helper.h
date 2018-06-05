@@ -595,6 +595,13 @@ public:
         dsn::json::string_tokenizer tokenizer(bb);
         return decode(tokenizer, t);
     }
+
+    // decode the member that's const qualified.
+    static bool decode(string_tokenizer &in, const T &t)
+    {
+        using MutableT = typename std::remove_const<T>::type;
+        return decode_inner(in, const_cast<MutableT &>(t), has_json_state{}, p_has_json_state{});
+    }
 };
 
 inline void json_encode(std::stringstream &out, const dsn::partition_configuration &config)
