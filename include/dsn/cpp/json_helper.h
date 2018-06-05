@@ -43,9 +43,10 @@
 #include <string>
 #include <type_traits>
 #include <cctype>
+#include <boost/lexical_cast.hpp>
 #include <dsn/utility/autoref_ptr.h>
-#include <dsn/tool-api/auto_codes.h>
 #include <dsn/utility/utils.h>
+#include <dsn/tool-api/auto_codes.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_enums.h>
 
@@ -384,7 +385,8 @@ inline void json_encode_map(std::stringstream &out, const T &t)
 {
     out << "{";
     for (auto it = t.begin(); it != t.end(); ++it) {
-        json_forwarder<typename std::decay<decltype(it->first)>::type>::encode(out, it->first);
+        std::string key_string = boost::lexical_cast<std::string>(it->first);
+        json_encode(out, key_string);
         out << ":";
         json_forwarder<typename std::decay<decltype(it->second)>::type>::encode(out, it->second);
         if (std::next(it) != t.end()) {
@@ -403,9 +405,13 @@ inline bool json_decode_map(string_tokenizer &in, TMap &t)
         if (!t.empty()) {
             dverify(in.expect_token(','));
         }
+
+        std::string key_string;
+        dverify(json_decode(in, key_string));
         typename TMap::key_type key;
+        dverify_exception(key = boost::lexical_cast<typename TMap::key_type>(key_string));
+
         typename TMap::mapped_type value;
-        dverify(json_forwarder<decltype(key)>::decode(in, key));
         dverify(in.expect_token(':'));
         dverify(json_forwarder<decltype(value)>::decode(in, value));
 

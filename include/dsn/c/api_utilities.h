@@ -126,6 +126,16 @@ extern DSN_API void dsn_coredump();
 #define dverify(exp)                                                                               \
     if (!(exp))                                                                                    \
     return false
+
+#define dverify_exception(exp)                                                                     \
+    do {                                                                                           \
+        try {                                                                                      \
+            exp;                                                                                   \
+        } catch (...) {                                                                            \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
+
 #define dverify_logged(exp, level, ...)                                                            \
     do {                                                                                           \
         if (!(exp)) {                                                                              \
