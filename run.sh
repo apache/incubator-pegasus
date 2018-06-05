@@ -54,24 +54,24 @@ function usage()
 function usage_build()
 {
     echo "Options for subcommand 'build':"
-    echo "   -h|--help         print the help info"
-    echo "   -t|--type         build type: debug|release, default is release"
-    echo "   -s|--serialize    serialize type: dsn|thrift|proto, default is thrift"
-    echo "   -c|--clear        clear the environment before building"
-    echo "   -cc|--half-clear  only clear the environment of replication before building"
-    echo "   -j|--jobs <num>   the number of jobs to run simultaneously, default 8"
-    echo "   -b|--boost_dir <dir>"
-    echo "                     specify customized boost directory,"
-    echo "                     if not set, then use the system boost"
-    echo "   -w|--warning_all  open all warnings when build, default no"
-    echo "   --enable_gcov     generate gcov code coverage report, default no"
-    echo "   -v|--verbose      build in verbose mode, default no"
+    echo "   -h|--help             print the help info"
+    echo "   -t|--type             build type: debug|release, default is release"
+    echo "   -s|--serialize        serialize type: dsn|thrift|proto, default is thrift"
+    echo "   -c|--clear            clear rdsn/rocksdb/pegasus before building, not clear thirdparty"
+    echo "   -cc|--half-clear      clear pegasus before building, not clear thirdparty/rdsn/rocksdb"
+    echo "   --clear_thirdparty    clear thirdparty/rdsn/rocksdb/pegasus before building"
+    echo "   -j|--jobs <num>       the number of jobs to run simultaneously, default 8"
+    echo "   -b|--boost_dir <dir>  specify customized boost directory, use system boost if not set"
+    echo "   -w|--warning_all      open all warnings when building, default no"
+    echo "   --enable_gcov         generate gcov code coverage report, default no"
+    echo "   -v|--verbose          build in verbose mode, default no"
 }
 function run_build()
 {
     BUILD_TYPE="release"
     CLEAR=NO
     PART_CLEAR=NO
+    CLEAR_THIRDPARTY=NO
     JOB_NUM=8
     BOOST_DIR=""
     WARNING_ALL=NO
@@ -94,6 +94,9 @@ function run_build()
                 ;;
             -cc|--part_clear)
                 PART_CLEAR=YES
+                ;;
+            --clear_thirdparty)
+                CLEAR_THIRDPARTY=YES
                 ;;
             -j|--jobs)
                 JOB_NUM="$2"
@@ -135,7 +138,7 @@ function run_build()
 
     export DSN_ROOT=$ROOT/rdsn/builder/output
     if [ ! -e $ROOT/DSN_ROOT ]; then
-        ln -s $DSN_ROOT $ROOT/DSN_ROOT
+        ln -sf $DSN_ROOT $ROOT/DSN_ROOT
     fi
 
     echo "INFO: start build rdsn..."
@@ -146,6 +149,9 @@ function run_build()
     fi
     if [ "$CLEAR" == "YES" ]; then
         OPT="$OPT -c"
+    fi
+    if [ "$CLEAR_THIRDPARTY" == "YES" ]; then
+        OPT="$OPT --clear_thirdparty"
     fi
     ./run.sh build $OPT
     if [ $? -ne 0 ]; then
