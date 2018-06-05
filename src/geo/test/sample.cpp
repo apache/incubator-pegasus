@@ -7,6 +7,7 @@
 #include <iostream>
 #include <s2/s2testing.h>
 #include <s2/s2cell.h>
+#include <dsn/utility/strings.h>
 
 static const int data_count = 10000;
 static const int test_count = 1;
@@ -20,7 +21,23 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    pegasus::geo my_geo("config.ini", argv[1], argv[2], argv[3]);
+    pegasus::geo my_geo(
+        "config.ini", argv[1], argv[2], argv[3], [](const std::string &value, S2LatLng &latlng) {
+            std::vector<std::string> data;
+            dsn::utils::split_args(value.c_str(), data, '|');
+            if (data.size() <= 6) {
+                return pegasus::PERR_INVALID_VALUE;
+            }
+
+            std::string lat = data[4];
+            std::string lng = data[5];
+            latlng =
+                S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
+
+            // TODO should check more for strtod
+
+            return pegasus::PERR_OK;
+        });
 
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),
@@ -32,7 +49,7 @@ int main(int argc, char **argv)
                             std::to_string(latlng.lat().degrees()) + "|" +
                             std::to_string(latlng.lng().degrees()) + "|123.456|456.789|0|-1";
 
-        int ret = my_geo.set_with_geo(id, "", value, 1000);
+        int ret = my_geo.set(id, "", value, 1000);
         if (ret != pegasus::PERR_OK) {
             std::cerr << "set data failed. error=" << ret << std::endl;
         }
@@ -41,7 +58,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < test_count; ++i) {
         S2LatLng latlng(S2Testing::SamplePoint(rect));
 
-        std::vector<std::pair<std::string, double>> result;
+        std::vector<pegasus::SearchResult> result;
         my_geo.search_radial(latlng.lat().degrees(),
                              latlng.lng().degrees(),
                              radius,
@@ -51,7 +68,7 @@ int main(int argc, char **argv)
 
         std::cout << "count: " << result.size() << std::endl;
         for (auto &data : result) {
-            std::cout << data.first << " => " << data.second << std::endl;
+            std::cout << data.to_string() << std::endl;
         }
     }
 

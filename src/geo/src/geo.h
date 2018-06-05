@@ -4,14 +4,50 @@
 
 #pragma once
 
-#include <dsn/utility/string_view.h>
-#include <dsn/tool-api/task_tracker.h>
+#include <sstream>
 #include <s2/s2latlng.h>
 #include <s2/s2latlng_rect.h>
 #include <s2/util/units/length-units.h>
+#include <dsn/utility/string_view.h>
+#include <dsn/tool-api/task_tracker.h>
 #include <pegasus/client.h>
 
 namespace pegasus {
+
+using latlng_extractor = std::function<int(const std::string &value, S2LatLng &latlng)>;
+
+struct SearchResult
+{
+    std::string hashkey;
+    std::string sortkey;
+    std::string value;
+    double lat_degrees;
+    double lng_degrees;
+    double distance;
+
+    explicit SearchResult(std::string &&hk = "",
+                          std::string &&sk = "",
+                          std::string &&v = "",
+                          double lat = 0.0,
+                          double lng = 0.0,
+                          double dis = 0.0)
+        : hashkey(hk), sortkey(sk), value(v), lat_degrees(lat), lng_degrees(lng), distance(dis)
+    {
+    }
+
+    std::string to_string()
+    {
+        std::stringstream ss;
+        ss << "[" << hashkey << " : " << sortkey << " => " << value << ", (" << lat_degrees << ", "
+           << lng_degrees << "): " << distance << "]";
+        return ss.str();
+    }
+};
+
+inline bool operator<(const SearchResult &l, const SearchResult &r)
+{
+    return l.distance <= r.distance;
+}
 
 class geo
 {
@@ -26,23 +62,24 @@ public:
     geo(dsn::string_view config_file,
         dsn::string_view cluster_name,
         dsn::string_view common_app_name,
-        dsn::string_view geo_app_name);
+        dsn::string_view geo_app_name,
+        latlng_extractor &&extractor);
 
-    int set_with_geo(const std::string &hashkey,
-                     const std::string &sortkey,
-                     const std::string &value,
-                     int timeout_milliseconds = 5000,
-                     int ttl_seconds = 0,
-                     pegasus_client::internal_info *info = nullptr);
+    int set(const std::string &hashkey,
+            const std::string &sortkey,
+            const std::string &value,
+            int timeout_milliseconds = 5000,
+            int ttl_seconds = 0,
+            pegasus_client::internal_info *info = nullptr);
+
     int search_radial(double lat_degrees,
                       double lng_degrees,
                       double radius_m,
                       int count,
                       SortType sort_type,
-                      std::vector<std::pair<std::string, double>> &result);
+                      std::vector<SearchResult> &result);
 
 private:
-    int extract_latlng(const std::string &value, S2LatLng &latlng);
     int set_common_data(const std::string &hashkey,
                         const std::string &sortkey,
                         const std::string &value,
@@ -57,7 +94,7 @@ private:
     int scan_next(const S2LatLng &center,
                   util::units::Meters radius,
                   int count,
-                  std::vector<std::pair<std::string, double>> &result,
+                  std::vector<SearchResult> &result,
                   const pegasus_client::pegasus_scanner_wrapper &wrap_scanner);
     int scan_data(const std::string &hash_key,
                   const std::string &start_sort_key,
@@ -65,7 +102,7 @@ private:
                   const S2LatLng &center,
                   util::units::Meters radius,
                   int count,
-                  std::vector<std::pair<std::string, double>> &result);
+                  std::vector<SearchResult> &result);
 
 private:
     // edge length at about 2km, cell id at this level is hash-key in pegasus
@@ -74,6 +111,8 @@ private:
     // convenient for scan operation
     static const int max_level = 16;
     static const int max_retry_times = 0;
+
+    latlng_extractor _extractor;
 
     dsn::task_tracker _tracker;
     pegasus_client *_common_data_client = nullptr;

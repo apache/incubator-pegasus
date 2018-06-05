@@ -18,7 +18,8 @@ DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT
 geo::geo(dsn::string_view config_file,
          dsn::string_view cluster_name,
          dsn::string_view common_app_name,
-         dsn::string_view geo_app_name)
+         dsn::string_view geo_app_name,
+         latlng_extractor &&extractor)
 {
     bool ok = pegasus_client_factory::initialize(config_file.data());
     dassert(ok, "init pegasus client factory failed");
@@ -29,14 +30,16 @@ geo::geo(dsn::string_view config_file,
 
     _geo_data_client = pegasus_client_factory::get_client(cluster_name.data(), geo_app_name.data());
     dassert(_geo_data_client != nullptr, "init pegasus _geo_data_client failed");
+
+    _extractor = extractor;
 }
 
-int geo::set_with_geo(const std::string &hashkey,
-                      const std::string &sortkey,
-                      const std::string &value,
-                      int timeout_milliseconds,
-                      int ttl_seconds,
-                      pegasus_client::internal_info *info)
+int geo::set(const std::string &hashkey,
+             const std::string &sortkey,
+             const std::string &value,
+             int timeout_milliseconds,
+             int ttl_seconds,
+             pegasus_client::internal_info *info)
 {
     // TODO 异步并行set
     int ret = set_common_data(hashkey, sortkey, value, timeout_milliseconds / 2, ttl_seconds, info);
@@ -46,9 +49,9 @@ int geo::set_with_geo(const std::string &hashkey,
     }
 
     S2LatLng latlng;
-    ret = extract_latlng(value, latlng);
+    ret = _extractor(value, latlng);
     if (ret != PERR_OK) {
-        derror_f("extract_latlng failed. value={}", value);
+        derror_f("_extractor failed. value={}", value);
         return ret;
     }
 
@@ -66,7 +69,7 @@ int geo::search_radial(double lat_degrees,
                        double radius_m,
                        int count,
                        SortType sort_type,
-                       std::vector<std::pair<std::string, double>> &result)
+                       std::vector<SearchResult> &result)
 {
     util::units::Meters radius((float)radius_m);
     S2Cap cap(S2LatLng::FromDegrees(lat_degrees, lng_degrees).ToPoint(), S2Earth::ToAngle(radius));
@@ -76,7 +79,7 @@ int geo::search_radial(double lat_degrees,
         single_scan_count = -1;
     }
 
-    std::list<std::vector<std::pair<std::string, double>>> results;
+    std::list<std::vector<SearchResult>> results;
 
     // region cover
     S2RegionCoverer rc;
@@ -84,7 +87,7 @@ int geo::search_radial(double lat_degrees,
     S2CellUnion cell_union = rc.GetCovering(cap);
     for (const auto &ci : cell_union) {
         if (cap.Contains(S2Cell(ci))) {
-            results.emplace_back(std::vector<std::pair<std::string, double>>());
+            results.emplace_back(std::vector<SearchResult>());
             int ret = scan_data(ci.ToString(),
                                 "",
                                 "",
@@ -125,7 +128,7 @@ int geo::search_radial(double lat_degrees,
                 }
             }
             for (auto &be : begin_ends) {
-                results.emplace_back(std::vector<std::pair<std::string, double>>());
+                results.emplace_back(std::vector<SearchResult>());
                 int ret = scan_data(hash_key,
                                     be.first,
                                     be.second,
@@ -145,34 +148,14 @@ int geo::search_radial(double lat_degrees,
     // TODO need optimize
     for (auto &r : results) {
         result.insert(result.end(), r.begin(), r.end());
+        if (count > 0 && result.size() >= count) {
+            result.resize((size_t)count);
+            break;
+        }
     }
     if (sort_type == SortType::nearest) {
-        std::sort(result.begin(),
-                  result.end(),
-                  [](const std::pair<std::string, double> &l,
-                     const std::pair<std::string, double> &r) { return l.second <= r.second; });
+        std::sort(result.begin(), result.end());
     }
-
-    if (count > 0) {
-        result.resize((size_t)count);
-    }
-
-    return PERR_OK;
-}
-
-int geo::extract_latlng(const std::string &value, S2LatLng &latlng)
-{
-    std::vector<std::string> data;
-    dsn::utils::split_args(value.c_str(), data, '|');
-    if (data.size() <= 6) {
-        return PERR_INVALID_VALUE;
-    }
-
-    std::string lat = data[4];
-    std::string lng = data[5];
-    latlng = S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
-
-    // TODO should check more for strtod
 
     return PERR_OK;
 }
@@ -184,8 +167,8 @@ int geo::set_common_data(const std::string &hashkey,
                          int ttl_seconds,
                          pegasus_client::internal_info *info)
 {
-    int ret = PERR_OK;
-    int retry_times = 0;
+    int ret;
+    unsigned int retry_times = 0;
     do {
         if (retry_times > 0) {
             dwarn_f("retry set data. sleep {}ms", retry_times * 10);
@@ -195,7 +178,7 @@ int geo::set_common_data(const std::string &hashkey,
             hashkey, sortkey, value, timeout_milliseconds, ttl_seconds, info);
     } while (ret != PERR_OK && retry_times++ < max_retry_times);
 
-    return PERR_OK;
+    return ret;
 }
 
 int geo::set_geo_data(const S2LatLng &latlng,
@@ -214,8 +197,8 @@ int geo::set_geo_data(const S2LatLng &latlng,
     std::string sort_key(leaf_cell_id.ToString().substr(hash_key.length()) + ":" +
                          key); // [0,3]{30-min_level}
 
-    int ret = PERR_OK;
-    int retry_times = 0;
+    int ret;
+    unsigned int retry_times = 0;
     do {
         if (retry_times > 0) {
             dwarn_f("retry set geo data. sleep {}ms", retry_times * 10);
@@ -223,7 +206,7 @@ int geo::set_geo_data(const S2LatLng &latlng,
         }
         ret = _geo_data_client->set(hash_key, sort_key, value, timeout_milliseconds, ttl_seconds);
         if (ret != PERR_OK) {
-            derror("set data failed. error=%s", _geo_data_client->get_error_string(ret));
+            derror_f("set data failed. error={}", _geo_data_client->get_error_string(ret));
         }
 
     } while (ret != PERR_OK && retry_times++ < max_retry_times);
@@ -234,7 +217,7 @@ int geo::set_geo_data(const S2LatLng &latlng,
 int geo::scan_next(const S2LatLng &center,
                    util::units::Meters radius,
                    int count,
-                   std::vector<std::pair<std::string, double>> &result,
+                   std::vector<SearchResult> &result,
                    const pegasus_client::pegasus_scanner_wrapper &wrap_scanner)
 {
     wrap_scanner->async_next(
@@ -253,15 +236,19 @@ int geo::scan_next(const S2LatLng &center,
             }
 
             S2LatLng latlng;
-            if (extract_latlng(scan_value, latlng) != PERR_OK) {
-                derror_f("extract_latlng failed. scan_value={}", scan_value);
+            if (_extractor(scan_value, latlng) != PERR_OK) {
+                derror_f("_extractor failed. scan_value={}", scan_value);
                 return;
             }
 
             util::units::Meters distance = S2Earth::GetDistance(center, latlng);
             if (distance.value() <= radius.value()) {
-                result.emplace_back(
-                    std::pair<std::string, double>(std::move(scan_value), distance.value()));
+                result.emplace_back(SearchResult(std::move(hash_key),
+                                                 std::move(sort_key),
+                                                 std::move(scan_value),
+                                                 latlng.lat().degrees(),
+                                                 latlng.lng().degrees(),
+                                                 distance.value()));
             }
 
             if (count == -1 || result.size() < count) {
@@ -278,7 +265,7 @@ int geo::scan_data(const std::string &hash_key,
                    const S2LatLng &center,
                    util::units::Meters radius,
                    int count,
-                   std::vector<std::pair<std::string, double>> &result)
+                   std::vector<SearchResult> &result)
 {
     dsn::tasking::enqueue(
         LPC_SCAN_DATA,
