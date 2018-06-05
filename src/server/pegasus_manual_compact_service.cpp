@@ -87,21 +87,25 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
 bool pegasus_manual_compact_service::check_compact_disabled(
     const std::map<std::string, std::string> &envs)
 {
-    bool disabled = false;
+    bool new_disabled = false;
     auto find = envs.find(MANUAL_COMPACT_DISABLED_KEY);
     if (find != envs.end() && find->second == "true") {
-        disabled = true;
+        new_disabled = true;
     }
 
-    if (disabled && !_disabled) {
-        ddebug_replica("manual compact is set to enabled now");
-        _disabled = true;
-    } else if (!disabled && _disabled) {
-        ddebug_replica("manual compact is set to disabled now");
-        _disabled = false;
+    bool old_disabled = _disabled.load();
+    if (new_disabled != old_disabled) {
+        // flag changed
+        if (new_disabled) {
+            ddebug_replica("manual compact is set to disabled now");
+            _disabled.store(true);
+        } else {
+            ddebug_replica("manual compact is set to enabled now");
+            _disabled.store(false);
+        }
     }
 
-    return disabled;
+    return new_disabled;
 }
 
 bool pegasus_manual_compact_service::check_once_compact(
@@ -233,7 +237,7 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
 {
     // if we find manual compaction is disabled when transfer from queue to running,
     // it would not to be started.
-    if (_disabled) {
+    if (_disabled.load()) {
         _manual_compact_enqueue_time_ms.store(0);
         return;
     }
