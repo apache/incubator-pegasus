@@ -44,28 +44,31 @@ function usage()
 #####################
 function usage_build()
 {
-    echo "Options for subcommand 'build':"
-    echo "   -h|--help         print the help info"
-    echo "   -t|--type         build type: debug|release, default is debug"
-    echo "   -c|--clear        clear the environment before building"
-    echo "   -j|--jobs <num>"
-    echo "                     the number of jobs to run simultaneously, default 8"
-    echo "   -b|--boost_dir <dir>"
-    echo "                     specify customized boost directory,"
-    echo "                     if not set, then use the system boost"
-    echo "   -w|--warning_all  open all warnings when build, default no"
-    echo "   --enable_gcov     generate gcov code coverage report, default no"
-    echo "   -v|--verbose      build in verbose mode, default no"
+    subcommand="build"
     if [ "$ONLY_BUILD" == "NO" ]; then
-        echo "   -m|--test_module  specify modules to test, split by ',',"
-        echo "                     e.g., \"dsn.core.tests,dsn.tests\","
-        echo "                     if not set, then run all tests"
+        subcommand="test"
+    fi
+    echo "Options for subcommand '$subcommand':"
+    echo "   -h|--help             print the help info"
+    echo "   -t|--type             build type: debug|release, default is debug"
+    echo "   -c|--clear            clear environment before building, but not clear thirdparty"
+    echo "   --clear_thirdparty    clear environment before building, including thirdparty"
+    echo "   -j|--jobs <num>       the number of jobs to run simultaneously, default 8"
+    echo "   -b|--boost_dir <dir>  specify customized boost directory, use system boost if not set"
+    echo "   -w|--warning_all      open all warnings when build, default no"
+    echo "   --enable_gcov         generate gcov code coverage report, default no"
+    echo "   -v|--verbose          build in verbose mode, default no"
+    if [ "$ONLY_BUILD" == "NO" ]; then
+        echo "   -m|--test_module      specify modules to test, split by ',',"
+        echo "                         e.g., \"dsn.core.tests,dsn.tests\","
+        echo "                         if not set, then run all tests"
     fi
 }
 function run_build()
 {
     BUILD_TYPE="release"
     CLEAR=NO
+    CLEAR_THIRDPARTY=NO
     JOB_NUM=8
     BOOST_DIR=""
     WARNING_ALL=NO
@@ -85,6 +88,9 @@ function run_build()
                 ;;
             -c|--clear)
                 CLEAR=YES
+                ;;
+            --clear_thirdparty)
+                CLEAR_THIRDPARTY=YES
                 ;;
             -j|--jobs)
                 JOB_NUM="$2"
@@ -125,6 +131,11 @@ function run_build()
 
     # build thirdparty first
     cd thirdparty
+    if [ "$CLEAR_THIRDPARTY" == "YES" ]; then
+        echo "Clear thirdparty..."
+        rm -rf src build output &>/dev/null
+        CLEAR=YES
+    fi
     ./download-thirdparty.sh
     exit_if_fail $?
     if [ "x"$BOOST_DIR != "x" ]; then
