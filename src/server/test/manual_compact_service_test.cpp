@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_server_test_base.h"
-#include "server/pagasus_manual_compact_service.h"
+#include "server/pegasus_manual_compact_service.h"
 
 namespace pegasus {
 namespace server {
@@ -11,7 +11,7 @@ namespace server {
 class manual_compact_service_test : public pegasus_server_test_base
 {
 public:
-    pagasus_manual_compact_service manual_compact_svc;
+    pegasus_manual_compact_service manual_compact_svc;
     static const uint64_t compacted_ts = 1500000000; // 2017.07.14 10:40:00 CST
 
 public:
@@ -26,6 +26,12 @@ public:
     void set_mock_now(uint64_t mock_now_sec)
     {
         manual_compact_svc._mock_now_timestamp = mock_now_sec * 1000;
+    }
+
+    void check_compact_disabled(const std::map<std::string, std::string> &envs, bool ok)
+    {
+        ASSERT_EQ(ok, manual_compact_svc.check_compact_disabled(envs))
+            << dsn::utils::kv_map_to_string(envs, ';', '=');
     }
 
     void check_once_compact(const std::map<std::string, std::string> &envs, bool ok)
@@ -73,6 +79,30 @@ public:
     }
 };
 
+TEST_F(manual_compact_service_test, check_compact_disabled)
+{
+    std::map<std::string, std::string> envs;
+    check_compact_disabled(envs, false);
+
+    envs[MANUAL_COMPACT_DISABLED_KEY] = "";
+    check_compact_disabled(envs, false);
+
+    envs[MANUAL_COMPACT_DISABLED_KEY] = "true";
+    check_compact_disabled(envs, true);
+
+    envs[MANUAL_COMPACT_DISABLED_KEY] = "false";
+    check_compact_disabled(envs, false);
+
+    envs[MANUAL_COMPACT_DISABLED_KEY] = "1";
+    check_compact_disabled(envs, false);
+
+    envs[MANUAL_COMPACT_DISABLED_KEY] = "0";
+    check_compact_disabled(envs, false);
+
+    envs[MANUAL_COMPACT_DISABLED_KEY] = "abc";
+    check_compact_disabled(envs, false);
+}
+
 TEST_F(manual_compact_service_test, check_once_compact)
 {
     // suppose compacted at 1500000000
@@ -108,24 +138,7 @@ TEST_F(manual_compact_service_test, check_once_compact)
 
 TEST_F(manual_compact_service_test, check_periodic_compact)
 {
-    // disabled
     std::map<std::string, std::string> envs;
-    check_periodic_compact(envs, false);
-
-    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "";
-    check_periodic_compact(envs, false);
-
-    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "true";
-    check_periodic_compact(envs, false);
-
-    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "1";
-    check_periodic_compact(envs, false);
-
-    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "abc";
-    check_periodic_compact(envs, false);
-
-    // enable
-    envs[MANUAL_COMPACT_PERIODIC_DISABLED_KEY] = "false";
 
     // invalid trigger time format
     check_periodic_compact(envs, false);

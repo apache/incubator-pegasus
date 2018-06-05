@@ -22,7 +22,6 @@ const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD("bulk_load");
 /// manual_compact.periodic.trigger_time=3:00,21:00             // required
 /// manual_compact.periodic.target_level=-1                     // optional, default -1
 /// manual_compact.periodic.bottommost_level_compaction=force   // optional, default force
-/// manual_compact.periodic.disabled=false                      // optional, default false
 /// ```
 ///
 /// Executed-once manual compaction: Triggered only at the specified unix time.
@@ -31,13 +30,19 @@ const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD("bulk_load");
 /// manual_compact.once.target_level=-1                         // optional, default -1
 /// manual_compact.once.bottommost_level_compaction=force       // optional, default force
 /// ```
-const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX("manual_compact.periodic.");
+///
+/// Disable manual compaction:
+/// ```
+/// manual_compact.disabled=false                               // optional, default false
+/// ```
+const std::string MANUAL_COMPACT_KEY_PREFIX("manual_compact.");
+const std::string MANUAL_COMPACT_DISABLED_KEY(MANUAL_COMPACT_KEY_PREFIX + "disabled");
+
+const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX(MANUAL_COMPACT_KEY_PREFIX + "periodic.");
 const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX +
                                                            "trigger_time");
-const std::string MANUAL_COMPACT_PERIODIC_DISABLED_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX +
-                                                       "disabled");
 
-const std::string MANUAL_COMPACT_ONCE_KEY_PREFIX("manual_compact.once.");
+const std::string MANUAL_COMPACT_ONCE_KEY_PREFIX(MANUAL_COMPACT_KEY_PREFIX + "once.");
 const std::string MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY(MANUAL_COMPACT_ONCE_KEY_PREFIX +
                                                        "trigger_time");
 
@@ -47,4 +52,5 @@ const std::string MANUAL_COMPACT_TARGET_LEVEL_KEY("target_level");
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY("bottommost_level_compaction");
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
+
 } // namespace
