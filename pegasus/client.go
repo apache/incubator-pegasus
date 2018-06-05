@@ -79,6 +79,7 @@ type Client interface {
 	Exist(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (bool, error)
 
 	// Get ttl time.
+	// ttl: if -1, it means infinity. if -2, it means not found
 	TTL(ctx context.Context, tableName string, hashKey []byte, sortKey []byte) (int, error)
 
 	// Get Scanner for {startSortKey, stopSortKey} within hashKey.

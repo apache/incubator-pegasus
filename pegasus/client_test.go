@@ -489,11 +489,18 @@ func TestPegasusClient_TTL(t *testing.T) {
 	}
 
 	assert.Nil(t, client.MultiSetOpt(context.Background(), "temp", hashKey, sortKeys, values, 10))
-
 	for i := 0; i < 10; i++ {
-		ttl, err := tb.TTL(context.Background(), hashKey, sortKeys[i])
+		exist, err := tb.Exist(context.Background(), hashKey, sortKeys[0])
 		assert.Nil(t, err)
-		assert.Equal(t, 10, ttl)
+		assert.Equal(t, true, exist)
+	}
+
+	time.Sleep(time.Second * 11)
+
+	// after more than 10s, keys should be not found.
+	for i := 0; i < 10; i++ {
+		ttl, _ := tb.TTL(context.Background(), hashKey, sortKeys[i])
+		assert.Equal(t, -2, ttl)
 	}
 }
 

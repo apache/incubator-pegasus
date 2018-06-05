@@ -368,7 +368,7 @@ func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey
 			err = base.NewDsnErrFromInt(resp.Error)
 		}
 		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return 0, err
+			return -2, err
 		} else {
 			return int(resp.GetTTLSeconds()), nil
 		}
