@@ -20,11 +20,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    pegasus::geo my_geo;
-    if (pegasus::PERR_OK != my_geo.init("config.ini", argv[1], argv[2], argv[3])) {
-        std::cerr << "init geo failed" << std::endl;
-        return -1;
-    }
+    pegasus::geo my_geo("config.ini", argv[1], argv[2], argv[3]);
 
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),
@@ -54,9 +50,9 @@ int main(int argc, char **argv)
                              result);
 
         std::cout << "count: " << result.size() << std::endl;
-        //        for (auto &data : result) {
-        //            std::cout << data.first << " => " << data.second << std::endl;
-        //        }
+        for (auto &data : result) {
+            std::cout << data.first << " => " << data.second << std::endl;
+        }
     }
 
     return 0;

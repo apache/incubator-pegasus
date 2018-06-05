@@ -23,10 +23,10 @@ public:
     };
 
 public:
-    int init(dsn::string_view config_file,
-             dsn::string_view cluster_name,
-             dsn::string_view common_app_name,
-             dsn::string_view geo_app_name);
+    geo(dsn::string_view config_file,
+        dsn::string_view cluster_name,
+        dsn::string_view common_app_name,
+        dsn::string_view geo_app_name);
 
     int set_with_geo(const std::string &hashkey,
                      const std::string &sortkey,

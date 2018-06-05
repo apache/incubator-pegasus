@@ -15,10 +15,10 @@ namespace pegasus {
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
-int geo::init(dsn::string_view config_file,
-              dsn::string_view cluster_name,
-              dsn::string_view common_app_name,
-              dsn::string_view geo_app_name)
+geo::geo(dsn::string_view config_file,
+         dsn::string_view cluster_name,
+         dsn::string_view common_app_name,
+         dsn::string_view geo_app_name)
 {
     bool ok = pegasus_client_factory::initialize(config_file.data());
     dassert(ok, "init pegasus client factory failed");
@@ -29,8 +29,6 @@ int geo::init(dsn::string_view config_file,
 
     _geo_data_client = pegasus_client_factory::get_client(cluster_name.data(), geo_app_name.data());
     dassert(_geo_data_client != nullptr, "init pegasus _geo_data_client failed");
-
-    return PERR_OK;
 }
 
 int geo::set_with_geo(const std::string &hashkey,
@@ -174,7 +172,7 @@ int geo::extract_latlng(const std::string &value, S2LatLng &latlng)
     std::string lng = data[5];
     latlng = S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
 
-    // TODO should add more check for strtod
+    // TODO should check more for strtod
 
     return PERR_OK;
 }
