@@ -103,6 +103,15 @@ void meta_storage::get_data(std::string &&node, std::function<void(const blob &)
     op.run();
 }
 
+void meta_storage::get_children(std::string &&node,
+                                std::function<void(bool, const std::vector<std::string> &)> &&cb)
+{
+    on_get_children op;
+    op.initialize(this);
+    op.args.reset(new on_get_children::arguments{std::move(cb), std::move(node)});
+    op.run();
+}
+
 } // namespace mss
 } // namespace replication
 } // namespace dsn

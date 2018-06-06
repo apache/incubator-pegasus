@@ -47,6 +47,7 @@ struct op_type
         OP_DELETE,
         OP_SET_DATA,
         OP_GET_DATA,
+        OP_GET_CHILDREN,
     };
 
     static const char *to_string(type v)
@@ -58,6 +59,7 @@ struct op_type
             "OP_DELETE",
             "OP_SET_DATA",
             "OP_GET_DATA",
+            "OP_GET_CHILDREN",
         };
 
         dassert_f(v != OP_NONE && v <= (sizeof(op_type_to_string_map) / sizeof(char *)),
@@ -275,6 +277,40 @@ struct on_set_data : operation
         }
 
         operation::on_error(this, op_type::OP_SET_DATA, ec, args->node);
+    }
+};
+
+struct on_get_children : operation
+{
+    struct arguments
+    {
+        std::function<void(bool, const std::vector<std::string> &)> cb;
+        std::string node;
+    };
+    std::shared_ptr<arguments> args;
+
+    void run()
+    {
+        remote_storage()->get_children(
+            args->node,
+            LPC_META_STATE_HIGH,
+            [op = *this](error_code ec, const std::vector<std::string> &children) mutable {
+                op.on_error(ec, children);
+            },
+            tracker());
+    }
+
+    void on_error(error_code ec, const std::vector<std::string> &children)
+    {
+        if (ec == ERR_OK) {
+            args->cb(true, children);
+            return;
+        }
+        if (ec == ERR_OBJECT_NOT_FOUND) {
+            args->cb(false, children);
+            return;
+        }
+        operation::on_error(this, op_type::OP_GET_CHILDREN, ec, args->node);
     }
 };
 

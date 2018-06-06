@@ -141,3 +141,42 @@ TEST_F(meta_state_service_utils_test, concurrent)
     }
     _tracker.wait_outstanding_tasks();
 }
+
+TEST_F(meta_state_service_utils_test, get_children)
+{
+    _storage->create_node("/1", dsn::blob(), [this]() {
+        _storage->create_node("/1/99", dsn::blob(), [this]() {});
+        _storage->create_node("/1/999", dsn::blob(), [this]() {});
+        _storage->create_node("/1/9999", dsn::blob(), [this]() {});
+    });
+    _tracker.wait_outstanding_tasks();
+
+    _storage->get_children("/1", [](bool node_exists, const std::vector<std::string> &children) {
+        ASSERT_TRUE(node_exists);
+
+        auto children_copy = children;
+        std::sort(children_copy.begin(), children_copy.end());
+        ASSERT_EQ(children_copy, std::vector<std::string>({"99", "999", "9999"}));
+    });
+    _tracker.wait_outstanding_tasks();
+
+    _storage->delete_node("/1/99", []() {});
+    _storage->delete_node("/1/999", []() {});
+    _storage->delete_node("/1/9999", []() {});
+    _tracker.wait_outstanding_tasks();
+
+    _storage->get_children("/1", [](bool node_exists, const std::vector<std::string> &children) {
+        ASSERT_TRUE(node_exists);
+        ASSERT_EQ(children.size(), 0);
+    });
+    _tracker.wait_outstanding_tasks();
+
+    _storage->delete_node_recursively("/1", []() {});
+    _tracker.wait_outstanding_tasks();
+
+    _storage->get_children("/1", [](bool node_exists, const std::vector<std::string> &children) {
+        ASSERT_FALSE(node_exists);
+        ASSERT_EQ(children.size(), 0);
+    });
+    _tracker.wait_outstanding_tasks();
+}
