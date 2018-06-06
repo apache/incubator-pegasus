@@ -437,7 +437,7 @@ function run_start_onebox()
         echo "ERROR: file ${SERVER_PATH}/pegasus_server not exist"
         exit -1
     fi
-    if ps -ef | grep ' /pegasus_server config.ini' | grep -E 'app_list meta|app_list replica'; then
+    if ps -ef | grep ' /pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector'; then
         echo "ERROR: some onebox processes are running, start failed"
         exit -1
     fi
@@ -504,6 +504,15 @@ function run_start_onebox()
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
     done
+    mkdir -p collector
+    cd collector
+    ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
+    sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/34800/" ${ROOT}/config-server.ini >config.ini
+    echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list collector &>result &"
+    $PWD/pegasus_server config.ini -app_list collector &>result &
+    PID=$!
+    ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+    cd ..
 }
 
 #####################
@@ -533,7 +542,7 @@ function run_stop_onebox()
         esac
         shift
     done
-    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | awk '{print $2}' | xargs kill &>/dev/null
 }
 
 #####################
@@ -563,7 +572,7 @@ function run_list_onebox()
         esac
         shift
     done
-    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica' | sort -k11
+    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | sort -k11
 }
 
 #####################
@@ -604,17 +613,17 @@ function run_clear_onebox()
 function usage_start_onebox_instance()
 {
     echo "Options for subcommand 'start_onebox_instance':"
-    echo "   -h|--help         print the help info"
-    echo "   -m|--meta_id <num>"
-    echo "                     meta server id"
-    echo "   -r|--replica_id <num>"
-    echo "                     replica server id"
+    echo "   -h|--help              print the help info"
+    echo "   -m|--meta_id <num>     start meta server with id"
+    echo "   -r|--replica_id <num>  start replica server with id"
+    echo "   -c|--collector         start collector server"
 }
 
 function run_start_onebox_instance()
 {
     META_ID=0
     REPLICA_ID=0
+    COLLECTOR_ID=0
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -630,6 +639,9 @@ function run_start_onebox_instance()
                 REPLICA_ID="$2"
                 shift
                 ;;
+            -c|--collector)
+                COLLECTOR_ID=1
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -639,12 +651,8 @@ function run_start_onebox_instance()
         esac
         shift
     done
-    if [ $META_ID = "0" -a $REPLICA_ID = "0" ]; then
-        echo "ERROR: no meta_id or replica_id set"
-        exit -1
-    fi
-    if [ $META_ID != "0" -a $REPLICA_ID != "0" ]; then
-        echo "ERROR: meta_id and replica_id can only set one"
+    if [ $META_ID = "0" -a $REPLICA_ID = "0" -a $COLLECTOR_ID = "0" ]; then
+        echo "ERROR: no meta_id or replica_id or collector set"
         exit -1
     fi
     if [ $META_ID != "0" ]; then
@@ -683,6 +691,24 @@ function run_start_onebox_instance()
         cd ..
         echo "INFO: replica@$REPLICA_ID started"
     fi
+    if [ $COLLECTOR_ID != "0" ]; then
+        dir=onebox/collector
+        if [ ! -d $dir ]; then
+            echo "ERROR: collector dir $dir not exist"
+            exit -1
+        fi
+        if ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" ; then
+            echo "INFO: collector already running"
+            exit -1
+        fi
+        cd $dir
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list collector &>result &"
+        $PWD/pegasus_server config.ini -app_list collector &>result &
+        PID=$!
+        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+        cd ..
+        echo "INFO: collector started"
+    fi
 }
 
 #####################
@@ -691,17 +717,17 @@ function run_start_onebox_instance()
 function usage_stop_onebox_instance()
 {
     echo "Options for subcommand 'stop_onebox_instance':"
-    echo "   -h|--help         print the help info"
-    echo "   -m|--meta_id <num>"
-    echo "                     meta server id"
-    echo "   -r|--replica_id <num>"
-    echo "                     replica server id"
+    echo "   -h|--help              print the help info"
+    echo "   -m|--meta_id <num>     stop meta server with id"
+    echo "   -r|--replica_id <num>  stop replica server with id"
+    echo "   -c|--collector         stop collector server"
 }
 
 function run_stop_onebox_instance()
 {
     META_ID=0
     REPLICA_ID=0
+    COLLECTOR_ID=0
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -717,6 +743,9 @@ function run_stop_onebox_instance()
                 REPLICA_ID="$2"
                 shift
                 ;;
+            -c|--collector)
+                COLLECTOR_ID=1
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -726,12 +755,8 @@ function run_stop_onebox_instance()
         esac
         shift
     done
-    if [ $META_ID = "0" -a $REPLICA_ID = "0" ]; then
-        echo "ERROR: no meta_id or replica_id set"
-        exit -1
-    fi
-    if [ $META_ID != "0" -a $REPLICA_ID != "0" ]; then
-        echo "ERROR: meta_id and replica_id can only set one"
+    if [ $META_ID = "0" -a $REPLICA_ID = "0" -a $COLLECTOR_ID = "0" ]; then
+        echo "ERROR: no meta_id or replica_id or collector set"
         exit -1
     fi
     if [ $META_ID != "0" ]; then
@@ -760,6 +785,14 @@ function run_stop_onebox_instance()
         ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" | awk '{print $2}' | xargs kill &>/dev/null
         echo "INFO: replica@$REPLICA_ID stopped"
     fi
+    if [ $COLLECTOR_ID != "0" ]; then
+        if ! ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" ; then
+            echo "INFO: collector is not running"
+            exit -1
+        fi
+        ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" | awk '{print $2}' | xargs kill &>/dev/null
+        echo "INFO: collector stopped"
+    fi
 }
 
 #####################
@@ -768,19 +801,18 @@ function run_stop_onebox_instance()
 function usage_restart_onebox_instance()
 {
     echo "Options for subcommand 'restart_onebox_instance':"
-    echo "   -h|--help         print the help info"
-    echo "   -m|--meta_id <num>"
-    echo "                     meta server id"
-    echo "   -r|--replica_id <num>"
-    echo "                     replica server id"
-    echo "   -s|--sleep <num>"
-    echo "                     sleep time in seconds between stop and start, default is 1"
+    echo "   -h|--help              print the help info"
+    echo "   -m|--meta_id <num>     restart meta server with id"
+    echo "   -r|--replica_id <num>  restart replica server with id"
+    echo "   -c|--collector         restart collector server"
+    echo "   -s|--sleep <num>       sleep time in seconds between stop and start, default is 1"
 }
 
 function run_restart_onebox_instance()
 {
     META_ID=0
     REPLICA_ID=0
+    COLLECTOR_OPT=""
     SLEEP=1
     while [[ $# > 0 ]]; do
         key="$1"
@@ -797,6 +829,10 @@ function run_restart_onebox_instance()
                 REPLICA_ID="$2"
                 shift
                 ;;
+            -c|--collector)
+                COLLECTOR_OPT="-c"
+                shift
+                ;;
             -s|--sleep)
                 SLEEP="$2"
                 shift
@@ -810,18 +846,14 @@ function run_restart_onebox_instance()
         esac
         shift
     done
-    if [ $META_ID = "0" -a $REPLICA_ID = "0" ]; then
-        echo "ERROR: no meta_id or replica_id set"
+    if [ $META_ID = "0" -a $REPLICA_ID = "0" -a "x$COLLECTOR_OPT" = "x" ]; then
+        echo "ERROR: no meta_id or replica_id or collector set"
         exit -1
     fi
-    if [ $META_ID != "0" -a $REPLICA_ID != "0" ]; then
-        echo "ERROR: meta_id and replica_id can only set one"
-        exit -1
-    fi
-    run_stop_onebox_instance -m $META_ID -r $REPLICA_ID
+    run_stop_onebox_instance -m $META_ID -r $REPLICA_ID $COLLECTOR_OPT
     echo "sleep $SLEEP"
     sleep $SLEEP
-    run_start_onebox_instance -m $META_ID -r $REPLICA_ID
+    run_start_onebox_instance -m $META_ID -r $REPLICA_ID $COLLECTOR_OPT
 }
 
 #####################
