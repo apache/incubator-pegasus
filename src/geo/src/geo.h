@@ -18,20 +18,20 @@ using latlng_extractor = std::function<int(const std::string &value, S2LatLng &l
 
 struct SearchResult
 {
-    std::string hashkey;
-    std::string sortkey;
-    std::string value;
     double lat_degrees;
     double lng_degrees;
     double distance;
+    std::string hashkey;
+    std::string sortkey;
+    std::string value;
 
-    explicit SearchResult(std::string &&hk = "",
-                          std::string &&sk = "",
-                          std::string &&v = "",
-                          double lat = 0.0,
+    explicit SearchResult(double lat = 0.0,
                           double lng = 0.0,
-                          double dis = 0.0)
-        : hashkey(hk), sortkey(sk), value(v), lat_degrees(lat), lng_degrees(lng), distance(dis)
+                          double dis = 0.0,
+                          std::string &&hk = "",
+                          std::string &&sk = "",
+                          std::string &&v = "")
+        : lat_degrees(lat), lng_degrees(lng), distance(dis), hashkey(hk), sortkey(sk), value(v)
     {
     }
 
@@ -40,7 +40,7 @@ struct SearchResult
         std::stringstream ss;
         ss << "[" << hashkey << " : " << sortkey << " => " << value << ", (" << lat_degrees << ", "
            << lng_degrees << "): " << distance << "]";
-        return ss.str();
+        return std::move(ss.str());
     }
 };
 
@@ -102,13 +102,14 @@ private:
                       double radius_m,
                       int count,
                       SortType sort_type,
-                      int timeout_milliseconds, // TODO timeout
+                      int timeout_milliseconds,
                       std::list<SearchResult> &result);
     void combine_keys(const std::string &hash_key,
                       const std::string &sort_key,
                       std::string &combine_key);
     int
     extract_keys(const std::string &combine_sort_key, std::string &hash_key, std::string &sort_key);
+    std::string get_sort_key(const S2CellId &max_level_cid, const std::string &hash_key);
     int set_common_data(const std::string &hash_key,
                         const std::string &sort_key,
                         const std::string &value,
@@ -125,24 +126,26 @@ private:
                   int count,
                   std::vector<SearchResult> &result,
                   const pegasus_client::pegasus_scanner_wrapper &wrap_scanner);
-    int scan_data(const std::string &hash_key,
-                  const std::string &start_sort_key,
-                  const std::string &stop_sort_key,
-                  const S2LatLng &center,
-                  util::units::Meters radius,
-                  int count,
-                  std::vector<SearchResult> &result);
+    void scan_data(const std::string &hash_key,
+                   const std::string &start_sort_key,
+                   const std::string &stop_sort_key,
+                   const S2LatLng &center,
+                   util::units::Meters radius,
+                   int count,
+                   std::vector<SearchResult> &result);
 
 private:
     // edge length at about 2km, cell id at this level is hash-key in pegasus
+    // `min_level` is immutable after geo data has been insert to DB.
     static const int min_level = 12;
     // edge length at about 150m, cell id at this level is prefix of sort-key in pegasus, and
     // convenient for scan operation
+    // `max_level` is mutable at any time, and geo-lib users can change it to a appropriate value to
+    // improve performance in their scenario.
     static const int max_level = 16;
-    static const int max_retry_times = 0;
+    static const int max_retry_times = 5;
 
     latlng_extractor _extractor;
-
     dsn::task_tracker _tracker;
     pegasus_client *_common_data_client = nullptr;
     pegasus_client *_geo_data_client = nullptr;
