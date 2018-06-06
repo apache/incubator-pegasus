@@ -385,10 +385,10 @@ void available_detector::on_day_report()
     int64_t detect_times = _recent_day_detect_times.fetch_and(0);
     int64_t fail_times = _recent_day_fail_times.fetch_and(0);
     int64_t succ_times = std::max(0L, detect_times - fail_times);
-    int64_t available = 1000000;
+    int64_t available = 0;
     std::string hash_key("detect_available_day");
     std::string sort_key(_old_day);
-    std::string value("0,0,1000000");
+    std::string value("0,0,0");
     if (detect_times > 0) {
         available = (int64_t)((double)succ_times / detect_times * 1000000);
         std::ostringstream oss;
@@ -438,10 +438,10 @@ void available_detector::on_hour_report()
     int64_t detect_times = _recent_hour_detect_times.fetch_and(0);
     int64_t fail_times = _recent_hour_fail_times.fetch_and(0);
     int64_t succ_times = std::max(0L, detect_times - fail_times);
-    int64_t available = 1000000;
+    int64_t available = 0;
     std::string hash_key("detect_available_hour");
     std::string sort_key(_old_hour);
-    std::string value("0,0,1000000");
+    std::string value("0,0,0");
     if (detect_times > 0) {
         available = (int64_t)((double)succ_times / detect_times * 1000000);
         std::ostringstream oss;
@@ -464,10 +464,10 @@ void available_detector::on_minute_report()
     int64_t detect_times = _recent_minute_detect_times.fetch_and(0);
     int64_t fail_times = _recent_minute_fail_times.fetch_and(0);
     int64_t succ_times = std::max(0L, detect_times - fail_times);
-    int64_t available = 1000000;
+    int64_t available = 0;
     std::string hash_key("detect_available_minute");
     std::string sort_key(_old_minute);
-    std::string value("0,0,1000000");
+    std::string value("0,0,0");
     if (detect_times > 0) {
         available = (int64_t)((double)succ_times / detect_times * 1000000);
         std::ostringstream oss;
