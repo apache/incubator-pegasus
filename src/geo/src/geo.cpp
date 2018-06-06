@@ -10,6 +10,7 @@
 #include <s2/s2testing.h>
 #include <s2/s2region_coverer.h>
 #include <s2/s2cap.h>
+#include <base/pegasus_key_schema.h>
 
 namespace pegasus {
 
@@ -34,17 +35,84 @@ geo::geo(dsn::string_view config_file,
     _extractor = extractor;
 }
 
-int geo::set(const std::string &hashkey,
-             const std::string &sortkey,
+int geo::set(const std::string &hash_key,
+             const std::string &sort_key,
              const std::string &value,
              int timeout_milliseconds,
              int ttl_seconds,
              pegasus_client::internal_info *info)
 {
     // TODO 异步并行set
-    int ret = set_common_data(hashkey, sortkey, value, timeout_milliseconds / 2, ttl_seconds, info);
+    int ret =
+        set_common_data(hash_key, sort_key, value, timeout_milliseconds / 2, ttl_seconds, info);
     if (ret != PERR_OK) {
-        derror_f("set_common_data failed. hashkey={} sortkey={}", hashkey, sortkey);
+        derror_f("set_common_data failed. hash_key={} sort_key={}", hash_key, sort_key);
+        return ret;
+    }
+
+    ret = set_geo_data(hash_key, sort_key, value, timeout_milliseconds / 2, ttl_seconds);
+    if (ret != PERR_OK) {
+        derror_f("set_geo_data failed. hash_key={} sort_key={}", hash_key, sort_key);
+        return ret;
+    }
+
+    return PERR_OK;
+}
+
+int geo::set_geo_data(const std::string &hash_key,
+                      const std::string &sort_key,
+                      const std::string &value,
+                      int timeout_milliseconds,
+                      int ttl_seconds)
+{
+    S2LatLng latlng;
+    int ret = _extractor(value, latlng);
+    if (ret != PERR_OK) {
+        derror_f("_extractor failed. value={}", value);
+        return ret;
+    }
+
+    std::string combine_key;
+    combine_keys(hash_key, sort_key, combine_key);
+
+    ret = set_geo_data(latlng, combine_key, value, timeout_milliseconds / 2, ttl_seconds);
+    if (ret != PERR_OK) {
+        derror_f("set_geo_data failed. hash_key={}, sort_key={}", hash_key, sort_key);
+        return ret;
+    }
+
+    return ret;
+}
+
+int geo::search_radial(double lat_degrees,
+                       double lng_degrees,
+                       double radius_m,
+                       int count,
+                       SortType sort_type,
+                       int timeout_milliseconds, // TODO timeout
+                       std::list<SearchResult> &result)
+{
+    util::units::Meters radius((float)radius_m);
+    return search_radial(S2LatLng::FromDegrees(lat_degrees, lng_degrees),
+                         radius_m,
+                         count,
+                         sort_type,
+                         timeout_milliseconds,
+                         result);
+}
+
+int geo::search_radial(const std::string &hash_key,
+                       const std::string &sort_key,
+                       double radius_m,
+                       int count,
+                       SortType sort_type,
+                       int timeout_milliseconds, // TODO timeout
+                       std::list<SearchResult> &result)
+{
+    std::string value;
+    int ret = _common_data_client->get(hash_key, sort_key, value, timeout_milliseconds / 4);
+    if (ret != pegasus::PERR_OK) {
+        derror_f("get failed, error={}", _common_data_client->get_error_string(ret));
         return ret;
     }
 
@@ -55,24 +123,18 @@ int geo::set(const std::string &hashkey,
         return ret;
     }
 
-    ret = set_geo_data(latlng, hashkey, value, timeout_milliseconds / 2, ttl_seconds);
-    if (ret != PERR_OK) {
-        derror_f("set_geo_data failed. hashkey={} sortkey={}", hashkey, sortkey);
-        return ret;
-    }
-
-    return PERR_OK;
+    return search_radial(latlng, radius_m, count, sort_type, timeout_milliseconds, result);
 }
 
-int geo::search_radial(double lat_degrees,
-                       double lng_degrees,
+int geo::search_radial(const S2LatLng &latlng,
                        double radius_m,
                        int count,
                        SortType sort_type,
-                       std::vector<SearchResult> &result)
+                       int timeout_milliseconds, // TODO timeout
+                       std::list<SearchResult> &result)
 {
     util::units::Meters radius((float)radius_m);
-    S2Cap cap(S2LatLng::FromDegrees(lat_degrees, lng_degrees).ToPoint(), S2Earth::ToAngle(radius));
+    S2Cap cap(latlng.ToPoint(), S2Earth::ToAngle(radius));
 
     int single_scan_count = count;
     if (sort_type == SortType::nearest) {
@@ -148,20 +210,60 @@ int geo::search_radial(double lat_degrees,
     // TODO need optimize
     for (auto &r : results) {
         result.insert(result.end(), r.begin(), r.end());
-        if (count > 0 && result.size() >= count) {
-            result.resize((size_t)count);
+        if (sort_type == SortType::random && count > 0 && result.size() >= count) {
             break;
         }
     }
     if (sort_type == SortType::nearest) {
-        std::sort(result.begin(), result.end());
+        std::priority_queue<SearchResult, std::vector<SearchResult>, SearchResultNearer>
+            nearest_result;
+        for (const auto &r : result) {
+            nearest_result.emplace(r);
+            if (nearest_result.size() > count) {
+                nearest_result.pop();
+            }
+        }
+
+        result.clear();
+        while (!nearest_result.empty()) {
+            result.emplace_front(nearest_result.top());
+            nearest_result.pop();
+        }
+    } else if (count > 0) {
+        result.resize((size_t)count);
     }
 
     return PERR_OK;
 }
 
-int geo::set_common_data(const std::string &hashkey,
-                         const std::string &sortkey,
+void geo::combine_keys(const std::string &hash_key,
+                       const std::string &sort_key,
+                       std::string &combine_key)
+{
+    dsn::blob blob_combine_key;
+    pegasus_generate_key(blob_combine_key, hash_key, sort_key);
+    combine_key = std::move(blob_combine_key.to_string());
+}
+
+int geo::extract_keys(const std::string &combine_sort_key,
+                      std::string &hash_key,
+                      std::string &sort_key)
+{
+    // combine_sort_key: [0,3]{30-min_level}:combine_keys
+    unsigned int leaf_cell_length = 30 - min_level + 1;
+    if (combine_sort_key.length() <= leaf_cell_length) {
+        return PERR_INVALID_VALUE;
+    }
+
+    auto combine_key_len = static_cast<unsigned int>(combine_sort_key.length() - leaf_cell_length);
+    pegasus_restore_key(
+        dsn::blob(combine_sort_key.c_str(), leaf_cell_length, combine_key_len), hash_key, sort_key);
+
+    return PERR_OK;
+}
+
+int geo::set_common_data(const std::string &hash_key,
+                         const std::string &sort_key,
                          const std::string &value,
                          int timeout_milliseconds,
                          int ttl_seconds,
@@ -175,14 +277,14 @@ int geo::set_common_data(const std::string &hashkey,
             usleep(retry_times * 10 * 1000);
         }
         ret = _common_data_client->set(
-            hashkey, sortkey, value, timeout_milliseconds, ttl_seconds, info);
+            hash_key, sort_key, value, timeout_milliseconds, ttl_seconds, info);
     } while (ret != PERR_OK && retry_times++ < max_retry_times);
 
     return ret;
 }
 
 int geo::set_geo_data(const S2LatLng &latlng,
-                      const std::string &key,
+                      const std::string &combine_key,
                       const std::string &value,
                       int timeout_milliseconds,
                       int ttl_seconds)
@@ -193,9 +295,9 @@ int geo::set_geo_data(const S2LatLng &latlng,
     // convert to a parent level cell
     S2CellId parent_cell_id = leaf_cell_id.parent(min_level);
 
-    std::string hash_key(parent_cell_id.ToString()); // regex: [0,5]{1}/[0,3]{min_level}
+    std::string hash_key(parent_cell_id.ToString()); // [0,5]{1}/[0,3]{min_level}
     std::string sort_key(leaf_cell_id.ToString().substr(hash_key.length()) + ":" +
-                         key); // [0,3]{30-min_level}
+                         combine_key); // [0,3]{30-min_level}:combine_keys
 
     int ret;
     unsigned int retry_times = 0;
@@ -243,8 +345,14 @@ int geo::scan_next(const S2LatLng &center,
 
             util::units::Meters distance = S2Earth::GetDistance(center, latlng);
             if (distance.value() <= radius.value()) {
-                result.emplace_back(SearchResult(std::move(hash_key),
-                                                 std::move(sort_key),
+                std::string origin_hash_key, origin_sort_key;
+                if (extract_keys(sort_key, origin_hash_key, origin_sort_key) != PERR_OK) {
+                    derror_f("extract_keys failed. sort_key={}", sort_key);
+                    return;
+                }
+
+                result.emplace_back(SearchResult(std::move(origin_hash_key),
+                                                 std::move(origin_sort_key),
                                                  std::move(scan_value),
                                                  latlng.lat().degrees(),
                                                  latlng.lng().degrees(),
@@ -256,7 +364,7 @@ int geo::scan_next(const S2LatLng &center,
             }
         });
 
-    return 0;
+    return PERR_OK;
 }
 
 int geo::scan_data(const std::string &hash_key,

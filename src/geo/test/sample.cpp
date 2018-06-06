@@ -58,13 +58,25 @@ int main(int argc, char **argv)
     for (int i = 0; i < test_count; ++i) {
         S2LatLng latlng(S2Testing::SamplePoint(rect));
 
-        std::vector<pegasus::SearchResult> result;
+        std::list<pegasus::SearchResult> result;
         my_geo.search_radial(latlng.lat().degrees(),
                              latlng.lng().degrees(),
                              radius,
                              -1,
-                             pegasus::geo::SortType::nearest,
+                             pegasus::geo::SortType::random,
+                             500,
                              result);
+
+        std::cout << "count: " << result.size() << std::endl;
+        for (auto &data : result) {
+            std::cout << data.to_string() << std::endl;
+        }
+    }
+
+    for (int i = 0; i < test_count; ++i) {
+        std::string id = std::to_string(i);
+        std::list<pegasus::SearchResult> result;
+        my_geo.search_radial(id, "", radius, 20, pegasus::geo::SortType::nearest, 500, result);
 
         std::cout << "count: " << result.size() << std::endl;
         for (auto &data : result) {

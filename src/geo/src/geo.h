@@ -35,7 +35,7 @@ struct SearchResult
     {
     }
 
-    std::string to_string()
+    std::string to_string() const
     {
         std::stringstream ss;
         ss << "[" << hashkey << " : " << sortkey << " => " << value << ", (" << lat_degrees << ", "
@@ -44,10 +44,13 @@ struct SearchResult
     }
 };
 
-inline bool operator<(const SearchResult &l, const SearchResult &r)
+struct SearchResultNearer
 {
-    return l.distance <= r.distance;
-}
+    inline bool operator()(const SearchResult &l, const SearchResult &r)
+    {
+        return l.distance < r.distance;
+    }
+};
 
 class geo
 {
@@ -65,29 +68,55 @@ public:
         dsn::string_view geo_app_name,
         latlng_extractor &&extractor);
 
-    int set(const std::string &hashkey,
-            const std::string &sortkey,
+    int set(const std::string &hash_key,
+            const std::string &sort_key,
             const std::string &value,
             int timeout_milliseconds = 5000,
             int ttl_seconds = 0,
             pegasus_client::internal_info *info = nullptr);
+
+    int set_geo_data(const std::string &hash_key,
+                     const std::string &sort_key,
+                     const std::string &value,
+                     int timeout_milliseconds = 5000,
+                     int ttl_seconds = 0);
 
     int search_radial(double lat_degrees,
                       double lng_degrees,
                       double radius_m,
                       int count,
                       SortType sort_type,
-                      std::vector<SearchResult> &result);
+                      int timeout_milliseconds,
+                      std::list<SearchResult> &result);
+
+    int search_radial(const std::string &hash_key,
+                      const std::string &sort_key,
+                      double radius_m,
+                      int count,
+                      SortType sort_type,
+                      int timeout_milliseconds,
+                      std::list<SearchResult> &result);
 
 private:
-    int set_common_data(const std::string &hashkey,
-                        const std::string &sortkey,
+    int search_radial(const S2LatLng &latlng,
+                      double radius_m,
+                      int count,
+                      SortType sort_type,
+                      int timeout_milliseconds, // TODO timeout
+                      std::list<SearchResult> &result);
+    void combine_keys(const std::string &hash_key,
+                      const std::string &sort_key,
+                      std::string &combine_key);
+    int
+    extract_keys(const std::string &combine_sort_key, std::string &hash_key, std::string &sort_key);
+    int set_common_data(const std::string &hash_key,
+                        const std::string &sort_key,
                         const std::string &value,
                         int timeout_milliseconds,
                         int ttl_seconds,
                         pegasus_client::internal_info *info);
     int set_geo_data(const S2LatLng &latlng,
-                     const std::string &key,
+                     const std::string &combine_key,
                      const std::string &value,
                      int timeout_milliseconds,
                      int ttl_seconds);
