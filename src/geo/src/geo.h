@@ -124,14 +124,16 @@ private:
     int scan_next(const S2LatLng &center,
                   util::units::Meters radius,
                   int count,
-                  std::vector<SearchResult> &result,
-                  const pegasus_client::pegasus_scanner_wrapper &wrap_scanner);
+                  dsn::task_tracker *tracker,
+                  const pegasus_client::pegasus_scanner_wrapper &wrap_scanner,
+                  std::vector<SearchResult> &result);
     void scan_data(const std::string &hash_key,
                    const std::string &start_sort_key,
                    const std::string &stop_sort_key,
                    const S2LatLng &center,
                    util::units::Meters radius,
                    int count,
+                   dsn::task_tracker *tracker,
                    std::vector<SearchResult> &result);
 
 private:
@@ -146,7 +148,6 @@ private:
     static const int max_retry_times = 5;
 
     latlng_extractor _extractor;
-    dsn::task_tracker _tracker;
     pegasus_client *_common_data_client = nullptr;
     pegasus_client *_geo_data_client = nullptr;
 };
