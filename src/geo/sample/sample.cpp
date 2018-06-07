@@ -2,7 +2,7 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "../src/geo.h"
+#include "geo/src/geo_client.h"
 
 #include <iostream>
 #include <s2/s2testing.h>
@@ -21,23 +21,23 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    pegasus::geo my_geo(
-        "config.ini", argv[1], argv[2], argv[3], [](const std::string &value, S2LatLng &latlng) {
-            std::vector<std::string> data;
-            dsn::utils::split_args(value.c_str(), data, '|');
-            if (data.size() <= 6) {
-                return pegasus::PERR_INVALID_VALUE;
-            }
+    // value format: "00:00:00:00:01:5e|2018-04-26 23:59:59|2018-04-28
+    // 03:00:00|ezp8xchrr|-0.356396|39.469644|24.043028|4.15921|0|-1"
+    auto extractor = [](const std::string &value, S2LatLng &latlng) {
+        std::vector<std::string> data;
+        dsn::utils::split_args(value.c_str(), data, '|');
+        if (data.size() <= 6) {
+            return pegasus::PERR_INVALID_VALUE;
+        }
 
-            std::string lat = data[4];
-            std::string lng = data[5];
-            latlng =
-                S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
+        std::string lat = data[4];
+        std::string lng = data[5];
+        latlng = S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
 
-            // TODO should check more for strtod
+        return pegasus::PERR_OK;
+    };
 
-            return pegasus::PERR_OK;
-        });
+    pegasus::geo_client my_geo("config.ini", argv[1], argv[2], argv[3], extractor);
 
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
                              latlng.lng().degrees(),
                              radius,
                              -1,
-                             pegasus::geo::SortType::random,
+                             pegasus::geo_client::SortType::random,
                              500,
                              result);
 
@@ -76,7 +76,8 @@ int main(int argc, char **argv)
     for (int i = 0; i < test_count; ++i) {
         std::string id = std::to_string(i);
         std::list<pegasus::SearchResult> result;
-        my_geo.search_radial(id, "", radius, 20, pegasus::geo::SortType::nearest, 500, result);
+        my_geo.search_radial(
+            id, "", radius, 20, pegasus::geo_client::SortType::nearest, 500, result);
 
         std::cout << "count: " << result.size() << std::endl;
         for (auto &data : result) {

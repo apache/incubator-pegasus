@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME pegasus_geo_test)
+set(MY_PROJ_NAME pegasus_geo_sample)
 project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
@@ -17,8 +17,7 @@ set(MY_PROJ_LIBS
         s2testing
         pegasus_geo_lib
         pegasus_client_static
-        fmt
-        gtest)
+        fmt)
 
 set(MY_BOOST_PACKAGES system filesystem)
 
