@@ -11,6 +11,7 @@
 #include <dsn/utility/string_view.h>
 #include <dsn/tool-api/task_tracker.h>
 #include <pegasus/client.h>
+#include <s2/s2cell_union.h>
 
 namespace pegasus {
 
@@ -104,6 +105,17 @@ private:
                       SortType sort_type,
                       int timeout_milliseconds,
                       std::list<SearchResult> &result);
+    void search_cap(const S2LatLng &latlng, double radius_m, S2Cap &cap);
+    void get_covering_cells(const S2Cap &cap, S2CellUnion &cids);
+    void get_result_from_cells(const S2CellUnion &cids,
+                               const S2Cap &cap,
+                               int count,
+                               SortType sort_type,
+                               std::list<std::vector<SearchResult>> &results);
+    void normalize_result(const std::list<std::vector<SearchResult>> &results,
+                          int count,
+                          SortType sort_type,
+                          std::list<SearchResult> &result);
     void combine_keys(const std::string &hash_key,
                       const std::string &sort_key,
                       std::string &combine_key);
@@ -121,8 +133,7 @@ private:
                      const std::string &value,
                      int timeout_milliseconds,
                      int ttl_seconds);
-    int scan_next(const S2LatLng &center,
-                  util::units::Meters radius,
+    int scan_next(const S2Cap &cap,
                   int count,
                   dsn::task_tracker *tracker,
                   const pegasus_client::pegasus_scanner_wrapper &wrap_scanner,
@@ -130,8 +141,7 @@ private:
     void scan_data(const std::string &hash_key,
                    const std::string &start_sort_key,
                    const std::string &stop_sort_key,
-                   const S2LatLng &center,
-                   util::units::Meters radius,
+                   const S2Cap &cap,
                    int count,
                    dsn::task_tracker *tracker,
                    std::vector<SearchResult> &result);

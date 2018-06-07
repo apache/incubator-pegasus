@@ -135,43 +135,59 @@ int geo::search_radial(const S2LatLng &latlng,
                        int timeout_milliseconds,
                        std::list<SearchResult> &result)
 {
+    S2Cap cap;
+    search_cap(latlng, radius_m, cap);
+
+    S2CellUnion cids;
+    get_covering_cells(cap, cids);
+
+    // each scan result store in a separate vector, we will combine all the results finally
+    std::list<std::vector<SearchResult>> results;
+    get_result_from_cells(cids, cap, count, sort_type, results);
+
+    normalize_result(results, count, sort_type, result);
+
+    return PERR_OK;
+}
+
+void geo::search_cap(const S2LatLng &latlng, double radius_m, S2Cap &cap)
+{
     // construct a cap by center point and radius
     util::units::Meters radius((float)radius_m);
-    S2Cap cap(latlng.ToPoint(), S2Earth::ToAngle(radius));
+    cap = S2Cap(latlng.ToPoint(), S2Earth::ToAngle(radius));
+}
 
+void geo::get_covering_cells(const S2Cap &cap, S2CellUnion &cids)
+{
+    // calculate all the cells covered by the cap at `min_level`
+    S2RegionCoverer rc;
+    rc.mutable_options()->set_fixed_level(min_level);
+    cids = rc.GetCovering(cap);
+}
+
+void geo::get_result_from_cells(const S2CellUnion &cids,
+                                const S2Cap &cap,
+                                int count,
+                                SortType sort_type,
+                                std::list<std::vector<SearchResult>> &results)
+{
     int single_scan_count = count;
     if (sort_type == SortType::nearest) {
         single_scan_count = -1; // scan all data to make full sort
     }
 
-    // each scan result store in a separate vector, we will combine all the results finally
-    std::list<std::vector<SearchResult>> results;
-
-    // calculate all the cells covered by the cap at `min_level`
-    S2RegionCoverer rc;
-    rc.mutable_options()->set_fixed_level(min_level);
-    S2CellUnion cell_union = rc.GetCovering(cap);
-
     // scan each cell
     dsn::task_tracker tracker;
-    for (const auto &cid : cell_union) {
+    for (const auto &cid : cids) {
         if (cap.Contains(S2Cell(cid))) {
             // for the full contained cell, scan all data in this cell(at `min_level`)
             results.emplace_back(std::vector<SearchResult>());
-            scan_data(cid.ToString(),
-                      "",
-                      "",
-                      S2LatLng(cap.center()),
-                      radius,
-                      single_scan_count,
-                      &tracker,
-                      results.back());
+            scan_data(cid.ToString(), "", "", cap, single_scan_count, &tracker, results.back());
         } else {
             // for the partial contained cell, scan cells covered by the cap at `max_level` which is
             // more accurate than the ones at `min_level`
             std::string hash_key = cid.parent(min_level).ToString();
-            std::pair<std::string, std::string> begin_end;
-            std::list<std::pair<std::string, std::string>> begin_ends;
+            std::pair<std::string, std::string> start_stop_keys;
             S2CellId pre;
             for (S2CellId cur = cid.child_begin(max_level); cur != cid.child_end(max_level);
                  cur = cur.next()) {
@@ -180,14 +196,23 @@ int geo::search_radial(const S2LatLng &latlng,
                     if (!pre.is_valid()) {
                         // `cur` is the very first cell in Hilbert curve and contained by the cap
                         pre = cur;
-                        begin_end.first = get_sort_key(pre, hash_key);
+                        start_stop_keys.first = get_sort_key(pre, hash_key);
                     } else {
                         if (pre.next() != cur) {
                             // `pre` is the last cell in Hilbert curve and contained by the cap
                             // `cur` is a new start cell in Hilbert curve and contained by the cap
-                            begin_end.second = get_sort_key(pre, hash_key);
-                            begin_ends.push_back(begin_end);
-                            begin_end.first = get_sort_key(cur, hash_key);
+                            start_stop_keys.second = get_sort_key(pre, hash_key);
+                            results.emplace_back(std::vector<SearchResult>());
+                            scan_data(hash_key,
+                                      start_stop_keys.first,
+                                      start_stop_keys.second,
+                                      cap,
+                                      single_scan_count,
+                                      &tracker,
+                                      results.back());
+
+                            start_stop_keys.first = get_sort_key(cur, hash_key);
+                            start_stop_keys.second.clear();
                         }
                         pre = cur;
                     }
@@ -195,17 +220,13 @@ int geo::search_radial(const S2LatLng &latlng,
             }
 
             // edge case: when the cell is the last one in Hilbert curve in current `min_level` cell
-            if (begin_ends.back().second.empty()) {
-                begin_ends.back().second = begin_ends.back().first;
-            }
-
-            for (auto &be : begin_ends) {
+            if (start_stop_keys.second.empty()) {
+                start_stop_keys.second = start_stop_keys.first;
                 results.emplace_back(std::vector<SearchResult>());
                 scan_data(hash_key,
-                          be.first,
-                          be.second,
-                          S2LatLng(cap.center()),
-                          radius,
+                          start_stop_keys.first,
+                          start_stop_keys.second,
+                          cap,
                           single_scan_count,
                           &tracker,
                           results.back());
@@ -213,7 +234,13 @@ int geo::search_radial(const S2LatLng &latlng,
         }
     }
     tracker.cancel_outstanding_tasks();
+}
 
+void geo::normalize_result(const std::list<std::vector<SearchResult>> &results,
+                           int count,
+                           SortType sort_type,
+                           std::list<SearchResult> &result)
+{
     for (auto &r : results) {
         result.insert(result.end(), r.begin(), r.end());
         if (sort_type == SortType::random && count > 0 && result.size() >= count) {
@@ -238,8 +265,6 @@ int geo::search_radial(const S2LatLng &latlng,
     } else if (count > 0) {
         result.resize((size_t)count);
     }
-
-    return PERR_OK;
 }
 
 void geo::combine_keys(const std::string &hash_key,
@@ -327,54 +352,53 @@ int geo::set_geo_data(const S2LatLng &latlng,
     return ret;
 }
 
-int geo::scan_next(const S2LatLng &center,
-                   util::units::Meters radius,
+int geo::scan_next(const S2Cap &cap,
                    int count,
                    dsn::task_tracker *tracker,
                    const pegasus_client::pegasus_scanner_wrapper &wrap_scanner,
                    std::vector<SearchResult> &result)
 {
-    wrap_scanner->async_next([this, center, radius, count, tracker, wrap_scanner, &result](
-        int ret,
-        std::string &&hash_key,
-        std::string &&sort_key,
-        std::string &&scan_value,
-        pegasus_client::internal_info &&info) {
-        if (ret == PERR_SCAN_COMPLETE) {
-            return;
-        }
-
-        if (ret != PERR_OK) {
-            derror_f("async_next failed. error={}", _geo_data_client->get_error_string(ret));
-            return;
-        }
-
-        S2LatLng latlng;
-        if (_extractor(scan_value, latlng) != PERR_OK) {
-            derror_f("_extractor failed. scan_value={}", scan_value);
-            return;
-        }
-
-        util::units::Meters distance = S2Earth::GetDistance(center, latlng);
-        if (distance.value() <= radius.value()) {
-            std::string origin_hash_key, origin_sort_key;
-            if (extract_keys(sort_key, origin_hash_key, origin_sort_key) != PERR_OK) {
-                derror_f("extract_keys failed. sort_key={}", sort_key);
+    wrap_scanner->async_next(
+        [this, cap, count, tracker, wrap_scanner, &result](int ret,
+                                                           std::string &&hash_key,
+                                                           std::string &&sort_key,
+                                                           std::string &&scan_value,
+                                                           pegasus_client::internal_info &&info) {
+            if (ret == PERR_SCAN_COMPLETE) {
                 return;
             }
 
-            result.emplace_back(SearchResult(latlng.lat().degrees(),
-                                             latlng.lng().degrees(),
-                                             distance.value(),
-                                             std::move(origin_hash_key),
-                                             std::move(origin_sort_key),
-                                             std::move(scan_value)));
-        }
+            if (ret != PERR_OK) {
+                derror_f("async_next failed. error={}", _geo_data_client->get_error_string(ret));
+                return;
+            }
 
-        if (count == -1 || result.size() < count) {
-            scan_next(center, radius, count, tracker, wrap_scanner, result);
-        }
-    });
+            S2LatLng latlng;
+            if (_extractor(scan_value, latlng) != PERR_OK) {
+                derror_f("_extractor failed. scan_value={}", scan_value);
+                return;
+            }
+
+            util::units::Meters distance = S2Earth::GetDistance(S2LatLng(cap.center()), latlng);
+            if (distance <= S2Earth::ToDistance(cap.radius())) {
+                std::string origin_hash_key, origin_sort_key;
+                if (extract_keys(sort_key, origin_hash_key, origin_sort_key) != PERR_OK) {
+                    derror_f("extract_keys failed. sort_key={}", sort_key);
+                    return;
+                }
+
+                result.emplace_back(SearchResult(latlng.lat().degrees(),
+                                                 latlng.lng().degrees(),
+                                                 distance.value(),
+                                                 std::move(origin_hash_key),
+                                                 std::move(origin_sort_key),
+                                                 std::move(scan_value)));
+            }
+
+            if (count == -1 || result.size() < count) {
+                scan_next(cap, count, tracker, wrap_scanner, result);
+            }
+        });
 
     return PERR_OK;
 }
@@ -382,8 +406,7 @@ int geo::scan_next(const S2LatLng &center,
 void geo::scan_data(const std::string &hash_key,
                     const std::string &start_sort_key,
                     const std::string &stop_sort_key,
-                    const S2LatLng &center,
-                    util::units::Meters radius,
+                    const S2Cap &cap,
                     int count,
                     dsn::task_tracker *tracker,
                     std::vector<SearchResult> &result)
@@ -391,7 +414,7 @@ void geo::scan_data(const std::string &hash_key,
     dsn::tasking::enqueue(
         LPC_SCAN_DATA,
         tracker,
-        [this, hash_key, start_sort_key, stop_sort_key, center, radius, count, tracker, &result]() {
+        [this, hash_key, start_sort_key, stop_sort_key, cap, count, tracker, &result]() {
             pegasus_client::scan_options options;
             options.start_inclusive = true;
             options.stop_inclusive = true;
@@ -400,12 +423,12 @@ void geo::scan_data(const std::string &hash_key,
                 start_sort_key,
                 stop_sort_key,
                 options,
-                [this, center, radius, count, tracker, &result](
-                    int ret, pegasus_client::pegasus_scanner *scanner) {
+                [this, cap, count, tracker, &result](int ret,
+                                                     pegasus_client::pegasus_scanner *scanner) {
                     if (ret == PERR_OK) {
                         pegasus_client::pegasus_scanner_wrapper wrap_scanner =
                             scanner->get_smart_wrapper();
-                        scan_next(center, radius, count, tracker, wrap_scanner, result);
+                        scan_next(cap, count, tracker, wrap_scanner, result);
                     }
                 });
 
