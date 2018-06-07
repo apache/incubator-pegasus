@@ -7,20 +7,20 @@
 if [ -z "$INSTALL_DIR" ]
 then
     echo "ERROR: no INSTALL_DIR specified"
-    exit -1
+    exit 1
 fi
 
 if [ ! -f "builder/output/lib/libdsn.core.so" ]
 then
     echo "ERROR: not build yet"
-    exit -1
+    exit 1
 fi
 
 mkdir -p $INSTALL_DIR
 if [ $? -ne 0 ]
 then
     echo "ERROR: mkdir $INSTALL_DIR failed"
-    exit -1
+    exit 1
 fi
 INSTALL_DIR=`cd $INSTALL_DIR; pwd`
 echo "INSTALL_DIR=$INSTALL_DIR"

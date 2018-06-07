@@ -20,7 +20,7 @@ function run_single()
             echo "---- gdb ./dsn.rep_tests.simple_kv core ----"
             gdb ./dsn.rep_tests.simple_kv core -ex "thread apply all bt" -ex "set pagination 0" -batch
         fi
-        exit -1
+        exit 1
     fi
 }
 
@@ -32,7 +32,7 @@ function run_case()
         cd case-${id}
         ./run.sh
         if [ $? -ne 0 ]; then
-            exit -1
+            exit 1
         fi
         cd ..
         return
@@ -54,7 +54,7 @@ function run_case()
     fi
 
     echo "case-${id} not found"
-    exit -1
+    exit 1
 }
 
 if [ $# -eq 0 ]; then

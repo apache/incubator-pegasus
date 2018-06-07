@@ -13,7 +13,7 @@ if [ $? -ne 0 ]; then
         echo "---- gdb ./dsn.meta.test core ----"
         gdb ./dsn.meta.test core -ex "thread apply all bt" -ex "set pagination 0" -batch
     fi
-    exit -1
+    exit 1
 fi
 
 ./clear.sh
@@ -25,7 +25,7 @@ if [ $? -ne 0 ]; then
         echo "---- gdb ./dsn.meta.test core ----"
         gdb ./dsn.meta.test core -ex "thread apply all bt" -ex "set pagination 0" -batch
     fi
-    exit -1
+    exit 1
 fi
 
 ./clear.sh
@@ -37,6 +37,6 @@ if [ $? -ne 0 ]; then
         echo "---- gdb ./dsn.meta.test core ----"
         gdb ./dsn.meta.test core -ex "thread apply all bt" -ex "set pagination 0" -batch
     fi
-    exit -1
+    exit 1
 fi
 

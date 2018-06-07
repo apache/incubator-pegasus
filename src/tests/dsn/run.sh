@@ -43,7 +43,7 @@ for filter in $filters; do
             gdb ./dsn.tests core -ex "thread apply all bt" -ex "set pagination 0" -batch
         fi
         destroy_environment $filter
-        exit -1
+        exit 1
     fi
     #destroy_environment $filter
 done

@@ -2,7 +2,7 @@
 
 if [ ! -f dsn.replication.simple_kv ]; then
     echo "dsn.replication.simple_kv not exist"
-    exit -1
+    exit 1
 fi
 
 ./clear.sh
@@ -27,7 +27,7 @@ if [ -f core ] || ! grep ERR_OK out > /dev/null ; then
         echo "---- gdb ./dsn.replication.simple_kv core ----"
         gdb ./dsn.replication.simple_kv core -ex "thread apply all bt" -ex "set pagination 0" -batch
     fi
-    exit -1
+    exit 1
 fi
 
 echo "run dsn.replication.simple_kv succeed"

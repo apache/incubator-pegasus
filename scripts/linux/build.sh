@@ -140,7 +140,7 @@ then
     if [ $? -ne 0 ]
     then
         echo "ERROR: cmake failed"
-        exit -1
+        exit 1
     fi
     cd ..
 fi
@@ -161,7 +161,7 @@ make install $MAKE_OPTIONS
 if [ $? -ne 0 ]
 then
     echo "ERROR: build failed"
-    exit -1
+    exit 1
 else
     echo "Build succeed"
 fi
@@ -199,13 +199,13 @@ then
     if [ $? -ne 0 ]
     then
         echo "ERROR: lcov init failed, maybe need to run again with --clear option"
-        exit -1
+        exit 1
     fi
     lcov -q -e $GCOV_TMP/initial.info $GCOV_PATTERN -o $GCOV_TMP/initial.extract.info
     if [ $? -ne 0 ]
     then
         echo "ERROR: lcov init extract failed"
-        exit -1
+        exit 1
     fi
 fi
 
@@ -220,12 +220,12 @@ for MODULE in `echo $TEST_MODULE | sed 's/,/ /g'`; do
     if [ ! -d "$MODULE_DIR" ]
     then
         echo "ERROR: module dir $MODULE_DIR not exist"
-        exit -1
+        exit 1
     fi
     if [ ! -f "$MODULE_DIR/run.sh" ]
     then
         echo "ERROR: module test entrance script $MODULE_DIR/run.sh not exist"
-        exit -1
+        exit 1
     fi
     cd $MODULE_DIR
     REPORT_DIR=$REPORT_DIR ./run.sh
@@ -233,7 +233,7 @@ for MODULE in `echo $TEST_MODULE | sed 's/,/ /g'`; do
     if [ $ret -ne 0 ]
     then
         echo "ERROR: run $MODULE failed, return_code = $ret"
-        exit -1
+        exit 1
     fi
 done
 
@@ -245,19 +245,19 @@ then
     if [ $? -ne 0 ]
     then
         echo "ERROR: lcov generate failed"
-        exit -1
+        exit 1
     fi
     lcov -q -e $GCOV_TMP/gcov.info $GCOV_PATTERN -o $GCOV_TMP/gcov.extract.info
     if [ $? -ne 0 ]
     then
         echo "ERROR: lcov extract failed"
-        exit -1
+        exit 1
     fi
     genhtml $GCOV_TMP/*.extract.info --show-details --legend --title "GCOV report at $TIME" -o $GCOV_TMP/report
     if [ $? -ne 0 ]
     then
         echo "ERROR: gcov genhtml failed"
-        exit -1
+        exit 1
     fi
     rm -rf $GCOV_DIR &>/dev/null
     mv $GCOV_TMP/report $GCOV_DIR

@@ -114,7 +114,7 @@ function run_build()
                     echo "ERROR: unknown option \"$key\""
                     echo
                     usage_build
-                    exit -1
+                    exit 1
                 fi
                 TEST_MODULE="$2"
                 shift
@@ -123,7 +123,7 @@ function run_build()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_build
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -151,7 +151,7 @@ function run_build()
         echo "ERROR: invalid build type \"$BUILD_TYPE\""
         echo
         usage_build
-        exit -1
+        exit 1
     fi
     if [ "$ONLY_BUILD" == "NO" ]; then
         run_start_zk
@@ -194,7 +194,7 @@ function run_install()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_install
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -236,7 +236,7 @@ function run_start_zk()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_start_zk
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -266,7 +266,7 @@ function run_stop_zk()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_stop_zk
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -296,7 +296,7 @@ function run_clear_zk()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_clear__zk
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -325,7 +325,7 @@ function run_format()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_format
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -376,6 +376,6 @@ case $cmd in
         echo "ERROR: unknown command $cmd"
         echo
         usage
-        exit -1
+        exit 1
 esac
 

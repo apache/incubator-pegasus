@@ -6,7 +6,7 @@
 if [ -z "$DOWNLOADED_DIR" ]
 then
     echo "ERROR: no DOWNLOADED_DIR specified"
-    exit -1
+    exit 1
 fi
 
 cd $DOWNLOADED_DIR

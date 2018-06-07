@@ -7,13 +7,13 @@
 if [ -z "$DOWNLOADED_DIR" ]
 then
     echo "ERROR: no INSTALL_DIR specified"
-    exit -1
+    exit 1
 fi
 
 if [ -z "$PORT" ]
 then
     echo "ERROR: no PORT specified"
-    exit -1
+    exit 1
 fi
 
 cd $DOWNLOADED_DIR
@@ -34,5 +34,5 @@ if echo ruok | nc localhost $ZOOKEEPER_PORT | grep -q imok; then
     exit 0
 else
     echo "ERROR: start zookeeper failed"
-    exit -1
+    exit 1
 fi

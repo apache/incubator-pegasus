@@ -18,7 +18,7 @@ find . -name '*.h' \
 
 if [ $? -eq 0 ]; then
     echo "ERROR: check format failed: should not contain tab character or '<::'"
-    exit -1
+    exit 1
 else
     echo "Check format succeed"
     exit 0
