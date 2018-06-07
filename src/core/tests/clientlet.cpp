@@ -156,7 +156,7 @@ public:
         ddebug("simple task %p is deallocated", this);
         allocate_count--;
     }
-    static int allocate_count;
+    static std::atomic_int allocate_count;
 };
 
 class simple_task_container : public dsn::ref_counter
@@ -179,36 +179,45 @@ public:
         ddebug("simple rpc repsonse task(%p) is dealloate", this);
         allocate_count--;
     }
-    static int allocate_count;
+    static std::atomic_int allocate_count;
 };
 
-int simple_task::allocate_count = 0;
-int simple_rpc_response_task::allocate_count = 0;
+std::atomic_int simple_task::allocate_count(0);
+std::atomic_int simple_rpc_response_task::allocate_count(0);
 
 DEFINE_TASK_CODE_RPC(TEST_CODE, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+
+bool spin_wait(const std::function<bool()> &pred, int wait_times)
+{
+    for (int i = 0; i != wait_times; ++i) {
+        if (pred())
+            return true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    return pred();
+}
+
 TEST(dev_cpp, task_destructor)
 {
     {
         task_ptr t(new simple_task(LPC_TEST_CLIENTLET, nullptr));
         t->enqueue();
         t->wait();
-        ASSERT_EQ(1, simple_task::allocate_count);
     }
-    ASSERT_EQ(0, simple_task::allocate_count);
+    ASSERT_TRUE(spin_wait([&]() { return simple_task::allocate_count.load() == 0; }, 10));
 
     dsn::ref_ptr<dsn::message_ex> req = message_ex::create_request(TEST_CODE);
     {
         dsn::rpc_response_task_ptr t(new simple_rpc_response_task(req.get(), nullptr));
         t->enqueue(dsn::ERR_OK, nullptr);
         t->wait();
-        ASSERT_EQ(1, simple_rpc_response_task::allocate_count);
     }
-    ASSERT_EQ(0, simple_rpc_response_task::allocate_count);
+    ASSERT_TRUE(
+        spin_wait([&]() { return simple_rpc_response_task::allocate_count.load() == 0; }, 10));
 
     {
         dsn::rpc_response_task_ptr t(new simple_rpc_response_task(req.get(), nullptr));
         t->replace_callback([t](dsn::error_code, dsn_message_t, dsn_message_t) {
-            ddebug("the pointer of t is (%p), count(%d)", t.get(), t->get_count());
             // ref_ptr out of callback + ref_ptr in callback + ref_added_in_enqueue
             ASSERT_EQ(3, t->get_count());
         });
@@ -216,7 +225,8 @@ TEST(dev_cpp, task_destructor)
         t->enqueue(dsn::ERR_OK, nullptr);
         t->wait();
     }
-    ASSERT_EQ(0, simple_rpc_response_task::allocate_count);
+    ASSERT_TRUE(
+        spin_wait([&]() { return simple_rpc_response_task::allocate_count.load() == 0; }, 10));
 
     {
         dsn::ref_ptr<simple_task_container> c(new simple_task_container());
@@ -224,16 +234,14 @@ TEST(dev_cpp, task_destructor)
 
         c->t->enqueue();
         c->t->wait();
-        ASSERT_EQ(1, simple_task::allocate_count);
     }
-    ASSERT_EQ(0, simple_task::allocate_count);
+    ASSERT_TRUE(spin_wait([&]() { return simple_task::allocate_count.load() == 0; }, 10));
 
     {
         dsn::ref_ptr<simple_task_container> c(new simple_task_container());
         c->t = new simple_task(LPC_TEST_CLIENTLET, [c]() { ddebug("cycle link reference test"); });
 
         ASSERT_TRUE(c->t->cancel(false));
-        ASSERT_EQ(1, simple_task::allocate_count);
     }
-    ASSERT_EQ(0, simple_task::allocate_count);
+    ASSERT_TRUE(spin_wait([&]() { return simple_task::allocate_count.load() == 0; }, 10));
 }
