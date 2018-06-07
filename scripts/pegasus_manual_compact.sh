@@ -97,14 +97,15 @@ function wait_manual_compact()
 
         queue_count=`grep 'recent enqueue at' ${query_log_file} | grep -v 'recent start at' | wc -l`
         running_count=`grep 'recent start at' ${query_log_file} | wc -l`
-        not_finish_count=$((queue_count+running_count))
+        processing_count=$((queue_count+running_count))
         finish_count=`grep "last finish at" ${query_log_file} | grep -v "recent enqueue at" | grep -v "recent start at" | grep -o 'last finish at [^,]*' | sed 's/\[/,/;s/\]//' | awk -F"," -v date="$earliest_finish_time_ms" 'BEGIN{count=0}{if(length($2)==23 && $2>=date){count++;}}END{print count}'`
 
-        if [ ${not_finish_count} -eq 0 -a ${finish_count} -eq ${total_replica_count} ]; then
+        if [ ${processing_count} -eq 0 -a ${finish_count} -ge ${total_replica_count} ]; then
             echo "All finished."
             break
         else
             left_time="unknown"
+            not_finish_count=$((total_replica_count-finish_count))
             if [ ${finish_count} -gt 0 ]; then
               left_time=$((slept / finish_count * not_finish_count))
             fi
