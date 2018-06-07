@@ -1,5 +1,7 @@
 #!/bin/bash
 
+PID=$$
+
 if [ $# -ne 4 ]
 then
   echo "This tool is for downgrading replicas of specified node."
@@ -24,9 +26,13 @@ then
   exit -1
 fi
 
-echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.set_meta_level
+echo "UID=$UID"
+echo "PID=$PID"
+echo
 
-echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.ls
+echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.set_meta_level
+
+echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.ls
 
 while read app_line
 do
@@ -40,7 +46,7 @@ do
       continue
     fi
 
-    echo "app $app -d" | ./run.sh shell --cluster $cluster &>/tmp/$UID.pegasus.app.$app
+    echo "app $app -d" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.app.$app
 
     while read line
     do
@@ -66,17 +72,18 @@ do
         fi
         echo "propose --gpid ${gid}.${pid} --type DOWNGRADE_TO_INACTIVE -t $pri -n $node"
       fi
-    done </tmp/$UID.pegasus.app.$app >/tmp/$UID.pegasus.cmd.$app
+    done </tmp/$UID.$PID.pegasus.app.$app >/tmp/$UID.$PID.pegasus.cmd.$app
 
     if [ "$type" = "run" ]
     then
-      cat /tmp/$UID.pegasus.cmd.$app
-      cat /tmp/$UID.pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
+      cat /tmp/$UID.$PID.pegasus.cmd.$app
+      cat /tmp/$UID.$PID.pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
       echo
       echo
     else
-      cat /tmp/$UID.pegasus.cmd.$app
+      cat /tmp/$UID.$PID.pegasus.cmd.$app
     fi
   fi
-done </tmp/$UID.pegasus.ls
+done </tmp/$UID.$PID.pegasus.ls
 
+rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

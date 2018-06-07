@@ -1,5 +1,7 @@
 #!/bin/bash
 
+PID=$$
+
 function usage()
 {
     echo "This tool is for manual compact specified table(app)."
@@ -50,7 +52,7 @@ function get_env()
     app_name=$2
     key=$3
 
-    log_file="/tmp/$UID.pegasus.get_app_envs.${app_name}"
+    log_file="/tmp/$UID.$PID.pegasus.get_app_envs.${app_name}"
     echo -e "use ${app_name}\n get_app_envs" | ./run.sh shell --cluster ${cluster} &>${log_file}
     get_ok=`grep 'get app envs succeed' ${log_file} | wc -l`
     if [ ${get_ok} -ne 1 ]; then
@@ -69,7 +71,7 @@ function set_env()
     value=$4
 
     echo "set_app_envs ${key}=${value}"
-    log_file="/tmp/$UID.pegasus.set_app_envs.${app_name}"
+    log_file="/tmp/$UID.$PID.pegasus.set_app_envs.${app_name}"
     echo -e "use ${app_name}\n set_app_envs ${key} ${value}" | ./run.sh shell --cluster ${cluster} &>${log_file}
     set_ok=`grep 'set app envs succeed' ${log_file} | wc -l`
     if [ ${set_ok} -ne 1 ]; then
@@ -92,16 +94,18 @@ function wait_manual_compact()
     slept=0
     while true
     do
-        query_log_file="/tmp/$UID.pegasus.query_compact.${app_id}"
+        query_log_file="/tmp/$UID.$PID.pegasus.query_compact.${app_id}"
         echo "${query_cmd}" | ./run.sh shell --cluster ${cluster} &>${query_log_file}
 
         queue_count=`grep 'recent enqueue at' ${query_log_file} | grep -v 'recent start at' | wc -l`
         running_count=`grep 'recent start at' ${query_log_file} | wc -l`
-        not_finish_count=$((queue_count+running_count))
+        processing_count=$((queue_count+running_count))
         finish_count=`grep "last finish at" ${query_log_file} | grep -v "recent enqueue at" | grep -v "recent start at" | grep -o 'last finish at [^,]*' | sed 's/\[/,/;s/\]//' | awk -F"," -v date="$earliest_finish_time_ms" 'BEGIN{count=0}{if(length($2)==23 && $2>=date){count++;}}END{print count}'`
+        not_finish_count=$((total_replica_count-finish_count))
 
-        if [ ${not_finish_count} -eq 0 -a ${finish_count} -eq ${total_replica_count} ]; then
-            echo "All finished."
+        if [ ${processing_count} -eq 0 -a ${finish_count} -eq ${total_replica_count} ]; then
+            echo "[${slept}s] $finish_count finished, $not_finish_count not finished ($queue_count in queue, $running_count in running), estimate remaining 0 seconds."
+            echo "All finished, total $total_replica_count replicas."
             break
         else
             left_time="unknown"
@@ -123,7 +127,7 @@ function create_checkpoint()
     app_id=$2
 
     echo "Start to create checkpoint..."
-    chkpt_log_file="/tmp/$UID.pegasus.trigger_checkpoint.${app_id}"
+    chkpt_log_file="/tmp/$UID.$PID.pegasus.trigger_checkpoint.${app_id}"
     echo "remote_command -t replica-server replica.trigger-checkpoint ${app_id}" | ./run.sh shell --cluster ${cluster} &>${chkpt_log_file}
     not_found_count=`grep '^    .*not found' ${chkpt_log_file} | wc -l`
     triggered_count=`grep '^    .*triggered' ${chkpt_log_file} | wc -l`
@@ -253,12 +257,14 @@ fi
 
 # record start time
 all_start_time=`date +%s`
+echo "UID=$UID"
+echo "PID=$PID"
 echo "Start time: `date -d @${all_start_time} +"%Y-%m-%d %H:%M:%S"`"
 echo
 
 if [ "${type}" == "periodic" ] || [ "${type}" == "once" -a "${wait_only}" == "false" ]; then
     # set steady
-    echo "set_meta_level steady" | ./run.sh shell --cluster ${cluster} &>/tmp/$UID.pegasus.set_meta_level
+    echo "set_meta_level steady" | ./run.sh shell --cluster ${cluster} &>/tmp/$UID.$PID.pegasus.set_meta_level
 
     # set manual compact envs
     if [ "${target_level}" != "" ]; then
@@ -273,6 +279,7 @@ fi
 
 # only `once` manual compact will check progress
 if [ "${type}" != "once" ]; then
+    rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null
     exit 0
 fi
 
@@ -282,7 +289,7 @@ if [ "${disabled}" == "true" ]; then
     exit -1
 fi
 
-ls_log_file="/tmp/$UID.pegasus.ls"
+ls_log_file="/tmp/$UID.$PID.pegasus.ls"
 echo ls | ./run.sh shell --cluster ${cluster} &>${ls_log_file}
 
 while read app_line
@@ -311,3 +318,5 @@ done <${ls_log_file}
 all_finish_time=`date +%s`
 echo "Finish time: `date -d @${all_finish_time} +"%Y-%m-%d %H:%M:%S"`"
 echo "Manual compact done, elapsed time is $((all_finish_time - all_start_time)) seconds."
+
+rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null
