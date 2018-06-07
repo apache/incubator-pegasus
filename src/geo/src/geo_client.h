@@ -16,8 +16,7 @@ namespace pegasus {
 
 /// a user define function to extract latitude and longitude from a std::string type value
 /// for example, if we have a value format like:
-/// "00:00:00:00:01:5e|2018-04-26 23:59:59|2018-04-28
-/// 03:00:00|ezp8xchrr|-0.356396|39.469644|24.043028|4.15921|0|-1"
+/// "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|-0.356396|39.469644|24.043028|4.15921|0|-1"
 /// we can define the extractor like this:
 ///    auto extractor = [](const std::string &value, S2LatLng &latlng) {
 ///        std::vector<std::string> data;
@@ -87,6 +86,21 @@ public:
     };
 
 public:
+    geo_client() = default;
+
+    geo_client &operator=(geo_client &&o)
+    {
+        _max_level = o._max_level;
+        _extractor = std::move(o._extractor);
+        _max_retry_times = o._max_retry_times;
+        _common_data_client = o._common_data_client;
+        o._common_data_client = nullptr;
+        _geo_data_client = o._geo_data_client;
+        o._geo_data_client = nullptr;
+
+        return *this;
+    }
+
     /// REQUIRES: app/table `common_app_name` and `geo_app_name` have been created on cluster
     /// `cluster_name`
     geo_client(const char *config_file,
@@ -209,6 +223,8 @@ public:
                       std::list<SearchResult> &result);
 
 private:
+    friend class geo_client_test;
+
     int search_radial(const S2LatLng &latlng,
                       double radius_m,
                       int count,
@@ -243,18 +259,17 @@ private:
                      const std::string &value,
                      int timeout_milliseconds,
                      int ttl_seconds);
-    int scan_next(const S2Cap &cap,
-                  int count,
-                  dsn::task_tracker *tracker,
-                  const pegasus_client::pegasus_scanner_wrapper &wrap_scanner,
-                  std::vector<SearchResult> &result);
-    void scan_data(const std::string &hash_key,
-                   const std::string &start_sort_key,
-                   const std::string &stop_sort_key,
-                   const S2Cap &cap,
-                   int count,
-                   dsn::task_tracker *tracker,
-                   std::vector<SearchResult> &result);
+    void start_scan(const std::string &hash_key,
+                    const std::string &start_sort_key,
+                    const std::string &stop_sort_key,
+                    const S2Cap &cap,
+                    int count,
+                    dsn::task_tracker *tracker,
+                    std::vector<SearchResult> &result);
+    void do_scan(const S2Cap &cap,
+                 int count,
+                 const pegasus_client::pegasus_scanner_wrapper &wrap_scanner,
+                 std::vector<SearchResult> &result);
 
 private:
     // cell id at this level is the hash-key in pegasus

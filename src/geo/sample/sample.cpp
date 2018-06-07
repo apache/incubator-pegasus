@@ -21,8 +21,8 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    // value format: "00:00:00:00:01:5e|2018-04-26 23:59:59|2018-04-28
-    // 03:00:00|ezp8xchrr|-0.356396|39.469644|24.043028|4.15921|0|-1"
+    // value format:
+    // "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|-0.356396|39.469644|24.043028|4.15921|0|-1"
     auto extractor = [](const std::string &value, S2LatLng &latlng) {
         std::vector<std::string> data;
         dsn::utils::split_args(value.c_str(), data, '|');
