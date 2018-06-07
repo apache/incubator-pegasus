@@ -6,7 +6,7 @@
 if [ -z "$INSTALL_DIR" ]
 then
     echo "ERROR: no INSTALL_DIR specified"
-    exit -1
+    exit 1
 fi
 
 cd $INSTALL_DIR

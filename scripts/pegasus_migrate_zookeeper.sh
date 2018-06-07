@@ -11,7 +11,7 @@ if [ $# -le 2 ]; then
   echo "For example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 127.0.0.1:2181"
   echo
-  exit -1
+  exit 1
 fi
 
 cluster=$1
@@ -27,28 +27,28 @@ cd $shell_dir
 minos_config=$minos_config_dir/pegasus-${cluster}.cfg
 if [ ! -f $minos_config ]; then
   echo "ERROR: minos config \"$minos_config\" not found"
-  exit -1
+  exit 1
 fi
 
 minos_client=$minos_client_dir/deploy
 if [ ! -f $minos_client ]; then
   echo "ERROR: minos client \"$minos_client\" not found"
-  exit -1
+  exit 1
 fi
 
 if [ `cat $minos_config | grep " recover_from_replica_server = " | wc -l` -ne 1 ] ; then
   echo "ERROR: no [recover_from_replica_server] entry in minos config \"$minos_config\""
-  exit -1
+  exit 1
 fi
 if [ `cat $minos_config | grep " hosts_list = " | wc -l` -ne 1 ] ; then
   echo "ERROR: no [hosts_list] entry in minos config \"$minos_config\""
-  exit -1
+  exit 1
 fi
 
 low_version_count=`echo server_info | ./run.sh shell --cluster $meta_list 2>&1 | grep 'Pegasus Server' | grep -v 'Pegasus Server 1.5' | wc -l`
 if [ $low_version_count -gt 0 ]; then
   echo "ERROR: cluster should upgrade to v1.5.0"
-  exit -1
+  exit 1
 fi
 
 echo "UID=$UID"
@@ -59,7 +59,7 @@ echo ">>>> Backuping app list..."
 echo "ls -o ${cluster}.apps" | ./run.sh shell --cluster $meta_list &>/dev/null
 if [ `cat ${cluster}.apps | wc -l` -eq 0 ]; then
   echo "ERROR: backup app list failed"
-  exit -1
+  exit 1
 fi
 cat ${cluster}.apps
 
@@ -67,16 +67,16 @@ echo ">>>> Backuping node list..."
 echo "nodes -d -o ${cluster}.nodes" | ./run.sh shell --cluster $meta_list &>/dev/null
 if [ `cat ${cluster}.nodes | wc -l` -eq 0 ]; then
   echo "ERROR: backup node list failed"
-  exit -1
+  exit 1
 fi
 if [ `grep UNALIVE ${cluster}.nodes | wc -l` -gt 0 ]; then
   echo "ERROR: unalive nodes found in \"${cluster}.nodes\""
-  exit -1
+  exit 1
 fi
 cat ${cluster}.nodes | grep " ALIVE" | awk '{print $1}' >${cluster}.recover.nodes
 if [ `cat ${cluster}.recover.nodes | wc -l` -eq 0 ]; then
   echo "ERROR: no node found in \"${cluster}.recover.nodes\""
-  exit -1
+  exit 1
 fi
 
 echo ">>>> Generating recover config..."
@@ -118,7 +118,7 @@ echo ">>>> Rolling update meta-server task 0..."
 rolling_update_meta 0
 if [ $? -ne 0 ]; then
   undo
-  exit -1
+  exit 1
 fi
 
 echo ">>>> Sending recover command..."
@@ -138,7 +138,7 @@ do
   echo "nodes -d -o /tmp/$UID.$PID.pegasus.migrate_zookeeper.shell.nodes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.migrate_zookeeper.shell.nodes.log
   if [ `cat /tmp/$UID.$PID.pegasus.migrate_zookeeper.shell.nodes | wc -l` -eq 0 ]; then
     echo "ERROR: get node list failed, refer to /tmp/$UID.$PID.pegasus.migrate_zookeeper.shell.nodes.log"
-    exit -1
+    exit 1
   fi
   awk '{print $1,$2,$3}' /tmp/$UID.$PID.pegasus.migrate_zookeeper.shell.nodes >/tmp/$UID.$PID.pegasus.migrate_zookeeper.diff.new
   diff /tmp/$UID.$PID.pegasus.migrate_zookeeper.diff.old /tmp/$UID.$PID.pegasus.migrate_zookeeper.diff.new &>/tmp/$UID.$PID.pegasus.migrate_zookeeper.diff
@@ -154,13 +154,13 @@ sed -i "s/ recover_from_replica_server = .*/ recover_from_replica_server = false
 echo ">>>> Rolling update meta-server task 1..."
 rolling_update_meta 1
 if [ $? -ne 0 ]; then
-  exit -1
+  exit 1
 fi
 
 echo ">>>> Rolling update meta-server task 0..."
 rolling_update_meta 0
 if [ $? -ne 0 ]; then
-  exit -1
+  exit 1
 fi
 
 echo ">>>> Querying cluster info..."

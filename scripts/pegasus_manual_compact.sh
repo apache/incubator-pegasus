@@ -57,7 +57,7 @@ function get_env()
     get_ok=`grep 'get app envs succeed' ${log_file} | wc -l`
     if [ ${get_ok} -ne 1 ]; then
         echo "ERROR: get app envs failed, refer to ${log_file}"
-        exit -1
+        exit 1
     fi
     grep "^${key} =" ${log_file} | awk '{print $3}'
 }
@@ -76,7 +76,7 @@ function set_env()
     set_ok=`grep 'set app envs succeed' ${log_file} | wc -l`
     if [ ${set_ok} -ne 1 ]; then
         echo "ERROR: set app envs failed, refer to ${log_file}"
-        exit -1
+        exit 1
     fi
 }
 
@@ -195,38 +195,38 @@ cd ${shell_dir}
 # check cluster
 if [ "${cluster}" == "" ]; then
     echo "ERROR: invalid cluster: ${cluster}"
-    exit -1
+    exit 1
 fi
 
 # check app_name
 if [ "${app_name}" == "" ]; then
     echo "ERROR: invalid app_name: ${app_name}"
-    exit -1
+    exit 1
 fi
 
 # check type
 if [ "${type}" != "periodic" -a "${type}" != "once" ]; then
     echo "ERROR: invalid type: ${type}"
-    exit -1
+    exit 1
 fi
 
 # check wait_only
 if [ "${wait_only}" == "true" -a "${type}" != "once" ]; then
     echo "ERROR: can not specify wait_only when type is ${type}"
-    exit -1
+    exit 1
 fi
 
 # check trigger_time
 if [ "${type}" == "once" ]; then
     if [ "${trigger_time}" != "" ]; then
         echo "ERROR: can not specify trigger_time when type is ${type}"
-        exit -1
+        exit 1
     fi
     if [ "${wait_only}" == "true" ]; then
         trigger_time=`get_env ${cluster} ${app_name} "manual_compact.once.trigger_time"`
         if [ "${trigger_time}" == "" ]; then
             echo "No once compact triggered previously, nothing to wait"
-            exit -1
+            exit 1
         fi
     else
        trigger_time=`date +%s`
@@ -234,7 +234,7 @@ if [ "${type}" == "once" ]; then
 else # type == periodic
     if [ "${trigger_time}" == "" ]; then
         echo "ERROR: should specify trigger_time when type is ${type}"
-        exit -1
+        exit 1
     fi
 fi
 
@@ -242,17 +242,17 @@ fi
 expr ${target_level} + 0 &>/dev/null
 if [ $? -ne 0 ]; then
     echo "ERROR: invalid target_level: ${target_level}"
-    exit -1
+    exit 1
 fi
 if [ ${target_level} -lt -1 ]; then
     echo "ERROR: invalid target_level: ${target_level}"
-    exit -1
+    exit 1
 fi
 
 # check bottommost_level_compaction
 if [ "${bottommost_level_compaction}" != "skip" -a "${bottommost_level_compaction}" != "force" ]; then
     echo "ERROR: invalid bottommost_level_compaction: ${bottommost_level_compaction}"
-    exit -1
+    exit 1
 fi
 
 # record start time
@@ -286,7 +286,7 @@ fi
 disabled=`get_env ${cluster} ${app_name} "manual_compact.disabled"`
 if [ "${disabled}" == "true" ]; then
     echo "Manual compact is disabled, not to wait"
-    exit -1
+    exit 1
 fi
 
 ls_log_file="/tmp/$UID.$PID.pegasus.ls"
@@ -306,7 +306,7 @@ do
 
     if [ "$status" != "AVAILABLE" ]; then
         echo "app ${app_name} is not available now, try to query result later"
-        exit -1
+        exit 1
     fi
 
     wait_manual_compact ${app_id} ${trigger_time} $(($partition_count*$replica_count))

@@ -7,7 +7,7 @@ then
   echo "This tool is for migrating primary replicas out of specified node."
   echo "USAGE: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
   echo "  app-name = * means migrate all apps"
-  exit -1
+  exit 1
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -23,7 +23,7 @@ if [ "$type" != "run" -a "$type" != "test" ]
 then
   echo "ERROR: invalid type: $type"
   echo "USAGE: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
-  exit -1
+  exit 1
 fi
 
 echo "UID=$UID"

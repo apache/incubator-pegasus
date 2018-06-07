@@ -11,7 +11,7 @@ if [ $# -le 2 ]; then
   echo "For example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 0"
   echo
-  exit -1
+  exit 1
 fi
 
 cluster=$1
@@ -27,13 +27,13 @@ cd $shell_dir
 minos_config=$minos_config_dir/pegasus-${cluster}.cfg
 if [ ! -f $minos_config ]; then
   echo "ERROR: minos config \"$minos_config\" not found"
-  exit -1
+  exit 1
 fi
 
 minos_client=$minos_client_dir/deploy
 if [ ! -f $minos_client ]; then
   echo "ERROR: minos client \"$minos_client\" not found"
-  exit -1
+  exit 1
 fi
 
 echo "UID=$UID"
@@ -51,7 +51,7 @@ grep 'Showing task [0-9][0-9]* of replica' /tmp/$UID.$PID.pegasus.offline_node.m
 replica_server_count=`cat /tmp/$UID.$PID.pegasus.offline_node.rs.list | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
-  exit -1
+  exit 1
 fi
 cd $shell_dir
 
@@ -60,12 +60,12 @@ echo cluster_info | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus
 cname=`grep zookeeper_root /tmp/$UID.$PID.pegasus.offline_node.cluster_info | grep -o '/[^/]*$' | grep -o '[^/]*$'`
 if [ "$cname" != "$cluster" ]; then
   echo "ERROR: cluster name and meta list not matched"
-  exit -1
+  exit 1
 fi
 pmeta=`grep primary_meta_server /tmp/$UID.$PID.pegasus.offline_node.cluster_info | grep -o '[0-9.:]*$'`
 if [ "$pmeta" == "" ]; then
   echo "ERROR: extract primary_meta_server by shell failed"
-  exit -1
+  exit 1
 fi
 
 echo "Generating /tmp/$UID.$PID.pegasus.offline_node.nodes..."
@@ -73,7 +73,7 @@ echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offlin
 rs_port=`grep '^[0-9.]*:' /tmp/$UID.$PID.pegasus.offline_node.nodes | head -n 1 | grep -o ':[0-9]*' | grep -o '[0-9]*'`
 if [ "$rs_port" == "" ]; then
   echo "ERROR: extract replica server port by shell failed"
-  exit -1
+  exit 1
 fi
 
 echo "Set meta level to steady..."
@@ -81,7 +81,7 @@ echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$
 set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.offline_node.set_meta_level | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set meta level to steady failed"
-  exit -1
+  exit 1
 fi
 
 echo "Set lb.assign_delay_ms to 10..."
@@ -89,7 +89,7 @@ echo "remote_command -l $pmeta meta.lb.assign_delay_ms 10" | ./run.sh shell --cl
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to 10 failed"
-  exit -1
+  exit 1
 fi
 
 echo
@@ -189,7 +189,7 @@ echo "remote_command -l $pmeta meta.lb.assign_delay_ms DEFAULT" | ./run.sh shell
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to DEFAULT failed"
-  exit -1
+  exit 1
 fi
 echo
 

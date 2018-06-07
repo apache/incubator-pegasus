@@ -2,7 +2,7 @@
 
 if [ $# -ne 1 ]; then
     echo "USAGE: $0 <version>"
-    exit -1
+    exit 1
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"

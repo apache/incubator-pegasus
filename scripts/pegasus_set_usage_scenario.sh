@@ -6,7 +6,7 @@ if [ $# -ne 3 ]
 then
   echo "This tool is for set usage scenario of specified table(app)."
   echo "USAGE: $0 <cluster-meta-list> <app-name> <normal|prefer_write|bulk_load>"
-  exit -1
+  exit 1
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -20,7 +20,7 @@ scenario_key="rocksdb.usage_scenario"
 
 if [ "$scenario" != "normal" -a "$scenario" != "prefer_write" -a "$scenario" != "bulk_load" ]; then
     echo "invalid usage scenario type: $scenario"
-    exit -1
+    exit 1
 fi
 
 echo "UID=$UID"
@@ -34,7 +34,7 @@ set_ok=`grep 'set app envs succeed' /tmp/$UID.$PID.pegasus.set_app_envs | wc -l`
 if [ $set_ok -ne 1 ]; then
   grep ERR /tmp/$UID.$PID.pegasus.set_app_envs
   echo "ERROR: set app envs failed, refer to /tmp/$UID.$PID.pegasus.set_app_envs"
-  exit -1
+  exit 1
 fi
 
 echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.ls

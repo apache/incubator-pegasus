@@ -54,5 +54,5 @@ case $cmd in
         ;;
     *)
         echo "Error: Unknown command $cmd."
-        exit -1
+        exit 1
 esac

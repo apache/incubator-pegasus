@@ -132,7 +132,7 @@ make -C ../rocksdb static_lib_$BUILD_TYPE $MAKE_OPTIONS
 if [ $? -ne 0 ]
 then
     echo "ERROR: build librocksdb.a failed"
-    exit -1
+    exit 1
 else
     echo "Build librocksdb.a succeed"
 fi
@@ -147,7 +147,7 @@ then
     if [ $? -ne 0 ]
     then
         echo "ERROR: cmake failed"
-        exit -1
+        exit 1
     fi
     cd ..
 fi
@@ -168,7 +168,7 @@ make install $MAKE_OPTIONS
 if [ $? -ne 0 ]
 then
     echo "ERROR: build pegasus failed"
-    exit -1
+    exit 1
 else
     echo "Build pegasus succeed"
 fi
@@ -179,7 +179,7 @@ make -C ../rocksdb pegasus_bench_$BUILD_TYPE $MAKE_OPTIONS
 if [ $? -ne 0 ]
 then
     echo "ERROR: build pegasus_bench failed"
-    exit -1
+    exit 1
 else
     mkdir -p $DSN_ROOT/bin/pegasus_bench
     mv ../rocksdb/pegasus_bench $DSN_ROOT/bin/pegasus_bench/pegasus_bench
