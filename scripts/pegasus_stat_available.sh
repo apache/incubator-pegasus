@@ -50,3 +50,5 @@ fi
 available=`cat $result_file | grep -o '[0-9]*,[0-9]*,[0-9]*' | awk -F, '{a+=$1;b+=$2}END{printf("%f\n",(double)b/a);}'`
 rm -f $result_file
 echo "$cluster $filter $days $available"
+
+rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

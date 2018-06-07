@@ -77,3 +77,4 @@ echo "Finish time: `date`"
 all_finish_time=$((`date +%s`))
 echo "Set usage scenario done, elasped time is $((all_finish_time - all_start_time)) seconds."
 
+rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

@@ -168,3 +168,4 @@ echo "cluster_info" | ./run.sh shell --cluster $meta_list
 
 echo "Migrate zookeeper done."
 
+rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

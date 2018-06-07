@@ -134,3 +134,5 @@ fi
 all_finish_time=$((`date +%s`))
 echo "Offline replica server task list done."
 echo "Elapsed time is $((all_finish_time - all_start_time)) seconds."
+
+rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

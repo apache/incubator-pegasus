@@ -86,3 +86,4 @@ do
   fi
 done </tmp/$UID.$PID.pegasus.ls
 
+rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

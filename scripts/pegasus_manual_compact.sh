@@ -279,6 +279,7 @@ fi
 
 # only `once` manual compact will check progress
 if [ "${type}" != "once" ]; then
+    rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null
     exit 0
 fi
 
@@ -317,3 +318,5 @@ done <${ls_log_file}
 all_finish_time=`date +%s`
 echo "Finish time: `date -d @${all_finish_time} +"%Y-%m-%d %H:%M:%S"`"
 echo "Manual compact done, elapsed time is $((all_finish_time - all_start_time)) seconds."
+
+rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null
