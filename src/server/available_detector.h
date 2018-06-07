@@ -32,6 +32,7 @@ private:
     // generate hash_keys that can access every partition.
     bool generate_hash_keys();
     void on_detect(int32_t idx);
+    void check_and_send_email(std::atomic<int> *cnt, int32_t idx);
     void detect_available();
     void report_availability_info();
 
