@@ -7,7 +7,7 @@ then
   echo "This tool is for downgrading replicas of specified node."
   echo "USAGE: $0 <cluster-meta-list> <node> <app-name> <run|test>"
   echo "  app-name = * means migrate all apps"
-  exit -1
+  exit 1
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -23,7 +23,7 @@ if [ "$type" != "run" -a "$type" != "test" ]
 then
   echo "ERROR: invalid type: $type"
   echo "USAGE: $0 <cluster-meta-list> <node> <app-name> <run|test>"
-  exit -1
+  exit 1
 fi
 
 echo "UID=$UID"
@@ -58,17 +58,17 @@ do
         if [ "$pri" = "" ]
         then
           echo "ERROR: can't downgrade ${gid}.${pid} because it is unhealthy"
-          exit -1
+          exit 1
         fi
         if [ "$pri" = "$node" ]
         then
           echo "ERROR: can't downgrade ${gid}.${pid} because $node is primary"
-          exit -1
+          exit 1
         fi
         if echo $sec | grep -v -q ','
         then
           echo "ERROR: can't downgrade ${gid}.${pid} because it is unhealthy"
-          exit -1
+          exit 1
         fi
         echo "propose --gpid ${gid}.${pid} --type DOWNGRADE_TO_INACTIVE -t $pri -n $node"
       fi

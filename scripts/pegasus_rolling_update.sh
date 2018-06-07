@@ -15,7 +15,7 @@ if [ $# -le 3 ]; then
   echo "For example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 one 0"
   echo
-  exit -1
+  exit 1
 fi
 
 update_options="--update_package --update_config"
@@ -26,7 +26,7 @@ type=$3
 start_task_id=$4
 if [ "$type" != "one" -a "$type" != "all" ]; then
   echo "ERROR: invalid type, should be one or all"
-  exit -1
+  exit 1
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -38,13 +38,13 @@ cd $shell_dir
 minos_config=$minos_config_dir/pegasus-${cluster}.cfg
 if [ ! -f $minos_config ]; then
   echo "ERROR: minos config \"$minos_config\" not found"
-  exit -1
+  exit 1
 fi
 
 minos_client=$minos_client_dir/deploy
 if [ ! -f $minos_client ]; then
   echo "ERROR: minos client \"$minos_client\" not found"
-  exit -1
+  exit 1
 fi
 
 echo "UID=$UID"
@@ -62,7 +62,7 @@ grep 'Showing task [0-9][0-9]* of replica' /tmp/$UID.$PID.pegasus.rolling_update
 replica_server_count=`cat /tmp/$UID.$PID.pegasus.rolling_update.rs.list | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
-  exit -1
+  exit 1
 fi
 cd $shell_dir
 
@@ -71,12 +71,12 @@ echo cluster_info | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus
 cname=`grep zookeeper_root /tmp/$UID.$PID.pegasus.rolling_update.cluster_info | grep -o '/[^/]*$' | grep -o '[^/]*$'`
 if [ "$cname" != "$cluster" ]; then
   echo "ERROR: cluster name and meta list not matched"
-  exit -1
+  exit 1
 fi
 pmeta=`grep primary_meta_server /tmp/$UID.$PID.pegasus.rolling_update.cluster_info | grep -o '[0-9.:]*$'`
 if [ "$pmeta" == "" ]; then
   echo "ERROR: extract primary_meta_server by shell failed"
-  exit -1
+  exit 1
 fi
 
 echo "Generating /tmp/$UID.$PID.pegasus.rolling_update.nodes..."
@@ -84,7 +84,7 @@ echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rollin
 rs_port=`grep '^[0-9.]*:' /tmp/$UID.$PID.pegasus.rolling_update.nodes | head -n 1 | grep -o ':[0-9]*' | grep -o '[0-9]*'`
 if [ "$rs_port" == "" ]; then
   echo "ERROR: extract replica server port by shell failed"
-  exit -1
+  exit 1
 fi
 
 echo "Set meta level to steady..."
@@ -92,7 +92,7 @@ echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$
 set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.rolling_update.set_meta_level | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set meta level to steady failed"
-  exit -1
+  exit 1
 fi
 
 echo
@@ -122,7 +122,7 @@ do
   set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
   if [ $set_ok -ne 1 ]; then
     echo "ERROR: set lb.add_secondary_max_count_for_one_node to 0 failed"
-    exit -1
+    exit 1
   fi
 
   echo "Migrating primary replicas out of node..."
@@ -182,7 +182,7 @@ do
     closing_count=`grep -o 'replica_stub.closing.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/$UID.$PID.pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
     if [ "$serving_count" = "" -o "$opening_count" = "" -o "$closing_count" = "" ]; then
       echo "ERROR: extract replica count from perf counters failed"
-      exit -1
+      exit 1
     fi
     rep_count=$((serving_count + opening_count + closing_count))
     if [ $rep_count -eq 0 ]; then
@@ -207,7 +207,7 @@ do
   set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
   if [ $set_ok -ne 1 ]; then
     echo "ERROR: set lb.add_secondary_max_count_for_one_node to 100 failed"
-    exit -1
+    exit 1
   fi
 
   echo "Rolling update by minos..."
@@ -261,7 +261,7 @@ echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node DEFA
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.add_secondary_max_count_for_one_node to DEFAULT failed"
-  exit -1
+  exit 1
 fi
 
 if [ "$type" = "all" ]; then
@@ -278,7 +278,7 @@ if [ "$type" = "all" ]; then
   set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.rolling_update.set_meta_level | wc -l`
   if [ $set_ok -ne 1 ]; then
     echo "ERROR: set meta level to lively failed"
-    exit -1
+    exit 1
   fi
   echo
 
@@ -291,7 +291,7 @@ if [ "$type" = "all" ]; then
   set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.rolling_update.set_meta_level | wc -l`
   if [ $set_ok -ne 1 ]; then
     echo "ERROR: set meta level to steady failed"
-    exit -1
+    exit 1
   fi
   echo
 fi
