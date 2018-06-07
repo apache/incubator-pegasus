@@ -225,7 +225,7 @@ function run_test()
         REPORT_DIR=$REPORT_DIR ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
-            exit
+            exit 1
         fi
         popd
     done
@@ -254,13 +254,13 @@ function run_start_zk()
     java -help 1>/dev/null 2>/dev/null
     if [ $? != 0 ]; then
         echo "start zk failed, need install jre..."
-        exit
+        exit 1
     fi
     # check nc command
     nc -help 1>/dev/null 2>/dev/null
     if [ $? != 0 ]; then
         echo "start zk failed, need install netcat command..."
-        exit
+        exit 1
     fi
     INSTALL_DIR=`pwd`/.zk_install
     PORT=22181
