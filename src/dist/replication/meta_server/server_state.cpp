@@ -565,8 +565,7 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                                                             const blob &value) mutable {
                 if (ec == ERR_OK) {
                     partition_configuration pc;
-                    dsn::json::string_tokenizer tokenizer(value);
-                    json_decode(tokenizer, pc);
+                    dsn::json::json_forwarder<partition_configuration>::decode(value, pc);
 
                     dassert(pc.pid.get_app_id() == app->app_id &&
                                 pc.pid.get_partition_index() == partition_id,

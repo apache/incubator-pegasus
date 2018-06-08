@@ -1085,9 +1085,8 @@ error_code backup_service::sync_policies_from_remote_storage()
         auto after_get_backup_info = [this, &err, policy_name](error_code ec, const blob &value) {
             if (ec == ERR_OK) {
                 dinfo("sync a backup string(%s) from remote storage", value.data());
-                ::dsn::json::string_tokenizer tokenizer(value);
                 backup_info tbackup_info;
-                tbackup_info.decode_json_state(tokenizer);
+                dsn::json::json_forwarder<backup_info>::decode(value, tbackup_info);
 
                 policy_context *ptr = nullptr;
                 {
@@ -1156,8 +1155,7 @@ error_code backup_service::sync_policies_from_remote_storage()
                     if (ec == ERR_OK) {
                         std::shared_ptr<policy_context> policy_ctx = _factory(this);
                         policy tpolicy;
-                        ::dsn::json::string_tokenizer tokenizer(value);
-                        tpolicy.decode_json_state(tokenizer);
+                        dsn::json::json_forwarder<policy>::decode(value, tpolicy);
                         policy_ctx->set_policy(std::move(tpolicy));
 
                         {

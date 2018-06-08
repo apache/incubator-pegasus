@@ -529,12 +529,12 @@ inline bool has_milliseconds_expired(uint64_t milliseconds_ts)
 namespace dsn {
 namespace json {
 
-inline void json_encode(std::stringstream &out, const replication::app_state &state)
+inline void json_encode(dsn::json::JsonWriter &out, const replication::app_state &state)
 {
     json_forwarder<dsn::app_info>::encode(out, (const dsn::app_info &)state);
 }
 
-inline bool json_decode(dsn::json::string_tokenizer &in, replication::app_state &state)
+inline bool json_decode(const dsn::json::JsonObject &in, replication::app_state &state)
 {
     return json_forwarder<dsn::app_info>::decode(in, (dsn::app_info &)state);
 }

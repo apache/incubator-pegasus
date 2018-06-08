@@ -343,7 +343,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                 continue;
             task_list.push_back(dsn::task_code(task_id).to_string());
         }
-        dsn::json::json_encode(ss, task_list);
+        dsn::json::json_forwarder<decltype(task_list)>::encode(ss, task_list);
         return ss.str();
     }
     // return a list of 2 elements for a specific task:
@@ -435,7 +435,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                 task_id = task_spec::get(task_id)->rpc_paired_code;
         } while (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE);
 
-        dsn::json::json_encode(ss, total_resp);
+        dsn::json::json_forwarder<decltype(total_resp)>::encode(ss, total_resp);
         return ss.str();
     }
     // return 6 types of latency times for a specific task
@@ -520,7 +520,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
         // timeList[0] = (timeList[3] - timeList[0]) / 2;
         // timeList[3] = timeList[0];
 
-        dsn::json::json_encode(ss, timeList);
+        dsn::json::json_forwarder<decltype(timeList)>::encode(ss, timeList);
         return ss.str();
     }
     // return a list of current counter value for a specific task
@@ -646,7 +646,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
         }
         call_list.push_back(caller_list);
         call_list.push_back(callee_list);
-        dsn::json::json_encode(ss, call_list);
+        dsn::json::json_forwarder<decltype(call_list)>::encode(ss, call_list);
         return ss.str();
     }
     // return a list of all sharer using the same pool with a specific task
@@ -670,7 +670,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
             if (j != TASK_CODE_INVALID && j != task_id && task_spec::get(j)->pool_code == pool &&
                 task_spec::get(j)->type == TASK_TYPE_RPC_RESPONSE)
                 sharer_list.push_back(std::string(dsn::task_code(j).to_string()));
-        dsn::json::json_encode(ss, sharer_list);
+        dsn::json::json_forwarder<decltype(sharer_list)>::encode(ss, sharer_list);
         return ss.str();
     }
     // query time

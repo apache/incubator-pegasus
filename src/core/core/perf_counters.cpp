@@ -206,7 +206,7 @@ std::string perf_counters::list_counter_internal(const std::vector<std::string> 
     }
 
     std::stringstream ss;
-    dsn::json::json_encode(ss, counters);
+    dsn::json::json_forwarder<decltype(counters)>::encode(ss, counters);
     return ss.str();
 }
 
@@ -218,7 +218,7 @@ std::string perf_counters::get_counter_value(const std::vector<std::string> &arg
     double value = 0;
 
     if (args.size() < 1) {
-        value_resp{value, ts, std::string()}.encode_json_state(ss);
+        dsn::json::json_forwarder<value_resp>::encode(ss, value_resp{value, ts, std::string()});
         return ss.str();
     }
 
