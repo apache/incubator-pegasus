@@ -33,6 +33,7 @@ namespace pegasus {
 ///        return pegasus::PERR_OK;
 ///    };
 using latlng_extractor = std::function<int(const std::string &value, S2LatLng &latlng)>;
+typedef std::function<void()> scan_finish_callback;
 
 /// search result structure when use `search_radial` APIs
 struct SearchResult
@@ -50,7 +51,12 @@ struct SearchResult
                           std::string &&hk = "",
                           std::string &&sk = "",
                           std::string &&v = "")
-        : lat_degrees(lat), lng_degrees(lng), distance(dis), hash_key(hk), sort_key(sk), value(v)
+        : lat_degrees(lat),
+          lng_degrees(lng),
+          distance(dis),
+          hash_key(std::move(hk)),
+          sort_key(std::move(sk)),
+          value(std::move(v))
     {
     }
 
@@ -264,11 +270,12 @@ private:
                     const std::string &stop_sort_key,
                     const S2Cap &cap,
                     int count,
-                    dsn::task_tracker *tracker,
+                    scan_finish_callback cb,
                     std::vector<SearchResult> &result);
-    void do_scan(const S2Cap &cap,
+    void do_scan(pegasus_client::pegasus_scanner *scanner,
+                 const S2Cap &cap,
                  int count,
-                 const pegasus_client::pegasus_scanner_wrapper &wrap_scanner,
+                 scan_finish_callback cb,
                  std::vector<SearchResult> &result);
 
 private:
