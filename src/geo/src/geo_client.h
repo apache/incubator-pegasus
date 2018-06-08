@@ -69,6 +69,15 @@ struct SearchResult
     }
 };
 
+#ifdef GEO_UNIT_TEST
+inline bool operator==(const SearchResult &l, const SearchResult &r)
+{
+    return l.lat_degrees == r.lat_degrees && l.lng_degrees == r.lng_degrees &&
+           l.distance == r.distance && l.hash_key == r.hash_key && l.sort_key == r.sort_key &&
+           l.value == r.value;
+}
+#endif
+
 struct SearchResultNearer
 {
     inline bool operator()(const SearchResult &l, const SearchResult &r)
@@ -230,6 +239,11 @@ public:
 
 private:
     friend class geo_client_test;
+    friend class geo_client_test_set_Test;
+    friend class geo_client_test_set_geo_data_Test;
+    friend class geo_client_test_normalize_result_random_order_Test;
+    friend class geo_client_test_normalize_result_distance_order_Test;
+    friend class geo_client_test_large_cap_Test;
 
     int search_radial(const S2LatLng &latlng,
                       double radius_m,
@@ -251,8 +265,9 @@ private:
     void combine_keys(const std::string &hash_key,
                       const std::string &sort_key,
                       std::string &combine_key);
-    int
-    extract_keys(const std::string &combine_sort_key, std::string &hash_key, std::string &sort_key);
+    int extract_keys(const std::string &combined_sort_key,
+                     std::string &hash_key,
+                     std::string &sort_key);
     std::string get_sort_key(const S2CellId &max_level_cid, const std::string &hash_key);
     int set_common_data(const std::string &hash_key,
                         const std::string &sort_key,
