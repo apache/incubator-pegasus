@@ -5,7 +5,6 @@
 package rpc
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net"
@@ -13,13 +12,12 @@ import (
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
-	"gopkg.in/tomb.v2"
 )
 
 // TODO(wutao1): make these parameters configurable
 const (
 	RpcConnKeepAliveInterval = time.Second * 30
-	RpcConnDialTimeout       = time.Second * 5
+	RpcConnDialTimeout       = time.Second * 3
 	RpcConnReadTimeout       = time.Second
 	RpcConnWriteTimeout      = time.Second
 )
@@ -68,12 +66,11 @@ type RpcConn struct {
 	rstream *ReadStream
 	conn    net.Conn
 
+	writeTimeout time.Duration
+	readTimeout  time.Duration
+
 	cstate ConnState
 	mu     sync.RWMutex
-
-	// the lifetime manager used to kill tasks (dialing, reading, writing...)
-	// after the connection closed.
-	tom *tomb.Tomb
 
 	logger pegalog.Logger
 }
@@ -108,7 +105,7 @@ func (rc *RpcConn) TryConnect() (err error) {
 				KeepAlive: RpcConnKeepAliveInterval,
 				Timeout:   RpcConnDialTimeout,
 			}
-			rc.conn, err = d.DialContext(rc.tom.Context(context.Background()), "tcp", rc.Endpoint)
+			rc.conn, err = d.Dial("tcp", rc.Endpoint)
 
 			rc.mu.Lock()
 			if err != nil {
@@ -137,7 +134,6 @@ func (rc *RpcConn) Close() (err error) {
 		err = rc.conn.Close()
 	}
 
-	rc.tom.Kill(errors.New("RpcConn closed"))
 	return
 }
 
@@ -149,7 +145,7 @@ func (rc *RpcConn) Write(msgBytes []byte) (err error) {
 
 		tcpConn, ok := rc.conn.(*net.TCPConn)
 		if ok {
-			tcpConn.SetWriteDeadline(time.Now().Add(RpcConnWriteTimeout))
+			tcpConn.SetWriteDeadline(time.Now().Add(rc.writeTimeout))
 		}
 
 		return rc.wstream.Write(msgBytes)
@@ -175,7 +171,7 @@ func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
 
 		tcpConn, ok := rc.conn.(*net.TCPConn)
 		if ok {
-			tcpConn.SetReadDeadline(time.Now().Add(RpcConnReadTimeout))
+			tcpConn.SetReadDeadline(time.Now().Add(rc.readTimeout))
 		}
 
 		bytes, err = rc.rstream.Next(size)
@@ -189,13 +185,24 @@ func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
 }
 
 // Returns an idle connection.
-func NewRpcConn(parent *tomb.Tomb, addr string) *RpcConn {
+func NewRpcConn(addr string) *RpcConn {
 	return &RpcConn{
-		Endpoint: addr,
-		logger:   pegalog.GetLogger(),
-		cstate:   ConnStateInit,
-		tom:      parent,
+		Endpoint:     addr,
+		logger:       pegalog.GetLogger(),
+		cstate:       ConnStateInit,
+		readTimeout:  RpcConnReadTimeout,
+		writeTimeout: RpcConnWriteTimeout,
 	}
+}
+
+// Not thread-safe
+func (rc *RpcConn) SetWriteTimeout(timeout time.Duration) {
+	rc.writeTimeout = timeout
+}
+
+// Not thread-safe
+func (rc *RpcConn) SetReadTimeout(timeout time.Duration) {
+	rc.readTimeout = timeout
 }
 
 func (rc *RpcConn) setReady(reader io.Reader, writer io.Writer) {
@@ -205,8 +212,8 @@ func (rc *RpcConn) setReady(reader io.Reader, writer io.Writer) {
 }
 
 // Create a fake client with specified reader and writer.
-func NewFakeRpcConn(parent *tomb.Tomb, reader io.Reader, writer io.Writer) *RpcConn {
-	conn := NewRpcConn(parent, "")
+func NewFakeRpcConn(reader io.Reader, writer io.Writer) *RpcConn {
+	conn := NewRpcConn("")
 	conn.setReady(reader, writer)
 	return conn
 }

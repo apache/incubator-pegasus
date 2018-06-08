@@ -16,6 +16,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/fortytw2/leaktest"
@@ -23,29 +24,35 @@ import (
 )
 
 func newFakeNodeSession(reader io.Reader, writer io.Writer) *nodeSession {
-	n := newNodeSessionAddr("", kNodeTypeMeta)
-	n.conn = rpc.NewFakeRpcConn(n.tom, reader, writer)
+	n := newNodeSessionAddr("", NodeTypeMeta)
+	n.conn = rpc.NewFakeRpcConn(reader, writer)
 	n.codec = &MockCodec{}
 	return n
 }
 
-// This test verifies that no routine leaks
-// if n.Close is called before looping.
+func newMetaSession(addr string) *metaSession {
+	return &metaSession{
+		NodeSession: newNodeSession(addr, NodeTypeMeta),
+		logger:      pegalog.GetLogger(),
+	}
+}
+
+// This test verifies that no routine leaks after calling Close.
 func TestNodeSession_Close(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	reader := bytes.NewBuffer(make([]byte, 0))
 	writer := bytes.NewBuffer(make([]byte, 0))
 	n := newFakeNodeSession(reader, writer)
-	n.Close()
 
+	n.tom.Go(n.loopForDialing)
 	n.tom.Go(n.loopForRequest)
 	n.tom.Go(n.loopForResponse)
-	n.tom.Go(n.loopForDialing)
+	n.Close()
 }
 
-// This test ensures loopForRequest receives the rpcCall sent from
-// callWithGpid.
+// This test ensures loopForRequest receives the PegasusRpcCall sent from
+// CallWithGpid.
 func TestNodeSession_LoopForRequest(t *testing.T) {
 	defer leaktest.Check(t)()
 
@@ -57,7 +64,7 @@ func TestNodeSession_LoopForRequest(t *testing.T) {
 	n.tom.Go(n.loopForRequest)
 
 	go func() {
-		n.callWithGpid(context.Background(), nil, nil, "")
+		n.CallWithGpid(context.Background(), nil, nil, "")
 	}()
 
 	time.Sleep(time.Second)
@@ -72,7 +79,7 @@ func TestNodeSession_LoopForDialingSuccess(t *testing.T) {
 
 	addr := "www.baidu.com:80"
 	n := newNodeSessionAddr(addr, "meta")
-	n.conn = rpc.NewRpcConn(n.tom, addr)
+	n.conn = rpc.NewRpcConn(addr)
 
 	n.tom.Go(n.loopForDialing)
 
@@ -95,7 +102,7 @@ func TestNodeSession_LoopForDialingCancelled(t *testing.T) {
 
 	addr := "www.baidu.com:12321"
 	n := newNodeSessionAddr(addr, "meta")
-	n.conn = rpc.NewRpcConn(n.tom, addr)
+	n.conn = rpc.NewRpcConn(addr)
 
 	n.tom.Go(n.loopForDialing)
 	n.tryDial()
@@ -103,7 +110,7 @@ func TestNodeSession_LoopForDialingCancelled(t *testing.T) {
 	time.Sleep(time.Second)
 	// time.Second < rpc.RpcConnDialTimeout, it must still be connecting.
 	assert.Equal(t, rpc.ConnStateConnecting, n.conn.GetState())
-	n.conn.Close()
+	n.Close()
 }
 
 type IOErrWriter struct {
@@ -143,26 +150,8 @@ func TestNodeSession_WriteFailed(t *testing.T) {
 	})
 	n.codec = mockCodec
 
-	_, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
+	_, err := n.CallWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
 	assert.NotNil(t, err)
-	assert.Equal(t, n.conn.GetState(), rpc.ConnStateTransientFailure)
-}
-
-// Ensure if read failed due to un-retryable error,
-// the session will be shutdown.
-func TestNodeSession_ReadFailed(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	writer := bytes.NewBuffer(make([]byte, 0))
-	n := newFakeNodeSession(&IOErrReader{err: base.ERR_CLIENT_FAILED}, writer)
-	n.tom.Go(n.loopForRequest)
-	n.tom.Go(n.loopForResponse)
-
-	arg := rrdb.NewMetaQueryCfgArgs()
-	arg.Query = replication.NewQueryCfgRequest()
-
-	_, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
-	assert.Equal(t, err, context.Canceled)
 	assert.Equal(t, n.conn.GetState(), rpc.ConnStateTransientFailure)
 }
 
@@ -195,7 +184,7 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	n := newMetaSession("0.0.0.0:8800")
+	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta)
 	defer n.Close()
 
 	var expected []byte
@@ -214,9 +203,9 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 	})
 	mockCodec.MockUnMarshal(func(data []byte, v interface{}) error {
 		actual = data
-		r, _ := v.(*rpcCall)
-		r.seqId = 1
-		r.result = nameToResultMap["RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX_ACK"]()
+		r, _ := v.(*PegasusRpcCall)
+		r.SeqId = 1
+		r.Result = nameToResultMap["RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX_ACK"]()
 		return nil
 	})
 
@@ -225,7 +214,8 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 	// wait for connection becoming ready
 	time.Sleep(time.Millisecond * 500)
 
-	n.queryConfig(context.Background(), "temp")
+	meta := &metaSession{NodeSession: n, logger: pegalog.GetLogger()}
+	meta.queryConfig(context.Background(), "temp")
 	assert.Equal(t, expected, actual)
 }
 
@@ -236,11 +226,11 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	meta := newMetaSession("0.0.0.0:8800")
+	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta)
 
 	mockCodec := &MockCodec{}
 	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
-		r, _ := v.(*rpcCall)
+		r, _ := v.(*PegasusRpcCall)
 		marshaled, _ := new(PegasusCodec).Marshal(r)
 
 		// prefixed with length
@@ -251,7 +241,7 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 		return buf, nil
 	})
 	mockCodec.MockUnMarshal(func(data []byte, v interface{}) error {
-		r, _ := v.(*rpcCall)
+		r, _ := v.(*PegasusRpcCall)
 
 		assert.True(t, len(data) > thriftHeaderBytesLen)
 		data = data[thriftHeaderBytesLen:]
@@ -260,16 +250,17 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		r.seqId = seqId
-		r.result = rrdb.NewMetaQueryCfgResult()
+		r.SeqId = seqId
+		r.Result = rrdb.NewMetaQueryCfgResult()
 
 		return nil
 	})
-	meta.codec = mockCodec
+	n.codec = mockCodec
 
 	// wait for connection becoming ready
 	time.Sleep(time.Millisecond * 500)
 
+	meta := &metaSession{NodeSession: n, logger: pegalog.GetLogger()}
 	var wg sync.WaitGroup
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
@@ -283,7 +274,7 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 	}
 	wg.Wait()
 
-	meta.Close()
+	n.Close()
 }
 
 // please ensure there's no active port on 8801.
@@ -318,7 +309,7 @@ func TestNodeSession_RestartConnection(t *testing.T) {
 func TestNodeSession_ReceiveErrorCode(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	n := newMetaSession("0.0.0.0:8800")
+	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta)
 	defer n.Close()
 
 	arg := rrdb.NewMetaQueryCfgArgs()
@@ -335,13 +326,13 @@ func TestNodeSession_ReceiveErrorCode(t *testing.T) {
 		return buf, nil
 	})
 	mockCodec.MockUnMarshal(func(data []byte, v interface{}) error {
-		r, _ := v.(*rpcCall)
-		r.seqId = 1
-		r.err = base.ERR_INVALID_STATE
+		r, _ := v.(*PegasusRpcCall)
+		r.SeqId = 1
+		r.Err = base.ERR_INVALID_STATE
 		return nil
 	})
 
-	result, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
+	result, err := n.CallWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
 	assert.Equal(t, result, nil)
 	assert.Equal(t, err, base.ERR_INVALID_STATE)
 }
@@ -352,7 +343,7 @@ func TestNodeSession_Redial(t *testing.T) {
 
 	addr := "0.0.0.0:8800"
 	n := newNodeSessionAddr(addr, "meta")
-	n.conn = rpc.NewRpcConn(n.tom, addr)
+	n.conn = rpc.NewRpcConn(addr)
 	defer n.Close()
 
 	n.tom.Go(n.loopForDialing)
@@ -372,16 +363,16 @@ func TestNodeSession_Redial(t *testing.T) {
 		return buf, nil
 	})
 	mockCodec.MockUnMarshal(func(data []byte, v interface{}) error {
-		r, _ := v.(*rpcCall)
-		r.seqId = 1
-		r.err = base.ERR_INVALID_STATE
+		r, _ := v.(*PegasusRpcCall)
+		r.SeqId = 1
+		r.Err = base.ERR_INVALID_STATE
 		return nil
 	})
 	n.codec = mockCodec
 
 	arg := rrdb.NewMetaQueryCfgArgs()
 	arg.Query = replication.NewQueryCfgRequest()
-	_, err := n.callWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
+	_, err := n.CallWithGpid(context.Background(), &base.Gpid{0, 0}, arg, "RPC_NAME")
 
 	assert.Equal(t, n.ConnState(), rpc.ConnStateReady)
 	assert.Equal(t, err, base.ERR_INVALID_STATE)

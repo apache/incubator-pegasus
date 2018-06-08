@@ -6,12 +6,14 @@ package session
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
+	"github.com/XiaoMi/pegasus-go-client/rpc"
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -20,13 +22,13 @@ type PegasusCodec struct {
 }
 
 func (p *PegasusCodec) Marshal(v interface{}) ([]byte, error) {
-	r, _ := v.(*rpcCall)
+	r, _ := v.(*PegasusRpcCall)
 
 	header := &thriftHeader{
 		headerLength:   uint32(thriftHeaderBytesLen),
-		appId:          r.gpid.Appid,
-		partitionIndex: r.gpid.PartitionIndex,
-		threadHash:     gpidToThreadHash(r.gpid),
+		appId:          r.Gpid.Appid,
+		partitionIndex: r.Gpid.PartitionIndex,
+		threadHash:     gpidToThreadHash(r.Gpid),
 		partitionHash:  0,
 	}
 
@@ -38,10 +40,10 @@ func (p *PegasusCodec) Marshal(v interface{}) ([]byte, error) {
 	oprot := thrift.NewTBinaryProtocolTransport(buf)
 
 	var err error
-	if err = oprot.WriteMessageBegin(r.name, thrift.CALL, r.seqId); err != nil {
+	if err = oprot.WriteMessageBegin(r.Name, thrift.CALL, r.SeqId); err != nil {
 		return nil, err
 	}
-	if err = r.args.Write(oprot); err != nil {
+	if err = r.Args.Write(oprot); err != nil {
 		return nil, err
 	}
 	if err = oprot.WriteMessageEnd(); err != nil {
@@ -56,7 +58,7 @@ func (p *PegasusCodec) Marshal(v interface{}) ([]byte, error) {
 }
 
 func (p *PegasusCodec) Unmarshal(data []byte, v interface{}) error {
-	r, _ := v.(*rpcCall)
+	r, _ := v.(*PegasusRpcCall)
 
 	iprot := thrift.NewTBinaryProtocolTransport(thrift.NewStreamTransportR(bytes.NewBuffer(data)))
 	ec := &base.ErrorCode{}
@@ -69,8 +71,8 @@ func (p *PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 		return err
 	}
 
-	r.name = name
-	r.seqId = seqId
+	r.Name = name
+	r.SeqId = seqId
 
 	if ec.Errno != base.ERR_OK.String() {
 		// convert string to base.ErrType
@@ -80,7 +82,7 @@ func (p *PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 			return parseErr
 		}
 
-		r.err = err
+		r.Err = err
 		return nil
 	}
 
@@ -88,10 +90,10 @@ func (p *PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 	if !ok {
 		return fmt.Errorf("failed to find rpc name: %s", name)
 	}
-	r.result = nameToResultFunc()
+	r.Result = nameToResultFunc()
 
 	// read response body
-	if err = r.result.Read(iprot); err != nil {
+	if err = r.Result.Read(iprot); err != nil {
 		return err
 	}
 	if err = iprot.ReadMessageEnd(); err != nil {
@@ -105,53 +107,53 @@ func (p *PegasusCodec) String() string {
 	return "pegasus"
 }
 
-var nameToResultMap = map[string]func() rpcResponseResult{
-	"RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX_ACK": func() rpcResponseResult {
+var nameToResultMap = map[string]func() RpcResponseResult{
+	"RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX_ACK": func() RpcResponseResult {
 		return &rrdb.MetaQueryCfgResult{
 			Success: replication.NewQueryCfgResponse(),
 		}
 	},
-	"RPC_RRDB_RRDB_GET_ACK": func() rpcResponseResult {
+	"RPC_RRDB_RRDB_GET_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbGetResult{
 			Success: rrdb.NewReadResponse(),
 		}
 	},
-	"RPC_RRDB_RRDB_PUT_ACK": func() rpcResponseResult {
+	"RPC_RRDB_RRDB_PUT_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbPutResult{
 			Success: rrdb.NewUpdateResponse(),
 		}
 	},
-	"RPC_RRDB_RRDB_REMOVE_ACK": func() rpcResponseResult {
+	"RPC_RRDB_RRDB_REMOVE_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbRemoveResult{
 			Success: rrdb.NewUpdateResponse(),
 		}
 	},
-	"RPC_RRDB_RRDB_MULTI_GET_ACK": func() rpcResponseResult {
+	"RPC_RRDB_RRDB_MULTI_GET_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbMultiGetResult{
 			Success: rrdb.NewMultiGetResponse(),
 		}
 	},
-	"RPC_RRDB_RRDB_MULTI_REMOVE_ACK": func() rpcResponseResult {
+	"RPC_RRDB_RRDB_MULTI_REMOVE_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbMultiRemoveResult{
 			Success: rrdb.NewMultiRemoveResponse(),
 		}
 	},
-	"RPC_RRDB_RRDB_MULTI_PUT_ACK": func() rpcResponseResult {
+	"RPC_RRDB_RRDB_MULTI_PUT_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbMultiPutResult{
 			Success: rrdb.NewUpdateResponse(),
 		}
 	},
-	"RPC_RRDB_RRDB_TTL_ACK": func() rpcResponseResult {
+	"RPC_RRDB_RRDB_TTL_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbTTLResult{
 			Success: rrdb.NewTTLResponse(),
 		}
 	},
-	"RPC_RRDB_RRDB_GET_SCANNER_ACK": func() rpcResponseResult {
+	"RPC_RRDB_RRDB_GET_SCANNER_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbGetScannerResult{
 			Success: rrdb.NewScanResponse(),
 		}
 	},
-	"RPC_RRDB_RRDB_SCAN_ACK": func() rpcResponseResult {
+	"RPC_RRDB_RRDB_SCAN_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbScanResult{
 			Success: rrdb.NewScanResponse(),
 		}
@@ -197,23 +199,64 @@ func (p *MockCodec) MockUnMarshal(unmarshal UnmarshalFunc) {
 }
 
 // a trait of the thrift-generated argument type (MetaQueryCfgArgs, RrdbPutArgs e.g.)
-type rpcRequestArgs interface {
+type RpcRequestArgs interface {
 	String() string
 	Write(oprot thrift.TProtocol) error
 }
 
 // a trait of the thrift-generated result type (MetaQueryCfgResult e.g.)
-type rpcResponseResult interface {
+type RpcResponseResult interface {
 	String() string
 	Read(iprot thrift.TProtocol) error
 }
 
-type rpcCall struct {
-	args   rpcRequestArgs
-	result rpcResponseResult
-	name   string // the rpc's name
-	seqId  int32
-	gpid   *base.Gpid
-	rawReq []byte // the marshalled request in bytes
-	err    error
+type PegasusRpcCall struct {
+	Args   RpcRequestArgs
+	Result RpcResponseResult
+	Name   string // the rpc's name
+	SeqId  int32
+	Gpid   *base.Gpid
+	RawReq []byte // the marshalled request in bytes
+	Err    error
+}
+
+func MarshallPegasusRpc(codec rpc.Codec, seqId int32, gpid *base.Gpid, args RpcRequestArgs, name string) (*PegasusRpcCall, error) {
+	rcall := &PegasusRpcCall{}
+	rcall.Args = args
+	rcall.Name = name
+	rcall.SeqId = seqId
+	rcall.Gpid = gpid
+
+	var err error
+	rcall.RawReq, err = codec.Marshal(rcall)
+	if err != nil {
+		return nil, err
+	}
+	return rcall, nil
+}
+
+func ReadRpcResponse(conn *rpc.RpcConn, codec rpc.Codec) (*PegasusRpcCall, error) {
+	// read length field
+	lenBuf, err := conn.Read(4)
+	if err != nil && len(lenBuf) < 4 {
+		return nil, err
+	}
+	resplen := binary.BigEndian.Uint32(lenBuf)
+	if resplen < 4 {
+		return nil, fmt.Errorf("response length(%d) smaller than 4 bytes", resplen)
+	}
+	resplen -= 4 // 4 bytes for length
+
+	// read data field
+	buf, err := conn.Read(int(resplen))
+	if err != nil || len(buf) != int(resplen) {
+		return nil, err
+	}
+
+	r := &PegasusRpcCall{}
+	if err := codec.Unmarshal(buf, r); err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }

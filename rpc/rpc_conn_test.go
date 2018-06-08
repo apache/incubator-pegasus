@@ -12,7 +12,6 @@ import (
 	"context"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/tomb.v2"
 )
 
 // This test ensures that:
@@ -21,7 +20,7 @@ func TestRpcConn_CreateConnected(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	for i := 0; i < 3; i++ {
-		conn := NewRpcConn(&tomb.Tomb{}, "www.baidu.com:80")
+		conn := NewRpcConn("www.baidu.com:80")
 		err := conn.TryConnect()
 
 		assert.Nil(t, err)
@@ -37,7 +36,7 @@ func TestRpcConn_CreateConnected(t *testing.T) {
 func TestRpcConn_ReadWriteNotReady(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	conn := NewRpcConn(&tomb.Tomb{}, "www.baidu.com:80")
+	conn := NewRpcConn("www.baidu.com:80")
 	err := conn.TryConnect()
 	assert.Nil(t, err)
 
@@ -58,7 +57,7 @@ func TestRpcConn_ReadWriteNotReady(t *testing.T) {
 func TestRpcConn_ReadCancelled(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	conn := NewRpcConn(&tomb.Tomb{}, "www.baidu.com:80")
+	conn := NewRpcConn("www.baidu.com:80")
 	err := conn.TryConnect()
 	assert.Nil(t, err)
 
@@ -75,7 +74,7 @@ func TestRpcConn_NewRpcConnectFailed(t *testing.T) {
 	defer leaktest.CheckTimeout(t, time.Second*6)()
 
 	// it must time out.
-	conn := NewRpcConn(&tomb.Tomb{}, "www.baidu.com:12321")
+	conn := NewRpcConn("www.baidu.com:12321")
 	err := conn.TryConnect()
 	assert.NotNil(t, err)
 	assert.Equal(t, ConnStateTransientFailure, conn.cstate)
@@ -87,7 +86,7 @@ func TestRpcConn_NewRpcConnectFailed(t *testing.T) {
 func TestRpcConn_CancelConnecting(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	conn := NewRpcConn(&tomb.Tomb{}, "www.baidu.com:12321")
+	conn := NewRpcConn("www.baidu.com:12321")
 	go func() {
 		conn.TryConnect()
 	}()
@@ -101,7 +100,7 @@ func TestRpcConn_WriteAndRead(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	conn := NewRpcConn(&tomb.Tomb{}, "0.0.0.0:8800")
+	conn := NewRpcConn("0.0.0.0:8800")
 	defer conn.Close()
 
 	assert.Nil(t, conn.TryConnect())
@@ -131,6 +130,6 @@ func Test_IsNetworkTimeoutErr(t *testing.T) {
 	// timeout error but not a network error
 	assert.False(t, IsNetworkTimeoutErr(context.DeadlineExceeded))
 
-	err := NewRpcConn(&tomb.Tomb{}, "www.baidu.com:12321").TryConnect()
+	err := NewRpcConn("www.baidu.com:12321").TryConnect()
 	assert.True(t, IsNetworkTimeoutErr(err))
 }

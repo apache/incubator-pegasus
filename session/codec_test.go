@@ -33,11 +33,11 @@ func TestCodec_Marshal(t *testing.T) {
 	arg.Query.AppName = "temp"
 	arg.Query.PartitionIndices = []int32{}
 
-	r := &rpcCall{
-		args:  arg,
-		name:  "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
-		gpid:  &base.Gpid{0, 0},
-		seqId: 1,
+	r := &PegasusRpcCall{
+		Args:  arg,
+		Name:  "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
+		Gpid:  &base.Gpid{0, 0},
+		SeqId: 1,
 	}
 
 	actual, _ := new(PegasusCodec).Marshal(r)
@@ -49,7 +49,7 @@ func TestCodec_UnmarshalErrorCode(t *testing.T) {
 		0x54, 0x48, 0x46,
 	}
 
-	r := &rpcCall{}
+	r := &PegasusRpcCall{}
 
 	err := new(PegasusCodec).Unmarshal(recvBytes, r)
 	assert.NotNil(t, err)

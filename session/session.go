@@ -6,7 +6,6 @@ package session
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"sync"
@@ -19,10 +18,37 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
-// nodeSession represents the network session to a node
+type NodeType string
+
+const (
+	NodeTypeMeta    NodeType = "meta"
+	NodeTypeReplica          = "replica"
+
+	kDialInterval = time.Second * 60
+)
+
+// NodeSession represents the network session to a node
 // (either a meta server or a replica server).
 // It encapsulates the internal rpc process, including
 // network communication and message (de)serialization.
+type NodeSession interface {
+	String() string
+
+	// Invoke an rpc call.
+	CallWithGpid(ctx context.Context, gpid *base.Gpid, args RpcRequestArgs, name string) (result RpcResponseResult, err error)
+
+	// Get connection state.
+	ConnState() rpc.ConnState
+
+	Close() error
+}
+
+// NodeSessionCreator creates an instance of NodeSession,
+// receiving argument `string` as host address, `NodeType`
+// as type of the node.
+type NodeSessionCreator func(string, NodeType) NodeSession
+
+// An implementation of NodeSession.
 type nodeSession struct {
 	logger pegalog.Logger
 
@@ -31,7 +57,7 @@ type nodeSession struct {
 	seqId int32
 
 	addr  string
-	ntype nodeType
+	ntype NodeType
 	conn  *rpc.RpcConn
 
 	tom *tomb.Tomb
@@ -48,19 +74,10 @@ type nodeSession struct {
 
 type requestListener struct {
 	ch   chan bool
-	call *rpcCall
+	call *PegasusRpcCall
 }
 
-type nodeType string
-
-const (
-	kNodeTypeMeta    nodeType = "meta"
-	kNodeTypeReplica          = "replica"
-
-	kDialInterval = time.Second * 60
-)
-
-func newNodeSessionAddr(addr string, ntype nodeType) *nodeSession {
+func newNodeSessionAddr(addr string, ntype NodeType) *nodeSession {
 	return &nodeSession{
 		logger:      pegalog.GetLogger(),
 		ntype:       ntype,
@@ -76,16 +93,20 @@ func newNodeSessionAddr(addr string, ntype nodeType) *nodeSession {
 	}
 }
 
-// newNodeSession always returns a non-nil value even when the
+// NewNodeSession always returns a non-nil value even when the
 // connection attempt failed.
 // Each nodeSession corresponds to an RpcConn.
-func newNodeSession(addr string, ntype nodeType) *nodeSession {
+func NewNodeSession(addr string, ntype NodeType) NodeSession {
+	return newNodeSession(addr, ntype)
+}
+
+func newNodeSession(addr string, ntype NodeType) *nodeSession {
 	logger := pegalog.GetLogger()
 
 	n := newNodeSessionAddr(addr, ntype)
 	logger.Printf("create session with %s", n)
 
-	n.conn = rpc.NewRpcConn(n.tom, addr)
+	n.conn = rpc.NewRpcConn(addr)
 
 	n.tom.Go(n.loopForDialing)
 	return n
@@ -160,7 +181,7 @@ func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
 	// notify the caller
 	case req.ch <- true:
 		n.mu.Lock()
-		delete(n.pendingResp, req.call.seqId)
+		delete(n.pendingResp, req.call.SeqId)
 		n.mu.Unlock()
 	default:
 		panic("impossible for concurrent notifiers")
@@ -176,14 +197,14 @@ func (n *nodeSession) loopForRequest() error {
 			return n.tom.Err()
 		case req := <-n.reqc:
 			n.mu.Lock()
-			n.pendingResp[req.call.seqId] = req
+			n.pendingResp[req.call.SeqId] = req
 			n.mu.Unlock()
 
 			if err := n.writeRequest(req.call); err != nil {
 				n.logger.Printf("failed to send request to %s: %s", n, err)
 
 				// notify the rpc caller.
-				req.call.err = err
+				req.call.Err = err
 				n.notifyCallerAndDrop(req)
 
 				// don give up if there's still hope
@@ -223,17 +244,17 @@ func (n *nodeSession) loopForResponse() error {
 		}
 
 		n.mu.Lock()
-		reqListener, ok := n.pendingResp[call.seqId]
+		reqListener, ok := n.pendingResp[call.SeqId]
 		n.mu.Unlock()
 
 		if !ok {
 			n.logger.Printf("ignore stale response (seqId: %d) from %s: %s",
-				call.seqId, n, call.result)
+				call.SeqId, n, call.Result)
 			continue
 		}
 
-		reqListener.call.err = call.err
-		reqListener.call.result = call.result
+		reqListener.call.Err = call.Err
+		reqListener.call.Result = call.Result
 		n.notifyCallerAndDrop(reqListener)
 	}
 }
@@ -268,21 +289,15 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 	return nil
 }
 
-// Invoke a rpc call.
-func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rpcRequestArgs, name string) (result rpcResponseResult, err error) {
+func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args RpcRequestArgs, name string) (result RpcResponseResult, err error) {
 	// either the ctx cancelled or the tomb killed will stop this rpc call.
 	ctxWithTomb := n.tom.Context(ctx)
 	if err := n.waitUntilSessionReady(ctxWithTomb); err != nil {
 		return nil, err
 	}
 
-	rcall := &rpcCall{}
-	rcall.args = args
-	rcall.name = name
-	rcall.seqId = atomic.AddInt32(&n.seqId, 1) // increment sequence id
-	rcall.gpid = gpid
-
-	rcall.rawReq, err = n.codec.Marshal(rcall)
+	seqId := atomic.AddInt32(&n.seqId, 1) // increment sequence id
+	rcall, err := MarshallPegasusRpc(n.codec, seqId, gpid, args, name)
 	if err != nil {
 		return nil, err
 	}
@@ -301,8 +316,8 @@ func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rp
 		select {
 		// receive from loopForResponse, or loopRequest failed
 		case <-req.ch:
-			err = rcall.err
-			result = rcall.result
+			err = rcall.Err
+			result = rcall.Result
 			return
 		case <-ctxWithTomb.Done():
 			err = ctxWithTomb.Err()
@@ -316,41 +331,20 @@ func (n *nodeSession) callWithGpid(ctx context.Context, gpid *base.Gpid, args rp
 	}
 }
 
-func (n *nodeSession) writeRequest(r *rpcCall) error {
-	return n.conn.Write(r.rawReq)
+func (n *nodeSession) writeRequest(r *PegasusRpcCall) error {
+	return n.conn.Write(r.RawReq)
 }
 
-// readResponse never returns nil `rpcCall` unless the tcp round trip failed.
+// readResponse never returns nil `PegasusRpcCall` unless the tcp round trip failed.
 // The pegasus node may responds with not-ERR_OK error code (together with
 // sequence id and rpc name) which doesn't mean that it failed due to
 // transport failure. This error should be handled by the upper-level rpc caller.
 // This session will not be closed for it.
-func (n *nodeSession) readResponse() (*rpcCall, error) {
-	// read length field
-	lenBuf, err := n.conn.Read(4)
-	if err != nil && len(lenBuf) < 4 {
-		return nil, err
-	}
-	resplen := binary.BigEndian.Uint32(lenBuf)
-	if resplen < 4 {
-		return nil, fmt.Errorf("response length(%d) smaller than 4 bytes", resplen)
-	}
-	resplen -= 4 // 4 bytes for length
-
-	// read data field
-	buf, err := n.conn.Read(int(resplen))
-	if err != nil || len(buf) != int(resplen) {
-		return nil, err
-	}
-
-	r := &rpcCall{}
-	if err := n.codec.Unmarshal(buf, r); err != nil {
-		return nil, err
-	}
-	return r, nil
+func (n *nodeSession) readResponse() (*PegasusRpcCall, error) {
+	return ReadRpcResponse(n.conn, n.codec)
 }
 
-func (n *nodeSession) Close() <-chan struct{} {
+func (n *nodeSession) Close() error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
@@ -360,5 +354,6 @@ func (n *nodeSession) Close() <-chan struct{} {
 		n.tom.Kill(errors.New("nodeSession closed"))
 	}
 
-	return n.tom.Dead()
+	<-n.tom.Dead()
+	return nil
 }

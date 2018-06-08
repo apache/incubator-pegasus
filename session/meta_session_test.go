@@ -20,7 +20,7 @@ func TestNodeSession_ContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	mm := NewMetaManager([]string{"0.0.0.0:34601"})
+	mm := NewMetaManager([]string{"0.0.0.0:34601"}, NewNodeSession)
 	defer mm.Close()
 	_, err := mm.QueryConfig(ctx, "temp")
 
@@ -40,7 +40,7 @@ func TestNodeSession_Call(t *testing.T) {
 func TestMetaSession_MustQueryLeader(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	mm := NewMetaManager([]string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"})
+	mm := NewMetaManager([]string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"}, NewNodeSession)
 	defer mm.Close()
 
 	resp, err := mm.QueryConfig(context.Background(), "temp")

@@ -10,7 +10,7 @@ import (
 func TestReplicaManager_GetReplica(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	rm := NewReplicaManager()
+	rm := NewReplicaManager(NewNodeSession)
 	defer rm.Close()
 
 	r1 := rm.GetReplica("127.0.0.1:34802")
@@ -23,7 +23,7 @@ func TestReplicaManager_GetReplica(t *testing.T) {
 func TestReplicaManager_Close(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	rm := NewReplicaManager()
+	rm := NewReplicaManager(NewNodeSession)
 
 	rm.GetReplica("127.0.0.1:34801")
 	rm.GetReplica("127.0.0.1:34802")

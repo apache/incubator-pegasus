@@ -71,7 +71,7 @@ type replicaNode struct {
 
 // Query for the configuration of the given table, and set up connection to
 // the replicas which the table locates on.
-func connectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager) (TableConnector, error) {
+func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager) (TableConnector, error) {
 	p := &pegasusTableConnector{
 		tableName:    tableName,
 		meta:         meta,
@@ -147,7 +147,7 @@ func validateHashKey(hashKey []byte) error {
 
 // Wraps up the internal errors for ensuring that all types of errors
 // returned by public interfaces are pegasus.PError.
-func wrapError(err error, op OpType) error {
+func WrapError(err error, op OpType) error {
 	if err != nil {
 		if pe, ok := err.(*PError); ok {
 			pe.Op = op
@@ -187,7 +187,7 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 			return resp.Value.Data, nil
 		}
 	}()
-	return b, wrapError(err, OpGet)
+	return b, WrapError(err, OpGet)
 }
 
 func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error {
@@ -206,7 +206,7 @@ func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey
 		}
 		return p.handleReplicaError(err, gpid, part)
 	}()
-	return wrapError(err, OpSet)
+	return WrapError(err, OpSet)
 }
 
 func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey []byte) error {
@@ -224,7 +224,7 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 		}
 		return p.handleReplicaError(err, gpid, part)
 	}()
-	return wrapError(err, OpDel)
+	return WrapError(err, OpDel)
 }
 
 func setRequestByOption(options MultiGetOptions, request *rrdb.MultiGetRequest) {
@@ -248,7 +248,7 @@ func (p *pegasusTableConnector) MultiGet(ctx context.Context, hashKey []byte, so
 	setRequestByOption(options, request)
 
 	kvs, err := p.doMultiGet(ctx, hashKey, request)
-	return kvs, wrapError(err, OpMultiGet)
+	return kvs, WrapError(err, OpMultiGet)
 }
 
 func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options MultiGetOptions) ([]KeyValue, error) {
@@ -259,7 +259,7 @@ func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byt
 	setRequestByOption(options, request)
 
 	kvs, err := p.doMultiGet(ctx, hashKey, request)
-	return kvs, wrapError(err, OpMultiGetRange)
+	return kvs, WrapError(err, OpMultiGetRange)
 }
 
 func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, request *rrdb.MultiGetRequest) ([]KeyValue, error) {
@@ -309,7 +309,7 @@ func (p *pegasusTableConnector) MultiSet(ctx context.Context, hashKey []byte, so
 	}
 
 	err := p.doMultiSet(ctx, hashKey, request)
-	return wrapError(err, OpMultiSet)
+	return WrapError(err, OpMultiSet)
 }
 
 func (p *pegasusTableConnector) doMultiSet(ctx context.Context, hashKey []byte, request *rrdb.MultiPutRequest) error {
@@ -351,7 +351,7 @@ func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, so
 		}
 		return p.handleReplicaError(err, gpid, part)
 	}()
-	return wrapError(err, OpMultiDel)
+	return WrapError(err, OpMultiDel)
 }
 
 func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error) {
@@ -373,7 +373,7 @@ func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey
 			return int(resp.GetTTLSeconds()), nil
 		}
 	}()
-	return ttl, wrapError(err, OpTTL)
+	return ttl, WrapError(err, OpTTL)
 }
 
 func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error) {
@@ -386,7 +386,7 @@ func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortK
 			return true, nil
 		}
 	}
-	return false, wrapError(err, OpTTL)
+	return false, WrapError(err, OpTTL)
 }
 
 func (p *pegasusTableConnector) GetScanner(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte,
@@ -433,7 +433,7 @@ func (p *pegasusTableConnector) GetScanner(ctx context.Context, hashKey []byte, 
 		}
 		return nil, fmt.Errorf("the scanning interval MUST NOT BE EMPTY")
 	}()
-	return scanner, wrapError(err, OpGetScanner)
+	return scanner, WrapError(err, OpGetScanner)
 }
 
 func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSplitCount int,
@@ -476,7 +476,7 @@ func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSpl
 		}
 		return scanners, nil
 	}()
-	return scanners, wrapError(err, OpGetUnorderedScanners)
+	return scanners, WrapError(err, OpGetUnorderedScanners)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {
@@ -529,7 +529,7 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 		}
 
 		// add gpid and remote address to error
-		perr := wrapError(err, 0).(*PError)
+		perr := WrapError(err, 0).(*PError)
 		if perr.Err != nil {
 			perr.Err = fmt.Errorf("%s [%s, %s]", perr.Err, gpid, replica)
 		} else {

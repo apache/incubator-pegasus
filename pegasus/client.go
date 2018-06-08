@@ -110,8 +110,8 @@ func NewClient(cfg Config) Client {
 
 	c := &pegasusClient{
 		tables:     make(map[string]TableConnector),
-		metaMgr:    session.NewMetaManager(cfg.MetaServers),
-		replicaMgr: session.NewReplicaManager(),
+		metaMgr:    session.NewMetaManager(cfg.MetaServers, session.NewNodeSession),
+		replicaMgr: session.NewReplicaManager(session.NewNodeSession),
 	}
 	return c
 }
@@ -212,7 +212,7 @@ func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableC
 		}
 
 		var tb TableConnector
-		tb, err := connectTable(ctx, tableName, p.metaMgr, p.replicaMgr)
+		tb, err := ConnectTable(ctx, tableName, p.metaMgr, p.replicaMgr)
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +220,7 @@ func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableC
 
 		return tb, nil
 	}()
-	return tb, wrapError(err, OpQueryConfig)
+	return tb, WrapError(err, OpQueryConfig)
 }
 
 func (p *pegasusClient) findTable(tableName string) TableConnector {

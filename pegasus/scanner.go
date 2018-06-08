@@ -127,7 +127,7 @@ func (p *pegasusScanner) Next(ctx context.Context) (err error, completed bool, h
 		p.batchStatus = batchError
 	}
 
-	err = wrapError(err, OpNext)
+	err = WrapError(err, OpNext)
 	return
 }
 
@@ -264,5 +264,5 @@ func (p *pegasusScanner) Close() error {
 
 	p.gpidIndex = 0
 	p.closed = true
-	return wrapError(err, OpScannerClose)
+	return WrapError(err, OpScannerClose)
 }
