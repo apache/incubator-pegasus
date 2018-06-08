@@ -61,6 +61,7 @@ do
       effect_count=`grep "$scenario_key=$scenario" /tmp/$UID.$PID.pegasus.query_app_envs.$app | wc -l`
       total_count=$((partition_count * replica_count))
       if [ $effect_count -ge $total_count ]; then
+        echo "[${sleeped}s] $effect_count/$total_count finished."
         echo "All finished."
         break
       else
