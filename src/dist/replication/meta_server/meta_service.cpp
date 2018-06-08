@@ -246,7 +246,7 @@ error_code meta_service::start()
         ddebug("initialize backup handler");
         _backup_handler = std::make_shared<backup_service>(
             this,
-            meta_options::concat_path_unix_style(_cluster_root, "backup_policy"),
+            meta_options::concat_path_unix_style(_cluster_root, "backup"),
             _opts.cold_backup_root,
             [](backup_service *bs) { return std::make_shared<policy_context>(bs); });
     }
