@@ -125,6 +125,9 @@ public:
         return _i->dsn_request;
     }
 
+    // the remote address where reveice request from and send response to.
+    rpc_address remote_address() const { return dsn_msg_from_address(dsn_request()); }
+
     // TCallback = void(dsn::error_code)
     // NOTE that the `error_code` is not the error carried by response. Users should
     // check the responded error themselves.

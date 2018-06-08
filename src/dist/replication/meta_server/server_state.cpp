@@ -2571,12 +2571,23 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
     if (!request.__isset.keys || !request.__isset.values ||
         request.keys.size() != request.values.size() || request.keys.size() <= 0) {
         env_rpc.response().err = ERR_INVALID_PARAMETERS;
-        dwarn("set_app_envs failed with invalid request");
+        dwarn("set app envs failed with invalid request");
         return;
     }
     const std::vector<std::string> &keys = request.keys;
     const std::vector<std::string> &values = request.values;
     const std::string &app_name = request.app_name;
+
+    std::ostringstream os;
+    for (int i = 0; i < keys.size(); i++) {
+        if (i != 0)
+            os << ", ";
+        os << keys[i] << "=" << values[i];
+    }
+    ddebug("set app envs for app(%s) from remote(%s): kvs = {%s}",
+           app_name.c_str(),
+           env_rpc.remote_address().to_string(),
+           os.str().c_str());
 
     app_info ainfo;
     std::string app_path;
@@ -2584,7 +2595,7 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         zauto_read_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
         if (app == nullptr) {
-            dwarn("set_app_env failed with invalid app_name(%s)", app_name.c_str());
+            dwarn("set app envs failed with invalid app_name(%s)", app_name.c_str());
             env_rpc.response().err = ERR_INVALID_PARAMETERS;
             env_rpc.response().hint_message = "invalid app name";
             return;
@@ -2599,11 +2610,17 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
     do_update_app_info(app_path, ainfo, [this, app_name, keys, values, env_rpc](error_code ec) {
         dassert(
             ec == ERR_OK, "update app_info to remote storage failed with err = %s", ec.to_string());
+
         zauto_write_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
+        std::string old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
         for (int idx = 0; idx < keys.size(); idx++) {
             app->envs[keys[idx]] = values[idx];
         }
+        std::string new_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+        ddebug("app envs changed: old_envs = {%s}, new_envs = {%s}",
+               old_envs.c_str(),
+               new_envs.c_str());
     });
 }
 
@@ -2612,11 +2629,22 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
     const configuration_update_app_env_request &request = env_rpc.request();
     if (!request.__isset.keys || request.keys.size() <= 0) {
         env_rpc.response().err = ERR_INVALID_PARAMETERS;
-        dwarn("del_app_envs failed with invalid request");
+        dwarn("del app envs failed with invalid request");
         return;
     }
     const std::vector<std::string> &keys = request.keys;
     const std::string &app_name = request.app_name;
+
+    std::ostringstream os;
+    for (int i = 0; i < keys.size(); i++) {
+        if (i != 0)
+            os << ",";
+        os << keys[i];
+    }
+    ddebug("del app envs for app(%s) from remote(%s): keys = {%s}",
+           app_name.c_str(),
+           env_rpc.remote_address().to_string(),
+           os.str().c_str());
 
     app_info ainfo;
     std::string app_path;
@@ -2624,7 +2652,7 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
         zauto_read_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
         if (app == nullptr) {
-            dwarn("del_app_env failed with invalid app_name(%s)", app_name.c_str());
+            dwarn("del app envs failed with invalid app_name(%s)", app_name.c_str());
             env_rpc.response().err = ERR_INVALID_PARAMETERS;
             env_rpc.response().hint_message = "invalid app name";
             return;
@@ -2645,6 +2673,7 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
     }
 
     if (deleted == 0) {
+        ddebug("no key need to delete");
         env_rpc.response().hint_message = "no key need to delete";
         return;
     } else {
@@ -2654,11 +2683,17 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
     do_update_app_info(app_path, ainfo, [this, app_name, keys, env_rpc](error_code ec) {
         dassert(
             ec == ERR_OK, "update app_info to remote storage failed with err = %s", ec.to_string());
+
         zauto_write_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
+        std::string old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
         for (const auto &key : keys) {
             app->envs.erase(key);
         }
+        std::string new_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+        ddebug("app envs changed: old_envs = {%s}, new_envs = {%s}",
+               old_envs.c_str(),
+               new_envs.c_str());
     });
 }
 
@@ -2667,12 +2702,16 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
     const configuration_update_app_env_request &request = env_rpc.request();
     if (!request.__isset.clear_prefix) {
         env_rpc.response().err = ERR_INVALID_PARAMETERS;
-        dwarn("clear_app_envs failed with invalid request");
+        dwarn("clear app envs failed with invalid request");
         return;
     }
 
     const std::string &prefix = request.clear_prefix;
     const std::string &app_name = request.app_name;
+    ddebug("clear app envs for app(%s) from remote(%s): prefix = {%s}",
+           app_name.c_str(),
+           env_rpc.remote_address().to_string(),
+           prefix.c_str());
 
     app_info ainfo;
     std::string app_path;
@@ -2680,7 +2719,7 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
         zauto_read_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
         if (app == nullptr) {
-            dwarn("del_app_env failed with invalid app_name(%s)", app_name.c_str());
+            dwarn("clear app envs failed with invalid app_name(%s)", app_name.c_str());
             env_rpc.response().err = ERR_INVALID_PARAMETERS;
             env_rpc.response().hint_message = "invalid app name";
             return;
@@ -2691,6 +2730,7 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
     }
 
     if (ainfo.envs.empty()) {
+        ddebug("no key need to delete");
         env_rpc.response().hint_message = "no key need to delete";
         return;
     }
@@ -2725,6 +2765,7 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
 
     if (!prefix.empty() && erase_keys.empty()) {
         // no need update app_info
+        ddebug("no key need to delete");
         env_rpc.response().hint_message = "no key need to delete";
         return;
     } else {
@@ -2739,6 +2780,7 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
 
             zauto_write_lock l(_lock);
             std::shared_ptr<app_state> app = get_app(app_name);
+            std::string old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
             if (prefix.empty()) {
                 app->envs.clear();
             } else {
@@ -2746,6 +2788,10 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
                     app->envs.erase(key);
                 }
             }
+            std::string new_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+            ddebug("app envs changed: old_envs = {%s}, new_envs = {%s}",
+                   old_envs.c_str(),
+                   new_envs.c_str());
         });
 }
 }
