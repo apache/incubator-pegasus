@@ -30,8 +30,6 @@ auto extractor = [](const std::string &value, S2LatLng &latlng) {
 class geo_client_test : public ::testing::Test
 {
 public:
-    geo_client_test() {}
-
     void SetUp() override
     {
         _geo_client = pegasus::geo_client("config.ini", "onebox", "temp", "temp_geo", extractor);
@@ -206,25 +204,25 @@ TEST_F(geo_client_test, large_cap)
         ASSERT_EQ(ret, pegasus::PERR_OK);
     }
 
-//    {
-//        // search the inserted data
-//        std::list<SearchResult> result;
-//        int ret = _geo_client.search_radial(
-//            "0", "", radius_m, -1, geo_client::SortType::nearest, 5000, result);
-//        ASSERT_EQ(ret, pegasus::PERR_OK);
-//        ASSERT_GE(result.size(), test_data_count);
-//        SearchResult last;
-//        for (const auto &r : result) {
-//            ASSERT_LE(last.distance, r.distance);
-//            uint64_t val;
-//            ASSERT_TRUE(dsn::buf2uint64(r.hash_key.c_str(), val));
-//            ASSERT_LE(0, val);
-//            ASSERT_LE(val, test_data_count);
-//            ASSERT_NE(last.hash_key, r.hash_key);
-//            ASSERT_EQ(r.sort_key, "");
-//            last = r;
-//        }
-//    }
+    {
+        // search the inserted data
+        std::list<SearchResult> result;
+        int ret = _geo_client.search_radial(
+            "0", "", radius_m * 2, -1, geo_client::SortType::nearest, 5000, result);
+        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_GE(result.size(), test_data_count);
+        SearchResult last;
+        for (const auto &r : result) {
+            ASSERT_LE(last.distance, r.distance);
+            uint64_t val;
+            ASSERT_TRUE(dsn::buf2uint64(r.hash_key.c_str(), val));
+            ASSERT_LE(0, val);
+            ASSERT_LE(val, test_data_count);
+            ASSERT_NE(last.hash_key, r.hash_key);
+            ASSERT_EQ(r.sort_key, "");
+            last = r;
+        }
+    }
 
     {
         // search the inserted data
@@ -232,7 +230,7 @@ TEST_F(geo_client_test, large_cap)
         int ret = _geo_client.search_radial(
             lat_degrees, lng_degrees, radius_m, -1, geo_client::SortType::nearest, 5000, result);
         ASSERT_EQ(ret, pegasus::PERR_OK);
-        //ASSERT_GE(result.size(), test_data_count);
+        ASSERT_GE(result.size(), test_data_count);
         SearchResult last;
         for (const auto &r : result) {
             ASSERT_LE(last.distance, r.distance);
@@ -246,4 +244,4 @@ TEST_F(geo_client_test, large_cap)
         }
     }
 }
-}
+} // namespace pegasus

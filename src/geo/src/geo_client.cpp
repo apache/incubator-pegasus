@@ -250,8 +250,9 @@ void geo_client::get_result_from_cells(const S2CellUnion &cids,
 
             // edge case: when the cell is the last one in Hilbert curve in current `_min_level`
             // cell
+            dassert(!start_stop_keys.first.empty(), "");
             if (start_stop_keys.second.empty()) {
-                start_stop_keys.second = start_stop_keys.first + "z";
+                start_stop_keys.second = get_sort_key(pre, hash_key) + "z";
                 results.emplace_back(std::vector<SearchResult>());
                 scan_count.fetch_add(1);
                 start_scan(hash_key,
@@ -320,8 +321,9 @@ int geo_client::extract_keys(const std::string &combined_sort_key,
     }
 
     auto combine_key_len = static_cast<unsigned int>(combined_sort_key.length() - leaf_cell_length);
-    pegasus_restore_key(
-        dsn::blob(combined_sort_key.c_str(), leaf_cell_length, combine_key_len), hash_key, sort_key);
+    pegasus_restore_key(dsn::blob(combined_sort_key.c_str(), leaf_cell_length, combine_key_len),
+                        hash_key,
+                        sort_key);
 
     return PERR_OK;
 }
@@ -339,7 +341,7 @@ int geo_client::set_common_data(const std::string &hash_key,
                                 pegasus_client::internal_info *info)
 {
     int ret = PERR_OK;
-/*    unsigned int retry_times = 0;
+    unsigned int retry_times = 0;
     do {
         if (retry_times > 0) {
             dwarn_f("retry set data. sleep {}ms", retry_times * 10);
@@ -347,7 +349,7 @@ int geo_client::set_common_data(const std::string &hash_key,
         }
         ret = _common_data_client->set(
             hash_key, sort_key, value, timeout_milliseconds, ttl_seconds, info);
-    } while (ret != PERR_OK && retry_times++ < _max_retry_times);*/
+    } while (ret != PERR_OK && retry_times++ < _max_retry_times);
 
     return ret;
 }
@@ -367,21 +369,20 @@ int geo_client::set_geo_data(const S2LatLng &latlng,
     std::string hash_key(parent_cell_id.ToString()); // [0,5]{1}/[0,3]{_min_level}
     std::string sort_key(leaf_cell_id.ToString().substr(hash_key.length()) + ":" +
                          combine_key); // [0,3]{30-_min_level}:combine_keys
-    dwarn_f("hash_key={}, sort_key={}", hash_key, sort_key);
 
     int ret = PERR_OK;
-//    unsigned int retry_times = 0;
-//    do {
-//        if (retry_times > 0) {
-//            dwarn_f("retry set geo_client data. sleep {}ms", retry_times * 10);
-//            usleep(retry_times * 10 * 1000);
-//        }
-//        ret = _geo_data_client->set(hash_key, sort_key, value, timeout_milliseconds, ttl_seconds);
-//        if (ret != PERR_OK) {
-//            derror_f("set data failed. error={}", _geo_data_client->get_error_string(ret));
-//        }
-//
-//    } while (ret != PERR_OK && retry_times++ < _max_retry_times);
+    unsigned int retry_times = 0;
+    do {
+        if (retry_times > 0) {
+            dwarn_f("retry set geo_client data. sleep {}ms", retry_times * 10);
+            usleep(retry_times * 10 * 1000);
+        }
+        ret = _geo_data_client->set(hash_key, sort_key, value, timeout_milliseconds, ttl_seconds);
+        if (ret != PERR_OK) {
+            derror_f("set data failed. error={}", _geo_data_client->get_error_string(ret));
+        }
+
+    } while (ret != PERR_OK && retry_times++ < _max_retry_times);
 
     return ret;
 }
@@ -394,7 +395,6 @@ void geo_client::start_scan(const std::string &hash_key,
                             scan_finish_callback cb,
                             std::vector<SearchResult> &result)
 {
-    dwarn_f("hash_key={}, start_sort_key={}, stop_sort_key={}", hash_key, start_sort_key, stop_sort_key);
     dsn::tasking::enqueue(
         LPC_GEO_SCAN_DATA,
         nullptr,
