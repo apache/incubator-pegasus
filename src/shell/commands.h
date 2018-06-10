@@ -2214,7 +2214,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         sleep_seconds++;
-        if (run_seconds > 0 && sleep_seconds >= run_seconds) {
+        if (!stopped_by_wait_seconds && run_seconds > 0 && sleep_seconds >= run_seconds) {
             bool expected = false;
             stopped_by_wait_seconds = error_occurred.compare_exchange_strong(expected, true);
         }
