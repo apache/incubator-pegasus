@@ -2214,7 +2214,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         sleep_seconds++;
-        if (!stopped_by_wait_seconds && run_seconds > 0 && sleep_seconds >= run_seconds) {
+        if (run_seconds > 0 && !stopped_by_wait_seconds && sleep_seconds >= run_seconds) {
             bool expected = false;
             stopped_by_wait_seconds = error_occurred.compare_exchange_strong(expected, true);
         }
@@ -2225,7 +2225,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
             if (contexts[i]->split_request_count.load() == 0)
                 completed_split_count++;
         }
-        if (error_occurred.load() && !stopped_by_wait_seconds) {
+        if (!stopped_by_wait_seconds && error_occurred.load()) {
             fprintf(stderr,
                     "INFO: processed for %d seconds, (%d/%d) splits, total %ld rows, last second "
                     "%ld rows, error occurred, terminating...\n",
@@ -2321,10 +2321,17 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    fprintf(stderr,
-            "\nCount %s, total %ld rows.\n",
-            error_occurred.load() ? "terminated" : "done",
-            total_rows);
+    std::string stop_desc;
+    if (error_occurred.load()) {
+        if (stopped_by_wait_seconds) {
+            stop_desc = "terminated as run time used out";
+        } else {
+            stop_desc = "terminated as error occurred";
+        }
+    } else {
+        stop_desc = "done";
+    }
+    fprintf(stderr, "\nCount %s, total %ld rows.\n", stop_desc.c_str(), total_rows);
 
     if (stat_size) {
         long row_size_sum = hash_key_size_sum + sort_key_size_sum + value_size_sum;
