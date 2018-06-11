@@ -366,16 +366,20 @@ TEST(json_helper, type_mismatch)
         "{\"b\":\"heheda\",\"s\":\"heheda\",\"d\":12.345}",
         "{\"b\":1,\"s\":[1, 2, 3],\"d\":12.345}",
         "{\"b\":1,\"s\":\"heheda\",\"d\":12.3.4.5}",
-        "{\"b\":1,\"s\":\"heheda\",\"d\":2345}",
         "{\"b\":1,\"s\":\"heheda\",\"d\":{}}",
+        "{\"b\":t,\"s\":\"heheda\",\"d\":{}}",
         "{\"b\":1,\"s\":\"heheda\",\"d\":12.345}",
+        "{\"b\":1,\"s\":\"heheda\",\"d\":2345}",
+        "{\"b\":1,\"s\":\"heheda\",\"d\":-0}",
+        "{\"b\":true,\"s\":\"heheda\",\"d\":-0}",
+        "{\"b\":false,\"s\":\"heheda\",\"d\":-0}",
         nullptr,
     };
-    bool expected1[] = {false, false, false, false, false, true};
+    bool expected1[] = {false, false, false, false, false, true, true, true, true, true};
     for (int i = 0; type_mismatch1[i]; ++i) {
         dsn::blob bb(type_mismatch1[i], 0, strlen(type_mismatch1[i]));
         bool result = dsn::json::json_forwarder<struct_type1>::decode(bb, t1);
-        ASSERT_EQ(expected1[i], result);
+        ASSERT_EQ(expected1[i], result) << "case " << i << " failed: " << type_mismatch1[i];
     }
 
     struct_type2 t2;

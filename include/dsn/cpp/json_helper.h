@@ -207,19 +207,32 @@ inline bool json_decode(const JsonObject &in, std::string &str)
 inline void json_encode(JsonWriter &out, bool t) { out.Int(t ? 1 : 0); }
 inline bool json_decode(const JsonObject &in, bool &t)
 {
-    dverify(in.IsInt());
-    int ans = in.GetInt();
-    t = (ans != 0);
-    return true;
+    if (in.IsInt()) {
+        int ans = in.GetInt();
+        t = (ans != 0);
+        return true;
+    } else if (in.IsBool()) {
+        t = in.GetBool();
+        return true;
+    }
+    return false;
 }
 
 // json serialization for double types
 inline void json_encode(JsonWriter &out, double d) { out.Double(d); }
 inline bool json_decode(const JsonObject &in, double &t)
 {
-    dverify(in.IsDouble());
-    t = in.GetDouble();
-    return true;
+    if (in.IsDouble()) {
+        t = in.GetDouble();
+        return true;
+    } else if (in.IsInt64()) {
+        t = (double)in.GetInt64();
+        return true;
+    } else if (in.IsUint64()) {
+        t = (double)in.GetUint64();
+        return true;
+    }
+    return false;
 }
 
 // json serialization for int types
