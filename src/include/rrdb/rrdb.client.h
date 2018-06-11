@@ -8,8 +8,6 @@
 namespace dsn {
 namespace apps {
 
-typedef rpc_holder<duplicate_request, duplicate_response> duplicate_rpc;
-
 class rrdb_client
 {
 public:
@@ -465,15 +463,6 @@ public:
                                        args,
                                        thread_hash,
                                        partition_hash);
-    }
-
-    // ---------- call RPC_RRDB_RRDB_DUPLICATE ------------
-
-    // - asynchronous with on-stack duplicate_request and duplicate_response
-    template <typename TCallback>
-    task_ptr duplicate(duplicate_rpc &rpc, TCallback &&callback, int reply_thread_hash = 0)
-    {
-        return rpc.call(_server, &_tracker, callback, reply_thread_hash);
     }
 
 private:
