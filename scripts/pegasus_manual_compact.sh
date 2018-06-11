@@ -283,12 +283,6 @@ if [ "${type}" != "once" ]; then
     exit 0
 fi
 
-disabled=`get_env ${cluster} ${app_name} "manual_compact.disabled"`
-if [ "${disabled}" == "true" ]; then
-    echo "Manual compact is disabled, not to wait"
-    exit 1
-fi
-
 ls_log_file="/tmp/$UID.$PID.pegasus.ls"
 echo ls | ./run.sh shell --cluster ${cluster} &>${ls_log_file}
 
