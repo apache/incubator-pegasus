@@ -2215,6 +2215,11 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
         std::this_thread::sleep_for(std::chrono::seconds(1));
         sleep_seconds++;
         if (run_seconds > 0 && !stopped_by_wait_seconds && sleep_seconds >= run_seconds) {
+            // here use compare-and-swap primitive:
+            // - if error_occurred is already set true by scanners as error occured, then
+            //   stopped_by_wait_seconds will be assigned as false.
+            // - else, error_occurred will be set true, and stopped_by_wait_seconds will be
+            //   assigned as true.
             bool expected = false;
             stopped_by_wait_seconds = error_occurred.compare_exchange_strong(expected, true);
         }
