@@ -37,7 +37,7 @@ int main(int argc, char **argv)
         return pegasus::PERR_OK;
     };
 
-    pegasus::geo_client my_geo("config.ini", argv[1], argv[2], argv[3], extractor);
+    pegasus::geo::geo_client my_geo("config.ini", argv[1], argv[2], argv[3], extractor);
 
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),
@@ -58,12 +58,12 @@ int main(int argc, char **argv)
     for (int i = 0; i < test_count; ++i) {
         S2LatLng latlng(S2Testing::SamplePoint(rect));
 
-        std::list<pegasus::SearchResult> result;
+        std::list<pegasus::geo::SearchResult> result;
         my_geo.search_radial(latlng.lat().degrees(),
                              latlng.lng().degrees(),
                              radius,
                              -1,
-                             pegasus::geo_client::SortType::random,
+                             pegasus::geo::geo_client::SortType::random,
                              500,
                              result);
 
@@ -75,9 +75,9 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < test_count; ++i) {
         std::string id = std::to_string(i);
-        std::list<pegasus::SearchResult> result;
+        std::list<pegasus::geo::SearchResult> result;
         my_geo.search_radial(
-            id, "", radius, 20, pegasus::geo_client::SortType::nearest, 500, result);
+            id, "", radius, 20, pegasus::geo::geo_client::SortType::nearest, 500, result);
 
         std::cout << "count: " << result.size() << std::endl;
         for (auto &data : result) {

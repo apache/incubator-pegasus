@@ -13,6 +13,7 @@
 #include <base/pegasus_key_schema.h>
 
 namespace pegasus {
+namespace geo {
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_GEO)
 DEFINE_TASK_CODE(LPC_GEO_SCAN_DATA, TASK_PRIORITY_COMMON, THREAD_POOL_GEO)
@@ -37,13 +38,6 @@ geo_client::geo_client(const char *config_file,
     // default: 16. edge length at level 16 is about 150m
     _max_level = (int32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "max_level", 16, "max cell level for scan");
-
-    // default: 5
-    _max_retry_times = (int32_t)dsn_config_get_value_uint64(
-        "geo_client.lib",
-        "max_retry_times",
-        5,
-        "max retry times when insert data into pegasus failed");
 }
 
 int geo_client::set(const std::string &hash_key,
@@ -53,21 +47,75 @@ int geo_client::set(const std::string &hash_key,
                     int ttl_seconds,
                     pegasus_client::internal_info *info)
 {
-    // TODO 异步并行set
-    int ret =
-        set_common_data(hash_key, sort_key, value, timeout_milliseconds / 2, ttl_seconds, info);
-    if (ret != PERR_OK) {
-        derror_f("set_common_data failed. hash_key={} sort_key={}", hash_key, sort_key);
-        return ret;
-    }
+    int ret = PERR_OK;
+    std::atomic<int> set_count(2);
+    dsn::utils::notify_event set_completed;
+    auto async_set_callback =
+        [&](int ec_, pegasus_client::internal_info &&info_, DataType data_type_) {
+            if (data_type_ == DataType::common) {
+                if (info != nullptr) {
+                    *info = std::move(info_);
+                }
+            }
 
-    ret = set_geo_data(hash_key, sort_key, value, timeout_milliseconds / 2, ttl_seconds);
-    if (ret != PERR_OK) {
-        derror_f("set_geo_data failed. hash_key={} sort_key={}", hash_key, sort_key);
-        return ret;
-    }
+            if (ec_ != PERR_OK) {
+                derror_f("set {} data failed. hash_key={}, sort_key={}",
+                         data_type_ == DataType::common ? "common" : "geo",
+                         hash_key,
+                         sort_key);
+                ret = ec_;
+            }
 
-    return PERR_OK;
+            set_count.fetch_sub(1);
+            if (set_count.load() == 0) {
+                set_completed.notify();
+            }
+        };
+
+    async_set_common_data(
+        hash_key, sort_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
+    async_set_geo_data(
+        hash_key, sort_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
+
+    set_completed.wait();
+
+    return ret;
+}
+
+void geo_client::async_set(const std::string &hash_key,
+                           const std::string &sort_key,
+                           const std::string &value,
+                           pegasus_client::async_set_callback_t &&callback,
+                           int timeout_milliseconds,
+                           int ttl_seconds)
+{
+    int ret = PERR_OK;
+    pegasus_client::internal_info info;
+    std::atomic<int> set_count(2);
+    auto async_set_callback =
+        [&](int ec_, pegasus_client::internal_info &&info_, DataType data_type_) {
+            if (data_type_ == DataType::common) {
+                info = std::move(info_);
+            }
+
+            if (ec_ != PERR_OK) {
+                derror_f("set {} data failed. hash_key={}, sort_key={}",
+                         data_type_ == DataType::common ? "common" : "geo",
+                         hash_key,
+                         sort_key);
+                ret = ec_;
+            }
+
+            set_count.fetch_sub(1);
+            if (set_count.load() == 0) {
+                callback(ret, std::move(info));
+            }
+        };
+
+    async_set_common_data(
+        hash_key, sort_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
+    async_set_geo_data(
+        hash_key, sort_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
 }
 
 int geo_client::set_geo_data(const std::string &hash_key,
@@ -83,22 +131,39 @@ int geo_client::set_geo_data(const std::string &hash_key,
         return ret;
     }
 
-    double lat_degrees = 40.039752;
-    double lng_degrees = 116.332557;
-    double radius_m = 10000;
-    S2Cap cap;
-    search_cap(S2LatLng::FromDegrees(lat_degrees, lng_degrees), radius_m, cap);
-
     std::string combine_key;
     combine_keys(hash_key, sort_key, combine_key);
 
-    ret = set_geo_data(latlng, combine_key, value, timeout_milliseconds / 2, ttl_seconds);
-    if (ret != PERR_OK) {
-        derror_f("set_geo_data failed. hash_key={}, sort_key={}", hash_key, sort_key);
-        return ret;
-    }
+    dsn::utils::notify_event set_completed;
+    auto async_set_callback = [&](int ec_, pegasus_client::internal_info &&info_) {
+        if (ec_ != PERR_OK) {
+            derror_f("set geo data failed. hash_key={}, sort_key={}", hash_key, sort_key);
+        }
+        set_completed.notify();
+    };
+    async_set_geo_data(
+        latlng, combine_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
 
+    set_completed.wait();
     return ret;
+}
+
+void geo_client::async_set_geo_data(const std::string &hash_key,
+                                    const std::string &sort_key,
+                                    const std::string &value,
+                                    pegasus_client::async_set_callback_t &&callback,
+                                    int timeout_milliseconds,
+                                    int ttl_seconds)
+{
+    async_set_geo_data(
+        hash_key,
+        sort_key,
+        value,
+        [cb = std::move(callback)](int error_code,
+                                   pegasus_client::internal_info &&info,
+                                   DataType data_type) { cb(error_code, std::move(info)); },
+        timeout_milliseconds,
+        ttl_seconds);
 }
 
 int geo_client::search_radial(double lat_degrees,
@@ -109,13 +174,40 @@ int geo_client::search_radial(double lat_degrees,
                               int timeout_milliseconds,
                               std::list<SearchResult> &result)
 {
+    int ret = PERR_OK;
     util::units::Meters radius((float)radius_m);
-    return search_radial(S2LatLng::FromDegrees(lat_degrees, lng_degrees),
-                         radius_m,
-                         count,
-                         sort_type,
-                         timeout_milliseconds,
-                         result);
+    dsn::utils::notify_event search_completed;
+    async_search_radial(S2LatLng::FromDegrees(lat_degrees, lng_degrees),
+                        radius_m,
+                        count,
+                        sort_type,
+                        timeout_milliseconds,
+                        [&](int error_code, std::list<SearchResult> &&r) {
+                            if (PERR_OK == error_code) {
+                                result = std::move(r);
+                            }
+                            ret = error_code;
+                            search_completed.notify();
+                        });
+    search_completed.wait();
+    return ret;
+}
+
+void geo_client::async_search_radial(double lat_degrees,
+                                     double lng_degrees,
+                                     double radius_m,
+                                     int count,
+                                     SortType sort_type,
+                                     int timeout_milliseconds,
+                                     geo_search_callback_t &&callback)
+{
+    util::units::Meters radius((float)radius_m);
+    async_search_radial(S2LatLng::FromDegrees(lat_degrees, lng_degrees),
+                        radius_m,
+                        count,
+                        sort_type,
+                        timeout_milliseconds,
+                        std::move(callback));
 }
 
 int geo_client::search_radial(const std::string &hash_key,
@@ -127,8 +219,8 @@ int geo_client::search_radial(const std::string &hash_key,
                               std::list<SearchResult> &result)
 {
     std::string value;
-    int ret =
-        _common_data_client->get(hash_key, sort_key, value, (int)(timeout_milliseconds * 0.2));
+    int ret = _common_data_client->get(
+        hash_key, sort_key, value, (int)(timeout_milliseconds * 0.2)); // TODO timeout control
     if (ret != pegasus::PERR_OK) {
         derror_f("get failed, error={}", _common_data_client->get_error_string(ret));
         return ret;
@@ -141,16 +233,66 @@ int geo_client::search_radial(const std::string &hash_key,
         return ret;
     }
 
-    return search_radial(
-        latlng, radius_m, count, sort_type, (int)(timeout_milliseconds * 0.8), result);
+    dsn::utils::notify_event search_completed;
+    async_search_radial(latlng,
+                        radius_m,
+                        count,
+                        sort_type,
+                        (int)(timeout_milliseconds * 0.8), // TODO timeout control
+                        [&](int error_code, std::list<SearchResult> &&r) {
+                            if (error_code == PERR_OK) {
+                                result = std::move(r);
+                                search_completed.notify();
+                            }
+                        });
+    search_completed.wait();
+
+    return PERR_OK;
 }
 
-int geo_client::search_radial(const S2LatLng &latlng,
-                              double radius_m,
-                              int count,
-                              SortType sort_type,
-                              int timeout_milliseconds,
-                              std::list<SearchResult> &result)
+void geo_client::async_search_radial(const std::string &hash_key,
+                                     const std::string &sort_key,
+                                     double radius_m,
+                                     int count,
+                                     SortType sort_type,
+                                     int timeout_milliseconds,
+                                     geo_search_callback_t &&callback)
+{
+    _common_data_client->async_get(
+        hash_key,
+        sort_key,
+        [ this, radius_m, count, sort_type, timeout_milliseconds, cb = std::move(callback) ](
+            int error_code, std::string &&value, pegasus_client::internal_info &&info) mutable {
+            if (error_code != PERR_OK) {
+                derror_f("get failed, error={}", _common_data_client->get_error_string(error_code));
+                cb(error_code, {});
+                return;
+            }
+
+            S2LatLng latlng;
+            int ret = _extractor(value, latlng);
+            if (ret != PERR_OK) {
+                derror_f("_extractor failed. value={}", value);
+                cb(error_code, {});
+                return;
+            }
+
+            async_search_radial(latlng,
+                                radius_m,
+                                count,
+                                sort_type,
+                                (int)(timeout_milliseconds * 0.8), // TODO timeout control
+                                std::move(cb));
+        },
+        (int)(timeout_milliseconds * 0.2)); // TODO timeout control
+}
+
+void geo_client::async_search_radial(const S2LatLng &latlng,
+                                     double radius_m,
+                                     int count,
+                                     SortType sort_type,
+                                     int timeout_milliseconds,
+                                     geo_search_callback_t &&callback)
 {
     S2Cap cap;
     search_cap(latlng, radius_m, cap);
@@ -159,12 +301,16 @@ int geo_client::search_radial(const S2LatLng &latlng,
     get_covering_cells(cap, cids);
 
     // each scan result store in a separate vector, we will combine all the results finally
-    std::list<std::vector<SearchResult>> results;
-    get_result_from_cells(cids, cap, count, sort_type, results);
-
-    normalize_result(results, count, sort_type, result);
-
-    return PERR_OK;
+    async_get_result_from_cells(cids,
+                                cap,
+                                count,
+                                sort_type,
+                                [ this, count, sort_type, cb = std::move(callback) ](
+                                    std::list<std::vector<SearchResult>> && results) {
+                                    std::list<SearchResult> result;
+                                    normalize_result(std::move(results), count, sort_type, result);
+                                    cb(PERR_OK, std::move(result));
+                                });
 }
 
 void geo_client::search_cap(const S2LatLng &latlng, double radius_m, S2Cap &cap)
@@ -182,11 +328,12 @@ void geo_client::get_covering_cells(const S2Cap &cap, S2CellUnion &cids)
     cids = rc.GetCovering(cap);
 }
 
-void geo_client::get_result_from_cells(const S2CellUnion &cids,
-                                       const S2Cap &cap,
-                                       int count,
-                                       SortType sort_type,
-                                       std::list<std::vector<SearchResult>> &results)
+// TODO it's not async!!
+void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
+                                             const S2Cap &cap,
+                                             int count,
+                                             SortType sort_type,
+                                             geo_search_callback_origin_t &&callback)
 {
     int single_scan_count = count;
     if (sort_type == SortType::nearest) {
@@ -194,13 +341,16 @@ void geo_client::get_result_from_cells(const S2CellUnion &cids,
     }
 
     // scan each cell
+    std::list<std::vector<SearchResult>> results;
     std::atomic<bool> send_finish(false);
     std::atomic<int> scan_count(0);
-    dsn::utils::notify_event op_completed;
-    auto scan_finish_cb = [&]() {
+    dsn::utils::notify_event search_completed;
+    auto scan_finish_cb = [&, cb = std::move(callback) ]()
+    {
         scan_count.fetch_sub(1);
         if (send_finish.load() && scan_count.load() == 0) {
-            op_completed.notify();
+            cb(std::move(results));
+            search_completed.notify();
         }
     };
 
@@ -266,10 +416,10 @@ void geo_client::get_result_from_cells(const S2CellUnion &cids,
         }
     }
     send_finish.store(true);
-    op_completed.wait();
+    search_completed.wait();
 }
 
-void geo_client::normalize_result(const std::list<std::vector<SearchResult>> &results,
+void geo_client::normalize_result(std::list<std::vector<SearchResult>> &&results,
                                   int count,
                                   SortType sort_type,
                                   std::list<SearchResult> &result)
@@ -333,32 +483,61 @@ std::string geo_client::get_sort_key(const S2CellId &max_level_cid, const std::s
     return std::move(max_level_cid.ToString().substr(hash_key.length()));
 }
 
-int geo_client::set_common_data(const std::string &hash_key,
-                                const std::string &sort_key,
-                                const std::string &value,
-                                int timeout_milliseconds,
-                                int ttl_seconds,
-                                pegasus_client::internal_info *info)
+void geo_client::async_set_common_data(const std::string &hash_key,
+                                       const std::string &sort_key,
+                                       const std::string &value,
+                                       geo_set_callback_t &&callback,
+                                       int timeout_milliseconds,
+                                       int ttl_seconds)
 {
-    int ret = PERR_OK;
-    unsigned int retry_times = 0;
-    do {
-        if (retry_times > 0) {
-            dwarn_f("retry set data. sleep {}ms", retry_times * 10);
-            usleep(retry_times * 10 * 1000);
-        }
-        ret = _common_data_client->set(
-            hash_key, sort_key, value, timeout_milliseconds, ttl_seconds, info);
-    } while (ret != PERR_OK && retry_times++ < _max_retry_times);
-
-    return ret;
+    _common_data_client->async_set(
+        hash_key,
+        sort_key,
+        value,
+        [cb = std::move(callback)](int error_code, pegasus_client::internal_info &&info) {
+            cb(error_code, std::move(info), DataType::common);
+        },
+        timeout_milliseconds,
+        ttl_seconds);
 }
 
-int geo_client::set_geo_data(const S2LatLng &latlng,
-                             const std::string &combine_key,
-                             const std::string &value,
-                             int timeout_milliseconds,
-                             int ttl_seconds)
+void geo_client::async_set_geo_data(const std::string &hash_key,
+                                    const std::string &sort_key,
+                                    const std::string &value,
+                                    geo_set_callback_t &&callback,
+                                    int timeout_milliseconds,
+                                    int ttl_seconds)
+{
+    S2LatLng latlng;
+    int ret = _extractor(value, latlng);
+    if (ret != PERR_OK) {
+        derror_f("_extractor failed. value={}", value);
+        if (callback != nullptr) {
+            callback(PERR_INVALID_HASH_KEY, pegasus_client::internal_info(), DataType::geo);
+        }
+        return;
+    }
+
+    std::string combine_key;
+    combine_keys(hash_key, sort_key, combine_key);
+
+    async_set_geo_data(
+        latlng,
+        combine_key,
+        value,
+        [cb = std::move(callback)](int error_code, pegasus_client::internal_info &&info) {
+            cb(error_code, std::move(info), DataType::geo);
+        },
+        timeout_milliseconds,
+        ttl_seconds);
+}
+
+void geo_client::async_set_geo_data(const S2LatLng &latlng,
+                                    const std::string &combine_key,
+                                    const std::string &value,
+                                    pegasus_client::async_set_callback_t &&callback,
+                                    int timeout_milliseconds,
+                                    int ttl_seconds)
 {
     // leaf cell
     S2CellId leaf_cell_id = S2Cell(latlng).id();
@@ -370,21 +549,8 @@ int geo_client::set_geo_data(const S2LatLng &latlng,
     std::string sort_key(leaf_cell_id.ToString().substr(hash_key.length()) + ":" +
                          combine_key); // [0,3]{30-_min_level}:combine_keys
 
-    int ret = PERR_OK;
-    unsigned int retry_times = 0;
-    do {
-        if (retry_times > 0) {
-            dwarn_f("retry set geo_client data. sleep {}ms", retry_times * 10);
-            usleep(retry_times * 10 * 1000);
-        }
-        ret = _geo_data_client->set(hash_key, sort_key, value, timeout_milliseconds, ttl_seconds);
-        if (ret != PERR_OK) {
-            derror_f("set data failed. error={}", _geo_data_client->get_error_string(ret));
-        }
-
-    } while (ret != PERR_OK && retry_times++ < _max_retry_times);
-
-    return ret;
+    _geo_data_client->async_set(
+        hash_key, sort_key, value, std::move(callback), timeout_milliseconds, ttl_seconds);
 }
 
 void geo_client::start_scan(const std::string &hash_key,
@@ -467,4 +633,5 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner *scanner,
         });
 }
 
+} // namespace geo
 } // namespace pegasus
