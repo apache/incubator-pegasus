@@ -257,8 +257,11 @@ fi
 
 # record start time
 all_start_time=`date +%s`
-echo "UID=$UID"
-echo "PID=$PID"
+echo "UID: $UID"
+echo "PID: $PID"
+echo "cluster: $cluster"
+echo "app_name: $app_name"
+echo "type: $type"
 echo "Start time: `date -d @${all_start_time} +"%Y-%m-%d %H:%M:%S"`"
 echo
 

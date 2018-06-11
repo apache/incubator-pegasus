@@ -23,8 +23,11 @@ if [ "$scenario" != "normal" -a "$scenario" != "prefer_write" -a "$scenario" != 
     exit 1
 fi
 
-echo "UID=$UID"
-echo "PID=$PID"
+echo "UID: $UID"
+echo "PID: $PID"
+echo "cluster: $cluster"
+echo "app_name: $app_name"
+echo "scenario: $scenario"
 echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
