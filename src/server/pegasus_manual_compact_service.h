@@ -14,10 +14,10 @@ namespace server {
 
 class pegasus_server_impl;
 
-class pagasus_manual_compact_service : public dsn::replication::replica_base
+class pegasus_manual_compact_service : public dsn::replication::replica_base
 {
 public:
-    explicit pagasus_manual_compact_service(pegasus_server_impl *app);
+    explicit pegasus_manual_compact_service(pegasus_server_impl *app);
 
     void init_last_finish_time_ms(uint64_t last_finish_time_ms);
 
@@ -28,8 +28,13 @@ public:
 private:
     friend class manual_compact_service_test;
 
+    // return true if manual compaction is disabled.
+    bool check_compact_disabled(const std::map<std::string, std::string> &envs);
+
+    // return true if need do once manual compaction.
     bool check_once_compact(const std::map<std::string, std::string> &envs);
 
+    // return true if need do periodic manual compaction.
     bool check_periodic_compact(const std::map<std::string, std::string> &envs);
 
     void extract_manual_compact_opts(const std::map<std::string, std::string> &envs,
@@ -57,6 +62,7 @@ private:
     int32_t _manual_compact_min_interval_seconds;
 
     // manual compact state
+    std::atomic<bool> _disabled;
     std::atomic<uint64_t> _manual_compact_enqueue_time_ms;
     std::atomic<uint64_t> _manual_compact_start_running_time_ms;
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;

@@ -2,14 +2,16 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "killer_handler_shell.h"
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
 #include <sstream>
 #include <fstream>
+
 #include <dsn/utility/config_api.h>
 #include <dsn/c/api_utilities.h>
+
+#include "killer_handler_shell.h"
 
 namespace pegasus {
 namespace test {

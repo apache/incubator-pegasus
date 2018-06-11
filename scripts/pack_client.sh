@@ -19,19 +19,19 @@ cd $shell_dir
 if [ ! -f src/include/pegasus/git_commit.h ]
 then
     echo "ERROR: src/include/pegasus/git_commit.h not found"
-    exit -1
+    exit 1
 fi
 
 if [ ! -f DSN_ROOT/bin/pegasus_server/pegasus_server ]
 then
     echo "ERROR: DSN_ROOT/bin/pegasus_server/pegasus_server not found"
-    exit -1
+    exit 1
 fi
 
 if [ ! -f src/builder/CMAKE_OPTIONS ]
 then
     echo "ERROR: src/builder/CMAKE_OPTIONS not found"
-    exit -1
+    exit 1
 fi
 
 if grep -q Debug src/builder/CMAKE_OPTIONS

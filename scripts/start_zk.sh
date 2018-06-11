@@ -7,20 +7,20 @@
 if [ -z "$INSTALL_DIR" ]
 then
     echo "ERROR: no INSTALL_DIR specified"
-    exit -1
+    exit 1
 fi
 
 if [ -z "$PORT" ]
 then
     echo "ERROR: no PORT specified"
-    exit -1
+    exit 1
 fi
 
 mkdir -p $INSTALL_DIR
 if [ $? -ne 0 ]
 then
     echo "ERROR: mkdir $PREFIX failed"
-    exit -1
+    exit 1
 fi
 
 cd $INSTALL_DIR
@@ -34,7 +34,7 @@ if [ ! -f zookeeper-3.4.6.tar.gz ]; then
         wget -T 5 -t 1 $download_url
         if [ $? -ne 0 ]; then
             echo "ERROR: download zookeeper failed"
-            exit -1
+            exit 1
         fi
     fi
 fi
@@ -44,7 +44,7 @@ if [ ! -d zookeeper-3.4.6 ]; then
     tar xfz zookeeper-3.4.6.tar.gz
     if [ $? -ne 0 ]; then
         echo "ERROR: decompress zookeeper failed"
-        exit -1
+        exit 1
     fi
 fi
 
@@ -64,6 +64,6 @@ if echo ruok | nc localhost $ZOOKEEPER_PORT | grep -q imok; then
     exit 0
 else
     echo "ERROR: start zookeeper failed"
-    exit -1
+    exit 1
 fi
  

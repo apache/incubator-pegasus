@@ -14,7 +14,7 @@
 
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
-#include "pagasus_manual_compact_service.h"
+#include "pegasus_manual_compact_service.h"
 #include "pegasus_write_service.h"
 
 namespace pegasus {
@@ -153,7 +153,7 @@ public:
     }
 
 private:
-    friend class pagasus_manual_compact_service;
+    friend class pegasus_manual_compact_service;
     friend class manual_compact_service_test;
     friend class pegasus_write_service;
 
@@ -227,6 +227,13 @@ private:
     // return true if successfully set
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
 
+    // return random value in range of [0.75,1.25] * base_value
+    inline uint64_t get_random_nearby(uint64_t base_value)
+    {
+        uint64_t gap = base_value / 4;
+        return dsn_random64(base_value - gap, base_value + gap);
+    }
+
 private:
     dsn::gpid _gpid;
     std::string _primary_address;
@@ -263,7 +270,7 @@ private:
     ::dsn::task_ptr _updating_rocksdb_sstsize_timer_task;
     uint32_t _updating_rocksdb_sstsize_interval_seconds;
 
-    pagasus_manual_compact_service _manual_compact_svc;
+    pegasus_manual_compact_service _manual_compact_svc;
 
     dsn::task_tracker _tracker;
 
