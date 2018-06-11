@@ -29,7 +29,7 @@ thrift_description = [
         },
         "file_move": {
             ".types.h _types.h": "include/dsn/cpp/serialization_helper",
-            "_types.cpp": "src/dev/cpp"
+            "_types.cpp": "src/core/core"
         }
     },
     {
@@ -73,7 +73,8 @@ thrift_description = [
                 "add": ["<dsn/dist/replication/replication_types.h>"],
                 "remove": ["\"replication_types.h\""]
             }
-        }
+        },
+        "add_end_newline": ["replication.types.h"]
     }, 
     {
         "name": "simple_kv", 
@@ -193,6 +194,29 @@ def replace_struct_usage(cpp_file, enum_class):
     sed_exp = "sed -i " + " ".join(["-e \'s/%s::type/%s/\'"%(i,i) for i in enum_class]) + " " + cpp_file
     os.system(sed_exp)
 
+def add_end_newline_file(filename):
+    tmp_result = filename + ".swapfile"
+    from_fd, to_fd = open(filename, "r"), open(tmp_result, "w")
+
+    for line in from_fd:
+        to_fd.write(line)
+    to_fd.write("\n");
+
+    from_fd.close()
+    to_fd.close()
+
+    os.remove(filename)
+    os.rename(tmp_result, filename)
+
+def add_end_newline(thrift_name, add_end_newline_list):
+    # current dir is thrift file dir
+    os.chdir("output")
+
+    for filename in add_end_newline_list:
+        add_end_newline_file(filename)
+
+    os.chdir("..")
+
 def fix_include_file(filename, fix_commands):
     tmp_result = filename + ".swapfile"
     from_fd, to_fd = open(filename, "r"), open(tmp_result, "w")
@@ -269,6 +293,9 @@ def compile_thrift_file(thrift_info):
     os.system("cp build/%s_types.h output"%(thrift_name))
     os.system("cp build/%s_types.cpp output"%(thrift_name))
     os.system("rm -rf build")
+
+    if "add_end_newline" in thrift_info:
+        add_end_newline(thrift_name, thrift_info["add_end_newline"])
 
     if "include_fix" in thrift_info:
         fix_include(thrift_name, thrift_info["include_fix"])
