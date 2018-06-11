@@ -7,6 +7,7 @@ set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
                 "../pegasus_event_listener.cpp"
                 "../pegasus_write_service.cpp"
                 "../pegasus_server_write.cpp"
+                "../pegasus_duplication_backlog_handler.cpp"
 )
 
 set(MY_SRC_SEARCH_MODE "GLOB")

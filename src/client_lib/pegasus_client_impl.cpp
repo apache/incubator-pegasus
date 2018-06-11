@@ -941,6 +941,12 @@ int pegasus_client_impl::get_unordered_scanners(int max_split_count,
     return ret;
 }
 
+void pegasus_client_impl::async_duplicate(dsn::apps::duplicate_rpc rpc,
+                                          std::function<void(dsn::error_code)> &&callback)
+{
+    _client->duplicate(rpc, std::move(callback));
+}
+
 const char *pegasus_client_impl::get_error_string(int error_code) const
 {
     auto it = _client_error_to_string.find(error_code);
