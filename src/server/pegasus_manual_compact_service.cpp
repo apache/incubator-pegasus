@@ -2,7 +2,7 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "pagasus_manual_compact_service.h"
+#include "pegasus_manual_compact_service.h"
 
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
@@ -17,9 +17,10 @@ namespace server {
 
 DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
 
-pagasus_manual_compact_service::pagasus_manual_compact_service(pegasus_server_impl *app)
+pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_impl *app)
     : replica_base(*app),
       _app(app),
+      _disabled(false),
       _manual_compact_enqueue_time_ms(0),
       _manual_compact_start_running_time_ms(0),
       _manual_compact_last_finish_time_ms(0),
@@ -43,14 +44,18 @@ pagasus_manual_compact_service::pagasus_manual_compact_service(pegasus_server_im
                                                        "current manual compact running count");
 }
 
-void pagasus_manual_compact_service::init_last_finish_time_ms(uint64_t last_finish_time_ms)
+void pegasus_manual_compact_service::init_last_finish_time_ms(uint64_t last_finish_time_ms)
 {
     _manual_compact_last_finish_time_ms.store(last_finish_time_ms);
 }
 
-void pagasus_manual_compact_service::start_manual_compact_if_needed(
+void pegasus_manual_compact_service::start_manual_compact_if_needed(
     const std::map<std::string, std::string> &envs)
 {
+    if (check_compact_disabled(envs)) {
+        return;
+    }
+
     std::string compact_rule;
     if (check_once_compact(envs)) {
         compact_rule = MANUAL_COMPACT_ONCE_KEY_PREFIX;
@@ -79,7 +84,31 @@ void pagasus_manual_compact_service::start_manual_compact_if_needed(
     }
 }
 
-bool pagasus_manual_compact_service::check_once_compact(
+bool pegasus_manual_compact_service::check_compact_disabled(
+    const std::map<std::string, std::string> &envs)
+{
+    bool new_disabled = false;
+    auto find = envs.find(MANUAL_COMPACT_DISABLED_KEY);
+    if (find != envs.end() && find->second == "true") {
+        new_disabled = true;
+    }
+
+    bool old_disabled = _disabled.load();
+    if (new_disabled != old_disabled) {
+        // flag changed
+        if (new_disabled) {
+            ddebug_replica("manual compact is set to disabled now");
+            _disabled.store(true);
+        } else {
+            ddebug_replica("manual compact is set to enabled now");
+            _disabled.store(false);
+        }
+    }
+
+    return new_disabled;
+}
+
+bool pegasus_manual_compact_service::check_once_compact(
     const std::map<std::string, std::string> &envs)
 {
     auto find = envs.find(MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY);
@@ -96,16 +125,10 @@ bool pagasus_manual_compact_service::check_once_compact(
     return trigger_time > _manual_compact_last_finish_time_ms.load() / 1000;
 }
 
-bool pagasus_manual_compact_service::check_periodic_compact(
+bool pegasus_manual_compact_service::check_periodic_compact(
     const std::map<std::string, std::string> &envs)
 {
-    auto find = envs.find(MANUAL_COMPACT_PERIODIC_DISABLED_KEY);
-    if (find != envs.end() && find->second == "true") {
-        dwarn_replica("periodic_compact is disabled now.");
-        return false;
-    }
-
-    find = envs.find(MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
+    auto find = envs.find(MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
     if (find == envs.end()) {
         return false;
     }
@@ -140,7 +163,7 @@ bool pagasus_manual_compact_service::check_periodic_compact(
     return false;
 }
 
-uint64_t pagasus_manual_compact_service::now_timestamp()
+uint64_t pegasus_manual_compact_service::now_timestamp()
 {
 #ifdef PEGASUS_UNIT_TEST
     ddebug_replica("_mock_now_timestamp={}", _mock_now_timestamp);
@@ -150,7 +173,7 @@ uint64_t pagasus_manual_compact_service::now_timestamp()
 #endif
 }
 
-void pagasus_manual_compact_service::extract_manual_compact_opts(
+void pegasus_manual_compact_service::extract_manual_compact_opts(
     const std::map<std::string, std::string> &envs,
     const std::string &key_prefix,
     rocksdb::CompactRangeOptions &options)
@@ -192,7 +215,7 @@ void pagasus_manual_compact_service::extract_manual_compact_opts(
     }
 }
 
-bool pagasus_manual_compact_service::check_manual_compact_state()
+bool pegasus_manual_compact_service::check_manual_compact_state()
 {
     uint64_t not_enqueue = 0;
     uint64_t now = now_timestamp();
@@ -210,14 +233,21 @@ bool pagasus_manual_compact_service::check_manual_compact_state()
     }
 }
 
-void pagasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeOptions &options)
+void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeOptions &options)
 {
+    // if we find manual compaction is disabled when transfer from queue to running,
+    // it would not to be started.
+    if (_disabled.load()) {
+        _manual_compact_enqueue_time_ms.store(0);
+        return;
+    }
+
     uint64_t start = begin_manual_compact();
     uint64_t finish = _app->do_manual_compact(options);
     end_manual_compact(start, finish);
 }
 
-uint64_t pagasus_manual_compact_service::begin_manual_compact()
+uint64_t pegasus_manual_compact_service::begin_manual_compact()
 {
     ddebug_replica("start to execute manual compaction");
     _pfc_manual_compact_running_count->increment();
@@ -226,7 +256,7 @@ uint64_t pagasus_manual_compact_service::begin_manual_compact()
     return start;
 }
 
-void pagasus_manual_compact_service::end_manual_compact(uint64_t start, uint64_t finish)
+void pegasus_manual_compact_service::end_manual_compact(uint64_t start, uint64_t finish)
 {
     ddebug_replica("finish to execute manual compaction, time_used = {}ms", finish - start);
     _manual_compact_last_finish_time_ms.store(finish);
@@ -236,7 +266,7 @@ void pagasus_manual_compact_service::end_manual_compact(uint64_t start, uint64_t
     _pfc_manual_compact_running_count->decrement();
 }
 
-std::string pagasus_manual_compact_service::query_compact_state() const
+std::string pegasus_manual_compact_service::query_compact_state() const
 {
     uint64_t enqueue_time_ms = _manual_compact_enqueue_time_ms.load();
     uint64_t start_time_ms = _manual_compact_start_running_time_ms.load();

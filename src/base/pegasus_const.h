@@ -21,9 +21,11 @@ extern const std::string ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
 extern const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE;
 extern const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
 
+extern const std::string MANUAL_COMPACT_KEY_PREFIX;
+extern const std::string MANUAL_COMPACT_DISABLED_KEY;
+
 extern const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX;
 extern const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY;
-extern const std::string MANUAL_COMPACT_PERIODIC_DISABLED_KEY;
 
 extern const std::string MANUAL_COMPACT_ONCE_KEY_PREFIX;
 extern const std::string MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY;
@@ -33,4 +35,5 @@ extern const std::string MANUAL_COMPACT_TARGET_LEVEL_KEY;
 extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY;
 extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
 extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
+
 } // namespace

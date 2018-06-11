@@ -54,24 +54,24 @@ function usage()
 function usage_build()
 {
     echo "Options for subcommand 'build':"
-    echo "   -h|--help         print the help info"
-    echo "   -t|--type         build type: debug|release, default is release"
-    echo "   -s|--serialize    serialize type: dsn|thrift|proto, default is thrift"
-    echo "   -c|--clear        clear the environment before building"
-    echo "   -cc|--half-clear  only clear the environment of replication before building"
-    echo "   -j|--jobs <num>   the number of jobs to run simultaneously, default 8"
-    echo "   -b|--boost_dir <dir>"
-    echo "                     specify customized boost directory,"
-    echo "                     if not set, then use the system boost"
-    echo "   -w|--warning_all  open all warnings when build, default no"
-    echo "   --enable_gcov     generate gcov code coverage report, default no"
-    echo "   -v|--verbose      build in verbose mode, default no"
+    echo "   -h|--help             print the help info"
+    echo "   -t|--type             build type: debug|release, default is release"
+    echo "   -s|--serialize        serialize type: dsn|thrift|proto, default is thrift"
+    echo "   -c|--clear            clear rdsn/rocksdb/pegasus before building, not clear thirdparty"
+    echo "   -cc|--half-clear      clear pegasus before building, not clear thirdparty/rdsn/rocksdb"
+    echo "   --clear_thirdparty    clear thirdparty/rdsn/rocksdb/pegasus before building"
+    echo "   -j|--jobs <num>       the number of jobs to run simultaneously, default 8"
+    echo "   -b|--boost_dir <dir>  specify customized boost directory, use system boost if not set"
+    echo "   -w|--warning_all      open all warnings when building, default no"
+    echo "   --enable_gcov         generate gcov code coverage report, default no"
+    echo "   -v|--verbose          build in verbose mode, default no"
 }
 function run_build()
 {
     BUILD_TYPE="release"
     CLEAR=NO
     PART_CLEAR=NO
+    CLEAR_THIRDPARTY=NO
     JOB_NUM=8
     BOOST_DIR=""
     WARNING_ALL=NO
@@ -95,6 +95,9 @@ function run_build()
             -cc|--part_clear)
                 PART_CLEAR=YES
                 ;;
+            --clear_thirdparty)
+                CLEAR_THIRDPARTY=YES
+                ;;
             -j|--jobs)
                 JOB_NUM="$2"
                 shift
@@ -116,7 +119,7 @@ function run_build()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_build
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -125,17 +128,17 @@ function run_build()
         echo "ERROR: invalid build type \"$BUILD_TYPE\""
         echo
         usage_build
-        exit -1
+        exit 1
     fi
 
     if [ ! -d $ROOT/rdsn/include ]; then
         echo "ERROR: rdsn submodule not fetched"
-        exit -1
+        exit 1
     fi
 
     export DSN_ROOT=$ROOT/rdsn/builder/output
     if [ ! -e $ROOT/DSN_ROOT ]; then
-        ln -s $DSN_ROOT $ROOT/DSN_ROOT
+        ln -sf $DSN_ROOT $ROOT/DSN_ROOT
     fi
 
     echo "INFO: start build rdsn..."
@@ -147,10 +150,13 @@ function run_build()
     if [ "$CLEAR" == "YES" ]; then
         OPT="$OPT -c"
     fi
+    if [ "$CLEAR_THIRDPARTY" == "YES" ]; then
+        OPT="$OPT --clear_thirdparty"
+    fi
     ./run.sh build $OPT
     if [ $? -ne 0 ]; then
         echo "ERROR: build rdsn failed"
-        exit -1
+        exit 1
     fi
 
     echo "INFO: start build pegasus..."
@@ -160,7 +166,7 @@ function run_build()
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" ./build.sh
     if [ $? -ne 0 ]; then
         echo "ERROR: build pegasus failed"
-        exit -1
+        exit 1
     fi
 
     cd $ROOT
@@ -199,7 +205,7 @@ function run_test()
                 echo "Error: unknow option \"$key\""
                 echo
                 usage_test
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -219,7 +225,7 @@ function run_test()
         REPORT_DIR=$REPORT_DIR ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
-            exit
+            exit 1
         fi
         popd
     done
@@ -248,13 +254,13 @@ function run_start_zk()
     java -help 1>/dev/null 2>/dev/null
     if [ $? != 0 ]; then
         echo "start zk failed, need install jre..."
-        exit
+        exit 1
     fi
     # check nc command
     nc -help 1>/dev/null 2>/dev/null
     if [ $? != 0 ]; then
         echo "start zk failed, need install netcat command..."
-        exit
+        exit 1
     fi
     INSTALL_DIR=`pwd`/.zk_install
     PORT=22181
@@ -277,7 +283,7 @@ function run_start_zk()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_start_zk
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -314,7 +320,7 @@ function run_stop_zk()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_stop_zk
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -351,7 +357,7 @@ function run_clear_zk()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_clear__zk
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -370,6 +376,8 @@ function usage_start_onebox()
     echo "                     meta server count, default is 3"
     echo "   -r|--replica_count <num>"
     echo "                     replica server count, default is 3"
+    echo "   -c|--collector"
+    echo "                     start the collector server, default not start"
     echo "   -a|--app_name <str>"
     echo "                     default app name, default is temp"
     echo "   -p|--partition_count <num>"
@@ -384,6 +392,7 @@ function run_start_onebox()
 {
     META_COUNT=3
     REPLICA_COUNT=3
+    COLLECTOR_COUNT=0
     APP_NAME=temp
     PARTITION_COUNT=8
     SERVER_PATH=${DSN_ROOT}/bin/pegasus_server
@@ -402,6 +411,9 @@ function run_start_onebox()
             -r|--replica_count)
                 REPLICA_COUNT="$2"
                 shift
+                ;;
+            -c|--collector)
+                COLLECTOR_COUNT=1
                 ;;
             -a|--app_name)
                 APP_NAME="$2"
@@ -422,18 +434,18 @@ function run_start_onebox()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_start_onebox
-                exit -1
+                exit 1
                 ;;
         esac
         shift
     done
     if [ ! -f ${SERVER_PATH}/pegasus_server ]; then
         echo "ERROR: file ${SERVER_PATH}/pegasus_server not exist"
-        exit -1
+        exit 1
     fi
-    if ps -ef | grep ' /pegasus_server config.ini' | grep -E 'app_list meta|app_list replica'; then
+    if ps -ef | grep '/pegasus_server config.ini' | grep -E -q 'app_list meta|app_list replica|app_list collector'; then
         echo "ERROR: some onebox processes are running, start failed"
-        exit -1
+        exit 1
     fi
     ln -s -f ${SERVER_PATH}/pegasus_server
     run_start_zk
@@ -498,6 +510,18 @@ function run_start_onebox()
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
     done
+    if [ $COLLECTOR_COUNT -eq 1 ]
+    then
+        mkdir -p collector
+        cd collector
+        ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
+        sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/34800/" ${ROOT}/config-server.ini >config.ini
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list collector &>result &"
+        $PWD/pegasus_server config.ini -app_list collector &>result &
+        PID=$!
+        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+        cd ..
+    fi
 }
 
 #####################
@@ -522,12 +546,12 @@ function run_stop_onebox()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_stop_onebox
-                exit -1
+                exit 1
                 ;;
         esac
         shift
     done
-    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | awk '{print $2}' | xargs kill &>/dev/null
 }
 
 #####################
@@ -552,12 +576,12 @@ function run_list_onebox()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_list_onebox
-                exit -1
+                exit 1
                 ;;
         esac
         shift
     done
-    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica' | sort -k11
+    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | sort -k11
 }
 
 #####################
@@ -582,7 +606,7 @@ function run_clear_onebox()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_clear_onebox
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -598,17 +622,17 @@ function run_clear_onebox()
 function usage_start_onebox_instance()
 {
     echo "Options for subcommand 'start_onebox_instance':"
-    echo "   -h|--help         print the help info"
-    echo "   -m|--meta_id <num>"
-    echo "                     meta server id"
-    echo "   -r|--replica_id <num>"
-    echo "                     replica server id"
+    echo "   -h|--help              print the help info"
+    echo "   -m|--meta_id <num>     start meta server with id"
+    echo "   -r|--replica_id <num>  start replica server with id"
+    echo "   -c|--collector         start collector server"
 }
 
 function run_start_onebox_instance()
 {
     META_ID=0
     REPLICA_ID=0
+    COLLECTOR_ID=0
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -624,32 +648,31 @@ function run_start_onebox_instance()
                 REPLICA_ID="$2"
                 shift
                 ;;
+            -c|--collector)
+                COLLECTOR_ID=1
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_start_onebox_instance
-                exit -1
+                exit 1
                 ;;
         esac
         shift
     done
-    if [ $META_ID = "0" -a $REPLICA_ID = "0" ]; then
-        echo "ERROR: no meta_id or replica_id set"
-        exit -1
-    fi
-    if [ $META_ID != "0" -a $REPLICA_ID != "0" ]; then
-        echo "ERROR: meta_id and replica_id can only set one"
-        exit -1
+    if [ $META_ID = "0" -a $REPLICA_ID = "0" -a $COLLECTOR_ID = "0" ]; then
+        echo "ERROR: no meta_id or replica_id or collector set"
+        exit 1
     fi
     if [ $META_ID != "0" ]; then
         dir=onebox/meta$META_ID
         if [ ! -d $dir ]; then
             echo "ERROR: invalid meta_id"
-            exit -1
+            exit 1
         fi
         if ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" ; then
             echo "INFO: meta@$META_ID already running"
-            exit -1
+            exit 1
         fi
         cd $dir
         echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list meta &>result &"
@@ -663,11 +686,11 @@ function run_start_onebox_instance()
         dir=onebox/replica$REPLICA_ID
         if [ ! -d $dir ]; then
             echo "ERROR: invalid replica_id"
-            exit -1
+            exit 1
         fi
         if ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" ; then
             echo "INFO: replica@$REPLICA_ID already running"
-            exit -1
+            exit 1
         fi
         cd $dir
         echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list replica &>result &"
@@ -677,6 +700,24 @@ function run_start_onebox_instance()
         cd ..
         echo "INFO: replica@$REPLICA_ID started"
     fi
+    if [ $COLLECTOR_ID != "0" ]; then
+        dir=onebox/collector
+        if [ ! -d $dir ]; then
+            echo "ERROR: collector dir $dir not exist"
+            exit 1
+        fi
+        if ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" ; then
+            echo "INFO: collector already running"
+            exit 1
+        fi
+        cd $dir
+        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list collector &>result &"
+        $PWD/pegasus_server config.ini -app_list collector &>result &
+        PID=$!
+        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+        cd ..
+        echo "INFO: collector started"
+    fi
 }
 
 #####################
@@ -685,17 +726,17 @@ function run_start_onebox_instance()
 function usage_stop_onebox_instance()
 {
     echo "Options for subcommand 'stop_onebox_instance':"
-    echo "   -h|--help         print the help info"
-    echo "   -m|--meta_id <num>"
-    echo "                     meta server id"
-    echo "   -r|--replica_id <num>"
-    echo "                     replica server id"
+    echo "   -h|--help              print the help info"
+    echo "   -m|--meta_id <num>     stop meta server with id"
+    echo "   -r|--replica_id <num>  stop replica server with id"
+    echo "   -c|--collector         stop collector server"
 }
 
 function run_stop_onebox_instance()
 {
     META_ID=0
     REPLICA_ID=0
+    COLLECTOR_ID=0
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -711,32 +752,31 @@ function run_stop_onebox_instance()
                 REPLICA_ID="$2"
                 shift
                 ;;
+            -c|--collector)
+                COLLECTOR_ID=1
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_stop_onebox_instance
-                exit -1
+                exit 1
                 ;;
         esac
         shift
     done
-    if [ $META_ID = "0" -a $REPLICA_ID = "0" ]; then
-        echo "ERROR: no meta_id or replica_id set"
-        exit -1
-    fi
-    if [ $META_ID != "0" -a $REPLICA_ID != "0" ]; then
-        echo "ERROR: meta_id and replica_id can only set one"
-        exit -1
+    if [ $META_ID = "0" -a $REPLICA_ID = "0" -a $COLLECTOR_ID = "0" ]; then
+        echo "ERROR: no meta_id or replica_id or collector set"
+        exit 1
     fi
     if [ $META_ID != "0" ]; then
         dir=onebox/meta$META_ID
         if [ ! -d $dir ]; then
             echo "ERROR: invalid meta_id"
-            exit -1
+            exit 1
         fi
         if ! ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" ; then
             echo "INFO: meta@$META_ID is not running"
-            exit -1
+            exit 1
         fi
         ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" | awk '{print $2}' | xargs kill &>/dev/null
         echo "INFO: meta@$META_ID stopped"
@@ -745,14 +785,22 @@ function run_stop_onebox_instance()
         dir=onebox/replica$REPLICA_ID
         if [ ! -d $dir ]; then
             echo "ERROR: invalid replica_id"
-            exit -1
+            exit 1
         fi
         if ! ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" ; then
             echo "INFO: replica@$REPLICA_ID is not running"
-            exit -1
+            exit 1
         fi
         ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" | awk '{print $2}' | xargs kill &>/dev/null
         echo "INFO: replica@$REPLICA_ID stopped"
+    fi
+    if [ $COLLECTOR_ID != "0" ]; then
+        if ! ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" ; then
+            echo "INFO: collector is not running"
+            exit 1
+        fi
+        ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" | awk '{print $2}' | xargs kill &>/dev/null
+        echo "INFO: collector stopped"
     fi
 }
 
@@ -762,19 +810,18 @@ function run_stop_onebox_instance()
 function usage_restart_onebox_instance()
 {
     echo "Options for subcommand 'restart_onebox_instance':"
-    echo "   -h|--help         print the help info"
-    echo "   -m|--meta_id <num>"
-    echo "                     meta server id"
-    echo "   -r|--replica_id <num>"
-    echo "                     replica server id"
-    echo "   -s|--sleep <num>"
-    echo "                     sleep time in seconds between stop and start, default is 1"
+    echo "   -h|--help              print the help info"
+    echo "   -m|--meta_id <num>     restart meta server with id"
+    echo "   -r|--replica_id <num>  restart replica server with id"
+    echo "   -c|--collector         restart collector server"
+    echo "   -s|--sleep <num>       sleep time in seconds between stop and start, default is 1"
 }
 
 function run_restart_onebox_instance()
 {
     META_ID=0
     REPLICA_ID=0
+    COLLECTOR_OPT=""
     SLEEP=1
     while [[ $# > 0 ]]; do
         key="$1"
@@ -791,6 +838,10 @@ function run_restart_onebox_instance()
                 REPLICA_ID="$2"
                 shift
                 ;;
+            -c|--collector)
+                COLLECTOR_OPT="-c"
+                shift
+                ;;
             -s|--sleep)
                 SLEEP="$2"
                 shift
@@ -799,23 +850,19 @@ function run_restart_onebox_instance()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_restart_onebox_instance
-                exit -1
+                exit 1
                 ;;
         esac
         shift
     done
-    if [ $META_ID = "0" -a $REPLICA_ID = "0" ]; then
-        echo "ERROR: no meta_id or replica_id set"
-        exit -1
+    if [ $META_ID = "0" -a $REPLICA_ID = "0" -a "x$COLLECTOR_OPT" = "x" ]; then
+        echo "ERROR: no meta_id or replica_id or collector set"
+        exit 1
     fi
-    if [ $META_ID != "0" -a $REPLICA_ID != "0" ]; then
-        echo "ERROR: meta_id and replica_id can only set one"
-        exit -1
-    fi
-    run_stop_onebox_instance -m $META_ID -r $REPLICA_ID
+    run_stop_onebox_instance -m $META_ID -r $REPLICA_ID $COLLECTOR_OPT
     echo "sleep $SLEEP"
     sleep $SLEEP
-    run_start_onebox_instance -m $META_ID -r $REPLICA_ID
+    run_start_onebox_instance -m $META_ID -r $REPLICA_ID $COLLECTOR_OPT
 }
 
 #####################
@@ -897,7 +944,7 @@ function run_start_kill_test()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_start_kill_test
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -962,7 +1009,7 @@ function run_stop_kill_test()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_stop_kill_test
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -994,7 +1041,7 @@ function run_list_kill_test()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_list_kill_test
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1029,7 +1076,7 @@ function run_clear_kill_test()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_clear_kill_test
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1125,7 +1172,7 @@ function run_start_upgrade_test()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_start_upgrade_test
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1192,7 +1239,7 @@ function run_stop_upgrade_test()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_stop_upgrade_test
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1224,7 +1271,7 @@ function run_list_upgrade_test()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_list_upgrade_test
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1259,7 +1306,7 @@ function run_clear_upgrade_test()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_clear_upgrade_test
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1350,7 +1397,7 @@ function run_bench()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_bench
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1416,7 +1463,7 @@ function run_shell()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_shell
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1426,7 +1473,7 @@ function run_shell()
         echo "ERROR: can not specify both cluster and cluster_name at the same time"
         echo
         usage_shell
-        exit -1
+        exit 1
     fi
 
     if [ ${CLUSTER_SPECIFIED} -eq 1 ]; then
@@ -1517,7 +1564,7 @@ function run_migrate_node()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_migrate_node
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1527,21 +1574,21 @@ function run_migrate_node()
         echo "ERROR: no cluster specified"
         echo
         usage_migrate_node
-        exit -1
+        exit 1
     fi
 
     if [ "$NODE" == "" ]; then
         echo "ERROR: no node specified"
         echo
         usage_migrate_node
-        exit -1
+        exit 1
     fi
 
     if [ "$TYPE" != "test" -a "$TYPE" != "run" ]; then
         echo "ERROR: invalid type $TYPE"
         echo
         usage_migrate_node
-        exit -1
+        exit 1
     fi
 
     echo "CLUSTER=$CLUSTER"
@@ -1611,7 +1658,7 @@ function run_downgrade_node()
                 echo "ERROR: unknown option \"$key\""
                 echo
                 usage_downgrade_node
-                exit -1
+                exit 1
                 ;;
         esac
         shift
@@ -1621,21 +1668,21 @@ function run_downgrade_node()
         echo "ERROR: no cluster specified"
         echo
         usage_downgrade_node
-        exit -1
+        exit 1
     fi
 
     if [ "$NODE" == "" ]; then
         echo "ERROR: no node specified"
         echo
         usage_downgrade_node
-        exit -1
+        exit 1
     fi
 
     if [ "$TYPE" != "test" -a "$TYPE" != "run" ]; then
         echo "ERROR: invalid type $TYPE"
         echo
         usage_downgrade_node
-        exit -1
+        exit 1
     fi
 
     echo "CLUSTER=$CLUSTER"
@@ -1786,6 +1833,6 @@ case $cmd in
         echo "ERROR: unknown command $cmd"
         echo
         usage
-        exit -1
+        exit 1
 esac
 

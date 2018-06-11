@@ -9,7 +9,8 @@
 Pegasus is a distributed key-value storage system developed and maintained by Xiaomi Cloud Storage Team, with targets of
 high availability, high performance, strong consistency and ease of use. The original motivation of this project is to replace
 [Apache HBase](https://hbase.apache.org/) for users who only need simple key-value schema but require low latency and high availability.
-It is based on the open source [rDSN](https://github.com/Microsoft/rDSN) framework, and uses modified [RocksDB](https://github.com/facebook/rocksdb) as underlying storage engine.
+It is based on the modified [rDSN](https://github.com/XiaoMi/rdsn)(original [Microsoft/rDSN](https://github.com/Microsoft/rDSN)) framework,
+and uses modified [RocksDB](https://github.com/xiaomi/pegasus-rocksdb)(original [facebook/RocksDB](https://github.com/facebook/rocksdb)) as underlying storage engine.
 The consensus algorithm it uses is [PacificA](https://www.microsoft.com/en-us/research/publication/pacifica-replication-in-log-based-distributed-storage-systems/).
 
 ## Features
@@ -68,15 +69,23 @@ You may want to refer to the [installation guide](docs/installation.md).
 
 ## Related Projects
 
+Submodules:
+* [rDSN](https://github.com/xiaomi/rdsn)
+* [RocksDB](https://github.com/xiaomi/pegasus-rocksdb)
+
 Client libs:
-* [Pegasus Java client](https://github.com/xiaomi/pegasus-java-client)
-* [Pegasus Python Client](https://github.com/xiaomi/pegasus-python-client)
-* [Pegasus Go Client](https://github.com/xiaomi/pegasus-go-client)
-* [Pegasus Node.js Client](https://github.com/xiaomi/pegasus-nodejs-client)
-* [Pegasus Scala Client](https://github.com/xiaomi/pegasus-scala-client)
+* [Java client](https://github.com/xiaomi/pegasus-java-client)
+* [Python Client](https://github.com/xiaomi/pegasus-python-client)
+* [Go Client](https://github.com/xiaomi/pegasus-go-client)
+* [Node.js Client](https://github.com/xiaomi/pegasus-nodejs-client)
+* [Scala Client](https://github.com/xiaomi/pegasus-scala-client)
 
 Test tools:
-* [Pegasus YCSB](https://github.com/xiaomi/pegasus-YCSB)
+* [Java YCSB](https://github.com/xiaomi/pegasus-YCSB)
+* [Go YCSB](https://github.com/xiaomi/pegasus-YCSB-go)
+
+Data import/export tools:
+* [DataX](https://github.com/xiaomi/pegasus-datax)
 
 ## How to contibute
 

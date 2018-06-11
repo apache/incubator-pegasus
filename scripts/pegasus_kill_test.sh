@@ -4,7 +4,7 @@ if [ $# -ne 5 ]
 then
     echo "USAGE: $0 <meta-count> <replica-count> <app-name> <kill-type> <sleep-time>"
     echo "  kill-type: meta | replica | all"
-    exit -1
+    exit 1
 fi
 META_COUNT=$1
 REPLICA_COUNT=$2
@@ -14,7 +14,7 @@ SLEEP_TIME=$5
 if [ "$KILL_TYPE" != "meta" -a "$KILL_TYPE" != "replica" -a "$KILL_TYPE" != "all" ]
 then
     echo "ERROR: invalid kill-type, should be: meta | replica | all"
-    exit -1
+    exit 1
 fi
 
 function stop_kill_test() {
@@ -23,7 +23,7 @@ function stop_kill_test() {
   echo "---------------------------"
   ps -ef | grep pegasus_kill_test | grep -v grep | awk '{print $2}' | xargs kill
   ./run.sh stop_onebox
-  exit -1
+  exit 1
 }
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
