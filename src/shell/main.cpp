@@ -223,7 +223,8 @@ command_executor commands[] = {
         "count_data",
         "get app row count",
         "[-s|--max_split_count num] [-b|--max_batch_count num] "
-        "[-t|--timeout_ms num] [-z|--stat_size] [-c|--top_count num]",
+        "[-t|--timeout_ms num] [-z|--stat_size] [-c|--top_count num] "
+        "[-r|--run_seconds num]",
         data_operations,
     },
     {

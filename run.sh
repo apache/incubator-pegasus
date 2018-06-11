@@ -1,5 +1,6 @@
 #!/bin/bash
 
+PID=$$
 ROOT=`pwd`
 LOCAL_IP=`scripts/get_local_ip`
 export REPORT_DIR="$ROOT/test_report"
@@ -1422,7 +1423,7 @@ function usage_shell()
 {
     echo "Options for subcommand 'shell':"
     echo "   -h|--help            print the help info"
-    echo "   -c|--config <path>   config file path, default './config-shell.ini'"
+    echo "   -c|--config <path>   config file path, default './config-shell.ini.{PID}'"
     echo "   --cluster <str>      cluster meta lists, default '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
     echo "   -n <cluster-name>    cluster name. Will try to get a cluster ip_list"
     echo "                        from your MINOS-config(through \$MINOS_CONFIG_FILE) or"
@@ -1431,7 +1432,7 @@ function usage_shell()
 
 function run_shell()
 {
-    CONFIG=${ROOT}/config-shell.ini
+    CONFIG=${ROOT}/config-shell.ini.$PID
     CONFIG_SPECIFIED=0
     CLUSTER=127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603
     CLUSTER_SPECIFIED=0
@@ -1515,7 +1516,10 @@ function run_shell()
 
     cd ${ROOT}
     ln -s -f ${DSN_ROOT}/bin/pegasus_shell/pegasus_shell
-    ./pegasus_shell config-shell.ini $CLUSTER_NAME
+    ./pegasus_shell ${CONFIG} $CLUSTER_NAME
+    # because pegasus shell will catch 'Ctrl-C' signal, so the following commands will be executed
+    # even user inputs 'Ctrl-C', so that the temporary config file will be cleared when exit shell.
+    rm -f ${CONFIG}
 }
 
 #####################

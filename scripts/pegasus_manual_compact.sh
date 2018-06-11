@@ -110,7 +110,7 @@ function wait_manual_compact()
         else
             left_time="unknown"
             if [ ${finish_count} -gt 0 ]; then
-              left_time=$((slept / finish_count * not_finish_count))
+              left_time=$((slept * not_finish_count / finish_count))
             fi
             echo "[${slept}s] $finish_count finished, $not_finish_count not finished ($queue_count in queue, $running_count in running), estimate remaining $left_time seconds."
             sleep 5
@@ -257,8 +257,11 @@ fi
 
 # record start time
 all_start_time=`date +%s`
-echo "UID=$UID"
-echo "PID=$PID"
+echo "UID: $UID"
+echo "PID: $PID"
+echo "cluster: $cluster"
+echo "app_name: $app_name"
+echo "type: $type"
 echo "Start time: `date -d @${all_start_time} +"%Y-%m-%d %H:%M:%S"`"
 echo
 
@@ -281,12 +284,6 @@ fi
 if [ "${type}" != "once" ]; then
     rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null
     exit 0
-fi
-
-disabled=`get_env ${cluster} ${app_name} "manual_compact.disabled"`
-if [ "${disabled}" == "true" ]; then
-    echo "Manual compact is disabled, not to wait"
-    exit 1
 fi
 
 ls_log_file="/tmp/$UID.$PID.pegasus.ls"

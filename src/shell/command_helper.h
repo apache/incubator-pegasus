@@ -185,6 +185,8 @@ inline void scan_data_next(scan_data_context *context)
                                 context->split_rows++;
                                 scan_data_next(context);
                             }
+                            // should put "split_request_count--" at end of the scope,
+                            // to prevent that split_request_count becomes 0 in the middle.
                             context->split_request_count--;
                         },
                         context->timeout_ms);
@@ -195,7 +197,6 @@ inline void scan_data_next(scan_data_context *context)
                         hash_key,
                         sort_key,
                         [context](int err, pegasus::pegasus_client::internal_info &&info) {
-                            context->split_request_count--;
                             if (err != pegasus::PERR_OK) {
                                 if (!context->split_completed.exchange(true)) {
                                     fprintf(stderr,
@@ -208,6 +209,9 @@ inline void scan_data_next(scan_data_context *context)
                                 context->split_rows++;
                                 scan_data_next(context);
                             }
+                            // should put "split_request_count--" at end of the scope,
+                            // to prevent that split_request_count becomes 0 in the middle.
+                            context->split_request_count--;
                         },
                         context->timeout_ms);
                     break;
@@ -247,6 +251,8 @@ inline void scan_data_next(scan_data_context *context)
                     context->error_occurred->store(true);
                 }
             }
+            // should put "split_request_count--" at end of the scope,
+            // to prevent that split_request_count becomes 0 in the middle.
             context->split_request_count--;
         });
     }
