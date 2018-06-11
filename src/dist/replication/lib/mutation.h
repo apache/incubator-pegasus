@@ -114,6 +114,7 @@ public:
 
     // >= 1 MB
     bool is_full() const { return _appro_data_bytes >= 1024 * 1024; }
+    int appro_data_bytes() const { return _appro_data_bytes; }
 
     // read & write mutation data
     //

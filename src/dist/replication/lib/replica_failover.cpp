@@ -57,10 +57,12 @@ void replica::handle_local_failure(error_code error)
 
 void replica::handle_remote_failure(partition_status::type st,
                                     ::dsn::rpc_address node,
-                                    error_code error)
+                                    error_code error,
+                                    const std::string &caused_by)
 {
-    derror("%s: handle remote failure error %s, status = %s, node = %s",
+    derror("%s: handle remote failure caused by %s, error = %s, status = %s, node = %s",
            name(),
+           caused_by.c_str(),
            error.to_string(),
            enum_to_string(st),
            node.to_string());

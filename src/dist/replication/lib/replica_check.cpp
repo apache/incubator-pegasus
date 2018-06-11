@@ -200,7 +200,7 @@ void replica::on_group_check_reply(error_code err,
     dassert(r == 1, "invalid node address, address = %s", req->node.to_string());
 
     if (err != ERR_OK) {
-        handle_remote_failure(req->config.status, req->node, err);
+        handle_remote_failure(req->config.status, req->node, err, "group check");
     } else {
         if (resp->err == ERR_OK) {
             if (resp->learner_status_ == learner_status::LearningSucceeded &&
@@ -208,7 +208,7 @@ void replica::on_group_check_reply(error_code err,
                 handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
             }
         } else {
-            handle_remote_failure(req->config.status, req->node, resp->err);
+            handle_remote_failure(req->config.status, req->node, resp->err, "group check");
         }
     }
 }

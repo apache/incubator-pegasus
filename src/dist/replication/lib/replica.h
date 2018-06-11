@@ -209,8 +209,10 @@ private:
     /////////////////////////////////////////////////////////////////
     // failure handling
     void handle_local_failure(error_code error);
-    void
-    handle_remote_failure(partition_status::type status, ::dsn::rpc_address node, error_code error);
+    void handle_remote_failure(partition_status::type status,
+                               ::dsn::rpc_address node,
+                               error_code error,
+                               const std::string &caused_by);
 
     /////////////////////////////////////////////////////////////////
     // reconfiguration

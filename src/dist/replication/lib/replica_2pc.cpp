@@ -467,17 +467,21 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     }
 
     if (resp.err == ERR_OK) {
-        dinfo("%s: mutation %s on_prepare_reply from %s, target_status = %s, err = %s",
+        dinfo("%s: mutation %s on_prepare_reply from %s, appro_data_bytes = %d, "
+              "target_status = %s, err = %s",
               name(),
               mu->name(),
               node.to_string(),
+              mu->appro_data_bytes(),
               enum_to_string(target_status),
               resp.err.to_string());
     } else {
-        derror("%s: mutation %s on_prepare_reply from %s, target_status = %s, err = %s",
+        derror("%s: mutation %s on_prepare_reply from %s, appro_data_bytes = %d, "
+               "target_status = %s, err = %s",
                name(),
                mu->name(),
                node.to_string(),
+               mu->appro_data_bytes(),
                enum_to_string(target_status),
                resp.err.to_string());
     }
@@ -573,7 +577,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
         // make sure this is before any later commit ops
         // because now commit ops may lead to new prepare ops
         // due to replication throttling
-        handle_remote_failure(st, node, resp.err);
+        handle_remote_failure(st, node, resp.err, "prepare");
 
         // note targetStatus and (curent) status may diff
         if (target_status == partition_status::PS_POTENTIAL_SECONDARY) {
