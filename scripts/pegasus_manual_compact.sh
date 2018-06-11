@@ -110,7 +110,7 @@ function wait_manual_compact()
         else
             left_time="unknown"
             if [ ${finish_count} -gt 0 ]; then
-              left_time=$((slept / finish_count * not_finish_count))
+              left_time=$((slept * not_finish_count / finish_count))
             fi
             echo "[${slept}s] $finish_count finished, $not_finish_count not finished ($queue_count in queue, $running_count in running), estimate remaining $left_time seconds."
             sleep 5
