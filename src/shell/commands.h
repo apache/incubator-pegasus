@@ -1736,19 +1736,22 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                            {"max_split_count", required_argument, 0, 's'},
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
+                                           {"is_geo_data", optional_argument, 0, 'g'},
                                            {0, 0, 0, 0}};
 
     std::string target_cluster_name;
     std::string target_app_name;
+    std::string target_geo_app_name;
     int max_split_count = 100000000;
     int max_batch_count = 500;
     int timeout_ms = sc->timeout_ms;
+    bool is_geo_data = false;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "c:a:s:b:t:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "c:a:s:b:t:g:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1757,6 +1760,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'a':
             target_app_name = optarg;
+            target_geo_app_name = target_app_name + "_geo";
             break;
         case 's':
             if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_split_count)) {
@@ -1773,6 +1777,12 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
         case 't':
             if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
                 fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
+                return false;
+            }
+            break;
+        case 'g':
+            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), is_geo_data)) {
+                fprintf(stderr, "parse %s as is_geo_data failed\n", optarg);
                 return false;
             }
             break;
@@ -1810,6 +1820,9 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "INFO: source_app_name = %s\n", sc->pg_client->get_app_name());
     fprintf(stderr, "INFO: target_cluster_name = %s\n", target_cluster_name.c_str());
     fprintf(stderr, "INFO: target_app_name = %s\n", target_app_name.c_str());
+    if (is_geo_data) {
+        fprintf(stderr, "INFO: target_geo_app_name = %s\n", target_geo_app_name.c_str());
+    }
     fprintf(stderr, "INFO: max_split_count = %d\n", max_split_count);
     fprintf(stderr, "INFO: max_batch_count = %d\n", max_batch_count);
     fprintf(stderr, "INFO: timeout_ms = %d\n", timeout_ms);
@@ -1834,6 +1847,29 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
+    pegasus::geo::geo_client *target_geo_client = nullptr;
+    if (is_geo_data) {
+        auto extractor = [](const std::string &value, S2LatLng &latlng) {
+            std::vector<std::string> data;
+            dsn::utils::split_args(value.c_str(), data, '|');
+            if (data.size() <= 6) {
+                return pegasus::PERR_INVALID_VALUE;
+            }
+
+            std::string lat = data[4];
+            std::string lng = data[5];
+            latlng =
+                S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
+
+            return pegasus::PERR_OK;
+        };
+        target_geo_client = new pegasus::geo::geo_client("config.ini",
+                                                         target_cluster_name.c_str(),
+                                                         target_app_name.c_str(),
+                                                         target_geo_app_name.c_str(),
+                                                         std::move(extractor));
+    }
+
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
     pegasus::pegasus_client::scan_options options;
     options.timeout_ms = timeout_ms;
@@ -1850,12 +1886,13 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     std::atomic_bool error_occurred(false);
     std::vector<scan_data_context *> contexts;
     for (int i = 0; i < scanners.size(); i++) {
-        scan_data_context *context = new scan_data_context(SCAN_COPY,
+        scan_data_context *context = new scan_data_context(is_geo_data ? SCAN_GEN_GEO : SCAN_COPY,
                                                            i,
                                                            max_batch_count,
                                                            timeout_ms,
                                                            scanners[i]->get_smart_wrapper(),
                                                            target_client,
+                                                           target_geo_client,
                                                            &error_occurred);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
@@ -2018,6 +2055,7 @@ inline bool clear_data(command_executor *e, shell_context *sc, arguments args)
                                                            timeout_ms,
                                                            scanners[i]->get_smart_wrapper(),
                                                            sc->pg_client,
+                                                           nullptr,
                                                            &error_occurred);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
@@ -2201,6 +2239,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            timeout_ms,
                                                            scanners[i]->get_smart_wrapper(),
                                                            sc->pg_client,
+                                                           nullptr,
                                                            &error_occurred,
                                                            stat_size,
                                                            top_count);

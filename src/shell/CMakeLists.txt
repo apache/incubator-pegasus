@@ -31,6 +31,9 @@ set(MY_PROJ_LIBS
     PocoJSON
     crypto
     fmt
+    pegasus_geo_lib
+    s2
+    s2testing
     )
 
 if (UNIX)
@@ -49,5 +52,7 @@ if (UNIX)
     SET(CMAKE_INSTALL_RPATH ".")
     SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
+
+add_definitions(-Wno-attributes)
 
 dsn_add_executable()

@@ -21,6 +21,7 @@
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 #include <pegasus/error.h>
+#include <geo/src/geo_client.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
@@ -45,7 +46,8 @@ enum scan_data_operator
 {
     SCAN_COPY,
     SCAN_CLEAR,
-    SCAN_COUNT
+    SCAN_COUNT,
+    SCAN_GEN_GEO
 };
 class top_container
 {
@@ -99,6 +101,7 @@ struct scan_data_context
     int timeout_ms;
     pegasus::pegasus_client::pegasus_scanner_wrapper scanner;
     pegasus::pegasus_client *client;
+    pegasus::geo::geo_client *geoclient;
     std::atomic_bool *error_occurred;
     std::atomic_long split_rows;
     std::atomic_long split_request_count;
@@ -119,6 +122,7 @@ struct scan_data_context
                       int timeout_ms_,
                       pegasus::pegasus_client::pegasus_scanner_wrapper scanner_,
                       pegasus::pegasus_client *client_,
+                      pegasus::geo::geo_client *geoclient_,
                       std::atomic_bool *error_occurred_,
                       bool stat_size_ = false,
                       int top_count_ = 0)
@@ -128,6 +132,7 @@ struct scan_data_context
           timeout_ms(timeout_ms_),
           scanner(scanner_),
           client(client_),
+          geoclient(geoclient_),
           error_occurred(error_occurred_),
           split_rows(0),
           split_request_count(0),
@@ -235,6 +240,31 @@ inline void scan_data_next(scan_data_context *context)
                         }
                     }
                     scan_data_next(context);
+                    break;
+                case SCAN_GEN_GEO:
+                    context->split_request_count++;
+                    context->geoclient->async_set(
+                        hash_key,
+                        sort_key,
+                        value,
+                        [context](int err, pegasus::pegasus_client::internal_info &&info) {
+                            if (err != pegasus::PERR_OK) {
+                                if (!context->split_completed.exchange(true)) {
+                                    fprintf(stderr,
+                                            "ERROR: split[%d] async set failed: %s\n",
+                                            context->split_id,
+                                            context->client->get_error_string(err));
+                                    context->error_occurred->store(true);
+                                }
+                            } else {
+                                context->split_rows++;
+                                scan_data_next(context);
+                            }
+                            // should put "split_request_count--" at end of the scope,
+                            // to prevent that split_request_count becomes 0 in the middle.
+                            context->split_request_count--;
+                        },
+                        context->timeout_ms);
                     break;
                 default:
                     dassert(false, "op = %d", context->op);

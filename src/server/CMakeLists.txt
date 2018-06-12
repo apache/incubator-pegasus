@@ -51,4 +51,5 @@ if (UNIX)
     SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
+add_definitions(-Wno-attributes)
 dsn_add_executable()

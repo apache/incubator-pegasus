@@ -89,9 +89,9 @@ void geo_client::async_set(const std::string &hash_key,
                            int timeout_milliseconds,
                            int ttl_seconds)
 {
-    int ret = PERR_OK;
+    std::shared_ptr<int> ret(new int(PERR_OK));
     std::shared_ptr<std::atomic<int32_t>> set_count(new std::atomic<int32_t>(2));
-    auto async_set_callback = [ hash_key, sort_key, set_count, &ret, cb = std::move(callback) ](
+    auto async_set_callback = [ hash_key, sort_key, set_count, ret, cb = std::move(callback) ](
         int ec_, pegasus_client::internal_info &&info_, DataType data_type_)
     {
         pegasus_client::internal_info info;
@@ -104,11 +104,11 @@ void geo_client::async_set(const std::string &hash_key,
                      data_type_ == DataType::common ? "common" : "geo",
                      hash_key,
                      sort_key);
-            ret = ec_;
+            *ret = ec_;
         }
 
         if (set_count->fetch_sub(1) == 1) {
-            cb(ret, std::move(info));
+            cb(*ret, std::move(info));
         }
     };
 
