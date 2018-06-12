@@ -65,7 +65,7 @@ protected:
     struct redis_array : public redis_base_type
     {
         int count = 0;
-        std::list<redis_base_type *> array;
+        std::list<std::shared_ptr<redis_base_type>> array;
 
         void marshalling(::dsn::binary_writer &write_stream) const final;
     };

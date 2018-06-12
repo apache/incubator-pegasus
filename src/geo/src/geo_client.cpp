@@ -328,7 +328,6 @@ void geo_client::get_covering_cells(const S2Cap &cap, S2CellUnion &cids)
     cids = rc.GetCovering(cap);
 }
 
-// TODO it's not async!!
 void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
                                              const S2Cap &cap,
                                              int count,
@@ -428,21 +427,14 @@ void geo_client::normalize_result(std::list<std::vector<SearchResult>> &&results
             break;
         }
     }
-    if (sort_type == SortType::asc /* || sort_type == SortType::desc*/) {
+    if (sort_type == SortType::asc) {
         auto top_n_result =
             std::priority_queue<SearchResult, std::vector<SearchResult>, SearchResultNearer>();
-        for (const auto &r : result) {
-            top_n_result.emplace(r);
-            if (top_n_result.size() > count) {
-                top_n_result.pop();
-            }
-        }
-
-        result.clear();
-        while (!top_n_result.empty()) {
-            result.emplace_front(top_n_result.top());
-            top_n_result.pop();
-        }
+        get_top_n(top_n_result, count, result);
+    } else if (sort_type == SortType::desc) {
+        auto top_n_result =
+            std::priority_queue<SearchResult, std::vector<SearchResult>, SearchResultFarther>();
+        get_top_n(top_n_result, count, result);
     } else if (count > 0 && result.size() > count) {
         result.resize((size_t)count);
     }

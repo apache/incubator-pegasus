@@ -705,6 +705,7 @@ void redis_parser::geo_radius(message_entry &entry)
         bool WITHCOORD = false;
         bool WITHDIST = false;
         bool WITHHASH = false;
+        bool WITHVALUE = false;
         geo::geo_client::SortType sort_type = geo::geo_client::SortType::random;
         int count = -1;
         for (int i = 5; i < redis_request.buffers.size(); ++i) {
@@ -715,6 +716,8 @@ void redis_parser::geo_radius(message_entry &entry)
                 WITHDIST = true;
             } else if (opt == "WITHHASH") {
                 WITHHASH = true;
+            } else if (opt == "WITHVALUE") {
+                WITHVALUE = true;
             } else if (opt == "COUNT" && i + 1 < redis_request.buffers.size()) {
                 const std::string &str_count = redis_request.buffers[i + 1].data.to_string();
                 if (!dsn::buf2int32(str_count, count)) {
@@ -727,7 +730,7 @@ void redis_parser::geo_radius(message_entry &entry)
             }
         }
 
-        auto search_callback = [ref_this, this, &entry, WITHCOORD, WITHDIST, WITHHASH](
+        auto search_callback = [ref_this, this, &entry, WITHCOORD, WITHDIST, WITHHASH, WITHVALUE](
             int ec, std::list<geo::SearchResult> &&results) {
             if (status == removed) {
                 return;
@@ -742,45 +745,56 @@ void redis_parser::geo_radius(message_entry &entry)
                 redis_array result;
                 result.count = (int)results.size();
                 for (const auto &elem : results) {
-                    if (!WITHCOORD && !WITHDIST && !WITHHASH) {
+                    if (!WITHCOORD && !WITHDIST && !WITHHASH && !WITHVALUE) {
                         result.array.push_back(
-                            new redis_bulk_string((int)elem.hash_key.size(), elem.hash_key.data()));
+                            std::shared_ptr<redis_base_type>(new redis_bulk_string(
+                                (int)elem.hash_key.size(), elem.hash_key.data())));
                     } else {
-                        auto *tmp = new redis_array();
-                        tmp->array.push_back(
-                            new redis_bulk_string((int)elem.hash_key.size(), elem.hash_key.data()));
+                        std::shared_ptr<redis_array> tmp(new redis_array());
+                        tmp->array.push_back(std::shared_ptr<redis_base_type>(new redis_bulk_string(
+                            (int)elem.hash_key.size(), elem.hash_key.data())));
                         tmp->count++;
+                        // NOTE: the order of WITH* options should be not changed because of the
+                        // protocol
                         if (WITHDIST) {
                             std::string dist = std::to_string(elem.distance);
                             std::shared_ptr<char> dist_buf =
                                 dsn::utils::make_shared_array<char>(dist.size());
                             memcpy(dist_buf.get(), dist.data(), dist.size());
-                            tmp->array.push_back(new redis_bulk_string(
-                                dsn::blob(std::move(dist_buf), (int)dist.size())));
+                            tmp->array.push_back(
+                                std::shared_ptr<redis_base_type>(new redis_bulk_string(
+                                    dsn::blob(std::move(dist_buf), (int)dist.size()))));
                             tmp->count++;
                         }
                         if (WITHHASH) {
                             // TODO
                         }
                         if (WITHCOORD) {
-                            auto *coord_tmp = new redis_array();
+                            std::shared_ptr<redis_array> coord_tmp(new redis_array());
                             std::string lng = std::to_string(elem.lng_degrees);
                             std::shared_ptr<char> lng_buf =
                                 dsn::utils::make_shared_array<char>(lng.size());
                             memcpy(lng_buf.get(), lng.data(), lng.size());
-                            coord_tmp->array.push_back(new redis_bulk_string(
-                                dsn::blob(std::move(lng_buf), (int)lng.size())));
+                            coord_tmp->array.push_back(
+                                std::shared_ptr<redis_base_type>(new redis_bulk_string(
+                                    dsn::blob(std::move(lng_buf), (int)lng.size()))));
                             coord_tmp->count++;
 
                             std::string lat = std::to_string(elem.lat_degrees);
                             std::shared_ptr<char> lat_buf =
                                 dsn::utils::make_shared_array<char>(lat.size());
                             memcpy(lat_buf.get(), lat.data(), lat.size());
-                            coord_tmp->array.push_back(new redis_bulk_string(
-                                dsn::blob(std::move(lat_buf), (int)lat.size())));
+                            coord_tmp->array.push_back(
+                                std::shared_ptr<redis_base_type>(new redis_bulk_string(
+                                    dsn::blob(std::move(lat_buf), (int)lat.size()))));
                             coord_tmp->count++;
 
                             tmp->array.push_back(coord_tmp);
+                            tmp->count++;
+                        }
+                        if (WITHVALUE) {
+                            tmp->array.push_back(std::shared_ptr<redis_base_type>(
+                                new redis_bulk_string((int)elem.value.size(), elem.value.data())));
                             tmp->count++;
                         }
                         result.array.push_back(tmp);

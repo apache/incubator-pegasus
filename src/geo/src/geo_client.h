@@ -287,7 +287,10 @@ public:
                              int timeout_milliseconds,
                              geo_search_callback_t &&callback);
 
-    const char *get_error_string(int error_code) const { return _common_data_client->get_error_string(error_code); }
+    const char *get_error_string(int error_code) const
+    {
+        return _common_data_client->get_error_string(error_code);
+    }
 
 private:
     friend class geo_client_test;
@@ -317,6 +320,23 @@ private:
                           int count,
                           SortType sort_type,
                           std::list<SearchResult> &result);
+    template <typename T>
+    void get_top_n(T &top_n_result, int count, std::list<SearchResult> &result)
+    {
+        for (const auto &r : result) {
+            top_n_result.emplace(r);
+            if (top_n_result.size() > count) {
+                top_n_result.pop();
+            }
+        }
+
+        result.clear();
+        while (!top_n_result.empty()) {
+            result.emplace_front(top_n_result.top());
+            top_n_result.pop();
+        }
+    }
+
     void combine_keys(const std::string &hash_key,
                       const std::string &sort_key,
                       std::string &combine_key);
