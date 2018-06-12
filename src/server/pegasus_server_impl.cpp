@@ -2418,6 +2418,7 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
                    status.ToString().c_str(),
                    dsn_now_ms() - start_time);
 
+    // do compact
     ddebug_replica("start to CompactRange, target_level = {}, bottommost_level_compaction = {}",
                    options.target_level,
                    options.bottommost_level_compaction == rocksdb::BottommostLevelCompaction::kForce
@@ -2428,6 +2429,9 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
     ddebug_replica("CompactRange finished, status = {}, time_used = {}ms",
                    status.ToString().c_str(),
                    dsn_now_ms() - start_time);
+
+    // update size immediately
+    updating_rocksdb_sstsize();
 
     return _db->GetLastManualCompactFinishTime();
 }

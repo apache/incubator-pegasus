@@ -2089,6 +2089,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
                                            {"timeout_ms", required_argument, 0, 't'},
                                            {"stat_size", no_argument, 0, 'z'},
                                            {"top_count", required_argument, 0, 'c'},
+                                           {"run_seconds", required_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
 
     int max_split_count = 100000000;
@@ -2096,12 +2097,13 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     int timeout_ms = sc->timeout_ms;
     bool stat_size = false;
     int top_count = 0;
+    int run_seconds = 0;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "s:b:t:zc:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "s:b:t:zc:r:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -2132,23 +2134,39 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
                 return false;
             }
             break;
+        case 'r':
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), run_seconds)) {
+                fprintf(stderr, "parse %s as run_seconds failed\n", optarg);
+                return false;
+            }
+            break;
         default:
             return false;
         }
     }
 
     if (max_split_count <= 0) {
-        fprintf(stderr, "ERROR: max_split_count should no less than 0\n");
+        fprintf(stderr, "ERROR: max_split_count should be greater than 0\n");
         return false;
     }
 
     if (max_batch_count <= 0) {
-        fprintf(stderr, "ERROR: max_batch_count should no less than 0\n");
+        fprintf(stderr, "ERROR: max_batch_count should be greater than 0\n");
         return false;
     }
 
     if (timeout_ms <= 0) {
-        fprintf(stderr, "ERROR: timeout_ms should no less than 0\n");
+        fprintf(stderr, "ERROR: timeout_ms should be greater than 0\n");
+        return false;
+    }
+
+    if (top_count < 0) {
+        fprintf(stderr, "ERROR: top_count should be no less than 0\n");
+        return false;
+    }
+
+    if (run_seconds < 0) {
+        fprintf(stderr, "ERROR: run_seconds should be no less than 0\n");
         return false;
     }
 
@@ -2159,6 +2177,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "INFO: timeout_ms = %d\n", timeout_ms);
     fprintf(stderr, "INFO: stat_size = %s\n", stat_size ? "true" : "false");
     fprintf(stderr, "INFO: top_count = %d\n", top_count);
+    fprintf(stderr, "INFO: run_seconds = %d\n", run_seconds);
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
     pegasus::pegasus_client::scan_options options;
@@ -2191,9 +2210,19 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
 
     int sleep_seconds = 0;
     long last_total_rows = 0;
+    bool stopped_by_wait_seconds = false;
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         sleep_seconds++;
+        if (run_seconds > 0 && !stopped_by_wait_seconds && sleep_seconds >= run_seconds) {
+            // here use compare-and-swap primitive:
+            // - if error_occurred is already set true by scanners as error occured, then
+            //   stopped_by_wait_seconds will be assigned as false.
+            // - else, error_occurred will be set true, and stopped_by_wait_seconds will be
+            //   assigned as true.
+            bool expected = false;
+            stopped_by_wait_seconds = error_occurred.compare_exchange_strong(expected, true);
+        }
         int completed_split_count = 0;
         long cur_total_rows = 0;
         for (int i = 0; i < scanners.size(); i++) {
@@ -2201,7 +2230,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
             if (contexts[i]->split_request_count.load() == 0)
                 completed_split_count++;
         }
-        if (error_occurred.load()) {
+        if (!stopped_by_wait_seconds && error_occurred.load()) {
             fprintf(stderr,
                     "INFO: processed for %d seconds, (%d/%d) splits, total %ld rows, last second "
                     "%ld rows, error occurred, terminating...\n",
@@ -2268,7 +2297,11 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     }
 
     if (error_occurred.load()) {
-        fprintf(stderr, "ERROR: error occurred, terminate processing\n");
+        if (stopped_by_wait_seconds) {
+            fprintf(stderr, "INFO: reached run seconds, terminate processing\n");
+        } else {
+            fprintf(stderr, "ERROR: error occurred, terminate processing\n");
+        }
     }
 
     long total_rows = 0;
@@ -2293,10 +2326,17 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    fprintf(stderr,
-            "\nCount %s, total %ld rows.\n",
-            error_occurred.load() ? "terminated" : "done",
-            total_rows);
+    std::string stop_desc;
+    if (error_occurred.load()) {
+        if (stopped_by_wait_seconds) {
+            stop_desc = "terminated as run time used out";
+        } else {
+            stop_desc = "terminated as error occurred";
+        }
+    } else {
+        stop_desc = "done";
+    }
+    fprintf(stderr, "\nCount %s, total %ld rows.\n", stop_desc.c_str(), total_rows);
 
     if (stat_size) {
         long row_size_sum = hash_key_size_sum + sort_key_size_sum + value_size_sum;
