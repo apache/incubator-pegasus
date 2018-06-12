@@ -90,27 +90,27 @@ void geo_client::async_set(const std::string &hash_key,
                            int ttl_seconds)
 {
     int ret = PERR_OK;
-    pegasus_client::internal_info info;
-    std::atomic<int> set_count(2);
-    auto async_set_callback =
-        [&](int ec_, pegasus_client::internal_info &&info_, DataType data_type_) {
-            if (data_type_ == DataType::common) {
-                info = std::move(info_);
-            }
+    std::shared_ptr<std::atomic<int32_t>> set_count(new std::atomic<int32_t>(2));
+    auto async_set_callback = [ hash_key, sort_key, set_count, &ret, cb = std::move(callback) ](
+        int ec_, pegasus_client::internal_info &&info_, DataType data_type_)
+    {
+        pegasus_client::internal_info info;
+        if (data_type_ == DataType::common) {
+            info = std::move(info_);
+        }
 
-            if (ec_ != PERR_OK) {
-                derror_f("set {} data failed. hash_key={}, sort_key={}",
-                         data_type_ == DataType::common ? "common" : "geo",
-                         hash_key,
-                         sort_key);
-                ret = ec_;
-            }
+        if (ec_ != PERR_OK) {
+            derror_f("set {} data failed. hash_key={}, sort_key={}",
+                     data_type_ == DataType::common ? "common" : "geo",
+                     hash_key,
+                     sort_key);
+            ret = ec_;
+        }
 
-            set_count.fetch_sub(1);
-            if (set_count.load() == 0) {
-                callback(ret, std::move(info));
-            }
-        };
+        if (set_count->fetch_sub(1) == 1) {
+            cb(ret, std::move(info));
+        }
+    };
 
     async_set_common_data(
         hash_key, sort_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
@@ -336,31 +336,29 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
                                              geo_search_callback_origin_t &&callback)
 {
     int single_scan_count = count;
-    if (sort_type == SortType::nearest) {
+    if (sort_type == SortType::asc || sort_type == SortType::desc) {
         single_scan_count = -1; // scan all data to make full sort
     }
 
     // scan each cell
-    std::list<std::vector<SearchResult>> results;
-    std::atomic<bool> send_finish(false);
-    std::atomic<int> scan_count(0);
-    dsn::utils::notify_event search_completed;
-    auto scan_finish_cb = [&, cb = std::move(callback) ]()
+    std::shared_ptr<std::list<std::vector<SearchResult>>> results(
+        new std::list<std::vector<SearchResult>>());
+    std::shared_ptr<std::atomic<bool>> send_finish(new std::atomic<bool>(false));
+    std::shared_ptr<std::atomic<int>> scan_count(new std::atomic<int>(0));
+    auto scan_finish_cb = [ results, send_finish, scan_count, cb = std::move(callback) ]() mutable
     {
-        scan_count.fetch_sub(1);
-        if (send_finish.load() && scan_count.load() == 0) {
-            cb(std::move(results));
-            search_completed.notify();
+        if (scan_count->fetch_sub(1) == 1 && send_finish->load()) {
+            cb(std::move(*results.get()));
         }
     };
 
     for (const auto &cid : cids) {
         if (cap.Contains(S2Cell(cid))) {
             // for the full contained cell, scan all data in this cell(at `_min_level`)
-            results.emplace_back(std::vector<SearchResult>());
-            scan_count.fetch_add(1);
+            results->emplace_back(std::vector<SearchResult>());
+            scan_count->fetch_add(1);
             start_scan(
-                cid.ToString(), "", "", cap, single_scan_count, scan_finish_cb, results.back());
+                cid.ToString(), "", "", cap, single_scan_count, scan_finish_cb, results->back());
         } else {
             // for the partial contained cell, scan cells covered by the cap at `_max_level` which
             // is more accurate than the ones at `_min_level`
@@ -380,15 +378,15 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
                             // `pre` is the last cell in Hilbert curve and contained by the cap
                             // `cur` is a new start cell in Hilbert curve and contained by the cap
                             start_stop_keys.second = get_sort_key(pre, hash_key) + "z";
-                            results.emplace_back(std::vector<SearchResult>());
-                            scan_count.fetch_add(1);
+                            results->emplace_back(std::vector<SearchResult>());
+                            scan_count->fetch_add(1);
                             start_scan(hash_key,
                                        start_stop_keys.first,
                                        start_stop_keys.second,
                                        cap,
                                        single_scan_count,
                                        scan_finish_cb,
-                                       results.back());
+                                       results->back());
 
                             start_stop_keys.first = get_sort_key(cur, hash_key);
                             start_stop_keys.second.clear();
@@ -403,20 +401,19 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
             dassert(!start_stop_keys.first.empty(), "");
             if (start_stop_keys.second.empty()) {
                 start_stop_keys.second = get_sort_key(pre, hash_key) + "z";
-                results.emplace_back(std::vector<SearchResult>());
-                scan_count.fetch_add(1);
+                results->emplace_back(std::vector<SearchResult>());
+                scan_count->fetch_add(1);
                 start_scan(hash_key,
                            start_stop_keys.first,
                            start_stop_keys.second,
                            cap,
                            single_scan_count,
                            scan_finish_cb,
-                           results.back());
+                           results->back());
             }
         }
     }
-    send_finish.store(true);
-    search_completed.wait();
+    send_finish->store(true);
 }
 
 void geo_client::normalize_result(std::list<std::vector<SearchResult>> &&results,
@@ -431,20 +428,20 @@ void geo_client::normalize_result(std::list<std::vector<SearchResult>> &&results
             break;
         }
     }
-    if (sort_type == SortType::nearest) {
-        std::priority_queue<SearchResult, std::vector<SearchResult>, SearchResultNearer>
-            nearest_result;
+    if (sort_type == SortType::asc /* || sort_type == SortType::desc*/) {
+        auto top_n_result =
+            std::priority_queue<SearchResult, std::vector<SearchResult>, SearchResultNearer>();
         for (const auto &r : result) {
-            nearest_result.emplace(r);
-            if (nearest_result.size() > count) {
-                nearest_result.pop();
+            top_n_result.emplace(r);
+            if (top_n_result.size() > count) {
+                top_n_result.pop();
             }
         }
 
         result.clear();
-        while (!nearest_result.empty()) {
-            result.emplace_front(nearest_result.top());
-            nearest_result.pop();
+        while (!top_n_result.empty()) {
+            result.emplace_front(top_n_result.top());
+            top_n_result.pop();
         }
     } else if (count > 0 && result.size() > count) {
         result.resize((size_t)count);
@@ -513,7 +510,7 @@ void geo_client::async_set_geo_data(const std::string &hash_key,
     if (ret != PERR_OK) {
         derror_f("_extractor failed. value={}", value);
         if (callback != nullptr) {
-            callback(PERR_INVALID_HASH_KEY, pegasus_client::internal_info(), DataType::geo);
+            callback(PERR_GEO_DECODE_VALUE_ERROR, pegasus_client::internal_info(), DataType::geo);
         }
         return;
     }

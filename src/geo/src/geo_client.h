@@ -53,19 +53,22 @@ struct SearchResult
     std::string hash_key; // the original hash_key, sort_key, and value when data inserted
     std::string sort_key;
     std::string value;
+    std::string cellid;
 
     explicit SearchResult(double lat = 0.0,
                           double lng = 0.0,
                           double dis = 0.0,
                           std::string &&hk = "",
                           std::string &&sk = "",
-                          std::string &&v = "")
+                          std::string &&v = "",
+                          std::string &&cid = "")
         : lat_degrees(lat),
           lng_degrees(lng),
           distance(dis),
           hash_key(std::move(hk)),
           sort_key(std::move(sk)),
-          value(std::move(v))
+          value(std::move(v)),
+          cellid(std::move(cid))
     {
     }
 
@@ -95,6 +98,14 @@ struct SearchResultNearer
     }
 };
 
+struct SearchResultFarther
+{
+    inline bool operator()(const SearchResult &l, const SearchResult &r)
+    {
+        return l.distance > r.distance;
+    }
+};
+
 /// geo_client is the class for users to operate geometry data on pegasus
 /// geo_client use two separate apps/tables on the same cluster, one for common data, the other for
 /// geometry data
@@ -106,7 +117,8 @@ public:
     enum class SortType
     {
         random = 0,
-        nearest = 1 // search results will be sorted by distance from the input point
+        asc = 1,
+        desc = 2,
     };
 
 public:
@@ -274,6 +286,8 @@ public:
                              SortType sort_type,
                              int timeout_milliseconds,
                              geo_search_callback_t &&callback);
+
+    const char *get_error_string(int error_code) const { return _common_data_client->get_error_string(error_code); }
 
 private:
     friend class geo_client_test;

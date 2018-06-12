@@ -25,6 +25,7 @@ PEGASUS_ERR_CODE(PERR_INVALID_VALUE, -203, "value can't be empty");
 PEGASUS_ERR_CODE(PERR_INVALID_PAR_COUNT, -204, "partition count must be a power of 2");
 PEGASUS_ERR_CODE(PERR_INVALID_REP_COUNT, -205, "replication count must be 3");
 PEGASUS_ERR_CODE(PERR_INVALID_SPLIT_COUNT, -206, "split count must be greater than 0");
+PEGASUS_ERR_CODE(PERR_GEO_DECODE_VALUE_ERROR, -207, "decode latitude and longitude from value error");
 
 // SERVER ERROR
 // start from -301

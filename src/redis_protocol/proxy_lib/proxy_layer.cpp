@@ -8,14 +8,20 @@
 namespace pegasus {
 namespace proxy {
 
-proxy_stub::proxy_stub(const proxy_session::factory &factory, const char *uri)
-    : serverlet<proxy_stub>("proxy_stub"), _factory(factory)
+proxy_stub::proxy_stub(const proxy_session::factory &f,
+                       const char *cluster,
+                       const char *app,
+                       const char *geo_app)
+    : serverlet<proxy_stub>("proxy_stub"),
+      _factory(f),
+      _cluster(cluster),
+      _app(app),
+      _geo_app(geo_app)
 {
-    _uri_address.assign_uri(uri);
+    _uri_address.assign_uri(
+        std::string("dsn://").append(_cluster).append("/").append(_app).c_str());
     open_service();
 }
-
-proxy_stub::~proxy_stub() {}
 
 void proxy_stub::on_rpc_request(dsn_message_t request)
 {

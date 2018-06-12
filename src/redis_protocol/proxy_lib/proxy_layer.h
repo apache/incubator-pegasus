@@ -56,9 +56,15 @@ protected:
 class proxy_stub : public ::dsn::serverlet<proxy_stub>
 {
 public:
-    proxy_stub(const proxy_session::factory &f, const char *uri);
-    virtual ~proxy_stub() override;
+    proxy_stub(const proxy_session::factory &f,
+               const char *cluster,
+               const char *app,
+               const char *geo_app = nullptr);
+    virtual ~proxy_stub() = default;
     const ::dsn::rpc_address get_service_uri() const { return _uri_address; }
+    const char *get_cluster() const { return _cluster; }
+    const char *get_app() const { return _app; }
+    const char *get_geo_app() const { return _geo_app; }
     void open_service()
     {
         this->register_rpc_handler(
@@ -81,6 +87,9 @@ private:
     std::unordered_map<::dsn::rpc_address, std::shared_ptr<proxy_session>> _sessions;
     proxy_session::factory _factory;
     ::dsn::rpc_address _uri_address;
+    const char *_cluster;
+    const char *_app;
+    const char *_geo_app;
 };
 }
 } // namespace

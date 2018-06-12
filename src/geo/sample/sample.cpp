@@ -77,7 +77,7 @@ int main(int argc, char **argv)
         std::string id = std::to_string(i);
         std::list<pegasus::geo::SearchResult> result;
         my_geo.search_radial(
-            id, "", radius, 20, pegasus::geo::geo_client::SortType::nearest, 500, result);
+            id, "", radius, 20, pegasus::geo::geo_client::SortType::asc, 500, result);
 
         std::cout << "count: " << result.size() << std::endl;
         for (auto &data : result) {

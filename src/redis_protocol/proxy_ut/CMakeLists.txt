@@ -20,10 +20,16 @@ endif()
 
 set(MY_BOOST_PACKAGES system filesystem)
 
-set(MY_PROJ_LIBS pegasus.rproxylib pegasus.base ${MY_PROJ_LIBS})
+set(MY_PROJ_LIBS pegasus.rproxylib pegasus.base ${MY_PROJ_LIBS}
+        s2testing
+        pegasus_geo_lib
+        s2
+        pegasus_client_static
+        fmt)
 
 set(MY_BINPLACES "config.ini" "run.sh")
 
 add_compile_options("-Wno-dangling-else")
+add_definitions(-Wno-attributes)
 
 dsn_add_executable()

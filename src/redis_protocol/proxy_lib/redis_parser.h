@@ -6,7 +6,9 @@
 
 #include <queue>
 #include <deque>
+#include <list>
 #include "proxy_layer.h"
+#include "geo/src/geo_client.h"
 
 namespace dsn {
 namespace apps {
@@ -30,22 +32,42 @@ protected:
         start_bulk_string_data,
         removed
     };
-    struct redis_bulk_string
+    struct redis_base_type
     {
-        int length;
-        ::dsn::blob data;
-        redis_bulk_string() : length(0) {}
-        redis_bulk_string(int len, const char *str) : length(len), data(str, 0, len) {}
-        redis_bulk_string(const ::dsn::blob &bb) : length(bb.length()), data(bb) {}
+        virtual void marshalling(::dsn::binary_writer &write_stream) const = 0;
     };
-    struct redis_simple_string
+    struct redis_integer : public redis_base_type
     {
-        bool is_error;
+        int64_t value = 0;
+
+        void marshalling(::dsn::binary_writer &write_stream) const final;
+    };
+    // both redis simple string and error
+    struct redis_simple_string : public redis_base_type
+    {
+        bool is_error = false;
         std::string message;
+
+        void marshalling(::dsn::binary_writer &write_stream) const final;
     };
-    struct redis_integer
+    struct redis_bulk_string : public redis_base_type
     {
-        int64_t value;
+        int length = 0;
+        ::dsn::blob data;
+
+        redis_bulk_string(int len = 0, const char *str = nullptr) : length(len), data(str, 0, len)
+        {
+        }
+        explicit redis_bulk_string(const ::dsn::blob &bb) : length(bb.length()), data(bb) {}
+
+        void marshalling(::dsn::binary_writer &write_stream) const final;
+    };
+    struct redis_array : public redis_base_type
+    {
+        int count = 0;
+        std::list<redis_base_type *> array;
+
+        void marshalling(::dsn::binary_writer &write_stream) const final;
     };
     struct redis_request
     {
@@ -56,13 +78,9 @@ protected:
     struct message_entry
     {
         redis_request request;
-        dsn_message_t response;
-        int64_t sequence_id;
+        dsn_message_t response = nullptr;
+        int64_t sequence_id = 0;
     };
-
-    static void marshalling(::dsn::binary_writer &write_stream, const redis_simple_string &data);
-    static void marshalling(::dsn::binary_writer &write_stream, const redis_bulk_string &data);
-    static void marshalling(::dsn::binary_writer &write_stream, const redis_integer &data);
 
     virtual bool parse(dsn_message_t msg) override;
 
@@ -89,6 +107,7 @@ private:
 
     // for rrdb
     std::unique_ptr<::dsn::apps::rrdb_client> client;
+    std::unique_ptr<geo::geo_client> _geo_client;
 
 private:
     // function for data stream
@@ -114,10 +133,12 @@ private:
     }
 
     DECLARE_REDIS_HANDLER(set)
+    DECLARE_REDIS_HANDLER(set_geo)
     DECLARE_REDIS_HANDLER(get)
     DECLARE_REDIS_HANDLER(del)
     DECLARE_REDIS_HANDLER(setex)
     DECLARE_REDIS_HANDLER(ttl)
+    DECLARE_REDIS_HANDLER(geo_radius)
     DECLARE_REDIS_HANDLER(default_handler)
 
     // function for pipeline reply
@@ -127,7 +148,7 @@ private:
         dsn_message_t resp = create_response();
         ::dsn::rpc_write_stream s(resp);
 
-        marshalling(s, value);
+        value.marshalling(s);
         s.commit_buffer();
         entry.response = resp;
         // released when dequeue fro the pending_response queue

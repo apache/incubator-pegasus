@@ -8,6 +8,8 @@
 #include <rocksdb/status.h>
 #include <pegasus_key_schema.h>
 #include <pegasus_utils.h>
+#include <dsn/utility/string_conv.h>
+#include <dsn/dist/fmt_logging.h>
 #include "redis_parser.h"
 
 #define CR '\015'
@@ -18,11 +20,13 @@ namespace proxy {
 
 std::unordered_map<std::string, redis_parser::redis_call_handler> redis_parser::s_dispatcher = {
     {"SET", redis_parser::g_set},
+    {"SET_GEO", redis_parser::g_set_geo}, // TODO set_geo ttl
     {"GET", redis_parser::g_get},
     {"DEL", redis_parser::g_del},
     {"SETEX", redis_parser::g_setex},
     {"TTL", redis_parser::g_ttl},
     {"PTTL", redis_parser::g_ttl},
+    {"GEORADIUS", redis_parser::g_geo_radius},
 };
 
 redis_parser::redis_call_handler redis_parser::get_handler(const char *command, unsigned int length)
@@ -47,10 +51,32 @@ redis_parser::redis_parser(proxy_stub *op, ::dsn::rpc_address remote)
       current_cursor(0)
 {
     ::dsn::apps::rrdb_client *r;
-    if (op)
+    if (op) {
         r = new ::dsn::apps::rrdb_client(op->get_service_uri());
-    else
+        // value format:
+        // "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|-0.356396|39.469644|24.043028|4.15921|0|-1"
+        auto extractor = [](const std::string &value, S2LatLng &latlng) {
+            std::vector<std::string> data;
+            dsn::utils::split_args(value.c_str(), data, '|');
+            if (data.size() <= 6) {
+                return pegasus::PERR_INVALID_VALUE;
+            }
+
+            std::string lat = data[4];
+            std::string lng = data[5];
+            latlng =
+                S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
+
+            return pegasus::PERR_OK;
+        };
+        _geo_client = std::make_unique<geo::geo_client>("config.ini",
+                                                        op->get_cluster(),
+                                                        op->get_app(),
+                                                        op->get_geo_app(),
+                                                        extractor); // TODO config.ini
+    } else {
         r = new ::dsn::apps::rrdb_client();
+    }
     client.reset(r);
 }
 
@@ -191,6 +217,7 @@ void redis_parser::end_bulk_string_size()
 {
     try {
         current_str.length = boost::lexical_cast<int>(current_size);
+        current_str.data.assign(nullptr, 0, 0);
         current_size.clear();
         if (-1 == current_str.length) {
             append_current_bulk_string();
@@ -366,6 +393,45 @@ void redis_parser::set(redis_parser::message_entry &entry)
                     0,
                     partition_hash,
                     proxy_session::hash());
+    }
+}
+
+void redis_parser::set_geo(message_entry &entry)
+{
+    redis_request &redis_request = entry.request;
+    if (redis_request.buffers.size() < 3) {
+        redis_simple_string result;
+        result.is_error = true;
+        result.message = "ERR wrong number of arguments for 'set_geo' command";
+        reply_message(entry, result);
+    } else {
+        // with a reference to prevent the object from being destoryed
+        std::shared_ptr<proxy_session> ref_this = shared_from_this();
+
+        // TODO: set the timeout
+        _geo_client->async_set(
+            redis_request.buffers[1].data.to_string(),
+            std::string(),
+            redis_request.buffers[2].data.to_string(),
+            [ref_this, this, &entry](int ec, pegasus_client::internal_info &&info) {
+                if (status == removed) {
+                    return;
+                }
+
+                if (PERR_OK != ec) {
+                    redis_simple_string result;
+                    result.is_error = true;
+                    result.message = std::string("ERR ") + _geo_client->get_error_string(ec);
+                    reply_message(entry, result);
+                } else {
+                    redis_simple_string result;
+                    result.is_error = false;
+                    result.message = "OK";
+                    reply_message(entry, result);
+                }
+            },
+            2000,
+            0);
     }
 }
 
@@ -612,6 +678,132 @@ void redis_parser::ttl(message_entry &entry)
     }
 }
 
+void redis_parser::geo_radius(message_entry &entry)
+{
+    redis_request &redis_request = entry.request;
+    if (redis_request.buffers.size() < 6) {
+        redis_simple_string result;
+        result.is_error = true;
+        result.message = "ERR wrong number of arguments for 'GEORADIUS' command";
+        reply_message(entry, result);
+    } else {
+        std::shared_ptr<proxy_session> ref_this = shared_from_this();
+
+        // TODO: set the timeout
+        std::string hash_key = redis_request.buffers[1].data.to_string();
+        double radius_m = atof(redis_request.buffers[4].data.to_string().c_str());
+        std::string unit = redis_request.buffers[5].data.to_string();
+        if (unit == "km") {
+            radius_m *= 1000;
+        } else if (unit == "mi") {
+            radius_m *= 1609.344;
+        } else if (unit == "ft") {
+            radius_m *= 0.3048;
+        } else {
+            // keep as meter unit
+        }
+        bool WITHCOORD = false;
+        bool WITHDIST = false;
+        bool WITHHASH = false;
+        geo::geo_client::SortType sort_type = geo::geo_client::SortType::random;
+        int count = -1;
+        for (int i = 5; i < redis_request.buffers.size(); ++i) {
+            const std::string &opt = redis_request.buffers[i].data.to_string();
+            if (opt == "WITHCOORD") {
+                WITHCOORD = true;
+            } else if (opt == "WITHDIST") {
+                WITHDIST = true;
+            } else if (opt == "WITHHASH") {
+                WITHHASH = true;
+            } else if (opt == "COUNT" && i + 1 < redis_request.buffers.size()) {
+                const std::string &str_count = redis_request.buffers[i + 1].data.to_string();
+                if (!dsn::buf2int32(str_count, count)) {
+                    derror_f("COUNT({}) opt is error, use {}", str_count, count);
+                }
+            } else if (opt == "ASC") {
+                sort_type = geo::geo_client::SortType::asc;
+            } else if (opt == "DESC") {
+                sort_type = geo::geo_client::SortType::desc; // TODO
+            }
+        }
+
+        auto search_callback = [ref_this, this, &entry, WITHCOORD, WITHDIST, WITHHASH](
+            int ec, std::list<geo::SearchResult> &&results) {
+            if (status == removed) {
+                return;
+            }
+
+            if (PERR_OK != ec) {
+                redis_simple_string result;
+                result.is_error = true;
+                result.message = std::string("ERR ") + _geo_client->get_error_string(ec);
+                reply_message(entry, result);
+            } else {
+                redis_array result;
+                result.count = (int)results.size();
+                for (const auto &elem : results) {
+                    if (!WITHCOORD && !WITHDIST && !WITHHASH) {
+                        result.array.push_back(
+                            new redis_bulk_string((int)elem.hash_key.size(), elem.hash_key.data()));
+                    } else {
+                        auto *tmp = new redis_array();
+                        tmp->array.push_back(
+                            new redis_bulk_string((int)elem.hash_key.size(), elem.hash_key.data()));
+                        tmp->count++;
+                        if (WITHDIST) {
+                            std::string dist = std::to_string(elem.distance);
+                            std::shared_ptr<char> dist_buf =
+                                dsn::utils::make_shared_array<char>(dist.size());
+                            memcpy(dist_buf.get(), dist.data(), dist.size());
+                            tmp->array.push_back(new redis_bulk_string(
+                                dsn::blob(std::move(dist_buf), (int)dist.size())));
+                            tmp->count++;
+                        }
+                        if (WITHHASH) {
+                            // TODO
+                        }
+                        if (WITHCOORD) {
+                            auto *coord_tmp = new redis_array();
+                            std::string lng = std::to_string(elem.lng_degrees);
+                            std::shared_ptr<char> lng_buf =
+                                dsn::utils::make_shared_array<char>(lng.size());
+                            memcpy(lng_buf.get(), lng.data(), lng.size());
+                            coord_tmp->array.push_back(new redis_bulk_string(
+                                dsn::blob(std::move(lng_buf), (int)lng.size())));
+                            coord_tmp->count++;
+
+                            std::string lat = std::to_string(elem.lat_degrees);
+                            std::shared_ptr<char> lat_buf =
+                                dsn::utils::make_shared_array<char>(lat.size());
+                            memcpy(lat_buf.get(), lat.data(), lat.size());
+                            coord_tmp->array.push_back(new redis_bulk_string(
+                                dsn::blob(std::move(lat_buf), (int)lat.size())));
+                            coord_tmp->count++;
+
+                            tmp->array.push_back(coord_tmp);
+                            tmp->count++;
+                        }
+                        result.array.push_back(tmp);
+                    }
+                }
+                reply_message(entry, result);
+            }
+        };
+
+        if (!hash_key.empty()) {
+            // GEORADIUS key "" "" radius m|km|ft|mi
+            _geo_client->async_search_radial(
+                hash_key, "", radius_m, count, sort_type, 2000, search_callback);
+        } else {
+            // GEORADIUS "" longitude latitude radius m|km|ft|mi
+            double lat_degrees = atof(redis_request.buffers[3].data.to_string().c_str());
+            double lng_degrees = atof(redis_request.buffers[2].data.to_string().c_str());
+            _geo_client->async_search_radial(
+                lat_degrees, lng_degrees, radius_m, count, sort_type, 2000, search_callback);
+        }
+    }
+}
+
 void redis_parser::handle_command(std::unique_ptr<message_entry> &&entry)
 {
     message_entry &e = *entry.get();
@@ -630,38 +822,54 @@ void redis_parser::handle_command(std::unique_ptr<message_entry> &&entry)
     handler(this, e);
 }
 
-void redis_parser::marshalling(::dsn::binary_writer &write_stream, const redis_bulk_string &bs)
+void redis_parser::redis_integer::marshalling(::dsn::binary_writer &write_stream) const
 {
-    write_stream.write_pod('$');
-    std::string result = boost::lexical_cast<std::string>(bs.length);
-    write_stream.write(result.c_str(), result.length());
+    write_stream.write_pod(':');
+    std::string result = std::to_string(value);
+    write_stream.write(result.c_str(), (int)result.length());
     write_stream.write_pod(CR);
     write_stream.write_pod(LF);
-    if (bs.length < 0)
+}
+
+void redis_parser::redis_simple_string::marshalling(::dsn::binary_writer &write_stream) const
+{
+    write_stream.write_pod(is_error ? '-' : '+');
+    write_stream.write(message.c_str(), (int)message.length());
+    write_stream.write_pod(CR);
+    write_stream.write_pod(LF);
+}
+
+void redis_parser::redis_bulk_string::marshalling(::dsn::binary_writer &write_stream) const
+{
+    write_stream.write_pod('$');
+    std::string result = std::to_string(length);
+    write_stream.write(result.c_str(), (int)result.length());
+    write_stream.write_pod(CR);
+    write_stream.write_pod(LF);
+    if (length < 0) {
         return;
-    if (bs.length > 0) {
-        dassert(bs.data.length() == bs.length, "%u VS %d", bs.data.length(), bs.length);
-        write_stream.write(bs.data.data(), bs.length);
+    }
+    if (length > 0) {
+        dassert(data.length() == length, "%u VS %d", data.length(), length);
+        write_stream.write(data.data(), length);
     }
     write_stream.write_pod(CR);
     write_stream.write_pod(LF);
 }
 
-void redis_parser::marshalling(::dsn::binary_writer &write_stream, const redis_simple_string &data)
+void redis_parser::redis_array::marshalling(::dsn::binary_writer &write_stream) const
 {
-    write_stream.write_pod(data.is_error ? '-' : '+');
-    write_stream.write(data.message.c_str(), data.message.length());
+    write_stream.write_pod('*');
+    std::string result = std::to_string(count);
+    write_stream.write(result.c_str(), (int)result.length());
     write_stream.write_pod(CR);
     write_stream.write_pod(LF);
-}
-
-void redis_parser::marshalling(::dsn::binary_writer &write_stream, const redis_integer &data)
-{
-    write_stream.write_pod(':');
-    std::string result = boost::lexical_cast<std::string>(data.value);
-    write_stream.write(result.c_str(), result.length());
-    write_stream.write_pod(CR);
-    write_stream.write_pod(LF);
+    if (count > 0) {
+        dassert_f(array.size() == count, "{} VS {}", array.size(), count);
+        for (auto elem : array) {
+            elem->marshalling(write_stream);
+        }
+    }
 }
 }
 } // namespace

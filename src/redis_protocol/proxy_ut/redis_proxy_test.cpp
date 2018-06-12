@@ -24,12 +24,12 @@ public:
 
     virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
-        if (args.size() < 2)
+        if (args.size() < 3)
             return ::dsn::ERR_INVALID_PARAMETERS;
         proxy_session::factory f = [](proxy_stub *p, ::dsn::rpc_address remote) {
             return std::make_shared<redis_parser>(p, remote);
         };
-        _proxy.reset(new proxy_stub(f, args[1].c_str()));
+        _proxy.reset(new proxy_stub(f, args[1].c_str(), args[2].c_str()));
         return ::dsn::ERR_OK;
     }
     virtual ::dsn::error_code stop(bool) override { return ::dsn::ERR_OK; }
@@ -267,7 +267,7 @@ public:
         stream.write_pod('\n');
 
         for (unsigned int i = 0; i != ra.length; ++i) {
-            redis_parser::marshalling(stream, ra.buffers[i]);
+            ra.buffers[i].marshalling(stream);
         }
         dsn_msg_release_ref(m);
         return result;

@@ -162,24 +162,24 @@ TEST_F(geo_client_test, normalize_result_distance_order)
     int count = 100;
     std::list<geo::SearchResult> result;
     _geo_client.normalize_result(
-        std::move(results), count, geo::geo_client::SortType::nearest, result);
+        std::move(results), count, geo::geo_client::SortType::asc, result);
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.front(), r2);
 
     geo::SearchResult r1(1.1, 1.1, 1, "test_hash_key_1", "test_sort_key_1", "value_1");
     results.push_back({r1});
-    _geo_client.normalize_result(std::move(results), 1, geo::geo_client::SortType::nearest, result);
+    _geo_client.normalize_result(std::move(results), 1, geo::geo_client::SortType::asc, result);
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.front(), r1);
 
     _geo_client.normalize_result(
-        std::move(results), count, geo::geo_client::SortType::nearest, result);
+        std::move(results), count, geo::geo_client::SortType::asc, result);
     ASSERT_EQ(result.size(), 2);
     ASSERT_EQ(result.front(), r1);
     ASSERT_EQ(result.back(), r2);
 
     _geo_client.normalize_result(
-        std::move(results), -1, geo::geo_client::SortType::nearest, result);
+        std::move(results), -1, geo::geo_client::SortType::asc, result);
     ASSERT_EQ(result.size(), 2);
     ASSERT_EQ(result.front(), r1);
     ASSERT_EQ(result.back(), r2);
@@ -215,7 +215,7 @@ TEST_F(geo_client_test, large_cap)
         // search the inserted data
         std::list<geo::SearchResult> result;
         int ret = _geo_client.search_radial(
-            "0", "", radius_m * 2, -1, geo::geo_client::SortType::nearest, 5000, result);
+            "0", "", radius_m * 2, -1, geo::geo_client::SortType::asc, 5000, result);
         ASSERT_EQ(ret, pegasus::PERR_OK);
         ASSERT_GE(result.size(), test_data_count);
         geo::SearchResult last;
@@ -238,7 +238,7 @@ TEST_F(geo_client_test, large_cap)
                                             lng_degrees,
                                             radius_m,
                                             -1,
-                                            geo::geo_client::SortType::nearest,
+                                            geo::geo_client::SortType::asc,
                                             5000,
                                             result);
         ASSERT_EQ(ret, pegasus::PERR_OK);
