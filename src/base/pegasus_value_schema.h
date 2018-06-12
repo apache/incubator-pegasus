@@ -57,7 +57,7 @@ inline void pegasus_extract_user_data(int version, std::string &&raw_value, ::ds
 }
 
 /// \return true if expired
-inline bool check_if_record_expired(uint32_t epoch_now, uint32_t expire_ts)
+inline bool check_if_ts_expired(uint32_t epoch_now, uint32_t expire_ts)
 {
     return expire_ts > 0 && expire_ts <= epoch_now;
 }
@@ -68,7 +68,7 @@ inline bool check_if_record_expired(uint32_t value_schema_version,
                                     dsn::string_view raw_value)
 {
     uint32_t expire_ts = pegasus_extract_expire_ts(value_schema_version, raw_value);
-    return check_if_record_expired(epoch_now, expire_ts);
+    return check_if_ts_expired(epoch_now, expire_ts);
 }
 
 /// Helper class for generating value.

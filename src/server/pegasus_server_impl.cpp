@@ -1027,7 +1027,8 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
     uint32_t expire_ts;
     uint32_t now_ts = ::pegasus::utils::epoch_now();
     if (status.ok()) {
-        if (check_if_record_expired(now_ts, value)) {
+        expire_ts = pegasus_extract_expire_ts(_value_schema_version, value);
+        if (check_if_ts_expired(now_ts, expire_ts)) {
             _pfc_recent_expire_count->increment();
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for ttl from %s",
