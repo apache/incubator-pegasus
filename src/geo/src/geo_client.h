@@ -30,8 +30,8 @@ enum class DataType
 ///            return pegasus::PERR_INVALID_VALUE;
 ///        }
 ///
-///        std::string lat = data[4];
-///        std::string lng = data[5];
+///        std::string lat = data[5];
+///        std::string lng = data[4];
 ///        latlng = S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(),
 ///        nullptr));
 ///
