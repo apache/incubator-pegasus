@@ -22,7 +22,7 @@ geo_client::geo_client(const char *config_file,
                        const char *cluster_name,
                        const char *common_app_name,
                        const char *geo_app_name,
-                       latlng_extractor &&extractor)
+                       latlng_extractor* extractor)
 {
     bool ok = pegasus_client_factory::initialize(config_file);
     dassert(ok, "init pegasus client factory failed");
@@ -33,7 +33,7 @@ geo_client::geo_client(const char *config_file,
     _geo_data_client = pegasus_client_factory::get_client(cluster_name, geo_app_name);
     dassert(_geo_data_client != nullptr, "init pegasus _geo_data_client failed");
 
-    _extractor = extractor;
+    _extractor.reset(extractor);
 
     // default: 16. edge length at level 16 is about 150m
     _max_level = (int32_t)dsn_config_get_value_uint64(
@@ -125,10 +125,9 @@ int geo_client::set_geo_data(const std::string &hash_key,
                              int ttl_seconds)
 {
     S2LatLng latlng;
-    int ret = _extractor(value, latlng);
-    if (ret != PERR_OK) {
+    if (!_extractor->extract_from_value(value, latlng)) {
         derror_f("_extractor failed. value={}", value);
-        return ret;
+        return PERR_GEO_DECODE_VALUE_ERROR;
     }
 
     std::string combine_key;
@@ -145,7 +144,7 @@ int geo_client::set_geo_data(const std::string &hash_key,
         latlng, combine_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
 
     set_completed.wait();
-    return ret;
+    return PERR_OK;
 }
 
 void geo_client::async_set_geo_data(const std::string &hash_key,
@@ -227,10 +226,9 @@ int geo_client::search_radial(const std::string &hash_key,
     }
 
     S2LatLng latlng;
-    ret = _extractor(value, latlng);
-    if (ret != PERR_OK) {
+    if (!_extractor->extract_from_value(value, latlng)) {
         derror_f("_extractor failed. value={}", value);
-        return ret;
+        return PERR_GEO_DECODE_VALUE_ERROR;
     }
 
     dsn::utils::notify_event search_completed;
@@ -270,8 +268,7 @@ void geo_client::async_search_radial(const std::string &hash_key,
             }
 
             S2LatLng latlng;
-            int ret = _extractor(value, latlng);
-            if (ret != PERR_OK) {
+            if (!_extractor->extract_from_value(value, latlng)) {
                 derror_f("_extractor failed. value={}", value);
                 cb(error_code, {});
                 return;
@@ -498,8 +495,7 @@ void geo_client::async_set_geo_data(const std::string &hash_key,
                                     int ttl_seconds)
 {
     S2LatLng latlng;
-    int ret = _extractor(value, latlng);
-    if (ret != PERR_OK) {
+    if (!_extractor->extract_from_value(value, latlng)) {
         derror_f("_extractor failed. value={}", value);
         if (callback != nullptr) {
             callback(PERR_GEO_DECODE_VALUE_ERROR, pegasus_client::internal_info(), DataType::geo);
@@ -590,7 +586,7 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner *scanner,
             }
 
             S2LatLng latlng;
-            if (_extractor(scan_value, latlng) != PERR_OK) {
+            if (!_extractor->extract_from_value(scan_value, latlng)) {
                 derror_f("_extractor failed. scan_value={}", scan_value);
                 cb();
                 return;

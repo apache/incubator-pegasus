@@ -12,29 +12,13 @@
 namespace pegasus {
 namespace geo {
 
-// value format:
-// "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|-0.356396|39.469644|24.043028|4.15921|0|-1"
-auto extractor = [](const std::string &value, S2LatLng &latlng) {
-    std::vector<std::string> data;
-    dsn::utils::split_args(value.c_str(), data, '|');
-    if (data.size() <= 6) {
-        return pegasus::PERR_INVALID_VALUE;
-    }
-
-    std::string lat = data[5];
-    std::string lng = data[4];
-    latlng = S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
-
-    return pegasus::PERR_OK;
-};
-
 class geo_client_test : public ::testing::Test
 {
 public:
     void SetUp() override
     {
         _geo_client =
-            pegasus::geo::geo_client("config.ini", "onebox", "temp", "temp_geo", extractor);
+            pegasus::geo::geo_client("config.ini", "onebox", "temp", "temp_geo", new latlng_extractor_for_lbs());
     }
 
     void TearDown() override {}

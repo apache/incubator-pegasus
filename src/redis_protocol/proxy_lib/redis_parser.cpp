@@ -54,27 +54,11 @@ redis_parser::redis_parser(proxy_stub *op, ::dsn::rpc_address remote)
     if (op) {
         r = new ::dsn::apps::rrdb_client(op->get_service_uri());
         if (op->get_geo_app() != nullptr) {
-            // value format:
-            // "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|-0.356396|39.469644|24.043028|4.15921|0|-1"
-            auto extractor = [](const std::string &value, S2LatLng &latlng) {
-                std::vector<std::string> data;
-                dsn::utils::split_args(value.c_str(), data, '|');
-                if (data.size() <= 6) {
-                    return pegasus::PERR_INVALID_VALUE;
-                }
-
-                std::string lat = data[5];
-                std::string lng = data[4];
-                latlng =
-                        S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
-
-                return pegasus::PERR_OK;
-            };
             _geo_client = dsn::make_unique<geo::geo_client>("config.ini",
                                                             op->get_cluster(),
                                                             op->get_app(),
                                                             op->get_geo_app(),
-                                                            extractor);
+                                                            new geo::latlng_extractor_for_lbs());
         }
     } else {
         r = new ::dsn::apps::rrdb_client();

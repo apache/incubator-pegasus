@@ -5,12 +5,12 @@
 #pragma once
 
 #include <sstream>
-#include <s2/s2latlng.h>
 #include <s2/s2latlng_rect.h>
 #include <s2/util/units/length-units.h>
 #include <dsn/tool-api/task_tracker.h>
 #include <pegasus/client.h>
 #include <s2/s2cell_union.h>
+#include "latlng_extractor.h"
 
 namespace pegasus {
 namespace geo {
@@ -19,25 +19,7 @@ enum class DataType
     common = 0,
     geo = 1
 };
-/// a user define function to extract latitude and longitude from a std::string type value
-/// for example, if we have a value format like:
-/// "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|-0.356396|39.469644|24.043028|4.15921|0|-1"
-/// we can define the extractor like this:
-///    auto extractor = [](const std::string &value, S2LatLng &latlng) {
-///        std::vector<std::string> data;
-///        dsn::utils::split_args(value.c_str(), data, '|');
-///        if (data.size() <= 6) {
-///            return pegasus::PERR_INVALID_VALUE;
-///        }
-///
-///        std::string lat = data[5];
-///        std::string lng = data[4];
-///        latlng = S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(),
-///        nullptr));
-///
-///        return pegasus::PERR_OK;
-///    };
-using latlng_extractor = std::function<int(const std::string &value, S2LatLng &latlng)>;
+
 using scan_finish_callback = std::function<void()>;
 using geo_set_callback_t =
     std::function<void(int error_code, pegasus_client::internal_info &&info, DataType data_type)>;
@@ -142,7 +124,7 @@ public:
                const char *cluster_name,
                const char *common_app_name,
                const char *geo_app_name,
-               latlng_extractor &&extractor);
+               latlng_extractor* extractor);
 
     ///
     /// \brief set
@@ -387,7 +369,7 @@ private:
     // to improve performance in their scenario.
     int _max_level = 16;
 
-    latlng_extractor _extractor;
+    std::shared_ptr<const latlng_extractor> _extractor = nullptr;
     pegasus_client *_common_data_client = nullptr;
     pegasus_client *_geo_data_client = nullptr;
 };

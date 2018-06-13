@@ -1849,25 +1849,11 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
 
     pegasus::geo::geo_client *target_geo_client = nullptr;
     if (is_geo_data) {
-        auto extractor = [](const std::string &value, S2LatLng &latlng) {
-            std::vector<std::string> data;
-            dsn::utils::split_args(value.c_str(), data, '|');
-            if (data.size() <= 6) {
-                return pegasus::PERR_INVALID_VALUE;
-            }
-
-            std::string lat = data[5];
-            std::string lng = data[4];
-            latlng =
-                S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
-
-            return pegasus::PERR_OK;
-        };
         target_geo_client = new pegasus::geo::geo_client("config.ini",
                                                          target_cluster_name.c_str(),
                                                          target_app_name.c_str(),
                                                          target_geo_app_name.c_str(),
-                                                         std::move(extractor));
+                                                         new pegasus::geo::latlng_extractor_for_lbs());
     }
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
