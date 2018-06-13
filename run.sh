@@ -181,7 +181,7 @@ function usage_test()
 {
     echo "Options for subcommand 'test':"
     echo "   -h|--help         print the help info"
-    echo "   -m|--modules      set the test modules: pegasus_rproxy_test pegasus_function_test"
+    echo "   -m|--modules      set the test modules: pegasus_unit_test pegasus_function_test"
     echo "   -k|--keep_onebox  whether keep the onebox after the test[default false]"
 }
 function run_test()
@@ -213,7 +213,7 @@ function run_test()
     done
 
     if [ "$test_modules" == "" ]; then
-        test_modules="pegasus_function_test pegasus_unit_test"
+        test_modules="pegasus_unit_test pegasus_function_test"
     fi
 
     ./run.sh clear_onebox #clear the onebox before test
