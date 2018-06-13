@@ -21,7 +21,7 @@
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 #include <pegasus/error.h>
-#include <geo/src/geo_client.h>
+#include <geo/lib/geo_client.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"

@@ -8,7 +8,7 @@
 #include <deque>
 #include <list>
 #include "proxy_layer.h"
-#include "geo/src/geo_client.h"
+#include "geo/lib/geo_client.h"
 
 namespace dsn {
 namespace apps {

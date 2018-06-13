@@ -2,7 +2,7 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "geo/src/geo_client.h"
+#include "geo/lib/geo_client.h"
 
 #include <iostream>
 #include <s2/s2testing.h>
@@ -46,8 +46,8 @@ int main(int argc, char **argv)
         S2LatLng latlng(S2Testing::SamplePoint(rect));
         std::string id = std::to_string(i);
         std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
-                            std::to_string(latlng.lat().degrees()) + "|" +
-                            std::to_string(latlng.lng().degrees()) + "|123.456|456.789|0|-1";
+                            std::to_string(latlng.lng().degrees()) + "|" +
+                            std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";
 
         int ret = my_geo.set(id, "", value, 1000);
         if (ret != pegasus::PERR_OK) {

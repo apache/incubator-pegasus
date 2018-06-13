@@ -2,7 +2,7 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "geo/src/geo_client.h"
+#include "geo/lib/geo_client.h"
 #include <gtest/gtest.h>
 #include <dsn/utility/strings.h>
 #include <s2/s2cap.h>
@@ -50,7 +50,7 @@ TEST_F(geo_client_test, set)
     std::string test_hash_key = "test_hash_key_set";
     std::string test_sort_key = "test_sort_key_set";
     std::string test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|" +
-                             std::to_string(lat_degrees) + "|" + std::to_string(lng_degrees) +
+                             std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) +
                              "|24.043028|4.15921|0|-1";
 
     // geo set
@@ -96,7 +96,7 @@ TEST_F(geo_client_test, set_geo_data)
     std::string test_hash_key = "test_hash_key_set_geo_data";
     std::string test_sort_key = "test_sort_key_set_geo_data";
     std::string test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|" +
-                             std::to_string(lat_degrees) + "|" + std::to_string(lng_degrees) +
+                             std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) +
                              "|24.043028|4.15921|0|-1";
 
     // geo set_geo_data
@@ -194,7 +194,7 @@ TEST_F(geo_client_test, large_cap)
     std::string test_hash_key = "test_hash_key_large_cap";
     std::string test_sort_key = "test_sort_key_large_cap";
     std::string test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|" +
-                             std::to_string(lat_degrees) + "|" + std::to_string(lng_degrees) +
+                             std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) +
                              "|24.043028|4.15921|0|-1";
 
     S2Cap cap;
@@ -204,8 +204,8 @@ TEST_F(geo_client_test, large_cap)
         ASSERT_TRUE(cap.Contains(latlng.ToPoint()));
         std::string id = std::to_string(i);
         std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
-                            std::to_string(latlng.lat().degrees()) + "|" +
-                            std::to_string(latlng.lng().degrees()) + "|123.456|456.789|0|-1";
+                            std::to_string(latlng.lng().degrees()) + "|" +
+                            std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";
 
         int ret = _geo_client.set(id, "", value, 1000);
         ASSERT_EQ(ret, pegasus::PERR_OK);
