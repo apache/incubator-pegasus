@@ -3277,8 +3277,8 @@ inline bool restore(command_executor *e, shell_context *sc, arguments args)
     std::string old_cluster_name, old_policy_name;
     std::string old_app_name, new_app_name;
     std::string backup_provider_type;
-    int32_t old_app_id;
-    int64_t timestamp;
+    int32_t old_app_id = 0;
+    int64_t timestamp = 0;
     bool skip_bad_partition = false;
 
     optind = 0;

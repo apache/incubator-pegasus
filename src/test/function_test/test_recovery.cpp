@@ -38,11 +38,9 @@ protected:
         system("sed -i \"/^perf_counter_enable_logging/c perf_counter_enable_logging = false\" "
                "src/server/config-server.ini");
 
-        std::cout << "sleep for a while to wait the onebox cleaned" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(10));
         system("./run.sh start_onebox -m 1 -r 3");
         std::cout << "sleep for a while to wait the new onebox start" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(3));
 
         chdir(global_env::instance()._working_dir.c_str());
 
@@ -78,9 +76,7 @@ protected:
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
         system("git checkout -- src/server/config-server.ini");
-        system("./run.sh start_onebox");
-        std::cout << "sleep for a while to wait the onebox to restart" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(20));
+        system("./run.sh start_onebox -w");
         chdir(global_env::instance()._working_dir.c_str());
     }
 

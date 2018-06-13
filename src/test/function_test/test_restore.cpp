@@ -29,9 +29,7 @@ public:
         std::string cmd = "sed -i \"/^cold_backup_root/c cold_backup_root = " + cluster_name;
         cmd = cmd + std::string("\" src/server/config-server.ini");
         system(cmd.c_str());
-        std::this_thread::sleep_for(std::chrono::seconds(3));
         system("./run.sh clear_onebox");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
         system("./run.sh start_onebox");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -72,11 +70,8 @@ public:
     {
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
         system("git checkout -- src/server/config-server.ini");
-        system("./run.sh start_onebox");
-        std::cout << "sleep 10s to restart onebox" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        system("./run.sh start_onebox -w");
         std::string cmd = "rm -rf " + backup_data_dir;
         system(cmd.c_str());
         chdir(global_env::instance()._working_dir.c_str());
@@ -136,7 +131,6 @@ public:
     bool restore()
     {
         system("./run.sh clear_onebox");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
         system("./run.sh start_onebox");
         std::this_thread::sleep_for(std::chrono::seconds(3));
         time_stamp = get_first_backup_timestamp();
