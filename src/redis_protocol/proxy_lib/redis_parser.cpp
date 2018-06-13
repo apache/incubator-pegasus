@@ -69,7 +69,7 @@ redis_parser::redis_parser(proxy_stub *op, ::dsn::rpc_address remote)
 
             return pegasus::PERR_OK;
         };
-        _geo_client = std::make_unique<geo::geo_client>("config.ini",
+        _geo_client = dsn::make_unique<geo::geo_client>("config.ini",
                                                         op->get_cluster(),
                                                         op->get_app(),
                                                         op->get_geo_app(),
