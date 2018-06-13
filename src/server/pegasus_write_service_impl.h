@@ -28,7 +28,7 @@ public:
           _primary_address(server->_primary_address),
           _value_schema_version(server->_value_schema_version),
           _db(server->_db),
-          _wt_opts(&server->_wt_opts) //_rd_opts(&server->_rd_opts)
+          _wt_opts(&server->_wt_opts)
     {
     }
 
@@ -167,7 +167,6 @@ private:
     rocksdb::WriteBatch _batch;
     rocksdb::DB *_db;
     rocksdb::WriteOptions *_wt_opts;
-    // const rocksdb::ReadOptions *_rd_opts;
 
     pegasus_value_generator _value_generator;
 
