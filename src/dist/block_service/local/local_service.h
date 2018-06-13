@@ -48,7 +48,7 @@ private:
 class local_file_object : public block_file
 {
 public:
-    local_file_object(local_service *local_svc, const std::string &name);
+    local_file_object(const std::string &name);
 
     virtual ~local_file_object();
 
@@ -79,7 +79,6 @@ private:
     std::string compute_md5();
 
 private:
-    local_service *_local_service;
     std::string _md5_value;
 };
 }

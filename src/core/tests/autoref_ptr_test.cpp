@@ -137,8 +137,9 @@ TEST(RefCountedUnitTest, TestSelfAssignment)
     dsn::ref_ptr<SelfAssign> var(p);
     var = var;
     EXPECT_EQ(var.get(), p);
-    var = std::move(var);
-    EXPECT_EQ(var.get(), p);
+    // comment the following two lines because clang compiler would complain with "-Wself-move"
+    // var = std::move(var);
+    // EXPECT_EQ(var.get(), p);
 
     // please uncomment these lines when swap are supported in ref_ptr
     // var.swap(var);

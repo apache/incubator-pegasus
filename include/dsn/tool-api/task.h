@@ -437,7 +437,7 @@ public:
 
     message_ex *get_request() const { return _request; }
 
-    DSN_API void enqueue() override;
+    void enqueue() override;
 
     void exec() override
     {
@@ -587,7 +587,11 @@ public:
     aio_task(task_code code, aio_handler &&cb, int hash = 0, service_node *node = nullptr);
     ~aio_task();
 
+    // tell the compiler that we want both the enqueue from base task and ours
+    // to prevent the compiler complaining -Werror,-Woverloaded-virtual.
+    using task::enqueue;
     void enqueue(error_code err, size_t transferred_size);
+
     size_t get_transferred_size() const { return _transferred_size; }
     disk_aio *aio() { return _aio; }
 

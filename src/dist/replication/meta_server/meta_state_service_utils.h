@@ -77,7 +77,7 @@ private:
     void delete_node_impl(std::string &&node, std::function<void()> &&cb, bool is_recursive);
 
 private:
-    friend class operation;
+    friend struct operation;
 
     dist::meta_state_service *_remote;
     dsn::task_tracker *_tracker;
