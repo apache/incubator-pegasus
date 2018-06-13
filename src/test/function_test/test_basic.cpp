@@ -1366,6 +1366,37 @@ TEST(basic, set_get_del_async)
     while (!callbacked.load(std::memory_order_seq_cst))
         usleep(100);
 
+    // set and ttl
+    {
+        dsn::utils::notify_event evt;
+        client->async_set("basic_test_hash_key_1",
+                          "basic_test_sort_key_1",
+                          "basic_test_value_1",
+                          [&](int err, internal_info &&info) {
+                              ASSERT_EQ(PERR_OK, err);
+                              evt.notify();
+                          },
+                          10,
+                          3);
+        evt.wait();
+        std::string value;
+        int result = client->get("basic_test_hash_key_1", "basic_test_sort_key_1", value);
+        ASSERT_EQ(PERR_OK, result);
+        ASSERT_EQ("basic_test_value_1", value);
+
+        int ttl_seconds;
+        result = client->ttl("basic_test_hash_key_1", "basic_test_sort_key_1", ttl_seconds);
+        ASSERT_EQ(PERR_OK, result);
+        ASSERT_TRUE(ttl_seconds > 0 && ttl_seconds <= 3) << "ttl is " << ttl_seconds;
+
+        std::this_thread::sleep_for(std::chrono::seconds(4));
+        result = client->ttl("basic_test_hash_key_1", "basic_test_sort_key_1", ttl_seconds);
+        ASSERT_EQ(PERR_NOT_FOUND, result);
+
+        result = client->get("basic_test_hash_key_1", "basic_test_sort_key_1", value);
+        ASSERT_EQ(PERR_NOT_FOUND, result);
+    }
+
     // exist
     ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
     ASSERT_EQ(PERR_NOT_FOUND, ret);
