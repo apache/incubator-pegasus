@@ -44,14 +44,14 @@ inline void pegasus_extract_user_data(int version, std::string &&raw_value, ::ds
             version,
             PEGASUS_VALUE_SCHEMA_MAX_VERSION);
 
-    dsn::data_input input(raw_value);
+    std::string *s = new std::string(std::move(raw_value));
+    dsn::data_input input(*s);
     input.skip(sizeof(uint32_t));
-
     dsn::string_view view = input.read_str();
 
     // tricky code to avoid memory copy
     auto ptr = const_cast<char *>(view.data());
-    auto deleter = [s = new std::string(std::move(raw_value))](char *) { delete s; };
+    auto deleter = [s](char *) { delete s; };
     std::shared_ptr<char> buf(ptr, deleter);
     user_data.assign(std::move(buf), 0, static_cast<unsigned int>(view.length()));
 }
