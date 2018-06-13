@@ -374,7 +374,7 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
             ::dsn::utils::filesystem::path_combine(backup_dir, valid_backup_chkpt_dirname);
         // parse checkpoint dirname
         std::string policy_name;
-        int64_t backup_id, decree, timestamp;
+        int64_t backup_id = 0, decree = 0, timestamp = 0;
         dassert(backup_parse_dir_name(
                     valid_backup_chkpt_dirname.c_str(), policy_name, backup_id, decree, timestamp),
                 "%s: valid chekpoint dirname %s",

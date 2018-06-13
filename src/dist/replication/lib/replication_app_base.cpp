@@ -541,7 +541,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
             break;
         default:
             dassert(false, "status = %s", enum_to_string(status));
-            break;
+            __builtin_unreachable();
         }
         ddebug("%s: mutation %s committed on %s, batched_count = %d",
                _replica->name(),

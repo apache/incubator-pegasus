@@ -118,7 +118,7 @@ distributed_lock_service_simple::lock(const std::string &lock_id,
 
     error_code err;
     std::string cowner;
-    uint64_t version;
+    uint64_t version = 0;
     bool is_new = false;
 
     {
@@ -225,7 +225,7 @@ task_ptr distributed_lock_service_simple::unlock(const std::string &lock_id,
 {
     error_code err;
     lock_wait_info next;
-    uint64_t next_version;
+    uint64_t next_version = 0;
 
     {
         zauto_lock l(_lock);
@@ -270,7 +270,7 @@ task_ptr distributed_lock_service_simple::query_lock(const std::string &lock_id,
 {
     error_code err;
     std::string cowner;
-    uint64_t version;
+    uint64_t version = 0;
 
     {
         zauto_lock l(_lock);
