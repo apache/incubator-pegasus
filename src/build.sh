@@ -45,15 +45,6 @@ else
     echo "PART_CLEAR=NO"
 fi
 
-if [ -n "$JOB_NUM" ]
-then
-    echo "JOB_NUM=$JOB_NUM"
-    MAKE_OPTIONS="$MAKE_OPTIONS -j$JOB_NUM"
-else
-    echo "JOB_NUM=8"
-    MAKE_OPTIONS="$MAKE_OPTIONS -j8"
-fi
-
 if [ "$BUILD_TYPE" == "debug" ]
 then
     echo "BUILD_TYPE=debug"
