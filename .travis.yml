@@ -8,6 +8,9 @@ os: linux
 compiler:
     - gcc
 
+cache:
+    - ccache
+
 before_install:
     - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/build-depends.tar.gz
     - tar xf build-depends.tar.gz
