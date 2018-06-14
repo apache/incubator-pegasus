@@ -566,14 +566,13 @@ function run_start_onebox()
         echo "Wait cluster to become healthy..."
         sleeped=0
         while true; do
-            unhealthy_count=`echo "ls -d" | ./run.sh shell | awk 'f{ if(NF<7){f=0} else if($3!=$4){print} } /fully_healthy/{f=1}' | wc -l`
-            if [ $unhealthy_count -eq 0 ]; then
+            sleep 1
+            sleeped=$((sleeped+1))
+            echo "Sleeped for $sleeped seconds"
+            unhealthy_count=`echo "ls -d" | ./run.sh shell | awk 'f{ if(NF<7){f=0} else if($3!=$4){print} } /fully_healthy/{print;f=1}' | wc -l`
+            if [ $unhealthy_count -eq 1 ]; then
                 echo "Cluster becomes healthy."
                 break
-            else
-                sleep 1
-                sleeped=$((sleeped+1))
-                echo "Sleeped for $sleeped seconds"
             fi
         done
     fi
