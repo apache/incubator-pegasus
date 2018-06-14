@@ -400,6 +400,13 @@ function(dsn_setup_compiler_flags)
         add_compile_options(-Wno-deprecated-declarations)
         add_compile_options(-Wno-inconsistent-missing-override)
 
+        find_program(CCACHE_FOUND ccache)
+        if(CCACHE_FOUND)
+            set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+            set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+            message("use ccache to speed up compilation")
+        endif(CCACHE_FOUND)
+
         set(CMAKE_EXE_LINKER_FLAGS
             "${CMAKE_EXE_LINKER_FLAGS} -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free"
             CACHE
