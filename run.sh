@@ -61,6 +61,9 @@ function usage_build()
     echo "   -c|--clear            clear rdsn/rocksdb/pegasus before building, not clear thirdparty"
     echo "   -cc|--half-clear      clear pegasus before building, not clear thirdparty/rdsn/rocksdb"
     echo "   --clear_thirdparty    clear thirdparty/rdsn/rocksdb/pegasus before building"
+    echo "   --compiler            specify c and cxx compiler, sperated by ','"
+    echo "                         e.g., \"gcc,g++\" or \"clang-3.9,clang++-3.9\""
+    echo "                         default is \"gcc,g++\""
     echo "   -j|--jobs <num>       the number of jobs to run simultaneously, default 8"
     echo "   -b|--boost_dir <dir>  specify customized boost directory, use system boost if not set"
     echo "   -w|--warning_all      open all warnings when building, default no"
@@ -69,6 +72,8 @@ function usage_build()
 }
 function run_build()
 {
+    C_COMPILER="gcc"
+    CXX_COMPILER="g++"
     BUILD_TYPE="release"
     CLEAR=NO
     PART_CLEAR=NO
@@ -98,6 +103,17 @@ function run_build()
                 ;;
             --clear_thirdparty)
                 CLEAR_THIRDPARTY=YES
+                ;;
+            --compiler)
+                C_COMPILER=`echo $2 | awk -F',' '{print $1}'`
+                CXX_COMPILER=`echo $2 | awk -F',' '{print $2}'`
+                if [ "x"$C_COMPILER == "x" -o "x"$CXX_COMPILER == "x" ]; then
+                    echo "ERROR: invalid compiler option: $2"
+                    echo
+                    usage_build
+                    exit 1
+                fi
+                shift
                 ;;
             -j|--jobs)
                 JOB_NUM="$2"
@@ -142,9 +158,12 @@ function run_build()
         ln -sf $DSN_ROOT $ROOT/DSN_ROOT
     fi
 
+    echo "Build start time: `date`"
+    start_time=`date +%s`
+
     echo "INFO: start build rdsn..."
     cd $ROOT/rdsn
-    OPT="-t $BUILD_TYPE -j $JOB_NUM"
+    OPT="-t $BUILD_TYPE -j $JOB_NUM --compiler $C_COMPILER,$CXX_COMPILER"
     if [ "$BOOST_DIR" != "" ]; then
         OPT="$OPT -b $BOOST_DIR"
     fi
@@ -162,7 +181,8 @@ function run_build()
 
     echo "INFO: start build pegasus..."
     cd $ROOT/src
-    BUILD_TYPE="$BUILD_TYPE" CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
+    C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
+        CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" ./build.sh
     if [ $? -ne 0 ]; then
@@ -172,6 +192,11 @@ function run_build()
 
     cd $ROOT
     chmod +x scripts/*.sh
+
+    echo "Build finish time: `date`"
+    finish_time=`date +%s`
+    used_time=$((finish_time-start_time))
+    echo "Build elapsed time: $((used_time/60))m $((used_time%60))s"
 }
 
 #####################
@@ -216,10 +241,11 @@ function run_test()
         test_modules="pegasus_unit_test pegasus_function_test"
     fi
 
+    echo "Test start time: `date`"
+    start_time=`date +%s`
+
     ./run.sh clear_onebox #clear the onebox before test
-    ./run.sh start_onebox 
-    echo "sleep 30 to wait for the onebox to start all partitions ..."
-    sleep 30
+    ./run.sh start_onebox -w
 
     for module in `echo $test_modules`; do
         pushd $ROOT/src/builder/bin/$module
@@ -234,6 +260,11 @@ function run_test()
     if [ "$clear_flags" == "1" ]; then
         ./run.sh clear_onebox
     fi
+
+    echo "Test finish time: `date`"
+    finish_time=`date +%s`
+    used_time=$((finish_time-start_time))
+    echo "Test elapsed time: $((used_time/60))m $((used_time%60))s"
 }
 
 #####################
@@ -383,6 +414,8 @@ function usage_start_onebox()
     echo "                     default app name, default is temp"
     echo "   -p|--partition_count <num>"
     echo "                     default app partition count, default is 8"
+    echo "   -w|--wait_healthy"
+    echo "                     wait cluster to become healthy, default not wait"
     echo "   -s|--server_path <str>"
     echo "                     server binary path, default is ${DSN_ROOT}/bin/pegasus_server"
     echo "   --use_product_config"
@@ -396,6 +429,7 @@ function run_start_onebox()
     COLLECTOR_COUNT=0
     APP_NAME=temp
     PARTITION_COUNT=8
+    WAIT_HEALHY=false
     SERVER_PATH=${DSN_ROOT}/bin/pegasus_server
     USE_PRODUCT_CONFIG=false
     while [[ $# > 0 ]]; do
@@ -423,6 +457,9 @@ function run_start_onebox()
             -p|--partition_count)
                 PARTITION_COUNT="$2"
                 shift
+                ;;
+            -w|--wait_healthy)
+                WAIT_HEALHY=true
                 ;;
             -s|--server_path)
                 SERVER_PATH="$2"
@@ -523,6 +560,22 @@ function run_start_onebox()
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
         cd ..
     fi
+
+    if [ $WAIT_HEALHY == "true" ]; then
+        cd $ROOT
+        echo "Wait cluster to become healthy..."
+        sleeped=0
+        while true; do
+            sleep 1
+            sleeped=$((sleeped+1))
+            echo "Sleeped for $sleeped seconds"
+            unhealthy_count=`echo "ls -d" | ./run.sh shell | awk 'f{ if(NF<7){f=0} else if($3!=$4){print} } /fully_healthy/{print;f=1}' | wc -l`
+            if [ $unhealthy_count -eq 1 ]; then
+                echo "Cluster becomes healthy."
+                break
+            fi
+        done
+    fi
 }
 
 #####################
@@ -615,6 +668,7 @@ function run_clear_onebox()
     run_stop_onebox
     run_clear_zk
     rm -rf onebox *.log *.data config-*.ini &>/dev/null
+    sleep 1
 }
 
 #####################
