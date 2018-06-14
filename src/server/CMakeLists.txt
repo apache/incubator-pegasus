@@ -40,7 +40,7 @@ else()
     set(MY_PROJ_LIBS rocksdblib ${MY_PROJ_LIBS} rpcrt4)
 endif()
 
-set(MY_PROJ_LIB_PATH "../../rocksdb" ${LIBFDS_LIB_DIR} ${POCO_LIB_DIR})
+set(MY_PROJ_LIB_PATH "../../rocksdb")
 
 set(MY_BOOST_PACKAGES system filesystem)
 

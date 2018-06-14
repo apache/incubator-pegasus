@@ -126,7 +126,18 @@ then
     rm -f ../rocksdb/pegasus_bench
 fi
 
-make -C ../rocksdb static_lib_$BUILD_TYPE $MAKE_OPTIONS
+# use ccache if possible
+if [ `command -v ccache` ]
+then
+    ROCKSDB_CC="ccache $C_COMPILER"
+    ROCKSDB_CXX="ccache $CXX_COMPILER"
+else
+    ROCKSDB_CC="$C_COMPILER"
+    ROCKSDB_CXX="$CXX_COMPILER"
+fi
+
+echo "ROCKDB_CC=$ROCKSDB_CC, ROCKSDB_CXX=$ROCKSDB_CXX"
+CC=$ROCKSDB_CC CXX=$ROCKSDB_CXX make -C ../rocksdb static_lib_$BUILD_TYPE $MAKE_OPTIONS
 if [ $? -ne 0 ]
 then
     echo "ERROR: build librocksdb.a failed"

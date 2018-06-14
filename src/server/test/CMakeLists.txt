@@ -11,7 +11,7 @@ set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
 
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIB_PATH "../../../rocksdb" ${LIBFDS_LIB_DIR} ${POCO_LIB_DIR})
+set(MY_PROJ_LIB_PATH "../../../rocksdb")
 
 set(MY_PROJ_LIBS
         dsn_replica_server
