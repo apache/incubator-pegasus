@@ -147,8 +147,8 @@ public:
             std::cout << "restore failed, err = " << err.to_string() << std::endl;
             return false;
         } else {
-            // sleep for at most 2min to wait app is fully healthy
-            bool ret = wait_app_healthy(120);
+            // sleep for at most 3 min to wait app is fully healthy
+            bool ret = wait_app_healthy(180);
             return ret;
         }
     }
@@ -161,8 +161,8 @@ public:
         error_code err = ERR_OK;
         while (seconds > 0 && !is_app_full_healthy) {
             int64_t sleep_time = 0;
-            if (seconds >= 10) {
-                sleep_time = 10;
+            if (seconds >= 3) {
+                sleep_time = 3;
             } else {
                 sleep_time = seconds;
             }
@@ -210,8 +210,8 @@ public:
         bool is_backup_complete = false;
         while (seconds > 0 && !is_backup_complete) {
             sleep_time = 0;
-            if (seconds >= 10) {
-                sleep_time = 10;
+            if (seconds >= 3) {
+                sleep_time = 3;
             } else {
                 sleep_time = seconds;
             }
@@ -307,7 +307,7 @@ TEST_F(restore_test, restore)
 {
     std::cout << "start testing restore..." << std::endl;
     // step1: wait backup complete
-    ASSERT_TRUE(wait_backup_complete(120));
+    ASSERT_TRUE(wait_backup_complete(180));
     // step2: test restore
     ASSERT_TRUE(restore());
     // step3: verify_data
