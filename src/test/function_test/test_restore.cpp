@@ -29,9 +29,7 @@ public:
         std::string cmd = "sed -i \"/^cold_backup_root/c cold_backup_root = " + cluster_name;
         cmd = cmd + std::string("\" src/server/config-server.ini");
         system(cmd.c_str());
-        std::this_thread::sleep_for(std::chrono::seconds(3));
         system("./run.sh clear_onebox");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
         system("./run.sh start_onebox");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -72,11 +70,8 @@ public:
     {
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
         system("git checkout -- src/server/config-server.ini");
-        system("./run.sh start_onebox");
-        std::cout << "sleep 10s to restart onebox" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        system("./run.sh start_onebox -w");
         std::string cmd = "rm -rf " + backup_data_dir;
         system(cmd.c_str());
         chdir(global_env::instance()._working_dir.c_str());
@@ -136,7 +131,6 @@ public:
     bool restore()
     {
         system("./run.sh clear_onebox");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
         system("./run.sh start_onebox");
         std::this_thread::sleep_for(std::chrono::seconds(3));
         time_stamp = get_first_backup_timestamp();
@@ -153,8 +147,8 @@ public:
             std::cout << "restore failed, err = " << err.to_string() << std::endl;
             return false;
         } else {
-            // sleep for at most 2min to wait app is fully healthy
-            bool ret = wait_app_healthy(120);
+            // sleep for at most 3 min to wait app is fully healthy
+            bool ret = wait_app_healthy(180);
             return ret;
         }
     }
@@ -167,8 +161,8 @@ public:
         error_code err = ERR_OK;
         while (seconds > 0 && !is_app_full_healthy) {
             int64_t sleep_time = 0;
-            if (seconds >= 10) {
-                sleep_time = 10;
+            if (seconds >= 3) {
+                sleep_time = 3;
             } else {
                 sleep_time = seconds;
             }
@@ -216,8 +210,8 @@ public:
         bool is_backup_complete = false;
         while (seconds > 0 && !is_backup_complete) {
             sleep_time = 0;
-            if (seconds >= 10) {
-                sleep_time = 10;
+            if (seconds >= 3) {
+                sleep_time = 3;
             } else {
                 sleep_time = seconds;
             }
@@ -313,7 +307,7 @@ TEST_F(restore_test, restore)
 {
     std::cout << "start testing restore..." << std::endl;
     // step1: wait backup complete
-    ASSERT_TRUE(wait_backup_complete(120));
+    ASSERT_TRUE(wait_backup_complete(180));
     // step2: test restore
     ASSERT_TRUE(restore());
     // step3: verify_data

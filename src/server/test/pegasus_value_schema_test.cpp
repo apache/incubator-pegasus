@@ -8,7 +8,7 @@
 
 using namespace pegasus;
 
-TEST(value_schema, generate_and_extract_v1_v0)
+TEST(value_schema, generate_and_extract_v0)
 {
     struct test_case
     {
@@ -19,6 +19,7 @@ TEST(value_schema, generate_and_extract_v1_v0)
     } tests[] = {
         {0, 1000, ""},
         {0, std::numeric_limits<uint32_t>::max(), "pegasus"},
+        {0, 0, "a"},
         {0, std::numeric_limits<uint32_t>::max(), ""},
     };
 

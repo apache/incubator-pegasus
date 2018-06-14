@@ -128,12 +128,11 @@ available_detector::~available_detector()
 void available_detector::start()
 {
     // available detector delay 60s to wait the pegasus finishing the initialization.
-    _detect_timer =
-        ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
-                                nullptr,
-                                std::move(std::bind(&available_detector::detect_available, this)),
-                                0,
-                                std::chrono::minutes(1));
+    _detect_timer = ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
+                                            nullptr,
+                                            std::bind(&available_detector::detect_available, this),
+                                            0,
+                                            std::chrono::minutes(1));
     report_availability_info();
 }
 
@@ -155,12 +154,12 @@ void available_detector::detect_available()
 {
     if (!generate_hash_keys()) {
         derror("initialize hash_keys failed, do not detect available, retry after 60 seconds");
-        _detect_timer = ::dsn::tasking::enqueue(
-            LPC_DETECT_AVAILABLE,
-            nullptr,
-            std::move(std::bind(&available_detector::detect_available, this)),
-            0,
-            std::chrono::minutes(1));
+        _detect_timer =
+            ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
+                                    nullptr,
+                                    std::bind(&available_detector::detect_available, this),
+                                    0,
+                                    std::chrono::minutes(1));
         return;
     }
     _detect_tasks.clear();
