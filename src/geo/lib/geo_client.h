@@ -14,19 +14,12 @@
 
 namespace pegasus {
 namespace geo {
-enum class DataType
-{
-    common = 0,
-    geo = 1
-};
 
-using scan_finish_callback = std::function<void()>;
-using geo_set_callback_t =
-    std::function<void(int error_code, pegasus_client::internal_info &&info, DataType data_type)>;
 struct SearchResult;
 using geo_search_callback_t =
     std::function<void(int error_code, std::list<SearchResult> &&results)>;
-/// search result structure when use `search_radial` APIs
+
+/// the search result structure used by `search_radial` APIs
 struct SearchResult
 {
     double lat_degrees; // latitude and longitude extract by `latlng_extractor`, in degree
@@ -58,41 +51,17 @@ struct SearchResult
     {
         std::stringstream ss;
         ss << "[" << hash_key << " : " << sort_key << " => " << value << ", (" << lat_degrees
-           << ", " << lng_degrees << "): " << distance << "]";
+           << ", " << lng_degrees << "): " << distance << ", " << cellid << "]";
         return std::move(ss.str());
     }
 };
 
-#ifdef GEO_UNIT_TEST
-inline bool operator==(const SearchResult &l, const SearchResult &r)
-{
-    return l.lat_degrees == r.lat_degrees && l.lng_degrees == r.lng_degrees &&
-           l.distance == r.distance && l.hash_key == r.hash_key && l.sort_key == r.sort_key &&
-           l.value == r.value;
-}
-#endif
-
-struct SearchResultNearer
-{
-    inline bool operator()(const SearchResult &l, const SearchResult &r)
-    {
-        return l.distance < r.distance;
-    }
-};
-
-struct SearchResultFarther
-{
-    inline bool operator()(const SearchResult &l, const SearchResult &r)
-    {
-        return l.distance > r.distance;
-    }
-};
-
 /// geo_client is the class for users to operate geometry data on pegasus
-/// geo_client use two separate apps/tables on the same cluster, one for common data, the other for
-/// geometry data
+/// geo_client use two separate apps on the same cluster, one for common origin data, the
+/// other for geometry data
+/// !!!NOTE: API operations on the two separate apps are not atomic!!!
 /// we use S2Geometry as the underlying library to calculate geometry data, see more:
-/// http://s2geometry.io/
+/// http://s2geometry.io
 class geo_client
 {
 public:
@@ -104,27 +73,13 @@ public:
     };
 
 public:
-    geo_client() = default;
-
-    geo_client &operator=(geo_client &&o) noexcept
-    {
-        _max_level = o._max_level;
-        _extractor = std::move(o._extractor);
-        _common_data_client = o._common_data_client;
-        o._common_data_client = nullptr;
-        _geo_data_client = o._geo_data_client;
-        o._geo_data_client = nullptr;
-
-        return *this;
-    }
-
     /// REQUIRES: app/table `common_app_name` and `geo_app_name` have been created on cluster
     /// `cluster_name`
     geo_client(const char *config_file,
                const char *cluster_name,
                const char *common_app_name,
                const char *geo_app_name,
-               latlng_extractor* extractor);
+               latlng_extractor *extractor);
 
     ///
     /// \brief set
@@ -158,6 +113,30 @@ public:
                    pegasus_client::async_set_callback_t &&callback = nullptr,
                    int timeout_milliseconds = 5000,
                    int ttl_seconds = 0);
+
+    ///
+    /// \brief del
+    ///     remove the k-v from the cluster, both app/table `common_app_name` and `geo_app_name`
+    ///     key is composed of hash_key and sort_key.
+    /// \param hash_key
+    /// used to decide which partition to put this k-v
+    /// \param sort_key
+    /// all the k-v under hash_key will be sorted by sort_key.
+    /// \param timeout_milliseconds
+    /// if wait longer than this value, will return time out error
+    /// \return
+    /// int, the error indicates whether or not the operation is succeeded.
+    /// this error can be converted to a string using get_error_string()
+    ///
+    int del(const std::string &hash_key,
+            const std::string &sort_key,
+            int timeout_milliseconds = 5000,
+            pegasus_client::internal_info *info = nullptr);
+
+    void async_del(const std::string &hash_key,
+                   const std::string &sort_key,
+                   pegasus_client::async_del_callback_t &&callback = nullptr,
+                   int timeout_milliseconds = 5000);
 
     ///
     /// \brief set_geo_data
@@ -282,8 +261,57 @@ private:
     friend class geo_client_test_normalize_result_distance_order_Test;
     friend class geo_client_test_large_cap_Test;
 
-    using geo_search_callback_origin_t =
+    enum class DataType
+    {
+        common = 0,
+        geo = 1
+    };
+
+    using update_callback_t = std::function<void(
+        int error_code, pegasus_client::internal_info &&info, DataType data_type)>;
+    using scan_all_area_callback_t =
         std::function<void(std::list<std::vector<SearchResult>> &&results)>;
+    using scan_one_area_callback = std::function<void()>;
+
+    // generate hash_key and sort_key in geo database from hash_key and sort_key in common data
+    // database
+    // geo hash_key is the prefix of cell id which is calculated from value by `_extractor`, its
+    // length is associated with `_min_level`
+    // geo sort_key is composed with the postfix of the same cell id and origin hash_key and
+    // sort_key
+    bool generate_geo_keys(const std::string &hash_key,
+                           const std::string &sort_key,
+                           const std::string &value,
+                           std::string &geo_hash_key,
+                           std::string &geo_sort_key);
+
+    int restore_origin_keys(const std::string &geo_sort_key,
+                            std::string &origin_hash_key,
+                            std::string &origin_sort_key);
+
+    void async_set_common_data(const std::string &hash_key,
+                               const std::string &sort_key,
+                               const std::string &value,
+                               update_callback_t &&callback,
+                               int timeout_milliseconds,
+                               int ttl_seconds);
+
+    void async_set_geo_data(const std::string &hash_key,
+                            const std::string &sort_key,
+                            const std::string &value,
+                            update_callback_t &&callback = nullptr,
+                            int timeout_milliseconds = 5000,
+                            int ttl_seconds = 0);
+
+    void async_del_common_data(const std::string &hash_key,
+                               const std::string &sort_key,
+                               update_callback_t &&callback,
+                               int timeout_milliseconds);
+
+    void async_del_geo_data(const std::string &hash_key,
+                            const std::string &sort_key,
+                            update_callback_t &&callback,
+                            int timeout_milliseconds);
 
     void async_search_radial(const S2LatLng &latlng,
                              double radius_m,
@@ -291,19 +319,28 @@ private:
                              SortType sort_type,
                              int timeout_milliseconds,
                              geo_search_callback_t &&callback);
-    void search_cap(const S2LatLng &latlng, double radius_m, S2Cap &cap);
-    void get_covering_cells(const S2Cap &cap, S2CellUnion &cids);
+
+    // generate a cap by center point and radius
+    void gen_search_cap(const S2LatLng &latlng, double radius_m, S2Cap &cap);
+
+    // generate cell ids covered by the cap on a pre-defined level
+    void gen_cells_covered_by_cap(const S2Cap &cap, S2CellUnion &cids);
+
+    // search data covered by `cap` in all `cids`
     void async_get_result_from_cells(const S2CellUnion &cids,
                                      const S2Cap &cap,
                                      int count,
                                      SortType sort_type,
-                                     geo_search_callback_origin_t &&callback);
+                                     scan_all_area_callback_t &&callback);
+
+    // normalize the result by count, sort type, ...
     void normalize_result(std::list<std::vector<SearchResult>> &&results,
                           int count,
                           SortType sort_type,
                           std::list<SearchResult> &result);
-    template <typename T>
-    void get_top_n(T &top_n_result, int count, std::list<SearchResult> &result)
+
+    template <typename priority_queue, typename elem_type>
+    void get_top_n(priority_queue &top_n_result, int count, std::list<elem_type> &result)
     {
         for (const auto &r : result) {
             top_n_result.emplace(r);
@@ -319,42 +356,25 @@ private:
         }
     }
 
-    void combine_keys(const std::string &hash_key,
-                      const std::string &sort_key,
-                      std::string &combine_key);
-    int extract_keys(const std::string &combined_sort_key,
-                     std::string &hash_key,
-                     std::string &sort_key);
-    std::string get_sort_key(const S2CellId &max_level_cid, const std::string &hash_key);
-    void async_set_common_data(const std::string &hash_key,
-                               const std::string &sort_key,
-                               const std::string &value,
-                               geo_set_callback_t &&callback,
-                               int timeout_milliseconds,
-                               int ttl_seconds);
-    void async_set_geo_data(const std::string &hash_key,
-                            const std::string &sort_key,
-                            const std::string &value,
-                            geo_set_callback_t &&callback = nullptr,
-                            int timeout_milliseconds = 5000,
-                            int ttl_seconds = 0);
-    void async_set_geo_data(const S2LatLng &latlng,
-                            const std::string &combine_key,
-                            const std::string &value,
-                            pegasus_client::async_set_callback_t &&callback,
-                            int timeout_milliseconds,
-                            int ttl_seconds);
+    // generate sort key of `max_level_cid` under `hash_key`
+    std::string gen_sort_key(const S2CellId &max_level_cid, const std::string &hash_key);
+    // generate start sort key of `max_level_cid` under `hash_key`
+    std::string gen_start_sort_key(const S2CellId &max_level_cid, const std::string &hash_key);
+    // generate stop sort key of `max_level_cid` under `hash_key`
+    std::string gen_stop_sort_key(const S2CellId &max_level_cid, const std::string &hash_key);
+
     void start_scan(const std::string &hash_key,
                     const std::string &start_sort_key,
                     const std::string &stop_sort_key,
                     const S2Cap &cap,
                     int count,
-                    scan_finish_callback cb,
+                    scan_one_area_callback cb,
                     std::vector<SearchResult> &result);
+
     void do_scan(pegasus_client::pegasus_scanner *scanner,
                  const S2Cap &cap,
                  int count,
-                 scan_finish_callback cb,
+                 scan_one_area_callback cb,
                  std::vector<SearchResult> &result);
 
 private:

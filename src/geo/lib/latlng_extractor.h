@@ -12,16 +12,19 @@
 namespace pegasus {
 namespace geo {
 
-class latlng_extractor {
+class latlng_extractor
+{
 public:
-    virtual const char* name() const = 0;
-    virtual const char* value_sample() const = 0;
+    virtual const char *name() const = 0;
+    virtual const char *value_sample() const = 0;
     virtual bool extract_from_value(const std::string &value, S2LatLng &latlng) const = 0;
 };
 
-class latlng_extractor_for_lbs : public latlng_extractor {
-    const char* name() const final;
-    const char* value_sample() const final;
+class latlng_extractor_for_lbs : public latlng_extractor
+{
+public:
+    const char *name() const final;
+    const char *value_sample() const final;
     bool extract_from_value(const std::string &value, S2LatLng &latlng) const final;
 };
 

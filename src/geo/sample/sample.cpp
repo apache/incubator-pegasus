@@ -27,6 +27,8 @@ int main(int argc, char **argv)
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),
                       S2LatLng::FromDegrees(40.028697, 116.535087));
+
+    // generate data for test
     for (int i = 0; i < data_count; ++i) {
         S2LatLng latlng(S2Testing::SamplePoint(rect));
         std::string id = std::to_string(i);
@@ -40,6 +42,7 @@ int main(int argc, char **argv)
         }
     }
 
+    // test search_radial by lat & lng
     for (int i = 0; i < test_count; ++i) {
         S2LatLng latlng(S2Testing::SamplePoint(rect));
 
@@ -58,6 +61,7 @@ int main(int argc, char **argv)
         }
     }
 
+    // test search_radial by key
     for (int i = 0; i < test_count; ++i) {
         std::string id = std::to_string(i);
         std::list<pegasus::geo::SearchResult> result;

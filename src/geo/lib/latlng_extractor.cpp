@@ -2,6 +2,7 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
+#include <dsn/utility/string_conv.h>
 #include "latlng_extractor.h"
 
 namespace pegasus {
@@ -17,16 +18,20 @@ const char *latlng_extractor_for_lbs::value_sample() const
 bool latlng_extractor_for_lbs::extract_from_value(const std::string &value, S2LatLng &latlng) const
 {
     std::vector<std::string> data;
-    dsn::utils::split_args(value.c_str(), data, '|');
+    dsn::utils::split_args(value.c_str(), data, '|', true);
     if (data.size() <= 6) {
         return false;
     }
 
-    std::string lat = data[5];
     std::string lng = data[4];
-    latlng = S2LatLng::FromDegrees(strtod(lat.c_str(), nullptr), strtod(lng.c_str(), nullptr));
+    std::string lat = data[5];
+    double lat_degrees, lng_degrees = 0.0;
+    if (!dsn::buf2double(lat, lat_degrees) || !dsn::buf2double(lng, lng_degrees)) {
+        return false;
+    }
+    latlng = S2LatLng::FromDegrees(lat_degrees, lng_degrees);
 
-    return true;
+    return latlng.is_valid();
 }
 
 } // namespace geo

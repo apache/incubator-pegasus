@@ -22,7 +22,6 @@ set(MY_PROJ_LIBS
 
 set(MY_BOOST_PACKAGES system filesystem)
 
-add_definitions(-DGEO_UNIT_TEST)
 add_definitions(-Wno-attributes)
 
 set(MY_BINPLACES "config.ini")
