@@ -153,6 +153,7 @@ function run_build()
         exit 1
     fi
 
+    # reset DSN_ROOT env because "$ROOT/DSN_ROOT" is not generated now.
     export DSN_ROOT=$ROOT/rdsn/builder/output
     if [ ! -e $ROOT/DSN_ROOT ]; then
         ln -sf $DSN_ROOT $ROOT/DSN_ROOT
@@ -172,6 +173,15 @@ function run_build()
     fi
     if [ "$CLEAR_THIRDPARTY" == "YES" ]; then
         OPT="$OPT --clear_thirdparty"
+    fi
+    if [ "$WARNING_ALL" == "YES" ]; then
+        OPT="$OPT -w"
+    fi
+    if [ "$RUN_VERBOSE" == "YES" ]; then
+        OPT="$OPT -v"
+    fi
+    if [ "$ENABLE_GCOV" == "YES" ]; then
+        OPT="$OPT --enable_gcov"
     fi
     ./run.sh build $OPT
     if [ $? -ne 0 ]; then
