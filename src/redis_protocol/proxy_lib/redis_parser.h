@@ -143,9 +143,10 @@ private:
     DECLARE_REDIS_HANDLER(geo_radius_by_member)
     DECLARE_REDIS_HANDLER(default_handler)
 
-    void set_internal(message_entry &req);
-    void set_geo_internal(message_entry &req);
-    void geo_radius_internal(message_entry &req);
+    void set_internal(message_entry &entry);
+    void set_geo_internal(message_entry &entry);
+    void del_internal(message_entry &entry);
+    void del_geo_internal(message_entry &entry);
     void parse_parameters(const std::vector<redis_bulk_string> &opts,
                           int base_index,
                           double &radius_m,

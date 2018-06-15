@@ -404,6 +404,7 @@ void redis_parser::set_geo_internal(message_entry &entry)
         result.message = "ERR wrong number of arguments for 'SET' command";
         reply_message(entry, result);
     } else {
+        // [EX seconds]
         int ttl_seconds = 0;
         for (int i = 3; i < redis_request.buffers.size(); ++i) {
             const std::string &opt = redis_request.buffers[i].data.to_string();
@@ -574,7 +575,15 @@ void redis_parser::get(message_entry &entry)
     }
 }
 
-void redis_parser::del(message_entry &entry)
+void redis_parser::del(message_entry &entry) {
+    if (_geo_client == nullptr) {
+        del_internal(entry);
+    } else {
+        del_geo_internal(entry);
+    }
+}
+
+void redis_parser::del_internal(message_entry &entry)
 {
     redis_request &redis_req = entry.request;
     if (redis_req.buffers.size() != 2) {
@@ -621,6 +630,41 @@ void redis_parser::del(message_entry &entry)
                        0,
                        partition_hash,
                        proxy_session::hash());
+    }
+}
+
+void redis_parser::del_geo_internal(message_entry &entry)
+{
+    redis_request &redis_request = entry.request;
+    if (redis_request.buffers.size() != 2) {
+        redis_simple_string result;
+        result.is_error = true;
+        result.message = "ERR wrong number of arguments for 'DEL' command";
+        reply_message(entry, result);
+    } else {
+        // with a reference to prevent the object from being destoryed
+        std::shared_ptr<proxy_session> ref_this = shared_from_this();
+        auto del_callback = [ref_this, this, &entry](int ec, pegasus_client::internal_info &&) {
+            if (status == removed) {
+                return;
+            }
+
+            if (PERR_OK != ec) {
+                redis_simple_string result;
+                result.is_error = true;
+                result.message = std::string("ERR ") + _geo_client->get_error_string(ec);
+                reply_message(entry, result);
+            } else {
+                redis_simple_string result;
+                result.is_error = false;
+                result.message = "OK";
+                reply_message(entry, result);
+            }
+        };
+        _geo_client->async_del(redis_request.buffers[1].data.to_string(), // key => hash_key
+                               std::string(),                             // "" => sort_key
+                               del_callback,
+                               2000); // TODO: set the timeout
     }
 }
 
@@ -748,7 +792,7 @@ void redis_parser::geo_radius(message_entry &entry)
 void redis_parser::geo_radius_by_member(message_entry &entry)
 {
     redis_request &redis_request = entry.request;
-    if (redis_request.buffers.size() < 5) {
+    if (redis_request.buffers.size() < 4) {
         redis_simple_string result;
         result.is_error = true;
         result.message = "ERR wrong number of arguments for 'GEORADIUSBYMEMBER' command";
@@ -807,10 +851,12 @@ void redis_parser::parse_parameters(const std::vector<redis_bulk_string> &opts,
         radius_m *= 0.3048;
     } else {
         // keep as meter unit
+        unit = "m";
+        base_index--;
     }
 
     // [WITHCOORD] [WITHDIST] [WITHVALUE] [COUNT count] [ASC|DESC]
-    while (base_index++ < opts.size()) {
+    while (base_index < opts.size()) {
         const std::string &opt = opts[base_index].data.to_string();
         if (opt == "WITHCOORD") {
             WITHCOORD = true;
@@ -828,8 +874,10 @@ void redis_parser::parse_parameters(const std::vector<redis_bulk_string> &opts,
         } else if (opt == "DESC") {
             sort_type = geo::geo_client::SortType::desc;
         }
+        base_index++;
     }
 }
+
 void redis_parser::process_geo_radius_result(message_entry &entry,
                                              const std::string &unit,
                                              bool WITHCOORD,

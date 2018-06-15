@@ -161,7 +161,10 @@ void geo_client::async_del(const std::string &hash_key,
 
             std::string geo_hash_key;
             std::string geo_sort_key;
-            generate_geo_keys(hash_key, sort_key, value_, geo_hash_key, geo_sort_key);
+            if (!generate_geo_keys(hash_key, sort_key, value_, geo_hash_key, geo_sort_key)) {
+                cb(PERR_GEO_DECODE_VALUE_ERROR, pegasus_client::internal_info());
+                return;
+            }
 
             std::shared_ptr<int> ret(new int(PERR_OK));
             std::shared_ptr<std::atomic<int32_t>> del_count(new std::atomic<int32_t>(2));
@@ -599,7 +602,10 @@ void geo_client::async_set_geo_data(const std::string &hash_key,
 {
     std::string geo_hash_key;
     std::string geo_sort_key;
-    generate_geo_keys(hash_key, sort_key, value, geo_hash_key, geo_sort_key);
+    if (!generate_geo_keys(hash_key, sort_key, value, geo_hash_key, geo_sort_key)) {
+        callback(PERR_GEO_DECODE_VALUE_ERROR, pegasus_client::internal_info(), DataType::geo);
+        return;
+    }
 
     _geo_data_client->async_set(
         geo_hash_key,
