@@ -82,6 +82,7 @@ public:
     {
         return ::dsn::ERR_OK;
     }
+
     // returns:
     //  - ERR_OK: checkpoint succeed
     //  - ERR_WRONG_TIMING: another checkpoint is running now
@@ -143,11 +144,9 @@ public:
 
     virtual int64_t last_flushed_decree() const override { return _db->GetLastFlushedDecree(); }
 
-    inline bool check_if_record_expired(uint32_t epoch_now, rocksdb::Slice raw_value)
-    {
-        return pegasus::check_if_record_expired(
-            _value_schema_version, epoch_now, utils::to_string_view(raw_value));
-    }
+    virtual void update_app_envs(const std::map<std::string, std::string> &envs) override;
+
+    virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs) override;
 
 private:
     friend class pegasus_manual_compact_service;
@@ -200,10 +199,6 @@ private:
 
     void updating_rocksdb_sstsize();
 
-    virtual void update_app_envs(const std::map<std::string, std::string> &envs);
-
-    virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
-
     // get the absolute path of restore directory and the flag whether force restore from env
     // return
     //      std::pair<std::string, bool>, pair.first is the path of the restore dir; pair.second is
@@ -225,10 +220,17 @@ private:
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
 
     // return random value in range of [0.75,1.25] * base_value
-    inline uint64_t get_random_nearby(uint64_t base_value)
+    uint64_t get_random_nearby(uint64_t base_value)
     {
         uint64_t gap = base_value / 4;
         return dsn_random64(base_value - gap, base_value + gap);
+    }
+
+    // return true if expired
+    bool check_if_record_expired(uint32_t epoch_now, rocksdb::Slice raw_value)
+    {
+        return pegasus::check_if_record_expired(
+            _value_schema_version, epoch_now, utils::to_string_view(raw_value));
     }
 
 private:
@@ -284,5 +286,6 @@ private:
     ::dsn::perf_counter_wrapper _pfc_sst_count;
     ::dsn::perf_counter_wrapper _pfc_sst_size;
 };
-}
-} // namespace
+
+} // namespace server
+} // namespace pegasus

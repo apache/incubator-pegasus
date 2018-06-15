@@ -466,8 +466,8 @@ void initialize(int argc, char **argv)
 
     dsn::replication::replica_helper::load_meta_servers(
         s_global_context.meta_list, section.c_str(), key.c_str());
-    s_global_context.ddl_client =
-        new dsn::replication::replication_ddl_client(s_global_context.meta_list);
+    s_global_context.ddl_client.reset(
+        new dsn::replication::replication_ddl_client(s_global_context.meta_list));
 
     register_all_commands();
 }
