@@ -1,3 +1,5 @@
+include(${CMAKE_CURRENT_LIST_DIR}/compiler_info.cmake)
+
 function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PROJ_LIB_PATH PROJ_BINPLACES PROJ_BINDIRS DO_INSTALL)
     if(DEFINED DSN_DEBUG_CMAKE)
         message(STATUS "PROJ_LANG = ${PROJ_LANG}")
@@ -404,6 +406,9 @@ function(dsn_setup_compiler_flags)
         if(CCACHE_FOUND)
             set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
             set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+            if ("${COMPILER_FAMILY}" STREQUAL "clang")
+                add_compile_options(-Qunused-arguments)
+            endif()
             message("use ccache to speed up compilation")
         endif(CCACHE_FOUND)
 
