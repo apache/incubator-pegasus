@@ -18,7 +18,7 @@ namespace geo {
 struct SearchResult;
 using geo_search_callback_t =
     std::function<void(int error_code, std::list<SearchResult> &&results)>;
-
+using distance_callback_t = std::function<void(int error_code, double &&distance)>;
 /// the search result structure used by `search_radial` APIs
 struct SearchResult
 {
@@ -86,17 +86,17 @@ public:
     ///     store the k-v to the cluster, both app/table `common_app_name` and `geo_app_name`
     ///     key is composed of hash_key and sort_key.
     /// \param hash_key
-    /// used to decide which partition to put this k-v
+    ///     used to decide which partition to put this k-v
     /// \param sort_key
-    /// all the k-v under hash_key will be sorted by sort_key.
+    ///     all the k-v under hash_key will be sorted by sort_key.
     /// \param value
-    /// the value we want to store.
+    ///     the value we want to store.
     /// \param timeout_milliseconds
-    /// if wait longer than this value, will return time out error
+    ///     if wait longer than this value, will return time out error
     /// \param ttl_seconds
-    /// time to live of this value, if expired, will return not found; 0 means no ttl
+    ///     time to live of this value, if expired, will return not found; 0 means no ttl
     /// \return
-    /// int, the error indicates whether or not the operation is succeeded.
+    ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
     /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_extractor
@@ -119,13 +119,13 @@ public:
     ///     remove the k-v from the cluster, both app/table `common_app_name` and `geo_app_name`
     ///     key is composed of hash_key and sort_key.
     /// \param hash_key
-    /// used to decide which partition to put this k-v
+    ///     used to decide which partition to put this k-v
     /// \param sort_key
-    /// all the k-v under hash_key will be sorted by sort_key.
+    ///     all the k-v under hash_key will be sorted by sort_key.
     /// \param timeout_milliseconds
-    /// if wait longer than this value, will return time out error
+    ///     if wait longer than this value, will return time out error
     /// \return
-    /// int, the error indicates whether or not the operation is succeeded.
+    ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
     int del(const std::string &hash_key,
@@ -143,17 +143,17 @@ public:
     ///     store the k-v to the cluster, only app/table `geo_app_name`
     ///     key is composed of hash_key and sort_key.
     /// \param hash_key
-    /// used to decide which partition to put this k-v
+    ///     used to decide which partition to put this k-v
     /// \param sort_key
-    /// all the k-v under hash_key will be sorted by sort_key.
+    ///     all the k-v under hash_key will be sorted by sort_key.
     /// \param value
-    /// the value we want to store.
+    ///     the value we want to store.
     /// \param timeout_milliseconds
-    /// if wait longer than this value, will return time out error
+    ///     if wait longer than this value, will return time out error
     /// \param ttl_seconds
-    /// time to live of this value, if expired, will return not found; 0 means no ttl
+    ///     time to live of this value, if expired, will return not found; 0 means no ttl
     /// \return
-    /// int, the error indicates whether or not the operation is succeeded.
+    ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
     /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_extractor
@@ -175,21 +175,21 @@ public:
     ///     search data from app/table `geo_app_name`, the results are `radius_m` meters far from
     ///     the (lat_degrees, lng_degrees).
     /// \param lat_degrees
-    /// latitude in degree, range in [-90.0, 90.0]
+    ///     latitude in degree, range in [-90.0, 90.0]
     /// \param lng_degrees
-    /// longitude in degree, range in [-180.0, 180.0]
+    ///     longitude in degree, range in [-180.0, 180.0]
     /// \param radius_m
-    /// the results are limited by its distance from the (lat_degrees, lng_degrees).
+    ///     the results are limited by its distance from the (lat_degrees, lng_degrees).
     /// \param count
-    /// limit results count
+    ///     limit results count
     /// \param sort_type
-    /// results sorted type
+    ///     results sorted type
     /// \param timeout_milliseconds
-    /// if wait longer than this value, will return time out error
+    ///     if wait longer than this value, will return time out error
     /// \param result
-    /// results container
+    ///     results container
     /// \return
-    /// int, the error indicates whether or not the operation is succeeded.
+    ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
     int search_radial(double lat_degrees,
@@ -213,21 +213,21 @@ public:
     ///     search data from app/table `geo_app_name`, the results are `radius_m` meters far from
     ///     the (lat_degrees, lng_degrees).
     /// \param hash_key
-    /// used to decide which partition to get this k-v
+    ///     used to decide which partition to get this k-v
     /// \param sort_key
-    /// all the k-v under hash_key will be sorted by sort_key.
+    ///     all the k-v under hash_key will be sorted by sort_key.
     /// \param radius_m
-    /// the results are limited by its distance from the (lat_degrees, lng_degrees).
+    ///     the results are limited by its distance from the (lat_degrees, lng_degrees).
     /// \param count
-    /// limit results count
+    ///     limit results count
     /// \param sort_type
-    /// results sorted type
+    ///     results sorted type
     /// \param timeout_milliseconds
-    /// if wait longer than this value, will return time out error
+    ///     if wait longer than this value, will return time out error
     /// \param result
-    /// results container
+    ///     results container
     /// \return
-    /// int, the error indicates whether or not the operation is succeeded.
+    ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
     /// REQUIRES: latitude and longitude can be correctly extracted by latlng_extractor from the
@@ -247,6 +247,32 @@ public:
                              SortType sort_type,
                              int timeout_milliseconds,
                              geo_search_callback_t &&callback);
+
+    ///
+    /// \brief distance
+    ///     get the distance of the two given keys
+    /// \param hash_key1, hash_key2
+    ///     used to decide which partition to get this k-v
+    /// \param sort_key1, sort_key2
+    ///     all the k-v under hash_key will be sorted by sort_key.
+    /// \param distance
+    ///     the returned distance of the two given keys.
+    /// \return
+    ///     int, the error indicates whether or not the operation is succeeded.
+    /// this error can be converted to a string using get_error_string()
+    int distance(const std::string &hash_key1,
+                 const std::string &sort_key1,
+                 const std::string &hash_key2,
+                 const std::string &sort_key2,
+                 int timeout_milliseconds,
+                 double &distance);
+
+    void async_distance(const std::string &hash_key1,
+                        const std::string &sort_key1,
+                        const std::string &hash_key2,
+                        const std::string &sort_key2,
+                        int timeout_milliseconds,
+                        distance_callback_t &&callback);
 
     const char *get_error_string(int error_code) const
     {

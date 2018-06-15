@@ -42,7 +42,7 @@ protected:
 
         void marshalling(::dsn::binary_writer &write_stream) const final;
     };
-    // both redis simple string and error
+    // represent both redis simple string and error
     struct redis_simple_string : public redis_base_type
     {
         bool is_error = false;
@@ -69,6 +69,7 @@ protected:
 
         void marshalling(::dsn::binary_writer &write_stream) const final;
     };
+
     struct redis_request
     {
         int length;
@@ -82,7 +83,7 @@ protected:
         int64_t sequence_id = 0;
     };
 
-    virtual bool parse(dsn_message_t msg) override;
+    bool parse(dsn_message_t msg) override;
 
     // this is virtual only because we can override and test other modules
     virtual void handle_command(std::unique_ptr<message_entry> &&entry);
@@ -133,13 +134,34 @@ private:
     }
 
     DECLARE_REDIS_HANDLER(set)
-    DECLARE_REDIS_HANDLER(set_geo)
     DECLARE_REDIS_HANDLER(get)
     DECLARE_REDIS_HANDLER(del)
     DECLARE_REDIS_HANDLER(setex)
     DECLARE_REDIS_HANDLER(ttl)
+    DECLARE_REDIS_HANDLER(geo_dist)
     DECLARE_REDIS_HANDLER(geo_radius)
+    DECLARE_REDIS_HANDLER(geo_radius_by_member)
     DECLARE_REDIS_HANDLER(default_handler)
+
+    void set_internal(message_entry &req);
+    void set_geo_internal(message_entry &req);
+    void geo_radius_internal(message_entry &req);
+    void parse_parameters(const std::vector<redis_bulk_string> &opts,
+                          int base_index,
+                          double &radius_m,
+                          std::string &unit,
+                          geo::geo_client::SortType &sort_type,
+                          int &count,
+                          bool &WITHCOORD,
+                          bool &WITHDIST,
+                          bool &WITHVALUE);
+    void process_geo_radius_result(message_entry &entry,
+                                   const std::string &unit,
+                                   bool WITHCOORD,
+                                   bool WITHDIST,
+                                   bool WITHVALUE,
+                                   int ec,
+                                   std::list<geo::SearchResult> &&results);
 
     // function for pipeline reply
     template <typename T>
@@ -164,8 +186,8 @@ private:
 
 public:
     redis_parser(proxy_stub *op, ::dsn::rpc_address remote);
-    virtual ~redis_parser();
-    virtual void on_remove_session(std::shared_ptr<proxy_session> _this) override;
+    ~redis_parser() override;
+    void on_remove_session(std::shared_ptr<proxy_session> _this) override;
 };
 }
 } // namespace

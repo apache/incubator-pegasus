@@ -329,7 +329,7 @@ void geo_client::async_search_radial(const std::string &hash_key,
 
             S2LatLng latlng;
             if (!_extractor->extract_from_value(value_, latlng)) {
-                derror_f("_extractor failed. hash_key={}, sort_key={}, value={}",
+                derror_f("extract_from_value failed. hash_key={}, sort_key={}, value={}",
                          hash_key,
                          sort_key,
                          value_);
@@ -518,7 +518,7 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
     // extract latitude and longitude from value
     S2LatLng latlng;
     if (!_extractor->extract_from_value(value, latlng)) {
-        derror_f("_extractor failed. value={}", value);
+        derror_f("extract_from_value failed. value={}", value);
         return false;
     }
 
@@ -689,7 +689,7 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner *scanner,
 
         S2LatLng latlng;
         if (!_extractor->extract_from_value(value, latlng)) {
-            derror_f("_extractor failed. value={}", value);
+            derror_f("extract_from_value failed. value={}", value);
             cb();
             return;
         }
@@ -718,6 +718,71 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner *scanner,
 
         do_scan(scanner, cap, count, cb, result);
     });
+}
+
+int geo_client::distance(const std::string &hash_key1,
+                         const std::string &sort_key1,
+                         const std::string &hash_key2,
+                         const std::string &sort_key2,
+                         int timeout_milliseconds,
+                         double &distance)
+{
+    int ret = PERR_OK;
+    dsn::utils::notify_event get_completed;
+    auto async_get_callback = [&](int ec_, double &&distance_) {
+        if (ec_ != PERR_OK) {
+            derror_f("get distance failed.");
+            ret = ec_;
+        }
+        distance = distance_;
+        get_completed.notify();
+    };
+    async_distance(
+        hash_key1, sort_key1, hash_key2, sort_key2, timeout_milliseconds, async_get_callback);
+    get_completed.wait();
+
+    return ret;
+}
+
+void geo_client::async_distance(const std::string &hash_key1,
+                                const std::string &sort_key1,
+                                const std::string &hash_key2,
+                                const std::string &sort_key2,
+                                int timeout_milliseconds,
+                                distance_callback_t &&callback)
+{
+    std::shared_ptr<int> ret(new int(PERR_OK));
+    std::shared_ptr<std::atomic<int32_t>> get_count(new std::atomic<int32_t>(2));
+    std::shared_ptr<std::vector<S2LatLng>> get_result(new std::vector<S2LatLng>(2));
+    auto async_get_callback = [ =, cb = std::move(callback) ](
+        int ec_, std::string &&value_, pegasus_client::internal_info &&)
+    {
+        if (ec_ != PERR_OK) {
+            derror_f("get data failed.");
+            *ret = ec_;
+        }
+
+        S2LatLng latlng;
+        if (!_extractor->extract_from_value(value_, latlng)) {
+            derror_f("extract_from_value failed. value={}", value_);
+            *ret = PERR_GEO_DECODE_VALUE_ERROR;
+        }
+
+        int index = get_count->fetch_sub(1);
+        (*get_result)[index - 1] = latlng;
+        if (index == 1) {
+            if (*ret == PERR_OK) {
+                util::units::Meters distance =
+                    S2Earth::GetDistance((*get_result)[0], (*get_result)[1]);
+                cb(*ret, distance.value());
+            } else {
+                cb(*ret, std::numeric_limits<double>::max());
+            }
+        }
+    };
+
+    _common_data_client->async_get(hash_key1, sort_key1, async_get_callback, timeout_milliseconds);
+    _common_data_client->async_get(hash_key1, sort_key1, async_get_callback, timeout_milliseconds);
 }
 
 } // namespace geo
