@@ -289,12 +289,12 @@ private:
         int calc_queue[MAX_QUEUE_LENGTH][4];
     };
 
-    inline void insert_calc_queue(boost::shared_ptr<compute_context> &ctx,
-                                  int left,
-                                  int right,
-                                  int qleft,
-                                  int qright,
-                                  int &calc_tail)
+    void insert_calc_queue(boost::shared_ptr<compute_context> &ctx,
+                           int left,
+                           int right,
+                           int qleft,
+                           int qright,
+                           int &calc_tail)
     {
         calc_tail++;
         ctx->calc_queue[calc_tail][_LEFT] = left;
@@ -324,12 +324,12 @@ private:
         return find_mid(ctx, 0, (right - left - 1) / 5);
     }
 
-    inline void select(boost::shared_ptr<compute_context> &ctx,
-                       int left,
-                       int right,
-                       int qleft,
-                       int qright,
-                       int &calc_tail)
+    void select(boost::shared_ptr<compute_context> &ctx,
+                int left,
+                int right,
+                int qleft,
+                int qright,
+                int &calc_tail)
     {
         int i, j, index, now;
         uint64_t mid;

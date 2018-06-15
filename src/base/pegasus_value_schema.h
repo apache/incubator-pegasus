@@ -13,22 +13,23 @@
 #include <dsn/utility/utils.h>
 #include <dsn/utility/smart_pointers.h>
 #include <dsn/utility/endians.h>
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/service_api_c.h>
 #include <rocksdb/slice.h>
 
 namespace pegasus {
 
-#define PEGASUS_VALUE_SCHEMA_MAX_VERSION 0
+#define PEGASUS_VALUE_SCHEMA_MAX_VERSION 0u
 
 /// Extracts expire_ts from rocksdb value with given version.
 /// The value schema must be in v0.
 /// \return expire_ts in host endian
-inline uint32_t pegasus_extract_expire_ts(int version, dsn::string_view value)
+inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view value)
 {
-    dassert(version <= PEGASUS_VALUE_SCHEMA_MAX_VERSION,
-            "value schema version(%d) must be <= %d",
-            version,
-            PEGASUS_VALUE_SCHEMA_MAX_VERSION);
+    dassert_f(version <= PEGASUS_VALUE_SCHEMA_MAX_VERSION,
+              "value schema version({}) must be <= {}",
+              version,
+              PEGASUS_VALUE_SCHEMA_MAX_VERSION);
 
     return dsn::data_input(value).read_u32();
 }
@@ -37,12 +38,13 @@ inline uint32_t pegasus_extract_expire_ts(int version, dsn::string_view value)
 /// In order to avoid data copy, the ownership of `raw_value` will be transferred
 /// into `user_data`.
 /// \param user_data: the result.
-inline void pegasus_extract_user_data(int version, std::string &&raw_value, ::dsn::blob &user_data)
+inline void
+pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob &user_data)
 {
-    dassert(version <= PEGASUS_VALUE_SCHEMA_MAX_VERSION,
-            "value schema version(%d) must be <= %d",
-            version,
-            PEGASUS_VALUE_SCHEMA_MAX_VERSION);
+    dassert_f(version <= PEGASUS_VALUE_SCHEMA_MAX_VERSION,
+              "value schema version(%{}) must be <= {}",
+              version,
+              PEGASUS_VALUE_SCHEMA_MAX_VERSION);
 
     std::string *s = new std::string(std::move(raw_value));
     dsn::data_input input(*s);
@@ -50,9 +52,7 @@ inline void pegasus_extract_user_data(int version, std::string &&raw_value, ::ds
     dsn::string_view view = input.read_str();
 
     // tricky code to avoid memory copy
-    auto ptr = const_cast<char *>(view.data());
-    auto deleter = [s](char *) { delete s; };
-    std::shared_ptr<char> buf(ptr, deleter);
+    std::shared_ptr<char> buf(const_cast<char *>(view.data()), [s](char *) { delete s; });
     user_data.assign(std::move(buf), 0, static_cast<unsigned int>(view.length()));
 }
 
@@ -67,25 +67,28 @@ inline bool check_if_record_expired(uint32_t value_schema_version,
                                     uint32_t epoch_now,
                                     dsn::string_view raw_value)
 {
-    uint32_t expire_ts = pegasus_extract_expire_ts(value_schema_version, raw_value);
-    return check_if_ts_expired(epoch_now, expire_ts);
+    return check_if_ts_expired(epoch_now,
+                               pegasus_extract_expire_ts(value_schema_version, raw_value));
 }
 
 /// Helper class for generating value.
-/// NOTE that the instance of pegasus_value_generator must be alive
-/// while the returned SliceParts is.
+/// NOTES:
+/// * the instance of pegasus_value_generator must be alive while the returned SliceParts is.
+/// * the data of user_data must be alive be alive while the returned SliceParts is, because
+///   we do not copy it.
+/// * the returned SliceParts is only valid before the next invoking of generate_value().
 class pegasus_value_generator
 {
 public:
     /// A higher level utility for generating value with given version.
     /// The value schema must be in v0.
     rocksdb::SliceParts
-    generate_value(int value_schema_version, dsn::string_view user_data, uint32_t expire_ts)
+    generate_value(uint32_t value_schema_version, dsn::string_view user_data, uint32_t expire_ts)
     {
         if (value_schema_version == 0) {
             return generate_value_v0(expire_ts, user_data);
         } else {
-            dfatal("unsupported value schema version: %d", value_schema_version);
+            dfatal_f("unsupported value schema version: {}", value_schema_version);
             __builtin_unreachable();
         }
     }

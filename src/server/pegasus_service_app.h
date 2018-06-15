@@ -21,7 +21,7 @@ public:
     {
     }
 
-    virtual ~pegasus_replication_service_app() {}
+    virtual ~pegasus_replication_service_app() override {}
 
     virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
@@ -54,7 +54,7 @@ public:
     {
     }
 
-    virtual ~pegasus_meta_service_app() {}
+    virtual ~pegasus_meta_service_app() override {}
 
     virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
