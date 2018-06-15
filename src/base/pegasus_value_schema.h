@@ -42,7 +42,7 @@ inline void
 pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob &user_data)
 {
     dassert_f(version <= PEGASUS_VALUE_SCHEMA_MAX_VERSION,
-              "value schema version(%{}) must be <= {}",
+              "value schema version({}) must be <= {}",
               version,
               PEGASUS_VALUE_SCHEMA_MAX_VERSION);
 
