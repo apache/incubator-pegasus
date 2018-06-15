@@ -5,6 +5,9 @@ set(DSN_THIRDPARTY_ROOT "$ENV{DSN_THIRDPARTY_ROOT}")
 if((DSN_ROOT STREQUAL "") OR (NOT EXISTS "${DSN_ROOT}/"))
     message(FATAL_ERROR "Please make sure that DSN_ROOT is defined and does exists.")
 endif()
+if((DSN_THIRDPARTY_ROOT STREQUAL "") OR (NOT EXISTS "${DSN_THIRDPARTY_ROOT}/"))
+    message(FATAL_ERROR "Please make sure that DSN_THIRDPARTY_ROOT is defined and does exists.")
+endif()
 
 include("${DSN_ROOT}/bin/dsn.cmake")
 
@@ -14,7 +17,7 @@ dsn_common_setup()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories("../rocksdb/include")
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../rocksdb/include)
 
 add_subdirectory(base)
 add_subdirectory(client_lib)
