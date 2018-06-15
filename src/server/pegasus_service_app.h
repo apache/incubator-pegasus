@@ -21,8 +21,6 @@ public:
     {
     }
 
-    virtual ~pegasus_replication_service_app() override {}
-
     virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
         ::dsn::error_code ret = ::dsn::replication::replication_service_app::start(args);
