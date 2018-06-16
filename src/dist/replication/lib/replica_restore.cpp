@@ -126,7 +126,7 @@ dsn::error_code replica::download_checkpoint(const configuration_restore_request
     dsn::error_code err = dsn::ERR_OK;
     dsn::task_tracker tracker;
 
-    auto download_file_callback_func = [this, &err, &local_chkpt_dir](
+    auto download_file_callback_func = [this, &err](
         const download_response &d_resp, block_file_ptr f, const std::string &local_file) {
         if (d_resp.err != dsn::ERR_OK) {
             if (d_resp.err == ERR_OBJECT_NOT_FOUND) {
@@ -527,7 +527,7 @@ void replica::report_restore_status_to_meta()
     ::dsn::marshall(msg, request);
     rpc_address target(_stub->_failure_detector->get_servers());
     rpc::call(
-        target, msg, &_tracker, [this](error_code err, dsn_message_t request, dsn_message_t resp) {
+        target, msg, &_tracker, [](error_code err, dsn_message_t request, dsn_message_t resp) {
             if (err == ERR_OK) {
                 configuration_report_restore_status_response response;
                 ::dsn::unmarshall(resp, response);

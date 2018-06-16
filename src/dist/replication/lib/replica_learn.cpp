@@ -845,7 +845,6 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             _potential_secondary_states.learn_remote_files_task =
                 tasking::create_task(LPC_LEARN_REMOTE_DELTA_FILES, &_tracker, [
                     this,
-                    err,
                     copy_start = _potential_secondary_states.duration_ms(),
                     req_cap = std::move(req),
                     resp_cap = std::move(resp)

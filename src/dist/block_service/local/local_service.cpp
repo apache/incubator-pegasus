@@ -179,7 +179,7 @@ dsn::task_ptr local_service::exist(const exist_request &req,
 {
     exist_future_ptr tsk(new exist_future(code, cb, 0));
     tsk->set_tracker(tracker);
-    auto exist_background = [this, req, tsk]() {
+    auto exist_background = [req, tsk]() {
         exist_response resp;
         if (utils::filesystem::path_exists(req.path)) {
             resp.err = ERR_OK;
@@ -201,7 +201,7 @@ dsn::task_ptr local_service::remove_path(const remove_path_request &req,
     remove_path_future_ptr tsk(new remove_path_future(code, cb, 0));
     tsk->set_tracker(tracker);
 
-    auto remove_path_background = [this, req, tsk]() {
+    auto remove_path_background = [req, tsk]() {
         remove_path_response resp;
         resp.err = ERR_OK;
 

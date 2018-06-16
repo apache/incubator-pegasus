@@ -1176,8 +1176,7 @@ error_code backup_service::sync_policies_from_remote_storage()
     _meta_svc->get_remote_storage()->get_children(
         _policy_meta_root,
         LPC_DEFAULT_CALLBACK, // TASK_CODE_EXEC_INLINED,,
-        [&err, &tracker, &init_one_policy](error_code ec,
-                                           const std::vector<std::string> &children) {
+        [&err, &init_one_policy](error_code ec, const std::vector<std::string> &children) {
             if (ec == ERR_OK) {
                 // children's name is name of each policy
                 for (const auto &policy_name : children) {

@@ -649,7 +649,7 @@ TEST_F(FDSClientTest, test_basic_operation)
             std::cout << "first clean the dir in case old test failed" << std::endl;
             s->remove_path(remove_path_request{std::string(prefix), true},
                            lpc_btest,
-                           [this, &rem_resp](const remove_path_response &resp) { rem_resp = resp; },
+                           [&rem_resp](const remove_path_response &resp) { rem_resp = resp; },
                            nullptr)
                 ->wait();
 
@@ -680,7 +680,7 @@ TEST_F(FDSClientTest, test_basic_operation)
             l_resp.entries->clear();
             s->list_dir(ls_request{prefix},
                         lpc_btest,
-                        [this, &l_resp](const ls_response &resp) { l_resp = resp; },
+                        [&l_resp](const ls_response &resp) { l_resp = resp; },
                         nullptr)
                 ->wait();
             ASSERT_EQ(l_resp.err, ERR_OK);
@@ -693,13 +693,13 @@ TEST_F(FDSClientTest, test_basic_operation)
             std::cout << "then remove all the files, using remove path" << std::endl;
             s->remove_path(remove_path_request{std::string(prefix), true},
                            lpc_btest,
-                           [this, &rem_resp](const remove_path_response &resp) { rem_resp = resp; },
+                           [&rem_resp](const remove_path_response &resp) { rem_resp = resp; },
                            nullptr)
                 ->wait();
             ASSERT_EQ(rem_resp.err, ERR_OK);
             s->exist(exist_request{std::string(prefix)},
                      lpc_btest,
-                     [this, &e_resp](const exist_response &resp) { e_resp = resp; },
+                     [&e_resp](const exist_response &resp) { e_resp = resp; },
                      nullptr)
                 ->wait();
             ASSERT_EQ(e_resp.err, ERR_OBJECT_NOT_FOUND);

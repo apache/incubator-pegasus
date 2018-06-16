@@ -145,9 +145,9 @@ TEST_F(meta_state_service_utils_test, concurrent)
 TEST_F(meta_state_service_utils_test, get_children)
 {
     _storage->create_node("/1", dsn::blob(), [this]() {
-        _storage->create_node("/1/99", dsn::blob(), [this]() {});
-        _storage->create_node("/1/999", dsn::blob(), [this]() {});
-        _storage->create_node("/1/9999", dsn::blob(), [this]() {});
+        _storage->create_node("/1/99", dsn::blob(), []() {});
+        _storage->create_node("/1/999", dsn::blob(), []() {});
+        _storage->create_node("/1/9999", dsn::blob(), []() {});
     });
     _tracker.wait_outstanding_tasks();
 
