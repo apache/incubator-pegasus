@@ -4,131 +4,43 @@
 
 #pragma once
 
-// for the auxiliary of main function
+#include <dsn/c/app_model.h>
 
-#include <iostream>
-#include <stdio.h>
-#include <string>
-#include <iomanip>
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <boost/lexical_cast.hpp>
-#include <dsn/service_api_c.h>
+#include "linenoise/linenoise.h"
+#include "sds/sds.h"
 
-extern std::string g_last_history;
-
-inline void rl_gets(char *&line_read, bool nextCommand = true)
+template <typename Func>
+struct deferred_action
 {
-    if (line_read) {
-        free(line_read);
-        line_read = (char *)NULL;
-    }
+    explicit deferred_action(Func &&func) noexcept : _func(std::move(func)) {}
+    ~deferred_action() { _func(); }
+private:
+    Func _func;
+};
 
-    if (nextCommand)
-        line_read = readline("\n>>>");
-    else
-        line_read = readline(">>>");
+template <typename Func>
+inline deferred_action<Func> defer(Func &&func)
+{
+    return deferred_action<Func>(std::forward<Func>(func));
+}
 
-    if (!line_read)
+inline sds *scanfCommand(int *argc)
+{
+    char *line = NULL;
+    auto _ = defer([line]() {
+        if (line) {
+            linenoiseFree(line);
+        }
+    });
+
+    if ((line = linenoise(">>> ")) == NULL) {
         dsn_exit(0);
-
-    if (line_read && *line_read && g_last_history != line_read) {
-        add_history(line_read);
-        g_last_history = line_read;
     }
-}
-
-// scanf a word
-inline bool scanfWord(std::string &str, char endFlag, char *&line_read, int &pos)
-{
-    char ch;
-    bool commandEnd = true;
-
-    if (endFlag == '\'') {
-        while ((ch = line_read[pos++]) != endFlag) {
-            if (ch == '\0') {
-                str += '\n';
-                rl_gets(line_read, false);
-                pos = 0;
-                continue;
-            }
-
-            if (ch == '\\') {
-                ch = line_read[pos++];
-                if (ch == 'x' || ch == 'X')
-                    str += '\\';
-            }
-            str += ch;
-        }
-    } else if (endFlag == '\"') {
-        while ((ch = line_read[pos++]) != endFlag) {
-            if (ch == '\0') {
-                str += '\n';
-                rl_gets(line_read, false);
-                pos = 0;
-                continue;
-            }
-
-            if (ch == '\\') {
-                ch = line_read[pos++];
-                if (ch == 'x' || ch == 'X')
-                    str += '\\';
-            }
-            str += ch;
-        }
-    } else {
-        ch = line_read[pos++];
-        while (!(ch == ' ' || ch == '\0')) {
-            str += ch;
-            ch = line_read[pos++];
-        }
+    if (line[0] == '\0') {
+        return NULL;
     }
-    if (ch == '\0')
-        return commandEnd;
-    else
-        return !commandEnd;
-}
+    linenoiseHistoryAdd(line);
+    linenoiseHistorySave(".shell-history");
 
-inline void scanfCommand(int &Argc, std::string Argv[], int paraNum)
-{
-    for (int i = 0; i < paraNum; ++i)
-        Argv[i].clear();
-    char *line_read = NULL;
-    rl_gets(line_read);
-
-    if (line_read == NULL) {
-        std::cout << std::endl;
-        Argc = -1;
-        return;
-    }
-
-    char ch;
-    int index;
-    int pos;
-    Argc = 0;
-    for (pos = 0, index = 0; index < paraNum; ++index) {
-        while ((ch = line_read[pos++]) == ' ')
-            ;
-
-        if (ch == '\'')
-            scanfWord(Argv[index], '\'', line_read, pos);
-        else if (ch == '\"')
-            scanfWord(Argv[index], '\"', line_read, pos);
-        else if (ch == '\0')
-            return;
-        else {
-            Argv[index] = ch;
-            if (scanfWord(Argv[index], ' ', line_read, pos)) {
-                Argc++;
-                return;
-            }
-        }
-
-        Argc++;
-    }
-
-    for (index = 0; index < Argc; ++index)
-        std::cout << Argv[index] << ' ';
-    free(line_read);
-    line_read = NULL;
+    return sdssplitargs(line, argc);
 }

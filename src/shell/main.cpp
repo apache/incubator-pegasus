@@ -12,7 +12,6 @@
 #include "commands.h"
 
 std::string g_last_history;
-const int s_max_params_count = 10000;
 std::map<std::string, command_executor *> s_commands_map;
 shell_context s_global_context;
 size_t s_max_name_length = 0;
@@ -25,7 +24,7 @@ bool help_info(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-command_executor commands[] = {
+static command_executor commands[] = {
     {
         "help", "print help info", "", help_info,
     },
@@ -404,44 +403,67 @@ void register_all_commands()
     }
 }
 
-void execute_command(command_executor *e, int argc, std::string str_args[])
+void execute_command(command_executor *e, int argc, sds *str_args)
 {
-    static char buffer[s_max_params_count][512]; // 512*32
-    static char *argv[s_max_params_count];
-    for (int i = 0; i < s_max_params_count; ++i) {
-        argv[i] = buffer[i];
-    }
-
-    for (int i = 0; i < argc && i < s_max_params_count; ++i) {
-        if (!str_args[i].empty()) {
-            strcpy(argv[i], str_args[i].c_str());
-        } else {
-            memset(argv[i], 0, sizeof(512));
-        }
-    }
-
-    if (!e->exec(e, &s_global_context, {argc, argv})) {
+    if (!e->exec(e, &s_global_context, {argc, str_args})) {
         printf("USAGE: ");
         print_help(e, s_max_name_length, s_option_width);
     }
 }
 
-static sigjmp_buf s_ctrlc_buf;
-void handle_signals(int signo)
+/* Linenoise completion callback. */
+static void completionCallback(const char *buf, linenoiseCompletions *lc)
 {
-    if (signo == SIGINT) {
-        std::cout << std::endl << "Type \"Ctrl-D\" to exit the shell." << std::endl;
-        siglongjmp(s_ctrlc_buf, 1);
+    for (int i = 0; commands[i].name != nullptr; ++i) {
+        const command_executor &c = commands[i];
+
+        size_t matchlen = strlen(buf);
+        if (strncasecmp(buf, c.name, matchlen) == 0) {
+            linenoiseAddCompletion(lc, c.name);
+        }
     }
 }
 
-void initialize(int argc, char **argv)
+/* Linenoise hints callback. */
+static char *hintsCallback(const char *buf, int *color, int *bold)
 {
-    if (signal(SIGINT, handle_signals) == SIG_ERR) {
-        std::cout << "ERROR: register signal handler failed" << std::endl;
-        dsn_exit(-1);
+    int argc;
+    sds *argv = sdssplitargs(buf, &argc);
+
+    auto cleanup = defer([argc, argv]() { sdsfreesplitres(argv, argc); });
+
+    /* Check if the argument list is empty and return ASAP. */
+    if (argc == 0) {
+        return NULL;
     }
 
+    size_t buflen = strlen(buf);
+    bool endWithSpace = buflen && isspace(buf[buflen - 1]);
+
+    for (int i = 0; commands[i].name != nullptr; ++i) {
+        if (strcasecmp(argv[0], commands[i].name) == 0) {
+            *color = 90;
+            *bold = 0;
+            sds hint = sdsnew(commands[i].option_usage);
+
+            /* Add an initial space if needed. */
+            if (!endWithSpace) {
+                sds newhint = sdsnewlen(" ", 1);
+                newhint = sdscatsds(newhint, hint);
+                sdsfree(hint);
+                hint = newhint;
+            }
+
+            return hint;
+        }
+    }
+    return NULL;
+}
+
+static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
+
+void initialize(int argc, char **argv)
+{
     std::cout << "Pegasus Shell " << PEGASUS_VERSION << std::endl;
     std::cout << "Type \"help\" for more information." << std::endl;
     std::cout << "Type \"Ctrl-D\" to exit the shell." << std::endl;
@@ -469,31 +491,36 @@ void initialize(int argc, char **argv)
     s_global_context.ddl_client.reset(
         new dsn::replication::replication_ddl_client(s_global_context.meta_list));
 
+    linenoiseSetMultiLine(1);
+    linenoiseSetCompletionCallback(completionCallback);
+    linenoiseSetHintsCallback(hintsCallback);
+    linenoiseSetFreeHintsCallback(freeHintsCallback);
+    linenoiseHistoryLoad(".shell-history");
+
     register_all_commands();
 }
 
 void run()
 {
-    while (sigsetjmp(s_ctrlc_buf, 1) != 0)
-        ;
-
     while (true) {
-        int arg_count;
-        std::string args[s_max_params_count];
-        scanfCommand(arg_count, args, s_max_params_count);
+        int arg_count = 0;
+        sds *args = scanfCommand(&arg_count);
+        auto cleanup = defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
+
         if (arg_count > 0) {
             int i = 0;
             for (; i < arg_count; ++i) {
-                std::string &s = args[i];
+                sds s = args[i];
                 int j = 0;
-                for (; j < s.size(); ++j) {
-                    if (!isprint(s.at(j))) {
+                for (; j < sdslen(s); ++j) {
+                    if (!isprint(s[j])) {
                         std::cout << "ERROR: found unprintable character in '"
-                                  << pegasus::utils::c_escape_string(s) << "'" << std::endl;
+                                  << pegasus::utils::c_escape_string(std::string(s, sdslen(s)))
+                                  << "'" << std::endl;
                         break;
                     }
                 }
-                if (j < s.size())
+                if (j < sdslen(s))
                     break;
             }
             if (i < arg_count)
