@@ -11,7 +11,6 @@
 #include "command_executor.h"
 #include "commands.h"
 
-std::string g_last_history;
 std::map<std::string, command_executor *> s_commands_map;
 shell_context s_global_context;
 size_t s_max_name_length = 0;
@@ -429,8 +428,7 @@ static char *hintsCallback(const char *buf, int *color, int *bold)
 {
     int argc;
     sds *argv = sdssplitargs(buf, &argc);
-
-    auto cleanup = defer([argc, argv]() { sdsfreesplitres(argv, argc); });
+    auto cleanup = dsn::defer([argc, argv]() { sdsfreesplitres(argv, argc); });
 
     /* Check if the argument list is empty and return ASAP. */
     if (argc == 0) {
@@ -460,6 +458,7 @@ static char *hintsCallback(const char *buf, int *color, int *bold)
     return NULL;
 }
 
+/* Linenoise free hints callback. */
 static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
 
 void initialize(int argc, char **argv)
@@ -505,7 +504,7 @@ void run()
     while (true) {
         int arg_count = 0;
         sds *args = scanfCommand(&arg_count);
-        auto cleanup = defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
+        auto cleanup = dsn::defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
 
         if (arg_count > 0) {
             int i = 0;

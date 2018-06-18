@@ -5,29 +5,15 @@
 #pragma once
 
 #include <dsn/c/app_model.h>
+#include <dsn/utility/defer.h>
 
 #include "linenoise/linenoise.h"
 #include "sds/sds.h"
 
-template <typename Func>
-struct deferred_action
-{
-    explicit deferred_action(Func &&func) noexcept : _func(std::move(func)) {}
-    ~deferred_action() { _func(); }
-private:
-    Func _func;
-};
-
-template <typename Func>
-inline deferred_action<Func> defer(Func &&func)
-{
-    return deferred_action<Func>(std::forward<Func>(func));
-}
-
 inline sds *scanfCommand(int *argc)
 {
     char *line = NULL;
-    auto _ = defer([line]() {
+    auto _ = dsn::defer([line]() {
         if (line) {
             linenoiseFree(line);
         }
