@@ -22,7 +22,6 @@ set(MY_PROJ_LIBS
     dsn.failure_detector
     dsn.failure_detector.multimaster
     pegasus_client_static
-    readline
     galaxy-fds-sdk-cpp
     PocoNet
     PocoFoundation

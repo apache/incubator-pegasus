@@ -32,12 +32,12 @@ Please notice that Pegasus can not be built until the following packages meet th
 For Ubuntu:
 
 ```
-sudo apt-get install build-essential cmake libboost-all-dev libaio-dev libsnappy-dev libbz2-dev libreadline-dev libgflags-dev patch
+sudo apt-get install build-essential cmake libboost-all-dev libaio-dev libsnappy-dev libbz2-dev libgflags-dev patch
 ```
 
 For CentOS:
 ```
-yum -y install cmake boost-devel libaio-devel snappy-devel bzip2-devel readline-devel patch
+yum -y install cmake boost-devel libaio-devel snappy-devel bzip2-devel patch
 ```
 
 Please make sure you install the proper version of GCC, CMake and Boost.
