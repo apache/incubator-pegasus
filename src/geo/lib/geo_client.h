@@ -19,6 +19,7 @@ struct SearchResult;
 using geo_search_callback_t =
     std::function<void(int error_code, std::list<SearchResult> &&results)>;
 using distance_callback_t = std::function<void(int error_code, double &&distance)>;
+
 /// the search result structure used by `search_radial` APIs
 struct SearchResult
 {
@@ -281,7 +282,7 @@ public:
 
 private:
     friend class geo_client_test;
-    friend class geo_client_test_set_Test;
+    friend class geo_client_test_set_and_del_Test;
     friend class geo_client_test_set_geo_data_Test;
     friend class geo_client_test_normalize_result_random_order_Test;
     friend class geo_client_test_normalize_result_distance_order_Test;
@@ -360,27 +361,10 @@ private:
                                      scan_all_area_callback_t &&callback);
 
     // normalize the result by count, sort type, ...
-    void normalize_result(std::list<std::vector<SearchResult>> &&results,
+    void normalize_result(const std::list<std::vector<SearchResult>> &results,
                           int count,
                           SortType sort_type,
                           std::list<SearchResult> &result);
-
-    template <typename priority_queue, typename elem_type>
-    void get_top_n(priority_queue &top_n_result, int count, std::list<elem_type> &result)
-    {
-        for (const auto &r : result) {
-            top_n_result.emplace(r);
-            if (top_n_result.size() > count) {
-                top_n_result.pop();
-            }
-        }
-
-        result.clear();
-        while (!top_n_result.empty()) {
-            result.emplace_front(top_n_result.top());
-            top_n_result.pop();
-        }
-    }
 
     // generate sort key of `max_level_cid` under `hash_key`
     std::string gen_sort_key(const S2CellId &max_level_cid, const std::string &hash_key);

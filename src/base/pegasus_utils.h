@@ -7,6 +7,7 @@
 #include <time.h>
 #include <cctype>
 #include <cstring>
+#include <queue>
 #include <boost/lexical_cast.hpp>
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/utility/string_view.h>
@@ -48,6 +49,37 @@ int binary_compare(const T &a, const T &b)
     return r;
 }
 
+template <typename elem_type, typename compare = std::less<elem_type>>
+class top_n
+{
+public:
+    typedef typename std::priority_queue<elem_type, std::vector<elem_type>, compare>
+        data_priority_queue;
+
+    top_n(const std::list<elem_type> &data, int n)
+    {
+        for (const auto &r : data) {
+            _queue.emplace(r);
+            if (_queue.size() > n) {
+                _queue.pop();
+            }
+        }
+    }
+
+    std::list<elem_type> to()
+    {
+        std::list<elem_type> result;
+        while (!_queue.empty()) {
+            result.emplace_front(_queue.top());
+            _queue.pop();
+        }
+        return std::move(result);
+    }
+
+protected:
+    data_priority_queue _queue;
+};
+
 // ----------------------------------------------------------------------
 // c_escape_string()
 //    Copies 'src' to 'dest', escaping dangerous characters using
@@ -82,6 +114,5 @@ int c_unescape_string(const std::string &src, std::string &dest);
 inline dsn::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
 
 inline rocksdb::Slice to_rocksdb_slice(dsn::string_view s) { return {s.data(), s.size()}; }
-
 }
 } // namespace

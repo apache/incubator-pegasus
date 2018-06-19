@@ -11,6 +11,7 @@
 #include <s2/s2region_coverer.h>
 #include <s2/s2cap.h>
 #include <base/pegasus_key_schema.h>
+#include <base/pegasus_utils.h>
 
 namespace pegasus {
 namespace geo {
@@ -169,7 +170,7 @@ void geo_client::async_del(const std::string &hash_key,
             std::shared_ptr<int> ret(new int(PERR_OK));
             std::shared_ptr<std::atomic<int32_t>> del_count(new std::atomic<int32_t>(2));
             auto async_del_callback =
-                [&](int ec__, pegasus_client::internal_info &&, DataType data_type_) {
+                [=](int ec__, pegasus_client::internal_info &&, DataType data_type_) mutable {
                     if (ec__ != PERR_OK) {
                         derror_f("del {} data failed. hash_key={}, sort_key={}",
                                  data_type_ == DataType::common ? "common" : "geo",
@@ -486,7 +487,7 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
     send_finish->store(true);
 }
 
-void geo_client::normalize_result(std::list<std::vector<SearchResult>> &&results,
+void geo_client::normalize_result(const std::list<std::vector<SearchResult>> &results,
                                   int count,
                                   SortType sort_type,
                                   std::list<SearchResult> &result)
@@ -500,13 +501,9 @@ void geo_client::normalize_result(std::list<std::vector<SearchResult>> &&results
     }
 
     if (sort_type == SortType::asc) {
-        auto top_n_result =
-            std::priority_queue<SearchResult, std::vector<SearchResult>, SearchResultNearer>();
-        get_top_n(top_n_result, count, result);
+        result = utils::top_n<SearchResult, SearchResultNearer>(result, count).to();
     } else if (sort_type == SortType::desc) {
-        auto top_n_result =
-            std::priority_queue<SearchResult, std::vector<SearchResult>, SearchResultFarther>();
-        get_top_n(top_n_result, count, result);
+        result = utils::top_n<SearchResult, SearchResultFarther>(result, count).to();
     } else if (count > 0 && result.size() > count) {
         result.resize((size_t)count);
     }
