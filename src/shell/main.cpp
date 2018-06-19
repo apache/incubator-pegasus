@@ -512,23 +512,6 @@ void run()
         }
 
         if (arg_count > 0) {
-            int i = 0;
-            for (; i < arg_count; ++i) {
-                sds s = args[i];
-                int j = 0;
-                for (; j < sdslen(s); ++j) {
-                    if (!isprint(s[j])) {
-                        std::cout << "ERROR: found unprintable character in '"
-                                  << pegasus::utils::c_escape_string(std::string(s, sdslen(s)))
-                                  << "'" << std::endl;
-                        break;
-                    }
-                }
-                if (j < sdslen(s))
-                    break;
-            }
-            if (i < arg_count)
-                continue;
             auto iter = s_commands_map.find(args[0]);
             if (iter != s_commands_map.end()) {
                 execute_command(iter->second, arg_count, args);
