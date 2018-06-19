@@ -87,22 +87,22 @@ while [[ $# > 0 ]]; do
 done
 
 mkdir -p ${pack}/bin
-cp -v ./DSN_ROOT/bin/pegasus_server/pegasus_server ${pack}/bin
-cp -v ./DSN_ROOT/lib/libdsn_meta_server.so ${pack}/bin
-cp -v ./DSN_ROOT/lib/libdsn_replica_server.so ${pack}/bin
-cp -v ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/bin
-cp -v ./rdsn/thirdparty/output/lib/libtcmalloc.so.4 ${pack}/bin
-cp -v ./scripts/sendmail.sh ${pack}/bin
-cp -v ./src/server/config.ini ${pack}/bin
+copy_file ./DSN_ROOT/bin/pegasus_server/pegasus_server ${pack}/bin
+copy_file ./DSN_ROOT/lib/libdsn_meta_server.so ${pack}/bin
+copy_file ./DSN_ROOT/lib/libdsn_replica_server.so ${pack}/bin
+copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/bin
+copy_file ./rdsn/thirdparty/output/lib/libtcmalloc.so.4 ${pack}/bin
+copy_file ./scripts/sendmail.sh ${pack}/bin
+copy_file ./src/server/config.ini ${pack}/bin
 
-cp -v `get_boost_lib $custom_boost_lib system` ${pack}/bin
-cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/bin
-cp -v `get_stdcpp_lib $custom_gcc` ${pack}/bin
-cp -v `get_system_lib server snappy` ${pack}/bin
-cp -v `get_system_lib server crypto` ${pack}/bin
-cp -v `get_system_lib server ssl` ${pack}/bin
-cp -v `get_system_lib server aio` ${pack}/bin
-cp -v `get_system_lib server bz2` ${pack}/bin
+copy_file `get_boost_lib $custom_boost_lib system` ${pack}/bin
+copy_file `get_boost_lib $custom_boost_lib filesystem` ${pack}/bin
+copy_file `get_stdcpp_lib $custom_gcc` ${pack}/bin
+copy_file `get_system_lib server snappy` ${pack}/bin
+copy_file `get_system_lib server crypto` ${pack}/bin
+copy_file `get_system_lib server ssl` ${pack}/bin
+copy_file `get_system_lib server aio` ${pack}/bin
+copy_file `get_system_lib server bz2` ${pack}/bin
 
 chmod +x ${pack}/bin/pegasus_* ${pack}/bin/*.sh
 chmod -x ${pack}/bin/lib*

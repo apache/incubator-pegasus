@@ -31,3 +31,19 @@ function get_system_lib()
     echo `ldconfig -p|grep $libname|awk '{print $NF}'`
 }
 
+#USAGE: copy_file src dest
+function copy_file()
+{
+    if [ $# -lt 2 ]; then
+        echo "ERROR: invalid copy file command: cp $*"
+        exit 1
+    fi
+    src=$1
+    dst=$2
+    cp -v $*
+    if [ $? -ne 0 ]; then
+        echo "ERROR: copy file failed: cp $*"
+        exit 1
+    fi
+}
+

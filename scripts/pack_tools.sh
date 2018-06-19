@@ -87,7 +87,7 @@ while [[ $# > 0 ]]; do
 done
 
 mkdir -p ${pack}
-cp -v ./run.sh ${pack}/
+copy_file ./run.sh ${pack}/
 
 mkdir -p ${pack}/DSN_ROOT/bin
 cp -v -r ./DSN_ROOT/bin/pegasus_server ${pack}/DSN_ROOT/bin/
@@ -98,33 +98,33 @@ cp -v -r ./DSN_ROOT/bin/pegasus_rproxy ${pack}/DSN_ROOT/bin/
 cp -v -r ./DSN_ROOT/bin/pegasus_pressureclient ${pack}/DSN_ROOT/bin/
 
 mkdir -p ${pack}/DSN_ROOT/lib
-cp -v -r ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
-cp -v ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib/
-cp -v ./rdsn/thirdparty/output/lib/libtcmalloc.so.4 ${pack}/DSN_ROOT/lib/
-cp -v `get_boost_lib $custom_boost_lib system` ${pack}/DSN_ROOT/lib/
-cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/DSN_ROOT/lib/
-cp -v `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
-cp -v `get_system_lib shell snappy` ${pack}/DSN_ROOT/lib/
-cp -v `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/
-cp -v `get_system_lib shell ssl` ${pack}/DSN_ROOT/lib/
-cp -v `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/
-cp -v `get_system_lib shell bz2` ${pack}/DSN_ROOT/lib/
+copy_file ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libtcmalloc.so.4 ${pack}/DSN_ROOT/lib/
+copy_file `get_boost_lib $custom_boost_lib system` ${pack}/DSN_ROOT/lib/
+copy_file `get_boost_lib $custom_boost_lib filesystem` ${pack}/DSN_ROOT/lib/
+copy_file `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
+copy_file `get_system_lib shell snappy` ${pack}/DSN_ROOT/lib/
+copy_file `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/
+copy_file `get_system_lib shell ssl` ${pack}/DSN_ROOT/lib/
+copy_file `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/
+copy_file `get_system_lib shell bz2` ${pack}/DSN_ROOT/lib/
 chmod -x ${pack}/DSN_ROOT/lib/*
 
 mkdir -p ${pack}/scripts
-cp -v ./scripts/* ${pack}/scripts/
+copy_file ./scripts/* ${pack}/scripts/
 chmod +x ${pack}/scripts/*.sh
 
 mkdir -p ${pack}/src/server
-cp -v ./src/server/*.ini ${pack}/src/server/
+copy_file ./src/server/*.ini ${pack}/src/server/
 
 mkdir -p ${pack}/src/shell
-cp -v ./src/shell/*.ini ${pack}/src/shell/
+copy_file ./src/shell/*.ini ${pack}/src/shell/
 
 mkdir -p ${pack}/src/test/kill_test
-cp -v ./src/test/kill_test/*.ini ${pack}/src/test/kill_test/
+copy_file ./src/test/kill_test/*.ini ${pack}/src/test/kill_test/
 
-cp -v ./src/*.ini ${pack}/src/
+copy_file ./src/*.ini ${pack}/src/
 
 echo "Pegasus Tools $version ($commit_id) $platform $build_type" >${pack}/VERSION
 
