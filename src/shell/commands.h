@@ -280,9 +280,11 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
 
     ::dsn::error_code err = sc->ddl_client->create_app(app_name, "pegasus", pc, rc, envs, false);
     if (err == ::dsn::ERR_OK)
-        std::cout << "create app " << app_name << " succeed" << std::endl;
+        std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name) << "\" succeed"
+                  << std::endl;
     else
-        std::cout << "create app " << app_name << " failed, error=" << err.to_string() << std::endl;
+        std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name)
+                  << "\" failed, error = " << err.to_string() << std::endl;
     return true;
 }
 
@@ -656,29 +658,12 @@ inline bool calculate_hash_value(command_executor *e, shell_context *sc, argumen
     return true;
 }
 
-inline bool unescape_str(std::string &str)
-{
-    std::string dst_str;
-    int len = pegasus::utils::c_unescape_string(str, dst_str);
-    if (len < 0) {
-        fprintf(
-            stderr, "ERROR: unescape input string failed (position %d): %s\n", -len, str.c_str());
-        return false;
-    }
-    str.swap(dst_str);
-    return true;
-}
-
 inline bool get_value(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc != 3)
         return false;
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::string sort_key = args.argv[2];
-    if (!unescape_str(sort_key))
-        return true;
     std::string value;
 
     pegasus::pegasus_client::internal_info info;
@@ -705,14 +690,10 @@ inline bool multi_get_value(command_executor *e, shell_context *sc, arguments ar
     if (args.argc < 2)
         return false;
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::set<std::string> sort_keys;
     if (args.argc > 2) {
         for (int i = 2; i < args.argc; i++) {
             std::string sort_key = args.argv[i];
-            if (!unescape_str(sort_key))
-                return true;
             sort_keys.insert(sort_key);
         }
     }
@@ -749,14 +730,8 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
         return false;
 
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::string start_sort_key = args.argv[2];
-    if (!unescape_str(start_sort_key))
-        return true;
     std::string stop_sort_key = args.argv[3];
-    if (!unescape_str(stop_sort_key))
-        return true;
     pegasus::pegasus_client::multi_get_options options;
     std::string sort_key_filter_type_name("no_filter");
     int max_count = -1;
@@ -798,8 +773,6 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
             break;
         case 'y':
             options.sort_key_filter_pattern = optarg;
-            if (!unescape_str(options.sort_key_filter_pattern))
-                return true;
             break;
         case 'n':
             if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_count)) {
@@ -884,8 +857,6 @@ inline bool multi_get_sortkeys(command_executor *e, shell_context *sc, arguments
     if (args.argc != 2)
         return false;
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::set<std::string> sort_keys;
 
     pegasus::pegasus_client::internal_info info;
@@ -918,11 +889,7 @@ inline bool exist(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::string sort_key = args.argv[2];
-    if (!unescape_str(sort_key))
-        return true;
     pegasus::pegasus_client::internal_info info;
     int ret = sc->pg_client->exist(hash_key, sort_key, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
@@ -949,8 +916,6 @@ inline bool sortkey_count(command_executor *e, shell_context *sc, arguments args
     }
 
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     int64_t count;
     pegasus::pegasus_client::internal_info info;
     int ret = sc->pg_client->sortkey_count(hash_key, count, sc->timeout_ms, &info);
@@ -974,14 +939,8 @@ inline bool set_value(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::string sort_key = args.argv[2];
-    if (!unescape_str(sort_key))
-        return true;
     std::string value = args.argv[3];
-    if (!unescape_str(value))
-        return true;
     int32_t ttl = 0;
     if (args.argc == 5) {
         if (!::pegasus::utils::buf2int(args.argv[4], strlen(args.argv[4]), ttl)) {
@@ -1017,20 +976,14 @@ inline bool multi_set_value(command_executor *e, shell_context *sc, arguments ar
     }
 
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::map<std::string, std::string> kvs;
     for (int i = 2; i < args.argc; i += 2) {
         std::string sort_key = args.argv[i];
-        if (!unescape_str(sort_key))
-            return true;
         if (kvs.find(sort_key) != kvs.end()) {
             fprintf(stderr, "ERROR: duplicate sort key %s\n", sort_key.c_str());
             return true;
         }
         std::string value = args.argv[i + 1];
-        if (!unescape_str(value))
-            return true;
         kvs.emplace(std::move(sort_key), std::move(value));
     }
     pegasus::pegasus_client::internal_info info;
@@ -1057,11 +1010,7 @@ inline bool delete_value(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::string sort_key = args.argv[2];
-    if (!unescape_str(sort_key))
-        return true;
     pegasus::pegasus_client::internal_info info;
     int ret = sc->pg_client->del(hash_key, sort_key, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
@@ -1083,13 +1032,9 @@ inline bool multi_del_value(command_executor *e, shell_context *sc, arguments ar
     if (args.argc < 3)
         return false;
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::set<std::string> sort_keys;
     for (int i = 2; i < args.argc; i++) {
         std::string sort_key = args.argv[i];
-        if (!unescape_str(sort_key))
-            return true;
         sort_keys.insert(sort_key);
     }
 
@@ -1118,14 +1063,8 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
         return false;
 
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::string start_sort_key = args.argv[2];
-    if (!unescape_str(start_sort_key))
-        return true;
     std::string stop_sort_key = args.argv[3];
-    if (!unescape_str(stop_sort_key))
-        return true;
     pegasus::pegasus_client::scan_options options;
     options.no_value = true;
     options.timeout_ms = sc->timeout_ms;
@@ -1170,8 +1109,6 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
             break;
         case 'y':
             options.sort_key_filter_pattern = optarg;
-            if (!unescape_str(options.sort_key_filter_pattern))
-                return true;
             break;
         case 'o':
             file = fopen(optarg, "w");
@@ -1318,11 +1255,7 @@ inline bool get_ttl(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::string sort_key = args.argv[2];
-    if (!unescape_str(sort_key))
-        return true;
     int ttl_seconds;
     pegasus::pegasus_client::internal_info info;
     int ret = sc->pg_client->ttl(hash_key, sort_key, ttl_seconds, sc->timeout_ms, &info);
@@ -1355,14 +1288,8 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
         return false;
 
     std::string hash_key = args.argv[1];
-    if (!unescape_str(hash_key))
-        return true;
     std::string start_sort_key = args.argv[2];
-    if (!unescape_str(start_sort_key))
-        return true;
     std::string stop_sort_key = args.argv[3];
-    if (!unescape_str(stop_sort_key))
-        return true;
 
     int32_t max_count = -1;
     bool detailed = false;
@@ -1433,8 +1360,6 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'y':
             options.sort_key_filter_pattern = optarg;
-            if (!unescape_str(options.sort_key_filter_pattern))
-                return true;
             break;
         case 'i':
             options.no_value = true;
@@ -1603,8 +1528,6 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'x':
             options.hash_key_filter_pattern = optarg;
-            if (!unescape_str(options.hash_key_filter_pattern))
-                return true;
             break;
         case 's':
             if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
@@ -1615,8 +1538,6 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'y':
             options.sort_key_filter_pattern = optarg;
-            if (!unescape_str(options.sort_key_filter_pattern))
-                return true;
             break;
         case 'i':
             options.no_value = true;
