@@ -465,7 +465,7 @@ void initialize(int argc, char **argv)
 {
     std::cout << "Pegasus Shell " << PEGASUS_VERSION << std::endl;
     std::cout << "Type \"help\" for more information." << std::endl;
-    std::cout << "Type \"Ctrl-D\" to exit the shell." << std::endl;
+    std::cout << "Type \"Ctrl-D/Ctrl-C\" to exit the shell." << std::endl;
     std::cout << std::endl;
 
     std::string config_file = argc > 1 ? argv[1] : "config.ini";
@@ -505,6 +505,11 @@ void run()
         int arg_count = 0;
         sds *args = scanfCommand(&arg_count);
         auto cleanup = dsn::defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
+
+        if (args == NULL) {
+            printf("Invalid argument(s)\n");
+            continue;
+        }
 
         if (arg_count > 0) {
             int i = 0;
