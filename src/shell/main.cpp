@@ -465,7 +465,7 @@ void initialize(int argc, char **argv)
 {
     std::cout << "Pegasus Shell " << PEGASUS_VERSION << std::endl;
     std::cout << "Type \"help\" for more information." << std::endl;
-    std::cout << "Type \"Ctrl-D/Ctrl-C\" to exit the shell." << std::endl;
+    std::cout << "Type \"Ctrl-D\" or \"Ctrl-C\" to exit the shell." << std::endl;
     std::cout << std::endl;
 
     std::string config_file = argc > 1 ? argv[1] : "config.ini";
