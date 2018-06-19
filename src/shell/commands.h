@@ -611,8 +611,8 @@ inline bool calculate_hash_value(command_executor *e, shell_context *sc, argumen
     if (args.argc != 3) {
         return false;
     }
-    std::string hash_key = args.argv[1];
-    std::string sort_key = args.argv[2];
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string sort_key = sds_to_string(args.argv[2]);
 
     ::dsn::blob key;
     pegasus::pegasus_generate_key(key, hash_key, sort_key);
@@ -663,8 +663,8 @@ inline bool get_value(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc != 3)
         return false;
-    std::string hash_key = args.argv[1];
-    std::string sort_key = args.argv[2];
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string sort_key = sds_to_string(args.argv[2]);
     std::string value;
 
     pegasus::pegasus_client::internal_info info;
@@ -690,11 +690,11 @@ inline bool multi_get_value(command_executor *e, shell_context *sc, arguments ar
 {
     if (args.argc < 2)
         return false;
-    std::string hash_key = args.argv[1];
+    std::string hash_key = sds_to_string(args.argv[1]);
     std::set<std::string> sort_keys;
     if (args.argc > 2) {
         for (int i = 2; i < args.argc; i++) {
-            std::string sort_key = args.argv[i];
+            std::string sort_key = sds_to_string(args.argv[i]);
             sort_keys.insert(sort_key);
         }
     }
@@ -730,9 +730,9 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
     if (args.argc < 4)
         return false;
 
-    std::string hash_key = args.argv[1];
-    std::string start_sort_key = args.argv[2];
-    std::string stop_sort_key = args.argv[3];
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string start_sort_key = sds_to_string(args.argv[2]);
+    std::string stop_sort_key = sds_to_string(args.argv[3]);
     pegasus::pegasus_client::multi_get_options options;
     std::string sort_key_filter_type_name("no_filter");
     int max_count = -1;
@@ -857,7 +857,7 @@ inline bool multi_get_sortkeys(command_executor *e, shell_context *sc, arguments
 {
     if (args.argc != 2)
         return false;
-    std::string hash_key = args.argv[1];
+    std::string hash_key = sds_to_string(args.argv[1]);
     std::set<std::string> sort_keys;
 
     pegasus::pegasus_client::internal_info info;
@@ -889,8 +889,8 @@ inline bool exist(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    std::string hash_key = args.argv[1];
-    std::string sort_key = args.argv[2];
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string sort_key = sds_to_string(args.argv[2]);
     pegasus::pegasus_client::internal_info info;
     int ret = sc->pg_client->exist(hash_key, sort_key, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
@@ -916,7 +916,7 @@ inline bool sortkey_count(command_executor *e, shell_context *sc, arguments args
         return false;
     }
 
-    std::string hash_key = args.argv[1];
+    std::string hash_key = sds_to_string(args.argv[1]);
     int64_t count;
     pegasus::pegasus_client::internal_info info;
     int ret = sc->pg_client->sortkey_count(hash_key, count, sc->timeout_ms, &info);
