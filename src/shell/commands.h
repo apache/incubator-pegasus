@@ -26,6 +26,7 @@
 #include "command_executor.h"
 #include "command_utils.h"
 #include "command_helper.h"
+#include "args.h"
 
 using namespace dsn::replication;
 
@@ -938,9 +939,9 @@ inline bool set_value(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    std::string hash_key = args.argv[1];
-    std::string sort_key = args.argv[2];
-    std::string value = args.argv[3];
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string sort_key = sds_to_string(args.argv[2]);
+    std::string value = sds_to_string(args.argv[3]);
     int32_t ttl = 0;
     if (args.argc == 5) {
         if (!::pegasus::utils::buf2int(args.argv[4], strlen(args.argv[4]), ttl)) {
@@ -975,15 +976,15 @@ inline bool multi_set_value(command_executor *e, shell_context *sc, arguments ar
         return false;
     }
 
-    std::string hash_key = args.argv[1];
+    std::string hash_key = sds_to_string(args.argv[1]);
     std::map<std::string, std::string> kvs;
     for (int i = 2; i < args.argc; i += 2) {
-        std::string sort_key = args.argv[i];
+        std::string sort_key = sds_to_string(args.argv[i]);
         if (kvs.find(sort_key) != kvs.end()) {
             fprintf(stderr, "ERROR: duplicate sort key %s\n", sort_key.c_str());
             return true;
         }
-        std::string value = args.argv[i + 1];
+        std::string value = sds_to_string(args.argv[i + 1]);
         kvs.emplace(std::move(sort_key), std::move(value));
     }
     pegasus::pegasus_client::internal_info info;
@@ -1009,8 +1010,8 @@ inline bool delete_value(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    std::string hash_key = args.argv[1];
-    std::string sort_key = args.argv[2];
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string sort_key = sds_to_string(args.argv[2]);
     pegasus::pegasus_client::internal_info info;
     int ret = sc->pg_client->del(hash_key, sort_key, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
@@ -1031,10 +1032,10 @@ inline bool multi_del_value(command_executor *e, shell_context *sc, arguments ar
 {
     if (args.argc < 3)
         return false;
-    std::string hash_key = args.argv[1];
+    std::string hash_key = sds_to_string(args.argv[1]);
     std::set<std::string> sort_keys;
     for (int i = 2; i < args.argc; i++) {
-        std::string sort_key = args.argv[i];
+        std::string sort_key = sds_to_string(args.argv[i]);
         sort_keys.insert(sort_key);
     }
 
@@ -1062,9 +1063,9 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
     if (args.argc < 4)
         return false;
 
-    std::string hash_key = args.argv[1];
-    std::string start_sort_key = args.argv[2];
-    std::string stop_sort_key = args.argv[3];
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string start_sort_key = sds_to_string(args.argv[2]);
+    std::string stop_sort_key = sds_to_string(args.argv[3]);
     pegasus::pegasus_client::scan_options options;
     options.no_value = true;
     options.timeout_ms = sc->timeout_ms;
@@ -1254,8 +1255,8 @@ inline bool get_ttl(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    std::string hash_key = args.argv[1];
-    std::string sort_key = args.argv[2];
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string sort_key = sds_to_string(args.argv[2]);
     int ttl_seconds;
     pegasus::pegasus_client::internal_info info;
     int ret = sc->pg_client->ttl(hash_key, sort_key, ttl_seconds, sc->timeout_ms, &info);
@@ -1287,9 +1288,9 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     if (args.argc < 4)
         return false;
 
-    std::string hash_key = args.argv[1];
-    std::string start_sort_key = args.argv[2];
-    std::string stop_sort_key = args.argv[3];
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string start_sort_key = sds_to_string(args.argv[2]);
+    std::string stop_sort_key = sds_to_string(args.argv[3]);
 
     int32_t max_count = -1;
     bool detailed = false;

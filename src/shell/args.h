@@ -30,3 +30,5 @@ inline sds *scanfCommand(int *argc)
 
     return sdssplitargs(line, argc);
 }
+
+inline std::string sds_to_string(const sds s) { return std::string(s, sdslen(s)); }
