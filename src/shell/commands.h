@@ -662,7 +662,7 @@ inline bool calculate_hash_value(command_executor *e, shell_context *sc, argumen
 inline std::string unescape_str(const char *escaped)
 {
     std::string dst, src = escaped;
-    pegasus::utils::c_unescape_string(src, dst);
+    dassert(pegasus::utils::c_unescape_string(src, dst) >= 0, "");
     return dst;
 }
 
@@ -1109,8 +1109,7 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(
-            args.argc, args.argv, "a:b:s:y:getopt_longo:i", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "a:b:s:y:o:i", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
