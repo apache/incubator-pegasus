@@ -681,12 +681,14 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner *scanner,
         pegasus_client::internal_info &&info) {
         if (ret == PERR_SCAN_COMPLETE) {
             cb();
+            delete scanner;
             return;
         }
 
         if (ret != PERR_OK) {
             derror_f("async_next failed. error={}", _geo_data_client->get_error_string(ret));
             cb();
+            delete scanner;
             return;
         }
 
@@ -694,21 +696,23 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner *scanner,
         if (!_extractor->extract_from_value(value, latlng)) {
             derror_f("extract_from_value failed. value={}", value);
             cb();
+            delete scanner;
             return;
         }
 
-        util::units::Meters distance = S2Earth::GetDistance(S2LatLng(cap.center()), latlng);
-        if (distance <= S2Earth::ToDistance(cap.radius())) {
+        double distance = S2Earth::GetDistanceMeters(S2LatLng(cap.center()), latlng);
+        if (distance <= S2Earth::ToMeters(cap.radius())) {
             std::string origin_hash_key, origin_sort_key;
             if (restore_origin_keys(geo_sort_key, origin_hash_key, origin_sort_key) != PERR_OK) {
                 derror_f("restore_origin_keys failed. geo_sort_key={}", geo_sort_key);
                 cb();
+                delete scanner;
                 return;
             }
 
             result.emplace_back(SearchResult(latlng.lat().degrees(),
                                              latlng.lng().degrees(),
-                                             distance.value(),
+                                             distance,
                                              std::move(origin_hash_key),
                                              std::move(origin_sort_key),
                                              std::move(value)));
@@ -716,6 +720,7 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner *scanner,
 
         if (count != -1 && result.size() >= count) {
             cb();
+            delete scanner;
             return;
         }
 
@@ -775,9 +780,8 @@ void geo_client::async_distance(const std::string &hash_key1,
         (*get_result)[index - 1] = latlng;
         if (index == 1) {
             if (*ret == PERR_OK) {
-                util::units::Meters distance =
-                    S2Earth::GetDistance((*get_result)[0], (*get_result)[1]);
-                cb(*ret, distance.value());
+                double distance = S2Earth::GetDistanceMeters((*get_result)[0], (*get_result)[1]);
+                cb(*ret, std::move(distance));
             } else {
                 cb(*ret, std::numeric_limits<double>::max());
             }
@@ -785,7 +789,7 @@ void geo_client::async_distance(const std::string &hash_key1,
     };
 
     _common_data_client->async_get(hash_key1, sort_key1, async_get_callback, timeout_milliseconds);
-    _common_data_client->async_get(hash_key1, sort_key1, async_get_callback, timeout_milliseconds);
+    _common_data_client->async_get(hash_key2, sort_key2, async_get_callback, timeout_milliseconds);
 }
 
 } // namespace geo

@@ -282,11 +282,6 @@ public:
 
 private:
     friend class geo_client_test;
-    friend class geo_client_test_set_and_del_Test;
-    friend class geo_client_test_set_geo_data_Test;
-    friend class geo_client_test_normalize_result_random_order_Test;
-    friend class geo_client_test_normalize_result_distance_order_Test;
-    friend class geo_client_test_large_cap_Test;
 
     enum class DataType
     {

@@ -19,10 +19,9 @@ using namespace ::pegasus::proxy;
 class proxy_app : public ::dsn::service_app
 {
 public:
-    proxy_app(const dsn::service_app_info *info) : service_app(info) {}
-    virtual ~proxy_app() {}
+    explicit proxy_app(const dsn::service_app_info *info) : service_app(info) {}
 
-    virtual ::dsn::error_code start(const std::vector<std::string> &args) override
+    ::dsn::error_code start(const std::vector<std::string> &args) override
     {
         if (args.size() < 3)
             return ::dsn::ERR_INVALID_PARAMETERS;
@@ -32,7 +31,7 @@ public:
         _proxy.reset(new proxy_stub(f, args[1].c_str(), args[2].c_str()));
         return ::dsn::ERR_OK;
     }
-    virtual ::dsn::error_code stop(bool) override { return ::dsn::ERR_OK; }
+    ::dsn::error_code stop(bool) override { return ::dsn::ERR_OK; }
 private:
     std::unique_ptr<pegasus::proxy::proxy_stub> _proxy;
 };
@@ -42,10 +41,10 @@ bool blob_compare(const ::dsn::blob &bb1, const ::dsn::blob &bb2)
     return bb1.length() == bb2.length() && memcmp(bb1.data(), bb2.data(), bb1.length()) == 0;
 }
 
-class redis_test_parser1 : public redis_parser
+class redis_test_parser : public redis_parser
 {
 protected:
-    virtual void handle_command(std::unique_ptr<message_entry> &&entry)
+    void handle_command(std::unique_ptr<message_entry> &&entry) override
     {
         redis_request &act_request = entry->request;
         redis_request &exp_request = reserved_entry[entry_index].request;
@@ -65,9 +64,11 @@ protected:
     }
 
 public:
-    redis_test_parser1(proxy_stub *stub, ::dsn::rpc_address addr) : redis_parser(stub, addr)
+    redis_test_parser(proxy_stub *stub, const ::dsn::rpc_address &addr) : redis_parser(stub, addr)
     {
         reserved_entry.resize(20);
+        entry_index = 0;
+        got_a_message = false;
     }
 
     void test_fixed_cases()
@@ -98,6 +99,32 @@ public:
             auto request2 = create_message(request_data2);
             ASSERT_TRUE(parse(request1));
             ASSERT_TRUE(parse(request2));
+            ASSERT_TRUE(got_a_message);
+        }
+
+        // geo GEORADIUS command
+        {
+            got_a_message = false;
+            entry_index = 0;
+            rr.length = 6;
+            rr.buffers = {{9, "GEORADIUS"}, {0, ""}, {5, "123.4"}, {5, "56.78"}, {3, "100"}, {1, "m"}};
+
+            const char *request_data = "*6\r\n$9\r\nGEORADIUS\r\n$0\r\n\r\n$5\r\n123.4\r\n$5\r\n56.78\r\n$3\r\n100\r\n$1\r\nm\r\n";
+            auto request = create_message(request_data);
+            ASSERT_TRUE(parse(request));
+            ASSERT_TRUE(got_a_message);
+        }
+
+        // geo GEORADIUSBYMEMBER command
+        {
+            got_a_message = false;
+            entry_index = 0;
+            rr.length = 5;
+            rr.buffers = {{17, "GEORADIUSBYMEMBER"}, {0, ""}, {7, "member1"}, {6, "1000.5"}, {2, "km"}};
+
+            const char *request_data = "*5\r\n$17\r\nGEORADIUSBYMEMBER\r\n$0\r\n\r\n$7\r\nmember1\r\n$6\r\n1000.5\r\n$2\r\nkm\r\n";
+            auto request = create_message(request_data);
+            ASSERT_TRUE(parse(request));
             ASSERT_TRUE(got_a_message);
         }
 
@@ -269,6 +296,7 @@ public:
         for (unsigned int i = 0; i != ra.length; ++i) {
             ra.buffers[i].marshalling(stream);
         }
+
         dsn_msg_release_ref(m);
         return result;
     }
@@ -280,8 +308,8 @@ public:
 
 TEST(proxy, parser)
 {
-    std::shared_ptr<redis_test_parser1> parser(
-        new redis_test_parser1(nullptr, ::dsn::rpc_address("127.0.0.1", 123)));
+    std::shared_ptr<redis_test_parser> parser(
+        new redis_test_parser(nullptr, ::dsn::rpc_address("127.0.0.1", 123)));
     parser->test_fixed_cases();
     parser->test_random_cases();
 }

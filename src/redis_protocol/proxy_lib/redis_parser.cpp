@@ -1079,7 +1079,7 @@ void redis_parser::redis_array::marshalling(::dsn::binary_writer &write_stream) 
     write_stream.write_pod(LF);
     if (count > 0) {
         dassert_f(array.size() == count, "{} VS {}", array.size(), count);
-        for (auto elem : array) {
+        for (const auto &elem : array) {
             elem->marshalling(write_stream);
         }
     }
