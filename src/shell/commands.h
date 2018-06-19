@@ -659,6 +659,26 @@ inline bool calculate_hash_value(command_executor *e, shell_context *sc, argumen
     return true;
 }
 
+inline std::string unescape_str(const char *escaped)
+{
+    std::string dst, src = escaped;
+    pegasus::utils::c_unescape_string(src, dst);
+    return dst;
+}
+
+// getopt_long cannot parse argv[i] when it contains '\0' in the middle.
+// For "bb\x00cc", getopt_long will parse it as "bb", since getopt_long is not binary-safe.
+inline void escape_sds_argv(int argc, sds *argv)
+{
+    for (int i = 0; i < argc; i++) {
+        const size_t dest_len = sdslen(argv[i]) * 4 + 1; // Maximum possible expansion
+        sds new_arg = sdsnewlen("", dest_len);
+        pegasus::utils::c_escape_string(argv[i], sdslen(argv[i]), new_arg, dest_len);
+        sdsfree(argv[i]);
+        argv[i] = new_arg;
+    }
+}
+
 inline bool get_value(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc != 3)
@@ -745,6 +765,8 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
                                            {"no_value", no_argument, 0, 'i'},
                                            {"reverse", no_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
+
+    escape_sds_argv(args.argc, args.argv);
     optind = 0;
     while (true) {
         int option_index = 0;
@@ -773,7 +795,7 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
             sort_key_filter_type_name = optarg;
             break;
         case 'y':
-            options.sort_key_filter_pattern = optarg;
+            options.sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'n':
             if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_count)) {
@@ -1081,11 +1103,14 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
                                            {"output", required_argument, 0, 'o'},
                                            {"silent", no_argument, 0, 'i'},
                                            {0, 0, 0, 0}};
+
+    escape_sds_argv(args.argc, args.argv);
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "a:b:s:y:o:i", long_options, &option_index);
+        c = getopt_long(
+            args.argc, args.argv, "a:b:s:y:getopt_longo:i", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1109,7 +1134,7 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
             sort_key_filter_type_name = optarg;
             break;
         case 'y':
-            options.sort_key_filter_pattern = optarg;
+            options.sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'o':
             file = fopen(optarg, "w");
@@ -1310,6 +1335,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
                                            {"no_value", no_argument, 0, 'i'},
                                            {0, 0, 0, 0}};
 
+    escape_sds_argv(args.argc, args.argv);
     optind = 0;
     while (true) {
         int option_index = 0;
@@ -1360,7 +1386,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             sort_key_filter_type_name = optarg;
             break;
         case 'y':
-            options.sort_key_filter_pattern = optarg;
+            options.sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'i':
             options.no_value = true;
@@ -1480,6 +1506,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
     std::string sort_key_filter_type_name("no_filter");
     pegasus::pegasus_client::scan_options options;
 
+    escape_sds_argv(args.argc, args.argv);
     optind = 0;
     while (true) {
         int option_index = 0;
@@ -1528,7 +1555,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             hash_key_filter_type_name = optarg;
             break;
         case 'x':
-            options.hash_key_filter_pattern = optarg;
+            options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
             if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
@@ -1538,7 +1565,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             sort_key_filter_type_name = optarg;
             break;
         case 'y':
-            options.sort_key_filter_pattern = optarg;
+            options.sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'i':
             options.no_value = true;
