@@ -9,6 +9,8 @@
 #include <s2/s2testing.h>
 #include <dsn/utility/string_conv.h>
 #include <s2/s2earth.h>
+#include <s2/s2cell.h>
+#include <base/pegasus_key_schema.h>
 
 namespace pegasus {
 namespace geo {
@@ -25,6 +27,27 @@ public:
     pegasus::geo::geo_client *geo_client() { return _geo_client.get(); }
 
     pegasus_client *common_data_client() { return _geo_client->_common_data_client; }
+
+    int min_level() { return _geo_client->_min_level; }
+
+    int max_level() { return _geo_client->_max_level; }
+
+    bool generate_geo_keys(const std::string &hash_key,
+                           const std::string &sort_key,
+                           const std::string &value,
+                           std::string &geo_hash_key,
+                           std::string &geo_sort_key)
+    {
+        return _geo_client->generate_geo_keys(
+            hash_key, sort_key, value, geo_hash_key, geo_sort_key);
+    }
+
+    bool restore_origin_keys(const std::string &geo_sort_key,
+                             std::string &origin_hash_key,
+                             std::string &origin_sort_key)
+    {
+        return _geo_client->restore_origin_keys(geo_sort_key, origin_hash_key, origin_sort_key);
+    }
 
     void normalize_result(const std::list<std::vector<SearchResult>> &results,
                           int count,
@@ -292,6 +315,46 @@ TEST_F(geo_client_test, same_point_diff_sort_key)
     ASSERT_EQ(ret, pegasus::PERR_OK);
 }
 
+TEST_F(geo_client_test, generate_and_restore_geo_keys)
+{
+    std::string geo_hash_key;
+    std::string geo_sort_key;
+    ASSERT_FALSE(generate_geo_keys("", "", "", geo_hash_key, geo_sort_key));
+
+    double lat_degrees = 32.345;
+    double lng_degrees = 67.890;
+    std::string test_hash_key = "test_hash_key";
+    std::string test_sort_key = "test_sort_key";
+    std::string test_value = gen_value(lat_degrees, lng_degrees);
+
+    std::string leaf_cell_id =
+        S2Cell(S2LatLng::FromDegrees(lat_degrees, lng_degrees)).id().ToString();
+    ASSERT_EQ(leaf_cell_id.length(), 32); // 1 width face, 1 width '/' and 30 width level
+
+    ASSERT_TRUE(
+        generate_geo_keys(test_hash_key, test_sort_key, test_value, geo_hash_key, geo_sort_key));
+    ASSERT_EQ(min_level() + 2, geo_hash_key.length());
+    ASSERT_EQ(leaf_cell_id.substr(0, geo_hash_key.length()), geo_hash_key);
+    ASSERT_EQ(leaf_cell_id.substr(geo_hash_key.length()),
+              geo_sort_key.substr(0, leaf_cell_id.length() - geo_hash_key.length()));
+
+    dsn::blob hash_key_bb, sort_key_bb;
+    int skip_length = (int)(32 - geo_hash_key.length()) + 1; // postfix of cell id and ':'
+    pegasus_restore_key(dsn::blob(geo_sort_key.data(),
+                                  skip_length,
+                                  (unsigned int)(geo_sort_key.length() - skip_length)),
+                        hash_key_bb,
+                        sort_key_bb);
+    ASSERT_EQ(hash_key_bb.to_string(), test_hash_key);
+    ASSERT_EQ(sort_key_bb.to_string(), test_sort_key);
+
+    std::string restore_hash_key;
+    std::string restore_sort_key;
+    ASSERT_TRUE(restore_origin_keys(geo_sort_key, restore_hash_key, restore_sort_key));
+    ASSERT_EQ(test_hash_key, restore_hash_key);
+    ASSERT_EQ(test_sort_key, restore_sort_key);
+}
+
 TEST_F(geo_client_test, normalize_result_random_order)
 {
     std::list<std::vector<geo::SearchResult>> results;
@@ -423,9 +486,6 @@ TEST_F(geo_client_test, large_cap)
             double distance = 0.0;
             ret = _geo_client->distance("0", "", r.hash_key, r.sort_key, 2000, distance);
             ASSERT_EQ(ret, pegasus::PERR_OK);
-            if (abs(distance - r.distance) > 1e-6) {
-                int a = 0;
-            }
             ASSERT_NEAR(distance, r.distance, 1e-6);
 
             last = r;

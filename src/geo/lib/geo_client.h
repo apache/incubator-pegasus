@@ -18,7 +18,7 @@ namespace geo {
 struct SearchResult;
 using geo_search_callback_t =
     std::function<void(int error_code, std::list<SearchResult> &&results)>;
-using distance_callback_t = std::function<void(int error_code, double &&distance)>;
+using distance_callback_t = std::function<void(int error_code, double distance)>;
 
 /// the search result structure used by `search_radial` APIs
 struct SearchResult
@@ -307,9 +307,9 @@ private:
                            std::string &geo_hash_key,
                            std::string &geo_sort_key);
 
-    int restore_origin_keys(const std::string &geo_sort_key,
-                            std::string &origin_hash_key,
-                            std::string &origin_sort_key);
+    bool restore_origin_keys(const std::string &geo_sort_key,
+                             std::string &origin_hash_key,
+                             std::string &origin_sort_key);
 
     void async_set_common_data(const std::string &hash_key,
                                const std::string &sort_key,
@@ -376,7 +376,7 @@ private:
                     scan_one_area_callback cb,
                     std::vector<SearchResult> &result);
 
-    void do_scan(pegasus_client::pegasus_scanner *scanner,
+    void do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper,
                  const S2Cap &cap,
                  int count,
                  scan_one_area_callback cb,

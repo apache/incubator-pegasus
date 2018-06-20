@@ -7,7 +7,6 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/fmt_logging.h>
 #include <s2/s2earth.h>
-#include <s2/s2testing.h>
 #include <s2/s2region_coverer.h>
 #include <s2/s2cap.h>
 #include <base/pegasus_key_schema.h>
@@ -537,14 +536,14 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
     return true;
 }
 
-int geo_client::restore_origin_keys(const std::string &geo_sort_key,
-                                    std::string &origin_hash_key,
-                                    std::string &origin_sort_key)
+bool geo_client::restore_origin_keys(const std::string &geo_sort_key,
+                                     std::string &origin_hash_key,
+                                     std::string &origin_sort_key)
 {
     // geo_sort_key: [0,3]{30-_min_level}:combine_keys
     int cid_prefix_len = 30 - _min_level + 1;
     if (geo_sort_key.length() <= cid_prefix_len) {
-        return PERR_INVALID_VALUE;
+        return false;
     }
 
     auto origin_keys_len = static_cast<unsigned int>(geo_sort_key.length() - cid_prefix_len);
@@ -552,7 +551,7 @@ int geo_client::restore_origin_keys(const std::string &geo_sort_key,
                         origin_hash_key,
                         origin_sort_key);
 
-    return PERR_OK;
+    return true;
 }
 
 std::string geo_client::gen_sort_key(const S2CellId &max_level_cid, const std::string &hash_key)
@@ -662,70 +661,67 @@ void geo_client::start_scan(const std::string &hash_key,
             int ret = _geo_data_client->get_scanner(
                 hash_key, start_sort_key, stop_sort_key, options, scanner);
             if (ret == PERR_OK) {
-                do_scan(scanner, cap, count, cb, result);
+                pegasus_client::pegasus_scanner_wrapper scanner_wrapper =
+                    scanner->get_smart_wrapper();
+                do_scan(scanner_wrapper, cap, count, cb, result);
             }
         });
 }
 
-void geo_client::do_scan(pegasus_client::pegasus_scanner *scanner,
+void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper,
                          const S2Cap &cap,
                          int count,
                          scan_one_area_callback cb,
                          std::vector<SearchResult> &result)
 {
-    scanner->async_next([this, cap, count, scanner, cb, &result](
-        int ret,
-        std::string &&geo_hash_key,
-        std::string &&geo_sort_key,
-        std::string &&value,
-        pegasus_client::internal_info &&info) {
-        if (ret == PERR_SCAN_COMPLETE) {
-            cb();
-            delete scanner;
-            return;
-        }
-
-        if (ret != PERR_OK) {
-            derror_f("async_next failed. error={}", _geo_data_client->get_error_string(ret));
-            cb();
-            delete scanner;
-            return;
-        }
-
-        S2LatLng latlng;
-        if (!_extractor->extract_from_value(value, latlng)) {
-            derror_f("extract_from_value failed. value={}", value);
-            cb();
-            delete scanner;
-            return;
-        }
-
-        double distance = S2Earth::GetDistanceMeters(S2LatLng(cap.center()), latlng);
-        if (distance <= S2Earth::ToMeters(cap.radius())) {
-            std::string origin_hash_key, origin_sort_key;
-            if (restore_origin_keys(geo_sort_key, origin_hash_key, origin_sort_key) != PERR_OK) {
-                derror_f("restore_origin_keys failed. geo_sort_key={}", geo_sort_key);
+    scanner_wrapper->async_next(
+        [this, cap, count, scanner_wrapper, cb, &result](int ret,
+                                                         std::string &&geo_hash_key,
+                                                         std::string &&geo_sort_key,
+                                                         std::string &&value,
+                                                         pegasus_client::internal_info &&info) {
+            if (ret == PERR_SCAN_COMPLETE) {
                 cb();
-                delete scanner;
                 return;
             }
 
-            result.emplace_back(SearchResult(latlng.lat().degrees(),
-                                             latlng.lng().degrees(),
-                                             distance,
-                                             std::move(origin_hash_key),
-                                             std::move(origin_sort_key),
-                                             std::move(value)));
-        }
+            if (ret != PERR_OK) {
+                derror_f("async_next failed. error={}", _geo_data_client->get_error_string(ret));
+                cb();
+                return;
+            }
 
-        if (count != -1 && result.size() >= count) {
-            cb();
-            delete scanner;
-            return;
-        }
+            S2LatLng latlng;
+            if (!_extractor->extract_from_value(value, latlng)) {
+                derror_f("extract_from_value failed. value={}", value);
+                cb();
+                return;
+            }
 
-        do_scan(scanner, cap, count, cb, result);
-    });
+            double distance = S2Earth::GetDistanceMeters(S2LatLng(cap.center()), latlng);
+            if (distance <= S2Earth::ToMeters(cap.radius())) {
+                std::string origin_hash_key, origin_sort_key;
+                if (!restore_origin_keys(geo_sort_key, origin_hash_key, origin_sort_key)) {
+                    derror_f("restore_origin_keys failed. geo_sort_key={}", geo_sort_key);
+                    cb();
+                    return;
+                }
+
+                result.emplace_back(SearchResult(latlng.lat().degrees(),
+                                                 latlng.lng().degrees(),
+                                                 distance,
+                                                 std::move(origin_hash_key),
+                                                 std::move(origin_sort_key),
+                                                 std::move(value)));
+            }
+
+            if (count != -1 && result.size() >= count) {
+                cb();
+                return;
+            }
+
+            do_scan(scanner_wrapper, cap, count, cb, result);
+        });
 }
 
 int geo_client::distance(const std::string &hash_key1,
@@ -737,7 +733,7 @@ int geo_client::distance(const std::string &hash_key1,
 {
     int ret = PERR_OK;
     dsn::utils::notify_event get_completed;
-    auto async_get_callback = [&](int ec_, double &&distance_) {
+    auto async_calculate_callback = [&](int ec_, double &&distance_) {
         if (ec_ != PERR_OK) {
             derror_f("get distance failed.");
             ret = ec_;
@@ -746,7 +742,7 @@ int geo_client::distance(const std::string &hash_key1,
         get_completed.notify();
     };
     async_distance(
-        hash_key1, sort_key1, hash_key2, sort_key2, timeout_milliseconds, async_get_callback);
+        hash_key1, sort_key1, hash_key2, sort_key2, timeout_milliseconds, async_calculate_callback);
     get_completed.wait();
 
     return ret;
@@ -760,8 +756,8 @@ void geo_client::async_distance(const std::string &hash_key1,
                                 distance_callback_t &&callback)
 {
     std::shared_ptr<int> ret(new int(PERR_OK));
-    std::shared_ptr<std::atomic<int32_t>> get_count(new std::atomic<int32_t>(2));
-    std::shared_ptr<std::vector<S2LatLng>> get_result(new std::vector<S2LatLng>(2));
+    std::shared_ptr<std::mutex> mutex(new std::mutex());
+    std::shared_ptr<std::vector<S2LatLng>> get_result(new std::vector<S2LatLng>());
     auto async_get_callback = [ =, cb = std::move(callback) ](
         int ec_, std::string &&value_, pegasus_client::internal_info &&)
     {
@@ -776,12 +772,12 @@ void geo_client::async_distance(const std::string &hash_key1,
             *ret = PERR_GEO_DECODE_VALUE_ERROR;
         }
 
-        int index = get_count->fetch_sub(1);
-        (*get_result)[index - 1] = latlng;
-        if (index == 1) {
+        std::lock_guard<std::mutex> lock(*mutex);
+        get_result->push_back(latlng);
+        if (get_result->size() == 2) {
             if (*ret == PERR_OK) {
                 double distance = S2Earth::GetDistanceMeters((*get_result)[0], (*get_result)[1]);
-                cb(*ret, std::move(distance));
+                cb(*ret, distance);
             } else {
                 cb(*ret, std::numeric_limits<double>::max());
             }
