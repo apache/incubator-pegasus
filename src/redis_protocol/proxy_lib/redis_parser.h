@@ -55,6 +55,10 @@ protected:
         int length = 0;
         ::dsn::blob data;
 
+        redis_bulk_string(const std::string &str)
+            : length((int)str.length()), data(str.data(), 0, (unsigned int)str.length())
+        {
+        }
         redis_bulk_string(int len = 0, const char *str = nullptr) : length(len), data(str, 0, len)
         {
         }
@@ -110,7 +114,7 @@ private:
     std::unique_ptr<::dsn::apps::rrdb_client> client;
     std::unique_ptr<geo::geo_client> _geo_client;
 
-private:
+protected:
     // function for data stream
     void append_message(dsn_message_t msg);
     void prepare_current_buffer();

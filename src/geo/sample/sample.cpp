@@ -13,11 +13,10 @@ static const int data_count = 10000;
 static const int test_count = 1;
 static const double radius = 5000.0;
 
-// ./pegasus_geo_test onebox temp temp_geo
 int main(int argc, char **argv)
 {
     if (argc != 4) {
-        std::cerr << "USAGE: " << argv[0] << "<cluster-name> <app-name>" << std::endl;
+        std::cerr << "USAGE: " << argv[0] << "<cluster-name> <app-name> <geo-app-name>" << std::endl;
         return -1;
     }
 

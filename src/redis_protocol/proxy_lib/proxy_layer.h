@@ -60,7 +60,6 @@ public:
                const char *cluster,
                const char *app,
                const char *geo_app = nullptr);
-    virtual ~proxy_stub() = default;
     const ::dsn::rpc_address get_service_uri() const { return _uri_address; }
     const char *get_cluster() const { return _cluster; }
     const char *get_app() const { return _app; }

@@ -10,8 +10,6 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include")
-
 set(MY_PROJ_LIBS
         s2
         s2testing
@@ -20,8 +18,6 @@ set(MY_PROJ_LIBS
         fmt)
 
 set(MY_BOOST_PACKAGES system filesystem)
-
-add_definitions(-Wno-attributes)
 
 set(MY_BINPLACES "config.ini")
 

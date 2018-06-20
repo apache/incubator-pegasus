@@ -30,9 +30,7 @@ set(MY_PROJ_LIBS
     crypto
     fmt
     pegasus_geo_lib
-    s2
-    s2testing
-    )
+    s2)
 
 if (UNIX)
     set(MY_PROJ_LIBS rocksdb ${MY_PROJ_LIBS} z bz2 snappy rt aio pthread)

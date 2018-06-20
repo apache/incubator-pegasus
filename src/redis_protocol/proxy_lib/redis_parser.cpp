@@ -2,15 +2,16 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
+#include "redis_parser.h"
+
 #include <boost/lexical_cast.hpp>
-#include <rrdb/rrdb.client.h>
-#include <pegasus/error.h>
 #include <rocksdb/status.h>
-#include <pegasus_key_schema.h>
-#include <pegasus_utils.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
-#include "redis_parser.h"
+#include <rrdb/rrdb.client.h>
+#include <pegasus/error.h>
+#include <pegasus_key_schema.h>
+#include <pegasus_utils.h>
 
 #define CR '\015'
 #define LF '\012'
@@ -346,7 +347,7 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
         result.message = "ERR wrong number of arguments for 'set' command";
         reply_message(entry, result);
     } else {
-        // with a reference to prevent the object from being destoryed
+        // with a reference to prevent the object from being destroyed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_set_reply =
             [ref_this, this, &entry](::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
@@ -418,7 +419,7 @@ void redis_parser::set_geo_internal(message_entry &entry)
             }
         }
 
-        // with a reference to prevent the object from being destoryed
+        // with a reference to prevent the object from being destroyed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto set_callback = [ref_this, this, &entry](int ec, pegasus_client::internal_info &&) {
             if (status == removed) {
@@ -438,7 +439,7 @@ void redis_parser::set_geo_internal(message_entry &entry)
             }
         };
         _geo_client->async_set(redis_request.buffers[1].data.to_string(), // key => hash_key
-                               std::string(),                             // "" => sort_key
+                               std::string(),                             // ""  => sort_key
                                redis_request.buffers[2].data.to_string(), // value
                                set_callback,
                                2000, // TODO: set the timeout
@@ -575,7 +576,8 @@ void redis_parser::get(message_entry &entry)
     }
 }
 
-void redis_parser::del(message_entry &entry) {
+void redis_parser::del(message_entry &entry)
+{
     if (_geo_client == nullptr) {
         del_internal(entry);
     } else {
@@ -633,6 +635,9 @@ void redis_parser::del_internal(message_entry &entry)
     }
 }
 
+// origin command format:
+// DEL key [key ...]
+// NOTE: only one key is supported
 void redis_parser::del_geo_internal(message_entry &entry)
 {
     redis_request &redis_request = entry.request;
@@ -642,7 +647,7 @@ void redis_parser::del_geo_internal(message_entry &entry)
         result.message = "ERR wrong number of arguments for 'DEL' command";
         reply_message(entry, result);
     } else {
-        // with a reference to prevent the object from being destoryed
+        // with a reference to prevent the object from being destroyed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto del_callback = [ref_this, this, &entry](int ec, pegasus_client::internal_info &&) {
             if (status == removed) {
@@ -662,7 +667,7 @@ void redis_parser::del_geo_internal(message_entry &entry)
             }
         };
         _geo_client->async_del(redis_request.buffers[1].data.to_string(), // key => hash_key
-                               std::string(),                             // "" => sort_key
+                               std::string(),                             // ""  => sort_key
                                del_callback,
                                2000); // TODO: set the timeout
     }
@@ -737,11 +742,15 @@ void redis_parser::ttl(message_entry &entry)
 // count] [ASC|DESC] [STORE key] [STOREDIST key] [WITHVALUE]
 // NOTE: [WITHHASH] [STORE key] [STOREDIST key] are not supported
 //       [WITHVALUE] are newly supported in pegasus
+// NOTE: we use SET instead of GEOADD to insert data into pegasus, so there is not a `key` as in
+// Redis(`GEOADD key longitude latitude member`), and we consider that all geo data in pegasus is
+// under "" key, so when execute 'GEORADIUS' command, the `key` parameter will always be ignored and
+// treated as "".
 // eg: GEORADIUS "" 146.123 34.567 1000
 void redis_parser::geo_radius(message_entry &entry)
 {
     redis_request &redis_request = entry.request;
-    if (redis_request.buffers.size() < 6) {
+    if (redis_request.buffers.size() < 5) {
         redis_simple_string result;
         result.is_error = true;
         result.message = "ERR wrong number of arguments for 'GEORADIUS' command";
@@ -788,6 +797,11 @@ void redis_parser::geo_radius(message_entry &entry)
 // [ASC|DESC] [STORE key] [STOREDIST key]
 // NOTE: [WITHHASH] [STORE key] [STOREDIST key] are not supported
 //       [WITHVALUE] are newly supported in pegasus
+// NOTE: we use SET instead of GEOADD to insert data into pegasus, so there is not a `key` as in
+// Redis(`GEOADD key longitude latitude member`), and we consider that all geo data in pegasus is
+// under "" key, so when execute 'GEORADIUSBYMEMBER' command, the `key` parameter will always be
+// ignored and
+// treated as "", and the `member` parameter is treated as `key` which is inserted by SET command.
 // eg: GEORADIUSBYMEMBER "" some_key 1000
 void redis_parser::geo_radius_by_member(message_entry &entry)
 {

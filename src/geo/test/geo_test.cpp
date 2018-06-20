@@ -4,12 +4,12 @@
 
 #include "geo/lib/geo_client.h"
 #include <gtest/gtest.h>
-#include <dsn/utility/strings.h>
 #include <s2/s2cap.h>
 #include <s2/s2testing.h>
-#include <dsn/utility/string_conv.h>
 #include <s2/s2earth.h>
 #include <s2/s2cell.h>
+#include <dsn/utility/strings.h>
+#include <dsn/utility/string_conv.h>
 #include <base/pegasus_key_schema.h>
 
 namespace pegasus {
@@ -24,13 +24,9 @@ public:
             "config.ini", "onebox", "temp", "temp_geo", new latlng_extractor_for_lbs()));
     }
 
-    pegasus::geo::geo_client *geo_client() { return _geo_client.get(); }
-
     pegasus_client *common_data_client() { return _geo_client->_common_data_client; }
 
     int min_level() { return _geo_client->_min_level; }
-
-    int max_level() { return _geo_client->_max_level; }
 
     bool generate_geo_keys(const std::string &hash_key,
                            const std::string &sort_key,

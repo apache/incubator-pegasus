@@ -26,40 +26,37 @@ TEST(latlng_extractor_for_lbs_test, extract_from_value)
     ASSERT_LE(std::abs(latlng.lat().degrees() - lat_degrees), 0.000001);
     ASSERT_LE(std::abs(latlng.lng().degrees() - lng_degrees), 0.000001);
 
-    test_value = "|2018-04-26|2018-04-28|ezp8xchrr|" +
-                             std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) +
-                             "|24.043028|4.15921|0|-1";
+    test_value = "|2018-04-26|2018-04-28|ezp8xchrr|" + std::to_string(lng_degrees) + "|" +
+                 std::to_string(lat_degrees) + "|24.043028|4.15921|0|-1";
     ASSERT_TRUE(lbs_extractor->extract_from_value(test_value, latlng));
     ASSERT_LE(std::abs(latlng.lat().degrees() - lat_degrees), 0.000001);
     ASSERT_LE(std::abs(latlng.lng().degrees() - lng_degrees), 0.000001);
 
-    test_value = "00:00:00:00:01:5e||2018-04-28|ezp8xchrr|" +
-                             std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) +
-                             "|24.043028|4.15921|0|-1";
-    ASSERT_TRUE(lbs_extractor->extract_from_value(test_value, latlng));
-    ASSERT_LE(std::abs(latlng.lat().degrees() - lat_degrees), 0.000001);
-    ASSERT_LE(std::abs(latlng.lng().degrees() - lng_degrees), 0.000001);
-
-    test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|" +
-                             std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) +
-                             "||4.15921|0|-1";
+    test_value = "00:00:00:00:01:5e||2018-04-28|ezp8xchrr|" + std::to_string(lng_degrees) + "|" +
+                 std::to_string(lat_degrees) + "|24.043028|4.15921|0|-1";
     ASSERT_TRUE(lbs_extractor->extract_from_value(test_value, latlng));
     ASSERT_LE(std::abs(latlng.lat().degrees() - lat_degrees), 0.000001);
     ASSERT_LE(std::abs(latlng.lng().degrees() - lng_degrees), 0.000001);
 
     test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|" +
-                             std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) +
-                             "|24.043028|4.15921|0|";
+                 std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) + "||4.15921|0|-1";
     ASSERT_TRUE(lbs_extractor->extract_from_value(test_value, latlng));
     ASSERT_LE(std::abs(latlng.lat().degrees() - lat_degrees), 0.000001);
     ASSERT_LE(std::abs(latlng.lng().degrees() - lng_degrees), 0.000001);
 
-    test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr||" + std::to_string(lat_degrees) +
-                             "|24.043028|4.15921|0|-1";
+    test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|" +
+                 std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) +
+                 "|24.043028|4.15921|0|";
+    ASSERT_TRUE(lbs_extractor->extract_from_value(test_value, latlng));
+    ASSERT_LE(std::abs(latlng.lat().degrees() - lat_degrees), 0.000001);
+    ASSERT_LE(std::abs(latlng.lng().degrees() - lng_degrees), 0.000001);
+
+    test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr||" +
+                 std::to_string(lat_degrees) + "|24.043028|4.15921|0|-1";
     ASSERT_FALSE(lbs_extractor->extract_from_value(test_value, latlng));
 
     test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|" +
-                             std::to_string(lng_degrees) + "||24.043028|4.15921|0|-1";
+                 std::to_string(lng_degrees) + "||24.043028|4.15921|0|-1";
     ASSERT_FALSE(lbs_extractor->extract_from_value(test_value, latlng));
 
     test_value = "00:00:00:00:01:5e|2018-04-26|2018-04-28|ezp8xchrr|||24.043028|4.15921|0|-1";

@@ -1797,11 +1797,12 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
 
     pegasus::geo::geo_client *target_geo_client = nullptr;
     if (is_geo_data) {
-        target_geo_client = new pegasus::geo::geo_client("config.ini",
-                                                         target_cluster_name.c_str(),
-                                                         target_app_name.c_str(),
-                                                         target_geo_app_name.c_str(),
-                                                         new pegasus::geo::latlng_extractor_for_lbs());
+        target_geo_client =
+            new pegasus::geo::geo_client("config.ini",
+                                         target_cluster_name.c_str(),
+                                         target_app_name.c_str(),
+                                         target_geo_app_name.c_str(),
+                                         new pegasus::geo::latlng_extractor_for_lbs());
     }
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
@@ -1812,6 +1813,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr,
                 "ERROR: open source app scanner failed: %s\n",
                 sc->pg_client->get_error_string(ret));
+        delete target_geo_client;
         return true;
     }
     int split_count = scanners.size();
@@ -1883,6 +1885,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
         delete contexts[i];
     }
     contexts.clear();
+    delete target_geo_client;
 
     fprintf(stderr,
             "\nCopy %s, total %ld rows.\n",

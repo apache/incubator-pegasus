@@ -4,11 +4,11 @@
 
 #include "geo_client.h"
 
-#include <dsn/service_api_cpp.h>
-#include <dsn/dist/fmt_logging.h>
 #include <s2/s2earth.h>
 #include <s2/s2region_coverer.h>
 #include <s2/s2cap.h>
+#include <dsn/service_api_cpp.h>
+#include <dsn/dist/fmt_logging.h>
 #include <base/pegasus_key_schema.h>
 #include <base/pegasus_utils.h>
 
@@ -373,7 +373,7 @@ void geo_client::async_search_radial(const S2LatLng &latlng,
                                 [ this, count, sort_type, cb = std::move(callback) ](
                                     std::list<std::vector<SearchResult>> && results_) {
                                     std::list<SearchResult> result;
-                                    normalize_result(std::move(results_), count, sort_type, result);
+                                    normalize_result(results_, count, sort_type, result);
                                     cb(PERR_OK, std::move(result));
                                 });
 }
