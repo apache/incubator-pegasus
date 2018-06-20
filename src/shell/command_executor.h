@@ -5,9 +5,12 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
+
+#include "sds/sds.h"
 
 struct command_executor;
 struct shell_context
@@ -15,19 +18,17 @@ struct shell_context
     std::string current_cluster_name;
     std::string current_app_name;
     std::vector<dsn::rpc_address> meta_list;
-    dsn::replication::replication_ddl_client *ddl_client;
+    std::unique_ptr<dsn::replication::replication_ddl_client> ddl_client;
     pegasus::pegasus_client *pg_client;
     bool escape_all;
     int timeout_ms;
-    shell_context() : ddl_client(nullptr), pg_client(nullptr), escape_all(false), timeout_ms(5000)
-    {
-    }
+    shell_context() : pg_client(nullptr), escape_all(false), timeout_ms(5000) {}
 };
 
 struct arguments
 {
     int argc;
-    char **argv;
+    sds *argv;
 };
 
 typedef bool (*executor)(command_executor *this_, shell_context *sc, arguments args);

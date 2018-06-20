@@ -35,13 +35,13 @@ int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
 
     dsn::task_code rpc_code(dsn_msg_task_code(requests[0]));
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-        dassert(count == 1, "");
+        dassert(count == 1, "count = %d", count);
         auto rpc = multi_put_rpc::auto_reply(requests[0]);
         on_multi_put(rpc);
         return rpc.response().error;
     }
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
-        dassert(count == 1, "");
+        dassert(count == 1, "count = %d", count);
         auto rpc = multi_remove_rpc::auto_reply(requests[0]);
         on_multi_remove(rpc);
         return rpc.response().error;
@@ -57,7 +57,7 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
         _write_svc->batch_prepare();
 
         for (int i = 0; i < count; ++i) {
-            dassert(requests[i] != nullptr, "");
+            dassert(requests[i] != nullptr, "request[%d] is null", i);
 
             dsn::task_code rpc_code(dsn_msg_task_code(requests[i]));
             if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {

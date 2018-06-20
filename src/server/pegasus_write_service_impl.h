@@ -13,13 +13,6 @@
 namespace pegasus {
 namespace server {
 
-static inline dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
-{
-    dsn::blob raw_key;
-    pegasus_generate_key(raw_key, hash_key, sort_key);
-    return raw_key;
-}
-
 class pegasus_write_service::impl : public dsn::replication::replica_base
 {
 public:
@@ -96,14 +89,14 @@ public:
         }
     }
 
-    inline void batch_put(const dsn::apps::update_request &update, dsn::apps::update_response &resp)
+    void batch_put(const dsn::apps::update_request &update, dsn::apps::update_response &resp)
     {
         resp.error = db_write_batch_put(
             update.key, update.value, static_cast<uint32_t>(update.expire_ts_seconds));
         _update_responses.emplace_back(&resp);
     }
 
-    inline void batch_remove(const dsn::blob &key, dsn::apps::update_response &resp)
+    void batch_remove(const dsn::blob &key, dsn::apps::update_response &resp)
     {
         resp.error = db_write_batch_delete(key);
         _update_responses.emplace_back(&resp);
@@ -159,10 +152,18 @@ public:
     }
 
 private:
+    dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
+    {
+        dsn::blob raw_key;
+        pegasus_generate_key(raw_key, hash_key, sort_key);
+        return raw_key;
+    }
+
+private:
     friend class pegasus_write_service_test;
 
     const std::string _primary_address;
-    const int _value_schema_version;
+    const uint32_t _value_schema_version;
 
     rocksdb::WriteBatch _batch;
     rocksdb::DB *_db;

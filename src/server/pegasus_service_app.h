@@ -21,8 +21,6 @@ public:
     {
     }
 
-    virtual ~pegasus_replication_service_app() {}
-
     virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
         ::dsn::error_code ret = ::dsn::replication::replication_service_app::start(args);
@@ -54,8 +52,6 @@ public:
     {
     }
 
-    virtual ~pegasus_meta_service_app() {}
-
     virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
         ::dsn::error_code ret = ::dsn::service::meta_service_app::start(args);
@@ -78,5 +74,6 @@ public:
 private:
     bool _updater_started;
 };
-}
-} // namespace
+
+} // namespace server
+} // namespace pegasus

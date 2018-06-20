@@ -3,15 +3,14 @@ project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+set(MY_PROJ_SRC "linenoise/linenoise.c" "sds/sds.c")
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../include"
-    "../base")
+set(MY_PROJ_INC_PATH "../include" "../base")
 
 set(MY_PROJ_LIBS
     dsn.replication.tool
@@ -23,7 +22,6 @@ set(MY_PROJ_LIBS
     dsn.failure_detector
     dsn.failure_detector.multimaster
     pegasus_client_static
-    readline
     galaxy-fds-sdk-cpp
     PocoNet
     PocoFoundation
@@ -42,7 +40,7 @@ else()
     set(MY_PROJ_LIBS rocksdblib ${MY_PROJ_LIBS} rpcrt4)
 endif()
 
-set(MY_PROJ_LIB_PATH "../../rocksdb" ${LIBFDS_LIB_DIR} ${POCO_LIB_DIR})
+set(MY_PROJ_LIB_PATH "../../rocksdb")
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 

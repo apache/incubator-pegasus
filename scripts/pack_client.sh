@@ -87,16 +87,17 @@ while [[ $# > 0 ]]; do
 done
 
 mkdir -p ${pack}/lib
-cp -v ./DSN_ROOT/lib/libpegasus_client_static.a ${pack}/lib
-cp -v ./DSN_ROOT/lib/libpegasus_client_shared.so ${pack}/lib
-cp -v `get_boost_lib $custom_boost_lib system` ${pack}/lib
+copy_file ./DSN_ROOT/lib/libpegasus_client_static.a ${pack}/lib
+copy_file ./DSN_ROOT/lib/libpegasus_client_shared.so ${pack}/lib
+copy_file `get_boost_lib $custom_boost_lib system` ${pack}/lib
 ln -sf `ls ${pack}/lib | grep libboost_system` ${pack}/lib/libboost_system.so
-cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/lib
+copy_file `get_boost_lib $custom_boost_lib filesystem` ${pack}/lib
 ln -sf `ls ${pack}/lib | grep libboost_filesystem` ${pack}/lib/libboost_filesystem.so
+
 cp -v -r ./src/include ${pack}
 
 cd src/sample
-make clean
+make clean &>/dev/null
 cd $shell_dir
 cp -v -r ./src/sample ${pack}
 
