@@ -10,6 +10,8 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
 
+#include "sds/sds.h"
+
 struct command_executor;
 struct shell_context
 {
@@ -26,7 +28,7 @@ struct shell_context
 struct arguments
 {
     int argc;
-    char **argv;
+    sds *argv;
 };
 
 typedef bool (*executor)(command_executor *this_, shell_context *sc, arguments args);

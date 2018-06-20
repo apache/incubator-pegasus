@@ -104,7 +104,6 @@ cp -v ./rdsn/thirdparty/output/lib/libtcmalloc.so.4 ${pack}/DSN_ROOT/lib/
 cp -v `get_boost_lib $custom_boost_lib system` ${pack}/DSN_ROOT/lib/
 cp -v `get_boost_lib $custom_boost_lib filesystem` ${pack}/DSN_ROOT/lib/
 cp -v `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
-cp -v `get_system_lib shell readline` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell snappy` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/
 cp -v `get_system_lib shell ssl` ${pack}/DSN_ROOT/lib/

@@ -3,7 +3,7 @@ project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+set(MY_PROJ_SRC "linenoise/linenoise.c" "sds/sds.c")
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search
@@ -22,7 +22,6 @@ set(MY_PROJ_LIBS
     dsn.failure_detector
     dsn.failure_detector.multimaster
     pegasus_client_static
-    readline
     galaxy-fds-sdk-cpp
     PocoNet
     PocoFoundation

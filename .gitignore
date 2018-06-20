@@ -88,3 +88,5 @@ t
 LOG
 
 .vscode/
+
+.shell-history
