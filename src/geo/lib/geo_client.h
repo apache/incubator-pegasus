@@ -330,8 +330,8 @@ private:
                                update_callback_t &&callback,
                                int timeout_milliseconds);
 
-    void async_del_geo_data(const std::string &hash_key,
-                            const std::string &sort_key,
+    void async_del_geo_data(const std::string &geo_hash_key,
+                            const std::string &geo_sort_key,
                             update_callback_t &&callback,
                             int timeout_milliseconds);
 

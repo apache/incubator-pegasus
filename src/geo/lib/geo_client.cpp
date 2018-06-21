@@ -88,35 +88,46 @@ void geo_client::async_set(const std::string &hash_key,
                            int timeout_milliseconds,
                            int ttl_seconds)
 {
-    std::shared_ptr<int> ret(new int(PERR_OK));
-    std::shared_ptr<std::atomic<int32_t>> set_count(new std::atomic<int32_t>(2));
-    std::shared_ptr<pegasus_client::internal_info> info(new pegasus_client::internal_info());
-    auto async_set_callback = [ =, cb = std::move(callback) ](
-        int ec_, pegasus_client::internal_info &&info_, DataType data_type_)
-    {
-        if (data_type_ == DataType::common) {
-            *info = std::move(info_);
-        }
-
-        if (ec_ != PERR_OK) {
-            derror_f("set {} data failed. hash_key={}, sort_key={}",
-                     data_type_ == DataType::common ? "common" : "geo",
-                     hash_key,
-                     sort_key);
-            *ret = ec_;
-        }
-
-        if (set_count->fetch_sub(1) == 1) {
-            if (cb != nullptr) {
-                cb(*ret, std::move(*info));
+    async_del(
+        hash_key,
+        sort_key,
+        [ =, cb = std::move(callback) ](int ec_, pegasus_client::internal_info &&info_) {
+            if (ec_ != PERR_OK) {
+                cb(ec_, std::move(info_));
+                return;
             }
-        }
-    };
 
-    async_set_common_data(
-        hash_key, sort_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
-    async_set_geo_data(
-        hash_key, sort_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
+            std::shared_ptr<int> ret(new int(PERR_OK));
+            std::shared_ptr<std::atomic<int32_t>> set_count(new std::atomic<int32_t>(2));
+            std::shared_ptr<pegasus_client::internal_info> info(
+                new pegasus_client::internal_info());
+            auto async_set_callback =
+                [=](int ec_, pegasus_client::internal_info &&info_, DataType data_type_) {
+                    if (data_type_ == DataType::common) {
+                        *info = std::move(info_);
+                    }
+
+                    if (ec_ != PERR_OK) {
+                        derror_f("set {} data failed. hash_key={}, sort_key={}",
+                                 data_type_ == DataType::common ? "common" : "geo",
+                                 hash_key,
+                                 sort_key);
+                        *ret = ec_;
+                    }
+
+                    if (set_count->fetch_sub(1) == 1) {
+                        if (cb != nullptr) {
+                            cb(*ret, std::move(*info));
+                        }
+                    }
+                };
+
+            async_set_common_data(
+                hash_key, sort_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
+            async_set_geo_data(
+                hash_key, sort_key, value, async_set_callback, timeout_milliseconds, ttl_seconds);
+        },
+        timeout_milliseconds);
 }
 
 int geo_client::del(const std::string &hash_key,
@@ -152,6 +163,13 @@ void geo_client::async_del(const std::string &hash_key,
         sort_key,
         [&, cb = std::move(callback) ](
             int ec_, std::string &&value_, pegasus::pegasus_client::internal_info &&info_) {
+            if (ec_ == PERR_NOT_FOUND) {
+                if (cb != nullptr) {
+                    cb(PERR_OK, std::move(info_));
+                }
+                return;
+            }
+
             if (ec_ != PERR_OK) {
                 if (cb != nullptr) {
                     cb(ec_, std::move(info_));
@@ -628,14 +646,14 @@ void geo_client::async_del_common_data(const std::string &hash_key,
         timeout_milliseconds);
 }
 
-void geo_client::async_del_geo_data(const std::string &hash_key,
-                                    const std::string &sort_key,
+void geo_client::async_del_geo_data(const std::string &geo_hash_key,
+                                    const std::string &geo_sort_key,
                                     update_callback_t &&callback,
                                     int timeout_milliseconds)
 {
     _geo_data_client->async_del(
-        hash_key,
-        sort_key,
+        geo_hash_key,
+        geo_sort_key,
         [cb = std::move(callback)](int error_code, pegasus_client::internal_info &&info) {
             cb(error_code, std::move(info), DataType::geo);
         },
