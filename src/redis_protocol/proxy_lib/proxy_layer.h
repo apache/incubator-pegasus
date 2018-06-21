@@ -61,9 +61,9 @@ public:
                const char *app,
                const char *geo_app = nullptr);
     const ::dsn::rpc_address get_service_uri() const { return _uri_address; }
-    const char *get_cluster() const { return _cluster; }
-    const char *get_app() const { return _app; }
-    const char *get_geo_app() const { return _geo_app; }
+    const char *get_cluster() const { return _cluster.c_str(); }
+    const char *get_app() const { return _app.c_str(); }
+    const char *get_geo_app() const { return _geo_app.c_str(); }
     void open_service()
     {
         this->register_rpc_handler(
@@ -86,9 +86,9 @@ private:
     std::unordered_map<::dsn::rpc_address, std::shared_ptr<proxy_session>> _sessions;
     proxy_session::factory _factory;
     ::dsn::rpc_address _uri_address;
-    const char *_cluster;
-    const char *_app;
-    const char *_geo_app;
+    std::string _cluster;
+    std::string _app;
+    std::string _geo_app;
 };
 }
 } // namespace

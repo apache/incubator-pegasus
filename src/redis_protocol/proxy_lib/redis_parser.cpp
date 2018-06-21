@@ -850,12 +850,18 @@ void redis_parser::parse_parameters(const std::vector<redis_bulk_string> &opts,
                                     bool &WITHVALUE)
 {
     // radius
+    if (base_index >= opts.size()) {
+        return;
+    }
     const std::string &str_radius = opts[base_index++].data.to_string();
     if (!dsn::buf2double(str_radius, radius_m)) {
         dwarn_f("radius parameter '{}' is error, use {}", str_radius, radius_m);
     }
 
     // m|km|ft|mi
+    if (base_index >= opts.size()) {
+        return;
+    }
     unit = opts[base_index++].data.to_string();
     if (unit == "km") {
         radius_m *= 1000;
