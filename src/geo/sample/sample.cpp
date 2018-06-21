@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     // generate data for test
     for (int i = 0; i < data_count; ++i) {
         S2LatLng latlng(S2Testing::SamplePoint(rect));
-        std::string id = std::to_string(i);
+        std::string id = std::to_string(i).append(".sample");
         std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
                             std::to_string(latlng.lng().degrees()) + "|" +
                             std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";

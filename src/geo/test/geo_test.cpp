@@ -443,7 +443,7 @@ TEST_F(geo_client_test, distance)
 
 TEST_F(geo_client_test, large_cap)
 {
-    double lat_degrees = 40.039752;
+    double lat_degrees = -40.039752;
     double lng_degrees = 116.332557;
     double radius_m = 10000;
     int test_data_count = 10000;
