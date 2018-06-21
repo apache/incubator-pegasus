@@ -878,20 +878,20 @@ void redis_parser::parse_parameters(const std::vector<redis_bulk_string> &opts,
     // [WITHCOORD] [WITHDIST] [WITHVALUE] [COUNT count] [ASC|DESC]
     while (base_index < opts.size()) {
         const std::string &opt = opts[base_index].data.to_string();
-        if (opt == "WITHCOORD") {
+        if (strcasecmp(opt.c_str(), "WITHCOORD") == 0) {
             WITHCOORD = true;
-        } else if (opt == "WITHDIST") {
+        } else if (strcasecmp(opt.c_str(), "WITHDIST") == 0) {
             WITHDIST = true;
-        } else if (opt == "WITHVALUE") {
+        } else if (strcasecmp(opt.c_str(), "WITHVALUE") == 0) {
             WITHVALUE = true;
-        } else if (opt == "COUNT" && base_index + 1 < opts.size()) {
+        } else if (strcasecmp(opt.c_str(), "COUNT") == 0 && base_index + 1 < opts.size()) {
             const std::string &str_count = opts[base_index + 1].data.to_string();
             if (!dsn::buf2int32(str_count, count)) {
                 derror_f("'COUNT {}' option is error, use {}", str_count, count);
             }
-        } else if (opt == "ASC") {
+        } else if (strcasecmp(opt.c_str(), "ASC") == 0) {
             sort_type = geo::geo_client::SortType::asc;
-        } else if (opt == "DESC") {
+        } else if (strcasecmp(opt.c_str(), "DESC") == 0) {
             sort_type = geo::geo_client::SortType::desc;
         }
         base_index++;
