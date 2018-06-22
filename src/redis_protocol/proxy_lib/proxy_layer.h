@@ -59,7 +59,7 @@ public:
     proxy_stub(const proxy_session::factory &f,
                const char *cluster,
                const char *app,
-               const char *geo_app = nullptr);
+               const char *geo_app = "");
     const ::dsn::rpc_address get_service_uri() const { return _uri_address; }
     const char *get_cluster() const { return _cluster.c_str(); }
     const char *get_app() const { return _app.c_str(); }

@@ -347,41 +347,43 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
         result.message = "ERR wrong number of arguments for 'set' command";
         reply_message(entry, result);
     } else {
+        int ttl_seconds = 0;
+        parse_set_parameters(request.buffers, ttl_seconds);
+
         // with a reference to prevent the object from being destroyed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
-        auto on_set_reply =
-            [ref_this, this, &entry](::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-                if (status == removed)
-                    return;
+        auto on_set_reply = [ref_this, this, &entry](
+            ::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
+            if (status == removed)
+                return;
 
-                if (::dsn::ERR_OK != ec) {
+            if (::dsn::ERR_OK != ec) {
+                redis_simple_string result;
+                result.is_error = true;
+                result.message = std::string("ERR ") + ec.to_string();
+                reply_message(entry, result);
+            } else {
+                ::dsn::apps::update_response rrdb_response;
+                ::dsn::unmarshall(response, rrdb_response);
+                if (rrdb_response.error != 0) {
                     redis_simple_string result;
                     result.is_error = true;
-                    result.message = std::string("ERR ") + ec.to_string();
+                    result.message = "ERR internal error " + std::to_string(rrdb_response.error);
                     reply_message(entry, result);
                 } else {
-                    ::dsn::apps::update_response rrdb_response;
-                    ::dsn::unmarshall(response, rrdb_response);
-                    if (rrdb_response.error != 0) {
-                        redis_simple_string result;
-                        result.is_error = true;
-                        result.message = "ERR internal error " +
-                                         boost::lexical_cast<std::string>(rrdb_response.error);
-                        reply_message(entry, result);
-                    } else {
-                        redis_simple_string result;
-                        result.is_error = false;
-                        result.message = "OK";
-                        reply_message(entry, result);
-                    }
+                    redis_simple_string result;
+                    result.is_error = false;
+                    result.message = "OK";
+                    reply_message(entry, result);
                 }
-            };
+            }
+        };
 
         ::dsn::apps::update_request req;
         ::dsn::blob null_blob;
         pegasus_generate_key(req.key, request.buffers[1].data, null_blob);
         req.value = request.buffers[2].data;
-        req.expire_ts_seconds = 0;
+        req.expire_ts_seconds = ttl_seconds;
         auto partition_hash = pegasus_key_hash(req.key);
         // TODO: set the timeout
         client->put(req,
@@ -405,19 +407,8 @@ void redis_parser::set_geo_internal(message_entry &entry)
         result.message = "ERR wrong number of arguments for 'SET' command";
         reply_message(entry, result);
     } else {
-        // [EX seconds]
         int ttl_seconds = 0;
-        for (int i = 3; i < redis_request.buffers.size(); ++i) {
-            const std::string &opt = redis_request.buffers[i].data.to_string();
-            if (opt == "EX" && i + 1 < redis_request.buffers.size()) {
-                const std::string &str_ttl_seconds = redis_request.buffers[i + 1].data.to_string();
-                if (!dsn::buf2int32(str_ttl_seconds, ttl_seconds)) {
-                    dwarn_f("'EX {}' option is error, use {}", str_ttl_seconds, ttl_seconds);
-                }
-            } else {
-                dwarn_f("only 'EX' option is supported");
-            }
-        }
+        parse_set_parameters(redis_request.buffers, ttl_seconds);
 
         // with a reference to prevent the object from being destroyed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
@@ -778,7 +769,7 @@ void redis_parser::geo_radius(message_entry &entry)
     bool WITHCOORD = false;
     bool WITHDIST = false;
     bool WITHVALUE = false;
-    parse_parameters(
+    parse_geo_radius_parameters(
         redis_request.buffers, 4, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHVALUE);
 
     std::shared_ptr<proxy_session> ref_this = shared_from_this();
@@ -825,7 +816,7 @@ void redis_parser::geo_radius_by_member(message_entry &entry)
     bool WITHCOORD = false;
     bool WITHDIST = false;
     bool WITHVALUE = false;
-    parse_parameters(
+    parse_geo_radius_parameters(
         redis_request.buffers, 3, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHVALUE);
 
     std::shared_ptr<proxy_session> ref_this = shared_from_this();
@@ -839,15 +830,33 @@ void redis_parser::geo_radius_by_member(message_entry &entry)
         hash_key, "", radius_m, count, sort_type, 2000, search_callback);
 }
 
-void redis_parser::parse_parameters(const std::vector<redis_bulk_string> &opts,
-                                    int base_index,
-                                    double &radius_m,
-                                    std::string &unit,
-                                    geo::geo_client::SortType &sort_type,
-                                    int &count,
-                                    bool &WITHCOORD,
-                                    bool &WITHDIST,
-                                    bool &WITHVALUE)
+void redis_parser::parse_set_parameters(const std::vector<redis_bulk_string> &opts,
+                                        int &ttl_seconds)
+{
+    // [EX seconds]
+    ttl_seconds = 0;
+    for (int i = 3; i < opts.size(); ++i) {
+        const std::string &opt = opts[i].data.to_string();
+        if (strcasecmp(opt.c_str(), "EX") == 0 && i + 1 < opts.size()) {
+            const std::string &str_ttl_seconds = opts[i + 1].data.to_string();
+            if (!dsn::buf2int32(str_ttl_seconds, ttl_seconds)) {
+                dwarn_f("'EX {}' option is error, use {}", str_ttl_seconds, ttl_seconds);
+            }
+        } else {
+            dwarn_f("only 'EX' option is supported");
+        }
+    }
+}
+
+void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_string> &opts,
+                                               int base_index,
+                                               double &radius_m,
+                                               std::string &unit,
+                                               geo::geo_client::SortType &sort_type,
+                                               int &count,
+                                               bool &WITHCOORD,
+                                               bool &WITHDIST,
+                                               bool &WITHVALUE)
 {
     // radius
     if (base_index >= opts.size()) {

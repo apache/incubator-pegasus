@@ -151,15 +151,16 @@ protected:
     void set_geo_internal(message_entry &entry);
     void del_internal(message_entry &entry);
     void del_geo_internal(message_entry &entry);
-    void parse_parameters(const std::vector<redis_bulk_string> &opts,
-                          int base_index,
-                          double &radius_m,
-                          std::string &unit,
-                          geo::geo_client::SortType &sort_type,
-                          int &count,
-                          bool &WITHCOORD,
-                          bool &WITHDIST,
-                          bool &WITHVALUE);
+    void parse_set_parameters(const std::vector<redis_bulk_string> &opts, int &ttl_seconds);
+    void parse_geo_radius_parameters(const std::vector<redis_bulk_string> &opts,
+                                     int base_index,
+                                     double &radius_m,
+                                     std::string &unit,
+                                     geo::geo_client::SortType &sort_type,
+                                     int &count,
+                                     bool &WITHCOORD,
+                                     bool &WITHDIST,
+                                     bool &WITHVALUE);
     void process_geo_radius_result(message_entry &entry,
                                    const std::string &unit,
                                    bool WITHCOORD,

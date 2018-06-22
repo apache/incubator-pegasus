@@ -303,7 +303,7 @@ public:
                                                  {"ASC"},
                                                  {"WITHVALUE"}});
 
-            parse_parameters(
+            parse_geo_radius_parameters(
                 opts, 4, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHVALUE);
 
             ASSERT_DOUBLE_EQ(radius_m, 100);
@@ -332,7 +332,7 @@ public:
                                                  {"500"},
                                                  {"DESC"}});
 
-            parse_parameters(
+            parse_geo_radius_parameters(
                 opts, 4, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHVALUE);
 
             ASSERT_DOUBLE_EQ(radius_m, 100230);
@@ -364,7 +364,7 @@ public:
                                                  {"ASC"},
                                                  {"WITHVALUE"}});
 
-            parse_parameters(
+            parse_geo_radius_parameters(
                 opts, 3, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHVALUE);
 
             ASSERT_DOUBLE_EQ(radius_m, 100);
@@ -392,7 +392,7 @@ public:
                                                  {"500"},
                                                  {"DESC"}});
 
-            parse_parameters(
+            parse_geo_radius_parameters(
                 opts, 3, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHVALUE);
 
             ASSERT_DOUBLE_EQ(radius_m, 100230);
@@ -402,6 +402,17 @@ public:
             ASSERT_FALSE(WITHCOORD);
             ASSERT_FALSE(WITHDIST);
             ASSERT_FALSE(WITHVALUE);
+        }
+
+        {
+            int ttl_seconds = 0;
+            std::vector<redis_bulk_string> opts({{"SET"},
+                                                 {"KK"},
+                                                 {"vv"},
+                                                 {"EX"},
+                                                 {"123"}});
+            parse_set_parameters(opts, ttl_seconds);
+            ASSERT_EQ(ttl_seconds, 123);
         }
     }
 
