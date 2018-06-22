@@ -55,7 +55,7 @@ redis_parser::redis_parser(proxy_stub *op, ::dsn::rpc_address remote)
     ::dsn::apps::rrdb_client *r;
     if (op) {
         r = new ::dsn::apps::rrdb_client(op->get_service_uri());
-        if (op->get_geo_app() != nullptr) {
+        if (strlen(op->get_geo_app()) != 0) {
             _geo_client = dsn::make_unique<geo::geo_client>("config.ini",
                                                             op->get_cluster(),
                                                             op->get_app(),
