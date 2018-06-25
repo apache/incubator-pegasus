@@ -75,8 +75,8 @@ func (p *PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 	r.SeqId = seqId
 
 	if ec.Errno != base.ERR_OK.String() {
-		// convert string to base.ErrType
-		err, parseErr := base.ErrTypeString(ec.Errno)
+		// convert string to base.DsnErrCode
+		err, parseErr := base.DsnErrCodeString(ec.Errno)
 		if parseErr != nil {
 			p.logger.Println("failed to unmarshal the heading error code of rpc response: ", parseErr)
 			return parseErr

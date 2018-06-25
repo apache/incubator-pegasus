@@ -136,7 +136,7 @@ func TestNodeSession_WriteFailed(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	reader := bytes.NewBuffer(make([]byte, 0))
-	n := newFakeNodeSession(reader, &IOErrWriter{err: base.ERR_CLIENT_FAILED})
+	n := newFakeNodeSession(reader, &IOErrWriter{err: base.ERR_INVALID_STATE})
 	defer n.Close()
 
 	n.tom.Go(n.loopForRequest)

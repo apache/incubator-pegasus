@@ -152,17 +152,10 @@ func WrapError(err error, op OpType) error {
 		if pe, ok := err.(*PError); ok {
 			pe.Op = op
 			return pe
-		} else if be, ok := err.(base.ErrType); ok {
-			return &PError{
-				Err:  nil,
-				Op:   op,
-				Code: be,
-			}
 		}
 		return &PError{
-			Err:  err,
-			Op:   op,
-			Code: base.ERR_CLIENT_FAILED,
+			Err: err,
+			Op:  op,
 		}
 	}
 	return nil
@@ -179,7 +172,11 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 
 		resp, err := part.Get(ctx, gpid, key)
 		if err == nil {
-			err = base.NewDsnErrFromInt(resp.Error)
+			err = base.NewRocksDBErrFromInt(resp.Error)
+		}
+		if err == base.NotFound {
+			// Success for non-existed entry.
+			return nil, nil
 		}
 		if err = p.handleReplicaError(err, gpid, part); err != nil {
 			return nil, err
@@ -202,7 +199,7 @@ func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey
 
 		resp, err := part.Put(ctx, gpid, key, val)
 		if err == nil {
-			err = base.NewDsnErrFromInt(resp.Error)
+			err = base.NewRocksDBErrFromInt(resp.Error)
 		}
 		return p.handleReplicaError(err, gpid, part)
 	}()
@@ -220,7 +217,7 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 
 		resp, err := part.Del(ctx, gpid, key)
 		if err == nil {
-			err = base.NewDsnErrFromInt(resp.Error)
+			err = base.NewRocksDBErrFromInt(resp.Error)
 		}
 		return p.handleReplicaError(err, gpid, part)
 	}()
@@ -271,7 +268,7 @@ func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, 
 	resp, err := part.MultiGet(ctx, gpid, request)
 
 	if err == nil {
-		err = base.NewDsnErrFromInt(resp.Error)
+		err = base.NewRocksDBErrFromInt(resp.Error)
 	}
 	if err = p.handleReplicaError(err, gpid, part); err == nil {
 		kvs := make([]KeyValue, len(resp.Kvs))
@@ -321,7 +318,7 @@ func (p *pegasusTableConnector) doMultiSet(ctx context.Context, hashKey []byte, 
 	resp, err := part.MultiSet(ctx, gpid, request)
 
 	if err == nil {
-		err = base.NewDsnErrFromInt(resp.Error)
+		err = base.NewRocksDBErrFromInt(resp.Error)
 	}
 
 	if err = p.handleReplicaError(err, gpid, part); err == nil {
@@ -347,7 +344,7 @@ func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, so
 		resp, err := part.MultiDelete(ctx, gpid, request)
 
 		if err == nil {
-			err = base.NewDsnErrFromInt(resp.Error)
+			err = base.NewRocksDBErrFromInt(resp.Error)
 		}
 		return p.handleReplicaError(err, gpid, part)
 	}()
@@ -365,7 +362,7 @@ func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey
 
 		resp, err := part.TTL(ctx, gpid, key)
 		if err == nil {
-			err = base.NewDsnErrFromInt(resp.Error)
+			err = base.NewRocksDBErrFromInt(resp.Error)
 		}
 		if err = p.handleReplicaError(err, gpid, part); err != nil {
 			return -2, err

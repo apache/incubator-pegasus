@@ -153,6 +153,24 @@ func TestPegasusClient_SequentialOperations(t *testing.T) {
 	}
 }
 
+func TestPegasusClient_GetNotFound(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	cfg := Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	}
+	client := NewClient(cfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+
+	value, err := tb.Get(context.Background(), []byte("h-notfound"), []byte("s-notfound"))
+	assert.Nil(t, err)
+	assert.Equal(t, []byte(nil), value)
+}
+
 func TestPegasusClient_ConcurrentDel(t *testing.T) {
 	defer leaktest.Check(t)()
 

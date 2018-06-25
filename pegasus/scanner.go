@@ -236,7 +236,7 @@ func (p *pegasusScanner) onRecvScanResponse(response *rrdb.ScanResponse, err err
 			p.batchStatus = batchEmpty
 		} else {
 			// rpc succeed, but operation encounter some error in server side
-			return base.NewDsnErrFromInt(response.Error)
+			return base.NewRocksDBErrFromInt(response.Error)
 		}
 	} else {
 		// rpc failed

@@ -6,15 +6,16 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
+/// Primitive for Pegasus thrift framework.
 type ErrorCode struct {
 	Errno string
 }
 
-//go:generate enumer -type=ErrType -output=err_type_string.go
-type ErrType int32
+//go:generate enumer -type=DsnErrCode -output=err_type_string.go
+type DsnErrCode int32
 
 const (
-	ERR_OK ErrType = iota
+	ERR_OK DsnErrCode = iota
 	ERR_UNKNOWN
 	ERR_REPLICATION_FAILURE
 	ERR_APP_EXIST
@@ -83,23 +84,10 @@ const (
 	ERR_DOCKER_DEPLOY_FAILED
 	ERR_DOCKER_UNDEPLOY_FAILED
 	ERR_FS_INTERNAL
-
-	// This error indicates the operation is failed, but there's
-	// no precise knowledge of the cause. It's not returned by
-	// server side.
-	ERR_CLIENT_FAILED
 )
 
-func (e ErrType) Error() string {
-	return e.String()
-}
-
-func NewDsnErrFromInt(e int32) error {
-	err := ErrType(e)
-	if err == ERR_OK {
-		return nil
-	}
-	return err
+func (e DsnErrCode) Error() string {
+	return fmt.Sprintf("DSN_ERR(%s)", e.String())
 }
 
 func (ec *ErrorCode) Read(iprot thrift.TProtocol) (err error) {
@@ -116,4 +104,36 @@ func (ec *ErrorCode) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("ErrorCode(%+v)", *ec)
+}
+
+//go:generate enumer -type=RocksDBErrCode -output=rocskdb_err_string.go
+type RocksDBErrCode int32
+
+const (
+	Ok RocksDBErrCode = iota
+	NotFound
+	Corruption
+	NotSupported
+	InvalidArgument
+	IOError
+	MergeInProgress
+	Incomplete
+	ShutdownInProgress
+	TimedOut
+	Aborted
+	Busy
+	Expired
+	TryAgain
+)
+
+func NewRocksDBErrFromInt(e int32) error {
+	err := RocksDBErrCode(e)
+	if err == Ok {
+		return nil
+	}
+	return err
+}
+
+func (e RocksDBErrCode) Error() string {
+	return fmt.Sprintf("ROCSKDB_ERR(%s)", e.String())
 }

@@ -6,16 +6,11 @@ package pegasus
 
 import (
 	"fmt"
-
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
 )
 
 type PError struct {
 	// Err is the error that occurred during the operation.
 	Err error
-
-	// Code is the error code that identifies the type of this error.
-	Code base.ErrType
 
 	// Op is the operation that caused this error
 	Op OpType
@@ -62,9 +57,5 @@ func (op OpType) String() string {
 }
 
 func (e *PError) Error() string {
-	estr := fmt.Sprintf("pegasus-go-client %s failed: [%s]", e.Op, e.Code)
-	if e.Err != nil {
-		estr += " " + e.Err.Error()
-	}
-	return estr
+	return fmt.Sprintf("pegasus-go-client %s failed: %s", e.Op, e.Err.Error())
 }
