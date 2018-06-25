@@ -730,9 +730,9 @@ void redis_parser::ttl(message_entry &entry)
 
 // command format:
 // GEORADIUS key longitude latitude radius m|km|ft|mi [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT
-// count] [ASC|DESC] [STORE key] [STOREDIST key] [WITHVALUE]
-// NOTE: [WITHHASH] [STORE key] [STOREDIST key] are not supported
-//       [WITHVALUE] are newly supported in pegasus
+// count] [ASC|DESC] [STORE key] [STOREDIST key]
+// NOTE: [STORE key] [STOREDIST key] are not supported
+// NOTE: [WITHHASH] will return origin value of member when enabled
 // NOTE: we use SET instead of GEOADD to insert data into pegasus, so there is not a `key` as in
 // Redis(`GEOADD key longitude latitude member`), and we consider that all geo data in pegasus is
 // under "" key, so when execute 'GEORADIUS' command, the `key` parameter will always be ignored and
@@ -761,22 +761,22 @@ void redis_parser::geo_radius(message_entry &entry)
         dwarn_f("latitude parameter '{}' is error, use {}", str_lat_degrees, lat_degrees);
     }
 
-    // radius m|km|ft|mi [WITHCOORD] [WITHDIST] [COUNT count] [ASC|DESC] [WITHVALUE]
+    // radius m|km|ft|mi [WITHCOORD] [WITHDIST] [COUNT count] [ASC|DESC]
     double radius_m = 100.0;
     std::string unit;
     geo::geo_client::SortType sort_type = geo::geo_client::SortType::random;
     int count = -1;
     bool WITHCOORD = false;
     bool WITHDIST = false;
-    bool WITHVALUE = false;
+    bool WITHHASH = false;
     parse_geo_radius_parameters(
-        redis_request.buffers, 4, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHVALUE);
+        redis_request.buffers, 4, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHHASH);
 
     std::shared_ptr<proxy_session> ref_this = shared_from_this();
-    auto search_callback = [ref_this, this, &entry, unit, WITHCOORD, WITHDIST, WITHVALUE](
+    auto search_callback = [ref_this, this, &entry, unit, WITHCOORD, WITHDIST, WITHHASH](
         int ec, std::list<geo::SearchResult> &&results) {
         process_geo_radius_result(
-            entry, unit, WITHCOORD, WITHDIST, WITHVALUE, ec, std::move(results));
+            entry, unit, WITHCOORD, WITHDIST, WITHHASH, ec, std::move(results));
     };
 
     _geo_client->async_search_radial(
@@ -786,8 +786,8 @@ void redis_parser::geo_radius(message_entry &entry)
 // command format:
 // GEORADIUSBYMEMBER key member radius m|km|ft|mi [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT count]
 // [ASC|DESC] [STORE key] [STOREDIST key]
-// NOTE: [WITHHASH] [STORE key] [STOREDIST key] are not supported
-//       [WITHVALUE] are newly supported in pegasus
+// NOTE: [STORE key] [STOREDIST key] are not supported
+// NOTE: [WITHHASH] will return origin value of member when enabled
 // NOTE: we use SET instead of GEOADD to insert data into pegasus, so there is not a `key` as in
 // Redis(`GEOADD key longitude latitude member`), and we consider that all geo data in pegasus is
 // under "" key, so when execute 'GEORADIUSBYMEMBER' command, the `key` parameter will always be
@@ -808,22 +808,22 @@ void redis_parser::geo_radius_by_member(message_entry &entry)
     // member
     std::string hash_key = redis_request.buffers[2].data.to_string(); // member => hash_key
 
-    // radius m|km|ft|mi [WITHCOORD] [WITHDIST] [COUNT count] [ASC|DESC] [WITHVALUE]
+    // radius m|km|ft|mi [WITHCOORD] [WITHDIST] [COUNT count] [ASC|DESC] [WITHHASH]
     double radius_m = 100.0;
     std::string unit;
     geo::geo_client::SortType sort_type = geo::geo_client::SortType::random;
     int count = -1;
     bool WITHCOORD = false;
     bool WITHDIST = false;
-    bool WITHVALUE = false;
+    bool WITHHASH = false;
     parse_geo_radius_parameters(
-        redis_request.buffers, 3, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHVALUE);
+        redis_request.buffers, 3, radius_m, unit, sort_type, count, WITHCOORD, WITHDIST, WITHHASH);
 
     std::shared_ptr<proxy_session> ref_this = shared_from_this();
-    auto search_callback = [ref_this, this, &entry, unit, WITHCOORD, WITHDIST, WITHVALUE](
+    auto search_callback = [ref_this, this, &entry, unit, WITHCOORD, WITHDIST, WITHHASH](
         int ec, std::list<geo::SearchResult> &&results) {
         process_geo_radius_result(
-            entry, unit, WITHCOORD, WITHDIST, WITHVALUE, ec, std::move(results));
+            entry, unit, WITHCOORD, WITHDIST, WITHHASH, ec, std::move(results));
     };
 
     _geo_client->async_search_radial(
@@ -856,7 +856,7 @@ void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_stri
                                                int &count,
                                                bool &WITHCOORD,
                                                bool &WITHDIST,
-                                               bool &WITHVALUE)
+                                               bool &WITHHASH)
 {
     // radius
     if (base_index >= opts.size()) {
@@ -884,15 +884,15 @@ void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_stri
         base_index--;
     }
 
-    // [WITHCOORD] [WITHDIST] [WITHVALUE] [COUNT count] [ASC|DESC]
+    // [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT count] [ASC|DESC]
     while (base_index < opts.size()) {
         const std::string &opt = opts[base_index].data.to_string();
         if (strcasecmp(opt.c_str(), "WITHCOORD") == 0) {
             WITHCOORD = true;
         } else if (strcasecmp(opt.c_str(), "WITHDIST") == 0) {
             WITHDIST = true;
-        } else if (strcasecmp(opt.c_str(), "WITHVALUE") == 0) {
-            WITHVALUE = true;
+        } else if (strcasecmp(opt.c_str(), "WITHHASH") == 0) {
+            WITHHASH = true;
         } else if (strcasecmp(opt.c_str(), "COUNT") == 0 && base_index + 1 < opts.size()) {
             const std::string &str_count = opts[base_index + 1].data.to_string();
             if (!dsn::buf2int32(str_count, count)) {
@@ -911,7 +911,7 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
                                              const std::string &unit,
                                              bool WITHCOORD,
                                              bool WITHDIST,
-                                             bool WITHVALUE,
+                                             bool WITHHASH,
                                              int ec,
                                              std::list<geo::SearchResult> &&results)
 {
@@ -930,7 +930,7 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
         for (const auto &elem : results) {
             std::shared_ptr<redis_base_type> key(new redis_bulk_string(
                 (int)elem.hash_key.size(), elem.hash_key.data())); // hash_key => member
-            if (!WITHCOORD && !WITHDIST && !WITHVALUE) {
+            if (!WITHCOORD && !WITHDIST && !WITHHASH) {
                 // only member
                 result.array.push_back(key);
             } else {
@@ -986,7 +986,7 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
                     sub_array->array.push_back(coordinate);
                     sub_array->count++;
                 }
-                if (WITHVALUE) {
+                if (WITHHASH) {
                     // with origin value
                     sub_array->array.push_back(std::shared_ptr<redis_base_type>(
                         new redis_bulk_string((int)elem.value.size(), elem.value.data())));

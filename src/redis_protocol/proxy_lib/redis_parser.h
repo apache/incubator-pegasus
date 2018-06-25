@@ -160,12 +160,12 @@ protected:
                                      int &count,
                                      bool &WITHCOORD,
                                      bool &WITHDIST,
-                                     bool &WITHVALUE);
+                                     bool &WITHHASH);
     void process_geo_radius_result(message_entry &entry,
                                    const std::string &unit,
                                    bool WITHCOORD,
                                    bool WITHDIST,
-                                   bool WITHVALUE,
+                                   bool WITHHASH,
                                    int ec,
                                    std::list<geo::SearchResult> &&results);
 
