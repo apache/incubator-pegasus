@@ -13,7 +13,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by mi on 16-3-22.
@@ -1950,5 +1952,195 @@ public class TestBasic {
                 }
         );
         f.awaitUninterruptibly();
+    }
+
+    @Test
+    public void scanWithFilter() throws PException {
+        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+        PegasusTableInterface table = client.openTable("temp");
+        byte[] hashKey = "x".getBytes();
+        List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+        values.add(Pair.of("m_1".getBytes(), "a".getBytes()));
+        values.add(Pair.of("m_2".getBytes(), "a".getBytes()));
+        values.add(Pair.of("m_3".getBytes(), "a".getBytes()));
+        values.add(Pair.of("m_4".getBytes(), "a".getBytes()));
+        values.add(Pair.of("m_5".getBytes(), "a".getBytes()));
+        values.add(Pair.of("n_1".getBytes(), "b".getBytes()));
+        values.add(Pair.of("n_2".getBytes(), "b".getBytes()));
+        values.add(Pair.of("n_3".getBytes(), "b".getBytes()));
+
+        try {
+            // multi set
+            table.multiSet(hashKey, values, 0);
+        }
+        catch (PException e) {
+            e.printStackTrace();
+            Assert.assertTrue(false);
+        }
+
+        try {
+            // scan with batch_size = 10
+            ScanOptions options = new ScanOptions();
+            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+            options.sortKeyFilterPattern = "m".getBytes();
+            options.batchSize = 10;
+            Map<String, String> data = new HashMap<String, String>();
+            PegasusScannerInterface scanner = table.getScanner(hashKey, null, null, options);
+            Assert.assertNotNull(scanner);
+            Pair<Pair<byte[], byte[]>, byte[]> item;
+            while((item = scanner.next()) != null) {
+                Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
+                Assert.assertArrayEquals("a".getBytes(), item.getRight());
+                data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
+            }
+            Assert.assertEquals(5, data.size());
+            Assert.assertTrue(data.containsKey("m_1"));
+            Assert.assertTrue(data.containsKey("m_2"));
+            Assert.assertTrue(data.containsKey("m_3"));
+            Assert.assertTrue(data.containsKey("m_4"));
+            Assert.assertTrue(data.containsKey("m_5"));
+        }
+        catch (PException e) {
+            e.printStackTrace();
+            Assert.assertTrue(false);
+        }
+
+        try {
+            // scan with batch_size = 3
+            ScanOptions options = new ScanOptions();
+            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+            options.sortKeyFilterPattern = "m".getBytes();
+            options.batchSize = 3;
+            Map<String, String> data = new HashMap<String, String>();
+            PegasusScannerInterface scanner = table.getScanner(hashKey, null, null, options);
+            Assert.assertNotNull(scanner);
+            Pair<Pair<byte[], byte[]>, byte[]> item;
+            while((item = scanner.next()) != null) {
+                Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
+                Assert.assertArrayEquals("a".getBytes(), item.getRight());
+                data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
+            }
+            Assert.assertEquals(5, data.size());
+            Assert.assertTrue(data.containsKey("m_1"));
+            Assert.assertTrue(data.containsKey("m_2"));
+            Assert.assertTrue(data.containsKey("m_3"));
+            Assert.assertTrue(data.containsKey("m_4"));
+            Assert.assertTrue(data.containsKey("m_5"));
+        }
+        catch (PException e) {
+            e.printStackTrace();
+            Assert.assertTrue(false);
+        }
+
+        try {
+            // multi del
+            List<byte[]> sortKeys = new ArrayList<byte[]>();
+            for (int i = 0; i < values.size(); i++) {
+                sortKeys.add(values.get(i).getKey());
+            }
+            table.multiDel(hashKey, sortKeys, 0);
+        }
+        catch (PException e) {
+            e.printStackTrace();
+            Assert.assertTrue(false);
+        }
+
+        PegasusClientFactory.closeSingletonClient();
+    }
+
+    @Test
+    public void fullScanWithFilter() throws PException {
+        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+        PegasusTableInterface table = client.openTable("temp");
+        byte[] hashKey = "x".getBytes();
+        List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+        values.add(Pair.of("m_1".getBytes(), "a".getBytes()));
+        values.add(Pair.of("m_2".getBytes(), "a".getBytes()));
+        values.add(Pair.of("m_3".getBytes(), "a".getBytes()));
+        values.add(Pair.of("m_4".getBytes(), "a".getBytes()));
+        values.add(Pair.of("m_5".getBytes(), "a".getBytes()));
+        values.add(Pair.of("n_1".getBytes(), "b".getBytes()));
+        values.add(Pair.of("n_2".getBytes(), "b".getBytes()));
+        values.add(Pair.of("n_3".getBytes(), "b".getBytes()));
+
+        try {
+            // multi set
+            table.multiSet(hashKey, values, 0);
+        }
+        catch (PException e) {
+            e.printStackTrace();
+            Assert.assertTrue(false);
+        }
+
+        try {
+            // scan with batch_size = 10
+            ScanOptions options = new ScanOptions();
+            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+            options.sortKeyFilterPattern = "m".getBytes();
+            options.batchSize = 10;
+            Map<String, String> data = new HashMap<String, String>();
+            List<PegasusScannerInterface> scanners = table.getUnorderedScanners(1, options);
+            Assert.assertEquals(1, scanners.size());
+            PegasusScannerInterface scanner = scanners.get(0);
+            Pair<Pair<byte[], byte[]>, byte[]> item;
+            while((item = scanner.next()) != null) {
+                Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
+                Assert.assertArrayEquals("a".getBytes(), item.getRight());
+                data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
+            }
+            Assert.assertEquals(5, data.size());
+            Assert.assertTrue(data.containsKey("m_1"));
+            Assert.assertTrue(data.containsKey("m_2"));
+            Assert.assertTrue(data.containsKey("m_3"));
+            Assert.assertTrue(data.containsKey("m_4"));
+            Assert.assertTrue(data.containsKey("m_5"));
+        }
+        catch (PException e) {
+            e.printStackTrace();
+            Assert.assertTrue(false);
+        }
+
+        try {
+            // scan with batch_size = 3
+            ScanOptions options = new ScanOptions();
+            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+            options.sortKeyFilterPattern = "m".getBytes();
+            options.batchSize = 3;
+            Map<String, String> data = new HashMap<String, String>();
+            List<PegasusScannerInterface> scanners = table.getUnorderedScanners(1, options);
+            Assert.assertEquals(1, scanners.size());
+            PegasusScannerInterface scanner = scanners.get(0);
+            Pair<Pair<byte[], byte[]>, byte[]> item;
+            while((item = scanner.next()) != null) {
+                Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
+                Assert.assertArrayEquals("a".getBytes(), item.getRight());
+                data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
+            }
+            Assert.assertEquals(5, data.size());
+            Assert.assertTrue(data.containsKey("m_1"));
+            Assert.assertTrue(data.containsKey("m_2"));
+            Assert.assertTrue(data.containsKey("m_3"));
+            Assert.assertTrue(data.containsKey("m_4"));
+            Assert.assertTrue(data.containsKey("m_5"));
+        }
+        catch (PException e) {
+            e.printStackTrace();
+            Assert.assertTrue(false);
+        }
+
+        try {
+            // multi del
+            List<byte[]> sortKeys = new ArrayList<byte[]>();
+            for (int i = 0; i < values.size(); i++) {
+                sortKeys.add(values.get(i).getKey());
+            }
+            table.multiDel(hashKey, sortKeys, 0);
+        }
+        catch (PException e) {
+            e.printStackTrace();
+            Assert.assertTrue(false);
+        }
+
+        PegasusClientFactory.closeSingletonClient();
     }
 }

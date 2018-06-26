@@ -9,6 +9,7 @@ import java.util.concurrent.Future;
 import io.netty.util.concurrent.*;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -63,6 +64,11 @@ public class TestScan {
                 sortMap.put(sortKey, value);
             }
         }
+    }
+
+    @AfterClass
+    public static void tearDownTestCase() throws PException {
+        clearDatabase();
     }
 
     @Test

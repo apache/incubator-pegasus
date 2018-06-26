@@ -12,7 +12,7 @@ public class ScanOptions {
     public int timeoutMillis = 5000; // operation timeout in milli-seconds.
                                      // if timeoutMillis > 0, it is a timeout value for current op,
                                      // else the timeout value in the configuration file will be used.
-    public int batchSize = 1000; // internal buffer batch size
+    public int batchSize = 100; // internal buffer batch size
     public boolean startInclusive = true; // if the startSortKey is included
     public boolean stopInclusive = false; // if the stopSortKey is included
     public FilterType hashKeyFilterType = FilterType.FT_NO_FILTER; // filter type for hash key

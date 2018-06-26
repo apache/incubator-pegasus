@@ -3,16 +3,52 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
+import org.apache.commons.lang3.tuple.Pair;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created by mi on 16-3-23.
  */
 public class TestBench {
+    private static void clearDatabase() throws PException {
+        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+        String tableName = "temp";
+
+        ScanOptions options = new ScanOptions();
+        List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 1, options);
+        Assert.assertEquals(1, scanners.size());
+        Assert.assertNotNull(scanners.get(0));
+
+        Pair<Pair<byte[], byte[]>, byte[]> item;
+        while((item = scanners.get(0).next()) != null ) {
+            client.del(tableName, item.getLeft().getLeft(), item.getLeft().getRight());
+        }
+        scanners.get(0).close();
+
+        scanners = client.getUnorderedScanners(tableName, 1, options);
+        Assert.assertEquals(1, scanners.size());
+        Assert.assertNotNull(scanners.get(0));
+        item = scanners.get(0).next();
+        scanners.get(0).close();
+        Assert.assertNull(
+                item == null ? null : String.format("Database is cleared but not empty, hashKey=%s, sortKey=%s",
+                        new String(item.getLeft().getLeft()), new String(item.getLeft().getRight())),
+                item);
+
+        PegasusClientFactory.closeSingletonClient();
+    }
+
+    @AfterClass
+    public static void tearDownTestCase() throws PException {
+        clearDatabase();
+    }
+
     @Test
     public void testBench() throws PException {
         PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
