@@ -112,7 +112,7 @@ public:
         bool no_value; // only fetch hash_key and sort_key, but not fetch value
         scan_options()
             : timeout_ms(5000),
-              batch_size(1000),
+              batch_size(100),
               start_inclusive(true),
               stop_inclusive(false),
               hash_key_filter_type(FT_NO_FILTER),

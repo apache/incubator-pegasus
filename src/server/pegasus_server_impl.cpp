@@ -1278,8 +1278,8 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         bool stop_inclusive = context->stop_inclusive;
         ::dsn::apps::filter_type::type hash_key_filter_type = context->hash_key_filter_type;
         const ::dsn::blob &hash_key_filter_pattern = context->hash_key_filter_pattern;
-        ::dsn::apps::filter_type::type sort_key_filter_type = context->hash_key_filter_type;
-        const ::dsn::blob &sort_key_filter_pattern = context->hash_key_filter_pattern;
+        ::dsn::apps::filter_type::type sort_key_filter_type = context->sort_key_filter_type;
+        const ::dsn::blob &sort_key_filter_pattern = context->sort_key_filter_pattern;
         bool no_value = context->no_value;
         bool complete = false;
         uint32_t epoch_now = ::pegasus::utils::epoch_now();
