@@ -8,6 +8,11 @@ import sys
 import os
 import copy
 
+#
+# RESTful API doc: http://wiki.n.miui.com/pages/viewpage.action?pageId=66037692
+# falcon ctrl api: http://dev.falcon.srv/doc/
+#
+
 # account info
 serviceAccount = ""
 serviceSeedMd5 = ""
