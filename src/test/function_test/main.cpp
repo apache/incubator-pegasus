@@ -15,8 +15,6 @@
 using namespace ::pegasus;
 
 pegasus_client *client = nullptr;
-void test_scan_global_init();
-void test_basic_global_init();
 
 GTEST_API_ int main(int argc, char **argv)
 {
@@ -34,9 +32,6 @@ GTEST_API_ int main(int argc, char **argv)
     const char *app_name = argv[2];
     client = pegasus_client_factory::get_client("mycluster", app_name);
     ddebug("MainThread: app_name=%s", app_name);
-
-    test_scan_global_init();
-    test_basic_global_init();
 
     int gargc = argc - 2;
     testing::InitGoogleTest(&gargc, argv + 2);
