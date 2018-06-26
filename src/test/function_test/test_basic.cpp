@@ -1678,6 +1678,7 @@ TEST(basic, scan_with_filter)
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
             ASSERT_EQ("x", hash_key);
+            ASSERT_EQ("a", value);
             data[sort_key] = value;
         }
         delete scanner;
@@ -1705,6 +1706,7 @@ TEST(basic, scan_with_filter)
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
             ASSERT_EQ("x", hash_key);
+            ASSERT_EQ("a", value);
             data[sort_key] = value;
         }
         delete scanner;
@@ -1718,14 +1720,9 @@ TEST(basic, scan_with_filter)
 
     // multi_del
     std::set<std::string> sortkeys;
-    sortkeys.insert("m_1");
-    sortkeys.insert("m_2");
-    sortkeys.insert("m_3");
-    sortkeys.insert("m_4");
-    sortkeys.insert("m_5");
-    sortkeys.insert("n_1");
-    sortkeys.insert("n_2");
-    sortkeys.insert("n_3");
+    for (auto kv : kvs) {
+        sortkeys.insert(kv.first);
+    }
     int64_t deleted_count;
     ret = client->multi_del("x", sortkeys, deleted_count);
     ASSERT_EQ(PERR_OK, ret);
@@ -1764,6 +1761,7 @@ TEST(basic, full_scan_with_filter)
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
             ASSERT_EQ("x", hash_key);
+            ASSERT_EQ("a", value);
             data[sort_key] = value;
         }
         delete scanner;
@@ -1792,6 +1790,7 @@ TEST(basic, full_scan_with_filter)
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
             ASSERT_EQ("x", hash_key);
+            ASSERT_EQ("a", value);
             data[sort_key] = value;
         }
         delete scanner;
@@ -1805,14 +1804,9 @@ TEST(basic, full_scan_with_filter)
 
     // multi_del
     std::set<std::string> sortkeys;
-    sortkeys.insert("m_1");
-    sortkeys.insert("m_2");
-    sortkeys.insert("m_3");
-    sortkeys.insert("m_4");
-    sortkeys.insert("m_5");
-    sortkeys.insert("n_1");
-    sortkeys.insert("n_2");
-    sortkeys.insert("n_3");
+    for (auto kv : kvs) {
+        sortkeys.insert(kv.first);
+    }
     int64_t deleted_count;
     ret = client->multi_del("x", sortkeys, deleted_count);
     ASSERT_EQ(PERR_OK, ret);

@@ -153,7 +153,7 @@ class test_scan : public testing::Test
 public:
     virtual void SetUp()
     {
-        ddebug("INIT...");
+        ddebug("SetUp...");
         clear_database();
 
         srand(time(NULL));
@@ -185,7 +185,7 @@ public:
 
     virtual void TearDown() override
     {
-        ddebug("INIT...");
+        ddebug("TearDown...");
         clear_database();
     }
 };
