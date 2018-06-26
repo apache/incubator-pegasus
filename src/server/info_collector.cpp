@@ -89,6 +89,11 @@ void info_collector::on_app_stat()
             all.remove_qps += row.remove_qps;
             all.multi_remove_qps += row.multi_remove_qps;
             all.scan_qps += row.scan_qps;
+            all.recent_expire_count += row.recent_expire_count;
+            all.recent_filter_count += row.recent_filter_count;
+            all.recent_abnormal_count += row.recent_abnormal_count;
+            all.storage_mb += row.storage_mb;
+            all.storage_count += row.storage_count;
             read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
             write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps;
         }
