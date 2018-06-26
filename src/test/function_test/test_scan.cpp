@@ -148,12 +148,12 @@ static void clear_database()
     ddebug("Database cleared.");
 }
 
-class InitData : public testing::Environment
+class test_scan : public testing::Test
 {
 public:
     virtual void SetUp()
     {
-        ddebug("INIT...");
+        ddebug("SetUp...");
         clear_database();
 
         srand(time(NULL));
@@ -182,9 +182,15 @@ public:
             }
         }
     }
+
+    virtual void TearDown() override
+    {
+        ddebug("TearDown...");
+        clear_database();
+    }
 };
 
-TEST(scan, ALL_SORT_KEY)
+TEST(test_scan, ALL_SORT_KEY)
 {
     ddebug("TESTING_HASH_SCAN, ALL SORT_KEYS ....");
     pegasus_client::scan_options options;
@@ -208,7 +214,7 @@ TEST(scan, ALL_SORT_KEY)
     compare(data, base[expected_hash_key], expected_hash_key);
 }
 
-TEST(scan, BOUND_INCLUSIVE)
+TEST(test_scan, BOUND_INCLUSIVE)
 {
     ddebug("TESTING_HASH_SCAN, [start, stop]...");
     auto it1 = base[expected_hash_key].begin();
@@ -244,7 +250,7 @@ TEST(scan, BOUND_INCLUSIVE)
     compare(data, std::map<std::string, std::string>(it1, it2), expected_hash_key);
 }
 
-TEST(scan, BOUND_EXCLUSIVE)
+TEST(test_scan, BOUND_EXCLUSIVE)
 {
     ddebug("TESTING_HASH_SCAN, (start, stop)...");
     auto it1 = base[expected_hash_key].begin();
@@ -280,7 +286,7 @@ TEST(scan, BOUND_EXCLUSIVE)
     compare(data, std::map<std::string, std::string>(it1, it2), expected_hash_key);
 }
 
-TEST(scan, ONE_POINT)
+TEST(test_scan, ONE_POINT)
 {
     ddebug("TESTING_HASH_SCAN, [start, start]...");
     auto it1 = base[expected_hash_key].begin();
@@ -311,7 +317,7 @@ TEST(scan, ONE_POINT)
     delete scanner;
 }
 
-TEST(scan, HALF_INCLUSIVE)
+TEST(test_scan, HALF_INCLUSIVE)
 {
     ddebug("TESTING_HASH_SCAN, [start, start)...");
     auto it1 = base[expected_hash_key].begin();
@@ -337,7 +343,7 @@ TEST(scan, HALF_INCLUSIVE)
     delete scanner;
 }
 
-TEST(scan, VOID_SPAN)
+TEST(test_scan, VOID_SPAN)
 {
     ddebug("TESTING_HASH_SCAN, [stop, start]...");
     auto it1 = base[expected_hash_key].begin();
@@ -366,7 +372,7 @@ TEST(scan, VOID_SPAN)
     delete scanner;
 }
 
-TEST(scan, OVERALL)
+TEST(test_scan, OVERALL)
 {
     ddebug("TEST OVERALL_SCAN...");
     pegasus_client::scan_options options;
@@ -391,5 +397,3 @@ TEST(scan, OVERALL)
     }
     compare(data, base);
 }
-
-void test_scan_global_init() { testing::AddGlobalTestEnvironment(new InitData()); }
