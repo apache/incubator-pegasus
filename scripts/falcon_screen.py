@@ -27,23 +27,23 @@ metaPort = ""
 replicaPort = ""
 collectorPort = ""
 
-# return:
-def get_service_port(clusterName):
+# return: bool
+def get_service_port_by_minos(clusterName):
     minosEnv = os.environ.get("MINOS_CONFIG_FILE")
     if not isinstance(minosEnv, str) or len(minosEnv) == 0:
-        print "ERROR: environment variables 'MINOS_CONFIG_FILE' is not set"
-        sys.exit(1)
+        print "WARN: environment variables 'MINOS_CONFIG_FILE' is not set"
+        return False
     if not os.path.isfile(minosEnv):
-        print "ERROR: environment variables 'MINOS_CONFIG_FILE' is not valid"
-        sys.exit(1)
+        print "WARN: environment variables 'MINOS_CONFIG_FILE' is not valid"
+        return False
     minosConfigDir = os.path.dirname(minosEnv)
     if not os.path.isdir(minosConfigDir):
-        print "ERROR: environment variables 'MINOS_CONFIG_FILE' is not valid"
-        sys.exit(1)
+        print "WARN: environment variables 'MINOS_CONFIG_FILE' is not valid"
+        return False
     clusterConfigFile = minosConfigDir + "/xiaomi-config/conf/pegasus/pegasus-" + clusterName + ".cfg"
     if not os.path.isfile(clusterConfigFile):
-        print "ERROR: cluster config file '%s' not exist" % clusterConfigFile
-        sys.exit(1)
+        print "WARN: cluster config file '%s' not exist" % clusterConfigFile
+        return False
 
     lines = [line.strip() for line in open(clusterConfigFile)]
     mode = ''
@@ -70,8 +70,58 @@ def get_service_port(clusterName):
 
     print "INFO: metaPort = %s, replicaPort = %s, collectorPort = %s" % (metaPort, replicaPort, collectorPort)
     if metaPort == '' or replicaPort == '' or collectorPort == '':
-        print "ERROR: get port from cluster config file '%s' failed" % clusterConfigFile
-        sys.exit(1)
+        print "WARN: get port from cluster config file '%s' failed" % clusterConfigFile
+        return False
+    return True
+
+
+# return: bool
+def get_service_port_by_minos2(clusterName):
+    minosEnv = os.environ.get("MINOS2_CONFIG_FILE")
+    if not isinstance(minosEnv, str) or len(minosEnv) == 0:
+        print "WARN: environment variables 'MINOS2_CONFIG_FILE' is not set"
+        return False
+    if not os.path.isfile(minosEnv):
+        print "WARN: environment variables 'MINOS2_CONFIG_FILE' is not valid"
+        return False
+    minosConfigDir = os.path.dirname(minosEnv)
+    if not os.path.isdir(minosConfigDir):
+        print "WARN: environment variables 'MINOS2_CONFIG_FILE' is not valid"
+        return False
+    clusterConfigFile = minosConfigDir + "/xiaomi-config/conf/pegasus/pegasus-" + clusterName + ".yaml"
+    if not os.path.isfile(clusterConfigFile):
+        print "WARN: cluster config file '%s' not exist" % clusterConfigFile
+        return False
+
+    lines = [line.strip() for line in open(clusterConfigFile)]
+    mode = ''
+    global metaPort
+    global replicaPort
+    global collectorPort
+    for line in lines:
+        if line == 'meta:':
+            mode = 'meta'
+        elif line == 'replica:':
+            mode = 'replica'
+        elif line == 'collector:':
+            mode = 'collector'
+        m = re.search('^base *: *([0-9]+)', line)
+        if m:
+            basePort = int(m.group(1))
+            if mode == 'meta':
+                metaPort = str(basePort + 1)
+            elif mode == 'replica':
+                replicaPort = str(basePort + 1)
+            elif mode == 'collector':
+                collectorPort = str(basePort + 1)
+            mode = ''
+
+    print "INFO: metaPort = %s, replicaPort = %s, collectorPort = %s" % (metaPort, replicaPort, collectorPort)
+    if metaPort == '' or replicaPort == '' or collectorPort == '':
+        print "WARN: get port from cluster config file '%s' failed" % clusterConfigFile
+        return False
+
+    return True
 
 
 # return:
@@ -467,7 +517,9 @@ if __name__ == '__main__':
         print "ERROR: argv[4] should be 'create' or 'update', but '%s'" % operateType
         sys.exit(1)
 
-    get_service_port(clusterName)
+    if not get_service_port_by_minos2(clusterName) and not get_service_port_by_minos(clusterName):
+        print "ERROR: get service ports from minos config failed"
+        sys.exit(1)
 
     login()
 
