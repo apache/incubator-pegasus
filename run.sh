@@ -1490,7 +1490,7 @@ function usage_shell()
     echo "   -c|--config <path>   config file path, default './config-shell.ini.{PID}'"
     echo "   --cluster <str>      cluster meta lists, default '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
     echo "   -n <cluster-name>    cluster name. Will try to get a cluster ip_list"
-    echo "                        from your MINOS-config(through \$MINOS_CONFIG_FILE) or"
+    echo "                        from your minos config (\$MINOS2_CONFIG_FILE or \$MINOS_CONFIG_FILE) or"
     echo "                        from [uri-resolve.dsn://<cluster-name>] of your config-file"
 }
 
@@ -1547,30 +1547,53 @@ function run_shell()
 
     if [ $CLUSTER_NAME_SPECIFIED -eq 1 ]; then
         meta_section="/tmp/minos.config.cluster.meta.section.$UID"
-        pegasus_config_file=$(dirname $MINOS_CONFIG_FILE)/xiaomi-config/conf/pegasus/pegasus-${CLUSTER_NAME}.cfg
-        if [ -f $pegasus_config_file ]; then
-            meta_section_start=$(grep -n "\[meta" $pegasus_config_file | head -1 | cut -d":" -f 1)
-            meta_section_end=$(grep -n "\[replica" $pegasus_config_file | head -1 | cut -d":" -f 1)
-            sed -n "${meta_section_start},${meta_section_end}p" $pegasus_config_file > $meta_section
+        if [ ! -z "$MINOS2_CONFIG_FILE" ]; then
+            minos2_config_file=$(dirname $MINOS2_CONFIG_FILE)/xiaomi-config/conf/pegasus/pegasus-${CLUSTER_NAME}.yaml
+        fi
+        if [ ! -z "$MINOS_CONFIG_FILE" ]; then
+            minos_config_file=$(dirname $MINOS_CONFIG_FILE)/xiaomi-config/conf/pegasus/pegasus-${CLUSTER_NAME}.cfg
+        fi
+
+        if [ ! -z "$MINOS2_CONFIG_FILE" -a -f "$minos2_config_file" ]; then
+            meta_section_start=$(grep -n "^ *meta:" $minos2_config_file | head -1 | cut -d":" -f 1)
+            meta_section_end=$(grep -n "^ *replica:" $minos2_config_file | head -1 | cut -d":" -f 1)
+            sed -n "${meta_section_start},${meta_section_end}p" $minos2_config_file > $meta_section
             if [ $? -ne 0 ]; then
-                echo "write $pegasus_config_file meta_info to $meta_section failed"
+                echo "ERROR: write $minos2_config_file meta section to $meta_section failed"
+                exit 1
             else
-                base_port=$(grep "base_port=" $meta_section | cut -d"=" -f2)
-                hosts_list=$(grep " host\.[0-9]*" $meta_section | grep -oh "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
-                if [ ! -z "$base_port" ] && [ ! -z "$hosts_list" ]; then
-                    meta_list=()
-                    for h in $hosts_list; do
-                        meta_list+=($h":"$[ $base_port + 1 ])
-                    done
-                    OLD_IFS="$IFS"
-                    IFS="," && CLUSTER="${meta_list[*]}" && IFS="$OLD_IFS"
-                    echo "parse meta_list $CLUSTER from $pegasus_config_file"
-                else
-                    echo "parse meta_list from $pegasus_config_file failed"
-                fi
+                base_port=$(grep "^ *base *:" $meta_section | cut -d":" -f2)
+                hosts_list=$(grep "^ *- *[0-9]*" $meta_section | grep -oh "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+                config_file=$minos2_config_file
+            fi
+        elif [ ! -z "$MINOS_CONFIG_FILE" -a -f "$minos_config_file" ]; then
+            meta_section_start=$(grep -n "\[meta" $minos_config_file | head -1 | cut -d":" -f 1)
+            meta_section_end=$(grep -n "\[replica" $minos_config_file | head -1 | cut -d":" -f 1)
+            sed -n "${meta_section_start},${meta_section_end}p" $minos_config_file > $meta_section
+            if [ $? -ne 0 ]; then
+                echo "ERROR: write $minos_config_file meta section to $meta_section failed"
+                exit 1
+            else
+                base_port=$(grep "^ *base_port *=" $meta_section | cut -d"=" -f2)
+                hosts_list=$(grep "^ *host\.[0-9]*" $meta_section | grep -oh "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+                config_file=$minos_config_file
             fi
         else
-            echo "can't find file $pegasus_config_file, please check you env \$MINOS_CONFIG_FILE"
+            echo "ERROR: can't find minos config file for $CLUSTER_NAME, please check env \$MINOS2_CONFIG_FILE or \$MINOS_CONFIG_FILE"
+            exit 1
+        fi
+
+        if [ ! -z "$base_port" ] && [ ! -z "$hosts_list" ]; then
+            meta_list=()
+            for h in $hosts_list; do
+                meta_list+=($h":"$[ $base_port + 1 ])
+            done
+            OLD_IFS="$IFS"
+            IFS="," && CLUSTER="${meta_list[*]}" && IFS="$OLD_IFS"
+            echo "INFO: parse meta_list from $config_file"
+        else
+            echo "ERROR: parse meta_list from $config_file failed"
+            exit 1
         fi
     fi
 
