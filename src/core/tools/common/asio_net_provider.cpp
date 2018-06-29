@@ -137,7 +137,10 @@ void asio_network_provider::do_accept()
                                      (std::shared_ptr<boost::asio::ip::tcp::socket> &)socket,
                                      null_parser,
                                      false);
-            this->on_server_session_accepted(s);
+            on_server_session_accepted(s);
+
+            // we should start read immediately after the rpc session is completely created.
+            s->start_read_next();
         }
 
         do_accept();

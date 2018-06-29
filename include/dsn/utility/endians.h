@@ -5,8 +5,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cassert>
 #include <endian.h>
-#include <dsn/service_api_c.h>
 #include <dsn/utility/string_view.h>
 
 namespace dsn {
@@ -57,7 +57,7 @@ private:
     void ensure(size_t sz)
     {
         size_t cap = _end - _ptr;
-        dassert(cap >= sz, "capacity %zu is not enough for %zu", cap, sz);
+        assert(cap >= sz);
     }
 
 private:
@@ -107,10 +107,7 @@ private:
         _size -= sz;
     }
 
-    void ensure(size_t sz)
-    {
-        dassert(_size >= sz, " content(%zu) is not enough for reading %zu size", _size, sz);
-    }
+    void ensure(size_t sz) { assert(_size >= sz); }
 
 private:
     const char *_p{nullptr};

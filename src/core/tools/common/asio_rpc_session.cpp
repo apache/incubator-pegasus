@@ -170,8 +170,6 @@ asio_rpc_session::asio_rpc_session(asio_network_provider &net,
     : rpc_session(net, remote_addr, parser, is_client), _socket(socket)
 {
     set_options();
-    if (!is_client)
-        start_read_next();
 }
 
 void asio_rpc_session::on_failure(bool is_write)

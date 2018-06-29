@@ -36,6 +36,7 @@
 #pragma once
 
 #include <dsn/c/api_common.h>
+#include <dsn/utility/ports.h>
 
 /*!
 @defgroup logging Logging Service
