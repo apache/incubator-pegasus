@@ -41,11 +41,6 @@ void proxy_stub::on_rpc_request(dsn_message_t request)
 
     // release in proxy_session
     dsn_msg_add_ref(request);
-    /*
-    tasking::enqueue(LPC_RPC_CALL_RAW_SCATTER, nullptr,
-                     std::bind(&proxy_session::on_recv_request, ps.get(), ps, request),
-                     ps->hash());
-    */
     ps->on_recv_request(ps, request);
 }
 

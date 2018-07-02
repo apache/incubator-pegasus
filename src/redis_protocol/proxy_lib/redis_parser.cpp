@@ -2,7 +2,8 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include <boost/lexical_cast.hpp>
+#include <dsn/utility/string_conv.h>
+
 #include <rrdb/rrdb.client.h>
 #include <pegasus/error.h>
 #include <rocksdb/status.h>
@@ -127,15 +128,16 @@ char redis_parser::peek()
     return current_buffer[current_cursor];
 }
 
-void redis_parser::eat(char c)
+bool redis_parser::eat(char c)
 {
     prepare_current_buffer();
     if (current_buffer[current_cursor] == c) {
         ++current_cursor;
         --total_length;
+        return true;
     } else {
         derror("expect token: %c, got %c", c, current_buffer[current_cursor]);
-        throw std::invalid_argument("");
+        return false;
     }
 }
 
@@ -155,22 +157,22 @@ void redis_parser::eat_all(char *dest, size_t length)
     }
 }
 
-void redis_parser::end_array_size()
+bool redis_parser::end_array_size()
 {
     redis_request &current_array = current_msg->request;
-    try {
-        current_array.length = boost::lexical_cast<int>(current_size);
-        current_size.clear();
-        if (current_array.length <= 0) {
-            derror("array size should be positive in redis request, but %d", current_array.length);
-            throw std::invalid_argument("");
-        }
-        current_array.buffers.reserve(current_array.length);
-        status = start_bulk_string;
-    } catch (const boost::bad_lexical_cast &c) {
-        derror("invalid size string \"%s\"", current_size.c_str());
-        throw std::invalid_argument("");
-    }
+
+    int32_t l;
+    bool result = dsn::buf2int32(dsn::string_view(current_size.c_str(), current_size.length()), l);
+    dverify_logged(result, LOG_LEVEL_ERROR, "invalid size string \"%s\"", current_size.c_str());
+
+    current_array.length = l;
+    current_size.clear();
+    dverify_logged(
+        l > 0, LOG_LEVEL_ERROR, "array size should be positive in redis request, but got %d", l);
+
+    current_array.buffers.reserve(current_array.length);
+    status = start_bulk_string;
+    return true;
 }
 
 void redis_parser::append_current_bulk_string()
@@ -187,23 +189,23 @@ void redis_parser::append_current_bulk_string()
     }
 }
 
-void redis_parser::end_bulk_string_size()
+bool redis_parser::end_bulk_string_size()
 {
-    try {
-        current_str.length = boost::lexical_cast<int>(current_size);
-        current_size.clear();
-        if (-1 == current_str.length) {
-            append_current_bulk_string();
-        } else if (current_str.length >= 0) {
-            status = start_bulk_string_data;
-        } else {
-            derror("invalid bulk string length: %d", current_str.length);
-            throw std::invalid_argument("");
-        }
-    } catch (const boost::bad_lexical_cast &c) {
-        derror("invalid size string \"%s\"", current_size.c_str());
-        throw std::invalid_argument("");
+    int32_t l;
+    bool result = dsn::buf2int32(dsn::string_view(current_size.c_str(), current_size.length()), l);
+    dverify_logged(result, LOG_LEVEL_ERROR, "invalid size string \"%s\"", current_size.c_str());
+
+    current_str.length = l;
+    current_size.clear();
+    if (-1 == current_str.length) {
+        append_current_bulk_string();
+    } else if (current_str.length >= 0) {
+        status = start_bulk_string_data;
+    } else {
+        derror("invalid bulk string length: %d", current_str.length);
+        return false;
     }
+    return true;
 }
 
 void redis_parser::append_message(dsn_message_t msg)
@@ -214,13 +216,13 @@ void redis_parser::append_message(dsn_message_t msg)
 }
 
 // refererence: http://redis.io/topics/protocol
-void redis_parser::parse_stream()
+bool redis_parser::parse_stream()
 {
     char t;
     while (total_length > 0) {
         switch (status) {
         case start_array:
-            eat('*');
+            dverify(eat('*'));
             status = in_array_size;
             break;
         case in_array_size:
@@ -228,21 +230,23 @@ void redis_parser::parse_stream()
             t = peek();
             if (t == CR) {
                 if (total_length > 1) {
-                    eat(CR);
-                    eat(LF);
-                    if (in_array_size == status)
-                        end_array_size();
-                    else
-                        end_bulk_string_size();
-                } else
-                    return;
+                    dverify(eat(CR));
+                    dverify(eat(LF));
+                    if (in_array_size == status) {
+                        dverify(end_array_size());
+                    } else {
+                        dverify(end_bulk_string_size());
+                    }
+                } else {
+                    return true;
+                }
             } else {
                 current_size.push_back(t);
-                eat(t);
+                dverify(eat(t));
             }
             break;
         case start_bulk_string:
-            eat('$');
+            dverify(eat('$'));
             status = in_bulk_string_size;
             break;
         case start_bulk_string_data:
@@ -255,28 +259,27 @@ void redis_parser::parse_stream()
                     eat_all(str_data.get(), current_str.length);
                     current_str.data.assign(std::move(str_data), 0, current_str.length);
                 }
-                eat(CR);
-                eat(LF);
+                dverify(eat(CR));
+                dverify(eat(LF));
                 append_current_bulk_string();
             } else
-                return;
+                return true;
             break;
         default:
             break;
         }
     }
+    return true;
 }
 
 bool redis_parser::parse(dsn_message_t msg)
 {
     append_message(msg);
-    try {
-        parse_stream();
-        return true;
-    } catch (...) {
+    bool ans = parse_stream();
+    if (!ans) {
         reset();
-        return false;
     }
+    return ans;
 }
 
 void redis_parser::on_remove_session(std::shared_ptr<proxy_session> _this)
