@@ -242,7 +242,7 @@ inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
     } else {
         // the protocol is json protocol
         std::string host;
-        int port;
+        int port = 0;
 
         uint32_t xfer = 0;
         std::string fname;

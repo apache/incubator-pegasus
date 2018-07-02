@@ -262,3 +262,16 @@ if [ ! -d $TP_OUTPUT/include/fds ]; then
 else
     echo "skip build fds"
 fi
+
+# build s2geometry
+if [ ! -d $TP_OUTPUT/include/s2 ]; then
+    cd $TP_SRC/s2geometry
+    mkdir -p build && cd build
+    cmake .. -DGTEST_INCLUDE=$TP_OUTPUT/include -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT
+    make -j8 && make install
+    res=$?
+    exit_if_fail "s2geometry" $res
+    cd $TP_DIR
+else
+    echo "skip build s2geometry"
+fi

@@ -174,5 +174,50 @@ TEST(string_conv, uint64_partial)
     ASSERT_FALSE(dsn::buf2uint64("0xdeadbeeg", result));
 
     ASSERT_FALSE(dsn::buf2uint64(std::to_string(-1), result));
-    ASSERT_FALSE(dsn::buf2uint64(std::to_string(std::numeric_limits<uint64_t>::max()).append("0"), result));
+    ASSERT_FALSE(
+        dsn::buf2uint64(std::to_string(std::numeric_limits<uint64_t>::max()).append("0"), result));
+}
+
+TEST(string_conv, buf2double)
+{
+    double result;
+
+    ASSERT_TRUE(dsn::buf2double("1.1", result));
+    ASSERT_DOUBLE_EQ(result, 1.1);
+
+    ASSERT_TRUE(dsn::buf2double("0.0", result));
+    ASSERT_DOUBLE_EQ(result, 0.0);
+    ASSERT_TRUE(dsn::buf2double("-0.0", result));
+    ASSERT_DOUBLE_EQ(result, 0.0);
+
+    ASSERT_TRUE(dsn::buf2double("-1.1", result));
+    ASSERT_DOUBLE_EQ(result, -1.1);
+
+    ASSERT_TRUE(dsn::buf2double("1.2e3", result));
+    ASSERT_DOUBLE_EQ(result, 1200.0);
+
+    ASSERT_TRUE(dsn::buf2double("1.2E3", result));
+    ASSERT_DOUBLE_EQ(result, 1200.0);
+
+    ASSERT_TRUE(dsn::buf2double("1e0", result));
+    ASSERT_DOUBLE_EQ(result, 1.0);
+
+    ASSERT_TRUE(dsn::buf2double("0x1.2p3", result));
+    ASSERT_DOUBLE_EQ(result, 0x1.2p3);
+    ASSERT_DOUBLE_EQ(result, 9.0);
+
+    ASSERT_TRUE(dsn::buf2double("0X1.2P3", result));
+    ASSERT_DOUBLE_EQ(result, 0x1.2p3);
+    ASSERT_DOUBLE_EQ(result, 9.0);
+
+    /// bad case
+    ASSERT_FALSE(dsn::buf2double("nan", result));
+    ASSERT_FALSE(dsn::buf2double("NaN", result));
+    ASSERT_FALSE(dsn::buf2double("-nan", result));
+    ASSERT_FALSE(dsn::buf2double("-NAN", result));
+    ASSERT_FALSE(dsn::buf2double("inf", result));
+    ASSERT_FALSE(dsn::buf2double("-INF", result));
+    ASSERT_FALSE(dsn::buf2double("INFINITY", result));
+    ASSERT_FALSE(dsn::buf2double("abc", result));
+    ASSERT_FALSE(dsn::buf2double("1.18973e+4932", result));
 }

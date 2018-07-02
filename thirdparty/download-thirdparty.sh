@@ -188,4 +188,15 @@ check_and_download "fmt-4.0.0.tar.gz"\
     "fmt-4.0.0"
 exit_if_fail $?
 
+# s2geometry
+if [ ! -d $TP_SRC/s2geometry ]; then
+    git clone -b pegasus https://github.com/acelyc111/s2geometry.git
+    if [ $? != 0 ]; then
+        echo "ERROR: download s2geometry wrong"
+        exit -1
+    fi
+else
+    echo "s2geometry has already downloaded, skip it"
+fi
+
 cd $TP_DIR

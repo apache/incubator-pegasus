@@ -23,29 +23,30 @@ std::string get_last_component(const std::string &input, const char splitters[])
         return input;
 }
 
-void split_args(const char *args, /*out*/ std::vector<std::string> &sargs, char splitter)
+void split_args(const char *args,
+                /*out*/ std::vector<std::string> &sargs,
+                char splitter,
+                bool keep_place_holder)
 {
     sargs.clear();
-
     std::string v(args);
-
-    int lastPos = 0;
+    uint64_t last_pos = 0;
     while (true) {
-        auto pos = v.find(splitter, lastPos);
+        auto pos = v.find(splitter, last_pos);
         if (pos != std::string::npos) {
-            std::string s = v.substr(lastPos, pos - lastPos);
-            if (s.length() > 0) {
-                std::string s2 = trim_string((char *)s.c_str());
-                if (s2.length() > 0)
-                    sargs.push_back(s2);
+            std::string s = trim_string((char *)v.substr(last_pos, pos - last_pos).c_str());
+            if (!s.empty()) {
+                sargs.push_back(s);
+            } else if (keep_place_holder) {
+                sargs.emplace_back("");
             }
-            lastPos = static_cast<int>(pos + 1);
+            last_pos = pos + 1;
         } else {
-            std::string s = v.substr(lastPos);
-            if (s.length() > 0) {
-                std::string s2 = trim_string((char *)s.c_str());
-                if (s2.length() > 0)
-                    sargs.push_back(s2);
+            std::string s = trim_string((char *)v.substr(last_pos).c_str());
+            if (!s.empty()) {
+                sargs.push_back(s);
+            } else if (keep_place_holder) {
+                sargs.emplace_back("");
             }
             break;
         }

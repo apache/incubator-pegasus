@@ -9,7 +9,10 @@
 namespace dsn {
 namespace utils {
 
-void split_args(const char *args, /*out*/ std::vector<std::string> &sargs, char splitter = ' ');
+void split_args(const char *args,
+                /*out*/ std::vector<std::string> &sargs,
+                char splitter = ' ',
+                bool keep_place_holder = false);
 
 void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter = ' ');
 

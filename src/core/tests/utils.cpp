@@ -103,6 +103,60 @@ TEST(core, split_args)
     EXPECT_EQ(*it++, "c");
 }
 
+TEST(core, split_args_keep_place_holder)
+{
+    std::string value = "a ,b, c ";
+    std::vector<std::string> sargs;
+    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+
+    EXPECT_EQ(sargs.size(), 3);
+    EXPECT_EQ(sargs[0], "a");
+    EXPECT_EQ(sargs[1], "b");
+    EXPECT_EQ(sargs[2], "c");
+
+    value = " ,  a ,b, c ";
+    sargs.clear();
+    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+
+    EXPECT_EQ(sargs.size(), 4);
+    EXPECT_EQ(sargs[0], "");
+    EXPECT_EQ(sargs[1], "a");
+    EXPECT_EQ(sargs[2], "b");
+    EXPECT_EQ(sargs[3], "c");
+
+    value = "a ,b, , c";
+    sargs.clear();
+    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+
+    EXPECT_EQ(sargs.size(), 4);
+    EXPECT_EQ(sargs[0], "a");
+    EXPECT_EQ(sargs[1], "b");
+    EXPECT_EQ(sargs[2], "");
+    EXPECT_EQ(sargs[3], "c");
+
+    value = "a ,b, c , ";
+    sargs.clear();
+    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+
+    EXPECT_EQ(sargs.size(), 4);
+    EXPECT_EQ(sargs[0], "a");
+    EXPECT_EQ(sargs[1], "b");
+    EXPECT_EQ(sargs[2], "c");
+    EXPECT_EQ(sargs[3], "");
+
+    value = ", a ,b, ,c , ";
+    sargs.clear();
+    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+
+    EXPECT_EQ(sargs.size(), 6);
+    EXPECT_EQ(sargs[0], "");
+    EXPECT_EQ(sargs[1], "a");
+    EXPECT_EQ(sargs[2], "b");
+    EXPECT_EQ(sargs[3], "");
+    EXPECT_EQ(sargs[4], "c");
+    EXPECT_EQ(sargs[5], "");
+}
+
 TEST(core, trim_string)
 {
     std::string value = " x x x x ";
