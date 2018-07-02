@@ -53,7 +53,7 @@ struct SearchResult
         std::stringstream ss;
         ss << "[" << hash_key << " : " << sort_key << " => " << value << ", (" << lat_degrees
            << ", " << lng_degrees << "): " << distance << ", " << cellid << "]";
-        return std::move(ss.str());
+        return ss.str();
     }
 };
 

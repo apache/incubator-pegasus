@@ -406,7 +406,7 @@ void geo_client::gen_cells_covered_by_cap(const S2Cap &cap, S2CellUnion &cids)
 {
     S2RegionCoverer rc;
     rc.mutable_options()->set_fixed_level(_min_level);
-    cids = std::move(rc.GetCovering(cap));
+    cids = rc.GetCovering(cap);
 }
 
 void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
@@ -542,14 +542,13 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
     // generate hash key
     S2CellId leaf_cell_id = S2Cell(latlng).id();
     S2CellId parent_cell_id = leaf_cell_id.parent(_min_level);
-    geo_hash_key = std::move(parent_cell_id.ToString()); // [0,5]{1}/[0,3]{_min_level}
+    geo_hash_key = parent_cell_id.ToString(); // [0,5]{1}/[0,3]{_min_level}
 
     // generate sort key
     dsn::blob sort_key_postfix;
     pegasus_generate_key(sort_key_postfix, hash_key, sort_key);
-    geo_sort_key =
-        std::move(leaf_cell_id.ToString().substr(geo_hash_key.length()) + ":" +
-                  std::move(sort_key_postfix.to_string())); // [0,3]{30-_min_level}:combine_keys
+    geo_sort_key = leaf_cell_id.ToString().substr(geo_hash_key.length()) + ":" +
+                   sort_key_postfix.to_string(); // [0,3]{30-_min_level}:combine_keys
 
     return true;
 }
@@ -574,7 +573,7 @@ bool geo_client::restore_origin_keys(const std::string &geo_sort_key,
 
 std::string geo_client::gen_sort_key(const S2CellId &max_level_cid, const std::string &hash_key)
 {
-    return std::move(max_level_cid.ToString().substr(hash_key.length()));
+    return max_level_cid.ToString().substr(hash_key.length());
 }
 
 std::string geo_client::gen_start_sort_key(const S2CellId &max_level_cid,

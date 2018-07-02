@@ -34,6 +34,7 @@ protected:
     };
     struct redis_base_type
     {
+        virtual ~redis_base_type() = default;
         virtual void marshalling(::dsn::binary_writer &write_stream) const = 0;
     };
     struct redis_integer : public redis_base_type

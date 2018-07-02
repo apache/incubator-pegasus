@@ -15,6 +15,7 @@ namespace geo {
 class latlng_extractor
 {
 public:
+    virtual ~latlng_extractor() = default;
     virtual const char *name() const = 0;
     virtual const char *value_sample() const = 0;
     virtual bool extract_from_value(const std::string &value, S2LatLng &latlng) const = 0;
