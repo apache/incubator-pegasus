@@ -192,7 +192,7 @@ void asio_rpc_session::safe_close()
 
 void asio_rpc_session::connect()
 {
-    if (try_connecting()) {
+    if (set_connecting()) {
         boost::asio::ip::tcp::endpoint ep(boost::asio::ip::address_v4(_remote_addr.ip()),
                                           _remote_addr.port());
 

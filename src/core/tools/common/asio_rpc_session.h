@@ -54,7 +54,7 @@ public:
                      bool is_client);
     virtual ~asio_rpc_session();
     virtual void send(uint64_t signature) override { return write(signature); }
-    virtual void close_on_fault_injection() override { safe_close(); }
+    virtual void close() override { safe_close(); }
 
 public:
     virtual void connect() override;

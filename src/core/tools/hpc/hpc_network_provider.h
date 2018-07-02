@@ -91,13 +91,10 @@ private:
 
 class hpc_rpc_session : public rpc_session
 {
-    // client
 public:
     virtual void connect() override;
+    virtual void close() override;
 
-    // server
-public:
-    // shared
 public:
     hpc_rpc_session(socket_t sock,
                     message_parser_ptr &parser,
@@ -114,14 +111,11 @@ public:
 #endif
     }
 
-    virtual void close_on_fault_injection() override { close(); }
-
     void bind_looper(io_looper *looper, bool delay = false);
     virtual void do_read(int read_next) override;
 
 private:
     void do_write(uint64_t signature);
-    void close();
     void on_failure(bool is_write = false);
     void on_read_completed(message_ex *msg)
     {

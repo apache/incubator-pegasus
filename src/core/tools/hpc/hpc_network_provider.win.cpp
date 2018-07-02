@@ -465,7 +465,7 @@ void hpc_rpc_session::on_failure(bool is_write)
 
 void hpc_rpc_session::connect()
 {
-    if (!try_connecting())
+    if (!set_connecting())
         return;
 
     _connect_event.callback = [this](int err, uint32_t io_size, uintptr_t lpolp) {

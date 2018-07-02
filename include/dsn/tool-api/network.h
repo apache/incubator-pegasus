@@ -206,102 +206,111 @@ public:
     @addtogroup tool-api-hooks
     @{
     */
-    DSN_API static join_point<void, rpc_session *> on_rpc_session_connected;
-    DSN_API static join_point<void, rpc_session *> on_rpc_session_disconnected;
+    static join_point<void, rpc_session *> on_rpc_session_connected;
+    static join_point<void, rpc_session *> on_rpc_session_disconnected;
     /*@}*/
 public:
-    DSN_API rpc_session(connection_oriented_network &net,
-                        ::dsn::rpc_address remote_addr,
-                        message_parser_ptr &parser,
-                        bool is_client);
-    DSN_API virtual ~rpc_session();
-
-    virtual void close_on_fault_injection() = 0;
-
-    DSN_API bool has_pending_out_msgs();
-    bool is_client() const { return _is_client; }
-    ::dsn::rpc_address remote_address() const { return _remote_addr; }
-    connection_oriented_network &net() const { return _net; }
-    message_parser_ptr parser() const { return _parser; }
-    DSN_API void send_message(message_ex *msg);
-    DSN_API bool cancel(message_ex *request);
-    void delay_recv(int delay_ms);
-    DSN_API bool on_recv_message(message_ex *msg, int delay_ms);
-
-    // for client session
-public:
-    // return true if the socket should be closed
-    DSN_API bool on_disconnected(bool is_write);
+    rpc_session(connection_oriented_network &net,
+                ::dsn::rpc_address remote_addr,
+                message_parser_ptr &parser,
+                bool is_client);
+    virtual ~rpc_session();
 
     virtual void connect() = 0;
+    virtual void close() = 0;
 
-    // for server session
+    bool is_client() const { return _is_client; }
+    dsn::rpc_address remote_address() const { return _remote_addr; }
+    connection_oriented_network &net() const { return _net; }
+    message_parser_ptr parser() const { return _parser; }
+
+    ///
+    /// rpc_session's interface for sending and receiving
+    ///
+    void send_message(message_ex *msg);
+    bool cancel(message_ex *request);
+    void delay_recv(int delay_ms);
+    bool on_recv_message(message_ex *msg, int delay_ms);
+
 public:
-    DSN_API void start_read_next(int read_next = 256);
-
+    ///
+    /// for subclass to implement receiving message
+    ///
+    void start_read_next(int read_next = 256);
     // should be called in do_read() before using _parser when it is nullptr.
     // returns:
     //   -1 : prepare failed, maybe because of invalid message header type
     //    0 : prepare succeed, _parser is not nullptr now.
     //   >0 : need read more data, returns read_next.
-    DSN_API int prepare_parser();
-
-    // shared
-protected:
-    //
-    // sending messages are put in _sending_msgs
-    // buffer is prepared well in _sending_buffers
-    // always call on_send_completed later
-    //
-    virtual void send(uint64_t signature) = 0;
+    int prepare_parser();
     virtual void do_read(int read_next) = 0;
 
-protected:
-    DSN_API bool try_connecting(); // return true when it is permitted
-    DSN_API void set_connected();
-    DSN_API bool set_disconnected(); // return true when it is permitted
-    bool is_disconnected() const { return _connect_state == SS_DISCONNECTED; }
-    bool is_connecting() const { return _connect_state == SS_CONNECTING; }
-    bool is_connected() const { return _connect_state == SS_CONNECTED; }
-    DSN_API void on_send_completed(uint64_t signature = 0); // default value for nothing is sent
-
-private:
-    // return whether there are messages for sending; should always be called in lock
-    DSN_API bool unlink_message_for_send();
-    DSN_API void clear_send_queue(bool resend_msgs);
+    ///
+    /// for subclass to implement sending message
+    ///
+    // return whether there are messages for sending;
+    // should always be called in lock
+    bool unlink_message_for_send();
+    virtual void send(uint64_t signature) = 0;
+    void on_send_completed(uint64_t signature = 0);
 
 protected:
-    // constant info
-    connection_oriented_network &_net;
-    ::dsn::rpc_address _remote_addr;
-    int _max_buffer_block_count_per_send;
-    message_reader _reader;
-    message_parser_ptr _parser;
-
-    // messages are currently being sent
-    // also locked by _lock later
-    std::vector<message_parser::send_buf> _sending_buffers;
-    std::vector<message_ex *> _sending_msgs;
-
-private:
-    const bool _is_client;
-    rpc_client_matcher *_matcher;
-
+    ///
+    /// fields related to sending messages
+    ///
     enum session_state
     {
         SS_CONNECTING,
         SS_CONNECTED,
         SS_DISCONNECTED
     };
-
-    // TODO: expose the queue to be customizable
     ::dsn::utils::ex_lock_nr _lock; // [
-    volatile bool _is_sending_next;
-    int _message_count; // count of _messages
-    dlink _messages;
     volatile session_state _connect_state;
+
+    // messages are sent in batch, firstly all messages are linked together
+    // in a doubly-linked list "_messages".
+    // if no messages are on-the-flying, a batch of messages are fetch from the "_messages"
+    // and put them to _sending_msgs; meanwhile, buffers of these messages are put
+    // in _sending_buffers
+    dlink _messages;
+    int _message_count; // count of _messages
+
+    bool _is_sending_next;
+
+    std::vector<message_ex *> _sending_msgs;
+    std::vector<message_parser::send_buf> _sending_buffers;
+
     uint64_t _message_sent;
     // ]
+
+protected:
+    ///
+    /// change status and check status
+    ///
+    // return true when it is permitted
+    bool set_connecting();
+    // return true when it is permitted
+    bool set_disconnected();
+    void set_connected();
+
+    bool is_disconnected() const { return _connect_state == SS_DISCONNECTED; }
+    bool is_connecting() const { return _connect_state == SS_CONNECTING; }
+    bool is_connected() const { return _connect_state == SS_CONNECTED; }
+
+    void clear_send_queue(bool resend_msgs);
+    bool on_disconnected(bool is_write);
+
+protected:
+    // constant info
+    connection_oriented_network &_net;
+    dsn::rpc_address _remote_addr;
+    int _max_buffer_block_count_per_send;
+    message_reader _reader;
+    message_parser_ptr _parser;
+
+private:
+    const bool _is_client;
+    rpc_client_matcher *_matcher;
 
     std::atomic_int _delay_server_receive_ms;
 };

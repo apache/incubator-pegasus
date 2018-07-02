@@ -58,7 +58,7 @@ rpc_session::~rpc_session()
     }
 }
 
-bool rpc_session::try_connecting()
+bool rpc_session::set_connecting()
 {
     dassert(is_client(), "must be client session");
 
@@ -338,27 +338,23 @@ void rpc_session::on_send_completed(uint64_t signature)
         this->send(sig);
 }
 
-bool rpc_session::has_pending_out_msgs()
-{
-    utils::auto_lock<utils::ex_lock_nr> l(_lock);
-    return !_messages.is_alone();
-}
-
 rpc_session::rpc_session(connection_oriented_network &net,
                          ::dsn::rpc_address remote_addr,
                          message_parser_ptr &parser,
                          bool is_client)
-    : _net(net),
+    : _connect_state(is_client ? SS_DISCONNECTED : SS_CONNECTED),
+      _message_count(0),
+      _is_sending_next(false),
+      _message_sent(0),
+
+      _net(net),
       _remote_addr(remote_addr),
       _max_buffer_block_count_per_send(net.max_buffer_block_count_per_send()),
       _reader(net.message_buffer_block_size()),
       _parser(parser),
+
       _is_client(is_client),
       _matcher(_net.engine()->matcher()),
-      _is_sending_next(false),
-      _message_count(0),
-      _connect_state(is_client ? SS_DISCONNECTED : SS_CONNECTED),
-      _message_sent(0),
       _delay_server_receive_ms(0)
 {
     if (!is_client) {
@@ -546,7 +542,7 @@ void connection_oriented_network::inject_drop_message(message_ex *msg, bool is_s
     }
 
     if (s != nullptr) {
-        s->close_on_fault_injection();
+        s->close();
     }
 }
 

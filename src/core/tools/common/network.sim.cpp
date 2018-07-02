@@ -57,7 +57,7 @@ sim_client_session::sim_client_session(sim_network_provider &net,
 
 void sim_client_session::connect()
 {
-    if (try_connecting())
+    if (set_connecting())
         set_connected();
 }
 

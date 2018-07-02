@@ -484,7 +484,7 @@ void hpc_rpc_session::on_failure(bool is_write)
 
 void hpc_rpc_session::connect()
 {
-    if (!try_connecting())
+    if (!set_connecting())
         return;
 
     dassert(_socket != -1, "invalid given socket handle");

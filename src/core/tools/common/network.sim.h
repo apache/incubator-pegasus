@@ -54,7 +54,7 @@ public:
 
     virtual void do_read(int sz) override {}
 
-    virtual void close_on_fault_injection() override {}
+    virtual void close() override {}
 };
 
 class sim_server_session : public rpc_session
@@ -71,7 +71,7 @@ public:
 
     virtual void do_read(int sz) override {}
 
-    virtual void close_on_fault_injection() override {}
+    virtual void close() override {}
 
 private:
     rpc_session_ptr _client;
