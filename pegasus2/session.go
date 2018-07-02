@@ -2,14 +2,15 @@ package pegasus2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
 	"github.com/XiaoMi/pegasus-go-client/session"
-	"time"
 )
 
 type nodeSession struct {
@@ -21,7 +22,8 @@ type nodeSession struct {
 	codec rpc.Codec
 	seqId int32
 
-	mu sync.Mutex
+	// mutex lock exclusive for CallWithGpid
+	callMut sync.Mutex
 }
 
 func newNodeSession(addr string, ntype session.NodeType) session.NodeSession {
@@ -45,8 +47,8 @@ func (n *nodeSession) String() string {
 
 func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args session.RpcRequestArgs, name string) (session.RpcResponseResult, error) {
 	// ensure CallWithGpid not being called concurrently
-	n.mu.Lock()
-	defer n.mu.Unlock()
+	n.callMut.Lock()
+	defer n.callMut.Unlock()
 
 	if n.conn.GetState() != rpc.ConnStateReady {
 		if err := n.conn.TryConnect(); err != nil {
@@ -59,7 +61,8 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args se
 		timeout := deadline.Sub(time.Now())
 		if timeout > time.Duration(0) {
 			n.conn.SetWriteTimeout(timeout)
-			n.conn.SetReadTimeout(timeout)
+		} else {
+			return nil, errors.New("send rpc timeout")
 		}
 	}
 
@@ -74,13 +77,25 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args se
 		}
 	}
 
-	{ // read response
+	for { // read response
+		if hasDeadline {
+			timeout := deadline.Sub(time.Now())
+			if timeout > time.Duration(0) {
+				n.conn.SetReadTimeout(timeout)
+			}
+		}
+
 		rcallRecv, err := session.ReadRpcResponse(n.conn, n.codec)
 		if err != nil {
 			return nil, err
 		}
 		if rcallRecv.Err != nil {
 			return nil, rcallRecv.Err
+		}
+		if n.seqId != rcallRecv.SeqId {
+			n.logger.Printf("ignore stale response (seqId: %d, current seqId: %d) from %s: %s",
+				rcallRecv.SeqId, n.seqId, n, rcallRecv.Name)
+			continue
 		}
 		return rcallRecv.Result, nil
 	}

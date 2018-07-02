@@ -26,7 +26,8 @@ func NewClient(cfg pegasus.Config) *Client {
 
 func (p *Client) OpenTable(ctx context.Context, tableName string) (pegasus.TableConnector, error) {
 	tb, err := func() (pegasus.TableConnector, error) {
-		// each table instance holds set of replica sessions.
+		// Each table holds an independent set of replica sessions.
+		// The meta sessions are shared by tables created from the same client.
 		replicaMgr := session.NewReplicaManager(newNodeSession)
 		return pegasus.ConnectTable(ctx, tableName, p.metaMgr, replicaMgr)
 	}()
