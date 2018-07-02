@@ -188,8 +188,8 @@ static command_executor commands[] = {
         "[-a|--start_inclusive true|false] [-b|--stop_inclusive true|false] "
         "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-o|--output file_name] [-n|--max_count num] [-t|--timeout_ms num] "
-        "[-d|--detailed] [-i|--no_value]",
+        "[-o|--output file_name] [-z|--batch_size num] [-n|--max_count num] "
+        "[-t|--timeout_ms num] [-d|--detailed] [-i|--no_value]",
         data_operations,
     },
     {
@@ -199,8 +199,8 @@ static command_executor commands[] = {
         "[-x|--hash_key_filter_pattern str] "
         "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-o|--output file_name] [-n|--max_count num] [-t|--timeout_ms num] "
-        "[-d|--detailed] [-i|--no_value] [-p|--partition num]",
+        "[-o|--output file_name] [-z|--batch_size num] [-n|--max_count num] "
+        "[-t|--timeout_ms num] [-d|--detailed] [-i|--no_value] [-p|--partition num]",
         data_operations,
     },
     {

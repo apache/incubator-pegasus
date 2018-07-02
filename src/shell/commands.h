@@ -1316,6 +1316,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     std::string start_sort_key = sds_to_string(args.argv[2]);
     std::string stop_sort_key = sds_to_string(args.argv[3]);
 
+    int32_t batch_size = 100;
     int32_t max_count = -1;
     bool detailed = false;
     FILE *file = stderr;
@@ -1324,6 +1325,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     pegasus::pegasus_client::scan_options options;
 
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
+                                           {"batch_size", required_argument, 0, 'z'},
                                            {"max_count", required_argument, 0, 'n'},
                                            {"timeout_ms", required_argument, 0, 't'},
                                            {"output", required_argument, 0, 'o'},
@@ -1339,12 +1341,18 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "dn:t:o:a:b:s:y:i", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "dz:n:t:o:a:b:s:y:i", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
         case 'd':
             detailed = true;
+            break;
+        case 'z':
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), batch_size)) {
+                fprintf(stderr, "parse %s as batch_size failed\n", optarg);
+                return false;
+            }
             break;
         case 'n':
             if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_count)) {
@@ -1409,13 +1417,17 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
                 "sort_key_filter_pattern: \"%s\"\n",
                 pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
     }
+    fprintf(stderr, "batch_size: %d\n", batch_size);
     fprintf(stderr, "max_count: %d\n", max_count);
+    fprintf(stderr, "timout_ms: %d\n", timeout_ms);
+    fprintf(stderr, "detailed: %s\n", detailed ? "true" : "false");
     fprintf(stderr, "no_value: %s\n", options.no_value ? "true" : "false");
     fprintf(stderr, "\n");
 
     int i = 0;
     pegasus::pegasus_client::pegasus_scanner *scanner = nullptr;
     options.timeout_ms = timeout_ms;
+    options.batch_size = batch_size;
     int ret = sc->pg_client->get_scanner(hash_key, start_sort_key, stop_sort_key, options, scanner);
     if (ret != pegasus::PERR_OK) {
         fprintf(file, "ERROR: get scanner failed: %s\n", sc->pg_client->get_error_string(ret));
@@ -1485,6 +1497,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
 inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
+                                           {"batch_size", required_argument, 0, 'z'},
                                            {"max_count", required_argument, 0, 'n'},
                                            {"partition", required_argument, 0, 'p'},
                                            {"timeout_ms", required_argument, 0, 't'},
@@ -1496,7 +1509,8 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
                                            {"no_value", no_argument, 0, 'i'},
                                            {0, 0, 0, 0}};
 
-    int32_t max_count = 0x7FFFFFFF;
+    int32_t batch_size = 100;
+    int32_t max_count = -1;
     bool detailed = false;
     FILE *file = stderr;
     int32_t timeout_ms = sc->timeout_ms;
@@ -1510,12 +1524,18 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "dn:p:t:o:h:x:s:y:i", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "dz:n:p:t:o:h:x:s:y:i", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
         case 'd':
             detailed = true;
+            break;
+        case 'z':
+            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), batch_size)) {
+                fprintf(stderr, "parse %s as batch_size failed\n", optarg);
+                return false;
+            }
             break;
         case 'n':
             if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_count)) {
@@ -1589,13 +1609,17 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
                 "sort_key_filter_pattern: \"%s\"\n",
                 pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
     }
+    fprintf(stderr, "batch_size: %d\n", batch_size);
     fprintf(stderr, "max_count: %d\n", max_count);
+    fprintf(stderr, "timout_ms: %d\n", timeout_ms);
+    fprintf(stderr, "detailed: %s\n", detailed ? "true" : "false");
     fprintf(stderr, "no_value: %s\n", options.no_value ? "true" : "false");
     fprintf(stderr, "\n");
 
     int i = 0;
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
     options.timeout_ms = timeout_ms;
+    options.batch_size = batch_size;
     int ret = sc->pg_client->get_unordered_scanners(10000, options, scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(file, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
