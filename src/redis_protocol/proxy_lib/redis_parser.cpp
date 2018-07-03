@@ -17,6 +17,8 @@
 namespace pegasus {
 namespace proxy {
 
+std::atomic_llong redis_parser::s_next_seqid(0);
+
 std::unordered_map<std::string, redis_parser::redis_call_handler> redis_parser::s_dispatcher = {
     {"SET", redis_parser::g_set},
     {"GET", redis_parser::g_get},
@@ -38,7 +40,6 @@ redis_parser::redis_call_handler redis_parser::get_handler(const char *command, 
 
 redis_parser::redis_parser(proxy_stub *op, dsn_message_t first_msg)
     : proxy_session(op, first_msg),
-      next_seqid(0),
       current_msg(new message_entry()),
       status(start_array),
       current_size(),
@@ -95,8 +96,6 @@ void redis_parser::prepare_current_buffer()
 
 void redis_parser::reset_parser()
 {
-    next_seqid = 0;
-
     // clear the parser status
     current_msg->request.length = 0;
     current_msg->request.buffers.clear();
@@ -321,7 +320,9 @@ void redis_parser::clear_reply_queue()
     std::vector<dsn_message_t> all_responses;
     fetch_and_dequeue_messages(all_responses, false);
     for (const dsn_message_t &m : all_responses) {
-        dsn_msg_release_ref(m);
+        if (m != nullptr) {
+            dsn_msg_release_ref(m);
+        }
     }
 }
 
@@ -330,6 +331,7 @@ void redis_parser::reply_all_ready()
     std::vector<dsn_message_t> ready_responses;
     fetch_and_dequeue_messages(ready_responses, true);
     for (const dsn_message_t &m : ready_responses) {
+        dassert(m != nullptr, "");
         dsn_rpc_reply(m, ::dsn::ERR_OK);
         // added when message is created
         dsn_msg_release_ref(m);
@@ -342,6 +344,10 @@ void redis_parser::default_handler(redis_parser::message_entry &entry)
     redis_simple_string result;
     result.is_error = true;
     result.message = "ERR unknown command '" + std::string(cmd.data(), cmd.length()) + "'";
+    ddebug("%s: %s with seqid %" PRId64 "",
+           remote_address.to_string(),
+           result.message.c_str(),
+           entry.sequence_id);
     reply_message(entry, result);
 }
 
@@ -349,6 +355,9 @@ void redis_parser::set(redis_parser::message_entry &entry)
 {
     redis_request &request = entry.request;
     if (request.buffers.size() < 3) {
+        ddebug("%s: set command with invalid arguments, seqid(%" PRId64 ")",
+               remote_address.to_string(),
+               entry.sequence_id);
         redis_simple_string result;
         result.is_error = true;
         result.message = "ERR wrong number of arguments for 'set' command";
@@ -357,19 +366,31 @@ void redis_parser::set(redis_parser::message_entry &entry)
         // with a reference to prevent the object from being destoryed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
 
+        dinfo("%s: send set command(%" PRId64 ")", remote_address.to_string(), entry.sequence_id);
         auto on_set_reply =
             [ref_this, this, &entry](::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
                 // when the "is_session_reset" flag is set, the socket may be broken.
                 // so continue to reply the message is not necessary
-                if (is_session_reset.load(std::memory_order_acquire))
+                if (is_session_reset.load(std::memory_order_acquire)) {
+                    ddebug("%s: set command seqid(%" PRId64 ") got reply, but session has reset",
+                           remote_address.to_string(),
+                           entry.sequence_id);
                     return;
+                }
 
                 // the entry is stored in the queue pending_response, so please ensure that
                 // entry hasn't been released when the callback runs
                 //
                 // currently we only clear a entry when it is replied or the redis_parser
                 // is destroyed
+                dinfo("%s: set command seqid(%" PRId64 ") got reply",
+                      remote_address.to_string(),
+                      entry.sequence_id);
                 if (::dsn::ERR_OK != ec) {
+                    ddebug("%s: set command seqid(%" PRId64 ") got reply with error = %s",
+                           remote_address.to_string(),
+                           entry.sequence_id,
+                           ec.to_string());
                     redis_simple_string result;
                     result.is_error = true;
                     result.message = std::string("ERR ") + ec.to_string();
@@ -408,11 +429,17 @@ void redis_parser::setex(message_entry &entry)
     redis_request &redis_req = entry.request;
     // setex key ttl_SECONDS value
     if (redis_req.buffers.size() != 4) {
+        ddebug("%s: setex command seqid(%" PRId64 ") with invalid arguments",
+               remote_address.to_string(),
+               entry.sequence_id);
         redis_simple_string result;
         result.is_error = true;
         result.message = "ERR wrong number of arguments for 'setex' command";
         reply_message(entry, result);
     } else {
+        dinfo("%s: send setex command seqid(%" PRId64 ")",
+              remote_address.to_string(),
+              entry.sequence_id);
         redis_simple_string result;
         ::dsn::blob &ttl_blob = redis_req.buffers[2].data;
         int ttl_seconds;
@@ -432,11 +459,22 @@ void redis_parser::setex(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_setex_reply = [ref_this, this, &entry](
             ::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-            if (is_session_reset.load(std::memory_order_acquire))
+            if (is_session_reset.load(std::memory_order_acquire)) {
+                ddebug("%s: setex command seqid(%" PRId64 ") got reply, but session has reset",
+                       remote_address.to_string(),
+                       entry.sequence_id);
                 return;
+            }
 
+            dinfo("%s: setex command seqid(%" PRId64 ") got reply",
+                  remote_address.to_string(),
+                  entry.sequence_id);
             redis_simple_string result;
             if (::dsn::ERR_OK != ec) {
+                ddebug("%s: setex command seqid(%" PRId64 ") got reply with error = %s",
+                       remote_address.to_string(),
+                       entry.sequence_id,
+                       ec.to_string());
                 result.is_error = true;
                 result.message = std::string("ERR ") + ec.to_string();
                 reply_message(entry, result);
@@ -476,18 +514,35 @@ void redis_parser::get(message_entry &entry)
 {
     redis_request &redis_req = entry.request;
     if (redis_req.buffers.size() != 2) {
+        ddebug("%s: get command seqid(%" PRId64 ") with invalid arguments",
+               remote_address.to_string(),
+               entry.sequence_id);
         redis_simple_string result;
         result.is_error = true;
         result.message = "ERR wrong number of arguments for 'get' command";
         reply_message(entry, result);
     } else {
+        dinfo("%s: send get command seqid(%" PRId64 ")",
+              remote_address.to_string(),
+              entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_get_reply =
             [ref_this, this, &entry](::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-                if (is_session_reset.load(std::memory_order_acquire))
+                if (is_session_reset.load(std::memory_order_acquire)) {
+                    ddebug("%s: get command(%" PRId64 ") got reply, but session has reset",
+                           remote_address.to_string(),
+                           entry.sequence_id);
                     return;
+                }
 
+                dinfo("%s: get command seqid(%" PRId64 ") got reply",
+                      remote_address.to_string(),
+                      entry.sequence_id);
                 if (::dsn::ERR_OK != ec) {
+                    ddebug("%s: get command seqid(%" PRId64 ") got reply with error = %s",
+                           remote_address.to_string(),
+                           entry.sequence_id,
+                           ec.to_string());
                     redis_simple_string result;
                     result.is_error = true;
                     result.message = std::string("ERR ") + ec.to_string();
@@ -526,18 +581,35 @@ void redis_parser::del(message_entry &entry)
 {
     redis_request &redis_req = entry.request;
     if (redis_req.buffers.size() != 2) {
+        ddebug("%s: del command seqid(%" PRId64 ") with invalid arguments",
+               remote_address.to_string(),
+               entry.sequence_id);
         redis_simple_string result;
         result.is_error = true;
         result.message = "ERR wrong number of arguments for 'del' command";
         reply_message(entry, result);
     } else {
+        dinfo("%s: send del command seqid(%" PRId64 ")",
+              remote_address.to_string(),
+              entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_del_reply =
             [ref_this, this, &entry](::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-                if (is_session_reset.load(std::memory_order_acquire))
+                if (is_session_reset.load(std::memory_order_acquire)) {
+                    ddebug("%s: del command seqid(%" PRId64 ") got reply, but session has reset",
+                           remote_address.to_string(),
+                           entry.sequence_id);
                     return;
+                }
 
+                dinfo("%s: del command seqid(%" PRId64 ") got reply",
+                      remote_address.to_string(),
+                      entry.sequence_id);
                 if (::dsn::ERR_OK != ec) {
+                    ddebug("%s: del command seqid(%" PRId64 ") got reply with error = %s",
+                           remote_address.to_string(),
+                           entry.sequence_id,
+                           ec.to_string());
                     redis_simple_string result;
                     result.is_error = true;
                     result.message = std::string("ERR ") + ec.to_string();
@@ -573,6 +645,9 @@ void redis_parser::ttl(message_entry &entry)
     redis_request &redis_req = entry.request;
     bool is_ttl = (toupper(redis_req.buffers[0].data.data()[0]) == 'T');
     if (redis_req.buffers.size() != 2) {
+        ddebug("%s: ttl/pttl command seqid(%" PRId64 ") with invalid arguments",
+               remote_address.to_string(),
+               entry.sequence_id);
         redis_simple_string result;
         result.is_error = true;
         if (is_ttl)
@@ -581,13 +656,27 @@ void redis_parser::ttl(message_entry &entry)
             result.message = "ERR wrong number of arguments for 'pttl' command";
         reply_message(entry, result);
     } else {
+        dinfo("%s: send pttl/ttl command seqid(%" PRId64 ")",
+              remote_address.to_string(),
+              entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_ttl_reply = [ref_this, this, &entry, is_ttl](
             ::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-            if (is_session_reset.load(std::memory_order_acquire))
+            if (is_session_reset.load(std::memory_order_acquire)) {
+                ddebug("%s: ttl/pttl command seqid(%" PRId64 ") got reply, but session has reset",
+                       remote_address.to_string(),
+                       entry.sequence_id);
                 return;
+            }
 
+            dinfo("%s: ttl/pttl command seqid(%" PRId64 ") got reply",
+                  remote_address.to_string(),
+                  entry.sequence_id);
             if (::dsn::ERR_OK != ec) {
+                ddebug("%s: del command seqid(%" PRId64 ") got reply with error = %s",
+                       remote_address.to_string(),
+                       entry.sequence_id,
+                       ec.to_string());
                 redis_simple_string result;
                 result.is_error = true;
                 result.message = std::string("ERR ") + ec.to_string();
@@ -630,8 +719,12 @@ void redis_parser::handle_command(std::unique_ptr<message_entry> &&entry)
 {
     message_entry &e = *entry.get();
     redis_request &request = e.request;
-    e.sequence_id = ++next_seqid;
+    e.sequence_id = ++s_next_seqid;
     e.response.store(nullptr, std::memory_order_relaxed);
+
+    dinfo("%s: new command parsed with new seqid %" PRId64 "",
+          remote_address.to_string(),
+          e.sequence_id);
     enqueue_pending_response(std::move(entry));
 
     dassert(request.length > 0, "invalid request, request.length = %d", request.length);

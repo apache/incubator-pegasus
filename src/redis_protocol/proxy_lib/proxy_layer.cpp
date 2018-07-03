@@ -85,7 +85,7 @@ std::shared_ptr<proxy_session> proxy_stub::remove_session(dsn::rpc_address remot
 }
 
 proxy_session::proxy_session(proxy_stub *op, dsn_message_t first_msg)
-    : stub(op), backup_one_request(first_msg)
+    : stub(op), is_session_reset(false), backup_one_request(first_msg)
 {
     dassert(first_msg != nullptr, "null msg when create session");
     dsn_msg_add_ref(backup_one_request);

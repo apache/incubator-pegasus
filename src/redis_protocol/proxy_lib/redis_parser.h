@@ -75,8 +75,6 @@ private:
 
     // recieving message and parsing status
     // [
-    int64_t next_seqid;
-
     // content for current parser
     redis_bulk_string current_str;
     std::unique_ptr<message_entry> current_msg;
@@ -148,6 +146,7 @@ private:
     typedef void (*redis_call_handler)(redis_parser *, message_entry &);
     static std::unordered_map<std::string, redis_call_handler> s_dispatcher;
     static redis_call_handler get_handler(const char *command, unsigned int length);
+    static std::atomic_llong s_next_seqid;
 
 public:
     redis_parser(proxy_stub *op, dsn_message_t first_msg);
