@@ -36,8 +36,8 @@ redis_parser::redis_call_handler redis_parser::get_handler(const char *command, 
     return iter->second;
 }
 
-redis_parser::redis_parser(proxy_stub *op, ::dsn::rpc_address remote)
-    : proxy_session(op, remote),
+redis_parser::redis_parser(proxy_stub *op, dsn_message_t first_msg)
+    : proxy_session(op, first_msg),
       next_seqid(0),
       current_msg(new message_entry()),
       status(start_array),
@@ -55,7 +55,12 @@ redis_parser::redis_parser(proxy_stub *op, ::dsn::rpc_address remote)
     client.reset(r);
 }
 
-redis_parser::~redis_parser() { dinfo("redis parser destroyed"); }
+redis_parser::~redis_parser()
+{
+    clear_reply_queue();
+    reset_parser();
+    ddebug("%s: redis parser destroyed", remote_address.to_string());
+}
 
 void redis_parser::prepare_current_buffer()
 {
@@ -78,7 +83,8 @@ void redis_parser::prepare_current_buffer()
             return;
         } else {
             // we have consume this message all over
-            dsn_msg_release_ref(first_msg); // added when messaged is received in proxy_stub
+            // reference is added in append message
+            dsn_msg_release_ref(first_msg);
             recv_buffers.pop();
             current_buffer = nullptr;
             prepare_current_buffer();
@@ -87,19 +93,8 @@ void redis_parser::prepare_current_buffer()
         return;
 }
 
-void redis_parser::reset()
+void redis_parser::reset_parser()
 {
-    // clear the response pipeline
-    {
-        ::dsn::service::zauto_lock l(_rlock);
-        while (!pending_response.empty()) {
-            message_entry *entry = pending_response.front().get();
-            if (entry->response)
-                dsn_msg_release_ref(entry->response);
-
-            pending_response.pop_front();
-        }
-    }
     next_seqid = 0;
 
     // clear the parser status
@@ -136,7 +131,10 @@ bool redis_parser::eat(char c)
         --total_length;
         return true;
     } else {
-        derror("expect token: %c, got %c", c, current_buffer[current_cursor]);
+        derror("%s: expect token: %c, got %c",
+               remote_address.to_string(),
+               c,
+               current_buffer[current_cursor]);
         return false;
     }
 }
@@ -163,12 +161,19 @@ bool redis_parser::end_array_size()
 
     int32_t l;
     bool result = dsn::buf2int32(dsn::string_view(current_size.c_str(), current_size.length()), l);
-    dverify_logged(result, LOG_LEVEL_ERROR, "invalid size string \"%s\"", current_size.c_str());
+    dverify_logged(result,
+                   LOG_LEVEL_ERROR,
+                   "%s: invalid size string \"%s\"",
+                   remote_address.to_string(),
+                   current_size.c_str());
 
     current_array.length = l;
     current_size.clear();
-    dverify_logged(
-        l > 0, LOG_LEVEL_ERROR, "array size should be positive in redis request, but got %d", l);
+    dverify_logged(l > 0,
+                   LOG_LEVEL_ERROR,
+                   "%s: array size should be positive in redis request, but got %d",
+                   remote_address.to_string(),
+                   l);
 
     current_array.buffers.reserve(current_array.length);
     status = start_bulk_string;
@@ -202,7 +207,8 @@ bool redis_parser::end_bulk_string_size()
     } else if (current_str.length >= 0) {
         status = start_bulk_string_data;
     } else {
-        derror("invalid bulk string length: %d", current_str.length);
+        derror(
+            "%s: invalid bulk string length: %d", remote_address.to_string(), current_str.length);
         return false;
     }
     return true;
@@ -210,9 +216,11 @@ bool redis_parser::end_bulk_string_size()
 
 void redis_parser::append_message(dsn_message_t msg)
 {
+    dsn_msg_add_ref(msg);
     recv_buffers.push(msg);
     total_length += dsn_msg_body_size(msg);
-    dinfo("recv message, currently total length is %d", total_length);
+    dinfo(
+        "%s: recv message, currently total length is %d", remote_address.to_string(), total_length);
 }
 
 // refererence: http://redis.io/topics/protocol
@@ -275,37 +283,55 @@ bool redis_parser::parse_stream()
 bool redis_parser::parse(dsn_message_t msg)
 {
     append_message(msg);
-    bool ans = parse_stream();
-    if (!ans) {
-        reset();
+    if (parse_stream())
+        return true;
+    else {
+        reset_parser();
+        return false;
     }
-    return ans;
 }
 
-void redis_parser::on_remove_session(std::shared_ptr<proxy_session> _this)
+void redis_parser::enqueue_pending_response(std::unique_ptr<message_entry> &&entry)
 {
-    reset();
-    status = removed;
+    dsn::service::zauto_lock l(response_lock);
+    pending_response.emplace_back(std::move(entry));
+}
+
+void redis_parser::fetch_and_dequeue_messages(std::vector<dsn_message_t> &msgs,
+                                              bool only_ready_ones)
+{
+    dsn::service::zauto_lock l(response_lock);
+    while (!pending_response.empty()) {
+        message_entry *entry = pending_response.front().get();
+        dsn_message_t r = entry->response.load(std::memory_order_acquire);
+        if (only_ready_ones && r == nullptr) {
+            break;
+        } else {
+            msgs.push_back(r);
+            pending_response.pop_front();
+        }
+    }
+}
+
+void redis_parser::clear_reply_queue()
+{
+    // clear the response pipeline
+    std::vector<dsn_message_t> all_responses;
+    fetch_and_dequeue_messages(all_responses, false);
+    for (const dsn_message_t &m : all_responses) {
+        dsn_msg_release_ref(m);
+    }
 }
 
 void redis_parser::reply_all_ready()
 {
-    _rlock.lock();
-    while (!pending_response.empty()) {
-        message_entry *entry = pending_response.front().get();
-        if (!entry->response) {
-            _rlock.unlock();
-            return;
-        }
-        std::unique_ptr<message_entry> e = std::move(pending_response.front());
-        pending_response.pop_front();
-        _rlock.unlock();
-        dsn_rpc_reply(e->response, ::dsn::ERR_OK);
+    std::vector<dsn_message_t> ready_responses;
+    fetch_and_dequeue_messages(ready_responses, true);
+    for (const dsn_message_t &m : ready_responses) {
+        dsn_rpc_reply(m, ::dsn::ERR_OK);
         // added when message is created
-        dsn_msg_release_ref(e->response);
-        _rlock.lock();
+        dsn_msg_release_ref(m);
     }
-    _rlock.unlock();
 }
 
 void redis_parser::default_handler(redis_parser::message_entry &entry)
@@ -330,7 +356,7 @@ void redis_parser::set(redis_parser::message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_set_reply =
             [ref_this, this, &entry](::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-                if (status == removed)
+                if (is_session_reset.load(std::memory_order_acquire))
                     return;
 
                 if (::dsn::ERR_OK != ec) {
@@ -363,12 +389,7 @@ void redis_parser::set(redis_parser::message_entry &entry)
         req.expire_ts_seconds = 0;
         auto partition_hash = pegasus_key_hash(req.key);
         // TODO: set the timeout
-        client->put(req,
-                    on_set_reply,
-                    std::chrono::milliseconds(2000),
-                    0,
-                    partition_hash,
-                    proxy_session::hash());
+        client->put(req, on_set_reply, std::chrono::milliseconds(2000), 0, partition_hash);
     }
 }
 
@@ -401,7 +422,7 @@ void redis_parser::setex(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_setex_reply = [ref_this, this, &entry](
             ::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-            if (status == removed)
+            if (is_session_reset.load(std::memory_order_acquire))
                 return;
 
             redis_simple_string result;
@@ -437,12 +458,7 @@ void redis_parser::setex(message_entry &entry)
         auto partition_hash = pegasus_key_hash(req.key);
 
         // TODO: set the timeout
-        client->put(req,
-                    on_setex_reply,
-                    std::chrono::milliseconds(2000),
-                    0,
-                    partition_hash,
-                    proxy_session::hash());
+        client->put(req, on_setex_reply, std::chrono::milliseconds(2000), 0, partition_hash);
     }
 }
 
@@ -458,7 +474,7 @@ void redis_parser::get(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_get_reply =
             [ref_this, this, &entry](::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-                if (removed == status)
+                if (is_session_reset.load(std::memory_order_acquire))
                     return;
 
                 if (::dsn::ERR_OK != ec) {
@@ -492,12 +508,7 @@ void redis_parser::get(message_entry &entry)
         pegasus_generate_key(req, redis_req.buffers[1].data, null_blob);
         auto partition_hash = pegasus_key_hash(req);
         // TODO: set the timeout
-        client->get(req,
-                    on_get_reply,
-                    std::chrono::milliseconds(2000),
-                    0,
-                    partition_hash,
-                    proxy_session::hash());
+        client->get(req, on_get_reply, std::chrono::milliseconds(2000), 0, partition_hash);
     }
 }
 
@@ -513,7 +524,7 @@ void redis_parser::del(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_del_reply =
             [ref_this, this, &entry](::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-                if (removed == status)
+                if (is_session_reset.load(std::memory_order_acquire))
                     return;
 
                 if (::dsn::ERR_OK != ec) {
@@ -542,12 +553,7 @@ void redis_parser::del(message_entry &entry)
         pegasus_generate_key(req, redis_req.buffers[1].data, null_blob);
         auto partition_hash = pegasus_key_hash(req);
         // TODO: set the timeout
-        client->remove(req,
-                       on_del_reply,
-                       std::chrono::milliseconds(2000),
-                       0,
-                       partition_hash,
-                       proxy_session::hash());
+        client->remove(req, on_del_reply, std::chrono::milliseconds(2000), 0, partition_hash);
     }
 }
 
@@ -568,7 +574,7 @@ void redis_parser::ttl(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_ttl_reply = [ref_this, this, &entry, is_ttl](
             ::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
-            if (removed == status)
+            if (is_session_reset.load(std::memory_order_acquire))
                 return;
 
             if (::dsn::ERR_OK != ec) {
@@ -606,12 +612,7 @@ void redis_parser::ttl(message_entry &entry)
         pegasus_generate_key(req, redis_req.buffers[1].data, null_blob);
         auto partition_hash = pegasus_key_hash(req);
         // TODO: set the timeout
-        client->ttl(req,
-                    on_ttl_reply,
-                    std::chrono::milliseconds(2000),
-                    0,
-                    partition_hash,
-                    proxy_session::hash());
+        client->ttl(req, on_ttl_reply, std::chrono::milliseconds(2000), 0, partition_hash);
     }
 }
 
@@ -620,12 +621,8 @@ void redis_parser::handle_command(std::unique_ptr<message_entry> &&entry)
     message_entry &e = *entry.get();
     redis_request &request = e.request;
     e.sequence_id = ++next_seqid;
-    e.response = nullptr;
-
-    {
-        ::dsn::service::zauto_lock l(_rlock);
-        pending_response.emplace_back(std::move(entry));
-    }
+    e.response.store(nullptr, std::memory_order_relaxed);
+    enqueue_pending_response(std::move(entry));
 
     dassert(request.length > 0, "invalid request, request.length = %d", request.length);
     ::dsn::blob &command = request.buffers[0].data;
