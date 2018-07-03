@@ -94,12 +94,6 @@ private:
     // for rrdb
     std::unique_ptr<::dsn::apps::rrdb_client> client;
 
-    // we reset the session when:
-    // 1. rpc session is closed by remote
-    // 2. network failure detected
-    // 3. parse message error occured
-    std::atomic_bool is_session_reset;
-
 private:
     // function for data stream
     void append_message(dsn_message_t msg);

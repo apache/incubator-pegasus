@@ -286,6 +286,8 @@ bool redis_parser::parse(dsn_message_t msg)
     if (parse_stream())
         return true;
     else {
+        // when parse a new message failed, we only reset the parser.
+        // for pending responses msg queue, we should keep it as it is.
         reset_parser();
         return false;
     }
@@ -354,11 +356,19 @@ void redis_parser::set(redis_parser::message_entry &entry)
     } else {
         // with a reference to prevent the object from being destoryed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
+
         auto on_set_reply =
             [ref_this, this, &entry](::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
+                // when the "is_session_reset" flag is set, the socket may be broken.
+                // so continue to reply the message is not necessary
                 if (is_session_reset.load(std::memory_order_acquire))
                     return;
 
+                // the entry is stored in the queue pending_response, so please ensure that
+                // entry hasn't been released when the callback runs
+                //
+                // currently we only clear a entry when it is replied or the redis_parser
+                // is destroyed
                 if (::dsn::ERR_OK != ec) {
                     redis_simple_string result;
                     result.is_error = true;

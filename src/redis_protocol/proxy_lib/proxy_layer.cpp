@@ -107,6 +107,9 @@ void proxy_session::on_recv_request(dsn_message_t msg)
     // NOTICE: in the implementation of parse, the msg may add_ref & release_ref.
     // so if the ref_count of msg is 0 before call "parse", the msg may be released
     // already after "parse" returns
+    //
+    // as "on_recv_request" won't be called concurrently, it's not necessary to
+    // call "parse" with a lock. a subclass may implement a lock inside parse if necessary
     if (!parse(msg)) {
         derror("%s: got invalid message, try to remove proxy session from proxy stub",
                remote_address.to_string());
