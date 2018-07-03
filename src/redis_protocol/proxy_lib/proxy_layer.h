@@ -41,7 +41,7 @@ protected:
     proxy_stub *stub;
 
 private:
-    // when get message from raw parser, request & response of "dsn_message_t" are not in couple
+    // when get message from raw parser, request & response of "dsn_message_t" are not in couple.
     // we need to backup one request to create a response struct.
     dsn_message_t backup_one_request;
     // the client address for which this session served
