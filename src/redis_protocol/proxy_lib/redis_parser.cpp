@@ -218,8 +218,7 @@ void redis_parser::append_message(dsn_message_t msg)
     dsn_msg_add_ref(msg);
     recv_buffers.push(msg);
     total_length += dsn_msg_body_size(msg);
-    dinfo(
-        "%s: recv message, currently total length is %d", remote_address.to_string(), total_length);
+    dinfo("%s: recv message, currently total length:%d", remote_address.to_string(), total_length);
 }
 
 // refererence: http://redis.io/topics/protocol
@@ -378,11 +377,11 @@ void redis_parser::set(redis_parser::message_entry &entry)
                     return;
                 }
 
-                // the entry is stored in the queue pending_response, so please ensure that
-                // entry hasn't been released when the callback runs
+                // the message_enry "entry" is stored in the queue "pending_response".
+                // please ensure that "entry" hasn't been released right now.
                 //
-                // currently we only clear a entry when it is replied or the redis_parser
-                // is destroyed
+                // currently we only clear an entry when it is replied or
+                // in the redis_parser's destructor
                 dinfo("%s: set command seqid(%" PRId64 ") got reply",
                       remote_address.to_string(),
                       entry.sequence_id);

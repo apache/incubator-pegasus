@@ -64,7 +64,6 @@ void proxy_stub::on_recv_remove_session_request(dsn_message_t request)
 {
     ::dsn::rpc_address source = dsn_msg_from_address(request);
     std::shared_ptr<proxy_session> ps = remove_session(source);
-    ddebug("try to proxy session %s", source.to_string());
     if (ps != nullptr) {
         ps->on_remove_session();
     }
@@ -104,12 +103,14 @@ proxy_session::~proxy_session()
 
 void proxy_session::on_recv_request(dsn_message_t msg)
 {
-    // NOTICE: in the implementation of parse, the msg may add_ref & release_ref.
-    // so if the ref_count of msg is 0 before call "parse", the msg may be released
-    // already after "parse" returns
+    // NOTICE:
+    // 1. in the implementation of "parse", the msg may add_ref & release_ref.
+    //    so if the ref_count of msg is 0 before call "parse", the msg may be released already
+    //    after "parse" returns. so please take care when you want to
+    //    use "msg" after call "parse"
     //
-    // as "on_recv_request" won't be called concurrently, it's not necessary to
-    // call "parse" with a lock. a subclass may implement a lock inside parse if necessary
+    // 2. as "on_recv_request" won't be called concurrently, it's not necessary to call
+    //    "parse" with a lock. a subclass may implement a lock inside parse if necessary
     if (!parse(msg)) {
         derror("%s: got invalid message, try to remove proxy session from proxy stub",
                remote_address.to_string());
