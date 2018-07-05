@@ -14,11 +14,11 @@ namespace proxy {
 
 DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_SESSION_DISCONNECT,
                      TASK_PRIORITY_COMMON,
-                     dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
+                     ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 class proxy_stub;
-class proxy_session : public std::enable_shared_from_this<proxy_session>, public ::dsn::clientlet
+class proxy_session : public std::enable_shared_from_this<proxy_session>
 {
 public:
     typedef std::function<std::shared_ptr<proxy_session>(proxy_stub *p, dsn_message_t first_msg)>
@@ -26,7 +26,7 @@ public:
     proxy_session(proxy_stub *p, dsn_message_t first_msg);
     virtual ~proxy_session();
 
-    // on_recv_request & on_remove_session are called by proxy_stub messages are got from
+    // on_recv_request & on_remove_session are called by proxy_stub when messages are got from
     // underlying rpc engine.
     //
     // then rpc engine ensures that on_recv_request for one proxy_session
