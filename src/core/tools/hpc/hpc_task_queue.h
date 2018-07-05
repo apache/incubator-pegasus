@@ -35,41 +35,13 @@
 
 #pragma once
 
-#include <dsn/tool_api.h>
-#include <condition_variable>
 #include <concurrentqueue/concurrentqueue.h>
 #include <concurrentqueue/blockingconcurrentqueue.h>
 
+#include <dsn/tool-api/task_queue.h>
+
 namespace dsn {
 namespace tools {
-class hpc_task_queue : public task_queue
-{
-public:
-    hpc_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
-
-    void enqueue(task *task) override;
-    task *dequeue(/*inout*/ int &batch_size) override;
-
-private:
-    utils::ex_lock_nr_spin _lock;
-    std::condition_variable_any _cond;
-    slist<task> _tasks;
-};
-
-class hpc_task_priority_queue : public task_queue
-{
-public:
-    hpc_task_priority_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
-
-    void enqueue(task *task) override;
-    task *dequeue(/*inout*/ int &batch_size) override;
-
-private:
-    utils::ex_lock_nr_spin _lock[TASK_PRIORITY_COUNT];
-    slist<task> _tasks[TASK_PRIORITY_COUNT];
-    utils::semaphore _sema;
-};
-
 class hpc_concurrent_task_queue : public task_queue
 {
     moodycamel::details::mpmc_sema::LightweightSemaphore _sema;

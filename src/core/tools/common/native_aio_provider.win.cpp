@@ -67,7 +67,7 @@ native_win_aio_provider::~native_win_aio_provider()
 void native_win_aio_provider::start(io_modifer &ctx)
 {
     _worker_thr = new std::thread([this, ctx]() {
-        task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+        task::set_tls_dsn_context(node(), nullptr);
 
         const char *name = ::dsn::tools::get_service_node_name(node());
         char buffer[128];

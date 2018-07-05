@@ -1,4 +1,3 @@
 config-test.ini -core.corrupt_message:core.aio*:core.operation_failed:tools_hpc.*
 config-test-sim.ini -core.corrupt_message:core.aio*:core.operation_failed:tools_hpc.*
-config-test-fastrun.ini core.aio*:core.operation_failed:tools_hpc.*
 config-test-posix-aio.ini core.aio*:core.operation_failed

@@ -51,11 +51,8 @@ namespace dsn {
 __thread struct __tls_dsn__ tls_dsn;
 __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
 
-/*static*/ void task::set_tls_dsn_context(
-    service_node *node,  // cannot be null
-    task_worker *worker, // null for io or timer threads if they are not worker threads
-    task_queue *queue    // owner queue if io_mode == IOE_PER_QUEUE
-    )
+/*static*/ void task::set_tls_dsn_context(service_node *node, // cannot be null
+                                          task_worker *worker)
 {
     memset(static_cast<void *>(&tls_dsn), 0, sizeof(tls_dsn));
     tls_dsn.magic = 0xdeadbeef;
@@ -71,22 +68,14 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
                     node->full_name());
         }
 
-        if (queue != nullptr) {
-            dassert(queue->pool()->node() == node,
-                    "queue not belonging to the given node: %s vs %s",
-                    queue->pool()->node()->full_name(),
-                    node->full_name());
-        }
-
         tls_dsn.node = node;
         tls_dsn.worker = worker;
         tls_dsn.worker_index = worker ? worker->index() : -1;
         tls_dsn.current_task = nullptr;
-        tls_dsn.rpc = node->rpc(queue ? queue : (worker ? worker->queue() : nullptr));
-        tls_dsn.disk = node->disk(queue ? queue : (worker ? worker->queue() : nullptr));
+        tls_dsn.rpc = node->rpc();
+        tls_dsn.disk = node->disk();
         tls_dsn.env = service_engine::fast_instance().env();
-        tls_dsn.nfs = node->nfs(queue ? queue : (worker ? worker->queue() : nullptr));
-        tls_dsn.tsvc = node->tsvc(queue ? queue : (worker ? worker->queue() : nullptr));
+        tls_dsn.nfs = node->nfs();
     }
 
     tls_dsn.node_pool_thread_ids = (node ? ((uint64_t)(uint8_t)node->id()) : 0)
@@ -143,7 +132,7 @@ task::task(dsn::task_code code, int hash, service_node *node)
     }
 
     if (tls_dsn.magic != 0xdeadbeef) {
-        set_tls_dsn_context(nullptr, nullptr, nullptr);
+        set_tls_dsn_context(nullptr, nullptr);
     }
 
     _task_id = tls_dsn.node_pool_thread_ids + (++tls_dsn.last_lower32_task_id);
@@ -582,8 +571,6 @@ aio_task::aio_task(dsn::task_code code, aio_handler &&cb, int hash, service_node
     set_error_code(ERR_IO_PENDING);
 
     auto disk = get_current_disk();
-    if (!disk)
-        disk = node->node_disk();
     _aio = disk->prepare_aio_context(this);
 }
 

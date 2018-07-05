@@ -46,8 +46,7 @@ class asio_network_provider : public connection_oriented_network
 public:
     asio_network_provider(rpc_engine *srv, network *inner_provider);
 
-    virtual error_code
-    start(rpc_channel channel, int port, bool client_only, io_modifer &ctx) override;
+    virtual error_code start(rpc_channel channel, int port, bool client_only) override;
     virtual ::dsn::rpc_address address() override { return _address; }
     virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override;
 
@@ -72,8 +71,7 @@ public:
 
     void send_message(message_ex *request) override;
 
-    virtual error_code
-    start(rpc_channel channel, int port, bool client_only, io_modifer &ctx) override;
+    virtual error_code start(rpc_channel channel, int port, bool client_only) override;
 
     virtual ::dsn::rpc_address address() override { return _address; }
 

@@ -83,7 +83,7 @@ public:
     sim_network_provider(rpc_engine *rpc, network *inner_provider);
     ~sim_network_provider(void) {}
 
-    virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer &ctx);
+    virtual error_code start(rpc_channel channel, int port, bool client_only);
 
     virtual ::dsn::rpc_address address() { return _address; }
 

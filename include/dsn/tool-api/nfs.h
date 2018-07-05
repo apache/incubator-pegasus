@@ -87,7 +87,7 @@ public:
 
     virtual ~nfs_node() {}
 
-    virtual ::dsn::error_code start(io_modifer &ctx) = 0;
+    virtual ::dsn::error_code start() = 0;
 
     virtual error_code stop() = 0;
 

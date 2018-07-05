@@ -45,8 +45,7 @@ asio_network_provider::asio_network_provider(rpc_engine *srv, network *inner_pro
     _acceptor = nullptr;
 }
 
-error_code
-asio_network_provider::start(rpc_channel channel, int port, bool client_only, io_modifer &ctx)
+error_code asio_network_provider::start(rpc_channel channel, int port, bool client_only)
 {
     if (_acceptor != nullptr)
         return ERR_SERVICE_ALREADY_RUNNING;
@@ -57,8 +56,8 @@ asio_network_provider::start(rpc_channel channel, int port, bool client_only, io
                                          1,
                                          "thread number for io service (timer and boost network)");
     for (int i = 0; i < io_service_worker_count; i++) {
-        _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this, ctx, i]() {
-            task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+        _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this, i]() {
+            task::set_tls_dsn_context(node(), nullptr);
 
             const char *name = ::dsn::tools::get_service_node_name(node());
             char buffer[128];
@@ -277,8 +276,7 @@ void asio_udp_provider::do_receive()
         });
 }
 
-error_code
-asio_udp_provider::start(rpc_channel channel, int port, bool client_only, io_modifer &ctx)
+error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_only)
 {
     _is_client = client_only;
     int io_service_worker_count =
@@ -341,8 +339,8 @@ asio_udp_provider::start(rpc_channel channel, int port, bool client_only, io_mod
     }
 
     for (int i = 0; i < io_service_worker_count; i++) {
-        _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this, ctx, i]() {
-            task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+        _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this, i]() {
+            task::set_tls_dsn_context(node(), nullptr);
 
             const char *name = ::dsn::tools::get_service_node_name(node());
             char buffer[128];

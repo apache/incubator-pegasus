@@ -43,16 +43,13 @@ simple_timer_service::simple_timer_service(service_node *node, timer_service *in
     _worker = nullptr;
 }
 
-void simple_timer_service::start(io_modifer &ctx)
+void simple_timer_service::start()
 {
-    _worker = std::shared_ptr<std::thread>(new std::thread([this, ctx]() {
-        task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+    _worker = std::shared_ptr<std::thread>(new std::thread([this]() {
+        task::set_tls_dsn_context(node(), nullptr);
 
         char buffer[128];
-        sprintf(buffer,
-                "%s.%s.timer",
-                get_service_node_name(node()),
-                ctx.queue ? ctx.queue->get_name().c_str() : "");
+        sprintf(buffer, "%s.timer", get_service_node_name(node()));
 
         task_worker::set_name(buffer);
         task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);

@@ -351,23 +351,6 @@ bool service_spec::init_app_specs()
 
             // fix ports_gap when necessary
             int ports_gap = app.ports_gap;
-            switch (rpc_io_mode) {
-            case IOE_PER_NODE:
-                ports_gap *= 1;
-                break;
-            case IOE_PER_QUEUE: {
-                int number_of_ioes = 0;
-                for (auto &pl : app.pools) {
-                    number_of_ioes += (this->threadpool_specs[pl].partitioned
-                                           ? this->threadpool_specs[pl].worker_count
-                                           : 1);
-                }
-                ports_gap *= number_of_ioes;
-            } break;
-            default:
-                dassert(false, "unsupport io mode");
-                break;
-            }
 
             auto ports = app.ports;
             auto nsc = app.network_server_confs;
@@ -400,27 +383,4 @@ bool service_spec::init_app_specs()
 
     return true;
 }
-
-int service_spec::get_ports_delta(int app_id, dsn::threadpool_code pool, int queue_index) const
-{
-    dassert(rpc_io_mode == IOE_PER_QUEUE, "only used for IOE_PER_QUEUE mode");
-
-    auto &aps = app_specs[app_id - 1];
-    int number_of_ioes = 0;
-    for (auto &pl : aps.pools) {
-        if (pl != pool) {
-            number_of_ioes +=
-                (this->threadpool_specs[pl].partitioned ? this->threadpool_specs[pl].worker_count
-                                                        : 1);
-        } else {
-            number_of_ioes += (this->threadpool_specs[pl].partitioned ? (queue_index + 1) : 1);
-            break;
-        }
-    }
-
-    dassert(number_of_ioes >= 1, "given pool not started");
-
-    return aps.ports_gap * (number_of_ioes - 1);
-}
-
 } // end namespace dsn

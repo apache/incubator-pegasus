@@ -35,8 +35,7 @@ pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER
 
 [core]
 ;tool = simulator
-;tool = nativerun
-tool = fastrun
+tool = nativerun
 
 toollets = tracer, profiler, fault_injector
 pause_on_start = true

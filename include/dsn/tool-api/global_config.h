@@ -103,7 +103,7 @@ struct service_app_spec
     int delay_seconds;
     bool run;
     int count;     // index = 1,2,...,count
-    int ports_gap; // when count > 1 or service_spec.io_mode != IOE_PER_NODE
+    int ports_gap; // when count > 1
 
     network_client_configs network_client_confs;
     network_server_configs network_server_confs;
@@ -173,11 +173,7 @@ struct service_spec
     std::list<std::string> rwlock_nr_aspects;
     std::list<std::string> semaphore_aspects;
 
-    ioe_mode disk_io_mode;  // whether disk is per node or per queue
-    ioe_mode rpc_io_mode;   // whether rpc is per node or per queue
-    ioe_mode nfs_io_mode;   // whether nfs is per node or per queue
-    ioe_mode timer_io_mode; // whether timer is per node or per queue
-    int io_worker_count;    // for disk and rpc when per node
+    int io_worker_count; // for disk and rpc
 
     network_client_configs network_default_client_cfs; // default network configed by tools
     network_server_configs network_default_server_cfs; // default network configed by tools
@@ -191,7 +187,6 @@ struct service_spec
     service_spec() {}
     DSN_API bool init();
     DSN_API bool init_app_specs();
-    DSN_API int get_ports_delta(int app_id, dsn::threadpool_code pool, int queue_index) const;
 };
 
 CONFIG_BEGIN(service_spec)
@@ -230,30 +225,6 @@ CONFIG_FLD_STRING_LIST(rwlock_nr_aspects,
                        "non-recursive rwlock aspect providers, usually for tooling purpose")
 CONFIG_FLD_STRING_LIST(semaphore_aspects, "semaphore aspect providers, usually for tooling purpose")
 
-CONFIG_FLD_ENUM(ioe_mode,
-                disk_io_mode,
-                IOE_PER_NODE,
-                IOE_INVALID,
-                false,
-                "how many disk engines? IOE_PER_NODE, or IOE_PER_QUEUE")
-CONFIG_FLD_ENUM(ioe_mode,
-                rpc_io_mode,
-                IOE_PER_NODE,
-                IOE_INVALID,
-                false,
-                "how many rpc engines? IOE_PER_NODE, or IOE_PER_QUEUE")
-CONFIG_FLD_ENUM(ioe_mode,
-                nfs_io_mode,
-                IOE_PER_NODE,
-                IOE_INVALID,
-                false,
-                "how many nfs engines? IOE_PER_NODE, or IOE_PER_QUEUE")
-CONFIG_FLD_ENUM(ioe_mode,
-                timer_io_mode,
-                IOE_PER_NODE,
-                IOE_INVALID,
-                false,
-                "how many disk timer services? IOE_PER_NODE, or IOE_PER_QUEUE")
 CONFIG_FLD(int,
            uint64,
            io_worker_count,

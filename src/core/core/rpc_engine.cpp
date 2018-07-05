@@ -429,8 +429,7 @@ rpc_engine::rpc_engine(service_node *node) : _node(node), _rpc_matcher(this)
 //
 network *rpc_engine::create_network(const network_server_config &netcs,
                                     bool client_only,
-                                    network_header_format client_hdr_format,
-                                    io_modifer &ctx)
+                                    network_header_format client_hdr_format)
 {
     const service_spec &spec = service_engine::fast_instance().spec();
     network *net = utils::factory_store<network>::create(
@@ -443,7 +442,7 @@ network *rpc_engine::create_network(const network_server_config &netcs,
     }
 
     // start the net
-    error_code ret = net->start(netcs.channel, netcs.port + ctx.port_shift_value, client_only, ctx);
+    error_code ret = net->start(netcs.channel, netcs.port, client_only);
     if (ret == ERR_OK) {
         return net;
     } else {
@@ -453,14 +452,11 @@ network *rpc_engine::create_network(const network_server_config &netcs,
     }
 }
 
-error_code rpc_engine::start(const service_app_spec &aspec, io_modifer &ctx)
+error_code rpc_engine::start(const service_app_spec &aspec)
 {
     if (_is_running) {
         return ERR_SERVICE_ALREADY_RUNNING;
     }
-
-    // local cache for shared networks with same provider and message format and port
-    std::map<std::string, network *> named_nets; // factory##fmt##port -> net
 
     // start client networks
     _client_nets.resize(network_header_format::max_value() + 1);
@@ -491,25 +487,16 @@ error_code rpc_engine::start(const service_app_spec &aspec, io_modifer &ctx)
             cs.factory_name = factory;
             cs.message_buffer_block_size = blk_size;
 
-            auto net = create_network(cs, true, client_hdr_format, ctx);
+            auto net = create_network(cs, true, client_hdr_format);
             if (!net)
                 return ERR_NETWORK_INIT_FAILED;
             pnet[j] = net;
 
-            if (ctx.queue) {
-                ddebug("[%s.%s] network client started at port %u, channel = %s, fmt = %s ...",
-                       node()->full_name(),
-                       ctx.queue->get_name().c_str(),
-                       (uint32_t)(cs.port + ctx.port_shift_value),
-                       cs.channel.to_string(),
-                       client_hdr_format.to_string());
-            } else {
-                ddebug("[%s] network client started at port %u, channel = %s, fmt = %s ...",
-                       node()->full_name(),
-                       (uint32_t)(cs.port + ctx.port_shift_value),
-                       cs.channel.to_string(),
-                       client_hdr_format.to_string());
-            }
+            ddebug("[%s] network client started at port %u, channel = %s, fmt = %s ...",
+                   node()->full_name(),
+                   (uint32_t)(cs.port),
+                   cs.channel.to_string(),
+                   client_hdr_format.to_string());
         }
     }
 
@@ -530,32 +517,23 @@ error_code rpc_engine::start(const service_app_spec &aspec, io_modifer &ctx)
             pnets = &it->second;
         }
 
-        auto net = create_network(sp.second, false, NET_HDR_DSN, ctx);
+        auto net = create_network(sp.second, false, NET_HDR_DSN);
         if (net == nullptr) {
             return ERR_NETWORK_INIT_FAILED;
         }
 
         (*pnets)[sp.second.channel] = net;
 
-        if (ctx.queue) {
-            dwarn("[%s.%s] network server started at port %u, channel = %s, ...",
-                  node()->full_name(),
-                  ctx.queue->get_name().c_str(),
-                  (uint32_t)(port + ctx.port_shift_value),
-                  sp.second.channel.to_string());
-        } else {
-            dwarn("[%s] network server started at port %u, channel = %s, ...",
-                  node()->full_name(),
-                  (uint32_t)(port + ctx.port_shift_value),
-                  sp.second.channel.to_string());
-        }
+        dwarn("[%s] network server started at port %u, channel = %s, ...",
+              node()->full_name(),
+              (uint32_t)(port),
+              sp.second.channel.to_string());
     }
 
     _uri_resolver_mgr.reset(new uri_resolver_manager());
 
     _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
-    _local_primary_address.set_port(aspec.ports.size() > 0 ? *aspec.ports.begin()
-                                                           : aspec.id + ctx.port_shift_value);
+    _local_primary_address.set_port(aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id);
 
     ddebug("=== service_node=[%s], primary_address=[%s] ===",
            _node->full_name(),

@@ -46,7 +46,7 @@ public:
     node_scoper(service_node *node)
     {
         _old = tls_dsn;
-        task::set_tls_dsn_context(node, nullptr, nullptr);
+        task::set_tls_dsn_context(node, nullptr);
     }
 
     ~node_scoper() { tls_dsn = _old; }

@@ -38,71 +38,6 @@
 
 namespace dsn {
 namespace tools {
-hpc_task_queue::hpc_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)
-    : task_queue(pool, index, inner_provider)
-{
-}
-
-void hpc_task_queue::enqueue(task *task)
-{
-    dassert(task->next == nullptr, "task is not alone");
-    {
-        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
-        _tasks.add(task);
-    }
-    _cond.notify_one();
-}
-
-task *hpc_task_queue::dequeue(/*inout*/ int &batch_size)
-{
-    task *t;
-
-    _lock.lock();
-    _cond.wait(_lock, [=] { return !_tasks.is_empty(); });
-    t = _tasks.pop_batch(batch_size);
-    _lock.unlock();
-
-    return t;
-}
-
-hpc_task_priority_queue::hpc_task_priority_queue(task_worker_pool *pool,
-                                                 int index,
-                                                 task_queue *inner_provider)
-    : task_queue(pool, index, inner_provider)
-{
-}
-
-void hpc_task_priority_queue::enqueue(task *task)
-{
-    dassert(task->next == nullptr, "task is not alone");
-    auto idx = static_cast<int>(task->spec().priority);
-    {
-        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock[idx]);
-        _tasks[idx].add(task);
-    }
-
-    _sema.signal();
-}
-
-task *hpc_task_priority_queue::dequeue(/*inout*/ int &batch_size)
-{
-    task *t = nullptr;
-
-    _sema.wait();
-
-    for (auto i = TASK_PRIORITY_COUNT - 1; i >= 0; --i) {
-        _lock[i].lock();
-        t = _tasks[i].pop_one();
-        _lock[i].unlock();
-
-        if (t)
-            break;
-    }
-
-    batch_size = 1;
-    dassert(t != nullptr, "returned task cannot be null");
-    return t;
-}
 
 hpc_concurrent_task_queue::hpc_concurrent_task_queue(task_worker_pool *pool,
                                                      int index,
@@ -116,6 +51,7 @@ void hpc_concurrent_task_queue::enqueue(task *task)
     _queues[task->spec().priority].q.enqueue(task);
     _sema.signal(1);
 }
+
 task *hpc_concurrent_task_queue::dequeue(int &batch_size)
 {
     batch_size = _sema.waitMany(batch_size);

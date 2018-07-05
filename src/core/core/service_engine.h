@@ -69,10 +69,6 @@ public:
         rpc_engine *rpc;
         disk_engine *disk;
         nfs_node *nfs;
-        timer_service *tsvc;
-
-        task_queue *q;
-        task_worker_pool *pool;
         aio_provider *aio;
 
         io_engine() { memset((void *)this, 0, sizeof(io_engine)); }
@@ -81,24 +77,17 @@ public:
 public:
     explicit service_node(service_app_spec &app_spec);
 
-    rpc_engine *rpc(task_queue *q) const;
-    disk_engine *disk(task_queue *q) const;
-    nfs_node *nfs(task_queue *q) const;
-    timer_service *tsvc(task_queue *q) const;
-
-    rpc_engine *node_rpc() const { return _per_node_io.rpc; }
-    disk_engine *node_disk() const { return _per_node_io.disk; }
-    nfs_node *node_nfs() const { return _per_node_io.nfs; }
-    timer_service *node_tsvc() const { return _per_node_io.tsvc; }
+    rpc_engine *rpc() const { return _node_io.rpc; }
+    disk_engine *disk() const { return _node_io.disk; }
+    nfs_node *nfs() const { return _node_io.nfs; }
 
     task_engine *computation() const { return _computation; }
-    const std::list<io_engine> &ios() const { return _ios; }
     void get_runtime_info(const std::string &indent,
                           const std::vector<std::string> &args,
                           /*out*/ std::stringstream &ss);
     void get_queue_info(/*out*/ std::stringstream &ss);
 
-    error_code start_io_engine_in_node_start_task(const io_engine &io);
+    error_code start_io_engine_in_node_start_task();
 
     dsn::error_code start();
     dsn::error_code start_app();
@@ -121,18 +110,15 @@ private:
     service_app_spec _app_spec;
     task_engine *_computation;
 
-    io_engine _per_node_io;
-    std::unordered_map<task_queue *, io_engine> _per_queue_ios;
-    std::list<io_engine> _ios; // all ios
+    io_engine _node_io;
 
 private:
     // the service entity is initialized after the engine
     // is initialized, so this should be call in start()
     void init_service_app();
 
-    error_code init_io_engine(io_engine &io, ioe_mode mode);
-    error_code start_io_engine_in_main(const io_engine &io);
-    void get_io(ioe_mode mode, task_queue *q, /*out*/ io_engine &io) const;
+    error_code init_io_engine();
+    error_code start_io_engine_in_main();
 };
 
 typedef std::map<int, service_node *> service_nodes_by_app_id;

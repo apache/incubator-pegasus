@@ -160,13 +160,13 @@ disk_engine::disk_engine(service_node *node)
 
 disk_engine::~disk_engine() {}
 
-void disk_engine::start(aio_provider *provider, io_modifer &ctx)
+void disk_engine::start(aio_provider *provider)
 {
     if (_is_running)
         return;
 
     _provider = provider;
-    _provider->start(ctx);
+    _provider->start();
     _is_running = true;
 }
 

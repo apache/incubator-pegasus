@@ -57,9 +57,7 @@ public:
 
         if (_start) {
             error_code err;
-            for (auto &io : _node->ios()) {
-                _node->start_io_engine_in_node_start_task(io);
-            }
+            err = _node->start_io_engine_in_node_start_task();
 
             err = _node->start_app();
             dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());

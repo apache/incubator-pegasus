@@ -94,18 +94,6 @@ ENUM_REG(TASK_STATE_FINISHED)
 ENUM_REG(TASK_STATE_CANCELLED)
 ENUM_END(task_state)
 
-typedef enum ioe_mode {
-    IOE_PER_NODE,  // each node has shared io engine (rpc/disk/nfs/timer)
-    IOE_PER_QUEUE, // each queue has shared io engine (rpc/disk/nfs/timer)
-    IOE_COUNT,
-    IOE_INVALID
-} ioe_mode;
-
-ENUM_BEGIN(ioe_mode, IOE_INVALID)
-ENUM_REG(IOE_PER_NODE)
-ENUM_REG(IOE_PER_QUEUE)
-ENUM_END(ioe_mode)
-
 typedef enum grpc_mode_t {
     GRPC_TO_LEADER, // the rpc is sent to the leader (if exist)
     GRPC_TO_ALL,    // the rpc is sent to all
@@ -160,13 +148,6 @@ class rpc_response_task;
 class message_ex;
 class admission_controller;
 typedef void (*task_rejection_handler)(task *, admission_controller *);
-
-typedef struct __io_mode_modifier__
-{
-    ioe_mode mode;        // see ioe_mode for details
-    task_queue *queue;    // when mode == IOE_PER_QUEUE
-    int port_shift_value; // port += port_shift_value
-} io_modifer;
 
 class task_spec : public extensible_object<task_spec, 4>
 {

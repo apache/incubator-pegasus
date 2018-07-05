@@ -56,7 +56,7 @@ class task_queue;
 @{
 */
 //
-// !!! all threads must be started with task::set_tls_dsn_context(null, provider->node());
+// !!! all threads must be started with task::set_tls_dsn_context(provider->node(), null);
 //
 class aio_provider
 {
@@ -81,7 +81,7 @@ public:
     virtual void aio(aio_task *aio) = 0;
     virtual disk_aio *prepare_aio_context(aio_task *) = 0;
 
-    virtual void start(io_modifer &ctx) = 0;
+    virtual void start() = 0;
 
 protected:
     DSN_API void

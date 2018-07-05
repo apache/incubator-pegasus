@@ -145,7 +145,7 @@ public:
     //
     // management routines
     //
-    ::dsn::error_code start(const service_app_spec &spec, io_modifer &ctx);
+    ::dsn::error_code start(const service_app_spec &spec);
     void start_serving() { _is_serving = true; }
 
     //
@@ -190,8 +190,7 @@ public:
 private:
     network *create_network(const network_server_config &netcs,
                             bool client_only,
-                            network_header_format client_hdr_format,
-                            io_modifer &ctx);
+                            network_header_format client_hdr_format);
 
 private:
     service_node *_node;

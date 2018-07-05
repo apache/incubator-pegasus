@@ -178,7 +178,7 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
     for (auto &node : nodes) {
         int id = node.second->id();
         std::string name = node.second->full_name();
-        rpc_address paddr = node.second->rpc(nullptr)->primary_address();
+        rpc_address paddr = node.second->rpc()->primary_address();
         int port = paddr.port();
         _node_to_address[name] = paddr;
         ddebug("=== node_to_address[%s]=%s", name.c_str(), paddr.to_string());

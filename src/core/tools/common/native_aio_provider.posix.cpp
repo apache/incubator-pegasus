@@ -107,7 +107,7 @@ void aio_completed(sigval sigval)
     auto ctx = (posix_disk_aio_context *)sigval.sival_ptr;
 
     if (dsn::tls_dsn.magic != 0xdeadbeef)
-        task::set_tls_dsn_context(ctx->tsk->node(), nullptr, nullptr);
+        task::set_tls_dsn_context(ctx->tsk->node(), nullptr);
 
     int err = aio_error(&ctx->cb);
     if (err != EINPROGRESS) {

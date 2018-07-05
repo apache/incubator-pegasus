@@ -266,7 +266,7 @@ void task_worker::run_internal()
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    task::set_tls_dsn_context(pool()->node(), this, queue());
+    task::set_tls_dsn_context(pool()->node(), this);
 
     _native_tid = ::dsn::utils::get_current_tid();
     set_name(name().c_str());

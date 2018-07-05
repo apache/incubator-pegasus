@@ -52,7 +52,7 @@ public:
     virtual void aio(aio_task *aio) override;
     virtual disk_aio *prepare_aio_context(aio_task *tsk) override;
 
-    virtual void start(io_modifer &ctx) override {}
+    virtual void start() override {}
 };
 }
 }

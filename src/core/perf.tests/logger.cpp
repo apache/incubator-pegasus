@@ -44,8 +44,6 @@
 
 #include "service_engine.h"
 #include "test_utils.h"
-#include "../tools/hpc/hpc_logger.h"
-#include "../tools/hpc/hpc_tail_logger.h"
 #include "../tools/common/simple_logger.h"
 
 using namespace ::dsn;
@@ -70,7 +68,7 @@ void logger_test(int thread_count, int record_count)
 
     for (int i = 0; i < thread_count; ++i) {
         threads.push_back(new std::thread([&, i] {
-            task::set_tls_dsn_context(task::get_current_node2(), nullptr, nullptr);
+            task::set_tls_dsn_context(task::get_current_node2(), nullptr);
             for (int j = 0; j < record_count; j++) {
                 logv(&logger, str, j, i);
             }
@@ -106,24 +104,5 @@ TEST(core, simple_logger_test)
     auto threads_count = {1, 2, 5, 10};
     for (int i : threads_count) {
         logger_test<dsn::tools::simple_logger>(i, 100000);
-    }
-}
-
-TEST(core, hpc_logger_test)
-{
-    std::cout << "thread_count\t\t record_count\t\t speed" << std::endl;
-
-    auto threads_count = {1, 2, 5, 10};
-    for (int i : threads_count)
-        logger_test<dsn::tools::hpc_logger>(i, 100000);
-}
-
-TEST(core, hpc_tail_logger_test)
-{
-    std::cout << "thread_count\t\t record_count\t\t speed" << std::endl;
-
-    auto threads_count = {1, 2, 5, 10};
-    for (int i : threads_count) {
-        logger_test<dsn::tools::hpc_tail_logger>(i, 10000);
     }
 }

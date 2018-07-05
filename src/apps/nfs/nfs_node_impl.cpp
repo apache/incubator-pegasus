@@ -59,7 +59,7 @@ void nfs_node_simple::call(std::shared_ptr<remote_copy_request> rci, aio_task *c
     _client->begin_remote_copy(rci, callback); // copy file request entry
 }
 
-error_code nfs_node_simple::start(io_modifer &ctx)
+error_code nfs_node_simple::start()
 {
     _server = new nfs_service_impl(*_opts);
     _server->open_service();

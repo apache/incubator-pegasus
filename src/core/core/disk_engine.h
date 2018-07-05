@@ -82,7 +82,7 @@ public:
     disk_engine(service_node *node);
     ~disk_engine();
 
-    void start(aio_provider *provider, io_modifer &ctx);
+    void start(aio_provider *provider);
 
     // asynchonous file read/write
     dsn_handle_t open(const char *file_name, int flag, int pmode);

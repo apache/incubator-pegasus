@@ -85,7 +85,6 @@ struct __tls_dsn__
     disk_engine *disk;
     env_provider *env;
     nfs_node *nfs;
-    timer_service *tsvc;
 
     int last_worker_queue_size;
     uint64_t node_pool_thread_ids; // 8,8,16 bits
@@ -260,12 +259,10 @@ public:
     static disk_engine *get_current_disk();
     static env_provider *get_current_env();
     static nfs_node *get_current_nfs();
-    static timer_service *get_current_tsvc();
 
     static void set_tls_dsn_context(
-        service_node *node,  // cannot be null
-        task_worker *worker, // null for io or timer threads if they are not worker threads
-        task_queue *queue    // owner queue if io_mode == IOE_PER_QUEUE
+        service_node *node, // cannot be null
+        task_worker *worker // null for io or timer threads if they are not worker threads
         );
 
 protected:
@@ -714,12 +711,6 @@ __inline /*static*/ nfs_node *task::get_current_nfs()
 {
     check_tls_dsn();
     return tls_dsn.nfs;
-}
-
-__inline /*static*/ timer_service *task::get_current_tsvc()
-{
-    check_tls_dsn();
-    return tls_dsn.tsvc;
 }
 
 } // end namespace

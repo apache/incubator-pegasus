@@ -588,7 +588,7 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
     for (auto &n : nodes) {
         if (n.second->spec().role_name == std::string(app_role) &&
             n.second->spec().index == index) {
-            ::dsn::task::set_tls_dsn_context(n.second, nullptr, nullptr);
+            ::dsn::task::set_tls_dsn_context(n.second, nullptr);
             return true;
         }
     }
@@ -682,7 +682,7 @@ bool run(const char *config_file,
         "dsn_runtime_init_time_ms = %" PRIu64 " (%s)", dsn_runtime_init_time_ms(), init_time_buf);
 
     dsn_core_init();
-    ::dsn::task::set_tls_dsn_context(nullptr, nullptr, nullptr);
+    ::dsn::task::set_tls_dsn_context(nullptr, nullptr);
 
     dsn_all.engine_ready = false;
     dsn_all.config_completed = false;

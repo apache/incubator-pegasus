@@ -90,8 +90,6 @@ private:
     std::vector<task_queue *> _queues;
     std::vector<admission_controller *> _controllers;
 
-    // cached ptrs for fast access
-    timer_service *_per_node_timer_svc;
     std::vector<timer_service *> _per_queue_timer_svcs;
 
     bool _is_running;

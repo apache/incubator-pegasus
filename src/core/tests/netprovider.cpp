@@ -119,16 +119,13 @@ TEST(tools_common, asio_net_provider)
 
     asio_network_provider *asio_network =
         new asio_network_provider(task::get_current_rpc(), nullptr);
-    io_modifer modifier;
-    modifier.mode = IOE_PER_NODE;
-    modifier.queue = nullptr;
 
     error_code start_result;
-    start_result = asio_network->start(RPC_CHANNEL_TCP, TEST_PORT, true, modifier);
+    start_result = asio_network->start(RPC_CHANNEL_TCP, TEST_PORT, true);
     ASSERT_TRUE(start_result == ERR_OK);
 
     // the same asio network handle, start only client is ok
-    start_result = asio_network->start(RPC_CHANNEL_TCP, TEST_PORT, true, modifier);
+    start_result = asio_network->start(RPC_CHANNEL_TCP, TEST_PORT, true);
     ASSERT_TRUE(start_result == ERR_OK);
 
     rpc_address network_addr = asio_network->address();
@@ -136,14 +133,14 @@ TEST(tools_common, asio_net_provider)
 
     asio_network_provider *asio_network2 =
         new asio_network_provider(task::get_current_rpc(), nullptr);
-    start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, true, modifier);
+    start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, true);
     ASSERT_TRUE(start_result == ERR_OK);
 
-    start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, false, modifier);
+    start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, false);
     ASSERT_TRUE(start_result == ERR_OK);
     ddebug("result: %s", start_result.to_string());
 
-    start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, false, modifier);
+    start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, false);
     ASSERT_TRUE(start_result == ERR_SERVICE_ALREADY_RUNNING);
     ddebug("result: %s", start_result.to_string());
 
@@ -168,15 +165,12 @@ TEST(tools_common, asio_udp_provider)
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
     auto client = new asio_udp_provider(task::get_current_rpc(), nullptr);
-    io_modifer modifier;
-    modifier.mode = IOE_PER_NODE;
-    modifier.queue = nullptr;
 
     error_code start_result;
-    start_result = client->start(RPC_CHANNEL_UDP, 0, true, modifier);
+    start_result = client->start(RPC_CHANNEL_UDP, 0, true);
     ASSERT_TRUE(start_result == ERR_OK);
 
-    start_result = client->start(RPC_CHANNEL_UDP, TEST_PORT, false, modifier);
+    start_result = client->start(RPC_CHANNEL_UDP, TEST_PORT, false);
     ASSERT_TRUE(start_result == ERR_OK);
 
     message_ex *msg = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
@@ -213,15 +207,12 @@ TEST(tools_common, sim_net_provider)
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
     sim_network_provider *sim_net = new sim_network_provider(task::get_current_rpc(), nullptr);
-    io_modifer modifer;
-    modifer.mode = IOE_PER_NODE;
-    modifer.queue = nullptr;
 
     error_code ans;
-    ans = sim_net->start(RPC_CHANNEL_TCP, TEST_PORT, false, modifer);
+    ans = sim_net->start(RPC_CHANNEL_TCP, TEST_PORT, false);
     ASSERT_TRUE(ans == ERR_OK);
 
-    ans = sim_net->start(RPC_CHANNEL_TCP, TEST_PORT, false, modifer);
+    ans = sim_net->start(RPC_CHANNEL_TCP, TEST_PORT, false);
     ASSERT_TRUE(ans == ERR_ADDRESS_ALREADY_USED);
 
     rpc_session_ptr client_session =

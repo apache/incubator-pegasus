@@ -62,7 +62,7 @@ public:
     // after milliseconds, the provider should call task->enqueue()
     virtual void add_timer(task *task) override;
 
-    virtual void start(io_modifer &ctx) override;
+    virtual void start() override;
 
 private:
     boost::asio::io_service _ios;

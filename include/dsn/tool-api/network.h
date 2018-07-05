@@ -56,7 +56,7 @@ class task_queue;
 
 /*!
   network bound to a specific rpc_channel and port (see start)
- !!! all threads must be started with task::set_tls_dsn_context(null, provider->node());
+ !!! all threads must be started with task::set_tls_dsn_context(provider->node(), null);
 */
 class network
 {
@@ -85,7 +85,7 @@ public:
     //
     // when client_only is true, port is faked (equal to app id for tracing purpose)
     //
-    virtual error_code start(rpc_channel channel, int port, bool client_only, io_modifer &ctx) = 0;
+    virtual error_code start(rpc_channel channel, int port, bool client_only) = 0;
 
     //
     // the named address

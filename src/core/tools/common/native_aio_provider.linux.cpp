@@ -58,10 +58,10 @@ native_linux_aio_provider::~native_linux_aio_provider()
     dassert(ret == 0, "io_destroy error, ret = %d", ret);
 }
 
-void native_linux_aio_provider::start(io_modifer &ctx)
+void native_linux_aio_provider::start()
 {
-    new std::thread([this, ctx]() {
-        task::set_tls_dsn_context(node(), nullptr, ctx.queue);
+    new std::thread([this]() {
+        task::set_tls_dsn_context(node(), nullptr);
         get_event();
     });
 }
@@ -111,7 +111,7 @@ void native_linux_aio_provider::get_event()
     struct io_event events[1];
     int ret;
 
-    task::set_tls_dsn_context(node(), nullptr, nullptr);
+    task::set_tls_dsn_context(node(), nullptr);
 
     const char *name = ::dsn::tools::get_service_node_name(node());
     char buffer[128];
