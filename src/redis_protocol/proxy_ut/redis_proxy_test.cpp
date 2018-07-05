@@ -28,8 +28,8 @@ public:
             return ::dsn::ERR_INVALID_PARAMETERS;
         }
 
-        proxy_session::factory f = [](proxy_stub *p, ::dsn::rpc_address remote) {
-            return std::make_shared<redis_parser>(p, remote);
+        proxy_session::factory f = [](proxy_stub *p, dsn_message_t m) {
+            return std::make_shared<redis_parser>(p, m);
         };
         _proxy = dsn::make_unique<proxy_stub>(f, args[1].c_str(), args[2].c_str());
         return ::dsn::ERR_OK;
@@ -50,7 +50,7 @@ protected:
     void handle_command(std::unique_ptr<message_entry> &&entry) override
     {
         redis_request &act_request = entry->request;
-        redis_request &exp_request = reserved_entry[entry_index].request;
+        redis_request &exp_request = reserved_entry[entry_index]->request;
 
         ASSERT_TRUE(act_request.length > 0);
         ASSERT_EQ(act_request.length, exp_request.length);
@@ -67,10 +67,12 @@ protected:
     }
 
 public:
-    redis_test_parser(proxy_stub *stub, const ::dsn::rpc_address &addr) : redis_parser(stub, addr)
+    redis_test_parser(proxy_stub *stub, dsn_message_t msg) : redis_parser(stub, msg)
     {
-        reserved_entry.resize(20);
-        entry_index = 0;
+        reserved_entry.reserve(20);
+        for (int i = 0; i < 20; ++i) {
+            reserved_entry.emplace_back(new message_entry());
+        }
         got_a_message = false;
     }
 
@@ -78,7 +80,7 @@ public:
     {
         std::cout << "test fixed cases" << std::endl;
 
-        redis_request &rr = reserved_entry[0].request;
+        redis_request &rr = reserved_entry[0]->request;
         // simple case
         {
             rr.length = 3;
@@ -192,7 +194,7 @@ public:
 
         // create several requests
         for (entry_index = 0; entry_index < total_requests; ++entry_index) {
-            redis_request &ra = reserved_entry[entry_index].request;
+            redis_request &ra = reserved_entry[entry_index]->request;
             ra.length = dsn_random32(1, 20);
             ra.buffers.resize(ra.length);
             for (unsigned int i = 0; i != ra.length; ++i) {
@@ -421,14 +423,12 @@ public:
     {
         dsn_message_t m = dsn_msg_create_received_request(
             RPC_CALL_RAW_MESSAGE, DSF_THRIFT_BINARY, (void *)data, strlen(data));
-        dsn_msg_add_ref(m);
         return m;
     }
     static dsn_message_t create_message(const char *data, int length)
     {
         dsn_message_t m = dsn_msg_create_received_request(
             RPC_CALL_RAW_MESSAGE, DSF_THRIFT_BINARY, (void *)data, length);
-        dsn_msg_add_ref(m);
         return m;
     }
     static dsn_message_t marshalling_array(const redis_request &ra)
@@ -452,18 +452,24 @@ public:
         return result;
     }
 
-    std::vector<message_entry> reserved_entry;
+    std::vector<std::unique_ptr<message_entry>> reserved_entry;
     int entry_index;
     bool got_a_message;
 };
 
 TEST(proxy, parser)
 {
-    std::shared_ptr<redis_test_parser> parser(
-        new redis_test_parser(nullptr, ::dsn::rpc_address("127.0.0.1", 123)));
+    dsn_message_t m = nullptr;
+    {
+        m = dsn_msg_create_received_request(RPC_CALL_RAW_MESSAGE, DSF_THRIFT_BINARY, nullptr, 0);
+        dsn::message_ex *msg = (dsn::message_ex *)m;
+        msg->header->from_address = dsn::rpc_address("127.0.0.1", 123);
+    }
+    std::shared_ptr<redis_test_parser> parser(new redis_test_parser(nullptr, m));
     parser->test_fixed_cases();
     parser->test_random_cases();
     parser->test_parse_parameters();
+    dsn_msg_release_ref(m);
 }
 
 TEST(proxy, utils)

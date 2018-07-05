@@ -17,40 +17,41 @@ DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_SESSION_DISCONNECT,
                      ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_PROXY_SERVER)
-DEFINE_TASK_CODE(LPC_RPC_CALL_RAW_SCATTER, TASK_PRIORITY_COMMON, THREAD_POOL_PROXY_SERVER)
-
 class proxy_stub;
-class proxy_session : public std::enable_shared_from_this<proxy_session>, public ::dsn::clientlet
+class proxy_session : public std::enable_shared_from_this<proxy_session>
 {
 public:
-    typedef std::function<std::shared_ptr<proxy_session>(proxy_stub *p, ::dsn::rpc_address raddr)>
+    typedef std::function<std::shared_ptr<proxy_session>(proxy_stub *p, dsn_message_t first_msg)>
         factory;
-    proxy_session(proxy_stub *p, ::dsn::rpc_address raddr);
+    proxy_session(proxy_stub *p, dsn_message_t first_msg);
     virtual ~proxy_session();
-    void on_recv_request(std::shared_ptr<proxy_session> _this, dsn_message_t msg);
 
-    // called when proxy_stub remove this session
-    virtual void on_remove_session(std::shared_ptr<proxy_session> _this) = 0;
-    std::size_t hash() const { return hash_code; }
+    // on_recv_request & on_remove_session are called by proxy_stub when messages are got from
+    // underlying rpc engine.
+    //
+    // then rpc engine ensures that on_recv_request for one proxy_session
+    // won't be called concurrently. that is to say: another on_recv_requst
+    // may happen only after the first one returns
+    //
+    // however, during the running of on_recv_request, an "on_remove_session" may be called,
+    // the proxy_session and its derived class may need to do some synchronization on this.
+    void on_recv_request(dsn_message_t msg);
+    void on_remove_session();
 
 protected:
-    // return true if no parse error, else return false
+    // return if parse ok
     virtual bool parse(dsn_message_t msg) = 0;
     dsn_message_t create_response();
-    proxy_stub *stub;
 
-private:
-    // when get message from raw parser, request & response of "dsn_message_t" are not in couple
+protected:
+    proxy_stub *stub;
+    std::atomic_bool is_session_reset;
+
+    // when get message from raw parser, request & response of "dsn_message_t" are not in couple.
     // we need to backup one request to create a response struct.
     dsn_message_t backup_one_request;
     // the client address for which this session served
-    ::dsn::rpc_address remote_address;
-    std::size_t hash_code;
-    ::dsn::service::zlock _lock;
-
-protected:
-    ::dsn::service::zlock _rlock; // reply lock
+    dsn::rpc_address remote_address;
 };
 
 class proxy_stub : public ::dsn::serverlet<proxy_stub>
@@ -77,6 +78,7 @@ public:
         this->unregister_rpc_handler(RPC_CALL_RAW_MESSAGE);
         this->unregister_rpc_handler(RPC_CALL_RAW_SESSION_DISCONNECT);
     }
+    std::shared_ptr<proxy_session> remove_session(dsn::rpc_address remote_address);
 
 private:
     void on_rpc_request(dsn_message_t request);
