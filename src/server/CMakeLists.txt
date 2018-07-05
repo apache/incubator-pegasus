@@ -52,4 +52,5 @@ if (UNIX)
 endif()
 
 add_definitions(-Wno-attributes)
+
 dsn_add_executable()

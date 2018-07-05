@@ -8,6 +8,34 @@
 namespace pegasus {
 namespace geo {
 
+void extract_indexs(const std::string &text,
+                    const std::vector<int> &indexs,
+                    std::vector<std::string> &values,
+                    char splitter)
+{
+    size_t begin_pos = 0;
+    size_t end_pos = 0;
+    int cur_index = -1;
+    for (auto index : indexs) {
+        while (cur_index < index) {
+            begin_pos = (cur_index == -1 ? 0 : end_pos + 1);    // at first time, seek from 0
+                                                                // then, seek from end_pos + 1
+            end_pos = text.find(splitter, begin_pos);
+            if (end_pos == std::string::npos) {
+                break;
+            }
+            cur_index++;
+        }
+
+        if (end_pos == std::string::npos) {
+            values.emplace_back(text.substr(begin_pos));
+            break;
+        } else {
+            values.emplace_back(text.substr(begin_pos, end_pos - begin_pos));
+        }
+    }
+}
+
 const char *latlng_extractor_for_lbs::name() const { return "latlng_extractor_for_lbs"; }
 
 const char *latlng_extractor_for_lbs::value_sample() const
@@ -18,13 +46,13 @@ const char *latlng_extractor_for_lbs::value_sample() const
 bool latlng_extractor_for_lbs::extract_from_value(const std::string &value, S2LatLng &latlng) const
 {
     std::vector<std::string> data;
-    dsn::utils::split_args(value.c_str(), data, '|', true);
-    if (data.size() <= 6) {
+    extract_indexs(value, {4, 5}, data, '|');
+    if (data.size() != 2) {
         return false;
     }
 
-    std::string lng = data[4];
-    std::string lat = data[5];
+    std::string lng = data[0];
+    std::string lat = data[1];
     double lat_degrees, lng_degrees = 0.0;
     if (!dsn::buf2double(lat, lat_degrees) || !dsn::buf2double(lng, lng_degrees)) {
         return false;
