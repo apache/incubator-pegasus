@@ -23,8 +23,8 @@ public:
     {
         if (args.size() < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
-        proxy_session::factory f = [](proxy_stub *p, ::dsn::rpc_address remote) {
-            return std::make_shared<redis_parser>(p, remote);
+        proxy_session::factory f = [](proxy_stub *p, dsn_message_t m) {
+            return std::make_shared<redis_parser>(p, m);
         };
         _proxy.reset(new proxy_stub(f, args[1].c_str()));
         return ::dsn::ERR_OK;

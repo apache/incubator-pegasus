@@ -28,7 +28,6 @@ protected:
         start_bulk_string,
         in_bulk_string_size,
         start_bulk_string_data,
-        removed
     };
     struct redis_bulk_string
     {
@@ -56,7 +55,7 @@ protected:
     struct message_entry
     {
         redis_request request;
-        dsn_message_t response;
+        std::atomic<dsn_message_t> response;
         int64_t sequence_id;
     };
 
@@ -71,9 +70,11 @@ protected:
 
 private:
     // queue for pipeline the response
+    dsn::service::zlock response_lock;
     std::deque<std::unique_ptr<message_entry>> pending_response;
-    int64_t next_seqid;
 
+    // recieving message and parsing status
+    // [
     // content for current parser
     redis_bulk_string current_str;
     std::unique_ptr<message_entry> current_msg;
@@ -86,6 +87,7 @@ private:
     char *current_buffer;
     size_t current_buffer_length;
     size_t current_cursor;
+    // ]
 
     // for rrdb
     std::unique_ptr<::dsn::apps::rrdb_client> client;
@@ -97,7 +99,7 @@ private:
     char peek();
     bool eat(char c);
     void eat_all(char *dest, size_t length);
-    void reset();
+    void reset_parser();
 
     // function for parser
     bool end_array_size();
@@ -121,30 +123,34 @@ private:
     DECLARE_REDIS_HANDLER(default_handler)
 
     // function for pipeline reply
+    void enqueue_pending_response(std::unique_ptr<message_entry> &&entry);
+    void fetch_and_dequeue_messages(std::vector<dsn_message_t> &msgs, bool only_ready_ones);
+    void clear_reply_queue();
+    void reply_all_ready();
+
     template <typename T>
     void reply_message(message_entry &entry, const T &value)
     {
         dsn_message_t resp = create_response();
-        ::dsn::rpc_write_stream s(resp);
+        // release in reply_all_ready or reset
+        dsn_msg_add_ref(resp);
 
+        dsn::rpc_write_stream s(resp);
         marshalling(s, value);
         s.commit_buffer();
-        entry.response = resp;
-        // released when dequeue fro the pending_response queue
-        dsn_msg_add_ref(entry.response);
 
+        entry.response.store(resp, std::memory_order_release);
         reply_all_ready();
     }
-    void reply_all_ready();
 
     typedef void (*redis_call_handler)(redis_parser *, message_entry &);
     static std::unordered_map<std::string, redis_call_handler> s_dispatcher;
     static redis_call_handler get_handler(const char *command, unsigned int length);
+    static std::atomic_llong s_next_seqid;
 
 public:
-    redis_parser(proxy_stub *op, ::dsn::rpc_address remote);
+    redis_parser(proxy_stub *op, dsn_message_t first_msg);
     virtual ~redis_parser();
-    virtual void on_remove_session(std::shared_ptr<proxy_session> _this) override;
 };
 }
 } // namespace
