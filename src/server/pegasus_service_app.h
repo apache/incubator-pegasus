@@ -7,7 +7,6 @@
 #include <dsn/dist/replication/meta_service_app.h>
 #include <dsn/dist/replication/replication_service_app.h>
 #include "pegasus_counter_updater.h"
-#include "pegasus_perf_counter.h"
 
 namespace pegasus {
 namespace server {

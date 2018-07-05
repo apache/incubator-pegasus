@@ -5,7 +5,6 @@
 #include "pegasus_server_impl.h"
 #include "pegasus_service_app.h"
 #include "info_collector_app.h"
-#include "pegasus_perf_counter.h"
 #include "pegasus_counter_updater.h"
 
 #include <pegasus/version.h>
@@ -42,11 +41,6 @@ void dsn_app_registration_pegasus()
     service_app::register_factory<::pegasus::server::info_collector_app>("collector");
 
     pegasus::server::pegasus_server_impl::register_service();
-
-    ::dsn::tools::internal_use_only::register_component_provider(
-        "pegasus::server::pegasus_perf_counter",
-        pegasus::server::pegasus_perf_counter_factory,
-        ::dsn::PROVIDER_TYPE_MAIN);
 
     ::dsn::command_manager::instance().register_command(
         {"server-info"},
