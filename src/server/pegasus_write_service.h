@@ -40,22 +40,32 @@ public:
                      dsn::apps::multi_remove_response &resp);
 
     /// Prepare for batch write.
-    void batch_prepare();
+    void batch_prepare(int64_t decree);
 
     // NOTE: A batch write may incur a database read for consistency check of timetag.
     // (see pegasus::pegasus_value_generator::generate_value_v1 for more info about timetag)
     // To disable the consistency check, unset `verify_timetag` under `pegasus.server` section
     // in configuration.
 
-    /// NOTE that `resp` should not be moved or freed while
-    /// the batch is not committed.
-    int batch_put(const dsn::apps::update_request &update, dsn::apps::update_response &resp);
-
-    int batch_remove(const dsn::blob &key, dsn::apps::update_response &resp);
-
+    /// Add PUT op in batch.
     /// \returns 0 if success, non-0 if failure.
-    /// If the batch contains no updates, 0 is returned.
+    /// NOTE that `resp` should not be moved or freed while the batch is not committed.
+    int batch_put(int64_t decree,
+                  const dsn::apps::update_request &update,
+                  dsn::apps::update_response &resp);
+
+    /// Add REMOVE op in batch.
+    /// \returns 0 if success, non-0 if failure.
+    /// NOTE that `resp` should not be moved or freed while the batch is not committed.
+    int batch_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp);
+
+    /// Commit batch write.
+    /// \returns 0 if success, non-0 if failure.
+    /// NOTE that if the batch contains no updates, 0 is returned.
     int batch_commit(int64_t decree);
+
+    /// Abort batch write.
+    void batch_abort(int64_t decree);
 
     /// Write empty record.
     /// See this document (https://github.com/XiaoMi/pegasus/wiki/last_flushed_decree)
@@ -80,7 +90,8 @@ private:
     ::dsn::perf_counter_wrapper _pfc_remove_latency;
     ::dsn::perf_counter_wrapper _pfc_multi_remove_latency;
 
-    std::vector<::dsn::perf_counter *> _batch_perfcounters;
+    std::vector<::dsn::perf_counter *> _batch_qps_perfcounters;
+    std::vector<::dsn::perf_counter *> _batch_latency_perfcounters;
 };
 
 } // namespace server

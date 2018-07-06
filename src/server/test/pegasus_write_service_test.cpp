@@ -110,14 +110,14 @@ public:
         // of response may be changed due to capacity increase.
         std::array<dsn::apps::update_response, kv_num> responses;
         {
-            _write_svc->batch_prepare();
+            _write_svc->batch_prepare(decree);
             for (int i = 0; i < kv_num; i++) {
                 dsn::apps::update_request req;
                 req.key = key[i];
-                _write_svc->batch_put(req, responses[i]);
+                _write_svc->batch_put(decree, req, responses[i]);
             }
             for (int i = 0; i < kv_num; i++) {
-                _write_svc->batch_remove(key[i], responses[i]);
+                _write_svc->batch_remove(decree, key[i], responses[i]);
             }
             _write_svc->batch_commit(decree);
         }

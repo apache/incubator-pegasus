@@ -82,55 +82,71 @@ int pegasus_write_service::multi_remove(int64_t decree,
     return err;
 }
 
-int pegasus_write_service::batch_put(const dsn::apps::update_request &update,
-                                     dsn::apps::update_response &resp)
+void pegasus_write_service::batch_prepare(int64_t decree)
 {
-    _pfc_put_qps->increment();
-    _batch_perfcounters.push_back(_pfc_put_latency.get());
+    dassert(_batch_start_time == 0,
+            "batch_prepare and batch_commit/batch_abort must be called in pair");
 
-    return _impl->batch_put(update, resp);
+    _batch_start_time = dsn_now_ns();
 }
 
-int pegasus_write_service::batch_remove(const dsn::blob &key, dsn::apps::update_response &resp)
+int pegasus_write_service::batch_put(int64_t decree,
+                                     const dsn::apps::update_request &update,
+                                     dsn::apps::update_response &resp)
 {
-    _pfc_remove_qps->increment();
-    _batch_perfcounters.push_back(_pfc_remove_latency.get());
+    _batch_qps_perfcounters.push_back(_pfc_put_qps.get());
+    _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
 
-    return _impl->batch_remove(key, resp);
+    return _impl->batch_put(decree, update, resp);
+}
+
+int pegasus_write_service::batch_remove(int64_t decree,
+                                        const dsn::blob &key,
+                                        dsn::apps::update_response &resp)
+{
+    _batch_qps_perfcounters.push_back(_pfc_remove_qps.get());
+    _batch_latency_perfcounters.push_back(_pfc_remove_latency.get());
+
+    return _impl->batch_remove(decree, key, resp);
 }
 
 int pegasus_write_service::batch_commit(int64_t decree)
 {
-    dassert(_batch_start_time != 0, "batch_commit and batch_prepare must be called in pair");
+    dassert(_batch_start_time != 0,
+            "batch_prepare and batch_commit/batch_abort must be called in pair");
 
     int ret = _impl->batch_commit(decree);
 
     uint64_t latency = dsn_now_ns() - _batch_start_time;
-    for (dsn::perf_counter *pfc : _batch_perfcounters) {
+    for (dsn::perf_counter *pfc : _batch_qps_perfcounters)
+        pfc->increment();
+    for (dsn::perf_counter *pfc : _batch_latency_perfcounters)
         pfc->set(latency);
-    }
 
-    _batch_perfcounters.clear();
+    _batch_qps_perfcounters.clear();
+    _batch_latency_perfcounters.clear();
     _batch_start_time = 0;
 
     return ret;
 }
 
-void pegasus_write_service::batch_prepare()
+void pegasus_write_service::batch_abort(int64_t decree)
 {
-    dassert(_batch_start_time == 0, "batch_commit and batch_prepare must be called in pair");
+    dassert(_batch_start_time != 0,
+            "batch_prepare and batch_commit/batch_abort must be called in pair");
 
-    _batch_start_time = dsn_now_ns();
+    _batch_qps_perfcounters.clear();
+    _batch_latency_perfcounters.clear();
+    _batch_start_time = 0;
 }
 
 int pegasus_write_service::empty_put(int64_t decree)
 {
     std::string empty_key, empty_value;
-    int err = _impl->db_write_batch_put(empty_key, empty_value, 0);
-    if (!err) {
-        err = _impl->db_write(decree);
-    }
-    return err;
+    int err = _impl->db_write_batch_put(decree, empty_key, empty_value, 0);
+    RETURN_NOT_ZERO(err);
+
+    return _impl->db_write(decree);
 }
 
 } // namespace server

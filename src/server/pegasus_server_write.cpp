@@ -52,7 +52,7 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
 {
     int err = 0;
     {
-        _write_svc->batch_prepare();
+        _write_svc->batch_prepare(decree);
 
         for (int i = 0; i < count; ++i) {
             dassert(requests[i] != nullptr, "request[%d] is null", i);
@@ -101,8 +101,8 @@ void pegasus_server_write::request_key_check(int64_t decree, dsn_message_t m, co
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
 
-        ddebug_rocksdb("write",
-                       "decree={}, code={}, hash_key={}, sort_key={}",
+        ddebug_rocksdb("Write",
+                       "decree: {}, code: {}, hash_key: {}, sort_key: {}",
                        decree,
                        msg->local_rpc_code.to_string(),
                        utils::c_escape_string(hash_key),

@@ -44,14 +44,14 @@ private:
 
     int on_single_put_in_batch(put_rpc &rpc)
     {
-        int err = _write_svc->batch_put(rpc.request(), rpc.response());
+        int err = _write_svc->batch_put(_decree, rpc.request(), rpc.response());
         request_key_check(_decree, rpc.dsn_request(), rpc.request().key);
         return err;
     }
 
     int on_single_remove_in_batch(remove_rpc &rpc)
     {
-        int err = _write_svc->batch_remove(rpc.request(), rpc.response());
+        int err = _write_svc->batch_remove(_decree, rpc.request(), rpc.response());
         request_key_check(_decree, rpc.dsn_request(), rpc.request());
         return err;
     }
