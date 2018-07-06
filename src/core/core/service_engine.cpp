@@ -43,8 +43,8 @@
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/tool-api/command_manager.h>
-#include <dsn/tool-api/perf_counter.h>
-#include <dsn/tool-api/perf_counters.h>
+#include <dsn/perf_counter/perf_counter.h>
+#include <dsn/perf_counter/perf_counters.h>
 #include <dsn/tool_api.h>
 #include <dsn/tool/node_scoper.h>
 
@@ -255,10 +255,6 @@ void service_engine::init_before_toollets(const service_spec &spec)
     // init common providers (first half)
     _logging = factory_store<logging_provider>::create(
         spec.logging_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.dir_log.c_str());
-
-    perf_counters::instance().register_factory(
-        factory_store<perf_counter>::get_factory<perf_counter::factory>(
-            spec.perf_counter_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN));
 
     // init common for all per-node providers
     message_ex::s_local_hash =

@@ -36,7 +36,7 @@
 #pragma once
 
 #include <dsn/tool-api/task.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/utility/dlib.h>
 
 namespace dsn {

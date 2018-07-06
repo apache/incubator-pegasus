@@ -156,8 +156,6 @@ DSN_API bool
 register_component_provider(const char *name, aio_provider::factory f, ::dsn::provider_type type);
 DSN_API bool
 register_component_provider(const char *name, env_provider::factory f, ::dsn::provider_type type);
-DSN_API bool
-register_component_provider(const char *name, perf_counter::factory f, ::dsn::provider_type type);
 DSN_API bool register_component_provider(const char *name,
                                          logging_provider::factory f,
                                          ::dsn::provider_type type);

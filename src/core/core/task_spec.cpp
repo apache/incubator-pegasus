@@ -35,7 +35,7 @@
 
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/utility/singleton.h>
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/perf_counter/perf_counter.h>
 #include <dsn/tool-api/command_manager.h>
 #include <sstream>
 #include <vector>

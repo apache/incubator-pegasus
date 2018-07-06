@@ -33,15 +33,13 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "../tools/common/simple_perf_counter.h"
-#include "../tools/common/simple_perf_counter_v2_atomic.h"
-#include "../tools/common/simple_perf_counter_v2_fast.h"
-
 #include <dsn/tool_api.h>
 #include <gtest/gtest.h>
 #include <thread>
 #include <cmath>
 #include <vector>
+
+#include "core/perf_counter/perf_counter_atomic.h"
 
 using namespace dsn;
 using namespace dsn::tools;
@@ -85,7 +83,7 @@ static void perf_counter_add(perf_counter_ptr pc, const std::vector<int> &vec)
         add_threads[i]->join();
 }
 
-static void test_perf_counter(perf_counter::factory f)
+TEST(counter, perf_counter_atomic)
 {
     int ans = 0;
     std::vector<int> vec(10000, 0);
@@ -97,22 +95,26 @@ static void test_perf_counter(perf_counter::factory f)
     int sleep_interval = (int)dsn_config_get_value_uint64(
         "components.simple_perf_counter", "counter_computation_interval_seconds", 3, "period");
 
-    perf_counter_ptr counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER, "");
+    perf_counter_ptr counter = new perf_counter_number_atomic(
+        "", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER, "");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
     ddebug("%lf", counter->get_value());
 
-    counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_VOLATILE_NUMBER, "");
+    counter = new perf_counter_volatile_number_atomic(
+        "", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_VOLATILE_NUMBER, "");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
     ddebug("%lf", counter->get_value());
 
-    counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_RATE, "");
+    counter =
+        new perf_counter_rate_atomic("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_RATE, "");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
     ddebug("%lf", counter->get_value());
 
-    counter = f("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES, "");
+    counter = new perf_counter_number_percentile_atomic(
+        "", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES, "");
     std::this_thread::sleep_for(std::chrono::seconds(sleep_interval));
     for (auto &count : gen_numbers) {
         for (unsigned int i = 0; i != count; ++i)
@@ -121,16 +123,4 @@ static void test_perf_counter(perf_counter::factory f)
         for (int i = 0; i != COUNTER_PERCENTILE_COUNT; ++i)
             ddebug("%lf", counter->get_percentile((dsn_perf_counter_percentile_type_t)i));
     }
-}
-
-TEST(tools_common, simple_perf_counter) { test_perf_counter(simple_perf_counter_factory); }
-
-TEST(tools_common, simple_perf_counter_v2_atomic)
-{
-    test_perf_counter(simple_perf_counter_v2_atomic_factory);
-}
-
-TEST(tools_common, simple_perf_counter_v2_fast)
-{
-    test_perf_counter(simple_perf_counter_v2_fast_factory);
 }

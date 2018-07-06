@@ -26,9 +26,8 @@
 
 #pragma once
 
-#include <dsn/service_api_c.h>
-#include <dsn/tool-api/perf_counter.h>
-#include <dsn/tool-api/perf_counters.h>
+#include <dsn/perf_counter/perf_counter.h>
+#include <dsn/perf_counter/perf_counters.h>
 
 namespace dsn {
 

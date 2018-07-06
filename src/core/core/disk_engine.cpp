@@ -34,7 +34,7 @@
  */
 
 #include "disk_engine.h"
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/perf_counter/perf_counter.h>
 #include <dsn/tool-api/aio_provider.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/transient_memory.h>

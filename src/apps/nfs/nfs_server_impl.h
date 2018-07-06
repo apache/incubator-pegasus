@@ -34,7 +34,7 @@
  */
 #pragma once
 #include <dsn/tool-api/task_tracker.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 #include "nfs_server.h"
 #include "nfs_client_impl.h"
 

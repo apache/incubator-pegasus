@@ -68,7 +68,7 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include "shared_io_service.h"
 #include "profiler_header.h"
 #include <dsn/tool-api/command_manager.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 
 using namespace dsn::service;
 

@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include <dsn/tool-api/perf_counter.h>
 #include <dsn/utility/singleton.h>
 #include <dsn/utility/synchronize.h>
+#include <dsn/perf_counter/perf_counter.h>
 #include <map>
 #include <sstream>
 #include <queue>
@@ -68,8 +68,6 @@ public:
     // get all the existed perf counters, useful for monitor system
     void get_all_counters(/*out*/ std::vector<dsn::perf_counter_ptr> *counter_vec);
 
-    void register_factory(perf_counter::factory factory);
-
     static std::string list_counter(const std::vector<std::string> &args);
     static std::string get_counter_value(const std::vector<std::string> &args);
     static std::string get_counter_sample(const std::vector<std::string> &args);
@@ -78,6 +76,11 @@ private:
     // full_name = perf_counter::build_full_name(...);
     perf_counter_ptr get_counter(const char *full_name);
     std::string list_counter_internal(const std::vector<std::string> &args);
+    perf_counter *new_counter(const char *app,
+                              const char *section,
+                              const char *name,
+                              dsn_perf_counter_type_t type,
+                              const char *dsptr);
 
     mutable utils::rw_lock_nr _lock;
 
@@ -92,7 +95,6 @@ private:
         int user_reference;
     };
     std::map<std::string, counter_object> _counters;
-    perf_counter::factory _factory;
 };
 
 } // end namespace dsn::utils

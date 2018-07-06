@@ -4,7 +4,7 @@
 
 #include <functional>
 #include <dsn/dist/block_service.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 
 #include "meta_data.h"
 

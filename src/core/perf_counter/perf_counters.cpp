@@ -33,13 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/tool-api/perf_counter.h>
-#include <dsn/tool-api/perf_counters.h>
+#include <dsn/perf_counter/perf_counter.h>
+#include <dsn/perf_counter/perf_counters.h>
+
 #include <dsn/cpp/service_app.h>
+#include <dsn/cpp/json_helper.h>
+
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/task.h>
-#include <dsn/cpp/json_helper.h>
-#include "service_engine.h"
+
+#include "perf_counter_atomic.h"
+#include "core/core/service_engine.h"
 
 namespace dsn {
 
@@ -91,7 +95,7 @@ perf_counter_ptr perf_counters::get_global_counter(const char *app,
     if (create_if_not_exist) {
         auto it = _counters.find(full_name);
         if (it == _counters.end()) {
-            perf_counter_ptr counter = _factory(app, section, name, flags, dsptr);
+            perf_counter_ptr counter = new_counter(app, section, name, flags, dsptr);
             _counters.emplace(full_name, counter_object{counter, 1});
             return counter;
         } else {
@@ -145,10 +149,24 @@ void perf_counters::get_all_counters(std::vector<perf_counter_ptr> *counter_vec)
     }
 }
 
-void perf_counters::register_factory(perf_counter::factory factory)
+perf_counter *perf_counters::new_counter(const char *app,
+                                         const char *section,
+                                         const char *name,
+                                         dsn_perf_counter_type_t type,
+                                         const char *dsptr)
 {
-    utils::auto_write_lock l(_lock);
-    _factory = factory;
+    if (type == dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER)
+        return new perf_counter_number_atomic(app, section, name, type, dsptr);
+    else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_VOLATILE_NUMBER)
+        return new perf_counter_volatile_number_atomic(app, section, name, type, dsptr);
+    else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_RATE)
+        return new perf_counter_rate_atomic(app, section, name, type, dsptr);
+    else if (type == dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES)
+        return new perf_counter_number_percentile_atomic(app, section, name, type, dsptr);
+    else {
+        dassert(false, "invalid type(%d)", type);
+        return nullptr;
+    }
 }
 
 std::string perf_counters::list_counter(const std::vector<std::string> &args)

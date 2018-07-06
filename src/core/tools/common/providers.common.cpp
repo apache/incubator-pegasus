@@ -39,9 +39,6 @@
 #include "native_aio_provider.win.h"
 #include "native_aio_provider.posix.h"
 #include "native_aio_provider.linux.h"
-#include "simple_perf_counter.h"
-#include "simple_perf_counter_v2_atomic.h"
-#include "simple_perf_counter_v2_fast.h"
 #include "simple_task_queue.h"
 #include "network.sim.h"
 #include "simple_logger.h"
@@ -84,17 +81,6 @@ void register_common_providers()
     register_component_provider<native_posix_aio_provider>("dsn::tools::native_aio_provider");
 #endif
     register_component_provider<empty_aio_provider>("dsn::tools::empty_aio_provider");
-
-    ::dsn::tools::internal_use_only::register_component_provider(
-        "dsn::tools::simple_perf_counter", simple_perf_counter_factory, PROVIDER_TYPE_MAIN);
-    ::dsn::tools::internal_use_only::register_component_provider(
-        "dsn::tools::simple_perf_counter_v2_atomic",
-        simple_perf_counter_v2_atomic_factory,
-        PROVIDER_TYPE_MAIN);
-    ::dsn::tools::internal_use_only::register_component_provider(
-        "dsn::tools::simple_perf_counter_v2_fast",
-        simple_perf_counter_v2_fast_factory,
-        PROVIDER_TYPE_MAIN);
 }
 }
 }

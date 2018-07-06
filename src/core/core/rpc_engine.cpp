@@ -46,7 +46,7 @@
 #include "rpc_engine.h"
 #include "service_engine.h"
 #include <dsn/utility/factory_store.h>
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/perf_counter/perf_counter.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/task_queue.h>

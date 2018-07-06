@@ -36,7 +36,7 @@
 #include "../client_lib/fs_manager.h"
 #include "../client_lib/block_service_manager.h"
 #include "replica.h"
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/failure_detector_multimaster.h>
 #include <functional>
 #include <tuple>

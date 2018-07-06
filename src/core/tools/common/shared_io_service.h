@@ -35,12 +35,12 @@
 
 #pragma once
 
-#include <boost/asio.hpp>
-#include <dsn/utility/singleton.h>
 #include <thread>
 #include <memory>
 #include <vector>
-#include <dsn/tool_api.h>
+#include <boost/asio.hpp>
+#include <dsn/utility/config_api.h>
+#include <dsn/utility/singleton.h>
 
 namespace dsn {
 namespace tools {
@@ -56,7 +56,7 @@ public:
         _io_service_worker_count =
             (int)dsn_config_get_value_uint64("core",
                                              "timer_service_worker_count",
-                                             1,
+                                             2,
                                              "thread number for timer service for core itself");
         for (int i = 0; i < _io_service_worker_count; i++) {
             _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this]() {

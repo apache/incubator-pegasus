@@ -38,7 +38,7 @@
 #include <deque>
 #include <dsn/tool-api/nfs.h>
 #include <dsn/tool-api/task_tracker.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 
 namespace dsn {
 namespace service {

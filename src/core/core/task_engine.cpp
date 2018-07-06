@@ -34,7 +34,7 @@
  */
 
 #include "task_engine.h"
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/perf_counter/perf_counter.h>
 #include <dsn/utility/factory_store.h>
 
 using namespace dsn::utils;

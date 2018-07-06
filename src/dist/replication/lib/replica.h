@@ -44,7 +44,7 @@
 
 #include <dsn/tool-api/uniq_timestamp_us.h>
 #include <dsn/cpp/serverlet.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>
 
 #include "dist/replication/client_lib/replication_common.h"

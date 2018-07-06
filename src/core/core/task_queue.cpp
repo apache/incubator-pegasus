@@ -35,7 +35,7 @@
 
 #include <dsn/tool-api/task_queue.h>
 #include "task_engine.h"
-#include <dsn/tool-api/perf_counters.h>
+#include <dsn/perf_counter/perf_counters.h>
 #include <dsn/tool-api/network.h>
 #include <cstdio>
 #include "rpc_engine.h"

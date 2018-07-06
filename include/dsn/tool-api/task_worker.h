@@ -39,7 +39,7 @@
 #include <dsn/utility/extensible_object.h>
 #include <dsn/utility/synchronize.h>
 #include <dsn/utility/dlib.h>
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/perf_counter/perf_counter.h>
 #include <thread>
 
 namespace dsn {

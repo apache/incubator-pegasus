@@ -38,7 +38,6 @@
 #include <dsn/utility/enum_helper.h>
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/utility/dlib.h>
-#include <dsn/service_api_c.h>
 #include <memory>
 #include <sstream>
 #include <vector>
@@ -89,20 +88,6 @@ typedef ref_ptr<perf_counter> perf_counter_ptr;
 
 class perf_counter : public ref_counter
 {
-public:
-    template <typename T>
-    static perf_counter *create(const char *app,
-                                const char *section,
-                                const char *name,
-                                dsn_perf_counter_type_t type,
-                                const char *dsptr)
-    {
-        return new T(app, section, name, type, dsptr);
-    }
-
-    typedef perf_counter *(*factory)(
-        const char *, const char *, const char *, dsn_perf_counter_type_t, const char *);
-
 public:
     perf_counter(const char *app,
                  const char *section,

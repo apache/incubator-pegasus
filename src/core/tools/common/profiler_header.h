@@ -38,7 +38,7 @@
 
 #pragma once
 #include <iomanip>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 
 namespace dsn {
 namespace tools {

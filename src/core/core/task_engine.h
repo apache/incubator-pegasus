@@ -38,7 +38,7 @@
 #include "service_engine.h"
 #include <dsn/tool-api/task_queue.h>
 #include <dsn/tool-api/admission_controller.h>
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/perf_counter/perf_counter.h>
 #include <dsn/tool-api/task_worker.h>
 #include <dsn/tool-api/timer_service.h>
 
