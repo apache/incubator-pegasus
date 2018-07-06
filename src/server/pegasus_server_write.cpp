@@ -57,6 +57,10 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
         for (int i = 0; i < count; ++i) {
             dassert(requests[i] != nullptr, "request[%d] is null", i);
 
+            // Make sure all writes are batched even if they are failed,
+            // since we need to record the total qps and rpc latencies,
+            // and respond for all RPCs regardless of their result.
+
             int local_err = 0;
             dsn::task_code rpc_code(dsn_msg_task_code(requests[i]));
             if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
@@ -84,14 +88,7 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
         if (err == 0) {
             err = _write_svc->batch_commit(decree);
         } else {
-            _write_svc->batch_abort(decree);
-
-            for (put_rpc &r : _put_rpc_batch) {
-                r.response().error = err;
-            }
-            for (remove_rpc &r : _remove_rpc_batch) {
-                r.response().error = err;
-            }
+            _write_svc->batch_abort(decree, err);
         }
     }
 

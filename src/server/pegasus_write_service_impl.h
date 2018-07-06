@@ -35,7 +35,6 @@ public:
         resp.server = _primary_address;
 
         if (update.kvs.empty()) {
-            // invalid argument
             derror_replica("invalid argument for multi_put: decree = {}, error = {}",
                            decree,
                            "request.kvs is empty");
@@ -67,7 +66,6 @@ public:
         resp.server = _primary_address;
 
         if (update.sort_keys.empty()) {
-            // invalid argument
             derror_replica("invalid argument for multi_remove: decree = {}, error = {}",
                            decree,
                            "request.sort_keys is empty");
@@ -108,28 +106,11 @@ public:
     int batch_commit(int64_t decree)
     {
         int err = db_write(decree);
-
-        dsn::apps::update_response resp;
-        resp.error = err;
-        resp.app_id = get_gpid().get_app_id();
-        resp.partition_index = get_gpid().get_partition_index();
-        resp.decree = decree;
-        resp.server = _primary_address;
-        for (dsn::apps::update_response *uresp : _update_responses) {
-            *uresp = resp;
-        }
-
-        _update_responses.clear();
-        _batch.Clear();
-
+        clear_up_batch_states(decree, err);
         return err;
     }
 
-    void batch_abort(int64_t decree)
-    {
-        _update_responses.clear();
-        _batch.Clear();
-    }
+    void batch_abort(int64_t decree, int err) { clear_up_batch_states(decree, err); }
 
     int db_write_batch_put(int64_t decree,
                            dsn::string_view raw_key,
@@ -192,6 +173,21 @@ private:
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, sort_key);
         return raw_key;
+    }
+
+    void clear_up_batch_states(int64_t decree, int err)
+    {
+        dsn::apps::update_response resp;
+        resp.error = err;
+        resp.app_id = get_gpid().get_app_id();
+        resp.partition_index = get_gpid().get_partition_index();
+        resp.decree = decree;
+        resp.server = _primary_address;
+        for (dsn::apps::update_response *uresp : _update_responses) {
+            *uresp = resp;
+        }
+        _update_responses.clear();
+        _batch.Clear();
     }
 
 private:

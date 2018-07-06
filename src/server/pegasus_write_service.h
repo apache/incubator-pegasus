@@ -65,12 +65,15 @@ public:
     int batch_commit(int64_t decree);
 
     /// Abort batch write.
-    void batch_abort(int64_t decree);
+    void batch_abort(int64_t decree, int err);
 
     /// Write empty record.
     /// See this document (https://github.com/XiaoMi/pegasus/wiki/last_flushed_decree)
     /// to know why we must have empty write.
     int empty_put(int64_t decree);
+
+private:
+    void clear_up_batch_states();
 
 private:
     friend class pegasus_write_service_test;
@@ -90,8 +93,11 @@ private:
     ::dsn::perf_counter_wrapper _pfc_remove_latency;
     ::dsn::perf_counter_wrapper _pfc_multi_remove_latency;
 
+    // Records all requests.
     std::vector<::dsn::perf_counter *> _batch_qps_perfcounters;
     std::vector<::dsn::perf_counter *> _batch_latency_perfcounters;
+
+    // TODO(wutao1): add perf counters for failed rpc.
 };
 
 } // namespace server

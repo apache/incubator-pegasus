@@ -33,8 +33,9 @@ public:
 
         // alarm for empty request
         request.hash_key = dsn::blob(hash_key.data(), 0, hash_key.size());
-        _write_svc->multi_put(decree, request, response);
+        int err = _write_svc->multi_put(decree, request, response);
         ASSERT_EQ(response.error, rocksdb::Status::kInvalidArgument);
+        ASSERT_EQ(err, 0);
 
         constexpr int kv_num = 100;
         std::string sort_key[kv_num];
@@ -68,8 +69,9 @@ public:
 
         // alarm for empty request
         request.hash_key = dsn::blob(hash_key.data(), 0, hash_key.size());
-        _write_svc->multi_remove(decree, request, response);
+        int err = _write_svc->multi_remove(decree, request, response);
         ASSERT_EQ(response.error, rocksdb::Status::kInvalidArgument);
+        ASSERT_EQ(err, 0);
 
         constexpr int kv_num = 100;
         std::string sort_key[kv_num];

@@ -116,27 +116,23 @@ int pegasus_write_service::batch_commit(int64_t decree)
             "batch_prepare and batch_commit/batch_abort must be called in pair");
 
     int ret = _impl->batch_commit(decree);
-
-    uint64_t latency = dsn_now_ns() - _batch_start_time;
-    for (dsn::perf_counter *pfc : _batch_qps_perfcounters)
-        pfc->increment();
-    for (dsn::perf_counter *pfc : _batch_latency_perfcounters)
-        pfc->set(latency);
-
-    _batch_qps_perfcounters.clear();
-    _batch_latency_perfcounters.clear();
-    _batch_start_time = 0;
-
+    clear_up_batch_states();
     return ret;
 }
 
-void pegasus_write_service::batch_abort(int64_t decree)
+void pegasus_write_service::batch_abort(int64_t decree, int err)
 {
     dassert(_batch_start_time != 0,
             "batch_prepare and batch_commit/batch_abort must be called in pair");
+    dassert(err, "must abort on non-zero err");
 
-    _impl->batch_abort(decree);
+    _impl->batch_abort(decree, err);
 
+    clear_up_batch_states();
+}
+
+void pegasus_write_service::clear_up_batch_states()
+{
     uint64_t latency = dsn_now_ns() - _batch_start_time;
     for (dsn::perf_counter *pfc : _batch_qps_perfcounters)
         pfc->increment();
