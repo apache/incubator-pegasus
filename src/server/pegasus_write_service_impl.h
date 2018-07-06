@@ -135,7 +135,7 @@ public:
         rocksdb::Status s = _batch.Put(skey_parts, svalue);
         if (dsn_unlikely(!s.ok())) {
             ::dsn::blob hash_key, sort_key;
-            pegasus_restore_key(utils::to_blob(raw_key), hash_key, sort_key);
+            pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
             derror_rocksdb("WriteBatchPut",
                            s.ToString(),
                            "decree: {}, hash_key: {}, sort_key: {}, expire_ts: {}",
@@ -152,7 +152,7 @@ public:
         rocksdb::Status s = _batch.Delete(utils::to_rocksdb_slice(raw_key));
         if (dsn_unlikely(!s.ok())) {
             ::dsn::blob hash_key, sort_key;
-            pegasus_restore_key(utils::to_blob(raw_key), hash_key, sort_key);
+            pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
             derror_rocksdb("WriteBatchDelete",
                            s.ToString(),
                            "decree: {}, hash_key: {}, sort_key: {}",
