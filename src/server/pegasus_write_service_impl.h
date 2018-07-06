@@ -132,9 +132,8 @@ public:
         if (dsn_unlikely(!s.ok())) {
             derror_rocksdb("WriteBatchPut",
                            s.ToString(),
-                           "raw_key: {}, value: {}, expire_sec: {}",
-                           raw_key,
-                           value,
+                           "raw_key: {}, expire_sec: {}",
+                           utils::c_escape_string(raw_key),
                            expire_sec);
         }
         return s.code();
@@ -144,7 +143,8 @@ public:
     {
         rocksdb::Status s = _batch.Delete(utils::to_rocksdb_slice(raw_key));
         if (dsn_unlikely(!s.ok())) {
-            derror_rocksdb("WriteBatchDelete", s.ToString(), "raw_key: {}", raw_key);
+            derror_rocksdb(
+                "WriteBatchDelete", s.ToString(), "raw_key: {}", utils::c_escape_string(raw_key));
         }
         return s.code();
     }
