@@ -57,14 +57,15 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
         for (int i = 0; i < count; ++i) {
             dassert(requests[i] != nullptr, "request[%d] is null", i);
 
+            int local_err = 0;
             dsn::task_code rpc_code(dsn_msg_task_code(requests[i]));
             if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
                 auto rpc = put_rpc::auto_reply(requests[i]);
-                err = on_single_put_in_batch(rpc);
+                local_err = on_single_put_in_batch(rpc);
                 _put_rpc_batch.emplace_back(std::move(rpc));
             } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
                 auto rpc = remove_rpc::auto_reply(requests[i]);
-                err = on_single_remove_in_batch(rpc);
+                local_err = on_single_remove_in_batch(rpc);
                 _remove_rpc_batch.emplace_back(std::move(rpc));
             } else {
                 if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT ||
@@ -74,10 +75,24 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
                     dfatal("rpc code not handled: %s", rpc_code.to_string());
                 }
             }
-            RETURN_NOT_ZERO(err);
+
+            if (!err && local_err) {
+                err = local_err;
+            }
         }
 
-        err = _write_svc->batch_commit(decree);
+        if (err == 0) {
+            err = _write_svc->batch_commit(decree);
+        } else {
+            _write_svc->batch_abort(decree);
+
+            for (put_rpc &r : _put_rpc_batch) {
+                r.response().error = err;
+            }
+            for (remove_rpc &r : _remove_rpc_batch) {
+                r.response().error = err;
+            }
+        }
     }
 
     // reply the batched RPCs

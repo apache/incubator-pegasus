@@ -135,6 +135,14 @@ void pegasus_write_service::batch_abort(int64_t decree)
     dassert(_batch_start_time != 0,
             "batch_prepare and batch_commit/batch_abort must be called in pair");
 
+    _impl->batch_abort(decree);
+
+    uint64_t latency = dsn_now_ns() - _batch_start_time;
+    for (dsn::perf_counter *pfc : _batch_qps_perfcounters)
+        pfc->increment();
+    for (dsn::perf_counter *pfc : _batch_latency_perfcounters)
+        pfc->set(latency);
+
     _batch_qps_perfcounters.clear();
     _batch_latency_perfcounters.clear();
     _batch_start_time = 0;

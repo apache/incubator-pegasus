@@ -115,12 +115,20 @@ public:
         resp.partition_index = get_gpid().get_partition_index();
         resp.decree = decree;
         resp.server = _primary_address;
-
         for (dsn::apps::update_response *uresp : _update_responses) {
             *uresp = resp;
         }
+
         _update_responses.clear();
+        _batch.Clear();
+
         return err;
+    }
+
+    void batch_abort(int64_t decree)
+    {
+        _update_responses.clear();
+        _batch.Clear();
     }
 
     int db_write_batch_put(int64_t decree,
@@ -175,7 +183,6 @@ public:
         if (!status.ok()) {
             derror_rocksdb("Write", status.ToString(), "decree: {}", decree);
         }
-        _batch.Clear();
         return status.code();
     }
 
