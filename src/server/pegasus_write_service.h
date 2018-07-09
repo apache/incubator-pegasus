@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>
 
 #include "base/pegasus_value_schema.h"

@@ -7,7 +7,7 @@
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/dist/replication.h>
 #include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 
 #include <stdlib.h>
 #include <signal.h>

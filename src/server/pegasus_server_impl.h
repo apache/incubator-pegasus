@@ -7,7 +7,7 @@
 #include <vector>
 #include <rocksdb/db.h>
 #include <rocksdb/listener.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <rrdb/rrdb_types.h>
 #include <rrdb/rrdb.server.h>

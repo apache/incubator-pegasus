@@ -6,7 +6,7 @@
 
 #include <rocksdb/db.h>
 #include <rocksdb/listener.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 
 namespace pegasus {
 namespace server {
