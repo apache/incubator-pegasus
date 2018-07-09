@@ -173,6 +173,9 @@ static command_executor commands[] = {
         data_operations,
     },
     {
+        "incr", "increment value of a key", "<hash_key> <sort_key> [increment]", data_operations,
+    },
+    {
         "exist", "check value exist", "<hash_key> <sort_key>", data_operations,
     },
     {

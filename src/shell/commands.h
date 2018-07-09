@@ -1273,6 +1273,39 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
     return true;
 }
 
+inline bool incr(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc != 3 && args.argc != 4) {
+        return false;
+    }
+
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string sort_key = sds_to_string(args.argv[2]);
+    int64_t increment = 1;
+    if (args.argc == 4) {
+        if (!pegasus::utils::buf2int64(args.argv[3], strlen(args.argv[3]), increment)) {
+            fprintf(stderr, "ERROR: invalid increment param\n");
+            return false;
+        }
+    }
+
+    int64_t new_value;
+    pegasus::pegasus_client::internal_info info;
+    int ret = sc->pg_client->incr(hash_key, sort_key, increment, new_value, sc->timeout_ms, &info);
+    if (ret != pegasus::PERR_OK) {
+        fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
+    } else {
+        fprintf(stderr, "%" PRId64 "\n", new_value);
+    }
+
+    fprintf(stderr, "\n");
+    fprintf(stderr, "app_id          : %d\n", info.app_id);
+    fprintf(stderr, "partition_index : %d\n", info.partition_index);
+    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fprintf(stderr, "server          : %s\n", info.server.c_str());
+    return true;
+}
+
 inline bool get_ttl(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc != 3) {
@@ -2373,6 +2406,7 @@ inline bool data_operations(command_executor *e, shell_context *sc, arguments ar
         {"del", delete_value},
         {"multi_del", multi_del_value},
         {"multi_del_range", multi_del_range},
+        {"incr", incr},
         {"exist", exist},
         {"count", sortkey_count},
         {"ttl", get_ttl},
@@ -2456,7 +2490,6 @@ inline bool sst_dump(command_executor *e, shell_context *sc, arguments args)
 }
 
 static const char *INDENT = "  ";
-DEFINE_TASK_CODE_RPC(RPC_RRDB_RRDB_INCR, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 inline bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
@@ -2563,7 +2596,7 @@ inline bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
                            << "\" : \"" << pegasus::utils::c_escape_string(sort_key, sc->escape_all)
                            << "\"" << std::endl;
                     }
-                } else if (msg->local_rpc_code == RPC_RRDB_RRDB_INCR) {
+                } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_INCR) {
                     ::dsn::apps::incr_request update;
                     ::dsn::unmarshall(request, update);
                     std::string hash_key, sort_key;
@@ -3181,10 +3214,10 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     out << std::setw(w) << std::right << "GET" << std::setw(w) << std::right << "MULTI_GET"
         << std::setw(w) << std::right << "PUT" << std::setw(w) << std::right << "MULTI_PUT"
         << std::setw(w) << std::right << "DEL" << std::setw(w) << std::right << "MULTI_DEL"
-        << std::setw(w) << std::right << "SCAN" << std::setw(w) << std::right << "expired"
-        << std::setw(w) << std::right << "filtered" << std::setw(w) << std::right << "abnormal"
-        << std::setw(w) << std::right << "storage_mb" << std::setw(w) << std::right << "file_count"
-        << std::endl;
+        << std::setw(w) << std::right << "INCR" << std::setw(w) << std::right << "SCAN"
+        << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
+        << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "storage_mb"
+        << std::setw(w) << std::right << "file_count" << std::endl;
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
     for (int i = 0; i < rows.size() - 1; ++i) {
@@ -3195,6 +3228,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.multi_put_qps += row.multi_put_qps;
         sum.remove_qps += row.remove_qps;
         sum.multi_remove_qps += row.multi_remove_qps;
+        sum.incr_qps += row.incr_qps;
         sum.scan_qps += row.scan_qps;
         sum.recent_expire_count += row.recent_expire_count;
         sum.recent_filter_count += row.recent_filter_count;
@@ -3218,6 +3252,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         PRINT_QPS(multi_put_qps);
         PRINT_QPS(remove_qps);
         PRINT_QPS(multi_remove_qps);
+        PRINT_QPS(incr_qps);
         PRINT_QPS(scan_qps);
         out << std::setw(w) << std::right << (int64_t)row.recent_expire_count << std::setw(w)
             << std::right << (int64_t)row.recent_filter_count << std::setw(w) << std::right

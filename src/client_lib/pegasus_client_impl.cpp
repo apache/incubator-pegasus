@@ -757,6 +757,73 @@ void pegasus_client_impl::async_multi_del(const std::string &hash_key,
                           partition_hash);
 }
 
+int pegasus_client_impl::incr(const std::string &hash_key,
+                              const std::string &sort_key,
+                              int64_t increment,
+                              int64_t &new_value,
+                              int timeout_milliseconds,
+                              internal_info *info)
+{
+    ::dsn::utils::notify_event op_completed;
+    int ret = -1;
+    auto callback = [&](int err, int64_t _new_value, internal_info &&_info) {
+        ret = err;
+        new_value = _new_value;
+        if (info != nullptr)
+            (*info) = std::move(_info);
+        op_completed.notify();
+    };
+    async_incr(hash_key, sort_key, increment, std::move(callback), timeout_milliseconds);
+    op_completed.wait();
+    return ret;
+}
+
+void pegasus_client_impl::async_incr(const std::string &hash_key,
+                                     const std::string &sort_key,
+                                     int64_t increment,
+                                     async_incr_callback_t &&callback,
+                                     int timeout_milliseconds)
+{
+    // check params
+    if (hash_key.size() >= UINT16_MAX) {
+        derror("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
+               (int)hash_key.size());
+        if (callback != nullptr)
+            callback(PERR_INVALID_HASH_KEY, 0, internal_info());
+        return;
+    }
+
+    ::dsn::apps::incr_request req;
+    pegasus_generate_key(req.key, hash_key, sort_key);
+    req.increment = increment;
+    auto partition_hash = pegasus_key_hash(req.key);
+
+    auto new_callback = [user_callback = std::move(callback)](
+        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+    {
+        if (user_callback == nullptr) {
+            return;
+        }
+        ::dsn::apps::incr_response response;
+        internal_info info;
+        if (err == ::dsn::ERR_OK) {
+            ::dsn::unmarshall(resp, response);
+            info.app_id = response.app_id;
+            info.partition_index = response.partition_index;
+            info.decree = response.decree;
+            info.server = response.server;
+        }
+        int ret =
+            get_client_error(err == ERR_OK ? get_rocksdb_server_error(response.error) : int(err));
+        user_callback(ret, response.new_value, std::move(info));
+    };
+    _client->incr(req,
+                  std::move(new_callback),
+                  std::chrono::milliseconds(timeout_milliseconds),
+                  0,
+                  partition_hash);
+}
+
 int pegasus_client_impl::ttl(const std::string &hash_key,
                              const std::string &sort_key,
                              int &ttl_seconds,
@@ -964,6 +1031,7 @@ const char *pegasus_client_impl::get_error_string(int error_code) const
     _server_error_to_client[::dsn::ERR_OBJECT_NOT_FOUND] = PERR_OBJECT_NOT_FOUND;
     _server_error_to_client[::dsn::ERR_NETWORK_FAILURE] = PERR_NETWORK_FAILURE;
     _server_error_to_client[::dsn::ERR_HANDLER_NOT_FOUND] = PERR_HANDLER_NOT_FOUND;
+    _server_error_to_client[::dsn::ERR_OPERATION_DISABLED] = PERR_OPERATION_DISABLED;
 
     _server_error_to_client[::dsn::ERR_APP_NOT_EXIST] = PERR_APP_NOT_EXIST;
     _server_error_to_client[::dsn::ERR_APP_EXIST] = PERR_APP_EXIST;

@@ -2185,6 +2185,206 @@ void incr_request::printTo(std::ostream &out) const
     out << ")";
 }
 
+incr_response::~incr_response() throw() {}
+
+void incr_response::__set_error(const int32_t val) { this->error = val; }
+
+void incr_response::__set_new_value(const int64_t val) { this->new_value = val; }
+
+void incr_response::__set_app_id(const int32_t val) { this->app_id = val; }
+
+void incr_response::__set_partition_index(const int32_t val) { this->partition_index = val; }
+
+void incr_response::__set_decree(const int64_t val) { this->decree = val; }
+
+void incr_response::__set_server(const std::string &val) { this->server = val; }
+
+uint32_t incr_response::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                xfer += iprot->readI32(this->error);
+                this->__isset.error = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->new_value);
+                this->__isset.new_value = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 3:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                xfer += iprot->readI32(this->app_id);
+                this->__isset.app_id = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 4:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                xfer += iprot->readI32(this->partition_index);
+                this->__isset.partition_index = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 5:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->decree);
+                this->__isset.decree = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 6:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->server);
+                this->__isset.server = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t incr_response::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("incr_response");
+
+    xfer += oprot->writeFieldBegin("error", ::apache::thrift::protocol::T_I32, 1);
+    xfer += oprot->writeI32(this->error);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("new_value", ::apache::thrift::protocol::T_I64, 2);
+    xfer += oprot->writeI64(this->new_value);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("app_id", ::apache::thrift::protocol::T_I32, 3);
+    xfer += oprot->writeI32(this->app_id);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("partition_index", ::apache::thrift::protocol::T_I32, 4);
+    xfer += oprot->writeI32(this->partition_index);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("decree", ::apache::thrift::protocol::T_I64, 5);
+    xfer += oprot->writeI64(this->decree);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("server", ::apache::thrift::protocol::T_STRING, 6);
+    xfer += oprot->writeString(this->server);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(incr_response &a, incr_response &b)
+{
+    using ::std::swap;
+    swap(a.error, b.error);
+    swap(a.new_value, b.new_value);
+    swap(a.app_id, b.app_id);
+    swap(a.partition_index, b.partition_index);
+    swap(a.decree, b.decree);
+    swap(a.server, b.server);
+    swap(a.__isset, b.__isset);
+}
+
+incr_response::incr_response(const incr_response &other73)
+{
+    error = other73.error;
+    new_value = other73.new_value;
+    app_id = other73.app_id;
+    partition_index = other73.partition_index;
+    decree = other73.decree;
+    server = other73.server;
+    __isset = other73.__isset;
+}
+incr_response::incr_response(incr_response &&other74)
+{
+    error = std::move(other74.error);
+    new_value = std::move(other74.new_value);
+    app_id = std::move(other74.app_id);
+    partition_index = std::move(other74.partition_index);
+    decree = std::move(other74.decree);
+    server = std::move(other74.server);
+    __isset = std::move(other74.__isset);
+}
+incr_response &incr_response::operator=(const incr_response &other75)
+{
+    error = other75.error;
+    new_value = other75.new_value;
+    app_id = other75.app_id;
+    partition_index = other75.partition_index;
+    decree = other75.decree;
+    server = other75.server;
+    __isset = other75.__isset;
+    return *this;
+}
+incr_response &incr_response::operator=(incr_response &&other76)
+{
+    error = std::move(other76.error);
+    new_value = std::move(other76.new_value);
+    app_id = std::move(other76.app_id);
+    partition_index = std::move(other76.partition_index);
+    decree = std::move(other76.decree);
+    server = std::move(other76.server);
+    __isset = std::move(other76.__isset);
+    return *this;
+}
+void incr_response::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "incr_response(";
+    out << "error=" << to_string(error);
+    out << ", "
+        << "new_value=" << to_string(new_value);
+    out << ", "
+        << "app_id=" << to_string(app_id);
+    out << ", "
+        << "partition_index=" << to_string(partition_index);
+    out << ", "
+        << "decree=" << to_string(decree);
+    out << ", "
+        << "server=" << to_string(server);
+    out << ")";
+}
+
 get_scanner_request::~get_scanner_request() throw() {}
 
 void get_scanner_request::__set_start_key(const ::dsn::blob &val) { this->start_key = val; }
@@ -2288,9 +2488,9 @@ uint32_t get_scanner_request::read(::apache::thrift::protocol::TProtocol *iprot)
             break;
         case 7:
             if (ftype == ::apache::thrift::protocol::T_I32) {
-                int32_t ecast73;
-                xfer += iprot->readI32(ecast73);
-                this->hash_key_filter_type = (filter_type::type)ecast73;
+                int32_t ecast77;
+                xfer += iprot->readI32(ecast77);
+                this->hash_key_filter_type = (filter_type::type)ecast77;
                 this->__isset.hash_key_filter_type = true;
             } else {
                 xfer += iprot->skip(ftype);
@@ -2306,9 +2506,9 @@ uint32_t get_scanner_request::read(::apache::thrift::protocol::TProtocol *iprot)
             break;
         case 9:
             if (ftype == ::apache::thrift::protocol::T_I32) {
-                int32_t ecast74;
-                xfer += iprot->readI32(ecast74);
-                this->sort_key_filter_type = (filter_type::type)ecast74;
+                int32_t ecast78;
+                xfer += iprot->readI32(ecast78);
+                this->sort_key_filter_type = (filter_type::type)ecast78;
                 this->__isset.sort_key_filter_type = true;
             } else {
                 xfer += iprot->skip(ftype);
@@ -2403,62 +2603,62 @@ void swap(get_scanner_request &a, get_scanner_request &b)
     swap(a.__isset, b.__isset);
 }
 
-get_scanner_request::get_scanner_request(const get_scanner_request &other75)
+get_scanner_request::get_scanner_request(const get_scanner_request &other79)
 {
-    start_key = other75.start_key;
-    stop_key = other75.stop_key;
-    start_inclusive = other75.start_inclusive;
-    stop_inclusive = other75.stop_inclusive;
-    batch_size = other75.batch_size;
-    no_value = other75.no_value;
-    hash_key_filter_type = other75.hash_key_filter_type;
-    hash_key_filter_pattern = other75.hash_key_filter_pattern;
-    sort_key_filter_type = other75.sort_key_filter_type;
-    sort_key_filter_pattern = other75.sort_key_filter_pattern;
-    __isset = other75.__isset;
+    start_key = other79.start_key;
+    stop_key = other79.stop_key;
+    start_inclusive = other79.start_inclusive;
+    stop_inclusive = other79.stop_inclusive;
+    batch_size = other79.batch_size;
+    no_value = other79.no_value;
+    hash_key_filter_type = other79.hash_key_filter_type;
+    hash_key_filter_pattern = other79.hash_key_filter_pattern;
+    sort_key_filter_type = other79.sort_key_filter_type;
+    sort_key_filter_pattern = other79.sort_key_filter_pattern;
+    __isset = other79.__isset;
 }
-get_scanner_request::get_scanner_request(get_scanner_request &&other76)
+get_scanner_request::get_scanner_request(get_scanner_request &&other80)
 {
-    start_key = std::move(other76.start_key);
-    stop_key = std::move(other76.stop_key);
-    start_inclusive = std::move(other76.start_inclusive);
-    stop_inclusive = std::move(other76.stop_inclusive);
-    batch_size = std::move(other76.batch_size);
-    no_value = std::move(other76.no_value);
-    hash_key_filter_type = std::move(other76.hash_key_filter_type);
-    hash_key_filter_pattern = std::move(other76.hash_key_filter_pattern);
-    sort_key_filter_type = std::move(other76.sort_key_filter_type);
-    sort_key_filter_pattern = std::move(other76.sort_key_filter_pattern);
-    __isset = std::move(other76.__isset);
+    start_key = std::move(other80.start_key);
+    stop_key = std::move(other80.stop_key);
+    start_inclusive = std::move(other80.start_inclusive);
+    stop_inclusive = std::move(other80.stop_inclusive);
+    batch_size = std::move(other80.batch_size);
+    no_value = std::move(other80.no_value);
+    hash_key_filter_type = std::move(other80.hash_key_filter_type);
+    hash_key_filter_pattern = std::move(other80.hash_key_filter_pattern);
+    sort_key_filter_type = std::move(other80.sort_key_filter_type);
+    sort_key_filter_pattern = std::move(other80.sort_key_filter_pattern);
+    __isset = std::move(other80.__isset);
 }
-get_scanner_request &get_scanner_request::operator=(const get_scanner_request &other77)
+get_scanner_request &get_scanner_request::operator=(const get_scanner_request &other81)
 {
-    start_key = other77.start_key;
-    stop_key = other77.stop_key;
-    start_inclusive = other77.start_inclusive;
-    stop_inclusive = other77.stop_inclusive;
-    batch_size = other77.batch_size;
-    no_value = other77.no_value;
-    hash_key_filter_type = other77.hash_key_filter_type;
-    hash_key_filter_pattern = other77.hash_key_filter_pattern;
-    sort_key_filter_type = other77.sort_key_filter_type;
-    sort_key_filter_pattern = other77.sort_key_filter_pattern;
-    __isset = other77.__isset;
+    start_key = other81.start_key;
+    stop_key = other81.stop_key;
+    start_inclusive = other81.start_inclusive;
+    stop_inclusive = other81.stop_inclusive;
+    batch_size = other81.batch_size;
+    no_value = other81.no_value;
+    hash_key_filter_type = other81.hash_key_filter_type;
+    hash_key_filter_pattern = other81.hash_key_filter_pattern;
+    sort_key_filter_type = other81.sort_key_filter_type;
+    sort_key_filter_pattern = other81.sort_key_filter_pattern;
+    __isset = other81.__isset;
     return *this;
 }
-get_scanner_request &get_scanner_request::operator=(get_scanner_request &&other78)
+get_scanner_request &get_scanner_request::operator=(get_scanner_request &&other82)
 {
-    start_key = std::move(other78.start_key);
-    stop_key = std::move(other78.stop_key);
-    start_inclusive = std::move(other78.start_inclusive);
-    stop_inclusive = std::move(other78.stop_inclusive);
-    batch_size = std::move(other78.batch_size);
-    no_value = std::move(other78.no_value);
-    hash_key_filter_type = std::move(other78.hash_key_filter_type);
-    hash_key_filter_pattern = std::move(other78.hash_key_filter_pattern);
-    sort_key_filter_type = std::move(other78.sort_key_filter_type);
-    sort_key_filter_pattern = std::move(other78.sort_key_filter_pattern);
-    __isset = std::move(other78.__isset);
+    start_key = std::move(other82.start_key);
+    stop_key = std::move(other82.stop_key);
+    start_inclusive = std::move(other82.start_inclusive);
+    stop_inclusive = std::move(other82.stop_inclusive);
+    batch_size = std::move(other82.batch_size);
+    no_value = std::move(other82.no_value);
+    hash_key_filter_type = std::move(other82.hash_key_filter_type);
+    hash_key_filter_pattern = std::move(other82.hash_key_filter_pattern);
+    sort_key_filter_type = std::move(other82.sort_key_filter_type);
+    sort_key_filter_pattern = std::move(other82.sort_key_filter_pattern);
+    __isset = std::move(other82.__isset);
     return *this;
 }
 void get_scanner_request::printTo(std::ostream &out) const
@@ -2552,26 +2752,26 @@ void swap(scan_request &a, scan_request &b)
     swap(a.__isset, b.__isset);
 }
 
-scan_request::scan_request(const scan_request &other79)
+scan_request::scan_request(const scan_request &other83)
 {
-    context_id = other79.context_id;
-    __isset = other79.__isset;
+    context_id = other83.context_id;
+    __isset = other83.__isset;
 }
-scan_request::scan_request(scan_request &&other80)
+scan_request::scan_request(scan_request &&other84)
 {
-    context_id = std::move(other80.context_id);
-    __isset = std::move(other80.__isset);
+    context_id = std::move(other84.context_id);
+    __isset = std::move(other84.__isset);
 }
-scan_request &scan_request::operator=(const scan_request &other81)
+scan_request &scan_request::operator=(const scan_request &other85)
 {
-    context_id = other81.context_id;
-    __isset = other81.__isset;
+    context_id = other85.context_id;
+    __isset = other85.__isset;
     return *this;
 }
-scan_request &scan_request::operator=(scan_request &&other82)
+scan_request &scan_request::operator=(scan_request &&other86)
 {
-    context_id = std::move(other82.context_id);
-    __isset = std::move(other82.__isset);
+    context_id = std::move(other86.context_id);
+    __isset = std::move(other86.__isset);
     return *this;
 }
 void scan_request::printTo(std::ostream &out) const
@@ -2627,13 +2827,13 @@ uint32_t scan_response::read(::apache::thrift::protocol::TProtocol *iprot)
             if (ftype == ::apache::thrift::protocol::T_LIST) {
                 {
                     this->kvs.clear();
-                    uint32_t _size83;
-                    ::apache::thrift::protocol::TType _etype86;
-                    xfer += iprot->readListBegin(_etype86, _size83);
-                    this->kvs.resize(_size83);
-                    uint32_t _i87;
-                    for (_i87 = 0; _i87 < _size83; ++_i87) {
-                        xfer += this->kvs[_i87].read(iprot);
+                    uint32_t _size87;
+                    ::apache::thrift::protocol::TType _etype90;
+                    xfer += iprot->readListBegin(_etype90, _size87);
+                    this->kvs.resize(_size87);
+                    uint32_t _i91;
+                    for (_i91 = 0; _i91 < _size87; ++_i91) {
+                        xfer += this->kvs[_i91].read(iprot);
                     }
                     xfer += iprot->readListEnd();
                 }
@@ -2700,9 +2900,9 @@ uint32_t scan_response::write(::apache::thrift::protocol::TProtocol *oprot) cons
     {
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
                                       static_cast<uint32_t>(this->kvs.size()));
-        std::vector<key_value>::const_iterator _iter88;
-        for (_iter88 = this->kvs.begin(); _iter88 != this->kvs.end(); ++_iter88) {
-            xfer += (*_iter88).write(oprot);
+        std::vector<key_value>::const_iterator _iter92;
+        for (_iter92 = this->kvs.begin(); _iter92 != this->kvs.end(); ++_iter92) {
+            xfer += (*_iter92).write(oprot);
         }
         xfer += oprot->writeListEnd();
     }
@@ -2741,46 +2941,46 @@ void swap(scan_response &a, scan_response &b)
     swap(a.__isset, b.__isset);
 }
 
-scan_response::scan_response(const scan_response &other89)
+scan_response::scan_response(const scan_response &other93)
 {
-    error = other89.error;
-    kvs = other89.kvs;
-    context_id = other89.context_id;
-    app_id = other89.app_id;
-    partition_index = other89.partition_index;
-    server = other89.server;
-    __isset = other89.__isset;
+    error = other93.error;
+    kvs = other93.kvs;
+    context_id = other93.context_id;
+    app_id = other93.app_id;
+    partition_index = other93.partition_index;
+    server = other93.server;
+    __isset = other93.__isset;
 }
-scan_response::scan_response(scan_response &&other90)
+scan_response::scan_response(scan_response &&other94)
 {
-    error = std::move(other90.error);
-    kvs = std::move(other90.kvs);
-    context_id = std::move(other90.context_id);
-    app_id = std::move(other90.app_id);
-    partition_index = std::move(other90.partition_index);
-    server = std::move(other90.server);
-    __isset = std::move(other90.__isset);
+    error = std::move(other94.error);
+    kvs = std::move(other94.kvs);
+    context_id = std::move(other94.context_id);
+    app_id = std::move(other94.app_id);
+    partition_index = std::move(other94.partition_index);
+    server = std::move(other94.server);
+    __isset = std::move(other94.__isset);
 }
-scan_response &scan_response::operator=(const scan_response &other91)
+scan_response &scan_response::operator=(const scan_response &other95)
 {
-    error = other91.error;
-    kvs = other91.kvs;
-    context_id = other91.context_id;
-    app_id = other91.app_id;
-    partition_index = other91.partition_index;
-    server = other91.server;
-    __isset = other91.__isset;
+    error = other95.error;
+    kvs = other95.kvs;
+    context_id = other95.context_id;
+    app_id = other95.app_id;
+    partition_index = other95.partition_index;
+    server = other95.server;
+    __isset = other95.__isset;
     return *this;
 }
-scan_response &scan_response::operator=(scan_response &&other92)
+scan_response &scan_response::operator=(scan_response &&other96)
 {
-    error = std::move(other92.error);
-    kvs = std::move(other92.kvs);
-    context_id = std::move(other92.context_id);
-    app_id = std::move(other92.app_id);
-    partition_index = std::move(other92.partition_index);
-    server = std::move(other92.server);
-    __isset = std::move(other92.__isset);
+    error = std::move(other96.error);
+    kvs = std::move(other96.kvs);
+    context_id = std::move(other96.context_id);
+    app_id = std::move(other96.app_id);
+    partition_index = std::move(other96.partition_index);
+    server = std::move(other96.server);
+    __isset = std::move(other96.__isset);
     return *this;
 }
 void scan_response::printTo(std::ostream &out) const

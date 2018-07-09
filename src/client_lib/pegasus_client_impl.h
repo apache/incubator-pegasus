@@ -138,6 +138,19 @@ public:
                                  async_multi_del_callback_t &&callback = nullptr,
                                  int timeout_milliseconds = 5000) override;
 
+    virtual int incr(const std::string &hashkey,
+                     const std::string &sortkey,
+                     int64_t increment,
+                     int64_t &new_value,
+                     int timeout_milliseconds = 5000,
+                     internal_info *info = NULL) override;
+
+    virtual void async_incr(const std::string &hashkey,
+                            const std::string &sortkey,
+                            int64_t increment,
+                            async_incr_callback_t &&callback = nullptr,
+                            int timeout_milliseconds = 5000) override;
+
     virtual int ttl(const std::string &hashkey,
                     const std::string &sortkey,
                     int &ttl_seconds,

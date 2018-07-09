@@ -154,6 +154,9 @@ public:
     typedef std::function<void(
         int /*error_code*/, int64_t /*deleted_count*/, internal_info && /*info*/)>
         async_multi_del_callback_t;
+    typedef std::function<void(
+        int /*error_code*/, int64_t /*new_value*/, internal_info && /*info*/)>
+        async_incr_callback_t;
     typedef std::function<void(int /*error_code*/,
                                std::string && /*hash_key*/,
                                std::string && /*sort_key*/,
@@ -677,6 +680,59 @@ public:
                                  const std::set<std::string> &sortkeys,
                                  async_multi_del_callback_t &&callback = nullptr,
                                  int timeout_milliseconds = 5000) = 0;
+
+    ///
+    /// \brief incr
+    ///     increment value by key from the cluster.
+    ///     key is composed of hashkey and sortkey. must provide both to get the value.
+    ///     the increment semantic is the same as redis:
+    ///       - if old data is not found or empty, then set initial value to 0.
+    ///       - if old data is not an integer or out of range, then return PERR_INVALID_ARGUMENT,
+    ///         and return `new_value' as 0.
+    ///       - if new value is out of range, then return PERR_INVALID_ARGUMENT, and return old
+    ///         value in `new_value'.
+    ///     the semantic involving with ttl is also the same as redis:
+    ///       - normally, increment will preserve the original ttl.
+    ///       - if old data is expired by ttl, then set initial value to 0 and set no ttl.
+    /// \param hashkey
+    /// used to decide which partition to get this k-v
+    /// \param sortkey
+    /// all the k-v under hashkey will be sorted by sortkey.
+    /// \param increment
+    /// the value we want to increment.
+    /// \param timeout_milliseconds
+    /// if wait longer than this value, will return time out error
+    /// \return
+    /// int, the error indicates whether or not the operation is succeeded.
+    /// this error can be converted to a string using get_error_string().
+    ///
+    virtual int incr(const std::string &hashkey,
+                     const std::string &sortkey,
+                     int64_t increment,
+                     int64_t &new_value,
+                     int timeout_milliseconds = 5000,
+                     internal_info *info = NULL) = 0;
+
+    ///
+    /// \brief asynchronous incr
+    ///     increment value by key from the cluster.
+    ///     will not be blocked, return immediately.
+    /// \param hashkey
+    /// used to decide which partition to get this k-v
+    /// \param sortkey
+    /// all the k-v under hashkey will be sorted by sortkey.
+    /// \param callback
+    /// the callback function will be invoked after operation finished or error occurred.
+    /// \param timeout_milliseconds
+    /// if wait longer than this value, will return time out error
+    /// \return
+    /// void.
+    ///
+    virtual void async_incr(const std::string &hashkey,
+                            const std::string &sortkey,
+                            int64_t increment,
+                            async_incr_callback_t &&callback = nullptr,
+                            int timeout_milliseconds = 5000) = 0;
 
     ///
     /// \brief ttl (time to live)
