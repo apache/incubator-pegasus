@@ -45,14 +45,14 @@ int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
         return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
     }
 
-    return on_batched_writes(requests, count, _decree);
+    return on_batched_writes(requests, count);
 }
 
-int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, int64_t decree)
+int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count)
 {
     int err = 0;
     {
-        _write_svc->batch_prepare(decree);
+        _write_svc->batch_prepare(_decree);
 
         for (int i = 0; i < count; ++i) {
             dassert(requests[i] != nullptr, "request[%d] is null", i);
@@ -86,9 +86,9 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
         }
 
         if (err == 0) {
-            err = _write_svc->batch_commit(decree);
+            err = _write_svc->batch_commit(_decree);
         } else {
-            _write_svc->batch_abort(decree, err);
+            _write_svc->batch_abort(_decree, err);
         }
     }
 

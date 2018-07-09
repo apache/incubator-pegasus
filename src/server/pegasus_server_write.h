@@ -30,7 +30,7 @@ public:
 
 private:
     /// Delay replying for the batched requests until all of them complete.
-    int on_batched_writes(dsn_message_t *requests, int count, int64_t decree);
+    int on_batched_writes(dsn_message_t *requests, int count);
 
     int on_single_put_in_batch(put_rpc &rpc)
     {
