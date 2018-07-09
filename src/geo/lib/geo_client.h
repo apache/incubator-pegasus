@@ -357,7 +357,7 @@ private:
 
     // search data covered by `cap` in all `cids`
     void async_get_result_from_cells(const S2CellUnion &cids,
-                                     const S2Cap &cap,
+                                     std::shared_ptr<S2Cap> cap_ptr,
                                      int count,
                                      SortType sort_type,
                                      scan_all_area_callback_t &&callback);
@@ -376,15 +376,16 @@ private:
     std::string gen_stop_sort_key(const S2CellId &max_level_cid, const std::string &hash_key);
 
     void start_scan(const std::string &hash_key,
-                    const std::string &start_sort_key,
-                    const std::string &stop_sort_key,
-                    const S2Cap &cap,
+                    std::string &&start_sort_key,
+                    std::string &&stop_sort_key,
+                    std::shared_ptr<S2Cap> cap_ptr,
                     int count,
                     scan_one_area_callback &&callback,
-                    std::vector<SearchResult> &result);
+                    std::vector<SearchResult> &result,
+                    bool start_inclusive = true);
 
     void do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper,
-                 const S2Cap &cap,
+                 std::shared_ptr<S2Cap> cap_ptr,
                  int count,
                  scan_one_area_callback &&callback,
                  std::vector<SearchResult> &result);

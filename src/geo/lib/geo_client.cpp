@@ -401,16 +401,16 @@ void geo_client::async_search_radial(const S2LatLng &latlng,
                                      geo_search_callback_t &&callback)
 {
     // generate a cap
-    S2Cap cap;
-    gen_search_cap(latlng, radius_m, cap);
+    std::shared_ptr<S2Cap> cap_ptr = std::make_shared<S2Cap>();
+    gen_search_cap(latlng, radius_m, *cap_ptr);
 
     // generate cell ids
     S2CellUnion cids;
-    gen_cells_covered_by_cap(cap, cids);
+    gen_cells_covered_by_cap(*cap_ptr, cids);
 
     // search data in the cell ids
     async_get_result_from_cells(cids,
-                                cap,
+                                cap_ptr,
                                 count,
                                 sort_type,
                                 [ this, count, sort_type, cb = std::move(callback) ](
@@ -435,7 +435,7 @@ void geo_client::gen_cells_covered_by_cap(const S2Cap &cap, S2CellUnion &cids)
 }
 
 void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
-                                             const S2Cap &cap,
+                                             std::shared_ptr<S2Cap> cap_ptr,
                                              int count,
                                              SortType sort_type,
                                              scan_all_area_callback_t &&callback)
@@ -460,14 +460,14 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
     };
 
     for (const auto &cid : cids) {
-        if (cap.Contains(S2Cell(cid))) {
+        if (cap_ptr->Contains(S2Cell(cid))) {
             // for the full contained cell, scan all data in this cell(which is at the `_min_level`)
             results->emplace_back(std::vector<SearchResult>());
             scan_count->fetch_add(1);
             start_scan(cid.ToString(),
                        "",
                        "",
-                       cap,
+                       cap_ptr,
                        single_scan_count,
                        single_scan_finish_callback,
                        results->back());
@@ -482,7 +482,7 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
             // the needed ones.
             for (S2CellId cur = cid.child_begin(_max_level); cur != cid.child_end(_max_level);
                  cur = cur.next()) {
-                if (cap.MayIntersect(S2Cell(cur))) {
+                if (cap_ptr->MayIntersect(S2Cell(cur))) {
                     // only cells whose any vertex is contained by the cap is needed
                     if (!pre.is_valid()) {
                         // `cur` is the very first cell in Hilbert curve contained by the cap
@@ -496,9 +496,9 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
                             results->emplace_back(std::vector<SearchResult>());
                             scan_count->fetch_add(1);
                             start_scan(hash_key,
-                                       start_stop_sort_keys.first,
-                                       start_stop_sort_keys.second,
-                                       cap,
+                                       std::move(start_stop_sort_keys.first),
+                                       std::move(start_stop_sort_keys.second),
+                                       cap_ptr,
                                        single_scan_count,
                                        single_scan_finish_callback,
                                        results->back());
@@ -518,15 +518,16 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
                 results->emplace_back(std::vector<SearchResult>());
                 scan_count->fetch_add(1);
                 start_scan(hash_key,
-                           start_stop_sort_keys.first,
-                           start_stop_sort_keys.second,
-                           cap,
+                           std::move(start_stop_sort_keys.first),
+                           std::move(start_stop_sort_keys.second),
+                           cap_ptr,
                            single_scan_count,
                            single_scan_finish_callback,
                            results->back());
             }
         }
     }
+
     // when all scan rpc have received before send_finish is set to true, the callback will never be
     // called, so we add 2 lines tricky code as follows
     scan_count->fetch_add(1);
@@ -690,12 +691,13 @@ void geo_client::async_del_geo_data(const std::string &geo_hash_key,
 }
 
 void geo_client::start_scan(const std::string &hash_key,
-                            const std::string &start_sort_key,
-                            const std::string &stop_sort_key,
-                            const S2Cap &cap,
+                            std::string &&start_sort_key,
+                            std::string &&stop_sort_key,
+                            std::shared_ptr<S2Cap> cap_ptr,
                             int count,
                             scan_one_area_callback &&callback,
-                            std::vector<SearchResult> &result)
+                            std::vector<SearchResult> &result,
+                            bool start_inclusive)
 {
     pegasus_client::scan_options options;
     options.start_inclusive = true;
@@ -707,10 +709,10 @@ void geo_client::start_scan(const std::string &hash_key,
         start_sort_key,
         stop_sort_key,
         options,
-        [ this, cap, count, cb = std::move(callback), &result ](
+        [ this, cap_ptr, count, cb = std::move(callback), &result ](
             int error_code, pegasus_client::pegasus_scanner *hash_scanner) mutable {
             if (error_code == PERR_OK) {
-                do_scan(hash_scanner->get_smart_wrapper(), cap, count, std::move(cb), result);
+                do_scan(hash_scanner->get_smart_wrapper(), cap_ptr, count, std::move(cb), result);
             } else {
                 cb();
             }
@@ -718,13 +720,13 @@ void geo_client::start_scan(const std::string &hash_key,
 }
 
 void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper,
-                         const S2Cap &cap,
+                         std::shared_ptr<S2Cap> cap_ptr,
                          int count,
                          scan_one_area_callback &&callback,
                          std::vector<SearchResult> &result)
 {
     scanner_wrapper->async_next(
-        [ this, cap, count, scanner_wrapper, cb = std::move(callback), &result ](
+        [ this, cap_ptr, count, scanner_wrapper, cb = std::move(callback), &result ](
             int ret,
             std::string &&geo_hash_key,
             std::string &&geo_sort_key,
@@ -748,8 +750,8 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper
                 return;
             }
 
-            double distance = S2Earth::GetDistanceMeters(S2LatLng(cap.center()), latlng);
-            if (distance <= S2Earth::ToMeters(cap.radius())) {
+            double distance = S2Earth::GetDistanceMeters(S2LatLng(cap_ptr->center()), latlng);
+            if (distance <= S2Earth::ToMeters(cap_ptr->radius())) {
                 std::string origin_hash_key, origin_sort_key;
                 if (!restore_origin_keys(geo_sort_key, origin_hash_key, origin_sort_key)) {
                     derror_f("restore_origin_keys failed. geo_sort_key={}", geo_sort_key);
@@ -770,7 +772,7 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper
                 return;
             }
 
-            do_scan(scanner_wrapper, cap, count, std::move(cb), result);
+            do_scan(scanner_wrapper, cap_ptr, count, std::move(cb), result);
         });
 }
 

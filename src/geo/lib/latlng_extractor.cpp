@@ -18,8 +18,8 @@ void extract_indexs(const std::string &text,
     int cur_index = -1;
     for (auto index : indexs) {
         while (cur_index < index) {
-            begin_pos = (cur_index == -1 ? 0 : end_pos + 1);    // at first time, seek from 0
-                                                                // then, seek from end_pos + 1
+            begin_pos = (cur_index == -1 ? 0 : end_pos + 1); // at first time, seek from 0
+                                                             // then, seek from end_pos + 1
             end_pos = text.find(splitter, begin_pos);
             if (end_pos == std::string::npos) {
                 break;
