@@ -5,6 +5,7 @@
 #pragma once
 
 #include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/dist/replication/replica_base.h>
 
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
@@ -14,6 +15,10 @@ namespace pegasus {
 namespace server {
 
 class pegasus_server_impl;
+
+#define RETURN_NOT_ZERO(err)                                                                       \
+    if (dsn_unlikely(err))                                                                         \
+        return err;
 
 /// Handle the write requests.
 /// As the signatures imply, this class is not responsible for replying the rpc,
@@ -26,13 +31,13 @@ public:
 
     ~pegasus_write_service();
 
-    void multi_put(int64_t decree,
-                   const dsn::apps::multi_put_request &update,
-                   dsn::apps::update_response &resp);
+    int multi_put(int64_t decree,
+                  const dsn::apps::multi_put_request &update,
+                  dsn::apps::update_response &resp);
 
-    void multi_remove(int64_t decree,
-                      const dsn::apps::multi_remove_request &update,
-                      dsn::apps::multi_remove_response &resp);
+    int multi_remove(int64_t decree,
+                     const dsn::apps::multi_remove_request &update,
+                     dsn::apps::multi_remove_response &resp);
 
     /// Prepare for batch write.
     void batch_prepare();
@@ -44,9 +49,9 @@ public:
 
     /// NOTE that `resp` should not be moved or freed while
     /// the batch is not committed.
-    void batch_put(const dsn::apps::update_request &update, dsn::apps::update_response &resp);
+    int batch_put(const dsn::apps::update_request &update, dsn::apps::update_response &resp);
 
-    void batch_remove(const dsn::blob &key, dsn::apps::update_response &resp);
+    int batch_remove(const dsn::blob &key, dsn::apps::update_response &resp);
 
     /// \returns 0 if success, non-0 if failure.
     /// If the batch contains no updates, 0 is returned.

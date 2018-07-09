@@ -37,14 +37,12 @@ int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         dassert(count == 1, "count = %d", count);
         auto rpc = multi_put_rpc::auto_reply(requests[0]);
-        on_multi_put(rpc);
-        return rpc.response().error;
+        return on_multi_put(rpc);
     }
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
         dassert(count == 1, "count = %d", count);
         auto rpc = multi_remove_rpc::auto_reply(requests[0]);
-        on_multi_remove(rpc);
-        return rpc.response().error;
+        return on_multi_remove(rpc);
     }
 
     return on_batched_writes(requests, count, decree);
@@ -52,7 +50,7 @@ int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
 
 int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, int64_t decree)
 {
-    int err;
+    int err = 0;
     {
         _write_svc->batch_prepare();
 
@@ -62,11 +60,11 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
             dsn::task_code rpc_code(dsn_msg_task_code(requests[i]));
             if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
                 auto rpc = put_rpc::auto_reply(requests[i]);
-                on_single_put_in_batch(rpc);
+                err = on_single_put_in_batch(rpc);
                 _put_rpc_batch.emplace_back(std::move(rpc));
             } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
                 auto rpc = remove_rpc::auto_reply(requests[i]);
-                on_single_remove_in_batch(rpc);
+                err = on_single_remove_in_batch(rpc);
                 _remove_rpc_batch.emplace_back(std::move(rpc));
             } else {
                 if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT ||
@@ -76,6 +74,7 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
                     dfatal("rpc code not handled: %s", rpc_code.to_string());
                 }
             }
+            RETURN_NOT_ZERO(err);
         }
 
         err = _write_svc->batch_commit(decree);
