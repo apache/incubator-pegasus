@@ -6,7 +6,7 @@
 
 #include <pegasus/client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 
 namespace pegasus {
 namespace server {

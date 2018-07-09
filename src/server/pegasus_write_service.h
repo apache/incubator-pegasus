@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <dsn/cpp/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>
 
 #include "base/pegasus_value_schema.h"
@@ -15,10 +15,6 @@ namespace pegasus {
 namespace server {
 
 class pegasus_server_impl;
-
-#define RETURN_NOT_ZERO(err)                                                                       \
-    if (dsn_unlikely(err))                                                                         \
-        return err;
 
 /// Handle the write requests.
 /// As the signatures imply, this class is not responsible for replying the rpc,
@@ -31,46 +27,49 @@ public:
 
     ~pegasus_write_service();
 
+    // Write empty record.
+    // See this document (https://github.com/XiaoMi/pegasus/wiki/last_flushed_decree)
+    // to know why we must have empty write.
+    int empty_put(int64_t decree);
+
+    // Write MULTI_PUT record.
     int multi_put(int64_t decree,
                   const dsn::apps::multi_put_request &update,
                   dsn::apps::update_response &resp);
 
+    // Write MULTI_REMOVE record.
     int multi_remove(int64_t decree,
                      const dsn::apps::multi_remove_request &update,
                      dsn::apps::multi_remove_response &resp);
 
-    /// Prepare for batch write.
+    /// For batch write.
+    /// NOTE: A batch write may incur a database read for consistency check of timetag.
+    /// (see pegasus::pegasus_value_generator::generate_value_v1 for more info about timetag)
+    /// To disable the consistency check, unset `verify_timetag` under `pegasus.server` section
+    /// in configuration.
+
+    // Prepare batch write.
     void batch_prepare(int64_t decree);
 
-    // NOTE: A batch write may incur a database read for consistency check of timetag.
-    // (see pegasus::pegasus_value_generator::generate_value_v1 for more info about timetag)
-    // To disable the consistency check, unset `verify_timetag` under `pegasus.server` section
-    // in configuration.
-
-    /// Add PUT op in batch.
-    /// \returns 0 if success, non-0 if failure.
-    /// NOTE that `resp` should not be moved or freed while the batch is not committed.
+    // Add PUT record in batch write.
+    // \returns 0 if success, non-0 if failure.
+    // NOTE that `resp` should not be moved or freed while the batch is not committed.
     int batch_put(int64_t decree,
                   const dsn::apps::update_request &update,
                   dsn::apps::update_response &resp);
 
-    /// Add REMOVE op in batch.
-    /// \returns 0 if success, non-0 if failure.
-    /// NOTE that `resp` should not be moved or freed while the batch is not committed.
+    // Add REMOVE record in batch write.
+    // \returns 0 if success, non-0 if failure.
+    // NOTE that `resp` should not be moved or freed while the batch is not committed.
     int batch_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp);
 
-    /// Commit batch write.
-    /// \returns 0 if success, non-0 if failure.
-    /// NOTE that if the batch contains no updates, 0 is returned.
+    // Commit batch write.
+    // \returns 0 if success, non-0 if failure.
+    // NOTE that if the batch contains no updates, 0 is returned.
     int batch_commit(int64_t decree);
 
-    /// Abort batch write.
+    // Abort batch write.
     void batch_abort(int64_t decree, int err);
-
-    /// Write empty record.
-    /// See this document (https://github.com/XiaoMi/pegasus/wiki/last_flushed_decree)
-    /// to know why we must have empty write.
-    int empty_put(int64_t decree);
 
 private:
     void clear_up_batch_states();

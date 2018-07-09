@@ -25,6 +25,20 @@ public:
     {
     }
 
+    int empty_put(int64_t decree)
+    {
+        int err = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+        if (err) {
+            clear_up_batch_states(decree, err);
+            return err;
+        }
+
+        err = db_write(decree);
+
+        clear_up_batch_states(decree, err);
+        return err;
+    }
+
     int multi_put(int64_t decree,
                   const dsn::apps::multi_put_request &update,
                   dsn::apps::update_response &resp)
@@ -47,13 +61,16 @@ public:
                                             composite_raw_key(update.hash_key, kv.key),
                                             kv.value,
                                             static_cast<uint32_t>(update.expire_ts_seconds));
-            RETURN_NOT_ZERO(resp.error);
+            if (resp.error) {
+                clear_up_batch_states(decree, resp.error);
+                return resp.error;
+            }
         }
 
         resp.error = db_write(decree);
-        RETURN_NOT_ZERO(resp.error);
 
-        return 0;
+        clear_up_batch_states(decree, resp.error);
+        return resp.error;
     }
 
     int multi_remove(int64_t decree,
@@ -76,15 +93,22 @@ public:
         for (auto &sort_key : update.sort_keys) {
             resp.error =
                 db_write_batch_delete(decree, composite_raw_key(update.hash_key, sort_key));
-            RETURN_NOT_ZERO(resp.error);
+            if (resp.error) {
+                clear_up_batch_states(decree, resp.error);
+                return resp.error;
+            }
         }
 
         resp.error = db_write(decree);
-        RETURN_NOT_ZERO(resp.error);
+        if (resp.error == 0) {
+            resp.count = update.sort_keys.size();
+        }
 
-        resp.count = update.sort_keys.size();
-        return 0;
+        clear_up_batch_states(decree, resp.error);
+        return resp.error;
     }
+
+    /// For batch write.
 
     int batch_put(int64_t decree,
                   const dsn::apps::update_request &update,
@@ -112,6 +136,7 @@ public:
 
     void batch_abort(int64_t decree, int err) { clear_up_batch_states(decree, err); }
 
+private:
     int db_write_batch_put(int64_t decree,
                            dsn::string_view raw_key,
                            dsn::string_view value,
@@ -167,27 +192,29 @@ public:
         return status.code();
     }
 
-private:
+    void clear_up_batch_states(int64_t decree, int err)
+    {
+        if (!_update_responses.empty()) {
+            dsn::apps::update_response resp;
+            resp.error = err;
+            resp.app_id = get_gpid().get_app_id();
+            resp.partition_index = get_gpid().get_partition_index();
+            resp.decree = decree;
+            resp.server = _primary_address;
+            for (dsn::apps::update_response *uresp : _update_responses) {
+                *uresp = resp;
+            }
+            _update_responses.clear();
+        }
+
+        _batch.Clear();
+    }
+
     dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, sort_key);
         return raw_key;
-    }
-
-    void clear_up_batch_states(int64_t decree, int err)
-    {
-        dsn::apps::update_response resp;
-        resp.error = err;
-        resp.app_id = get_gpid().get_app_id();
-        resp.partition_index = get_gpid().get_partition_index();
-        resp.decree = decree;
-        resp.server = _primary_address;
-        for (dsn::apps::update_response *uresp : _update_responses) {
-            *uresp = resp;
-        }
-        _update_responses.clear();
-        _batch.Clear();
     }
 
 private:

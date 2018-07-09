@@ -58,7 +58,9 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
                                                "statistic the latency of MULTI_REMOVE request");
 }
 
-pegasus_write_service::~pegasus_write_service() = default;
+pegasus_write_service::~pegasus_write_service() {}
+
+int pegasus_write_service::empty_put(int64_t decree) { return _impl->empty_put(decree); }
 
 int pegasus_write_service::multi_put(int64_t decree,
                                      const dsn::apps::multi_put_request &update,
@@ -94,6 +96,8 @@ int pegasus_write_service::batch_put(int64_t decree,
                                      const dsn::apps::update_request &update,
                                      dsn::apps::update_response &resp)
 {
+    dassert(_batch_start_time != 0, "batch_put must be called after batch_prepare");
+
     _batch_qps_perfcounters.push_back(_pfc_put_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
 
@@ -104,6 +108,8 @@ int pegasus_write_service::batch_remove(int64_t decree,
                                         const dsn::blob &key,
                                         dsn::apps::update_response &resp)
 {
+    dassert(_batch_start_time != 0, "batch_put must be called after batch_prepare");
+
     _batch_qps_perfcounters.push_back(_pfc_remove_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_remove_latency.get());
 
@@ -112,22 +118,19 @@ int pegasus_write_service::batch_remove(int64_t decree,
 
 int pegasus_write_service::batch_commit(int64_t decree)
 {
-    dassert(_batch_start_time != 0,
-            "batch_prepare and batch_commit/batch_abort must be called in pair");
+    dassert(_batch_start_time != 0, "batch_commit must be called after batch_prepare");
 
-    int ret = _impl->batch_commit(decree);
+    int err = _impl->batch_commit(decree);
     clear_up_batch_states();
-    return ret;
+    return err;
 }
 
 void pegasus_write_service::batch_abort(int64_t decree, int err)
 {
-    dassert(_batch_start_time != 0,
-            "batch_prepare and batch_commit/batch_abort must be called in pair");
+    dassert(_batch_start_time != 0, "batch_abort must be called after batch_prepare");
     dassert(err, "must abort on non-zero err");
 
     _impl->batch_abort(decree, err);
-
     clear_up_batch_states();
 }
 
@@ -142,15 +145,6 @@ void pegasus_write_service::clear_up_batch_states()
     _batch_qps_perfcounters.clear();
     _batch_latency_perfcounters.clear();
     _batch_start_time = 0;
-}
-
-int pegasus_write_service::empty_put(int64_t decree)
-{
-    std::string empty_key, empty_value;
-    int err = _impl->db_write_batch_put(decree, empty_key, empty_value, 0);
-    RETURN_NOT_ZERO(err);
-
-    return _impl->db_write(decree);
 }
 
 } // namespace server

@@ -8,8 +8,8 @@
 #include <dsn/utility/synchronize.h>
 #include <dsn/c/api_utilities.h>
 #include <dsn/cpp/json_helper.h>
-#include <dsn/cpp/perf_counter_wrapper.h>
-#include <dsn/tool-api/perf_counter.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include <dsn/perf_counter/perf_counter.h>
 
 #include <boost/asio.hpp>
 #include <event2/event.h>

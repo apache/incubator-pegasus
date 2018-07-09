@@ -29,18 +29,8 @@ public:
                                   uint64_t timestamp);
 
 private:
-    int on_multi_put(multi_put_rpc &rpc)
-    {
-        return _write_svc->multi_put(_decree, rpc.request(), rpc.response());
-    }
-
-    int on_multi_remove(multi_remove_rpc &rpc)
-    {
-        return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
-    }
-
     /// Delay replying for the batched requests until all of them complete.
-    int on_batched_writes(dsn_message_t *requests, int count, int64_t decree);
+    int on_batched_writes(dsn_message_t *requests, int count);
 
     int on_single_put_in_batch(put_rpc &rpc)
     {
