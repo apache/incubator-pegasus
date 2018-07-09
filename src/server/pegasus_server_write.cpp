@@ -30,22 +30,22 @@ int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
     // rocksdb's `last_flushed_decree` (see rocksdb::DB::GetLastFlushedDecree())
     // TODO(wutao1): remove it when shared log is removed.
     if (count == 0) {
-        return _write_svc->empty_put(decree);
+        return _write_svc->empty_put(_decree);
     }
 
     dsn::task_code rpc_code(dsn_msg_task_code(requests[0]));
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         dassert(count == 1, "count = %d", count);
         auto rpc = multi_put_rpc::auto_reply(requests[0]);
-        return on_multi_put(rpc);
+        return _write_svc->multi_put(_decree, rpc.request(), rpc.response());
     }
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
         dassert(count == 1, "count = %d", count);
         auto rpc = multi_remove_rpc::auto_reply(requests[0]);
-        return on_multi_remove(rpc);
+        return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
     }
 
-    return on_batched_writes(requests, count, decree);
+    return on_batched_writes(requests, count, _decree);
 }
 
 int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, int64_t decree)
