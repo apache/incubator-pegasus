@@ -30,41 +30,46 @@ int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
     // rocksdb's `last_flushed_decree` (see rocksdb::DB::GetLastFlushedDecree())
     // TODO(wutao1): remove it when shared log is removed.
     if (count == 0) {
-        return _write_svc->empty_put(decree);
+        return _write_svc->empty_put(_decree);
     }
 
     dsn::task_code rpc_code(dsn_msg_task_code(requests[0]));
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         dassert(count == 1, "count = %d", count);
         auto rpc = multi_put_rpc::auto_reply(requests[0]);
-        return on_multi_put(rpc);
+        return _write_svc->multi_put(_decree, rpc.request(), rpc.response());
     }
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
         dassert(count == 1, "count = %d", count);
         auto rpc = multi_remove_rpc::auto_reply(requests[0]);
-        return on_multi_remove(rpc);
+        return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
     }
 
-    return on_batched_writes(requests, count, decree);
+    return on_batched_writes(requests, count);
 }
 
-int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, int64_t decree)
+int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count)
 {
     int err = 0;
     {
-        _write_svc->batch_prepare();
+        _write_svc->batch_prepare(_decree);
 
         for (int i = 0; i < count; ++i) {
             dassert(requests[i] != nullptr, "request[%d] is null", i);
 
+            // Make sure all writes are batched even if they are failed,
+            // since we need to record the total qps and rpc latencies,
+            // and respond for all RPCs regardless of their result.
+
+            int local_err = 0;
             dsn::task_code rpc_code(dsn_msg_task_code(requests[i]));
             if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
                 auto rpc = put_rpc::auto_reply(requests[i]);
-                err = on_single_put_in_batch(rpc);
+                local_err = on_single_put_in_batch(rpc);
                 _put_rpc_batch.emplace_back(std::move(rpc));
             } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
                 auto rpc = remove_rpc::auto_reply(requests[i]);
-                err = on_single_remove_in_batch(rpc);
+                local_err = on_single_remove_in_batch(rpc);
                 _remove_rpc_batch.emplace_back(std::move(rpc));
             } else {
                 if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT ||
@@ -74,10 +79,17 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count, 
                     dfatal("rpc code not handled: %s", rpc_code.to_string());
                 }
             }
-            RETURN_NOT_ZERO(err);
+
+            if (!err && local_err) {
+                err = local_err;
+            }
         }
 
-        err = _write_svc->batch_commit(decree);
+        if (err == 0) {
+            err = _write_svc->batch_commit(_decree);
+        } else {
+            _write_svc->batch_abort(_decree, err);
+        }
     }
 
     // reply the batched RPCs
@@ -101,8 +113,8 @@ void pegasus_server_write::request_key_check(int64_t decree, dsn_message_t m, co
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
 
-        ddebug_rocksdb("write",
-                       "decree={}, code={}, hash_key={}, sort_key={}",
+        ddebug_rocksdb("Write",
+                       "decree: {}, code: {}, hash_key: {}, sort_key: {}",
                        decree,
                        msg->local_rpc_code.to_string(),
                        utils::c_escape_string(hash_key),

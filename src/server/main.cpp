@@ -43,11 +43,6 @@ void dsn_app_registration_pegasus()
 
     pegasus::server::pegasus_server_impl::register_service();
 
-    ::dsn::tools::internal_use_only::register_component_provider(
-        "pegasus::server::pegasus_perf_counter",
-        pegasus::server::pegasus_perf_counter_factory,
-        ::dsn::PROVIDER_TYPE_MAIN);
-
     ::dsn::command_manager::instance().register_command(
         {"server-info"},
         "server-info - query server information",

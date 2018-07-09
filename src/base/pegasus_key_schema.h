@@ -150,4 +150,4 @@ inline uint64_t pegasus_key_hash(const ::dsn::blob &key)
     }
 }
 
-} // namespace
+} // namespace pegasus

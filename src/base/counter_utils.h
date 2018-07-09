@@ -49,4 +49,4 @@ struct perf_counter_info
     DEFINE_JSON_SERIALIZATION(result, timestamp, timestamp_str, counters)
 };
 
-} // namespace
+} // namespace pegasus

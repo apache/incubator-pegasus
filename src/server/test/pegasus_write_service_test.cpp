@@ -33,8 +33,9 @@ public:
 
         // alarm for empty request
         request.hash_key = dsn::blob(hash_key.data(), 0, hash_key.size());
-        _write_svc->multi_put(decree, request, response);
+        int err = _write_svc->multi_put(decree, request, response);
         ASSERT_EQ(response.error, rocksdb::Status::kInvalidArgument);
+        ASSERT_EQ(err, 0);
 
         constexpr int kv_num = 100;
         std::string sort_key[kv_num];
@@ -68,8 +69,9 @@ public:
 
         // alarm for empty request
         request.hash_key = dsn::blob(hash_key.data(), 0, hash_key.size());
-        _write_svc->multi_remove(decree, request, response);
+        int err = _write_svc->multi_remove(decree, request, response);
         ASSERT_EQ(response.error, rocksdb::Status::kInvalidArgument);
+        ASSERT_EQ(err, 0);
 
         constexpr int kv_num = 100;
         std::string sort_key[kv_num];
@@ -110,14 +112,14 @@ public:
         // of response may be changed due to capacity increase.
         std::array<dsn::apps::update_response, kv_num> responses;
         {
-            _write_svc->batch_prepare();
+            _write_svc->batch_prepare(decree);
             for (int i = 0; i < kv_num; i++) {
                 dsn::apps::update_request req;
                 req.key = key[i];
-                _write_svc->batch_put(req, responses[i]);
+                _write_svc->batch_put(decree, req, responses[i]);
             }
             for (int i = 0; i < kv_num; i++) {
-                _write_svc->batch_remove(key[i], responses[i]);
+                _write_svc->batch_remove(decree, key[i], responses[i]);
             }
             _write_svc->batch_commit(decree);
         }

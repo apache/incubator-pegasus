@@ -25,6 +25,20 @@ public:
     {
     }
 
+    int empty_put(int64_t decree)
+    {
+        int err = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+        if (err) {
+            clear_up_batch_states(decree, err);
+            return err;
+        }
+
+        err = db_write(decree);
+
+        clear_up_batch_states(decree, err);
+        return err;
+    }
+
     int multi_put(int64_t decree,
                   const dsn::apps::multi_put_request &update,
                   dsn::apps::update_response &resp)
@@ -35,23 +49,27 @@ public:
         resp.server = _primary_address;
 
         if (update.kvs.empty()) {
-            // invalid argument
-            derror_replica("invalid argument for multi_put: decree = {}, error = empty kvs",
-                           decree);
-
-            // an invalid operation shouldn't be added to latency calculation
+            derror_replica("invalid argument for multi_put: decree = {}, error = {}",
+                           decree,
+                           "request.kvs is empty");
             resp.error = rocksdb::Status::kInvalidArgument;
             return 0;
         }
 
         for (auto &kv : update.kvs) {
-            resp.error = db_write_batch_put(composite_raw_key(update.hash_key, kv.key),
+            resp.error = db_write_batch_put(decree,
+                                            composite_raw_key(update.hash_key, kv.key),
                                             kv.value,
                                             static_cast<uint32_t>(update.expire_ts_seconds));
-            RETURN_NOT_ZERO(resp.error);
+            if (resp.error) {
+                clear_up_batch_states(decree, resp.error);
+                return resp.error;
+            }
         }
 
         resp.error = db_write(decree);
+
+        clear_up_batch_states(decree, resp.error);
         return resp.error;
     }
 
@@ -65,42 +83,46 @@ public:
         resp.server = _primary_address;
 
         if (update.sort_keys.empty()) {
-            // invalid argument
-            derror_replica(
-                "invalid argument for multi_remove: decree = {}, error = empty sort keys", decree);
-
-            // an invalid operation shouldn't be added to latency calculation
+            derror_replica("invalid argument for multi_remove: decree = {}, error = {}",
+                           decree,
+                           "request.sort_keys is empty");
             resp.error = rocksdb::Status::kInvalidArgument;
-            resp.count = 0;
             return 0;
         }
 
         for (auto &sort_key : update.sort_keys) {
-            // TODO(wutao1): check returned error
-            resp.error = db_write_batch_delete(composite_raw_key(update.hash_key, sort_key));
-            RETURN_NOT_ZERO(resp.error);
+            resp.error =
+                db_write_batch_delete(decree, composite_raw_key(update.hash_key, sort_key));
+            if (resp.error) {
+                clear_up_batch_states(decree, resp.error);
+                return resp.error;
+            }
         }
 
         resp.error = db_write(decree);
-        if (resp.error != 0) {
-            resp.count = 0;
-        } else {
+        if (resp.error == 0) {
             resp.count = update.sort_keys.size();
         }
+
+        clear_up_batch_states(decree, resp.error);
         return resp.error;
     }
 
-    int batch_put(const dsn::apps::update_request &update, dsn::apps::update_response &resp)
+    /// For batch write.
+
+    int batch_put(int64_t decree,
+                  const dsn::apps::update_request &update,
+                  dsn::apps::update_response &resp)
     {
         resp.error = db_write_batch_put(
-            update.key, update.value, static_cast<uint32_t>(update.expire_ts_seconds));
+            decree, update.key, update.value, static_cast<uint32_t>(update.expire_ts_seconds));
         _update_responses.emplace_back(&resp);
         return resp.error;
     }
 
-    int batch_remove(const dsn::blob &key, dsn::apps::update_response &resp)
+    int batch_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp)
     {
-        resp.error = db_write_batch_delete(key);
+        resp.error = db_write_batch_delete(decree, key);
         _update_responses.emplace_back(&resp);
         return resp.error;
     }
@@ -108,21 +130,17 @@ public:
     int batch_commit(int64_t decree)
     {
         int err = db_write(decree);
-
-        dsn::apps::update_response resp;
-        resp.app_id = get_gpid().get_app_id();
-        resp.partition_index = get_gpid().get_partition_index();
-        resp.decree = decree;
-        resp.server = _primary_address;
-
-        for (dsn::apps::update_response *uresp : _update_responses) {
-            *uresp = resp;
-        }
-        _update_responses.clear();
+        clear_up_batch_states(decree, err);
         return err;
     }
 
-    int db_write_batch_put(dsn::string_view raw_key, dsn::string_view value, uint32_t expire_sec)
+    void batch_abort(int64_t decree, int err) { clear_up_batch_states(decree, err); }
+
+private:
+    int db_write_batch_put(int64_t decree,
+                           dsn::string_view raw_key,
+                           dsn::string_view value,
+                           uint32_t expire_sec)
     {
         rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
         rocksdb::SliceParts skey_parts(&skey, 1);
@@ -130,21 +148,31 @@ public:
             _value_generator.generate_value(_value_schema_version, value, expire_sec);
         rocksdb::Status s = _batch.Put(skey_parts, svalue);
         if (dsn_unlikely(!s.ok())) {
+            ::dsn::blob hash_key, sort_key;
+            pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
             derror_rocksdb("WriteBatchPut",
                            s.ToString(),
-                           "raw_key: {}, expire_sec: {}",
-                           utils::c_escape_string(raw_key),
+                           "decree: {}, hash_key: {}, sort_key: {}, expire_ts: {}",
+                           decree,
+                           utils::c_escape_string(hash_key),
+                           utils::c_escape_string(sort_key),
                            expire_sec);
         }
         return s.code();
     }
 
-    int db_write_batch_delete(dsn::string_view raw_key)
+    int db_write_batch_delete(int64_t decree, dsn::string_view raw_key)
     {
         rocksdb::Status s = _batch.Delete(utils::to_rocksdb_slice(raw_key));
         if (dsn_unlikely(!s.ok())) {
-            derror_rocksdb(
-                "WriteBatchDelete", s.ToString(), "raw_key: {}", utils::c_escape_string(raw_key));
+            ::dsn::blob hash_key, sort_key;
+            pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
+            derror_rocksdb("WriteBatchDelete",
+                           s.ToString(),
+                           "decree: {}, hash_key: {}, sort_key: {}",
+                           decree,
+                           utils::c_escape_string(hash_key),
+                           utils::c_escape_string(sort_key));
         }
         return s.code();
     }
@@ -161,11 +189,27 @@ public:
         if (!status.ok()) {
             derror_rocksdb("Write", status.ToString(), "decree: {}", decree);
         }
-        _batch.Clear();
         return status.code();
     }
 
-private:
+    void clear_up_batch_states(int64_t decree, int err)
+    {
+        if (!_update_responses.empty()) {
+            dsn::apps::update_response resp;
+            resp.error = err;
+            resp.app_id = get_gpid().get_app_id();
+            resp.partition_index = get_gpid().get_partition_index();
+            resp.decree = decree;
+            resp.server = _primary_address;
+            for (dsn::apps::update_response *uresp : _update_responses) {
+                *uresp = resp;
+            }
+            _update_responses.clear();
+        }
+
+        _batch.Clear();
+    }
+
     dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
     {
         dsn::blob raw_key;
