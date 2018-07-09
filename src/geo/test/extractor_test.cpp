@@ -9,7 +9,8 @@
 namespace pegasus {
 namespace geo {
 
-static std::shared_ptr<latlng_extractor_for_lbs> lbs_extractor(new latlng_extractor_for_lbs());
+static std::shared_ptr<latlng_extractor_for_lbs> lbs_extractor =
+    std::make_shared<latlng_extractor_for_lbs>();
 TEST(latlng_extractor_for_lbs_test, extract_from_value)
 {
     ASSERT_EQ(std::string(lbs_extractor->name()), "latlng_extractor_for_lbs");

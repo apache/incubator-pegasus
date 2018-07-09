@@ -207,7 +207,7 @@ static command_executor commands[] = {
         "copy_data",
         "copy app data",
         "<-c|--target_cluster_name str> <-a|--target_app_name str> "
-        "[-s|--max_split_count num] [-b|--max_batch_count num] [-t|--timeout_ms num] [-g|--is_geo_data true|false]",
+        "[-s|--max_split_count num] [-b|--max_batch_count num] [-t|--timeout_ms num] [-g|--geo_data]",
         data_operations,
     },
     {

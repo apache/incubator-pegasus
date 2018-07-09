@@ -1708,7 +1708,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                            {"max_split_count", required_argument, 0, 's'},
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
-                                           {"is_geo_data", optional_argument, 0, 'g'},
+                                           {"geo_data", optional_argument, 0, 'g'},
                                            {0, 0, 0, 0}};
 
     std::string target_cluster_name;
@@ -1753,10 +1753,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'g':
-            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), is_geo_data)) {
-                fprintf(stderr, "parse %s as is_geo_data failed\n", optarg);
-                return false;
-            }
+            is_geo_data = true;
             break;
         default:
             return false;

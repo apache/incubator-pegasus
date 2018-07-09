@@ -754,6 +754,7 @@ void redis_parser::del_geo_internal(message_entry &entry)
         };
         _geo_client->async_del(redis_request.buffers[1].data.to_string(), // key => hash_key
                                std::string(),                             // ""  => sort_key
+                               false,
                                del_callback,
                                2000); // TODO: set the timeout
     }
@@ -1038,14 +1039,14 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
         redis_array result;
         result.count = (int)results.size();
         for (const auto &elem : results) {
-            std::shared_ptr<redis_base_type> key(new redis_bulk_string(
-                (int)elem.hash_key.size(), elem.hash_key.data())); // hash_key => member
+            std::shared_ptr<redis_base_type> key = std::make_shared<redis_bulk_string>(
+                (int)elem.hash_key.size(), elem.hash_key.data()); // hash_key => member
             if (!WITHCOORD && !WITHDIST && !WITHHASH) {
                 // only member
                 result.array.push_back(key);
             } else {
                 // member and some WITH* parameters
-                std::shared_ptr<redis_array> sub_array(new redis_array());
+                std::shared_ptr<redis_array> sub_array = std::make_shared<redis_array>();
 
                 // member
                 sub_array->array.push_back(key);
@@ -1069,28 +1070,28 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
                     std::shared_ptr<char> dist_buf =
                         dsn::utils::make_shared_array<char>(dist.size());
                     memcpy(dist_buf.get(), dist.data(), dist.size());
-                    sub_array->array.push_back(std::shared_ptr<redis_base_type>(
-                        new redis_bulk_string(dsn::blob(std::move(dist_buf), (int)dist.size()))));
+                    sub_array->array.push_back(std::make_shared<redis_bulk_string>(
+                        dsn::blob(std::move(dist_buf), (int)dist.size())));
                     sub_array->count++;
                 }
                 if (WITHCOORD) {
                     // with coordinate
-                    std::shared_ptr<redis_array> coordinate(new redis_array());
+                    std::shared_ptr<redis_array> coordinate = std::make_shared<redis_array>();
 
                     // longitude
                     std::string lng = std::to_string(elem.lng_degrees);
                     std::shared_ptr<char> lng_buf = dsn::utils::make_shared_array<char>(lng.size());
                     memcpy(lng_buf.get(), lng.data(), lng.size());
-                    coordinate->array.push_back(std::shared_ptr<redis_base_type>(
-                        new redis_bulk_string(dsn::blob(std::move(lng_buf), (int)lng.size()))));
+                    coordinate->array.push_back(std::make_shared<redis_bulk_string>(
+                        dsn::blob(std::move(lng_buf), (int)lng.size())));
                     coordinate->count++;
 
                     // latitude
                     std::string lat = std::to_string(elem.lat_degrees);
                     std::shared_ptr<char> lat_buf = dsn::utils::make_shared_array<char>(lat.size());
                     memcpy(lat_buf.get(), lat.data(), lat.size());
-                    coordinate->array.push_back(std::shared_ptr<redis_base_type>(
-                        new redis_bulk_string(dsn::blob(std::move(lat_buf), (int)lat.size()))));
+                    coordinate->array.push_back(std::make_shared<redis_bulk_string>(
+                        dsn::blob(std::move(lat_buf), (int)lat.size())));
                     coordinate->count++;
 
                     sub_array->array.push_back(coordinate);
@@ -1098,8 +1099,8 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
                 }
                 if (WITHHASH) {
                     // with origin value
-                    sub_array->array.push_back(std::shared_ptr<redis_base_type>(
-                        new redis_bulk_string((int)elem.value.size(), elem.value.data())));
+                    sub_array->array.push_back(std::make_shared<redis_bulk_string>(
+                        (int)elem.value.size(), elem.value.data()));
                     sub_array->count++;
                 }
                 result.array.push_back(sub_array);

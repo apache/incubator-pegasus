@@ -125,6 +125,8 @@ public:
     ///     used to decide which partition to put this k-v
     /// \param sort_key
     ///     all the k-v under hash_key will be sorted by sort_key.
+    /// \param keep_common_data
+    ///     only delete geo data, keep common data.
     /// \param timeout_milliseconds
     ///     if wait longer than this value, will return time out error
     /// \return
@@ -138,6 +140,7 @@ public:
 
     void async_del(const std::string &hash_key,
                    const std::string &sort_key,
+                   bool keep_common_data,
                    pegasus_client::async_del_callback_t &&callback = nullptr,
                    int timeout_milliseconds = 5000);
 
