@@ -83,5 +83,5 @@ inline dsn::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.s
 
 inline rocksdb::Slice to_rocksdb_slice(dsn::string_view s) { return {s.data(), s.size()}; }
 
-}
-} // namespace
+} // namespace utils
+} // namespace pegasus

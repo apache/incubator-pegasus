@@ -214,5 +214,6 @@ int c_unescape_string(const std::string &src, std::string &dest)
         dest.resize(len);
     return len;
 }
-}
-} // namespace
+
+} // namespace utils
+} // namespace pegasus

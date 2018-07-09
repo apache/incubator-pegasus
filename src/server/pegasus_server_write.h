@@ -29,29 +29,19 @@ public:
                                   uint64_t timestamp);
 
 private:
-    int on_multi_put(multi_put_rpc &rpc)
-    {
-        return _write_svc->multi_put(_decree, rpc.request(), rpc.response());
-    }
-
-    int on_multi_remove(multi_remove_rpc &rpc)
-    {
-        return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
-    }
-
     /// Delay replying for the batched requests until all of them complete.
-    int on_batched_writes(dsn_message_t *requests, int count, int64_t decree);
+    int on_batched_writes(dsn_message_t *requests, int count);
 
     int on_single_put_in_batch(put_rpc &rpc)
     {
-        int err = _write_svc->batch_put(rpc.request(), rpc.response());
+        int err = _write_svc->batch_put(_decree, rpc.request(), rpc.response());
         request_key_check(_decree, rpc.dsn_request(), rpc.request().key);
         return err;
     }
 
     int on_single_remove_in_batch(remove_rpc &rpc)
     {
-        int err = _write_svc->batch_remove(rpc.request(), rpc.response());
+        int err = _write_svc->batch_remove(_decree, rpc.request(), rpc.response());
         request_key_check(_decree, rpc.dsn_request(), rpc.request());
         return err;
     }
