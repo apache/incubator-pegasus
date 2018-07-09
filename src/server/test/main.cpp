@@ -5,8 +5,6 @@
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/replication/replication_service_app.h>
-
-#include "server/pegasus_perf_counter.h"
 #include "server/pegasus_server_impl.h"
 
 std::atomic_bool gtest_done{false};
@@ -34,8 +32,6 @@ GTEST_API_ int main(int argc, char **argv)
     dsn::replication::replication_app_base::register_storage_engine(
         "pegasus",
         dsn::replication::replication_app_base::create<pegasus::server::pegasus_server_impl>);
-
-    dsn::service_app::register_factory<gtest_app>("replica");
 
     dsn_run_config("config.ini", false);
     while (!gtest_done) {

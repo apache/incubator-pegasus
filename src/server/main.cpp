@@ -5,7 +5,6 @@
 #include "pegasus_server_impl.h"
 #include "pegasus_service_app.h"
 #include "info_collector_app.h"
-#include "pegasus_perf_counter.h"
 #include "pegasus_counter_updater.h"
 
 #include <pegasus/version.h>
