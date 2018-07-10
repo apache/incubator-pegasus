@@ -50,6 +50,13 @@ protected:
         multi_remove_response resp;
         reply(resp);
     }
+    // RPC_RRDB_RRDB_INCR
+    virtual void on_incr(const incr_request &args, ::dsn::rpc_replier<incr_response> &reply)
+    {
+        std::cout << "... exec RPC_RRDB_RRDB_INCR ... (not implemented) " << std::endl;
+        incr_response resp;
+        reply(resp);
+    }
     // RPC_RRDB_RRDB_GET
     virtual void on_get(const ::dsn::blob &args, ::dsn::rpc_replier<read_response> &reply)
     {
@@ -106,6 +113,7 @@ protected:
         register_async_rpc_handler(RPC_RRDB_RRDB_PUT, "put", on_put);
         register_async_rpc_handler(RPC_RRDB_RRDB_MULTI_PUT, "multi_put", on_multi_put);
         register_async_rpc_handler(RPC_RRDB_RRDB_REMOVE, "remove", on_multi_remove);
+        register_async_rpc_handler(RPC_RRDB_RRDB_INCR, "incr", on_incr);
         register_async_rpc_handler(RPC_RRDB_RRDB_GET, "get", on_get);
         register_async_rpc_handler(RPC_RRDB_RRDB_MULTI_GET, "multi_get", on_multi_get);
         register_async_rpc_handler(RPC_RRDB_RRDB_SORTKEY_COUNT, "sortkey_count", on_sortkey_count);
@@ -139,6 +147,11 @@ private:
                                 ::dsn::rpc_replier<multi_remove_response> &reply)
     {
         svc->on_multi_remove(args, reply);
+    }
+    static void
+    on_incr(rrdb_service *svc, const incr_request &args, ::dsn::rpc_replier<incr_response> &reply)
+    {
+        svc->on_incr(args, reply);
     }
     static void
     on_get(rrdb_service *svc, const ::dsn::blob &args, ::dsn::rpc_replier<read_response> &reply)
