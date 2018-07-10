@@ -299,7 +299,7 @@ private:
     using update_callback_t = std::function<void(
         int error_code, pegasus_client::internal_info &&info, DataType data_type)>;
     using scan_all_area_callback_t =
-        std::function<void(std::list<std::vector<SearchResult>> &&results)>;
+        std::function<void(std::list<std::list<SearchResult>> &&results)>;
     using scan_one_area_callback = std::function<void()>;
 
     // generate hash_key and sort_key in geo database from hash_key and sort_key in common data
@@ -363,7 +363,7 @@ private:
                                      scan_all_area_callback_t &&callback);
 
     // normalize the result by count, sort type, ...
-    void normalize_result(const std::list<std::vector<SearchResult>> &results,
+    void normalize_result(std::list<std::list<SearchResult>> &&results,
                           int count,
                           SortType sort_type,
                           std::list<SearchResult> &result);
@@ -381,14 +381,13 @@ private:
                     std::shared_ptr<S2Cap> cap_ptr,
                     int count,
                     scan_one_area_callback &&callback,
-                    std::vector<SearchResult> &result,
-                    bool start_inclusive = true);
+                    std::list<SearchResult> &result);
 
     void do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper,
                  std::shared_ptr<S2Cap> cap_ptr,
                  int count,
                  scan_one_area_callback &&callback,
-                 std::vector<SearchResult> &result);
+                 std::list<SearchResult> &result);
 
 private:
     // cell id at this level is the hash-key in pegasus

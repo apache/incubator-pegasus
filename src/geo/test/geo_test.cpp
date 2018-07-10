@@ -45,12 +45,12 @@ public:
         return _geo_client->restore_origin_keys(geo_sort_key, origin_hash_key, origin_sort_key);
     }
 
-    void normalize_result(const std::list<std::vector<SearchResult>> &results,
+    void normalize_result(std::list<std::list<SearchResult>> &&results,
                           int count,
                           geo::geo_client::SortType sort_type,
                           std::list<SearchResult> &result)
     {
-        _geo_client->normalize_result(results, count, sort_type, result);
+        _geo_client->normalize_result(std::move(results), count, sort_type, result);
     }
 
     void gen_search_cap(const S2LatLng &latlng, double radius_m, S2Cap &cap)
@@ -353,58 +353,91 @@ TEST_F(geo_client_test, generate_and_restore_geo_keys)
 
 TEST_F(geo_client_test, normalize_result_random_order)
 {
-    std::list<std::vector<geo::SearchResult>> results;
     geo::SearchResult r1(1.1, 1.1, 1, "test_hash_key_1", "test_sort_key_1", "value_1");
-    results.push_back({r1});
+    geo::SearchResult r2(2.2, 2.2, 2, "test_hash_key_2", "test_sort_key_2", "value_2");
     int count = 100;
     std::list<geo::SearchResult> result;
-    normalize_result(results, count, geo::geo_client::SortType::random, result);
-    ASSERT_EQ(result.size(), 1);
-    ASSERT_EQ(result.front(), r1);
 
-    geo::SearchResult r2(2.2, 2.2, 2, "test_hash_key_2", "test_sort_key_2", "value_2");
-    results.push_back({r2});
-    normalize_result(results, 1, geo::geo_client::SortType::random, result);
-    ASSERT_EQ(result.size(), 1);
-    ASSERT_EQ(result.front(), r1);
+    {
+        std::list<std::list<geo::SearchResult>> results;
+        results.push_back({geo::SearchResult(r1)});
+        normalize_result(std::move(results), count, geo::geo_client::SortType::random, result);
+        ASSERT_EQ(result.size(), 1);
+        ASSERT_EQ(result.front(), r1);
+    }
 
-    normalize_result(results, count, geo::geo_client::SortType::random, result);
-    ASSERT_EQ(result.size(), 2);
-    ASSERT_EQ(result.front(), r1);
-    ASSERT_EQ(result.back(), r2);
+    {
+        std::list<std::list<geo::SearchResult>> results;
+        results.push_back({geo::SearchResult(r1)});
+        results.push_back({geo::SearchResult(r2)});
+        normalize_result(std::move(results), 1, geo::geo_client::SortType::random, result);
+        ASSERT_EQ(result.size(), 1);
+        ASSERT_EQ(result.front(), r1);
+    }
 
-    normalize_result(results, -1, geo::geo_client::SortType::random, result);
-    ASSERT_EQ(result.size(), 2);
-    ASSERT_EQ(result.front(), r1);
-    ASSERT_EQ(result.back(), r2);
+    {
+        std::list<std::list<geo::SearchResult>> results;
+        results.push_back({geo::SearchResult(r1)});
+        results.push_back({geo::SearchResult(r2)});
+        normalize_result(std::move(results), count, geo::geo_client::SortType::random, result);
+        ASSERT_EQ(result.size(), 2);
+        ASSERT_EQ(result.front(), r1);
+        ASSERT_EQ(result.back(), r2);
+    }
+
+    {
+        std::list<std::list<geo::SearchResult>> results;
+        results.push_back({geo::SearchResult(r1)});
+        results.push_back({geo::SearchResult(r2)});
+        normalize_result(std::move(results), -1, geo::geo_client::SortType::random, result);
+        ASSERT_EQ(result.size(), 2);
+        ASSERT_EQ(result.front(), r1);
+        ASSERT_EQ(result.back(), r2);
+    }
 }
 
 TEST_F(geo_client_test, normalize_result_distance_order)
 {
-    std::list<std::vector<geo::SearchResult>> results;
+    geo::SearchResult r1(1.1, 1.1, 1, "test_hash_key_1", "test_sort_key_1", "value_1");
     geo::SearchResult r2(2.2, 2.2, 2, "test_hash_key_2", "test_sort_key_2", "value_2");
-    results.push_back({r2});
     int count = 100;
     std::list<geo::SearchResult> result;
-    normalize_result(results, count, geo::geo_client::SortType::asc, result);
-    ASSERT_EQ(result.size(), 1);
-    ASSERT_EQ(result.front(), r2);
 
-    geo::SearchResult r1(1.1, 1.1, 1, "test_hash_key_1", "test_sort_key_1", "value_1");
-    results.push_back({r1});
-    normalize_result(results, 1, geo::geo_client::SortType::asc, result);
-    ASSERT_EQ(result.size(), 1);
-    ASSERT_EQ(result.front(), r1);
+    {
+        std::list<std::list<geo::SearchResult>> results;
+        results.push_back({geo::SearchResult(r2)});
+        normalize_result(std::move(results), count, geo::geo_client::SortType::asc, result);
+        ASSERT_EQ(result.size(), 1);
+        ASSERT_EQ(result.front(), r2);
+    }
 
-    normalize_result(results, count, geo::geo_client::SortType::asc, result);
-    ASSERT_EQ(result.size(), 2);
-    ASSERT_EQ(result.front(), r1);
-    ASSERT_EQ(result.back(), r2);
+    {
+        std::list<std::list<geo::SearchResult>> results;
+        results.push_back({geo::SearchResult(r1)});
+        normalize_result(std::move(results), 1, geo::geo_client::SortType::asc, result);
+        ASSERT_EQ(result.size(), 1);
+        ASSERT_EQ(result.front(), r1);
+    }
 
-    normalize_result(results, -1, geo::geo_client::SortType::asc, result);
-    ASSERT_EQ(result.size(), 2);
-    ASSERT_EQ(result.front(), r1);
-    ASSERT_EQ(result.back(), r2);
+    {
+        std::list<std::list<geo::SearchResult>> results;
+        results.push_back({geo::SearchResult(r1)});
+        results.push_back({geo::SearchResult(r2)});
+        normalize_result(std::move(results), count, geo::geo_client::SortType::asc, result);
+        ASSERT_EQ(result.size(), 2);
+        ASSERT_EQ(result.front(), r1);
+        ASSERT_EQ(result.back(), r2);
+    }
+
+    {
+        std::list<std::list<geo::SearchResult>> results;
+        results.push_back({geo::SearchResult(r1)});
+        results.push_back({geo::SearchResult(r2)});
+        normalize_result(std::move(results), -1, geo::geo_client::SortType::asc, result);
+        ASSERT_EQ(result.size(), 2);
+        ASSERT_EQ(result.front(), r1);
+        ASSERT_EQ(result.back(), r2);
+    }
 }
 
 TEST_F(geo_client_test, distance)
