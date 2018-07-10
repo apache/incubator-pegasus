@@ -14,6 +14,7 @@ set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIBS gtest
                  dsn_runtime
+                 boost_regex
                  )
 
 set(MY_PROJ_LIB_PATH "${GTEST_LIB_DIR}")
@@ -41,4 +42,5 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/gtest.filter"
 )
 add_definitions(-Wno-dangling-else)
+add_definitions(-DENABLE_FAIL)
 dsn_add_executable()

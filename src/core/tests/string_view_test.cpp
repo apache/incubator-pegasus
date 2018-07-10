@@ -18,6 +18,30 @@
 
 namespace {
 
+// Continued from STL2
+TEST(StringViewTest, STL2Substr) {
+    const dsn::string_view a("abcdefghijklmnopqrstuvwxyz");
+    const dsn::string_view b("abc");
+    const dsn::string_view c("xyz");
+    dsn::string_view d("foobar");
+    const dsn::string_view e;
+
+    d = dsn::string_view();
+    EXPECT_EQ(a.substr(0, 3), b);
+    EXPECT_EQ(a.substr(23), c);
+    EXPECT_EQ(a.substr(23, 3), c);
+    EXPECT_EQ(a.substr(23, 99), c);
+    EXPECT_EQ(a.substr(0), a);
+    EXPECT_EQ(a.substr(3, 2), "de");
+    // empty std::string nonsense
+    EXPECT_EQ(d.substr(0, 99), e);
+    // use of npos
+    EXPECT_EQ(a.substr(0, dsn::string_view::npos), a);
+    EXPECT_EQ(a.substr(23, dsn::string_view::npos), c);
+
+    EXPECT_THROW(a.substr(99, 2), std::out_of_range);
+}
+
 TEST(StringViewTest, Ctor)
 {
     {

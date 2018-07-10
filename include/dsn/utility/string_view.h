@@ -44,6 +44,7 @@
 #include <algorithm>
 #include <cassert>
 #include <dsn/utility/blob.h>
+#include <dsn/utility/ports.h>
 
 namespace dsn {
 
@@ -150,6 +151,8 @@ public:
     using reverse_iterator = const_reverse_iterator;
     using size_type = size_t;
     using difference_type = std::ptrdiff_t;
+
+    static constexpr size_type npos = static_cast<size_type>(-1);
 
     // Null `string_view` constructor
     constexpr string_view() noexcept : ptr_(nullptr), length_(0) {}
@@ -322,6 +325,19 @@ public:
         return std::basic_string<char, traits_type, A>(data(), size());
     }
 
+    // string_view::substr()
+    //
+    // Returns a "substring" of the `string_view` (at offset `pos` and length
+    // `n`) as another string_view. This function throws `std::out_of_bounds` if
+    // `pos > size'.
+    string_view substr(size_type pos, size_type n = npos) const
+    {
+        if (dsn_unlikely(pos > length_))
+            throw std::out_of_range("absl::string_view::substr");
+        n = std::min(n, length_ - pos);
+        return string_view(ptr_ + pos, n);
+    }
+
     // string_view::compare()
     //
     // Performs a lexicographical comparison between the `string_view` and
@@ -345,6 +361,39 @@ public:
         if (length_ > x.length_)
             return 1;
         return 0;
+    }
+
+    // Overload of `string_view::compare()` for comparing a substring of the
+    // 'string_view` and another `absl::string_view`.
+    int compare(size_type pos1, size_type count1, string_view v) const
+    {
+        return substr(pos1, count1).compare(v);
+    }
+
+    // Overload of `string_view::compare()` for comparing a substring of the
+    // `string_view` and a substring of another `absl::string_view`.
+    int
+    compare(size_type pos1, size_type count1, string_view v, size_type pos2, size_type count2) const
+    {
+        return substr(pos1, count1).compare(v.substr(pos2, count2));
+    }
+
+    // Overload of `string_view::compare()` for comparing a `string_view` and a
+    // a different  C-style std::string `s`.
+    int compare(const char *s) const { return compare(string_view(s)); }
+
+    // Overload of `string_view::compare()` for comparing a substring of the
+    // `string_view` and a different std::string C-style std::string `s`.
+    int compare(size_type pos1, size_type count1, const char *s) const
+    {
+        return substr(pos1, count1).compare(string_view(s));
+    }
+
+    // Overload of `string_view::compare()` for comparing a substring of the
+    // `string_view` and a substring of a different C-style std::string `s`.
+    int compare(size_type pos1, size_type count1, const char *s, size_type count2) const
+    {
+        return substr(pos1, count1).compare(string_view(s, count2));
     }
 
 private:
