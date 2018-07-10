@@ -54,7 +54,8 @@ public:
                            decree,
                            "request.kvs is empty");
             resp.error = rocksdb::Status::kInvalidArgument;
-            return 0;
+            // we should write empty record to update rocksdb's last flushed decree
+            return empty_put(decree);
         }
 
         for (auto &kv : update.kvs) {
@@ -88,7 +89,8 @@ public:
                            decree,
                            "request.sort_keys is empty");
             resp.error = rocksdb::Status::kInvalidArgument;
-            return 0;
+            // we should write empty record to update rocksdb's last flushed decree
+            return empty_put(decree);
         }
 
         for (auto &sort_key : update.sort_keys) {
@@ -141,7 +143,8 @@ public:
                                        decree,
                                        "old value is not an integer or out of range");
                         resp.error = rocksdb::Status::kInvalidArgument;
-                        return 0;
+                        // we should write empty record to update rocksdb's last flushed decree
+                        return empty_put(decree);
                     }
                     new_value = old_value_int + update.increment;
                     if ((update.increment > 0 && new_value < old_value_int) ||
@@ -152,7 +155,8 @@ public:
                                        "new value is out of range");
                         resp.error = rocksdb::Status::kInvalidArgument;
                         resp.new_value = old_value_int;
-                        return 0;
+                        // we should write empty record to update rocksdb's last flushed decree
+                        return empty_put(decree);
                     }
                 }
             }
@@ -261,9 +265,7 @@ private:
     // Apply the write batch into rocksdb.
     int db_write(int64_t decree)
     {
-        if (_batch.Count() == 0) {
-            return 0;
-        }
+        dassert(_batch.Count() != 0, "");
 
         _wt_opts->given_decree = static_cast<uint64_t>(decree);
         auto status = _db->Write(*_wt_opts, &_batch);
