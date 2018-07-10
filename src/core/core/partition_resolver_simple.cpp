@@ -83,6 +83,8 @@ void partition_resolver_simple::on_access_failure(int partition_index, error_cod
         &&
         err != ERR_NOT_ENOUGH_MEMBER // primary won't change and we only r/w on primary in this
                                      // provider
+        &&
+        err != ERR_OPERATION_DISABLED // operation disabled
         ) {
         ddebug("clear partition configuration cache %d.%d due to access failure %s",
                _app_id,
@@ -397,9 +399,8 @@ void partition_resolver_simple::handle_pending_requests(std::deque<request_conte
             } else {
                 call(std::move(req), true);
             }
-        } else if (err == ERR_HANDLER_NOT_FOUND) {
-            end_request(std::move(req), err, rpc_address());
-        } else if (err == ERR_APP_NOT_EXIST) {
+        } else if (err == ERR_HANDLER_NOT_FOUND || err == ERR_APP_NOT_EXIST ||
+                   err == ERR_OPERATION_DISABLED) {
             end_request(std::move(req), err, rpc_address());
         } else {
             call(std::move(req), true);

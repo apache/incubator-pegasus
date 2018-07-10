@@ -100,13 +100,15 @@ void task_spec::register_storage_task_code(task_code code,
                                            dsn_task_priority_t pri,
                                            threadpool_code pool,
                                            bool is_write_operation,
-                                           bool allow_batch)
+                                           bool allow_batch,
+                                           bool is_idempotent)
 {
     register_task_code(code, type, pri, pool);
     task_spec *spec = task_spec::get(code);
     spec->rpc_request_for_storage = true;
     spec->rpc_request_is_write_operation = is_write_operation;
     spec->rpc_request_is_write_allow_batch = allow_batch;
+    spec->rpc_request_is_write_idempotent = is_idempotent;
 }
 
 task_spec *task_spec::get(int code)
@@ -126,6 +128,7 @@ task_spec::task_spec(int code,
       rpc_request_for_storage(false),
       rpc_request_is_write_operation(false),
       rpc_request_is_write_allow_batch(false),
+      rpc_request_is_write_idempotent(false),
       priority(pri),
       pool_code(pool),
       rpc_call_header_format(NET_HDR_DSN),

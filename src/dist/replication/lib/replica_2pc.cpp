@@ -46,6 +46,12 @@ void replica::on_client_write(task_code code, dsn_message_t request)
 {
     check_hashed_access();
 
+    task_spec *spec = task_spec::get(code);
+    if (!_options->allow_non_idempotent_write && !spec->rpc_request_is_write_idempotent) {
+        response_client_message(false, request, ERR_OPERATION_DISABLED);
+        return;
+    }
+
     if (partition_status::PS_PRIMARY != status()) {
         response_client_message(false, request, ERR_INVALID_STATE);
         return;

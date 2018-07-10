@@ -163,7 +163,8 @@ public:
                                                    dsn_task_priority_t pri,
                                                    dsn::threadpool_code pool,
                                                    bool is_write_operation,
-                                                   bool allow_batch);
+                                                   bool allow_batch,
+                                                   bool is_idempotent);
 
 public:
     // not configurable [
@@ -176,6 +177,7 @@ public:
     bool rpc_request_for_storage;
     bool rpc_request_is_write_operation;   // need stateful replication
     bool rpc_request_is_write_allow_batch; // if write allow batch
+    bool rpc_request_is_write_idempotent;  // if write operation is idempotent
     // ]
 
     // configurable [

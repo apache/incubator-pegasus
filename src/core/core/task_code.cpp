@@ -48,10 +48,12 @@ task_code::task_code(const char *name,
                      dsn_task_priority_t pri,
                      dsn::threadpool_code pool,
                      bool is_storage_write,
-                     bool allow_batch)
+                     bool allow_batch,
+                     bool is_idempotent)
     : task_code(name)
 {
-    task_spec::register_storage_task_code(*this, tt, pri, pool, is_storage_write, allow_batch);
+    task_spec::register_storage_task_code(
+        *this, tt, pri, pool, is_storage_write, allow_batch, is_idempotent);
 }
 
 const char *task_code::to_string() const

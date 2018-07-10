@@ -664,7 +664,8 @@ void rpc_engine::call_uri(rpc_address addr, message_ex *request, const rpc_respo
                 dsn::error_code err, dsn_message_t req, dsn_message_t resp) {
                 message_ex *req2 = (message_ex *)req;
                 if (req2->header->gpid.value() != 0 && err != ERR_OK &&
-                    err != ERR_HANDLER_NOT_FOUND && err != ERR_APP_NOT_EXIST) {
+                    err != ERR_HANDLER_NOT_FOUND && err != ERR_APP_NOT_EXIST &&
+                    err != ERR_OPERATION_DISABLED) {
                     auto resolver = req2->server_address.uri_address()->get_resolver();
                     if (nullptr != resolver) {
                         resolver->on_access_failure(req2->header->gpid.get_partition_index(), err);

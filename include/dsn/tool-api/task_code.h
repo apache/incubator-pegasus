@@ -102,7 +102,8 @@ public:
               dsn_task_priority_t pri,
               dsn::threadpool_code pool,
               bool is_storage_write,
-              bool allow_batch);
+              bool allow_batch,
+              bool is_idempotent);
 
     const char *to_string() const;
 
@@ -153,7 +154,9 @@ private:
 // 2. for a write rpc, a primary may also need to replicate it
 //    to secondaries before forwarding to the storage engine.
 // 3. some storage engine's rpc shouldn't be batched,
-//    either for better performance or correctness
+//    either for better performance or correctness.
+// 4. some write rpc is idempotent, but some is not.
+//    we should differentiate it.
 // so we define some specical fields in task_spec to mark these features.
 //
 // please refer to rpc_engine::on_recv_request for the detailes on how storage_engine's rpc
@@ -162,11 +165,21 @@ private:
 // Notice we dispatch storage rpc's response to THREAD_POOL_DEFAULT,
 // the reason is that the storage rpc's response mainly runs at client side, which is not
 // necessary to start so many threadpools
-#define DEFINE_STORAGE_RPC_CODE(x, pri, pool, is_write, allow_batch)                               \
+#define DEFINE_STORAGE_RPC_CODE(x, pri, pool, is_write, allow_batch, is_idempotent)                \
     __selectany const ::dsn::task_code x(                                                          \
-        #x, TASK_TYPE_RPC_REQUEST, pri, pool, is_write, allow_batch);                              \
-    __selectany const ::dsn::task_code x##_ACK(                                                    \
-        #x "_ACK", TASK_TYPE_RPC_RESPONSE, pri, THREAD_POOL_DEFAULT, is_write, allow_batch);
+        #x, TASK_TYPE_RPC_REQUEST, pri, pool, is_write, allow_batch, is_idempotent);               \
+    __selectany const ::dsn::task_code x##_ACK(#x "_ACK",                                          \
+                                               TASK_TYPE_RPC_RESPONSE,                             \
+                                               pri,                                                \
+                                               THREAD_POOL_DEFAULT,                                \
+                                               is_write,                                           \
+                                               allow_batch,                                        \
+                                               is_idempotent);
+
+#define ALLOW_BATCH true
+#define NOT_ALLOW_BATCH false
+#define IS_IDEMPOTENT true
+#define NOT_IDEMPOTENT false
 
 // define a default task code "task_code_invalid", it's mainly used for representing
 // some error status when you want to return task_code in some functions.
