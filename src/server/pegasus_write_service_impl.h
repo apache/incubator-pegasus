@@ -10,6 +10,8 @@
 
 #include "base/pegasus_key_schema.h"
 
+#include <dsn/utility/fail_point.h>
+
 namespace pegasus {
 namespace server {
 
@@ -142,6 +144,9 @@ private:
                            dsn::string_view value,
                            uint32_t expire_sec)
     {
+        FAIL_POINT_INJECT_F("db_write_batch_put",
+                            [](dsn::string_view) -> int { return rocksdb::Status::kCorruption; });
+
         rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
         rocksdb::SliceParts skey_parts(&skey, 1);
         rocksdb::SliceParts svalue =
@@ -163,6 +168,9 @@ private:
 
     int db_write_batch_delete(int64_t decree, dsn::string_view raw_key)
     {
+        FAIL_POINT_INJECT_F("db_write_batch_delete",
+                            [](dsn::string_view) -> int { return rocksdb::Status::kCorruption; });
+
         rocksdb::Status s = _batch.Delete(utils::to_rocksdb_slice(raw_key));
         if (dsn_unlikely(!s.ok())) {
             ::dsn::blob hash_key, sort_key;
@@ -183,6 +191,9 @@ private:
         if (_batch.Count() == 0) {
             return 0;
         }
+
+        FAIL_POINT_INJECT_F("db_write",
+                            [](dsn::string_view) -> int { return rocksdb::Status::kCorruption; });
 
         _wt_opts->given_decree = static_cast<uint64_t>(decree);
         auto status = _db->Write(*_wt_opts, &_batch);
