@@ -49,7 +49,7 @@ static const long stat_max_pos = stat_batch - 1;
 long get_time()
 {
     struct timeval tv;
-    gettimeofday(&tv, NULL);
+    gettimeofday(&tv, nullptr);
     return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 

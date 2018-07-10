@@ -435,7 +435,7 @@ static char *hintsCallback(const char *buf, int *color, int *bold)
 
     /* Check if the argument list is empty and return ASAP. */
     if (argc == 0) {
-        return NULL;
+        return nullptr;
     }
 
     size_t buflen = strlen(buf);
@@ -458,7 +458,7 @@ static char *hintsCallback(const char *buf, int *color, int *bold)
             return hint;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 /* Linenoise free hints callback. */
@@ -509,7 +509,7 @@ void run()
         sds *args = scanfCommand(&arg_count);
         auto cleanup = dsn::defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
 
-        if (args == NULL) {
+        if (args == nullptr) {
             printf("Invalid argument(s)\n");
             continue;
         }

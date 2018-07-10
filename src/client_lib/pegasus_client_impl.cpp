@@ -766,8 +766,8 @@ int pegasus_client_impl::incr(const std::string &hash_key,
 {
     ::dsn::utils::notify_event op_completed;
     int ret = -1;
-    auto callback = [&](int err, int64_t _new_value, internal_info &&_info) {
-        ret = err;
+    auto callback = [&](int _err, int64_t _new_value, internal_info &&_info) {
+        ret = _err;
         new_value = _new_value;
         if (info != nullptr)
             (*info) = std::move(_info);

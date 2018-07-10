@@ -1827,7 +1827,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
 
     pegasus::pegasus_client *target_client = pegasus::pegasus_client_factory::get_client(
         target_cluster_name.c_str(), target_app_name.c_str());
-    if (target_client == NULL) {
+    if (target_client == nullptr) {
         fprintf(stderr, "ERROR: get target app client failed\n");
         return true;
     }

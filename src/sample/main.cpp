@@ -43,7 +43,7 @@ int main(int argc, const char *argv[])
     }
 
     // hash scan
-    pegasus_client::pegasus_scanner *scanner = NULL;
+    pegasus_client::pegasus_scanner *scanner = nullptr;
     std::string start_sort_key("pegasus_cpp_sample");
     std::string stop_sort_key(""); // empty string means scan to the end
     pegasus_client::scan_options scan_options;

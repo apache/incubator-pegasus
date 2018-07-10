@@ -190,7 +190,7 @@ public:
         virtual int next(std::string &hashkey,
                          std::string &sortkey,
                          std::string &value,
-                         internal_info *info = NULL) = 0;
+                         internal_info *info = nullptr) = 0;
 
         ///
         /// \brief async get the next key-value pair of this scanner
@@ -269,7 +269,7 @@ public:
                     const std::string &value,
                     int timeout_milliseconds = 5000,
                     int ttl_seconds = 0,
-                    internal_info *info = NULL) = 0;
+                    internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous set
@@ -318,7 +318,7 @@ public:
                           const std::map<std::string, std::string> &kvs,
                           int timeout_milliseconds = 5000,
                           int ttl_seconds = 0,
-                          internal_info *info = NULL) = 0;
+                          internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous multi_set (guarantee atomicity)
@@ -363,7 +363,7 @@ public:
                     const std::string &sortkey,
                     std::string &value,
                     int timeout_milliseconds = 5000,
-                    internal_info *info = NULL) = 0;
+                    internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous get
@@ -414,7 +414,7 @@ public:
                           int max_fetch_count = 100,
                           int max_fetch_size = 1000000,
                           int timeout_milliseconds = 5000,
-                          internal_info *info = NULL) = 0;
+                          internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous multi_get
@@ -476,7 +476,7 @@ public:
                           int max_fetch_count = 100,
                           int max_fetch_size = 1000000,
                           int timeout_milliseconds = 5000,
-                          internal_info *info = NULL) = 0;
+                          internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous multi_get
@@ -535,7 +535,7 @@ public:
                                    int max_fetch_count = 100,
                                    int max_fetch_size = 1000000,
                                    int timeout_milliseconds = 5000,
-                                   internal_info *info = NULL) = 0;
+                                   internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous multi_get_sortkeys
@@ -579,7 +579,7 @@ public:
     virtual int exist(const std::string &hashkey,
                       const std::string &sortkey,
                       int timeout_milliseconds = 5000,
-                      internal_info *info = NULL) = 0;
+                      internal_info *info = nullptr) = 0;
 
     ///
     /// \brief sortkey_count
@@ -597,7 +597,7 @@ public:
     virtual int sortkey_count(const std::string &hashkey,
                               int64_t &count,
                               int timeout_milliseconds = 5000,
-                              internal_info *info = NULL) = 0;
+                              internal_info *info = nullptr) = 0;
 
     ///
     /// \brief del
@@ -616,7 +616,7 @@ public:
     virtual int del(const std::string &hashkey,
                     const std::string &sortkey,
                     int timeout_milliseconds = 5000,
-                    internal_info *info = NULL) = 0;
+                    internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous del
@@ -658,7 +658,7 @@ public:
                           const std::set<std::string> &sortkeys,
                           int64_t &deleted_count,
                           int timeout_milliseconds = 5000,
-                          internal_info *info = NULL) = 0;
+                          internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous multi_del
@@ -711,7 +711,7 @@ public:
                      int64_t increment,
                      int64_t &new_value,
                      int timeout_milliseconds = 5000,
-                     internal_info *info = NULL) = 0;
+                     internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous incr
@@ -754,7 +754,7 @@ public:
                     const std::string &sortkey,
                     int &ttl_seconds,
                     int timeout_milliseconds = 5000,
-                    internal_info *info = NULL) = 0;
+                    internal_info *info = nullptr) = 0;
 
     ///
     /// \brief get hash scanner
