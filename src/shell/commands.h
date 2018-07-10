@@ -13,6 +13,7 @@
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/string_conv.h>
 #include <dsn/tool/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
@@ -257,13 +258,13 @@ inline bool create_app(command_executor *e, shell_context *sc, arguments args)
             break;
         switch (c) {
         case 'p':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), pc)) {
+            if (!dsn::buf2int32(optarg, pc)) {
                 fprintf(stderr, "parse %s as partition_count failed\n", optarg);
                 return false;
             }
             break;
         case 'r':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), rc)) {
+            if (!dsn::buf2int32(optarg, rc)) {
                 fprintf(stderr, "parse %s as replica_count failed\n", optarg);
                 return false;
             }
@@ -309,7 +310,7 @@ inline bool drop_app(command_executor *e, shell_context *sc, arguments args)
             break;
         switch (c) {
         case 'r':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), reserve_seconds)) {
+            if (!dsn::buf2int32(optarg, reserve_seconds)) {
                 fprintf(stderr, "parse %s as reserve_seconds failed\n", optarg);
                 return false;
             }
@@ -335,7 +336,7 @@ inline bool recall_app(command_executor *e, shell_context *sc, arguments args)
 
     int id;
     std::string new_name = "";
-    if (!::pegasus::utils::buf2int(args.argv[1], strlen(args.argv[1]), id)) {
+    if (!dsn::buf2int32(args.argv[1], id)) {
         fprintf(stderr, "ERROR: parse %s as id failed\n", args.argv[1]);
         return false;
     }
@@ -590,7 +591,7 @@ inline bool process_timeout(command_executor *e, shell_context *sc, arguments ar
         return true;
     } else if (args.argc == 2) {
         int timeout;
-        if (!::pegasus::utils::buf2int(args.argv[1], strlen(args.argv[1]), timeout)) {
+        if (!dsn::buf2int32(args.argv[1], timeout)) {
             fprintf(stderr, "ERROR: parse %s as timeout failed\n", args.argv[1]);
             return false;
         }
@@ -776,13 +777,13 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
             break;
         switch (c) {
         case 'a':
-            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.start_inclusive)) {
+            if (!dsn::buf2bool(optarg, options.start_inclusive)) {
                 fprintf(stderr, "invalid start_inclusive param\n");
                 return false;
             }
             break;
         case 'b':
-            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.stop_inclusive)) {
+            if (!dsn::buf2bool(optarg, options.stop_inclusive)) {
                 fprintf(stderr, "invalid stop_inclusive param\n");
                 return false;
             }
@@ -798,7 +799,7 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
             options.sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'n':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_count)) {
+            if (!dsn::buf2int32(optarg, max_count)) {
                 fprintf(stderr, "parse %s as max_count failed\n", optarg);
                 return false;
             }
@@ -966,7 +967,7 @@ inline bool set_value(command_executor *e, shell_context *sc, arguments args)
     std::string value = sds_to_string(args.argv[3]);
     int32_t ttl = 0;
     if (args.argc == 5) {
-        if (!::pegasus::utils::buf2int(args.argv[4], strlen(args.argv[4]), ttl)) {
+        if (!dsn::buf2int32(args.argv[4], ttl)) {
             fprintf(stderr, "ERROR: parse %s as ttl failed\n", args.argv[4]);
             return false;
         }
@@ -1114,13 +1115,13 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
             break;
         switch (c) {
         case 'a':
-            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.start_inclusive)) {
+            if (!dsn::buf2bool(optarg, options.start_inclusive)) {
                 fprintf(stderr, "invalid start_inclusive param\n");
                 return false;
             }
             break;
         case 'b':
-            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.stop_inclusive)) {
+            if (!dsn::buf2bool(optarg, options.stop_inclusive)) {
                 fprintf(stderr, "invalid stop_inclusive param\n");
                 return false;
             }
@@ -1283,7 +1284,7 @@ inline bool incr(command_executor *e, shell_context *sc, arguments args)
     std::string sort_key = sds_to_string(args.argv[2]);
     int64_t increment = 1;
     if (args.argc == 4) {
-        if (!pegasus::utils::buf2int64(args.argv[3], strlen(args.argv[3]), increment)) {
+        if (!dsn::buf2int64(args.argv[3], increment)) {
             fprintf(stderr, "ERROR: invalid increment param\n");
             return false;
         }
@@ -1382,19 +1383,19 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             detailed = true;
             break;
         case 'z':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), batch_size)) {
+            if (!dsn::buf2int32(optarg, batch_size)) {
                 fprintf(stderr, "parse %s as batch_size failed\n", optarg);
                 return false;
             }
             break;
         case 'n':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_count)) {
+            if (!dsn::buf2int32(optarg, max_count)) {
                 fprintf(stderr, "parse %s as max_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+            if (!dsn::buf2int32(optarg, timeout_ms)) {
                 fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
@@ -1407,13 +1408,13 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'a':
-            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.start_inclusive)) {
+            if (!dsn::buf2bool(optarg, options.start_inclusive)) {
                 fprintf(stderr, "invalid start_inclusive param\n");
                 return false;
             }
             break;
         case 'b':
-            if (!::pegasus::utils::buf2bool(optarg, strlen(optarg), options.stop_inclusive)) {
+            if (!dsn::buf2bool(optarg, options.stop_inclusive)) {
                 fprintf(stderr, "invalid stop_inclusive param\n");
                 return false;
             }
@@ -1565,19 +1566,19 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             detailed = true;
             break;
         case 'z':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), batch_size)) {
+            if (!dsn::buf2int32(optarg, batch_size)) {
                 fprintf(stderr, "parse %s as batch_size failed\n", optarg);
                 return false;
             }
             break;
         case 'n':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_count)) {
+            if (!dsn::buf2int32(optarg, max_count)) {
                 fprintf(stderr, "parse %s as max_count failed\n", optarg);
                 return false;
             }
             break;
         case 'p':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), partition)) {
+            if (!dsn::buf2int32(optarg, partition)) {
                 fprintf(stderr, "parse %s as partition id failed\n", optarg);
                 return false;
             }
@@ -1587,7 +1588,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 't':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+            if (!dsn::buf2int32(optarg, timeout_ms)) {
                 fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
@@ -1764,19 +1765,19 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
             target_app_name = optarg;
             break;
         case 's':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_split_count)) {
+            if (!dsn::buf2int32(optarg, max_split_count)) {
                 fprintf(stderr, "parse %s as max_split_count failed\n", optarg);
                 return false;
             }
             break;
         case 'b':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_batch_count)) {
+            if (!dsn::buf2int32(optarg, max_batch_count)) {
                 fprintf(stderr, "parse %s as max_batch_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+            if (!dsn::buf2int32(optarg, timeout_ms)) {
                 fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
@@ -1951,19 +1952,19 @@ inline bool clear_data(command_executor *e, shell_context *sc, arguments args)
             force = true;
             break;
         case 's':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_split_count)) {
+            if (!dsn::buf2int32(optarg, max_split_count)) {
                 fprintf(stderr, "parse %s as max_split_count failed\n", optarg);
                 return false;
             }
             break;
         case 'b':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_batch_count)) {
+            if (!dsn::buf2int32(optarg, max_batch_count)) {
                 fprintf(stderr, "parse %s as max_batch_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+            if (!dsn::buf2int32(optarg, timeout_ms)) {
                 fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
@@ -2113,19 +2114,19 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
             break;
         switch (c) {
         case 's':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_split_count)) {
+            if (!dsn::buf2int32(optarg, max_split_count)) {
                 fprintf(stderr, "parse %s as max_split_count failed\n", optarg);
                 return false;
             }
             break;
         case 'b':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), max_batch_count)) {
+            if (!dsn::buf2int32(optarg, max_batch_count)) {
                 fprintf(stderr, "parse %s as max_batch_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), timeout_ms)) {
+            if (!dsn::buf2int32(optarg, timeout_ms)) {
                 fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
@@ -2134,13 +2135,13 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
             stat_size = true;
             break;
         case 'c':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), top_count)) {
+            if (!dsn::buf2int32(optarg, top_count)) {
                 fprintf(stderr, "parse %s as top_count failed\n", optarg);
                 return false;
             }
             break;
         case 'r':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), run_seconds)) {
+            if (!dsn::buf2int32(optarg, run_seconds)) {
                 fprintf(stderr, "parse %s as run_seconds failed\n", optarg);
                 return false;
             }
@@ -2660,7 +2661,7 @@ inline bool recover(command_executor *e, shell_context *sc, arguments args)
             node_list_str = optarg;
             break;
         case 'w':
-            if (!::pegasus::utils::buf2int(optarg, strlen(optarg), wait_seconds)) {
+            if (!dsn::buf2int32(optarg, wait_seconds)) {
                 fprintf(stderr, "parse %s as wait_seconds failed\n", optarg);
                 return false;
             }
