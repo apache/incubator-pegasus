@@ -10,6 +10,8 @@
 
 #include "base/pegasus_key_schema.h"
 
+#include <dsn/utility/string_conv.h>
+
 namespace pegasus {
 namespace server {
 
@@ -137,7 +139,7 @@ public:
                     new_value = update.increment;
                 } else {
                     int64_t old_value_int;
-                    if (!utils::buf2int64(old_value.data(), old_value.length(), old_value_int)) {
+                    if (!dsn::buf2int64(old_value, old_value_int)) {
                         // invalid old value
                         derror_replica("incr failed: decree = {}, error = {}",
                                        decree,
