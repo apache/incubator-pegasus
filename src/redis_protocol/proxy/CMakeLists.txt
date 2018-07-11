@@ -11,7 +11,12 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "../../include" "../../base" "../proxy_lib")
 
-set(MY_PROJ_LIBS pegasus.rproxylib pegasus.base)
+set(MY_PROJ_LIBS pegasus.rproxylib
+                 pegasus.base
+                 pegasus_geo_lib
+                 s2
+                 pegasus_client_static
+                 fmt)
 
 set(MY_BINPLACES "config.ini")
 

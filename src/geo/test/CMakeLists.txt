@@ -1,4 +1,5 @@
-set(MY_PROJ_NAME pegasus.rproxylib)
+set(MY_PROJ_NAME pegasus_geo_test)
+project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -9,12 +10,18 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include" "../../base")
+set(MY_PROJ_LIBS
+        s2testing
+        pegasus_geo_lib
+        s2
+        pegasus_client_static
+        fmt
+        gtest)
 
-set(MY_PROJ_LIBS "")
-
-set(MY_PROJ_LIB_PATH "")
+set(MY_BOOST_PACKAGES system filesystem)
 
 add_definitions(-Wno-attributes)
 
-dsn_add_static_library()
+set(MY_BINPLACES "config.ini")
+
+dsn_add_executable()

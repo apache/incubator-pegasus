@@ -1742,19 +1742,22 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                            {"max_split_count", required_argument, 0, 's'},
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
+                                           {"geo_data", no_argument, 0, 'g'},
                                            {0, 0, 0, 0}};
 
     std::string target_cluster_name;
     std::string target_app_name;
+    std::string target_geo_app_name;
     int max_split_count = 100000000;
     int max_batch_count = 500;
     int timeout_ms = sc->timeout_ms;
+    bool is_geo_data = false;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "c:a:s:b:t:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "c:a:s:b:t:g", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1763,6 +1766,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'a':
             target_app_name = optarg;
+            target_geo_app_name = target_app_name + "_geo";
             break;
         case 's':
             if (!dsn::buf2int32(optarg, max_split_count)) {
@@ -1781,6 +1785,9 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
                 fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
+            break;
+        case 'g':
+            is_geo_data = true;
             break;
         default:
             return false;
@@ -1816,6 +1823,9 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "INFO: source_app_name = %s\n", sc->pg_client->get_app_name());
     fprintf(stderr, "INFO: target_cluster_name = %s\n", target_cluster_name.c_str());
     fprintf(stderr, "INFO: target_app_name = %s\n", target_app_name.c_str());
+    if (is_geo_data) {
+        fprintf(stderr, "INFO: target_geo_app_name = %s\n", target_geo_app_name.c_str());
+    }
     fprintf(stderr, "INFO: max_split_count = %d\n", max_split_count);
     fprintf(stderr, "INFO: max_batch_count = %d\n", max_batch_count);
     fprintf(stderr, "INFO: timeout_ms = %d\n", timeout_ms);
@@ -1840,6 +1850,16 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
+    pegasus::geo::geo_client *target_geo_client = nullptr;
+    if (is_geo_data) {
+        target_geo_client =
+            new pegasus::geo::geo_client("config.ini",
+                                         target_cluster_name.c_str(),
+                                         target_app_name.c_str(),
+                                         target_geo_app_name.c_str(),
+                                         new pegasus::geo::latlng_extractor_for_lbs());
+    }
+
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
     pegasus::pegasus_client::scan_options options;
     options.timeout_ms = timeout_ms;
@@ -1848,6 +1868,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr,
                 "ERROR: open source app scanner failed: %s\n",
                 sc->pg_client->get_error_string(ret));
+        delete target_geo_client;
         return true;
     }
     int split_count = scanners.size();
@@ -1856,12 +1877,13 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     std::atomic_bool error_occurred(false);
     std::vector<scan_data_context *> contexts;
     for (int i = 0; i < scanners.size(); i++) {
-        scan_data_context *context = new scan_data_context(SCAN_COPY,
+        scan_data_context *context = new scan_data_context(is_geo_data ? SCAN_GEN_GEO : SCAN_COPY,
                                                            i,
                                                            max_batch_count,
                                                            timeout_ms,
                                                            scanners[i]->get_smart_wrapper(),
                                                            target_client,
+                                                           target_geo_client,
                                                            &error_occurred);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
@@ -1918,6 +1940,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
         delete contexts[i];
     }
     contexts.clear();
+    delete target_geo_client;
 
     fprintf(stderr,
             "\nCopy %s, total %ld rows.\n",
@@ -2024,6 +2047,7 @@ inline bool clear_data(command_executor *e, shell_context *sc, arguments args)
                                                            timeout_ms,
                                                            scanners[i]->get_smart_wrapper(),
                                                            sc->pg_client,
+                                                           nullptr,
                                                            &error_occurred);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
@@ -2207,6 +2231,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            timeout_ms,
                                                            scanners[i]->get_smart_wrapper(),
                                                            sc->pg_client,
+                                                           nullptr,
                                                            &error_occurred,
                                                            stat_size,
                                                            top_count);
