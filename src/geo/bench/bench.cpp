@@ -83,7 +83,7 @@ int main(int argc, char **argv)
             latlng.lng().degrees(),
             radius,
             -1,
-            pegasus::geo::geo_client::SortType::asc,
+            pegasus::geo::geo_client::SortType::random,
             500,
             [&, start_nanos](int error_code, std::list<pegasus::geo::SearchResult> &&results) {
                 latency_histogram.Add(env->NowNanos() - start_nanos);
