@@ -1742,7 +1742,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                            {"max_split_count", required_argument, 0, 's'},
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
-                                           {"geo_data", optional_argument, 0, 'g'},
+                                           {"geo_data", no_argument, 0, 'g'},
                                            {0, 0, 0, 0}};
 
     std::string target_cluster_name;
