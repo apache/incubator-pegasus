@@ -489,7 +489,7 @@ void pegasus_counter_updater::http_post_request(const std::string &host,
 {
     dinfo("start update_request, %s", data.c_str());
     struct event_base *base = event_base_new();
-    struct evhttp_connection *conn = evhttp_connection_base_new(base, NULL, host.c_str(), port);
+    struct evhttp_connection *conn = evhttp_connection_base_new(base, nullptr, host.c_str(), port);
     struct evhttp_request *req =
         evhttp_request_new(pegasus_counter_updater::http_request_done, base);
 

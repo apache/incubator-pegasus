@@ -513,7 +513,7 @@ void redis_parser::setex(message_entry &entry)
         redis_simple_string result;
         ::dsn::blob &ttl_blob = redis_req.buffers[2].data;
         int ttl_seconds;
-        if (!pegasus::utils::buf2int(ttl_blob.data(), ttl_blob.length(), ttl_seconds)) {
+        if (!dsn::buf2int32(ttl_blob, ttl_seconds)) {
             result.is_error = true;
             result.message = "ERR value is not an integer or out of range";
             reply_message(entry, result);

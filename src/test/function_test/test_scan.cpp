@@ -156,7 +156,7 @@ public:
         ddebug("SetUp...");
         clear_database();
 
-        srand(time(NULL));
+        srand(time(nullptr));
         for (int i = 0; i < sizeof(buffer); i++)
             buffer[i] = CCH[rand() % sizeof(CCH)];
 
