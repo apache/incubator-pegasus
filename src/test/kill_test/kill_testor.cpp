@@ -53,7 +53,7 @@ kill_testor::kill_testor(const char *config_file)
         (uint32_t)dsn_config_get_value_uint64(section, "kill_interval_seconds", 30, "");
     max_seconds_for_partitions_recover = (uint32_t)dsn_config_get_value_uint64(
         section, "max_seconds_for_all_partitions_to_recover", 600, "");
-    srand((unsigned)time(NULL));
+    srand((unsigned)time(nullptr));
 }
 
 kill_testor::~kill_testor() {}

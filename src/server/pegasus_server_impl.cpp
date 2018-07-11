@@ -23,12 +23,6 @@
 namespace pegasus {
 namespace server {
 
-// Although we have removed the INCR operator, but we need reserve the code for compatibility
-// reason,
-// because there may be some mutation log entries which include the code. Even if these entries need
-// not to be applied to rocksdb, they may be deserialized.
-DEFINE_TASK_CODE_RPC(RPC_RRDB_RRDB_INCR, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 DEFINE_TASK_CODE(LPC_UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION_LONG)

@@ -344,6 +344,7 @@ struct row_data
     double multi_put_qps;
     double remove_qps;
     double multi_remove_qps;
+    double incr_qps;
     double scan_qps;
     double recent_expire_count;
     double recent_filter_count;
@@ -357,6 +358,7 @@ struct row_data
           multi_put_qps(0),
           remove_qps(0),
           multi_remove_qps(0),
+          incr_qps(0),
           scan_qps(0),
           recent_expire_count(0),
           recent_filter_count(0),
@@ -381,6 +383,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.remove_qps += value;
     else if (counter_name == "multi_remove_qps")
         row.multi_remove_qps += value;
+    else if (counter_name == "incr_qps")
+        row.incr_qps += value;
     else if (counter_name == "scan_qps")
         row.scan_qps += value;
     else if (counter_name == "recent.expire.count")

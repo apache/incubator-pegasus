@@ -57,6 +57,8 @@ class multi_get_response;
 
 class incr_request;
 
+class incr_response;
+
 class get_scanner_request;
 
 class scan_request;
@@ -922,6 +924,90 @@ public:
 void swap(incr_request &a, incr_request &b);
 
 inline std::ostream &operator<<(std::ostream &out, const incr_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _incr_response__isset
+{
+    _incr_response__isset()
+        : error(false),
+          new_value(false),
+          app_id(false),
+          partition_index(false),
+          decree(false),
+          server(false)
+    {
+    }
+    bool error : 1;
+    bool new_value : 1;
+    bool app_id : 1;
+    bool partition_index : 1;
+    bool decree : 1;
+    bool server : 1;
+} _incr_response__isset;
+
+class incr_response
+{
+public:
+    incr_response(const incr_response &);
+    incr_response(incr_response &&);
+    incr_response &operator=(const incr_response &);
+    incr_response &operator=(incr_response &&);
+    incr_response() : error(0), new_value(0), app_id(0), partition_index(0), decree(0), server() {}
+
+    virtual ~incr_response() throw();
+    int32_t error;
+    int64_t new_value;
+    int32_t app_id;
+    int32_t partition_index;
+    int64_t decree;
+    std::string server;
+
+    _incr_response__isset __isset;
+
+    void __set_error(const int32_t val);
+
+    void __set_new_value(const int64_t val);
+
+    void __set_app_id(const int32_t val);
+
+    void __set_partition_index(const int32_t val);
+
+    void __set_decree(const int64_t val);
+
+    void __set_server(const std::string &val);
+
+    bool operator==(const incr_response &rhs) const
+    {
+        if (!(error == rhs.error))
+            return false;
+        if (!(new_value == rhs.new_value))
+            return false;
+        if (!(app_id == rhs.app_id))
+            return false;
+        if (!(partition_index == rhs.partition_index))
+            return false;
+        if (!(decree == rhs.decree))
+            return false;
+        if (!(server == rhs.server))
+            return false;
+        return true;
+    }
+    bool operator!=(const incr_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const incr_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(incr_response &a, incr_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const incr_response &obj)
 {
     obj.printTo(out);
     return out;

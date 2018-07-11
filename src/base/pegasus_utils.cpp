@@ -28,49 +28,6 @@ void addr2host(const ::dsn::rpc_address &addr, char *str, int len /* = 100*/)
     }
 }
 
-bool buf2int(const char *buffer, int length, int &result)
-{
-    if (length <= 0)
-        return false;
-    std::string s(buffer, length);
-    char *p = nullptr;
-    long long v = ::strtoll(s.data(), &p, 10);
-    if (*p != 0)
-        return false;
-    if (v < INT_MIN || v > INT_MAX) // out of range
-        return false;
-    result = (int)v;
-    return true;
-}
-
-bool buf2int64(const char *buffer, int length, int64_t &result)
-{
-    if (length <= 0)
-        return false;
-    std::string s(buffer, length);
-    char *p = nullptr;
-    long long v = ::strtoll(s.data(), &p, 10);
-    if (*p != 0)
-        return false;
-    if ((v == LLONG_MIN || v == LLONG_MAX) && errno == ERANGE) // out of range
-        return false;
-    result = v;
-    return true;
-}
-
-bool buf2bool(const char *buffer, int length, bool &result)
-{
-    if (length == 4 && strncmp(buffer, "true", 4) == 0) {
-        result = true;
-        return true;
-    }
-    if (length == 5 && strncmp(buffer, "false", 5) == 0) {
-        result = false;
-        return true;
-    }
-    return false;
-}
-
 size_t
 c_escape_string(const char *src, size_t src_len, char *dest, size_t dest_len, bool always_escape)
 {

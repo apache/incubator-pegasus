@@ -7,6 +7,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp>
 
+#include <dsn/utility/string_conv.h>
+
 #include <gtest/gtest.h>
 #include <rrdb/rrdb.client.h>
 #include <pegasus_utils.h>
@@ -312,7 +314,7 @@ TEST(proxy, utils)
 
     for (int i = 0; int_buffers[i]; ++i) {
         int result;
-        bool succeed = pegasus::utils::buf2int(int_buffers[i], strlen(int_buffers[i]), result);
+        bool succeed = dsn::buf2int32(int_buffers[i], result);
 
         ASSERT_EQ(call_results[i].succeed, succeed);
         if (result == true) {
