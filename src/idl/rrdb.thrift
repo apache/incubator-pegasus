@@ -114,6 +114,16 @@ struct incr_request
     2:i64           increment;
 }
 
+struct incr_response
+{
+    1:i32           error;
+    2:i64           new_value;
+    3:i32           app_id;
+    4:i32           partition_index;
+    5:i64           decree;
+    6:string        server;
+}
+
 struct get_scanner_request
 {
     1:dsn.blob  start_key;
@@ -149,6 +159,7 @@ service rrdb
     update_response multi_put(1:multi_put_request request);
     update_response remove(1:dsn.blob key);
     multi_remove_response multi_remove(1:multi_remove_request request);
+    incr_response incr(1:incr_request request);
     read_response get(1:dsn.blob key);
     multi_get_response multi_get(1:multi_get_request request);
     count_response sortkey_count(1:dsn.blob hash_key);

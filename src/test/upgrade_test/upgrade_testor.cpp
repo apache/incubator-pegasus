@@ -69,9 +69,11 @@ upgrade_testor::upgrade_testor()
         section, "upgrade_replica_max_count", _total_replica_count, "replica upgradeed max count");
     _upgrade_meta_max_count = (int32_t)dsn_config_get_value_uint64(
         section, "upgrade_meta_max_count", _total_meta_count, "meta upgradeed max count");
-    _upgrade_zk_max_count = (int32_t)dsn_config_get_value_uint64(
-        section, "upgrade_zookeeper_max_count", _total_zookeeper_count, "zookeeper upgradeed max count");
-    srand((unsigned)time(NULL));
+    _upgrade_zk_max_count = (int32_t)dsn_config_get_value_uint64(section,
+                                                                 "upgrade_zookeeper_max_count",
+                                                                 _total_zookeeper_count,
+                                                                 "zookeeper upgradeed max count");
+    srand((unsigned)time(nullptr));
 }
 
 upgrade_testor::~upgrade_testor() {}

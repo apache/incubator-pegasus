@@ -34,4 +34,9 @@ inline dsn_message_t create_remove_request(const dsn::blob &key)
         dsn::apps::RPC_RRDB_RRDB_REMOVE, DSF_THRIFT_BINARY, (void *)key.data(), key.length());
 }
 
+inline dsn_message_t create_incr_request(const dsn::apps::incr_request &request)
+{
+    return dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_INCR);
+}
+
 } // namespace pegasus

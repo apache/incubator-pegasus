@@ -12,18 +12,18 @@
 
 inline sds *scanfCommand(int *argc)
 {
-    char *line = NULL;
+    char *line = nullptr;
     auto _ = dsn::defer([line]() {
         if (line) {
             linenoiseFree(line);
         }
     });
 
-    if ((line = linenoise(">>> ")) == NULL) {
+    if ((line = linenoise(">>> ")) == nullptr) {
         dsn_exit(0);
     }
     if (line[0] == '\0') {
-        return NULL;
+        return nullptr;
     }
     linenoiseHistoryAdd(line);
     linenoiseHistorySave(".shell-history");

@@ -189,6 +189,50 @@ public:
                                 reply_thread_hash);
     }
 
+    // ---------- call RPC_RRDB_RRDB_INCR ------------
+    // - synchronous
+    std::pair<::dsn::error_code, incr_response>
+    incr_sync(const incr_request &args,
+              std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+              int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0,
+                                   // thread_hash is computed from partition_hash
+              uint64_t partition_hash = 0,
+              dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+    {
+        return ::dsn::rpc::wait_and_unwrap<incr_response>(
+            ::dsn::rpc::call(server_addr.unwrap_or(_server),
+                             RPC_RRDB_RRDB_INCR,
+                             args,
+                             &_tracker,
+                             empty_rpc_handler,
+                             timeout,
+                             thread_hash,
+                             partition_hash));
+    }
+
+    // - asynchronous with on-stack incr_request and incr_response
+    template <typename TCallback>
+    ::dsn::task_ptr incr(const incr_request &args,
+                         TCallback &&callback,
+                         std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+                         int request_thread_hash = 0, // if thread_hash == 0 &&
+                                                      // partition_hash != 0, thread_hash is
+                                                      // computed from partition_hash
+                         uint64_t request_partition_hash = 0,
+                         int reply_thread_hash = 0,
+                         dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+    {
+        return ::dsn::rpc::call(server_addr.unwrap_or(_server),
+                                RPC_RRDB_RRDB_INCR,
+                                args,
+                                &_tracker,
+                                std::forward<TCallback>(callback),
+                                timeout,
+                                request_thread_hash,
+                                request_partition_hash,
+                                reply_thread_hash);
+    }
+
     // ---------- call RPC_RRDB_RRDB_GET ------------
     // - synchronous
     std::pair<::dsn::error_code, read_response>
