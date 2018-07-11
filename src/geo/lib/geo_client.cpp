@@ -64,7 +64,10 @@ int geo_client::set(const std::string &hash_key,
     dsn::utils::notify_event set_completed;
     auto async_set_callback = [&](int ec_, pegasus_client::internal_info &&info_) {
         if (ec_ != PERR_OK) {
-            derror_f("set data failed. hash_key={}, sort_key={}", hash_key, sort_key);
+            derror_f("set data failed. hash_key={}, sort_key={}, error={}",
+                     hash_key,
+                     sort_key,
+                     get_error_string(ec_));
             ret = ec_;
         }
         if (info != nullptr) {
@@ -108,10 +111,11 @@ void geo_client::async_set(const std::string &hash_key,
                     }
 
                     if (ec_ != PERR_OK) {
-                        derror_f("set {} data failed. hash_key={}, sort_key={}",
+                        derror_f("set {} data failed. hash_key={}, sort_key={}, error={}",
                                  data_type_ == DataType::common ? "common" : "geo",
                                  hash_key,
-                                 sort_key);
+                                 sort_key,
+                                 get_error_string(ec_));
                         *ret = ec_;
                     }
 
@@ -139,7 +143,10 @@ int geo_client::del(const std::string &hash_key,
     dsn::utils::notify_event del_completed;
     auto async_del_callback = [&](int ec_, pegasus_client::internal_info &&info_) {
         if (ec_ != PERR_OK) {
-            derror_f("del data failed. hash_key={}, sort_key={}", hash_key, sort_key);
+            derror_f("del data failed. hash_key={}, sort_key={}, error={}",
+                     hash_key,
+                     sort_key,
+                     get_error_string(ec_));
             ret = ec_;
         }
         if (info != nullptr) {
@@ -191,10 +198,11 @@ void geo_client::async_del(const std::string &hash_key,
             auto async_del_callback =
                 [=](int ec__, pegasus_client::internal_info &&, DataType data_type_) mutable {
                     if (ec__ != PERR_OK) {
-                        derror_f("del {} data failed. hash_key={}, sort_key={}",
+                        derror_f("del {} data failed. hash_key={}, sort_key={}, error={}",
                                  data_type_ == DataType::common ? "common" : "geo",
                                  hash_key,
-                                 sort_key);
+                                 sort_key,
+                                 get_error_string(ec_));
                         *ret = ec__;
                     }
 
@@ -222,7 +230,10 @@ int geo_client::set_geo_data(const std::string &hash_key,
     auto async_set_callback = [&](int ec_, pegasus_client::internal_info &&info_) {
         if (ec_ != PERR_OK) {
             ret = ec_;
-            derror_f("set geo data failed. hash_key={}, sort_key={}", hash_key, sort_key);
+            derror_f("set geo data failed. hash_key={}, sort_key={}, error={}",
+                     hash_key,
+                     sort_key,
+                     get_error_string(ec_));
         }
         set_completed.notify();
     };
@@ -724,7 +735,7 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper
             }
 
             if (ret != PERR_OK) {
-                derror_f("async_next failed. error={}", _geo_data_client->get_error_string(ret));
+                derror_f("async_next failed. error={}", get_error_string(ret));
                 cb();
                 return;
             }
@@ -773,7 +784,13 @@ int geo_client::distance(const std::string &hash_key1,
     dsn::utils::notify_event get_completed;
     auto async_calculate_callback = [&](int ec_, double &&distance_) {
         if (ec_ != PERR_OK) {
-            derror_f("get distance failed.");
+            derror_f("get distance failed. hash_key1={}, sort_key1={}, hash_key2={}, sort_key2={}, "
+                     "error={}",
+                     hash_key1,
+                     sort_key1,
+                     hash_key2,
+                     sort_key2,
+                     get_error_string(ec_));
             ret = ec_;
         }
         distance = distance_;
@@ -800,7 +817,13 @@ void geo_client::async_distance(const std::string &hash_key1,
         int ec_, std::string &&value_, pegasus_client::internal_info &&)
     {
         if (ec_ != PERR_OK) {
-            derror_f("get data failed.");
+            derror_f("get data failed. hash_key1={}, sort_key1={}, hash_key2={}, sort_key2={}, "
+                     "error={}",
+                     hash_key1,
+                     sort_key1,
+                     hash_key2,
+                     sort_key2,
+                     get_error_string(ec_));
             *ret = ec_;
         }
 
