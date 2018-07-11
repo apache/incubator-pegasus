@@ -1723,7 +1723,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "c:a:s:b:t:g:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "c:a:s:b:t:g", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
