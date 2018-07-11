@@ -94,7 +94,7 @@ public:
     ///     all the k-v under hash_key will be sorted by sort_key.
     /// \param value
     ///     the value we want to store.
-    /// \param timeout_milliseconds
+    /// \param timeout_ms
     ///     if wait longer than this value, will return time out error
     /// \param ttl_seconds
     ///     time to live of this value, if expired, will return not found; 0 means no ttl
@@ -106,7 +106,7 @@ public:
     int set(const std::string &hash_key,
             const std::string &sort_key,
             const std::string &value,
-            int timeout_milliseconds = 5000,
+            int timeout_ms = 5000,
             int ttl_seconds = 0,
             pegasus_client::internal_info *info = nullptr);
 
@@ -114,7 +114,7 @@ public:
                    const std::string &sort_key,
                    const std::string &value,
                    pegasus_client::async_set_callback_t &&callback = nullptr,
-                   int timeout_milliseconds = 5000,
+                   int timeout_ms = 5000,
                    int ttl_seconds = 0);
 
     ///
@@ -127,7 +127,7 @@ public:
     ///     all the k-v under hash_key will be sorted by sort_key.
     /// \param keep_common_data
     ///     only delete geo data, keep common data.
-    /// \param timeout_milliseconds
+    /// \param timeout_ms
     ///     if wait longer than this value, will return time out error
     /// \return
     ///     int, the error indicates whether or not the operation is succeeded.
@@ -135,14 +135,14 @@ public:
     ///
     int del(const std::string &hash_key,
             const std::string &sort_key,
-            int timeout_milliseconds = 5000,
+            int timeout_ms = 5000,
             pegasus_client::internal_info *info = nullptr);
 
     void async_del(const std::string &hash_key,
                    const std::string &sort_key,
                    bool keep_common_data,
                    pegasus_client::async_del_callback_t &&callback = nullptr,
-                   int timeout_milliseconds = 5000);
+                   int timeout_ms = 5000);
 
     ///
     /// \brief set_geo_data
@@ -154,7 +154,7 @@ public:
     ///     all the k-v under hash_key will be sorted by sort_key.
     /// \param value
     ///     the value we want to store.
-    /// \param timeout_milliseconds
+    /// \param timeout_ms
     ///     if wait longer than this value, will return time out error
     /// \param ttl_seconds
     ///     time to live of this value, if expired, will return not found; 0 means no ttl
@@ -166,14 +166,14 @@ public:
     int set_geo_data(const std::string &hash_key,
                      const std::string &sort_key,
                      const std::string &value,
-                     int timeout_milliseconds = 5000,
+                     int timeout_ms = 5000,
                      int ttl_seconds = 0);
 
     void async_set_geo_data(const std::string &hash_key,
                             const std::string &sort_key,
                             const std::string &value,
                             pegasus_client::async_set_callback_t &&callback = nullptr,
-                            int timeout_milliseconds = 5000,
+                            int timeout_ms = 5000,
                             int ttl_seconds = 0);
 
     ///
@@ -190,7 +190,7 @@ public:
     ///     limit results count
     /// \param sort_type
     ///     results sorted type
-    /// \param timeout_milliseconds
+    /// \param timeout_ms
     ///     if wait longer than this value, will return time out error
     /// \param result
     ///     results container
@@ -203,7 +203,7 @@ public:
                       double radius_m,
                       int count,
                       SortType sort_type,
-                      int timeout_milliseconds,
+                      int timeout_ms,
                       std::list<SearchResult> &result);
 
     void async_search_radial(double lat_degrees,
@@ -211,7 +211,7 @@ public:
                              double radius_m,
                              int count,
                              SortType sort_type,
-                             int timeout_milliseconds,
+                             int timeout_ms,
                              geo_search_callback_t &&callback);
 
     ///
@@ -228,7 +228,7 @@ public:
     ///     limit results count
     /// \param sort_type
     ///     results sorted type
-    /// \param timeout_milliseconds
+    /// \param timeout_ms
     ///     if wait longer than this value, will return time out error
     /// \param result
     ///     results container
@@ -243,7 +243,7 @@ public:
                       double radius_m,
                       int count,
                       SortType sort_type,
-                      int timeout_milliseconds,
+                      int timeout_ms,
                       std::list<SearchResult> &result);
 
     void async_search_radial(const std::string &hash_key,
@@ -251,7 +251,7 @@ public:
                              double radius_m,
                              int count,
                              SortType sort_type,
-                             int timeout_milliseconds,
+                             int timeout_ms,
                              geo_search_callback_t &&callback);
 
     ///
@@ -270,14 +270,14 @@ public:
                  const std::string &sort_key1,
                  const std::string &hash_key2,
                  const std::string &sort_key2,
-                 int timeout_milliseconds,
+                 int timeout_ms,
                  double &distance);
 
     void async_distance(const std::string &hash_key1,
                         const std::string &sort_key1,
                         const std::string &hash_key2,
                         const std::string &sort_key2,
-                        int timeout_milliseconds,
+                        int timeout_ms,
                         distance_callback_t &&callback);
 
     const char *get_error_string(int error_code) const
@@ -322,31 +322,31 @@ private:
                                const std::string &sort_key,
                                const std::string &value,
                                update_callback_t &&callback,
-                               int timeout_milliseconds,
+                               int timeout_ms,
                                int ttl_seconds);
 
     void async_set_geo_data(const std::string &hash_key,
                             const std::string &sort_key,
                             const std::string &value,
                             update_callback_t &&callback = nullptr,
-                            int timeout_milliseconds = 5000,
+                            int timeout_ms = 5000,
                             int ttl_seconds = 0);
 
     void async_del_common_data(const std::string &hash_key,
                                const std::string &sort_key,
                                update_callback_t &&callback,
-                               int timeout_milliseconds);
+                               int timeout_ms);
 
     void async_del_geo_data(const std::string &geo_hash_key,
                             const std::string &geo_sort_key,
                             update_callback_t &&callback,
-                            int timeout_milliseconds);
+                            int timeout_ms);
 
     void async_search_radial(const S2LatLng &latlng,
                              double radius_m,
                              int count,
                              SortType sort_type,
-                             int timeout_milliseconds,
+                             int timeout_ms,
                              geo_search_callback_t &&callback);
 
     // generate a cap by center point and radius
@@ -360,6 +360,7 @@ private:
                                      std::shared_ptr<S2Cap> cap_ptr,
                                      int count,
                                      SortType sort_type,
+                                     int timeout_ms,
                                      scan_all_area_callback_t &&callback);
 
     // normalize the result by count, sort type, ...
@@ -380,6 +381,7 @@ private:
                     std::string &&stop_sort_key,
                     std::shared_ptr<S2Cap> cap_ptr,
                     int count,
+                    int timeout_ms,
                     scan_one_area_callback &&callback,
                     std::list<SearchResult> &result);
 
