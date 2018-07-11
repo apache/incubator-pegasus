@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME pegasus_rproxy_test)
+set(MY_PROJ_NAME pegasus_geo_bench)
 project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
@@ -10,27 +10,22 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include" "../../base" "../proxy_lib")
+set(MY_PROJ_INC_PATH "../../../rocksdb")
+set(MY_PROJ_LIB_PATH "../../../rocksdb")
 
-if (UNIX)
-    set(MY_PROJ_LIBS gtest pthread)
-else()
-    set(MY_PROJ_LIBS gtest)
-endif()
+set(MY_PROJ_LIBS
+        s2
+        s2testing
+        pegasus_geo_lib
+        pegasus_client_static
+        fmt
+        rocksdb
+        z
+        bz2
+        snappy)
 
 set(MY_BOOST_PACKAGES system filesystem)
 
-set(MY_PROJ_LIBS pegasus.rproxylib
-        pegasus.base ${MY_PROJ_LIBS}
-        s2testing
-        pegasus_geo_lib
-        s2
-        pegasus_client_static
-        fmt)
-
-set(MY_BINPLACES "config.ini" "run.sh")
-
-add_compile_options("-Wno-dangling-else")
-add_definitions(-Wno-attributes)
+set(MY_BINPLACES "config.ini")
 
 dsn_add_executable()

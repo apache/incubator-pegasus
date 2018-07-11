@@ -11,8 +11,15 @@
 namespace pegasus {
 namespace proxy {
 
-proxy_stub::proxy_stub(const proxy_session::factory &factory, const char *uri)
-    : serverlet<proxy_stub>("proxy_stub"), _factory(factory)
+proxy_stub::proxy_stub(const proxy_session::factory &f,
+                       const char *cluster,
+                       const char *app,
+                       const char *geo_app)
+    : serverlet<proxy_stub>("proxy_stub"),
+      _factory(f),
+      _cluster(cluster),
+      _app(app),
+      _geo_app(geo_app)
 {
     dsn::task_spec::get(RPC_CALL_RAW_MESSAGE)->allow_inline = true;
     dsn::task_spec::get(RPC_CALL_RAW_SESSION_DISCONNECT)->allow_inline = true;
@@ -29,11 +36,11 @@ proxy_stub::proxy_stub(const proxy_session::factory &factory, const char *uri)
     dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_SCAN_ACK)->allow_inline = true;
     dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_CLEAR_SCANNER_ACK)->allow_inline = true;
 
-    _uri_address.assign_uri(uri);
+    _uri_address.assign_uri(
+        std::string("dsn://").append(_cluster).append("/").append(_app).c_str());
+
     open_service();
 }
-
-proxy_stub::~proxy_stub() {}
 
 void proxy_stub::on_rpc_request(dsn_message_t request)
 {
