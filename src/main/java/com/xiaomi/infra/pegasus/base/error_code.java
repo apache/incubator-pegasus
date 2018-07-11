@@ -34,20 +34,8 @@ public class error_code implements TBase<error_code, error_code._Fields>, java.i
   public enum error_types {
       // ERROR_CODE copy from rDSN
       ERR_OK,
+
       ERR_UNKNOWN,
-      ERR_REPLICATION_FAILURE,
-      ERR_APP_EXIST,
-      ERR_APP_NOT_EXIST,
-      ERR_BUSY_CREATING,
-      ERR_BUSY_DROPPING,
-      ERR_EXPIRED,
-      ERR_LOCK_ALREADY_EXIST,
-      ERR_HOLD_BY_OTHERS,
-      ERR_RECURSIVE_LOCK,
-      ERR_NO_OWNER,
-      ERR_NODE_ALREADY_EXIST,
-      ERR_INCONSISTENT_STATE,
-      ERR_ARRAY_INDEX_OUT_OF_RANGE,
       ERR_SERVICE_NOT_FOUND,
       ERR_SERVICE_ALREADY_RUNNING,
       ERR_IO_PENDING,
@@ -57,6 +45,7 @@ public class error_code implements TBase<error_code, error_code._Fields>, java.i
       ERR_NETWORK_INIT_FAILED,
       ERR_FORWARD_TO_OTHERS,
       ERR_OBJECT_NOT_FOUND,
+
       ERR_HANDLER_NOT_FOUND,
       ERR_LEARN_FILE_FAILED,
       ERR_GET_LEARN_STATE_FAILED,
@@ -67,6 +56,7 @@ public class error_code implements TBase<error_code, error_code._Fields>, java.i
       ERR_INACTIVE_STATE,
       ERR_NOT_ENOUGH_MEMBER,
       ERR_FILE_OPERATION_FAILED,
+
       ERR_HANDLE_EOF,
       ERR_WRONG_CHECKSUM,
       ERR_INVALID_DATA,
@@ -77,6 +67,7 @@ public class error_code implements TBase<error_code, error_code._Fields>, java.i
       ERR_PATH_ALREADY_EXIST,
       ERR_ADDRESS_ALREADY_USED,
       ERR_STATE_FREEZED,
+
       ERR_LOCAL_APP_FAILURE,
       ERR_BIND_IOCP_FAILED,
       ERR_NETWORK_START_FAILED,
@@ -87,27 +78,38 @@ public class error_code implements TBase<error_code, error_code._Fields>, java.i
       ERR_CORRUPTION,
       ERR_TRY_AGAIN,
       ERR_CLUSTER_NOT_FOUND,
+
       ERR_CLUSTER_ALREADY_EXIST,
+      ERR_SERVICE_ALREADY_EXIST,
+      ERR_INJECTED,
+      ERR_REPLICATION_FAILURE,
+      ERR_APP_EXIST,
+      ERR_APP_NOT_EXIST,
+      ERR_BUSY_CREATING,
+      ERR_BUSY_DROPPING,
+      ERR_NETWORK_FAILURE,
+      ERR_UNDER_RECOVERY,
+
+      ERR_LEARNER_NOT_FOUND,
+      ERR_OPERATION_DISABLED,
+      ERR_EXPIRED,
+      ERR_LOCK_ALREADY_EXIST,
+      ERR_HOLD_BY_OTHERS,
+      ERR_RECURSIVE_LOCK,
+      ERR_NO_OWNER,
+      ERR_NODE_ALREADY_EXIST,
+      ERR_INCONSISTENT_STATE,
+      ERR_ARRAY_INDEX_OUT_OF_RANGE,
+
+      ERR_DIR_NOT_EMPTY,
+      ERR_FS_INTERNAL,
+      ERR_IGNORE_BAD_DATA,
+      ERR_APP_DROPPED,
+      ERR_MOCK_INTERNAL,
       ERR_ZOOKEEPER_OPERATION,
-      ERR_K8S_CLUSTER_NOT_FOUND,
-      ERR_K8S_KUBECTL_NOT_FOUND,
-      ERR_K8S_DEPLOY_FAILED,
-      ERR_K8S_UNDEPLOY_FAILED,
-      ERR_RESOURCE_NOT_ENOUGH,
-      ERR_WIN_DEPLOY_FAILED,
-      ERR_WIN_UNDEPLOY_FAILED,
-      ERR_DOCKER_DAEMON_NOT_FOUND,
-      ERR_DOCKER_BINARY_NOT_FOUND,
-      ERR_DOCKER_DEPLOY_FAILED,
-      ERR_DOCKER_UNDEPLOY_FAILED,
 
       //ERROR_CODE defined by client
-      ERR_NO_PRIMARY,
-      ERR_NO_REPLICA,
-      ERR_NO_META_SERVER,
-      ERR_READ_TABLE_FAILED,
       ERR_SESSION_RESET,
-      ERR_META_RESET
   };
   public error_types errno;
 

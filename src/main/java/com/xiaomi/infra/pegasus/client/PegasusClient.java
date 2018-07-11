@@ -5,7 +5,7 @@ package com.xiaomi.infra.pegasus.client;
 
 import com.xiaomi.infra.pegasus.rpc.Cluster;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
-import com.xiaomi.infra.pegasus.tools.tools;
+import com.xiaomi.infra.pegasus.tools.Tools;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
@@ -38,8 +38,8 @@ public class PegasusClient implements PegasusClientInterface {
             ByteBuffer buf = ByteBuffer.wrap(key);
             int hashKeyLen = 0xFFFF & buf.getShort();
             Validate.isTrue(hashKeyLen != 0xFFFF && (2 + hashKeyLen <= key.length));
-            return hashKeyLen == 0 ? tools.dsn_crc64(key, 2, key.length - 2) :
-                    tools.dsn_crc64(key, 2, hashKeyLen);
+            return hashKeyLen == 0 ? Tools.dsn_crc64(key, 2, key.length - 2) :
+                    Tools.dsn_crc64(key, 2, hashKeyLen);
         }
     }
 
@@ -403,6 +403,12 @@ public class PegasusClient implements PegasusClientInterface {
                               List<PException> results) throws PException {
         PegasusTable tb = getTable(tableName);
         return tb.batchMultiDel2(keys, results, 0);
+    }
+
+    @Override
+    public long incr(String tableName, byte[] hashKey, byte[] sortKey, long increment) throws PException {
+        PegasusTable tb = getTable(tableName);
+        return tb.incr(hashKey, sortKey, increment, 0);
     }
 
     @Override

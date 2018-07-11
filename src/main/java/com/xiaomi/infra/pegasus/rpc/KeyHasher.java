@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.rpc;
 
-import com.xiaomi.infra.pegasus.tools.tools;
+import com.xiaomi.infra.pegasus.tools.Tools;
 
 /**
  * Created by weijiesun on 16-11-11.
@@ -12,7 +12,7 @@ public interface KeyHasher {
     KeyHasher DEFAULT = new KeyHasher() {
         @Override
         public long hash(byte[] key) {
-            return tools.dsn_crc64(key);
+            return Tools.dsn_crc64(key);
         }
     };
 

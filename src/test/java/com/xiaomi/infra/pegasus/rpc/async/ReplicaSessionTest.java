@@ -7,7 +7,7 @@ import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.base.blob;
 import com.xiaomi.infra.pegasus.tools.Toollet;
-import com.xiaomi.infra.pegasus.tools.tools;
+import com.xiaomi.infra.pegasus.tools.Tools;
 import com.xiaomi.infra.pegasus.apps.*;
 
 import org.junit.Assert;
@@ -75,7 +75,7 @@ public class ReplicaSessionTest {
 
         for (FutureTask<Void> cb: callbacks) {
             try {
-                tools.waitUninterruptable(cb, Integer.MAX_VALUE);
+                Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
             } catch (ExecutionException e) {
                 Assert.fail();
             }
@@ -142,7 +142,7 @@ public class ReplicaSessionTest {
 
         for (FutureTask<Void> cb: callbacks) {
             try {
-                tools.waitUninterruptable(cb, Integer.MAX_VALUE);
+                Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
             } catch (ExecutionException e) {
                 e.printStackTrace();
                 Assert.fail();

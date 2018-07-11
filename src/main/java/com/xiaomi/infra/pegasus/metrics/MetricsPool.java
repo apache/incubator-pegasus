@@ -7,7 +7,7 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Snapshot;
-import com.xiaomi.infra.pegasus.tools.tools;
+import com.xiaomi.infra.pegasus.tools.Tools;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -93,7 +93,7 @@ public final class MetricsPool {
     }
 
     public String metricsToJson() throws JSONException {
-        theMetric.timestamp = tools.unixEpochMills() / 1000;
+        theMetric.timestamp = Tools.unixEpochMills() / 1000;
 
         StringBuilder builder = new StringBuilder();
         builder.append('[');

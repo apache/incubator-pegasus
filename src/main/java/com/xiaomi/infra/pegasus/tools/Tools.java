@@ -17,7 +17,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class tools {
+public class Tools {
     private static class dsn_crc {
         public static final long crc64_poly = 0x9a6c9329ac4bc9b5l;
         public static final int crc32_poly = 0x82f63b78;
@@ -165,5 +165,5 @@ public class tools {
         throw new IllegalStateException("Couldn\'t find the local machine ip.");
     }
 
-    private static final Logger logger = org.slf4j.LoggerFactory.getLogger(tools.class);
+    private static final Logger logger = org.slf4j.LoggerFactory.getLogger(Tools.class);
 }

@@ -18,6 +18,7 @@ public class rrdb_multi_get_operator extends client_operator {
     }
 
     public String name() { return "multi_get"; }
+
     public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid) throws TException {
         TMessage msg = new TMessage("RPC_RRDB_RRDB_MULTI_GET", TMessageType.CALL, seqid);
         oprot.writeMessageBegin(msg);
@@ -33,10 +34,12 @@ public class rrdb_multi_get_operator extends client_operator {
             resp = result.success;
         else
             throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
-                    com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT, "multi get failed: unknown result");
+                    com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
+                    "multi get failed: unknown result");
     }
 
     public multi_get_response get_response() { return resp; }
+
     private multi_get_request request;
     private multi_get_response resp;
 }

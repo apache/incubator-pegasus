@@ -395,6 +395,19 @@ public interface PegasusClientInterface {
     public int ttl(String tableName, byte[] hashKey, byte[] sortKey) throws PException;
 
     /**
+     * Increment value.
+     * @param tableName TableHandler name
+     * @param hashKey used to decide which partition to put this k-v,
+     *                if null or length == 0, means no hash key.
+     * @param sortKey all the k-v under hashKey will be sorted by sortKey,
+     *                if null or length == 0, means no sort key.
+     * @param increment the increment to be added to the old value.
+     * @return new value.
+     * @throws PException
+     */
+    public long incr(String tableName, byte[] hashKey, byte[] sortKey, long increment) throws PException;
+
+    /**
      * Get Scanner for {startSortKey, stopSortKey} within hashKey
      * @param tableName TableHandler name
      * @param hashKey used to decide which partition to put this k-v,

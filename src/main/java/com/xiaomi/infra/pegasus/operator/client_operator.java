@@ -5,7 +5,7 @@ package com.xiaomi.infra.pegasus.operator;
 
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.gpid;
-import com.xiaomi.infra.pegasus.tools.tools;
+import com.xiaomi.infra.pegasus.tools.Tools;
 import com.xiaomi.infra.pegasus.thrift.TException;
 import com.xiaomi.infra.pegasus.rpc.ThriftHeader;
 
@@ -22,7 +22,7 @@ public abstract class client_operator {
     public final byte[] prepare_thrift_header(int body_length) {
         header.body_length = body_length;
         header.header_length = ThriftHeader.HEADER_LENGTH;
-        header.thread_hash = tools.dsn_gpid_to_thread_hash(header.app_id, header.partition_index);
+        header.thread_hash = Tools.dsn_gpid_to_thread_hash(header.app_id, header.partition_index);
         header.partition_hash = 0;
         return header.toByteArray();
     }

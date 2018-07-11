@@ -116,13 +116,31 @@ public class TableHandler extends Table {
 
         for (partition_configuration pc: resp.getPartitions()) {
             ReplicaConfiguration s = newConfig.replicas.get(pc.getPid().get_pidx());
-            logger.info("{}: gpid({}) ballot: {} -> {}, primary: {} -> {}",
-                    tableName_,
-                    pc.getPid().toString(),
-                    s.ballot,
-                    pc.ballot,
-                    s.primary,
-                    pc.primary);
+            if (s.ballot != pc.ballot) {
+                if (!s.primary.equals(pc.primary)) {
+                    logger.info("{}: gpid({}) ballot: {} -> {}, primary: {} -> {}",
+                            tableName_,
+                            pc.getPid().toString(),
+                            s.ballot,
+                            pc.ballot,
+                            s.primary,
+                            pc.primary);
+                } else {
+                    logger.info("{}: gpid({}) ballot: {} -> {}, primary: {}",
+                            tableName_,
+                            pc.getPid().toString(),
+                            s.ballot,
+                            pc.ballot,
+                            pc.primary);
+
+                }
+            } else {
+                logger.info("{}: gpid({}) ballot: {}, primary: {}",
+                        tableName_,
+                        pc.getPid().toString(),
+                        pc.ballot,
+                        pc.primary);
+            }
 
             s.ballot = pc.ballot;
             s.primary = pc.primary;
@@ -205,26 +223,18 @@ public class TableHandler extends Table {
                 round.thisRoundCompletion();
                 return;
 
+            // timeout
             case ERR_TIMEOUT: // <- operation timeout
-                logger.warn("{}: rpc timeout for gpid({}), operator({}), try({}), error_code({})",
+                logger.warn("{}: replica server({}) rpc timeout for gpid({}), operator({}), try({}), error_code({}), not retry",
                         tableName_,
+                        cachedHandle.session.name(),
                         operator.get_gpid().toString(),
                         operator,
                         tryId,
                         operator.rpc_error.errno.toString());
                 break;
 
-            case ERR_INVALID_DATA: // <- maybe because task code is invalid
-                logger.error("{}: invalid data for gpid({}), operator({}), try({}), error_code({})",
-                        tableName_,
-                        operator.get_gpid().toString(),
-                        operator,
-                        tryId,
-                        operator.rpc_error.errno.toString());
-                assert false;
-                break;
-
-            // under these cases we should query the new config from meta
+            // under these cases we should query the new config from meta and retry later
             case ERR_SESSION_RESET: // <- connection with the server failed
             case ERR_OBJECT_NOT_FOUND: // <- replica server doesn't serve this gpid
             case ERR_INVALID_STATE: // <- replica server is not primary
@@ -238,6 +248,7 @@ public class TableHandler extends Table {
                 needQueryMeta = true;
                 break;
 
+            // under these cases we should retry later without querying the new config from meta
             case ERR_NOT_ENOUGH_MEMBER:
             case ERR_CAPACITY_EXCEEDED:
                 logger.warn("{}: replica server({}) can't serve writing for gpid({}), operator({}), try({}), error_code({}), retry later",
@@ -249,15 +260,17 @@ public class TableHandler extends Table {
                         operator.rpc_error.errno.toString());
                 break;
 
+            // under other cases we should not retry
             default:
-                logger.error("{}: unexpected error for gpid({}), operator({}), try({}), error_code({})",
+                logger.error("{}: replica server({}) fails for gpid({}), operator({}), try({}), error_code({}), not retry",
                         tableName_,
+                        cachedHandle.session.name(),
                         operator.get_gpid().toString(),
                         operator,
                         tryId,
                         operator.rpc_error.errno.toString());
-                assert false;
-                break;
+                round.thisRoundCompletion();
+                return;
         }
 
         if (needQueryMeta) {

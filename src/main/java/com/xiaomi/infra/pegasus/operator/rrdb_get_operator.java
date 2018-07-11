@@ -34,10 +34,13 @@ public class rrdb_get_operator extends client_operator {
         if (result.isSetSuccess())
             resp = result.success;
         else
-            throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT, "get failed: unknown result");
+            throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
+                    com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
+                    "get failed: unknown result");
     }
 
     public read_response get_response() { return resp; }
+
     private blob request;
     private read_response resp;
 }

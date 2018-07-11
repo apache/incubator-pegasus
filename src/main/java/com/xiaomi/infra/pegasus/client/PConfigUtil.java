@@ -18,7 +18,7 @@ import java.util.Properties;
 /**
  * @author qinzuoyan
  *
- * This class encapsulates tools for loading configuration.
+ * This class encapsulates Tools for loading configuration.
  */
 public class PConfigUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(PConfigUtil.class);

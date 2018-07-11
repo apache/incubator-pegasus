@@ -465,6 +465,44 @@ public interface PegasusTableInterface {
      */
     public Future<Void> asyncMultiDel(byte[] hashKey, List<byte[]> sortKeys, int timeout/*ms*/);
 
+    ///< -------- Incr --------
+
+    public static interface IncrListener extends GenericFutureListener<Future<Long>> {
+        /**
+         * This function will be called when listened asyncIncr future is done.
+         * @param future the listened future
+         * @throws Exception
+         *
+         * Notice: User shouldn't do any operations that may block or time-consuming
+         */
+        @Override
+        public void operationComplete(Future<Long> future) throws Exception;
+    }
+
+    /**
+     * increment value a specific (hashKey, sortKey) pair, async version
+     * @param hashKey used to decide which partition the key may exist
+     *                if null or empty, means no hash key.
+     * @param sortKey all keys under the same hashKey will be sorted by sortKey
+     *                if null or empty, means no sort key
+     * @param increment the increment to be added to the old value.
+     * @param timeout how long will the operation timeout in milliseconds.
+     *                if timeout > 0, it is a timeout value for current op,
+     *                else the timeout value in the configuration file will be used.
+     *
+     * @return the future for current op
+     *
+     * Future return:
+     *      On success: return new value.
+     *      On failure: a throwable, which is an instance of PException
+     *
+     * Thread safety:
+     *      All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
+     *      listeners for the same future are guaranteed to be executed as the same order as the listeners added.
+     *      But listeners for different tables are not guaranteed to be dispatched in the same thread.
+     */
+    public Future<Long> asyncIncr(byte[] hashKey, byte[] sortKey, long increment, int timeout/*ms*/);
+
     ///< -------- TTL --------
 
     public static interface TTLListener extends GenericFutureListener<Future<Integer>> {
@@ -769,6 +807,11 @@ public interface PegasusTableInterface {
      */
     public int batchMultiDel2(List<Pair<byte[], List<byte[]>>> keys,
                               List<PException> results, int timeout/*ms*/) throws PException;
+
+    /**
+     * sync version of Incr, please refer to the async version {@link #asyncIncr(byte[], byte[], long, int)}
+     */
+    public long incr(byte[] hashKey, byte[] sortKey, long increment, int timeout/*ms*/) throws PException;
 
     /**
      * sync version of TTL, please refer to the async version {@link #asyncTTL(byte[], byte[], int)}

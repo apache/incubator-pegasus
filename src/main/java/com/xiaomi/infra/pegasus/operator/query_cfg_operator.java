@@ -20,6 +20,7 @@ public class query_cfg_operator extends client_operator {
     }
 
     public String name() { return "query_config"; }
+
     public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid) throws TException {
         TMessage msg = new TMessage("RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX", TMessageType.CALL, seqid);
         oprot.writeMessageBegin(msg);
@@ -34,7 +35,9 @@ public class query_cfg_operator extends client_operator {
         if (result.isSetSuccess())
             response = result.success;
         else
-            throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT, "get scanner failed: unknown result");
+            throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
+                    com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
+                    "query config failed: unknown result");
     }
 
     public query_cfg_response get_response() { return response; }

@@ -20,6 +20,7 @@ public class rrdb_multi_remove_operator extends client_operator {
     }
 
     public String name() { return "multi_remove"; }
+
     public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid) throws TException {
         TMessage msg = new TMessage("RPC_RRDB_RRDB_MULTI_REMOVE", TMessageType.CALL, seqid);
         oprot.writeMessageBegin(msg);
@@ -35,7 +36,8 @@ public class rrdb_multi_remove_operator extends client_operator {
             resp = result.success;
         else
             throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
-                    com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT, "multi get failed: unknown result");
+                    com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
+                    "multi remove failed: unknown result");
     }
 
     public multi_remove_response get_response() { return resp; }

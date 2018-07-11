@@ -32,6 +32,7 @@ public class PegasusCli {
         System.out.println("         - multi_get_sort_keys <hash_key>");
         System.out.println("         - multi_set <hash_key> <sort_key> <value> [sort_key value...]");
         System.out.println("         - multi_del <hash_key> <sort_key> [sort_key...]");
+        System.out.println("         - incr <hash_key> <sort_key> [increment]");
         System.out.println("         - scan <hash_key> [start_sort_key] [stop_sort_key] [max_count]");
         System.out.println("         - scan_all [max_count]");
         System.out.println();
@@ -55,6 +56,7 @@ public class PegasusCli {
         byte[] sortKey = null;
         byte[] value = null;
         int ttl_seconds = 0;
+        long increment = 1;
         List<byte[]> sortKeys =  new ArrayList<byte[]>();
         List<Pair<byte[], byte[]>> sortKeyValuePairs = new ArrayList<Pair<byte[], byte[]>>();
         byte[] startSortKey = null;
@@ -121,6 +123,18 @@ public class PegasusCli {
             hashKey = args[0].getBytes();
             for (int i = 1; i < args.length; ++i) {
                 sortKeys.add(args[i].getBytes());
+            }
+        }
+        else if (opName.equals("incr")) {
+            if (args.length != 2 && args.length != 3) {
+                System.out.println("ERROR: invalid parameter count");
+                usage();
+                return;
+            }
+            hashKey = args[0].getBytes();
+            sortKey = args[1].getBytes();
+            if (args.length == 3) {
+                increment = Long.parseLong(args[2]);
             }
         }
         else if (opName.equals("scan")) {
@@ -203,6 +217,12 @@ public class PegasusCli {
             }
             else if (opName.equals("multi_del")) {
                 client.multiDel(appName, hashKey, sortKeys);
+                System.out.println("OK");
+            }
+            else if (opName.equals("incr")) {
+                long new_value = client.incr(appName, hashKey, sortKey, increment);
+                System.out.printf("%d\n", new_value);
+                System.out.println();
                 System.out.println("OK");
             }
             else if (opName.equals("scan")) {

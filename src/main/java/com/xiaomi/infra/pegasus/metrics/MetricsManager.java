@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.metrics;
 
-import com.xiaomi.infra.pegasus.tools.tools;
+import com.xiaomi.infra.pegasus.tools.Tools;
 import org.slf4j.Logger;
 
 /**
@@ -42,7 +42,7 @@ public final class MetricsManager {
     }
 
     public static final void detectHostAndInit(String tag, int reportIntervalSec) {
-        initFromHost(tools.getLocalHostAddress().getHostName(), tag, reportIntervalSec);
+        initFromHost(Tools.getLocalHostAddress().getHostName(), tag, reportIntervalSec);
     }
 
     public static final void finish() {

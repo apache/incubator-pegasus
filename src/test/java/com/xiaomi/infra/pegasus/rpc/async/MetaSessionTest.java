@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.rpc.async;
 
-import com.xiaomi.infra.pegasus.tools.tools;
+import com.xiaomi.infra.pegasus.tools.Tools;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import org.junit.Assert;
 import org.junit.Test;
@@ -89,7 +89,7 @@ public class MetaSessionTest {
         Toollet.closeServer(addr);
         for (FutureTask<Void> cb: callbacks) {
             try {
-                tools.waitUninterruptable(cb, Integer.MAX_VALUE);
+                Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
             } catch (ExecutionException e) {
                 e.printStackTrace();
                 Assert.fail();

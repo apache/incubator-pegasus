@@ -17,6 +17,7 @@ public class rrdb_ttl_operator extends client_operator {
     }
 
     public String name() { return "ttl"; }
+
     public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid) throws TException {
         TMessage msg = new TMessage("RPC_RRDB_RRDB_TTL", TMessageType.CALL, seqid);
         oprot.writeMessageBegin(msg);
@@ -31,10 +32,13 @@ public class rrdb_ttl_operator extends client_operator {
         if (result.isSetSuccess())
             resp = result.success;
         else
-            throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT, "ttl failed: unknown result");
+            throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
+                    com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
+                    "get ttl failed: unknown result");
     }
 
     public ttl_response get_response() { return resp; }
+
     private blob request;
     private ttl_response resp;
 }

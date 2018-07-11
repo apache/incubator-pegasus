@@ -12,24 +12,26 @@ import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
 import com.xiaomi.infra.pegasus.apps.rrdb;
 
 public class rrdb_clear_scanner_operator extends client_operator {
-  public rrdb_clear_scanner_operator(com.xiaomi.infra.pegasus.base.gpid gpid, String tableName, long request) {
-    super(gpid, tableName);
-    this.request = request;
-  }
+    public rrdb_clear_scanner_operator(com.xiaomi.infra.pegasus.base.gpid gpid, String tableName, long request) {
+        super(gpid, tableName);
+        this.request = request;
+    }
 
-  public String name() { return "clear_scanner"; }
-  public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_CLEAR_SCANNER", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.clear_scanner_args args = new rrdb.clear_scanner_args(request);
-    args.write(oprot);
-    oprot.writeMessageEnd();
-  }
+    public String name() {
+        return "clear_scanner";
+    }
 
-  public void recv_data(TProtocol iprot) throws TException {
-  }
+    public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid) throws TException {
+        TMessage msg = new TMessage("RPC_RRDB_RRDB_CLEAR_SCANNER", TMessageType.CALL, seqid);
+        oprot.writeMessageBegin(msg);
+        rrdb.clear_scanner_args args = new rrdb.clear_scanner_args(request);
+        args.write(oprot);
+        oprot.writeMessageEnd();
+    }
 
-  public scan_response get_response() { return null; }
+    public void recv_data(TProtocol iprot) throws TException {}
 
-  private long request;
+    public scan_response get_response() { return null; }
+
+    private long request;
 }
