@@ -31,6 +31,7 @@
           "collector*app.pegasus*app.stat.multi_put_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.remove_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.multi_remove_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
+          "collector*app.pegasus*app.stat.incr_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.scan_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
       ],
       "graph_type": "a",
@@ -485,6 +486,7 @@
           "collector*app.pegasus*app.stat.multi_put_qps#${table.name}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.remove_qps#${table.name}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.multi_remove_qps#${table.name}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
+          "collector*app.pegasus*app.stat.incr_qps#${table.name}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.scan_qps#${table.name}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
       ],
       "graph_type": "a",
