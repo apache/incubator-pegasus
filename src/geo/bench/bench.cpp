@@ -9,9 +9,8 @@
 #include <s2/s2cell.h>
 #include "monitoring/histogram.h"
 #include <dsn/utility/strings.h>
-#include <rocksdb/env.h>
 #include <dsn/utility/string_conv.h>
-#include <dsn/cpp/clientlet.h>
+#include <rocksdb/env.h>
 
 static const int data_count = 10000;
 
