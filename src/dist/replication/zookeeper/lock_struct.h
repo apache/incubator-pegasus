@@ -33,6 +33,7 @@
  */
 #pragma once
 
+#include <dsn/tool-api/thread_access_checker.h>
 #include <dsn/dist/distributed_lock_service.h>
 #include <string>
 
@@ -59,7 +60,7 @@ struct zoolock_pair
     int64_t _sequence_id;
 };
 
-class lock_struct : public clientlet, public ref_counter
+class lock_struct : public ref_counter
 {
 public:
     lock_struct(lock_srv_ptr srv);
@@ -118,6 +119,8 @@ private:
     int _hash;
 
     lock_srv_ptr _dist_lock_service;
+
+    thread_access_checker _checker;
 };
 }
 }

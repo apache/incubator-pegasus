@@ -118,7 +118,7 @@ error_code failure_detector::stop()
 void failure_detector::register_master(::dsn::rpc_address target)
 {
     bool setup_timer = false;
-    uint64_t now = now_ms();
+    uint64_t now = dsn_now_ms();
 
     zauto_lock l(_lock);
 
@@ -143,7 +143,7 @@ void failure_detector::register_master(::dsn::rpc_address target)
         ret.first->second.send_beacon_timer =
             tasking::enqueue_timer(LPC_BEACON_SEND,
                                    &_tracker,
-                                   [this, target]() { this->send_beacon(target, now_ms()); },
+                                   [this, target]() { this->send_beacon(target, dsn_now_ms()); },
                                    std::chrono::milliseconds(_beacon_interval_milliseconds),
                                    0,
                                    std::chrono::milliseconds(1));
@@ -171,7 +171,7 @@ bool failure_detector::switch_master(::dsn::rpc_address from,
         it->second.send_beacon_timer =
             tasking::enqueue_timer(LPC_BEACON_SEND,
                                    &_tracker,
-                                   [this, to]() { this->send_beacon(to, now_ms()); },
+                                   [this, to]() { this->send_beacon(to, dsn_now_ms()); },
                                    std::chrono::milliseconds(_beacon_interval_milliseconds),
                                    0,
                                    std::chrono::milliseconds(delay_milliseconds));
@@ -218,7 +218,7 @@ void failure_detector::check_all_records()
     }
 
     std::vector<::dsn::rpc_address> expire;
-    uint64_t now = now_ms();
+    uint64_t now = dsn_now_ms();
 
     {
         zauto_lock l(_lock);
@@ -256,7 +256,7 @@ void failure_detector::check_all_records()
 
     // process recv record, for server
     expire.clear();
-    now = now_ms();
+    now = dsn_now_ms();
 
     {
         zauto_lock l(_lock);
@@ -297,13 +297,13 @@ void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon
 {
     ack.time = beacon.time;
     ack.this_node = beacon.to_addr;
-    ack.primary_node = primary_address();
+    ack.primary_node = dsn_primary_address();
     ack.is_master = true;
     ack.allowed = true;
 
     zauto_lock l(_lock);
 
-    uint64_t now = now_ms();
+    uint64_t now = dsn_now_ms();
     auto node = beacon.from_addr;
 
     worker_map::iterator itr = _workers.find(node);
@@ -354,7 +354,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
      */
     uint64_t beacon_send_time = ack.time;
     auto node = ack.this_node;
-    uint64_t now = now_ms();
+    uint64_t now = dsn_now_ms();
 
     if (err != ERR_OK) {
         dwarn("ping master(%s) failed, timeout_ms = %u, err = %s",
@@ -370,7 +370,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
         dwarn("received beacon ack without corresponding master, ignore it, "
               "remote_master[%s], local_worker[%s]",
               node.to_string(),
-              primary_address().to_string());
+              dsn_primary_address().to_string());
         return false;
     }
 
@@ -379,7 +379,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
         dwarn("worker rejected, stop sending beacon message, "
               "remote_master[%s], local_worker[%s]",
               node.to_string(),
-              primary_address().to_string());
+              dsn_primary_address().to_string());
         record.rejected = true;
         record.send_beacon_timer->cancel(true);
         return false;
@@ -442,7 +442,7 @@ bool failure_detector::is_master_connected(::dsn::rpc_address node) const
 
 void failure_detector::register_worker(::dsn::rpc_address target, bool is_connected)
 {
-    uint64_t now = now_ms();
+    uint64_t now = dsn_now_ms();
 
     /*
      * callers should use the fd::_lock necessarily
@@ -500,7 +500,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
 {
     beacon_msg beacon;
     beacon.time = time;
-    beacon.from_addr = primary_address();
+    beacon.from_addr = dsn_primary_address();
     beacon.to_addr = target;
     beacon.__set_start_time(static_cast<int64_t>(dsn_runtime_init_time_ms()));
 

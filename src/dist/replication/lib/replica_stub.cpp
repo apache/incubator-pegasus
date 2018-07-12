@@ -269,7 +269,7 @@ void replica_stub::initialize(bool clear /* = false*/)
 
 void replica_stub::initialize(const replication_options &opts, bool clear /* = false*/)
 {
-    _primary_address = primary_address();
+    _primary_address = dsn_primary_address();
     ddebug("primary_address = %s", _primary_address.to_string());
 
     set_options(opts);
@@ -365,7 +365,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                     ddebug("%s@%s: load replica '%s' success, <durable, commit> = <%" PRId64
                            ", %" PRId64 ">, last_prepared_decree = %" PRId64,
                            r->get_gpid().to_string(),
-                           primary_address().to_string(),
+                           dsn_primary_address().to_string(),
                            dir.c_str(),
                            r->last_durable_decree(),
                            r->last_committed_decree(),
@@ -530,13 +530,13 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     // gc
     if (false == _options.gc_disabled) {
-        _gc_timer_task =
-            tasking::enqueue_timer(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
-                                   &_tracker,
-                                   [this] { on_gc(); },
-                                   std::chrono::milliseconds(_options.gc_interval_ms),
-                                   0,
-                                   std::chrono::milliseconds(random32(0, _options.gc_interval_ms)));
+        _gc_timer_task = tasking::enqueue_timer(
+            LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
+            &_tracker,
+            [this] { on_gc(); },
+            std::chrono::milliseconds(_options.gc_interval_ms),
+            0,
+            std::chrono::milliseconds(dsn_random32(0, _options.gc_interval_ms)));
     }
 
     // disk stat
@@ -558,7 +558,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     }
 
     if (_options.delay_for_fd_timeout_on_start) {
-        uint64_t now_time_ms = now_ms();
+        uint64_t now_time_ms = dsn_now_ms();
         uint64_t delay_time_ms =
             (_options.fd_grace_seconds + 3) * 1000; // for more 3 seconds than grace seconds
         if (now_time_ms < dsn_runtime_init_time_ms() + delay_time_ms) {
@@ -1194,7 +1194,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
     replica_ptr replica = get_replica(id);
     if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY) {
         if (replica->status() == partition_status::PS_INACTIVE &&
-            now_ms() - replica->create_time_milliseconds() <
+            dsn_now_ms() - replica->create_time_milliseconds() <
                 _options.gc_memory_replica_interval_ms) {
             ddebug("%s: replica not exists on meta server, wait to close", replica->name());
             return;

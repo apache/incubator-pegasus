@@ -35,6 +35,8 @@
 #include <cinttypes>
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/aio_provider.h>
+#include <dsn/tool-api/async_calls.h>
+
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/utility/priority_queue.h>

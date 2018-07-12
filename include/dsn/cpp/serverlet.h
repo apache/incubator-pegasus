@@ -25,9 +25,9 @@
  */
 #pragma once
 
-#include <dsn/cpp/clientlet.h>
 #include <dsn/cpp/service_app.h>
 #include <dsn/cpp/rpc_holder.h>
+#include <dsn/cpp/serialization.h>
 
 namespace dsn {
 /*!
@@ -104,7 +104,7 @@ private:
 };
 
 template <typename T> // where T : serverlet<T>
-class serverlet : public virtual clientlet
+class serverlet
 {
 public:
     explicit serverlet(const char *nm);

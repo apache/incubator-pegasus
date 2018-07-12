@@ -40,6 +40,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <dsn/tool-api/thread_access_checker.h>
+#include <dsn/tool-api/async_calls.h>
+
 #include "distributed_lock_service_zookeeper.h"
 #include "lock_struct.h"
 #include "lock_types.h"
@@ -91,7 +94,7 @@ static bool is_zookeeper_timeout(int zookeeper_error)
 #define REMOVE_FOR_UNLOCK true
 #define REMOVE_FOR_CANCEL false
 
-lock_struct::lock_struct(lock_srv_ptr srv) : clientlet(), ref_counter()
+lock_struct::lock_struct(lock_srv_ptr srv) : ref_counter()
 {
     _dist_lock_service = srv;
     clear();
@@ -123,7 +126,7 @@ void lock_struct::clear()
 
 void lock_struct::remove_lock()
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     if (_dist_lock_service != nullptr) {
         _dist_lock_service->erase(std::make_pair(_lock_id, _myself._node_value));
@@ -175,7 +178,7 @@ void lock_struct::my_lock_removed(lock_struct_ptr _this, int zoo_event)
 {
     static const lock_state allow_state[] = {
         lock_state::locked, lock_state::unlocking, lock_state::expired};
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::unlocking || _this->_state == lock_state::expired) {
@@ -189,7 +192,7 @@ void lock_struct::owner_change(lock_struct_ptr _this, int zoo_event)
 {
     static const lock_state allow_state[] = {
         lock_state::uninitialized, lock_state::pending, lock_state::cancelled, lock_state::expired};
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::uninitialized) {
@@ -222,7 +225,7 @@ void lock_struct::after_remove_duplicated_locknode(lock_struct_ptr _this,
     };
     static const int allow_state[] = {
         lock_state::pending, lock_state::cancelled, lock_state::expired, lock_state::locked};
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     __check_code(ec, allow_ec, 3, zerror(ec));
     __check_code(_this->_state, allow_state, 4, string_state(_this->_state));
 
@@ -290,7 +293,7 @@ void lock_struct::after_get_lock_owner(lock_struct_ptr _this,
     };
     static const int allow_state[] = {
         lock_state::pending, lock_state::cancelled, lock_state::expired};
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     __check_code(ec, allow_ec, 3, zerror(ec));
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
@@ -345,7 +348,7 @@ void lock_struct::after_self_check(lock_struct_ptr _this,
     };
     static const lock_state allow_state[] = {
         lock_state::locked, lock_state::unlocking, lock_state::expired};
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     __check_code(ec, allow_ec, 3, zerror(ec));
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
@@ -433,7 +436,7 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
     static const int allow_state[] = {
         lock_state::pending, lock_state::cancelled, lock_state::expired};
 
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     __check_code(ec, allow_ec, 2, zerror(ec));
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
@@ -545,7 +548,7 @@ void lock_struct::after_create_locknode(lock_struct_ptr _this,
     static const int allow_state[] = {
         lock_state::pending, lock_state::cancelled, lock_state::expired};
 
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     __check_code(ec, allow_ec, 2, zerror(ec));
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
@@ -605,7 +608,7 @@ void lock_struct::create_locknode()
 /*static*/
 void lock_struct::after_create_lockdir(lock_struct_ptr _this, int ec)
 {
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     static const int allow_ec[] = {
         ZOK,
         ZNODEEXISTS,  // succeed state
@@ -635,7 +638,7 @@ void lock_struct::try_lock(lock_struct_ptr _this,
                            lock_future_ptr lock_callback,
                            lock_future_ptr expire_callback)
 {
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
 
     if (_this->_state != lock_state::uninitialized) {
         lock_callback->enqueue_with(ERR_RECURSIVE_LOCK, "", -1);
@@ -678,7 +681,7 @@ void lock_struct::after_remove_my_locknode(lock_struct_ptr _this, int ec, bool r
     };
     static const int allow_state[] = {
         lock_state::cancelled, lock_state::unlocking, lock_state::expired};
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     __check_code(ec, allow_ec, 3, zerror(ec));
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
@@ -746,7 +749,7 @@ void lock_struct::remove_my_locknode(std::string &&znode_path,
 /*static*/
 void lock_struct::cancel_pending_lock(lock_struct_ptr _this, lock_future_ptr cancel_callback)
 {
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     if (_this->_state != lock_state::uninitialized && _this->_state != lock_state::pending &&
         _this->_state != lock_state::cancelled) {
         cancel_callback->enqueue_with(ERR_INVALID_PARAMETERS, "", _this->_owner._sequence_id);
@@ -770,7 +773,7 @@ void lock_struct::cancel_pending_lock(lock_struct_ptr _this, lock_future_ptr can
 /*static*/
 void lock_struct::unlock(lock_struct_ptr _this, error_code_future_ptr unlock_callback)
 {
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     if (_this->_state != lock_state::locked && _this->_state != lock_state::unlocking) {
         ddebug("lock(%s) myself(%s) seqid(%lld) state(%s), just return",
                _this->_lock_id.c_str(),
@@ -791,7 +794,7 @@ void lock_struct::unlock(lock_struct_ptr _this, error_code_future_ptr unlock_cal
 /*static*/
 void lock_struct::lock_expired(lock_struct_ptr _this)
 {
-    _this->check_hashed_access();
+    _this->_checker.only_one_thread_access();
     _this->on_expire();
 }
 }

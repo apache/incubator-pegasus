@@ -63,7 +63,7 @@ public:
 
     void send_one_read(int payload_bytes, int key_space_size)
     {
-        auto rs = random64(0, 10000000) % key_space_size;
+        auto rs = dsn_random64(0, 10000000) % key_space_size;
         std::stringstream ss;
         ss << "key." << rs << "." << std::string(payload_bytes, 'x');
 
@@ -78,7 +78,7 @@ public:
 
     void send_one_write(int payload_bytes, int key_space_size)
     {
-        auto rs = random64(0, 10000000) % key_space_size;
+        auto rs = dsn_random64(0, 10000000) % key_space_size;
         std::stringstream ss;
         ss << "key." << rs;
 
@@ -94,7 +94,7 @@ public:
 
     void send_one_append(int payload_bytes, int key_space_size)
     {
-        auto rs = random64(0, 10000000) % key_space_size;
+        auto rs = dsn_random64(0, 10000000) % key_space_size;
         std::stringstream ss;
         ss << "key." << rs;
         kv_pair req = {ss.str(), std::string(payload_bytes, 'x')};

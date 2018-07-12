@@ -63,7 +63,7 @@ private:
 };
 
 // client app example
-class echo_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+class echo_client_app : public ::dsn::service_app
 {
 public:
     echo_client_app(const service_app_info *info) : ::dsn::service_app(info) {}
@@ -112,7 +112,7 @@ private:
     std::unique_ptr<echo_client> _echo_client;
 };
 
-class echo_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+class echo_perf_test_client_app : public ::dsn::service_app
 {
 public:
     echo_perf_test_client_app(const service_app_info *info) : ::dsn::service_app(info)

@@ -45,7 +45,7 @@ namespace replication {
 
 void replica::on_config_proposal(configuration_update_request &proposal)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     ddebug("%s: process config proposal %s for %s",
            name(),
@@ -423,7 +423,7 @@ void replica::on_update_configuration_on_meta_server_reply(
     dsn_message_t response,
     std::shared_ptr<configuration_update_request> req)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     if (partition_status::PS_INACTIVE != status() || _stub->is_connected() == false) {
         _primary_states.reconfiguration_task = nullptr;
@@ -706,7 +706,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
                   result.to_string());
         }
     }
-    _last_config_change_time_ms = now_ms();
+    _last_config_change_time_ms = dsn_now_ms();
     dassert(max_prepared_decree() >= last_committed_decree(),
             "%" PRId64 " VS %" PRId64 "",
             max_prepared_decree(),

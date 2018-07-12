@@ -44,7 +44,7 @@ namespace replication {
 
 void replica::init_group_check()
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     ddebug("%s: init group check", name());
 
@@ -131,7 +131,7 @@ void replica::broadcast_group_check()
 void replica::on_group_check(const group_check_request &request,
                              /*out*/ group_check_response &response)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     ddebug("%s: process group check, primary = %s, ballot = %" PRId64
            ", status = %s, last_committed_decree = %" PRId64,
@@ -190,7 +190,7 @@ void replica::on_group_check_reply(error_code err,
                                    const std::shared_ptr<group_check_request> &req,
                                    const std::shared_ptr<group_check_response> &resp)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     if (partition_status::PS_PRIMARY != status() || req->config.ballot < get_ballot()) {
         return;

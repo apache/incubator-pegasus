@@ -41,7 +41,7 @@ using namespace ::dsn::service;
 
 namespace dsn {
 namespace dist {
-class distributed_lock_service_simple : public distributed_lock_service, public clientlet
+class distributed_lock_service_simple : public distributed_lock_service
 {
 public:
     virtual ~distributed_lock_service_simple() { _tracker.cancel_outstanding_tasks(); }

@@ -231,7 +231,7 @@ error_code meta_service::start()
     _failure_detector->acquire_leader_lock();
     dassert(_failure_detector->get_leader(nullptr), "must be primary at this point");
     ddebug("%s got the primary lock, start to recover server state from remote storage",
-           primary_address().to_string());
+           dsn_primary_address().to_string());
 
     // initialize the load balancer
     server_load_balancer *balancer = utils::factory_store<server_load_balancer>::create(
@@ -449,7 +449,7 @@ void meta_service::on_query_cluster_info(dsn_message_t req)
 
     response.values.push_back(oss.str());
     response.keys.push_back("primary_meta_server");
-    response.values.push_back(primary_address().to_std_string());
+    response.values.push_back(dsn_primary_address().to_std_string());
     std::string zk_hosts =
         dsn_config_get_value_string("zookeeper", "hosts_list", "", "zookeeper_hosts");
     zk_hosts.erase(std::remove_if(zk_hosts.begin(), zk_hosts.end(), ::isspace), zk_hosts.end());
@@ -595,7 +595,7 @@ void meta_service::on_start_recovery(dsn_message_t req)
         zauto_write_lock l(_meta_lock);
         if (_started.load()) {
             ddebug("service(%s) is already started, ignore the recovery request",
-                   primary_address().to_string());
+                   dsn_primary_address().to_string());
             response.err = ERR_SERVICE_ALREADY_RUNNING;
         } else {
             configuration_recovery_request request;

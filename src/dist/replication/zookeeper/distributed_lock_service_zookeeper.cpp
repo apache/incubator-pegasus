@@ -31,7 +31,9 @@
  * Revision history:
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
+#include <dsn/tool-api/async_calls.h>
 #include <dsn/dist/replication/replication.codes.h>
+
 #include <zookeeper/zookeeper.h>
 #include <boost/lexical_cast.hpp>
 #include <functional>
@@ -50,8 +52,7 @@ namespace dist {
 
 std::string distributed_lock_service_zookeeper::LOCK_NODE_PREFIX = "LOCKNODE";
 
-distributed_lock_service_zookeeper::distributed_lock_service_zookeeper()
-    : clientlet(), ref_counter()
+distributed_lock_service_zookeeper::distributed_lock_service_zookeeper() : ref_counter()
 {
     _first_call = true;
 }

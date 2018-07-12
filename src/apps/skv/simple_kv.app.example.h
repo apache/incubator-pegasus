@@ -44,7 +44,7 @@ namespace dsn {
 namespace replication {
 namespace application {
 // client app example
-class simple_kv_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+class simple_kv_client_app : public ::dsn::service_app
 {
 public:
     simple_kv_client_app(const service_app_info *info) : ::dsn::service_app(info) {}
@@ -127,7 +127,7 @@ private:
     dsn::task_tracker _tracker;
 };
 
-class simple_kv_perf_test_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+class simple_kv_perf_test_client_app : public ::dsn::service_app
 {
 public:
     simple_kv_perf_test_client_app(const service_app_info *info) : ::dsn::service_app(info) {}

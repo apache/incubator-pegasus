@@ -89,7 +89,7 @@ bool meta_server_failure_detector::get_leader(rpc_address *leader)
     }
 
     if (_is_leader.load()) {
-        *leader = primary_address();
+        *leader = dsn_primary_address();
         return true;
     } else if (_lock_svc == nullptr) {
         leader->set_invalid();
@@ -99,7 +99,7 @@ bool meta_server_failure_detector::get_leader(rpc_address *leader)
         uint64_t version;
         error_code err = _lock_svc->query_cache(_primary_lock_id, lock_owner, version);
         if (err == dsn::ERR_OK && leader->from_string_ipv4(lock_owner.c_str())) {
-            return (*leader) == primary_address();
+            return (*leader) == dsn_primary_address();
         } else {
             dwarn("query leader from cache got error(%s)", err.to_string());
             leader->set_invalid();
@@ -119,7 +119,7 @@ void meta_server_failure_detector::acquire_leader_lock()
         error_code err;
         auto tasks = _lock_svc->lock(
             _primary_lock_id,
-            primary_address().to_std_string(),
+            dsn_primary_address().to_std_string(),
             // lock granted
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
             [this, &err](error_code ec, const std::string &owner, uint64_t version) {
@@ -180,10 +180,10 @@ void meta_server_failure_detector::leader_initialize(const std::string &lock_ser
     dassert(addr.from_string_ipv4(lock_service_owner.c_str()),
             "parse %s to rpc_address failed",
             lock_service_owner.c_str());
-    dassert(addr == primary_address(),
+    dassert(addr == dsn_primary_address(),
             "acquire leader return success, but owner not match: %s vs %s",
             addr.to_string(),
-            primary_address().to_string());
+            dsn_primary_address().to_string());
     _is_leader.store(true);
     _election_moment.store(dsn_now_ms());
 }

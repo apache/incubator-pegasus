@@ -34,36 +34,40 @@
  */
 
 #include <dsn/tool-api/aio_provider.h>
-#include <gtest/gtest.h>
+#include <dsn/tool-api/async_calls.h>
+#include <dsn/tool-api/thread_access_checker.h>
 #include <dsn/service_api_cpp.h>
-#include <dsn/cpp/clientlet.h>
+
+#include <gtest/gtest.h>
 #include <functional>
 #include <chrono>
+
 #include "test_utils.h"
 
 DEFINE_TASK_CODE(LPC_TEST_CLIENTLET, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 using namespace dsn;
 
 int global_value;
-class test_clientlet : public clientlet
+class tracker_class
 {
 public:
     std::string str;
     int number;
     dsn::task_tracker _tracker;
+    dsn::thread_access_checker _checker;
 
 public:
-    test_clientlet() : clientlet(), str("before called"), number(0) { global_value = 0; }
+    tracker_class() : str("before called"), number(0), _tracker(1) { global_value = 0; }
     void callback_function1()
     {
-        check_hashed_access();
+        _checker.only_one_thread_access();
         str = "after called";
         ++global_value;
     }
 
     void callback_function2()
     {
-        check_hashed_access();
+        _checker.only_one_thread_access();
         number = 0;
         for (int i = 0; i < 1000; ++i)
             number += i;
@@ -73,52 +77,52 @@ public:
     void callback_function3() { ++global_value; }
 };
 
-TEST(dev_cpp, clientlet_task)
+TEST(async_call, task_call)
 {
     /* normal lpc*/
-    test_clientlet *cl = new test_clientlet();
+    tracker_class *tc = new tracker_class();
     task_ptr t =
-        tasking::enqueue(LPC_TEST_CLIENTLET, &cl->_tracker, [cl] { cl->callback_function1(); });
+        tasking::enqueue(LPC_TEST_CLIENTLET, &tc->_tracker, [tc] { tc->callback_function1(); });
     EXPECT_TRUE(t != nullptr);
     t->wait();
-    EXPECT_TRUE(cl->str == "after called");
-    delete cl;
+    EXPECT_TRUE(tc->str == "after called");
+    delete tc;
 
     /* task tracking */
-    cl = new test_clientlet();
+    tc = new tracker_class();
     std::vector<task_ptr> test_tasks;
     t = tasking::enqueue(LPC_TEST_CLIENTLET,
-                         &cl->_tracker,
-                         [=] { cl->callback_function1(); },
+                         &tc->_tracker,
+                         [=] { tc->callback_function1(); },
                          0,
                          std::chrono::seconds(30));
     test_tasks.push_back(t);
     t = tasking::enqueue(LPC_TEST_CLIENTLET,
-                         &cl->_tracker,
-                         [cl] { cl->callback_function1(); },
+                         &tc->_tracker,
+                         [tc] { tc->callback_function1(); },
                          0,
                          std::chrono::seconds(30));
     test_tasks.push_back(t);
     t = tasking::enqueue_timer(LPC_TEST_CLIENTLET,
-                               &cl->_tracker,
-                               [cl] { cl->callback_function1(); },
+                               &tc->_tracker,
+                               [tc] { tc->callback_function1(); },
                                std::chrono::seconds(20),
                                0,
                                std::chrono::seconds(30));
     test_tasks.push_back(t);
 
-    delete cl;
+    delete tc;
     for (unsigned int i = 0; i != test_tasks.size(); ++i)
         EXPECT_FALSE(test_tasks[i]->cancel(true));
 }
 
-TEST(dev_cpp, clientlet_rpc)
+TEST(async_call, rpc_call)
 {
     rpc_address addr("localhost", 20101);
     rpc_address addr2("localhost", TEST_PORT_END);
     rpc_address addr3("localhost", 32767);
 
-    test_clientlet *cl = new test_clientlet();
+    tracker_class *tc = new tracker_class();
     rpc::call_one_way_typed(addr, RPC_TEST_STRING_COMMAND, std::string("expect_no_reply"), 0);
     std::vector<task_ptr> task_vec;
     const char *command = "echo hello world";
@@ -127,7 +131,7 @@ TEST(dev_cpp, clientlet_rpc)
     auto t = rpc::call(addr3,
                        RPC_TEST_STRING_COMMAND,
                        *str_command,
-                       &cl->_tracker,
+                       &tc->_tracker,
                        [str_command](error_code ec, std::string &&resp) {
                            if (ERR_OK == ec)
                                EXPECT_TRUE(str_command->substr(5) == resp);
@@ -136,11 +140,13 @@ TEST(dev_cpp, clientlet_rpc)
     t = rpc::call(addr2,
                   RPC_TEST_STRING_COMMAND,
                   std::string(command),
-                  &cl->_tracker,
+                  &tc->_tracker,
                   [](error_code ec, std::string &&resp) { EXPECT_TRUE(ec == ERR_OK); });
     task_vec.push_back(t);
     for (int i = 0; i != task_vec.size(); ++i)
         task_vec[i]->wait();
+
+    delete tc;
 }
 
 class simple_task : public dsn::raw_task
@@ -196,8 +202,7 @@ bool spin_wait(const std::function<bool()> &pred, int wait_times)
     }
     return pred();
 }
-
-TEST(dev_cpp, task_destructor)
+TEST(async_call, task_destructor)
 {
     {
         task_ptr t(new simple_task(LPC_TEST_CLIENTLET, nullptr));

@@ -23,25 +23,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-/*
- * Description:
- *     cpp development library atop zion's c service api
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include <dsn/service_api_c.h>
-#include <dsn/tool-api/auto_codes.h>
-#include <dsn/cpp/serialization.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2.types.h>
-#include <dsn/cpp/rpc_stream.h>
-#include <dsn/cpp/zlocks.h>
-#include <dsn/cpp/serverlet.h>
-#include <dsn/cpp/service_app.h>
-#include <dsn/tool-api/rpc_address.h>
-#include <dsn/cpp/perf_test_helper.h>
+namespace dsn {
+
+///
+/// a simple class used to check if some code is accessed by only one thread.
+/// please refer to @replica.h and @lock_struct.h for a sample usage
+///
+class thread_access_checker
+{
+public:
+    thread_access_checker();
+    ~thread_access_checker();
+
+    void only_one_thread_access();
+
+private:
+    // TODO: the implementation is not thread safe. use atomic variable to reimplement this
+    int _access_thread_id;
+    bool _access_thread_id_inited;
+};
+}

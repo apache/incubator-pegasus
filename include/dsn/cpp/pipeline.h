@@ -28,7 +28,7 @@
 
 #include <dsn/tool-api/task_code.h>
 #include <dsn/tool-api/task_tracker.h>
-#include <dsn/cpp/clientlet.h>
+#include <dsn/tool-api/async_calls.h>
 #include <dsn/utility/chrono_literals.h>
 #include <dsn/utility/apply.h>
 

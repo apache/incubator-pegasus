@@ -46,7 +46,7 @@ namespace replication {
 
 void replica::init_learn(uint64_t signature)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     if (status() != partition_status::PS_POTENTIAL_SECONDARY) {
         dwarn(
@@ -230,7 +230,7 @@ void replica::init_learn(uint64_t signature)
 
 void replica::on_learn(dsn_message_t msg, const learn_request &request)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     learn_response response;
     if (partition_status::PS_PRIMARY != status()) {
@@ -502,7 +502,7 @@ void replica::on_learn(dsn_message_t msg, const learn_request &request)
 
 void replica::on_learn_reply(error_code err, learn_request &&req, learn_response &&resp)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     dassert(partition_status::PS_POTENTIAL_SECONDARY == status(),
             "invalid partition status, status = %s",
@@ -1116,7 +1116,7 @@ void replica::on_copy_remote_state_completed(error_code err,
 
 void replica::on_learn_remote_state_completed(error_code err)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     if (partition_status::PS_POTENTIAL_SECONDARY != status()) {
         dwarn("%s: on_learn_remote_state_completed[%016" PRIx64
@@ -1157,7 +1157,7 @@ void replica::on_learn_remote_state_completed(error_code err)
 
 void replica::handle_learning_error(error_code err, bool is_local_error)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     derror("%s: handle_learning_error[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
            " ms, err = %s, %s",
@@ -1246,7 +1246,7 @@ void replica::notify_learn_completion()
 void replica::on_learn_completion_notification(const group_check_response &report,
                                                /*out*/ learn_notify_response &response)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     ddebug("%s: on_learn_completion_notification[%016" PRIx64
            "]: learner = %s, learning_status = %s",
@@ -1291,7 +1291,7 @@ void replica::on_learn_completion_notification_reply(error_code err,
                                                      group_check_response &&report,
                                                      learn_notify_response &&resp)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     dassert(partition_status::PS_POTENTIAL_SECONDARY == status(),
             "invalid partition_status, status = %s",

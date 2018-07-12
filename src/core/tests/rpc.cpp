@@ -44,7 +44,8 @@
 
 #include <dsn/utility/priority_queue.h>
 #include <dsn/tool-api/group_address.h>
-#include <dsn/tool-api/aio_provider.h>
+#include <dsn/tool-api/async_calls.h>
+
 #include "test_utils.h"
 
 typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;

@@ -33,30 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/cpp/clientlet.h>
 #include <dsn/cpp/service_app.h>
 #include <dsn/utility/singleton.h>
 #include <dsn/tool-api/task.h>
+#include <dsn/tool-api/async_calls.h>
 #include <iostream>
 #include <map>
 
 namespace dsn {
-
-clientlet::clientlet() { _access_thread_id_inited = false; }
-
-clientlet::~clientlet() { _access_thread_id_inited = false; }
-
-void clientlet::check_hashed_access()
-{
-    if (_access_thread_id_inited) {
-        dassert(::dsn::utils::get_current_tid() == _access_thread_id,
-                "the service is assumed to be accessed by one thread only!");
-    } else {
-        _access_thread_id = ::dsn::utils::get_current_tid();
-        _access_thread_id_inited = true;
-    }
-}
-
 namespace file {
 
 void copy_remote_files_impl(::dsn::rpc_address remote,
@@ -83,5 +67,4 @@ void copy_remote_files_impl(::dsn::rpc_address remote,
     }
 }
 }
-
-} // end namespace dsn::service
+}

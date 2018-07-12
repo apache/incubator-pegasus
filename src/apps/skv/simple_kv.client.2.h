@@ -3,11 +3,12 @@
 #include "simple_kv.types.h"
 #include <iostream>
 #include <dsn/utility/optional.h>
+#include <dsn/tool-api/async_calls.h>
 
 namespace dsn {
 namespace replication {
 namespace application {
-class simple_kv_client2 : public virtual ::dsn::clientlet
+class simple_kv_client2
 {
 public:
     simple_kv_client2(::dsn::rpc_address server) { _server = server; }

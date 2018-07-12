@@ -34,12 +34,13 @@
  */
 #pragma once
 #include <dsn/utility/optional.h>
+#include <dsn/tool-api/async_calls.h>
 #include <dsn/tool/nfs.h>
 #include <iostream>
 
 namespace dsn {
 namespace service {
-class nfs_client : public virtual ::dsn::clientlet
+class nfs_client
 {
 public:
     nfs_client(::dsn::rpc_address server) { _server = server; }

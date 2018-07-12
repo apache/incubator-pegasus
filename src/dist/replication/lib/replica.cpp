@@ -79,7 +79,7 @@ replica::replica(
 
 void replica::update_last_checkpoint_generate_time()
 {
-    _last_checkpoint_generate_time_ms = now_ms();
+    _last_checkpoint_generate_time_ms = dsn_now_ms();
     uint64_t max_interval_ms = _options->checkpoint_max_interval_hours * 3600000UL;
     // use random trigger time to avoid flush peek
     _next_checkpoint_interval_trigger_time_ms =
@@ -105,7 +105,7 @@ void replica::init_state()
     _config.pid.set_partition_index(0);
     _config.status = partition_status::PS_INACTIVE;
     _primary_states.membership.ballot = 0;
-    _create_time_ms = now_ms();
+    _create_time_ms = dsn_now_ms();
     _last_config_change_time_ms = _create_time_ms;
     update_last_checkpoint_generate_time();
     _private_log = nullptr;

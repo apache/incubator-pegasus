@@ -37,11 +37,11 @@
 #include "fd.code.definition.h"
 #include <iostream>
 #include <dsn/utility/optional.h>
-#include <dsn/cpp/clientlet.h>
+#include <dsn/tool-api/async_calls.h>
 
 namespace dsn {
 namespace fd {
-class failure_detector_client : public virtual ::dsn::clientlet
+class failure_detector_client
 {
 public:
     failure_detector_client(::dsn::rpc_address server) { _server = server; }

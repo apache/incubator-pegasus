@@ -36,10 +36,11 @@
 #include "echo.code.definition.h"
 #include <iostream>
 #include <dsn/utility/optional.h>
+#include <dsn/tool-api/async_calls.h>
 
 namespace dsn {
 namespace example {
-class echo_client : public virtual ::dsn::clientlet
+class echo_client
 {
 public:
     echo_client(::dsn::rpc_address server) { _server = server; }

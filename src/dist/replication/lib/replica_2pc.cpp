@@ -44,7 +44,7 @@ namespace replication {
 
 void replica::on_client_write(task_code code, dsn_message_t request)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     task_spec *spec = task_spec::get(code);
     if (!_options->allow_non_idempotent_write && !spec->rpc_request_is_write_idempotent) {
@@ -229,7 +229,7 @@ void replica::do_possible_commit_on_primary(mutation_ptr &mu)
 
 void replica::on_prepare(dsn_message_t request)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     replica_configuration rconfig;
     mutation_ptr mu;
@@ -384,7 +384,7 @@ void replica::on_prepare(dsn_message_t request)
 
 void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t size)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     dinfo("%s: append shared log completed for mutation %s, size = %u, err = %s",
           name(),
@@ -443,7 +443,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
                                dsn_message_t request,
                                dsn_message_t reply)
 {
-    check_hashed_access();
+    _checker.only_one_thread_access();
 
     mutation_ptr mu = pr.first;
     partition_status::type target_status = pr.second;

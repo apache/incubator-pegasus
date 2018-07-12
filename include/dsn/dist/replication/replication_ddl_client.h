@@ -39,6 +39,7 @@
 #include <map>
 #include <dsn/dist/replication.h>
 #include <dsn/tool-api/task_tracker.h>
+#include <dsn/tool-api/async_calls.h>
 
 namespace dsn {
 namespace replication {

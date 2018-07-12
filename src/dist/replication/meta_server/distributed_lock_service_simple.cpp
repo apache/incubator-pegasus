@@ -33,12 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <dsn/tool-api/async_calls.h>
+
 #include "dist/replication/client_lib/replication_common.h"
 #include "distributed_lock_service_simple.h"
 
 namespace dsn {
 namespace dist {
-DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER);
+DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER)
 
 static void __lock_cb_bind_and_enqueue(task_ptr lock_task,
                                        error_code err,

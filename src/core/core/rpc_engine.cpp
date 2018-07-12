@@ -50,8 +50,8 @@
 #include <dsn/tool-api/group_address.h>
 #include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/task_queue.h>
+#include <dsn/tool-api/async_calls.h>
 #include <dsn/cpp/serialization.h>
-#include <dsn/cpp/clientlet.h>
 #include <set>
 
 namespace dsn {

@@ -35,9 +35,9 @@
  */
 
 #include <dsn/utility/factory_store.h>
-#include <dsn/cpp/clientlet.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/command_manager.h>
+#include <dsn/tool-api/async_calls.h>
 #include <sstream>
 #include <cinttypes>
 #include <string>
@@ -2118,7 +2118,7 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &
         ddebug("send query app and replica request to node(%s)", replica_nodes[i].to_string());
 
         query_app_info_request app_query;
-        app_query.meta_server = _meta_svc->primary_address();
+        app_query.meta_server = dsn_primary_address();
 
         rpc::call(replica_nodes[i],
                   RPC_QUERY_APP_INFO,

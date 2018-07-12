@@ -242,7 +242,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 std::map<gpid, decree> replay_condition;
                 replay_condition[_config.pid] = _app->last_committed_decree();
 
-                uint64_t start_time = now_ms();
+                uint64_t start_time = dsn_now_ms();
                 err = _private_log->open(
                     [this](int log_length, mutation_ptr &mu) { return replay_mutation(mu, true); },
                     [this](error_code err) {
@@ -253,7 +253,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                     },
                     replay_condition);
 
-                uint64_t finish_time = now_ms();
+                uint64_t finish_time = dsn_now_ms();
 
                 if (err == ERR_OK) {
                     ddebug("%s: replay private log succeed, durable = %" PRId64

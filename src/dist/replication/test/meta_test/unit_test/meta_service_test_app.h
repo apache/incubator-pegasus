@@ -2,6 +2,7 @@
 #define META_SERVICE_TEST_APP_H
 
 #include <dsn/service_api_cpp.h>
+#include <dsn/tool-api/async_calls.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/meta_service_app.h>
 #include "dist/replication/meta_server/server_state.h"

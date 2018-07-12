@@ -23,25 +23,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <dsn/utility/utils.h>
+#include <dsn/tool-api/thread_access_checker.h>
+#include <dsn/c/api_utilities.h>
 
-/*
- * Description:
- *     cpp development library atop zion's c service api
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
+namespace dsn {
 
-#pragma once
+thread_access_checker::thread_access_checker() { _access_thread_id_inited = false; }
 
-#include <dsn/service_api_c.h>
-#include <dsn/tool-api/auto_codes.h>
-#include <dsn/cpp/serialization.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2.types.h>
-#include <dsn/cpp/rpc_stream.h>
-#include <dsn/cpp/zlocks.h>
-#include <dsn/cpp/serverlet.h>
-#include <dsn/cpp/service_app.h>
-#include <dsn/tool-api/rpc_address.h>
-#include <dsn/cpp/perf_test_helper.h>
+thread_access_checker::~thread_access_checker() { _access_thread_id_inited = false; }
+
+void thread_access_checker::only_one_thread_access()
+{
+    if (_access_thread_id_inited) {
+        dassert(::dsn::utils::get_current_tid() == _access_thread_id,
+                "the service is assumed to be accessed by one thread only!");
+    } else {
+        _access_thread_id = ::dsn::utils::get_current_tid();
+        _access_thread_id_inited = true;
+    }
+}
+}

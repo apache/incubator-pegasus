@@ -33,10 +33,14 @@
  *     2016-01-05, Tianyi Wang, first version
  */
 #include <dsn/tool-api/rpc_address.h>
-#include <gtest/gtest.h>
+#include <dsn/tool-api/async_calls.h>
+
 #include <dsn/service_api_cpp.h>
-#include "test_utils.h"
+
 #include <boost/lexical_cast.hpp>
+#include <gtest/gtest.h>
+
+#include "test_utils.h"
 
 TEST(core, rpc_perf_test)
 {

@@ -41,9 +41,7 @@ namespace dsn {
 namespace dist {
 
 class zookeeper_session;
-class distributed_lock_service_zookeeper : public distributed_lock_service,
-                                           public clientlet,
-                                           public ref_counter
+class distributed_lock_service_zookeeper : public distributed_lock_service, public ref_counter
 {
 public:
     explicit distributed_lock_service_zookeeper();

@@ -34,6 +34,7 @@
  */
 #pragma once
 #include <dsn/tool-api/task_tracker.h>
+#include <dsn/tool-api/async_calls.h>
 #include <dsn/dist/replication.h>
 #include <dsn/tool/nfs.h>
 
@@ -42,7 +43,7 @@ namespace replication {
 namespace application {
 
 // server app example
-class nfs_server_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+class nfs_server_app : public ::dsn::service_app
 {
 public:
     nfs_server_app(const service_app_info *info) : ::dsn::service_app(info) {}
@@ -57,7 +58,7 @@ public:
 };
 
 // client app example
-class nfs_client_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+class nfs_client_app : public ::dsn::service_app
 {
 public:
     nfs_client_app(const service_app_info *info) : ::dsn::service_app(info)

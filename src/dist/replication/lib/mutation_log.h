@@ -120,7 +120,7 @@ public:
 // this class is thread safe
 //
 class replica;
-class mutation_log : public ref_counter, public virtual clientlet
+class mutation_log : public ref_counter
 {
 public:
     // return true when the mutation's offset is not less than

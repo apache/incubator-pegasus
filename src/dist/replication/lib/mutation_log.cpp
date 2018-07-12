@@ -40,6 +40,7 @@
 #include "replica.h"
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/crc.h>
+#include <dsn/tool-api/async_calls.h>
 
 namespace dsn {
 namespace replication {

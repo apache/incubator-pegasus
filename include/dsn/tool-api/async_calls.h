@@ -33,30 +33,6 @@
 #include <dsn/cpp/serialization.h>
 
 namespace dsn {
-/*
-clientlet is the base class for RPC service and client
-there can be multiple clientlet in the system
-*/
-class clientlet
-{
-public:
-    clientlet();
-    virtual ~clientlet();
-    rpc_address primary_address() { return dsn_primary_address(); }
-
-    static uint32_t random32(uint32_t min, uint32_t max) { return dsn_random32(min, max); }
-    static uint64_t random64(uint64_t min, uint64_t max) { return dsn_random64(min, max); }
-    static uint64_t now_ns() { return dsn_now_ns(); }
-    static uint64_t now_us() { return dsn_now_us(); }
-    static uint64_t now_ms() { return dsn_now_ms(); }
-
-protected:
-    void check_hashed_access();
-
-private:
-    int _access_thread_id;
-    bool _access_thread_id_inited;
-};
 
 inline void empty_rpc_handler(error_code, dsn_message_t, dsn_message_t) {}
 
