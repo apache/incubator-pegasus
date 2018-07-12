@@ -16,6 +16,11 @@
 namespace pegasus {
 namespace server {
 
+/// internal error codes used for fail injection
+static constexpr int FAIL_DB_WRITE_BATCH_PUT = -101;
+static constexpr int FAIL_DB_WRITE_BATCH_DELETE = -102;
+static constexpr int FAIL_DB_WRITE = -103;
+
 class pegasus_write_service::impl : public dsn::replication::replica_base
 {
 public:
@@ -231,7 +236,7 @@ private:
                            uint32_t expire_sec)
     {
         FAIL_POINT_INJECT_F("db_write_batch_put",
-                            [](dsn::string_view) -> int { return rocksdb::Status::kCorruption; });
+                            [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
         rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
         rocksdb::SliceParts skey_parts(&skey, 1);
@@ -255,7 +260,7 @@ private:
     int db_write_batch_delete(int64_t decree, dsn::string_view raw_key)
     {
         FAIL_POINT_INJECT_F("db_write_batch_delete",
-                            [](dsn::string_view) -> int { return rocksdb::Status::kCorruption; });
+                            [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_DELETE; });
 
         rocksdb::Status s = _batch.Delete(utils::to_rocksdb_slice(raw_key));
         if (dsn_unlikely(!s.ok())) {
@@ -276,8 +281,7 @@ private:
     {
         dassert(_batch.Count() != 0, "");
 
-        FAIL_POINT_INJECT_F("db_write",
-                            [](dsn::string_view) -> int { return rocksdb::Status::kCorruption; });
+        FAIL_POINT_INJECT_F("db_write", [](dsn::string_view) -> int { return FAIL_DB_WRITE; });
 
         _wt_opts->given_decree = static_cast<uint64_t>(decree);
         auto status = _db->Write(*_wt_opts, &_batch);
@@ -314,6 +318,7 @@ private:
 
 private:
     friend class pegasus_write_service_test;
+    friend class pegasus_server_write_test;
 
     const std::string _primary_address;
     const uint32_t _value_schema_version;

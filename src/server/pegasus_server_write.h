@@ -23,6 +23,9 @@ public:
     /// Error returned is regarded as the failure of replica, thus will trigger
     /// cluster membership changes. Make sure no error is returned because of
     /// invalid user argument.
+    /// As long as the returned error is 0, the operation is guaranteed to be
+    /// successfully applied into rocksdb, which means an empty_put will be called
+    /// even if there's no write.
     int on_batched_write_requests(dsn_message_t *requests,
                                   int count,
                                   int64_t decree,
