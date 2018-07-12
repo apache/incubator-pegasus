@@ -5,7 +5,6 @@
 #pragma once
 
 #include <dsn/cpp/service_app.h>
-#include <dsn/cpp/clientlet.h>
 #include "info_collector.h"
 #include "available_detector.h"
 
@@ -14,7 +13,7 @@ namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_COLLECTOR_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
-class info_collector_app : public ::dsn::service_app, public virtual ::dsn::clientlet
+class info_collector_app : public ::dsn::service_app
 {
 public:
     info_collector_app(const dsn::service_app_info *info);
