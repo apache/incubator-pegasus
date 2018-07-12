@@ -18,8 +18,59 @@
 
 namespace {
 
+// Separated from STL1() because some compilers produce an overly
+// large stack frame for the combined function.
+TEST(StringViewTest, STL2)
+{
+    const dsn::string_view a("abcdefghijklmnopqrstuvwxyz");
+    const dsn::string_view b("abc");
+    const dsn::string_view c("xyz");
+    dsn::string_view d("foobar");
+    const dsn::string_view e;
+    const dsn::string_view f("123"
+                             "\0"
+                             "456",
+                             7);
+
+    d = dsn::string_view();
+    EXPECT_EQ(d.size(), 0);
+    EXPECT_TRUE(d.empty());
+    EXPECT_TRUE(d.data() == nullptr);
+    EXPECT_TRUE(d.begin() == d.end());
+
+    EXPECT_EQ(a.find(b), 0);
+    EXPECT_EQ(a.find(b, 1), dsn::string_view::npos);
+    EXPECT_EQ(a.find(c), 23);
+    EXPECT_EQ(a.find(c, 9), 23);
+    EXPECT_EQ(a.find(c, dsn::string_view::npos), dsn::string_view::npos);
+    EXPECT_EQ(b.find(c), dsn::string_view::npos);
+    EXPECT_EQ(b.find(c, dsn::string_view::npos), dsn::string_view::npos);
+    EXPECT_EQ(a.find(d), 0);
+    EXPECT_EQ(a.find(e), 0);
+    EXPECT_EQ(a.find(d, 12), 12);
+    EXPECT_EQ(a.find(e, 17), 17);
+    dsn::string_view g("xx not found bb");
+    EXPECT_EQ(a.find(g), dsn::string_view::npos);
+    // empty std::string nonsense
+    EXPECT_EQ(d.find(b), dsn::string_view::npos);
+    EXPECT_EQ(e.find(b), dsn::string_view::npos);
+    EXPECT_EQ(d.find(b, 4), dsn::string_view::npos);
+    EXPECT_EQ(e.find(b, 7), dsn::string_view::npos);
+
+    size_t empty_search_pos = std::string().find(std::string());
+    EXPECT_EQ(d.find(d), empty_search_pos);
+    EXPECT_EQ(d.find(e), empty_search_pos);
+    EXPECT_EQ(e.find(d), empty_search_pos);
+    EXPECT_EQ(e.find(e), empty_search_pos);
+    EXPECT_EQ(d.find(d, 4), std::string().find(std::string(), 4));
+    EXPECT_EQ(d.find(e, 4), std::string().find(std::string(), 4));
+    EXPECT_EQ(e.find(d, 4), std::string().find(std::string(), 4));
+    EXPECT_EQ(e.find(e, 4), std::string().find(std::string(), 4));
+}
+
 // Continued from STL2
-TEST(StringViewTest, STL2Substr) {
+TEST(StringViewTest, STL2Substr)
+{
     const dsn::string_view a("abcdefghijklmnopqrstuvwxyz");
     const dsn::string_view b("abc");
     const dsn::string_view c("xyz");
@@ -281,12 +332,51 @@ TEST(StringViewTest, Noexcept)
     EXPECT_TRUE(noexcept(sp.empty()));
     EXPECT_TRUE(noexcept(sp.data()));
     EXPECT_TRUE(noexcept(sp.compare(sp)));
+    EXPECT_TRUE(noexcept(sp.find(sp)));
 }
 
 TEST(StringViewTest, HeterogenousStringViewEquals)
 {
     EXPECT_EQ(dsn::string_view("hello"), std::string("hello"));
     EXPECT_EQ("hello", dsn::string_view("hello"));
+}
+
+TEST(StringViewTest, FindConformance)
+{
+    struct
+    {
+        std::string haystack;
+        std::string needle;
+    } specs[] = {
+        {"", ""},
+        {"", "a"},
+        {"a", ""},
+        {"a", "a"},
+        {"a", "b"},
+        {"aa", ""},
+        {"aa", "a"},
+        {"aa", "b"},
+        {"ab", "a"},
+        {"ab", "b"},
+        {"abcd", ""},
+        {"abcd", "a"},
+        {"abcd", "d"},
+        {"abcd", "ab"},
+        {"abcd", "bc"},
+        {"abcd", "cd"},
+        {"abcd", "abcd"},
+    };
+    for (const auto &s : specs) {
+        SCOPED_TRACE(s.haystack);
+        SCOPED_TRACE(s.needle);
+        std::string st = s.haystack;
+        dsn::string_view sp = s.haystack;
+        for (size_t i = 0; i <= sp.size(); ++i) {
+            size_t pos = (i == sp.size()) ? dsn::string_view::npos : i;
+            SCOPED_TRACE(pos);
+            EXPECT_EQ(sp.find(s.needle, pos), st.find(s.needle, pos));
+        }
+    }
 }
 
 } // namespace dsn

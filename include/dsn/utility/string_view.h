@@ -396,6 +396,13 @@ public:
         return substr(pos1, count1).compare(string_view(s, count2));
     }
 
+    // string_view::find()
+    //
+    // Finds the first occurrence of the substring `s` within the `string_view`,
+    // returning the position of the first character's match, or `npos` if no
+    // match was found.
+    size_type find(string_view s, size_type pos = 0) const noexcept;
+
 private:
     const char *ptr_;
     size_type length_;
