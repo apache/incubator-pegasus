@@ -24,6 +24,8 @@
  * THE SOFTWARE.
  */
 
+#include <utility>
+
 namespace dsn {
 
 // `defer` is an useful util to implement RAII in golang, much alike

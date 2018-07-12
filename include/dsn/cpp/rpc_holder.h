@@ -146,7 +146,7 @@ public:
                       "the first argument of TCallback must be dsn::error_code");
 
         if (dsn_unlikely(_mail_box != nullptr)) {
-            _mail_box->emplace_back(request());
+            _mail_box->emplace_back(*this);
             return nullptr;
         }
 
@@ -179,7 +179,7 @@ public:
     // In mock mode, all messages will be dropped into mail_box without going through network,
     // and response callbacks will never be called.
     // This function is not thread-safe.
-    using mail_box_t = std::vector<TRequest>;
+    using mail_box_t = std::vector<rpc_holder<TRequest, TResponse>>;
     using mail_box_u_ptr = std::unique_ptr<mail_box_t>;
     static void enable_mocking()
     {
@@ -229,6 +229,14 @@ private:
 
         void reply()
         {
+            if (dsn_unlikely(_mail_box != nullptr)) {
+                rpc_holder<TRequest, TResponse> rpc(std::move(thrift_request),
+                                                    dsn_msg_task_code(dsn_request));
+                rpc.response() = std::move(thrift_response);
+                _mail_box->emplace_back(std::move(rpc));
+                return;
+            }
+
             dsn_message_t dsn_response = dsn_msg_create_response(dsn_request);
             ::dsn::marshall(dsn_response, thrift_response);
             dsn_rpc_reply(dsn_response);
