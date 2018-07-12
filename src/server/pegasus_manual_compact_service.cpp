@@ -7,7 +7,7 @@
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication.codes.h>
-#include <dsn/cpp/clientlet.h>
+#include <dsn/tool-api/async_calls.h>
 
 #include "base/pegasus_const.h"
 #include "pegasus_server_impl.h"

@@ -10,7 +10,7 @@
 #include <dsn/c/api_utilities.h>
 #include <dsn/c/api_layer1.h>
 #include <dsn/utility/utils.h>
-#include <dsn/cpp/clientlet.h>
+#include <dsn/tool-api/async_calls.h>
 
 #include "pegasus/client.h"
 
