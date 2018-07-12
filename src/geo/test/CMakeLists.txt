@@ -11,8 +11,8 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-        s2testing
         pegasus_geo_lib
+        s2testing
         s2
         pegasus_client_static
         fmt

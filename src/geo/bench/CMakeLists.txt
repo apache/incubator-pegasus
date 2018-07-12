@@ -14,9 +14,9 @@ set(MY_PROJ_INC_PATH "../../../rocksdb")
 set(MY_PROJ_LIB_PATH "../../../rocksdb")
 
 set(MY_PROJ_LIBS
-        s2
-        s2testing
         pegasus_geo_lib
+        s2testing
+        s2
         pegasus_client_static
         fmt
         rocksdb

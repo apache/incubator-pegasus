@@ -22,7 +22,6 @@ set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIBS pegasus.rproxylib
         pegasus.base ${MY_PROJ_LIBS}
-        s2testing
         pegasus_geo_lib
         s2
         pegasus_client_static
