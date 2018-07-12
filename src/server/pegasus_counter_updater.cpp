@@ -4,53 +4,25 @@
 
 #include "pegasus_counter_updater.h"
 
-#include <iomanip>
 #include <regex>
+#include <ios>
+#include <iomanip>
+#include <iostream>
+#include <fstream>
+
+#include <unistd.h>
+
+#include <dsn/utility/smart_pointers.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/cpp/service_app.h>
 
 #include "base/pegasus_utils.h"
-#include "base/counter_utils.h"
 #include "pegasus_io_service.h"
-
-#if defined(__linux__)
-#include <unistd.h>
-#include <ios>
-#include <iostream>
-#include <fstream>
-#endif
 
 using namespace ::dsn;
 
 namespace pegasus {
 namespace server {
-
-// clang-format off
-static const char *s_brief_stat_mapper[] = {
-    "get_qps", "zion*profiler*RPC_RRDB_RRDB_GET.qps",
-    "get_p99(ns)", "zion*profiler*RPC_RRDB_RRDB_GET.latency.server",
-    "multi_get_qps", "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.qps",
-    "multi_get_p99(ns)", "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server",
-    "put_qps", "zion*profiler*RPC_RRDB_RRDB_PUT.qps",
-    "put_p99(ns)","zion*profiler*RPC_RRDB_RRDB_PUT.latency.server",
-    "multi_put_qps", "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.qps",
-    "multi_put_p99(ns)", "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server",
-    "serving_replica_count", "replica*eon.replica_stub*replica(Count)",
-    "opening_replica_count", "replica*eon.replica_stub*opening.replica(Count)",
-    "closing_replica_count", "replica*eon.replica_stub*closing.replica(Count)",
-    "commit_throughput", "replica*eon.replica_stub*replicas.commit.qps",
-    "learning_count", "replica*eon.replica_stub*replicas.learning.count",
-    "manual_compact_running_count", "replica*app.pegasus*manual.compact.running.count",
-    "manual_compact_enqueue_count", "replica*app.pegasus*manual.compact.enqueue.count",
-    "shared_log_size(MB)", "replica*eon.replica_stub*shared.log.size(MB)",
-    "memused_virt(MB)", "replica*server*memused.virt(MB)",
-    "memused_res(MB)", "replica*server*memused.res(MB)",
-    "disk_capacity_total(MB)", "replica*eon.replica_stub*disk.capacity.total(MB)",
-    "disk_available_total_ratio", "replica*eon.replica_stub*disk.available.total.ratio",
-    "disk_available_min_ratio", "replica*eon.replica_stub*disk.available.min.ratio",
-    "disk_available_max_ratio", "replica*eon.replica_stub*disk.available.max.ratio"
-};
-// clang-format on
 
 static void libevent_log(int severity, const char *msg)
 {
@@ -66,87 +38,17 @@ static void libevent_log(int severity, const char *msg)
     dlog(level, msg);
 }
 
-#if defined(__linux__)
-//////////////////////////////////////////////////////////////////////////////
-//
-// process_mem_usage(double &, double &) - takes two doubles by reference,
-// attempts to read the system-dependent data for a process' virtual memory
-// size and resident set size, and return the results in KB.
-//
-// On failure, returns 0.0, 0.0
-static void process_mem_usage(double &vm_usage, double &resident_set)
-{
-    using std::ios_base;
-    using std::ifstream;
-    using std::string;
-
-    vm_usage = 0.0;
-    resident_set = 0.0;
-
-    // 'file' stat seems to give the most reliable results
-    //
-    ifstream stat_stream("/proc/self/stat", ios_base::in);
-
-    // dummy vars for leading entries in stat that we don't care about
-    //
-    string pid, comm, state, ppid, pgrp, session, tty_nr;
-    string tpgid, flags, minflt, cminflt, majflt, cmajflt;
-    string utime, stime, cutime, cstime, priority, nice;
-    string O, itrealvalue, starttime;
-
-    // the two fields we want
-    //
-    unsigned long vsize;
-    long rss;
-
-    stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr >> tpgid >> flags >>
-        minflt >> cminflt >> majflt >> cmajflt >> utime >> stime >> cutime >> cstime >> priority >>
-        nice >> O >> itrealvalue >> starttime >> vsize >> rss; // don't care about the rest
-
-    stat_stream.close();
-
-    static long page_size_kb =
-        sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
-    vm_usage = vsize / 1024.0;
-    resident_set = rss * page_size_kb;
-}
-#endif
-
 pegasus_counter_updater::pegasus_counter_updater()
     : _local_port(0),
       _update_interval_seconds(0),
       _last_report_time_ms(0),
-      _enable_stat(false),
       _enable_logging(false),
       _enable_falcon(false),
-      _falcon_port(0),
-      _brief_stat_count(0),
-      _last_timestamp(0)
+      _falcon_port(0)
 {
-    ::dsn::command_manager::instance().register_command(
-        {"server-stat"},
-        "server-stat - query server statistics",
-        "server-stat",
-        [](const std::vector<std::string> &args) {
-            return ::pegasus::server::pegasus_counter_updater::instance().get_brief_stat();
-        });
-
-    ::dsn::command_manager::instance().register_command(
-        {"perf-counters"},
-        "perf-counters - query perf counters, supporting filter by POSIX basic regular expressions",
-        "perf-counters [name-filter]...",
-        [](const std::vector<std::string> &args) {
-            return ::pegasus::server::pegasus_counter_updater::instance().get_perf_counters(args);
-        });
 }
 
 pegasus_counter_updater::~pegasus_counter_updater() { stop(); }
-
-void pegasus_counter_updater::stat_intialize()
-{
-    _brief_stat_count = sizeof(s_brief_stat_mapper) / sizeof(char *) / 2;
-    _brief_stat_value.resize(_brief_stat_count, -1);
-}
 
 void pegasus_counter_updater::falcon_initialize()
 {
@@ -182,11 +84,6 @@ void pegasus_counter_updater::falcon_initialize()
 
 void pegasus_counter_updater::start()
 {
-    _pfc_memused_virt.init_app_counter(
-        "server", "memused.virt(MB)", COUNTER_TYPE_NUMBER, "virtual memory usage in MB");
-    _pfc_memused_res.init_app_counter(
-        "server", "memused.res(MB)", COUNTER_TYPE_NUMBER, "physical memory usage in MB");
-
     ::dsn::utils::auto_write_lock l(_lock);
     if (_report_timer != nullptr)
         return;
@@ -212,16 +109,10 @@ void pegasus_counter_updater::start()
             _update_interval_seconds);
     _last_report_time_ms = dsn_now_ms();
 
-    _enable_stat = dsn_config_get_value_bool(
-        "pegasus.server", "perf_counter_enable_stat", true, "perf_counter_enable_stat");
     _enable_logging = dsn_config_get_value_bool(
         "pegasus.server", "perf_counter_enable_logging", true, "perf_counter_enable_logging");
     _enable_falcon = dsn_config_get_value_bool(
         "pegasus.server", "perf_counter_enable_falcon", false, "perf_counter_enable_falcon");
-
-    if (_enable_stat) {
-        stat_intialize();
-    }
 
     if (_enable_falcon) {
         falcon_initialize();
@@ -244,241 +135,45 @@ void pegasus_counter_updater::stop()
     }
 }
 
-/*static*/
-const char *pegasus_counter_updater::perf_counter_type(dsn_perf_counter_type_t t,
-                                                       perf_counter_target target)
-{
-    static const char *type_string[] = {
-        "number",
-        "GAUGE", // falcon type
-
-        "volatile_number",
-        "GAUGE", // falcon type
-
-        "rate",
-        // falcon type
-        // NOTICE: the "rate" is "GAUGE" coz we don't need falcon to recalculate the rate,
-        // please ref the falcon manual
-        "GAUGE",
-
-        "number_percentile",
-        "GAUGE", // falcon type
-    };
-
-    static const int TYPES_COUNT = sizeof(type_string) / sizeof(const char *);
-    dassert(t * T_TARGET_COUNT + target < TYPES_COUNT, "type (%d)", t);
-    return type_string[t * T_TARGET_COUNT + target];
-}
-
-void pegasus_counter_updater::update_counters_to_falcon(
-    const std::vector<dsn::perf_counter_ptr> &counters,
-    const std::vector<double> &values,
-    int64_t timestamp)
+void pegasus_counter_updater::update_counters_to_falcon(const std::string &result,
+                                                        int64_t timestamp)
 {
     ddebug("update counters to falcon with timestamp = %" PRId64, timestamp);
-
-    std::stringstream falcon_data;
-    falcon_data << "[";
-    for (unsigned int i = 0; i < values.size(); ++i) {
-        const dsn::perf_counter_ptr &ptr = counters[i];
-        _falcon_metric.metric = ptr->full_name();
-        _falcon_metric.timestamp = timestamp;
-        _falcon_metric.value = values[i];
-        _falcon_metric.counterType = perf_counter_type(ptr->type(), T_FALCON);
-        _falcon_metric.encode_json_state(falcon_data);
-        if (i + 1 < values.size())
-            falcon_data << ",";
-    }
-    falcon_data << "]";
-
-    const std::string &result = falcon_data.str();
     http_post_request(
         _falcon_host, _falcon_port, _falcon_path, "application/x-www-form-urlencoded", result);
 }
 
-void pegasus_counter_updater::logging_counters(const std::vector<dsn::perf_counter_ptr> &counters,
-                                               const std::vector<double> &values)
-{
-    std::stringstream logging;
-    logging << "logging perf counter(name, type, value):" << std::endl;
-    logging << std::fixed << std::setprecision(2);
-    for (unsigned int i = 0; i < values.size(); ++i) {
-        const dsn::perf_counter_ptr &ptr = counters[i];
-        logging << "[" << ptr->full_name() << ", " << perf_counter_type(ptr->type(), T_DEBUG)
-                << ", " << values[i] << "]" << std::endl;
-    }
-    ddebug(logging.str().c_str());
-}
-
-struct cmp_str
-{
-    bool operator()(const char *a, const char *b) { return std::strcmp(a, b) < 0; }
-};
-void pegasus_counter_updater::update_brief_stat(const std::vector<dsn::perf_counter_ptr> &counters,
-                                                const std::vector<double> &values)
-{
-    std::map<const char *, int, cmp_str> pref_name_to_index;
-    for (int i = 0; i < counters.size(); ++i) {
-        pref_name_to_index[counters[i]->full_name()] = i;
-    }
-    for (int i = 0; i < _brief_stat_count; ++i) {
-        const char *perf_name = s_brief_stat_mapper[i * 2 + 1];
-        auto find = pref_name_to_index.find(perf_name);
-        if (find != pref_name_to_index.end()) {
-            _brief_stat_value[i] = values[find->second];
-        }
-    }
-}
-
-std::string pegasus_counter_updater::get_brief_stat()
-{
-    std::ostringstream oss;
-    if (_enable_stat) {
-        oss << std::fixed << std::setprecision(0);
-        for (int i = 0; i < _brief_stat_count; ++i) {
-            if (i != 0)
-                oss << ", ";
-            const char *stat_name = s_brief_stat_mapper[i * 2];
-            oss << stat_name << "=" << _brief_stat_value[i];
-        }
-    } else {
-        oss << "stat disabled";
-    }
-    return oss.str();
-}
-
-std::string pegasus_counter_updater::get_perf_counters(const std::vector<std::string> &args)
-{
-    std::vector<dsn::perf_counter_ptr> metrics;
-    std::vector<double> values;
-    int64_t timestamp = 0;
-    {
-        ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_last_counter_lock);
-        metrics = _last_metrics;
-        values = _last_values;
-        timestamp = _last_timestamp;
-    }
-
-    perf_counter_info info;
-    if (timestamp != 0) {
-        dassert(metrics.size() == values.size(),
-                "unmatched size: %d vs %d",
-                (int)metrics.size(),
-                (int)values.size());
-
-        std::vector<std::regex> regs;
-        regs.reserve(args.size());
-        for (auto &arg : args) {
-            try {
-                regs.emplace_back(arg, std::regex_constants::basic);
-            } catch (...) {
-                info.result = "ERROR: invalid filter: " + arg;
-                break;
-            }
-        }
-
-        if (info.result.empty()) {
-            for (int i = 0; i < metrics.size(); ++i) {
-                bool matched = false;
-                if (regs.empty()) {
-                    matched = true;
-                } else {
-                    for (auto &reg : regs) {
-                        if (std::regex_match(metrics[i]->full_name(), reg)) {
-                            matched = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (matched) {
-                    info.counters.emplace_back(
-                        metrics[i]->full_name(), metrics[i]->type(), values[i]);
-                }
-            }
-
-            info.result = "OK";
-            info.timestamp = timestamp;
-            char buf[20];
-            ::dsn::utils::time_ms_to_date_time(timestamp * 1000, buf, sizeof(buf));
-            info.timestamp_str = buf;
-        }
-    } else {
-        info.result = "ERROR: counter not generated";
-    }
-
-    std::stringstream ss;
-    info.encode_json_state(ss);
-    return ss.str();
-}
-
 void pegasus_counter_updater::update()
 {
-    ddebug("start update by timer");
-
-#if defined(__linux__)
-    double vm_usage;
-    double resident_set;
-    process_mem_usage(vm_usage, resident_set);
-    uint64_t memused_virt = (uint64_t)vm_usage / 1024;
-    uint64_t memused_res = (uint64_t)resident_set / 1024;
-    _pfc_memused_virt->set(memused_virt);
-    _pfc_memused_res->set(memused_res);
-    ddebug("memused_virt = %" PRIu64 " MB, memused_res = %" PRIu64 "MB", memused_virt, memused_res);
-#endif
-
-    std::vector<dsn::perf_counter_ptr> metrics;
-    std::vector<double> values;
-
-    ::dsn::perf_counters::instance().get_all_counters(&metrics);
-    if (metrics.empty()) {
-        ddebug("no need update, coz no counters added");
-        return;
-    }
-
     uint64_t now = dsn_now_ms();
-    dinfo("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
-    _last_report_time_ms = now;
-
     int64_t timestamp = now / 1000;
-    values.reserve(metrics.size());
-
-    // in case the get_xxx functions for the perf counters had SIDE EFFECTS
-    // we'd better pre fetch these values, and then use them
-    for (auto &counter : metrics) {
-        switch (counter->type()) {
-        case COUNTER_TYPE_NUMBER:
-        case COUNTER_TYPE_VOLATILE_NUMBER:
-            values.push_back(counter->get_integer_value());
-            break;
-        case COUNTER_TYPE_RATE:
-            values.push_back(counter->get_value());
-            break;
-        case COUNTER_TYPE_NUMBER_PERCENTILES:
-            values.push_back(counter->get_percentile(COUNTER_PERCENTILE_99));
-            break;
-        default:
-            dassert(false, "invalid type(%d)", counter->type());
-            break;
-        }
+    std::vector<std::unique_ptr<counter_stream>> streams;
+    if (_enable_logging) {
+        streams.emplace_back(dsn::make_unique<logging_counter>());
+    }
+    if (_enable_falcon) {
+        streams.emplace_back(dsn::make_unique<falcon_counter>(_falcon_metric, timestamp));
     }
 
-    if (_enable_stat) {
-        update_brief_stat(metrics, values);
-    }
+    perf_counters::instance().take_snapshot();
+    perf_counters::instance().iterate_snapshot(
+        [&streams, this](const dsn::perf_counter_ptr &ptr, double val) {
+            for (const std::unique_ptr<counter_stream> &s : streams) {
+                s->append(ptr, val);
+            }
+        });
 
     if (_enable_logging) {
-        logging_counters(metrics, values);
+        std::string str = streams.front()->to_string();
+        ddebug("%s", str.c_str());
     }
-
     if (_enable_falcon) {
-        update_counters_to_falcon(metrics, values, timestamp);
+        std::string str = streams.back()->to_string();
+        update_counters_to_falcon(str, timestamp);
     }
 
-    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_last_counter_lock);
-    _last_metrics = std::move(metrics);
-    _last_values = std::move(values);
-    _last_timestamp = timestamp;
+    ddebug("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
+    _last_report_time_ms = now;
 }
 
 void pegasus_counter_updater::http_post_request(const std::string &host,
