@@ -2,7 +2,7 @@
 
 ![docs/media-img/pegasus-logo.png](docs/media-img/pegasus-logo.png)
 
-[**中文Wiki**](https://github.com/xiaomi/pegasus/wiki), [**slack channel**](https://join.slack.com/t/pegasus-kv/shared_invite/enQtMjcyMjQzOTk4Njk1LWVkMjlkMGE5Mzg1Y2M3MDc0NGYyYzQ5YzYyMGE0ZjlhMDMyNjU1ZGViYzdjZmUwNjVmNGE0ZDdkMWJiN2Q1MDY)
+[**中文Wiki**](https://github.com/xiaomi/pegasus/wiki), [**微信交流群**](https://github.com/XiaoMi/pegasus/wiki/%E5%85%B3%E4%BA%8E%E6%88%91%E4%BB%AC), [**slack channel**](https://join.slack.com/t/pegasus-kv/shared_invite/enQtMjcyMjQzOTk4Njk1LWVkMjlkMGE5Mzg1Y2M3MDc0NGYyYzQ5YzYyMGE0ZjlhMDMyNjU1ZGViYzdjZmUwNjVmNGE0ZDdkMWJiN2Q1MDY)
 
 ## What is Pegasus?
 
