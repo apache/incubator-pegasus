@@ -35,7 +35,6 @@
 #pragma once
 #include <dsn/tool-api/task_tracker.h>
 #include "echo.client.h"
-#include "echo.client.perf.h"
 #include "echo.server.h"
 
 namespace dsn {
@@ -110,43 +109,6 @@ private:
     ::dsn::rpc_address _server;
 
     std::unique_ptr<echo_client> _echo_client;
-};
-
-class echo_perf_test_client_app : public ::dsn::service_app
-{
-public:
-    echo_perf_test_client_app(const service_app_info *info) : ::dsn::service_app(info)
-    {
-        _echo_client = nullptr;
-    }
-
-    ~echo_perf_test_client_app() { stop(); }
-
-    virtual ::dsn::error_code start(const std::vector<std::string> &args)
-    {
-        if (args.size() < 2)
-            return ::dsn::ERR_INVALID_PARAMETERS;
-
-        _server.assign_ipv4(args[1].c_str(), (uint16_t)atoi(args[2].c_str()));
-
-        _echo_client = new echo_perf_test_client(_server);
-        _echo_client->start_test("echo.perf-test.case", 1);
-        return ::dsn::ERR_OK;
-    }
-
-    virtual ::dsn::error_code stop(bool cleanup = false)
-    {
-        if (_echo_client != nullptr) {
-            delete _echo_client;
-            _echo_client = nullptr;
-        }
-
-        return ::dsn::ERR_OK;
-    }
-
-private:
-    echo_perf_test_client *_echo_client;
-    ::dsn::rpc_address _server;
 };
 }
 }

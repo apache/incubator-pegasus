@@ -35,7 +35,6 @@
 
 #pragma once
 #include "simple_kv.client.2.h"
-#include "simple_kv.client.perf.h"
 #include "simple_kv.server.h"
 
 #define TRANSPARENT_LAYER2_CLIENT
@@ -115,6 +114,7 @@ public:
             std::tie(err, resp) = _simple_kv_client->append_sync(req);
             std::cout << "call RPC_SIMPLE_KV_SIMPLE_KV_APPEND end, return " << err.to_string()
                       << std::endl;
+
             // async:
             //_simple_kv_client->append(req, empty_rpc_handler);
         }
@@ -125,38 +125,6 @@ private:
     ::dsn::rpc_address _server;
     std::unique_ptr<simple_kv_client2> _simple_kv_client;
     dsn::task_tracker _tracker;
-};
-
-class simple_kv_perf_test_client_app : public ::dsn::service_app
-{
-public:
-    simple_kv_perf_test_client_app(const service_app_info *info) : ::dsn::service_app(info) {}
-
-    ~simple_kv_perf_test_client_app() { stop(); }
-
-    virtual ::dsn::error_code start(const std::vector<std::string> &args)
-    {
-        if (args.size() < 2)
-            return ::dsn::ERR_INVALID_PARAMETERS;
-
-        // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
-        rpc_address service_addr;
-        service_addr.assign_uri(args[1].c_str());
-
-        _simple_kv_client.reset(new simple_kv_perf_test_client(service_addr));
-        _simple_kv_client->start_test("simple_kv.perf-test.case", 3);
-        return ::dsn::ERR_OK;
-    }
-
-    virtual ::dsn::error_code stop(bool cleanup = false)
-    {
-        _simple_kv_client.reset();
-
-        return ::dsn::ERR_OK;
-    }
-
-private:
-    std::unique_ptr<simple_kv_perf_test_client> _simple_kv_client;
 };
 }
 }

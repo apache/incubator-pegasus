@@ -52,8 +52,6 @@ static void dsn_app_registration_simple_kv()
 
     dsn::service_app::register_factory<dsn::replication::application::simple_kv_client_app>(
         "client");
-    dsn::service_app::register_factory<
-        ::dsn::replication::application::simple_kv_perf_test_client_app>("client.perf.test");
 }
 
 int main(int argc, char **argv)

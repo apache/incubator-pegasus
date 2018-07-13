@@ -40,8 +40,6 @@ static void dsn_app_registration_echo()
     // register all possible service apps
     dsn::service_app::register_factory<::dsn::example::echo_server_app>("server");
     dsn::service_app::register_factory<::dsn::example::echo_client_app>("client");
-    dsn::service_app::register_factory<::dsn::example::echo_perf_test_client_app>(
-        "client.perf.echo");
 }
 
 int main(int argc, char **argv)
