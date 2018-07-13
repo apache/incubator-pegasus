@@ -14,7 +14,6 @@ set(MY_PROJ_INC_PATH "../../include")
 
 set(MY_PROJ_LIBS
         s2
-        s2testing
         pegasus_client_static
         fmt)
 
