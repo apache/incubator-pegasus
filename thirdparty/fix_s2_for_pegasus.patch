@@ -1,0 +1,67 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c6b40ee..cd20718 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.1)
++cmake_minimum_required(VERSION 2.8.12)
+ project(s2-geometry)
+ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+ include(CMakeDependentOption)
+@@ -17,11 +17,12 @@ cmake_dependent_option(WITH_GLOG "Use glog for logging." ON
+                        "WITH_GFLAGS" OFF)
+ add_feature_info(GLOG WITH_GLOG "provides logging configurability.")
+ 
+-option(BUILD_SHARED_LIBS "Build shared libraries instead of static." ON)
++option(BUILD_SHARED_LIBS "Build shared libraries instead of static." OFF)
+ add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
+                  "builds shared libraries instead of static.")
+ 
+-option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
++option(BUILD_EXAMPLES "Build s2 documentation examples." OFF)
++option(BUILD_PYTHON "Build python interfaces." OFF)
+ 
+ feature_summary(WHAT ALL)
+ 
+@@ -58,7 +59,12 @@ if (APPLE)
+     set(CMAKE_MACOSX_RPATH TRUE)
+ endif()
+ 
+-set(CMAKE_CXX_STANDARD 11)
++if (CMAKE_VERSION VERSION_LESS "3.1")
++  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
++else()
++  set (CMAKE_CXX_STANDARD 11)
++endif()
++
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ # No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
+ set(CMAKE_CXX_EXTENSIONS OFF)
+@@ -85,6 +91,11 @@ endif()
+ include_directories(
+     ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR}
+     ${PYTHON_INCLUDE_DIRS})
++message("GTEST_INCLUDE: ${GTEST_INCLUDE}")
++if (GTEST_INCLUDE)
++    include_directories(${GTEST_INCLUDE})
++endif()
++
+ include_directories(src)
+ 
+ add_library(s2
+@@ -404,6 +415,7 @@ install(FILES src/s2/util/units/length-units.h
+               src/s2/util/units/physical-units.h
+         DESTINATION include/s2/util/units)
+ install(TARGETS s2 DESTINATION lib)
++install(TARGETS s2testing DESTINATION lib)
+ 
+ message("GTEST_ROOT: ${GTEST_ROOT}")
+ if (GTEST_ROOT)
+@@ -526,6 +538,6 @@ if (BUILD_EXAMPLES)
+   add_subdirectory("doc/examples" examples)
+ endif()
+ 
+-if (${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
++if (BUILD_PYTHON AND ${SWIG_FOUND} AND ${PYTHONLIBS_FOUND})
+   add_subdirectory("src/python" python)
+ endif()

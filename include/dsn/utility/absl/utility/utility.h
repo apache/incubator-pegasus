@@ -46,6 +46,8 @@
 
 #include <dsn/utility/absl/base/internal/invoke.h>
 
+// make namespace absl internal of dsn to solve redefine error with absl in s2geometry
+namespace dsn {
 namespace absl {
 
 // integer_sequence
@@ -200,5 +202,7 @@ auto apply(Functor &&functor, Tuple &&t) -> decltype(utility_internal::apply_hel
             std::tuple_size<typename std::remove_reference<Tuple>::type>::value>{});
 }
 } // namespace absl
+} // namespace dsn
 
 #endif // ABSL_UTILITY_UTILITY_H_
+

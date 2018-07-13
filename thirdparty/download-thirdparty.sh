@@ -57,7 +57,14 @@ function check_and_download()
 function extract_package()
 {
     package_name=$1
-    tar xf $package_name
+    is_tar_gz=$(echo $package_name | grep ".tar.gz")
+    if [[ $is_tar_gz != "" ]]; then
+        tar xf $package_name
+    fi
+    is_zip=$(echo $package_name | grep ".zip")
+    if [[ $is_zip != "" ]]; then
+        unzip -oq $package_name
+    fi
     local ret_code=$?
     if [ $ret_code -ne 0 ]; then
         rm -f $package_name
@@ -135,14 +142,14 @@ check_and_download "thrift-0.9.3.tar.gz"\
     "thrift-0.9.3"
 ret_code=$?
 if [ $ret_code -eq 2 ]; then
-    exit -1
+    exit 2
 elif [ $ret_code -eq 0 ]; then
     echo "make patch to thrift"
     cd thrift-0.9.3
     patch -p1 < ../../fix_thrift_for_cpp11.patch
     if [ $? != 0 ]; then
         echo "ERROR: patch fix_thrift_for_cpp11.patch for thrift failed"
-        exit -1
+        exit 2
     fi
     cd ..
 fi
@@ -173,7 +180,7 @@ if [ ! -d $TP_SRC/fds ]; then
     git clone https://github.com/XiaoMi/galaxy-fds-sdk-cpp.git
     if [ $? != 0 ]; then
         echo "ERROR: download fds wrong"
-        exit -1
+        exit 2
     fi
     echo "mv galaxy-fds-sdk-cpp fds"
     mv galaxy-fds-sdk-cpp fds
@@ -189,14 +196,22 @@ check_and_download "fmt-4.0.0.tar.gz"\
 exit_if_fail $?
 
 # s2geometry
-if [ ! -d $TP_SRC/s2geometry ]; then
-    git clone -b pegasus https://github.com/acelyc111/s2geometry.git
+check_and_download "s2geometry-master.zip"\
+    "https://github.com/google/s2geometry/archive/master.zip"\
+    "afda53fb79131248d414e10f5246f4ed"\
+    "s2geometry-master"
+ret_code=$?
+if [ $ret_code -eq 2 ]; then
+    exit 2
+elif [ $ret_code -eq 0 ]; then
+    echo "make patch to s2geometry"
+    cd s2geometry-master
+    patch -p1 < ../../fix_s2_for_pegasus.patch
     if [ $? != 0 ]; then
-        echo "ERROR: download s2geometry wrong"
-        exit -1
+        echo "ERROR: patch fix_s2_for_pegasus.patch for s2geometry failed"
+        exit 2
     fi
-else
-    echo "s2geometry has already downloaded, skip it"
+    cd ..
 fi
 
 cd $TP_DIR

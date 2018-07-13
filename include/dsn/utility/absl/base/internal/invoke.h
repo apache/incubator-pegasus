@@ -42,6 +42,8 @@
 // The following code is internal implementation detail.  See the comment at the
 // top of this file for the API documentation.
 
+// make namespace absl internal of dsn to solve redefine error with absl in s2geometry
+namespace dsn {
 namespace absl {
 namespace base_internal {
 
@@ -211,5 +213,6 @@ InvokeT<F, Args...> Invoke(F &&f, Args &&... args)
 }
 } // namespace base_internal
 } // namespace absl
+} // namespace dsn
 
 #endif // ABSL_BASE_INTERNAL_INVOKE_H_

@@ -30,6 +30,6 @@
 
 namespace dsn {
 
-using ::absl::apply;
+using absl::apply;
 
 } // namespace dsn
