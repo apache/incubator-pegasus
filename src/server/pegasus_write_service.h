@@ -79,6 +79,7 @@ private:
 
 private:
     friend class pegasus_write_service_test;
+    friend class pegasus_server_write_test;
 
     class impl;
     std::unique_ptr<impl> _impl;

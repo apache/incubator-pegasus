@@ -30,8 +30,7 @@ inline dsn_message_t create_put_request(const dsn::apps::update_request &request
 
 inline dsn_message_t create_remove_request(const dsn::blob &key)
 {
-    return dsn_msg_create_received_request(
-        dsn::apps::RPC_RRDB_RRDB_REMOVE, DSF_THRIFT_BINARY, (void *)key.data(), key.length());
+    return dsn::from_thrift_request_to_received_message(key, dsn::apps::RPC_RRDB_RRDB_REMOVE);
 }
 
 inline dsn_message_t create_incr_request(const dsn::apps::incr_request &request)
