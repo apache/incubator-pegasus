@@ -52,10 +52,8 @@ private:
 public:
     raw_message_parser();
     virtual ~raw_message_parser() {}
-    virtual void reset() override;
     virtual message_ex *get_message_on_receive(message_reader *reader,
                                                /*out*/ int &read_next) override;
-    virtual int get_buffer_count_on_send(message_ex *msg) override;
     virtual int get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers) override;
 };
 }

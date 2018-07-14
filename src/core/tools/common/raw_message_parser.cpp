@@ -72,8 +72,6 @@ raw_message_parser::raw_message_parser()
     }
 }
 
-void raw_message_parser::reset() {}
-
 message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
                                                        /*out*/ int &read_next)
 {
@@ -107,8 +105,6 @@ message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
         return new_message;
     }
 }
-
-int raw_message_parser::get_buffer_count_on_send(message_ex *msg) { return msg->buffers.size(); }
 
 int raw_message_parser::get_buffers_on_send(message_ex *msg, send_buf *buffers)
 {

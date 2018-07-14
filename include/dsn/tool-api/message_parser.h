@@ -39,6 +39,7 @@
 #include <dsn/utility/ports.h>
 #include <dsn/utility/singleton.h>
 #include <dsn/tool-api/task_spec.h>
+#include <dsn/tool-api/rpc_message.h>
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/blob.h>
@@ -112,24 +113,18 @@ public:
     // may be invoked for mutiple times if the message is reused for resending.
     virtual void prepare_on_send(message_ex *msg) {}
 
-// be compatible with WSABUF on windows and iovec on linux
-#ifdef _WIN32
-    struct send_buf
-    {
-        uint32_t sz;
-        void *buf;
-    };
-#else
     struct send_buf
     {
         void *buf;
         size_t sz;
     };
-#endif
 
     // get max buffer count needed by get_buffers_on_send().
     // may be invoked for mutiple times if the message is reused for resending.
-    virtual int get_buffer_count_on_send(message_ex *msg) = 0;
+    int get_buffer_count_on_send(message_ex *msg) const
+    {
+        return static_cast<int>(msg->buffers.size());
+    }
 
     // get buffers from message to 'buffers'.
     // return buffer count used, which must be no more than the return value of

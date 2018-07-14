@@ -405,11 +405,6 @@ void http_message_parser::prepare_on_send(message_ex *msg)
     buffers.emplace_back(blob(std::move(header_holder), header_len));
 }
 
-int http_message_parser::get_buffer_count_on_send(message_ex *msg)
-{
-    return (int)msg->buffers.size();
-}
-
 int http_message_parser::get_buffers_on_send(message_ex *msg, send_buf *buffers)
 {
     auto &msg_header = msg->header;

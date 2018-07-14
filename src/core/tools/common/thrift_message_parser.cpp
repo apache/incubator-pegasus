@@ -147,11 +147,6 @@ void thrift_message_parser::prepare_on_send(message_ex *msg)
     buffers.emplace_back(std::move(end_bb));
 }
 
-int thrift_message_parser::get_buffer_count_on_send(message_ex *msg)
-{
-    return (int)msg->buffers.size();
-}
-
 int thrift_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers)
 {
     auto &msg_header = msg->header;

@@ -145,11 +145,6 @@ void dsn_message_parser::prepare_on_send(message_ex *msg)
     }
 }
 
-int dsn_message_parser::get_buffer_count_on_send(message_ex *msg)
-{
-    return (int)msg->buffers.size();
-}
-
 int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers)
 {
     int i = 0;
