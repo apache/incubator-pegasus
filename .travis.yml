@@ -21,6 +21,7 @@ before_install:
 install:
     - sudo apt-get -f install
     - sudo apt-get -y install libsnappy-dev
+    - sudo apt-get -y install libgflags-dev
 
 before_script:
     - cd rdsn/thirdparty
