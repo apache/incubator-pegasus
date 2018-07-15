@@ -1388,43 +1388,35 @@ function usage_bench()
 {
     echo "Options for subcommand 'bench':"
     echo "   -h|--help            print the help info"
-    echo "   -c|--config <path>   config file path, default './config-bench.ini'"
     echo "   -t|--type            benchmark type, supporting:"
-    echo "                          fillseq_pegasus, fillrandom_pegasus, filluniquerandom_pegasus,"
-    echo "                          readrandom_pegasus, deleteseq_pegasus, deleterandom_pegasus"
-    echo "                        default is 'fillseq_pegasus,readrandom_pegasus'"
+    echo "                          fillseq_pegasus, fillrandom_pegasus, readrandom_pegasus, filluniquerandom_pegasus,"
+    echo "                          deleteseq_pegasus,deleterandom_pegasus,multi_set_pegasus,scan_pegasus"
+    echo "                        default is all of them"
     echo "   -n <num>             number of key/value pairs, default 100000"
     echo "   --cluster <str>      cluster meta lists, default '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
     echo "   --app_name <str>     app name, default 'temp'"
     echo "   --thread_num <num>   number of threads, default 1"
     echo "   --key_size <num>     key size, default 16"
     echo "   --value_size <num>   value size, default 100"
-    echo "   --timeout <num>      timeout in milliseconds, default 10000"
+    echo "   --timeout <num>      timeout in milliseconds, default 1000"
 }
 
 function run_bench()
 {
-    CONFIG=${ROOT}/config-bench.ini
-    CONFIG_SPECIFIED=0
-    TYPE=fillseq_pegasus,readrandom_pegasus
+    TYPE=fillseq_pegasus,fillrandom_pegasus,readrandom_pegasus,filluniquerandom_pegasus,deleteseq_pegasus,deleterandom_pegasus,multi_set_pegasus,scan_pegasus
     NUM=100000
     CLUSTER=127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603
     APP=temp
     THREAD=1
     KEY_SIZE=16
     VALUE_SIZE=100
-    TIMEOUT_MS=10000
+    TIMEOUT_MS=1000
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
             -h|--help)
                 usage_bench
                 exit 0
-                ;;
-            -c|--config)
-                CONFIG="$2"
-                CONFIG_SPECIFIED=1
-                shift
                 ;;
             -t|--type)
                 TYPE="$2"
@@ -1468,16 +1460,13 @@ function run_bench()
         shift
     done
 
-    if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
-        sed "s/@CLUSTER@/$CLUSTER/g" ${ROOT}/src/config-bench.ini >${CONFIG}
-    fi
-
     cd ${ROOT}
+    sed -i "s/@CLUSTER@/$CLUSTER/g" ${DSN_ROOT}/bin/pegasus_bench/config.ini
     ln -s -f ${DSN_ROOT}/bin/pegasus_bench/pegasus_bench
-    ./pegasus_bench --pegasus_config=${CONFIG} --benchmarks=${TYPE} --pegasus_timeout_ms=${TIMEOUT_MS} \
+    ./pegasus_bench --pegasus_config=${DSN_ROOT}/bin/pegasus_bench/config.ini --benchmarks=${TYPE} --pegasus_timeout_ms=${TIMEOUT_MS} \
         --key_size=${KEY_SIZE} --value_size=${VALUE_SIZE} --threads=${THREAD} --num=${NUM} \
         --pegasus_cluster_name=mycluster --pegasus_app_name=${APP} --stats_interval=1000 --histogram=1 \
-        --compression_type=none --compression_ratio=1.0
+        --compression_ratio=1.0
 }
 
 #####################

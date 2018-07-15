@@ -125,7 +125,6 @@ if [ "$CLEAR" == "YES" -o "$PART_CLEAR" == "YES" ]
 then
     echo "Clear $BUILD_DIR ..."
     rm -rf $BUILD_DIR
-    rm -f ../rocksdb/pegasus_bench
 fi
 
 # use ccache if possible
@@ -186,15 +185,3 @@ else
 fi
 cd ..
 
-rm -f ../rocksdb/pegasus_bench &>/dev/null
-make -C ../rocksdb pegasus_bench_$BUILD_TYPE $MAKE_OPTIONS
-if [ $? -ne 0 ]
-then
-    echo "ERROR: build pegasus_bench failed"
-    exit 1
-else
-    mkdir -p $DSN_ROOT/bin/pegasus_bench
-    mv ../rocksdb/pegasus_bench $DSN_ROOT/bin/pegasus_bench/pegasus_bench
-    cp ./config-bench.ini $DSN_ROOT/bin/pegasus_bench/config.ini
-    echo "Build pegasus_bench succeed"
-fi
