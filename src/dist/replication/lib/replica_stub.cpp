@@ -1489,7 +1489,7 @@ void replica_stub::on_gc()
             }
         }
 
-        _counter_shared_log_size->set(_log->size() / (1024 * 1024));
+        _counter_shared_log_size->set(_log->total_size() / (1024 * 1024));
     }
 
     // statistic learning info

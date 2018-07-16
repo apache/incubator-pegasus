@@ -280,7 +280,8 @@ public:
     // thread safe
     void check_valid_start_offset(gpid gpid, int64_t valid_start_offset) const;
 
-    int64_t size() const { return _global_end_offset - _global_start_offset; }
+    // get total size.
+    int64_t total_size() const;
 
     void hint_switch_file() { _switch_file_hint = true; }
     void demand_switch_file() { _switch_file_demand = true; }
@@ -327,6 +328,9 @@ private:
     // - _lock.locked()
     error_code create_new_log_file();
 
+    // get total size ithout lock.
+    int64_t total_size_no_lock() const;
+
 protected:
     std::string _dir;
     bool _is_private;
@@ -354,7 +358,8 @@ private:
     int _last_file_index;                   // new log file index = _last_file_index + 1
     std::map<int, log_file_ptr> _log_files; // index -> log_file_ptr
     log_file_ptr _current_log_file;         // current log file
-    int64_t _global_start_offset;           // global start offset of all files
+    int64_t _global_start_offset;           // global start offset of all files.
+                                            // invalid if _log_files.size() == 0.
     int64_t _global_end_offset;             // global end offset currently
 
     // replica log info

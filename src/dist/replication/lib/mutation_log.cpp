@@ -1055,6 +1055,17 @@ void mutation_log::check_valid_start_offset(gpid gpid, int64_t valid_start_offse
     }
 }
 
+int64_t mutation_log::total_size() const
+{
+    zauto_lock l(_lock);
+    return total_size_no_lock();
+}
+
+int64_t mutation_log::total_size_no_lock() const
+{
+    return _log_files.size() > 0 ? _global_end_offset - _global_start_offset : 0;
+}
+
 void mutation_log::set_valid_start_offset_on_open(gpid gpid, int64_t valid_start_offset)
 {
     zauto_lock l(_lock);
@@ -1429,7 +1440,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
         max_decrees = _shared_log_info_map;
         if (_current_log_file != nullptr)
             current_log_index = _current_log_file->index();
-        total_log_size = size();
+        total_log_size = total_size_no_lock();
     }
 
     if (files.size() <= 1) {
@@ -1668,7 +1679,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
             _global_start_offset =
                 _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
             reserved_log_count = _log_files.size();
-            reserved_log_size = size();
+            reserved_log_size = total_size_no_lock();
             if (reserved_log_count > 0) {
                 reserved_smallest_log = _log_files.begin()->first;
                 reserved_largest_log = _log_files.rbegin()->first;
