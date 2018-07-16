@@ -1391,7 +1391,7 @@ function usage_bench()
     echo "   -t|--type            benchmark type, supporting:"
     echo "                          fillseq_pegasus, fillrandom_pegasus, readrandom_pegasus, filluniquerandom_pegasus,"
     echo "                          deleteseq_pegasus,deleterandom_pegasus,multi_set_pegasus,scan_pegasus"
-    echo "                        default is all of them"
+    echo "                        default is fillseq_pegasus,readrandom_pegasus"
     echo "   -n <num>             number of key/value pairs, default 100000"
     echo "   --cluster <str>      cluster meta lists, default '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
     echo "   --app_name <str>     app name, default 'temp'"
@@ -1403,7 +1403,7 @@ function usage_bench()
 
 function run_bench()
 {
-    TYPE=fillseq_pegasus,fillrandom_pegasus,readrandom_pegasus,filluniquerandom_pegasus,deleteseq_pegasus,deleterandom_pegasus,multi_set_pegasus,scan_pegasus
+    TYPE=fillseq_pegasus,readrandom_pegasus
     NUM=100000
     CLUSTER=127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603
     APP=temp
