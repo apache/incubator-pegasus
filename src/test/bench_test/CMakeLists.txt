@@ -24,8 +24,6 @@ set(MY_PROJ_LIBS
 
 set(MY_BOOST_PACKAGES system filesystem)
 
-add_definitions(-DGFLAGS=gflags)
-
 set(MY_BINPLACES "config.ini")
 
 dsn_add_executable()

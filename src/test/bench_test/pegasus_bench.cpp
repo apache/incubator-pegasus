@@ -8,7 +8,6 @@
 #endif
 
 #include <fcntl.h>
-#include <gflags/gflags.h>
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
@@ -22,6 +21,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <zconf.h>
+#include <gflags/gflags.h>
 
 #include <rocksdb/env.h>
 #include <util/random.h>
@@ -31,14 +31,14 @@
 #include <rocksdb/rate_limiter.h>
 #include <util/mutexlock.h>
 
-using GFLAGS::ParseCommandLineFlags;
-using GFLAGS::RegisterFlagValidator;
-using GFLAGS::SetUsageMessage;
-
 #include "pegasus/client.h"
 
-using namespace ::pegasus;
-using namespace ::rocksdb;
+namespace google {}
+namespace gflags {}
+using namespace google;
+using namespace gflags;
+using namespace pegasus;
+using namespace rocksdb;
 
 DEFINE_string(pegasus_config, "config.ini", "pegasus config file");
 DEFINE_string(pegasus_cluster_name, "onebox", "pegasus cluster name");
