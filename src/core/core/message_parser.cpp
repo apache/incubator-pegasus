@@ -171,7 +171,6 @@ message_parser_manager::message_parser_manager() {}
 void message_parser_manager::register_factory(network_header_format fmt,
                                               const std::vector<const char *> &signatures,
                                               message_parser::factory f,
-                                              message_parser::factory2 f2,
                                               size_t sz)
 {
     if (static_cast<unsigned int>(fmt) >= _factory_vec.size()) {
@@ -181,7 +180,6 @@ void message_parser_manager::register_factory(network_header_format fmt,
     parser_factory_info &info = _factory_vec[fmt];
     info.fmt = fmt;
     info.factory = f;
-    info.factory2 = f2;
     info.parser_size = sz;
 
     for (auto &v : signatures) {

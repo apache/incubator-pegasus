@@ -208,10 +208,9 @@ bool register_component_provider(const char *name,
 bool register_component_provider(network_header_format fmt,
                                  const std::vector<const char *> &signatures,
                                  message_parser::factory f,
-                                 message_parser::factory2 f2,
                                  size_t sz)
 {
-    message_parser_manager::instance().register_factory(fmt, signatures, f, f2, sz);
+    message_parser_manager::instance().register_factory(fmt, signatures, f, sz);
     return true;
 }
 

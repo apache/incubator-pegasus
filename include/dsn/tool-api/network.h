@@ -130,10 +130,6 @@ public:
     //
     DSN_API message_parser *new_message_parser(network_header_format hdr_format);
 
-    // for in-place new message parser
-    DSN_API std::pair<message_parser::factory2, size_t>
-    get_message_parser_info(network_header_format hdr_format);
-
     rpc_engine *engine() const { return _engine; }
     int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
     network_header_format client_hdr_format() const { return _client_hdr_format; }

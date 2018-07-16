@@ -110,9 +110,8 @@ void thrift_message_parser::prepare_on_send(message_ex *msg)
     ::apache::thrift::protocol::TBinaryProtocol header_proto(header_trans_ptr);
     // first total length, but we don't know the length, so firstly we put a placeholder
     header_proto.writeI32(0);
-    char_ptr error_msg(header->server.error_name, strlen(header->server.error_name));
     // then the error_message
-    header_proto.writeString<char_ptr>(error_msg);
+    header_proto.writeString(string_view(header->server.error_name));
     // then the thrift message begin
     header_proto.writeMessageBegin(
         header->rpc_name, ::apache::thrift::protocol::T_REPLY, header->id);

@@ -88,14 +88,7 @@ public:
         return new T();
     }
 
-    template <typename T>
-    static message_parser *create2(void *place)
-    {
-        return new (place) T();
-    }
-
     typedef message_parser *(*factory)();
-    typedef message_parser *(*factory2)(void *);
 
 public:
     virtual ~message_parser() {}

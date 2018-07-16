@@ -43,14 +43,10 @@ class message_parser_manager : public utils::singleton<message_parser_manager>
 public:
     struct parser_factory_info
     {
-        parser_factory_info()
-            : fmt(NET_HDR_INVALID), factory(nullptr), factory2(nullptr), parser_size(0)
-        {
-        }
+        parser_factory_info() : fmt(NET_HDR_INVALID), factory(nullptr), parser_size(0) {}
 
         network_header_format fmt;
         message_parser::factory factory;
-        message_parser::factory2 factory2;
         size_t parser_size;
     };
 
@@ -61,7 +57,6 @@ public:
     void register_factory(network_header_format fmt,
                           const std::vector<const char *> &signatures,
                           message_parser::factory f,
-                          message_parser::factory2 f2,
                           size_t sz);
 
     message_parser *create_parser(network_header_format fmt);

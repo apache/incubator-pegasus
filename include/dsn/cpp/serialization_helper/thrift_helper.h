@@ -191,18 +191,6 @@ inline uint32_t read_base(::apache::thrift::protocol::TProtocol *iprot,
     return xfer;
 }
 
-class char_ptr
-{
-private:
-    const char *ptr;
-    int length;
-
-public:
-    char_ptr(const char *p, int len) : ptr(p), length(len) {}
-    std::size_t size() const { return length; }
-    const char *data() const { return ptr; }
-};
-
 class blob_string
 {
 private:
@@ -445,7 +433,7 @@ inline uint32_t task_code::write(apache::thrift::protocol::TProtocol *oprot) con
         dynamic_cast<apache::thrift::protocol::TBinaryProtocol *>(oprot);
     if (binary_proto != nullptr) {
         // the protocol is binary protocol
-        return binary_proto->writeString<char_ptr>(char_ptr(name, static_cast<int>(strlen(name))));
+        return binary_proto->writeString(string_view(name));
     } else {
         // the protocol is json protocol
         uint32_t xfer = 0;
@@ -529,7 +517,7 @@ inline uint32_t error_code::write(apache::thrift::protocol::TProtocol *oprot) co
         dynamic_cast<apache::thrift::protocol::TBinaryProtocol *>(oprot);
     if (binary_proto != nullptr) {
         // the protocol is binary protocol
-        return binary_proto->writeString<char_ptr>(char_ptr(name, static_cast<int>(strlen(name))));
+        return binary_proto->writeString(string_view(name));
     } else {
         // the protocol is json protocol
         uint32_t xfer = 0;
