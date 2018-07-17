@@ -15,7 +15,7 @@ set(MY_PROJ_INC_PATH "../../include")
 set(MY_BOOST_PACKAGES "system")
 set(MY_PROJ_LIBS
     dsn.replication.ddlclient
-    dsn.replication.clientlib
+    dsn_replication_common
     pegasus_client_static
     fmt
     )
