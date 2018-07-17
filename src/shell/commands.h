@@ -774,7 +774,7 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
         case 's':
             options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
                 ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_") + optarg,
+                std::string("ft_match_") + optarg,
                 ::dsn::apps::filter_type::FT_NO_FILTER);
             if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
@@ -1116,7 +1116,7 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
         case 's':
             options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
                 ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_") + optarg,
+                std::string("ft_match_") + optarg,
                 ::dsn::apps::filter_type::FT_NO_FILTER);
             if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
@@ -1569,7 +1569,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
         case 's':
             options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
                 ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_") + optarg,
+                std::string("ft_match_") + optarg,
                 ::dsn::apps::filter_type::FT_NO_FILTER);
             if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
@@ -1754,7 +1754,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
         case 'h':
             options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
                 ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_") + optarg,
+                std::string("ft_match_") + optarg,
                 ::dsn::apps::filter_type::FT_NO_FILTER);
             if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid hash_key_filter_type param\n");
@@ -1768,7 +1768,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
         case 's':
             options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
                 dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_") + optarg,
+                std::string("ft_match_") + optarg,
                 ::dsn::apps::filter_type::FT_NO_FILTER);
             if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
