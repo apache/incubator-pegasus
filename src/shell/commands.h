@@ -32,36 +32,6 @@
 
 using namespace dsn::replication;
 
-typedef pegasus::pegasus_client::filter_type filter_type;
-ENUM_BEGIN(filter_type, filter_type::FT_NO_FILTER)
-ENUM_REG(filter_type::FT_NO_FILTER)
-ENUM_REG(filter_type::FT_MATCH_ANYWHERE)
-ENUM_REG(filter_type::FT_MATCH_PREFIX)
-ENUM_REG(filter_type::FT_MATCH_POSTFIX)
-ENUM_END(filter_type)
-
-typedef pegasus::pegasus_client::cas_check_type cas_check_type;
-ENUM_BEGIN(cas_check_type, cas_check_type::CT_NO_CHECK)
-ENUM_REG(cas_check_type::CT_NO_CHECK)
-ENUM_REG(cas_check_type::CT_VALUE_NOT_EXIST)
-ENUM_REG(cas_check_type::CT_VALUE_NOT_EXIST_OR_EMPTY)
-ENUM_REG(cas_check_type::CT_VALUE_EXIST)
-ENUM_REG(cas_check_type::CT_VALUE_NOT_EMPTY)
-ENUM_REG(cas_check_type::CT_VALUE_MATCH_ANYWHERE)
-ENUM_REG(cas_check_type::CT_VALUE_MATCH_PREFIX)
-ENUM_REG(cas_check_type::CT_VALUE_MATCH_POSTFIX)
-ENUM_REG(cas_check_type::CT_VALUE_BYTES_LESS)
-ENUM_REG(cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL)
-ENUM_REG(cas_check_type::CT_VALUE_BYTES_EQUAL)
-ENUM_REG(cas_check_type::CT_VALUE_BYTES_GREATER_OR_EQUAL)
-ENUM_REG(cas_check_type::CT_VALUE_BYTES_GREATER)
-ENUM_REG(cas_check_type::CT_VALUE_INT_LESS)
-ENUM_REG(cas_check_type::CT_VALUE_INT_LESS_OR_EQUAL)
-ENUM_REG(cas_check_type::CT_VALUE_INT_EQUAL)
-ENUM_REG(cas_check_type::CT_VALUE_INT_GREATER_OR_EQUAL)
-ENUM_REG(cas_check_type::CT_VALUE_INT_GREATER)
-ENUM_END(cas_check_type)
-
 inline bool version(command_executor *e, shell_context *sc, arguments args)
 {
     std::ostringstream oss;
@@ -177,7 +147,7 @@ inline bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     ::dsn::app_status::type s = ::dsn::app_status::AS_INVALID;
     if (!status.empty() && status != "all") {
         s = type_from_string(::dsn::_app_status_VALUES_TO_NAMES,
-                             std::string("AS_") + status,
+                             std::string("as_") + status,
                              ::dsn::app_status::AS_INVALID);
         verify_logged(s != ::dsn::app_status::AS_INVALID,
                       "parse %s as app_status::type failed",
@@ -802,8 +772,11 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
             }
             break;
         case 's':
-            options.sort_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
-            if (options.sort_key_filter_type == filter_type::FT_NO_FILTER) {
+            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
+                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
+                std::string("ft_") + optarg,
+                ::dsn::apps::filter_type::FT_NO_FILTER);
+            if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1141,8 +1114,11 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
             }
             break;
         case 's':
-            options.sort_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
-            if (options.sort_key_filter_type == filter_type::FT_NO_FILTER) {
+            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
+                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
+                std::string("ft_") + optarg,
+                ::dsn::apps::filter_type::FT_NO_FILTER);
+            if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1330,7 +1306,7 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
     std::string hash_key = sds_to_string(args.argv[1]);
     bool check_sort_key_provided = false;
     std::string check_sort_key;
-    cas_check_type check_type = cas_check_type::CT_NO_CHECK;
+    ::dsn::apps::cas_check_type::type check_type = ::dsn::apps::cas_check_type::CT_NO_CHECK;
     std::string check_type_name;
     bool check_operand_provided = false;
     std::string check_operand;
@@ -1363,8 +1339,10 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
             check_sort_key = unescape_str(optarg);
             break;
         case 't':
-            check_type = enum_from_string(optarg, cas_check_type::CT_NO_CHECK);
-            if (check_type == cas_check_type::CT_NO_CHECK) {
+            check_type = type_from_string(::dsn::apps::_cas_check_type_VALUES_TO_NAMES,
+                                          std::string("ct_value_") + optarg,
+                                          ::dsn::apps::cas_check_type::CT_NO_CHECK);
+            if (check_type == ::dsn::apps::cas_check_type::CT_NO_CHECK) {
                 fprintf(stderr, "ERROR: invalid check_type param\n");
                 return false;
             }
@@ -1400,11 +1378,12 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
         fprintf(stderr, "ERROR: check_sort_key not provided\n");
         return false;
     }
-    if (check_type == pegasus::pegasus_client::CT_NO_CHECK) {
+    if (check_type == ::dsn::apps::cas_check_type::CT_NO_CHECK) {
         fprintf(stderr, "ERROR: check_type not provided\n");
         return false;
     }
-    if (!check_operand_provided && check_type >= pegasus::pegasus_client::CT_VALUE_MATCH_ANYWHERE) {
+    if (!check_operand_provided &&
+        check_type >= ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
         fprintf(stderr, "ERROR: check_operand not provided\n");
         return false;
     }
@@ -1422,7 +1401,7 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
             "check_sort_key: \"%s\"\n",
             pegasus::utils::c_escape_string(check_sort_key).c_str());
     fprintf(stderr, "check_type: %s\n", check_type_name.c_str());
-    if (check_type >= pegasus::pegasus_client::CT_VALUE_MATCH_ANYWHERE) {
+    if (check_type >= ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
         fprintf(stderr,
                 "check_operand: \"%s\"\n",
                 pegasus::utils::c_escape_string(check_operand).c_str());
@@ -1438,7 +1417,7 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
     pegasus::pegasus_client::internal_info info;
     int ret = sc->pg_client->check_and_set(hash_key,
                                            check_sort_key,
-                                           check_type,
+                                           (pegasus::pegasus_client::cas_check_type)check_type,
                                            check_operand,
                                            set_sort_key,
                                            set_value,
@@ -1588,8 +1567,11 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 's':
-            options.sort_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
-            if (options.sort_key_filter_type == filter_type::FT_NO_FILTER) {
+            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
+                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
+                std::string("ft_") + optarg,
+                ::dsn::apps::filter_type::FT_NO_FILTER);
+            if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1770,8 +1752,11 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            options.hash_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
-            if (options.hash_key_filter_type == filter_type::FT_NO_FILTER) {
+            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
+                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
+                std::string("ft_") + optarg,
+                ::dsn::apps::filter_type::FT_NO_FILTER);
+            if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid hash_key_filter_type param\n");
                 return false;
             }
@@ -1781,8 +1766,11 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            options.sort_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
-            if (options.sort_key_filter_type == filter_type::FT_NO_FILTER) {
+            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
+                dsn::apps::_filter_type_VALUES_TO_NAMES,
+                std::string("ft_") + optarg,
+                ::dsn::apps::filter_type::FT_NO_FILTER);
+            if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
