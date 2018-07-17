@@ -15,7 +15,7 @@ set(MY_PROJ_INC_PATH "../../include" "../function_test")
 set(MY_PROJ_LIBS
     pegasus_client_static
     dsn.replication.ddlclient
-    dsn.replication.clientlib
+    dsn_replication_common
     )
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 

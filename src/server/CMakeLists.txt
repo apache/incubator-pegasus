@@ -15,7 +15,7 @@ set(MY_PROJ_INC_PATH "")
 set(MY_PROJ_LIBS
     dsn_replica_server
     dsn_meta_server
-    dsn.replication.clientlib
+    dsn_replication_common
     dsn.replication.ddlclient
     dsn.block_service.local
     dsn.block_service.fds

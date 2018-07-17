@@ -15,7 +15,7 @@ set(MY_PROJ_INC_PATH "../include" "../base")
 set(MY_PROJ_LIBS
     dsn.replication.tool
     dsn_replica_server
-    dsn.replication.clientlib
+    dsn_replication_common
     dsn.replication.ddlclient
     dsn.block_service.local
     dsn.block_service.fds
