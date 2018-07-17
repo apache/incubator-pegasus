@@ -149,9 +149,10 @@ public:
                     int64_t old_value_int;
                     if (!dsn::buf2int64(old_value, old_value_int)) {
                         // invalid old value
-                        derror_replica("incr failed: decree = {}, error = {}",
+                        derror_replica("incr failed: decree = {}, error = "
+                                       "old value \"{}\" is not an integer or out of range",
                                        decree,
-                                       "old value is not an integer or out of range");
+                                       utils::c_escape_string(old_value));
                         resp.error = rocksdb::Status::kInvalidArgument;
                         // we should write empty record to update rocksdb's last flushed decree
                         return empty_put(decree);
@@ -160,9 +161,11 @@ public:
                     if ((update.increment > 0 && new_value < old_value_int) ||
                         (update.increment < 0 && new_value > old_value_int)) {
                         // new value is out of range, return old value by 'new_value'
-                        derror_replica("incr failed: decree = {}, error = {}",
+                        derror_replica("incr failed: decree = {}, error = "
+                                       "new value is out of range, old_value = {}, increment = {}",
                                        decree,
-                                       "new value is out of range");
+                                       old_value_int,
+                                       update.increment);
                         resp.error = rocksdb::Status::kInvalidArgument;
                         resp.new_value = old_value_int;
                         // we should write empty record to update rocksdb's last flushed decree
@@ -492,18 +495,20 @@ private:
             int64_t check_value_int;
             if (!dsn::buf2int64(value, check_value_int)) {
                 // invalid check value
-                derror_replica("check failed: decree = {}, error = {}",
+                derror_replica("check failed: decree = {}, error = "
+                               "check value \"{}\" is not an integer or out of range",
                                decree,
-                               "check value is not an integer or out of range");
+                               utils::c_escape_string(value));
                 invalid_argument = true;
                 return false;
             }
             int64_t check_operand_int;
             if (!dsn::buf2int64(check_operand, check_operand_int)) {
                 // invalid check operand
-                derror_replica("check failed: decree = {}, error = {}",
+                derror_replica("check failed: decree = {}, error = "
+                               "check operand \"{}\" is not an integer or out of range",
                                decree,
-                               "check operand is not an integer or out of range");
+                               utils::c_escape_string(check_operand));
                 invalid_argument = true;
                 return false;
             }
