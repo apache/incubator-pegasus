@@ -824,6 +824,120 @@ void pegasus_client_impl::async_incr(const std::string &hash_key,
                   partition_hash);
 }
 
+int pegasus_client_impl::check_and_set(const std::string &hash_key,
+                                       const std::string &check_sort_key,
+                                       cas_check_type check_type,
+                                       const std::string &check_operand,
+                                       const std::string &set_sort_key,
+                                       const std::string &set_value,
+                                       const check_and_set_options &options,
+                                       check_and_set_results &results,
+                                       int timeout_milliseconds,
+                                       internal_info *info)
+{
+    ::dsn::utils::notify_event op_completed;
+    int ret = -1;
+    auto callback = [&](int _err, check_and_set_results &&_results, internal_info &&_info) {
+        ret = _err;
+        results = std::move(_results);
+        if (info != nullptr)
+            (*info) = std::move(_info);
+        op_completed.notify();
+    };
+    async_check_and_set(hash_key,
+                        check_sort_key,
+                        check_type,
+                        check_operand,
+                        set_sort_key,
+                        set_value,
+                        options,
+                        std::move(callback),
+                        timeout_milliseconds);
+    op_completed.wait();
+    return ret;
+}
+
+void pegasus_client_impl::async_check_and_set(const std::string &hash_key,
+                                              const std::string &check_sort_key,
+                                              cas_check_type check_type,
+                                              const std::string &check_operand,
+                                              const std::string &set_sort_key,
+                                              const std::string &set_value,
+                                              const check_and_set_options &options,
+                                              async_check_and_set_callback_t &&callback,
+                                              int timeout_milliseconds)
+{
+    // check params
+    if (hash_key.size() >= UINT16_MAX) {
+        derror("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
+               (int)hash_key.size());
+        if (callback != nullptr)
+            callback(PERR_INVALID_HASH_KEY, check_and_set_results(), internal_info());
+        return;
+    }
+
+    ::dsn::apps::check_and_set_request req;
+    req.hash_key.assign(hash_key.c_str(), 0, hash_key.size());
+    req.check_sort_key.assign(check_sort_key.c_str(), 0, check_sort_key.size());
+    req.check_type = (dsn::apps::cas_check_type::type)check_type;
+    req.check_operand.assign(check_operand.c_str(), 0, check_operand.size());
+    if (check_sort_key != set_sort_key) {
+        req.set_diff_sort_key = true;
+        req.set_sort_key.assign(set_sort_key.c_str(), 0, set_sort_key.size());
+    }
+    req.set_value.assign(set_value.c_str(), 0, set_value.size());
+    if (options.set_value_ttl_seconds == 0)
+        req.set_expire_ts_seconds = 0;
+    else
+        req.set_expire_ts_seconds = options.set_value_ttl_seconds + utils::epoch_now();
+    req.return_check_value = options.return_check_value;
+
+    ::dsn::blob tmp_key;
+    pegasus_generate_key(tmp_key, req.hash_key, ::dsn::blob());
+    auto partition_hash = pegasus_key_hash(tmp_key);
+    auto new_callback = [user_callback = std::move(callback)](
+        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+    {
+        if (user_callback == nullptr) {
+            return;
+        }
+        check_and_set_results results;
+        internal_info info;
+        ::dsn::apps::check_and_set_response response;
+        if (err == ::dsn::ERR_OK) {
+            ::dsn::unmarshall(resp, response);
+            if (response.error == 0) {
+                results.set_succeed = true;
+            } else if (response.error == 13) { // kTryAgain
+                results.set_succeed = false;
+                response.error = 0;
+            } else {
+                results.set_succeed = false;
+            }
+            if (response.check_value_returned) {
+                results.check_value_returned = true;
+                if (response.check_value_exist) {
+                    results.check_value_exist = true;
+                    results.check_value.assign(response.check_value.data(),
+                                               response.check_value.length());
+                }
+            }
+            info.app_id = response.app_id;
+            info.partition_index = response.partition_index;
+            info.decree = response.decree;
+            info.server = response.server;
+        }
+        int ret =
+            get_client_error(err == ERR_OK ? get_rocksdb_server_error(response.error) : int(err));
+        user_callback(ret, std::move(results), std::move(info));
+    };
+    _client->check_and_set(req,
+                           std::move(new_callback),
+                           std::chrono::milliseconds(timeout_milliseconds),
+                           0,
+                           partition_hash);
+}
+
 int pegasus_client_impl::ttl(const std::string &hash_key,
                              const std::string &sort_key,
                              int &ttl_seconds,

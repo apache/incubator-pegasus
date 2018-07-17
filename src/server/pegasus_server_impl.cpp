@@ -2021,44 +2021,30 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
     return ::dsn::ERR_OK;
 }
 
-bool pegasus_server_impl::is_filter_type_supported(::dsn::apps::filter_type::type filter_type)
-{
-    return filter_type >= ::dsn::apps::filter_type::FT_NO_FILTER &&
-           filter_type <= ::dsn::apps::filter_type::FT_MATCH_POSTFIX;
-}
-
 bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_type,
                                           const ::dsn::blob &filter_pattern,
                                           const ::dsn::blob &value)
 {
-    if (filter_type == ::dsn::apps::filter_type::FT_NO_FILTER || filter_pattern.length() == 0)
-        return true;
-    if (value.length() < filter_pattern.length())
-        return false;
     switch (filter_type) {
-    case ::dsn::apps::filter_type::FT_MATCH_ANYWHERE: {
-        // brute force search
-        // TODO: improve it according to
-        //   http://old.blog.phusion.nl/2010/12/06/efficient-substring-searching/
-        const char *a1 = value.data();
-        int l1 = value.length();
-        const char *a2 = filter_pattern.data();
-        int l2 = filter_pattern.length();
-        for (int i = 0; i <= l1 - l2; ++i) {
-            int j = 0;
-            while (j < l2 && a1[i + j] == a2[j])
-                ++j;
-            if (j == l2)
-                return true;
-        }
-        return false;
-    }
+    case ::dsn::apps::filter_type::FT_NO_FILTER:
+        return true;
+    case ::dsn::apps::filter_type::FT_MATCH_ANYWHERE:
     case ::dsn::apps::filter_type::FT_MATCH_PREFIX:
-        return (memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0);
-    case ::dsn::apps::filter_type::FT_MATCH_POSTFIX:
-        return (memcmp(value.data() + value.length() - filter_pattern.length(),
-                       filter_pattern.data(),
-                       filter_pattern.length()) == 0);
+    case ::dsn::apps::filter_type::FT_MATCH_POSTFIX: {
+        if (filter_pattern.length() == 0)
+            return true;
+        if (value.length() < filter_pattern.length())
+            return false;
+        if (filter_type == ::dsn::apps::filter_type::FT_MATCH_ANYWHERE) {
+            return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
+        } else if (filter_type == ::dsn::apps::filter_type::FT_MATCH_PREFIX) {
+            return ::memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0;
+        } else { // filter_type == ::dsn::apps::filter_type::FT_MATCH_POSTFIX
+            return ::memcmp(value.data() + value.length() - filter_pattern.length(),
+                            filter_pattern.data(),
+                            filter_pattern.length()) == 0;
+        }
+    }
     default:
         dassert(false, "unsupported filter type: %d", filter_type);
     }

@@ -17,8 +17,10 @@ table_name=temp
 
 GTEST_OUTPUT="xml:$REPORT_DIR/basic.xml" GTEST_FILTER="basic.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test basic failed: $test_case $config_file $table_name"
-GTEST_OUTPUT="xml:$REPORT_DIR/basic.xml" GTEST_FILTER="incr.*" ./$test_case $config_file $table_name
+GTEST_OUTPUT="xml:$REPORT_DIR/incr" GTEST_FILTER="incr.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test incr failed: $test_case $config_file $table_name"
+GTEST_OUTPUT="xml:$REPORT_DIR/check_and_set.xml" GTEST_FILTER="check_and_set.*" ./$test_case $config_file $table_name
+exit_if_fail $? "run test check_and_set failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/scan.xml" GTEST_FILTER="scan.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test scan failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/slog_log.xml" GTEST_FILTER="lost_log.*" ./$test_case $config_file $table_name

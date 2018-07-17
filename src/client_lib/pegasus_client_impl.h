@@ -151,6 +151,27 @@ public:
                             async_incr_callback_t &&callback = nullptr,
                             int timeout_milliseconds = 5000) override;
 
+    virtual int check_and_set(const std::string &hash_key,
+                              const std::string &check_sort_key,
+                              cas_check_type check_type,
+                              const std::string &check_operand,
+                              const std::string &set_sort_key,
+                              const std::string &set_value,
+                              const check_and_set_options &options,
+                              check_and_set_results &results,
+                              int timeout_milliseconds = 5000,
+                              internal_info *info = nullptr) override;
+
+    virtual void async_check_and_set(const std::string &hash_key,
+                                     const std::string &check_sort_key,
+                                     cas_check_type check_type,
+                                     const std::string &check_operand,
+                                     const std::string &set_sort_key,
+                                     const std::string &set_value,
+                                     const check_and_set_options &options,
+                                     async_check_and_set_callback_t &&callback = nullptr,
+                                     int timeout_milliseconds = 5000) override;
+
     virtual int ttl(const std::string &hashkey,
                     const std::string &sortkey,
                     int &ttl_seconds,
