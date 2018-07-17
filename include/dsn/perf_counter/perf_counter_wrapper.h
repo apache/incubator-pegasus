@@ -84,6 +84,7 @@ public:
     {
         dsn::perf_counter_ptr c =
             dsn::perf_counters::instance().get_app_counter(section, name, type, dsptr, true);
+        clear();
         _counter = c.get();
     }
 
@@ -96,6 +97,7 @@ public:
     {
         dsn::perf_counter_ptr c = dsn::perf_counters::instance().get_global_counter(
             app, section, name, type, dsptr, true);
+        clear();
         _counter = c.get();
     }
 

@@ -32,9 +32,11 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
+#include <regex>
 
 #include <dsn/perf_counter/perf_counter.h>
 #include <dsn/perf_counter/perf_counters.h>
+#include <dsn/perf_counter/perf_counter_utils.h>
 
 #include <dsn/cpp/service_app.h>
 #include <dsn/cpp/json_helper.h>
@@ -43,32 +45,23 @@
 #include <dsn/tool-api/task.h>
 
 #include "perf_counter_atomic.h"
+#include "builtin_counters.h"
 #include "core/core/service_engine.h"
 
 namespace dsn {
 
-perf_counters::perf_counters(void)
+perf_counters::perf_counters()
 {
-    ::dsn::command_manager::instance().register_command(
-        {"counter.list"},
-        "counter.list - get the list of all counters",
-        "counter.list",
-        &perf_counters::list_counter);
-
-    ::dsn::command_manager::instance().register_command(
-        {"counter.value"},
-        "counter.value - get current value of a specific counter",
-        "counter.value app-name*section-name*counter-name",
-        &perf_counters::get_counter_value);
-
-    ::dsn::command_manager::instance().register_command(
-        {"counter.sample"},
-        "counter.sample - get latest sample of a specific counter",
-        "counter.sample app-name*section-name*counter-name",
-        &perf_counters::get_counter_sample);
+    dsn::command_manager::instance().register_command(
+        {"perf-counters"},
+        "perf-counters - query perf counters, supporting filter by POSIX basic regular expressions",
+        "perf-counters [name-filter]...",
+        [](const std::vector<std::string> &args) {
+            return dsn::perf_counters::instance().list_snapshot_by_regexp(args);
+        });
 }
 
-perf_counters::~perf_counters(void) {}
+perf_counters::~perf_counters() {}
 
 perf_counter_ptr perf_counters::get_app_counter(const char *section,
                                                 const char *name,
@@ -139,16 +132,6 @@ bool perf_counters::remove_counter(const char *full_name)
     return true;
 }
 
-void perf_counters::get_all_counters(std::vector<perf_counter_ptr> *counter_vec)
-{
-    counter_vec->clear();
-    utils::auto_read_lock l(_lock);
-    counter_vec->reserve(_counters.size());
-    for (auto &cp : _counters) {
-        counter_vec->push_back(cp.second.counter);
-    }
-}
-
 perf_counter *perf_counters::new_counter(const char *app,
                                          const char *section,
                                          const char *name,
@@ -169,124 +152,126 @@ perf_counter *perf_counters::new_counter(const char *app,
     }
 }
 
-std::string perf_counters::list_counter(const std::vector<std::string> &args)
+void perf_counters::get_all_counters(std::vector<perf_counter_ptr> *all)
 {
-    return perf_counters::instance().list_counter_internal(args);
-}
-
-struct counter_info
-{
-    std::string name;
-    DEFINE_JSON_SERIALIZATION(name)
-};
-
-struct value_resp
-{
-    double val;
-    uint64_t time;
-    std::string counter_name;
-    DEFINE_JSON_SERIALIZATION(val, time, counter_name)
-};
-
-struct sample_resp
-{
-    uint64_t val;
-    uint64_t time;
-    std::string counter_name;
-    DEFINE_JSON_SERIALIZATION(val, time, counter_name)
-};
-
-std::string perf_counters::list_counter_internal(const std::vector<std::string> &args)
-{
-    // <app, <section, counter_info[] > > counters
-    std::map<std::string, std::map<std::string, std::vector<counter_info>>> counters;
-    std::map<std::string, std::vector<counter_info>> empty_m;
-    std::vector<counter_info> empty_v;
-
-    std::map<std::string, std::vector<counter_info>> *pp;
-    std::vector<counter_info> *pv;
-
-    {
-        utils::auto_read_lock l(_lock);
-        for (auto &c : _counters) {
-            pp = &counters
-                      .insert(
-                          std::map<std::string, std::map<std::string, std::vector<counter_info>>>::
-                              value_type(c.second.counter->app(), empty_m))
-                      .first->second;
-
-            pv = &pp->insert(std::map<std::string, std::vector<counter_info>>::value_type(
-                                 c.second.counter->section(), empty_v))
-                      .first->second;
-
-            pv->push_back({c.second.counter->name()});
-        }
-    }
-
-    std::stringstream ss;
-    dsn::json::json_forwarder<decltype(counters)>::encode(ss, counters);
-    return ss.str();
-}
-
-std::string perf_counters::get_counter_value(const std::vector<std::string> &args)
-{
-    std::stringstream ss;
-
-    uint64_t ts = 0;
-    double value = 0;
-
-    if (args.size() < 1) {
-        dsn::json::json_forwarder<value_resp>::encode(ss, value_resp{value, ts, std::string()});
-        return ss.str();
-    }
-
-    perf_counters &c = perf_counters::instance();
-    auto counter = c.get_counter(args[0].c_str());
-
-    if (counter) {
-        if (counter->type() != COUNTER_TYPE_NUMBER_PERCENTILES) {
-            value = counter->get_value();
-        }
-    }
-
-    ts = dsn_now_ns();
-    value_resp{value, ts, args[0]}.encode_json_state(ss);
-    return ss.str();
-}
-
-std::string perf_counters::get_counter_sample(const std::vector<std::string> &args)
-{
-    std::stringstream ss;
-
-    uint64_t ts = 0;
-    uint64_t sample = 0;
-
-    if (args.size() < 1) {
-        sample_resp{sample, ts, std::string()}.encode_json_state(ss);
-        return ss.str();
-    }
-
-    perf_counters &c = perf_counters::instance();
-    auto counter = c.get_counter(args[0].c_str());
-
-    if (counter) {
-        sample = counter->get_latest_sample();
-    }
-
-    ts = dsn_now_ns();
-    sample_resp{sample, ts, args[0]}.encode_json_state(ss);
-    return ss.str();
-}
-
-perf_counter_ptr perf_counters::get_counter(const char *full_name)
-{
+    all->clear();
     utils::auto_read_lock l(_lock);
-
-    auto it = _counters.find(full_name);
-    if (it == _counters.end())
-        return nullptr;
-    else
-        return it->second.counter;
+    all->reserve(_counters.size());
+    for (auto &p : _counters) {
+        all->push_back(p.second.counter);
+    }
 }
 
+std::string perf_counters::list_snapshot_by_regexp(const std::vector<std::string> &args)
+{
+    perf_counter_info info;
+
+    std::vector<std::regex> regs;
+    regs.reserve(args.size());
+    for (auto &arg : args) {
+        try {
+            regs.emplace_back(arg, std::regex_constants::basic);
+        } catch (...) {
+            info.result = "ERROR: invalid filter: " + arg;
+            break;
+        }
+    }
+
+    if (info.result.empty()) {
+        snapshot_iterator visitor = [&regs, &info](const dsn::perf_counter_ptr &ptr, double val) {
+            bool matched = false;
+            if (regs.empty()) {
+                matched = true;
+            } else {
+                for (auto &reg : regs) {
+                    if (std::regex_match(ptr->full_name(), reg)) {
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+
+            if (matched) {
+                info.counters.emplace_back(ptr->full_name(), ptr->type(), val);
+            }
+        };
+        iterate_snapshot(visitor);
+        info.result = "OK";
+    }
+
+    std::stringstream ss;
+    info.timestamp = dsn_now_ms() / 1000;
+    char buf[20];
+    utils::time_ms_to_date_time(info.timestamp * 1000, buf, sizeof(buf));
+    info.timestamp_str = buf;
+    info.encode_json_state(ss);
+    return ss.str();
+}
+
+void perf_counters::take_snapshot()
+{
+    builtin_counters::instance().update_counters();
+
+    std::vector<dsn::perf_counter_ptr> all_counters;
+    get_all_counters(&all_counters);
+
+    utils::auto_write_lock l(_snapshot_lock);
+    for (auto &p : _snapshots) {
+        p.second.updated_recently = false;
+    }
+
+    // updated counters from current value
+    for (const dsn::perf_counter_ptr &c : all_counters) {
+        counter_snapshot &cs = _snapshots[c->full_name()];
+        if (cs.counter == nullptr) {
+            // recently created counter, which wasn't in snapshot before
+            cs.counter = c;
+        }
+        cs.updated_recently = true;
+        if (c->type() != COUNTER_TYPE_NUMBER_PERCENTILES) {
+            cs.value = c->get_value();
+        } else {
+            cs.value = c->get_percentile(COUNTER_PERCENTILE_99);
+        }
+    }
+
+    // delete old counters
+    std::vector<std::string> old_counters;
+    for (auto &p : _snapshots)
+        if (!p.second.updated_recently)
+            old_counters.push_back(p.first);
+    for (const std::string &n : old_counters)
+        _snapshots.erase(n);
+}
+
+void perf_counters::iterate_snapshot(const snapshot_iterator &v)
+{
+    utils::auto_read_lock l(_snapshot_lock);
+    for (auto &kv : _snapshots) {
+        const counter_snapshot &cs = kv.second;
+        v(cs.counter, cs.value);
+    }
+}
+
+void perf_counters::query_snapshot(const std::vector<std::string> &counters,
+                                   const snapshot_iterator &v,
+                                   std::vector<bool> *found)
+{
+    std::vector<bool> result;
+    if (found == nullptr)
+        found = &result;
+
+    found->reserve(counters.size());
+    utils::auto_read_lock l(_snapshot_lock);
+    for (const std::string &name : counters) {
+        auto iter = _snapshots.find(name);
+        if (iter == _snapshots.end()) {
+            found->push_back(false);
+        } else {
+            found->push_back(true);
+            const counter_snapshot &cs = iter->second;
+            v(cs.counter, cs.value);
+        }
+    }
+}
 } // end namespace

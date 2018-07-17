@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/utility/enum_helper.h>
@@ -47,8 +38,8 @@ typedef enum dsn_perf_counter_type_t {
     COUNTER_TYPE_VOLATILE_NUMBER, // special kind of NUMBER which will be reset on get
     COUNTER_TYPE_RATE,
     COUNTER_TYPE_NUMBER_PERCENTILES,
-    COUNTER_TYPE_INVALID,
-    COUNTER_TYPE_COUNT
+    COUNTER_TYPE_COUNT,
+    COUNTER_TYPE_INVALID
 } dsn_perf_counter_type_t;
 
 typedef enum dsn_perf_counter_percentile_type_t {
@@ -62,29 +53,13 @@ typedef enum dsn_perf_counter_percentile_type_t {
     COUNTER_PERCENTILE_INVALID
 } dsn_perf_counter_percentile_type_t;
 
+const char *dsn_counter_type_to_string(dsn_perf_counter_type_t t);
+dsn_perf_counter_type_t dsn_counter_type_from_string(const char *str);
+
+const char *dsn_percentile_type_to_string(dsn_perf_counter_percentile_type_t t);
+dsn_perf_counter_percentile_type_t dsn_percentile_type_from_string(const char *str);
+
 namespace dsn {
-
-/*!
-@addtogroup tool-api-providers
-@{
-*/
-ENUM_BEGIN(dsn_perf_counter_type_t, COUNTER_TYPE_INVALID)
-ENUM_REG(COUNTER_TYPE_NUMBER)
-ENUM_REG(COUNTER_TYPE_VOLATILE_NUMBER)
-ENUM_REG(COUNTER_TYPE_RATE)
-ENUM_REG(COUNTER_TYPE_NUMBER_PERCENTILES)
-ENUM_END(dsn_perf_counter_type_t)
-
-ENUM_BEGIN(dsn_perf_counter_percentile_type_t, COUNTER_PERCENTILE_INVALID)
-ENUM_REG(COUNTER_PERCENTILE_50)
-ENUM_REG(COUNTER_PERCENTILE_90)
-ENUM_REG(COUNTER_PERCENTILE_95)
-ENUM_REG(COUNTER_PERCENTILE_99)
-ENUM_REG(COUNTER_PERCENTILE_999)
-ENUM_END(dsn_perf_counter_percentile_type_t)
-
-class perf_counter;
-typedef ref_ptr<perf_counter> perf_counter_ptr;
 
 class perf_counter : public ref_counter
 {
@@ -103,13 +78,13 @@ public:
 
     virtual void increment() = 0;
     virtual void decrement() = 0;
-    virtual void add(uint64_t val) = 0;
-    virtual void set(uint64_t val) = 0;
+    virtual void add(int64_t val) = 0;
+    virtual void set(int64_t val) = 0;
     virtual double get_value() = 0;
-    virtual uint64_t get_integer_value() = 0;
+    virtual int64_t get_integer_value() = 0;
     virtual double get_percentile(dsn_perf_counter_percentile_type_t type) = 0;
 
-    typedef std::vector<std::pair<uint64_t *, int>> samples_t;
+    typedef std::vector<std::pair<int64_t *, int>> samples_t;
 
     // return actual sample count, must <= required_sample_count
     virtual int get_latest_samples(int required_sample_count, /*out*/ samples_t &samples) const
@@ -118,7 +93,7 @@ public:
     }
 
     // return the latest sample value
-    virtual uint64_t get_latest_sample() const { return 0; }
+    virtual int64_t get_latest_sample() const { return 0; }
 
     const char *full_name() const { return _full_name.c_str(); }
     const char *app() const { return _app.c_str(); }
@@ -148,5 +123,6 @@ private:
     std::string _full_name;
     friend class perf_counters;
 };
-/*@}*/
+typedef ref_ptr<perf_counter> perf_counter_ptr;
+
 } // end namespace

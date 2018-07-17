@@ -77,7 +77,7 @@ public:
     int count() const { return _queue_length.load(std::memory_order_relaxed); }
     int decrease_count(int count = 1)
     {
-        _queue_length_counter->add((uint64_t)(-count));
+        _queue_length_counter->add((int64_t)(-count));
         return _queue_length.fetch_sub(count, std::memory_order_relaxed) - count;
     }
     int increase_count(int count = 1)

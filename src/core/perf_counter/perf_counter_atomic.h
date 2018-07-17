@@ -43,12 +43,12 @@ public:
         uint64_t task_id = static_cast<int>(utils::get_current_tid());
         _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_relaxed);
     }
-    virtual void add(uint64_t val)
+    virtual void add(int64_t val)
     {
         uint64_t task_id = static_cast<int>(utils::get_current_tid());
         _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_relaxed);
     }
-    virtual void set(uint64_t val)
+    virtual void set(int64_t val)
     {
         // the set-op of number is reset the number to zero.
         // for simplicity, only set other zero, not add the lock to protect, if needed, should add
@@ -65,9 +65,9 @@ public:
         }
         return val;
     }
-    virtual uint64_t get_integer_value()
+    virtual int64_t get_integer_value()
     {
-        uint64_t val = 0;
+        int64_t val = 0;
         for (int i = 0; i < DIVIDE_CONTAINER; i++) {
             val += _val[i].load(std::memory_order_relaxed);
         }
@@ -80,7 +80,7 @@ public:
     }
 
 protected:
-    std::atomic<uint64_t> _val[DIVIDE_CONTAINER];
+    std::atomic<int64_t> _val[DIVIDE_CONTAINER];
 };
 
 // -----------   VOLATILE_NUMBER perf counter ---------------------------------
@@ -106,9 +106,9 @@ public:
         }
         return val;
     }
-    virtual uint64_t get_integer_value()
+    virtual int64_t get_integer_value()
     {
-        uint64_t val = 0;
+        int64_t val = 0;
         for (int i = 0; i < DIVIDE_CONTAINER; i++) {
             val += _val[i].exchange(0, std::memory_order_relaxed);
         }
@@ -145,12 +145,12 @@ public:
         uint64_t task_id = static_cast<int>(utils::get_current_tid());
         _val[task_id % DIVIDE_CONTAINER].fetch_sub(1, std::memory_order_relaxed);
     }
-    virtual void add(uint64_t val)
+    virtual void add(int64_t val)
     {
         uint64_t task_id = static_cast<int>(utils::get_current_tid());
         _val[task_id % DIVIDE_CONTAINER].fetch_add(val, std::memory_order_relaxed);
     }
-    virtual void set(uint64_t val) { dassert(false, "invalid execution flow"); }
+    virtual void set(int64_t val) { dassert(false, "invalid execution flow"); }
     virtual double get_value()
     {
         uint64_t now = utils::get_current_physical_time_ns();
@@ -167,7 +167,7 @@ public:
         _last_time = now;
         return _rate;
     }
-    virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
+    virtual int64_t get_integer_value() { return (int64_t)get_value(); }
     virtual double get_percentile(dsn_perf_counter_percentile_type_t type)
     {
         dassert(false, "invalid execution flow");
@@ -177,7 +177,7 @@ public:
 private:
     std::atomic<double> _rate;
     std::atomic<uint64_t> _last_time;
-    std::atomic<uint64_t> _val[DIVIDE_CONTAINER];
+    std::atomic<int64_t> _val[DIVIDE_CONTAINER];
 };
 
 // -----------   NUMBER_PERCENTILE perf counter ---------------------------------
@@ -222,8 +222,8 @@ public:
 
     virtual void increment() { dassert(false, "invalid execution flow"); }
     virtual void decrement() { dassert(false, "invalid execution flow"); }
-    virtual void add(uint64_t val) { dassert(false, "invalid execution flow"); }
-    virtual void set(uint64_t val)
+    virtual void add(int64_t val) { dassert(false, "invalid execution flow"); }
+    virtual void set(int64_t val)
     {
         uint64_t idx = _tail.fetch_add(1, std::memory_order_relaxed);
         _samples[idx % MAX_QUEUE_LENGTH] = val;
@@ -234,7 +234,7 @@ public:
         dassert(false, "invalid execution flow");
         return 0.0;
     }
-    virtual uint64_t get_integer_value() { return (uint64_t)get_value(); }
+    virtual int64_t get_integer_value() { return (int64_t)get_value(); }
 
     virtual double get_percentile(dsn_perf_counter_percentile_type_t type)
     {
@@ -258,18 +258,18 @@ public:
         int start_index = (end_index + MAX_QUEUE_LENGTH - return_count) % MAX_QUEUE_LENGTH;
 
         if (end_index >= start_index) {
-            samples.push_back(std::make_pair((uint64_t *)_samples + start_index, return_count));
+            samples.push_back(std::make_pair((int64_t *)_samples + start_index, return_count));
         } else {
             samples.push_back(
-                std::make_pair((uint64_t *)_samples + start_index, MAX_QUEUE_LENGTH - start_index));
-            samples.push_back(std::make_pair((uint64_t *)_samples,
+                std::make_pair((int64_t *)_samples + start_index, MAX_QUEUE_LENGTH - start_index));
+            samples.push_back(std::make_pair((int64_t *)_samples,
                                              return_count - (MAX_QUEUE_LENGTH - start_index)));
         }
 
         return return_count;
     }
 
-    virtual uint64_t get_latest_sample() const override
+    virtual int64_t get_latest_sample() const override
     {
         int idx = (_tail.load() + MAX_QUEUE_LENGTH - 1) % MAX_QUEUE_LENGTH;
         return _samples[idx];
@@ -278,9 +278,9 @@ public:
 private:
     struct compute_context
     {
-        uint64_t ask[COUNTER_PERCENTILE_COUNT];
-        uint64_t tmp[MAX_QUEUE_LENGTH];
-        uint64_t mid_tmp[MAX_QUEUE_LENGTH];
+        int64_t ask[COUNTER_PERCENTILE_COUNT];
+        int64_t tmp[MAX_QUEUE_LENGTH];
+        int64_t mid_tmp[MAX_QUEUE_LENGTH];
         int calc_queue[MAX_QUEUE_LENGTH][4];
     };
 
@@ -299,7 +299,7 @@ private:
         return;
     }
 
-    uint64_t find_mid(boost::shared_ptr<compute_context> &ctx, int left, int right)
+    int64_t find_mid(boost::shared_ptr<compute_context> &ctx, int left, int right)
     {
         if (left == right)
             return ctx->mid_tmp[left];
@@ -308,7 +308,7 @@ private:
             int remain_num = index + 5 >= right ? right - index + 1 : 5;
             for (int i = index; i < index + remain_num; i++) {
                 int j;
-                uint64_t k = ctx->mid_tmp[i];
+                int64_t k = ctx->mid_tmp[i];
                 for (j = i - 1; (j >= index) && (ctx->mid_tmp[j] > k); j--)
                     ctx->mid_tmp[j + 1] = ctx->mid_tmp[j];
                 ctx->mid_tmp[j + 1] = k;
@@ -327,7 +327,7 @@ private:
                 int &calc_tail)
     {
         int i, j, index, now;
-        uint64_t mid;
+        int64_t mid;
 
         if (qleft > qright)
             return;
@@ -436,8 +436,8 @@ private:
 
     std::shared_ptr<boost::asio::deadline_timer> _timer;
     std::atomic<uint64_t> _tail; // should use unsigned int to avoid out of bound
-    uint64_t _samples[MAX_QUEUE_LENGTH];
-    uint64_t _results[COUNTER_PERCENTILE_COUNT];
+    int64_t _samples[MAX_QUEUE_LENGTH];
+    int64_t _results[COUNTER_PERCENTILE_COUNT];
     int _counter_computation_interval_seconds;
 };
 

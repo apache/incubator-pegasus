@@ -104,5 +104,14 @@ inline int get_invalid_tid() { return -1; }
 // read it's stdout to output
 // and return the retcode of command
 int pipe_execute(const char *command, std::ostream &output);
+
+//
+// process_mem_usage(double &, double &) - takes two doubles by reference,
+// attempts to read the system-dependent data for a process' virtual memory
+// size and resident set size, and return the results in KB.
+//
+// On failure, returns 0.0, 0.0
+//
+void process_mem_usage(double &vm_usage, double &resident_set);
 }
 }

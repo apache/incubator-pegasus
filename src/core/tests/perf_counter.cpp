@@ -83,7 +83,7 @@ static void perf_counter_add(perf_counter_ptr pc, const std::vector<int> &vec)
         add_threads[i]->join();
 }
 
-TEST(counter, perf_counter_atomic)
+TEST(perf_counter, perf_counter_atomic)
 {
     int ans = 0;
     std::vector<int> vec(10000, 0);
@@ -123,4 +123,49 @@ TEST(counter, perf_counter_atomic)
         for (int i = 0; i != COUNTER_PERCENTILE_COUNT; ++i)
             ddebug("%lf", counter->get_percentile((dsn_perf_counter_percentile_type_t)i));
     }
+}
+
+TEST(perf_counter, print_type)
+{
+    ASSERT_STREQ("NUMBER", dsn_counter_type_to_string(COUNTER_TYPE_NUMBER));
+    ASSERT_STREQ("VOLATILE_NUMBER", dsn_counter_type_to_string(COUNTER_TYPE_VOLATILE_NUMBER));
+    ASSERT_STREQ("RATE", dsn_counter_type_to_string(COUNTER_TYPE_RATE));
+    ASSERT_STREQ("PERCENTILE", dsn_counter_type_to_string(COUNTER_TYPE_NUMBER_PERCENTILES));
+    ASSERT_STREQ("INVALID_COUNTER", dsn_counter_type_to_string(COUNTER_TYPE_INVALID));
+
+    ASSERT_EQ(COUNTER_TYPE_NUMBER,
+              dsn_counter_type_from_string(dsn_counter_type_to_string(COUNTER_TYPE_NUMBER)));
+    ASSERT_EQ(
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        dsn_counter_type_from_string(dsn_counter_type_to_string(COUNTER_TYPE_VOLATILE_NUMBER)));
+    ASSERT_EQ(COUNTER_TYPE_RATE,
+              dsn_counter_type_from_string(dsn_counter_type_to_string(COUNTER_TYPE_RATE)));
+    ASSERT_EQ(
+        COUNTER_TYPE_NUMBER_PERCENTILES,
+        dsn_counter_type_from_string(dsn_counter_type_to_string(COUNTER_TYPE_NUMBER_PERCENTILES)));
+    ASSERT_EQ(COUNTER_TYPE_INVALID, dsn_counter_type_from_string("xxxx"));
+
+    ASSERT_STREQ("P50", dsn_percentile_type_to_string(COUNTER_PERCENTILE_50));
+    ASSERT_STREQ("P90", dsn_percentile_type_to_string(COUNTER_PERCENTILE_90));
+    ASSERT_STREQ("P95", dsn_percentile_type_to_string(COUNTER_PERCENTILE_95));
+    ASSERT_STREQ("P99", dsn_percentile_type_to_string(COUNTER_PERCENTILE_99));
+    ASSERT_STREQ("P999", dsn_percentile_type_to_string(COUNTER_PERCENTILE_999));
+    ASSERT_STREQ("INVALID_PERCENTILE", dsn_percentile_type_to_string(COUNTER_PERCENTILE_INVALID));
+
+    ASSERT_EQ(
+        COUNTER_PERCENTILE_50,
+        dsn_percentile_type_from_string(dsn_percentile_type_to_string(COUNTER_PERCENTILE_50)));
+    ASSERT_EQ(
+        COUNTER_PERCENTILE_90,
+        dsn_percentile_type_from_string(dsn_percentile_type_to_string(COUNTER_PERCENTILE_90)));
+    ASSERT_EQ(
+        COUNTER_PERCENTILE_95,
+        dsn_percentile_type_from_string(dsn_percentile_type_to_string(COUNTER_PERCENTILE_95)));
+    ASSERT_EQ(
+        COUNTER_PERCENTILE_99,
+        dsn_percentile_type_from_string(dsn_percentile_type_to_string(COUNTER_PERCENTILE_99)));
+    ASSERT_EQ(
+        COUNTER_PERCENTILE_999,
+        dsn_percentile_type_from_string(dsn_percentile_type_to_string(COUNTER_PERCENTILE_999)));
+    ASSERT_EQ(COUNTER_PERCENTILE_INVALID, dsn_percentile_type_from_string("afafda"));
 }
