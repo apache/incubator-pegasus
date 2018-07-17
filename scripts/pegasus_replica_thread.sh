@@ -80,7 +80,7 @@ do
       count=0
     fi
     pad_str "$count" $thread_pad_length right
-    replica_count=$((replica_count+1))
+    replica_count=$((replica_count+count))
     if [ $count -gt $max ]; then
       max=$count
       max_time=1

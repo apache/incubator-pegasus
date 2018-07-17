@@ -29,8 +29,9 @@ public:
           _primary_address(server->_primary_address),
           _value_schema_version(server->_value_schema_version),
           _db(server->_db),
-          _wt_opts(&server->_wt_opts),
-          _rd_opts(&server->_rd_opts)
+          _wt_opts(server->_wt_opts),
+          _rd_opts(server->_rd_opts),
+          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
     }
 
@@ -130,11 +131,12 @@ public:
         uint32_t expire_ts = 0;
         std::string raw_value;
         int64_t new_value = 0;
-        rocksdb::Status s = _db->Get(*_rd_opts, raw_key, &raw_value);
+        rocksdb::Status s = _db->Get(_rd_opts, raw_key, &raw_value);
         if (s.ok()) {
             expire_ts = pegasus_extract_expire_ts(_value_schema_version, raw_value);
             if (check_if_ts_expired(utils::epoch_now(), expire_ts)) {
                 // ttl timeout, set to 0 before increment, and set expire_ts to 0
+                _pfc_recent_expire_count->increment();
                 new_value = update.increment;
                 expire_ts = 0;
             } else {
@@ -176,7 +178,7 @@ public:
             // read old value failed
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-            derror_rocksdb("IncrGet",
+            derror_rocksdb("Get for Incr",
                            s.ToString(),
                            "decree: {}, hash_key: {}, sort_key: {}",
                            decree,
@@ -199,6 +201,105 @@ public:
 
         clear_up_batch_states(decree, resp.error);
         return resp.error;
+    }
+
+    int check_and_set(int64_t decree,
+                      const dsn::apps::check_and_set_request &update,
+                      dsn::apps::check_and_set_response &resp)
+    {
+        resp.app_id = get_gpid().get_app_id();
+        resp.partition_index = get_gpid().get_partition_index();
+        resp.decree = decree;
+        resp.server = _primary_address;
+
+        if (!is_check_type_supported(update.check_type)) {
+            derror_replica("invalid argument for check_and_set: decree = {}, error = {}",
+                           decree,
+                           "check type {} not supported",
+                           update.check_type);
+            resp.error = rocksdb::Status::kInvalidArgument;
+            // we should write empty record to update rocksdb's last flushed decree
+            return empty_put(decree);
+        }
+
+        ::dsn::blob check_key;
+        pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
+        rocksdb::Slice check_raw_key(check_key.data(), check_key.length());
+        std::string check_raw_value;
+        rocksdb::Status s = _db->Get(_rd_opts, check_raw_key, &check_raw_value);
+        if (s.ok()) {
+            // read check value succeed
+            if (check_if_record_expired(
+                    _value_schema_version, utils::epoch_now(), check_raw_value)) {
+                // check value ttl timeout
+                _pfc_recent_expire_count->increment();
+                s = rocksdb::Status::NotFound();
+            }
+        } else if (!s.IsNotFound()) {
+            // read check value failed
+            derror_rocksdb("GetCheckValue for CheckAndSet",
+                           s.ToString(),
+                           "decree: {}, hash_key: {}, check_sort_key: {}",
+                           decree,
+                           utils::c_escape_string(update.hash_key),
+                           utils::c_escape_string(update.check_sort_key));
+            resp.error = s.code();
+            return resp.error;
+        }
+        dassert(s.ok() || s.IsNotFound(), "status = %s", s.ToString().c_str());
+
+        ::dsn::blob check_value;
+        if (s.ok()) {
+            pegasus_extract_user_data(
+                _value_schema_version, std::move(check_raw_value), check_value);
+        }
+
+        bool invalid_argument = false;
+        bool passed = validate_check(
+            decree, update.check_type, update.check_operand, s.ok(), check_value, invalid_argument);
+        if (passed) {
+            // check passed, write new value
+            ::dsn::blob set_key;
+            if (update.set_diff_sort_key) {
+                pegasus_generate_key(set_key, update.hash_key, update.set_sort_key);
+            } else {
+                set_key = check_key;
+            }
+            resp.error = db_write_batch_put(decree,
+                                            set_key,
+                                            update.set_value,
+                                            static_cast<uint32_t>(update.set_expire_ts_seconds));
+        } else {
+            // check not passed, write empty record to update rocksdb's last flushed decree
+            resp.error = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+        }
+        if (resp.error) {
+            clear_up_batch_states(decree, resp.error);
+            return resp.error;
+        }
+
+        resp.error = db_write(decree);
+        if (resp.error) {
+            clear_up_batch_states(decree, resp.error);
+            return resp.error;
+        }
+
+        if (!passed) {
+            // check not passed, return proper error code to user
+            resp.error =
+                invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
+        }
+
+        if (update.return_check_value) {
+            resp.check_value_returned = true;
+            if (s.ok()) {
+                resp.check_value_exist = true;
+                resp.check_value = std::move(check_value);
+            }
+        }
+
+        clear_up_batch_states(decree, resp.error);
+        return 0;
     }
 
     /// For batch write.
@@ -283,8 +384,8 @@ private:
 
         FAIL_POINT_INJECT_F("db_write", [](dsn::string_view) -> int { return FAIL_DB_WRITE; });
 
-        _wt_opts->given_decree = static_cast<uint64_t>(decree);
-        auto status = _db->Write(*_wt_opts, &_batch);
+        _wt_opts.given_decree = static_cast<uint64_t>(decree);
+        auto status = _db->Write(_wt_opts, &_batch);
         if (!status.ok()) {
             derror_rocksdb("Write", status.ToString(), "decree: {}", decree);
         }
@@ -316,6 +417,111 @@ private:
         return raw_key;
     }
 
+    // return true if the check type is supported
+    bool is_check_type_supported(::dsn::apps::cas_check_type::type check_type)
+    {
+        return check_type >= ::dsn::apps::cas_check_type::CT_NO_CHECK &&
+               check_type <= ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER;
+    }
+
+    // return true if check passed.
+    // for int compare, if check operand or value are not valid integer, then return false,
+    // and set out param `invalid_argument' to false.
+    bool validate_check(int64_t decree,
+                        ::dsn::apps::cas_check_type::type check_type,
+                        const ::dsn::blob &check_operand,
+                        bool value_exist,
+                        const ::dsn::blob &value,
+                        bool &invalid_argument)
+    {
+        invalid_argument = false;
+        switch (check_type) {
+        case ::dsn::apps::cas_check_type::CT_NO_CHECK:
+            return true;
+        case ::dsn::apps::cas_check_type::CT_VALUE_NOT_EXIST:
+            return !value_exist;
+        case ::dsn::apps::cas_check_type::CT_VALUE_NOT_EXIST_OR_EMPTY:
+            return !value_exist || value.length() == 0;
+        case ::dsn::apps::cas_check_type::CT_VALUE_EXIST:
+            return value_exist;
+        case ::dsn::apps::cas_check_type::CT_VALUE_NOT_EMPTY:
+            return value_exist && value.length() != 0;
+        case ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE:
+        case ::dsn::apps::cas_check_type::CT_VALUE_MATCH_PREFIX:
+        case ::dsn::apps::cas_check_type::CT_VALUE_MATCH_POSTFIX: {
+            if (!value_exist)
+                return false;
+            if (check_operand.length() == 0)
+                return true;
+            if (value.length() < check_operand.length())
+                return false;
+            if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
+                return dsn::string_view(value).find(check_operand) != dsn::string_view::npos;
+            } else if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_PREFIX) {
+                return ::memcmp(value.data(), check_operand.data(), check_operand.length()) == 0;
+            } else { // check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_POSTFIX
+                return ::memcmp(value.data() + value.length() - check_operand.length(),
+                                check_operand.data(),
+                                check_operand.length()) == 0;
+            }
+        }
+        case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS:
+        case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL:
+        case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_EQUAL:
+        case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER_OR_EQUAL:
+        case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER: {
+            if (!value_exist)
+                return false;
+            int c = dsn::string_view(value).compare(dsn::string_view(check_operand));
+            if (c < 0) {
+                return check_type <= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL;
+            } else if (c == 0) {
+                return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL &&
+                       check_type <= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER_OR_EQUAL;
+            } else { // c > 0
+                return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER_OR_EQUAL;
+            }
+        }
+        case ::dsn::apps::cas_check_type::CT_VALUE_INT_LESS:
+        case ::dsn::apps::cas_check_type::CT_VALUE_INT_LESS_OR_EQUAL:
+        case ::dsn::apps::cas_check_type::CT_VALUE_INT_EQUAL:
+        case ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER_OR_EQUAL:
+        case ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER: {
+            if (!value_exist)
+                return false;
+            int64_t check_value_int;
+            if (!dsn::buf2int64(value, check_value_int)) {
+                // invalid check value
+                derror_replica("check failed: decree = {}, error = {}",
+                               decree,
+                               "check value is not an integer or out of range");
+                invalid_argument = true;
+                return false;
+            }
+            int64_t check_operand_int;
+            if (!dsn::buf2int64(check_operand, check_operand_int)) {
+                // invalid check operand
+                derror_replica("check failed: decree = {}, error = {}",
+                               decree,
+                               "check operand is not an integer or out of range");
+                invalid_argument = true;
+                return false;
+            }
+            if (check_value_int < check_operand_int) {
+                return check_type <= ::dsn::apps::cas_check_type::CT_VALUE_INT_LESS_OR_EQUAL;
+            } else if (check_value_int == check_operand_int) {
+                return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_INT_LESS_OR_EQUAL &&
+                       check_type <= ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER_OR_EQUAL;
+            } else { // check_value_int > check_operand_int
+                return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER_OR_EQUAL;
+            }
+        }
+        default:
+            dassert(false, "unsupported check type: %d", check_type);
+        }
+        return false;
+    }
+
 private:
     friend class pegasus_write_service_test;
     friend class pegasus_server_write_test;
@@ -325,8 +531,9 @@ private:
 
     rocksdb::WriteBatch _batch;
     rocksdb::DB *_db;
-    rocksdb::WriteOptions *_wt_opts;
-    rocksdb::ReadOptions *_rd_opts;
+    rocksdb::WriteOptions &_wt_opts;
+    rocksdb::ReadOptions &_rd_opts;
+    ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
 
     pegasus_value_generator _value_generator;
 

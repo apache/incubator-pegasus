@@ -35,6 +35,7 @@ public:
         ::dsn::perf_counter_wrapper remove_qps;
         ::dsn::perf_counter_wrapper multi_remove_qps;
         ::dsn::perf_counter_wrapper incr_qps;
+        ::dsn::perf_counter_wrapper check_and_set_qps;
         ::dsn::perf_counter_wrapper scan_qps;
         ::dsn::perf_counter_wrapper recent_expire_count;
         ::dsn::perf_counter_wrapper recent_filter_count;

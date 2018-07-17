@@ -19,4 +19,7 @@ using remove_rpc = dsn::rpc_holder<dsn::blob, dsn::apps::update_response>;
 
 using incr_rpc = dsn::rpc_holder<dsn::apps::incr_request, dsn::apps::incr_response>;
 
+using check_and_set_rpc =
+    dsn::rpc_holder<dsn::apps::check_and_set_request, dsn::apps::check_and_set_response>;
+
 } // namespace pegasus
