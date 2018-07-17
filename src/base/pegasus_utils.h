@@ -23,25 +23,6 @@ inline uint32_t epoch_now() { return time(nullptr) - epoch_begin; }
 // extract "host" from rpc_address
 void addr2host(const ::dsn::rpc_address &addr, char *str, int len);
 
-// three-way comparison, returns value:
-//   <  0 iff "a" <  "b",
-//   == 0 iff "a" == "b",
-//   >  0 iff "a" >  "b"
-// T must support data() and length() method.
-template <class T>
-int binary_compare(const T &a, const T &b)
-{
-    size_t min_len = (a.length() < b.length()) ? a.length() : b.length();
-    int r = ::memcmp(a.data(), b.data(), min_len);
-    if (r == 0) {
-        if (a.length() < b.length())
-            r = -1;
-        else if (a.length() > b.length())
-            r = +1;
-    }
-    return r;
-}
-
 template <typename elem_type, typename compare = std::less<elem_type>>
 class top_n
 {

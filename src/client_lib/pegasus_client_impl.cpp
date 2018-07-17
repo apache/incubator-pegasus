@@ -1025,12 +1025,12 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
         pegasus_generate_key(prefix_start, hash_key, o.sort_key_filter_pattern);
         pegasus_generate_next_blob(prefix_stop, hash_key, o.sort_key_filter_pattern);
 
-        if (::pegasus::utils::binary_compare(prefix_start, start) > 0) {
+        if (::dsn::string_view(prefix_start).compare(start) > 0) {
             start = std::move(prefix_start);
             o.start_inclusive = true;
         }
 
-        if (::pegasus::utils::binary_compare(prefix_stop, stop) <= 0) {
+        if (::dsn::string_view(prefix_stop).compare(stop) <= 0) {
             stop = std::move(prefix_stop);
             o.stop_inclusive = false;
         }
@@ -1038,7 +1038,7 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
 
     // check if range is empty
     std::vector<uint64_t> v;
-    int c = ::pegasus::utils::binary_compare(start, stop);
+    int c = ::dsn::string_view(start).compare(stop);
     if (c < 0 || (c == 0 && o.start_inclusive && o.stop_inclusive)) {
         v.push_back(pegasus_key_hash(start));
     }

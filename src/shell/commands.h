@@ -14,6 +14,7 @@
 #include <rocksdb/sst_dump_tool.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
+#include <dsn/utility/string_view.h>
 #include <dsn/tool/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
@@ -40,96 +41,91 @@ inline bool version(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-#define NAME_EQUAL(name) ((len = strlen(name)) == length && strncmp(buffer, name, len) == 0)
-
-inline bool
-buf2filter_type(const char *buffer, int length, pegasus::pegasus_client::filter_type &result)
+inline bool buf2filter_type(dsn::string_view str, pegasus::pegasus_client::filter_type &result)
 {
-    int len = 0;
-    if (NAME_EQUAL("anywhere")) {
+    if (!str.compare("anywhere")) {
         result = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
         return true;
     }
-    if (NAME_EQUAL("prefix")) {
+    if (!str.compare("prefix")) {
         result = pegasus::pegasus_client::FT_MATCH_PREFIX;
         return true;
     }
-    if (NAME_EQUAL("postfix")) {
+    if (!str.compare("postfix")) {
         result = pegasus::pegasus_client::FT_MATCH_POSTFIX;
         return true;
     }
     return false;
 }
 
-inline bool
-buf2cas_check_type(const char *buffer, int length, pegasus::pegasus_client::cas_check_type &result)
+inline bool buf2cas_check_type(dsn::string_view str,
+                               pegasus::pegasus_client::cas_check_type &result)
 {
-    int len = 0;
-    if (NAME_EQUAL("not_exist")) {
+    if (!str.compare("not_exist")) {
         result = pegasus::pegasus_client::CT_VALUE_NOT_EXIST;
         return true;
     }
-    if (NAME_EQUAL("not_exist_or_empty")) {
+    if (!str.compare("not_exist_or_empty")) {
         result = pegasus::pegasus_client::CT_VALUE_NOT_EXIST_OR_EMPTY;
         return true;
     }
-    if (NAME_EQUAL("exist")) {
+    if (!str.compare("exist")) {
         result = pegasus::pegasus_client::CT_VALUE_EXIST;
         return true;
     }
-    if (NAME_EQUAL("not_empty")) {
+    if (!str.compare("not_empty")) {
         result = pegasus::pegasus_client::CT_VALUE_NOT_EMPTY;
         return true;
     }
-    if (NAME_EQUAL("match_anywhere")) {
+    if (!str.compare("match_anywhere")) {
         result = pegasus::pegasus_client::CT_VALUE_MATCH_ANYWHERE;
         return true;
     }
-    if (NAME_EQUAL("match_prefix")) {
+    if (!str.compare("match_prefix")) {
         result = pegasus::pegasus_client::CT_VALUE_MATCH_PREFIX;
         return true;
     }
-    if (NAME_EQUAL("match_postfix")) {
+    if (!str.compare("match_postfix")) {
         result = pegasus::pegasus_client::CT_VALUE_MATCH_POSTFIX;
         return true;
     }
-    if (NAME_EQUAL("bytes_less")) {
+    if (!str.compare("bytes_less")) {
         result = pegasus::pegasus_client::CT_VALUE_BYTES_LESS;
         return true;
     }
-    if (NAME_EQUAL("bytes_less_or_equal")) {
+    if (!str.compare("bytes_less_or_equal")) {
         result = pegasus::pegasus_client::CT_VALUE_BYTES_LESS_OR_EQUAL;
         return true;
     }
-    if (NAME_EQUAL("bytes_equal")) {
+    if (!str.compare("bytes_equal")) {
         result = pegasus::pegasus_client::CT_VALUE_BYTES_EQUAL;
         return true;
     }
-    if (NAME_EQUAL("bytes_greater_or_equal")) {
+    if (!str.compare("bytes_greater_or_equal")) {
         result = pegasus::pegasus_client::CT_VALUE_BYTES_GREATER_OR_EQUAL;
         return true;
     }
-    if (NAME_EQUAL("bytes_greater")) {
+    if (!str.compare("bytes_greater")) {
         result = pegasus::pegasus_client::CT_VALUE_BYTES_GREATER;
         return true;
     }
-    if (NAME_EQUAL("int_less")) {
+    if (!str.compare("int_less")) {
         result = pegasus::pegasus_client::CT_VALUE_INT_LESS;
         return true;
     }
-    if (NAME_EQUAL("int_less_or_equal")) {
+    if (!str.compare("int_less_or_equal")) {
         result = pegasus::pegasus_client::CT_VALUE_INT_LESS_OR_EQUAL;
         return true;
     }
-    if (NAME_EQUAL("int_equal")) {
+    if (!str.compare("int_equal")) {
         result = pegasus::pegasus_client::CT_VALUE_INT_EQUAL;
         return true;
     }
-    if (NAME_EQUAL("int_greater_or_equal")) {
+    if (!str.compare("int_greater_or_equal")) {
         result = pegasus::pegasus_client::CT_VALUE_INT_GREATER_OR_EQUAL;
         return true;
     }
-    if (NAME_EQUAL("int_greater")) {
+    if (!str.compare("int_greater")) {
         result = pegasus::pegasus_client::CT_VALUE_INT_GREATER;
         return true;
     }
@@ -867,7 +863,7 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
             }
             break;
         case 's':
-            if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
+            if (!buf2filter_type(optarg, options.sort_key_filter_type)) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1205,7 +1201,7 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
             }
             break;
         case 's':
-            if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
+            if (!buf2filter_type(optarg, options.sort_key_filter_type)) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1426,7 +1422,7 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
             check_sort_key = unescape_str(optarg);
             break;
         case 't':
-            if (!buf2cas_check_type(optarg, strlen(optarg), check_type)) {
+            if (!buf2cas_check_type(optarg, check_type)) {
                 fprintf(stderr, "ERROR: invalid check_type param\n");
                 return false;
             }
@@ -1650,7 +1646,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 's':
-            if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
+            if (!buf2filter_type(optarg, options.sort_key_filter_type)) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1831,7 +1827,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            if (!buf2filter_type(optarg, strlen(optarg), options.hash_key_filter_type)) {
+            if (!buf2filter_type(optarg, options.hash_key_filter_type)) {
                 fprintf(stderr, "invalid hash_key_filter_type param\n");
                 return false;
             }
@@ -1841,7 +1837,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            if (!buf2filter_type(optarg, strlen(optarg), options.sort_key_filter_type)) {
+            if (!buf2filter_type(optarg, options.sort_key_filter_type)) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
