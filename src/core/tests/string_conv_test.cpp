@@ -46,6 +46,16 @@ TEST(string_conv, buf2bool)
     ASSERT_EQ(result, false);
 
     ASSERT_FALSE(dsn::buf2bool("TrUe", result, false));
+
+    std::string str("true\0false", 10);
+    ASSERT_FALSE(dsn::buf2bool(dsn::string_view(str.data(), 3), result));
+    ASSERT_TRUE(dsn::buf2bool(dsn::string_view(str.data(), 4), result));
+    ASSERT_EQ(result, true);
+    ASSERT_FALSE(dsn::buf2bool(dsn::string_view(str.data(), 5), result));
+    ASSERT_FALSE(dsn::buf2bool(dsn::string_view(str.data(), 6), result));
+    ASSERT_FALSE(dsn::buf2bool(dsn::string_view(str.data() + 5, 4), result));
+    ASSERT_TRUE(dsn::buf2bool(dsn::string_view(str.data() + 5, 5), result));
+    ASSERT_EQ(result, false);
 }
 
 TEST(string_conv, buf2int32)
@@ -76,6 +86,14 @@ TEST(string_conv, buf2int32)
     ASSERT_FALSE(dsn::buf2int32(std::to_string(std::numeric_limits<int64_t>::max()), result));
     ASSERT_FALSE(dsn::buf2int32(std::to_string(std::numeric_limits<int64_t>::min()), result));
     ASSERT_FALSE(dsn::buf2int32(std::to_string(std::numeric_limits<uint64_t>::max()), result));
+
+    std::string str("123\0456", 7);
+    ASSERT_TRUE(dsn::buf2int32(dsn::string_view(str.data(), 2), result));
+    ASSERT_EQ(result, 12);
+    ASSERT_TRUE(dsn::buf2int32(dsn::string_view(str.data(), 3), result));
+    ASSERT_EQ(result, 123);
+    ASSERT_FALSE(dsn::buf2int32(dsn::string_view(str.data(), 4), result));
+    ASSERT_FALSE(dsn::buf2int32(dsn::string_view(str.data(), 5), result));
 }
 
 TEST(string_conv, buf2int64)
@@ -113,6 +131,14 @@ TEST(string_conv, buf2int64)
     ASSERT_EQ(result, std::numeric_limits<int64_t>::min());
 
     ASSERT_FALSE(dsn::buf2int64(std::to_string(std::numeric_limits<uint64_t>::max()), result));
+
+    std::string str("123\0456", 7);
+    ASSERT_TRUE(dsn::buf2int64(dsn::string_view(str.data(), 2), result));
+    ASSERT_EQ(result, 12);
+    ASSERT_TRUE(dsn::buf2int64(dsn::string_view(str.data(), 3), result));
+    ASSERT_EQ(result, 123);
+    ASSERT_FALSE(dsn::buf2int64(dsn::string_view(str.data(), 4), result));
+    ASSERT_FALSE(dsn::buf2int64(dsn::string_view(str.data(), 5), result));
 }
 
 TEST(string_conv, buf2uint64)
@@ -124,6 +150,8 @@ TEST(string_conv, buf2uint64)
 
     ASSERT_TRUE(dsn::buf2uint64("-0", result));
     ASSERT_EQ(result, 0);
+
+    ASSERT_FALSE(dsn::buf2uint64("-1", result));
 
     ASSERT_TRUE(dsn::buf2uint64("0xdeadbeef", result));
     ASSERT_EQ(result, 0xdeadbeef);
@@ -145,6 +173,14 @@ TEST(string_conv, buf2uint64)
 
     ASSERT_TRUE(dsn::buf2uint64(std::to_string(std::numeric_limits<uint64_t>::min()), result));
     ASSERT_EQ(result, std::numeric_limits<uint64_t>::min());
+
+    std::string str("123\0456", 7);
+    ASSERT_TRUE(dsn::buf2uint64(dsn::string_view(str.data(), 2), result));
+    ASSERT_EQ(result, 12);
+    ASSERT_TRUE(dsn::buf2uint64(dsn::string_view(str.data(), 3), result));
+    ASSERT_EQ(result, 123);
+    ASSERT_FALSE(dsn::buf2uint64(dsn::string_view(str.data(), 4), result));
+    ASSERT_FALSE(dsn::buf2uint64(dsn::string_view(str.data(), 5), result));
 }
 
 TEST(string_conv, int64_partial)

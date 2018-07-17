@@ -44,12 +44,13 @@ bool buf2signed(string_view buf, T &result)
         return false;
     }
 
+    std::string str(buf.data(), buf.length());
     const int saved_errno = errno;
     errno = 0;
     char *p = nullptr;
-    long long v = std::strtoll(buf.data(), &p, 0);
+    long long v = std::strtoll(str.data(), &p, 0);
 
-    if (p - buf.data() != buf.length()) {
+    if (p - str.data() != str.length()) {
         return false;
     }
 
@@ -74,12 +75,13 @@ bool buf2unsigned(string_view buf, T &result)
         return false;
     }
 
+    std::string str(buf.data(), buf.length());
     const int saved_errno = errno;
     errno = 0;
     char *p = nullptr;
-    unsigned long long v = std::strtoull(buf.data(), &p, 0);
+    unsigned long long v = std::strtoull(str.data(), &p, 0);
 
-    if (p - buf.data() != buf.length()) {
+    if (p - str.data() != str.length()) {
         return false;
     }
 
@@ -93,7 +95,7 @@ bool buf2unsigned(string_view buf, T &result)
 
     // strtoull() will convert a negative integer to an unsigned integer,
     // return false in this condition. (but we consider "-0" is correct)
-    if (v != 0 && std::find(buf.begin(), buf.end(), '-') != buf.end()) {
+    if (v != 0 && str.find('-') != std::string::npos) {
         return false;
     }
 
@@ -142,12 +144,13 @@ inline bool buf2double(string_view buf, double &result)
         return false;
     }
 
+    std::string str(buf.data(), buf.length());
     const int saved_errno = errno;
     errno = 0;
     char *p = nullptr;
-    double v = std::strtod(buf.data(), &p);
+    double v = std::strtod(str.data(), &p);
 
-    if (p - buf.data() != buf.length()) {
+    if (p - str.data() != str.length()) {
         return false;
     }
 
