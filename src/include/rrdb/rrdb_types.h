@@ -33,6 +33,33 @@ struct filter_type
 
 extern const std::map<int, const char *> _filter_type_VALUES_TO_NAMES;
 
+struct cas_check_type
+{
+    enum type
+    {
+        CT_NO_CHECK = 0,
+        CT_VALUE_NOT_EXIST = 1,
+        CT_VALUE_NOT_EXIST_OR_EMPTY = 2,
+        CT_VALUE_EXIST = 3,
+        CT_VALUE_NOT_EMPTY = 4,
+        CT_VALUE_MATCH_ANYWHERE = 5,
+        CT_VALUE_MATCH_PREFIX = 6,
+        CT_VALUE_MATCH_POSTFIX = 7,
+        CT_VALUE_BYTES_LESS = 8,
+        CT_VALUE_BYTES_LESS_OR_EQUAL = 9,
+        CT_VALUE_BYTES_EQUAL = 10,
+        CT_VALUE_BYTES_GREATER_OR_EQUAL = 11,
+        CT_VALUE_BYTES_GREATER = 12,
+        CT_VALUE_INT_LESS = 13,
+        CT_VALUE_INT_LESS_OR_EQUAL = 14,
+        CT_VALUE_INT_EQUAL = 15,
+        CT_VALUE_INT_GREATER_OR_EQUAL = 16,
+        CT_VALUE_INT_GREATER = 17
+    };
+};
+
+extern const std::map<int, const char *> _cas_check_type_VALUES_TO_NAMES;
+
 class update_request;
 
 class update_response;
@@ -58,6 +85,10 @@ class multi_get_response;
 class incr_request;
 
 class incr_response;
+
+class check_and_set_request;
+
+class check_and_set_response;
 
 class get_scanner_request;
 
@@ -1008,6 +1039,224 @@ public:
 void swap(incr_response &a, incr_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const incr_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _check_and_set_request__isset
+{
+    _check_and_set_request__isset()
+        : hash_key(false),
+          check_sort_key(false),
+          check_type(false),
+          check_operand(false),
+          set_diff_sort_key(false),
+          set_sort_key(false),
+          set_value(false),
+          set_expire_ts_seconds(false),
+          return_check_value(false)
+    {
+    }
+    bool hash_key : 1;
+    bool check_sort_key : 1;
+    bool check_type : 1;
+    bool check_operand : 1;
+    bool set_diff_sort_key : 1;
+    bool set_sort_key : 1;
+    bool set_value : 1;
+    bool set_expire_ts_seconds : 1;
+    bool return_check_value : 1;
+} _check_and_set_request__isset;
+
+class check_and_set_request
+{
+public:
+    check_and_set_request(const check_and_set_request &);
+    check_and_set_request(check_and_set_request &&);
+    check_and_set_request &operator=(const check_and_set_request &);
+    check_and_set_request &operator=(check_and_set_request &&);
+    check_and_set_request()
+        : check_type((cas_check_type::type)0),
+          set_diff_sort_key(0),
+          set_expire_ts_seconds(0),
+          return_check_value(0)
+    {
+    }
+
+    virtual ~check_and_set_request() throw();
+    ::dsn::blob hash_key;
+    ::dsn::blob check_sort_key;
+    cas_check_type::type check_type;
+    ::dsn::blob check_operand;
+    bool set_diff_sort_key;
+    ::dsn::blob set_sort_key;
+    ::dsn::blob set_value;
+    int32_t set_expire_ts_seconds;
+    bool return_check_value;
+
+    _check_and_set_request__isset __isset;
+
+    void __set_hash_key(const ::dsn::blob &val);
+
+    void __set_check_sort_key(const ::dsn::blob &val);
+
+    void __set_check_type(const cas_check_type::type val);
+
+    void __set_check_operand(const ::dsn::blob &val);
+
+    void __set_set_diff_sort_key(const bool val);
+
+    void __set_set_sort_key(const ::dsn::blob &val);
+
+    void __set_set_value(const ::dsn::blob &val);
+
+    void __set_set_expire_ts_seconds(const int32_t val);
+
+    void __set_return_check_value(const bool val);
+
+    bool operator==(const check_and_set_request &rhs) const
+    {
+        if (!(hash_key == rhs.hash_key))
+            return false;
+        if (!(check_sort_key == rhs.check_sort_key))
+            return false;
+        if (!(check_type == rhs.check_type))
+            return false;
+        if (!(check_operand == rhs.check_operand))
+            return false;
+        if (!(set_diff_sort_key == rhs.set_diff_sort_key))
+            return false;
+        if (!(set_sort_key == rhs.set_sort_key))
+            return false;
+        if (!(set_value == rhs.set_value))
+            return false;
+        if (!(set_expire_ts_seconds == rhs.set_expire_ts_seconds))
+            return false;
+        if (!(return_check_value == rhs.return_check_value))
+            return false;
+        return true;
+    }
+    bool operator!=(const check_and_set_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const check_and_set_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(check_and_set_request &a, check_and_set_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const check_and_set_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _check_and_set_response__isset
+{
+    _check_and_set_response__isset()
+        : error(false),
+          check_value_returned(false),
+          check_value_exist(false),
+          check_value(false),
+          app_id(false),
+          partition_index(false),
+          decree(false),
+          server(false)
+    {
+    }
+    bool error : 1;
+    bool check_value_returned : 1;
+    bool check_value_exist : 1;
+    bool check_value : 1;
+    bool app_id : 1;
+    bool partition_index : 1;
+    bool decree : 1;
+    bool server : 1;
+} _check_and_set_response__isset;
+
+class check_and_set_response
+{
+public:
+    check_and_set_response(const check_and_set_response &);
+    check_and_set_response(check_and_set_response &&);
+    check_and_set_response &operator=(const check_and_set_response &);
+    check_and_set_response &operator=(check_and_set_response &&);
+    check_and_set_response()
+        : error(0),
+          check_value_returned(0),
+          check_value_exist(0),
+          app_id(0),
+          partition_index(0),
+          decree(0),
+          server()
+    {
+    }
+
+    virtual ~check_and_set_response() throw();
+    int32_t error;
+    bool check_value_returned;
+    bool check_value_exist;
+    ::dsn::blob check_value;
+    int32_t app_id;
+    int32_t partition_index;
+    int64_t decree;
+    std::string server;
+
+    _check_and_set_response__isset __isset;
+
+    void __set_error(const int32_t val);
+
+    void __set_check_value_returned(const bool val);
+
+    void __set_check_value_exist(const bool val);
+
+    void __set_check_value(const ::dsn::blob &val);
+
+    void __set_app_id(const int32_t val);
+
+    void __set_partition_index(const int32_t val);
+
+    void __set_decree(const int64_t val);
+
+    void __set_server(const std::string &val);
+
+    bool operator==(const check_and_set_response &rhs) const
+    {
+        if (!(error == rhs.error))
+            return false;
+        if (!(check_value_returned == rhs.check_value_returned))
+            return false;
+        if (!(check_value_exist == rhs.check_value_exist))
+            return false;
+        if (!(check_value == rhs.check_value))
+            return false;
+        if (!(app_id == rhs.app_id))
+            return false;
+        if (!(partition_index == rhs.partition_index))
+            return false;
+        if (!(decree == rhs.decree))
+            return false;
+        if (!(server == rhs.server))
+            return false;
+        return true;
+    }
+    bool operator!=(const check_and_set_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const check_and_set_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(check_and_set_response &a, check_and_set_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const check_and_set_response &obj)
 {
     obj.printTo(out);
     return out;

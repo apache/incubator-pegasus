@@ -49,6 +49,11 @@ int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
         auto rpc = incr_rpc::auto_reply(requests[0]);
         return _write_svc->incr(_decree, rpc.request(), rpc.response());
     }
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+        dassert(count == 1, "count = %d", count);
+        auto rpc = check_and_set_rpc::auto_reply(requests[0]);
+        return _write_svc->check_and_set(_decree, rpc.request(), rpc.response());
+    }
 
     return on_batched_writes(requests, count);
 }

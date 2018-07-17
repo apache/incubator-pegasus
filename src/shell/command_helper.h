@@ -16,6 +16,7 @@
 #include <dsn/tool/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
+#include <dsn/perf_counter/perf_counter_utils.h>
 
 #include <rrdb/rrdb.code.definition.h>
 #include <pegasus/version.h>
@@ -26,7 +27,6 @@
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
-#include "base/counter_utils.h"
 
 #include "command_executor.h"
 #include "command_utils.h"
@@ -375,6 +375,7 @@ struct row_data
     double remove_qps;
     double multi_remove_qps;
     double incr_qps;
+    double check_and_set_qps;
     double scan_qps;
     double recent_expire_count;
     double recent_filter_count;
@@ -389,6 +390,7 @@ struct row_data
           remove_qps(0),
           multi_remove_qps(0),
           incr_qps(0),
+          check_and_set_qps(0),
           scan_qps(0),
           recent_expire_count(0),
           recent_filter_count(0),
@@ -415,6 +417,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.multi_remove_qps += value;
     else if (counter_name == "incr_qps")
         row.incr_qps += value;
+    else if (counter_name == "check_and_set_qps")
+        row.check_and_set_qps += value;
     else if (counter_name == "scan_qps")
         row.scan_qps += value;
     else if (counter_name == "recent.expire.count")
@@ -506,9 +510,9 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 derror("query perf counter info from node %s failed", node_addr.to_string());
                 return true;
             }
-            pegasus::perf_counter_info info;
+            dsn::perf_counter_info info;
             dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<pegasus::perf_counter_info>::decode(bb, info)) {
+            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
                 derror("decode perf counter info from node %s failed, result = %s",
                        node_addr.to_string(),
                        results[i].second.c_str());
@@ -520,7 +524,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                        info.result.c_str());
                 return true;
             }
-            for (pegasus::perf_counter_metric &m : info.counters) {
+            for (dsn::perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
                 std::string counter_name;
                 bool parse_ret = parse_app_pegasus_perf_counter_name(
@@ -560,9 +564,9 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 derror("query perf counter info from node %s failed", node_addr.to_string());
                 return true;
             }
-            pegasus::perf_counter_info info;
+            dsn::perf_counter_info info;
             dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<pegasus::perf_counter_info>::decode(bb, info)) {
+            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
                 derror("decode perf counter info from node %s failed, result = %s",
                        node_addr.to_string(),
                        results[i].second.c_str());
@@ -574,7 +578,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                        info.result.c_str());
                 return true;
             }
-            for (pegasus::perf_counter_metric &m : info.counters) {
+            for (dsn::perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
                 std::string counter_name;
                 bool parse_ret = parse_app_pegasus_perf_counter_name(

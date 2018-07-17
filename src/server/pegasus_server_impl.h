@@ -187,7 +187,11 @@ private:
                                        bool no_value);
 
     // return true if the filter type is supported
-    bool is_filter_type_supported(::dsn::apps::filter_type::type filter_type);
+    bool is_filter_type_supported(::dsn::apps::filter_type::type filter_type)
+    {
+        return filter_type >= ::dsn::apps::filter_type::FT_NO_FILTER &&
+               filter_type <= ::dsn::apps::filter_type::FT_MATCH_POSTFIX;
+    }
 
     // return true if the data is valid for the filter
     bool validate_filter(::dsn::apps::filter_type::type filter_type,

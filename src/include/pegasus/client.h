@@ -99,6 +99,66 @@ public:
         }
     };
 
+    enum cas_check_type
+    {
+        CT_NO_CHECK = 0,
+
+        // appearance
+        CT_VALUE_NOT_EXIST = 1,          // value is not exist
+        CT_VALUE_NOT_EXIST_OR_EMPTY = 2, // value is not exist or value is empty
+        CT_VALUE_EXIST = 3,              // value is exist
+        CT_VALUE_NOT_EMPTY = 4,          // value is exist and not empty
+
+        // match
+        CT_VALUE_MATCH_ANYWHERE = 5, // operand matches anywhere in value
+        CT_VALUE_MATCH_PREFIX = 6,   // operand matches prefix in value
+        CT_VALUE_MATCH_POSTFIX = 7,  // operand matches postfix in value
+
+        // bytes compare
+        CT_VALUE_BYTES_LESS = 8,              // bytes compare: value < operand
+        CT_VALUE_BYTES_LESS_OR_EQUAL = 9,     // bytes compare: value <= operand
+        CT_VALUE_BYTES_EQUAL = 10,            // bytes compare: value == operand
+        CT_VALUE_BYTES_GREATER_OR_EQUAL = 11, // bytes compare: value >= operand
+        CT_VALUE_BYTES_GREATER = 12,          // bytes compare: value > operand
+
+        // int compare: first transfer bytes to int64 by atoi(); then compare by int value
+        CT_VALUE_INT_LESS = 13,             // int compare: value < operand
+        CT_VALUE_INT_LESS_OR_EQUAL = 14,    // int compare: value <= operand
+        CT_VALUE_INT_EQUAL = 15,            // int compare: value == operand
+        CT_VALUE_INT_GREATER_OR_EQUAL = 16, // int compare: value >= operand
+        CT_VALUE_INT_GREATER = 17           // int compare: value > operand
+    };
+
+    struct check_and_set_options
+    {
+        int set_value_ttl_seconds; // time to live in seconds of the set value, 0 means no ttl.
+        bool return_check_value;   // if return the check value in results.
+        check_and_set_options() : set_value_ttl_seconds(0), return_check_value(false) {}
+        check_and_set_options(const check_and_set_options &o)
+            : set_value_ttl_seconds(o.set_value_ttl_seconds),
+              return_check_value(o.return_check_value)
+        {
+        }
+    };
+
+    struct check_and_set_results
+    {
+        bool set_succeed;          // if set value succeed.
+        bool check_value_returned; // if the check value is returned.
+        bool check_value_exist;    // can be used only when check_value_returned is true.
+        std::string check_value;   // can be used only when check_value_exist is true.
+        check_and_set_results()
+            : set_succeed(false), check_value_returned(false), check_value_exist(false)
+        {
+        }
+        check_and_set_results(const check_and_set_results &o)
+            : set_succeed(o.set_succeed),
+              check_value_returned(o.check_value_returned),
+              check_value_exist(o.check_value_exist)
+        {
+        }
+    };
+
     struct scan_options
     {
         int timeout_ms;           // RPC call timeout param, in milliseconds
@@ -157,6 +217,9 @@ public:
     typedef std::function<void(
         int /*error_code*/, int64_t /*new_value*/, internal_info && /*info*/)>
         async_incr_callback_t;
+    typedef std::function<void(
+        int /*error_code*/, check_and_set_results && /*results*/, internal_info && /*info*/)>
+        async_check_and_set_callback_t;
     typedef std::function<void(int /*error_code*/,
                                std::string && /*hash_key*/,
                                std::string && /*sort_key*/,
@@ -683,7 +746,7 @@ public:
 
     ///
     /// \brief incr
-    ///     increment value by key from the cluster.
+    ///     atomically increment value by key from the cluster.
     ///     key is composed of hashkey and sortkey. must provide both to get the value.
     ///     the increment semantic is the same as redis:
     ///       - if old data is not found or empty, then set initial value to 0.
@@ -700,6 +763,8 @@ public:
     /// all the k-v under hashkey will be sorted by sortkey.
     /// \param increment
     /// the value we want to increment.
+    /// \param new_value
+    /// out param to return the new value if increment succeed.
     /// \param timeout_milliseconds
     /// if wait longer than this value, will return time out error
     /// \return
@@ -715,12 +780,14 @@ public:
 
     ///
     /// \brief asynchronous incr
-    ///     increment value by key from the cluster.
+    ///     atomically increment value by key from the cluster.
     ///     will not be blocked, return immediately.
     /// \param hashkey
     /// used to decide which partition to get this k-v
     /// \param sortkey
     /// all the k-v under hashkey will be sorted by sortkey.
+    /// \param increment
+    /// the value we want to increment.
     /// \param callback
     /// the callback function will be invoked after operation finished or error occurred.
     /// \param timeout_milliseconds
@@ -733,6 +800,81 @@ public:
                             int64_t increment,
                             async_incr_callback_t &&callback = nullptr,
                             int timeout_milliseconds = 5000) = 0;
+
+    ///
+    /// \brief check_and_set
+    ///     atomically check and set value by key from the cluster.
+    ///     the value will be set if and only if check passed.
+    ///     the sort key for checking and setting can be the same or different.
+    /// \param hash_key
+    /// used to decide which partition to get this k-v
+    /// \param check_sort_key
+    /// the sort key to check.
+    /// \param check_type
+    /// the check type.
+    /// \param check_operand
+    /// the check operand.
+    /// \param set_sort_key
+    /// the sort key to set value if check passed.
+    /// \param set_value
+    /// the value to set if check passed.
+    /// \param options
+    /// the check-and-set options.
+    /// \param results
+    /// the check-and-set results.
+    /// \param timeout_milliseconds
+    /// if wait longer than this value, will return time out error
+    /// \return
+    /// int, the error indicates whether or not the operation is succeeded.
+    /// this error can be converted to a string using get_error_string().
+    /// if check type is int compare, and check_operand/check_value is not integer
+    /// or out of range, then return PERR_INVALID_ARGUMENT.
+    ///
+    virtual int check_and_set(const std::string &hash_key,
+                              const std::string &check_sort_key,
+                              cas_check_type check_type,
+                              const std::string &check_operand,
+                              const std::string &set_sort_key,
+                              const std::string &set_value,
+                              const check_and_set_options &options,
+                              check_and_set_results &results,
+                              int timeout_milliseconds = 5000,
+                              internal_info *info = nullptr) = 0;
+
+    ///
+    /// \brief asynchronous check_and_set
+    ///     atomically check and set value by key from the cluster.
+    ///     will not be blocked, return immediately.
+    /// \param hash_key
+    /// used to decide which partition to get this k-v
+    /// \param check_sort_key
+    /// the sort key to check.
+    /// \param check_type
+    /// the check type.
+    /// \param check_operand
+    /// the check operand.
+    /// \param set_sort_key
+    /// the sort key to set value if check passed.
+    /// \param set_value
+    /// the value to set if check passed.
+    /// \param options
+    /// the check-and-set options.
+    /// \param callback
+    /// the callback function will be invoked after operation finished or error occurred.
+    /// \param timeout_milliseconds
+    /// if wait longer than this value, will return time out error
+    /// \return
+    /// void.
+    ///
+    virtual void async_check_and_set(const std::string &hash_key,
+                                     const std::string &check_sort_key,
+                                     cas_check_type check_type,
+                                     const std::string &check_operand,
+                                     const std::string &set_sort_key,
+                                     const std::string &set_value,
+                                     const check_and_set_options &options,
+                                     async_check_and_set_callback_t &&callback = nullptr,
+                                     int timeout_milliseconds = 5000) = 0;
 
     ///
     /// \brief ttl (time to live)

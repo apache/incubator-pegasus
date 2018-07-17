@@ -10,6 +10,36 @@ enum filter_type
     FT_MATCH_POSTFIX
 }
 
+enum cas_check_type
+{
+    CT_NO_CHECK,
+
+    // (1~4) appearance
+    CT_VALUE_NOT_EXIST,               // value is not exist
+    CT_VALUE_NOT_EXIST_OR_EMPTY,      // value is not exist or value is empty
+    CT_VALUE_EXIST,                   // value is exist
+    CT_VALUE_NOT_EMPTY,               // value is exist and not empty
+
+    // (5~7) match
+    CT_VALUE_MATCH_ANYWHERE,          // operand matches anywhere in value
+    CT_VALUE_MATCH_PREFIX,            // operand matches prefix in value
+    CT_VALUE_MATCH_POSTFIX,           // operand matches postfix in value
+
+    // (8~12) bytes compare
+    CT_VALUE_BYTES_LESS,              // bytes compare: value < operand
+    CT_VALUE_BYTES_LESS_OR_EQUAL,     // bytes compare: value <= operand
+    CT_VALUE_BYTES_EQUAL,             // bytes compare: value == operand
+    CT_VALUE_BYTES_GREATER_OR_EQUAL,  // bytes compare: value >= operand
+    CT_VALUE_BYTES_GREATER,           // bytes compare: value > operand
+
+    // (13~17) int compare: first transfer bytes to int64 by atoi(); then compare by int value
+    CT_VALUE_INT_LESS,                // int compare: value < operand
+    CT_VALUE_INT_LESS_OR_EQUAL,       // int compare: value <= operand
+    CT_VALUE_INT_EQUAL,               // int compare: value == operand
+    CT_VALUE_INT_GREATER_OR_EQUAL,    // int compare: value >= operand
+    CT_VALUE_INT_GREATER              // int compare: value > operand
+}
+
 struct update_request
 {
     1:dsn.blob      key;
@@ -124,6 +154,33 @@ struct incr_response
     6:string        server;
 }
 
+struct check_and_set_request
+{
+    1:dsn.blob       hash_key;
+    2:dsn.blob       check_sort_key;
+    3:cas_check_type check_type;
+    4:dsn.blob       check_operand;
+    5:bool           set_diff_sort_key; // if set different sort key with check_sort_key
+    6:dsn.blob       set_sort_key; // used only if set_diff_sort_key is true
+    7:dsn.blob       set_value;
+    8:i32            set_expire_ts_seconds;
+    9:bool           return_check_value;
+}
+
+struct check_and_set_response
+{
+    1:i32            error; // return kTryAgain if check not passed.
+                            // return kInvalidArgument if check type is int compare and
+                            // check_operand/check_value is not integer or out of range.
+    2:bool           check_value_returned;
+    3:bool           check_value_exist; // used only if check_value_returned is true
+    4:dsn.blob       check_value; // used only if check_value_returned and check_value_exist is true
+    5:i32            app_id;
+    6:i32            partition_index;
+    7:i64            decree;
+    8:string         server;
+}
+
 struct get_scanner_request
 {
     1:dsn.blob  start_key;
@@ -160,6 +217,7 @@ service rrdb
     update_response remove(1:dsn.blob key);
     multi_remove_response multi_remove(1:multi_remove_request request);
     incr_response incr(1:incr_request request);
+    check_and_set_response check_and_set(1:check_and_set_request request);
     read_response get(1:dsn.blob key);
     multi_get_response multi_get(1:multi_get_request request);
     count_response sortkey_count(1:dsn.blob hash_key);
