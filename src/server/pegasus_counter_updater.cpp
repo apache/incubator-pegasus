@@ -147,29 +147,40 @@ void pegasus_counter_updater::update()
 {
     uint64_t now = dsn_now_ms();
     int64_t timestamp = now / 1000;
-    std::vector<std::unique_ptr<counter_stream>> streams;
-    if (_enable_logging) {
-        streams.emplace_back(dsn::make_unique<logging_counter>());
-    }
-    if (_enable_falcon) {
-        streams.emplace_back(dsn::make_unique<falcon_counter>(_falcon_metric, timestamp));
-    }
 
     perf_counters::instance().take_snapshot();
-    perf_counters::instance().iterate_snapshot(
-        [&streams, this](const dsn::perf_counter_ptr &ptr, double val) {
-            for (const std::unique_ptr<counter_stream> &s : streams) {
-                s->append(ptr, val);
-            }
-        });
 
     if (_enable_logging) {
-        std::string str = streams.front()->to_string();
-        ddebug("%s", str.c_str());
+        std::stringstream oss;
+        oss << "logging perf counter(name, type, value):" << std::endl;
+        oss << std::fixed << std::setprecision(2);
+        perf_counters::instance().iterate_snapshot(
+            [&oss, this](const dsn::perf_counter_ptr &ptr, double val) {
+                oss << "[" << ptr->full_name() << ", " << dsn_counter_type_to_string(ptr->type())
+                    << ", " << val << "]" << std::endl;
+            });
+        ddebug("%s", oss.str().c_str());
     }
+
     if (_enable_falcon) {
-        std::string str = streams.back()->to_string();
-        update_counters_to_falcon(str, timestamp);
+        std::stringstream oss;
+        oss << "[";
+
+        bool first_append = true;
+        _falcon_metric.timestamp = timestamp;
+        perf_counters::instance().iterate_snapshot(
+            [&oss, &first_append, this](const dsn::perf_counter_ptr &ptr, double val) {
+                _falcon_metric.metric = ptr->full_name();
+                _falcon_metric.value = val;
+                _falcon_metric.counterType = "GAUGE";
+                if (!first_append)
+                    oss << ",";
+                _falcon_metric.encode_json_state(oss);
+                first_append = false;
+            });
+        oss << "]";
+
+        update_counters_to_falcon(oss.str(), timestamp);
     }
 
     ddebug("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);

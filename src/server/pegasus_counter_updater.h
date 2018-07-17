@@ -36,61 +36,6 @@ struct falcon_metric
     DEFINE_JSON_SERIALIZATION(endpoint, metric, timestamp, step, value, counterType, tags)
 };
 
-class counter_stream
-{
-public:
-    virtual void append(const dsn::perf_counter_ptr &ptr, double val) = 0;
-    virtual std::string to_string() = 0;
-
-protected:
-    std::stringstream _stream;
-};
-
-class logging_counter : public counter_stream
-{
-public:
-    logging_counter() : counter_stream()
-    {
-        _stream << "logging perf counter(name, type, value):" << std::endl;
-        _stream << std::fixed << std::setprecision(2);
-    }
-    virtual void append(const dsn::perf_counter_ptr &ptr, double val)
-    {
-        _stream << "[" << ptr->full_name() << ", " << dsn_counter_type_to_string(ptr->type())
-                << ", " << val << "]" << std::endl;
-    }
-    virtual std::string to_string() override { return _stream.str(); }
-};
-
-class falcon_counter : public counter_stream
-{
-public:
-    falcon_counter(falcon_metric &metric, int64_t timestamp) : counter_stream(), _metric(metric)
-    {
-        _metric.timestamp = timestamp;
-        _stream << "[";
-    }
-    virtual void append(const dsn::perf_counter_ptr &ptr, double val)
-    {
-        _metric.metric = ptr->full_name();
-        _metric.value = val;
-        _metric.counterType = "GAUGE";
-        if (!_first_append)
-            _stream << ",";
-        _metric.encode_json_state(_stream);
-        _first_append = false;
-    }
-    virtual std::string to_string() override
-    {
-        _stream << "]";
-        return _stream.str();
-    }
-
-private:
-    falcon_metric &_metric;
-    bool _first_append{true};
-};
-
 class pegasus_counter_updater : public ::dsn::utils::singleton<pegasus_counter_updater>
 {
 public:
