@@ -32,6 +32,36 @@
 
 using namespace dsn::replication;
 
+typedef pegasus::pegasus_client::filter_type filter_type;
+ENUM_BEGIN(filter_type, filter_type::FT_NO_FILTER)
+ENUM_REG(filter_type::FT_NO_FILTER)
+ENUM_REG(filter_type::FT_MATCH_ANYWHERE)
+ENUM_REG(filter_type::FT_MATCH_PREFIX)
+ENUM_REG(filter_type::FT_MATCH_POSTFIX)
+ENUM_END(filter_type)
+
+typedef pegasus::pegasus_client::cas_check_type cas_check_type;
+ENUM_BEGIN(cas_check_type, cas_check_type::CT_NO_CHECK)
+ENUM_REG(cas_check_type::CT_NO_CHECK)
+ENUM_REG(cas_check_type::CT_VALUE_NOT_EXIST)
+ENUM_REG(cas_check_type::CT_VALUE_NOT_EXIST_OR_EMPTY)
+ENUM_REG(cas_check_type::CT_VALUE_EXIST)
+ENUM_REG(cas_check_type::CT_VALUE_NOT_EMPTY)
+ENUM_REG(cas_check_type::CT_VALUE_MATCH_ANYWHERE)
+ENUM_REG(cas_check_type::CT_VALUE_MATCH_PREFIX)
+ENUM_REG(cas_check_type::CT_VALUE_MATCH_POSTFIX)
+ENUM_REG(cas_check_type::CT_VALUE_BYTES_LESS)
+ENUM_REG(cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL)
+ENUM_REG(cas_check_type::CT_VALUE_BYTES_EQUAL)
+ENUM_REG(cas_check_type::CT_VALUE_BYTES_GREATER_OR_EQUAL)
+ENUM_REG(cas_check_type::CT_VALUE_BYTES_GREATER)
+ENUM_REG(cas_check_type::CT_VALUE_INT_LESS)
+ENUM_REG(cas_check_type::CT_VALUE_INT_LESS_OR_EQUAL)
+ENUM_REG(cas_check_type::CT_VALUE_INT_EQUAL)
+ENUM_REG(cas_check_type::CT_VALUE_INT_GREATER_OR_EQUAL)
+ENUM_REG(cas_check_type::CT_VALUE_INT_GREATER)
+ENUM_END(cas_check_type)
+
 inline bool version(command_executor *e, shell_context *sc, arguments args)
 {
     std::ostringstream oss;
@@ -39,97 +69,6 @@ inline bool version(command_executor *e, shell_context *sc, arguments args)
         << PEGASUS_BUILD_TYPE;
     std::cout << oss.str() << std::endl;
     return true;
-}
-
-inline bool buf2filter_type(dsn::string_view str, pegasus::pegasus_client::filter_type &result)
-{
-    if (!str.compare("anywhere")) {
-        result = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-        return true;
-    }
-    if (!str.compare("prefix")) {
-        result = pegasus::pegasus_client::FT_MATCH_PREFIX;
-        return true;
-    }
-    if (!str.compare("postfix")) {
-        result = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-        return true;
-    }
-    return false;
-}
-
-inline bool buf2cas_check_type(dsn::string_view str,
-                               pegasus::pegasus_client::cas_check_type &result)
-{
-    if (!str.compare("not_exist")) {
-        result = pegasus::pegasus_client::CT_VALUE_NOT_EXIST;
-        return true;
-    }
-    if (!str.compare("not_exist_or_empty")) {
-        result = pegasus::pegasus_client::CT_VALUE_NOT_EXIST_OR_EMPTY;
-        return true;
-    }
-    if (!str.compare("exist")) {
-        result = pegasus::pegasus_client::CT_VALUE_EXIST;
-        return true;
-    }
-    if (!str.compare("not_empty")) {
-        result = pegasus::pegasus_client::CT_VALUE_NOT_EMPTY;
-        return true;
-    }
-    if (!str.compare("match_anywhere")) {
-        result = pegasus::pegasus_client::CT_VALUE_MATCH_ANYWHERE;
-        return true;
-    }
-    if (!str.compare("match_prefix")) {
-        result = pegasus::pegasus_client::CT_VALUE_MATCH_PREFIX;
-        return true;
-    }
-    if (!str.compare("match_postfix")) {
-        result = pegasus::pegasus_client::CT_VALUE_MATCH_POSTFIX;
-        return true;
-    }
-    if (!str.compare("bytes_less")) {
-        result = pegasus::pegasus_client::CT_VALUE_BYTES_LESS;
-        return true;
-    }
-    if (!str.compare("bytes_less_or_equal")) {
-        result = pegasus::pegasus_client::CT_VALUE_BYTES_LESS_OR_EQUAL;
-        return true;
-    }
-    if (!str.compare("bytes_equal")) {
-        result = pegasus::pegasus_client::CT_VALUE_BYTES_EQUAL;
-        return true;
-    }
-    if (!str.compare("bytes_greater_or_equal")) {
-        result = pegasus::pegasus_client::CT_VALUE_BYTES_GREATER_OR_EQUAL;
-        return true;
-    }
-    if (!str.compare("bytes_greater")) {
-        result = pegasus::pegasus_client::CT_VALUE_BYTES_GREATER;
-        return true;
-    }
-    if (!str.compare("int_less")) {
-        result = pegasus::pegasus_client::CT_VALUE_INT_LESS;
-        return true;
-    }
-    if (!str.compare("int_less_or_equal")) {
-        result = pegasus::pegasus_client::CT_VALUE_INT_LESS_OR_EQUAL;
-        return true;
-    }
-    if (!str.compare("int_equal")) {
-        result = pegasus::pegasus_client::CT_VALUE_INT_EQUAL;
-        return true;
-    }
-    if (!str.compare("int_greater_or_equal")) {
-        result = pegasus::pegasus_client::CT_VALUE_INT_GREATER_OR_EQUAL;
-        return true;
-    }
-    if (!str.compare("int_greater")) {
-        result = pegasus::pegasus_client::CT_VALUE_INT_GREATER;
-        return true;
-    }
-    return false;
 }
 
 inline bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
@@ -863,7 +802,8 @@ inline bool multi_get_range(command_executor *e, shell_context *sc, arguments ar
             }
             break;
         case 's':
-            if (!buf2filter_type(optarg, options.sort_key_filter_type)) {
+            options.sort_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
+            if (options.sort_key_filter_type == filter_type::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1201,7 +1141,8 @@ inline bool multi_del_range(command_executor *e, shell_context *sc, arguments ar
             }
             break;
         case 's':
-            if (!buf2filter_type(optarg, options.sort_key_filter_type)) {
+            options.sort_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
+            if (options.sort_key_filter_type == filter_type::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1389,7 +1330,7 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
     std::string hash_key = sds_to_string(args.argv[1]);
     bool check_sort_key_provided = false;
     std::string check_sort_key;
-    pegasus::pegasus_client::cas_check_type check_type = pegasus::pegasus_client::CT_NO_CHECK;
+    cas_check_type check_type = cas_check_type::CT_NO_CHECK;
     std::string check_type_name;
     bool check_operand_provided = false;
     std::string check_operand;
@@ -1422,7 +1363,8 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
             check_sort_key = unescape_str(optarg);
             break;
         case 't':
-            if (!buf2cas_check_type(optarg, check_type)) {
+            check_type = enum_from_string(optarg, cas_check_type::CT_NO_CHECK);
+            if (check_type == cas_check_type::CT_NO_CHECK) {
                 fprintf(stderr, "ERROR: invalid check_type param\n");
                 return false;
             }
@@ -1646,7 +1588,8 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 's':
-            if (!buf2filter_type(optarg, options.sort_key_filter_type)) {
+            options.sort_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
+            if (options.sort_key_filter_type == filter_type::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
@@ -1827,7 +1770,8 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            if (!buf2filter_type(optarg, options.hash_key_filter_type)) {
+            options.hash_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
+            if (options.hash_key_filter_type == filter_type::FT_NO_FILTER) {
                 fprintf(stderr, "invalid hash_key_filter_type param\n");
                 return false;
             }
@@ -1837,7 +1781,8 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            if (!buf2filter_type(optarg, options.sort_key_filter_type)) {
+            options.sort_key_filter_type = enum_from_string(optarg, filter_type::FT_NO_FILTER);
+            if (options.sort_key_filter_type == filter_type::FT_NO_FILTER) {
                 fprintf(stderr, "invalid sort_key_filter_type param\n");
                 return false;
             }
