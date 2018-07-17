@@ -41,22 +41,12 @@ class blob
 public:
     constexpr blob() = default;
 
-    blob(const std::shared_ptr<char> &buffer, unsigned int length)
-        : _holder(buffer), _buffer(_holder.get()), _data(_holder.get()), _length(length)
-    {
-    }
-
-    blob(std::shared_ptr<char> &&buffer, unsigned int length)
+    blob(std::shared_ptr<char> buffer, unsigned int length)
         : _holder(std::move(buffer)), _buffer(_holder.get()), _data(_holder.get()), _length(length)
     {
     }
 
-    blob(const std::shared_ptr<char> &buffer, int offset, unsigned int length)
-        : _holder(buffer), _buffer(_holder.get()), _data(_holder.get() + offset), _length(length)
-    {
-    }
-
-    blob(std::shared_ptr<char> &&buffer, int offset, unsigned int length)
+    blob(std::shared_ptr<char> buffer, int offset, unsigned int length)
         : _holder(std::move(buffer)),
           _buffer(_holder.get()),
           _data(_holder.get() + offset),
@@ -70,6 +60,23 @@ public:
     blob(const char *buffer, int offset, unsigned int length)
         : _buffer(buffer), _data(buffer + offset), _length(length)
     {
+    }
+
+    /// Create shared buffer from allocated raw bytes.
+    /// NOTE: this operation is not efficient since it involves a memory copy.
+    static blob create_from_bytes(const char *s, size_t len)
+    {
+        std::shared_ptr<char> s_arr(new char[len], std::default_delete<char[]>());
+        memcpy(s_arr.get(), s, len);
+        return blob(std::move(s_arr), 0, static_cast<unsigned int>(len));
+    }
+
+    /// Create shared buffer without copying data.
+    static blob create_from_bytes(std::string &&bytes)
+    {
+        auto s = new std::string(std::move(bytes));
+        std::shared_ptr<char> buf(const_cast<char *>(s->data()), [s](char *) { delete s; });
+        return blob(std::move(buf), 0, static_cast<unsigned int>(s->length()));
     }
 
     void assign(const std::shared_ptr<char> &buffer, int offset, unsigned int length)
@@ -88,6 +95,7 @@ public:
         _length = length;
     }
 
+    /// Deprecated. Use dsn::string_view whenever possible.
     void assign(const char *buffer, int offset, unsigned int length)
     {
         _holder = nullptr;
@@ -101,8 +109,6 @@ public:
     unsigned int length() const noexcept { return _length; }
 
     std::shared_ptr<char> buffer() const { return _holder; }
-
-    bool has_holder() const { return _holder.get() != nullptr; }
 
     const char *buffer_ptr() const { return _holder.get(); }
 
