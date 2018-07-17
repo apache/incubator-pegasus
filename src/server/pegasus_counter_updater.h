@@ -11,6 +11,7 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/perf_counter/perf_counter.h>
 
+#include <iomanip>
 #include <boost/asio.hpp>
 #include <event2/event.h>
 #include <event2/buffer.h>
@@ -20,13 +21,6 @@
 
 namespace pegasus {
 namespace server {
-
-enum perf_counter_target
-{
-    T_DEBUG = 0,
-    T_FALCON,
-    T_TARGET_COUNT
-};
 
 // Falcon field description:
 //   http://git.n.xiaomi.com/falcon/doc/wikis/instance_monitor
@@ -49,30 +43,22 @@ public:
     virtual ~pegasus_counter_updater();
     void start();
     void stop();
-    std::string get_brief_stat();
-    std::string get_perf_counters(const std::vector<std::string> &args);
 
 private:
-    void stat_intialize();
     void falcon_initialize();
 
-    void update_brief_stat(const std::vector<dsn::perf_counter_ptr> &counters,
-                           const std::vector<double> &values);
-    void logging_counters(const std::vector<dsn::perf_counter_ptr> &counters,
-                          const std::vector<double> &values);
-    void update_counters_to_falcon(const std::vector<dsn::perf_counter_ptr> &counters,
-                                   const std::vector<double> &values,
-                                   int64_t timestamp);
+    void update_counters_to_falcon(const std::string &result, int64_t timestamp);
 
-    void update();
     void http_post_request(const std::string &host,
                            int32_t port,
                            const std::string &path,
                            const std::string &content_type,
                            const std::string &data);
+    static void http_request_done(struct evhttp_request *req, void *arg);
+
+    void update();
     void on_report_timer(std::shared_ptr<boost::asio::deadline_timer> timer,
                          const boost::system::error_code &ec);
-    static void http_request_done(struct evhttp_request *req, void *arg);
 
     mutable ::dsn::utils::rw_lock_nr _lock;
     std::string _local_host;
@@ -85,7 +71,6 @@ private:
     std::shared_ptr<boost::asio::deadline_timer> _report_timer;
 
     // perf counter flags
-    bool _enable_stat;
     bool _enable_logging;
     bool _enable_falcon;
 
@@ -94,22 +79,6 @@ private:
     uint16_t _falcon_port;
     std::string _falcon_path;
     falcon_metric _falcon_metric;
-
-    int _brief_stat_count;
-    std::vector<double> _brief_stat_value;
-
-    ::dsn::utils::ex_lock_nr _last_counter_lock; // protected the following fields
-    std::vector<dsn::perf_counter_ptr> _last_metrics;
-    std::vector<double> _last_values;
-    int64_t _last_timestamp;
-
-    // perf counters
-    ::dsn::perf_counter_wrapper _pfc_memused_virt;
-    ::dsn::perf_counter_wrapper _pfc_memused_res;
-
-private:
-    static const char *perf_counter_type(dsn_perf_counter_type_t type,
-                                         perf_counter_target target_type);
 };
 }
 } // namespace

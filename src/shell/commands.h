@@ -3159,9 +3159,9 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
                       << " failed" << std::endl;
             return true;
         }
-        pegasus::perf_counter_info info;
+        dsn::perf_counter_info info;
         dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-        if (!dsn::json::json_forwarder<pegasus::perf_counter_info>::decode(bb, info)) {
+        if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
             std::cout << "ERROR: decode perf counter info from node "
                       << nodes[i].address.to_string() << " failed, result = " << results[i].second
                       << std::endl;
@@ -3172,7 +3172,7 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
                       << " returns error, error = " << info.result << std::endl;
             return true;
         }
-        for (pegasus::perf_counter_metric &m : info.counters) {
+        for (dsn::perf_counter_metric &m : info.counters) {
             int32_t app_id_x, partition_index_x;
             std::string counter_name;
             bool parse_ret = parse_app_pegasus_perf_counter_name(
