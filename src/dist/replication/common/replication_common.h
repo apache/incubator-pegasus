@@ -37,7 +37,6 @@
 
 #include <dsn/dist/replication.h>
 #include <string>
-#include "dist/replication/client_lib/replication_ds.h"
 
 using namespace ::dsn::service;
 

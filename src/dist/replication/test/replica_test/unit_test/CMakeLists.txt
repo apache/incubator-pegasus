@@ -14,7 +14,7 @@ set(MY_PROJ_INC_PATH "")
 set(MY_PROJ_LIBS dsn_meta_server
                  dsn_replica_server
                  dsn.replication.zookeeper_provider
-                 dsn.replication.clientlib
+                 dsn_replication_common
                  dsn.block_service.local
                  dsn.block_service.fds
                  dsn.failure_detector

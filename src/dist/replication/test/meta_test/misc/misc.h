@@ -6,7 +6,7 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/replication/replication.types.h>
 #include "dist/replication/meta_server/meta_data.h"
-#include "dist/replication/client_lib/fs_manager.h"
+#include "dist/replication/common/fs_manager.h"
 
 typedef std::map<dsn::rpc_address, std::shared_ptr<dsn::replication::fs_manager>> nodes_fs_manager;
 

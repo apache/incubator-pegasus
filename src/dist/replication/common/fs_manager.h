@@ -38,7 +38,7 @@
 #include <dsn/cpp/zlocks.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <memory>
-#include "dist/replication/client_lib/replication_common.h"
+#include "dist/replication/common/replication_common.h"
 
 namespace dsn {
 namespace replication {

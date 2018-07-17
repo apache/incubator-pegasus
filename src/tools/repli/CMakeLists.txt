@@ -15,7 +15,7 @@ set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_PROJ_LIB_PATH "")
 set(MY_PROJ_LIBS dsn_replica_server
-                 dsn.replication.clientlib
+                 dsn_replication_common
                  dsn.block_service.local
                  dsn.block_service.fds
                  dsn.failure_detector

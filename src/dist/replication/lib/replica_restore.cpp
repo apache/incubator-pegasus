@@ -11,7 +11,7 @@
 #include "replica.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
-#include "../client_lib/block_service_manager.h"
+#include "../common/block_service_manager.h"
 
 using namespace dsn::dist::block_service;
 

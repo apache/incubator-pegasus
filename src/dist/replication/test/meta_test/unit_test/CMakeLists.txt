@@ -14,7 +14,7 @@ ms_find_source_files("CXX" "${CMAKE_CURRENT_SOURCE_DIR}/../../../meta_server" "G
 set(MY_PROJ_INC_PATH "")
 
 set(MY_PROJ_LIBS dsn.replication.zookeeper_provider
-                 dsn.replication.clientlib
+                 dsn_replication_common
                  dsn.block_service.local
                  dsn.block_service.fds
                  dsn.failure_detector

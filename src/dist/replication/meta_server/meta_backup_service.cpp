@@ -3,7 +3,7 @@
 #include "meta_backup_service.h"
 #include "dist/replication/meta_server/meta_service.h"
 #include "dist/replication/meta_server/server_state.h"
-#include "dist/replication/client_lib/block_service_manager.h"
+#include "dist/replication/common/block_service_manager.h"
 
 namespace dsn {
 namespace replication {

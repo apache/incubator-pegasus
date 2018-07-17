@@ -15,7 +15,7 @@ set(MY_PROJ_LIBS gtest
                  dsn_runtime
                  dsn_replica_server
                  dsn_meta_server
-                 dsn.replication.clientlib
+                 dsn_replication_common
                  dsn.block_service.local
                  dsn.block_service.fds
                  dsn.failure_detector.multimaster

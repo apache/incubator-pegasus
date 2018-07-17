@@ -3,7 +3,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/replication/replication_app_base.h>
 
-#include "dist/replication/client_lib/block_service_manager.h"
+#include "dist/replication/common/block_service_manager.h"
 
 #include "replica.h"
 #include "mutation.h"

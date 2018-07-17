@@ -33,25 +33,24 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "checker.h"
-#include "case.h"
-#include "dsn/utility/factory_store.h"
-
-#include "../../lib/replica.h"
-#include "../../lib/replica_stub.h"
-#include "../../lib/mutation_log.h"
-#include "../../meta_server/meta_service.h"
-#include "../../meta_server/meta_server_failure_detector.h"
-#include "../../meta_server/server_state.h"
-#include "../../meta_server/server_load_balancer.h"
-#include "../../client_lib/replication_ds.h"
-#include "../../../../core/core/service_engine.h"
-#include "../../../../core/core/rpc_engine.h"
-
 #include <sstream>
 #include <boost/lexical_cast.hpp>
-
+#include <dsn/utility/factory_store.h>
 #include <dsn/tool_api.h>
+
+#include "checker.h"
+#include "case.h"
+
+#include "dist/replication/lib/replica.h"
+#include "dist/replication/lib/replica_stub.h"
+#include "dist/replication/lib/mutation_log.h"
+#include "dist/replication/meta_server/meta_service.h"
+#include "dist/replication/meta_server/meta_server_failure_detector.h"
+#include "dist/replication/meta_server/server_state.h"
+#include "dist/replication/meta_server/server_load_balancer.h"
+
+#include "core/core/service_engine.h"
+#include "core/core/rpc_engine.h"
 
 namespace dsn {
 namespace replication {

@@ -28,8 +28,8 @@
 #include <dsn/dist/block_service.h>
 #include <boost/lexical_cast.hpp>
 
-#include "dist/replication/client_lib/block_service_manager.h"
-#include "dist/replication/client_lib/replication_common.h"
+#include "dist/replication/common/block_service_manager.h"
+#include "dist/replication/common/replication_common.h"
 #include "dist/replication/meta_server/meta_service.h"
 #include "dist/replication/meta_server/server_state.h"
 

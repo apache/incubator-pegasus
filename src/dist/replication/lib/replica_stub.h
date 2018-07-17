@@ -32,9 +32,9 @@
 //   replica_stub(singleton) --> replica --> replication_app
 //
 
-#include "../client_lib/replication_common.h"
-#include "../client_lib/fs_manager.h"
-#include "../client_lib/block_service_manager.h"
+#include "../common/replication_common.h"
+#include "../common/fs_manager.h"
+#include "../common/block_service_manager.h"
 #include "replica.h"
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/failure_detector_multimaster.h>

@@ -35,7 +35,7 @@
 
 #include <dsn/tool-api/async_calls.h>
 
-#include "dist/replication/client_lib/replication_common.h"
+#include "dist/replication/common/replication_common.h"
 #include "distributed_lock_service_simple.h"
 
 namespace dsn {

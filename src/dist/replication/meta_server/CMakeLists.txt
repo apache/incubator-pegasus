@@ -12,7 +12,7 @@ set(MY_SRC_SEARCH_MODE "GLOB_RECURSE")
 set(MY_PROJ_INC_PATH)
 
 set(MY_PROJ_LIBS
-    dsn.replication.clientlib
+    dsn_replication_common
     dsn.block_service.local
     dsn.block_service.fds
     dsn.failure_detector
