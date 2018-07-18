@@ -20,7 +20,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../rocksdb/include)
 
 add_subdirectory(base)
-add_subdirectory(monitor)
+add_subdirectory(reporter)
 add_subdirectory(base/test)
 add_subdirectory(client_lib)
 add_subdirectory(server)

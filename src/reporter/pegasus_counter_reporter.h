@@ -32,11 +32,11 @@ struct falcon_metric
     DEFINE_JSON_SERIALIZATION(endpoint, metric, timestamp, step, value, counterType, tags)
 };
 
-class pegasus_counter_updater : public ::dsn::utils::singleton<pegasus_counter_updater>
+class pegasus_counter_reporter : public ::dsn::utils::singleton<pegasus_counter_reporter>
 {
 public:
-    pegasus_counter_updater();
-    virtual ~pegasus_counter_updater();
+    pegasus_counter_reporter();
+    virtual ~pegasus_counter_reporter();
     void start();
     void stop();
 

@@ -9,7 +9,7 @@
 
 #include <pegasus/version.h>
 
-#include "monitor/pegasus_counter_updater.h"
+#include "reporter/pegasus_counter_reporter.h"
 #include "redis_parser.h"
 
 namespace pegasus {
@@ -32,7 +32,7 @@ public:
         _proxy = dsn::make_unique<proxy_stub>(
             f, args[1].c_str(), args[2].c_str(), args.size() > 3 ? args[3].c_str() : "");
 
-        pegasus::server::pegasus_counter_updater::instance().start();
+        pegasus::server::pegasus_counter_reporter::instance().start();
 
         return ::dsn::ERR_OK;
     }

@@ -6,7 +6,7 @@
 
 #include <dsn/dist/replication/meta_service_app.h>
 #include <dsn/dist/replication/replication_service_app.h>
-#include "monitor/pegasus_counter_updater.h"
+#include "reporter/pegasus_counter_reporter.h"
 
 namespace pegasus {
 namespace server {
@@ -24,7 +24,7 @@ public:
     {
         ::dsn::error_code ret = ::dsn::replication::replication_service_app::start(args);
         if (ret == ::dsn::ERR_OK) {
-            pegasus_counter_updater::instance().start();
+            pegasus_counter_reporter::instance().start();
             _updater_started = true;
         }
         return ret;
@@ -34,7 +34,7 @@ public:
     {
         ::dsn::error_code ret = ::dsn::replication::replication_service_app::stop();
         if (_updater_started) {
-            pegasus_counter_updater::instance().stop();
+            pegasus_counter_reporter::instance().stop();
         }
         return ret;
     }
@@ -55,7 +55,7 @@ public:
     {
         ::dsn::error_code ret = ::dsn::service::meta_service_app::start(args);
         if (ret == ::dsn::ERR_OK) {
-            pegasus_counter_updater::instance().start();
+            pegasus_counter_reporter::instance().start();
             _updater_started = true;
         }
         return ret;
@@ -65,7 +65,7 @@ public:
     {
         ::dsn::error_code ret = ::dsn::service::meta_service_app::stop();
         if (_updater_started) {
-            pegasus_counter_updater::instance().stop();
+            pegasus_counter_reporter::instance().stop();
         }
         return ret;
     }
