@@ -31,6 +31,7 @@
 #include <arpa/inet.h>
 
 #include <dsn/utility/ports.h>
+#include <dsn/utility/string_view.h>
 #include <dsn/utility/fixed_size_buffer_pool.h>
 
 #include <dsn/c/api_utilities.h>
@@ -67,18 +68,29 @@ uint32_t rpc_address::ipv4_from_host(const char *name)
     return (uint32_t)ntohl(addr.sin_addr.s_addr);
 }
 
-// if network_interface is "", then return the first
-// site-local ipv4 address: 10.*.*.*, 172.16.*.*, 192.168.*.*
+/*static*/
+bool rpc_address::is_site_local_address(uint32_t ip_net)
+{
+    uint32_t iphost = ntohl(ip_net);
+    return (iphost >= 0x0A000000 && iphost <= 0x0AFFFFFF) || // 10.0.0.0-10.255.255.255
+           (iphost >= 0xAC100000 && iphost <= 0xAC1FFFFF) || // 172.16.0.0-172.31.255.255
+           (iphost >= 0xC0A80000 && iphost <= 0xC0A8FFFF) || // 192.168.0.0-192.168.255.255
+           false;
+}
+
+/*static*/
+bool rpc_address::is_docker_netcard(const char *netcard_interface, uint32_t ip_net)
+{
+    if (dsn::string_view(netcard_interface).find("docker") != dsn::string_view::npos)
+        return true;
+    uint32_t iphost = ntohl(ip_net);
+    return iphost == 0xAC112A01; // 172.17.42.1
+}
+
 /*static*/
 uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
 {
     uint32_t ret = 0;
-
-    static auto is_site_local = [&](uint32_t ip_net) {
-        const uint8_t *addr = reinterpret_cast<const uint8_t *>(&ip_net);
-        return addr[0] == 10 || (addr[0] == 172 && addr[1] == 16) ||
-               (addr[0] == 192 && addr[1] == 168);
-    };
 
     struct ifaddrs *ifa = nullptr;
     if (getifaddrs(&ifa) == 0) {
@@ -88,9 +100,12 @@ uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
                 i->ifa_addr->sa_family == AF_INET) {
                 uint32_t ip_val = ((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr;
                 if (strcmp(i->ifa_name, network_interface) == 0 ||
-                    (network_interface[0] == '\0' && is_site_local(ip_val))) {
+                    (network_interface[0] == '\0' && !is_docker_netcard(i->ifa_name, ip_val) &&
+                     is_site_local_address(ip_val))) {
                     ret = (uint32_t)ntohl(ip_val);
                     break;
+                } else {
+                    ddebug("skip interface(%s), address(%08X)", i->ifa_name, ip_val);
                 }
             }
             i = i->ifa_next;
@@ -98,6 +113,11 @@ uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
 
         if (i == nullptr) {
             derror("get local ip from network interfaces failed, network_interface = %s",
+                   network_interface);
+        } else {
+            ddebug("get ip address from network interface(%s), addr(%08X), input interface(%s)",
+                   i->ifa_name,
+                   ret,
                    network_interface);
         }
 

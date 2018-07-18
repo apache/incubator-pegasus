@@ -66,6 +66,26 @@ TEST(core, rpc_address_ipv4_from_network_interface)
               rpc_address::ipv4_from_network_interface("not_exist_interface"));
 }
 
+TEST(core, is_site_local_address)
+{
+    ASSERT_FALSE(rpc_address::is_site_local_address(htonl(host_ipv4(1, 2, 3, 4))));
+    ASSERT_TRUE(rpc_address::is_site_local_address(htonl(host_ipv4(10, 235, 111, 111))));
+    ASSERT_FALSE(rpc_address::is_site_local_address(htonl(host_ipv4(171, 11, 11, 11))));
+    ASSERT_TRUE(rpc_address::is_site_local_address(htonl(host_ipv4(172, 16, 2, 2))));
+    ASSERT_TRUE(rpc_address::is_site_local_address(htonl(host_ipv4(172, 31, 234, 255))));
+    ASSERT_FALSE(rpc_address::is_site_local_address(htonl(host_ipv4(191, 128, 1, 2))));
+    ASSERT_TRUE(rpc_address::is_site_local_address(htonl(host_ipv4(192, 168, 3, 45))));
+    ASSERT_FALSE(rpc_address::is_site_local_address(htonl(host_ipv4(201, 201, 201, 201))));
+}
+
+TEST(core, is_docker_netcard)
+{
+    ASSERT_TRUE(rpc_address::is_docker_netcard("docker0", htonl(host_ipv4(1, 2, 3, 4))));
+    ASSERT_TRUE(rpc_address::is_docker_netcard("10docker5", htonl(host_ipv4(4, 5, 6, 8))));
+    ASSERT_FALSE(rpc_address::is_docker_netcard("eth0", htonl(host_ipv4(192, 168, 123, 123))));
+    ASSERT_TRUE(rpc_address::is_docker_netcard("eth0", htonl(host_ipv4(172, 17, 42, 1))));
+}
+
 TEST(core, rpc_address_to_string)
 {
     {
