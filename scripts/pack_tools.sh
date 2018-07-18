@@ -124,8 +124,6 @@ copy_file ./src/shell/*.ini ${pack}/src/shell/
 mkdir -p ${pack}/src/test/kill_test
 copy_file ./src/test/kill_test/*.ini ${pack}/src/test/kill_test/
 
-copy_file ./src/*.ini ${pack}/src/
-
 echo "Pegasus Tools $version ($commit_id) $platform $build_type" >${pack}/VERSION
 
 tar cfz ${pack}.tar.gz ${pack}
