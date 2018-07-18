@@ -39,7 +39,7 @@ else()
     set(MY_PROJ_LIBS rocksdblib ${MY_PROJ_LIBS} rpcrt4)
 endif()
 
-set(MY_PROJ_LIB_PATH "../../rocksdb")
+set(MY_PROJ_LIB_PATH "../../rocksdb/build")
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
