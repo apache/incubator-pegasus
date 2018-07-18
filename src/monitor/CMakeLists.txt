@@ -10,17 +10,10 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../include" "../base")
+set(MY_PROJ_INC_PATH "../base")
 
 set(MY_PROJ_LIBS "")
 
-set(MY_BOOST_PACKAGES system filesystem)
-
-if (UNIX)
-    SET(CMAKE_INSTALL_RPATH ".")
-    SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-endif()
-
-add_definitions(-Wno-attributes)
+set(MY_BOOST_PACKAGES system)
 
 dsn_add_static_library()
