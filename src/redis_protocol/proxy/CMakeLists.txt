@@ -14,7 +14,7 @@ set(MY_PROJ_INC_PATH "../../include" "../../base" "../proxy_lib")
 set(MY_PROJ_LIBS pegasus.rproxylib
                  pegasus.base
                  pegasus_geo_lib
-                 pegasus_monitor
+                 pegasus_reporter
                  event
                  s2
                  pegasus_client_static
