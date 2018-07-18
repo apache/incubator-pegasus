@@ -2,7 +2,7 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "pegasus_counter_updater.h"
+#include "pegasus_counter_reporter.h"
 
 #include <regex>
 #include <ios>
@@ -13,7 +13,6 @@
 #include <unistd.h>
 
 #include <dsn/utility/smart_pointers.h>
-#include <dsn/tool-api/command_manager.h>
 #include <dsn/cpp/service_app.h>
 
 #include "base/pegasus_utils.h"
@@ -38,7 +37,7 @@ static void libevent_log(int severity, const char *msg)
     dlog(level, msg);
 }
 
-pegasus_counter_updater::pegasus_counter_updater()
+pegasus_counter_reporter::pegasus_counter_reporter()
     : _local_port(0),
       _update_interval_seconds(0),
       _last_report_time_ms(0),
@@ -48,9 +47,9 @@ pegasus_counter_updater::pegasus_counter_updater()
 {
 }
 
-pegasus_counter_updater::~pegasus_counter_updater() { stop(); }
+pegasus_counter_reporter::~pegasus_counter_reporter() { stop(); }
 
-void pegasus_counter_updater::falcon_initialize()
+void pegasus_counter_reporter::falcon_initialize()
 {
     _falcon_host = dsn_config_get_value_string(
         "pegasus.server", "falcon_host", "127.0.0.1", "falcon agent host");
@@ -82,7 +81,7 @@ void pegasus_counter_updater::falcon_initialize()
            _falcon_metric.tags.c_str());
 }
 
-void pegasus_counter_updater::start()
+void pegasus_counter_reporter::start()
 {
     ::dsn::utils::auto_write_lock l(_lock);
     if (_report_timer != nullptr)
@@ -124,10 +123,10 @@ void pegasus_counter_updater::start()
     _report_timer->expires_from_now(
         boost::posix_time::seconds(rand() % _update_interval_seconds + 1));
     _report_timer->async_wait(std::bind(
-        &pegasus_counter_updater::on_report_timer, this, _report_timer, std::placeholders::_1));
+        &pegasus_counter_reporter::on_report_timer, this, _report_timer, std::placeholders::_1));
 }
 
-void pegasus_counter_updater::stop()
+void pegasus_counter_reporter::stop()
 {
     ::dsn::utils::auto_write_lock l(_lock);
     if (_report_timer != nullptr) {
@@ -135,7 +134,7 @@ void pegasus_counter_updater::stop()
     }
 }
 
-void pegasus_counter_updater::update_counters_to_falcon(const std::string &result,
+void pegasus_counter_reporter::update_counters_to_falcon(const std::string &result,
                                                         int64_t timestamp)
 {
     ddebug("update counters to falcon with timestamp = %" PRId64, timestamp);
@@ -143,7 +142,7 @@ void pegasus_counter_updater::update_counters_to_falcon(const std::string &resul
         _falcon_host, _falcon_port, _falcon_path, "application/x-www-form-urlencoded", result);
 }
 
-void pegasus_counter_updater::update()
+void pegasus_counter_reporter::update()
 {
     uint64_t now = dsn_now_ms();
     int64_t timestamp = now / 1000;
@@ -187,7 +186,7 @@ void pegasus_counter_updater::update()
     _last_report_time_ms = now;
 }
 
-void pegasus_counter_updater::http_post_request(const std::string &host,
+void pegasus_counter_reporter::http_post_request(const std::string &host,
                                                 int32_t port,
                                                 const std::string &path,
                                                 const std::string &contentType,
@@ -197,7 +196,7 @@ void pegasus_counter_updater::http_post_request(const std::string &host,
     struct event_base *base = event_base_new();
     struct evhttp_connection *conn = evhttp_connection_base_new(base, nullptr, host.c_str(), port);
     struct evhttp_request *req =
-        evhttp_request_new(pegasus_counter_updater::http_request_done, base);
+        evhttp_request_new(pegasus_counter_reporter::http_request_done, base);
 
     evhttp_add_header(req->output_headers, "Host", host.c_str());
     evhttp_add_header(req->output_headers, "Content-Type", contentType.c_str());
@@ -212,7 +211,7 @@ void pegasus_counter_updater::http_post_request(const std::string &host,
     event_base_free(base);
 }
 
-void pegasus_counter_updater::http_request_done(struct evhttp_request *req, void *arg)
+void pegasus_counter_reporter::http_request_done(struct evhttp_request *req, void *arg)
 {
     struct event_base *event = (struct event_base *)arg;
     if (req == nullptr) {
@@ -242,7 +241,7 @@ void pegasus_counter_updater::http_request_done(struct evhttp_request *req, void
     }
 }
 
-void pegasus_counter_updater::on_report_timer(std::shared_ptr<boost::asio::deadline_timer> timer,
+void pegasus_counter_reporter::on_report_timer(std::shared_ptr<boost::asio::deadline_timer> timer,
                                               const boost::system::error_code &ec)
 {
     // NOTICE: the following code is running out of rDSN's tls_context
@@ -250,7 +249,7 @@ void pegasus_counter_updater::on_report_timer(std::shared_ptr<boost::asio::deadl
         update();
         timer->expires_from_now(boost::posix_time::seconds(_update_interval_seconds));
         timer->async_wait(std::bind(
-            &pegasus_counter_updater::on_report_timer, this, timer, std::placeholders::_1));
+            &pegasus_counter_reporter::on_report_timer, this, timer, std::placeholders::_1));
     } else if (boost::system::errc::operation_canceled != ec) {
         dassert(false, "pegasus report timer error!!!");
     }

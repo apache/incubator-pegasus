@@ -6,12 +6,8 @@
 
 #include <dsn/utility/singleton.h>
 #include <dsn/utility/synchronize.h>
-#include <dsn/c/api_utilities.h>
 #include <dsn/cpp/json_helper.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/perf_counter/perf_counter.h>
 
-#include <iomanip>
 #include <boost/asio.hpp>
 #include <event2/event.h>
 #include <event2/buffer.h>
@@ -36,11 +32,11 @@ struct falcon_metric
     DEFINE_JSON_SERIALIZATION(endpoint, metric, timestamp, step, value, counterType, tags)
 };
 
-class pegasus_counter_updater : public ::dsn::utils::singleton<pegasus_counter_updater>
+class pegasus_counter_reporter : public ::dsn::utils::singleton<pegasus_counter_reporter>
 {
 public:
-    pegasus_counter_updater();
-    virtual ~pegasus_counter_updater();
+    pegasus_counter_reporter();
+    virtual ~pegasus_counter_reporter();
     void start();
     void stop();
 
