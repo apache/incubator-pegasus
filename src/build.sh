@@ -114,40 +114,6 @@ then
     fi
 fi
 
-if [ "$CLEAR" == "YES" ]
-then
-    echo "Clear librocksdb.a ..."
-    rm -rf $BUILD_DIR
-    make -C ../rocksdb clean
-fi
-
-if [ "$CLEAR" == "YES" -o "$PART_CLEAR" == "YES" ]
-then
-    echo "Clear $BUILD_DIR ..."
-    rm -rf $BUILD_DIR
-fi
-
-# use ccache if possible
-if [ `command -v ccache` ]
-then
-    ROCKSDB_CC="ccache $C_COMPILER"
-    ROCKSDB_CXX="ccache $CXX_COMPILER"
-else
-    ROCKSDB_CC="$C_COMPILER"
-    ROCKSDB_CXX="$CXX_COMPILER"
-fi
-
-echo "ROCKDB_CC=$ROCKSDB_CC"
-echo "ROCKSDB_CXX=$ROCKSDB_CXX"
-CC=$ROCKSDB_CC CXX=$ROCKSDB_CXX make -C ../rocksdb static_lib_$BUILD_TYPE $MAKE_OPTIONS
-if [ $? -ne 0 ]
-then
-    echo "ERROR: build librocksdb.a failed"
-    exit 1
-else
-    echo "Build librocksdb.a succeed"
-fi
-
 if [ ! -d "$BUILD_DIR" ]
 then
     echo "Running cmake..."
