@@ -100,6 +100,9 @@ else
 fi
 
 echo "CMAKE_OPTIONS=$CMAKE_OPTIONS"
+
+#rocksdb enable jemalloc by default, but we use regular malloc.
+MAKE_OPTIONS="$MAKE_OPTIONS DISABLE_JEMALLOC=1"
 echo "MAKE_OPTIONS=$MAKE_OPTIONS"
 
 echo "#############################################################################"
