@@ -13,7 +13,6 @@
 #include <unistd.h>
 
 #include <dsn/utility/smart_pointers.h>
-#include <dsn/tool-api/command_manager.h>
 #include <dsn/cpp/service_app.h>
 
 #include "base/pegasus_utils.h"

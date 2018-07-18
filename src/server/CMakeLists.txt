@@ -22,6 +22,7 @@ set(MY_PROJ_LIBS
     dsn.failure_detector
     dsn.failure_detector.multimaster
     dsn.replication.zookeeper_provider
+    pegasus_monitor
     pegasus_client_static
     zookeeper_mt
     event

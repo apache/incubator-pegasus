@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "info_collector_app.h"
-#include "pegasus_counter_updater.h"
+#include "monitor/pegasus_counter_updater.h"
 
 #include <dsn/dist/replication.h>
 #include <dsn/dist/replication/replication_other_types.h>
