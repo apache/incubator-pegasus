@@ -10,6 +10,7 @@
 #include "args.h"
 #include "command_executor.h"
 #include "commands.h"
+#include "duplication_commands.h"
 
 std::map<std::string, command_executor *> s_commands_map;
 shell_context s_global_context;
@@ -361,6 +362,11 @@ static command_executor commands[] = {
     {
         "clear_app_envs", "clear current app envs", "<-a|--all> <-p|--prefix str>", clear_app_envs,
     },
+    {"add_dup", "add duplication for app", "<app_name> <remote_cluster_address>", add_dup},
+    {"query_dup", "query duplications info of app", "<app_name>", query_dup},
+    {"remove_dup", "remove duplication of app", "<app_name> <dup_id>", remove_dup},
+    {"start_dup", "start duplication of app", "<app_name> <dup_id>", start_dup},
+    {"pause_dup", "pause duplicaton of app", "<app_name> <dup_id>", pause_dup},
     {
         "exit", "exit shell", "", exit_shell,
     },

@@ -150,4 +150,10 @@ inline uint64_t pegasus_key_hash(const ::dsn::blob &key)
     }
 }
 
+/// Calculate hash value from hash key.
+inline uint64_t pegasus_hash_key_hash(const ::dsn::blob &hash_key)
+{
+    return dsn::utils::crc64_calc(hash_key.data(), hash_key.length(), 0);
+}
+
 } // namespace pegasus

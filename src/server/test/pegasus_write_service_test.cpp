@@ -35,7 +35,8 @@ public:
 
         // alarm for empty request
         request.hash_key = dsn::blob(hash_key.data(), 0, hash_key.size());
-        int err = _write_svc->multi_put(decree, request, response);
+        auto ctx = db_write_context::create(decree, 1000);
+        int err = _write_svc->multi_put(ctx, request, response);
         ASSERT_EQ(err, 0);
         verify_response(response, rocksdb::Status::kInvalidArgument, decree);
 
@@ -56,20 +57,20 @@ public:
 
         {
             dsn::fail::cfg("db_write_batch_put", "100%1*return()");
-            err = _write_svc->multi_put(decree, request, response);
+            err = _write_svc->multi_put(ctx, request, response);
             ASSERT_EQ(err, FAIL_DB_WRITE_BATCH_PUT);
             verify_response(response, err, decree);
         }
 
         {
             dsn::fail::cfg("db_write", "100%1*return()");
-            err = _write_svc->multi_put(decree, request, response);
+            err = _write_svc->multi_put(ctx, request, response);
             ASSERT_EQ(err, FAIL_DB_WRITE);
             verify_response(response, err, decree);
         }
 
         { // success
-            err = _write_svc->multi_put(decree, request, response);
+            err = _write_svc->multi_put(ctx, request, response);
             ASSERT_EQ(err, 0);
             verify_response(response, 0, decree);
         }
@@ -129,6 +130,8 @@ public:
         int64_t decree = 10;
         std::string hash_key = "hash_key";
 
+        auto ctx = db_write_context::create(decree, 1000);
+
         constexpr int kv_num = 100;
         dsn::blob key[kv_num];
         std::string value[kv_num];
@@ -148,7 +151,7 @@ public:
             for (int i = 0; i < kv_num; i++) {
                 dsn::apps::update_request req;
                 req.key = key[i];
-                _write_svc->batch_put(decree, req, responses[i]);
+                _write_svc->batch_put(ctx, req, responses[i]);
             }
             for (int i = 0; i < kv_num; i++) {
                 _write_svc->batch_remove(decree, key[i], responses[i]);
@@ -172,6 +175,69 @@ public:
         ASSERT_EQ(_write_svc->_impl->_batch.Count(), 0);
         ASSERT_EQ(_write_svc->_impl->_update_responses.size(), 0);
     }
+
+    void test_put_verify_timetag()
+    {
+        auto write_impl = _write_svc->_impl.get();
+        const_cast<bool &>(write_impl->_verify_timetag) = true;
+
+        std::string raw_key = "key";
+        std::string value = "value";
+        int64_t decree = 10;
+
+        /// insert timestamp 10
+        uint64_t timestamp = 10;
+        auto ctx = db_write_context::create(decree, timestamp);
+        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
+        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
+
+        /// insert timestamp 15, which overwrites the previous record
+        timestamp = 15;
+        ctx = db_write_context::create(decree, timestamp);
+        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
+        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
+
+        /// insert timestamp 11, which will be ignored
+        uint64_t old_timestamp = timestamp;
+        timestamp = 11;
+        ctx = db_write_context::create(decree, timestamp);
+        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
+        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(read_timestamp_from(raw_key), old_timestamp);
+
+        /// insert timestamp 15 from remote, which will overwrite the previous record,
+        /// since its cluster id is larger
+        timestamp = 15;
+        ctx.remote_timetag = pegasus::generate_timetag(timestamp, 2, false);
+        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
+        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
+
+        /// insert timestamp 16 from local, which will overwrite the remote record,
+        /// since its timestamp is larger
+        timestamp = 16;
+        ctx = db_write_context::create(decree, timestamp);
+        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
+        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
+
+        const_cast<bool &>(write_impl->_verify_timetag) = false;
+    }
+
+    uint64_t read_timestamp_from(dsn::string_view raw_key)
+    {
+        auto write_impl = _write_svc->_impl.get();
+
+        std::string raw_value;
+        rocksdb::Status s = write_impl->_db->Get(
+            write_impl->_rd_opts, utils::to_rocksdb_slice(raw_key), &raw_value);
+
+        uint64_t local_timetag =
+            pegasus_extract_timetag(write_impl->_value_schema_version, raw_value);
+        return extract_timestamp_from_timetag(local_timetag);
+    }
 };
 
 TEST_F(pegasus_write_service_test, multi_put) { test_multi_put(); }
@@ -179,6 +245,8 @@ TEST_F(pegasus_write_service_test, multi_put) { test_multi_put(); }
 TEST_F(pegasus_write_service_test, multi_remove) { test_multi_remove(); }
 
 TEST_F(pegasus_write_service_test, batched_writes) { test_batched_writes(); }
+
+TEST_F(pegasus_write_service_test, put_verify_timetag) { test_put_verify_timetag(); }
 
 } // namespace server
 } // namespace pegasus

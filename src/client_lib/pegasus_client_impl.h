@@ -199,6 +199,12 @@ public:
                                  const scan_options &options,
                                  async_get_unordered_scanners_callback_t &&callback) override;
 
+    /// \internal
+    /// This is an internal function for duplication.
+    /// \see pegasus::server::pegasus_mutation_duplicator
+    void async_duplicate(dsn::apps::duplicate_rpc rpc,
+                         std::function<void(dsn::error_code)> &&callback);
+
     virtual const char *get_error_string(int error_code) const override;
 
     static void init_error();

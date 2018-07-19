@@ -84,13 +84,13 @@ pegasus_write_service::~pegasus_write_service() {}
 
 int pegasus_write_service::empty_put(int64_t decree) { return _impl->empty_put(decree); }
 
-int pegasus_write_service::multi_put(int64_t decree,
+int pegasus_write_service::multi_put(const db_write_context &ctx,
                                      const dsn::apps::multi_put_request &update,
                                      dsn::apps::update_response &resp)
 {
     uint64_t start_time = dsn_now_ns();
     _pfc_multi_put_qps->increment();
-    int err = _impl->multi_put(decree, update, resp);
+    int err = _impl->multi_put(ctx, update, resp);
     _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
     return err;
 }
@@ -136,7 +136,7 @@ void pegasus_write_service::batch_prepare(int64_t decree)
     _batch_start_time = dsn_now_ns();
 }
 
-int pegasus_write_service::batch_put(int64_t decree,
+int pegasus_write_service::batch_put(const db_write_context &ctx,
                                      const dsn::apps::update_request &update,
                                      dsn::apps::update_response &resp)
 {
@@ -145,7 +145,7 @@ int pegasus_write_service::batch_put(int64_t decree,
     _batch_qps_perfcounters.push_back(_pfc_put_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
 
-    return _impl->batch_put(decree, update, resp);
+    return _impl->batch_put(ctx, update, resp);
 }
 
 int pegasus_write_service::batch_remove(int64_t decree,

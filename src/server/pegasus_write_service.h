@@ -6,6 +6,7 @@
 
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>
+#include <dsn/dist/replication/duplication_common.h>
 
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
@@ -13,6 +14,42 @@
 
 namespace pegasus {
 namespace server {
+
+inline uint8_t get_current_cluster_id()
+{
+    static const uint8_t cluster_id =
+        dsn::replication::get_duplication_cluster_id(dsn::replication::get_current_cluster_name())
+            .get_value();
+    return cluster_id;
+}
+
+// The context of an update to the database.
+struct db_write_context
+{
+    int64_t decree{0};          // the mutation decree
+    uint64_t timestamp{0};      // the timestamp of this write
+    uint64_t remote_timetag{0}; // timetag of the remote write, 0 if it's not from remote.
+
+    static inline db_write_context empty(int64_t d) { return create(d, 0); }
+
+    static inline db_write_context create(int64_t decree, uint64_t timestamp)
+    {
+        db_write_context ctx;
+        ctx.decree = decree;
+        ctx.timestamp = timestamp;
+        return ctx;
+    }
+
+    static inline db_write_context create_duplicate(int64_t decree, uint64_t remote_timetag)
+    {
+        db_write_context ctx;
+        ctx.decree = decree;
+        ctx.remote_timetag = remote_timetag;
+        return ctx;
+    }
+
+    bool is_duplicated_write() const { return remote_timetag > 0; }
+};
 
 class pegasus_server_impl;
 
@@ -33,7 +70,7 @@ public:
     int empty_put(int64_t decree);
 
     // Write MULTI_PUT record.
-    int multi_put(int64_t decree,
+    int multi_put(const db_write_context &ctx,
                   const dsn::apps::multi_put_request &update,
                   dsn::apps::update_response &resp);
 
@@ -62,7 +99,7 @@ public:
     // Add PUT record in batch write.
     // \returns 0 if success, non-0 if failure.
     // NOTE that `resp` should not be moved or freed while the batch is not committed.
-    int batch_put(int64_t decree,
+    int batch_put(const db_write_context &ctx,
                   const dsn::apps::update_request &update,
                   dsn::apps::update_response &resp);
 
