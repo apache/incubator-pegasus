@@ -243,14 +243,14 @@ function run_build()
         mkdir -p $ROCKSDB_BUILD_DIR
         cd $ROCKSDB_BUILD_DIR
         echo "$CMAKE_OPTIONS" >CMAKE_OPTIONS
-        cmake .. $CMAKE_OPTIONS
+        cmake .. -DCMAKE_INSTALL_PREFIX=$ROCKSDB_BUILD_DIR $CMAKE_OPTIONS
         if [ $? -ne 0 ]
         then
             echo "ERROR: cmake failed"
             exit 1
         fi
         echo "Building..."
-        make -j $JOB_NUM $MAKE_OPTIONS
+        make install -j $JOB_NUM $MAKE_OPTIONS
         if [ $? -ne 0 ]
         then
             echo "ERROR: build rocksdb failed"
