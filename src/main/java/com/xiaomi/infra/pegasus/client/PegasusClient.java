@@ -412,6 +412,23 @@ public class PegasusClient implements PegasusClientInterface {
     }
 
     @Override
+    public PegasusTableInterface.CheckAndSetResult checkAndSet(String tableName, byte[] hashKey, byte[] checkSortKey,
+                                                               CheckType checkType, byte[] checkOperand,
+                                                               byte[] setSortKey, byte[] setValue,
+                                                               CheckAndSetOptions options) throws PException {
+        PegasusTable tb = getTable(tableName);
+        return tb.checkAndSet(hashKey, checkSortKey, checkType, checkOperand, setSortKey, setValue, options, 0);
+    }
+
+    @Override
+    public PegasusTableInterface.CompareExchangeResult compareExchange(String tableName, byte[] hashKey, byte[] sortKey,
+                                                                       byte[] expectedValue, byte[] desiredValue,
+                                                                       int ttlSeconds) throws PException {
+        PegasusTable tb = getTable(tableName);
+        return tb.compareExchange(hashKey, sortKey, expectedValue, desiredValue, ttlSeconds, 0);
+    }
+
+    @Override
     public int ttl(String tableName, byte[] hashKey, byte[] sortKey) throws PException {
         PegasusTable tb = getTable(tableName);
         return tb.ttl(hashKey, sortKey, 0);

@@ -20,10 +20,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -52,9 +49,8 @@ public class PegasusTable implements PegasusTableInterface {
                     @Override
                     public void operationComplete(Future<Integer> future) throws Exception {
                         if (future.isSuccess()) {
-                            promise.setSuccess(future.get()!=-2);
-                        }
-                        else {
+                            promise.setSuccess(future.get() != -2);
+                        } else {
                             promise.setFailure(future.cause());
                         }
                     }
@@ -84,11 +80,9 @@ public class PegasusTable implements PegasusTableInterface {
                 rrdb_sortkey_count_operator op = (rrdb_sortkey_count_operator) clientOP;
                 if (op.rpc_error.errno != error_code.error_types.ERR_OK) {
                     promise.setFailure(new PException(new ReplicationException(op.rpc_error.errno)));
-                }
-                else if (op.get_response().error != 0) {
+                } else if (op.get_response().error != 0) {
                     promise.setFailure(new PException("rocksdb error: " + op.get_response().error));
-                }
-                else {
+                } else {
                     promise.setSuccess(op.get_response().count);
                 }
             }
@@ -110,14 +104,11 @@ public class PegasusTable implements PegasusTableInterface {
                 rrdb_get_operator gop = (rrdb_get_operator) clientOP;
                 if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
                     promise.setFailure(new PException(new ReplicationException(gop.rpc_error.errno)));
-                }
-                else if (gop.get_response().error == 1) {//rocksdb::kNotFound
+                } else if (gop.get_response().error == 1) {//rocksdb::kNotFound
                     promise.setSuccess(null);
-                }
-                else if (gop.get_response().error != 0) {
+                } else if (gop.get_response().error != 0) {
                     promise.setFailure(new PException("rocksdb error: " + gop.get_response().error));
-                }
-                else {
+                } else {
                     promise.setSuccess(gop.get_response().value.data);
                 }
             }
@@ -150,11 +141,9 @@ public class PegasusTable implements PegasusTableInterface {
                         rrdb_put_operator gop = (rrdb_put_operator) clientOP;
                         if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
                             promise.setFailure(new PException(new ReplicationException(gop.rpc_error.errno)));
-                        }
-                        else if (gop.get_response().error != 0) {
+                        } else if (gop.get_response().error != 0) {
                             promise.setFailure(new PException("rocksdb error: " + gop.get_response().error));
-                        }
-                        else {
+                        } else {
                             promise.setSuccess(null);
                         }
                     }
@@ -188,12 +177,12 @@ public class PegasusTable implements PegasusTableInterface {
             for (int i = 0; i < sortKeys.size(); i++) {
                 byte[] sortKey = sortKeys.get(i);
                 if (sortKey == null) {
-                    promise.setFailure(new PException("Invalid parameter: sortKeys["+i+"] should not be null"));
+                    promise.setFailure(new PException("Invalid parameter: sortKeys[" + i + "] should not be null"));
                     return promise;
                 }
                 setKeyMap.put(ByteBuffer.wrap(sortKey), sortKey);
             }
-            for (Map.Entry<ByteBuffer, byte[]> entry: setKeyMap.entrySet()) {
+            for (Map.Entry<ByteBuffer, byte[]> entry : setKeyMap.entrySet()) {
                 sortKeyBlobs.add(new blob(entry.getValue()));
             }
         }
@@ -213,12 +202,10 @@ public class PegasusTable implements PegasusTableInterface {
                         rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
                         if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
                             promise.setFailure(new PException(new ReplicationException(gop.rpc_error.errno)));
-                        }
-                        else if (gop.get_response().error != 0 && gop.get_response().error != 7) {
+                        } else if (gop.get_response().error != 0 && gop.get_response().error != 7) {
                             // rocksdb::Status::kOk && rocksdb::Status::kIncomplete
                             promise.setFailure(new PException("rocksdb error: " + gop.get_response().error));
-                        }
-                        else {
+                        } else {
                             MultiGetResult result = new MultiGetResult();
                             result.allFetched = (gop.get_response().error == 0);
                             result.values = new ArrayList<Pair<byte[], byte[]>>(gop.get_response().kvs.size());
@@ -226,8 +213,7 @@ public class PegasusTable implements PegasusTableInterface {
                                 for (key_value kv : gop.get_response().kvs) {
                                     result.values.add(new ImmutablePair<byte[], byte[]>(kv.key.data, kv.value.data));
                                 }
-                            }
-                            else {
+                            } else {
                                 for (key_value kv : gop.get_response().kvs) {
                                     byte[] sortKey = finalSetKeyMap.get(ByteBuffer.wrap(kv.key.data));
                                     if (sortKey != null) {
@@ -289,12 +275,10 @@ public class PegasusTable implements PegasusTableInterface {
                         rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
                         if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
                             promise.setFailure(new PException(new ReplicationException(gop.rpc_error.errno)));
-                        }
-                        else if (gop.get_response().error != 0 && gop.get_response().error != 7) {
+                        } else if (gop.get_response().error != 0 && gop.get_response().error != 7) {
                             // rocksdb::Status::kOk && rocksdb::Status::kIncomplete
                             promise.setFailure(new PException("rocksdb error: " + gop.get_response().error));
-                        }
-                        else {
+                        } else {
                             MultiGetResult result = new MultiGetResult();
                             result.allFetched = (gop.get_response().error == 0);
                             result.values = new ArrayList<Pair<byte[], byte[]>>(gop.get_response().kvs.size());
@@ -320,24 +304,23 @@ public class PegasusTable implements PegasusTableInterface {
         final DefaultPromise<MultiGetSortKeysResult> promise = table.newPromise();
         asyncMultiGet(hashKey, null, maxFetchCount, maxFetchSize, true, timeout)
                 .addListener(new MultiGetListener() {
-            @Override
-            public void operationComplete(Future<MultiGetResult> future) throws Exception {
-                if (future.isSuccess()) {
-                    MultiGetResult result = future.getNow();
-                    MultiGetSortKeysResult sortkeyResult = new MultiGetSortKeysResult();
-                    sortkeyResult.allFetched = result.allFetched;
-                    sortkeyResult.keys = new ArrayList<byte[]>(result.values.size());
-                    for (Pair<byte[], byte[]> kv: result.values) {
-                        sortkeyResult.keys.add(kv.getLeft());
-                    }
+                    @Override
+                    public void operationComplete(Future<MultiGetResult> future) throws Exception {
+                        if (future.isSuccess()) {
+                            MultiGetResult result = future.getNow();
+                            MultiGetSortKeysResult sortkeyResult = new MultiGetSortKeysResult();
+                            sortkeyResult.allFetched = result.allFetched;
+                            sortkeyResult.keys = new ArrayList<byte[]>(result.values.size());
+                            for (Pair<byte[], byte[]> kv : result.values) {
+                                sortkeyResult.keys.add(kv.getLeft());
+                            }
 
-                    promise.setSuccess(sortkeyResult);
-                }
-                else {
-                    promise.setFailure(future.cause());
-                }
-            }
-        });
+                            promise.setSuccess(sortkeyResult);
+                        } else {
+                            promise.setFailure(future.cause());
+                        }
+                    }
+                });
 
         return promise;
     }
@@ -369,12 +352,12 @@ public class PegasusTable implements PegasusTableInterface {
         for (int i = 0; i < values.size(); i++) {
             byte[] k = values.get(i).getKey();
             if (k == null) {
-                promise.setFailure(new PException("Invalid parameter: values["+i+"].key should not be null"));
+                promise.setFailure(new PException("Invalid parameter: values[" + i + "].key should not be null"));
                 return promise;
             }
             byte[] v = values.get(i).getValue();
             if (v == null) {
-                promise.setFailure(new PException("Invalid parameter: values["+i+"].value should not be null"));
+                promise.setFailure(new PException("Invalid parameter: values[" + i + "].value should not be null"));
                 return promise;
             }
             values_blob.add(new key_value(new blob(k), new blob(v)));
@@ -391,11 +374,9 @@ public class PegasusTable implements PegasusTableInterface {
                 rrdb_multi_put_operator op2 = (rrdb_multi_put_operator) clientOP;
                 if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
                     promise.setFailure(new PException(new ReplicationException(op2.rpc_error.errno)));
-                }
-                else if (op2.get_response().error != 0) {
+                } else if (op2.get_response().error != 0) {
                     promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
-                }
-                else {
+                } else {
                     promise.setSuccess(null);
                 }
             }
@@ -421,11 +402,9 @@ public class PegasusTable implements PegasusTableInterface {
                 rrdb_remove_operator op2 = (rrdb_remove_operator) clientOP;
                 if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
                     promise.setFailure(new PException(new ReplicationException(op2.rpc_error.errno)));
-                }
-                else if (op2.get_response().error != 0) {
+                } else if (op2.get_response().error != 0) {
                     promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
-                }
-                else {
+                } else {
                     promise.setSuccess(null);
                 }
             }
@@ -453,7 +432,7 @@ public class PegasusTable implements PegasusTableInterface {
         for (int i = 0; i < sortKeys.size(); i++) {
             byte[] sortKey = sortKeys.get(i);
             if (sortKey == null) {
-                promise.setFailure(new PException("Invalid parameter: sortKeys["+i+"] should not be null"));
+                promise.setFailure(new PException("Invalid parameter: sortKeys[" + i + "] should not be null"));
                 return promise;
             }
             sortKeyBlobs.add(new blob(sortKey));
@@ -474,11 +453,9 @@ public class PegasusTable implements PegasusTableInterface {
                         rrdb_multi_remove_operator op2 = (rrdb_multi_remove_operator) clientOP;
                         if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
                             promise.setFailure(new PException(new ReplicationException(op2.rpc_error.errno)));
-                        }
-                        else if (op2.get_response().error != 0) {
+                        } else if (op2.get_response().error != 0) {
                             promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
-                        }
-                        else {
+                        } else {
                             Validate.isTrue(op2.get_response().count == sortKeys.size());
                             promise.setSuccess(null);
                         }
@@ -500,12 +477,136 @@ public class PegasusTable implements PegasusTableInterface {
                 rrdb_incr_operator op2 = (rrdb_incr_operator) clientOP;
                 if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
                     promise.setFailure(new PException(new ReplicationException(op2.rpc_error.errno)));
-                }
-                else if (op2.get_response().error != 0) {
+                } else if (op2.get_response().error != 0) {
                     promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
-                }
-                else {
+                } else {
                     promise.setSuccess(op2.get_response().new_value);
+                }
+            }
+        }, timeout);
+        return promise;
+    }
+
+    @Override
+    public Future<CheckAndSetResult> asyncCheckAndSet(byte[] hashKey, byte[] checkSortKey, CheckType checkType,
+                                                      byte[] checkOperand, byte[] setSortKey, byte[] setValue,
+                                                      CheckAndSetOptions options, int timeout) {
+        final DefaultPromise<CheckAndSetResult> promise = table.newPromise();
+        if (hashKey == null || hashKey.length == 0) {
+            promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+            return promise;
+        }
+        if (hashKey.length >= 0xFFFF) {
+            promise.setFailure(new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
+            return promise;
+        }
+
+        blob hashKeyBlob = new blob(hashKey);
+        blob checkSortKeyBlob = (checkSortKey == null ? null : new blob(checkSortKey));
+        cas_check_type type = cas_check_type.findByValue(checkType.getValue());
+        blob checkOperandBlob = (checkOperand == null ? null : new blob(checkOperand));
+        boolean diffSortKey = false;
+        blob setSortKeyBlob = null;
+        if (!Arrays.equals(checkSortKey, setSortKey)) {
+            diffSortKey = true;
+            setSortKeyBlob = (setSortKey == null ? null : new blob(setSortKey));
+        }
+        blob setValueBlob = (setValue == null ? null : new blob(setValue));
+        int expireSeconds = (options.setValueTTLSeconds == 0 ? 0 : options.setValueTTLSeconds + (int) Tools.epoch_now());
+
+        check_and_set_request request = new check_and_set_request(
+                hashKeyBlob, checkSortKeyBlob, type, checkOperandBlob,
+                diffSortKey, setSortKeyBlob, setValueBlob,
+                expireSeconds, options.returnCheckValue);
+
+        gpid gpid = table.getHashKeyGpid(hashKey);
+        rrdb_check_and_set_operator op = new rrdb_check_and_set_operator(gpid, table.getTableName(), request);
+
+        table.asyncOperate(op, new Table.ClientOPCallback() {
+            @Override
+            public void onCompletion(client_operator clientOP) {
+                rrdb_check_and_set_operator op2 = (rrdb_check_and_set_operator) clientOP;
+                if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
+                    promise.setFailure(new PException(new ReplicationException(op2.rpc_error.errno)));
+                } else if (op2.get_response().error != 0 && op2.get_response().error != 13) { // 13 : kTryAgain
+                    promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
+                } else {
+                    CheckAndSetResult result = new CheckAndSetResult();
+                    if (op2.get_response().error == 0) {
+                        result.setSucceed = true;
+                    } else {
+                        result.setSucceed = false;
+                    }
+                    if (op2.get_response().check_value_returned) {
+                        result.checkValueReturned = true;
+                        if (op2.get_response().check_value_exist) {
+                            result.checkValueExist = true;
+                            result.checkValue = op2.get_response().check_value.data;
+                        } else {
+                            result.checkValueExist = false;
+                            result.checkValue = null;
+                        }
+                    } else {
+                        result.checkValueReturned = false;
+                        result.checkValueExist = false;
+                        result.checkValue = null;
+                    }
+                    promise.setSuccess(result);
+                }
+            }
+        }, timeout);
+        return promise;
+    }
+
+    @Override
+    public Future<CompareExchangeResult> asyncCompareExchange(byte[] hashKey, byte[] sortKey,
+                                                              byte[] expectedValue, byte[] desiredValue,
+                                                              int ttlSeconds, int timeout) {
+        final DefaultPromise<CompareExchangeResult> promise = table.newPromise();
+        if (hashKey == null || hashKey.length == 0) {
+            promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+            return promise;
+        }
+        if (hashKey.length >= 0xFFFF) {
+            promise.setFailure(new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
+            return promise;
+        }
+
+        blob hashKeyBlob = new blob(hashKey);
+        blob sortKeyBlob = (sortKey == null ? null : new blob(sortKey));
+        blob checkOperandBlob = (expectedValue == null ? null : new blob(expectedValue));
+        blob setValueBlob = (desiredValue == null ? null : new blob(desiredValue));
+        int expireSeconds = (ttlSeconds == 0 ? 0 : ttlSeconds + (int) Tools.epoch_now());
+
+        check_and_set_request request = new check_and_set_request(
+                hashKeyBlob, sortKeyBlob, cas_check_type.CT_VALUE_BYTES_EQUAL, checkOperandBlob,
+                false, null, setValueBlob, expireSeconds, true);
+
+        gpid gpid = table.getHashKeyGpid(hashKey);
+        rrdb_check_and_set_operator op = new rrdb_check_and_set_operator(gpid, table.getTableName(), request);
+
+        table.asyncOperate(op, new Table.ClientOPCallback() {
+            @Override
+            public void onCompletion(client_operator clientOP) {
+                rrdb_check_and_set_operator op2 = (rrdb_check_and_set_operator) clientOP;
+                if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
+                    promise.setFailure(new PException(new ReplicationException(op2.rpc_error.errno)));
+                } else if (op2.get_response().error != 0 && op2.get_response().error != 13) { // 13 : kTryAgain
+                    promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
+                } else {
+                    CompareExchangeResult result = new CompareExchangeResult();
+                    if (op2.get_response().error == 0) {
+                        result.setSucceed = true;
+                        result.actualValue = null;
+                    } else {
+                        result.setSucceed = false;
+                        if (op2.get_response().check_value_exist) {
+                            result.actualValue = op2.get_response().check_value.data;
+                        } else {
+                            result.actualValue = null;
+                        }
+                    }
+                    promise.setSuccess(result);
                 }
             }
         }, timeout);
@@ -526,11 +627,9 @@ public class PegasusTable implements PegasusTableInterface {
                 rrdb_ttl_operator op2 = (rrdb_ttl_operator) clientOP;
                 if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
                     promise.setFailure(new PException(new ReplicationException(op2.rpc_error.errno)));
-                }
-                else if (op2.get_response().error != 0 && op2.get_response().error != 1) {
+                } else if (op2.get_response().error != 0 && op2.get_response().error != 1) {
                     promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
-                }
-                else {
+                } else {
                     // On success: ttl time in seconds; -1 if no ttl set; -2 if not exist.
                     // If not exist, the error code of rpc response is kNotFound(1).
                     promise.setSuccess(op2.get_response().error == 1 ? -2 : op2.get_response().ttl_seconds);
@@ -1111,6 +1210,42 @@ public class PegasusTable implements PegasusTableInterface {
     }
 
     @Override
+    public CheckAndSetResult checkAndSet(byte[] hashKey, byte[] checkSortKey, CheckType checkType,
+                                         byte[] checkOperand, byte[] setSortKey, byte[] setValue,
+                                         CheckAndSetOptions options, int timeout) throws PException {
+        if (timeout <= 0)
+            timeout = defaultTimeout;
+        try {
+            return asyncCheckAndSet(hashKey, checkSortKey, checkType, checkOperand,
+                    setSortKey, setValue, options, timeout).get(timeout, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            throw new PException(new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+        } catch (TimeoutException e) {
+            throw new PException(new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+        } catch (ExecutionException e) {
+            throw new PException(e);
+        }
+    }
+
+    @Override
+    public CompareExchangeResult compareExchange(byte[] hashKey, byte[] sortKey,
+                                                 byte[] expectedValue, byte[] desiredValue,
+                                                 int ttlSeconds, int timeout) throws PException {
+        if (timeout <= 0)
+            timeout = defaultTimeout;
+        try {
+            return asyncCompareExchange(hashKey, sortKey, expectedValue, desiredValue,
+                    ttlSeconds, timeout).get(timeout, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            throw new PException(new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+        } catch (TimeoutException e) {
+            throw new PException(new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+        } catch (ExecutionException e) {
+            throw new PException(e);
+        }
+    }
+
+    @Override
     public int ttl(byte[] hashKey, byte[] sortKey, int timeout) throws PException {
         if (timeout <= 0)
             timeout = defaultTimeout;
@@ -1166,7 +1301,7 @@ public class PegasusTable implements PegasusTableInterface {
         int cmp = PegasusClient.bytesCompare(start, stop);
         gpid[] v = cmp < 0 || cmp == 0 && o.startInclusive && o.stopInclusive ?
                 // (start < stop) or (start == stop and bounds are inclusive)
-                new gpid[]{ table.getGpid(start) } :
+                new gpid[]{table.getGpid(start)} :
                 new gpid[0];
 
         return new PegasusScanner(table, v, o, new blob(start), new blob(stop));
