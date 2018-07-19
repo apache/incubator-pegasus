@@ -474,11 +474,11 @@ private:
     {
         FAIL_POINT_INJECT_F("db_get", [](dsn::string_view) -> int { return FAIL_DB_GET; });
 
+        *expired = false;
         rocksdb::Status s = _db->Get(_rd_opts, utils::to_rocksdb_slice(raw_key), raw_value);
         if (dsn_likely(s.ok())) {
             *found = true;
             *expire_ts = pegasus_extract_expire_ts(_value_schema_version, *raw_value);
-            *expired = false;
             if (check_if_ts_expired(utils::epoch_now(), *expire_ts)) {
                 *expired = true;
             }
