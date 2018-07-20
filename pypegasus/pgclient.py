@@ -365,6 +365,9 @@ class Table(SessionManager):
 
 
 class PegasusScanner(object):
+    """
+    Pegasus scanner class, used for scanning data in pegasus table.
+    """
 
     CONTEXT_ID_VALID_MIN = 0
     CONTEXT_ID_COMPLETED = -1
@@ -391,7 +394,7 @@ class PegasusScanner(object):
     def get_next(self):
         """
         scan the next k-v pair for the scanner.
-        :return: ((hash_key, sort_key), value) tuple or None
+        :return: (tuple<tuple<hash_key, sort_key>, value> or None)
                  all the sort_keys returned by this API are in ascend order.
         """
         self._p += 1
@@ -575,10 +578,10 @@ class Pegasus(object):
     def __init__(self, meta_addrs=None, table_name='',
                  timeout=DEFAULT_TIMEOUT):
         """
-        :param meta_addrs: pagasus meta servers list.
+        :param meta_addrs: (list) pagasus meta servers list.
                            example: ['127.0.0.1:34601', '127.0.0.1:34602', '127.0.0.1:34603']
-        :param table_name: table name/app name used in pegasus.
-        :param timeout: default timeout in milliseconds when communicate with meta sever and replica server.
+        :param table_name: (str) table name/app name used in pegasus.
+        :param timeout: (int) default timeout in milliseconds when communicate with meta sever and replica server.
         """
         self.name = table_name
         self.table = Table(table_name, self, timeout)
@@ -594,7 +597,8 @@ class Pegasus(object):
     def init(self):
         """
         Initialize the client before you can use it.
-        :return: True when initialized succeed, others when failed.
+
+        :return: (DeferredList) True when initialized succeed, others when failed.
         """
         dlist = self.meta_session_manager.query()
         dlist.addCallback(self.table.update_cfg)
@@ -640,14 +644,14 @@ class Pegasus(object):
     def ttl(self, hash_key, sort_key, timeout=0):
         """
         Get ttl(time to live) of the data.
-        :param hash_key: which hash key used for this API.
-        :param sort_key: which sort key used for this API.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param sort_key: (str) which sort key used for this API.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, ttl) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data exist, error_types.ERR_OBJECT_NOT_FOUND.value when data not found.
+        :return: (tuple<error_types.code.value, int>) (code, ttl)
+                 code: error_types.ERR_OK.value when data exist, error_types.ERR_OBJECT_NOT_FOUND.value when data not found.
                  ttl: in seconds, -1 means forever.
         """
         blob_key = self.generate_key(hash_key, sort_key)
@@ -662,28 +666,29 @@ class Pegasus(object):
     def exist(self, hash_key, sort_key, timeout=0):
         """
         Check value exist.
-        :param hash_key: which hash key used for this API.
-        :param sort_key: which sort key used for this API.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param sort_key: (str) which sort key used for this API.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, ign) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data exist, error_types.ERR_OBJECT_NOT_FOUND.value when data not found.
+        :return: (tuple<error_types.code.value, None>) (code, ign)
+                 code: error_types.ERR_OK.value when data exist, error_types.ERR_OBJECT_NOT_FOUND.value when data not found.
+                 ign: useless, should be ignored.
         """
         return self.ttl(hash_key, sort_key, timeout)
 
     def get(self, hash_key, sort_key, timeout=0):
         """
         Get value stored in <hash_key, sort_key>.
-        :param hash_key: which hash key used for this API.
-        :param sort_key: which sort key used for this API.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param sort_key: (str) which sort key used for this API.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, value) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data got succeed, error_types.ERR_OBJECT_NOT_FOUND.value when data not found.
+        :return: (tuple<error_types.code.value, str>) (code, value).
+                 code: error_types.ERR_OK.value when data got succeed, error_types.ERR_OBJECT_NOT_FOUND.value when data not found.
                  value: data stored in this <hash_key, sort_key>
         """
         blob_key = self.generate_key(hash_key, sort_key)
@@ -698,16 +703,16 @@ class Pegasus(object):
     def set(self, hash_key, sort_key, value, ttl=0, timeout=0):
         """
         Set value to be stored in <hash_key, sort_key>.
-        :param hash_key: which hash key used for this API.
-        :param sort_key: which sort key used for this API.
-        :param value: value to be stored under <hash_key, sort_key>.
-        :param ttl: ttl(time to live) in seconds of this data.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param sort_key: (str) which sort key used for this API.
+        :param value: (str) value to be stored under <hash_key, sort_key>.
+        :param ttl: (int) ttl(time to live) in seconds of this data.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, ign) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data stored succeed.
+        :return: (tuple<error_types.code.value, None>) (code, ign)
+                 code: error_types.ERR_OK.value when data stored succeed.
                  ign: useless, should be ignored.
         """
         blob_key = self.generate_key(hash_key, sort_key)
@@ -722,14 +727,14 @@ class Pegasus(object):
     def remove(self, hash_key, sort_key, timeout=0):
         """
         Remove the entire <hash_key, sort_key>-value in pegasus.
-        :param hash_key: which hash key used for this API.
-        :param sort_key: which sort key used for this API.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param sort_key: (str) which sort key used for this API.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, ign) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data stored succeed.
+        :return: (tuple<error_types.code.value, None>) (code, ign)
+                 code: error_types.ERR_OK.value when data stored succeed.
                  ign: useless, should be ignored.
         """
         blob_key = self.generate_key(hash_key, sort_key)
@@ -744,13 +749,13 @@ class Pegasus(object):
     def sort_key_count(self, hash_key, timeout=0):
         """
         Get the total sort key count under the hash_key.
-        :param hash_key: which hash key used for this API.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, count) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data got succeed, error_types.ERR_OBJECT_NOT_FOUND.value when data not found.
+        :return: (tuple<error_types.code.value, count>) (code, count)
+                 code: error_types.ERR_OK.value when data got succeed, error_types.ERR_OBJECT_NOT_FOUND.value when data not found.
                  value: total sort key count under the hash_key.
         """
         peer_gpid = self.table.get_hash_key_pid(hash_key)
@@ -764,15 +769,15 @@ class Pegasus(object):
     def multi_set(self, hash_key, sortkey_value_dict, ttl=0, timeout=0):
         """
         Set multiple sort_keys-values under hash_key to be stored.
-        :param hash_key: which hash key used for this API.
-        :param sortkey_value_dict: <sort_key, value> pairs in dict.
-        :param ttl: ttl(time to live) in seconds of these data.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param sortkey_value_dict: (dict) <sort_key, value> pairs in dict.
+        :param ttl: (int) ttl(time to live) in seconds of these data.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, ign) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data stored succeed.
+        :return: (tuple<error_types.code.value, _>) (code, ign)
+                 code: error_types.ERR_OK.value when data stored succeed.
                  ign: useless, should be ignored.
         """
         peer_gpid = self.table.get_hash_key_pid(hash_key)
@@ -794,17 +799,17 @@ class Pegasus(object):
                   timeout=0):
         """
         Get multiple values stored in <hash_key, sortkey> pairs.
-        :param hash_key: which hash key used for this API.
-        :param sortkey_set: sort keys in set.
-        :param max_kv_count: max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
-        :param max_kv_size: max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
-        :param no_value: whether to fetch value of these keys.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param sortkey_set: (set) sort keys in set.
+        :param max_kv_count: (int) max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
+        :param max_kv_size: (int) max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
+        :param no_value: (bool) whether to fetch value of these keys.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, kvs) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data got succeed.
+        :return: (tuple<error_types.code.value, dict>) (code, kvs)
+                 code: error_types.ERR_OK.value when data got succeed.
                  kvs: <sort_key, value> pairs in dict.
         """
         peer_gpid = self.table.get_hash_key_pid(hash_key)
@@ -834,18 +839,18 @@ class Pegasus(object):
                       timeout=0):
         """
         Get multiple values stored in hash_key, and sort key range in [start_sort_key, stop_sort_key) as default.
-        :param hash_key: which hash key used for this API.
-        :param start_sort_key: returned k-v pairs is start from start_sort_key.
-        :param stop_sort_key: returned k-v pairs is stop at stop_sort_key.
-        :param multi_get_options: configurable multi_get options, instance of MultiGetOptions.
-        :param max_kv_count: max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
-        :param max_kv_size: max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param start_sort_key: (str) returned k-v pairs is start from start_sort_key.
+        :param stop_sort_key: (str) returned k-v pairs is stop at stop_sort_key.
+        :param multi_get_options: (MultiGetOptions) configurable multi_get options.
+        :param max_kv_count: (int) max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
+        :param max_kv_size: (int) max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, kvs) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data got succeed.
+        :return: (tuple<error_types.code.value, dict>) (code, kvs)
+                 code: error_types.ERR_OK.value when data got succeed.
                  kvs: <sort_key, value> pairs in dict.
         """
         peer_gpid = self.table.get_hash_key_pid(hash_key)
@@ -874,15 +879,15 @@ class Pegasus(object):
                       timeout=0):
         """
         Get multiple sort keys under hash_key.
-        :param hash_key: which hash key used for this API.
-        :param max_kv_count: max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
-        :param max_kv_size: max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param max_kv_count: (int) max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
+        :param max_kv_size: (int) max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, ks) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data got succeed.
+        :return: (tuple<error_types.code.value, set>) (code, ks)
+                 code: error_types.ERR_OK.value when data got succeed.
                  ks: <sort_key, ign> pairs in dict, ign will always be empty str.
         """
         return self.multi_get(hash_key, None,
@@ -892,14 +897,14 @@ class Pegasus(object):
     def multi_del(self, hash_key, sortkey_set, timeout=0):
         """
         Remove multiple entire <hash_key, sort_key>-values in pegasus.
-        :param hash_key: which hash key used for this API.
-        :param sortkey_set: sort keys in set.
-        :param timeout: how long will the operation timeout in milliseconds.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param sortkey_set: (set) sort keys in set.
+        :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (code, count) tuple.
-                 code: type of error_types.code.value,
-                       error_types.ERR_OK.value when data got succeed.
+        :return: (tuple<error_types.code.value, int>) (code, count).
+                 code: error_types.ERR_OK.value when data got succeed.
                  count: count of deleted k-v pairs.
         """
         peer_gpid = self.table.get_hash_key_pid(hash_key)
@@ -923,11 +928,12 @@ class Pegasus(object):
         """
         Get scanner for hash_key, start from start_sort_key, and stop at stop_sort_key.
         Whether the scanner include the start_sort_key and stop_sort_key is configurable by scan_options
-        :param hash_key: which hash key used for this API.
-        :param start_sort_key: returned scanner is start from start_sort_key.
-        :param stop_sort_key: returned scanner is stop at stop_sort_key.
-        :param scan_options: configurable scan options, instance of ScanOptions.
-        :return: scanner, instance of PegasusScanner.
+
+        :param hash_key: (str) which hash key used for this API.
+        :param start_sort_key: (str) returned scanner is start from start_sort_key.
+        :param stop_sort_key: (str) returned scanner is stop at stop_sort_key.
+        :param scan_options: (ScanOptions) configurable scan options.
+        :return: (PegasusScanner) scanner, instance of PegasusScanner.
         """
         start_key = self.generate_key(hash_key, start_sort_key)
         stop_key, stop_inclusive = self.generate_stop_key(hash_key, stop_sort_key)
@@ -944,9 +950,10 @@ class Pegasus(object):
     def get_unordered_scanners(self, max_split_count, scan_options):
         """
         Get scanners for the whole pegasus table.
-        :param max_split_count: max count of scanners will be returned.
-        :param scan_options: configurable scan options, instance of ScanOptions.
-        :return: [scanner] list.
+
+        :param max_split_count: (int) max count of scanners will be returned.
+        :param scan_options: (ScanOptions) configurable scan options.
+        :return: (list) instance of PegasusScanner list.
                  each scanner in this list can scan separate part of the whole pegasus table.
         """
         if max_split_count <= 0:
