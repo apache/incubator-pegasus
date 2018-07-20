@@ -34,9 +34,5 @@ RUN cd /pegasus && \
 
 RUN yum -y install jre nmap-ncat.x86_64
 
-RUN cd /pegasus && \
-    wget https://github.com/shengofsun/packages/raw/master/zookeeper-3.4.6.tar.gz && \
-    mkdir .zk_install && mv zookeeper-3.4.6.tar.gz .zk_install
-
 CMD cd /pegasus
 
