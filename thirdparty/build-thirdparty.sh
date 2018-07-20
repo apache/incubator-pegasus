@@ -275,3 +275,16 @@ if [ ! -d $TP_OUTPUT/include/s2 ]; then
 else
     echo "skip build s2geometry"
 fi
+
+# build gflags
+if [ ! -d $TP_OUTPUT/include/gflags ]; then
+    cd $TP_SRC/gflags-2.2.1
+    mkdir -p build && cd build
+    cmake .. -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT
+    make -j8 && make install
+    res=$?
+    exit_if_fail "gflags" $res
+    cd $TP_DIR
+else
+    echo "skip build gflags"
+fi

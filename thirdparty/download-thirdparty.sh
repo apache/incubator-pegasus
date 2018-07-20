@@ -195,6 +195,13 @@ check_and_download "fmt-4.0.0.tar.gz"\
     "fmt-4.0.0"
 exit_if_fail $?
 
+# gflags
+check_and_download "gflags-2.2.1.zip"\
+    "https://github.com/gflags/gflags/archive/v2.2.1.zip"\
+    "2d988ef0b50939fb50ada965dafce96b"\
+    "gflags-2.2.1"
+exit_if_fail $?
+
 # s2geometry
 check_and_download "s2geometry-master.zip"\
     "https://github.com/google/s2geometry/archive/master.zip"\
