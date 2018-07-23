@@ -114,13 +114,6 @@ then
     fi
 fi
 
-if [ "$CLEAR" == "YES" ]
-then
-    echo "Clear librocksdb.a ..."
-    rm -rf $BUILD_DIR
-    make -C ../rocksdb clean
-fi
-
 if [ "$CLEAR" == "YES" -o "$PART_CLEAR" == "YES" ]
 then
     echo "Clear $BUILD_DIR ..."
