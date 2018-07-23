@@ -155,7 +155,7 @@ void pegasus_counter_updater::update()
         oss << "logging perf counter(name, type, value):" << std::endl;
         oss << std::fixed << std::setprecision(2);
         perf_counters::instance().iterate_snapshot(
-            [&oss, this](const dsn::perf_counter_ptr &ptr, double val) {
+            [&oss](const dsn::perf_counter_ptr &ptr, double val) {
                 oss << "[" << ptr->full_name() << ", " << dsn_counter_type_to_string(ptr->type())
                     << ", " << val << "]" << std::endl;
             });
