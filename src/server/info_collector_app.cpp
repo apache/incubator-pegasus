@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "info_collector_app.h"
-#include "pegasus_counter_updater.h"
+#include "reporter/pegasus_counter_reporter.h"
 
 #include <dsn/dist/replication.h>
 #include <dsn/dist/replication/replication_other_types.h>
@@ -24,7 +24,7 @@ info_collector_app::~info_collector_app() {}
 
 ::dsn::error_code info_collector_app::start(const std::vector<std::string> &args)
 {
-    pegasus_counter_updater::instance().start();
+    pegasus_counter_reporter::instance().start();
     _updater_started = true;
 
     _collector.start();
@@ -35,7 +35,7 @@ info_collector_app::~info_collector_app() {}
 ::dsn::error_code info_collector_app::stop(bool cleanup)
 {
     if (_updater_started) {
-        pegasus_counter_updater::instance().stop();
+        pegasus_counter_reporter::instance().stop();
     }
 
     _collector.stop();

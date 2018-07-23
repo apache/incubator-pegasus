@@ -8,6 +8,8 @@
 #include <signal.h>
 
 #include <pegasus/version.h>
+
+#include "reporter/pegasus_counter_reporter.h"
 #include "redis_parser.h"
 
 namespace pegasus {
@@ -28,7 +30,10 @@ public:
             return std::make_shared<redis_parser>(p, m);
         };
         _proxy = dsn::make_unique<proxy_stub>(
-            f, args[1].c_str(), args[2].c_str(), args.size() > 3 ? args[3].c_str() : nullptr);
+            f, args[1].c_str(), args[2].c_str(), args.size() > 3 ? args[3].c_str() : "");
+
+        pegasus::server::pegasus_counter_reporter::instance().start();
+
         return ::dsn::ERR_OK;
     }
 
