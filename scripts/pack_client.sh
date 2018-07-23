@@ -93,6 +93,8 @@ copy_file `get_boost_lib $custom_boost_lib system` ${pack}/lib
 ln -sf `ls ${pack}/lib | grep libboost_system` ${pack}/lib/libboost_system.so
 copy_file `get_boost_lib $custom_boost_lib filesystem` ${pack}/lib
 ln -sf `ls ${pack}/lib | grep libboost_filesystem` ${pack}/lib/libboost_filesystem.so
+copy_file `get_boost_lib $custom_boost_lib regex` ${pack}/lib
+ln -sf `ls ${pack}/lib | grep libboost_regex` ${pack}/lib/libboost_regex.so
 
 cp -v -r ./src/include ${pack}
 
