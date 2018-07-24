@@ -162,10 +162,10 @@ check_and_download "zookeeper-3.4.10.tar.gz"\
 exit_if_fail $?
 
 # libevent for send http request
-check_and_download "libevent-2.0.22.tar.gz"\
-    "https://codeload.github.com/libevent/libevent/tar.gz/release-2.0.22-stable"\
-    "8913ef56ec329f2c046007bd634c7201"\
-    "libevent-release-2.0.22-stable"
+check_and_download "libevent-2.1.8.tar.gz"\
+    "https://github.com/libevent/libevent/archive/release-2.1.8-stable.tar.gz"\
+    "80f8652e4b08d2ec86a5f5eb46b74510"\
+    "libevent-release-2.1.8-stable"
 exit_if_fail $?
 
 # poco 1.7.8

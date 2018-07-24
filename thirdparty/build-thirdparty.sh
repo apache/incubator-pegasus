@@ -164,7 +164,7 @@ fi
 
 # build libevent
 if [ ! -d $TP_OUTPUT/include/event2 ]; then
-    cd $TP_SRC/libevent-release-2.0.22-stable
+    cd $TP_SRC/libevent-release-2.1.8-stable
     ./autogen.sh
     ./configure --enable-shared=no --disable-debug-mode --prefix=$TP_OUTPUT --with-pic=yes
     make -j8 && make install
