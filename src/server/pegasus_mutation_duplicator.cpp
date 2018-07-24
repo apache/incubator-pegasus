@@ -73,7 +73,7 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(const dsn::replication:
                     ret.get_error().description());
     _remote_cluster_id = static_cast<uint8_t>(ret.get_value());
 
-    ddebug_replica("initiated backlog handler for local cluster [id:{}], "
+    ddebug_replica("initialize mutation duplicator for local cluster [id:{}], "
                    "remote cluster [id:{}, addr:{}]",
                    get_current_cluster_id(),
                    _remote_cluster_id,

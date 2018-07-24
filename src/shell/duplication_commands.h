@@ -30,6 +30,16 @@ inline bool add_dup(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+inline bool string2dupid(const std::string &str, dsn::replication::dupid_t *dup_id)
+{
+    bool ok = dsn::buf2int32(str, *dup_id);
+    if (!ok) {
+        fmt::print(stderr, "parsing {} as positive int failed: {}\n", str);
+        return false;
+    }
+    return true;
+}
+
 inline bool query_dup(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc <= 1)
@@ -62,17 +72,37 @@ inline bool query_dup(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-namespace internal {
-
-inline bool get_dupid(const std::string &str, dsn::replication::dupid_t *dup_id)
+inline bool query_dup_detail(command_executor *e, shell_context *sc, arguments args)
 {
-    bool ok = dsn::buf2int32(str, *dup_id);
-    if (!ok) {
-        fmt::print(stderr, "parsing {} as positive int failed: {}\n", str);
+    if (args.argc <= 2)
         return false;
+
+    std::string app_name = args.argv[1];
+
+    dsn::replication::dupid_t dup_id;
+    if (!string2dupid(args.argv[2], &dup_id)) {
+        return false;
+    }
+
+    auto err_resp = sc->ddl_client->query_dup(app_name);
+    if (!err_resp.is_ok()) {
+        fmt::print("querying duplication of [app({}) dupid({})] failed, error={}\n",
+                   app_name,
+                   dup_id,
+                   err_resp.get_error().description());
+    } else {
+        fmt::print("duplication [{}] of app [{}]:\n", dup_id, app_name);
+        const auto &resp = err_resp.get_value();
+        for (auto info : resp.entry_list) {
+            if (info.dupid == dup_id) {
+                fmt::print("{}\n", duplication_entry_to_string(info));
+            }
+        }
     }
     return true;
 }
+
+namespace internal {
 
 inline bool change_dup_status(command_executor *e,
                               shell_context *sc,
@@ -86,7 +116,7 @@ inline bool change_dup_status(command_executor *e,
     std::string app_name = args.argv[1];
 
     dsn::replication::dupid_t dup_id;
-    if (!get_dupid(args.argv[2], &dup_id)) {
+    if (!string2dupid(args.argv[2], &dup_id)) {
         return false;
     }
 
