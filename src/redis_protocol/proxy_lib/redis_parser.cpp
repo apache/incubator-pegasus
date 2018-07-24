@@ -33,8 +33,8 @@ std::unordered_map<std::string, redis_parser::redis_call_handler> redis_parser::
     {"GEORADIUSBYMEMBER", redis_parser::g_geo_radius_by_member},
     {"INCR", redis_parser::g_incr},
     {"INCRBY", redis_parser::g_incr_by},
-    {"DECR", redis_parser::g_incr},
-    {"DECRBY", redis_parser::g_incr_by},
+    {"DECR", redis_parser::g_decr},
+    {"DECRBY", redis_parser::g_decr_by},
 };
 
 redis_parser::redis_call_handler redis_parser::get_handler(const char *command, unsigned int length)
@@ -954,8 +954,8 @@ void redis_parser::counter_internal(message_entry &entry)
 {
     dassert(!entry.request.buffers.empty(), "");
     dassert(entry.request.buffers[0].length > 0, "");
-    int64_t increment = 1;
     const char *command = entry.request.buffers[0].data.data();
+    int64_t increment = 1;
     if (strcasecmp(command, "INCR") == 0 || strcasecmp(command, "DECR") == 0) {
         if (entry.request.buffers.size() != 2) {
             ddebug_f("{}: command {} seqid({}) with invalid arguments",
