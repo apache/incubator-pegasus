@@ -35,13 +35,12 @@ set(MY_PROJ_LIBS
         rocksdb
         pegasus.base
         gtest
-        boost_regex
         z bz2 snappy rt aio pthread
         )
 add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_PACKAGES system filesystem regex)
 
 set(MY_BINPLACES config.ini run.sh)
 
