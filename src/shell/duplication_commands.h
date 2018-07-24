@@ -17,9 +17,15 @@ inline bool add_dup(command_executor *e, shell_context *sc, arguments args)
 
     std::string app_name = args.argv[1];
     std::string remote_address = args.argv[2];
-    dsn::error_code err = sc->ddl_client->add_dup(app_name, remote_address);
-    if (err != dsn::ERR_OK) {
-        fmt::print("adding duplication for app [{}] failed, error={}\n", app_name, err.to_string());
+    auto err_resp = sc->ddl_client->add_dup(app_name, remote_address);
+    if (!err_resp.is_ok()) {
+        fmt::print("adding duplication for app [{}] failed, error={}\n",
+                   app_name,
+                   err_resp.get_error().description());
+    } else {
+        const auto &resp = err_resp.get_value();
+        fmt::print(
+            "Success for adding duplication [appid: {}, dupid: {}]\n", resp.appid, resp.dupid);
     }
     return true;
 }
@@ -30,10 +36,28 @@ inline bool query_dup(command_executor *e, shell_context *sc, arguments args)
         return false;
 
     std::string app_name = args.argv[1];
-    dsn::error_code err = sc->ddl_client->query_dup(app_name);
-    if (err != dsn::ERR_OK) {
-        fmt::print(
-            "querying duplications of app [{}] failed, error={}\n", app_name, err.to_string());
+    auto err_resp = sc->ddl_client->query_dup(app_name);
+    if (!err_resp.is_ok()) {
+        fmt::print("querying duplications of app [{}] failed, error={}\n",
+                   app_name,
+                   err_resp.get_error().description());
+    } else {
+        const auto &resp = err_resp.get_value();
+        fmt::print("duplications of app [{}] are listed as below:\n", app_name);
+        fmt::print("|{: ^16}|{: ^12}|{: ^24}|{: ^25}|\n",
+                   "dup_id",
+                   "status",
+                   "remote cluster",
+                   "create time");
+        char create_time[25];
+        for (auto info : resp.entry_list) {
+            dsn::utils::time_ms_to_date_time(info.create_ts, create_time, sizeof(create_time));
+            fmt::print("|{: ^16}|{: ^12}|{: ^24}|{: ^25}|\n",
+                       info.dupid,
+                       duplication_status_to_string(info.status),
+                       info.remote_address,
+                       create_time);
+        }
     }
     return true;
 }
@@ -81,12 +105,15 @@ inline bool change_dup_status(command_executor *e,
         dfatal("unexpected duplication status %d", status);
     }
 
-    dsn::error_code err = sc->ddl_client->change_dup_status(app_name, dup_id, status);
-    if (err == dsn::ERR_OK) {
+    auto err_resp = sc->ddl_client->change_dup_status(app_name, dup_id, status);
+    if (err_resp.is_ok()) {
         fmt::print("{}({}) for app [{}] succeed\n", operation, dup_id, app_name);
     } else {
-        fmt::print(
-            "{}({}) for app [{}] failed, error=\n", operation, dup_id, app_name, err.to_string());
+        fmt::print("{}({}) for app [{}] failed, error={}\n",
+                   operation,
+                   dup_id,
+                   app_name,
+                   err_resp.get_error().description());
     }
     return true;
 }
