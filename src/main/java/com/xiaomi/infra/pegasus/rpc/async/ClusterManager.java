@@ -9,8 +9,6 @@ import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.EventExecutor;
@@ -110,19 +108,11 @@ public class ClusterManager extends Cluster {
     }
 
     public static EventLoopGroup getEventLoopGroupInstance(int threadsCount) {
-        if (osName.equals(Linux)) {
-            logger.debug("create epolled eventloop group");
-            return new EpollEventLoopGroup(threadsCount);
-        }
         logger.debug("create nio eventloop group");
         return new NioEventLoopGroup(threadsCount);
     }
 
     public static Class getSocketChannelClass() {
-        if (osName.equals(Linux)) {
-            logger.debug("create epolled Socket channel");
-            return EpollSocketChannel.class;
-        }
         logger.debug("create nio eventloop group");
         return NioSocketChannel.class;
     }
