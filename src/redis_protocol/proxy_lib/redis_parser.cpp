@@ -958,10 +958,11 @@ void redis_parser::counter_internal(message_entry &entry)
     int64_t increment = 1;
     if (strcasecmp(command, "INCR") == 0 || strcasecmp(command, "DECR") == 0) {
         if (entry.request.buffers.size() != 2) {
-            ddebug_f("{}: command {} seqid({}) with invalid arguments",
-                     remote_address.to_string(),
-                     command,
-                     entry.sequence_id);
+            dwarn_f("{}: command {} seqid({}) with invalid arguments count: {}",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id,
+                    entry.request.buffers.size());
             redis_simple_string result;
             result.is_error = true;
             result.message = fmt::format("ERR wrong number of arguments for '{}'", command);
@@ -970,10 +971,11 @@ void redis_parser::counter_internal(message_entry &entry)
         }
     } else if (strcasecmp(command, "INCRBY") == 0 || strcasecmp(command, "DECRBY") == 0) {
         if (entry.request.buffers.size() != 3) {
-            ddebug_f("{}: command {} seqid({}) with invalid arguments",
-                     remote_address.to_string(),
-                     command,
-                     entry.sequence_id);
+            dwarn_f("{}: command {} seqid({}) with invalid arguments count: {}",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id,
+                    entry.request.buffers.size());
             redis_simple_string result;
             result.is_error = true;
             result.message = fmt::format("ERR wrong number of arguments for '{}'", command);
@@ -981,9 +983,11 @@ void redis_parser::counter_internal(message_entry &entry)
             return;
         }
         if (!dsn::buf2int64(entry.request.buffers[2].data, increment)) {
-            ddebug_f("{}: command {} seqid({}) with invalid arguments",
-                     remote_address.to_string(),
-                     entry.sequence_id);
+            dwarn_f("{}: command {} seqid({}) with invalid 'increment': {}",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id,
+                    entry.request.buffers[2].data.to_string());
             redis_simple_string result;
             result.is_error = true;
             result.message =
@@ -992,7 +996,7 @@ void redis_parser::counter_internal(message_entry &entry)
             return;
         }
     } else {
-        dassert(false, "command not support");
+        dfatal_f("command not support: {}", command);
     }
     if (strncasecmp(command, "DECR", 4) == 0) {
         increment = -increment;
