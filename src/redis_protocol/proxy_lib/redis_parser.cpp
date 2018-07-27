@@ -1006,19 +1006,19 @@ void redis_parser::counter_internal(message_entry &entry)
     auto on_incr_reply = [ref_this, this, command, &entry](
         ::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
         if (is_session_reset.load(std::memory_order_acquire)) {
-            ddebug_f("{}: command {} seqid({}) got reply, but session has reset",
-                     remote_address.to_string(),
-                     command,
-                     entry.sequence_id);
+            dwarn_f("{}: command {} seqid({}) got reply, but session has reset",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id);
             return;
         }
 
         if (::dsn::ERR_OK != ec) {
-            ddebug_f("{}: command {} seqid({}) got reply with error = {}",
-                     remote_address.to_string(),
-                     command,
-                     entry.sequence_id,
-                     ec.to_string());
+            dwarn_f("{}: command {} seqid({}) got reply with error = {}",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id,
+                    ec.to_string());
             redis_simple_string result;
             result.is_error = true;
             result.message = std::string("ERR ") + ec.to_string();
