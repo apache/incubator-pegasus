@@ -31,6 +31,10 @@ std::unordered_map<std::string, redis_parser::redis_call_handler> redis_parser::
     {"GEODIST", redis_parser::g_geo_dist},
     {"GEORADIUS", redis_parser::g_geo_radius},
     {"GEORADIUSBYMEMBER", redis_parser::g_geo_radius_by_member},
+    {"INCR", redis_parser::g_incr},
+    {"INCRBY", redis_parser::g_incr_by},
+    {"DECR", redis_parser::g_decr},
+    {"DECRBY", redis_parser::g_decr_by},
 };
 
 redis_parser::redis_call_handler redis_parser::get_handler(const char *command, unsigned int length)
@@ -936,6 +940,108 @@ void redis_parser::geo_radius_by_member(message_entry &entry)
 
     _geo_client->async_search_radial(
         hash_key, "", radius_m, count, sort_type, 2000, search_callback);
+}
+
+void redis_parser::incr(message_entry &entry) { counter_internal(entry); }
+
+void redis_parser::incr_by(message_entry &entry) { counter_internal(entry); }
+
+void redis_parser::decr(message_entry &entry) { counter_internal(entry); }
+
+void redis_parser::decr_by(message_entry &entry) { counter_internal(entry); }
+
+void redis_parser::counter_internal(message_entry &entry)
+{
+    dassert(!entry.request.buffers.empty(), "");
+    dassert(entry.request.buffers[0].length > 0, "");
+    const char *command = entry.request.buffers[0].data.data();
+    int64_t increment = 1;
+    if (strcasecmp(command, "INCR") == 0 || strcasecmp(command, "DECR") == 0) {
+        if (entry.request.buffers.size() != 2) {
+            dwarn_f("{}: command {} seqid({}) with invalid arguments count: {}",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id,
+                    entry.request.buffers.size());
+            redis_simple_string result;
+            result.is_error = true;
+            result.message = fmt::format("ERR wrong number of arguments for '{}'", command);
+            reply_message(entry, result);
+            return;
+        }
+    } else if (strcasecmp(command, "INCRBY") == 0 || strcasecmp(command, "DECRBY") == 0) {
+        if (entry.request.buffers.size() != 3) {
+            dwarn_f("{}: command {} seqid({}) with invalid arguments count: {}",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id,
+                    entry.request.buffers.size());
+            redis_simple_string result;
+            result.is_error = true;
+            result.message = fmt::format("ERR wrong number of arguments for '{}'", command);
+            reply_message(entry, result);
+            return;
+        }
+        if (!dsn::buf2int64(entry.request.buffers[2].data, increment)) {
+            dwarn_f("{}: command {} seqid({}) with invalid 'increment': {}",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id,
+                    entry.request.buffers[2].data.to_string());
+            redis_simple_string result;
+            result.is_error = true;
+            result.message =
+                fmt::format("ERR wrong type of argument 'increment 'for '{}'", command);
+            reply_message(entry, result);
+            return;
+        }
+    } else {
+        dfatal_f("command not support: {}", command);
+    }
+    if (strncasecmp(command, "DECR", 4) == 0) {
+        increment = -increment;
+    }
+
+    std::shared_ptr<proxy_session> ref_this = shared_from_this();
+    auto on_incr_reply = [ref_this, this, command, &entry](
+        ::dsn::error_code ec, dsn_message_t, dsn_message_t response) {
+        if (is_session_reset.load(std::memory_order_acquire)) {
+            dwarn_f("{}: command {} seqid({}) got reply, but session has reset",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id);
+            return;
+        }
+
+        if (::dsn::ERR_OK != ec) {
+            dwarn_f("{}: command {} seqid({}) got reply with error = {}",
+                    remote_address.to_string(),
+                    command,
+                    entry.sequence_id,
+                    ec.to_string());
+            redis_simple_string result;
+            result.is_error = true;
+            result.message = std::string("ERR ") + ec.to_string();
+            reply_message(entry, result);
+        } else {
+            ::dsn::apps::incr_response incr_resp;
+            ::dsn::unmarshall(response, incr_resp);
+            if (incr_resp.error != 0) {
+                redis_simple_string result;
+                result.is_error = true;
+                result.message = "ERR internal error " + std::to_string(incr_resp.error);
+                reply_message(entry, result);
+            } else {
+                redis_integer result;
+                result.value = incr_resp.new_value;
+                reply_message(entry, result);
+            }
+        }
+    };
+    dsn::apps::incr_request req;
+    pegasus_generate_key(req.key, entry.request.buffers[1].data, dsn::blob());
+    req.increment = increment;
+    client->incr(req, on_incr_reply, std::chrono::milliseconds(2000), 0, pegasus_key_hash(req.key));
 }
 
 void redis_parser::parse_set_parameters(const std::vector<redis_bulk_string> &opts,
