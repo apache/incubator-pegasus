@@ -129,19 +129,19 @@ func main() {
 			fmt.Fprintln(os.Stderr, "QueryCfg requires 1 args")
 			flag.Usage()
 		}
-		arg93 := flag.Arg(1)
-		mbTrans94 := thrift.NewTMemoryBufferLen(len(arg93))
-		defer mbTrans94.Close()
-		_, err95 := mbTrans94.WriteString(arg93)
-		if err95 != nil {
+		arg109 := flag.Arg(1)
+		mbTrans110 := thrift.NewTMemoryBufferLen(len(arg109))
+		defer mbTrans110.Close()
+		_, err111 := mbTrans110.WriteString(arg109)
+		if err111 != nil {
 			Usage()
 			return
 		}
-		factory96 := thrift.NewTSimpleJSONProtocolFactory()
-		jsProt97 := factory96.GetProtocol(mbTrans94)
+		factory112 := thrift.NewTSimpleJSONProtocolFactory()
+		jsProt113 := factory112.GetProtocol(mbTrans110)
 		argvalue0 := replication.NewQueryCfgRequest()
-		err98 := argvalue0.Read(jsProt97)
-		if err98 != nil {
+		err114 := argvalue0.Read(jsProt113)
+		if err114 != nil {
 			Usage()
 			return
 		}

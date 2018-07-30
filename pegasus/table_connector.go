@@ -23,28 +23,83 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
+type KeyValue struct {
+	SortKey, Value []byte
+}
+
+type MultiGetOptions struct {
+	StartInclusive bool
+	StopInclusive  bool
+	SortKeyFilter  Filter
+
+	// Max count of k-v pairs to be fetched. MaxFetchCount <= 0 means no limit.
+	MaxFetchCount int
+
+	// Max size of k-v pairs to be fetched. MaxFetchSize <= 0 means no limit.
+	MaxFetchSize int
+}
+
 type TableConnector interface {
+	// Get retrieves the entry for `hashKey` + `sortKey`.
+	// Returns nil if no entry matches.
 	Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error)
 
+	// Set the entry for `hashKey` + `sortKey` to `value`.
 	Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error
+	SetTTL(ctx context.Context, hashKey []byte, sortKey []byte, value []byte, ttl time.Duration) error
 
+	// Delete the entry for `hashKey` + `sortKey`.
 	Del(ctx context.Context, hashKey []byte, sortKey []byte) error
 
-	MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte, options MultiGetOptions) ([]KeyValue, error)
+	// MultiGet retrieves the multiple entries under `hashKey` all in one operation.
+	// The returned key-value pairs are sorted by sort key in ascending order.
+	// Returns nil if no entries match.
+	// Returns true if all data is fetched, false if only partial data is fetched.
+	MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte) ([]KeyValue, bool, error)
+	MultiGetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, options *MultiGetOptions) ([]KeyValue, bool, error)
 
-	MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options MultiGetOptions) ([]KeyValue, error)
+	// MultiGetRange retrieves the multiple entries under `hashKey`, between range (`startSortKey`, `stopSortKey`),
+	// all in one operation.
+	// The returned key-value pairs are sorted by sort key in ascending order.
+	// Returns nil if no entries match.
+	// Returns true if all data is fetched, false if only partial data is fetched.
+	MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) ([]KeyValue, bool, error)
+	MultiGetRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *MultiGetOptions) ([]KeyValue, bool, error)
 
-	MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttlSeconds int) error
+	// MultiSet sets the multiple entries under `hashKey` all in one operation.
+	MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte) error
+	MultiSetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttl time.Duration) error
 
+	// MultiDel deletes the multiple entries under `hashKey` all in one operation.
+	// Returns sort key of deleted entries.
 	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error
 
+	// Returns ttl(time-to-live) in seconds: -1 if ttl is not set; -2 if entry doesn't exist.
 	TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error)
 
+	// Check value existence for the entry for `hashKey` + `sortKey`.
 	Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error)
 
+	// Get Scanner for {startSortKey, stopSortKey} within hashKey.
+	// startSortKey: if null or length == 0, it means start from begin
+	// stopSortKey: if null or length == 0, it means stop to end
 	GetScanner(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *ScannerOptions) (Scanner, error)
 
+	// Get Scanners for all data in pegasus, the count of scanners will
+	// be no more than maxSplitCount
 	GetUnorderedScanners(ctx context.Context, maxSplitCount int, options *ScannerOptions) ([]Scanner, error)
+
+	// Atomically check and set value by key from the cluster. The value will be set if and only if check passed.
+	// The sort key for checking and setting can be the same or different.
+	//
+	// `checkSortKey`: The sort key for checking.
+	// `setSortKey`: The sort key for setting.
+	// `checkOperand`:
+	CheckAndSet(ctx context.Context, hashKey []byte, checkSortKey []byte, checkType CheckType,
+		checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error)
+
+	// Returns the count of sortkeys under hashkey.
+	SortKeyCount(ctx context.Context, hashKey []byte) (int64, error)
 
 	Close() error
 }
@@ -145,6 +200,13 @@ func validateHashKey(hashKey []byte) error {
 	return nil
 }
 
+func validateValue(value []byte) error {
+	if value == nil || len(value) == 0 {
+		return fmt.Errorf("InvalidParameter: value must not be empty")
+	}
+	return nil
+}
+
 // Wraps up the internal errors for ensuring that all types of errors
 // returned by public interfaces are pegasus.PError.
 func WrapError(err error, op OpType) error {
@@ -187,23 +249,34 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 	return b, WrapError(err, OpGet)
 }
 
-func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error {
+func (p *pegasusTableConnector) SetTTL(ctx context.Context, hashKey []byte, sortKey []byte, value []byte, ttl time.Duration) error {
 	err := func() error {
 		if err := validateHashKey(hashKey); err != nil {
+			return err
+		}
+		if err := validateValue(value); err != nil {
 			return err
 		}
 
 		key := encodeHashKeySortKey(hashKey, sortKey)
 		val := &base.Blob{Data: value}
 		gpid, part := p.getPartition(hashKey)
+		expireTsSec := int32(0)
+		if ttl != 0 {
+			expireTsSec = expireTsSeconds(ttl)
+		}
 
-		resp, err := part.Put(ctx, gpid, key, val)
+		resp, err := part.Put(ctx, gpid, key, val, expireTsSec)
 		if err == nil {
 			err = base.NewRocksDBErrFromInt(resp.Error)
 		}
 		return p.handleReplicaError(err, gpid, part)
 	}()
 	return WrapError(err, OpSet)
+}
+
+func (p *pegasusTableConnector) Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error {
+	return p.SetTTL(ctx, hashKey, sortKey, value, 0)
 }
 
 func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey []byte) error {
@@ -224,7 +297,7 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 	return WrapError(err, OpDel)
 }
 
-func setRequestByOption(options MultiGetOptions, request *rrdb.MultiGetRequest) {
+func setRequestByOption(options *MultiGetOptions, request *rrdb.MultiGetRequest) {
 	request.MaxKvCount = int32(options.MaxFetchCount)
 	request.MaxKvSize = int32(options.MaxFetchSize)
 	request.StartInclusive = options.StartInclusive
@@ -233,44 +306,70 @@ func setRequestByOption(options MultiGetOptions, request *rrdb.MultiGetRequest) 
 	request.SortKeyFilterPattern = &base.Blob{Data: options.SortKeyFilter.Pattern}
 }
 
-func (p *pegasusTableConnector) MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte, options MultiGetOptions) ([]KeyValue, error) {
-	request := rrdb.NewMultiGetRequest()
-	request.HashKey = &base.Blob{Data: hashKey}
-	request.SorkKeys = make([]*base.Blob, len(sortKeys))
-	request.StartSortkey = &base.Blob{}
-	request.StopSortkey = &base.Blob{}
-	for i, sortKey := range sortKeys {
-		request.SorkKeys[i] = &base.Blob{Data: sortKey}
-	}
-	setRequestByOption(options, request)
+func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, options *MultiGetOptions) ([]KeyValue, bool, error) {
+	kvs, allFetched, err := func() ([]KeyValue, bool, error) {
+		if err := validateHashKey(hashKey); err != nil {
+			return nil, false, err
+		}
 
-	kvs, err := p.doMultiGet(ctx, hashKey, request)
-	return kvs, WrapError(err, OpMultiGet)
+		request := rrdb.NewMultiGetRequest()
+		request.HashKey = &base.Blob{Data: hashKey}
+		request.SorkKeys = make([]*base.Blob, len(sortKeys))
+		request.StartSortkey = &base.Blob{}
+		request.StopSortkey = &base.Blob{}
+		for i, sortKey := range sortKeys {
+			request.SorkKeys[i] = &base.Blob{Data: sortKey}
+		}
+		setRequestByOption(options, request)
+
+		return p.doMultiGet(ctx, hashKey, request)
+	}()
+	return kvs, allFetched, WrapError(err, OpMultiGet)
 }
 
-func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options MultiGetOptions) ([]KeyValue, error) {
-	request := rrdb.NewMultiGetRequest()
-	request.HashKey = &base.Blob{Data: hashKey}
-	request.StartSortkey = &base.Blob{Data: startSortKey}
-	request.StopSortkey = &base.Blob{Data: stopSortKey}
-	setRequestByOption(options, request)
-
-	kvs, err := p.doMultiGet(ctx, hashKey, request)
-	return kvs, WrapError(err, OpMultiGetRange)
+func (p *pegasusTableConnector) MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte) ([]KeyValue, bool, error) {
+	return p.MultiGetOpt(ctx, hashKey, sortKeys, &MultiGetOptions{})
 }
 
-func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, request *rrdb.MultiGetRequest) ([]KeyValue, error) {
-	if err := validateHashKey(hashKey); err != nil {
-		return nil, err
-	}
+func (p *pegasusTableConnector) MultiGetRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *MultiGetOptions) ([]KeyValue, bool, error) {
+	kvs, allFetched, err := func() ([]KeyValue, bool, error) {
+		if err := validateHashKey(hashKey); err != nil {
+			return nil, false, err
+		}
 
+		request := rrdb.NewMultiGetRequest()
+		request.HashKey = &base.Blob{Data: hashKey}
+		request.StartSortkey = &base.Blob{Data: startSortKey}
+		request.StopSortkey = &base.Blob{Data: stopSortKey}
+		setRequestByOption(options, request)
+
+		return p.doMultiGet(ctx, hashKey, request)
+	}()
+	return kvs, allFetched, WrapError(err, OpMultiGetRange)
+}
+
+func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) ([]KeyValue, bool, error) {
+	return p.MultiGetRangeOpt(ctx, hashKey, startSortKey, stopSortKey, &MultiGetOptions{})
+}
+
+func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, request *rrdb.MultiGetRequest) ([]KeyValue, bool, error) {
 	gpid, part := p.getPartition(hashKey)
 	resp, err := part.MultiGet(ctx, gpid, request)
 
 	if err == nil {
 		err = base.NewRocksDBErrFromInt(resp.Error)
 	}
+
+	allFetched := true
+	if err == base.Incomplete {
+		// partial data is fetched
+		allFetched = false
+		err = nil
+	}
 	if err = p.handleReplicaError(err, gpid, part); err == nil {
+		if len(resp.Kvs) == 0 {
+			return nil, allFetched, nil
+		}
 		kvs := make([]KeyValue, len(resp.Kvs))
 		for i, blobKv := range resp.Kvs {
 			kvs[i].SortKey = blobKv.Key.Data
@@ -281,38 +380,49 @@ func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, 
 			return bytes.Compare(kvs[i].SortKey, kvs[j].SortKey) < 0
 		})
 
-		return kvs, nil
+		return kvs, allFetched, nil
 	}
-	return nil, err
+	return nil, false, err
 }
 
-func (p *pegasusTableConnector) MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttlSeconds int) error {
-	request := rrdb.NewMultiPutRequest()
-	request.HashKey = &base.Blob{Data: hashKey}
-	request.Kvs = make([]*rrdb.KeyValue, len(sortKeys))
+func (p *pegasusTableConnector) MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte) error {
+	return p.MultiSetOpt(ctx, hashKey, sortKeys, values, 0)
+}
 
-	for i := 0; i < len(sortKeys); i++ {
-		request.Kvs[i] = &rrdb.KeyValue{
-			Key:   &base.Blob{Data: sortKeys[i]},
-			Value: &base.Blob{Data: values[i]},
+func (p *pegasusTableConnector) MultiSetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttl time.Duration) error {
+	err := func() error {
+		if err := validateHashKey(hashKey); err != nil {
+			return err
 		}
-	}
+		if values == nil || len(values) == 0 {
+			return fmt.Errorf("InvalidParameter: values must not be empty")
+		}
+		for _, v := range values {
+			if err := validateValue(v); err != nil {
+				return err
+			}
+		}
 
-	if ttlSeconds == 0 {
+		request := rrdb.NewMultiPutRequest()
+		request.HashKey = &base.Blob{Data: hashKey}
+		request.Kvs = make([]*rrdb.KeyValue, len(sortKeys))
+		for i := 0; i < len(sortKeys); i++ {
+			request.Kvs[i] = &rrdb.KeyValue{
+				Key:   &base.Blob{Data: sortKeys[i]},
+				Value: &base.Blob{Data: values[i]},
+			}
+		}
 		request.ExpireTsSeconds = 0
-	} else {
-		// 1451606400 means 2016.01.01-00:00:00 GMT
-		request.ExpireTsSeconds = int32(int64(ttlSeconds) + time.Now().Unix() - 1451606400)
-	}
+		if ttl != 0 {
+			request.ExpireTsSeconds = expireTsSeconds(ttl)
+		}
 
-	err := p.doMultiSet(ctx, hashKey, request)
+		return p.doMultiSet(ctx, hashKey, request)
+	}()
 	return WrapError(err, OpMultiSet)
 }
 
 func (p *pegasusTableConnector) doMultiSet(ctx context.Context, hashKey []byte, request *rrdb.MultiPutRequest) error {
-	if err := validateHashKey(hashKey); err != nil {
-		return err
-	}
 
 	gpid, part := p.getPartition(hashKey)
 	resp, err := part.MultiSet(ctx, gpid, request)
@@ -337,6 +447,7 @@ func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, so
 
 		request := rrdb.NewMultiRemoveRequest()
 		request.HashKey = &base.Blob{Data: hashKey}
+		request.SorkKeys = make([]*base.Blob, len(sortKeys))
 		for i, sortKey := range sortKeys {
 			request.SorkKeys[i] = &base.Blob{Data: sortKey}
 		}
@@ -351,30 +462,35 @@ func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, so
 	return WrapError(err, OpMultiDel)
 }
 
+func (p *pegasusTableConnector) doTTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error) {
+	if err := validateHashKey(hashKey); err != nil {
+		return 0, err
+	}
+
+	key := encodeHashKeySortKey(hashKey, sortKey)
+	gpid, part := p.getPartition(hashKey)
+
+	resp, err := part.TTL(ctx, gpid, key)
+	if err == nil {
+		err = base.NewRocksDBErrFromInt(resp.Error)
+		if err == base.NotFound {
+			return -2, nil
+		}
+	}
+	if err = p.handleReplicaError(err, gpid, part); err != nil {
+		return -2, err
+	}
+	return int(resp.GetTTLSeconds()), nil
+}
+
+// -2 means entry not found.
 func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error) {
-	ttl, err := func() (int, error) {
-		if err := validateHashKey(hashKey); err != nil {
-			return 0, err
-		}
-
-		key := encodeHashKeySortKey(hashKey, sortKey)
-		gpid, part := p.getPartition(hashKey)
-
-		resp, err := part.TTL(ctx, gpid, key)
-		if err == nil {
-			err = base.NewRocksDBErrFromInt(resp.Error)
-		}
-		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return -2, err
-		} else {
-			return int(resp.GetTTLSeconds()), nil
-		}
-	}()
+	ttl, err := p.doTTL(ctx, hashKey, sortKey)
 	return ttl, WrapError(err, OpTTL)
 }
 
 func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error) {
-	ttl, err := p.TTL(ctx, hashKey, sortKey)
+	ttl, err := p.doTTL(ctx, hashKey, sortKey)
 
 	if err == nil {
 		if ttl == -2 {
@@ -383,7 +499,7 @@ func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortK
 			return true, nil
 		}
 	}
-	return false, WrapError(err, OpTTL)
+	return false, WrapError(err, OpExist)
 }
 
 func (p *pegasusTableConnector) GetScanner(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte,
@@ -474,6 +590,78 @@ func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSpl
 		return scanners, nil
 	}()
 	return scanners, WrapError(err, OpGetUnorderedScanners)
+}
+
+func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte, checkSortKey []byte, checkType CheckType,
+	checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error) {
+	result, err := func() (*CheckAndSetResult, error) {
+		if err := validateHashKey(hashKey); err != nil {
+			return nil, err
+		}
+
+		gpid, part := p.getPartition(hashKey)
+
+		request := rrdb.NewCheckAndSetRequest()
+		request.CheckType = rrdb.CasCheckType(checkType)
+		request.CheckOperand = &base.Blob{Data: checkOperand}
+		request.CheckSortKey = &base.Blob{Data: checkSortKey}
+		request.HashKey = &base.Blob{Data: hashKey}
+		request.SetExpireTsSeconds = 0
+		if options.SetValueTTLSeconds != 0 {
+			request.SetExpireTsSeconds = expireTsSeconds(time.Second * time.Duration(options.SetValueTTLSeconds))
+		}
+		request.SetSortKey = &base.Blob{Data: setSortKey}
+		request.SetValue = &base.Blob{Data: setValue}
+		request.ReturnCheckValue = options.ReturnCheckValue
+		if bytes.Compare(checkSortKey, setSortKey) != 0 {
+			request.SetDiffSortKey = true
+		} else {
+			request.SetDiffSortKey = false
+		}
+
+		resp, err := part.CheckAndSet(ctx, gpid, request)
+
+		if err == nil {
+			err = base.NewRocksDBErrFromInt(resp.Error)
+		}
+		if err == base.TryAgain {
+			err = nil
+		}
+		if err = p.handleReplicaError(err, gpid, part); err != nil {
+			return nil, err
+		}
+
+		result := &CheckAndSetResult{
+			SetSucceed:         resp.Error == 0,
+			CheckValueReturned: resp.CheckValueReturned,
+			CheckValueExist:    resp.CheckValueReturned && resp.CheckValueExist,
+		}
+		if resp.CheckValueReturned && resp.CheckValueExist && resp.CheckValue != nil && resp.CheckValue.Data != nil && len(resp.CheckValue.Data) != 0 {
+			result.CheckValue = resp.CheckValue.Data
+		}
+		return result, nil
+	}()
+	return result, WrapError(err, OpCheckAndSet)
+}
+
+func (p *pegasusTableConnector) SortKeyCount(ctx context.Context, hashKey []byte) (int64, error) {
+	count, err := func() (int64, error) {
+		if err := validateHashKey(hashKey); err != nil {
+			return 0, err
+		}
+
+		gpid, part := p.getPartition(hashKey)
+		resp, err := part.SortKeyCount(ctx, gpid, &base.Blob{Data: hashKey})
+		if err == nil {
+			err = base.NewRocksDBErrFromInt(resp.Error)
+		}
+		if err = p.handleReplicaError(err, gpid, part); err != nil {
+			return 0, err
+		} else {
+			return resp.Count, nil
+		}
+	}()
+	return count, WrapError(err, OpSortKeyCount)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {

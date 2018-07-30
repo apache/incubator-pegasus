@@ -57,8 +57,8 @@ type pegasusScanner struct {
 	logger pegalog.Logger
 }
 
-func NewScanOptions() ScannerOptions {
-	return ScannerOptions{
+func NewScanOptions() *ScannerOptions {
+	return &ScannerOptions{
 		BatchSize:      1000,
 		StartInclusive: true,
 		StopInclusive:  false,

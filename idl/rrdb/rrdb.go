@@ -93,6 +93,144 @@ func (p *FilterType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type CasCheckType int64
+
+const (
+	CasCheckType_CT_NO_CHECK                     CasCheckType = 0
+	CasCheckType_CT_VALUE_NOT_EXIST              CasCheckType = 1
+	CasCheckType_CT_VALUE_NOT_EXIST_OR_EMPTY     CasCheckType = 2
+	CasCheckType_CT_VALUE_EXIST                  CasCheckType = 3
+	CasCheckType_CT_VALUE_NOT_EMPTY              CasCheckType = 4
+	CasCheckType_CT_VALUE_MATCH_ANYWHERE         CasCheckType = 5
+	CasCheckType_CT_VALUE_MATCH_PREFIX           CasCheckType = 6
+	CasCheckType_CT_VALUE_MATCH_POSTFIX          CasCheckType = 7
+	CasCheckType_CT_VALUE_BYTES_LESS             CasCheckType = 8
+	CasCheckType_CT_VALUE_BYTES_LESS_OR_EQUAL    CasCheckType = 9
+	CasCheckType_CT_VALUE_BYTES_EQUAL            CasCheckType = 10
+	CasCheckType_CT_VALUE_BYTES_GREATER_OR_EQUAL CasCheckType = 11
+	CasCheckType_CT_VALUE_BYTES_GREATER          CasCheckType = 12
+	CasCheckType_CT_VALUE_INT_LESS               CasCheckType = 13
+	CasCheckType_CT_VALUE_INT_LESS_OR_EQUAL      CasCheckType = 14
+	CasCheckType_CT_VALUE_INT_EQUAL              CasCheckType = 15
+	CasCheckType_CT_VALUE_INT_GREATER_OR_EQUAL   CasCheckType = 16
+	CasCheckType_CT_VALUE_INT_GREATER            CasCheckType = 17
+)
+
+func (p CasCheckType) String() string {
+	switch p {
+	case CasCheckType_CT_NO_CHECK:
+		return "CT_NO_CHECK"
+	case CasCheckType_CT_VALUE_NOT_EXIST:
+		return "CT_VALUE_NOT_EXIST"
+	case CasCheckType_CT_VALUE_NOT_EXIST_OR_EMPTY:
+		return "CT_VALUE_NOT_EXIST_OR_EMPTY"
+	case CasCheckType_CT_VALUE_EXIST:
+		return "CT_VALUE_EXIST"
+	case CasCheckType_CT_VALUE_NOT_EMPTY:
+		return "CT_VALUE_NOT_EMPTY"
+	case CasCheckType_CT_VALUE_MATCH_ANYWHERE:
+		return "CT_VALUE_MATCH_ANYWHERE"
+	case CasCheckType_CT_VALUE_MATCH_PREFIX:
+		return "CT_VALUE_MATCH_PREFIX"
+	case CasCheckType_CT_VALUE_MATCH_POSTFIX:
+		return "CT_VALUE_MATCH_POSTFIX"
+	case CasCheckType_CT_VALUE_BYTES_LESS:
+		return "CT_VALUE_BYTES_LESS"
+	case CasCheckType_CT_VALUE_BYTES_LESS_OR_EQUAL:
+		return "CT_VALUE_BYTES_LESS_OR_EQUAL"
+	case CasCheckType_CT_VALUE_BYTES_EQUAL:
+		return "CT_VALUE_BYTES_EQUAL"
+	case CasCheckType_CT_VALUE_BYTES_GREATER_OR_EQUAL:
+		return "CT_VALUE_BYTES_GREATER_OR_EQUAL"
+	case CasCheckType_CT_VALUE_BYTES_GREATER:
+		return "CT_VALUE_BYTES_GREATER"
+	case CasCheckType_CT_VALUE_INT_LESS:
+		return "CT_VALUE_INT_LESS"
+	case CasCheckType_CT_VALUE_INT_LESS_OR_EQUAL:
+		return "CT_VALUE_INT_LESS_OR_EQUAL"
+	case CasCheckType_CT_VALUE_INT_EQUAL:
+		return "CT_VALUE_INT_EQUAL"
+	case CasCheckType_CT_VALUE_INT_GREATER_OR_EQUAL:
+		return "CT_VALUE_INT_GREATER_OR_EQUAL"
+	case CasCheckType_CT_VALUE_INT_GREATER:
+		return "CT_VALUE_INT_GREATER"
+	}
+	return "<UNSET>"
+}
+
+func CasCheckTypeFromString(s string) (CasCheckType, error) {
+	switch s {
+	case "CT_NO_CHECK":
+		return CasCheckType_CT_NO_CHECK, nil
+	case "CT_VALUE_NOT_EXIST":
+		return CasCheckType_CT_VALUE_NOT_EXIST, nil
+	case "CT_VALUE_NOT_EXIST_OR_EMPTY":
+		return CasCheckType_CT_VALUE_NOT_EXIST_OR_EMPTY, nil
+	case "CT_VALUE_EXIST":
+		return CasCheckType_CT_VALUE_EXIST, nil
+	case "CT_VALUE_NOT_EMPTY":
+		return CasCheckType_CT_VALUE_NOT_EMPTY, nil
+	case "CT_VALUE_MATCH_ANYWHERE":
+		return CasCheckType_CT_VALUE_MATCH_ANYWHERE, nil
+	case "CT_VALUE_MATCH_PREFIX":
+		return CasCheckType_CT_VALUE_MATCH_PREFIX, nil
+	case "CT_VALUE_MATCH_POSTFIX":
+		return CasCheckType_CT_VALUE_MATCH_POSTFIX, nil
+	case "CT_VALUE_BYTES_LESS":
+		return CasCheckType_CT_VALUE_BYTES_LESS, nil
+	case "CT_VALUE_BYTES_LESS_OR_EQUAL":
+		return CasCheckType_CT_VALUE_BYTES_LESS_OR_EQUAL, nil
+	case "CT_VALUE_BYTES_EQUAL":
+		return CasCheckType_CT_VALUE_BYTES_EQUAL, nil
+	case "CT_VALUE_BYTES_GREATER_OR_EQUAL":
+		return CasCheckType_CT_VALUE_BYTES_GREATER_OR_EQUAL, nil
+	case "CT_VALUE_BYTES_GREATER":
+		return CasCheckType_CT_VALUE_BYTES_GREATER, nil
+	case "CT_VALUE_INT_LESS":
+		return CasCheckType_CT_VALUE_INT_LESS, nil
+	case "CT_VALUE_INT_LESS_OR_EQUAL":
+		return CasCheckType_CT_VALUE_INT_LESS_OR_EQUAL, nil
+	case "CT_VALUE_INT_EQUAL":
+		return CasCheckType_CT_VALUE_INT_EQUAL, nil
+	case "CT_VALUE_INT_GREATER_OR_EQUAL":
+		return CasCheckType_CT_VALUE_INT_GREATER_OR_EQUAL, nil
+	case "CT_VALUE_INT_GREATER":
+		return CasCheckType_CT_VALUE_INT_GREATER, nil
+	}
+	return CasCheckType(0), fmt.Errorf("not a valid CasCheckType string")
+}
+
+func CasCheckTypePtr(v CasCheckType) *CasCheckType { return &v }
+
+func (p CasCheckType) MarshalText() ([]byte, error) {
+	return []byte(p.String()), nil
+}
+
+func (p *CasCheckType) UnmarshalText(text []byte) error {
+	q, err := CasCheckTypeFromString(string(text))
+	if err != nil {
+		return err
+	}
+	*p = q
+	return nil
+}
+
+func (p *CasCheckType) Scan(value interface{}) error {
+	v, ok := value.(int64)
+	if !ok {
+		return errors.New("Scan value is not int64")
+	}
+	*p = CasCheckType(v)
+	return nil
+}
+
+func (p *CasCheckType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 // Attributes:
 //  - Key
 //  - Value
@@ -3115,6 +3253,1320 @@ func (p *MultiGetResponse) String() string {
 }
 
 // Attributes:
+//  - Key
+//  - Increment
+type IncrRequest struct {
+	Key       *base.Blob `thrift:"key,1" db:"key" json:"key"`
+	Increment int64      `thrift:"increment,2" db:"increment" json:"increment"`
+}
+
+func NewIncrRequest() *IncrRequest {
+	return &IncrRequest{}
+}
+
+var IncrRequest_Key_DEFAULT *base.Blob
+
+func (p *IncrRequest) GetKey() *base.Blob {
+	if !p.IsSetKey() {
+		return IncrRequest_Key_DEFAULT
+	}
+	return p.Key
+}
+
+func (p *IncrRequest) GetIncrement() int64 {
+	return p.Increment
+}
+func (p *IncrRequest) IsSetKey() bool {
+	return p.Key != nil
+}
+
+func (p *IncrRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *IncrRequest) ReadField1(iprot thrift.TProtocol) error {
+	p.Key = &base.Blob{}
+	if err := p.Key.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Key), err)
+	}
+	return nil
+}
+
+func (p *IncrRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.Increment = v
+	}
+	return nil
+}
+
+func (p *IncrRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("incr_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *IncrRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("key", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:key: ", p), err)
+	}
+	if err := p.Key.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Key), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:key: ", p), err)
+	}
+	return err
+}
+
+func (p *IncrRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("increment", thrift.I64, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:increment: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.Increment)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.increment (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:increment: ", p), err)
+	}
+	return err
+}
+
+func (p *IncrRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("IncrRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Error
+//  - NewValue_
+//  - AppID
+//  - PartitionIndex
+//  - Decree
+//  - Server
+type IncrResponse struct {
+	Error          int32  `thrift:"error,1" db:"error" json:"error"`
+	NewValue_      int64  `thrift:"new_value,2" db:"new_value" json:"new_value"`
+	AppID          int32  `thrift:"app_id,3" db:"app_id" json:"app_id"`
+	PartitionIndex int32  `thrift:"partition_index,4" db:"partition_index" json:"partition_index"`
+	Decree         int64  `thrift:"decree,5" db:"decree" json:"decree"`
+	Server         string `thrift:"server,6" db:"server" json:"server"`
+}
+
+func NewIncrResponse() *IncrResponse {
+	return &IncrResponse{}
+}
+
+func (p *IncrResponse) GetError() int32 {
+	return p.Error
+}
+
+func (p *IncrResponse) GetNewValue_() int64 {
+	return p.NewValue_
+}
+
+func (p *IncrResponse) GetAppID() int32 {
+	return p.AppID
+}
+
+func (p *IncrResponse) GetPartitionIndex() int32 {
+	return p.PartitionIndex
+}
+
+func (p *IncrResponse) GetDecree() int64 {
+	return p.Decree
+}
+
+func (p *IncrResponse) GetServer() string {
+	return p.Server
+}
+func (p *IncrResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField6(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *IncrResponse) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Error = v
+	}
+	return nil
+}
+
+func (p *IncrResponse) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.NewValue_ = v
+	}
+	return nil
+}
+
+func (p *IncrResponse) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.AppID = v
+	}
+	return nil
+}
+
+func (p *IncrResponse) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		p.PartitionIndex = v
+	}
+	return nil
+}
+
+func (p *IncrResponse) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 5: ", err)
+	} else {
+		p.Decree = v
+	}
+	return nil
+}
+
+func (p *IncrResponse) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 6: ", err)
+	} else {
+		p.Server = v
+	}
+	return nil
+}
+
+func (p *IncrResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("incr_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField6(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *IncrResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("error", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:error: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.Error)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.error (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:error: ", p), err)
+	}
+	return err
+}
+
+func (p *IncrResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("new_value", thrift.I64, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:new_value: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.NewValue_)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.new_value (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:new_value: ", p), err)
+	}
+	return err
+}
+
+func (p *IncrResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_id", thrift.I32, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:app_id: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.AppID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_id (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:app_id: ", p), err)
+	}
+	return err
+}
+
+func (p *IncrResponse) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("partition_index", thrift.I32, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:partition_index: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.PartitionIndex)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.partition_index (4) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:partition_index: ", p), err)
+	}
+	return err
+}
+
+func (p *IncrResponse) writeField5(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("decree", thrift.I64, 5); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:decree: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.Decree)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.decree (5) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 5:decree: ", p), err)
+	}
+	return err
+}
+
+func (p *IncrResponse) writeField6(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("server", thrift.STRING, 6); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:server: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.Server)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.server (6) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 6:server: ", p), err)
+	}
+	return err
+}
+
+func (p *IncrResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("IncrResponse(%+v)", *p)
+}
+
+// Attributes:
+//  - HashKey
+//  - CheckSortKey
+//  - CheckType
+//  - CheckOperand
+//  - SetDiffSortKey
+//  - SetSortKey
+//  - SetValue
+//  - SetExpireTsSeconds
+//  - ReturnCheckValue
+type CheckAndSetRequest struct {
+	HashKey            *base.Blob   `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
+	CheckSortKey       *base.Blob   `thrift:"check_sort_key,2" db:"check_sort_key" json:"check_sort_key"`
+	CheckType          CasCheckType `thrift:"check_type,3" db:"check_type" json:"check_type"`
+	CheckOperand       *base.Blob   `thrift:"check_operand,4" db:"check_operand" json:"check_operand"`
+	SetDiffSortKey     bool         `thrift:"set_diff_sort_key,5" db:"set_diff_sort_key" json:"set_diff_sort_key"`
+	SetSortKey         *base.Blob   `thrift:"set_sort_key,6" db:"set_sort_key" json:"set_sort_key"`
+	SetValue           *base.Blob   `thrift:"set_value,7" db:"set_value" json:"set_value"`
+	SetExpireTsSeconds int32        `thrift:"set_expire_ts_seconds,8" db:"set_expire_ts_seconds" json:"set_expire_ts_seconds"`
+	ReturnCheckValue   bool         `thrift:"return_check_value,9" db:"return_check_value" json:"return_check_value"`
+}
+
+func NewCheckAndSetRequest() *CheckAndSetRequest {
+	return &CheckAndSetRequest{}
+}
+
+var CheckAndSetRequest_HashKey_DEFAULT *base.Blob
+
+func (p *CheckAndSetRequest) GetHashKey() *base.Blob {
+	if !p.IsSetHashKey() {
+		return CheckAndSetRequest_HashKey_DEFAULT
+	}
+	return p.HashKey
+}
+
+var CheckAndSetRequest_CheckSortKey_DEFAULT *base.Blob
+
+func (p *CheckAndSetRequest) GetCheckSortKey() *base.Blob {
+	if !p.IsSetCheckSortKey() {
+		return CheckAndSetRequest_CheckSortKey_DEFAULT
+	}
+	return p.CheckSortKey
+}
+
+func (p *CheckAndSetRequest) GetCheckType() CasCheckType {
+	return p.CheckType
+}
+
+var CheckAndSetRequest_CheckOperand_DEFAULT *base.Blob
+
+func (p *CheckAndSetRequest) GetCheckOperand() *base.Blob {
+	if !p.IsSetCheckOperand() {
+		return CheckAndSetRequest_CheckOperand_DEFAULT
+	}
+	return p.CheckOperand
+}
+
+func (p *CheckAndSetRequest) GetSetDiffSortKey() bool {
+	return p.SetDiffSortKey
+}
+
+var CheckAndSetRequest_SetSortKey_DEFAULT *base.Blob
+
+func (p *CheckAndSetRequest) GetSetSortKey() *base.Blob {
+	if !p.IsSetSetSortKey() {
+		return CheckAndSetRequest_SetSortKey_DEFAULT
+	}
+	return p.SetSortKey
+}
+
+var CheckAndSetRequest_SetValue_DEFAULT *base.Blob
+
+func (p *CheckAndSetRequest) GetSetValue() *base.Blob {
+	if !p.IsSetSetValue() {
+		return CheckAndSetRequest_SetValue_DEFAULT
+	}
+	return p.SetValue
+}
+
+func (p *CheckAndSetRequest) GetSetExpireTsSeconds() int32 {
+	return p.SetExpireTsSeconds
+}
+
+func (p *CheckAndSetRequest) GetReturnCheckValue() bool {
+	return p.ReturnCheckValue
+}
+func (p *CheckAndSetRequest) IsSetHashKey() bool {
+	return p.HashKey != nil
+}
+
+func (p *CheckAndSetRequest) IsSetCheckSortKey() bool {
+	return p.CheckSortKey != nil
+}
+
+func (p *CheckAndSetRequest) IsSetCheckOperand() bool {
+	return p.CheckOperand != nil
+}
+
+func (p *CheckAndSetRequest) IsSetSetSortKey() bool {
+	return p.SetSortKey != nil
+}
+
+func (p *CheckAndSetRequest) IsSetSetValue() bool {
+	return p.SetValue != nil
+}
+
+func (p *CheckAndSetRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField6(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField7(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField8(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField9(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) ReadField1(iprot thrift.TProtocol) error {
+	p.HashKey = &base.Blob{}
+	if err := p.HashKey.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HashKey), err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) ReadField2(iprot thrift.TProtocol) error {
+	p.CheckSortKey = &base.Blob{}
+	if err := p.CheckSortKey.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CheckSortKey), err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		temp := CasCheckType(v)
+		p.CheckType = temp
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) ReadField4(iprot thrift.TProtocol) error {
+	p.CheckOperand = &base.Blob{}
+	if err := p.CheckOperand.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CheckOperand), err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 5: ", err)
+	} else {
+		p.SetDiffSortKey = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) ReadField6(iprot thrift.TProtocol) error {
+	p.SetSortKey = &base.Blob{}
+	if err := p.SetSortKey.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.SetSortKey), err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) ReadField7(iprot thrift.TProtocol) error {
+	p.SetValue = &base.Blob{}
+	if err := p.SetValue.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.SetValue), err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) ReadField8(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 8: ", err)
+	} else {
+		p.SetExpireTsSeconds = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) ReadField9(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 9: ", err)
+	} else {
+		p.ReturnCheckValue = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("check_and_set_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField6(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField7(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField8(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField9(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("hash_key", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:hash_key: ", p), err)
+	}
+	if err := p.HashKey.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HashKey), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:hash_key: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_sort_key", thrift.STRUCT, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:check_sort_key: ", p), err)
+	}
+	if err := p.CheckSortKey.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CheckSortKey), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:check_sort_key: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_type", thrift.I32, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:check_type: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.CheckType)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.check_type (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:check_type: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_operand", thrift.STRUCT, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:check_operand: ", p), err)
+	}
+	if err := p.CheckOperand.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CheckOperand), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:check_operand: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("set_diff_sort_key", thrift.BOOL, 5); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:set_diff_sort_key: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.SetDiffSortKey)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.set_diff_sort_key (5) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 5:set_diff_sort_key: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("set_sort_key", thrift.STRUCT, 6); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:set_sort_key: ", p), err)
+	}
+	if err := p.SetSortKey.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.SetSortKey), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 6:set_sort_key: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("set_value", thrift.STRUCT, 7); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:set_value: ", p), err)
+	}
+	if err := p.SetValue.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.SetValue), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 7:set_value: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetRequest) writeField8(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("set_expire_ts_seconds", thrift.I32, 8); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:set_expire_ts_seconds: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.SetExpireTsSeconds)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.set_expire_ts_seconds (8) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 8:set_expire_ts_seconds: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetRequest) writeField9(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("return_check_value", thrift.BOOL, 9); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:return_check_value: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.ReturnCheckValue)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.return_check_value (9) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 9:return_check_value: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CheckAndSetRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Error
+//  - CheckValueReturned
+//  - CheckValueExist
+//  - CheckValue
+//  - AppID
+//  - PartitionIndex
+//  - Decree
+//  - Server
+type CheckAndSetResponse struct {
+	Error              int32      `thrift:"error,1" db:"error" json:"error"`
+	CheckValueReturned bool       `thrift:"check_value_returned,2" db:"check_value_returned" json:"check_value_returned"`
+	CheckValueExist    bool       `thrift:"check_value_exist,3" db:"check_value_exist" json:"check_value_exist"`
+	CheckValue         *base.Blob `thrift:"check_value,4" db:"check_value" json:"check_value"`
+	AppID              int32      `thrift:"app_id,5" db:"app_id" json:"app_id"`
+	PartitionIndex     int32      `thrift:"partition_index,6" db:"partition_index" json:"partition_index"`
+	Decree             int64      `thrift:"decree,7" db:"decree" json:"decree"`
+	Server             string     `thrift:"server,8" db:"server" json:"server"`
+}
+
+func NewCheckAndSetResponse() *CheckAndSetResponse {
+	return &CheckAndSetResponse{}
+}
+
+func (p *CheckAndSetResponse) GetError() int32 {
+	return p.Error
+}
+
+func (p *CheckAndSetResponse) GetCheckValueReturned() bool {
+	return p.CheckValueReturned
+}
+
+func (p *CheckAndSetResponse) GetCheckValueExist() bool {
+	return p.CheckValueExist
+}
+
+var CheckAndSetResponse_CheckValue_DEFAULT *base.Blob
+
+func (p *CheckAndSetResponse) GetCheckValue() *base.Blob {
+	if !p.IsSetCheckValue() {
+		return CheckAndSetResponse_CheckValue_DEFAULT
+	}
+	return p.CheckValue
+}
+
+func (p *CheckAndSetResponse) GetAppID() int32 {
+	return p.AppID
+}
+
+func (p *CheckAndSetResponse) GetPartitionIndex() int32 {
+	return p.PartitionIndex
+}
+
+func (p *CheckAndSetResponse) GetDecree() int64 {
+	return p.Decree
+}
+
+func (p *CheckAndSetResponse) GetServer() string {
+	return p.Server
+}
+func (p *CheckAndSetResponse) IsSetCheckValue() bool {
+	return p.CheckValue != nil
+}
+
+func (p *CheckAndSetResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField6(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField7(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField8(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Error = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.CheckValueReturned = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.CheckValueExist = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) ReadField4(iprot thrift.TProtocol) error {
+	p.CheckValue = &base.Blob{}
+	if err := p.CheckValue.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CheckValue), err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 5: ", err)
+	} else {
+		p.AppID = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 6: ", err)
+	} else {
+		p.PartitionIndex = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) ReadField7(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 7: ", err)
+	} else {
+		p.Decree = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) ReadField8(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 8: ", err)
+	} else {
+		p.Server = v
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("check_and_set_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField6(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField7(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField8(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CheckAndSetResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("error", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:error: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.Error)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.error (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:error: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_value_returned", thrift.BOOL, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:check_value_returned: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.CheckValueReturned)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.check_value_returned (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:check_value_returned: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_value_exist", thrift.BOOL, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:check_value_exist: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.CheckValueExist)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.check_value_exist (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:check_value_exist: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetResponse) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_value", thrift.STRUCT, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:check_value: ", p), err)
+	}
+	if err := p.CheckValue.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CheckValue), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:check_value: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetResponse) writeField5(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_id", thrift.I32, 5); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:app_id: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.AppID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_id (5) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 5:app_id: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetResponse) writeField6(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("partition_index", thrift.I32, 6); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:partition_index: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.PartitionIndex)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.partition_index (6) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 6:partition_index: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetResponse) writeField7(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("decree", thrift.I64, 7); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:decree: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.Decree)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.decree (7) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 7:decree: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetResponse) writeField8(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("server", thrift.STRING, 8); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:server: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.Server)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.server (8) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 8:server: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndSetResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CheckAndSetResponse(%+v)", *p)
+}
+
+// Attributes:
 //  - StartKey
 //  - StopKey
 //  - StartInclusive
@@ -4052,6 +5504,12 @@ type Rrdb interface {
 	//  - Request
 	MultiRemove(ctx context.Context, request *MultiRemoveRequest) (r *MultiRemoveResponse, err error)
 	// Parameters:
+	//  - Request
+	Incr(ctx context.Context, request *IncrRequest) (r *IncrResponse, err error)
+	// Parameters:
+	//  - Request
+	CheckAndSet(ctx context.Context, request *CheckAndSetRequest) (r *CheckAndSetResponse, err error)
+	// Parameters:
 	//  - Key
 	Get(ctx context.Context, key *base.Blob) (r *ReadResponse, err error)
 	// Parameters:
@@ -4147,12 +5605,12 @@ func (p *RrdbClient) MultiRemove(ctx context.Context, request *MultiRemoveReques
 }
 
 // Parameters:
-//  - Key
-func (p *RrdbClient) Get(ctx context.Context, key *base.Blob) (r *ReadResponse, err error) {
-	var _args13 RrdbGetArgs
-	_args13.Key = key
-	var _result14 RrdbGetResult
-	if err = p.c.Call(ctx, "get", &_args13, &_result14); err != nil {
+//  - Request
+func (p *RrdbClient) Incr(ctx context.Context, request *IncrRequest) (r *IncrResponse, err error) {
+	var _args13 RrdbIncrArgs
+	_args13.Request = request
+	var _result14 RrdbIncrResult
+	if err = p.c.Call(ctx, "incr", &_args13, &_result14); err != nil {
 		return
 	}
 	return _result14.GetSuccess(), nil
@@ -4160,70 +5618,94 @@ func (p *RrdbClient) Get(ctx context.Context, key *base.Blob) (r *ReadResponse, 
 
 // Parameters:
 //  - Request
-func (p *RrdbClient) MultiGet(ctx context.Context, request *MultiGetRequest) (r *MultiGetResponse, err error) {
-	var _args15 RrdbMultiGetArgs
+func (p *RrdbClient) CheckAndSet(ctx context.Context, request *CheckAndSetRequest) (r *CheckAndSetResponse, err error) {
+	var _args15 RrdbCheckAndSetArgs
 	_args15.Request = request
-	var _result16 RrdbMultiGetResult
-	if err = p.c.Call(ctx, "multi_get", &_args15, &_result16); err != nil {
+	var _result16 RrdbCheckAndSetResult
+	if err = p.c.Call(ctx, "check_and_set", &_args15, &_result16); err != nil {
 		return
 	}
 	return _result16.GetSuccess(), nil
 }
 
 // Parameters:
-//  - HashKey
-func (p *RrdbClient) SortkeyCount(ctx context.Context, hash_key *base.Blob) (r *CountResponse, err error) {
-	var _args17 RrdbSortkeyCountArgs
-	_args17.HashKey = hash_key
-	var _result18 RrdbSortkeyCountResult
-	if err = p.c.Call(ctx, "sortkey_count", &_args17, &_result18); err != nil {
+//  - Key
+func (p *RrdbClient) Get(ctx context.Context, key *base.Blob) (r *ReadResponse, err error) {
+	var _args17 RrdbGetArgs
+	_args17.Key = key
+	var _result18 RrdbGetResult
+	if err = p.c.Call(ctx, "get", &_args17, &_result18); err != nil {
 		return
 	}
 	return _result18.GetSuccess(), nil
 }
 
 // Parameters:
-//  - Key
-func (p *RrdbClient) TTL(ctx context.Context, key *base.Blob) (r *TTLResponse, err error) {
-	var _args19 RrdbTTLArgs
-	_args19.Key = key
-	var _result20 RrdbTTLResult
-	if err = p.c.Call(ctx, "ttl", &_args19, &_result20); err != nil {
+//  - Request
+func (p *RrdbClient) MultiGet(ctx context.Context, request *MultiGetRequest) (r *MultiGetResponse, err error) {
+	var _args19 RrdbMultiGetArgs
+	_args19.Request = request
+	var _result20 RrdbMultiGetResult
+	if err = p.c.Call(ctx, "multi_get", &_args19, &_result20); err != nil {
 		return
 	}
 	return _result20.GetSuccess(), nil
 }
 
 // Parameters:
-//  - Request
-func (p *RrdbClient) GetScanner(ctx context.Context, request *GetScannerRequest) (r *ScanResponse, err error) {
-	var _args21 RrdbGetScannerArgs
-	_args21.Request = request
-	var _result22 RrdbGetScannerResult
-	if err = p.c.Call(ctx, "get_scanner", &_args21, &_result22); err != nil {
+//  - HashKey
+func (p *RrdbClient) SortkeyCount(ctx context.Context, hash_key *base.Blob) (r *CountResponse, err error) {
+	var _args21 RrdbSortkeyCountArgs
+	_args21.HashKey = hash_key
+	var _result22 RrdbSortkeyCountResult
+	if err = p.c.Call(ctx, "sortkey_count", &_args21, &_result22); err != nil {
 		return
 	}
 	return _result22.GetSuccess(), nil
 }
 
 // Parameters:
-//  - Request
-func (p *RrdbClient) Scan(ctx context.Context, request *ScanRequest) (r *ScanResponse, err error) {
-	var _args23 RrdbScanArgs
-	_args23.Request = request
-	var _result24 RrdbScanResult
-	if err = p.c.Call(ctx, "scan", &_args23, &_result24); err != nil {
+//  - Key
+func (p *RrdbClient) TTL(ctx context.Context, key *base.Blob) (r *TTLResponse, err error) {
+	var _args23 RrdbTTLArgs
+	_args23.Key = key
+	var _result24 RrdbTTLResult
+	if err = p.c.Call(ctx, "ttl", &_args23, &_result24); err != nil {
 		return
 	}
 	return _result24.GetSuccess(), nil
 }
 
 // Parameters:
+//  - Request
+func (p *RrdbClient) GetScanner(ctx context.Context, request *GetScannerRequest) (r *ScanResponse, err error) {
+	var _args25 RrdbGetScannerArgs
+	_args25.Request = request
+	var _result26 RrdbGetScannerResult
+	if err = p.c.Call(ctx, "get_scanner", &_args25, &_result26); err != nil {
+		return
+	}
+	return _result26.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Request
+func (p *RrdbClient) Scan(ctx context.Context, request *ScanRequest) (r *ScanResponse, err error) {
+	var _args27 RrdbScanArgs
+	_args27.Request = request
+	var _result28 RrdbScanResult
+	if err = p.c.Call(ctx, "scan", &_args27, &_result28); err != nil {
+		return
+	}
+	return _result28.GetSuccess(), nil
+}
+
+// Parameters:
 //  - ContextID
 func (p *RrdbClient) ClearScanner(ctx context.Context, context_id int64) (err error) {
-	var _args25 RrdbClearScannerArgs
-	_args25.ContextID = context_id
-	if err := p.c.Call(ctx, "clear_scanner", &_args25, nil); err != nil {
+	var _args29 RrdbClearScannerArgs
+	_args29.ContextID = context_id
+	if err := p.c.Call(ctx, "clear_scanner", &_args29, nil); err != nil {
 		return err
 	}
 	return nil
@@ -4249,19 +5731,21 @@ func (p *RrdbProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 
 func NewRrdbProcessor(handler Rrdb) *RrdbProcessor {
 
-	self26 := &RrdbProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self26.processorMap["put"] = &rrdbProcessorPut{handler: handler}
-	self26.processorMap["multi_put"] = &rrdbProcessorMultiPut{handler: handler}
-	self26.processorMap["remove"] = &rrdbProcessorRemove{handler: handler}
-	self26.processorMap["multi_remove"] = &rrdbProcessorMultiRemove{handler: handler}
-	self26.processorMap["get"] = &rrdbProcessorGet{handler: handler}
-	self26.processorMap["multi_get"] = &rrdbProcessorMultiGet{handler: handler}
-	self26.processorMap["sortkey_count"] = &rrdbProcessorSortkeyCount{handler: handler}
-	self26.processorMap["ttl"] = &rrdbProcessorTTL{handler: handler}
-	self26.processorMap["get_scanner"] = &rrdbProcessorGetScanner{handler: handler}
-	self26.processorMap["scan"] = &rrdbProcessorScan{handler: handler}
-	self26.processorMap["clear_scanner"] = &rrdbProcessorClearScanner{handler: handler}
-	return self26
+	self30 := &RrdbProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self30.processorMap["put"] = &rrdbProcessorPut{handler: handler}
+	self30.processorMap["multi_put"] = &rrdbProcessorMultiPut{handler: handler}
+	self30.processorMap["remove"] = &rrdbProcessorRemove{handler: handler}
+	self30.processorMap["multi_remove"] = &rrdbProcessorMultiRemove{handler: handler}
+	self30.processorMap["incr"] = &rrdbProcessorIncr{handler: handler}
+	self30.processorMap["check_and_set"] = &rrdbProcessorCheckAndSet{handler: handler}
+	self30.processorMap["get"] = &rrdbProcessorGet{handler: handler}
+	self30.processorMap["multi_get"] = &rrdbProcessorMultiGet{handler: handler}
+	self30.processorMap["sortkey_count"] = &rrdbProcessorSortkeyCount{handler: handler}
+	self30.processorMap["ttl"] = &rrdbProcessorTTL{handler: handler}
+	self30.processorMap["get_scanner"] = &rrdbProcessorGetScanner{handler: handler}
+	self30.processorMap["scan"] = &rrdbProcessorScan{handler: handler}
+	self30.processorMap["clear_scanner"] = &rrdbProcessorClearScanner{handler: handler}
+	return self30
 }
 
 func (p *RrdbProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -4274,12 +5758,12 @@ func (p *RrdbProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtoc
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x27 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x31 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x27.Write(oprot)
+	x31.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x27
+	return false, x31
 
 }
 
@@ -4458,6 +5942,102 @@ func (p *rrdbProcessorMultiRemove) Process(ctx context.Context, seqId int32, ipr
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("multi_remove", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type rrdbProcessorIncr struct {
+	handler Rrdb
+}
+
+func (p *rrdbProcessorIncr) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := RrdbIncrArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("incr", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := RrdbIncrResult{}
+	var retval *IncrResponse
+	var err2 error
+	if retval, err2 = p.handler.Incr(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing incr: "+err2.Error())
+		oprot.WriteMessageBegin("incr", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("incr", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type rrdbProcessorCheckAndSet struct {
+	handler Rrdb
+}
+
+func (p *rrdbProcessorCheckAndSet) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := RrdbCheckAndSetArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("check_and_set", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := RrdbCheckAndSetResult{}
+	var retval *CheckAndSetResponse
+	var err2 error
+	if retval, err2 = p.handler.CheckAndSet(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing check_and_set: "+err2.Error())
+		oprot.WriteMessageBegin("check_and_set", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("check_and_set", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -5646,6 +7226,438 @@ func (p *RrdbMultiRemoveResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("RrdbMultiRemoveResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Request
+type RrdbIncrArgs struct {
+	Request *IncrRequest `thrift:"request,1" db:"request" json:"request"`
+}
+
+func NewRrdbIncrArgs() *RrdbIncrArgs {
+	return &RrdbIncrArgs{}
+}
+
+var RrdbIncrArgs_Request_DEFAULT *IncrRequest
+
+func (p *RrdbIncrArgs) GetRequest() *IncrRequest {
+	if !p.IsSetRequest() {
+		return RrdbIncrArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *RrdbIncrArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *RrdbIncrArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RrdbIncrArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Request = &IncrRequest{}
+	if err := p.Request.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Request), err)
+	}
+	return nil
+}
+
+func (p *RrdbIncrArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("incr_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RrdbIncrArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:request: ", p), err)
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Request), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:request: ", p), err)
+	}
+	return err
+}
+
+func (p *RrdbIncrArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RrdbIncrArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type RrdbIncrResult struct {
+	Success *IncrResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewRrdbIncrResult() *RrdbIncrResult {
+	return &RrdbIncrResult{}
+}
+
+var RrdbIncrResult_Success_DEFAULT *IncrResponse
+
+func (p *RrdbIncrResult) GetSuccess() *IncrResponse {
+	if !p.IsSetSuccess() {
+		return RrdbIncrResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *RrdbIncrResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *RrdbIncrResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField0(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RrdbIncrResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &IncrResponse{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *RrdbIncrResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("incr_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RrdbIncrResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RrdbIncrResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RrdbIncrResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Request
+type RrdbCheckAndSetArgs struct {
+	Request *CheckAndSetRequest `thrift:"request,1" db:"request" json:"request"`
+}
+
+func NewRrdbCheckAndSetArgs() *RrdbCheckAndSetArgs {
+	return &RrdbCheckAndSetArgs{}
+}
+
+var RrdbCheckAndSetArgs_Request_DEFAULT *CheckAndSetRequest
+
+func (p *RrdbCheckAndSetArgs) GetRequest() *CheckAndSetRequest {
+	if !p.IsSetRequest() {
+		return RrdbCheckAndSetArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *RrdbCheckAndSetArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *RrdbCheckAndSetArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndSetArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Request = &CheckAndSetRequest{}
+	if err := p.Request.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Request), err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndSetArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("check_and_set_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndSetArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:request: ", p), err)
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Request), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:request: ", p), err)
+	}
+	return err
+}
+
+func (p *RrdbCheckAndSetArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RrdbCheckAndSetArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type RrdbCheckAndSetResult struct {
+	Success *CheckAndSetResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewRrdbCheckAndSetResult() *RrdbCheckAndSetResult {
+	return &RrdbCheckAndSetResult{}
+}
+
+var RrdbCheckAndSetResult_Success_DEFAULT *CheckAndSetResponse
+
+func (p *RrdbCheckAndSetResult) GetSuccess() *CheckAndSetResponse {
+	if !p.IsSetSuccess() {
+		return RrdbCheckAndSetResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *RrdbCheckAndSetResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *RrdbCheckAndSetResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField0(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndSetResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &CheckAndSetResponse{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndSetResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("check_and_set_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndSetResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RrdbCheckAndSetResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RrdbCheckAndSetResult(%+v)", *p)
 }
 
 // Attributes:
@@ -7076,13 +9088,13 @@ func NewMetaClient(c thrift.TClient) *MetaClient {
 // Parameters:
 //  - Query
 func (p *MetaClient) QueryCfg(ctx context.Context, query *replication.QueryCfgRequest) (r *replication.QueryCfgResponse, err error) {
-	var _args89 MetaQueryCfgArgs
-	_args89.Query = query
-	var _result90 MetaQueryCfgResult
-	if err = p.c.Call(ctx, "query_cfg", &_args89, &_result90); err != nil {
+	var _args105 MetaQueryCfgArgs
+	_args105.Query = query
+	var _result106 MetaQueryCfgResult
+	if err = p.c.Call(ctx, "query_cfg", &_args105, &_result106); err != nil {
 		return
 	}
-	return _result90.GetSuccess(), nil
+	return _result106.GetSuccess(), nil
 }
 
 type MetaProcessor struct {
@@ -7105,9 +9117,9 @@ func (p *MetaProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 
 func NewMetaProcessor(handler Meta) *MetaProcessor {
 
-	self91 := &MetaProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self91.processorMap["query_cfg"] = &metaProcessorQueryCfg{handler: handler}
-	return self91
+	self107 := &MetaProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self107.processorMap["query_cfg"] = &metaProcessorQueryCfg{handler: handler}
+	return self107
 }
 
 func (p *MetaProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -7120,12 +9132,12 @@ func (p *MetaProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtoc
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x92 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x108 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x92.Write(oprot)
+	x108.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x92
+	return false, x108
 
 }
 

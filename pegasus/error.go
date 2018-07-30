@@ -29,10 +29,13 @@ const (
 	OpClose
 	OpMultiSet
 	OpTTL
+	OpExist
 	OpGetScanner
 	OpGetUnorderedScanners
 	OpNext
 	OpScannerClose
+	OpCheckAndSet
+	OpSortKeyCount
 )
 
 var opTypeToStringMap = map[OpType]string{
@@ -46,10 +49,13 @@ var opTypeToStringMap = map[OpType]string{
 	OpClose:                "Close",
 	OpMultiSet:             "MULTI_SET",
 	OpTTL:                  "TTL",
+	OpExist:                "EXIST",
 	OpGetScanner:           "GET_SCANNER",
 	OpGetUnorderedScanners: "GET_UNORDERED_SCANNERS",
 	OpNext:                 "SCAN_NEXT",
 	OpScannerClose:         "SCANNER_CLOSE",
+	OpCheckAndSet:          "CHECK_AND_SET",
+	OpSortKeyCount:         "SORTKEY_COUNT",
 }
 
 func (op OpType) String() string {
