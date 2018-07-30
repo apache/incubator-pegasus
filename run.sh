@@ -191,7 +191,7 @@ function run_build()
 
     echo "INFO: start build rocksdb..."
     ROCKSDB_BUILD_DIR="$ROOT/rocksdb/build"
-    CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER"
+    CMAKE_OPTIONS="-DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER"
     if [ "$WARNING_ALL" == "YES" ]
     then
         echo "WARNING_ALL=YES"
