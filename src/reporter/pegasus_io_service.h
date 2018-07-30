@@ -8,7 +8,6 @@
 #include <thread>
 #include <memory>
 #include <vector>
-#include <dsn/tool_api.h>
 #include <dsn/utility/singleton.h>
 
 namespace pegasus {
