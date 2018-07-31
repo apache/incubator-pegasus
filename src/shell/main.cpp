@@ -510,12 +510,11 @@ void initialize(int argc, char **argv)
     s_global_context.ddl_client.reset(
         new dsn::replication::replication_ddl_client(s_global_context.meta_list));
 
-    if (cluster_name == "unknown" || cluster_name == "mycluster") {
-        std::string name;
-        ::dsn::error_code err = s_global_context.ddl_client->cluster_name(1000, name);
-        if (err == dsn::ERR_OK) {
-            cluster_name = name;
-        }
+    // get real cluster name from zk
+    std::string name;
+    ::dsn::error_code err = s_global_context.ddl_client->cluster_name(1000, name);
+    if (err == dsn::ERR_OK) {
+        cluster_name = name;
     }
     std::cout << "The cluster name is: " << cluster_name << std::endl;
     std::cout << "The cluster meta list is: " << server_list << std::endl;
