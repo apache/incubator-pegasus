@@ -529,10 +529,10 @@ public interface PegasusTableInterface {
          * @param checkValueExist true if the check value is exist; can be used only when checkValueReturned is true.
          * @param checkValue return the check value if exist; can be used only when checkValueExist is true.
          */
-        boolean setSucceed;
-        boolean checkValueReturned;
-        boolean checkValueExist;
-        byte[] checkValue;
+        public boolean setSucceed;
+        public boolean checkValueReturned;
+        public boolean checkValueExist;
+        public byte[] checkValue;
     }
 
     public static interface CheckAndSetListener extends GenericFutureListener<Future<CheckAndSetResult>> {
@@ -587,8 +587,8 @@ public interface PegasusTableInterface {
          * @param setSucceed true if set value succeed.
          * @param actualValue return the actual value if set value failed; null means the actual value is not exist.
          */
-        boolean setSucceed;
-        byte[] actualValue;
+        public boolean setSucceed;
+        public byte[] actualValue;
     }
 
     public static interface CompareExchangeListener extends GenericFutureListener<Future<CompareExchangeResult>> {
