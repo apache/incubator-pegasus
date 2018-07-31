@@ -602,6 +602,38 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
 #undef RESOLVE
 }
 
+dsn::error_code replication_ddl_client::cluster_name(int64_t timeout_ms, std::string &cluster_name)
+{
+    std::shared_ptr<configuration_cluster_info_request> req(
+        new configuration_cluster_info_request());
+
+    auto resp_task = request_meta<configuration_cluster_info_request>(RPC_CM_CLUSTER_INFO, req, timeout_ms);
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK) {
+        return resp_task->error();
+    }
+
+    configuration_cluster_info_response resp;
+    ::dsn::unmarshall(resp_task->get_response(), resp);
+    if (resp.err != dsn::ERR_OK) {
+        return resp.err;
+    }
+
+    std::string zk_root;
+    for (int i = 0; i < resp.keys.size(); ++i) {
+        if (resp.keys[i] == "zookeeper_root") {
+            zk_root = resp.values[i];
+        }
+    }
+
+    cluster_name.clear();
+    if (!zk_root.empty() && zk_root.find("/pegasus/") == 0) {
+        cluster_name = zk_root.substr(9);
+    }
+
+    return cluster_name.empty() ? dsn::ERR_UNKNOWN : dsn::ERR_OK;
+}
+
 dsn::error_code replication_ddl_client::cluster_info(const std::string &file_name, bool resolve_ip)
 {
     std::shared_ptr<configuration_cluster_info_request> req(

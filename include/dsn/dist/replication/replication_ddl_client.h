@@ -79,6 +79,8 @@ public:
     list_nodes(const dsn::replication::node_status::type status,
                std::map<dsn::rpc_address, dsn::replication::node_status::type> &nodes);
 
+    dsn::error_code cluster_name(int64_t timeout_ms, std::string &cluster_name);
+
     dsn::error_code cluster_info(const std::string &file_name, bool resolve_ip = false);
 
     dsn::error_code list_app(const std::string &app_name,
