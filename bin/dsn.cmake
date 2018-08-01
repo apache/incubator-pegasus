@@ -1,5 +1,10 @@
 include(${CMAKE_CURRENT_LIST_DIR}/compiler_info.cmake)
 
+# Always generate the compilation database file (compile_commands.json) for use
+# with various development tools, such as IWYU and Vim's YouCompleteMe plugin.
+# See http://clang.llvm.org/docs/JSONCompilationDatabase.html
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+
 function(ms_add_project PROJ_LANG PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PROJ_LIB_PATH PROJ_BINPLACES PROJ_BINDIRS DO_INSTALL)
     if(DEFINED DSN_DEBUG_CMAKE)
         message(STATUS "PROJ_LANG = ${PROJ_LANG}")

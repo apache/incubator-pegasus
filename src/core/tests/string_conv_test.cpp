@@ -29,7 +29,7 @@
 
 TEST(string_conv, buf2bool)
 {
-    bool result;
+    bool result = false;
 
     ASSERT_TRUE(dsn::buf2bool("true", result));
     ASSERT_EQ(result, true);
@@ -60,7 +60,7 @@ TEST(string_conv, buf2bool)
 
 TEST(string_conv, buf2int32)
 {
-    int32_t result;
+    int32_t result = -1;
 
     ASSERT_TRUE(dsn::buf2int32(std::to_string(0), result));
     ASSERT_EQ(result, 0);
@@ -98,7 +98,7 @@ TEST(string_conv, buf2int32)
 
 TEST(string_conv, buf2int64)
 {
-    int64_t result;
+    int64_t result = -1;
 
     ASSERT_TRUE(dsn::buf2int64(std::to_string(0), result));
     ASSERT_EQ(result, 0);
@@ -143,7 +143,7 @@ TEST(string_conv, buf2int64)
 
 TEST(string_conv, buf2uint64)
 {
-    uint64_t result;
+    uint64_t result = 1;
 
     ASSERT_TRUE(dsn::buf2uint64(std::to_string(0), result));
     ASSERT_EQ(result, 0);
@@ -185,7 +185,7 @@ TEST(string_conv, buf2uint64)
 
 TEST(string_conv, int64_partial)
 {
-    int64_t result;
+    int64_t result = 0;
     ASSERT_FALSE(dsn::buf2int64("", result));
     ASSERT_FALSE(dsn::buf2int64(" ", result)) << result;
     ASSERT_FALSE(dsn::buf2int64("-", result)) << result;
@@ -201,7 +201,7 @@ TEST(string_conv, int64_partial)
 
 TEST(string_conv, uint64_partial)
 {
-    uint64_t result;
+    uint64_t result = 0;
     ASSERT_FALSE(dsn::buf2uint64("", result));
     ASSERT_FALSE(dsn::buf2uint64(" ", result)) << result;
     ASSERT_FALSE(dsn::buf2uint64("-", result)) << result;
@@ -216,7 +216,7 @@ TEST(string_conv, uint64_partial)
 
 TEST(string_conv, buf2double)
 {
-    double result;
+    double result = 0;
 
     ASSERT_TRUE(dsn::buf2double("1.1", result));
     ASSERT_DOUBLE_EQ(result, 1.1);
