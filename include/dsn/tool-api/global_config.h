@@ -137,7 +137,6 @@ struct service_spec
     std::string tool;                // the main tool (only 1 is allowed for a time)
     std::list<std::string> toollets; // toollets enabled compatible to the main tool
     std::string data_dir;            // to store all data/log/coredump etc.
-    bool start_nfs;
 
     //
     // we allow multiple apps in the same process in rDSN, and each app (service_app_spec)
@@ -192,7 +191,6 @@ CONFIG_BEGIN(service_spec)
 CONFIG_FLD_STRING(tool, "", "use what tool to run this process, e.g., native or simulator")
 CONFIG_FLD_STRING_LIST(toollets, "use what toollets, e.g., tracer, profiler, fault_injector")
 CONFIG_FLD_STRING(data_dir, "./data", "where to put the all the data/log/coredump, etc..")
-CONFIG_FLD(bool, bool, start_nfs, false, "whether to start nfs")
 CONFIG_FLD(
     bool,
     bool,

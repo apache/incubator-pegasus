@@ -24,19 +24,10 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     network file system component base interface
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include <dsn/service_api_c.h>
 #include <string>
+#include <memory>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/binary_reader.h>
 #include <dsn/utility/binary_writer.h>
@@ -44,14 +35,9 @@
 
 namespace dsn {
 
-/*!
-@addtogroup tool-api-providers
-@{
-*/
-
 struct remote_copy_request
 {
-    ::dsn::rpc_address source;
+    dsn::rpc_address source;
     std::string source_dir;
     std::vector<std::string> files;
     std::string dest_dir;
@@ -59,45 +45,38 @@ struct remote_copy_request
     bool high_priority;
 };
 
-struct remote_copy_response
-{
-};
-
-DSN_API extern void marshall(::dsn::binary_writer &writer, const remote_copy_request &val);
-
-DSN_API extern void unmarshall(::dsn::binary_reader &reader, /*out*/ remote_copy_request &val);
-
-class service_node;
-class task_worker_pool;
-class task_queue;
-
 class nfs_node
 {
 public:
-    template <typename T>
-    static nfs_node *create(service_node *node)
-    {
-        return new T(node);
-    }
-
-    typedef nfs_node *(*factory)(service_node *);
+    static std::unique_ptr<nfs_node> create();
 
 public:
-    nfs_node(service_node *node) : _node(node) {}
+    aio_task_ptr copy_remote_directory(rpc_address remote,
+                                       const std::string &source_dir,
+                                       const std::string &dest_dir,
+                                       bool overwrite,
+                                       bool high_priority,
+                                       task_code callback_code,
+                                       task_tracker *tracker,
+                                       aio_handler &&callback,
+                                       int hash = 0);
+    aio_task_ptr copy_remote_files(rpc_address remote,
+                                   const std::string &source_dir,
+                                   const std::vector<std::string> &files, // empty for all
+                                   const std::string &dest_dir,
+                                   bool overwrite,
+                                   bool high_priority,
+                                   task_code callback_code,
+                                   task_tracker *tracker,
+                                   aio_handler &&callback,
+                                   int hash = 0);
 
+    nfs_node() {}
     virtual ~nfs_node() {}
-
-    virtual ::dsn::error_code start() = 0;
-
+    virtual error_code start() = 0;
     virtual error_code stop() = 0;
 
-    virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task *callback) = 0;
-
-    service_node *node() { return _node; }
-
 protected:
-    service_node *_node;
+    virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task *callback) = 0;
 };
-
-/*@}*/
 }

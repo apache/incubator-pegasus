@@ -24,19 +24,13 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #pragma once
+#include <iostream>
 #include <dsn/utility/optional.h>
 #include <dsn/tool-api/async_calls.h>
-#include <dsn/tool/nfs.h>
-#include <iostream>
+
+#include "nfs.types.h"
+#include "nfs_code_definition.h"
 
 namespace dsn {
 namespace service {

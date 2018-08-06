@@ -67,7 +67,6 @@ class task_queue;
 class rpc_engine;
 class disk_engine;
 class env_provider;
-class nfs_node;
 class timer_service;
 class task;
 
@@ -84,7 +83,6 @@ struct __tls_dsn__
     rpc_engine *rpc;
     disk_engine *disk;
     env_provider *env;
-    nfs_node *nfs;
 
     int last_worker_queue_size;
     uint64_t node_pool_thread_ids; // 8,8,16 bits
@@ -258,7 +256,6 @@ public:
     static rpc_engine *get_current_rpc();
     static disk_engine *get_current_disk();
     static env_provider *get_current_env();
-    static nfs_node *get_current_nfs();
 
     static void set_tls_dsn_context(
         service_node *node, // cannot be null
@@ -705,12 +702,6 @@ __inline /*static*/ env_provider *task::get_current_env()
 {
     check_tls_dsn();
     return tls_dsn.env;
-}
-
-__inline /*static*/ nfs_node *task::get_current_nfs()
-{
-    check_tls_dsn();
-    return tls_dsn.nfs;
 }
 
 } // end namespace

@@ -2,4 +2,4 @@ add_subdirectory(failure_detector)
 add_subdirectory(replication)
 add_subdirectory(failure_detector_multimaster)
 add_subdirectory(block_service)
-
+add_subdirectory(nfs)

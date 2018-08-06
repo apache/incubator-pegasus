@@ -32,16 +32,35 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
+#pragma once
 
-// apps
-#include "nfs_test.app.example.h"
+#include <dsn/tool_api.h>
+#include <dsn/dist/nfs_node.h>
 
-int main(int argc, char **argv)
+namespace dsn {
+namespace service {
+
+class nfs_service_impl;
+class nfs_client_impl;
+struct nfs_opts;
+
+class nfs_node_simple : public nfs_node
 {
-    dsn::service_app::register_factory<::dsn::replication::application::nfs_client_app>("client");
-    dsn::service_app::register_factory<::dsn::replication::application::nfs_server_app>("server");
+public:
+    nfs_node_simple();
 
-    // specify what services and tools will run in config file, then run
-    dsn_run_config("config.ini", true);
-    return 0;
+    virtual ~nfs_node_simple();
+
+    virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task *callback) override;
+
+    virtual ::dsn::error_code start() override;
+
+    virtual error_code stop() override;
+
+private:
+    nfs_opts *_opts;
+    nfs_service_impl *_server;
+    nfs_client_impl *_client;
+};
+}
 }

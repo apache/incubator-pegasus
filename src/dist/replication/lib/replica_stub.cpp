@@ -556,6 +556,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     for (const auto &kv : _replicas) {
         _fs_manager.add_replica(kv.first, kv.second->dir());
     }
+    _nfs = std::move(dsn::nfs_node::create());
+    _nfs->start();
 
     if (_options.delay_for_fd_timeout_on_start) {
         uint64_t now_time_ms = dsn_now_ms();

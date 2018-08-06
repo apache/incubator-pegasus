@@ -24,17 +24,11 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #pragma once
-#include <dsn/tool/nfs.h>
 #include <iostream>
+#include <dsn/cpp/serverlet.h>
+#include "nfs_code_definition.h"
+#include "nfs.types.h"
 
 namespace dsn {
 namespace service {

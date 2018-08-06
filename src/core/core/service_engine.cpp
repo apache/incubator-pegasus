@@ -39,7 +39,6 @@
 #include "rpc_engine.h"
 #include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/env_provider.h>
-#include <dsn/tool-api/nfs.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/tool-api/command_manager.h>
@@ -88,18 +87,6 @@ error_code service_node::init_io_engine()
     // init rpc engine
     _node_io.rpc = new rpc_engine(this);
 
-    // init nfs
-    _node_io.nfs = nullptr;
-    if (!spec.start_nfs) {
-        ddebug("nfs not started coz [core] start_nfs = false");
-    } else if (spec.nfs_factory_name == "") {
-        dwarn("nfs not started coz no nfs_factory_name is specified,"
-              " continue with no nfs");
-    } else {
-        _node_io.nfs = factory_store<nfs_node>::create(
-            spec.nfs_factory_name.c_str(), PROVIDER_TYPE_MAIN, this);
-    }
-
     return err;
 }
 
@@ -113,15 +100,6 @@ error_code service_node::start_io_engine_in_main()
 
     // start rpc engine
     err = _node_io.rpc->start(_app_spec);
-    return err;
-}
-
-error_code service_node::start_io_engine_in_node_start_task()
-{
-    error_code err = ERR_OK;
-    if (_node_io.nfs) {
-        err = _node_io.nfs->start();
-    }
     return err;
 }
 

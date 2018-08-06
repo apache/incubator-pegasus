@@ -29,17 +29,19 @@
 //
 // the replica_stub is the *singleton* entry to
 // access all replica managed in the same process
-//   replica_stub(singleton) --> replica --> replication_app
+//   replica_stub(singleton) --> replica --> replication_app_base
 //
 
-#include "../common/replication_common.h"
-#include "../common/fs_manager.h"
-#include "../common/block_service_manager.h"
-#include "replica.h"
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/dist/failure_detector_multimaster.h>
 #include <functional>
 #include <tuple>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include <dsn/dist/failure_detector_multimaster.h>
+#include <dsn/dist/nfs_node.h>
+
+#include "dist/replication/common/replication_common.h"
+#include "dist/replication/common/fs_manager.h"
+#include "dist/replication/common/block_service_manager.h"
+#include "replica.h"
 
 namespace dsn {
 namespace replication {
@@ -254,6 +256,9 @@ private:
     // handle all the block filesystems for current replica stub
     // (in other words, current service node)
     block_service_manager _block_service_manager;
+
+    // nfs_node
+    std::unique_ptr<dsn::nfs_node> _nfs;
 
     // performance counters
     perf_counter_wrapper _counter_replicas_count;

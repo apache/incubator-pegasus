@@ -197,19 +197,19 @@ void replica::on_copy_checkpoint_ack(error_code err,
     if (utils::filesystem::path_exists(ldir))
         utils::filesystem::remove_path(ldir);
 
-    _primary_states.checkpoint_task =
-        file::copy_remote_files(resp->address,
-                                resp->base_local_dir,
-                                resp->state.files,
-                                ldir,
-                                false,
-                                false,
-                                LPC_REPLICA_COPY_LAST_CHECKPOINT_DONE,
-                                &_tracker,
-                                [this, resp, ldir](error_code err, size_t sz) {
-                                    this->on_copy_checkpoint_file_completed(err, sz, resp, ldir);
-                                },
-                                get_gpid().thread_hash());
+    _primary_states.checkpoint_task = _stub->_nfs->copy_remote_files(
+        resp->address,
+        resp->base_local_dir,
+        resp->state.files,
+        ldir,
+        false,
+        false,
+        LPC_REPLICA_COPY_LAST_CHECKPOINT_DONE,
+        &_tracker,
+        [this, resp, ldir](error_code err, size_t sz) {
+            this->on_copy_checkpoint_file_completed(err, sz, resp, ldir);
+        },
+        get_gpid().thread_hash());
 }
 
 void replica::on_copy_checkpoint_file_completed(error_code err,

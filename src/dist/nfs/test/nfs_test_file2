@@ -1,0 +1,108 @@
+[apps..default]
+run = true
+count = 1
+;network.client.RPC_CHANNEL_TCP = dsn::tools::sim_network_provider, 65536
+;network.client.RPC_CHANNEL_UDP = dsn::tools::sim_network_provider, 65536
+;network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::sim_network_provider, 65536
+
+[apps.client]
+name = client
+type = test
+arguments = localhost 20101
+run = true
+ports = 
+count = 1
+delay_seconds = 1
+pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER, THREAD_POOL_FOR_TEST_1, THREAD_POOL_FOR_TEST_2
+
+[apps.server]
+name = server
+type = test
+arguments =
+ports = 20101,20102
+run = true
+count = 1
+pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER
+
+[apps.server_group]
+name = server_group
+type = test
+arguments =
+ports = 20201
+run = true
+count = 3
+pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER
+
+[core]
+;tool = simulator
+tool = nativerun
+
+toollets = tracer, profiler, fault_injector
+pause_on_start = true
+cli_local = true
+cli_remote = true
+
+logging_start_level = LOG_LEVEL_DEBUG
+logging_factory_name = dsn::tools::simple_logger
+
+disk_io_mode = IOE_PER_QUEUE
+;rpc_io_mode = IOE_PER_QUEUE
+nfs_io_mode = IOE_PER_QUEUE
+timer_io_mode = IOE_PER_QUEUE
+
+io_worker_count = 1
+
+[tools.simulator]
+random_seed = 0
+
+[network]
+; how many network threads for network library (used by asio)
+io_service_worker_count = 2
+
+[task..default]
+is_trace = true
+is_profile = true
+allow_inline = false
+rpc_call_channel = RPC_CHANNEL_TCP
+fast_execution_in_network_thread = false
+rpc_message_header_format = dsn
+rpc_timeout_milliseconds = 5000
+
+[task.LPC_AIO_IMMEDIATE_CALLBACK]
+is_trace = false
+is_profile = false
+allow_inline = false
+
+[task.LPC_RPC_TIMEOUT]
+is_trace = false
+is_profile = false
+
+; specification for each thread pool
+[threadpool..default]
+worker_count = 2
+
+[threadpool.THREAD_POOL_DEFAULT]
+name = default
+partitioned = false
+; max_input_queue_length = 1024
+worker_priority = THREAD_xPRIORITY_NORMAL
+
+[threadpool.THREAD_POOL_TEST_SERVER]
+partitioned = false
+
+[threadpool.THREAD_POOL_FOR_TEST_1]
+name = THREAD_POOL_FOR_TEST_1
+worker_count = 2
+partitioned = false
+admission_controller_factory_name = dsn::tools::admission_controller_for_test
+admission_controller_arguments = this is test argument
+
+[threadpool.THREAD_POOL_FOR_TEST_2]
+name = THREAD_POOL_FOR_TEST_2
+worker_count = 2
+partitioned = true
+
+[core.test]
+count = 1
+run = true
+

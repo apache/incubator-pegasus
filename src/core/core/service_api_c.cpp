@@ -40,7 +40,6 @@
 #include <dsn/cpp/serialization.h>
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/tool-api/zlock_provider.h>
-#include <dsn/tool-api/nfs.h>
 #include <dsn/tool-api/env_provider.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/tool-api/task.h>
@@ -414,52 +413,6 @@ DSN_API void dsn_file_write_vector(dsn_handle_t file,
     }
 
     ::dsn::task::get_current_disk()->write(cb);
-}
-
-DSN_API void dsn_file_copy_remote_directory(dsn::rpc_address remote,
-                                            const char *source_dir,
-                                            const char *dest_dir,
-                                            bool overwrite,
-                                            bool high_priority,
-                                            dsn::aio_task *cb)
-{
-    std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
-    rci->source = remote;
-    rci->source_dir = source_dir;
-    rci->files.clear();
-    rci->dest_dir = dest_dir;
-    rci->overwrite = overwrite;
-    rci->high_priority = high_priority;
-
-    ::dsn::task::get_current_nfs()->call(rci, cb);
-}
-
-DSN_API void dsn_file_copy_remote_files(dsn::rpc_address remote,
-                                        const char *source_dir,
-                                        const char **source_files,
-                                        const char *dest_dir,
-                                        bool overwrite,
-                                        bool high_priority,
-                                        dsn::aio_task *cb)
-{
-    std::shared_ptr<::dsn::remote_copy_request> rci(new ::dsn::remote_copy_request());
-    rci->source = remote;
-    rci->source_dir = source_dir;
-
-    rci->files.clear();
-    const char **p = source_files;
-    while (*p != nullptr && **p != '\0') {
-        rci->files.push_back(std::string(*p));
-        p++;
-
-        dinfo("copy remote file %s from %s", *(p - 1), rci->source.to_string());
-    }
-
-    rci->dest_dir = dest_dir;
-    rci->overwrite = overwrite;
-    rci->high_priority = high_priority;
-
-    ::dsn::task::get_current_nfs()->call(rci, cb);
 }
 
 //------------------------------------------------------------------------------

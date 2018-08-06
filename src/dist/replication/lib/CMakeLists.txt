@@ -15,6 +15,7 @@ set(MY_PROJ_LIBS
     dsn_replication_common
     dsn.failure_detector
     dsn.failure_detector.multimaster
+    dsn_nfs
     )
 
 set(MY_PROJ_LIB_PATH "")

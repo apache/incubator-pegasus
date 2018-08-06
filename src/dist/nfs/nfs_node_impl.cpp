@@ -32,34 +32,52 @@
  *     xxxx-xx-xx, author, first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
-#pragma once
 
-#include <dsn/tool_api.h>
-#include <dsn/tool-api/nfs.h>
+#include "nfs_node_simple.h"
+#include "nfs_client_impl.h"
+#include "nfs_server_impl.h"
 
 namespace dsn {
 namespace service {
 
-class nfs_service_impl;
-class nfs_client_impl;
-struct nfs_opts;
-class nfs_node_simple : public nfs_node
+nfs_node_simple::nfs_node_simple() : nfs_node()
 {
-public:
-    nfs_node_simple(::dsn::service_node *node);
+    _opts = new nfs_opts();
+    _opts->init();
+    _server = nullptr;
+    _client = nullptr;
+}
 
-    virtual ~nfs_node_simple(void);
+nfs_node_simple::~nfs_node_simple()
+{
+    stop();
+    delete _opts;
+}
 
-    virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task *callback) override;
+void nfs_node_simple::call(std::shared_ptr<remote_copy_request> rci, aio_task *callback)
+{
+    _client->begin_remote_copy(rci, callback); // copy file request entry
+}
 
-    virtual ::dsn::error_code start() override;
+error_code nfs_node_simple::start()
+{
+    _server = new nfs_service_impl(*_opts);
+    _server->open_service();
 
-    virtual error_code stop() override;
+    _client = new nfs_client_impl(*_opts);
+    return ERR_OK;
+}
 
-private:
-    nfs_opts *_opts;
-    nfs_service_impl *_server;
-    nfs_client_impl *_client;
-};
+error_code nfs_node_simple::stop()
+{
+    _server->close_service();
+    delete _server;
+    _server = nullptr;
+
+    delete _client;
+    _client = nullptr;
+
+    return ERR_OK;
+}
 }
 }

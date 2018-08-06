@@ -57,8 +57,6 @@ public:
 
         if (_start) {
             error_code err;
-            err = _node->start_io_engine_in_node_start_task();
-
             err = _node->start_app();
             dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
         } else {
@@ -191,11 +189,6 @@ bool register_component_provider(const char *name,
                                  ::dsn::provider_type type)
 {
     return dsn::utils::factory_store<env_provider>::register_factory(name, f, type);
-}
-
-bool register_component_provider(const char *name, nfs_node::factory f, ::dsn::provider_type type)
-{
-    return dsn::utils::factory_store<nfs_node>::register_factory(name, f, type);
 }
 
 bool register_component_provider(const char *name,

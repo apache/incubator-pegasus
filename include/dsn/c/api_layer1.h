@@ -565,44 +565,6 @@ extern DSN_API void dsn_file_write_vector(dsn_handle_t file,
                                           int buffer_count,
                                           uint64_t offset,
                                           dsn::aio_task *cb);
-
-/*!
- copy remote directory to the local machine
-
- \param remote     address of the remote nfs server
- \param source_dir source dir on remote server
- \param dest_dir   destination dir on local server
- \param overwrite  true to overwrite, false to preserve.
- \param high_priority  true means copy in high priority.
- \param cb         callback aio task to be executed on completion
- */
-extern DSN_API void dsn_file_copy_remote_directory(dsn::rpc_address remote,
-                                                   const char *source_dir,
-                                                   const char *dest_dir,
-                                                   bool overwrite,
-                                                   bool high_priority,
-                                                   dsn::aio_task *cb);
-
-/*!
- copy remote files to the local machine
-
- \param remote       address of the remote nfs server
- \param source_dir   source dir on remote server
- \param source_files zero-ended file string array within the source dir on remote server,
-    when it contains no files, all files within source_dir are copied
- \param dest_dir     destination dir on local server
- \param overwrite    true to overwrite, false to preserve.
- \param high_priority  true means copy in high priority.
- \param cb           callback aio task to be executed on completion
- */
-extern DSN_API void dsn_file_copy_remote_files(dsn::rpc_address remote,
-                                               const char *source_dir,
-                                               const char **source_files,
-                                               const char *dest_dir,
-                                               bool overwrite,
-                                               bool high_priority,
-                                               dsn::aio_task *cb);
-
 /*@}*/
 
 /*!

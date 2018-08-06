@@ -41,7 +41,7 @@
 #include <dsn/utility/filesystem.h>
 #include <gtest/gtest.h>
 #include <thread>
-#include "../core/service_engine.h"
+#include "core/core/service_engine.h"
 
 using namespace dsn;
 
@@ -144,12 +144,6 @@ TEST(core, dsn_config)
     ASSERT_STREQ("run", buffers[1]);
 }
 
-TEST(core, dsn_coredump) {}
-
-TEST(core, dsn_crc32) {}
-
-TEST(core, dsn_task) {}
-
 TEST(core, dsn_exlock)
 {
     if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
@@ -207,11 +201,8 @@ TEST(core, dsn_semaphore)
     dsn_semaphore_destroy(s);
 }
 
-TEST(core, dsn_rpc) {}
-
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_NFS, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 struct aio_result
 {
     dsn::error_code err;
@@ -288,132 +279,6 @@ TEST(core, dsn_file)
     ASSERT_TRUE(utils::filesystem::file_size("command.copy.txt", fout_size));
     ASSERT_EQ(fin_size, fout_size);
 }
-
-// TODO: On windows an opened file cannot be deleted, so this test cannot pass
-#ifndef WIN32
-TEST(core, dsn_nfs)
-{
-    // if in dsn_mimic_app() and nfs_io_mode == IOE_PER_QUEUE
-    if (task::get_current_nfs() == nullptr)
-        return;
-
-    utils::filesystem::remove_path("nfs_test_dir");
-    utils::filesystem::remove_path("nfs_test_dir_copy");
-
-    ASSERT_FALSE(utils::filesystem::directory_exists("nfs_test_dir"));
-    ASSERT_FALSE(utils::filesystem::directory_exists("nfs_test_dir_copy"));
-
-    ASSERT_TRUE(utils::filesystem::create_directory("nfs_test_dir"));
-    ASSERT_TRUE(utils::filesystem::directory_exists("nfs_test_dir"));
-
-    { // copy nfs_test_file1 nfs_test_file2 nfs_test_dir
-        ASSERT_FALSE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
-        ASSERT_FALSE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file2"));
-
-        const char *files[] = {"nfs_test_file1", "nfs_test_file2", nullptr};
-
-        aio_result r;
-        dsn::aio_task_ptr t = new dsn::aio_task(LPC_AIO_TEST_NFS,
-                                                [&r](dsn::error_code err, size_t sz) {
-                                                    r.err = err;
-                                                    r.sz = sz;
-                                                },
-                                                0);
-        ASSERT_NE(nullptr, t);
-        dsn_file_copy_remote_files(
-            dsn::rpc_address("localhost", 20101), ".", files, "nfs_test_dir", false, false, t);
-        ASSERT_TRUE(t->wait(20000));
-        ASSERT_EQ(r.err, t->error());
-        ASSERT_EQ(ERR_OK, r.err);
-        ASSERT_EQ(r.sz, t->get_transferred_size());
-        // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator") {
-            ASSERT_EQ(1, t->get_count());
-        }
-
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file2"));
-
-        int64_t sz1, sz2;
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_file1", sz1));
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir/nfs_test_file1", sz2));
-        ASSERT_EQ(sz1, sz2);
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_file2", sz1));
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir/nfs_test_file2", sz2));
-        ASSERT_EQ(sz1, sz2);
-    }
-
-    { // copy files again, overwrite
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file2"));
-
-        const char *files[] = {"nfs_test_file1", "nfs_test_file2", nullptr};
-
-        aio_result r;
-        dsn::aio_task_ptr t = new dsn::aio_task(LPC_AIO_TEST_NFS,
-                                                [&r](dsn::error_code err, size_t sz) {
-                                                    r.err = err;
-                                                    r.sz = sz;
-                                                },
-                                                0);
-        ASSERT_NE(nullptr, t);
-        dsn_file_copy_remote_files(
-            dsn::rpc_address("localhost", 20101), ".", files, "nfs_test_dir", true, false, t);
-        ASSERT_TRUE(t->wait(20000));
-        ASSERT_EQ(r.err, t->error());
-        ASSERT_EQ(ERR_OK, r.err);
-        ASSERT_EQ(r.sz, t->get_transferred_size());
-        // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator") {
-            ASSERT_EQ(1, t->get_count());
-        }
-    }
-
-    { // copy nfs_test_dir nfs_test_dir_copy
-        ASSERT_FALSE(utils::filesystem::directory_exists("nfs_test_dir_copy"));
-
-        aio_result r;
-        dsn::aio_task_ptr t = new dsn::aio_task(LPC_AIO_TEST_NFS,
-                                                [&r](dsn::error_code err, size_t sz) {
-                                                    r.err = err;
-                                                    r.sz = sz;
-                                                },
-                                                0);
-        ASSERT_NE(nullptr, t);
-        dsn_file_copy_remote_directory(dsn::rpc_address("localhost", 20101),
-                                       "nfs_test_dir",
-                                       "nfs_test_dir_copy",
-                                       false,
-                                       false,
-                                       t);
-        ASSERT_TRUE(t->wait(20000));
-        ASSERT_EQ(r.err, t->error());
-        ASSERT_EQ(ERR_OK, r.err);
-        ASSERT_EQ(r.sz, t->get_transferred_size());
-        // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator") {
-            ASSERT_EQ(1, t->get_count());
-        }
-
-        ASSERT_TRUE(utils::filesystem::directory_exists("nfs_test_dir_copy"));
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir_copy/nfs_test_file1"));
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir_copy/nfs_test_file2"));
-
-        std::vector<std::string> sub1, sub2;
-        ASSERT_TRUE(utils::filesystem::get_subfiles("nfs_test_dir", sub1, true));
-        ASSERT_TRUE(utils::filesystem::get_subfiles("nfs_test_dir_copy", sub2, true));
-        ASSERT_EQ(sub1.size(), sub2.size());
-
-        int64_t sz1, sz2;
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir/nfs_test_file1", sz1));
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir_copy/nfs_test_file1", sz2));
-        ASSERT_EQ(sz1, sz2);
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir/nfs_test_file2", sz1));
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir_copy/nfs_test_file2", sz2));
-        ASSERT_EQ(sz1, sz2);
-    }
-}
-#endif
 
 TEST(core, dsn_env)
 {

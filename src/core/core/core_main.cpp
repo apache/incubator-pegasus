@@ -45,7 +45,6 @@
 
 #include <dsn/tool/providers.common.h>
 #include <dsn/tool/providers.hpc.h>
-#include <dsn/tool/nfs.h>
 #include <dsn/utility/singleton.h>
 
 #include <dsn/dist/dist.providers.common.h>
@@ -57,8 +56,6 @@ void dsn_core_init()
     // register all providers
     dsn::tools::register_common_providers();
     dsn::tools::register_hpc_providers();
-    dsn::tools::register_component_provider<::dsn::service::nfs_node_simple>(
-        "dsn::service::nfs_node_simple");
 
     // dsn::tools::register_component_provider<dsn::thrift_binary_message_parser>("thrift");
 

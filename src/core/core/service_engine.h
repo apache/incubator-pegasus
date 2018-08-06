@@ -68,7 +68,6 @@ public:
     {
         rpc_engine *rpc;
         disk_engine *disk;
-        nfs_node *nfs;
         aio_provider *aio;
 
         io_engine() { memset((void *)this, 0, sizeof(io_engine)); }
@@ -79,15 +78,12 @@ public:
 
     rpc_engine *rpc() const { return _node_io.rpc; }
     disk_engine *disk() const { return _node_io.disk; }
-    nfs_node *nfs() const { return _node_io.nfs; }
 
     task_engine *computation() const { return _computation; }
     void get_runtime_info(const std::string &indent,
                           const std::vector<std::string> &args,
                           /*out*/ std::stringstream &ss);
     void get_queue_info(/*out*/ std::stringstream &ss);
-
-    error_code start_io_engine_in_node_start_task();
 
     dsn::error_code start();
     dsn::error_code start_app();

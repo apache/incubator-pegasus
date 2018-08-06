@@ -2,20 +2,21 @@
 run = true
 count = 1
 network.client.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider, 65536
-network.client.RPC_CHANNEL_UDP = dsn::tools::asio_udp_provider, 65536
-network.server.0.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider, 65536
-network.server.0.RPC_CHANNEL_UDP = dsn::tools::asio_udp_provider, 65536
+network.client.RPC_CHANNEL_UDP = dsn::tools::asio_network_provider, 65536
+network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider, 65536
 
 [apps.client]
+name = client
 type = test
 arguments = localhost 20101
 run = true
-ports = 20001
+ports = 
 count = 1
 delay_seconds = 1
 pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER, THREAD_POOL_FOR_TEST_1, THREAD_POOL_FOR_TEST_2
 
 [apps.server]
+name = server
 type = test
 arguments =
 ports = 20101,20102
@@ -23,11 +24,12 @@ run = true
 count = 1
 pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER
 network.client.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
-network.server.20101.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
-network.server.20102.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
-network.server.20103.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
+network.server.20101.RPC_CHANNEL_TCP = NET_HDR_DSN,dsn::tools::asio_network_provider,65536
+network.server.20102.RPC_CHANNEL_TCP = NET_HDR_DSN,dsn::tools::asio_network_provider,65536
+network.server.20103.RPC_CHANNEL_TCP = NET_HDR_DSN,dsn::tools::asio_network_provider,65536
 
 [apps.server_group]
+name = server_group
 type = test
 arguments =
 ports = 20201
@@ -36,6 +38,7 @@ count = 3
 pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER
 
 [apps.server_not_run]
+name = server_not_run
 type = test
 arguments =
 ports = 20301
@@ -47,22 +50,15 @@ pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER
 ;tool = simulator
 tool = nativerun
 
-toollets = tracer, profiler
+toollets = tracer, profiler, fault_injector
 pause_on_start = false
 cli_local = true
 cli_remote = true
 
-logging_start_level = LOG_LEVEL_INFORMATION
+logging_start_level = LOG_LEVEL_DEBUG
 logging_factory_name = dsn::tools::simple_logger
 
 io_worker_count = 1
-
-
-
-[tools.simple_logger]
-fast_flush = true
-short_header = false
-stderr_start_level = LOG_LEVEL_FATAL
 
 [tools.simulator]
 random_seed = 0
@@ -76,8 +72,9 @@ is_trace = true
 is_profile = true
 allow_inline = false
 rpc_call_channel = RPC_CHANNEL_TCP
+fast_execution_in_network_thread = false
 rpc_message_header_format = dsn
-rpc_timeout_milliseconds = 1000
+rpc_timeout_milliseconds = 5000
 
 [task.LPC_AIO_IMMEDIATE_CALLBACK]
 is_trace = false
@@ -88,15 +85,12 @@ allow_inline = false
 is_trace = false
 is_profile = false
 
-[task.RPC_TEST_UDP]
-rpc_call_channel = RPC_CHANNEL_UDP
-rpc_message_crc_required = true
-
 ; specification for each thread pool
 [threadpool..default]
 worker_count = 2
 
 [threadpool.THREAD_POOL_DEFAULT]
+name = default
 partitioned = false
 ; max_input_queue_length = 1024
 worker_priority = THREAD_xPRIORITY_NORMAL
@@ -106,6 +100,7 @@ partitioned = false
 admission_controller_factory_name = dsn::tools::admission_controller_for_test
 
 [threadpool.THREAD_POOL_FOR_TEST_1]
+name = THREAD_POOL_FOR_TEST_1
 worker_count = 2
 worker_priority = THREAD_xPRIORITY_HIGHEST
 worker_share_core = false
@@ -116,6 +111,7 @@ admission_controller_factory_name = dsn::tools::admission_controller_for_test
 admission_controller_arguments = this is test argument
 
 [threadpool.THREAD_POOL_FOR_TEST_2]
+name = THREAD_POOL_FOR_TEST_2
 worker_count = 2
 worker_priority = THREAD_xPRIORITY_NORMAL
 worker_share_core = true
@@ -123,19 +119,7 @@ worker_affinity_mask = 1
 max_input_queue_length = 1024
 partitioned = true
 
-[components.simple_perf_counter]
-counter_computation_interval_seconds = 1
-
-[components.simple_perf_counter_v2_atomic]
-counter_computation_interval_seconds = 1
-
-[components.simple_perf_counter_v2_fast]
-counter_computation_interval_seconds = 1
-
 [core.test]
 count = 1
 run = true
 
-[uri-resolver.http://localhost:8080]
-factory = partition_resolver_simple
-arguments = 127.0.0.1:8080

@@ -55,11 +55,6 @@ struct is_typed_rpc_callback<TFunction,
     using response_t = typename std::decay<typename inspect_t::template arg_t<1>>::type;
 };
 
-/*!
-@addtogroup tasking
-@{
-*/
-
 namespace tasking {
 inline task_ptr
 create_task(task_code code, task_tracker *tracker, task_handler &&callback, int hash = 0)
@@ -107,12 +102,7 @@ inline task_ptr enqueue_timer(task_code evt,
     return tsk;
 }
 }
-/*@}*/
 
-/*!
-@addtogroup rpc-client
-@{
-*/
 namespace rpc {
 
 inline rpc_response_task_ptr create_rpc_response_task(dsn_message_t req,
@@ -234,12 +224,7 @@ call_wait(rpc_address server,
                                            partition_hash));
 }
 }
-/*@}*/
 
-/*!
-@addtogroup file
-@{
-*/
 namespace file {
 
 inline aio_task_ptr
@@ -292,55 +277,6 @@ inline aio_task_ptr write_vector(dsn_handle_t fh,
     dsn_file_write_vector(fh, buffers, buffer_count, offset, tsk.get());
     return tsk;
 }
-
-void copy_remote_files_impl(rpc_address remote,
-                            const std::string &source_dir,
-                            const std::vector<std::string> &files, // empty for all
-                            const std::string &dest_dir,
-                            bool overwrite,
-                            bool high_priority,
-                            aio_task *tsk);
-
-inline aio_task_ptr copy_remote_files(rpc_address remote,
-                                      const std::string &source_dir,
-                                      const std::vector<std::string> &files, // empty for all
-                                      const std::string &dest_dir,
-                                      bool overwrite,
-                                      bool high_priority,
-                                      task_code callback_code,
-                                      task_tracker *tracker,
-                                      aio_handler &&callback,
-                                      int hash = 0)
-{
-    auto tsk = create_aio_task(callback_code, tracker, std::move(callback), hash);
-    copy_remote_files_impl(
-        remote, source_dir, files, dest_dir, overwrite, high_priority, tsk.get());
-    return tsk;
 }
-
-inline aio_task_ptr copy_remote_directory(rpc_address remote,
-                                          const std::string &source_dir,
-                                          const std::string &dest_dir,
-                                          bool overwrite,
-                                          bool high_priority,
-                                          task_code callback_code,
-                                          task_tracker *tracker,
-                                          aio_handler &&callback,
-                                          int hash = 0)
-{
-    return copy_remote_files(remote,
-                             source_dir,
-                             {},
-                             dest_dir,
-                             overwrite,
-                             high_priority,
-                             callback_code,
-                             tracker,
-                             std::move(callback),
-                             hash);
-}
-}
-/*@}*/
-// ------------- inline implementation ----------------
 
 } // end namespace
