@@ -58,7 +58,7 @@ thrift_description = [
         "path": "src/dist/replication", 
         "file_move": {
             ".types.h _types.h": "include/dsn/dist/replication",
-            "_types.cpp": "src/dist/replication/client_lib"
+            "_types.cpp": "src/dist/replication/common"
         },
         "include_fix": {
             "_types.h": {
@@ -86,22 +86,11 @@ thrift_description = [
     }, 
     {
         "name": "nfs", 
-        "path": "src/apps/nfs",
-        "file_move": {
-            ".types.h _types.h": "include/dsn/tool/nfs"
-        },
+        "path": "src/dist/nfs",
         "include_fix": {
             "_types.h": {
                 "add": ["<dsn/service_api_cpp.h>"],
                 "remove": ["\"dsn_types.h\""]
-            },
-            "_types.cpp": {
-                "add": ["<dsn/tool/nfs.h>"],
-                "remove": ["\"nfs_types.h\""]
-            },
-            ".types.h": {
-                "add": ["<dsn/tool/nfs/nfs_types.h>"],
-                "remove": ["\"nfs_types.h\""]
             }
         }
     }, 
@@ -433,7 +422,6 @@ if __name__ == "__main__":
 
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
     ctor_configuration_proposal_action = "  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}"
-    add_hook("deploy_svc", "src/dist/deployment_service", remove_struct_define_hook, ["deploy_svc_types.h", "cluster_type", "service_status"])
     add_hook("simple_kv", "src/apps/skv", constructor_hook, ["simple_kv_types.h", "kv_pair", ctor_kv_pair])
     add_hook("replication", "src/dist/replication", constructor_hook, ["replication_types.h", "configuration_proposal_action", ctor_configuration_proposal_action])
     add_hook("dsn.layer2", "src", replace_hook, ["dsn.layer2_types.h", {r"dsn\.layer2_TYPES_H": 'dsn_layer2_TYPES_H'}])
