@@ -500,18 +500,24 @@ void initialize(int argc, char **argv)
     }
 
     std::string cluster_name = argc > 2 ? argv[2] : "mycluster";
-    std::cout << "The cluster name is: " << cluster_name << std::endl;
-
     s_global_context.current_cluster_name = cluster_name;
     std::string section = "uri-resolver.dsn://" + s_global_context.current_cluster_name;
     std::string key = "arguments";
     std::string server_list = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
-    std::cout << "The cluster meta list is: " << server_list << std::endl;
 
     dsn::replication::replica_helper::load_meta_servers(
         s_global_context.meta_list, section.c_str(), key.c_str());
     s_global_context.ddl_client.reset(
         new dsn::replication::replication_ddl_client(s_global_context.meta_list));
+
+    // get real cluster name from zk
+    std::string name;
+    ::dsn::error_code err = s_global_context.ddl_client->cluster_name(1000, name);
+    if (err == dsn::ERR_OK) {
+        cluster_name = name;
+    }
+    std::cout << "The cluster name is: " << cluster_name << std::endl;
+    std::cout << "The cluster meta list is: " << server_list << std::endl;
 
     linenoiseSetMultiLine(1);
     linenoiseSetCompletionCallback(completionCallback);

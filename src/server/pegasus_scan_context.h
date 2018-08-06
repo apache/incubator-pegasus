@@ -7,10 +7,10 @@
 #include <map>
 #include <rocksdb/db.h>
 #include <dsn/tool_api.h>
-
 #include <rrdb/rrdb_types.h>
 
 #include "base/pegasus_const.h"
+#include "base/pegasus_utils.h"
 
 namespace pegasus {
 namespace server {
@@ -63,7 +63,22 @@ public:
 class pegasus_context_cache
 {
 public:
-    pegasus_context_cache() : _counter(pegasus::utils::epoch_now() << 20) {}
+    pegasus_context_cache()
+    {
+        // some comments:
+        // 1. we should keep the context id unique when the server restarts, so as to prevent
+        //    an old scan reuse the context id assigned to a new scan
+        // 2. we should prevent the context id mixed when primary switches.
+        // 3. we should keep context id positive, as negtive value have specical meanings.
+        //
+        // a more detailed description on the context id confliction is here:
+        //   https://github.com/XiaoMi/pegasus/issues/156
+        //
+        // however, currently the implementation is not 100% correct.
+        //
+        _counter = dsn_random64(0, 2 << 31);
+        _counter <<= 32;
+    }
 
     void clear()
     {
