@@ -27,10 +27,13 @@ type KeyValue struct {
 	SortKey, Value []byte
 }
 
+// Defaults to DefaultMultiGetOptions.
 type MultiGetOptions struct {
 	StartInclusive bool
 	StopInclusive  bool
 	SortKeyFilter  Filter
+
+	// MaxFetchCount and MaxFetchSize limit the size of returned result.
 
 	// Max count of k-v pairs to be fetched. MaxFetchCount <= 0 means no limit.
 	MaxFetchCount int
@@ -39,50 +42,83 @@ type MultiGetOptions struct {
 	MaxFetchSize int
 }
 
+// Default options for MultiGet and MultiGetRange.
+var DefaultMultiGetOptions = &MultiGetOptions{
+	StartInclusive: true,
+	StopInclusive:  false,
+	SortKeyFilter: Filter{
+		Type:    FilterTypeNoFilter,
+		Pattern: nil,
+	},
+	MaxFetchCount: 100,
+	MaxFetchSize:  100000,
+}
+
 type TableConnector interface {
 	// Get retrieves the entry for `hashKey` + `sortKey`.
 	// Returns nil if no entry matches.
+	// `hashKey` : CAN'T be nil.
 	Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error)
 
 	// Set the entry for `hashKey` + `sortKey` to `value`.
+	// If Set is called or `ttl` == 0, no data expiration is specified.
+	// `hashKey` / `value` : CAN'T be nil.
 	Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error
 	SetTTL(ctx context.Context, hashKey []byte, sortKey []byte, value []byte, ttl time.Duration) error
 
 	// Delete the entry for `hashKey` + `sortKey`.
+	// `hashKey` : CAN'T be nil.
 	Del(ctx context.Context, hashKey []byte, sortKey []byte) error
 
-	// MultiGet retrieves the multiple entries under `hashKey` all in one operation.
+	// MultiGet/MultiGetOpt retrieves the multiple entries for `hashKey` + `sortKeys[i]` atomically in one operation.
+	// MultiGet is identical to MultiGetOpt except that the former uses DefaultMultiGetOptions as `options`.
+	//
+	// If `sortKeys` are given empty or nil, all entries under `hashKey` will be retrieved.
+	// `hashKey` : CAN'T be nil.
+	//
 	// The returned key-value pairs are sorted by sort key in ascending order.
 	// Returns nil if no entries match.
 	// Returns true if all data is fetched, false if only partial data is fetched.
-	MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte) ([]KeyValue, bool, error)
-	MultiGetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, options *MultiGetOptions) ([]KeyValue, bool, error)
+	//
+	MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte) ([]*KeyValue, bool, error)
+	MultiGetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, options *MultiGetOptions) ([]*KeyValue, bool, error)
 
 	// MultiGetRange retrieves the multiple entries under `hashKey`, between range (`startSortKey`, `stopSortKey`),
-	// all in one operation.
-	// The returned key-value pairs are sorted by sort key in ascending order.
+	// atomically in one operation.
+	//
+	// startSortKey: nil or len(startSortKey) == 0 means start from begin.
+	// stopSortKey: nil or len(stopSortKey) == 0 means stop to end.
+	// `hashKey` : CAN'T be nil.
+	//
+	// The returned key-value pairs are sorted by sort keys in ascending order.
 	// Returns nil if no entries match.
 	// Returns true if all data is fetched, false if only partial data is fetched.
-	MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) ([]KeyValue, bool, error)
-	MultiGetRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *MultiGetOptions) ([]KeyValue, bool, error)
+	//
+	MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) ([]*KeyValue, bool, error)
+	MultiGetRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *MultiGetOptions) ([]*KeyValue, bool, error)
 
-	// MultiSet sets the multiple entries under `hashKey` all in one operation.
+	// MultiSet sets the multiple entries for `hashKey` + `sortKeys[i]` atomically in one operation.
+	// `hashKey` / `sortKeys` / `values` / `values[i]`: CAN'T be nil.
 	MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte) error
 	MultiSetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttl time.Duration) error
 
 	// MultiDel deletes the multiple entries under `hashKey` all in one operation.
+	// `hashKey` / `sortKeys`: CAN'T be nil.
 	// Returns sort key of deleted entries.
 	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error
 
 	// Returns ttl(time-to-live) in seconds: -1 if ttl is not set; -2 if entry doesn't exist.
+	// `hashKey`: CAN'T be nil.
 	TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error)
 
 	// Check value existence for the entry for `hashKey` + `sortKey`.
+	// `hashKey`: CAN'T be nil.
 	Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error)
 
 	// Get Scanner for {startSortKey, stopSortKey} within hashKey.
-	// startSortKey: if null or length == 0, it means start from begin
-	// stopSortKey: if null or length == 0, it means stop to end
+	// startSortKey: nil or len(startSortKey) == 0 means start from begin.
+	// stopSortKey: nil or len(stopSortKey) == 0 means stop to end.
+	// `hashKey`: CAN'T be nil.
 	GetScanner(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *ScannerOptions) (Scanner, error)
 
 	// Get Scanners for all data in pegasus, the count of scanners will
@@ -99,6 +135,7 @@ type TableConnector interface {
 		checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error)
 
 	// Returns the count of sortkeys under hashkey.
+	// `hashKey`: CAN'T be nil.
 	SortKeyCount(ctx context.Context, hashKey []byte) (int64, error)
 
 	Close() error
@@ -207,6 +244,13 @@ func validateValue(value []byte) error {
 	return nil
 }
 
+func validateSortKeys(sortKeys [][]byte) error {
+	if sortKeys == nil || len(sortKeys) == 0 {
+		return fmt.Errorf("InvalidParameter: sortkeys must not be empty")
+	}
+	return nil
+}
+
 // Wraps up the internal errors for ensuring that all types of errors
 // returned by public interfaces are pegasus.PError.
 func WrapError(err error, op OpType) error {
@@ -306,10 +350,13 @@ func setRequestByOption(options *MultiGetOptions, request *rrdb.MultiGetRequest)
 	request.SortKeyFilterPattern = &base.Blob{Data: options.SortKeyFilter.Pattern}
 }
 
-func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, options *MultiGetOptions) ([]KeyValue, bool, error) {
-	kvs, allFetched, err := func() ([]KeyValue, bool, error) {
+func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, options *MultiGetOptions) ([]*KeyValue, bool, error) {
+	kvs, allFetched, err := func() ([]*KeyValue, bool, error) {
 		if err := validateHashKey(hashKey); err != nil {
 			return nil, false, err
+		}
+		if sortKeys == nil {
+			sortKeys = make([][]byte, 0)
 		}
 
 		request := rrdb.NewMultiGetRequest()
@@ -327,12 +374,12 @@ func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte,
 	return kvs, allFetched, WrapError(err, OpMultiGet)
 }
 
-func (p *pegasusTableConnector) MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte) ([]KeyValue, bool, error) {
-	return p.MultiGetOpt(ctx, hashKey, sortKeys, &MultiGetOptions{})
+func (p *pegasusTableConnector) MultiGet(ctx context.Context, hashKey []byte, sortKeys [][]byte) ([]*KeyValue, bool, error) {
+	return p.MultiGetOpt(ctx, hashKey, sortKeys, DefaultMultiGetOptions)
 }
 
-func (p *pegasusTableConnector) MultiGetRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *MultiGetOptions) ([]KeyValue, bool, error) {
-	kvs, allFetched, err := func() ([]KeyValue, bool, error) {
+func (p *pegasusTableConnector) MultiGetRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *MultiGetOptions) ([]*KeyValue, bool, error) {
+	kvs, allFetched, err := func() ([]*KeyValue, bool, error) {
 		if err := validateHashKey(hashKey); err != nil {
 			return nil, false, err
 		}
@@ -348,11 +395,11 @@ func (p *pegasusTableConnector) MultiGetRangeOpt(ctx context.Context, hashKey []
 	return kvs, allFetched, WrapError(err, OpMultiGetRange)
 }
 
-func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) ([]KeyValue, bool, error) {
-	return p.MultiGetRangeOpt(ctx, hashKey, startSortKey, stopSortKey, &MultiGetOptions{})
+func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) ([]*KeyValue, bool, error) {
+	return p.MultiGetRangeOpt(ctx, hashKey, startSortKey, stopSortKey, DefaultMultiGetOptions)
 }
 
-func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, request *rrdb.MultiGetRequest) ([]KeyValue, bool, error) {
+func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, request *rrdb.MultiGetRequest) ([]*KeyValue, bool, error) {
 	gpid, part := p.getPartition(hashKey)
 	resp, err := part.MultiGet(ctx, gpid, request)
 
@@ -370,10 +417,12 @@ func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, 
 		if len(resp.Kvs) == 0 {
 			return nil, allFetched, nil
 		}
-		kvs := make([]KeyValue, len(resp.Kvs))
+		kvs := make([]*KeyValue, len(resp.Kvs))
 		for i, blobKv := range resp.Kvs {
-			kvs[i].SortKey = blobKv.Key.Data
-			kvs[i].Value = blobKv.Value.Data
+			kvs[i] = &KeyValue{
+				SortKey: blobKv.Key.Data,
+				Value:   blobKv.Value.Data,
+			}
 		}
 
 		sort.Slice(kvs, func(i, j int) bool {
@@ -394,6 +443,9 @@ func (p *pegasusTableConnector) MultiSetOpt(ctx context.Context, hashKey []byte,
 		if err := validateHashKey(hashKey); err != nil {
 			return err
 		}
+		if err := validateSortKeys(sortKeys); err != nil {
+			return err
+		}
 		if values == nil || len(values) == 0 {
 			return fmt.Errorf("InvalidParameter: values must not be empty")
 		}
@@ -401,6 +453,10 @@ func (p *pegasusTableConnector) MultiSetOpt(ctx context.Context, hashKey []byte,
 			if err := validateValue(v); err != nil {
 				return err
 			}
+		}
+		if len(sortKeys) != len(values) {
+			return fmt.Errorf("InvalidParameter: unmatched key-value pairs: len(sortKeys)=%d len(values)=%d",
+				len(sortKeys), len(values))
 		}
 
 		request := rrdb.NewMultiPutRequest()
@@ -440,6 +496,9 @@ func (p *pegasusTableConnector) doMultiSet(ctx context.Context, hashKey []byte, 
 func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error {
 	err := func() error {
 		if err := validateHashKey(hashKey); err != nil {
+			return err
+		}
+		if err := validateSortKeys(sortKeys); err != nil {
 			return err
 		}
 

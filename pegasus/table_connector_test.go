@@ -173,7 +173,7 @@ func TestPegasusTableConnector_EmptyInput(t *testing.T) {
 	err2 = tb.Set(context.Background(), []byte("h1"), nil, []byte{})
 	assert.Equal(t, err, err2)
 
-	err = tb.MultiSet(context.Background(), []byte("h1"), nil, nil)
+	err = tb.MultiSet(context.Background(), []byte("h1"), [][]byte{}, nil)
 	assert.NotNil(t, err)
 	err2 = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{}, [][]byte{}, 0)
 	assert.Equal(t, err, err2)
@@ -182,6 +182,16 @@ func TestPegasusTableConnector_EmptyInput(t *testing.T) {
 	assert.NotNil(t, err)
 	err2 = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{[]byte("s1")}, [][]byte{[]byte{}}, 0)
 	assert.Equal(t, err, err2)
+
+	// === empty sortkeys === //
+
+	err = tb.MultiSet(context.Background(), []byte("h1"), nil, [][]byte{[]byte("v1")})
+	assert.NotNil(t, err)
+	err2 = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{}, [][]byte{[]byte("v1")}, 0)
+	assert.Equal(t, err, err2)
+
+	err = tb.MultiDel(context.Background(), []byte("h1"), nil)
+	assert.NotNil(t, err)
 }
 
 func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
@@ -404,6 +414,12 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(results), 1)
 	assert.False(t, allFetched)
+
+	// ensure nil sortKeys retrieves all entries
+	results, allFetched, err = tb.MultiGetOpt(context.Background(), hashKey, nil, &MultiGetOptions{})
+	assert.Nil(t, err)
+	assert.Equal(t, len(results), len(sortKeys))
+	assert.True(t, allFetched)
 
 	// === ttl === //
 
