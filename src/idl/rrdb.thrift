@@ -42,8 +42,8 @@ enum cas_check_type
 
 enum mutate_operation
 {
-    PUT,
-    DELETE
+    MO_PUT,
+    MO_DELETE
 }
 
 struct update_request
@@ -189,10 +189,10 @@ struct check_and_set_response
 
 struct mutate
 {
-    1:i32            operation;
-    2:dsn.blob       sort_key;
-    3:dsn.blob       value; 
-    4:i32            set_expire_ts_seconds;
+    1:mutate_operation operation;
+    2:dsn.blob         sort_key;
+    3:dsn.blob         value; // set null if operation is MO_DELETE
+    4:i32              set_expire_ts_seconds; // set 0 if operation is MO_DELETE
 }
 
 struct check_and_mutate_request
