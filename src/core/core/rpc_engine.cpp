@@ -613,7 +613,9 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
                   msg->header->trace_id);
 
             dassert(msg->get_count() == 0, "request should not be referenced by anybody so far");
-            delete msg;
+            msg->add_ref();
+            dsn_rpc_reply(dsn_msg_create_response(msg), ::dsn::ERR_HANDLER_NOT_FOUND);
+            msg->release_ref();
         }
     } else {
         dwarn("recv message with unknown rpc name %s from %s, trace_id = %016" PRIx64,
@@ -622,7 +624,9 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
               msg->header->trace_id);
 
         dassert(msg->get_count() == 0, "request should not be referenced by anybody so far");
-        delete msg;
+        msg->add_ref();
+        dsn_rpc_reply(dsn_msg_create_response(msg), ::dsn::ERR_HANDLER_NOT_FOUND);
+        msg->release_ref();
     }
 }
 
@@ -864,9 +868,20 @@ void rpc_engine::reply(message_ex *response, error_code err)
             sizeof(response->header->server.error_name));
     response->header->server.error_code.local_code = err;
     response->header->server.error_code.local_hash = message_ex::s_local_hash;
-    auto sp = task_spec::get(response->local_rpc_code);
 
-    bool no_fail = sp->on_rpc_reply.execute(task::get_current_task(), response, true);
+    // response rpc code may be TASK_CODE_INVALID when request rpc code is not exist
+    auto sp = response->local_rpc_code == TASK_CODE_INVALID
+                  ? nullptr
+                  : task_spec::get(response->local_rpc_code);
+
+    bool no_fail = true;
+    if (sp) {
+        // current task may be nullptr when this method is directly invoked from rpc_engine.
+        task *cur_task = task::get_current_task();
+        if (cur_task) {
+            no_fail = sp->on_rpc_reply.execute(cur_task, response, true);
+        }
+    }
 
     // connection oriented network, we have bound session
     if (s != nullptr) {
@@ -886,7 +901,8 @@ void rpc_engine::reply(message_ex *response, error_code err)
                         "target address must have named port in this case");
 
             // use the header format recorded in the message
-            network *net = _client_nets[response->hdr_format][sp->rpc_call_channel];
+            auto rpc_channel = sp ? sp->rpc_call_channel : RPC_CHANNEL_TCP;
+            network *net = _client_nets[response->hdr_format][rpc_channel];
             dassert(
                 nullptr != net,
                 "client network not present for rpc channel '%s' with format '%s' used by rpc %s",
@@ -907,7 +923,8 @@ void rpc_engine::reply(message_ex *response, error_code err)
         dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,
                     "target address must have named port in this case");
 
-        network *net = _server_nets[response->header->from_address.port()][sp->rpc_call_channel];
+        auto rpc_channel = sp ? sp->rpc_call_channel : RPC_CHANNEL_TCP;
+        network *net = _server_nets[response->header->from_address.port()][rpc_channel];
 
         dassert(nullptr != net,
                 "server network not present for rpc channel '%s' on port %u used by rpc %s",

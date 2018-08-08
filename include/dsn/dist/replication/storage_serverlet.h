@@ -79,11 +79,10 @@ protected:
         if (ptr != nullptr) {
             (*ptr)(static_cast<T *>(this), request);
         } else {
-            dassert(false,
-                    "recv message with unhandled rpc name %s from %s, trace_id = %016" PRIx64,
-                    t.to_string(),
-                    dsn_msg_from_address(request).to_string(),
-                    dsn_msg_trace_id(request));
+            dwarn("recv message with unhandled rpc name %s from %s, trace_id = %016" PRIx64,
+                  t.to_string(),
+                  dsn_msg_from_address(request).to_string(),
+                  dsn_msg_trace_id(request));
             dsn_rpc_reply(dsn_msg_create_response(request), ::dsn::ERR_HANDLER_NOT_FOUND);
         }
         return 0;
