@@ -35,60 +35,20 @@
 
 #include <dsn/c/api_utilities.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/utils.h>
+#include <dsn/utility/safe_strerror_posix.h>
+
 #include <sys/stat.h>
 #include <errno.h>
 #include <stdio.h>
 #include <boost/filesystem.hpp>
-
-#ifdef _WIN32
-
-#include <direct.h>
-#include <io.h>
-#include <deque>
-
-#define getcwd_ _getcwd
-#define rmdir_ _rmdir
-#define mkdir_ _mkdir
-#define close_ _close
-#define stat_ _stat64
-
-#ifndef __S_ISTYPE
-#define __S_ISTYPE(mode, mask) (((mode)&S_IFMT) == (mask))
-#endif
-
-#ifndef S_ISREG
-#define S_ISREG(mode) __S_ISTYPE((mode), S_IFREG)
-#endif
-
-#ifndef S_ISDIR
-#define S_ISDIR(mode) __S_ISTYPE((mode), S_IFDIR)
-#endif
-
-#ifndef PATH_MAX
-#define PATH_MAX MAX_PATH
-#endif
-
-#else
-
 #include <openssl/md5.h>
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/user.h>
-#include <libutil.h>
-#endif
-
-#if defined(__APPLE__)
-#include <libproc.h>
-#endif
 
 #define getcwd_ getcwd
 #define rmdir_ rmdir
 #define mkdir_(path) mkdir(path, 0775)
 #define close_ close
 #define stat_ stat
-
-#endif
 
 namespace dsn {
 namespace utils {
@@ -114,12 +74,6 @@ static inline int get_stat_internal(const std::string &npath, struct stat_ &st)
     err = ::stat_(npath.c_str(), &st);
     if (err != 0) {
         err = errno;
-        /*
-        dinfo("get_stat_internal %s failed, err = %s",
-            npath.c_str(),
-            strerror(err)
-            );
-        */
     }
 
     return err;
@@ -140,29 +94,15 @@ int get_normalized_path(const std::string &path, std::string &npath)
 
     len = path.length();
 
-#ifdef _WIN32
-    sep = _FS_BSLASH;
-#else
     sep = _FS_SLASH;
-#endif
     i = 0;
     pos = 0;
     while (i < len) {
         c = path[i++];
-        if (
-#ifdef _WIN32
-            _FS_ISSEP(c)
-#else
-            c == _FS_SLASH
-#endif
-                ) {
-#ifdef _WIN32
-            c = sep;
-            if (i > 1)
-#endif
-                while ((i < len) && _FS_ISSEP(path[i])) {
-                    i++;
-                }
+        if (c == _FS_SLASH) {
+            while ((i < len) && _FS_ISSEP(path[i])) {
+                i++;
+            }
         }
 
         tls_path_buffer[pos++] = c;
@@ -170,11 +110,7 @@ int get_normalized_path(const std::string &path, std::string &npath)
 
     tls_path_buffer[pos] = _FS_NULL;
     if ((c == sep) && (pos > 1)) {
-#ifdef _WIN32
-        c = tls_path_buffer[pos - 2];
-        if ((c != _FS_COLON) && (c != _FS_QUESTION) && (c != _FS_BSLASH))
-#endif
-            tls_path_buffer[pos - 1] = _FS_NULL;
+        tls_path_buffer[pos - 1] = _FS_NULL;
     }
 
     dassert(tls_path_buffer[0] != _FS_NULL, "Normalized path cannot be empty!");
@@ -183,7 +119,6 @@ int get_normalized_path(const std::string &path, std::string &npath)
     return 0;
 }
 
-#ifndef _WIN32
 static __thread struct
 {
     ftw_handler *handler;
@@ -193,131 +128,27 @@ static __thread struct
 static int ftw_wrapper(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
     if (!tls_ftw_ctx.recursive && (ftwbuf->level > 1)) {
-#ifdef __linux__
         if ((typeflag == FTW_D) || (typeflag == FTW_DP)) {
             return FTW_SKIP_SUBTREE;
         } else {
             return FTW_SKIP_SIBLINGS;
         }
-#else
-        return 0;
-#endif
     }
 
     return (*tls_ftw_ctx.handler)(fpath, typeflag, ftwbuf);
 }
-#endif
-
-#ifdef _WIN32
-struct win_ftw_info
-{
-    struct FTW ftw;
-    std::string path;
-};
-#endif
 
 bool file_tree_walk(const std::string &dirpath, ftw_handler handler, bool recursive)
 {
-#ifdef _WIN32
-    WIN32_FIND_DATAA ffd;
-    HANDLE hFind;
-    DWORD dwError = ERROR_SUCCESS;
-    std::deque<win_ftw_info> queue;
-    std::deque<win_ftw_info> queue2;
-    char c;
-    size_t pos;
-    win_ftw_info info;
-    win_ftw_info info2;
-    int ret;
-    int err;
-
-    info.path.reserve(PATH_MAX);
-    err = dsn::utils::filesystem::get_normalized_path(dirpath, info.path);
-    if (err != 0) {
-        return false;
-    }
-    info2.path.reserve(PATH_MAX);
-    pos = info.path.find_last_of("\\");
-    info.ftw.base = (info.ftw.base == std::string::npos) ? 0 : (int)(pos + 1);
-    info.ftw.level = 0;
-    queue.push_back(info);
-
-    while (!queue.empty()) {
-        info = queue.front();
-        queue.pop_front();
-
-        c = info.path[info.path.length() - 1];
-        info2.path = info.path;
-        pos = info2.path.length() + 1;
-        info2.ftw.base = (int)pos;
-        info2.ftw.level = info.ftw.level + 1;
-        if ((c != _FS_BSLASH) && (c != _FS_COLON)) {
-            info2.path.append(1, _FS_BSLASH);
-        }
-        info2.path.append(1, _FS_STAR);
-
-        hFind = ::FindFirstFileA(info2.path.c_str(), &ffd);
-        if (INVALID_HANDLE_VALUE == hFind) {
-            return false;
-        }
-
-        do {
-            if ((ffd.cFileName[0] == _FS_NULL) || (::strcmp(ffd.cFileName, ".") == 0) ||
-                (::strcmp(ffd.cFileName, "..") == 0)) {
-                continue;
-            }
-
-            info2.path.replace(pos, std::string::npos, ffd.cFileName);
-
-            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                if (recursive) {
-                    queue.push_front(info2);
-                } else {
-                    queue2.push_front(info2);
-                }
-            } else {
-                ret = handler(info2.path.c_str(), FTW_F, &info2.ftw);
-                if (ret != FTW_CONTINUE) {
-                    ::FindClose(hFind);
-                    return false;
-                }
-            }
-        } while (::FindNextFileA(hFind, &ffd) != 0);
-
-        dwError = ::GetLastError();
-        ::FindClose(hFind);
-        if (dwError != ERROR_NO_MORE_FILES) {
-            return false;
-        }
-
-        queue2.push_front(info);
-    }
-
-    for (auto &info3 : queue2) {
-        ret = handler(info3.path.c_str(), FTW_DP, &info3.ftw);
-        if (ret != FTW_CONTINUE) {
-            return false;
-        }
-    }
-
-    return true;
-#else
     tls_ftw_ctx.handler = &handler;
     tls_ftw_ctx.recursive = recursive;
-    int flags =
-#ifdef __linux__
-        FTW_ACTIONRETVAL
-#else
-        0
-#endif
-        ;
+    int flags = FTW_ACTIONRETVAL;
     if (recursive) {
         flags |= FTW_DEPTH;
     }
     int ret = ::nftw(dirpath.c_str(), ftw_wrapper, 1, flags);
 
     return (ret == 0);
-#endif
 }
 
 // npath need to be a normalized path
@@ -495,21 +326,10 @@ static bool remove_directory(const std::string &npath)
 
             dassert(
                 (typeflag == FTW_F) || (typeflag == FTW_DP), "Invalid typeflag = %d.", typeflag);
-#ifdef _WIN32
-            if (typeflag != FTW_F) {
-                succ = (::RemoveDirectoryA(fpath) == TRUE);
-                if (!succ) {
-                    dwarn("remove directory %s failed, err = %d", fpath, ::GetLastError());
-                }
-            } else {
-#endif
-                succ = (::remove(fpath) == 0);
-                if (!succ) {
-                    dwarn("remove file %s failed, err = %s", fpath, strerror(errno));
-                }
-#ifdef _WIN32
+            succ = (::remove(fpath) == 0);
+            if (!succ) {
+                dwarn("remove file %s failed, err = %s", fpath, safe_strerror(errno).c_str());
             }
-#endif
 
             return (succ ? FTW_CONTINUE : FTW_STOP);
         },
@@ -533,7 +353,7 @@ bool remove_path(const std::string &path)
     if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
         bool ret = (::remove(npath.c_str()) == 0);
         if (!ret) {
-            dwarn("remove file %s failed, err = %s", path.c_str(), strerror(errno));
+            dwarn("remove file %s failed, err = %s", path.c_str(), safe_strerror(errno).c_str());
         }
         return ret;
     } else if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
@@ -547,30 +367,12 @@ bool rename_path(const std::string &path1, const std::string &path2)
 {
     bool ret;
 
-//
-// on linux, we don't need to check this existence of path2 since ::rename() will do this.
-// however, rename will not do this on windows as on linux, so we do this here for windows
-//
-#if defined(_WIN32)
-    if (dsn::utils::filesystem::path_exists(path2)) {
-        ret = dsn::utils::filesystem::remove_path(path2);
-        if (!ret) {
-            dwarn("rename from '%s' to '%s' failed to remove the existed destinate path, err = %s",
-                  path1.c_str(),
-                  path2.c_str(),
-                  strerror(errno));
-
-            return ret;
-        }
-    }
-#endif
-
     ret = (::rename(path1.c_str(), path2.c_str()) == 0);
     if (!ret) {
         dwarn("rename from '%s' to '%s' failed, err = %s",
               path1.c_str(),
               path2.c_str(),
-              strerror(errno));
+              safe_strerror(errno).c_str());
     }
 
     return ret;
@@ -649,21 +451,10 @@ bool create_directory(const std::string &path)
     }
 
     len = npath.length();
-#ifdef _WIN32
-    sep = _FS_BSLASH;
-    if (npath.compare(0, 4, "\\\\?\\") == 0) {
-        prev = 4;
-    } else if (npath.compare(0, 2, "\\\\") == 0) {
-        prev = 2;
-    } else if (npath.compare(1, 2, ":\\") == 0) {
-        prev = 3;
-    }
-#else
     sep = _FS_SLASH;
     if (npath[0] == sep) {
         prev = 1;
     }
-#endif
 
     while ((pos = npath.find_first_of(sep, prev)) != std::string::npos) {
         cpath = npath.substr(0, pos++);
@@ -689,7 +480,7 @@ out_error:
     dwarn("create_directory %s failed due to cannot create the component: %s, err = %s",
           path.c_str(),
           cpath.c_str(),
-          strerror(err));
+          safe_strerror(err).c_str());
     return false;
 }
 
@@ -730,17 +521,11 @@ bool create_file(const std::string &path)
         }
     }
 
-#ifdef _WIN32
-    mode = _S_IREAD | _S_IWRITE;
-    if (::_sopen_s(&fd, npath.c_str(), _O_WRONLY | _O_CREAT | _O_TRUNC, _SH_DENYRW, mode) != 0)
-#else
     mode = 0775;
     fd = ::creat(npath.c_str(), mode);
-    if (fd == -1)
-#endif
-    {
+    if (fd == -1) {
         err = errno;
-        dwarn("create_file %s failed, err = %s", path.c_str(), strerror(err));
+        dwarn("create_file %s failed, err = %s", path.c_str(), safe_strerror(err).c_str());
         return false;
     }
 
@@ -754,13 +539,7 @@ bool create_file(const std::string &path)
 bool get_absolute_path(const std::string &path1, std::string &path2)
 {
     bool succ;
-#if defined(_WIN32)
-    char *component;
-    succ =
-        (0 != ::GetFullPathNameA(path1.c_str(), TLS_PATH_BUFFER_SIZE, tls_path_buffer, &component));
-#else
     succ = (::realpath(path1.c_str(), tls_path_buffer) != nullptr);
-#endif
     if (succ) {
         path2 = tls_path_buffer;
     }
@@ -810,14 +589,7 @@ std::string get_file_name(const std::string &path)
     }
 
     if (pos == std::string::npos) {
-#ifdef _WIN32
-        pos = path.find_last_of(_FS_COLON);
-        if (pos == last) {
-            return "";
-        }
-#else
         return path;
-#endif
     }
 
     return path.substr((pos + 1), (len - pos));
@@ -835,19 +607,7 @@ std::string path_combine(const std::string &path1, const std::string &path2)
         err = dsn::utils::filesystem::get_normalized_path(path1, npath);
     } else {
         path3 = path1;
-#ifdef _WIN32
-        if (path1[path1.length() - 1] != _FS_COLON) {
-#endif
-            path3.append(1,
-#ifdef _WIN32
-                         _FS_BSLASH
-#else
-                     _FS_SLASH
-#endif
-                         );
-#ifdef _WIN32
-        }
-#endif
+        path3.append(1, _FS_SLASH);
         path3.append(path2);
 
         err = dsn::utils::filesystem::get_normalized_path(path3, npath);
@@ -899,29 +659,8 @@ error_code get_process_image_path(int pid, std::string &path)
         return ERR_INVALID_PARAMETERS;
     }
 
-#if defined(__linux__) || defined(__APPLE__)
     int err;
-#endif
 
-#if defined(_WIN32)
-    HANDLE hProcess;
-    DWORD dwSize = TLS_PATH_BUFFER_SIZE;
-
-    if (pid == -1) {
-        hProcess = ::GetCurrentProcess();
-    } else {
-        hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, (DWORD)pid);
-        if (hProcess == nullptr) {
-            return ERR_INVALID_HANDLE;
-        }
-    }
-
-    if (::QueryFullProcessImageNameA(hProcess, 0, tls_path_buffer, &dwSize) == FALSE) {
-        return ERR_PATH_NOT_FOUND;
-    }
-
-    path = tls_path_buffer;
-#elif defined(__linux__)
     char tmp[48];
 
     err = snprintf_p(
@@ -935,37 +674,6 @@ error_code get_process_image_path(int pid, std::string &path)
 
     tls_path_buffer[err] = 0;
     path = tls_path_buffer;
-#elif defined(__FreeBSD__)
-    struct kinfo_proc *proc;
-
-    if (pid == -1) {
-        pid = (int)getpid();
-    }
-
-    proc = kinfo_getproc(pid);
-    if (proc == nullptr) {
-        return ERR_PATH_NOT_FOUND;
-    }
-
-    // proc->ki_comm is the command name instead of the full name.
-    if (!dsn::utils::filesystem::get_absolute_path(proc->ki_comm, path)) {
-        return ERR_PATH_NOT_FOUND;
-    }
-    free(proc);
-#elif defined(__APPLE__)
-    if (pid == -1) {
-        pid = getpid();
-    }
-
-    err = proc_pidpath(pid, tls_path_buffer, TLS_PATH_BUFFER_SIZE);
-    if (err <= 0) {
-        return ERR_PATH_NOT_FOUND;
-    }
-
-    path = tls_path_buffer;
-#else
-#error not implemented yet
-#endif
 
     return ERR_OK;
 }
@@ -993,11 +701,7 @@ bool link_file(const std::string &src, const std::string &target)
     if (!file_exists(src) || file_exists(target))
         return false;
     int err = 0;
-#if defined(_WIN32)
-#error not implemented yet
-#else
     err = ::link(src.c_str(), target.c_str());
-#endif
     return (err == 0);
 }
 
@@ -1010,9 +714,6 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
         return ERR_OBJECT_NOT_FOUND;
     }
 
-#if defined(_WIN32)
-#error not implemented yet
-#else
     FILE *fp = fopen(file_path.c_str(), "rb");
     if (fp == nullptr) {
         derror("md5sum error: open file %s failed", file_path.c_str());
@@ -1037,7 +738,7 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
                 derror("md5sum error: read file %s failed: errno = %d (%s)",
                        file_path.c_str(),
                        err,
-                       strerror(err));
+                       safe_strerror(err).c_str());
                 fclose(fp);
                 MD5_Final(out, &c);
                 return ERR_FILE_OPERATION_FAILED;
@@ -1048,10 +749,10 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
     MD5_Final(out, &c);
 
     char str[MD5_DIGEST_LENGTH * 2 + 1];
+    str[MD5_DIGEST_LENGTH * 2] = 0;
     for (int n = 0; n < MD5_DIGEST_LENGTH; n++)
         sprintf(str + n + n, "%02x", out[n]);
     result.assign(str);
-#endif
 
     return ERR_OK;
 }
@@ -1060,9 +761,6 @@ std::pair<error_code, bool> is_directory_empty(const std::string &dirname)
 {
     std::pair<error_code, bool> res;
     res.first = ERR_OK;
-#if defined(_WIN32)
-#error not implemented yet
-#else
     std::vector<std::string> subfiles;
     std::vector<std::string> subdirs;
     if (get_subfiles(dirname, subfiles, false) && get_subdirectories(dirname, subdirs, false)) {
@@ -1070,7 +768,6 @@ std::pair<error_code, bool> is_directory_empty(const std::string &dirname)
     } else {
         res.first = ERR_FILE_OPERATION_FAILED;
     }
-#endif
     return res;
 }
 }
