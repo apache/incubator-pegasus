@@ -206,6 +206,13 @@ function run_build()
     else
         echo "ENABLE_GCOV=NO"
     fi
+    if [ "$BUILD_TYPE" == "debug" ]
+    then
+        echo "BUILD_TYPE=debug"
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
+    else
+        echo "BUILD_TYPE=release"
+    fi
 
     if [ -f $ROCKSDB_BUILD_DIR/CMAKE_OPTIONS ]
     then
@@ -217,20 +224,27 @@ function run_build()
         fi
     fi
 
-    if [ "$CLEAR" == "YES" -a -d "$ROCKSDB_BUILD_DIR" ]
+    if ( [ "$CLEAR" == "YES" ] || [ "$PART_CLEAR" == "YES" ] ) && [ -d "$ROCKSDB_BUILD_DIR" ]
     then
         echo "Clear $ROCKSDB_BUILD_DIR ..."
         rm -rf $ROCKSDB_BUILD_DIR
     fi
 
-    echo "Running cmake..."
-    if [ "$BUILD_TYPE" == "debug" ]
-    then
-        echo "BUILD_TYPE=debug"
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
+    if [ ! -f $ROCKSDB_BUILD_DIR/Makefile ]; then
+        echo "Running cmake..."
+        mkdir -p $ROCKSDB_BUILD_DIR
+        cd $ROCKSDB_BUILD_DIR
+        echo "$CMAKE_OPTIONS" >CMAKE_OPTIONS
+        cmake .. -DCMAKE_INSTALL_PREFIX=$ROCKSDB_BUILD_DIR $CMAKE_OPTIONS
+        if [ $? -ne 0 ]; then
+            echo "ERROR: cmake failed"
+            exit 1
+        fi
     else
-        echo "BUILD_TYPE=release"
+        cd $ROCKSDB_BUILD_DIR
     fi
+
+    echo "Building..."
     if [ "$RUN_VERBOSE" == "YES" ]
     then
         echo "RUN_VERBOSE=YES"
@@ -238,16 +252,6 @@ function run_build()
     else
         echo "RUN_VERBOSE=NO"
     fi
-    mkdir -p $ROCKSDB_BUILD_DIR
-    cd $ROCKSDB_BUILD_DIR
-    echo "$CMAKE_OPTIONS" >CMAKE_OPTIONS
-    cmake .. -DCMAKE_INSTALL_PREFIX=$ROCKSDB_BUILD_DIR $CMAKE_OPTIONS
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: cmake failed"
-        exit 1
-    fi
-    echo "Building..."
     make install -j $JOB_NUM $MAKE_OPTIONS
     if [ $? -ne 0 ]
     then
