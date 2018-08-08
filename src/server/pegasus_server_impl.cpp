@@ -489,7 +489,7 @@ void pegasus_server_impl::gc_checkpoints()
 
 int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                                                    uint64_t timestamp,
-                                                   dsn_message_t *requests,
+                                                   dsn::message_ex **requests,
                                                    int count)
 {
     dassert(_is_open, "");

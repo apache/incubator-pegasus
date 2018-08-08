@@ -4,4 +4,7 @@
 
 using namespace pegasus::test;
 
-void register_upgrade_handlers() { upgrader_handler::register_factory<upgrader_handler_shell>("shell"); }
+void register_upgrade_handlers()
+{
+    upgrader_handler::register_factory<upgrader_handler_shell>("shell");
+}

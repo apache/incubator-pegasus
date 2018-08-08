@@ -39,7 +39,8 @@ public:
 
 private:
     // action = upgrade | downgrade.
-    std::list<std::string> generate_cmd(int index, const std::string &job, const std::string &action);
+    std::list<std::string>
+    generate_cmd(int index, const std::string &job, const std::string &action);
     // check whether the command execute success.
     bool check(const std::string &job, int index, const std::string &type);
 

@@ -12,7 +12,7 @@ class rrdb_service : public replication::replication_app_base,
 public:
     rrdb_service(replication::replica *r) : replication::replication_app_base(r) {}
     virtual ~rrdb_service() {}
-    virtual int on_request(dsn_message_t request) override
+    virtual int on_request(dsn::message_ex *request) override
     {
         handle_request(request);
         return 0;

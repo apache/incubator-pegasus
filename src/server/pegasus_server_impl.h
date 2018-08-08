@@ -75,7 +75,7 @@ public:
     /// \inherit dsn::replication::replication_app_base
     virtual int on_batched_write_requests(int64_t decree,
                                           uint64_t timestamp,
-                                          dsn_message_t *requests,
+                                          dsn::message_ex **requests,
                                           int count) override;
 
     virtual ::dsn::error_code prepare_get_checkpoint(dsn::blob &learn_req) override
