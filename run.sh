@@ -224,7 +224,7 @@ function run_build()
         fi
     fi
 
-    if ( [ "$CLEAR" == "YES" ] || [ "$PART_CLEAR" == "YES" ] ) && [ -d "$ROCKSDB_BUILD_DIR" ]
+    if [ "$CLEAR" == "YES" ] && [ -d "$ROCKSDB_BUILD_DIR" ]
     then
         echo "Clear $ROCKSDB_BUILD_DIR ..."
         rm -rf $ROCKSDB_BUILD_DIR
