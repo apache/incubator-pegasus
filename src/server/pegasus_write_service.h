@@ -50,7 +50,7 @@ public:
                       const dsn::apps::check_and_set_request &update,
                       dsn::apps::check_and_set_response &resp);
 
-    // TODO HW
+    // Write CHECK_AND_MUTATE record.
     int check_and_mutate(int64_t decree,
                          const dsn::apps::check_and_mutate_request &update,
                          dsn::apps::check_and_mutate_response &resp);

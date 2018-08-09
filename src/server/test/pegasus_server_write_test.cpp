@@ -55,7 +55,7 @@ public:
                     for (int i = 0; i < total_rpc_cnt; i++) {
                         dsn_msg_release_ref(writes[i]);
                     }
-                    delete writes;
+                    delete[] writes;
                 });
 
                 int err =

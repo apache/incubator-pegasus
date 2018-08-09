@@ -1576,16 +1576,26 @@ void pegasus_server_impl::cancel_background_work(bool wait)
     delete _db;
     _db = nullptr;
 
+    std::deque<int64_t> reserved_checkpoints;
     {
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
-        _checkpoints.clear();
+        std::swap(reserved_checkpoints, _checkpoints);
         set_last_durable_decree(0);
     }
 
     if (clear_state) {
-        if (!::dsn::utils::filesystem::remove_path(data_dir())) {
-            derror(
-                "%s: clear directory %s failed when stop app", replica_name(), data_dir().c_str());
+        // when clean the data dir, please clean the checkpoints first.
+        // otherwise, if the "rdb" is removed but the checkpoints remains,
+        // the storage engine can't be opened again
+        for (auto iter = reserved_checkpoints.begin(); iter != reserved_checkpoints.end(); ++iter) {
+            std::string chkpt_path =
+                dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(*iter));
+            if (!dsn::utils::filesystem::remove_path(chkpt_path)) {
+                derror("%s: rmdir %s failed when stop app", replica_name(), chkpt_path.c_str());
+            }
+        }
+        if (!dsn::utils::filesystem::remove_path(data_dir())) {
+            derror("%s: rmdir %s failed when stop app", replica_name(), data_dir().c_str());
             return ::dsn::ERR_FILE_OPERATION_FAILED;
         }
         _pfc_sst_count->set(0);
