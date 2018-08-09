@@ -36,6 +36,7 @@ public:
         ::dsn::perf_counter_wrapper multi_remove_qps;
         ::dsn::perf_counter_wrapper incr_qps;
         ::dsn::perf_counter_wrapper check_and_set_qps;
+        ::dsn::perf_counter_wrapper check_and_mutate_qps;
         ::dsn::perf_counter_wrapper scan_qps;
         ::dsn::perf_counter_wrapper recent_expire_count;
         ::dsn::perf_counter_wrapper recent_filter_count;
@@ -66,5 +67,5 @@ private:
     ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
     std::map<std::string, AppStatCounters *> _app_stat_counters;
 };
-}
-} // namespace
+} // namespace server
+} // namespace pegasus
