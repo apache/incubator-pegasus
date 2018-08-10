@@ -107,6 +107,9 @@ public:
 
     const char *to_string() const;
 
+    // return a.b.c.d if address is ipv4
+    const char *ipv4_str() const;
+
     std::string to_std_string() const { return std::string(to_string()); }
 
     bool from_string_ipv4(const char *s)

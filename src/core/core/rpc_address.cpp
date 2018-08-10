@@ -191,6 +191,22 @@ void rpc_address::set_invalid()
 }
 
 static __thread fixed_size_buffer_pool<8, 256> bf;
+
+const char *rpc_address::ipv4_str() const
+{
+    char *p = bf.next();
+    auto sz = bf.get_chunk_size();
+    struct in_addr net_addr;
+
+    if (_addr.v4.type == HOST_TYPE_IPV4) {
+        net_addr.s_addr = htonl(ip());
+        inet_ntop(AF_INET, &net_addr, p, sz);
+    } else {
+        p = (char *)"invalid_ipv4";
+    }
+    return p;
+}
+
 const char *rpc_address::to_string() const
 {
     char *p = bf.next();

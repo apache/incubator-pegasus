@@ -46,5 +46,8 @@ replace_string(std::string subject, const std::string &search, const std::string
 std::string get_last_component(const std::string &input, const char splitters[]);
 
 char *trim_string(char *s);
+
+// calculate the md5 checksum of buffer
+std::string string_md5(const char *buffer, unsigned int length);
 }
 }

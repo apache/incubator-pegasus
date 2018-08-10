@@ -41,6 +41,8 @@ public:
 
     virtual ~local_service();
 
+    static std::string get_metafile(const std::string &filepath);
+
 private:
     std::string _root;
 };
@@ -75,11 +77,16 @@ public:
                                    const download_callback &cb,
                                    dsn::task_tracker *tracker = nullptr) override;
 
+    error_code load_metadata();
+    error_code store_metadata();
+
 private:
     std::string compute_md5();
 
 private:
+    uint64_t _size;
     std::string _md5_value;
+    bool _has_meta_synced;
 };
 }
 }

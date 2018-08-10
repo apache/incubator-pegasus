@@ -648,7 +648,7 @@ std::string get_remote_chkpt_dirname()
     // here using server address as suffix of remote_chkpt_dirname
     rpc_address local_address = dsn_primary_address();
     std::stringstream ss;
-    ss << "checkpoint@" << local_address.to_string();
+    ss << "chkpt_" << local_address.ipv4_str() << "_" << local_address.port();
     return ss.str();
 }
 

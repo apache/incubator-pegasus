@@ -2,6 +2,12 @@
 
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/error_code.h>
+#include <dsn/utility/defer.h>
+#include <dsn/utility/utils.h>
+#include <dsn/utility/strings.h>
+#include <dsn/utility/safe_strerror_posix.h>
+
+#include <dsn/cpp/json_helper.h>
 #include <dsn/tool-api/task_tracker.h>
 #include "local_service.h"
 
@@ -14,17 +20,32 @@ namespace block_service {
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_LOCAL_SERVICE)
 DEFINE_TASK_CODE(LPC_LOCAL_SERVICE_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_SERVICE)
 
+struct file_metadata
+{
+    uint64_t size;
+    std::string md5;
+    DEFINE_JSON_SERIALIZATION(size, md5)
+};
+
+std::string local_service::get_metafile(const std::string &filepath)
+{
+    std::string dir_part = utils::filesystem::remove_file_name(filepath);
+    std::string base_part = utils::filesystem::get_file_name(filepath);
+
+    return utils::filesystem::path_combine(dir_part, std::string(".") + base_part + ".meta");
+}
+
 local_service::local_service() {}
 
 local_service::local_service(const std::string &root) : _root(root) {}
 
-local_service::~local_service()
-{
-    // do nothing
-}
+local_service::~local_service() {}
 
 error_code local_service::initialize(const std::vector<std::string> &args)
 {
+    if (args.size() > 0 && _root.empty())
+        _root = args[0];
+
     if (_root.empty()) {
         ddebug("initialize local block service succeed with empty root");
     } else {
@@ -36,8 +57,8 @@ error_code local_service::initialize(const std::vector<std::string> &args)
                 return ERR_FS_INTERNAL;
             }
         }
+        ddebug("local block service initialize succeed with root(%s)", _root.c_str());
     }
-    ddebug("local block service initialize succeed");
     return ERR_OK;
 }
 
@@ -72,9 +93,15 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
                 ls_entry tentry;
                 tentry.is_directory = false;
 
-                for (const auto &file : children) {
-                    tentry.entry_name = ::dsn::utils::filesystem::get_file_name(file);
-                    resp.entries->emplace_back(tentry);
+                std::set<std::string> file_matcher;
+                for (const std::string &file : children) {
+                    file_matcher.insert(utils::filesystem::get_file_name(file));
+                }
+                for (const auto &file : file_matcher) {
+                    if (file_matcher.find(get_metafile(file)) != file_matcher.end()) {
+                        tentry.entry_name = file;
+                        resp.entries->emplace_back(tentry);
+                    }
                 }
             }
 
@@ -118,23 +145,22 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
     }
 
     auto create_file_background = [this, req, tsk]() {
-        std::string file_path = ::dsn::utils::filesystem::path_combine(_root, req.file_name);
+        std::string file_path = utils::filesystem::path_combine(_root, req.file_name);
+        std::string meta_file_path =
+            utils::filesystem::path_combine(_root, get_metafile(req.file_name));
         create_file_response resp;
         resp.err = ERR_OK;
 
-        if (::dsn::utils::filesystem::file_exists(file_path)) {
-            ddebug("file: %s already exist", file_path.c_str());
-            resp.file_handle = new local_file_object(file_path);
-        } else {
-            ddebug("start create file, file = %s", file_path.c_str());
-            if (!::dsn::utils::filesystem::create_file(file_path)) {
-                derror("create file: %s fail", file_path.c_str());
-                resp.err = ERR_FS_INTERNAL;
-            } else {
-                resp.file_handle = new local_file_object(file_path);
-                ddebug("create file succeed, file = %s", resp.file_handle->file_name().c_str());
-            }
+        dsn::ref_ptr<local_file_object> f = new local_file_object(file_path);
+        if (utils::filesystem::file_exists(file_path) &&
+            utils::filesystem::file_exists(meta_file_path)) {
+
+            dinfo("file(%s) already exist", file_path.c_str());
+            resp.err = f->load_metadata();
         }
+
+        if (ERR_OK == resp.err)
+            resp.file_handle = f;
 
         tsk->enqueue_with(resp);
     };
@@ -154,15 +180,26 @@ dsn::task_ptr local_service::delete_file(const delete_file_request &req,
     auto delete_file_background = [this, req, tsk]() {
         delete_file_response resp;
         resp.err = ERR_OK;
-        ddebug("delete file(%s)", req.file_name.c_str());
-        std::string file = ::dsn::utils::filesystem::path_combine(_root, req.file_name);
+        dinfo("delete file(%s)", req.file_name.c_str());
 
-        if (::dsn::utils::filesystem::file_exists(file)) {
-            if (!::dsn::utils::filesystem::remove_path(file)) {
+        // delete the meta data file.
+        std::string meta_file = utils::filesystem::path_combine(_root, get_metafile(req.file_name));
+        if (utils::filesystem::file_exists(meta_file)) {
+            if (!utils::filesystem::remove_path(meta_file)) {
                 resp.err = ERR_FS_INTERNAL;
             }
-        } else {
-            resp.err = ERR_OBJECT_NOT_FOUND;
+        }
+
+        // if "delete meta data file ok" or "meta data file not found", then delete the real file
+        if (resp.err == ERR_OK) {
+            std::string file = utils::filesystem::path_combine(_root, req.file_name);
+            if (::dsn::utils::filesystem::file_exists(file)) {
+                if (!::dsn::utils::filesystem::remove_path(file)) {
+                    resp.err = ERR_FS_INTERNAL;
+                }
+            } else {
+                resp.err = ERR_OBJECT_NOT_FOUND;
+            }
         }
 
         tsk->enqueue_with(resp);
@@ -179,9 +216,10 @@ dsn::task_ptr local_service::exist(const exist_request &req,
 {
     exist_future_ptr tsk(new exist_future(code, cb, 0));
     tsk->set_tracker(tracker);
-    auto exist_background = [req, tsk]() {
+    auto exist_background = [this, req, tsk]() {
         exist_response resp;
-        if (utils::filesystem::path_exists(req.path)) {
+        std::string meta_file = utils::filesystem::path_combine(_root, get_metafile(req.path));
+        if (utils::filesystem::path_exists(meta_file)) {
             resp.err = ERR_OK;
         } else {
             resp.err = ERR_OBJECT_NOT_FOUND;
@@ -201,31 +239,32 @@ dsn::task_ptr local_service::remove_path(const remove_path_request &req,
     remove_path_future_ptr tsk(new remove_path_future(code, cb, 0));
     tsk->set_tracker(tracker);
 
-    auto remove_path_background = [req, tsk]() {
+    auto remove_path_background = [this, req, tsk]() {
         remove_path_response resp;
         resp.err = ERR_OK;
 
-        bool is_need_truly_remove = true;
+        bool do_remove = true;
 
-        if (utils::filesystem::directory_exists(req.path)) {
-            auto res = utils::filesystem::is_directory_empty(req.path);
+        std::string full_path = utils::filesystem::path_combine(_root, req.path);
+        if (utils::filesystem::directory_exists(full_path)) {
+            auto res = utils::filesystem::is_directory_empty(full_path);
             if (res.first == ERR_OK) {
                 // directory is not empty & recursive = false
                 if (!res.second && !req.recursive) {
                     resp.err = ERR_DIR_NOT_EMPTY;
-                    is_need_truly_remove = false;
+                    do_remove = false;
                 }
             } else {
                 resp.err = ERR_FS_INTERNAL;
-                is_need_truly_remove = false;
+                do_remove = false;
             }
-        } else if (!utils::filesystem::file_exists(req.path)) {
+        } else if (!utils::filesystem::file_exists(full_path)) {
             resp.err = ERR_OBJECT_NOT_FOUND;
-            is_need_truly_remove = false;
+            do_remove = false;
         }
 
-        if (is_need_truly_remove) {
-            if (!utils::filesystem::remove_path(req.path)) {
+        if (do_remove) {
+            if (!utils::filesystem::remove_path(full_path)) {
                 resp.err = ERR_FS_INTERNAL;
             }
         }
@@ -238,24 +277,64 @@ dsn::task_ptr local_service::remove_path(const remove_path_request &req,
 }
 
 // local_file_object
-local_file_object::local_file_object(const std::string &name) : block_file(name)
+local_file_object::local_file_object(const std::string &name)
+    : block_file(name), _size(0), _md5_value(""), _has_meta_synced(false)
 {
-    _md5_value = compute_md5();
 }
 
 local_file_object::~local_file_object() {}
 
 const std::string &local_file_object::get_md5sum() { return _md5_value; }
 
-uint64_t local_file_object::get_size()
+uint64_t local_file_object::get_size() { return _size; }
+
+error_code local_file_object::load_metadata()
 {
-    if (!::dsn::utils::filesystem::file_exists(file_name())) {
-        return 0;
-    } else {
-        int64_t size = 0;
-        ::dsn::utils::filesystem::file_size(file_name(), size);
-        return static_cast<uint64_t>(size);
+    if (_has_meta_synced)
+        return ERR_OK;
+
+    std::string metadata_path = local_service::get_metafile(file_name());
+    std::ifstream is(metadata_path, std::ios::in);
+    if (!is.is_open()) {
+        dwarn("load meta data from %s failed, err = %s", utils::safe_strerror(errno).c_str());
+        return ERR_FS_INTERNAL;
     }
+    auto cleanup = dsn::defer([&is]() { is.close(); });
+
+    std::string data;
+    is >> data;
+
+    file_metadata meta;
+    bool ans = dsn::json::json_forwarder<file_metadata>::decode(
+        dsn::blob(data.c_str(), 0, data.size()), meta);
+    if (!ans) {
+        dwarn("decode meta data from json(%s) failed", data.c_str());
+        return ERR_FS_INTERNAL;
+    }
+    _size = meta.size;
+    _md5_value = meta.md5;
+    _has_meta_synced = true;
+    return ERR_OK;
+}
+
+error_code local_file_object::store_metadata()
+{
+    file_metadata meta;
+    meta.md5 = _md5_value;
+    meta.size = _size;
+
+    std::string metadata_path = local_service::get_metafile(file_name());
+    std::ofstream os(metadata_path, std::ios::out | std::ios::trunc);
+    if (!os.is_open()) {
+        dwarn("store to metadata file %s failed, err=%s",
+              metadata_path.c_str(),
+              utils::safe_strerror(errno).c_str());
+        return ERR_FS_INTERNAL;
+    }
+    auto cleanup = dsn::defer([&os]() { os.close(); });
+    dsn::json::json_forwarder<file_metadata>::encode(os, meta);
+
+    return ERR_OK;
 }
 
 dsn::task_ptr local_file_object::write(const write_request &req,
@@ -278,7 +357,7 @@ dsn::task_ptr local_file_object::write(const write_request &req,
         }
 
         if (resp.err == ERR_OK) {
-            ddebug("start write file, file = %s", file_name().c_str());
+            dinfo("start write file, file = %s", file_name().c_str());
 
             std::ofstream fout(file_name(), std::ifstream::out | std::ifstream::trunc);
             if (!fout.is_open()) {
@@ -287,7 +366,14 @@ dsn::task_ptr local_file_object::write(const write_request &req,
                 fout.write(req.buffer.data(), req.buffer.length());
                 resp.written_size = req.buffer.length();
                 fout.close();
-                _md5_value = compute_md5();
+
+                // Currently we calc the meta data from source data, which save the io bandwidth
+                // a lot, but it is somewhat not correct.
+                _size = resp.written_size;
+                _md5_value = utils::string_md5(req.buffer.data(), req.buffer.length());
+                _has_meta_synced = true;
+
+                store_metadata();
             }
         }
         tsk->enqueue_with(resp);
@@ -310,42 +396,41 @@ dsn::task_ptr local_file_object::read(const read_request &req,
     auto read_func = [this, req, tsk]() {
         read_response resp;
         resp.err = ERR_OK;
-        if (!::dsn::utils::filesystem::file_exists(file_name())) {
+        if (!utils::filesystem::file_exists(file_name()) ||
+            !utils::filesystem::file_exists(local_service::get_metafile(file_name()))) {
             resp.err = ERR_OBJECT_NOT_FOUND;
         } else {
-            ddebug("start read file, file = %s", file_name().c_str());
-            // just read the whole file
-            int64_t file_sz = 0;
-            if (!::dsn::utils::filesystem::file_size(file_name(), file_sz)) {
-                dassert(false, "get file size failed, file = %s", file_name().c_str());
-                resp.err = ERR_FILE_OPERATION_FAILED;
-            }
-            int64_t total_sz = 0;
-            if (req.remote_length == -1 || req.remote_length > file_sz) {
-                total_sz = file_sz;
+            if ((resp.err = load_metadata()) != ERR_OK) {
+                dwarn("load meta data of %s failed", file_name().c_str());
             } else {
-                total_sz = req.remote_length;
-            }
+                int64_t file_sz = _size;
+                int64_t total_sz = 0;
+                if (req.remote_length == -1 || req.remote_length + req.remote_pos > file_sz) {
+                    total_sz = file_sz - req.remote_pos;
+                } else {
+                    total_sz = req.remote_length;
+                }
 
-            ddebug("read file(%s), size = %ld", file_name().c_str(), total_sz);
-            std::shared_ptr<char> buf = std::shared_ptr<char>(new char[total_sz + 1]);
-            std::ifstream fin(file_name(), std::ifstream::in);
-            if (!fin.is_open()) {
-                resp.err = ERR_FS_INTERNAL;
-            } else {
-                fin.seekg(static_cast<int64_t>(req.remote_pos), fin.beg);
-                fin.read(buf.get(), total_sz);
-                buf.get()[fin.gcount()] = '\0';
-                ddebug("read func, read value = %s", buf.get());
-                resp.buffer.assign(std::move(buf), 0, fin.gcount());
+                dinfo("read file(%s), size = %ld", file_name().c_str(), total_sz);
+                std::shared_ptr<char> buf = std::shared_ptr<char>(new char[total_sz + 1]);
+                std::ifstream fin(file_name(), std::ifstream::in);
+                if (!fin.is_open()) {
+                    resp.err = ERR_FS_INTERNAL;
+                } else {
+                    fin.seekg(static_cast<int64_t>(req.remote_pos), fin.beg);
+                    fin.read(buf.get(), total_sz);
+                    buf.get()[fin.gcount()] = '\0';
+                    resp.buffer.assign(std::move(buf), 0, fin.gcount());
+                }
+                fin.close();
             }
-            fin.close();
         }
 
         tsk->enqueue_with(resp);
         release_ref();
     };
-    ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(read_func));
+
+    dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(read_func));
     return tsk;
 }
 
@@ -360,52 +445,59 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
     auto upload_file_func = [this, req, tsk]() {
         upload_response resp;
         resp.err = ERR_OK;
-        if (!::dsn::utils::filesystem::file_exists(file_name())) {
-            if (!::dsn::utils::filesystem::create_file(file_name())) {
+        std::ifstream fin(req.input_local_name, std::ios_base::in);
+        if (!fin.is_open()) {
+            dwarn("open source file %s for read failed, err(%s)",
+                  req.input_local_name.c_str(),
+                  utils::safe_strerror(errno).c_str());
+            resp.err = ERR_FILE_OPERATION_FAILED;
+        }
+
+        utils::filesystem::create_file(file_name());
+        std::ofstream fout(file_name(), std::ios_base::out | std::ios_base::trunc);
+        if (!fout.is_open()) {
+            dwarn("open target file %s for write failed, err(%s)",
+                  file_name().c_str(),
+                  utils::safe_strerror(errno).c_str());
+            resp.err = ERR_FS_INTERNAL;
+        }
+
+        if (resp.err == ERR_OK) {
+            dinfo("start to transfer from src_file(%s) to des_file(%s)",
+                  req.input_local_name.c_str(),
+                  file_name().c_str());
+            int64_t total_sz = 0;
+            char buf[max_length] = {'\0'};
+            while (!fin.eof()) {
+                fin.read(buf, max_length);
+                total_sz += fin.gcount();
+                fout.write(buf, fin.gcount());
+            }
+            dinfo("finish upload file, file = %s, total_size = %d", file_name().c_str(), total_sz);
+            fout.close();
+            fin.close();
+
+            resp.uploaded_size = static_cast<uint64_t>(total_sz);
+
+            // calc the md5sum by source file for simplicity
+            _size = total_sz;
+            error_code res = utils::filesystem::md5sum(req.input_local_name, _md5_value);
+            if (res == dsn::ERR_OK) {
+                _has_meta_synced = true;
+                store_metadata();
+            } else {
                 resp.err = ERR_FS_INTERNAL;
             }
-        }
-        if (resp.err == ERR_OK) {
-            ddebug("start upload file, src = %s, des = %s",
-                   req.input_local_name.c_str(),
-                   file_name().c_str());
-            std::ifstream fin(req.input_local_name, std::ifstream::in);
-            std::ofstream fout(file_name(), std::ifstream::out | std::ifstream::trunc);
-            if (!fin.is_open() || !fout.is_open()) {
-                if (fin) {
-                    resp.err = ERR_FS_INTERNAL;
-                    fin.close();
-                }
-                if (fout) {
-                    resp.err = ERR_FILE_OPERATION_FAILED;
-                    fout.close();
-                }
-            }
-            if (resp.err == ERR_OK) {
-                ddebug("start to transfer the file, src_file = %s, des_file = %s",
-                       req.input_local_name.c_str(),
-                       file_name().c_str());
-                int64_t total_sz = 0;
-                char buf[max_length] = {'\0'};
-                while (!fin.eof()) {
-                    fin.read(buf, max_length);
-                    total_sz += fin.gcount();
-                    fout.write(buf, fin.gcount());
-                }
-                ddebug("finish upload file, file = %s, total_size = %d",
-                       file_name().c_str(),
-                       total_sz);
-                fout.close();
+        } else {
+            if (fin.is_open())
                 fin.close();
-                resp.uploaded_size = static_cast<uint64_t>(total_sz);
-                _md5_value = compute_md5();
-            }
+            if (fout.is_open())
+                fout.close();
         }
+
         tsk->enqueue_with(resp);
-        ddebug("%s: start to release_ref in upload file", file_name().c_str());
         release_ref();
     };
-    // push this task to thread_pool, make it work
     ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(upload_file_func));
 
     return tsk;
@@ -425,38 +517,63 @@ dsn::task_ptr local_file_object::download(const download_request &req,
         resp.err = ERR_OK;
         std::string target_file = req.output_local_name;
         if (target_file.empty()) {
-            derror("%s: download file failed, because output file is invalid", file_name().c_str());
+            derror("download %s failed, because target name(%s) is invalid",
+                   file_name().c_str(),
+                   target_file.c_str());
             resp.err = ERR_INVALID_PARAMETERS;
         }
 
-        std::ifstream fin(file_name(), std::ifstream::in);
-        std::ofstream fout(target_file, std::ifstream::out | std::ifstream::trunc);
-        if (!fin.is_open() || !fout.is_open()) {
-            if (fin) {
-                resp.err = ERR_FILE_OPERATION_FAILED;
-                fin.close();
-            }
-            if (fout) {
-                resp.err = ERR_FS_INTERNAL;
-                fout.close();
+        if (resp.err == ERR_OK && !_has_meta_synced) {
+            if (!utils::filesystem::file_exists(file_name()) ||
+                !utils::filesystem::file_exists(local_service::get_metafile(file_name()))) {
+                resp.err = ERR_OBJECT_NOT_FOUND;
             }
         }
+
         if (resp.err == ERR_OK) {
-            ddebug("start to transfer the file, src_file = %s, des_file = %s",
-                   file_name().c_str(),
-                   target_file.c_str());
-            int64_t total_sz = 0;
-            char buf[max_length] = {'\0'};
-            while (!fin.eof()) {
-                fin.read(buf, max_length);
-                total_sz += fin.gcount();
-                fout.write(buf, fin.gcount());
+            std::ifstream fin(file_name(), std::ifstream::in);
+            if (!fin.is_open()) {
+                derror("open block file(%s) failed, err(%s)",
+                       file_name().c_str(),
+                       utils::safe_strerror(errno).c_str());
+                resp.err = ERR_FS_INTERNAL;
             }
-            ddebug(
-                "finish download file, file = %s, total_size = %d", target_file.c_str(), total_sz);
-            fout.close();
-            fin.close();
-            resp.downloaded_size = static_cast<uint64_t>(total_sz);
+
+            std::ofstream fout(target_file, std::ios_base::out | std::ios_base::trunc);
+            if (!fout.is_open()) {
+                if (fin.is_open())
+                    fin.close();
+                derror("open target file(%s) failed, err(%s)",
+                       target_file.c_str(),
+                       utils::safe_strerror(errno).c_str());
+                resp.err = ERR_FILE_OPERATION_FAILED;
+            }
+
+            if (resp.err == ERR_OK) {
+                dinfo("start to transfer, src_file(%s), des_file(%s)",
+                      file_name().c_str(),
+                      target_file.c_str());
+                int64_t total_sz = 0;
+                char buf[max_length] = {'\0'};
+                while (!fin.eof()) {
+                    fin.read(buf, max_length);
+                    total_sz += fin.gcount();
+                    fout.write(buf, fin.gcount());
+                }
+                dinfo("finish download file(%s), total_size = %d", target_file.c_str(), total_sz);
+                fout.close();
+                fin.close();
+                resp.downloaded_size = static_cast<uint64_t>(total_sz);
+
+                _size = total_sz;
+                if ((resp.err = utils::filesystem::md5sum(target_file, _md5_value)) != ERR_OK) {
+                    dwarn("download %s failed when calculate the md5sum of %s",
+                          file_name().c_str(),
+                          target_file.c_str());
+                } else {
+                    _has_meta_synced = true;
+                }
+            }
         }
 
         tsk->enqueue_with(resp);
@@ -465,16 +582,6 @@ dsn::task_ptr local_file_object::download(const download_request &req,
     ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(download_file_func));
 
     return tsk;
-}
-
-std::string local_file_object::compute_md5()
-{
-    std::string result;
-    if (::dsn::utils::filesystem::file_exists(file_name())) {
-        auto err = ::dsn::utils::filesystem::md5sum(file_name(), result);
-        dassert(err == ERR_OK, "local file object calculate md5 failed");
-    }
-    return result;
 }
 }
 }
