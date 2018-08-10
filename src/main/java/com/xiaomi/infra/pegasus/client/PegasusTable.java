@@ -1332,6 +1332,8 @@ public class PegasusTable implements PegasusTableInterface {
         opt.noValue = options.noValue;
         opt.sortKeyFilterType = options.sortKeyFilterType;
         opt.sortKeyFilterPattern = options.sortKeyFilterPattern;
+        opt.hashKeyFilterPattern = options.hashKeyFilterPattern;
+        opt.hashKeyFilterType = options.hashKeyFilterType;
         for (int i = 0; i < split; i++) {
             int s = i < more ? size + 1 : size;
             gpid[] v = new gpid[s];

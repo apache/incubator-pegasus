@@ -302,6 +302,26 @@ public class TestScan {
         }
     }
 
+    @Test
+    public void testHashKeyFilteringScan() throws PException {
+        System.out.println("TEST HASHKEY_FILTERING_SCAN...");
+        ScanOptions options = new ScanOptions();
+        options.hashKeyFilterType = FilterType.FT_MATCH_PREFIX;
+        options.hashKeyFilterPattern = expectedHashKey.getBytes();
+        TreeMap<String, String> data = new TreeMap<String, String>();
+        List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 1, options);
+        PegasusScannerInterface scanner = scanners.get(0);
+        Assert.assertNotNull(scanner);
+        Pair<Pair<byte[], byte[]>, byte[]> item;
+        while((item = scanner.next()) != null) {
+            Assert.assertArrayEquals(expectedHashKey.getBytes(), item.getLeft().getLeft());
+            checkAndPutSortMap(data, expectedHashKey,
+                    new String(item.getLeft().getRight()), new String(item.getRight()));
+        }
+        scanner.close();
+        compareSortMap(data, base.get(expectedHashKey), expectedHashKey);
+    }
+
     private static void clearDatabase() throws PException {
         ScanOptions options = new ScanOptions();
         List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 1, options);
