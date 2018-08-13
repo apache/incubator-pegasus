@@ -34,6 +34,8 @@
  */
 
 #include <dsn/dist/replication/replication_service_app.h>
+#include <dsn/tool-api/http_server.h>
+
 #include "dist/replication/common/replication_common.h"
 #include "replica_stub.h"
 
@@ -45,7 +47,8 @@ void replication_service_app::register_all()
     dsn::service_app::register_factory<replication_service_app>("replica");
 }
 
-replication_service_app::replication_service_app(const service_app_info *info) : service_app(info)
+replication_service_app::replication_service_app(const service_app_info *info)
+    : service_app(info), _http_server(new http_server())
 {
     _stub = new replica_stub();
 }

@@ -36,6 +36,7 @@
 #include <dsn/dist/replication.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/dist/replication/meta_service_app.h>
+#include <dsn/tool-api/http_server.h>
 
 #include "distributed_lock_service_simple.h"
 #include "meta_state_service_simple.h"
@@ -87,7 +88,8 @@ void meta_service_app::register_all()
     register_components();
 }
 
-meta_service_app::meta_service_app(const service_app_info *info) : service_app(info)
+meta_service_app::meta_service_app(const service_app_info *info)
+    : service_app(info), _http_server(new http_server())
 {
     // create in constructor because it may be used in checker before started
     _service.reset(new replication::meta_service());

@@ -39,6 +39,9 @@
 #include <dsn/cpp/service_app.h>
 
 namespace dsn {
+
+class http_server;
+
 namespace replication {
 
 class replication_checker;
@@ -68,6 +71,7 @@ private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
     replica_stub_ptr _stub;
+    std::unique_ptr<http_server> _http_server;
 
     static const char *replica_service_app_info(int argc, char **argv);
     static void replica_service_app_info_free(const char *response);

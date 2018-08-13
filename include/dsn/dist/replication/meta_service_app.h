@@ -50,6 +50,9 @@ class test_checker;
 }
 
 namespace dsn {
+
+class http_server;
+
 namespace service {
 
 class meta_service_app : public service_app
@@ -69,6 +72,7 @@ private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
     std::unique_ptr<dsn::replication::meta_service> _service;
+    std::unique_ptr<http_server> _http_server;
 };
 }
 }

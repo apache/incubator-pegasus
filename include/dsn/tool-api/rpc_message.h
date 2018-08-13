@@ -67,7 +67,11 @@ struct fast_code
 
 typedef struct message_header
 {
+    // For thrift protocol this is "THFT".
+    // For dsn protocol this is "RDSN".
+    // For http protocol this is either a "GET " or "POST".
     uint32_t hdr_type;
+
     uint32_t hdr_version;
     uint32_t hdr_length;
     uint32_t hdr_crc32;
@@ -154,8 +158,19 @@ public:
                                               int thread_hash = 0,
                                               uint64_t partition_hash = 0);
 
+    /// This method is only used for receiving request.
+    /// The returned message:
+    ///   - msg->buffers[0] = message_header
+    ///   - msg->buffers[1] = data
     DSN_API static message_ex *create_receive_message_with_standalone_header(const blob &data);
+
+    /// The returned message:
+    ///   - msg->buffers[0] = message_header
+    ///   - msg->_is_read = false
+    ///   - msg->_rw_index = 0
+    ///   - msg->_rw_offset = 48 (size of message_header)
     DSN_API message_ex *create_response();
+
     DSN_API message_ex *copy(bool clone_content, bool copy_for_receive);
     DSN_API message_ex *copy_and_prepare_send(bool clone_content);
 
@@ -164,7 +179,6 @@ public:
     //
     DSN_API void write_next(void **ptr, size_t *size, size_t min_size);
     DSN_API void write_commit(size_t size);
-    DSN_API void write_append(const blob &data);
     DSN_API bool read_next(void **ptr, size_t *size);
     bool read_next(blob &data);
     DSN_API void read_commit(size_t size);

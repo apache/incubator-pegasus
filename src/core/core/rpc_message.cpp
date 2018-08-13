@@ -558,22 +558,6 @@ void message_ex::write_commit(size_t size)
     this->header->body_length += (int)size;
 }
 
-void message_ex::write_append(const blob &data)
-{
-    // printf("%p %s\n", this, __FUNCTION__);
-    dassert(!this->_is_read && this->_rw_committed,
-            "there are pending msg write not committed"
-            ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
-
-    int size = data.length();
-    if (size > 0) {
-        this->_rw_index++;
-        this->_rw_offset += size;
-        this->buffers.push_back(data);
-        this->header->body_length += size;
-    }
-}
-
 bool message_ex::read_next(void **ptr, size_t *size)
 {
     // printf("%p %s %d\n", this, __FUNCTION__, utils::get_current_tid());

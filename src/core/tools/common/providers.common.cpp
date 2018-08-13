@@ -45,7 +45,6 @@
 #include "empty_aio_provider.h"
 #include "dsn_message_parser.h"
 #include "thrift_message_parser.h"
-#include "http_message_parser.h"
 #include "raw_message_parser.h"
 
 namespace dsn {
@@ -68,8 +67,6 @@ void register_common_providers()
 
     register_message_header_parser<dsn_message_parser>(NET_HDR_DSN, {"RDSN"});
     register_message_header_parser<thrift_message_parser>(NET_HDR_THRIFT, {"THFT"});
-    register_message_header_parser<http_message_parser>(NET_HDR_HTTP,
-                                                        {"GET ", "POST", "OPTI", "HTTP"});
     register_message_header_parser<raw_message_parser>(NET_HDR_RAW, {"_RAW"});
 
 #if defined(_WIN32)
