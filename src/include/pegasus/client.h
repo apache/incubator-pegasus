@@ -13,9 +13,11 @@
 #include <functional>
 #include <memory>
 
+#include <rrdb/rrdb_types.h> // TODO HW
+#include <base/pegasus_utils.h>
 namespace pegasus {
 
-class rrdb_client;
+class rrdb_client; // TODO HW need?
 ///
 /// \brief The client class
 /// pegasus_client is the base class that users use to access a specific cluster with an app name
@@ -159,12 +161,76 @@ public:
         }
     };
 
+    struct mutations
+    {
+    private:
+        mutable std::vector<::dsn::apps::mutate> mu_list; // unchecked
+        std::vector<std::pair<int, int>> ttl_list;
+
+    public:
+        void set(const std::string &sort_key, const std::string &value, const int ttl_seconds = 0)
+        {
+            ::dsn::apps::mutate mu;
+            mu.operation = ::dsn::apps::mutate_operation::MO_PUT;
+            mu.sort_key.assign(sort_key.data(), 0, sort_key.length());
+            mu.value.assign(value.data(), 0, value.length());
+            mu.set_expire_ts_seconds = 0;
+            mu_list.emplace_back(mu);
+        }
+        void del(const std::string &sort_key)
+        {
+            ::dsn::apps::mutate mu;
+            mu.operation = ::dsn::apps::mutate_operation::MO_DELETE;
+            mu.sort_key.assign(sort_key.data(), 0, sort_key.length());
+            // mu.value = NULL; //TODO HW unchecked
+            mu.set_expire_ts_seconds = 0;
+            mu_list.emplace_back(mu);
+        }
+        const std::vector<::dsn::apps::mutate> get_mutations() const
+        {
+            int current_time = ::pegasus::utils::epoch_now();
+            for (auto &pair : ttl_list) {
+                mu_list[pair.first].set_expire_ts_seconds += (pair.second + current_time);
+            }
+            return mu_list;
+        }
+        bool is_empty() const { return mu_list.empty(); }
+    };
+
+    struct check_and_mutate_options
+    {
+        bool return_check_value; // if return the check value in results.
+        check_and_mutate_options() : return_check_value(false) {}
+        check_and_mutate_options(const check_and_mutate_options &o)
+            : return_check_value(o.return_check_value)
+        {
+        }
+    };
+
+    struct check_and_mutate_results
+    {
+        bool mutate_succeed;       // if mutate succeed.
+        bool check_value_returned; // if the check value is returned.
+        bool check_value_exist;    // can be used only when check_value_returned is true.
+        std::string check_value;   // can be used only when check_value_exist is true.
+        check_and_mutate_results()
+            : mutate_succeed(false), check_value_returned(false), check_value_exist(false)
+        {
+        }
+        check_and_mutate_results(const check_and_mutate_results &o)
+            : mutate_succeed(o.mutate_succeed),
+              check_value_returned(o.check_value_returned),
+              check_value_exist(o.check_value_exist)
+        {
+        }
+    };
+
     struct scan_options
     {
-        int timeout_ms;           // RPC call timeout param, in milliseconds
-        int batch_size;           // max k-v count one RPC call
-        bool start_inclusive;     // will be ingored when get_unordered_scanners()
-        bool stop_inclusive;      // will be ingored when get_unordered_scanners()
+        int timeout_ms;       // RPC call timeout param, in milliseconds
+        int batch_size;       // max k-v count one RPC call
+        bool start_inclusive; // will be ingored when get_unordered_scanners()
+        bool stop_inclusive;  // will be ingored when get_unordered_scanners()
         filter_type hash_key_filter_type;
         std::string hash_key_filter_pattern;
         filter_type sort_key_filter_type;
@@ -220,6 +286,9 @@ public:
     typedef std::function<void(
         int /*error_code*/, check_and_set_results && /*results*/, internal_info && /*info*/)>
         async_check_and_set_callback_t;
+    typedef std::function<void(
+        int /*error_code*/, check_and_mutate_results && /*results*/, internal_info && /*info*/)>
+        async_check_and_mutate_callback_t;
     typedef std::function<void(int /*error_code*/,
                                std::string && /*hash_key*/,
                                std::string && /*sort_key*/,
@@ -877,6 +946,78 @@ public:
                                      int timeout_milliseconds = 5000) = 0;
 
     ///
+    /// \brief check_and_mutate
+    ///     atomically check and mutate from the cluster.
+    ///     the mutations will be triggered if and only if check passed. TODO HW
+    ///     the sort key for checking and setting can be the same or different.
+    /// \param hash_key
+    /// used to decide which partition to get this k-v
+    /// \param check_sort_key
+    /// the sort key to check.
+    /// \param check_type
+    /// the check type.
+    /// \param check_operand
+    /// the check operand.
+    /// \param mutations
+    /// the list of mutations to perform if check condition is satisfied.
+    /// \param options
+    /// the check-and-mutate options.
+    /// \param results
+    /// the check-and-mutate results.
+    /// \param timeout_milliseconds
+    /// if wait longer than this value, will return time out error
+    /// \return
+    /// int, the error indicates whether or not the operation is succeeded.
+    /// this error can be converted to a string using get_error_string().
+    /// if check type is int compare, and check_operand/check_value is not integer
+    /// or out of range, then return PERR_INVALID_ARGUMENT.
+    ///
+    virtual int check_and_mutate(const std::string &hash_key,
+                                 const std::string &check_sort_key,
+                                 cas_check_type check_type,
+                                 const std::string &check_operand,
+                                 const mutations &mutations,
+                                 const check_and_mutate_options &options,
+                                 check_and_mutate_results &results,
+                                 int timeout_milliseconds = 5000,
+                                 internal_info *info = nullptr) = 0;
+    // TODO HW 和java-client
+    /// Mutations保持一致，shell如何使用mutate是第二步。不知道mutations该不该使用apps::的类，先这么写，如果需要分离再搞一个类就好了
+    // TODO HW async mutate
+
+    ///
+    /// \brief asynchronous check_and_mutate
+    ///     atomically check and mutate from the cluster.
+    ///     will not be blocked, return immediately.
+    /// \param hash_key
+    /// used to decide which partition to get this k-v
+    /// \param check_sort_key
+    /// the sort key to check.
+    /// \param check_type
+    /// the check type.
+    /// \param check_operand
+    /// the check operand.
+    /// \param mutations
+    /// the list of mutations to perform if check condition is satisfied.
+    /// \param options
+    /// the check-and-mutate options.
+    /// \param callback
+    /// the callback function will be invoked after operation finished or error occurred.
+    /// \param timeout_milliseconds
+    /// if wait longer than this value, will return time out error
+    /// \return
+    /// void.
+    ///
+    virtual void async_check_and_mutate(const std::string &hash_key,
+                                        const std::string &check_sort_key,
+                                        cas_check_type check_type,
+                                        const std::string &check_operand,
+                                        const mutations &mutations,
+                                        const check_and_mutate_options &options,
+                                        async_check_and_mutate_callback_t &&callback = nullptr,
+                                        int timeout_milliseconds = 5000) = 0;
+
+    ///
     /// \brief ttl (time to live)
     ///     get ttl in seconds of this k-v.
     ///     key is composed of hashkey and sortkey. must provide both to get the value.
@@ -1015,4 +1156,4 @@ public:
     static pegasus_client *get_client(const char *cluster_name, const char *app_name);
 };
 
-} // namespace
+} // namespace pegasus

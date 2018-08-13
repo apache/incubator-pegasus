@@ -172,6 +172,25 @@ public:
                                      async_check_and_set_callback_t &&callback = nullptr,
                                      int timeout_milliseconds = 5000) override;
 
+    virtual int check_and_mutate(const std::string &hash_key,
+                                 const std::string &check_sort_key,
+                                 cas_check_type check_type,
+                                 const std::string &check_operand,
+                                 const mutations &mutations,
+                                 const check_and_mutate_options &options,
+                                 check_and_mutate_results &results,
+                                 int timeout_milliseconds = 5000,
+                                 internal_info *info = nullptr) override;
+
+    virtual void async_check_and_mutate(const std::string &hash_key,
+                                        const std::string &check_sort_key,
+                                        cas_check_type check_type,
+                                        const std::string &check_operand,
+                                        const mutations &mutations,
+                                        const check_and_mutate_options &options,
+                                        async_check_and_mutate_callback_t &&callback = nullptr,
+                                        int timeout_milliseconds = 5000) override;
+
     virtual int ttl(const std::string &hashkey,
                     const std::string &sortkey,
                     int &ttl_seconds,
@@ -300,5 +319,5 @@ private:
     ///
     static std::unordered_map<int, int> _server_error_to_client;
 };
-}
-} // namespace
+} // namespace client
+} // namespace pegasus
