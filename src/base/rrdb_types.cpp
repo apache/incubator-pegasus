@@ -4233,5 +4233,5 @@ void scan_response::printTo(std::ostream &out) const
         << "server=" << to_string(server);
     out << ")";
 }
-}
-} // namespace
+} // namespace apps
+} // namespace dsn

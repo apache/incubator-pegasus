@@ -25,22 +25,13 @@ bool help_info(command_executor *e, shell_context *sc, arguments args)
 
 static command_executor commands[] = {
     {
-        "help",
-        "print help info",
-        "",
-        help_info,
+        "help", "print help info", "", help_info,
     },
     {
-        "version",
-        "get the shell version",
-        "",
-        version,
+        "version", "get the shell version", "", version,
     },
     {
-        "cluster_info",
-        "get the informations for the cluster",
-        "",
-        query_cluster_info,
+        "cluster_info", "get the informations for the cluster", "", query_cluster_info,
     },
     {
         "app",
@@ -75,16 +66,10 @@ static command_executor commands[] = {
         create_app,
     },
     {
-        "drop",
-        "drop an app",
-        "<app_name> [-r|--reserve_seconds num]",
-        drop_app,
+        "drop", "drop an app", "<app_name> [-r|--reserve_seconds num]", drop_app,
     },
     {
-        "recall",
-        "recall an app",
-        "<app_id> [new_app_name]",
-        recall_app,
+        "recall", "recall an app", "<app_id> [new_app_name]", recall_app,
     },
     {
         "set_meta_level",
@@ -93,10 +78,7 @@ static command_executor commands[] = {
         set_meta_level,
     },
     {
-        "get_meta_level",
-        "get the meta function level",
-        "",
-        get_meta_level,
+        "get_meta_level", "get the meta function level", "", get_meta_level,
     },
     {
         "balance",
@@ -138,10 +120,7 @@ static command_executor commands[] = {
         calculate_hash_value,
     },
     {
-        "set",
-        "set value",
-        "<hash_key> <sort_key> <value> [ttl_in_seconds]",
-        data_operations,
+        "set", "set value", "<hash_key> <sort_key> <value> [ttl_in_seconds]", data_operations,
     },
     {
         "multi_set",
@@ -150,10 +129,7 @@ static command_executor commands[] = {
         data_operations,
     },
     {
-        "get",
-        "get value",
-        "<hash_key> <sort_key>",
-        data_operations,
+        "get", "get value", "<hash_key> <sort_key>", data_operations,
     },
     {
         "multi_get",
@@ -178,10 +154,7 @@ static command_executor commands[] = {
         data_operations,
     },
     {
-        "del",
-        "delete a key",
-        "<hash_key> <sort_key>",
-        data_operations,
+        "del", "delete a key", "<hash_key> <sort_key>", data_operations,
     },
     {
         "multi_del",
@@ -236,22 +209,13 @@ static command_executor commands[] = {
         data_operations,
     },
     {
-        "exist",
-        "check value exist",
-        "<hash_key> <sort_key>",
-        data_operations,
+        "exist", "check value exist", "<hash_key> <sort_key>", data_operations,
     },
     {
-        "count",
-        "get sort key count for a single hash key",
-        "<hash_key>",
-        data_operations,
+        "count", "get sort key count for a single hash key", "<hash_key>", data_operations,
     },
     {
-        "ttl",
-        "query ttl for a specific key",
-        "<hash_key> <sort_key>",
-        data_operations,
+        "ttl", "query ttl for a specific key", "<hash_key> <sort_key>", data_operations,
     },
     {
         "hash_scan",
@@ -330,10 +294,7 @@ static command_executor commands[] = {
         flush_log,
     },
     {
-        "local_get",
-        "get value from local db",
-        "<db_path> <hash_key> <sort_key>",
-        local_get,
+        "local_get", "get value from local db", "<db_path> <hash_key> <sort_key>", local_get,
     },
     {
         "sst_dump",
@@ -406,40 +367,22 @@ static command_executor commands[] = {
         query_restore_status,
     },
     {
-        "get_app_envs",
-        "get current app envs",
-        "",
-        get_app_envs,
+        "get_app_envs", "get current app envs", "", get_app_envs,
     },
     {
-        "set_app_envs",
-        "set current app envs",
-        "<key> <value> [key value...]",
-        set_app_envs,
+        "set_app_envs", "set current app envs", "<key> <value> [key value...]", set_app_envs,
     },
     {
-        "del_app_envs",
-        "delete current app envs",
-        "<key> [key...]",
-        del_app_envs,
+        "del_app_envs", "delete current app envs", "<key> [key...]", del_app_envs,
     },
     {
-        "clear_app_envs",
-        "clear current app envs",
-        "<-a|--all> <-p|--prefix str>",
-        clear_app_envs,
+        "clear_app_envs", "clear current app envs", "<-a|--all> <-p|--prefix str>", clear_app_envs,
     },
     {
-        "exit",
-        "exit shell",
-        "",
-        exit_shell,
+        "exit", "exit shell", "", exit_shell,
     },
     {
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
+        nullptr, nullptr, nullptr, nullptr,
     }};
 
 void print_help(command_executor *e, size_t name_width, size_t option_width)

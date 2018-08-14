@@ -1785,7 +1785,7 @@ inline std::ostream &operator<<(std::ostream &out, const scan_response &obj)
     obj.printTo(out);
     return out;
 }
-}
-} // namespace
+} // namespace apps
+} // namespace dsn
 
 #endif
