@@ -164,7 +164,7 @@ public:
     struct mutations
     {
     private:
-        mutable std::vector<::dsn::apps::mutate> mu_list; // unchecked
+        mutable std::vector<::dsn::apps::mutate> mu_list; // TODO HW unchecked 
         std::vector<std::pair<int, int>> ttl_list;
 
     public:
@@ -174,17 +174,23 @@ public:
             mu.operation = ::dsn::apps::mutate_operation::MO_PUT;
             mu.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
             mu.value.assign(value.c_str(), 0, value.size());
+            // set_expire_ts_seconds will be set when check_and_mutate() gets the mutations (by calling get_mutations())
             mu.set_expire_ts_seconds = 0;
-            mu_list.emplace_back(mu);
+            mu_list.push_back(mu);
+
+            ddebug("in set: sort_key %s, %s; value %s, %s",sort_key.c_str(),mu.sort_key.to_string().c_str(),value.c_str(),mu.value.to_string().c_str());
+            if (ttl_seconds != 0) {
+                ttl_list.push_back(std::make_pair(mu_list.size() - 1, ttl_seconds));
+            }
         }
         void del(const std::string &sort_key)
         {
             ::dsn::apps::mutate mu;
             mu.operation = ::dsn::apps::mutate_operation::MO_DELETE;
             mu.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
-            // mu.value = NULL; //TODO HW unchecked
+            // mu.value = NULL; // TODO HW unchecked
             mu.set_expire_ts_seconds = 0;
-            mu_list.emplace_back(mu);
+            mu_list.push_back(mu);
         }
         const std::vector<::dsn::apps::mutate> get_mutations() const
         {
@@ -948,8 +954,7 @@ public:
     ///
     /// \brief check_and_mutate
     ///     atomically check and mutate from the cluster.
-    ///     the mutations will be triggered if and only if check passed. TODO HW
-    ///     the sort key for checking and setting can be the same or different.
+    ///     the mutations will be triggered if and only if check passed. 
     /// \param hash_key
     /// used to decide which partition to get this k-v
     /// \param check_sort_key
@@ -981,9 +986,6 @@ public:
                                  check_and_mutate_results &results,
                                  int timeout_milliseconds = 5000,
                                  internal_info *info = nullptr) = 0;
-    // TODO HW 和java-client
-    /// Mutations保持一致，shell如何使用mutate是第二步。不知道mutations该不该使用apps::的类，先这么写，如果需要分离再搞一个类就好了
-    // TODO HW async mutate
 
     ///
     /// \brief asynchronous check_and_mutate

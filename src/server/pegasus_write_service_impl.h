@@ -537,8 +537,8 @@ private:
         return false;
     }
 
-    // check_and_mutate
-    // return err is not resp.error
+    // for check_and_mutate
+    
     int check_phase(const std::string &func_name,
                     int decree,
                     ::dsn::apps::cas_check_type::type check_type,
