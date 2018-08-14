@@ -538,8 +538,8 @@ private:
     }
 
     // for check_and_mutate
-    
-    int check_phase(const std::string &func_name,
+
+    int check_phase(dsn::string_view func_name,
                     int decree,
                     ::dsn::apps::cas_check_type::type check_type,
                     const ::dsn::blob &hash_key,
@@ -552,10 +552,11 @@ private:
                     bool &is_arg_invalid)
     {
         if (!is_check_type_supported(check_type)) {
-            derror_replica("invalid argument for " + func_name + ": decree = {}, error = {}",
-                           decree,
-                           "check type {} not supported",
-                           check_type);
+            derror_replica(
+                "invalid argument for {}: decree = {}, error = check type {} not supported",
+                func_name,
+                decree,
+                check_type);
             resp_error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);
@@ -641,7 +642,7 @@ private:
 
     // for setting update_response.error after committed.
     std::vector<dsn::apps::update_response *> _update_responses;
-}; // namespace server
+};
 
 } // namespace server
 } // namespace pegasus
