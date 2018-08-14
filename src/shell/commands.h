@@ -3578,20 +3578,10 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         << std::setw(w) << std::right << "PUT" << std::setw(w) << std::right << "MPUT"
         << std::setw(w) << std::right << "DEL" << std::setw(w) << std::right << "MDEL"
         << std::setw(w) << std::right << "INCR" << std::setw(w) << std::right << "CAS"
-<<<<<<< HEAD
         << std::setw(w) << std::right << "CAM" << std::setw(w) << std::right << "SCAN"
         << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
         << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "storage_mb"
         << std::setw(w) << std::right << "file_count" << std::endl;
-=======
-        << std::setw(w) << std::right << "SCAN";
-    if (!only_qps) {
-        out << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
-            << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "file_mb"
-            << std::setw(w) << std::right << "file_num";
-    }
-    out << std::endl;
->>>>>>> 5fc6ea618ddc12ac6c60d9c2e70b110e034d75ee
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
     for (int i = 0; i < rows.size() - 1; ++i) {

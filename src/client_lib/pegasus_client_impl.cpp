@@ -878,7 +878,7 @@ void pegasus_client_impl::async_check_and_set(const std::string &hash_key,
 
     if (dsn::apps::_cas_check_type_VALUES_TO_NAMES.find(check_type) ==
         dsn::apps::_cas_check_type_VALUES_TO_NAMES.end()) {
-        derror("invalid check type");
+        derror("invalid check type: %d", (int)check_type);
         if (callback != nullptr)
             callback(PERR_INVALID_ARGUMENT, check_and_set_results(), internal_info());
         return;
@@ -997,7 +997,7 @@ void pegasus_client_impl::async_check_and_mutate(const std::string &hash_key,
 
     if (dsn::apps::_cas_check_type_VALUES_TO_NAMES.find(check_type) ==
         dsn::apps::_cas_check_type_VALUES_TO_NAMES.end()) {
-        derror("invalid check type");
+        derror("invalid check type: %d", (int)check_type);
         if (callback != nullptr)
             callback(PERR_INVALID_ARGUMENT, check_and_mutate_results(), internal_info());
         return;
@@ -1014,16 +1014,7 @@ void pegasus_client_impl::async_check_and_mutate(const std::string &hash_key,
     req.check_sort_key.assign(check_sort_key.c_str(), 0, check_sort_key.size());
     req.check_type = (dsn::apps::cas_check_type::type)check_type;
     req.check_operand.assign(check_operand.c_str(), 0, check_operand.size());
-    
-    auto mutate_list = mutations.get_mutations();
-    for (auto &mu : mutate_list) {
-        req.mutate_list.push_back(mu);
-        ddebug("mu %d %s %s %d",
-               mutate_list.back().operation,
-               mutate_list.back().sort_key.to_string().c_str(),
-               mutate_list.back().value.to_string().c_str(),
-               mutate_list.back().set_expire_ts_seconds);
-    }
+    mutations.get_mutations(req.mutate_list);
     req.return_check_value = options.return_check_value;
 
     ::dsn::blob tmp_key;

@@ -13,11 +13,11 @@
 #include <functional>
 #include <memory>
 
-#include <rrdb/rrdb_types.h> // TODO HW
+#include <rrdb/rrdb_types.h>
 #include <base/pegasus_utils.h>
 namespace pegasus {
 
-class rrdb_client; // TODO HW need?
+class rrdb_client;
 ///
 /// \brief The client class
 /// pegasus_client is the base class that users use to access a specific cluster with an app name
@@ -164,7 +164,7 @@ public:
     struct mutations
     {
     private:
-        mutable std::vector<::dsn::apps::mutate> mu_list; // TODO HW unchecked
+        mutable std::vector<::dsn::apps::mutate> mu_list;
         std::vector<std::pair<int, int>> ttl_list;
 
     public:
@@ -177,15 +177,10 @@ public:
             // set_expire_ts_seconds will be set when check_and_mutate() gets the mutations (by
             // calling get_mutations())
             mu.set_expire_ts_seconds = 0;
-            mu_list.push_back(mu);
+            mu_list.emplace_back(std::move(mu));
 
-            ddebug("in set: sort_key %s, %s; value %s, %s",
-                   sort_key.data(),
-                   mu_list.back().sort_key.to_string().c_str(),
-                   value.data(),
-                   mu_list.back().value.to_string().c_str());
             if (ttl_seconds != 0) {
-                ttl_list.push_back(std::make_pair(mu_list.size() - 1, ttl_seconds));
+                ttl_list.emplace_back(std::make_pair(mu_list.size() - 1, ttl_seconds));
             }
         }
         void del(dsn::string_view sort_key)
@@ -193,17 +188,16 @@ public:
             ::dsn::apps::mutate mu;
             mu.operation = ::dsn::apps::mutate_operation::MO_DELETE;
             mu.sort_key.assign(sort_key.data(), 0, sort_key.size());
-            // mu.value = NULL; // TODO HW unchecked
             mu.set_expire_ts_seconds = 0;
-            mu_list.push_back(mu);
+            mu_list.emplace_back(std::move(mu));
         }
-        const std::vector<::dsn::apps::mutate> get_mutations() const
+        void get_mutations(std::vector<::dsn::apps::mutate> &mutations) const
         {
             int current_time = ::pegasus::utils::epoch_now();
             for (auto &pair : ttl_list) {
                 mu_list[pair.first].set_expire_ts_seconds = pair.second + current_time;
             }
-            return mu_list;
+            mutations = mu_list;
         }
         bool is_empty() const { return mu_list.empty(); }
     };
