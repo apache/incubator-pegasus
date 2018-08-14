@@ -40,6 +40,9 @@ type MultiGetOptions struct {
 
 	// Max size of k-v pairs to be fetched. MaxFetchSize <= 0 means no limit.
 	MaxFetchSize int
+
+	// Query order
+	Reverse bool
 }
 
 // Default options for MultiGet and MultiGetRange.
@@ -348,6 +351,7 @@ func setRequestByOption(options *MultiGetOptions, request *rrdb.MultiGetRequest)
 	request.StopInclusive = options.StopInclusive
 	request.SortKeyFilterType = rrdb.FilterType(options.SortKeyFilter.Type)
 	request.SortKeyFilterPattern = &base.Blob{Data: options.SortKeyFilter.Pattern}
+	request.Reverse = options.Reverse
 }
 
 func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, options *MultiGetOptions) ([]*KeyValue, bool, error) {
