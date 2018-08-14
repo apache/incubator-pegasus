@@ -164,7 +164,7 @@ public:
     struct mutations
     {
     private:
-        mutable std::vector<::dsn::apps::mutate> mu_list; // TODO HW unchecked 
+        mutable std::vector<::dsn::apps::mutate> mu_list; // TODO HW unchecked
         std::vector<std::pair<int, int>> ttl_list;
 
     public:
@@ -174,11 +174,16 @@ public:
             mu.operation = ::dsn::apps::mutate_operation::MO_PUT;
             mu.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
             mu.value.assign(value.c_str(), 0, value.size());
-            // set_expire_ts_seconds will be set when check_and_mutate() gets the mutations (by calling get_mutations())
+            // set_expire_ts_seconds will be set when check_and_mutate() gets the mutations (by
+            // calling get_mutations())
             mu.set_expire_ts_seconds = 0;
             mu_list.push_back(mu);
 
-            ddebug("in set: sort_key %s, %s; value %s, %s",sort_key.c_str(),mu.sort_key.to_string().c_str(),value.c_str(),mu.value.to_string().c_str());
+            ddebug("in set: sort_key %s, %s; value %s, %s",
+                   sort_key.c_str(),
+                   mu_list.back().sort_key.to_string().c_str(),
+                   value.c_str(),
+                   mu_list.back().value.to_string().c_str());
             if (ttl_seconds != 0) {
                 ttl_list.push_back(std::make_pair(mu_list.size() - 1, ttl_seconds));
             }
@@ -954,7 +959,7 @@ public:
     ///
     /// \brief check_and_mutate
     ///     atomically check and mutate from the cluster.
-    ///     the mutations will be triggered if and only if check passed. 
+    ///     the mutations will be triggered if and only if check passed.
     /// \param hash_key
     /// used to decide which partition to get this k-v
     /// \param check_sort_key
