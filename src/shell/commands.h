@@ -3346,22 +3346,27 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
 inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
+                                           {"only_qps", required_argument, 0, 'q'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
 
     std::string app_name;
     std::string out_file;
+    bool only_qps = false;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "a:o:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "a:qo:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
         case 'a':
             app_name = optarg;
+            break;
+        case 'q':
+            only_qps = true;
             break;
         case 'o':
             out_file = optarg;
@@ -3387,7 +3392,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    size_t w = 12;
+    size_t w = 10;
     size_t first_column_width = w;
     if (app_name.empty()) {
         for (row_data &row : rows) {
@@ -3397,14 +3402,17 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     } else {
         out << std::setw(first_column_width) << std::left << "pidx";
     }
-    out << std::setw(w) << std::right << "GET" << std::setw(w) << std::right << "MULTI_GET"
-        << std::setw(w) << std::right << "PUT" << std::setw(w) << std::right << "MULTI_PUT"
-        << std::setw(w) << std::right << "DEL" << std::setw(w) << std::right << "MULTI_DEL"
+    out << std::setw(w) << std::right << "GET" << std::setw(w) << std::right << "MGET"
+        << std::setw(w) << std::right << "PUT" << std::setw(w) << std::right << "MPUT"
+        << std::setw(w) << std::right << "DEL" << std::setw(w) << std::right << "MDEL"
         << std::setw(w) << std::right << "INCR" << std::setw(w) << std::right << "CAS"
-        << std::setw(w) << std::right << "SCAN" << std::setw(w) << std::right << "expired"
-        << std::setw(w) << std::right << "filtered" << std::setw(w) << std::right << "abnormal"
-        << std::setw(w) << std::right << "storage_mb" << std::setw(w) << std::right << "file_count"
-        << std::endl;
+        << std::setw(w) << std::right << "SCAN";
+    if (!only_qps) {
+        out << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
+            << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "file_mb"
+            << std::setw(w) << std::right << "file_num";
+    }
+    out << std::endl;
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
     for (int i = 0; i < rows.size() - 1; ++i) {
@@ -3443,11 +3451,14 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         PRINT_QPS(incr_qps);
         PRINT_QPS(check_and_set_qps);
         PRINT_QPS(scan_qps);
-        out << std::setw(w) << std::right << (int64_t)row.recent_expire_count << std::setw(w)
-            << std::right << (int64_t)row.recent_filter_count << std::setw(w) << std::right
-            << (int64_t)row.recent_abnormal_count << std::setw(w) << std::right
-            << (int64_t)row.storage_mb << std::setw(w) << std::right << (int64_t)row.storage_count
-            << std::endl;
+        if (!only_qps) {
+            out << std::setw(w) << std::right << (int64_t)row.recent_expire_count << std::setw(w)
+                << std::right << (int64_t)row.recent_filter_count << std::setw(w) << std::right
+                << (int64_t)row.recent_abnormal_count << std::setw(w) << std::right
+                << (int64_t)row.storage_mb << std::setw(w) << std::right
+                << (int64_t)row.storage_count;
+        }
+        out << std::endl;
     }
 #undef PRINT_QPS
 

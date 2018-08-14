@@ -268,7 +268,10 @@ static command_executor commands[] = {
         server_stat,
     },
     {
-        "app_stat", "get stat of apps", "[-a|--app_name str] [-o|--output file_name]", app_stat,
+        "app_stat",
+        "get stat of apps",
+        "[-a|--app_name str] [-q|--only_qps] [-o|--output file_name]",
+        app_stat,
     },
     {
         "flush_log",
