@@ -6,6 +6,7 @@ package com.xiaomi.infra.pegasus.rpc.async;
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.base.blob;
+import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import com.xiaomi.infra.pegasus.tools.Tools;
 import com.xiaomi.infra.pegasus.apps.*;
@@ -94,6 +95,12 @@ public class ReplicaSessionTest {
         callbacks.clear();
 
         rs = manager.getReplicaSession(addr);
+        rs.setMessageResponseFilter(new ReplicaSession.MessageResponseFilter() {
+            @Override
+            public boolean abandonIt(error_code.error_types err, TMessage header) {
+                return true;
+            }
+        });
         for (int i=0; i<20; ++i) {
             // we send query request to replica server. We expect it to discard it.
             final int index = i;
@@ -148,6 +155,7 @@ public class ReplicaSessionTest {
                 Assert.fail();
             }
         }
+        rs.setMessageResponseFilter(null);
 
         Toollet.tryStartServer(addr);
     }

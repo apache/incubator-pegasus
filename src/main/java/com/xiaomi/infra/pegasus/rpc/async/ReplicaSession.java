@@ -7,6 +7,7 @@ import com.xiaomi.infra.pegasus.base.error_code.error_types;
 
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.operator.client_operator;
+import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
 import io.netty.channel.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.socket.SocketChannel;
@@ -23,8 +24,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Created by weijiesun on 17-9-13.
@@ -62,6 +61,17 @@ public class ReplicaSession {
                         pipeline.addLast("ClientHandler", new ReplicaSession.DefaultHandler());
                     }
                 });
+    }
+
+    // You can specify a message response filter with constructor or with "setMessageResponseFilter" function.
+    // the mainly usage of filter is test, in which you can control whether to abaondon a response
+    // and how to abandon it, so as to emulate some network failure cases
+    public ReplicaSession(rpc_address address, EventLoopGroup rpcGroup, int socketTimeout, MessageResponseFilter filter) {
+        this(address, rpcGroup, socketTimeout);
+        this.filter = filter;
+    }
+    public void setMessageResponseFilter(MessageResponseFilter filter) {
+        this.filter = filter;
     }
 
     public int asyncSend(client_operator op, Runnable callbackFunc, long timeoutInMilliseconds) {
@@ -276,6 +286,10 @@ public class ReplicaSession {
     ConnState getState() {
         return fields.state;
     }
+    interface MessageResponseFilter {
+        public boolean abandonIt(error_types err, TMessage header);
+    }
+    MessageResponseFilter filter = null;
 
     final private ConcurrentHashMap<Integer, RequestEntry> pendingResponse = new ConcurrentHashMap<Integer, RequestEntry>();
     final private AtomicInteger seqId = new AtomicInteger(0);

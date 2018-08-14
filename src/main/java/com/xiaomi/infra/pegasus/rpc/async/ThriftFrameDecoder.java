@@ -45,17 +45,23 @@ public class ThriftFrameDecoder extends ByteToMessageDecoder {
         try {
             ec.read(iprot);
             TMessage msgHeader = iprot.readMessageBegin();
-            ReplicaSession.RequestEntry e = session.getAndRemoveEntry(msgHeader.seqid);
-            if (e!=null) {
-                e.timeoutTask.cancel(true);
-                e.op.rpc_error.errno = ec.errno;
-                if (e.op.rpc_error.errno == error_code.error_types.ERR_OK) {
-                    e.op.recv_data(iprot);
+            if (session.filter != null && session.filter.abandonIt(ec.errno, msgHeader)) {
+                logger.info("{}: abaondon a message, err({}), header({})",
+                        ctx.channel().toString(),
+                        ec.errno.toString(),
+                        msgHeader.toString());
+            } else {
+                ReplicaSession.RequestEntry e = session.getAndRemoveEntry(msgHeader.seqid);
+                if (e != null) {
+                    e.timeoutTask.cancel(true);
+                    e.op.rpc_error.errno = ec.errno;
+                    if (e.op.rpc_error.errno == error_code.error_types.ERR_OK) {
+                        e.op.recv_data(iprot);
+                    }
+                    out.add(e);
+                } else {
+                    logger.info("{}: {} removed, perhaps timeout", ctx.channel().toString(), msgHeader.seqid);
                 }
-                out.add(e);
-            }
-            else {
-                logger.info("{}: {} removed, perhaps timeout", ctx.channel().toString(), msgHeader.seqid);
             }
         } catch (TException e) {
             logger.error("{}: got exception in thrift decode: ", ctx.channel().toString(), e);
