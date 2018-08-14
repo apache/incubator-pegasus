@@ -90,6 +90,14 @@ else
     echo "ENABLE_GCOV=NO"
 fi
 
+if [ "$NO_TEST" == "YES" ]
+then
+    echo "NO_TEST=YES"
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DBUILD_TEST=OFF"
+else
+    echo "NO_TEST=NO"
+fi
+
 # You can specify customized boost by defining BOOST_DIR.
 # Install boost like this:
 #   wget http://downloads.sourceforge.net/project/boost/boost/1.54.0/boost_1_54_0.zip?r=&ts=1442891144&use_mirror=jaist

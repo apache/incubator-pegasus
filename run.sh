@@ -61,6 +61,7 @@ function usage_build()
     echo "   -w|--warning_all      open all warnings when build, default no"
     echo "   --enable_gcov         generate gcov code coverage report, default no"
     echo "   -v|--verbose          build in verbose mode, default no"
+    echo "   --notest              build without building unit tests, default no"
     if [ "$ONLY_BUILD" == "NO" ]; then
         echo "   -m|--test_module      specify modules to test, split by ',',"
         echo "                         e.g., \"dsn.core.tests,dsn.tests\","
@@ -79,6 +80,7 @@ function run_build()
     WARNING_ALL=NO
     ENABLE_GCOV=NO
     RUN_VERBOSE=NO
+    NO_TEST=NO
     TEST_MODULE=""
     while [[ $# > 0 ]]; do
         key="$1"
@@ -124,6 +126,9 @@ function run_build()
                 ;;
             -v|--verbose)
                 RUN_VERBOSE=YES
+                ;;
+            --notest)
+                NO_TEST=YES
                 ;;
             -m|--test_module)
                 if [ "$ONLY_BUILD" == "YES" ]; then
@@ -175,7 +180,7 @@ function run_build()
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
-        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" $scripts_dir/build.sh
+        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" $scripts_dir/build.sh
 }
 
 #####################

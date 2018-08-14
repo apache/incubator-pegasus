@@ -26,4 +26,4 @@ set(MY_BINPLACES
     "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
 )
 
-dsn_add_executable()
+dsn_add_test()

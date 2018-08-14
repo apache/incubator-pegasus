@@ -47,8 +47,4 @@ set(MY_BINPLACES
     "${CASE_FILES}"
 )
 
-if(WIN32)
-    SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} /ignore:4049 /ignore:4217")
-endif()
-
-dsn_add_executable()
+dsn_add_test()

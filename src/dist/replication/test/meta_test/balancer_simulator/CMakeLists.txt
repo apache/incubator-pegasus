@@ -25,4 +25,4 @@ set(MY_BOOST_PACKAGES system filesystem)
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
-dsn_add_executable()
+dsn_add_test()

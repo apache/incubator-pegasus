@@ -42,4 +42,4 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
 )
 add_definitions(-Wno-dangling-else)
 add_definitions(-DENABLE_FAIL)
-dsn_add_executable()
+dsn_add_test()

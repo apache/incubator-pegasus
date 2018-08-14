@@ -36,4 +36,4 @@ set(MY_BOOST_PACKAGES system filesystem)
 set(MY_BINPLACES clear.sh run.sh config-ddl-test.ini config-test.ini suite1 suite2)
 
 add_definitions(-DDSN_MOCK_TEST)
-dsn_add_executable()
+dsn_add_test()

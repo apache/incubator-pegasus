@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 2.8.8)
 
-#set(DSN_DEBUG_CMAKE TRUE)
-
 include(bin/dsn.cmake)
-#cmake_policy(SET CMP0048 NEW)
-#project(dsn VERSION 1.0 LANGUAGES C CXX)
+
 project(dsn C CXX)
 set(DSN_BUILD_RUNTIME TRUE)
 add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)

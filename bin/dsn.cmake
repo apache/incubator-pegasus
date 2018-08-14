@@ -378,6 +378,13 @@ function(dsn_add_object)
     dsn_add_project()
 endfunction(dsn_add_object)
 
+option(BUILD_TEST "build unit test" ON)
+function(dsn_add_test)
+    if(${BUILD_TEST})
+        dsn_add_executable()
+    endif()
+endfunction()
+
 function(dsn_setup_compiler_flags)
     ms_replace_compiler_flags("STATIC_LINK")
 
