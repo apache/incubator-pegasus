@@ -320,7 +320,7 @@ static command_executor commands[] = {
     {
         "app_stat",
         "get stat of apps",
-        "[-a|--app_name str] [-o|--output file_name]",
+        "[-a|--app_name str] [-q|--only_qps] [-o|--output file_name]",
         app_stat,
     },
     {
