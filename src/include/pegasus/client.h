@@ -197,7 +197,7 @@ public:
             mu.set_expire_ts_seconds = 0;
             mu_list.push_back(mu);
         }
-        const std::vector<::dsn::apps::mutate> get_mutations() const
+        const std::vector<::dsn::apps::mutate> get_mutations() const // TODO HW 多次调用会有问题
         {
             int current_time = ::pegasus::utils::epoch_now();
             for (auto &pair : ttl_list) {
