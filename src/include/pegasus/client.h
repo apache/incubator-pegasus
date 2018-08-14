@@ -172,8 +172,8 @@ public:
         {
             ::dsn::apps::mutate mu;
             mu.operation = ::dsn::apps::mutate_operation::MO_PUT;
-            mu.sort_key.assign(sort_key.data(), 0, sort_key.length());
-            mu.value.assign(value.data(), 0, value.length());
+            mu.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
+            mu.value.assign(value.c_str(), 0, value.size());
             mu.set_expire_ts_seconds = 0;
             mu_list.emplace_back(mu);
         }
@@ -181,7 +181,7 @@ public:
         {
             ::dsn::apps::mutate mu;
             mu.operation = ::dsn::apps::mutate_operation::MO_DELETE;
-            mu.sort_key.assign(sort_key.data(), 0, sort_key.length());
+            mu.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
             // mu.value = NULL; //TODO HW unchecked
             mu.set_expire_ts_seconds = 0;
             mu_list.emplace_back(mu);
