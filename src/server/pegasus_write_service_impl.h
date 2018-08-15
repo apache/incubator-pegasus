@@ -215,51 +215,93 @@ public:
         resp.decree = decree;
         resp.server = _primary_address;
 
-        rocksdb::Status value_status;
+        if (!is_check_type_supported(update.check_type)) {
+            derror_replica("invalid argument for check_and_set: decree = {}, error = {}",
+                           decree,
+                           "check type {} not supported",
+                           update.check_type);
+            resp.error = rocksdb::Status::kInvalidArgument;
+            // we should write empty record to update rocksdb's last flushed decree
+            return empty_put(decree);
+        }
+
+        ::dsn::blob check_key;
+        pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
+        rocksdb::Slice check_raw_key(check_key.data(), check_key.length());
+        std::string check_raw_value;
+        rocksdb::Status s = _db->Get(_rd_opts, check_raw_key, &check_raw_value);
+        if (s.ok()) {
+            // read check value succeed
+            if (check_if_record_expired(
+                    _value_schema_version, utils::epoch_now(), check_raw_value)) {
+                // check value ttl timeout
+                _pfc_recent_expire_count->increment();
+                s = rocksdb::Status::NotFound();
+            }
+        } else if (!s.IsNotFound()) {
+            // read check value failed
+            derror_rocksdb("GetCheckValue for CheckAndSet",
+                           s.ToString(),
+                           "decree: {}, hash_key: {}, check_sort_key: {}",
+                           decree,
+                           utils::c_escape_string(update.hash_key),
+                           utils::c_escape_string(update.check_sort_key));
+            resp.error = s.code();
+            return resp.error;
+        }
+        dassert(s.ok() || s.IsNotFound(), "status = %s", s.ToString().c_str());
+
         ::dsn::blob check_value;
-        bool passed = false;
-        bool is_arg_invalid = false;
-        int err = 0;
-        if ((err = check_phase(__FUNCTION__,
-                               decree,
-                               update.check_type,
-                               update.hash_key,
-                               update.check_sort_key,
-                               update.check_operand,
-                               /*output*/
-                               resp.error,
-                               value_status,
-                               check_value,
-                               passed,
-                               is_arg_invalid))) {
-            return err;
+        if (s.ok()) {
+            pegasus_extract_user_data(
+                _value_schema_version, std::move(check_raw_value), check_value);
         }
 
         if (update.return_check_value) {
             resp.check_value_returned = true;
-            if (value_status.ok()) {
+            if (s.ok()) {
                 resp.check_value_exist = true;
                 resp.check_value = std::move(check_value);
             }
         }
 
+        bool invalid_argument = false;
+        bool passed = validate_check(
+            decree, update.check_type, update.check_operand, s.ok(), check_value, invalid_argument);
+
+        if (passed) {
+            // check passed, write new value
+            ::dsn::blob set_key;
+            if (update.set_diff_sort_key) {
+                pegasus_generate_key(set_key, update.hash_key, update.set_sort_key);
+            } else {
+                set_key = check_key;
+            }
+            resp.error = db_write_batch_put(decree,
+                                            set_key,
+                                            update.set_value,
+                                            static_cast<uint32_t>(update.set_expire_ts_seconds));
+        } else {
+            // check not passed, write empty record to update rocksdb's last flushed decree
+            resp.error = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+        }
+        if (resp.error) {
+            clear_up_batch_states(decree, resp.error);
+            return resp.error;
+        }
+
+        resp.error = db_write(decree);
+        if (resp.error) {
+            clear_up_batch_states(decree, resp.error);
+            return resp.error;
+        }
+
         if (!passed) {
             // check not passed, return proper error code to user
             resp.error =
-                is_arg_invalid ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
-            return empty_put(decree);
+                invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
         }
 
-        std::vector<::dsn::apps::mutate> mutate_list;
-        ::dsn::apps::mutate mu;
-        mu.operation = ::dsn::apps::mutate_operation::MO_PUT;
-        mu.sort_key = update.set_diff_sort_key ? update.set_sort_key : update.check_sort_key;
-        mu.value = update.set_value;
-        mu.set_expire_ts_seconds = update.set_expire_ts_seconds;
-        mutate_list.push_back(mu);
-        if ((err = mutate_phase(decree, update.hash_key, mutate_list, resp.error))) {
-            return err;
-        }
         clear_up_batch_states(decree, resp.error);
         return 0;
     }
@@ -273,44 +315,106 @@ public:
         resp.decree = decree;
         resp.server = _primary_address;
 
-        rocksdb::Status value_status;
+        if (!is_check_type_supported(update.check_type)) {
+            derror_replica("invalid argument for check_and_mutate: decree = {}, error = {}",
+                           decree,
+                           "check type {} not supported",
+                           update.check_type);
+            resp.error = rocksdb::Status::kInvalidArgument;
+            // we should write empty record to update rocksdb's last flushed decree
+            return empty_put(decree);
+        }
+
+        ::dsn::blob check_key;
+        pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
+        rocksdb::Slice check_raw_key(check_key.data(), check_key.length());
+        std::string check_raw_value;
+        rocksdb::Status check_status = _db->Get(_rd_opts, check_raw_key, &check_raw_value);
+        if (check_status.ok()) {
+            // read check value succeed
+            if (check_if_record_expired(
+                    _value_schema_version, utils::epoch_now(), check_raw_value)) {
+                // check value ttl timeout
+                _pfc_recent_expire_count->increment();
+                check_status = rocksdb::Status::NotFound();
+            }
+        } else if (!check_status.IsNotFound()) {
+            // read check value failed
+            derror_rocksdb("GetCheckValue for CheckAndMutate",
+                           check_status.ToString(),
+                           "decree: {}, hash_key: {}, check_sort_key: {}",
+                           decree,
+                           utils::c_escape_string(update.hash_key),
+                           utils::c_escape_string(update.check_sort_key));
+            resp.error = check_status.code();
+            return resp.error;
+        }
+        dassert(check_status.ok() || check_status.IsNotFound(),
+                "status = %s",
+                check_status.ToString().c_str());
+
         ::dsn::blob check_value;
-        bool passed = false;
-        bool is_arg_invalid = false;
-        int err = 0;
-        if ((err = check_phase(__FUNCTION__,
-                               decree,
-                               update.check_type,
-                               update.hash_key,
-                               update.check_sort_key,
-                               update.check_operand,
-                               /*output*/
-                               resp.error,
-                               value_status,
-                               check_value,
-                               passed,
-                               is_arg_invalid))) {
-            return err;
+        if (check_status.ok()) {
+            pegasus_extract_user_data(
+                _value_schema_version, std::move(check_raw_value), check_value);
         }
 
         if (update.return_check_value) {
             resp.check_value_returned = true;
-            if (value_status.ok()) {
+            if (check_status.ok()) {
                 resp.check_value_exist = true;
                 resp.check_value = std::move(check_value);
             }
         }
 
+        bool invalid_argument = false;
+        bool passed = validate_check(decree,
+                                     update.check_type,
+                                     update.check_operand,
+                                     check_status.ok(),
+                                     check_value,
+                                     invalid_argument);
+
+        if (passed) {
+            for (auto &m : update.mutate_list) {
+                ::dsn::blob key;
+                pegasus_generate_key(key, update.hash_key, m.sort_key);
+                if (m.operation == ::dsn::apps::mutate_operation::MO_PUT) {
+                    resp.error = db_write_batch_put(
+                        decree, key, m.value, static_cast<uint32_t>(m.set_expire_ts_seconds));
+                } else if (m.operation == ::dsn::apps::mutate_operation::MO_DELETE) {
+                    resp.error = db_write_batch_delete(
+                        decree, composite_raw_key(update.hash_key, m.sort_key));
+                }
+
+                if (resp.error) {
+                    // in case of failure, cancel mutations
+                    clear_up_batch_states(decree, resp.error);
+                    return resp.error;
+                }
+            }
+            resp.error = rocksdb::Status::OK().code();
+        } else {
+            // check not passed, write empty record to update rocksdb's last flushed decree
+            resp.error = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+            if (resp.error) {
+                clear_up_batch_states(decree, resp.error);
+                return resp.error;
+            }
+        }
+
+        resp.error = db_write(decree);
+        if (resp.error) {
+            clear_up_batch_states(decree, resp.error);
+            return resp.error;
+        }
+
         if (!passed) {
             // check not passed, return proper error code to user
             resp.error =
-                is_arg_invalid ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
-            return empty_put(decree);
+                invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
         }
 
-        if ((err = mutate_phase(decree, update.hash_key, update.mutate_list, resp.error))) {
-            return err;
-        }
         clear_up_batch_states(decree, resp.error);
         return 0;
     }
@@ -535,94 +639,6 @@ private:
             dassert(false, "unsupported check type: %d", check_type);
         }
         return false;
-    }
-
-    // for check_and_mutate
-
-    int check_phase(dsn::string_view func_name,
-                    int decree,
-                    ::dsn::apps::cas_check_type::type check_type,
-                    const ::dsn::blob &hash_key,
-                    const ::dsn::blob &check_sort_key,
-                    const ::dsn::blob &check_operand,
-                    int &resp_error,
-                    ::rocksdb::Status &value_status,
-                    ::dsn::blob &return_check_value,
-                    bool &passed,
-                    bool &is_arg_invalid)
-    {
-        if (!is_check_type_supported(check_type)) {
-            derror_replica(
-                "invalid argument for {}: decree = {}, error = check type {} not supported",
-                func_name,
-                decree,
-                check_type);
-            resp_error = rocksdb::Status::kInvalidArgument;
-            // we should write empty record to update rocksdb's last flushed decree
-            return empty_put(decree);
-        }
-
-        // get value
-        ::dsn::blob check_key;
-        pegasus_generate_key(check_key, hash_key, check_sort_key);
-        rocksdb::Slice check_raw_key(check_key.data(), check_key.length());
-        std::string check_raw_value;
-        value_status = _db->Get(_rd_opts, check_raw_key, &check_raw_value);
-        dassert(value_status.ok() || value_status.IsNotFound(),
-                "status = %s",
-                value_status.ToString().c_str());
-
-        if (value_status.ok() &&
-            check_if_record_expired(_value_schema_version, utils::epoch_now(), check_raw_value)) {
-            // value ttl timeout
-            _pfc_recent_expire_count->increment();
-            value_status = rocksdb::Status::NotFound();
-        }
-
-        if (value_status.ok()) {
-            pegasus_extract_user_data(
-                _value_schema_version, std::move(check_raw_value), return_check_value);
-        }
-
-        passed = validate_check(decree,
-                                check_type,
-                                check_operand,
-                                value_status.ok(),
-                                return_check_value,
-                                is_arg_invalid);
-
-        return 0;
-    }
-
-    int mutate_phase(int decree,
-                     const ::dsn::blob &hash_key,
-                     const std::vector<::dsn::apps::mutate> &mutate_list,
-                     int &resp_error)
-    {
-        for (auto &m : mutate_list) {
-            ::dsn::blob key;
-            pegasus_generate_key(key, hash_key, m.sort_key);
-            if (m.operation == ::dsn::apps::mutate_operation::MO_PUT) {
-                resp_error = db_write_batch_put(
-                    decree, key, m.value, static_cast<uint32_t>(m.set_expire_ts_seconds));
-            } else if (m.operation == ::dsn::apps::mutate_operation::MO_DELETE) {
-                resp_error = db_write_batch_delete(decree, composite_raw_key(hash_key, m.sort_key));
-            }
-
-            if (resp_error) {
-                // in case of failure, cancel mutations
-                clear_up_batch_states(decree, resp_error);
-                return resp_error;
-            }
-        }
-
-        resp_error = db_write(decree);
-        if (resp_error) {
-            clear_up_batch_states(decree, resp_error);
-            return resp_error;
-        }
-
-        return 0;
     }
 
 private:

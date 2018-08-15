@@ -1714,6 +1714,90 @@ TEST(check_and_mutate, invalid_type)
     }
 }
 
+TEST(check_and_mutate, set_del)
+{
+    std::string hash_key("check_and_mutate_test_set_del");
+
+    {
+        int ret = 0;
+        ret = client->del(hash_key, "k1");
+        ASSERT_EQ(0, ret);
+
+        std::string value;
+        pegasus_client::mutations mutations;
+        pegasus_client::check_and_mutate_options options;
+        pegasus_client::check_and_mutate_results results;
+
+        options.return_check_value = true;
+        mutations.set("k1", "v1");
+        mutations.del("k1");
+        ret = client->check_and_mutate(hash_key,
+                                       "k1",
+                                       pegasus_client::cas_check_type::CT_VALUE_NOT_EXIST,
+                                       "",
+                                       mutations,
+                                       options,
+                                       results);
+        ASSERT_EQ(PERR_OK, ret);
+        ASSERT_TRUE(results.mutate_succeed);
+        ASSERT_TRUE(results.check_value_returned);
+        ASSERT_FALSE(results.check_value_exist);
+
+        ret = client->get(hash_key, "k1", value);
+        ASSERT_EQ(PERR_NOT_FOUND, ret);
+    }
+}
+
+TEST(check_and_mutate, multi_get_mutations)
+{
+    std::string hash_key("check_and_mutate_test_multi_get_mutations");
+
+    {
+        int ret = 0;
+        ret = client->del(hash_key, "k1");
+        ASSERT_EQ(0, ret);
+
+        std::string value;
+        pegasus_client::mutations mutations;
+        pegasus_client::check_and_mutate_options options;
+        pegasus_client::check_and_mutate_results results;
+
+        options.return_check_value = true;
+        mutations.set("k1", "v1", 10);
+        ret = client->check_and_mutate(hash_key,
+                                       "k1",
+                                       pegasus_client::cas_check_type::CT_VALUE_NOT_EXIST,
+                                       "",
+                                       mutations,
+                                       options,
+                                       results);
+        ASSERT_EQ(PERR_OK, ret);
+        ASSERT_TRUE(results.mutate_succeed);
+        ASSERT_TRUE(results.check_value_returned);
+        ASSERT_FALSE(results.check_value_exist);
+
+        ::sleep(12);
+        ret = client->get(hash_key, "k1", value);
+        ASSERT_EQ(PERR_NOT_FOUND, ret);
+
+        ret = client->check_and_mutate(hash_key,
+                                       "k1",
+                                       pegasus_client::cas_check_type::CT_VALUE_NOT_EXIST,
+                                       "",
+                                       mutations,
+                                       options,
+                                       results);
+        ASSERT_EQ(PERR_OK, ret);
+        ASSERT_TRUE(results.mutate_succeed);
+        ASSERT_TRUE(results.check_value_returned);
+        ASSERT_FALSE(results.check_value_exist);
+
+        ret = client->get(hash_key, "k1", value);
+        ASSERT_EQ(PERR_OK, ret);
+        ASSERT_EQ("v1", value);
+    }
+}
+
 TEST(check_and_mutate, expire_seconds)
 {
     std::string hash_key("check_and_mutate_test_expire_seconds");
@@ -1730,7 +1814,7 @@ TEST(check_and_mutate, expire_seconds)
 
         options.return_check_value = true;
         mutations.set("k1", "v1", 10);
-        ::sleep(10);
+        ::sleep(12);
         mutations.set("k2", "v2", 10);
         ret = client->check_and_mutate(hash_key,
                                        "k1",
