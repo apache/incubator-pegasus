@@ -164,7 +164,7 @@ public:
     struct mutations
     {
     private:
-        mutable std::vector<::dsn::apps::mutate> mu_list;
+        std::vector<::dsn::apps::mutate> mu_list;
         std::vector<std::pair<int, int>> ttl_list;
 
     public:
@@ -194,10 +194,10 @@ public:
         void get_mutations(std::vector<::dsn::apps::mutate> &mutations) const
         {
             int current_time = ::pegasus::utils::epoch_now();
-            for (auto &pair : ttl_list) {
-                mu_list[pair.first].set_expire_ts_seconds = pair.second + current_time;
-            }
             mutations = mu_list;
+            for (auto &pair : ttl_list) {
+                mutations[pair.first].set_expire_ts_seconds = pair.second + current_time;
+            }
         }
         bool is_empty() const { return mu_list.empty(); }
     };
@@ -953,7 +953,7 @@ public:
     ///
     /// \brief check_and_mutate
     ///     atomically check and mutate from the cluster.
-    ///     the mutations will be triggered if and only if check passed.
+    ///     the mutations will be applied if and only if check passed.
     /// \param hash_key
     /// used to decide which partition to get this k-v
     /// \param check_sort_key
