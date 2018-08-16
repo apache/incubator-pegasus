@@ -330,12 +330,13 @@ public:
             return empty_put(decree);
         }
 
-        std::for_each(
-            update.mutate_list.begin(), update.mutate_list.end(), [&](const auto &mu) mutable {
-                if (mu.operation != ::dsn::apps::mutate_operation::MO_PUT &&
-                    mu.operation != ::dsn::apps::mutate_operation::MO_DELETE)
-                    resp.error = rocksdb::Status::kInvalidArgument;
-            });
+        std::for_each(update.mutate_list.begin(),
+                      update.mutate_list.end(),
+                      [&](const dsn::apps::mutate &mu) mutable {
+                          if (mu.operation != ::dsn::apps::mutate_operation::MO_PUT &&
+                              mu.operation != ::dsn::apps::mutate_operation::MO_DELETE)
+                              resp.error = rocksdb::Status::kInvalidArgument;
+                      });
         if (resp.error) {
             derror_replica("invalid argument for check_and_mutate: decree = {}, error = {}",
                            decree,
