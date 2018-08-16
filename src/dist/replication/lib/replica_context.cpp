@@ -212,6 +212,10 @@ bool potential_secondary_context::cleanup(bool force)
     learning_copy_file_size = 0;
     learning_copy_buffer_size = 0;
     learning_round_is_running = false;
+    if (learn_app_concurrent_count_increased) {
+        --owner_replica->get_replica_stub()->_learn_app_concurrent_count;
+        learn_app_concurrent_count_increased = false;
+    }
     learning_start_prepare_decree = invalid_decree;
     learning_status = learner_status::LearningInvalid;
     return true;

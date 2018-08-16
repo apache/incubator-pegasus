@@ -46,6 +46,7 @@ namespace dsn {
 namespace replication {
 
 class replica;
+class replica_stub;
 
 struct remote_learner_state
 {
@@ -128,14 +129,16 @@ public:
 class potential_secondary_context
 {
 public:
-    potential_secondary_context()
-        : learning_version(0),
+    potential_secondary_context(replica *r)
+        : owner_replica(r),
+          learning_version(0),
           learning_start_ts_ns(0),
           learning_copy_file_count(0),
           learning_copy_file_size(0),
           learning_copy_buffer_size(0),
           learning_status(learner_status::LearningInvalid),
           learning_round_is_running(false),
+          learn_app_concurrent_count_increased(false),
           learning_start_prepare_decree(invalid_decree)
     {
     }
@@ -148,6 +151,7 @@ public:
     }
 
 public:
+    replica *owner_replica;
     uint64_t learning_version;
     uint64_t learning_start_ts_ns;
     uint64_t learning_copy_file_count;
@@ -155,6 +159,7 @@ public:
     uint64_t learning_copy_buffer_size;
     learner_status::type learning_status;
     volatile bool learning_round_is_running;
+    volatile bool learn_app_concurrent_count_increased;
     decree learning_start_prepare_decree;
 
     ::dsn::task_ptr delay_learning_task;

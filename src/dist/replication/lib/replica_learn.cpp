@@ -667,16 +667,18 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
     if (resp.type == learn_type::LT_APP) {
         if (++_stub->_learn_app_concurrent_count > _options->learn_app_max_concurrent_count) {
             --_stub->_learn_app_concurrent_count;
-            dwarn(
-                "%s: on_learn_reply[%016" PRIx64
-                "]: learnee = %s, exceed learn_app_max_concurrent_count(%d) limit, skip this round",
-                name(),
-                _potential_secondary_states.learning_version,
-                _config.primary.to_string(),
-                _options->learn_app_max_concurrent_count);
+            dwarn("%s: on_learn_reply[%016" PRIx64
+                  "]: learnee = %s, learn_app_concurrent_count(%d) >= "
+                  "learn_app_max_concurrent_count(%d), skip this round",
+                  name(),
+                  _potential_secondary_states.learning_version,
+                  _config.primary.to_string(),
+                  _stub->_learn_app_concurrent_count.load(),
+                  _options->learn_app_max_concurrent_count);
             _potential_secondary_states.learning_round_is_running = false;
             return;
         } else {
+            _potential_secondary_states.learn_app_concurrent_count_increased = true;
             ddebug("%s: on_learn_reply[%016" PRIx64
                    "]: learnee = %s, ++learn_app_concurrent_count = %d",
                    name(),
@@ -936,6 +938,7 @@ void replica::on_copy_remote_state_completed(error_code err,
 
     if (resp.type == learn_type::LT_APP) {
         --_stub->_learn_app_concurrent_count;
+        _potential_secondary_states.learn_app_concurrent_count_increased = false;
         ddebug("%s: on_copy_remote_state_completed[%016" PRIx64
                "]: learnee = %s, --learn_app_concurrent_count = %d",
                name(),
