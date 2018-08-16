@@ -1477,6 +1477,7 @@ inline void load_mutations(shell_context *sc, pegasus::pegasus_client::mutations
         auto cleanup = dsn::defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
         escape_sds_argv(arg_count, args);
 
+        std::string sort_key, value;
         int ttl = 0;
         int status = mutation_check(arg_count, args);
         switch (status) {
@@ -1488,19 +1489,22 @@ inline void load_mutations(shell_context *sc, pegasus::pegasus_client::mutations
             if (arg_count == 4) {
                 ttl = std::stoi(args[3]);
             }
-            mutations.set(unescape_str(args[1]), unescape_str(args[2]), ttl);
+            sort_key = unescape_str(args[1]);
+            value = unescape_str(args[2]);
+            mutations.set(sort_key, value, ttl);
 
             fprintf(stderr,
                     "LOAD: set sortkey %s, value %s, ttl %d\n",
-                    pegasus::utils::c_escape_string(unescape_str(args[1]), sc->escape_all).c_str(),
-                    pegasus::utils::c_escape_string(unescape_str(args[2]), sc->escape_all).c_str(),
+                    pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str(),
+                    pegasus::utils::c_escape_string(value, sc->escape_all).c_str(),
                     ttl);
             break;
         case 1:
-            mutations.del(unescape_str(args[1]));
+            sort_key = unescape_str(args[1]);
+            mutations.del(sort_key);
             fprintf(stderr,
                     "LOAD: del sortkey %s\n",
-                    pegasus::utils::c_escape_string(unescape_str(args[1]), sc->escape_all).c_str());
+                    pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str());
             break;
         default:
             fprintf(stderr, "ERROR: invalid mutation, print \"ok\" to finish loading\n");
@@ -2924,8 +2928,10 @@ inline bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     std::function<void(int64_t decree, int64_t timestamp, dsn_message_t * requests, int count)>
         callback;
     if (detailed) {
-        callback = [&os, sc](
-            int64_t decree, int64_t timestamp, dsn_message_t *requests, int count) mutable {
+        callback = [&os, sc](int64_t decree,
+                             int64_t timestamp,
+                             dsn_message_t *requests,
+                             int count) mutable {
             for (int i = 0; i < count; ++i) {
                 dsn_message_t request = requests[i];
                 dassert(request != nullptr, "");
