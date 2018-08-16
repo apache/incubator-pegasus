@@ -148,12 +148,17 @@ protected:
     DECLARE_REDIS_HANDLER(geo_dist)
     DECLARE_REDIS_HANDLER(geo_radius)
     DECLARE_REDIS_HANDLER(geo_radius_by_member)
+    DECLARE_REDIS_HANDLER(incr)
+    DECLARE_REDIS_HANDLER(incr_by)
+    DECLARE_REDIS_HANDLER(decr)
+    DECLARE_REDIS_HANDLER(decr_by)
     DECLARE_REDIS_HANDLER(default_handler)
 
     void set_internal(message_entry &entry);
     void set_geo_internal(message_entry &entry);
     void del_internal(message_entry &entry);
     void del_geo_internal(message_entry &entry);
+    void counter_internal(message_entry &entry);
     void parse_set_parameters(const std::vector<redis_bulk_string> &opts, int &ttl_seconds);
     void parse_geo_radius_parameters(const std::vector<redis_bulk_string> &opts,
                                      int base_index,

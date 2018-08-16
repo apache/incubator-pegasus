@@ -10,7 +10,7 @@ set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
 
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIB_PATH "../../../rocksdb")
+set(MY_PROJ_LIB_PATH "../../../rocksdb/build")
 
 set(MY_PROJ_LIBS
         dsn_replica_server
@@ -36,13 +36,12 @@ set(MY_PROJ_LIBS
         rocksdb
         pegasus.base
         gtest
-        boost_regex
         z bz2 snappy rt aio pthread
         )
 add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_PACKAGES system filesystem regex)
 
 set(MY_BINPLACES config.ini run.sh)
 

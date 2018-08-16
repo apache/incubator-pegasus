@@ -35,6 +35,7 @@ proxy_stub::proxy_stub(const proxy_session::factory &f,
     dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_GET_SCANNER_ACK)->allow_inline = true;
     dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_SCAN_ACK)->allow_inline = true;
     dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_CLEAR_SCANNER_ACK)->allow_inline = true;
+    dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_INCR_ACK)->allow_inline = true;
 
     _uri_address.assign_uri(
         std::string("dsn://").append(_cluster).append("/").append(_app).c_str());
