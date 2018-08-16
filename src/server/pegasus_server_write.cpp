@@ -19,6 +19,11 @@ pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool ver
       _write_svc(new pegasus_write_service(server)),
       _verbose_log(verbose_log)
 {
+    _total_duplicate_latency.init_app_counter(
+        "app.pegasus",
+        fmt::format("total_duplicate_latency@{}", get_gpid()).data(),
+        COUNTER_TYPE_NUMBER_PERCENTILES,
+        "total latency of a write request from source cluster duplicated to remote cluster");
 }
 
 int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
@@ -89,11 +94,6 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
         resp.error = _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
         return resp.error;
     }
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
-        incr_rpc rpc(write);
-        resp.error = _write_svc->incr(_decree, rpc.request(), rpc.response());
-        return resp.error;
-    }
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
         put_rpc rpc(write);
         _write_svc->batch_prepare(_decree);
@@ -116,6 +116,10 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
         }
         return resp.error;
     }
+
+    int64_t latency_us =
+        _write_ctx.timestamp - extract_timestamp_from_timetag(_write_ctx.remote_timetag);
+    _total_duplicate_latency->set(latency_us * 1000);
 
     dfatal_replica("invalid rpc: {}", rpc_code.to_string());
     __builtin_unreachable();

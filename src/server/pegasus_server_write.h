@@ -64,6 +64,8 @@ private:
     std::vector<put_rpc> _put_rpc_batch;
     std::vector<remove_rpc> _remove_rpc_batch;
 
+    dsn::perf_counter_wrapper _total_duplicate_latency;
+
     db_write_context _write_ctx;
     int64_t _decree;
 
