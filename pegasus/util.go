@@ -53,10 +53,10 @@ func crc64Hash(data []byte) uint64 {
 	return crc64.Checksum(data, crc64Table)
 }
 
-// 1451606400 means seconds since 2016.01.01-00:00:00 GMT
 func expireTsSeconds(ttl time.Duration) int32 {
 	if ttl == 0 {
 		return 0
 	}
+	// 1451606400 means seconds since 2016.01.01-00:00:00 GMT
 	return int32(ttl.Seconds()) + int32(time.Now().Unix()-1451606400)
 }

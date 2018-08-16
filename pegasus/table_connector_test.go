@@ -254,9 +254,7 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 }
 
 func TestPegasusTableConnector_ValidateHashKey(t *testing.T) {
-	var hashKey []byte
-
-	hashKey = nil
+	hashKey := []byte(nil)
 	assert.NotNil(t, validateHashKey(hashKey))
 
 	hashKey = make([]byte, 0)
@@ -358,7 +356,7 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 		// make sortKeys sorted.
 		sidBuf := []byte(fmt.Sprintf("%d", i))
 		var sidWithLeadingZero bytes.Buffer
-		for i := 0; i < 20-len(sidBuf); i++ {
+		for k := 0; k < 20-len(sidBuf); k++ {
 			sidWithLeadingZero.WriteByte('0')
 		}
 		sidWithLeadingZero.Write(sidBuf)
@@ -368,6 +366,8 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 
 	// clear keyspace
 	results, allFetched, err := tb.MultiGetRange(context.Background(), hashKey, nil, nil)
+	assert.Nil(t, err)
+	assert.True(t, allFetched)
 	for _, result := range results {
 		assert.Nil(t, tb.Del(context.Background(), hashKey, result.SortKey))
 	}
@@ -480,7 +480,7 @@ func TestPegasusTableConnector_ScanAllSortKey(t *testing.T) {
 
 	dataMap := make(map[string]string)
 	for {
-		err, completed, h, s, v := scanner.Next(context.Background())
+		completed, h, s, v, err := scanner.Next(context.Background())
 		assert.Nil(t, err)
 		if completed {
 			break
@@ -538,9 +538,10 @@ func TestPegasusTableConnector_ScanInclusive(t *testing.T) {
 	assert.Nil(t, err)
 
 	dataMap := make(map[string]string)
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 	for {
-		err, completed, h, s, v := scanner.Next(ctx)
+		completed, h, s, v, err := scanner.Next(ctx)
 		assert.Nil(t, err)
 		if completed {
 			break
@@ -602,10 +603,11 @@ func TestPegasusTableConnector_ScanExclusive(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, scanner)
 	dataMap := make(map[string]string)
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 	for {
-		err, completed, h, s, v := scanner.Next(ctx)
-		assert.Nil(t, err)
+		completed, h, s, v, err2 := scanner.Next(ctx)
+		assert.Nil(t, err2)
 		if completed {
 			break
 		}
@@ -617,7 +619,7 @@ func TestPegasusTableConnector_ScanExclusive(t *testing.T) {
 	scanner.Close()
 
 	err = cutAndCompareMaps(t, dataMap, baseMap["h1"], start, false, stop, false)
-	//fmt.Println(err.Error()) if can't cut the baseMap, abandon compare
+	assert.Nil(t, err)
 }
 
 func TestPegasusTableConnector_ScanOnePoint(t *testing.T) {
@@ -648,14 +650,14 @@ func TestPegasusTableConnector_ScanOnePoint(t *testing.T) {
 	options.StopInclusive = true
 	scanner, err := tb.GetScanner(context.Background(), []byte("h1"), start, start, options)
 	assert.Nil(t, err)
-	err, completed, h, s, v := scanner.Next(context.Background())
+	completed, h, s, v, err := scanner.Next(context.Background())
 	assert.Nil(t, err)
 	assert.False(t, completed)
 	assert.Equal(t, []byte("h1"), h)
 	assert.Equal(t, start, s)
 	assert.Equal(t, baseMap["h1"][string(start)], string(v))
 
-	err, completed, _, _, _ = scanner.Next(context.Background())
+	completed, _, _, _, err = scanner.Next(context.Background())
 	assert.Nil(t, err)
 	assert.True(t, completed)
 	scanner.Close()
@@ -760,7 +762,7 @@ func TestPegasusTableConnector_ScanOverallScan(t *testing.T) {
 	for _, s := range scanners {
 		assert.NotNil(t, s)
 		for {
-			err, completed, h, s, v := s.Next(context.Background())
+			completed, h, s, v, err := s.Next(context.Background())
 			assert.Nil(t, err)
 			if completed {
 				break
@@ -808,7 +810,7 @@ func TestPegasusTableConnector_ConcurrentCallScanner(t *testing.T) {
 
 		scanner := scanners[0]
 		for {
-			err, completed, h, s, v := scanner.Next(context.Background())
+			completed, h, s, v, err := scanner.Next(context.Background())
 			assert.Nil(t, err)
 			if completed {
 				break
@@ -850,9 +852,10 @@ func TestPegasusTableConnector_NoValueScan(t *testing.T) {
 	scanner, err := tb.GetScanner(context.Background(), []byte("h1"), []byte{}, []byte{}, options)
 	assert.Nil(t, err)
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 	for {
-		err, completed, h, s, v := scanner.Next(ctx)
+		completed, h, s, v, err := scanner.Next(ctx)
 		assert.Nil(t, err)
 		if completed {
 			break
@@ -873,7 +876,7 @@ func clearDatabase(t *testing.T, tb TableConnector) {
 	assert.NotNil(t, scanners[0])
 
 	for {
-		err1, completed, h, s, _ := scanners[0].Next(context.Background())
+		completed, h, s, _, err1 := scanners[0].Next(context.Background())
 		assert.Nil(t, err1)
 		if completed {
 			break
@@ -888,7 +891,7 @@ func clearDatabase(t *testing.T, tb TableConnector) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(scanners))
 	assert.NotNil(t, scanners[0])
-	err, completed, _, _, _ := scanners[0].Next(context.Background())
+	completed, _, _, _, err := scanners[0].Next(context.Background())
 	assert.Nil(t, err)
 	assert.True(t, completed)
 }
@@ -999,6 +1002,7 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 
 	{ // check sortkey and set sortkey are different
 		results, _, err := tb.MultiGetRange(context.Background(), []byte("h1"), nil, nil)
+		assert.Nil(t, err)
 		for _, result := range results {
 			assert.Nil(t, tb.Del(context.Background(), []byte("h1"), result.SortKey))
 		}

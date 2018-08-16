@@ -12,8 +12,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
-// Client is the main interface to pegasus.
-// Each client is bound to a pegasus cluster specified by `Config`.
+// Client manages the client sessions to the pegasus cluster specified by `Config`.
 // In order to reuse the previous connections, it's recommended to use one singleton
 // client in your program. The operations upon a client instance are thread-safe.
 type Client interface {
@@ -34,9 +33,10 @@ type pegasusClient struct {
 	replicaMgr *session.ReplicaManager
 }
 
+// NewClient creates a new instance of pegasus client.
 func NewClient(cfg Config) Client {
 	if len(cfg.MetaServers) == 0 {
-		pegalog.GetLogger().Fatalln("pegasus-go-client: meta sever list should not be empty")
+		pegalog.GetLogger().Fatalln("pegasus-go-client: meta server list should not be empty")
 		return nil
 	}
 
@@ -58,9 +58,10 @@ func (p *pegasusClient) Close() error {
 		}
 	}
 
-	err := p.metaMgr.Close()
-	err = p.replicaMgr.Close()
-	return err
+	if err := p.metaMgr.Close(); err != nil {
+		pegalog.GetLogger().Fatalln("pegasus-go-client: unable to close metaMgr: ", err)
+	}
+	return p.replicaMgr.Close()
 }
 
 func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableConnector, error) {

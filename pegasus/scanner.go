@@ -6,6 +6,7 @@ package pegasus
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
 )
 
+// ScannerOptions is the options for GetScanner and GetUnorderedScanners.
 type ScannerOptions struct {
 	BatchSize      int  // internal buffer batch size
 	StartInclusive bool // if the startSortKey is included
@@ -31,14 +33,16 @@ const (
 	batchError        = -3
 )
 
+// Scanner defines the interface of client-side scanning.
 type Scanner interface {
-	Next(ctx context.Context) (err error, completed bool, hashKey []byte, sortKey []byte, value []byte)
+	// Grabs the next entry.
+	Next(ctx context.Context) (completed bool, hashKey []byte, sortKey []byte, value []byte, err error)
+
 	Close() error
 }
 
 type pegasusScanner struct {
 	table    *pegasusTableConnector
-	hashKey  *base.Blob
 	startKey *base.Blob
 	stopKey  *base.Blob
 	options  *ScannerOptions
@@ -57,6 +61,7 @@ type pegasusScanner struct {
 	logger pegalog.Logger
 }
 
+// NewScanOptions returns the default ScannerOptions.
 func NewScanOptions() *ScannerOptions {
 	return &ScannerOptions{
 		BatchSize:      1000,
@@ -101,8 +106,8 @@ func newPegasusScannerForUnorderedScanners(table *pegasusTableConnector, gpidSli
 		&base.Blob{Data: []byte{0xFF, 0xFF}})
 }
 
-func (p *pegasusScanner) Next(ctx context.Context) (err error, completed bool, hashKey []byte,
-	sortKey []byte, value []byte) {
+func (p *pegasusScanner) Next(ctx context.Context) (completed bool, hashKey []byte,
+	sortKey []byte, value []byte, err error) {
 	if p.batchStatus == batchError {
 		err = fmt.Errorf("last Next() failed")
 		return
@@ -112,7 +117,7 @@ func (p *pegasusScanner) Next(ctx context.Context) (err error, completed bool, h
 		return
 	}
 
-	err, completed, hashKey, sortKey, value = func() (err error, completed bool, hashKey []byte, sortKey []byte, value []byte) {
+	completed, hashKey, sortKey, value, err = func() (completed bool, hashKey []byte, sortKey []byte, value []byte, err error) {
 		// Prevent two concurrent calls on Next of the same Scanner.
 		if p.isNextRunning.Load() != 0 {
 			err = fmt.Errorf("there can be no concurrent calls on Next of the same Scanner")
@@ -131,8 +136,8 @@ func (p *pegasusScanner) Next(ctx context.Context) (err error, completed bool, h
 	return
 }
 
-func (p *pegasusScanner) doNext(ctx context.Context) (err error, completed bool, hashKey []byte,
-	sortKey []byte, value []byte) {
+func (p *pegasusScanner) doNext(ctx context.Context) (completed bool, hashKey []byte,
+	sortKey []byte, value []byte, err error) {
 	// until we have the valid batch
 	for p.batchIndex++; p.batchIndex >= len(p.batchEntries); p.batchIndex++ {
 		if p.batchStatus == batchScanFinished {
@@ -140,11 +145,10 @@ func (p *pegasusScanner) doNext(ctx context.Context) (err error, completed bool,
 				completed = true
 				p.logger.Print(" Scanning on all partitions has been completed")
 				return
-			} else {
-				p.gpidIndex--
-				p.curGpid = p.gpidSlice[p.gpidIndex]
-				p.batchClear()
 			}
+			p.gpidIndex--
+			p.curGpid = p.gpidSlice[p.gpidIndex]
+			p.batchClear()
 		} else if p.batchStatus == batchEmpty {
 			return p.startScanPartition(ctx)
 		} else {
@@ -153,7 +157,7 @@ func (p *pegasusScanner) doNext(ctx context.Context) (err error, completed bool,
 		}
 	}
 	// batch.SortKey=<hashKey,sortKey>
-	err, hashKey, sortKey = restoreSortKeyHashKey(p.batchEntries[p.batchIndex].SortKey)
+	hashKey, sortKey, err = restoreSortKeyHashKey(p.batchEntries[p.batchIndex].SortKey)
 	value = p.batchEntries[p.batchIndex].Value
 	return
 }
@@ -164,8 +168,8 @@ func (p *pegasusScanner) batchClear() {
 	p.batchStatus = batchEmpty
 }
 
-func (p *pegasusScanner) startScanPartition(ctx context.Context) (err error, completed bool, hashKey []byte,
-	sortKey []byte, value []byte) {
+func (p *pegasusScanner) startScanPartition(ctx context.Context) (completed bool, hashKey []byte,
+	sortKey []byte, value []byte, err error) {
 	request := rrdb.NewGetScannerRequest()
 	if len(p.batchEntries) == 0 {
 		request.StartKey = p.startKey
@@ -202,8 +206,8 @@ func (p *pegasusScanner) startScanPartition(ctx context.Context) (err error, com
 	return
 }
 
-func (p *pegasusScanner) nextBatch(ctx context.Context) (err error, completed bool, hashKey []byte,
-	sortKey []byte, value []byte) {
+func (p *pegasusScanner) nextBatch(ctx context.Context) (completed bool, hashKey []byte,
+	sortKey []byte, value []byte, err error) {
 	request := &rrdb.ScanRequest{ContextID: p.batchStatus}
 	part := p.table.getPartitionByGpid(p.curGpid)
 	response, err := part.Scan(ctx, p.curGpid, request)
@@ -250,7 +254,8 @@ func (p *pegasusScanner) Close() error {
 	var err error
 
 	// try to close in 100ms,
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*100)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	defer cancel()
 
 	// if batchScanFinished or batchEmpty, server side will clear scanner automatically
 	// if not, clear scanner manually
@@ -265,4 +270,19 @@ func (p *pegasusScanner) Close() error {
 	p.gpidIndex = 0
 	p.closed = true
 	return WrapError(err, OpScannerClose)
+}
+
+func restoreSortKeyHashKey(key []byte) (hashKey []byte, sortKey []byte, err error) {
+	if key == nil || len(key) < 2 {
+		return nil, nil, fmt.Errorf("unable to restore key: %s", key)
+	}
+
+	hashKeyLen := 0xFFFF & binary.BigEndian.Uint16(key[:2])
+	if hashKeyLen != 0xFFFF && int(2+hashKeyLen) <= len(key) {
+		hashKey = key[2 : 2+hashKeyLen]
+		sortKey = key[2+hashKeyLen:]
+		return hashKey, sortKey, nil
+	}
+
+	return nil, nil, fmt.Errorf("unable to restore key, hashKey length invalid")
 }

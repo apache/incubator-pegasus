@@ -8,16 +8,19 @@ import (
 	"fmt"
 )
 
+// PError is the return error type of all interfaces of pegasus client.
 type PError struct {
 	// Err is the error that occurred during the operation.
 	Err error
 
-	// Op is the operation that caused this error
+	// The failed operation
 	Op OpType
 }
 
+// OpType is the type of operation that led to PError.
 type OpType int
 
+// Operation types
 const (
 	OpQueryConfig OpType = iota
 	OpGet

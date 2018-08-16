@@ -6,8 +6,10 @@ package pegasus
 
 import "github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 
+// CheckType defines the types of value checking in a CAS.
 type CheckType int
 
+// The value checking types
 const (
 	CheckTypeNoCheck = CheckType(rrdb.CasCheckType_CT_NO_CHECK)
 
@@ -37,6 +39,7 @@ const (
 	CheckTypeIntGreater        = CheckType(rrdb.CasCheckType_CT_VALUE_BYTES_GREATER)        // int compare: value > operand
 )
 
+// CheckAndSetResult is the result of a CAS.
 type CheckAndSetResult struct {
 	// true if set value succeed.
 	SetSucceed bool
@@ -51,6 +54,7 @@ type CheckAndSetResult struct {
 	CheckValueReturned bool
 }
 
+// CheckAndSetOptions is the options of a CAS.
 type CheckAndSetOptions struct {
 	SetValueTTLSeconds int  // time to live in seconds of the set value, 0 means no ttl.
 	ReturnCheckValue   bool // if return the check value in results.

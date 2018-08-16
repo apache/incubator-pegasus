@@ -56,7 +56,8 @@ func TestPegasusClient_OpenTableTimeout(t *testing.T) {
 
 	client := NewClient(cfg)
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*2)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
 	tb, err := client.OpenTable(ctx, "temp")
 	assert.Equal(t, ctx.Err(), context.DeadlineExceeded)
 	assert.Nil(t, tb)
@@ -83,7 +84,8 @@ func TestPegasusClient_ConcurrentOpenSameTable(t *testing.T) {
 	for i := 0; i < openTableQueries; i++ {
 		wg.Add(1)
 		go func() {
-			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
 			tb, err := client.OpenTable(ctx, "temp")
 			assert.Nil(t, err)
 			tblist = append(tblist, tb)
@@ -115,7 +117,8 @@ func TestPegasusClient_ConcurrentMetaQueries(t *testing.T) {
 
 		id := i
 		go func() {
-			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
 			_, err := client.OpenTable(ctx, "table_not_exist"+fmt.Sprint(id))
 			assert.NotNil(t, err)
 			wg.Done()

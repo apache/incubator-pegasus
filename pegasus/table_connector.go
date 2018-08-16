@@ -23,11 +23,12 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
+// KeyValue is the returned type of MultiGet and MultiGetRange.
 type KeyValue struct {
 	SortKey, Value []byte
 }
 
-// Defaults to DefaultMultiGetOptions.
+// MultiGetOptions is the options for MultiGet and MultiGetRange, defaults to DefaultMultiGetOptions.
 type MultiGetOptions struct {
 	StartInclusive bool
 	StopInclusive  bool
@@ -45,7 +46,7 @@ type MultiGetOptions struct {
 	Reverse bool
 }
 
-// Default options for MultiGet and MultiGetRange.
+// DefaultMultiGetOptions defines the defaults of MultiGetOptions.
 var DefaultMultiGetOptions = &MultiGetOptions{
 	StartInclusive: true,
 	StopInclusive:  false,
@@ -57,6 +58,7 @@ var DefaultMultiGetOptions = &MultiGetOptions{
 	MaxFetchSize:  100000,
 }
 
+// TableConnector is used to communicate with single Pegasus table.
 type TableConnector interface {
 	// Get retrieves the entry for `hashKey` + `sortKey`.
 	// Returns nil if no entry matches.
@@ -157,7 +159,7 @@ type pegasusTableConnector struct {
 	logger pegalog.Logger
 
 	tableName string
-	appId     int32
+	appID     int32
 	parts     []*replicaNode
 	mu        sync.RWMutex
 
@@ -170,7 +172,7 @@ type replicaNode struct {
 	pconf   *replication.PartitionConfiguration
 }
 
-// Query for the configuration of the given table, and set up connection to
+// ConnectTable queries for the configuration of the given table, and set up connection to
 // the replicas which the table locates on.
 func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager) (TableConnector, error) {
 	p := &pegasusTableConnector{
@@ -212,7 +214,7 @@ func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfg
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.appId = resp.AppID
+	p.appID = resp.AppID
 
 	if len(resp.Partitions) > len(p.parts) {
 		// during partition split or first configuration update of client.
@@ -225,7 +227,7 @@ func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfg
 	// TODO(wutao1): make sure PartitionIndex are continuous
 	for _, pconf := range resp.Partitions {
 		if pconf == nil || pconf.Primary == nil || pconf.Primary.GetRawAddress() == 0 {
-			return fmt.Errorf("unable to resolve routing table [appid: %d]: [%v]", p.appId, pconf)
+			return fmt.Errorf("unable to resolve routing table [appid: %d]: [%v]", p.appID, pconf)
 		}
 		r := &replicaNode{
 			pconf:   pconf,
@@ -293,7 +295,7 @@ func validateSortKeys(sortKeys [][]byte) error {
 	return nil
 }
 
-// Wraps up the internal errors for ensuring that all types of errors
+// WrapError wraps up the internal errors for ensuring that all types of errors
 // returned by public interfaces are pegasus.PError.
 func WrapError(err error, op OpType) error {
 	if err != nil {
@@ -331,9 +333,8 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 		}
 		if err = p.handleReplicaError(err, gpid, part); err != nil {
 			return nil, err
-		} else {
-			return resp.Value.Data, nil
 		}
+		return resp.Value.Data, nil
 	}()
 	return b, WrapError(err, OpGet)
 }
@@ -407,7 +408,7 @@ func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte,
 		if err := validateHashKey(hashKey); err != nil {
 			return nil, false, err
 		}
-		if sortKeys != nil && len(sortKeys) != 0 {
+		if len(sortKeys) != 0 {
 			// sortKeys are nil-able, nil means fetching all entries.
 			if err := validateSortKeys(sortKeys); err != nil {
 				return nil, false, err
@@ -607,9 +608,8 @@ func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortK
 	if err == nil {
 		if ttl == -2 {
 			return false, nil
-		} else {
-			return true, nil
 		}
+		return true, nil
 	}
 	return false, WrapError(err, OpExist)
 }
@@ -623,7 +623,7 @@ func (p *pegasusTableConnector) GetScanner(ctx context.Context, hashKey []byte, 
 
 		start := encodeHashKeySortKey(hashKey, startSortKey)
 		var stop *base.Blob
-		if stopSortKey == nil || len(stopSortKey) == 0 {
+		if len(stopSortKey) == 0 {
 			stop = encodeHashKeySortKey(hashKey, []byte{0xFF, 0xFF}) // []byte{0xFF, 0xFF} means the max sortKey value
 			options.StopInclusive = false
 		} else {
@@ -725,7 +725,7 @@ func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte,
 		request.SetSortKey = &base.Blob{Data: setSortKey}
 		request.SetValue = &base.Blob{Data: setValue}
 		request.ReturnCheckValue = options.ReturnCheckValue
-		if bytes.Compare(checkSortKey, setSortKey) != 0 {
+		if !bytes.Equal(checkSortKey, setSortKey) {
 			request.SetDiffSortKey = true
 		} else {
 			request.SetDiffSortKey = false
@@ -769,9 +769,8 @@ func (p *pegasusTableConnector) SortKeyCount(ctx context.Context, hashKey []byte
 		}
 		if err = p.handleReplicaError(err, gpid, part); err != nil {
 			return 0, err
-		} else {
-			return resp.Count, nil
 		}
+		return resp.Count, nil
 	}()
 	return count, WrapError(err, OpSortKeyCount)
 }
@@ -785,7 +784,7 @@ func (p *pegasusTableConnector) getPartition(hashKey []byte) (*base.Gpid, *sessi
 	defer p.mu.RUnlock()
 
 	gpid := &base.Gpid{
-		Appid:          p.appId,
+		Appid:          p.appID,
 		PartitionIndex: getPartitionIndex(hashKey, len(p.parts)),
 	}
 	part := p.parts[gpid.PartitionIndex].session
@@ -861,12 +860,13 @@ func (p *pegasusTableConnector) loopForAutoUpdate() error {
 			return nil
 		}
 	}
-	return nil
 }
 
 func (p *pegasusTableConnector) selfUpdate() bool {
 	// ignore the returned error
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	if err := p.updateConf(ctx); err != nil {
 		p.logger.Printf("self update failed [table: %s]: %s", p.tableName, err.Error())
 	}
@@ -880,21 +880,6 @@ func (p *pegasusTableConnector) selfUpdate() bool {
 	return true
 }
 
-func restoreSortKeyHashKey(key []byte) (error, []byte, []byte) {
-	if key == nil || len(key) < 2 {
-		return fmt.Errorf("unable to restore key: %s", key), nil, nil
-	}
-
-	hashKeyLen := 0xFFFF & binary.BigEndian.Uint16(key[:2])
-	if hashKeyLen != 0xFFFF && int(2+hashKeyLen) <= len(key) {
-		hashKey := key[2 : 2+hashKeyLen]
-		sortKey := key[2+hashKeyLen:]
-		return nil, hashKey, sortKey
-	}
-
-	return fmt.Errorf("unable to restore key, hashKey length invalid"), nil, nil
-}
-
 func (p *pegasusTableConnector) getGpid(key []byte) (*base.Gpid, error) {
 	if key == nil || len(key) < 2 {
 		return nil, fmt.Errorf("unable to getGpid by key: %s", key)
@@ -902,7 +887,7 @@ func (p *pegasusTableConnector) getGpid(key []byte) (*base.Gpid, error) {
 
 	hashKeyLen := 0xFFFF & binary.BigEndian.Uint16(key[:2])
 	if hashKeyLen != 0xFFFF && int(2+hashKeyLen) <= len(key) {
-		gpid := &base.Gpid{Appid: p.appId}
+		gpid := &base.Gpid{Appid: p.appID}
 		if hashKeyLen == 0 {
 			gpid.PartitionIndex = int32(crc64Hash(key[2:]) % uint64(len(p.parts)))
 		} else {
@@ -920,7 +905,7 @@ func (p *pegasusTableConnector) getAllGpid() []*base.Gpid {
 	count := len(p.parts)
 	ret := make([]*base.Gpid, count)
 	for i := 0; i < count; i++ {
-		ret[i] = &base.Gpid{Appid: p.appId, PartitionIndex: int32(i)}
+		ret[i] = &base.Gpid{Appid: p.appID, PartitionIndex: int32(i)}
 	}
 	return ret
 }

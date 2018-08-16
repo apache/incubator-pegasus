@@ -4,6 +4,7 @@
 
 package pegasus
 
+// Config is the configuration of pegasus client.
 type Config struct {
 	MetaServers []string `json:"meta_servers"`
 }
