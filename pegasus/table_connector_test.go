@@ -5,6 +5,7 @@
 package pegasus
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"bytes"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
@@ -107,7 +107,6 @@ func TestPegasusTableConnector_SingleKeyOperations(t *testing.T) {
 	wg.Wait()
 }
 
-// ensure client will return InvalidArguments errors when input is empty.
 func TestPegasusTableConnector_EmptyInput(t *testing.T) {
 	cfg := Config{
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
@@ -119,79 +118,97 @@ func TestPegasusTableConnector_EmptyInput(t *testing.T) {
 	assert.Nil(t, err)
 	defer tb.Close()
 
-	// === empty hashkey === //
-
-	_, err = tb.TTL(context.Background(), nil, nil)
-	assert.NotNil(t, err)
-	_, err2 := tb.TTL(context.Background(), []byte{}, nil)
-	assert.Equal(t, err, err2)
-
-	_, err = tb.Exist(context.Background(), nil, nil)
-	assert.NotNil(t, err)
-	_, err2 = tb.Exist(context.Background(), []byte{}, nil)
-	assert.Equal(t, err, err2)
-
-	err = tb.SetTTL(context.Background(), nil, nil, nil, 0)
-	assert.NotNil(t, err)
-	err2 = tb.Set(context.Background(), []byte{}, nil, nil)
-	assert.Equal(t, err, err2)
-
+	// Get
 	_, err = tb.Get(context.Background(), nil, nil)
-	assert.NotNil(t, err)
-	_, err2 = tb.Get(context.Background(), []byte{}, nil)
-	assert.Equal(t, err, err2)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	_, err = tb.Get(context.Background(), []byte{}, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
+	_, err = tb.Get(context.Background(), []byte("h1"), nil)
+	assert.Contains(t, err.Error(), "sortkey must not be nil")
+	_, err = tb.Get(context.Background(), []byte("h1"), []byte(""))
+	assert.Nil(t, err)
 
-	_, _, err = tb.MultiGet(context.Background(), nil, nil)
-	assert.NotNil(t, err)
-	_, _, err2 = tb.MultiGetOpt(context.Background(), []byte{}, nil, &MultiGetOptions{})
-	assert.Equal(t, err, err2)
+	// Set
+	err = tb.SetTTL(context.Background(), nil, nil, nil, 0)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	err = tb.Set(context.Background(), []byte{}, nil, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
+	err = tb.SetTTL(context.Background(), []byte("h1"), nil, []byte(""), 0)
+	assert.Contains(t, err.Error(), "sortkey must not be nil")
+	err = tb.SetTTL(context.Background(), []byte("h1"), []byte(""), nil, 0)
+	assert.Contains(t, err.Error(), "value must not be nil")
+	err = tb.SetTTL(context.Background(), []byte("h1"), []byte(""), []byte(""), 0)
+	assert.Nil(t, err)
 
-	_, _, err = tb.MultiGetRange(context.Background(), nil, nil, nil)
-	assert.NotNil(t, err)
-	_, _, err2 = tb.MultiGetRangeOpt(context.Background(), []byte{}, nil, nil, &MultiGetOptions{})
-	assert.Equal(t, err, err2)
-
-	err = tb.MultiSet(context.Background(), nil, nil, nil)
-	assert.NotNil(t, err)
-	err2 = tb.MultiSetOpt(context.Background(), []byte{}, nil, nil, 0)
-	assert.Equal(t, err, err2)
-
-	err = tb.MultiDel(context.Background(), nil, nil)
-	assert.NotNil(t, err)
-	err2 = tb.MultiDel(context.Background(), []byte{}, nil)
-	assert.Equal(t, err, err2)
-
+	// Del
 	err = tb.Del(context.Background(), nil, nil)
-	assert.NotNil(t, err)
-	err2 = tb.Del(context.Background(), []byte{}, nil)
-	assert.Equal(t, err, err2)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	err = tb.Del(context.Background(), []byte{}, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
+	err = tb.Del(context.Background(), []byte("h1"), nil)
+	assert.Contains(t, err.Error(), "sortkey must not be nil")
+	err = tb.Del(context.Background(), []byte("h1"), []byte(""))
+	assert.Nil(t, err)
 
-	// === empty value === //
+	// MultiGet
+	_, _, err = tb.MultiGet(context.Background(), nil, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	_, _, err = tb.MultiGetOpt(context.Background(), []byte{}, nil, &MultiGetOptions{})
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
+	_, _, err = tb.MultiGet(context.Background(), []byte("h1"), nil)
+	assert.Nil(t, err)
+	_, _, err = tb.MultiGetOpt(context.Background(), []byte("h1"), [][]byte{}, &MultiGetOptions{})
+	assert.Nil(t, err)
+	_, _, err = tb.MultiGetOpt(context.Background(), []byte("h1"), [][]byte{nil}, &MultiGetOptions{})
+	assert.Contains(t, err.Error(), "sortkeys[0] must not be nil")
 
-	err = tb.SetTTL(context.Background(), []byte("h1"), nil, nil, 0)
-	assert.NotNil(t, err)
-	err2 = tb.Set(context.Background(), []byte("h1"), nil, []byte{})
-	assert.Equal(t, err, err2)
+	// MultiGetRange
+	_, _, err = tb.MultiGetRange(context.Background(), nil, nil, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	_, _, err = tb.MultiGetRangeOpt(context.Background(), []byte{}, nil, nil, &MultiGetOptions{})
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
 
-	err = tb.MultiSet(context.Background(), []byte("h1"), [][]byte{}, nil)
-	assert.NotNil(t, err)
-	err2 = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{}, [][]byte{}, 0)
-	assert.Equal(t, err, err2)
-
-	err = tb.MultiSet(context.Background(), []byte("h1"), [][]byte{[]byte("s1")}, [][]byte{nil})
-	assert.NotNil(t, err)
-	err2 = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{[]byte("s1")}, [][]byte{[]byte{}}, 0)
-	assert.Equal(t, err, err2)
-
-	// === empty sortkeys === //
-
+	// MultiSet
+	err = tb.MultiSet(context.Background(), nil, nil, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	err = tb.MultiSetOpt(context.Background(), []byte{}, nil, nil, 0)
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
+	err = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{[]byte("s1")}, nil, 0)
+	assert.Contains(t, err.Error(), "values must not be nil")
+	err = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{[]byte("s1")}, [][]byte{}, 0)
+	assert.Contains(t, err.Error(), "values must not be empty")
+	err = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{[]byte("s1")}, [][]byte{nil}, 0)
+	assert.Contains(t, err.Error(), "values[0] must not be nil")
 	err = tb.MultiSet(context.Background(), []byte("h1"), nil, [][]byte{[]byte("v1")})
-	assert.NotNil(t, err)
-	err2 = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{}, [][]byte{[]byte("v1")}, 0)
-	assert.Equal(t, err, err2)
+	assert.Contains(t, err.Error(), "sortkeys must not be nil")
+	err = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{}, [][]byte{[]byte("v1")}, 0)
+	assert.Contains(t, err.Error(), "sortkeys must not be empty")
+	err = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{nil}, [][]byte{[]byte("v1")}, 0)
+	assert.Contains(t, err.Error(), "sortkeys[0] must not be nil")
+	err = tb.MultiSetOpt(context.Background(), []byte("h1"), [][]byte{[]byte("")}, [][]byte{[]byte("v1")}, 0)
+	assert.Nil(t, err)
 
+	// MultiDel
+	err = tb.MultiDel(context.Background(), nil, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	err = tb.MultiDel(context.Background(), []byte{}, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
 	err = tb.MultiDel(context.Background(), []byte("h1"), nil)
-	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "sortkeys must not be nil")
+	err = tb.MultiDel(context.Background(), []byte("h1"), [][]byte{})
+	assert.Contains(t, err.Error(), "sortkeys must not be empty")
+	err = tb.MultiDel(context.Background(), []byte("h1"), [][]byte{nil})
+	assert.Contains(t, err.Error(), "sortkeys[0] must not be nil")
+
+	// TTL
+	_, err = tb.TTL(context.Background(), nil, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	_, err = tb.TTL(context.Background(), []byte{}, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
+	_, err = tb.TTL(context.Background(), []byte("h1"), nil)
+	assert.Contains(t, err.Error(), "sortkey must not be nil")
+	_, err = tb.TTL(context.Background(), []byte("h1"), []byte(""))
+	assert.Nil(t, err)
 }
 
 func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {

@@ -60,24 +60,28 @@ var DefaultMultiGetOptions = &MultiGetOptions{
 type TableConnector interface {
 	// Get retrieves the entry for `hashKey` + `sortKey`.
 	// Returns nil if no entry matches.
-	// `hashKey` : CAN'T be nil.
+	// `hashKey` : CAN'T be nil or empty.
+	// `sortKey` : CAN'T be nil but CAN be empty.
 	Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error)
 
 	// Set the entry for `hashKey` + `sortKey` to `value`.
 	// If Set is called or `ttl` == 0, no data expiration is specified.
-	// `hashKey` / `value` : CAN'T be nil.
+	// `hashKey` : CAN'T be nil or empty.
+	// `sortKey` / `value` : CAN'T be nil but CAN be empty.
 	Set(ctx context.Context, hashKey []byte, sortKey []byte, value []byte) error
 	SetTTL(ctx context.Context, hashKey []byte, sortKey []byte, value []byte, ttl time.Duration) error
 
 	// Delete the entry for `hashKey` + `sortKey`.
-	// `hashKey` : CAN'T be nil.
+	// `hashKey` : CAN'T be nil or empty.
+	// `sortKey` : CAN'T be nil but CAN be empty.
 	Del(ctx context.Context, hashKey []byte, sortKey []byte) error
 
 	// MultiGet/MultiGetOpt retrieves the multiple entries for `hashKey` + `sortKeys[i]` atomically in one operation.
 	// MultiGet is identical to MultiGetOpt except that the former uses DefaultMultiGetOptions as `options`.
 	//
 	// If `sortKeys` are given empty or nil, all entries under `hashKey` will be retrieved.
-	// `hashKey` : CAN'T be nil.
+	// `hashKey` : CAN'T be nil or empty.
+	// `sortKeys[i]` : CAN'T be nil but CAN be empty.
 	//
 	// The returned key-value pairs are sorted by sort key in ascending order.
 	// Returns nil if no entries match.
@@ -101,27 +105,29 @@ type TableConnector interface {
 	MultiGetRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *MultiGetOptions) ([]*KeyValue, bool, error)
 
 	// MultiSet sets the multiple entries for `hashKey` + `sortKeys[i]` atomically in one operation.
-	// `hashKey` / `sortKeys` / `values` / `values[i]`: CAN'T be nil.
+	// `hashKey` / `sortKeys` / `values` : CAN'T be nil or empty.
+	// `sortKeys[i]` / `values[i]` : CAN'T be nil but CAN be empty.
 	MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte) error
 	MultiSetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttl time.Duration) error
 
 	// MultiDel deletes the multiple entries under `hashKey` all in one operation.
-	// `hashKey` / `sortKeys`: CAN'T be nil.
-	// Returns sort key of deleted entries.
+	// `hashKey` / `sortKeys` : CAN'T be nil or empty.
+	// `sortKeys[i]` : CAN'T be nil but CAN be empty.
 	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error
 
 	// Returns ttl(time-to-live) in seconds: -1 if ttl is not set; -2 if entry doesn't exist.
-	// `hashKey`: CAN'T be nil.
+	// `hashKey` : CAN'T be nil or empty.
+	// `sortKey` : CAN'T be nil but CAN be empty.
 	TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error)
 
 	// Check value existence for the entry for `hashKey` + `sortKey`.
-	// `hashKey`: CAN'T be nil.
+	// `hashKey`: CAN'T be nil or empty.
 	Exist(ctx context.Context, hashKey []byte, sortKey []byte) (bool, error)
 
 	// Get Scanner for {startSortKey, stopSortKey} within hashKey.
 	// startSortKey: nil or len(startSortKey) == 0 means start from begin.
 	// stopSortKey: nil or len(stopSortKey) == 0 means stop to end.
-	// `hashKey`: CAN'T be nil.
+	// `hashKey`: CAN'T be nil or empty.
 	GetScanner(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *ScannerOptions) (Scanner, error)
 
 	// Get Scanners for all data in pegasus, the count of scanners will
@@ -138,7 +144,7 @@ type TableConnector interface {
 		checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error)
 
 	// Returns the count of sortkeys under hashkey.
-	// `hashKey`: CAN'T be nil.
+	// `hashKey`: CAN'T be nil or empty.
 	SortKeyCount(ctx context.Context, hashKey []byte) (int64, error)
 
 	Close() error
@@ -231,25 +237,58 @@ func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfg
 }
 
 func validateHashKey(hashKey []byte) error {
-	if len(hashKey) == 0 || hashKey == nil {
-		return fmt.Errorf("InvalidParameter: hash key must not be empty")
+	if hashKey == nil {
+		return fmt.Errorf("InvalidParameter: hashkey must not be nil")
+	}
+	if len(hashKey) == 0 {
+		return fmt.Errorf("InvalidParameter: hashkey must not be empty")
 	}
 	if len(hashKey) > math.MaxUint16 {
-		return fmt.Errorf("InvalidParameter: length of hash key (%d) must be less than %d", len(hashKey), math.MaxUint16)
+		return fmt.Errorf("InvalidParameter: length of hashkey (%d) must be less than %d", len(hashKey), math.MaxUint16)
 	}
 	return nil
 }
 
 func validateValue(value []byte) error {
-	if value == nil || len(value) == 0 {
-		return fmt.Errorf("InvalidParameter: value must not be empty")
+	if value == nil {
+		return fmt.Errorf("InvalidParameter: value must not be nil")
+	}
+	return nil
+}
+
+func validateValues(values [][]byte) error {
+	if values == nil {
+		return fmt.Errorf("InvalidParameter: values must not be nil")
+	}
+	if len(values) == 0 {
+		return fmt.Errorf("InvalidParameter: values must not be empty")
+	}
+	for i, value := range values {
+		if value == nil {
+			return fmt.Errorf("InvalidParameter: values[%d] must not be nil", i)
+		}
+	}
+	return nil
+}
+
+func validateSortKey(sortKey []byte) error {
+	if sortKey == nil {
+		return fmt.Errorf("InvalidParameter: sortkey must not be nil")
 	}
 	return nil
 }
 
 func validateSortKeys(sortKeys [][]byte) error {
-	if sortKeys == nil || len(sortKeys) == 0 {
+	if sortKeys == nil {
+		return fmt.Errorf("InvalidParameter: sortkeys must not be nil")
+	}
+	if len(sortKeys) == 0 {
 		return fmt.Errorf("InvalidParameter: sortkeys must not be empty")
+	}
+	for i, sortKey := range sortKeys {
+		if sortKey == nil {
+			return fmt.Errorf("InvalidParameter: sortkeys[%d] must not be nil", i)
+		}
 	}
 	return nil
 }
@@ -273,6 +312,9 @@ func WrapError(err error, op OpType) error {
 func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error) {
 	b, err := func() ([]byte, error) {
 		if err := validateHashKey(hashKey); err != nil {
+			return nil, err
+		}
+		if err := validateSortKey(sortKey); err != nil {
 			return nil, err
 		}
 
@@ -299,6 +341,9 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 func (p *pegasusTableConnector) SetTTL(ctx context.Context, hashKey []byte, sortKey []byte, value []byte, ttl time.Duration) error {
 	err := func() error {
 		if err := validateHashKey(hashKey); err != nil {
+			return err
+		}
+		if err := validateSortKey(sortKey); err != nil {
 			return err
 		}
 		if err := validateValue(value); err != nil {
@@ -331,6 +376,9 @@ func (p *pegasusTableConnector) Del(ctx context.Context, hashKey []byte, sortKey
 		if err := validateHashKey(hashKey); err != nil {
 			return err
 		}
+		if err := validateSortKey(sortKey); err != nil {
+			return err
+		}
 
 		key := encodeHashKeySortKey(hashKey, sortKey)
 		gpid, part := p.getPartition(hashKey)
@@ -359,8 +407,11 @@ func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte,
 		if err := validateHashKey(hashKey); err != nil {
 			return nil, false, err
 		}
-		if sortKeys == nil {
-			sortKeys = make([][]byte, 0)
+		if sortKeys != nil && len(sortKeys) != 0 {
+			// sortKeys are nil-able, nil means fetching all entries.
+			if err := validateSortKeys(sortKeys); err != nil {
+				return nil, false, err
+			}
 		}
 
 		request := rrdb.NewMultiGetRequest()
@@ -450,13 +501,8 @@ func (p *pegasusTableConnector) MultiSetOpt(ctx context.Context, hashKey []byte,
 		if err := validateSortKeys(sortKeys); err != nil {
 			return err
 		}
-		if values == nil || len(values) == 0 {
-			return fmt.Errorf("InvalidParameter: values must not be empty")
-		}
-		for _, v := range values {
-			if err := validateValue(v); err != nil {
-				return err
-			}
+		if err := validateValues(values); err != nil {
+			return err
 		}
 		if len(sortKeys) != len(values) {
 			return fmt.Errorf("InvalidParameter: unmatched key-value pairs: len(sortKeys)=%d len(values)=%d",
@@ -527,6 +573,9 @@ func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, so
 
 func (p *pegasusTableConnector) doTTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error) {
 	if err := validateHashKey(hashKey); err != nil {
+		return 0, err
+	}
+	if err := validateSortKey(sortKey); err != nil {
 		return 0, err
 	}
 
