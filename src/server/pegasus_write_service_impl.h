@@ -329,6 +329,21 @@ public:
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);
         }
+
+        std::for_each(
+            update.mutate_list.begin(), update.mutate_list.end(), [&](const auto &mu) mutable {
+                if (mu.operation != ::dsn::apps::mutate_operation::MO_PUT &&
+                    mu.operation != ::dsn::apps::mutate_operation::MO_DELETE)
+                    resp.error = rocksdb::Status::kInvalidArgument;
+            });
+        if (resp.error) {
+            derror_replica("invalid argument for check_and_mutate: decree = {}, error = {}",
+                           decree,
+                           "mutations have invalid operations");
+            // we should write empty record to update rocksdb's last flushed decree
+            return empty_put(decree);
+        }
+
         if (!is_check_type_supported(update.check_type)) {
             derror_replica("invalid argument for check_and_mutate: decree = {}, error = {}",
                            decree,
@@ -389,7 +404,6 @@ public:
                                      check_value,
                                      invalid_argument);
 
-        resp.error = rocksdb::Status::OK().code();
         if (passed) {
             for (auto &m : update.mutate_list) {
                 ::dsn::blob key;
@@ -399,12 +413,6 @@ public:
                         decree, key, m.value, static_cast<uint32_t>(m.set_expire_ts_seconds));
                 } else if (m.operation == ::dsn::apps::mutate_operation::MO_DELETE) {
                     resp.error = db_write_batch_delete(decree, key);
-                } else {
-                    derror_replica("invalid argument for check_and_mutate: decree = {}, error = {}",
-                                   decree,
-                                   "mutate_operation {} not supported",
-                                   m.operation);
-                    resp.error = rocksdb::Status::kInvalidArgument;
                 }
 
                 // in case of failure, cancel mutations

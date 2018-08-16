@@ -204,7 +204,6 @@ static command_executor commands[] = {
         "[bytes_less|bytes_less_or_equal|bytes_equal|bytes_greater_or_equal|bytes_greater] "
         "[int_less|int_less_or_equal|int_equal|int_greater_or_equal|int_greater] "
         "[-o|--check_operand str] "
-        "[-m|--mutations] "
         "[-r|--return_check_value]",
         data_operations,
     },
@@ -560,7 +559,11 @@ void run()
         if (arg_count > 0) {
             auto iter = s_commands_map.find(args[0]);
             if (iter != s_commands_map.end()) {
+                // command executions(e.g. check_and_mutate) may have the different hints, so cancel
+                // the commands hints temporarily
+                linenoiseSetHintsCallback(nullptr);
                 execute_command(iter->second, arg_count, args);
+                linenoiseSetHintsCallback(hintsCallback);
             } else {
                 std::cout << "ERROR: invalid subcommand '" << args[0] << "'" << std::endl;
                 print_help();

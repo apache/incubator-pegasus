@@ -1454,32 +1454,59 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
     return true;
 }
 
-inline void load_mutations(pegasus::pegasus_client::mutations &mutations)
+inline int mutation_check(int args_count, sds *args)
 {
-    std::string str;
-    std::stringstream ss;
-    while (getline(std::cin, str) && str != "ok") {
-        std::string op, sort_key, value;
-        int ttl = 0;
+    int ret = -2;
+    if (args_count > 0) {
+        std::string op = unescape_str(args[0]);
+        if (op == "ok")
+            ret = -1;
+        else if (op == "set" && (args_count == 3 || args_count == 4))
+            ret = 0;
+        else if (op == "del" && args_count == 2)
+            ret = 1;
+    }
+    return ret;
+}
 
-        ss << str;
-        ss >> op >> sort_key >> value >> ttl;
-        if (op == "set") {
+inline void load_mutations(shell_context *sc, pegasus::pegasus_client::mutations &mutations)
+{
+    while (true) {
+        int arg_count = 0;
+        sds *args = scanfCommand(&arg_count);
+        auto cleanup = dsn::defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
+        escape_sds_argv(arg_count, args);
+
+        int ttl = 0;
+        int status = mutation_check(arg_count, args);
+        switch (status) {
+        case -1:
+            fprintf(stderr, "INFO: load mutations done.\n\n");
+            return;
+        case 0:
+            ttl = 0;
+            if (arg_count == 4) {
+                ttl = std::stoi(args[3]);
+            }
+            mutations.set(unescape_str(args[1]), unescape_str(args[2]), ttl);
+
             fprintf(stderr,
                     "LOAD: set sortkey %s, value %s, ttl %d\n",
-                    sort_key.c_str(),
-                    value.c_str(),
+                    pegasus::utils::c_escape_string(unescape_str(args[1]), sc->escape_all).c_str(),
+                    pegasus::utils::c_escape_string(unescape_str(args[2]), sc->escape_all).c_str(),
                     ttl);
-            mutations.set(sort_key, value, ttl);
-        } else if (op == "del") {
-            fprintf(stderr, "LOAD: del sortkey %s\n", sort_key.c_str());
-            mutations.del(sort_key);
-        } else {
-            fprintf(stderr, "ERROR: unknown mutate operator: %s\n", op.c_str());
+            break;
+        case 1:
+            mutations.del(unescape_str(args[1]));
+            fprintf(stderr,
+                    "LOAD: del sortkey %s\n",
+                    pegasus::utils::c_escape_string(unescape_str(args[1]), sc->escape_all).c_str());
+            break;
+        default:
+            fprintf(stderr, "ERROR: invalid mutation, print \"ok\" to finish loading\n");
+            break;
         }
-        ss.clear();
     }
-    fprintf(stderr, "INFO: load mutations done.\n\n");
 }
 
 inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments args)
@@ -1494,15 +1521,12 @@ inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments a
     std::string check_type_name;
     bool check_operand_provided = false;
     std::string check_operand;
-    bool set_mutations_provided = false;
     pegasus::pegasus_client::mutations mutations;
 
     pegasus::pegasus_client::check_and_mutate_options options;
-
     static struct option long_options[] = {{"check_sort_key", required_argument, 0, 'c'},
                                            {"check_type", required_argument, 0, 't'},
                                            {"check_operand", required_argument, 0, 'o'},
-                                           {"mutations", no_argument, 0, 'm'},
                                            {"return_check_value", no_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
 
@@ -1512,7 +1536,7 @@ inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments a
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "c:t:o:mr", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "c:t:o:r", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1533,15 +1557,6 @@ inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments a
         case 'o':
             check_operand_provided = true;
             check_operand = unescape_str(optarg);
-            break;
-        case 'm':
-            set_mutations_provided = true;
-            fprintf(stderr,
-                    "load mutations, like\n"
-                    "   set <sort_key> <value> [ttl]\n"
-                    "   del <sort_key>\n"
-                    "print \"ok\" to finish loading\n");
-            load_mutations(mutations);
             break;
         case 'r':
             options.return_check_value = true;
@@ -1564,7 +1579,14 @@ inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments a
         fprintf(stderr, "ERROR: check_operand not provided\n");
         return false;
     }
-    if (!set_mutations_provided) {
+
+    fprintf(stderr,
+            "Load mutations, like\n"
+            "   set <sort_key> <value> [ttl]\n"
+            "   del <sort_key>\n"
+            "Print \"ok\" to finish loading\n");
+    load_mutations(sc, mutations);
+    if (mutations.is_empty()) {
         fprintf(stderr, "ERROR: mutations not provided\n");
         return false;
     }
