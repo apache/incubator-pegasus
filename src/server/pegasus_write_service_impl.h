@@ -330,19 +330,19 @@ public:
             return empty_put(decree);
         }
 
-        std::for_each(update.mutate_list.begin(),
-                      update.mutate_list.end(),
-                      [&](const dsn::apps::mutate &mu) mutable {
-                          if (mu.operation != ::dsn::apps::mutate_operation::MO_PUT &&
-                              mu.operation != ::dsn::apps::mutate_operation::MO_DELETE)
-                              resp.error = rocksdb::Status::kInvalidArgument;
-                      });
-        if (resp.error) {
-            derror_replica("invalid argument for check_and_mutate: decree = {}, error = {}",
-                           decree,
-                           "mutations have invalid operations");
-            // we should write empty record to update rocksdb's last flushed decree
-            return empty_put(decree);
+        for (int i = 0; i < update.mutate_list.size(); ++i) {
+            auto &mu = update.mutate_list[i];
+            if (mu.operation != ::dsn::apps::mutate_operation::MO_PUT &&
+                mu.operation != ::dsn::apps::mutate_operation::MO_DELETE) {
+                derror_replica("invalid argument for check_and_mutate: decree = {}, error = "
+                               "mutation[{}] uses invalid operation {}",
+                               decree,
+                               i,
+                               mu.operation);
+                resp.error = rocksdb::Status::kInvalidArgument;
+                // we should write empty record to update rocksdb's last flushed decree
+                return empty_put(decree);
+            }
         }
 
         if (!is_check_type_supported(update.check_type)) {
@@ -412,7 +412,10 @@ public:
                 if (m.operation == ::dsn::apps::mutate_operation::MO_PUT) {
                     resp.error = db_write_batch_put(
                         decree, key, m.value, static_cast<uint32_t>(m.set_expire_ts_seconds));
-                } else if (m.operation == ::dsn::apps::mutate_operation::MO_DELETE) {
+                } else {
+                    dassert(m.operation == ::dsn::apps::mutate_operation::MO_DELETE,
+                            "m.operation = %d",
+                            m.operation);
                     resp.error = db_write_batch_delete(decree, key);
                 }
 

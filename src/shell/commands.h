@@ -1494,7 +1494,7 @@ inline void load_mutations(shell_context *sc, pegasus::pegasus_client::mutations
             mutations.set(sort_key, value, ttl);
 
             fprintf(stderr,
-                    "LOAD: set sortkey %s, value %s, ttl %d\n",
+                    "LOAD: set sortkey \"%s\", value \"%s\", ttl %d\n",
                     pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str(),
                     pegasus::utils::c_escape_string(value, sc->escape_all).c_str(),
                     ttl);
@@ -1503,7 +1503,7 @@ inline void load_mutations(shell_context *sc, pegasus::pegasus_client::mutations
             sort_key = unescape_str(args[1]);
             mutations.del(sort_key);
             fprintf(stderr,
-                    "LOAD: del sortkey %s\n",
+                    "LOAD: del sortkey \"%s\"\n",
                     pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str());
             break;
         default:
@@ -2928,10 +2928,8 @@ inline bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     std::function<void(int64_t decree, int64_t timestamp, dsn_message_t * requests, int count)>
         callback;
     if (detailed) {
-        callback = [&os, sc](int64_t decree,
-                             int64_t timestamp,
-                             dsn_message_t *requests,
-                             int count) mutable {
+        callback = [&os, sc](
+            int64_t decree, int64_t timestamp, dsn_message_t *requests, int count) mutable {
             for (int i = 0; i < count; ++i) {
                 dsn_message_t request = requests[i];
                 dassert(request != nullptr, "");
