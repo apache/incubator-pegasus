@@ -50,6 +50,11 @@ public:
                       const dsn::apps::check_and_set_request &update,
                       dsn::apps::check_and_set_response &resp);
 
+    // Write CHECK_AND_MUTATE record.
+    int check_and_mutate(int64_t decree,
+                         const dsn::apps::check_and_mutate_request &update,
+                         dsn::apps::check_and_mutate_response &resp);
+
     /// For batch write.
     /// NOTE: A batch write may incur a database read for consistency check of timetag.
     /// (see pegasus::pegasus_value_generator::generate_value_v1 for more info about timetag)
@@ -97,6 +102,7 @@ private:
     ::dsn::perf_counter_wrapper _pfc_multi_remove_qps;
     ::dsn::perf_counter_wrapper _pfc_incr_qps;
     ::dsn::perf_counter_wrapper _pfc_check_and_set_qps;
+    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_qps;
 
     ::dsn::perf_counter_wrapper _pfc_put_latency;
     ::dsn::perf_counter_wrapper _pfc_multi_put_latency;
@@ -104,6 +110,7 @@ private:
     ::dsn::perf_counter_wrapper _pfc_multi_remove_latency;
     ::dsn::perf_counter_wrapper _pfc_incr_latency;
     ::dsn::perf_counter_wrapper _pfc_check_and_set_latency;
+    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_latency;
 
     // Records all requests.
     std::vector<::dsn::perf_counter *> _batch_qps_perfcounters;
