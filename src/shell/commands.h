@@ -1492,23 +1492,22 @@ inline int load_mutations(shell_context *sc, pegasus::pegasus_client::mutations 
         case 1: // SET
             ttl = 0;
             if (arg_count == 4) {
-                char *end_ptr = nullptr;
-                long l_ttl = strtol(args[3], &end_ptr, 10);
-                if (end_ptr == args[3]) {
+                if (!dsn::buf2int32(args[3], ttl)) {
                     fprintf(stderr,
                             "ERROR: parse \"%s\" as ttl failed, "
-                            "print \"ok\" to finish loading\n",
+                            "print \"ok\" to finish loading, print \"abort\" to abort this "
+                            "command\n",
                             args[3]);
                     break;
                 }
-                if (l_ttl > INT_MAX || l_ttl < 0) {
+                if (ttl <= 0) {
                     fprintf(stderr,
                             "ERROR: invalid ttl %s, "
-                            "print \"ok\" to finish loading\n",
+                            "print \"ok\" to finish loading, print \"abort\" to abort this "
+                            "command\n",
                             args[3]);
                     break;
                 }
-                ttl = l_ttl;
             }
             sort_key = unescape_str(args[1]);
             value = unescape_str(args[2]);
@@ -1638,7 +1637,8 @@ inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments a
         if (copy_of_mutations[i].operation == ::dsn::apps::mutate_operation::MO_PUT) {
             fprintf(
                 stderr,
-                "  mutation[%d].type: SET\n  mutation[%d].sort_key: \"%s\"\n  mutation[%d].value: "
+                "  mutation[%d].type: SET\n  mutation[%d].sort_key: \"%s\"\n  "
+                "mutation[%d].value: "
                 "\"%s\"\n  mutation[%d].expire_seconds: %d\n",
                 i,
                 i,
