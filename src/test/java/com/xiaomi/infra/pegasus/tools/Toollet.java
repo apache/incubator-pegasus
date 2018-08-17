@@ -34,10 +34,10 @@ public class Toollet {
             BufferedReader input = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             int process_id = -1;
-            while ( (line = input.readLine()) != null) {
+            while ((line = input.readLine()) != null) {
                 if (line.contains("pegasus_server") && line.contains("meta")) {
                     String[] words = line.split(" ");
-                    for (String word: words) {
+                    for (String word : words) {
                         try {
                             process_id = Integer.valueOf(word);
                             break;
@@ -45,7 +45,7 @@ public class Toollet {
                         }
                     }
                     if (process_id == -1) {
-                        logger.warn("can get process id from {}", line);
+                        logger.warn("can not get process id from {}", line);
                         throw new IllegalArgumentException("Toollet initialize");
                     }
                     break;
@@ -88,10 +88,10 @@ public class Toollet {
     public static boolean closeServer(rpc_address server) {
         String command = String.format(
                 "netstat -anp 2>/dev/null | " +
-                "grep %d | grep LISTEN | " +
-                "awk '{print $7}' | " +
-                "cut -d \"/\" -f 1 | " +
-                "xargs kill -9", server.get_port());
+                        "grep %d | grep LISTEN | " +
+                        "awk '{print $7}' | " +
+                        "cut -d \"/\" -f 1 | " +
+                        "xargs kill -9", server.get_port());
         return tryExecuteCommand(command);
     }
 
@@ -104,8 +104,7 @@ public class Toollet {
             assert server.get_port() > 34600;
             role = "-m";
             index = server.get_port() - 34600;
-        }
-        else {
+        } else {
             // so this is replica server
             assert server.get_port() < 34900;
             role = "-r";
@@ -134,12 +133,12 @@ public class Toollet {
                 e.printStackTrace();
             }
             seconds--;
-        } while (seconds>0);
+        } while (seconds > 0);
         return false;
     }
 
-    public static interface BoolCallable {
-        public boolean call();
+    public interface BoolCallable {
+        boolean call();
     }
 
     public static class test_operator extends rrdb_put_operator {

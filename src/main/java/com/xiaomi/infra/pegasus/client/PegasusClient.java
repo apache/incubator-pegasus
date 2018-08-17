@@ -310,9 +310,9 @@ public class PegasusClient implements PegasusClientInterface {
     }
 
     @Override
-    public void set(String tableName, byte[] hashKey, byte[] sortKey, byte[] value, int ttl_seconds) throws PException {
+    public void set(String tableName, byte[] hashKey, byte[] sortKey, byte[] value, int ttlSeconds) throws PException {
         PegasusTable tb = getTable(tableName);
-        tb.set(hashKey, sortKey, value, ttl_seconds, 0);
+        tb.set(hashKey, sortKey, value, ttlSeconds, 0);
     }
 
     @Override
@@ -333,9 +333,9 @@ public class PegasusClient implements PegasusClientInterface {
     }
 
     @Override
-    public void multiSet(String tableName, byte[] hashKey, List<Pair<byte[], byte[]>> values, int ttl_seconds) throws PException {
+    public void multiSet(String tableName, byte[] hashKey, List<Pair<byte[], byte[]>> values, int ttlSeconds) throws PException {
         PegasusTable tb = getTable(tableName);
-        tb.multiSet(hashKey, values, ttl_seconds, 0);
+        tb.multiSet(hashKey, values, ttlSeconds, 0);
     }
 
     @Override
@@ -344,9 +344,9 @@ public class PegasusClient implements PegasusClientInterface {
     }
 
     @Override
-    public void batchMultiSet(String tableName, List<HashKeyData> items, int ttl_seconds) throws PException {
+    public void batchMultiSet(String tableName, List<HashKeyData> items, int ttlSeconds) throws PException {
         PegasusTable tb = getTable(tableName);
-        tb.batchMultiSet(items, ttl_seconds, 0);
+        tb.batchMultiSet(items, ttlSeconds, 0);
     }
 
     @Override
@@ -356,9 +356,9 @@ public class PegasusClient implements PegasusClientInterface {
 
     @Override
     public int batchMultiSet2(String tableName, List<HashKeyData> items,
-                              int ttl_seconds, List<PException> results) throws PException {
+                              int ttlSeconds, List<PException> results) throws PException {
         PegasusTable tb = getTable(tableName);
-        return tb.batchMultiSet2(items, ttl_seconds, results, 0);
+        return tb.batchMultiSet2(items, ttlSeconds, results, 0);
     }
 
     @Override
@@ -418,6 +418,15 @@ public class PegasusClient implements PegasusClientInterface {
                                                                CheckAndSetOptions options) throws PException {
         PegasusTable tb = getTable(tableName);
         return tb.checkAndSet(hashKey, checkSortKey, checkType, checkOperand, setSortKey, setValue, options, 0);
+    }
+
+    @Override
+    public PegasusTableInterface.CheckAndMutateResult checkAndMutate(String tableName, byte[] hashKey, byte[] checkSortKey,
+                                                     CheckType checkType, byte[] checkOperand,
+                                                     Mutations mutations,
+                                                     CheckAndMutateOptions options) throws PException {
+        PegasusTable tb = getTable(tableName);
+        return tb.checkAndMutate(hashKey, checkSortKey, checkType, checkOperand, mutations, options, 0);
     }
 
     @Override

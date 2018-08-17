@@ -4,18 +4,17 @@
 package com.xiaomi.infra.pegasus.client;
 
 /**
- * @author qinzuoyan
+ * @author huangwei
  *
- * Check-and-set options.
+ * check_and_mutate options.
  */
-public class CheckAndSetOptions {
-    public int setValueTTLSeconds = 0; // time to live in seconds of the set value, 0 means no ttl.
+public class CheckAndMutateOptions {
     public boolean returnCheckValue = false; // whether return the check value in results.
 
-    public CheckAndSetOptions() {}
+    public CheckAndMutateOptions() {
+    }
 
-    public CheckAndSetOptions(CheckAndSetOptions o) {
-        setValueTTLSeconds = o.setValueTTLSeconds;
+    public CheckAndMutateOptions(CheckAndMutateOptions o) {
         returnCheckValue = o.returnCheckValue;
     }
 }

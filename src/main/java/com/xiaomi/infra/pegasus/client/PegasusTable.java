@@ -559,6 +559,76 @@ public class PegasusTable implements PegasusTableInterface {
     }
 
     @Override
+    public Future<CheckAndMutateResult> asyncCheckAndMutate(byte[] hashKey, byte[] checkSortKey,
+                                                            CheckType checkType, byte[] checkOperand,
+                                                            Mutations mutations,
+                                                            CheckAndMutateOptions options, int timeout)
+
+    {
+        final DefaultPromise<CheckAndMutateResult> promise = table.newPromise();
+        if (hashKey == null || hashKey.length == 0) {
+            promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+            return promise;
+        }
+        if (hashKey.length >= 0xFFFF) {
+            promise.setFailure(new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
+            return promise;
+        }
+        if (mutations == null || mutations.isEmpty()) {
+            promise.setFailure(new PException("Invalid parameter: mutations should not be null or empty"));
+        }
+
+        blob hashKeyBlob = new blob(hashKey);
+        blob checkSortKeyBlob = (checkSortKey == null ? null : new blob(checkSortKey));
+        cas_check_type type = cas_check_type.findByValue(checkType.getValue());
+        blob checkOperandBlob = (checkOperand == null ? null : new blob(checkOperand));
+
+        check_and_mutate_request request = new check_and_mutate_request(
+                hashKeyBlob, checkSortKeyBlob, type, checkOperandBlob,
+                mutations.getMutations(), options.returnCheckValue);
+
+        gpid gpid = table.getHashKeyGpid(hashKey);
+        rrdb_check_and_mutate_operator op = new rrdb_check_and_mutate_operator(gpid, table.getTableName(), request);
+
+        table.asyncOperate(op, new Table.ClientOPCallback() {
+            @Override
+            public void onCompletion(client_operator clientOP) {
+                rrdb_check_and_mutate_operator op2 = (rrdb_check_and_mutate_operator) clientOP;
+                if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
+                    promise.setFailure(new PException(new ReplicationException(op2.rpc_error.errno)));
+                } else if (op2.get_response().error != 0 && op2.get_response().error != 13) { // 13 : kTryAgain
+                    promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
+                } else {
+                    CheckAndMutateResult result = new CheckAndMutateResult();
+                    if (op2.get_response().error == 0) {
+                        result.mutateSucceed = true;
+                    } else {
+                        result.mutateSucceed = false;
+                    }
+
+                    if (op2.get_response().check_value_returned) {
+                        result.checkValueReturned = true;
+                        if (op2.get_response().check_value_exist) {
+                            result.checkValueExist = true;
+                            result.checkValue = op2.get_response().check_value.data;
+                        } else {
+                            result.checkValueExist = false;
+                            result.checkValue = null;
+                        }
+                    } else {
+                        result.checkValueReturned = false;
+                        result.checkValueExist = false;
+                        result.checkValue = null;
+                    }
+
+                    promise.setSuccess(result);
+                }
+            }
+        }, timeout);
+        return promise;
+    }
+
+    @Override
     public Future<CompareExchangeResult> asyncCompareExchange(byte[] hashKey, byte[] sortKey,
                                                               byte[] expectedValue, byte[] desiredValue,
                                                               int ttlSeconds, int timeout) {
@@ -1017,13 +1087,13 @@ public class PegasusTable implements PegasusTableInterface {
     }
 
     @Override
-    public void batchMultiSet(List<HashKeyData> items, int ttl_seconds, int timeout) throws PException {
+    public void batchMultiSet(List<HashKeyData> items, int ttlSeconds, int timeout) throws PException {
         if (items == null || items.size() == 0) {
             throw new PException("Invalid parameter: items should not be null or empty");
         }
         List<Future<Void>> futures = new ArrayList<Future<Void>>();
         for (HashKeyData item : items) {
-            futures.add(asyncMultiSet(item.hashKey, item.values, ttl_seconds, timeout));
+            futures.add(asyncMultiSet(item.hashKey, item.values, ttlSeconds, timeout));
         }
         for (int i = 0; i < items.size(); i++) {
             Future<Void> fu = futures.get(i);
@@ -1037,7 +1107,7 @@ public class PegasusTable implements PegasusTableInterface {
 
     @Override
     public int batchMultiSet2(List<HashKeyData> items,
-                              int ttl_seconds, List<PException> results, int timeout) throws PException {
+                              int ttlSeconds, List<PException> results, int timeout) throws PException {
         if (items == null) {
             throw new PException("Invalid parameter: items should not be null");
         }
@@ -1047,7 +1117,7 @@ public class PegasusTable implements PegasusTableInterface {
         results.clear();
         List<Future<Void>> futures = new ArrayList<Future<Void>>();
         for (HashKeyData item : items) {
-            futures.add(asyncMultiSet(item.hashKey, item.values, ttl_seconds, timeout));
+            futures.add(asyncMultiSet(item.hashKey, item.values, ttlSeconds, timeout));
         }
         int count = 0;
         PException nullEx = null;
@@ -1218,6 +1288,24 @@ public class PegasusTable implements PegasusTableInterface {
         try {
             return asyncCheckAndSet(hashKey, checkSortKey, checkType, checkOperand,
                     setSortKey, setValue, options, timeout).get(timeout, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            throw new PException(new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+        } catch (TimeoutException e) {
+            throw new PException(new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+        } catch (ExecutionException e) {
+            throw new PException(e);
+        }
+    }
+
+    @Override
+    public CheckAndMutateResult checkAndMutate(byte[] hashKey, byte[] checkSortKey, CheckType checkType,
+                                               byte[] checkOperand, Mutations mutations,
+                                               CheckAndMutateOptions options, int timeout) throws PException {
+        if (timeout <= 0)
+            timeout = defaultTimeout;
+        try {
+            return asyncCheckAndMutate(hashKey, checkSortKey, checkType, checkOperand,
+                    mutations, options, timeout).get(timeout, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             throw new PException(new ReplicationException(error_code.error_types.ERR_TIMEOUT));
         } catch (TimeoutException e) {

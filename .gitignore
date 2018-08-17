@@ -8,3 +8,5 @@ target/
 pegasus-client.iml
 log.txt
 rolling_log/
+.vscode/
+

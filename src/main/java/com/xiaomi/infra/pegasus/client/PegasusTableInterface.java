@@ -9,6 +9,8 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
 
+import com.xiaomi.infra.pegasus.apps.mutate_operation;
+
 /**
  * @author sunweijie
  *
@@ -83,11 +85,11 @@ public interface PegasusTableInterface {
      *                if timeout > 0, it is a timeout value for current op,
      *                else the timeout value in the configuration file will be used.
      * @return A future for current op.
-     * <p>
+     * 
      * Future return:
      * On success: true if exist, false if not exist
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * The api is thread safe.
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
@@ -120,11 +122,11 @@ public interface PegasusTableInterface {
      *                if timeout > 0, it is a timeout value for current op,
      *                else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: the count result for the hashKey
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * The api is thread safe.
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
@@ -159,11 +161,11 @@ public interface PegasusTableInterface {
      *                if timeout > 0, it is a timeout value for current op,
      *                else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: the got value
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * The api is thread safe.
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
@@ -214,11 +216,11 @@ public interface PegasusTableInterface {
      *                      if timeout > 0, it is a timeout value for current op,
      *                      else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: An object of type MultiGetResult
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -247,11 +249,11 @@ public interface PegasusTableInterface {
      *                      if timeout > 0, it is a timeout value for current op,
      *                      else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: An object of type MultiGetResult
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -303,11 +305,11 @@ public interface PegasusTableInterface {
      *                      if timeout > 0, it is a timeout value for current op,
      *                      else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: An object of type MultiGetSortKeysResult
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -347,11 +349,11 @@ public interface PegasusTableInterface {
      *                   if timeout > 0, it is a timeout value for current op,
      *                   else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: no return
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * The api is thread safe.
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
@@ -390,11 +392,11 @@ public interface PegasusTableInterface {
      *                   if timeout > 0, it is a timeout value for current op,
      *                   else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: no return
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -431,11 +433,11 @@ public interface PegasusTableInterface {
      *                if timeout > 0, it is a timeout value for current op,
      *                else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: no return
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -469,11 +471,11 @@ public interface PegasusTableInterface {
      *                 if timeout > 0, it is a timeout value for current op,
      *                 else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: no return
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -506,11 +508,11 @@ public interface PegasusTableInterface {
      *                  if timeout > 0, it is a timeout value for current op,
      *                  else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: return new value.
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -563,11 +565,11 @@ public interface PegasusTableInterface {
      *                     if timeout > 0, it is a timeout value for current op,
      *                     else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: return CheckAndSetResult.
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -577,6 +579,50 @@ public interface PegasusTableInterface {
                                                       byte[] checkOperand, byte[] setSortKey, byte[] setValue,
                                                       CheckAndSetOptions options, int timeout/*ms*/);
 
+    ///< -------- CheckAndMutate --------
+
+    class CheckAndMutateResult {
+        /**
+         * return value for checkAndMutate
+         *
+         * @param mutateSucceed true if mutate succeed.
+         * @param checkValueReturned true if the check value is returned.
+         * @param checkValueExist true if the check value is exist; can be used only when checkValueReturned is true.
+         * @param checkValue return the check value if exist; can be used only when checkValueExist is true.
+         */
+        public boolean mutateSucceed;
+        public boolean checkValueReturned;
+        public boolean checkValueExist;
+        public byte[] checkValue;
+    }
+
+    /**
+     * atomically check and mutate by key, async version.
+     * if the check condition is satisfied, then apply to mutate.
+     *
+     * @param hashKey      the hash key to check and mutate.
+     * @param checkSortKey the sort key to check.
+     * @param checkType    the check type.
+     * @param checkOperand the check operand.
+     * @param mutations    the list of mutations to perform if check condition is satisfied.
+     * @param options      the check-and-mutate options.
+     * @param timeout      how long will the operation timeout in milliseconds.
+     *                     if timeout > 0, it is a timeout value for current op,
+     *                     else the timeout value in the configuration file will be used.
+     * @return the future for current op
+     * 
+     * Future return:
+     * On success: return CheckAndMutateResult.
+     * On failure: a throwable, which is an instance of PException
+     * 
+     * Thread safety:
+     * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
+     * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
+     * But listeners for different tables are not guaranteed to be dispatched in the same thread.
+     */
+    Future<CheckAndMutateResult> asyncCheckAndMutate(byte[] hashKey, byte[] checkSortKey, CheckType checkType,
+                                                     byte[] checkOperand, Mutations mutations,
+                                                     CheckAndMutateOptions options, int timeout/*ms*/);
 
     ///< -------- CompareExchange --------
 
@@ -606,13 +652,13 @@ public interface PegasusTableInterface {
 
     /**
      * atomically compare and exchange value by key, async version.
-     * <p>
+     * 
      * - if the original value for the key is equal to the expected value, then update it with the desired value,
      *   set CompareExchangeResult.setSucceed to true, and set CompareExchangeResult.actualValue to null because
      *   the actual value must be equal to the desired value.
      * - if the original value for the key is not exist or not equal to the expected value, then set
      *   CompareExchangeResult.setSucceed to false, and set the actual value in CompareExchangeResult.actualValue.
-     * <p>
+     * 
      * this method is very like the C++ function in {https://en.cppreference.com/w/cpp/atomic/atomic_compare_exchange}.
      *
      * @param hashKey       the hash key to compare and exchange.
@@ -624,11 +670,11 @@ public interface PegasusTableInterface {
      *                      if timeout > 0, it is a timeout value for current op,
      *                      else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: return CompareExchangeResult.
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -664,11 +710,11 @@ public interface PegasusTableInterface {
      *                if timeout > 0, it is a timeout value for current op,
      *                else the timeout value in the configuration file will be used.
      * @return the future for current op
-     * <p>
+     * 
      * Future return:
      * On success: ttl time in seconds; -1 if no ttl set; -2 if not exist.
      * On failure: a throwable, which is an instance of PException
-     * <p>
+     * 
      * Thread safety:
      * All the listeners for the same table are guaranteed to be dispatched in the same thread, so all the
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
@@ -851,7 +897,7 @@ public interface PegasusTableInterface {
      * Will terminate immediately if any error occurs.
      *
      * @param items       list of items.
-     * @param ttl_seconds time to live in seconds, 0 means no ttl.
+     * @param ttlSeconds time to live in seconds, 0 means no ttl.
      * @param timeout     how long will the operation timeout in milliseconds.
      *                    if timeout > 0, it is a timeout value for current op,
      *                    else the timeout value in the configuration file will be used.
@@ -859,14 +905,14 @@ public interface PegasusTableInterface {
      *
      * Notice: the method is not atomic, that means, maybe some keys succeed but some keys failed.
      */
-    public void batchMultiSet(List<HashKeyData> items, int ttl_seconds, int timeout/*ms*/) throws PException;
+    public void batchMultiSet(List<HashKeyData> items, int ttlSeconds, int timeout/*ms*/) throws PException;
 
     /**
      * Batch set multiple value under the same hash key.
      * Will wait for all requests done even if some error occurs.
      *
      * @param items       list of items.
-     * @param ttl_seconds time to live in seconds,
+     * @param ttlSeconds time to live in seconds,
      *                    0 means no ttl. default value is 0.
      * @param results     output results; should be created by caller; after call done, the size of results will
      *                    be same with items; the results[i] is a PException:
@@ -881,7 +927,7 @@ public interface PegasusTableInterface {
      * Notice: the method is not atomic, that means, maybe some keys succeed but some keys failed.
      */
     public int batchMultiSet2(List<HashKeyData> items,
-                              int ttl_seconds, List<PException> results, int timeout/*ms*/) throws PException;
+                              int ttlSeconds, List<PException> results, int timeout/*ms*/) throws PException;
 
     /**
      * sync version of Del, please refer to the async version {@link #asyncDel(byte[], byte[], int)}
@@ -973,6 +1019,14 @@ public interface PegasusTableInterface {
     public CheckAndSetResult checkAndSet(byte[] hashKey, byte[] checkSortKey, CheckType checkType,
                                          byte[] checkOperand, byte[] setSortKey, byte[] setValue,
                                          CheckAndSetOptions options, int timeout/*ms*/) throws PException;
+
+    /**
+     * sync version of CheckAndMutate, please refer to the async version
+     *{@link #asyncCheckAndMutate(byte[], byte[], CheckType, byte[], Mutations, CheckAndMutateOptions, int)}
+     */
+    public CheckAndMutateResult checkAndMutate(byte[] hashKey, byte[] checkSortKey, CheckType checkType,
+                                               byte[] checkOperand, Mutations mutations,
+                                               CheckAndMutateOptions options, int timeout) throws PException;
 
     /**
      * sync version of CompareExchange, please refer to the async version

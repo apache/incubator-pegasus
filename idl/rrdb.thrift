@@ -43,6 +43,12 @@ enum cas_check_type
     CT_VALUE_INT_GREATER              // int compare: value > operand
 }
 
+enum mutate_operation
+{
+    MO_PUT,
+    MO_DELETE
+}
+
 struct update_request
 {
     1:base.blob     key;
@@ -182,6 +188,36 @@ struct check_and_set_response
     8:string         server;
 }
 
+struct mutate
+{
+    1:mutate_operation operation;
+    2:base.blob        sort_key;
+    3:base.blob        value;
+    4:i32              set_expire_ts_seconds;
+}
+
+struct check_and_mutate_request
+{
+    1:base.blob      hash_key;
+    2:base.blob      check_sort_key;
+    3:cas_check_type check_type;
+    4:base.blob      check_operand;
+    5:list<mutate>   mutate_list;
+    6:bool           return_check_value;
+}
+
+struct check_and_mutate_response
+{
+    1:i32            error; // for errors such as kInvalidArgument etc.
+    2:bool           check_value_returned;
+    3:bool           check_value_exist; // used only if check_value_returned is true
+    4:base.blob      check_value; // used only if check_value_returned and check_value_exist is true
+    5:i32            app_id;
+    6:i32            partition_index;
+    7:i64            decree;
+    8:string         server;
+}
+
 struct get_scanner_request
 {
     1:base.blob start_key;
@@ -219,6 +255,7 @@ service rrdb
     multi_remove_response multi_remove(1:multi_remove_request request);
     incr_response incr(1:incr_request request);
     check_and_set_response check_and_set(1:check_and_set_request request);
+    check_and_mutate_response check_and_mutate(1:check_and_mutate_request request);
     read_response get(1:base.blob key);
     multi_get_response multi_get(1:multi_get_request request);
     count_response sortkey_count(1:base.blob hash_key);
