@@ -1459,17 +1459,19 @@ inline int mutation_check(int args_count, sds *args)
     int ret = -2;
     if (args_count > 0) {
         std::string op = unescape_str(args[0]);
-        if (op == "ok")
+        if (op == "abort")
             ret = -1;
-        else if (op == "set" && (args_count == 3 || args_count == 4))
+        else if (op == "ok")
             ret = 0;
-        else if (op == "del" && args_count == 2)
+        else if (op == "set" && (args_count == 3 || args_count == 4))
             ret = 1;
+        else if (op == "del" && args_count == 2)
+            ret = 2;
     }
     return ret;
 }
 
-inline void load_mutations(shell_context *sc, pegasus::pegasus_client::mutations &mutations)
+inline int load_mutations(shell_context *sc, pegasus::pegasus_client::mutations &mutations)
 {
     while (true) {
         int arg_count = 0;
@@ -1482,12 +1484,31 @@ inline void load_mutations(shell_context *sc, pegasus::pegasus_client::mutations
         int status = mutation_check(arg_count, args);
         switch (status) {
         case -1:
-            fprintf(stderr, "INFO: load mutations done.\n\n");
-            return;
+            fprintf(stderr, "INFO: abort loading\n");
+            return -1;
         case 0:
+            fprintf(stderr, "INFO: load mutations done.\n\n");
+            return 0;
+        case 1: // SET
             ttl = 0;
             if (arg_count == 4) {
-                ttl = std::stoi(args[3]);
+                char *end_ptr = nullptr;
+                long l_ttl = strtol(args[3], &end_ptr, 10);
+                if (end_ptr == args[3]) {
+                    fprintf(stderr,
+                            "ERROR: parse \"%s\" as ttl failed, "
+                            "print \"ok\" to finish loading\n",
+                            args[3]);
+                    break;
+                }
+                if (l_ttl > INT_MAX || l_ttl < 0) {
+                    fprintf(stderr,
+                            "ERROR: invalid ttl %s, "
+                            "print \"ok\" to finish loading\n",
+                            args[3]);
+                    break;
+                }
+                ttl = l_ttl;
             }
             sort_key = unescape_str(args[1]);
             value = unescape_str(args[2]);
@@ -1498,7 +1519,7 @@ inline void load_mutations(shell_context *sc, pegasus::pegasus_client::mutations
                     ttl);
             mutations.set(sort_key, value, ttl);
             break;
-        case 1:
+        case 2: // DEL
             sort_key = unescape_str(args[1]);
             fprintf(stderr,
                     "LOAD: del sortkey \"%s\"\n",
@@ -1510,6 +1531,7 @@ inline void load_mutations(shell_context *sc, pegasus::pegasus_client::mutations
             break;
         }
     }
+    return 0;
 }
 
 inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments args)
@@ -1587,8 +1609,11 @@ inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments a
             "Load mutations, like\n"
             "  set <sort_key> <value> [ttl]\n"
             "  del <sort_key>\n"
-            "Print \"ok\" to finish loading\n");
-    load_mutations(sc, mutations);
+            "Print \"ok\" to finish loading, \"abort\" to abort this command\n");
+    if (load_mutations(sc, mutations)) {
+        fprintf(stderr, "INFO: abort check_and_mutate command\n");
+        return true;
+    }
     if (mutations.is_empty()) {
         fprintf(stderr, "ERROR: mutations not provided\n");
         return false;
@@ -1613,15 +1638,15 @@ inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments a
         if (copy_of_mutations[i].operation == ::dsn::apps::mutate_operation::MO_PUT) {
             fprintf(
                 stderr,
-                "  mutation[%d].type: SET\n  mutation[%d].sort_key: \"%s\"\n",
+                "  mutation[%d].type: SET\n  mutation[%d].sort_key: \"%s\"\n  mutation[%d].value: "
+                "\"%s\"\n  mutation[%d].expire_seconds: %d\n",
                 i,
                 i,
-                pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key.to_string()).c_str());
-            fprintf(
-                stderr,
-                "  mutation[%d].value: \"%s\"\n",
+                pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key.to_string()).c_str(),
                 i,
-                pegasus::utils::c_escape_string(copy_of_mutations[i].value.to_string()).c_str());
+                pegasus::utils::c_escape_string(copy_of_mutations[i].value.to_string()).c_str(),
+                i,
+                copy_of_mutations[i].set_expire_ts_seconds);
         } else {
             fprintf(
                 stderr,
