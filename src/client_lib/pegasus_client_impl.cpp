@@ -1005,7 +1005,7 @@ void pegasus_client_impl::async_check_and_mutate(const std::string &hash_key,
     if (mutations.is_empty()) {
         derror("invalid mutations: mutations should not be empty.");
         if (callback != nullptr)
-            callback(PERR_INVALID_HASH_KEY, check_and_mutate_results(), internal_info());
+            callback(PERR_INVALID_ARGUMENT, check_and_mutate_results(), internal_info());
         return;
     }
 

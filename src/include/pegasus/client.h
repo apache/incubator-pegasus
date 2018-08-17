@@ -164,42 +164,42 @@ public:
     struct mutations
     {
     private:
-        std::vector<::dsn::apps::mutate> mu_list;
-        std::vector<std::pair<int, int>> ttl_list;
+        std::vector<::dsn::apps::mutate> _mu_list;
+        std::vector<std::pair<int, int>> _ttl_list;
 
     public:
         void set(dsn::string_view sort_key, dsn::string_view value, const int ttl_seconds = 0)
         {
             ::dsn::apps::mutate mu;
             mu.operation = ::dsn::apps::mutate_operation::MO_PUT;
-            mu.sort_key.assign(sort_key.data(), 0, sort_key.size());
-            mu.value.assign(value.data(), 0, value.size());
+            mu.sort_key = ::dsn::blob::create_from_bytes(sort_key.data(), sort_key.size());
+            mu.value = ::dsn::blob::create_from_bytes(value.data(), value.size());
             // set_expire_ts_seconds will be set when check_and_mutate() gets the mutations (by
             // calling get_mutations())
             mu.set_expire_ts_seconds = 0;
-            mu_list.emplace_back(std::move(mu));
-
+            _mu_list.emplace_back(std::move(mu));
             if (ttl_seconds != 0) {
-                ttl_list.emplace_back(std::make_pair(mu_list.size() - 1, ttl_seconds));
+                _ttl_list.emplace_back(std::make_pair(_mu_list.size() - 1, ttl_seconds));
             }
         }
         void del(dsn::string_view sort_key)
         {
             ::dsn::apps::mutate mu;
             mu.operation = ::dsn::apps::mutate_operation::MO_DELETE;
-            mu.sort_key.assign(sort_key.data(), 0, sort_key.size());
+            mu.sort_key = ::dsn::blob::create_from_bytes(sort_key.data(), sort_key.size());
             mu.set_expire_ts_seconds = 0;
-            mu_list.emplace_back(std::move(mu));
+            _mu_list.emplace_back(std::move(mu));
         }
+        // TODO HW: distinguish copy from deepcopy
         void get_mutations(std::vector<::dsn::apps::mutate> &mutations) const
         {
             int current_time = ::pegasus::utils::epoch_now();
-            mutations = mu_list;
-            for (auto &pair : ttl_list) {
+            mutations = _mu_list;
+            for (auto &pair : _ttl_list) {
                 mutations[pair.first].set_expire_ts_seconds = pair.second + current_time;
             }
         }
-        bool is_empty() const { return mu_list.empty(); }
+        bool is_empty() const { return _mu_list.empty(); }
     };
 
     struct check_and_mutate_options
