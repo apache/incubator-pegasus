@@ -44,7 +44,7 @@ public:
                 int put_rpc_cnt = dsn_random32(1, 10);
                 int remove_rpc_cnt = dsn_random32(1, 10);
                 int total_rpc_cnt = put_rpc_cnt + remove_rpc_cnt;
-                auto writes = new dsn_message_t[total_rpc_cnt];
+                auto writes = new dsn::message_ex *[total_rpc_cnt];
                 for (int i = 0; i < put_rpc_cnt; i++) {
                     writes[i] = pegasus::create_put_request(req);
                 }
@@ -53,7 +53,7 @@ public:
                 }
                 auto cleanup = dsn::defer([=]() {
                     for (int i = 0; i < total_rpc_cnt; i++) {
-                        dsn_msg_release_ref(writes[i]);
+                        writes[i]->release_ref();
                     }
                     delete[] writes;
                 });

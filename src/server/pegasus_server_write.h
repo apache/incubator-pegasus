@@ -26,14 +26,14 @@ public:
     /// As long as the returned error is 0, the operation is guaranteed to be
     /// successfully applied into rocksdb, which means an empty_put will be called
     /// even if there's no write.
-    int on_batched_write_requests(dsn_message_t *requests,
+    int on_batched_write_requests(dsn::message_ex **requests,
                                   int count,
                                   int64_t decree,
                                   uint64_t timestamp);
 
 private:
     /// Delay replying for the batched requests until all of them complete.
-    int on_batched_writes(dsn_message_t *requests, int count);
+    int on_batched_writes(dsn::message_ex **requests, int count);
 
     int on_single_put_in_batch(put_rpc &rpc)
     {
@@ -51,7 +51,7 @@ private:
 
     // Ensure that the write request is directed to the right partition.
     // In verbose mode it will log for every request.
-    void request_key_check(int64_t decree, dsn_message_t m, const dsn::blob &key);
+    void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
 
 private:
     friend class pegasus_server_write_test;

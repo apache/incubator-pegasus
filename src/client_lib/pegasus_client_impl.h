@@ -267,7 +267,7 @@ public:
         void _async_next_internal();
         void _start_scan();
         void _next_batch();
-        void _on_scan_response(::dsn::error_code, dsn_message_t, dsn_message_t);
+        void _on_scan_response(::dsn::error_code, dsn::message_ex *, dsn::message_ex *);
         void _split_reset();
 
     private:

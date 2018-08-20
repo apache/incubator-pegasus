@@ -2975,13 +2975,13 @@ inline bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream &os = *os_ptr;
 
-    std::function<void(int64_t decree, int64_t timestamp, dsn_message_t * requests, int count)>
+    std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex * *requests, int count)>
         callback;
     if (detailed) {
         callback = [&os, sc](
-            int64_t decree, int64_t timestamp, dsn_message_t *requests, int count) mutable {
+            int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count) mutable {
             for (int i = 0; i < count; ++i) {
-                dsn_message_t request = requests[i];
+                dsn::message_ex *request = requests[i];
                 dassert(request != nullptr, "");
                 ::dsn::message_ex *msg = (::dsn::message_ex *)request;
                 if (msg->local_rpc_code == RPC_REPLICATION_WRITE_EMPTY) {

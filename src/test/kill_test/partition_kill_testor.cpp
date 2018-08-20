@@ -61,7 +61,7 @@ void partition_kill_testor::run()
         cmd.arguments[1] = to_string(p.pid.get_partition_index());
 
         auto callback = [&results,
-                         i](::dsn::error_code err, dsn_message_t req, dsn_message_t resp) {
+                         i](::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) {
             if (err == ::dsn::ERR_OK) {
                 results[i].first = true;
                 ::dsn::unmarshall(resp, results[i].second);
