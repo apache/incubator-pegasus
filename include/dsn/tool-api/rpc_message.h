@@ -42,28 +42,38 @@
 #include <dsn/utility/blob.h>
 #include <dsn/utility/link.h>
 #include <dsn/utility/callocator.h>
-
+#include <dsn/utility/link.h>
 #include <dsn/tool-api/auto_codes.h>
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/global_config.h>
 
 namespace dsn {
 class rpc_session;
-typedef ::dsn::ref_ptr<rpc_session> rpc_session_ptr;
-
-typedef struct dsn_buffer_t // binary compatible with WSABUF on windows
-{
-    unsigned long length;
-    char *buffer;
-} dsn_buffer_t;
+typedef dsn::ref_ptr<rpc_session> rpc_session_ptr;
 
 struct fast_code
 {
     uint32_t local_code;
-    uint32_t local_hash; // same hash from two processes indicates that
-                         // the mapping of rpc string and id are consistent, which
-                         // we leverage for optimization (fast rpc handler lookup)
+
+    // same hash from two processes indicates that
+    // the mapping of rpc string and id are consistent, which
+    // we leverage for optimization (fast rpc handler lookup)
+    uint32_t local_hash;
 };
+
+typedef union msg_context
+{
+    struct
+    {
+        uint64_t is_request : 1;           ///< whether the RPC message is a request or response
+        uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
+        uint64_t unused : 4;               ///< not used yet
+        uint64_t serialize_format : 4;     ///< dsn_msg_serialize_format
+        uint64_t is_forward_supported : 1; ///< whether support forwarding a message to real leader
+        uint64_t reserved : 53;
+    } u;
+    uint64_t context; ///< msg_context is of sizeof(uint64_t)
+} msg_context_t;
 
 typedef struct message_header
 {
@@ -82,7 +92,7 @@ typedef struct message_header
     char rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
     fast_code rpc_code; // dsn::task_code
     dsn::gpid gpid;     // global partition id
-    dsn_msg_context_t context;
+    msg_context_t context;
 
     // Attention:
     // here, from_address must be IPv4 address, namely we can regard from_address as a
@@ -158,6 +168,13 @@ public:
                                               int thread_hash = 0,
                                               uint64_t partition_hash = 0);
 
+    DSN_API static message_ex *create_received_request(dsn::task_code rpc_code,
+                                                       dsn_msg_serialize_format format,
+                                                       void *buffer,
+                                                       int size,
+                                                       int thread_hash = 0,
+                                                       uint64_t partition_hash = 0);
+
     /// This method is only used for receiving request.
     /// The returned message:
     ///   - msg->buffers[0] = message_header
@@ -203,5 +220,6 @@ private:
 public:
     static uint32_t s_local_hash; // used by fast_rpc_name
 };
+typedef dsn::ref_ptr<message_ex> message_ptr;
 
 } // end namespace

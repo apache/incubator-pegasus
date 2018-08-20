@@ -144,7 +144,7 @@ void simple_kv_client_app::send_config_to_meta(const rpc_address &receiver,
                                                dsn::replication::config_type::type type,
                                                const rpc_address &node)
 {
-    dsn_message_t req = dsn_msg_create_request(RPC_CM_PROPOSE_BALANCER, 30000);
+    dsn::message_ex *req = dsn::message_ex::create_request(RPC_CM_PROPOSE_BALANCER, 30000);
 
     configuration_balancer_request request;
     request.gpid = g_default_gpid;

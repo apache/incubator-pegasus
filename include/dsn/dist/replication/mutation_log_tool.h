@@ -38,7 +38,7 @@
 #include <string>
 #include <iostream>
 #include <functional>
-#include <dsn/c/api_common.h>
+#include <dsn/tool-api/rpc_message.h>
 
 namespace dsn {
 namespace replication {
@@ -49,8 +49,8 @@ public:
     bool
     dump(const std::string &log_dir,
          std::ostream &output,
-         std::function<void(int64_t decree, int64_t timestamp, dsn_message_t *requests, int count)>
-             callback);
+         std::function<void(
+             int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)> callback);
 };
 }
 }

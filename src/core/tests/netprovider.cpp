@@ -57,7 +57,10 @@ static int TEST_PORT = 20401;
 DEFINE_TASK_CODE_RPC(RPC_TEST_NETPROVIDER, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 volatile int wait_flag = 0;
-void response_handler(dsn::error_code ec, dsn_message_t req, dsn_message_t resp, void *request_buf)
+void response_handler(dsn::error_code ec,
+                      dsn::message_ex *req,
+                      dsn::message_ex *resp,
+                      void *request_buf)
 {
     if (ERR_OK == ec) {
         std::string response_string;
@@ -70,11 +73,11 @@ void response_handler(dsn::error_code ec, dsn_message_t req, dsn_message_t resp,
     wait_flag = 1;
 }
 
-void rpc_server_response(dsn_message_t request)
+void rpc_server_response(dsn::message_ex *request)
 {
     std::string str_command;
     ::dsn::unmarshall(request, str_command);
-    dsn_message_t response = dsn_msg_create_response(request);
+    dsn::message_ex *response = request->create_response();
     ::dsn::marshall(response, str_command);
     dsn_rpc_reply(response);
 }

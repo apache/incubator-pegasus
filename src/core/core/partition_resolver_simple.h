@@ -114,7 +114,7 @@ private:
 
     // with replica
     void call(request_context_ptr &&request, bool from_meta_ack = false);
-    // void replica_rw_reply(error_code err, dsn_message_t request, dsn_message_t response,
+    // void replica_rw_reply(error_code err, dsn::message_ex* request, dsn::message_ex* response,
     // request_context_ptr rc);
     void end_request(request_context_ptr &&request,
                      error_code err,
@@ -125,8 +125,8 @@ private:
     // with meta server
     task_ptr query_config(int partition_index);
     void query_config_reply(error_code err,
-                            dsn_message_t request,
-                            dsn_message_t response,
+                            dsn::message_ex* request,
+                            dsn::message_ex* response,
                             int partition_index);
 };
 #pragma pack(pop)

@@ -38,7 +38,7 @@ http_server::http_server() : serverlet<http_server>("http_server")
     add_service(new root_http_service());
 }
 
-void http_server::serve(dsn_message_t msg)
+void http_server::serve(message_ex *msg)
 {
     error_with<http_request> res = http_request::parse(msg);
     http_response resp;
@@ -56,7 +56,7 @@ void http_server::serve(dsn_message_t msg)
         }
     }
 
-    ref_ptr<message_ex> resp_msg = resp.to_message(msg);
+    message_ptr resp_msg = resp.to_message(msg);
     dsn_rpc_reply(resp_msg.get());
 }
 
@@ -66,9 +66,8 @@ void http_server::add_service(http_service *service)
     _service_map.emplace(service->path(), std::unique_ptr<http_service>(service));
 }
 
-/*static*/ error_with<http_request> http_request::parse(dsn_message_t msg)
+/*static*/ error_with<http_request> http_request::parse(message_ex *m)
 {
-    auto m = (message_ex *)(msg);
     dassert(m->buffers.size() == 3, "");
 
     http_request ret;
@@ -110,9 +109,9 @@ void http_server::add_service(http_service *service)
     return ret;
 }
 
-ref_ptr<message_ex> http_response::to_message(dsn_message_t req) const
+message_ptr http_response::to_message(message_ex *req) const
 {
-    ref_ptr<message_ex> resp = reinterpret_cast<message_ex *>(req)->create_response();
+    message_ptr resp = req->create_response();
 
     std::ostringstream os;
     os << "HTTP/1.1 " << http_status_code_to_string(status_code) << "\r\n";

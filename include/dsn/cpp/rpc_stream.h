@@ -41,11 +41,11 @@ namespace dsn {
 class rpc_read_stream : public binary_reader
 {
 public:
-    rpc_read_stream(dsn_message_t msg) { set_read_msg(msg); }
+    rpc_read_stream(message_ex *msg) { set_read_msg(msg); }
 
     rpc_read_stream() : _msg(nullptr) {}
 
-    void set_read_msg(dsn_message_t msg)
+    void set_read_msg(message_ex *msg)
     {
         _msg = msg;
 
@@ -59,12 +59,12 @@ public:
     ~rpc_read_stream()
     {
         if (_msg) {
-            dsn_msg_read_commit(_msg, (size_t)(total_size() - get_remaining_size()));
+            _msg->read_commit((size_t)(total_size() - get_remaining_size()));
         }
     }
 
 private:
-    dsn_message_t _msg;
+    dsn::message_ex *_msg;
 };
 typedef ::dsn::ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
 
@@ -74,7 +74,7 @@ class rpc_write_stream : public binary_writer
 {
 public:
     // for response
-    rpc_write_stream(dsn_message_t msg)
+    rpc_write_stream(message_ex *msg)
         : _msg(msg), _last_write_next_committed(true), _last_write_next_total_size(0)
     {
     }
@@ -84,7 +84,7 @@ public:
                      int timeout_ms = 0,
                      int thread_hash = 0,
                      uint64_t partition_hash = 0)
-        : _msg(dsn_msg_create_request(code, timeout_ms, thread_hash, partition_hash)),
+        : _msg(message_ex::create_request(code, timeout_ms, thread_hash, partition_hash)),
           _last_write_next_committed(true),
           _last_write_next_total_size(0)
     {
@@ -99,7 +99,7 @@ public:
     void commit_buffer()
     {
         if (!_last_write_next_committed) {
-            dsn_msg_write_commit(_msg, (size_t)(total_size() - _last_write_next_total_size));
+            _msg->write_commit((size_t)(total_size() - _last_write_next_total_size));
             _last_write_next_committed = true;
         }
     }
@@ -119,7 +119,7 @@ private:
 
         void *ptr;
         size_t sz;
-        dsn_msg_write_next(_msg, &ptr, &sz, size);
+        _msg->write_next(&ptr, &sz, size);
         dbg_dassert(sz >= size, "allocated buffer size must be not less than the required size");
         bb.assign((const char *)ptr, 0, (int)sz);
 
@@ -128,7 +128,7 @@ private:
     }
 
 private:
-    dsn_message_t _msg;
+    message_ex *_msg;
     bool _last_write_next_committed;
     int _last_write_next_total_size;
 };

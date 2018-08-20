@@ -222,7 +222,7 @@ TEST(async_call, task_destructor)
 
     {
         dsn::rpc_response_task_ptr t(new simple_rpc_response_task(req.get(), nullptr));
-        t->replace_callback([t](dsn::error_code, dsn_message_t, dsn_message_t) {
+        t->replace_callback([t](dsn::error_code, dsn::message_ex *, dsn::message_ex *) {
             // ref_ptr out of callback + ref_ptr in callback + ref_added_in_enqueue
             ASSERT_EQ(3, t->get_count());
         });

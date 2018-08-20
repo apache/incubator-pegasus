@@ -155,23 +155,23 @@ inline void unmarshall(binary_reader &reader, T &value, dsn_msg_serialize_format
     }
 
 template <typename T>
-inline void marshall(dsn_message_t msg, const T &val)
+inline void marshall(dsn::message_ex *msg, const T &val)
 {
     ::dsn::rpc_write_stream writer(msg);
-    marshall(writer, val, dsn_msg_get_serialize_format(msg));
+    marshall(writer, val, (dsn_msg_serialize_format)msg->header->context.u.serialize_format);
 }
 
 template <typename T>
-inline void marshall(dsn_message_t msg, const T &val, dsn_msg_serialize_format fmt)
+inline void marshall(dsn::message_ex *msg, const T &val, dsn_msg_serialize_format fmt)
 {
     ::dsn::rpc_write_stream writer(msg);
     marshall(writer, val, fmt);
 }
 
 template <typename T>
-inline void unmarshall(dsn_message_t msg, /*out*/ T &val)
+inline void unmarshall(dsn::message_ex *msg, /*out*/ T &val)
 {
     ::dsn::rpc_read_stream reader(msg);
-    unmarshall(reader, val, dsn_msg_get_serialize_format(msg));
+    unmarshall(reader, val, (dsn_msg_serialize_format)msg->header->context.u.serialize_format);
 }
 }

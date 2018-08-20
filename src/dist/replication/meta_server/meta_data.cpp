@@ -198,7 +198,7 @@ void config_context::cancel_sync()
         pending_sync_request.reset();
     }
     if (msg) {
-        dsn_msg_release_ref(msg);
+        msg->release_ref();
     }
     msg = nullptr;
     stage = config_status::not_pending;

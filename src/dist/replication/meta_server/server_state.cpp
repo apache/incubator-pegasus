@@ -231,7 +231,7 @@ void server_state::transition_staging_state(std::shared_ptr<app_state> &app)
     do {                                                                                           \
         if (msg != nullptr) {                                                                      \
             meta->reply_data(msg, response_data);                                                  \
-            dsn_msg_release_ref(msg);                                                              \
+            msg->release_ref();                                                                    \
             msg = nullptr;                                                                         \
         }                                                                                          \
     } while (0)
@@ -774,7 +774,7 @@ void server_state::query_configuration_by_node(
 
 // partition server => meta server
 // this is done in meta_state_thread_pool
-void server_state::on_config_sync(dsn_message_t msg)
+void server_state::on_config_sync(dsn::message_ex *msg)
 {
     configuration_query_by_node_request request;
     configuration_query_by_node_response response;
@@ -914,7 +914,7 @@ void server_state::on_config_sync(dsn_message_t msg)
            (int)response.partitions.size(),
            (int)response.gc_replicas.size());
     _meta_svc->reply_data(msg, response);
-    dsn_msg_release_ref(msg);
+    msg->release_ref();
 }
 
 bool server_state::query_configuration_by_gpid(dsn::gpid id,
@@ -1028,7 +1028,7 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
         app_dir, LPC_META_STATE_HIGH, on_create_app_root, value);
 }
 
-void server_state::create_app(dsn_message_t msg)
+void server_state::create_app(dsn::message_ex *msg)
 {
     configuration_create_app_request request;
     configuration_create_app_response response;
@@ -1101,7 +1101,7 @@ void server_state::create_app(dsn_message_t msg)
         do_app_create(app);
     } else {
         _meta_svc->reply_data(msg, response);
-        dsn_msg_release_ref(msg);
+        msg->release_ref();
     }
 }
 
@@ -1132,7 +1132,7 @@ void server_state::do_app_drop(std::shared_ptr<app_state> &app)
         app_path, json_app, LPC_META_STATE_HIGH, after_mark_app_dropped);
 }
 
-void server_state::drop_app(dsn_message_t msg)
+void server_state::drop_app(dsn::message_ex *msg)
 {
     configuration_drop_app_request request;
     configuration_drop_app_response response;
@@ -1183,7 +1183,7 @@ void server_state::drop_app(dsn_message_t msg)
         do_app_drop(app);
     } else {
         _meta_svc->reply_data(msg, response);
-        dsn_msg_release_ref(msg);
+        msg->release_ref();
     }
 }
 
@@ -1202,7 +1202,7 @@ void server_state::do_app_recall(std::shared_ptr<app_state> &app)
         app_path, value, LPC_META_STATE_HIGH, after_recall_app);
 }
 
-void server_state::recall_app(dsn_message_t msg)
+void server_state::recall_app(dsn::message_ex *msg)
 {
     configuration_recall_app_request request;
     configuration_recall_app_response response;
@@ -1251,7 +1251,7 @@ void server_state::recall_app(dsn_message_t msg)
 
     if (!do_recalling) {
         _meta_svc->reply_data(msg, response);
-        dsn_msg_release_ref(msg);
+        msg->release_ref();
         return;
     }
     do_app_recall(target_app);
@@ -1280,8 +1280,8 @@ void server_state::send_proposal(rpc_address target, const configuration_update_
            proposal.config.ballot,
            target.to_string(),
            proposal.node.to_string());
-    dsn_message_t msg =
-        dsn_msg_create_request(RPC_CONFIG_PROPOSAL, 0, proposal.config.pid.thread_hash());
+    dsn::message_ex *msg =
+        dsn::message_ex::create_request(RPC_CONFIG_PROPOSAL, 0, proposal.config.pid.thread_hash());
     ::marshall(msg, proposal);
     _meta_svc->send_message(target, msg);
 }
@@ -1555,7 +1555,7 @@ void server_state::on_update_configuration_on_remote_reply(
             resp.err = ERR_OK;
             resp.config = config_request->config;
             _meta_svc->reply_data(cc.msg, resp);
-            dsn_msg_release_ref(cc.msg);
+            cc.msg->release_ref();
             cc.msg = nullptr;
         }
 
@@ -1770,7 +1770,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
 }
 
 void server_state::on_update_configuration(
-    std::shared_ptr<configuration_update_request> &cfg_request, dsn_message_t msg)
+    std::shared_ptr<configuration_update_request> &cfg_request, dsn::message_ex *msg)
 {
     zauto_write_lock l(_lock);
     dsn::gpid &gpid = cfg_request->config.pid;
@@ -1821,7 +1821,7 @@ void server_state::on_update_configuration(
                gpid.get_partition_index(),
                cfg_request->config.ballot);
         // we don't reply the replica server, expect it to retry
-        dsn_msg_release_ref(msg);
+        msg->release_ref();
         return;
     } else {
         maintain_drops(cfg_request->config.last_drops, cfg_request->node, cfg_request->type);
@@ -1829,7 +1829,7 @@ void server_state::on_update_configuration(
 
     if (response.err != ERR_IO_PENDING) {
         _meta_svc->reply_data(msg, response);
-        dsn_msg_release_ref(msg);
+        msg->release_ref();
     } else {
         dassert(config_status::not_pending == cc.stage ||
                     config_status::pending_proposal == cc.stage,

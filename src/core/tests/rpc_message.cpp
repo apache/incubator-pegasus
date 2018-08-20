@@ -48,7 +48,7 @@ extern void tls_trans_mem_alloc(size_t min_size);
 
 TEST(core, message_ex)
 {
-    dsn_msg_context_t ctx0, ctx1;
+    msg_context_t ctx0, ctx1;
     ctx0.context = 0;
     ctx0.u.is_request = true;
     ctx0.u.serialize_format = DSF_THRIFT_BINARY;
@@ -181,70 +181,5 @@ TEST(core, message_ex)
 
         request->add_ref();
         request->release_ref();
-    }
-
-    { // c interface
-        dsn_message_t request = dsn_msg_create_request(RPC_CODE_FOR_TEST, 100, 1, 2);
-        dsn_msg_options_t opts;
-
-        opts.context.context = 444;
-        opts.gpid.set_value(333);
-
-        dsn_msg_set_options(request, &opts, DSN_MSGM_CONTEXT | DSN_MSGM_VNID);
-        message_ex *m = (message_ex *)request;
-        m->header->from_address = rpc_address("127.0.0.1", 8080);
-        m->to_address = rpc_address("127.0.0.1", 9090);
-
-        dsn_msg_get_options(request, &opts);
-        ASSERT_EQ(100, opts.timeout_ms);
-        ASSERT_EQ(1, opts.thread_hash);
-        ASSERT_EQ(2, opts.partition_hash);
-        ASSERT_EQ(333u, opts.gpid.value());
-        ASSERT_EQ(444u, opts.context.context);
-
-        ASSERT_EQ(rpc_address("127.0.0.1", 8080), rpc_address(dsn_msg_from_address(request)));
-        ASSERT_EQ(rpc_address("127.0.0.1", 9090), rpc_address(dsn_msg_to_address(request)));
-
-        const char *data = "adaoihfeuifgggggisdosghkbvjhzxvdafdiofgeof";
-        size_t data_size = strlen(data);
-
-        void *ptr;
-        size_t sz;
-
-        dsn_msg_write_next(request, &ptr, &sz, data_size);
-        memcpy(ptr, data, data_size);
-        dsn_msg_write_commit(request, data_size);
-
-        ASSERT_EQ(data_size, dsn_msg_body_size(request));
-
-        ptr = dsn_msg_rw_ptr(request, 0);
-        ASSERT_EQ(std::string(data), std::string((const char *)ptr, data_size));
-        ptr = dsn_msg_rw_ptr(request, 10);
-        ASSERT_EQ(std::string(data + 10), std::string((const char *)ptr, data_size - 10));
-        ptr = dsn_msg_rw_ptr(request, data_size);
-        ASSERT_EQ(nullptr, ptr);
-
-        dsn_message_t response = dsn_msg_create_response(request);
-        ASSERT_EQ(rpc_address("127.0.0.1", 9090), rpc_address(dsn_msg_from_address(response)));
-        ASSERT_EQ(rpc_address("127.0.0.1", 8080), rpc_address(dsn_msg_to_address(response)));
-
-        ASSERT_EQ(1u, m->buffers.size());
-        dsn_message_t receive = (dsn_message_t)message_ex::create_receive_message(m->buffers[0]);
-
-        ASSERT_EQ(data_size, dsn_msg_body_size(receive));
-
-        dsn_msg_read_next(receive, &ptr, &sz);
-        ASSERT_EQ(data_size, sz);
-        ASSERT_EQ(std::string(data), std::string((const char *)ptr, sz));
-        dsn_msg_read_commit(receive, sz);
-
-        dsn_msg_add_ref(receive);
-        dsn_msg_release_ref(receive);
-
-        dsn_msg_add_ref(response);
-        dsn_msg_release_ref(response);
-
-        dsn_msg_add_ref(request);
-        dsn_msg_release_ref(request);
     }
 }

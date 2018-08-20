@@ -384,7 +384,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
     update_local_configuration_with_no_ballot_change(partition_status::PS_INACTIVE);
     set_inactive_state_transient(true);
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
+    dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->info = _app_info;
@@ -411,7 +411,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
         rpc::call(target,
                   msg,
                   &_tracker,
-                  [=](error_code err, dsn_message_t reqmsg, dsn_message_t response) {
+                  [=](error_code err, dsn::message_ex *reqmsg, dsn::message_ex *response) {
                       on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
                   },
                   get_gpid().thread_hash());
@@ -419,8 +419,8 @@ void replica::update_configuration_on_meta_server(config_type::type type,
 
 void replica::on_update_configuration_on_meta_server_reply(
     error_code err,
-    dsn_message_t request,
-    dsn_message_t response,
+    dsn::message_ex *request,
+    dsn::message_ex *response,
     std::shared_ptr<configuration_update_request> req)
 {
     _checker.only_one_thread_access();
@@ -444,7 +444,7 @@ void replica::on_update_configuration_on_meta_server_reply(
 
         if (err != ERR_INVALID_VERSION) {
             // when the rpc call timeout, we would delay to do the recall
-            dsn_msg_add_ref(request); // will be released after recall
+            request->add_ref(); // will be released after recall
             _primary_states.reconfiguration_task = tasking::enqueue(
                 LPC_DELAY_UPDATE_CONFIG,
                 &_tracker,
@@ -453,15 +453,15 @@ void replica::on_update_configuration_on_meta_server_reply(
                     rpc_response_task_ptr t = rpc::create_rpc_response_task(
                         request,
                         &_tracker,
-                        [this,
-                         req2](error_code err, dsn_message_t request, dsn_message_t response) {
+                        [this, req2](
+                            error_code err, dsn::message_ex *request, dsn::message_ex *response) {
                             on_update_configuration_on_meta_server_reply(
                                 err, request, response, std::move(req2));
                         },
                         get_gpid().thread_hash());
                     _primary_states.reconfiguration_task = t;
                     dsn_rpc_call(target, t.get());
-                    dsn_msg_release_ref(request);
+                    request->release_ref();
                 },
                 get_gpid().thread_hash(),
                 std::chrono::seconds(1));

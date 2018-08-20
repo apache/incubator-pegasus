@@ -26,44 +26,44 @@ public:
 
 struct reply_context
 {
-    dsn_message_t response;
+    dsn::message_ex *response;
     spin_counter e;
 };
-dsn_message_t create_corresponding_receive(dsn_message_t req);
+dsn::message_ex *create_corresponding_receive(dsn::message_ex *req);
 
 class fake_receiver_meta_service : public dsn::replication::meta_service
 {
 public:
     fake_receiver_meta_service() : meta_service() {}
     virtual ~fake_receiver_meta_service() {}
-    virtual void reply_message(dsn_message_t request, dsn_message_t response) override
+    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override
     {
         uint64_t ptr;
         dsn::unmarshall(request, ptr);
         reply_context *ctx = reinterpret_cast<reply_context *>(ptr);
         ctx->response = create_corresponding_receive(response);
-        dsn_msg_add_ref(ctx->response);
+        ctx->response->add_ref();
 
         // release the response
-        dsn_msg_add_ref(response);
-        dsn_msg_release_ref(response);
+        response->add_ref();
+        response->release_ref();
 
         ctx->e.notify();
     }
 };
 
 // release the dsn_message who's reference is 0
-inline void destroy_message(dsn_message_t msg)
+inline void destroy_message(dsn::message_ex *msg)
 {
-    dsn_msg_add_ref(msg);
-    dsn_msg_release_ref(msg);
+    msg->add_ref();
+    msg->release_ref();
 }
 
 #define fake_wait_rpc(context, response_data)                                                      \
     do {                                                                                           \
         context->e.wait();                                                                         \
         unmarshall(context->response, response_data);                                              \
-        dsn_msg_release_ref(context->response);                                                    \
+        context->response->release_ref();                                                          \
     } while (0)
 
 class meta_service_test_app : public dsn::service_app
@@ -111,12 +111,12 @@ public:
     fake_rpc_call(dsn::task_code rpc_code,
                   dsn::task_code server_state_write_code,
                   RequestHandler *handle_class,
-                  void (RequestHandler::*handle)(dsn_message_t request),
+                  void (RequestHandler::*handle)(dsn::message_ex *request),
                   const TRequest &data,
                   int hash = 0,
                   std::chrono::milliseconds delay = std::chrono::milliseconds(0))
     {
-        dsn_message_t msg = dsn_msg_create_request(rpc_code);
+        dsn::message_ex *msg = dsn::message_ex::create_request(rpc_code);
         dsn::marshall(msg, data);
 
         std::shared_ptr<reply_context> result = std::make_shared<reply_context>();
@@ -124,8 +124,8 @@ public:
         uint64_t ptr = reinterpret_cast<uint64_t>(result.get());
         dsn::marshall(msg, ptr);
 
-        dsn_message_t received = create_corresponding_receive(msg);
-        dsn_msg_add_ref(received);
+        dsn::message_ex *received = create_corresponding_receive(msg);
+        received->add_ref();
         dsn::tasking::enqueue(server_state_write_code,
                               nullptr,
                               std::bind(handle, handle_class, received),

@@ -178,8 +178,8 @@ private:
     void end_meta_request(const rpc_response_task_ptr &callback,
                           int retry_times,
                           error_code err,
-                          dsn_message_t request,
-                          dsn_message_t resp);
+                          dsn::message_ex *request,
+                          dsn::message_ex *resp);
 
     template <typename TRequest>
     rpc_response_task_ptr request_meta(dsn::task_code code,
@@ -187,18 +187,18 @@ private:
                                        int timeout_milliseconds = 0,
                                        int reply_thread_hash = 0)
     {
-        dsn_message_t msg = dsn_msg_create_request(code, timeout_milliseconds);
+        dsn::message_ex *msg = dsn::message_ex::create_request(code, timeout_milliseconds);
         ::dsn::marshall(msg, *req);
 
         rpc_response_task_ptr task = ::dsn::rpc::create_rpc_response_task(
             msg, nullptr, empty_rpc_handler, reply_thread_hash);
-        rpc::call(
-            _meta_server,
-            msg,
-            &_tracker,
-            [this, task](error_code err, dsn_message_t request, dsn_message_t response) mutable {
-                end_meta_request(std::move(task), 0, err, request, response);
-            });
+        rpc::call(_meta_server,
+                  msg,
+                  &_tracker,
+                  [this, task](
+                      error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
+                      end_meta_request(std::move(task), 0, err, request, response);
+                  });
         return task;
     }
 

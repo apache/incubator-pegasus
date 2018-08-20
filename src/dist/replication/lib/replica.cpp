@@ -124,7 +124,7 @@ replica::~replica(void)
     dinfo("%s: replica destroyed", name());
 }
 
-void replica::on_client_read(task_code code, dsn_message_t request)
+void replica::on_client_read(task_code code, dsn::message_ex *request)
 {
     if (status() == partition_status::PS_INACTIVE ||
         status() == partition_status::PS_POTENTIAL_SECONDARY) {
@@ -158,7 +158,7 @@ void replica::on_client_read(task_code code, dsn_message_t request)
     _app->on_request(request);
 }
 
-void replica::response_client_message(bool is_read, dsn_message_t request, error_code error)
+void replica::response_client_message(bool is_read, dsn::message_ex *request, error_code error)
 {
     if (nullptr == request) {
         return;
@@ -172,10 +172,10 @@ void replica::response_client_message(bool is_read, dsn_message_t request, error
          "%s: reply client %s to %s, err = %s",
          name(),
          is_read ? "read" : "write",
-         dsn_msg_from_address(request).to_string(),
+         request->header->from_address.to_string(),
          error.to_string());
 
-    dsn_rpc_reply(dsn_msg_create_response(request), error);
+    dsn_rpc_reply(request->create_response(), error);
 }
 
 // error_code replica::check_and_fix_private_log_completeness()

@@ -28,11 +28,11 @@
 
 namespace dsn {
 
-/*extern*/ dsn_message_t from_blob_to_received_msg(dsn::task_code rpc_code,
-                                                   const blob &bb,
-                                                   int thread_hash,
-                                                   uint64_t partition_hash,
-                                                   dsn_msg_serialize_format serialization_type)
+/*extern*/ dsn::message_ex *from_blob_to_received_msg(dsn::task_code rpc_code,
+                                                      const blob &bb,
+                                                      int thread_hash,
+                                                      uint64_t partition_hash,
+                                                      dsn_msg_serialize_format serialization_type)
 {
     auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = rpc_code;

@@ -444,7 +444,7 @@ error_code replication_app_base::open_new_internal(replica *r,
 
 int replication_app_base::on_batched_write_requests(int64_t decree,
                                                     uint64_t timestamp,
-                                                    dsn_message_t *requests,
+                                                    dsn::message_ex **requests,
                                                     int request_length)
 {
     int storage_error = 0;
@@ -453,7 +453,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
         if (e != 0) {
             derror("%s: got storage error when handler request(%s)",
                    _replica->name(),
-                   dsn_msg_rpc_name(requests[i]));
+                   requests[i]->header->rpc_name);
             storage_error = e;
         }
     }
@@ -473,14 +473,15 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
     dassert(mu->data.updates.size() > 0, "");
 
     int request_count = static_cast<int>(mu->client_requests.size());
-    dsn_message_t *batched_requests =
-        (dsn_message_t *)alloca(sizeof(dsn_message_t) * request_count);
-    dsn_message_t *faked_requests = (dsn_message_t *)alloca(sizeof(dsn_message_t) * request_count);
+    dsn::message_ex **batched_requests =
+        (dsn::message_ex **)alloca(sizeof(dsn::message_ex *) * request_count);
+    dsn::message_ex **faked_requests =
+        (dsn::message_ex **)alloca(sizeof(dsn::message_ex *) * request_count);
     int batched_count = 0;
     int faked_count = 0;
     for (int i = 0; i < request_count; i++) {
         const mutation_update &update = mu->data.updates[i];
-        dsn_message_t req = mu->client_requests[i];
+        dsn::message_ex *req = mu->client_requests[i];
         if (update.code != RPC_REPLICATION_WRITE_EMPTY) {
             dinfo("%s: mutation %s #%d: dispatch rpc call %s",
                   _replica->name(),
@@ -489,7 +490,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
                   update.code.to_string());
 
             if (req == nullptr) {
-                req = dsn_msg_create_received_request(
+                req = dsn::message_ex::create_received_request(
                     update.code,
                     (dsn_msg_serialize_format)update.serialization_type,
                     (void *)update.data.data(),
@@ -513,7 +514,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
 
     // release faked requests
     for (int i = 0; i < faked_count; i++) {
-        dsn_msg_release_ref(faked_requests[i]);
+        faked_requests[i]->release_ref();
     }
 
     if (perror != 0) {

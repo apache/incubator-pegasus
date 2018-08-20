@@ -78,7 +78,7 @@ error_code replication_service_app::stop(bool cleanup)
 
 void replication_service_app::on_intercepted_request(dsn::gpid gpid,
                                                      bool is_write,
-                                                     dsn_message_t msg)
+                                                     dsn::message_ex* msg)
 {
     if (is_write) {
         _stub->on_client_write(gpid, msg);

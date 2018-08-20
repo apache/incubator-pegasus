@@ -93,19 +93,22 @@ public:
     }
 
     template <typename TResponse>
-    void reply_data(dsn_message_t request, const TResponse &data)
+    void reply_data(dsn::message_ex *request, const TResponse &data)
     {
-        dsn_message_t response = dsn_msg_create_response(request);
+        dsn::message_ex *response = request->create_response();
         dsn::marshall(response, data);
         reply_message(request, response);
     }
 
-    virtual void reply_message(dsn_message_t, dsn_message_t response) { dsn_rpc_reply(response); }
-    virtual void send_message(const rpc_address &target, dsn_message_t request)
+    virtual void reply_message(dsn::message_ex *, dsn::message_ex *response)
+    {
+        dsn_rpc_reply(response);
+    }
+    virtual void send_message(const rpc_address &target, dsn::message_ex *request)
     {
         dsn_rpc_call_one_way(target, request);
     }
-    virtual void send_request(dsn_message_t /*req*/,
+    virtual void send_request(dsn::message_ex * /*req*/,
                               const rpc_address &target,
                               const rpc_response_task_ptr &callback)
     {
@@ -126,45 +129,45 @@ private:
 
     // client => meta server
     // query partition configuration
-    void on_query_configuration_by_node(dsn_message_t req);
-    void on_query_configuration_by_index(dsn_message_t req);
+    void on_query_configuration_by_node(dsn::message_ex *req);
+    void on_query_configuration_by_index(dsn::message_ex *req);
 
     // partition server => meta server
-    void on_config_sync(dsn_message_t req);
+    void on_config_sync(dsn::message_ex *req);
 
     // update configuration
-    void on_propose_balancer(dsn_message_t req);
-    void on_update_configuration(dsn_message_t req);
+    void on_propose_balancer(dsn::message_ex *req);
+    void on_update_configuration(dsn::message_ex *req);
 
     // app operations
-    void on_create_app(dsn_message_t req);
-    void on_drop_app(dsn_message_t req);
-    void on_recall_app(dsn_message_t req);
-    void on_list_apps(dsn_message_t req);
-    void on_list_nodes(dsn_message_t req);
+    void on_create_app(dsn::message_ex *req);
+    void on_drop_app(dsn::message_ex *req);
+    void on_recall_app(dsn::message_ex *req);
+    void on_list_apps(dsn::message_ex *req);
+    void on_list_nodes(dsn::message_ex *req);
 
     // app env operations
     void update_app_env(app_env_rpc env_rpc);
 
     // cluster info
-    void on_query_cluster_info(dsn_message_t req);
+    void on_query_cluster_info(dsn::message_ex *req);
 
     // meta control
-    void on_control_meta_level(dsn_message_t req);
-    void on_start_recovery(dsn_message_t req);
-    void on_start_restore(dsn_message_t req);
-    void on_add_backup_policy(dsn_message_t req);
-    void on_query_backup_policy(dsn_message_t req);
-    void on_modify_backup_policy(dsn_message_t req);
-    void on_report_restore_status(dsn_message_t req);
-    void on_query_restore_status(dsn_message_t req);
+    void on_control_meta_level(dsn::message_ex *req);
+    void on_start_recovery(dsn::message_ex *req);
+    void on_start_restore(dsn::message_ex *req);
+    void on_add_backup_policy(dsn::message_ex *req);
+    void on_query_backup_policy(dsn::message_ex *req);
+    void on_modify_backup_policy(dsn::message_ex *req);
+    void on_report_restore_status(dsn::message_ex *req);
+    void on_query_restore_status(dsn::message_ex *req);
 
     // common routines
     // ret:
     //   1. the meta is leader
     //   0. meta isn't leader, and rpc-msg can forward to others
     //  -1. meta isn't leader, and rpc-msg can't forward to others
-    int check_leader(dsn_message_t req);
+    int check_leader(dsn::message_ex *req);
     error_code remote_storage_initialize();
     bool check_freeze() const;
 

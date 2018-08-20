@@ -68,9 +68,9 @@ void meta_service_test_app::app_envs_basic_test()
         request.__set_keys(keys);
         request.__set_values(values);
 
-        dsn_message_t binary_req = dsn_msg_create_request(RPC_CM_UPDATE_APP_ENV);
+        dsn::message_ex* binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
         dsn::marshall(binary_req, request);
-        dsn_message_t recv_msg = create_corresponding_receive(binary_req);
+        dsn::message_ex* recv_msg = create_corresponding_receive(binary_req);
         app_env_rpc rpc(recv_msg); // don't need reply
         ss->set_app_envs(rpc);
         ss->wait_all_task();
@@ -90,9 +90,9 @@ void meta_service_test_app::app_envs_basic_test()
         request.__set_op(app_env_operation::type::APP_ENV_OP_DEL);
         request.__set_keys(del_keys);
 
-        dsn_message_t binary_req = dsn_msg_create_request(RPC_CM_UPDATE_APP_ENV);
+        dsn::message_ex* binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
         dsn::marshall(binary_req, request);
-        dsn_message_t recv_msg = create_corresponding_receive(binary_req);
+        dsn::message_ex* recv_msg = create_corresponding_receive(binary_req);
         app_env_rpc rpc(recv_msg); // don't need reply
         ss->del_app_envs(rpc);
         ss->wait_all_task();
@@ -119,9 +119,9 @@ void meta_service_test_app::app_envs_basic_test()
             request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
             request.__set_clear_prefix(clear_prefix);
 
-            dsn_message_t binary_req = dsn_msg_create_request(RPC_CM_UPDATE_APP_ENV);
+            dsn::message_ex* binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
             dsn::marshall(binary_req, request);
-            dsn_message_t recv_msg = create_corresponding_receive(binary_req);
+            dsn::message_ex* recv_msg = create_corresponding_receive(binary_req);
             app_env_rpc rpc(recv_msg); // don't need reply
             ss->clear_app_envs(rpc);
             ss->wait_all_task();
@@ -151,9 +151,9 @@ void meta_service_test_app::app_envs_basic_test()
             request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
             request.__set_clear_prefix("");
 
-            dsn_message_t binary_req = dsn_msg_create_request(RPC_CM_UPDATE_APP_ENV);
+            dsn::message_ex* binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
             dsn::marshall(binary_req, request);
-            dsn_message_t recv_msg = create_corresponding_receive(binary_req);
+            dsn::message_ex* recv_msg = create_corresponding_receive(binary_req);
             app_env_rpc rpc(recv_msg); // don't need reply
             ss->clear_app_envs(rpc);
             ss->wait_all_task();

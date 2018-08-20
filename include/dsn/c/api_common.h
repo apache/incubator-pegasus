@@ -59,4 +59,3 @@
 #define DSN_MAX_PATH 1024
 
 typedef void *dsn_handle_t;
-typedef void *dsn_message_t;

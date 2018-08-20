@@ -48,7 +48,7 @@
 
 #include "test_utils.h"
 
-typedef std::function<void(error_code, dsn_message_t, dsn_message_t)> rpc_reply_handler;
+typedef std::function<void(error_code, dsn::message_ex *, dsn::message_ex *)> rpc_reply_handler;
 
 static dsn::rpc_address build_group()
 {
@@ -156,8 +156,8 @@ TEST(core, group_address_change_leader)
 
 typedef ::dsn::utils::priority_queue<::dsn::task_ptr, 1> task_resp_queue;
 static void rpc_group_callback(error_code err,
-                               dsn_message_t req,
-                               dsn_message_t resp,
+                               dsn::message_ex *req,
+                               dsn::message_ex *resp,
                                task_resp_queue *q,
                                rpc_reply_handler action_on_succeed,
                                rpc_reply_handler action_on_failure)
@@ -170,19 +170,19 @@ static void rpc_group_callback(error_code err,
         dsn::rpc_address group_addr = ((dsn::message_ex *)req)->server_address;
         group_addr.group_address()->leader_forward();
 
-        auto req_again = dsn_msg_copy(req, false, false);
-        auto call_again =
-            ::dsn::rpc::call(group_addr,
-                             req_again,
-                             nullptr,
-                             [=](error_code err, dsn_message_t request, dsn_message_t response) {
-                                 rpc_group_callback(err,
-                                                    request,
-                                                    response,
-                                                    q,
-                                                    std::move(action_on_succeed),
-                                                    std::move(action_on_failure));
-                             });
+        auto req_again = req->copy(false, false);
+        auto call_again = ::dsn::rpc::call(
+            group_addr,
+            req_again,
+            nullptr,
+            [=](error_code err, dsn::message_ex *request, dsn::message_ex *response) {
+                rpc_group_callback(err,
+                                   request,
+                                   response,
+                                   q,
+                                   std::move(action_on_succeed),
+                                   std::move(action_on_failure));
+            });
         q->enqueue(call_again, 0);
     }
 }
@@ -195,13 +195,13 @@ static void send_message(::dsn::rpc_address addr,
 {
     task_resp_queue q("response.queue");
     for (int i = 0; i != repeat_times; ++i) {
-        dsn_message_t request = dsn_msg_create_request(RPC_TEST_STRING_COMMAND);
+        dsn::message_ex *request = dsn::message_ex::create_request(RPC_TEST_STRING_COMMAND);
         ::dsn::marshall(request, command);
         dsn::task_ptr resp_task = ::dsn::rpc::call(
             addr,
             request,
             nullptr,
-            [&](error_code err, dsn_message_t request, dsn_message_t response) {
+            [&](error_code err, dsn::message_ex *request, dsn::message_ex *response) {
                 rpc_group_callback(
                     err, request, response, &q, action_on_succeed, action_on_failure);
             });
@@ -216,19 +216,21 @@ static void send_message(::dsn::rpc_address addr,
 TEST(core, group_address_no_response_2)
 {
     ::dsn::rpc_address addr = build_group();
-    rpc_reply_handler action_on_succeed = [](error_code err, dsn_message_t, dsn_message_t resp) {
-        EXPECT_TRUE(err == ERR_OK);
-        std::string result;
-        ::dsn::unmarshall(resp, result);
-        ::dsn::rpc_address a = dsn_address_from_string(result);
-        EXPECT_TRUE(a.port() == TEST_PORT_END);
-    };
+    rpc_reply_handler action_on_succeed =
+        [](error_code err, dsn::message_ex *, dsn::message_ex *resp) {
+            EXPECT_TRUE(err == ERR_OK);
+            std::string result;
+            ::dsn::unmarshall(resp, result);
+            ::dsn::rpc_address a = dsn_address_from_string(result);
+            EXPECT_TRUE(a.port() == TEST_PORT_END);
+        };
 
-    rpc_reply_handler action_on_failure = [](error_code err, dsn_message_t req, dsn_message_t) {
-        if (err == ERR_TIMEOUT) {
-            EXPECT_TRUE(((dsn::message_ex *)req)->to_address.port() != TEST_PORT_END);
-        }
-    };
+    rpc_reply_handler action_on_failure =
+        [](error_code err, dsn::message_ex *req, dsn::message_ex *) {
+            if (err == ERR_TIMEOUT) {
+                EXPECT_TRUE(((dsn::message_ex *)req)->to_address.port() != TEST_PORT_END);
+            }
+        };
 
     send_message(addr, std::string("expect_no_reply"), 1, action_on_succeed, action_on_failure);
 }
@@ -239,13 +241,14 @@ TEST(core, send_to_invalid_address)
     /* here we assume 10.255.254.253:32766 is not assigned */
     group.group_address()->set_leader(dsn::rpc_address("10.255.254.253", 32766));
 
-    rpc_reply_handler action_on_succeed = [](error_code err, dsn_message_t, dsn_message_t resp) {
-        EXPECT_TRUE(err == ERR_OK);
-        std::string hehe_str;
-        ::dsn::unmarshall(resp, hehe_str);
-        EXPECT_TRUE(hehe_str == "hehehe");
-    };
-    rpc_reply_handler action_on_failure = [](error_code err, dsn_message_t, dsn_message_t) {
+    rpc_reply_handler action_on_succeed =
+        [](error_code err, dsn::message_ex *, dsn::message_ex *resp) {
+            EXPECT_TRUE(err == ERR_OK);
+            std::string hehe_str;
+            ::dsn::unmarshall(resp, hehe_str);
+            EXPECT_TRUE(hehe_str == "hehehe");
+        };
+    rpc_reply_handler action_on_failure = [](error_code err, dsn::message_ex *, dsn::message_ex *) {
         EXPECT_TRUE(err != ERR_OK);
     };
 

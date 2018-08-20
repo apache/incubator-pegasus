@@ -495,25 +495,27 @@ void replica::tell_meta_to_restore_rollback()
     request.app_name = _app_info.app_name;
     request.options = std::move(options);
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_DROP_APP);
+    dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_DROP_APP);
     ::dsn::marshall(msg, request);
 
     rpc_address target(_stub->_failure_detector->get_servers());
-    rpc::call(
-        target, msg, &_tracker, [this](error_code err, dsn_message_t request, dsn_message_t resp) {
-            if (err == ERR_OK) {
-                configuration_drop_app_response response;
-                ::dsn::unmarshall(resp, response);
-                if (response.err == ERR_OK) {
-                    ddebug("restore rolling backup succeed");
-                    return;
-                } else {
-                    tell_meta_to_restore_rollback();
-                }
-            } else if (err == ERR_TIMEOUT) {
-                tell_meta_to_restore_rollback();
-            }
-        });
+    rpc::call(target,
+              msg,
+              &_tracker,
+              [this](error_code err, dsn::message_ex *request, dsn::message_ex *resp) {
+                  if (err == ERR_OK) {
+                      configuration_drop_app_response response;
+                      ::dsn::unmarshall(resp, response);
+                      if (response.err == ERR_OK) {
+                          ddebug("restore rolling backup succeed");
+                          return;
+                      } else {
+                          tell_meta_to_restore_rollback();
+                      }
+                  } else if (err == ERR_TIMEOUT) {
+                      tell_meta_to_restore_rollback();
+                  }
+              });
 }
 
 void replica::report_restore_status_to_meta()
@@ -523,23 +525,25 @@ void replica::report_restore_status_to_meta()
     request.pid = _config.pid;
     request.progress = _restore_progress.load();
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_CM_REPORT_RESTORE_STATUS);
+    dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_REPORT_RESTORE_STATUS);
     ::dsn::marshall(msg, request);
     rpc_address target(_stub->_failure_detector->get_servers());
-    rpc::call(
-        target, msg, &_tracker, [](error_code err, dsn_message_t request, dsn_message_t resp) {
-            if (err == ERR_OK) {
-                configuration_report_restore_status_response response;
-                ::dsn::unmarshall(resp, response);
-                if (response.err == ERR_OK) {
-                    dinfo("report restore status succeed");
-                    return;
-                }
-            } else if (err == ERR_TIMEOUT) {
-                // TODO: we should retry to make the result more precisely
-                // report_restore_status_to_meta();
-            }
-        });
+    rpc::call(target,
+              msg,
+              &_tracker,
+              [](error_code err, dsn::message_ex *request, dsn::message_ex *resp) {
+                  if (err == ERR_OK) {
+                      configuration_report_restore_status_response response;
+                      ::dsn::unmarshall(resp, response);
+                      if (response.err == ERR_OK) {
+                          dinfo("report restore status succeed");
+                          return;
+                      }
+                  } else if (err == ERR_TIMEOUT) {
+                      // TODO: we should retry to make the result more precisely
+                      // report_restore_status_to_meta();
+                  }
+              });
 }
 
 void replica::update_restore_progress()

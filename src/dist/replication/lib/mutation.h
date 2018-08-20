@@ -64,12 +64,12 @@ public:
     const uint64_t tid() const { return _tid; }
     bool is_logged() const { return _not_logged == 0; }
     bool is_ready_for_commit() const { return _private0 == 0; }
-    const std::vector<dsn_message_t> &prepare_requests() const { return _prepare_requests; }
-    void add_prepare_request(dsn_message_t request)
+    const std::vector<dsn::message_ex *> &prepare_requests() const { return _prepare_requests; }
+    void add_prepare_request(dsn::message_ex *request)
     {
         if (nullptr != request) {
             _prepare_requests.push_back(request);
-            dsn_msg_add_ref(request); // released on dctor
+            request->add_ref(); // released on dctor
         }
     }
     unsigned int left_secondary_ack_count() const { return _left_secondary_ack_count; }
@@ -90,7 +90,7 @@ public:
     // state change
     void set_id(ballot b, decree c);
     void set_timestamp(int64_t timestamp) { data.header.timestamp = timestamp; }
-    void add_client_request(task_code code, dsn_message_t request);
+    void add_client_request(task_code code, dsn::message_ex *request);
     void copy_from(mutation_ptr &old);
     void set_logged()
     {
@@ -123,8 +123,8 @@ public:
     //   - the private log may be transfered to other node with different program
     //   - the private/shared log may be replayed by different program when server restart
     void write_to(std::function<void(const blob &)> inserter) const;
-    void write_to(binary_writer &writer, dsn_message_t to) const;
-    static mutation_ptr read_from(binary_reader &reader, dsn_message_t from);
+    void write_to(binary_writer &writer, dsn::message_ex *to) const;
+    static mutation_ptr read_from(binary_reader &reader, dsn::message_ex *from);
 
     static void write_mutation_header(binary_writer &writer, const mutation_header &header);
     static void read_mutation_header(binary_reader &reader, mutation_header &header);
@@ -133,7 +133,7 @@ public:
     mutation_data data;
 
     // user requests
-    std::vector<dsn_message_t> client_requests;
+    std::vector<dsn::message_ex *> client_requests;
 
     // used by pending mutation queue only
     mutation *next;
@@ -153,8 +153,8 @@ private:
     uint64_t _prepare_ts_ms;
     ::dsn::task_ptr _log_task;
     node_tasks _prepare_or_commit_tasks;
-    std::vector<dsn_message_t> _prepare_requests; // may combine duplicate requests
-    char _name[60];                               // app_id.partition_index.ballot.decree
+    std::vector<dsn::message_ex *> _prepare_requests; // may combine duplicate requests
+    char _name[60];                                   // app_id.partition_index.ballot.decree
     int _appro_data_bytes;
     uint64_t _create_ts_ns; // for profiling
     uint64_t _tid;          // trace id, unique in process
@@ -186,7 +186,7 @@ public:
                 _current_op_count);
     }
 
-    mutation_ptr add_work(task_code code, dsn_message_t request, replica *r);
+    mutation_ptr add_work(task_code code, dsn::message_ex *request, replica *r);
 
     void clear();
     // called when you want to clear the mutation_queue and want to get the remaining messages
@@ -218,7 +218,6 @@ private:
     mutation_ptr _pending_mutation;
     slist<mutation> _hdr;
 };
-
 }
 } // namespace
 

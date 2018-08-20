@@ -84,7 +84,7 @@ void server_state::sync_app_from_backup_media(
 }
 
 std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app_info(
-    dsn_message_t msg, const configuration_restore_request &req, const dsn::blob &app_info)
+    dsn::message_ex *msg, const configuration_restore_request &req, const dsn::blob &app_info)
 {
     std::pair<dsn::error_code, std::shared_ptr<app_state>> res = std::make_pair(ERR_OK, nullptr);
 
@@ -141,7 +141,7 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
     return res;
 }
 
-void server_state::restore_app(dsn_message_t msg)
+void server_state::restore_app(dsn::message_ex *msg)
 {
     configuration_restore_request request;
     dsn::unmarshall(msg, request);
@@ -168,12 +168,12 @@ void server_state::restore_app(dsn_message_t msg)
                 response.err = ec;
                 response.appid = -1;
                 _meta_svc->reply_data(msg, response);
-                dsn_msg_release_ref(msg);
+                msg->release_ref();
             }
         });
 }
 
-void server_state::on_recv_restore_report(dsn_message_t msg)
+void server_state::on_recv_restore_report(dsn::message_ex *msg)
 {
     zauto_write_lock l(_lock);
 
@@ -207,9 +207,10 @@ void server_state::on_recv_restore_report(dsn_message_t msg)
                request.progress);
     }
     _meta_svc->reply_data(msg, response);
-    dsn_msg_release_ref(msg);
+    msg->release_ref();
 }
-void server_state::on_query_restore_status(dsn_message_t msg)
+
+void server_state::on_query_restore_status(dsn::message_ex *msg)
 {
     zauto_read_lock l(_lock);
 
@@ -243,7 +244,7 @@ void server_state::on_query_restore_status(dsn_message_t msg)
         }
     }
     _meta_svc->reply_data(msg, response);
-    dsn_msg_release_ref(msg);
+    msg->release_ref();
 }
 }
 }

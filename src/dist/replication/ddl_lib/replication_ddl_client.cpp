@@ -607,7 +607,8 @@ dsn::error_code replication_ddl_client::cluster_name(int64_t timeout_ms, std::st
     std::shared_ptr<configuration_cluster_info_request> req(
         new configuration_cluster_info_request());
 
-    auto resp_task = request_meta<configuration_cluster_info_request>(RPC_CM_CLUSTER_INFO, req, timeout_ms);
+    auto resp_task =
+        request_meta<configuration_cluster_info_request>(RPC_CM_CLUSTER_INFO, req, timeout_ms);
     resp_task->wait();
     if (resp_task->error() != dsn::ERR_OK) {
         return resp_task->error();
@@ -1348,15 +1349,15 @@ bool replication_ddl_client::valid_app_char(int c)
 void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callback,
                                               int retry_times,
                                               error_code err,
-                                              dsn_message_t request,
-                                              dsn_message_t resp)
+                                              dsn::message_ex *request,
+                                              dsn::message_ex *resp)
 {
     if (err != dsn::ERR_OK && retry_times < 2) {
         rpc::call(_meta_server,
                   request,
                   &_tracker,
                   [this, retry_times, callback](
-                      error_code err, dsn_message_t request, dsn_message_t response) mutable {
+                      error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
                       end_meta_request(callback, retry_times + 1, err, request, response);
                   });
     } else {

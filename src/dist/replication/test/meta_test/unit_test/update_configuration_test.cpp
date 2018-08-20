@@ -21,11 +21,11 @@ private:
 public:
     fake_sender_meta_service(meta_service_test_app *app) : meta_service(), _app(app) {}
 
-    virtual void reply_message(dsn_message_t request, dsn_message_t response) override {}
-    virtual void send_message(const dsn::rpc_address &target, dsn_message_t request) override
+    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override {}
+    virtual void send_message(const dsn::rpc_address &target, dsn::message_ex *request) override
     {
         // we expect this is a configuration_update_request proposal
-        dsn_message_t recv_request = create_corresponding_receive(request);
+        dsn::message_ex *recv_request = create_corresponding_receive(request);
 
         std::shared_ptr<configuration_update_request> update_req =
             std::make_shared<configuration_update_request>();
@@ -73,11 +73,11 @@ public:
 class null_meta_service : public dsn::replication::meta_service
 {
 public:
-    void send_message(const dsn::rpc_address &target, dsn_message_t request)
+    void send_message(const dsn::rpc_address &target, dsn::message_ex *request)
     {
         ddebug("send request to %s", target.to_string());
-        dsn_msg_add_ref(request);
-        dsn_msg_release_ref(request);
+        request->add_ref();
+        request->release_ref();
     }
 };
 
@@ -110,9 +110,10 @@ public:
 void meta_service_test_app::call_update_configuration(
     meta_service *svc, std::shared_ptr<dsn::replication::configuration_update_request> &request)
 {
-    dsn_message_t fake_request = dsn_msg_create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
+    dsn::message_ex *fake_request =
+        dsn::message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
     ::dsn::marshall(fake_request, *request);
-    dsn_msg_add_ref(fake_request);
+    fake_request->add_ref();
 
     dsn::tasking::enqueue(
         LPC_META_STATE_HIGH,
@@ -124,11 +125,11 @@ void meta_service_test_app::call_update_configuration(
 void meta_service_test_app::call_config_sync(
     meta_service *svc, std::shared_ptr<configuration_query_by_node_request> &request)
 {
-    dsn_message_t fake_request = dsn_msg_create_request(RPC_CM_CONFIG_SYNC);
+    dsn::message_ex *fake_request = dsn::message_ex::create_request(RPC_CM_CONFIG_SYNC);
     ::dsn::marshall(fake_request, *request);
 
-    dsn_message_t recvd_request = create_corresponding_receive(fake_request);
-    dsn_msg_add_ref(recvd_request);
+    dsn::message_ex *recvd_request = create_corresponding_receive(fake_request);
+    recvd_request->add_ref();
 
     destroy_message(fake_request);
 

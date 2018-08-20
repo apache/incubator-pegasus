@@ -155,7 +155,7 @@ bool command_manager::run_command(const std::string &cmd,
         } else {
             ::dsn::rpc_read_stream response;
 
-            dsn_message_t msg = dsn_msg_create_request(RPC_CLI_CLI_CALL);
+            dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CLI_CLI_CALL);
             ::dsn::command rcmd;
             rcmd.cmd = cmd;
             rcmd.arguments = args;
@@ -175,12 +175,12 @@ bool command_manager::run_command(const std::string &cmd,
 void command_manager::start_remote_cli()
 {
     ::dsn::service_engine::fast_instance().register_system_rpc_handler(
-        RPC_CLI_CLI_CALL, "dsn.cli", [](dsn_message_t req) {
+        RPC_CLI_CLI_CALL, "dsn.cli", [](dsn::message_ex *req) {
             command_manager::instance().on_remote_cli(req);
         });
 }
 
-void command_manager::on_remote_cli(dsn_message_t req)
+void command_manager::on_remote_cli(dsn::message_ex *req)
 {
     ::dsn::command cmd;
     std::string result;
@@ -192,13 +192,13 @@ void command_manager::on_remote_cli(dsn_message_t req)
         oss << " \"" << cmd.arguments[i] << "\"";
     }
     ddebug("received remote command from %s: %s%s",
-           dsn_msg_from_address(req).to_string(),
+           req->header->from_address.to_string(),
            cmd.cmd.c_str(),
            oss.str().c_str());
 
     run_command(cmd.cmd, cmd.arguments, result);
 
-    auto resp = dsn_msg_create_response(req);
+    auto resp = req->create_response();
     ::dsn::marshall(resp, result);
     dsn_rpc_reply(resp);
 }

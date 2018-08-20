@@ -544,13 +544,13 @@ TEST(fd, worker_died_when_switch_master)
     ASSERT_TRUE(spin_wait_condition([&wait_count] { return wait_count == 0; }, 20));
 }
 
-dsn_message_t create_fake_rpc_response()
+dsn::message_ex *create_fake_rpc_response()
 {
-    dsn_message_t req =
-        dsn_msg_create_received_request(RPC_MASTER_CONFIG, DSF_THRIFT_BINARY, nullptr, 0);
-    dsn_message_t response = dsn_msg_create_response(req);
-    dsn_msg_add_ref(req);
-    dsn_msg_release_ref(req);
+    dsn::message_ex *req =
+        dsn::message_ex::create_received_request(RPC_MASTER_CONFIG, DSF_THRIFT_BINARY, nullptr, 0);
+    dsn::message_ex *response = req->create_response();
+    req->add_ref();
+    req->release_ref();
     return response;
 }
 

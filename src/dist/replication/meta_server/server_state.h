@@ -147,13 +147,13 @@ public:
                                       /*out*/ configuration_query_by_index_response &response);
     bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &config);
 
-    // app operations
-    void create_app(dsn_message_t msg);
-    void drop_app(dsn_message_t msg);
-    void recall_app(dsn_message_t msg);
+    // app options
+    void create_app(dsn::message_ex *msg);
+    void drop_app(dsn::message_ex *msg);
+    void recall_app(dsn::message_ex *msg);
     void list_apps(const configuration_list_apps_request &request,
                    configuration_list_apps_response &response);
-    void restore_app(dsn_message_t msg);
+    void restore_app(dsn::message_ex *msg);
 
     // app env operations
     void set_app_envs(const app_env_rpc &env_rpc);
@@ -161,9 +161,9 @@ public:
     void clear_app_envs(const app_env_rpc &env_rpc);
 
     // update configuration
-    void on_config_sync(dsn_message_t msg);
+    void on_config_sync(dsn::message_ex *msg);
     void on_update_configuration(std::shared_ptr<configuration_update_request> &request,
-                                 dsn_message_t msg);
+                                 dsn::message_ex *msg);
 
     // dump & restore
     error_code dump_from_remote_storage(const char *local_path, bool sync_immediately);
@@ -174,9 +174,9 @@ public:
                              configuration_balancer_response &response);
     void on_start_recovery(const configuration_recovery_request &request,
                            configuration_recovery_response &response);
-    void on_recv_restore_report(dsn_message_t msg);
+    void on_recv_restore_report(dsn::message_ex *msg);
 
-    void on_query_restore_status(dsn_message_t msg);
+    void on_query_restore_status(dsn::message_ex *msg);
 
     // return true if no need to do any actions
     bool check_all_partitions();
@@ -214,7 +214,7 @@ private:
     sync_app_from_backup_media(const configuration_restore_request &request,
                                std::function<void(dsn::error_code, const dsn::blob &)> &&callback);
     std::pair<dsn::error_code, std::shared_ptr<app_state>> restore_app_info(
-        dsn_message_t msg, const configuration_restore_request &req, const dsn::blob &app_info);
+        dsn::message_ex *msg, const configuration_restore_request &req, const dsn::blob &app_info);
 
     error_code initialize_default_apps();
     void initialize_node_state();

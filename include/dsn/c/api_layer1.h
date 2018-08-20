@@ -217,220 +217,10 @@ replace the underneath implementation of the network (e.g., RDMA, simulated netw
 */
 
 /*!
-@defgroup rpc-msg RPC Message Utilities
-
-RPC Message Utilities
-
-
-rpc message and buffer management
-
-all returned dsn_message_t are NOT add_ref by rDSN (unless explicitly specified), so you
-do not need to call msg_release_ref to release the msgs.  the decision is made for easier
-programming, and you may consider the later dsn_rpc_xxx calls do the resource gc work for
-you.  however, if you want to hold the message further after call dsn_rpc_xxx, you need to
-call dsn_msg_add_ref first before these operations,  and call dsn_msg_release_ref later to
-ensure there is no memory leak.  This is very similar to what we have above with task
-handles.  however, this is not true for returned message from dsn_rpc_call_wait and
-dsn_rpc_get_response. For these two cases,  developers are responsible for releasing the
-message handle  by calling dsn_msg_release_ref. similarily, for all msgs accessable in
-callbacks, if you want to hold them in  upper apps further beyond the callbacks,  you need to
-call msg_add_ref, and msg_release_ref explicitly.  when timeout_milliseconds == 0,
-[task.%rpc_code%] rpc_timeout_milliseconds is used.
-
-rpc message read/write
-
-<PRE>
-// apps write rpc message as follows:
-       void* ptr;
-       size_t size;
-       dsn_msg_write_next(msg, &ptr, &size, min_size);
-       write msg content to [ptr, ptr + size)
-       dsn_msg_write_commit(msg, real_written_size);
-
-// apps read rpc message as follows:
-       void* ptr;
-       size_t size;
-       dsn_msg_read_next(msg, &ptr, &size);
-       read msg content in [ptr, ptr + size)
-       dsn_msg_read_commit(msg, real read size);
-// if not committed, next dsn_msg_read_next returns the same read buffer
-</PRE>
-
 @{
 */
 
 extern DSN_API dsn::rpc_address dsn_primary_address();
-
-/*!
- create a rpc request message
-
- \param rpc_code              task code for this request
- \param timeout_milliseconds  timeout for the RPC call, 0 for default value as
-                              configued in config files for the task code
- \param thread_hash           used for thread dispatching on server,
-                              if thread_hash == 0 && partition_hash != 0, thread_hash is computed
- from partition_hash
- \param partition_hash        used for finding which partition the request should be sent to
- \return RPC message handle
- */
-extern DSN_API dsn_message_t dsn_msg_create_request(dsn::task_code rpc_code,
-                                                    int timeout_milliseconds DEFAULT(0),
-                                                    int thread_hash DEFAULT(0),
-                                                    uint64_t partition_hash DEFAULT(0));
-
-/*! create a RPC response message correspondent to the given request message */
-extern DSN_API dsn_message_t dsn_msg_create_response(dsn_message_t request);
-
-/*! make a copy of the given message */
-extern DSN_API dsn_message_t dsn_msg_copy(dsn_message_t msg,
-                                          bool clone_content,
-                                          bool copy_for_receive);
-
-/*! add reference to the message, paired with /ref dsn_msg_release_ref */
-extern DSN_API void dsn_msg_add_ref(dsn_message_t msg);
-
-/*! release reference to the message, paired with /ref dsn_msg_add_ref */
-extern DSN_API void dsn_msg_release_ref(dsn_message_t msg);
-
-/*! define various serialization format supported by rDSN, note any changes here must also be
- * reflected in src/tools/.../dsn_transport.js */
-typedef enum dsn_msg_serialize_format {
-    DSF_INVALID = 0,
-    DSF_THRIFT_BINARY = 1,
-    DSF_THRIFT_COMPACT = 2,
-    DSF_THRIFT_JSON = 3,
-    DSF_PROTOC_BINARY = 4,
-    DSF_PROTOC_JSON = 5,
-    DSF_JSON = 6
-} dsn_msg_serialize_format;
-
-/*! explicitly create a received RPC request, MUST released mannually later using
- * dsn_msg_release_ref */
-extern DSN_API dsn_message_t
-dsn_msg_create_received_request(dsn::task_code rpc_code,
-                                dsn_msg_serialize_format serialization_type,
-                                void *buffer,
-                                int size,
-                                int thread_hash DEFAULT(0),
-                                uint64_t partition_hash DEFAULT(0));
-
-/*! type of the parameter in \ref dsn_msg_context_t */
-typedef enum dsn_msg_parameter_type_t {
-    MSG_PARAM_NONE = 0, ///< nothing
-} dsn_msg_parameter_type_t;
-
-/*! RPC message context */
-typedef union dsn_msg_context_t
-{
-    struct
-    {
-        uint64_t is_request : 1;           ///< whether the RPC message is a request or response
-        uint64_t is_forwarded : 1;         ///< whether the msg is forwarded or not
-        uint64_t unused : 4;               ///< not used yet
-        uint64_t serialize_format : 4;     ///< dsn_msg_serialize_format
-        uint64_t is_forward_supported : 1; ///< whether support forwarding a message to real leader
-        uint64_t
-            parameter_type : 3;  ///< type of the parameter next, see \ref dsn_msg_parameter_type_t
-        uint64_t parameter : 50; ///< piggybacked parameter for specific flags above
-    } u;
-    uint64_t context; ///< msg_context is of sizeof(uint64_t)
-} dsn_msg_context_t;
-
-#define DSN_MSGM_TIMEOUT (0x1 << 0)        ///< msg timeout is to be set/get
-#define DSN_MSGM_THREAD_HASH (0x1 << 1)    ///< thread hash is to be set/get
-#define DSN_MSGM_PARTITION_HASH (0x1 << 2) ///< partition hash is to be set/get
-#define DSN_MSGM_VNID (0x1 << 3)           ///< virtual node id (gpid) is to be set/get
-#define DSN_MSGM_CONTEXT (0x1 << 4)        ///< rpc message context is to be set/get
-
-/*! options for RPC messages, used by \ref dsn_msg_set_options and \ref dsn_msg_get_options */
-typedef struct dsn_msg_options_t
-{
-    int timeout_ms;  ///< RPC timeout in milliseconds
-    int thread_hash; ///< thread hash on RPC server
-    ///< if thread_hash == 0 && partition_hash != 0, thread_hash is computed from partition_hash
-    uint64_t partition_hash;   ///< partition hash for calculating partition index
-    dsn::gpid gpid;            ///< virtual node id, 0 for none
-    dsn_msg_context_t context; ///< see \ref dsn_msg_context_t
-} dsn_msg_options_t;
-
-/*!
- set options for the given message
-
- \param msg  the message handle
- \param opts options to be set in the message
- \param mask the mask composed using e.g., DSN_MSGM_TIMEOUT above to specify what to set
- */
-extern DSN_API void dsn_msg_set_options(dsn_message_t msg, dsn_msg_options_t *opts, uint32_t mask);
-
-/*!
- get options for the given message
-
- \param msg  the message handle
- \param opts options to be get
- */
-extern DSN_API void dsn_msg_get_options(dsn_message_t msg,
-                                        /*out*/ dsn_msg_options_t *opts);
-
-DSN_API void dsn_msg_set_serailize_format(dsn_message_t msg, dsn_msg_serialize_format fmt);
-
-DSN_API dsn_msg_serialize_format dsn_msg_get_serialize_format(dsn_message_t msg);
-
-/*! get message body size */
-extern DSN_API size_t dsn_msg_body_size(dsn_message_t msg);
-
-/*! get read/write pointer with the given offset */
-extern DSN_API void *dsn_msg_rw_ptr(dsn_message_t msg, size_t offset_begin);
-
-/*! get from-address where the message is sent */
-extern DSN_API dsn::rpc_address dsn_msg_from_address(dsn_message_t msg);
-
-/*! get to-address where the message is sent to */
-extern DSN_API dsn::rpc_address dsn_msg_to_address(dsn_message_t msg);
-
-/*! get trace id of the message */
-extern DSN_API uint64_t dsn_msg_trace_id(dsn_message_t msg);
-
-/*! get task code of the message, return TASK_CODE_INVALID if code name is not recognized */
-extern DSN_API dsn::task_code dsn_msg_task_code(dsn_message_t msg);
-
-/*! get rpc name of the message */
-extern DSN_API const char *dsn_msg_rpc_name(dsn_message_t msg);
-
-/*!
- get message write buffer
-
- \param msg      message handle
- \param ptr      *ptr returns the writable memory pointer
- \param size     *size returns the writable memory buffer size
- \param min_size *size must >= min_size
- */
-extern DSN_API void dsn_msg_write_next(dsn_message_t msg,
-                                       /*out*/ void **ptr,
-                                       /*out*/ size_t *size,
-                                       size_t min_size);
-
-/*! commit the write buffer after the message content is written with the real written size */
-extern DSN_API void dsn_msg_write_commit(dsn_message_t msg, size_t size);
-
-/*!
- get message read buffer
-
- \param msg  message handle
- \param ptr  *ptr points to the next read buffer
- \param size *size points to the size of the next buffer filled with content
-
- \return true if it succeeds, false if it is already beyond the end of the message
- */
-extern DSN_API bool dsn_msg_read_next(dsn_message_t msg,
-                                      /*out*/ void **ptr,
-                                      /*out*/ size_t *size);
-
-/*! commit the read buffer after the message content is read with the real read size,
-    it is possible to use a different size to allow duplicated or skipped read in the message.
- */
-extern DSN_API void dsn_msg_read_commit(dsn_message_t msg, size_t size);
-
-/*@}*/
 
 /*!
 @defgroup rpc-server Server-Side RPC Primitives
@@ -448,11 +238,12 @@ extern DSN_API bool dsn_rpc_register_handler(dsn::task_code code,
     was registered */
 extern DSN_API bool dsn_rpc_unregiser_handler(dsn::task_code code);
 
-/*! reply with a response which is created using dsn_msg_create_response */
-extern DSN_API void dsn_rpc_reply(dsn_message_t response, dsn::error_code err DEFAULT(dsn::ERR_OK));
+/*! reply with a response which is created using dsn::message_ex::create_response */
+extern DSN_API void dsn_rpc_reply(dsn::message_ex *response,
+                                  dsn::error_code err DEFAULT(dsn::ERR_OK));
 
 /*! forward the request to another server instead */
-extern DSN_API void dsn_rpc_forward(dsn_message_t request, dsn::rpc_address addr);
+extern DSN_API void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr);
 
 /*@}*/
 
@@ -468,17 +259,18 @@ extern DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task
 
 /*!
    client invokes the RPC call and waits for its response, note
-   returned msg must be explicitly released using \ref dsn_msg_release_ref
+   returned msg must be explicitly released using \ref dsn::message_ex::release_ref
  */
-extern DSN_API dsn_message_t dsn_rpc_call_wait(dsn::rpc_address server, dsn_message_t request);
+extern DSN_API dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server,
+                                                  dsn::message_ex *request);
 
 /*! one-way RPC from client, no rpc response is expected */
-extern DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn_message_t request);
+extern DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request);
 
 /*! this is to mimic a response is received when no real rpc is called */
 extern DSN_API void dsn_rpc_enqueue_response(dsn::rpc_response_task *rpc_call,
                                              dsn::error_code err,
-                                             dsn_message_t response);
+                                             dsn::message_ex *response);
 
 /*@}*/
 

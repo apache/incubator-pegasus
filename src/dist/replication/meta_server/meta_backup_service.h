@@ -313,9 +313,9 @@ public:
 
     const std::string &backup_root() const { return _backup_root; }
     const std::string &policy_root() const { return _policy_meta_root; }
-    void add_new_policy(dsn_message_t msg);
-    void query_policy(dsn_message_t msg);
-    void modify_policy(dsn_message_t msg);
+    void add_new_policy(dsn::message_ex* msg);
+    void query_policy(dsn::message_ex* msg);
+    void modify_policy(dsn::message_ex* msg);
 
     // compose the absolute path(AP) for policy
     // input:
@@ -335,10 +335,10 @@ private:
     void start_sync_policies();
     error_code sync_policies_from_remote_storage();
 
-    void do_add_policy(dsn_message_t req,
+    void do_add_policy(dsn::message_ex* req,
                        std::shared_ptr<policy_context> p,
                        const std::string &hint_msg);
-    void do_update_policy_to_remote_storage(dsn_message_t req,
+    void do_update_policy_to_remote_storage(dsn::message_ex* req,
                                             const policy &p,
                                             std::shared_ptr<policy_context> &p_context_ptr);
 

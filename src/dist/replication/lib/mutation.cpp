@@ -58,12 +58,12 @@ mutation::~mutation()
 {
     for (auto &r : client_requests) {
         if (r != nullptr) {
-            dsn_msg_release_ref(r);
+            r->release_ref();
         }
     }
 
     for (auto &request : _prepare_requests) {
-        dsn_msg_release_ref(request);
+        request->release_ref();
     }
 }
 
@@ -90,7 +90,8 @@ void mutation::copy_from(mutation_ptr &old)
 
     for (auto &r : client_requests) {
         if (r != nullptr) {
-            dsn_msg_add_ref(r); // release in dctor
+            // release in dctor
+            r->add_ref();
         }
     }
 
@@ -108,11 +109,11 @@ void mutation::copy_from(mutation_ptr &old)
 
     _prepare_requests = old->prepare_requests();
     for (auto &request : _prepare_requests) {
-        dsn_msg_add_ref(request);
+        request->add_ref();
     }
 }
 
-void mutation::add_client_request(task_code code, dsn_message_t request)
+void mutation::add_client_request(task_code code, dsn::message_ex *request)
 {
     data.updates.push_back(mutation_update());
     mutation_update &update = data.updates.back();
@@ -120,14 +121,15 @@ void mutation::add_client_request(task_code code, dsn_message_t request)
 
     if (request != nullptr) {
         update.code = code;
-        update.serialization_type = dsn_msg_get_serialize_format(request);
-        dsn_msg_add_ref(request); // released on dctor
+        update.serialization_type =
+            (dsn_msg_serialize_format)request->header->context.u.serialize_format;
+        request->add_ref(); // released on dctor
 
         void *ptr;
         size_t size;
-        bool r = dsn_msg_read_next(request, &ptr, &size);
+        bool r = request->read_next(&ptr, &size);
         dassert(r, "payload is not present");
-        dsn_msg_read_commit(request, 0); // so we can re-read the request buffer in replicated app
+        request->read_commit(0); // so we can re-read the request buffer in replicated app
         update.data.assign((char *)ptr, 0, (int)size);
 
         _appro_data_bytes += sizeof(int) + (int)size; // data size
@@ -165,7 +167,7 @@ void mutation::write_to(std::function<void(const blob &)> inserter) const
     }
 }
 
-void mutation::write_to(binary_writer &writer, dsn_message_t /*to*/) const
+void mutation::write_to(binary_writer &writer, dsn::message_ex * /*to*/) const
 {
     write_mutation_header(writer, data.header);
     writer.write_pod(static_cast<int>(data.updates.size()));
@@ -188,7 +190,7 @@ void mutation::write_to(binary_writer &writer, dsn_message_t /*to*/) const
     }
 }
 
-/*static*/ mutation_ptr mutation::read_from(binary_reader &reader, dsn_message_t from)
+/*static*/ mutation_ptr mutation::read_from(binary_reader &reader, dsn::message_ex *from)
 {
     mutation_ptr mu(new mutation());
     read_mutation_header(reader, mu->data.header);
@@ -313,7 +315,7 @@ mutation_queue::mutation_queue(gpid gpid,
     _pcount = dsn_task_queue_virtual_length_ptr(RPC_PREPARE, gpid.thread_hash());
 }
 
-mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, replica *r)
+mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request, replica *r)
 {
     task_spec *spec = task_spec::get(code);
 
@@ -331,7 +333,7 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn_message_t request, rep
     }
 
     dinfo("add request with trace_id = %016" PRIx64 " into mutation with mutation_tid = %" PRIu64,
-          dsn_msg_trace_id(request),
+          request->header->trace_id,
           _pending_mutation->tid());
 
     _pending_mutation->add_client_request(code, request);

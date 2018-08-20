@@ -441,7 +441,8 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
             req.policy = *(static_cast<const policy_info *>(&_policy));
             req.backup_id = _cur_backup.backup_id;
             req.app_name = _policy.app_names.at(pid.get_app_id());
-            dsn_message_t request = dsn_msg_create_request(RPC_COLD_BACKUP, 0, pid.thread_hash());
+            dsn::message_ex *request =
+                dsn::message_ex::create_request(RPC_COLD_BACKUP, 0, pid.thread_hash());
             dsn::marshall(request, req);
             dsn::rpc_response_task_ptr rpc_callback = rpc::create_rpc_response_task(
                 request,
@@ -1199,7 +1200,7 @@ void backup_service::start()
     start_create_policy_meta_root(after_create_policy_meta_root);
 }
 
-void backup_service::add_new_policy(dsn_message_t msg)
+void backup_service::add_new_policy(dsn::message_ex *msg)
 {
     configuration_add_backup_policy_request request;
     configuration_add_backup_policy_response response;
@@ -1273,11 +1274,11 @@ void backup_service::add_new_policy(dsn_message_t msg)
     } else {
         response.err = ERR_INVALID_PARAMETERS;
         _meta_svc->reply_data(msg, response);
-        dsn_msg_release_ref(msg);
+        msg->release_ref();
     }
 }
 
-void backup_service::do_add_policy(dsn_message_t req,
+void backup_service::do_add_policy(dsn::message_ex *req,
                                    std::shared_ptr<policy_context> p,
                                    const std::string &hint_msg)
 {
@@ -1296,7 +1297,7 @@ void backup_service::do_add_policy(dsn_message_t req,
                 ddebug("add backup policy succeed, policy_name = %s", policy_name.c_str());
 
                 _meta_svc->reply_data(req, resp);
-                dsn_msg_release_ref(req);
+                req->release_ref();
                 {
                     zauto_lock l(_lock);
                     _policy_states.insert(std::make_pair(policy_name, p));
@@ -1322,7 +1323,7 @@ void backup_service::do_add_policy(dsn_message_t req,
 }
 
 void backup_service::do_update_policy_to_remote_storage(
-    dsn_message_t req, const policy &p, std::shared_ptr<policy_context> &p_context_ptr)
+    dsn::message_ex *req, const policy &p, std::shared_ptr<policy_context> &p_context_ptr)
 {
     std::string policy_path = get_policy_path(p.policy_name);
     blob value = json::json_forwarder<policy>::encode(p);
@@ -1335,7 +1336,7 @@ void backup_service::do_update_policy_to_remote_storage(
                        p.policy_name.c_str());
                 p_context_ptr->set_policy(p);
                 _meta_svc->reply_data(req, resp);
-                dsn_msg_release_ref(req);
+                req->release_ref();
             } else if (err == ERR_TIMEOUT) {
                 derror("update backup policy to remote storage failed, policy_name = %s, retry "
                        "after %" PRId64 "(ms)",
@@ -1364,7 +1365,7 @@ bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_nam
     return (iter == _policy_states.end());
 }
 
-void backup_service::query_policy(dsn_message_t msg)
+void backup_service::query_policy(dsn::message_ex *msg)
 {
     configuration_query_backup_policy_request request;
     configuration_query_backup_policy_response response;
@@ -1435,10 +1436,10 @@ void backup_service::query_policy(dsn_message_t msg)
     }
 
     _meta_svc->reply_data(msg, response);
-    dsn_msg_release_ref(msg);
+    msg->release_ref();
 }
 
-void backup_service::modify_policy(dsn_message_t msg)
+void backup_service::modify_policy(dsn::message_ex *msg)
 {
     configuration_modify_backup_policy_request request;
     configuration_modify_backup_policy_response response;
@@ -1458,7 +1459,7 @@ void backup_service::modify_policy(dsn_message_t msg)
     }
     if (context_ptr == nullptr) {
         _meta_svc->reply_data(msg, response);
-        dsn_msg_release_ref(msg);
+        msg->release_ref();
         return;
     }
     policy cur_policy = context_ptr->get_policy();
@@ -1575,7 +1576,7 @@ void backup_service::modify_policy(dsn_message_t msg)
         do_update_policy_to_remote_storage(msg, cur_policy, context_ptr);
     } else {
         _meta_svc->reply_data(msg, response);
-        dsn_msg_release_ref(msg);
+        msg->release_ref();
     }
 }
 

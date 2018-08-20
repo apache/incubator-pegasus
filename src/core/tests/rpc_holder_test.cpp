@@ -61,11 +61,12 @@ TEST(rpc_holder, construct)
     {
         configuration_query_by_index_request request;
         request.app_name = "test";
-        dsn_message_t msg = dsn_msg_create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
+        dsn::message_ex *msg =
+            dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
         dsn::marshall(msg, request);
-        msg = dsn_msg_copy(msg, true, true);
+        dsn::message_ex *msg2 = msg->copy(true, true);
 
-        t_rpc rpc(msg);
+        t_rpc rpc(msg2);
         ASSERT_TRUE(rpc.is_initialized());
         ASSERT_EQ(rpc.request().app_name, "test");
     }

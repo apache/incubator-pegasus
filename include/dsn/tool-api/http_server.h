@@ -13,7 +13,7 @@ namespace dsn {
 
 struct http_request
 {
-    static error_with<http_request> parse(dsn_message_t msg);
+    static error_with<http_request> parse(dsn::message_ex *m);
 
     std::pair<std::string, std::string> service_method;
     blob body;
@@ -36,7 +36,7 @@ struct http_response
     http_status_code status_code{http_status_code::ok};
     std::string content_type = "text/plain";
 
-    ref_ptr<message_ex> to_message(dsn_message_t req) const;
+    message_ptr to_message(message_ex *req) const;
 };
 
 class http_service
@@ -75,7 +75,7 @@ public:
 
     void add_service(http_service *service);
 
-    void serve(dsn_message_t msg);
+    void serve(message_ex *msg);
 
 private:
     std::map<std::string, std::unique_ptr<http_service>> _service_map;

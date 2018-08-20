@@ -42,7 +42,7 @@ namespace replication {
 bool mutation_log_tool::dump(
     const std::string &log_dir,
     std::ostream &output,
-    std::function<void(int64_t decree, int64_t timestamp, dsn_message_t *requests, int count)>
+    std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)>
         callback)
 {
     mutation_log_ptr mlog = new mutation_log_shared(log_dir, 32, false);
@@ -62,11 +62,11 @@ bool mutation_log_tool::dump(
                    << "update_count=" << mu->data.updates.size() << std::endl;
             if (callback && mu->data.updates.size() > 0) {
 
-                dsn_message_t *batched_requests =
-                    (dsn_message_t *)alloca(sizeof(dsn_message_t) * mu->data.updates.size());
+                dsn::message_ex **batched_requests =
+                    (dsn::message_ex **)alloca(sizeof(dsn::message_ex *) * mu->data.updates.size());
                 int batched_count = 0;
                 for (mutation_update &update : mu->data.updates) {
-                    dsn_message_t req = dsn_msg_create_received_request(
+                    dsn::message_ex *req = dsn::message_ex::create_received_request(
                         update.code,
                         (dsn_msg_serialize_format)update.serialization_type,
                         (void *)update.data.data(),
@@ -78,7 +78,7 @@ bool mutation_log_tool::dump(
                          batched_requests,
                          batched_count);
                 for (int i = 0; i < batched_count; i++) {
-                    dsn_msg_release_ref(batched_requests[i]);
+                    batched_requests[i]->release_ref();
                 }
             }
             return true;

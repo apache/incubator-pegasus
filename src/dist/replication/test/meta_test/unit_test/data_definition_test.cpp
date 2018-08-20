@@ -16,9 +16,9 @@
 using namespace dsn;
 using namespace dsn::replication;
 
-dsn_message_t create_corresponding_receive(dsn_message_t request_msg)
+dsn::message_ex *create_corresponding_receive(dsn::message_ex *request_msg)
 {
-    return dsn_msg_copy(request_msg, true, true);
+    return request_msg->copy(true, true);
 }
 
 #define fake_create_app(state, request_data)                                                       \

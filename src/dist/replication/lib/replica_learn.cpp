@@ -217,7 +217,7 @@ void replica::init_learn(uint64_t signature)
            _potential_secondary_states.learning_copy_file_size,
            _potential_secondary_states.learning_copy_buffer_size);
 
-    dsn_message_t msg = dsn_msg_create_request(RPC_LEARN, 0, get_gpid().thread_hash());
+    dsn::message_ex* msg = dsn::message_ex::create_request(RPC_LEARN, 0, get_gpid().thread_hash());
     dsn::marshall(msg, request);
     _potential_secondary_states.learning_task = rpc::call(
         _config.primary,
@@ -228,7 +228,7 @@ void replica::init_learn(uint64_t signature)
         });
 }
 
-void replica::on_learn(dsn_message_t msg, const learn_request &request)
+void replica::on_learn(dsn::message_ex* msg, const learn_request &request)
 {
     _checker.only_one_thread_access();
 
@@ -1233,8 +1233,8 @@ void replica::notify_learn_completion()
         _potential_secondary_states.completion_notify_task->cancel(false);
     }
 
-    dsn_message_t msg =
-        dsn_msg_create_request(RPC_LEARN_COMPLETION_NOTIFY, 0, get_gpid().thread_hash());
+    dsn::message_ex* msg =
+        dsn::message_ex::create_request(RPC_LEARN_COMPLETION_NOTIFY, 0, get_gpid().thread_hash());
     dsn::marshall(msg, report);
 
     _potential_secondary_states.completion_notify_task =

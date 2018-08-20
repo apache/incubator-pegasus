@@ -288,7 +288,7 @@ DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_c
     ::dsn::task::get_current_rpc()->call(msg, dsn::rpc_response_task_ptr(rpc_call));
 }
 
-DSN_API dsn_message_t dsn_rpc_call_wait(dsn::rpc_address server, dsn_message_t request)
+DSN_API dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *request)
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
@@ -308,7 +308,7 @@ DSN_API dsn_message_t dsn_rpc_call_wait(dsn::rpc_address server, dsn_message_t r
     }
 }
 
-DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn_message_t request)
+DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request)
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
@@ -316,13 +316,13 @@ DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn_message_t request
     ::dsn::task::get_current_rpc()->call(msg, nullptr);
 }
 
-DSN_API void dsn_rpc_reply(dsn_message_t response, dsn::error_code err)
+DSN_API void dsn_rpc_reply(dsn::message_ex *response, dsn::error_code err)
 {
     auto msg = ((::dsn::message_ex *)response);
     ::dsn::task::get_current_rpc()->reply(msg, err);
 }
 
-DSN_API void dsn_rpc_forward(dsn_message_t request, dsn::rpc_address addr)
+DSN_API void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr)
 {
     ::dsn::task::get_current_rpc()->forward((::dsn::message_ex *)(request),
                                             ::dsn::rpc_address(addr));
@@ -330,7 +330,7 @@ DSN_API void dsn_rpc_forward(dsn_message_t request, dsn::rpc_address addr)
 
 DSN_API void dsn_rpc_enqueue_response(dsn::rpc_response_task *rpc_call,
                                       dsn::error_code err,
-                                      dsn_message_t response)
+                                      dsn::message_ex *response)
 {
     dassert(rpc_call->spec().type == TASK_TYPE_RPC_RESPONSE,
             "invalid task_type, type = %s",

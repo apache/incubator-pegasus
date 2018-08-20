@@ -35,8 +35,8 @@
 
 #pragma once
 
-#include <dsn/service_api_c.h>
 #include <dsn/tool-api/task_spec.h>
+#include <dsn/tool-api/threadpool_spec.h>
 #include <dsn/utility/dlib.h>
 #include <string>
 #include <map>

@@ -51,7 +51,7 @@ public:
 
     bool run_command(const std::string &cmdline, /*out*/ std::string &output);
     void start_remote_cli();
-    void on_remote_cli(dsn_message_t req);
+    void on_remote_cli(dsn::message_ex* req);
     void set_cli_target_address(dsn_handle_t handle, dsn::rpc_address address);
 
 private:
