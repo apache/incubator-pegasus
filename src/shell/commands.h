@@ -3654,10 +3654,9 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         << std::setw(w) << std::right << "INCR" << std::setw(w) << std::right << "CAS"
         << std::setw(w) << std::right << "CAM" << std::setw(w) << std::right << "SCAN";
     if (!only_qps) {
-        out << std::setw(w) << std::right << "storage_mb" << std::setw(w) << std::right
-            << "file_count" << std::setw(w) << std::right << "expired" << std::setw(w) << std::right
-            << "filtered" << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right
-            << "file_mb" << std::setw(w) << std::right << "file_num";
+        out << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
+            << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "file_mb"
+            << std::setw(w) << std::right << "file_num";
     }
     out << std::endl;
     rows.resize(rows.size() + 1);
