@@ -124,6 +124,7 @@ do
     echo "ERROR: set lb.add_secondary_max_count_for_one_node to 0 failed"
     exit 1
   fi
+  echo
 
   echo "Migrating primary replicas out of node..."
   sleeped=0
