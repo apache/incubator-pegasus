@@ -40,6 +40,10 @@ static inline bool is_delete_operation(dsn_message_t req)
     if (tc == dsn::apps::RPC_RRDB_RRDB_PUT || tc == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
         dsn::apps::update_request thrift_request;
         dsn::from_blob_to_thrift(data, thrift_request);
+        dassert_f(thrift_request.key.length() >= 2,
+                  "invalid raw key: [code:{}, size:{}]",
+                  tc.to_string(),
+                  data.length());
         return pegasus_key_hash(thrift_request.key);
     }
     if (tc == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
