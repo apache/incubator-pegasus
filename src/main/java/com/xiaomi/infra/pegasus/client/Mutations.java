@@ -53,7 +53,7 @@ public class Mutations {
         muList.add(new mutate(mutate_operation.MO_DELETE, sortKeyBlob, null, 0));
     }
 
-    List<mutate> getMutations() {
+    public List<mutate> getMutations() {
         int currentTime = (int) Tools.epoch_now();
         for (Pair<Integer, Integer> pair : ttlList) {
             muList.get(pair.getLeft()).set_expire_ts_seconds = pair.getRight() + currentTime;
@@ -61,7 +61,7 @@ public class Mutations {
         return Collections.unmodifiableList(muList);
     }
 
-    boolean isEmpty() {
+    public boolean isEmpty() {
         return muList.isEmpty();
     }
 }
