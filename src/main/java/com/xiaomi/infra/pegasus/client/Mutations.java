@@ -26,7 +26,7 @@ public class Mutations {
     // Pair<index_in_muList, ttlSeconds>
     private final List<Pair<Integer, Integer>> ttlList;
 
-    Mutations() {
+    public Mutations() {
         muList = new ArrayList<mutate>();
         ttlList = new ArrayList<Pair<Integer, Integer>>();
     }
