@@ -298,10 +298,8 @@ describe('test/client.test.js', function(){
                 assert.deepEqual(new Buffer('1'), result[0].value);
                 assert.deepEqual(new Buffer('11'), result[1].sortKey);
                 assert.deepEqual(new Buffer('111'), result[1].value);
-                assert.deepEqual(new Buffer('2'), result[2].sortKey);
-                assert.deepEqual(new Buffer('3'), result[2].value);
-                assert.deepEqual(new Buffer('22'), result[3].sortKey);
-                assert.deepEqual(new Buffer('222'), result[3].value);
+                assert.deepEqual(new Buffer('22'), result[2].sortKey);
+                assert.deepEqual(new Buffer('222'), result[2].value);
                 done();
             });
         });
