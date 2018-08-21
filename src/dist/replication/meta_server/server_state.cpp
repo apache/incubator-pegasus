@@ -443,6 +443,7 @@ error_code server_state::initialize_default_apps()
                 dsn_config_get_value_bool(s, "stateful", true, "whether this is a stateful app");
             default_app.max_replica_count = (int)dsn_config_get_value_uint64(
                 s, "max_replica_count", 3, "max replica count in app");
+            default_app.create_second = dsn_now_ms() / 1000;
             std::string envs_str = dsn_config_get_value_string(s, "envs", "", "app envs");
             bool parse = dsn::utils::parse_kv_map(envs_str.c_str(), default_app.envs, ',', '=');
 
@@ -1087,6 +1088,7 @@ void server_state::create_app(dsn::message_ex *msg)
             info.max_replica_count = request.options.replica_count;
             info.partition_count = request.options.partition_count;
             info.status = app_status::AS_CREATING;
+            info.create_second = dsn_now_ms() / 1000;
 
             app = app_state::create(info);
             app->helpers->pending_response = msg;
@@ -1151,11 +1153,12 @@ void server_state::drop_app(dsn::message_ex *msg)
             case app_status::AS_AVAILABLE:
                 do_dropping = true;
                 app->status = app_status::AS_DROPPING;
+                app->drop_second = dsn_now_ms() / 1000;
                 if (request.options.__isset.reserve_seconds &&
                     request.options.reserve_seconds > 0) {
-                    app->expire_second = dsn_now_ms() / 1000 + request.options.reserve_seconds;
+                    app->expire_second = app->drop_second + request.options.reserve_seconds;
                 } else {
-                    app->expire_second = dsn_now_ms() / 1000 +
+                    app->expire_second = app->drop_second +
                                          _meta_svc->get_meta_options().hold_seconds_for_dropped_app;
                 }
                 app->helpers->pending_response = msg;

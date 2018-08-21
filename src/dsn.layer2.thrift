@@ -54,4 +54,8 @@ struct app_info
     7:bool          is_stateful;
     8:i32           max_replica_count;
     9:i64           expire_second;
+
+    // new fields added from v1.11.0
+    10:i64          create_second;
+    11:i64          drop_second;
 }
