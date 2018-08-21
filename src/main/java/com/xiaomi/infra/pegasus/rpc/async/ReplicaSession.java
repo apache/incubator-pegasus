@@ -84,6 +84,8 @@ public class ReplicaSession {
         pendingResponse.put(new Integer(entry.sequenceId), entry);
         entry.timeoutTask = addTimer(entry.sequenceId, timeoutInMilliseconds);
 
+        // We store the connection_state & netty channel in a struct so that they can fetch and update in atomic.
+        // Moreover, we can avoid the lock protection when we want to get the netty channel for send message
         VolatileFields cache = fields;
         if (cache.state == ConnState.CONNECTED) {
             write(entry, cache);
@@ -134,6 +136,7 @@ public class ReplicaSession {
 
     private void doConnect() {
         try {
+            // we will receive the channel connect event in DefaultHandler.ChannelActive
             boot.connect(address.get_ip(), address.get_port()).addListener(
                     new ChannelFutureListener() {
                         @Override
