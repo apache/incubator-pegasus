@@ -16,7 +16,7 @@ const ClientRequestRound = require('./session').ClientRequestRound;
 const Operator = require('./operator');
 const Long = require('long');
 const tools = require('./tools');
-const deasync = require('deasync');
+// const deasync = require('deasync');
 
 const DEFAULT_MULTI_COUNT = 100;
 const DEFAULT_MULTI_SIZE = 1000000;
@@ -73,7 +73,6 @@ TableHandler.prototype.queryMeta = function (tableName, callback) {
         //console.log('table %s is querying meta', tableName);
         session.query(round);
     }
-    // session.query(round);
 };
 
 /**
@@ -122,11 +121,16 @@ TableHandler.prototype.updateResponse = function (oldResp, newResp) {
         let session = tools.findSessionByAddr(current_sessions, primary_addr);
         if (session === null) {
             session = new ReplicaSession({'address': primary_addr});
+            this.cluster.replicaSessions.push({
+                'key': primary_addr,
+                'value': session,
+            });
         }
-        this.cluster.replicaSessions.push({
-            'key': primary_addr,
-            'value': session,
-        });
+        // TODO(hyc): delete after whole test
+        // this.cluster.replicaSessions.push({
+        //     'key': primary_addr,
+        //     'value': session,
+        // });
         connected_rpc.push(primary_addr);
     }
     this.queryCfgResponse = newResp;
@@ -246,29 +250,29 @@ TableInfo.prototype.get = function (args, callback) {
  *        {Number}      argsArray[i].timeout(ms)
  * @param {Function}    callback
  */
-TableInfo.prototype.batchGet = function (argsArray, callback) {
-    let i, len = argsArray.length;
-    let error = null, resultArray = [], sync = true;
-
-    for (i = 0; i < len; ++i) {
-        let args = argsArray[i];
-        this.get(args, function (err, result) {
-            if (err !== null) {
-                error = err;
-                sync = false;
-            } else {
-                resultArray.push(result);
-            }
-            if (resultArray.length === len) {
-                sync = false;
-            }
-        });
-    }
-    while (sync) {
-        deasync.sleep(1);
-    }
-    callback(error, resultArray);
-};
+// TableInfo.prototype.batchGet = function (argsArray, callback) {
+//     let i, len = argsArray.length;
+//     let error = null, resultArray = [], sync = true;
+//
+//     for (i = 0; i < len; ++i) {
+//         let args = argsArray[i];
+//         this.get(args, function (err, result) {
+//             if (err !== null) {
+//                 error = err;
+//                 sync = false;
+//             } else {
+//                 resultArray.push(result);
+//             }
+//             if (resultArray.length === len) {
+//                 sync = false;
+//             }
+//         });
+//     }
+//     while (sync) {
+//         deasync.sleep(1);
+//     }
+//     callback(error, resultArray);
+// };
 
 /**
  * Batch Get value using promise
@@ -347,29 +351,29 @@ TableInfo.prototype.set = function (args, callback) {
  *        {Number}      argsArray[i].timeout(ms)
  * @param {Function}    callback
  */
-TableInfo.prototype.batchSet = function (argsArray, callback) {
-    let i, len = argsArray.length;
-    let error = null, resultArray = [], sync = true;
-
-    for (i = 0; i < len; ++i) {
-        let args = argsArray[i];
-        this.set(args, function (err, result) {
-            if (err !== null) {
-                error = err;
-                sync = false;
-            } else {
-                resultArray.push(result);
-            }
-            if (resultArray.length === len) {
-                sync = false;
-            }
-        });
-    }
-    while (sync) {
-        deasync.sleep(1);
-    }
-    callback(error, resultArray);
-};
+// TableInfo.prototype.batchSet = function (argsArray, callback) {
+//     let i, len = argsArray.length;
+//     let error = null, resultArray = [], sync = true;
+//
+//     for (i = 0; i < len; ++i) {
+//         let args = argsArray[i];
+//         this.set(args, function (err, result) {
+//             if (err !== null) {
+//                 error = err;
+//                 sync = false;
+//             } else {
+//                 resultArray.push(result);
+//             }
+//             if (resultArray.length === len) {
+//                 sync = false;
+//             }
+//         });
+//     }
+//     while (sync) {
+//         deasync.sleep(1);
+//     }
+//     callback(error, resultArray);
+// };
 
 /**
  * Batch Set value using promise
