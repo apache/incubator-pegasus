@@ -13,8 +13,8 @@ const net = require('net');
  * @param {number} partition_index
  * @return {number}
  */
-function dsn_gpid_to_thread_hash(app_id, partition_index){
-    return (parseInt(app_id)*7919 + parseInt(partition_index));
+function dsn_gpid_to_thread_hash(app_id, partition_index) {
+    return (parseInt(app_id) * 7919 + parseInt(partition_index));
 }
 
 /**
@@ -23,11 +23,11 @@ function dsn_gpid_to_thread_hash(app_id, partition_index){
  * @param addr
  * @return {boolean}
  */
-function isAddrExist(array, addr){
+function isAddrExist(array, addr) {
     let i, len = array.length;
     let flag = false;
-    for(i = 0; i < len; ++i){
-        if(addr.equals(array[i])){
+    for (i = 0; i < len; ++i) {
+        if (addr.equals(array[i])) {
             flag = true;
             break;
         }
@@ -41,10 +41,10 @@ function isAddrExist(array, addr){
  * @param address
  * @return {Session}
  */
-function findSessionByAddr(dic, address){
+function findSessionByAddr(dic, address) {
     let i, len = dic.length, session = null;
-    for(i = 0; i < len; ++i){
-        if(dic[i].key.equals(address)){
+    for (i = 0; i < len; ++i) {
+        if (dic[i].key.equals(address)) {
             session = dic[i].value;
             break;
         }
@@ -58,13 +58,13 @@ function findSessionByAddr(dic, address){
  * @param  {Buffer|String} sortKey
  * @return {Buffer}        hashKeyLen+hashKey+sortKey
  */
-function generateKey(hashKey, sortKey){
+function generateKey(hashKey, sortKey) {
     let temp;
-    if(!Buffer.isBuffer(hashKey)){
+    if (!Buffer.isBuffer(hashKey)) {
         temp = new Buffer(hashKey);
         hashKey = temp;
     }
-    if(!Buffer.isBuffer(sortKey)){
+    if (!Buffer.isBuffer(sortKey)) {
         temp = new Buffer(sortKey);
         sortKey = temp;
     }
@@ -75,7 +75,7 @@ function generateKey(hashKey, sortKey){
     let lenBuf = Buffer.alloc(2);
     lenBuf.writeInt16BE(hashLen, 0);
 
-    return Buffer.concat([lenBuf, hashKey, sortKey], (2+hashLen+sortLen));
+    return Buffer.concat([lenBuf, hashKey, sortKey], (2 + hashLen + sortLen));
 }
 
 /**
@@ -85,23 +85,23 @@ function generateKey(hashKey, sortKey){
  *          {String}  configs.metaServers[i]    ipv4:port
  * @throws  {InvalidParamException}
  */
-function validateClientConfigs(configs){
-    if(!(configs instanceof Object)){
+function validateClientConfigs(configs) {
+    if (!(configs instanceof Object)) {
         throw new InvalidParamException('configs should be instanceof Object');
     }
-    if(!(configs.metaServers instanceof Array)){
+    if (!(configs.metaServers instanceof Array)) {
         throw new InvalidParamException('configs.metaServers should be instanceof Array');
     }
     let i, len = configs.metaServers.length;
-    for(i = 0; i < len; ++i){
+    for (i = 0; i < len; ++i) {
         let ip_port = configs.metaServers[i].split(':');
-        if(ip_port.length !== 2){
+        if (ip_port.length !== 2) {
             throw new InvalidParamException(configs.metaServers[i] + ' is not valid, correct format is ip_address:port');
         }
-        if(!net.isIPv4(ip_port[0])){
+        if (!net.isIPv4(ip_port[0])) {
             throw new InvalidParamException(ip_port[0] + ' is not valid ipv4 address');
         }
-        if(isNaN(ip_port[1]) || ip_port[1] < 0 || ip_port[1] > 65535){
+        if (isNaN(ip_port[1]) || ip_port[1] < 0 || ip_port[1] > 65535) {
             throw new InvalidParamException(ip_port[1] + ' is not valid port');
         }
     }
@@ -113,9 +113,9 @@ function validateClientConfigs(configs){
  * @param   {String}    name
  * @throws  {InvalidParamException}
  */
-function validateFunction(obj, name){
-    if(!(obj instanceof Function)){
-        throw new InvalidParamException('lack of '+name+' or '+name+' is not function');
+function validateFunction(obj, name) {
+    if (!(obj instanceof Function)) {
+        throw new InvalidParamException('lack of ' + name + ' or ' + name + ' is not function');
     }
 }
 
@@ -128,28 +128,28 @@ function validateFunction(obj, name){
  * @param   {Function}      callback
  * @return  {Boolean}       true means return callee function at once
  */
-function validateParam(param, name, type, isObject, callback){
+function validateParam(param, name, type, isObject, callback) {
     let flag = true;
-    if(isObject){
+    if (isObject) {
         flag = (param instanceof type);
         type = type.name;
-    }else{
+    } else {
         flag = (typeof(param) === type);
     }
-    if(!flag){
-        callback(new InvalidParamException(name+':'+param+' is not '+type), null);
+    if (!flag) {
+        callback(new InvalidParamException(name + ':' + param + ' is not ' + type), null);
     }
     return (!flag);
 }
 
 module.exports = {
-    dsn_gpid_to_thread_hash : dsn_gpid_to_thread_hash,
-    isAddrExist : isAddrExist,
-    findSessionByAddr : findSessionByAddr,
-    generateKey : generateKey,
-    validateClientConfigs : validateClientConfigs,
-    validateFunction : validateFunction,
-    validateParam : validateParam,
+    dsn_gpid_to_thread_hash: dsn_gpid_to_thread_hash,
+    isAddrExist: isAddrExist,
+    findSessionByAddr: findSessionByAddr,
+    generateKey: generateKey,
+    validateClientConfigs: validateClientConfigs,
+    validateFunction: validateFunction,
+    validateParam: validateParam,
 };
 
 

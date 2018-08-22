@@ -30,7 +30,7 @@ let log = null;
  *        {Object}  options.protocol        optional
  * @constructor
  */
-function Connection (options) {
+function Connection(options) {
     log = options.log;
     this.id = ++_seq_id;
     this.host = options.host;
@@ -54,6 +54,7 @@ function Connection (options) {
 
     this.setupStream();
 }
+
 util.inherits(Connection, EventEmitter);
 
 Connection.Request_counter = 0; //total request for one client
@@ -61,7 +62,7 @@ Connection.Request_counter = 0; //total request for one client
 /**
  * Set up connection and register events
  */
-Connection.prototype.setupConnection = function(){
+Connection.prototype.setupConnection = function () {
     this.socket = net.connect(this.address);
     //register socket event
     this.socket.on('timeout', this._handleTimeout.bind(this));
@@ -75,7 +76,7 @@ Connection.prototype.setupConnection = function(){
  * Handle socket timeout
  * @private
  */
-Connection.prototype._handleTimeout = function(){
+Connection.prototype._handleTimeout = function () {
     this._close(new Exception.ConnectionClosedException('%s socket closed by timeout', this.name));
 };
 
@@ -83,7 +84,7 @@ Connection.prototype._handleTimeout = function(){
  * Handle socket close
  * @private
  */
-Connection.prototype._handleClose = function(){
+Connection.prototype._handleClose = function () {
     log.debug('%s close event emit', this.name);
     this.closed = true;
     this.emit('close');
@@ -107,10 +108,10 @@ Connection.prototype._handleError = function (err) {
     if (err.message.indexOf('ECONNREFUSED') >= 0) {
         errorName = 'ConnectionRefusedException';
         err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
-    }else if (err.message.indexOf('ECONNRESET') >= 0 || err.message.indexOf('This socket is closed') >= 0) {
+    } else if (err.message.indexOf('ECONNRESET') >= 0 || err.message.indexOf('This socket is closed') >= 0) {
         errorName = 'ConnectionResetException';
         err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
-    }else{
+    } else {
         err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
         // err = new Exception.ConnectionClosedException(this.name + ' error: ' + errorName + ', ' + err.message);
     }
@@ -129,14 +130,14 @@ Connection.prototype._handleError = function (err) {
  * @param err
  * @private
  */
-Connection.prototype._cleanupRequests = function(err){
+Connection.prototype._cleanupRequests = function (err) {
     let count = 0;
     let requests = this.requests;
     // if(requests.length === 0){
     //     return;
     // }
     this.requests = {};
-    for(let id in requests){
+    for (let id in requests) {
         let request = requests[id];
         request.setException(err);
         count++;
@@ -149,7 +150,7 @@ Connection.prototype._cleanupRequests = function(err){
  * @param {ConnectionClosedException} err
  * @private
  */
-Connection.prototype._close = function(err){
+Connection.prototype._close = function (err) {
     this.closed = true;
     this._closeError = err;
     this.socket.destroy();
@@ -159,9 +160,9 @@ Connection.prototype._close = function(err){
 /**
  * Register data event for socket to receive response
  */
-Connection.prototype.getResponse = function(){
+Connection.prototype.getResponse = function () {
     let self = this;
-    this.socket.on('data', self.transport.receiver(function(transport_with_data){
+    this.socket.on('data', self.transport.receiver(function (transport_with_data) {
         let protocol = new self.protocol(transport_with_data);
         try {
             while (true) {
@@ -170,7 +171,7 @@ Connection.prototype.getResponse = function(){
                 let len = protocol.readI32();
 
                 // current packet is NOT integrated
-                if(transport_with_data.writeCursor - startReadCursor < len){
+                if (transport_with_data.writeCursor - startReadCursor < len) {
                     transport_with_data.rollbackPosition();
                     break;
                 }
@@ -199,7 +200,7 @@ Connection.prototype.getResponse = function(){
                 transport_with_data.commitPosition();
             }
 
-        } catch(e){
+        } catch (e) {
             if (e instanceof InputBufferUnderrunError) {
                 transport_with_data.rollbackPosition();
             }
@@ -213,14 +214,14 @@ Connection.prototype.getResponse = function(){
 /**
  * Set up socket stream
  */
-Connection.prototype.setupStream = function(){
+Connection.prototype.setupStream = function () {
     let self = this;
     log.debug('Connecting to %s', self.name);
 
     self.setupConnection();
     self.out = new DataOutputStream(this.socket);
 
-    self.socket.on('connect', function (){
+    self.socket.on('connect', function () {
         this._connected = true;
         self.getResponse();
         self.emit('connect');
@@ -232,7 +233,7 @@ Connection.prototype.setupStream = function(){
  * Send request and register request events
  * @param entry
  */
-Connection.prototype.call = function(entry){
+Connection.prototype.call = function (entry) {
     let timeout = entry.operator.timeout;
     let self = this;
     let connectionRequestId = self._requestNums++;
@@ -240,19 +241,19 @@ Connection.prototype.call = function(entry){
     let rpcRequest = new Request(this, connectionRequestId, entry, timeout);
     self.requests[rpcRequest.id] = rpcRequest;
 
-    rpcRequest.on('done', function(err, operator){
+    rpcRequest.on('done', function (err, operator) {
         delete self.requests[rpcRequest.id];
-        if(err){
+        if (err) {
             log.error(err.message);
         }
         entry.callback(err, operator);
     });
 
-    if(self.closed){
+    if (self.closed) {
         return this._handleClose();
     }
 
-    rpcRequest.on('timeout', function(){
+    rpcRequest.on('timeout', function () {
         delete self.requests[rpcRequest.id];
     });
 
@@ -263,7 +264,7 @@ Connection.prototype.call = function(entry){
  * Send request
  * @param request
  */
-Connection.prototype.sendRequest = function(request){
+Connection.prototype.sendRequest = function (request) {
     let transport = new this.transport();
     let protocol = new this.protocol(transport);
 
@@ -280,7 +281,7 @@ Connection.prototype.sendRequest = function(request){
  * Write data to socket
  * @param msg
  */
-Connection.prototype.send = function(msg){
+Connection.prototype.send = function (msg) {
     this.out.write(msg);
 };
 
@@ -289,7 +290,7 @@ Connection.prototype.send = function(msg){
  * @param out
  * @constructor
  */
-function DataOutputStream(out){
+function DataOutputStream(out) {
     this.out = out;
     this.written = 0;
 }
@@ -298,7 +299,7 @@ function DataOutputStream(out){
  * Write data into stream
  * @param buffer
  */
-DataOutputStream.prototype.write = function(buffer){
+DataOutputStream.prototype.write = function (buffer) {
     this.out.write(buffer);
     this.written += buffer.length;
 };
@@ -324,19 +325,20 @@ function Request(connection, seqid, entry, timeout) {
     this.startTime = Date.now();
     this.timeout = timeout;
 
-    if(timeout && timeout > 0){
+    if (timeout && timeout > 0) {
         log.debug('%s-request%d, timeout %d', this.connection.name, this.id, this.timeout);
         this.timer = setTimeout(this.handleTimeout.bind(this), parseInt(timeout));
     }
 }
+
 util.inherits(Request, EventEmitter);
 
 /**
  * Handle request timeout
  */
-Request.prototype.handleTimeout = function(){
-    let msg = this.connection.name + ' request#' + this.id + ' timeout, use ' + (Date.now()-this.startTime) + 'ms';
-    this.entry.operator.rpc_error = new ErrorCode({'errno' : 'ERR_TIMEOUT'});
+Request.prototype.handleTimeout = function () {
+    let msg = this.connection.name + ' request#' + this.id + ' timeout, use ' + (Date.now() - this.startTime) + 'ms';
+    this.entry.operator.rpc_error = new ErrorCode({'errno': 'ERR_TIMEOUT'});
     log.info('%s has %d requests now', this.connection.name, Object.keys(this.connection.requests).length);
 
     let err = new Exception.RPCException('ERR_TIMEOUT', msg);
@@ -348,13 +350,13 @@ Request.prototype.handleTimeout = function(){
  * Set request exception
  * @param err
  */
-Request.prototype.setException = function(err){
-    if(err.message.indexOf('no error') < 0) {
+Request.prototype.setException = function (err) {
+    if (err.message.indexOf('no error') < 0) {
         log.error('%s request#%d error %s', this.connection.name, this.id, err.message);
     }
     this.error = err;
-    if(err.err_type === 'ERR_SESSION_RESET'){
-        this.entry.operator.rpc_error = new ErrorCode({'errno' : 'ERR_SESSION_RESET'});
+    if (err.err_type === 'ERR_SESSION_RESET') {
+        this.entry.operator.rpc_error = new ErrorCode({'errno': 'ERR_SESSION_RESET'});
     }
     this.callComplete();
 };
@@ -362,18 +364,18 @@ Request.prototype.setException = function(err){
 /**
  * Set request completed
  */
-Request.prototype.callComplete = function(){
-    if(this.timer){
+Request.prototype.callComplete = function () {
+    if (this.timer) {
         clearTimeout(this.timer);
         this.timer = null;
     }
     //Done before
-    if(this.done){
+    if (this.done) {
         return;
     }
     this.done = true;
 
-    let usedTime = Date.now()-this.startTime;
+    let usedTime = Date.now() - this.startTime;
     this.entry.operator.timeout -= usedTime;
     log.debug('%s-request#%d use %dms, remain timeout %dms',
         this.connection.name,
@@ -387,7 +389,7 @@ Request.prototype.callComplete = function(){
  * Set response
  * @param response
  */
-Request.prototype.setResponse = function(response){
+Request.prototype.setResponse = function (response) {
     this.entry.operator.response = response;
     this.callComplete();
 };

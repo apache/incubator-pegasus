@@ -29,7 +29,7 @@ let log = null;
  * @param   {Function}  callback
  * @constructor
  */
-function TableHandler(cluster, tableName, callback){
+function TableHandler(cluster, tableName, callback) {
     log = cluster.log;
     this.cluster = cluster;
     this.tableName = tableName;
@@ -41,10 +41,10 @@ function TableHandler(cluster, tableName, callback){
     this.partition_count = 0;
     this.partitions = {};       //partition pid -> primary rpc_address
 
-    if(this.cluster.metaSession.connectionError){
+    if (this.cluster.metaSession.connectionError) {
         //Failed to get meta sessions
         callback(this.cluster.metaSession.connectionError, null);
-    }else {
+    } else {
         this.queryMeta(tableName, this.onUpdateResponse.bind(this));
     }
 }
@@ -54,7 +54,7 @@ function TableHandler(cluster, tableName, callback){
  * @param {String}      tableName
  * @param {Function}    callback
  */
-TableHandler.prototype.queryMeta = function(tableName, callback){
+TableHandler.prototype.queryMeta = function (tableName, callback) {
     let session = this.cluster.metaSession;
     let queryCfgOperator = new Operator.QueryCfgOperator(new Gpid(-1, -1),
         new replica.query_cfg_request({'app_name': tableName}),
@@ -64,11 +64,11 @@ TableHandler.prototype.queryMeta = function(tableName, callback){
         session.maxRetryCounter,
         session.metaList[session.curLeader]);
 
-    if(session.isQuery){
+    if (session.isQuery) {
         session.roundQueue.push(round);
         // log.info('%d requests is waiting', session.roundQueue.length);
         // console.log('%d requests is waiting', session.roundQueue.length);
-    }else{
+    } else {
         session.isQuery = true;
         //console.log('table %s is querying meta', tableName);
         session.query(round);
@@ -81,17 +81,17 @@ TableHandler.prototype.queryMeta = function(tableName, callback){
  * @param {Error}       err
  * @param {Operator}    op
  */
-TableHandler.prototype.onUpdateResponse = function(err, op){
+TableHandler.prototype.onUpdateResponse = function (err, op) {
     let response = op.response;
 
-    if(err === null && ErrorType[response.err.errno] === ErrorType.ERR_OK){
+    if (err === null && ErrorType[response.err.errno] === ErrorType.ERR_OK) {
         this.updateResponse(this.queryCfgResponse, response);
         this.callback(null, this);
-    }else if(err === null){
+    } else if (err === null) {
         this.callback(new Exception.MetaException(
             response.err.errno, 'Failed to query meta server, error is ' + response.err.errno
         ), null);
-    }else{
+    } else {
         this.callback(err, null);
     }
 };
@@ -101,7 +101,7 @@ TableHandler.prototype.onUpdateResponse = function(err, op){
  * @param   oldResp
  * @param   newResp
  */
-TableHandler.prototype.updateResponse = function(oldResp, newResp){
+TableHandler.prototype.updateResponse = function (oldResp, newResp) {
     this.app_id = newResp.app_id;
     this.partition_count = newResp.partition_count;
 
@@ -111,21 +111,21 @@ TableHandler.prototype.updateResponse = function(oldResp, newResp){
     let connected_rpc = [];
 
     let i, len = newResp.partitions.length;
-    for(i = 0; i < len; ++i){
+    for (i = 0; i < len; ++i) {
         let partition = newResp.partitions[i];
         let primary_addr = partition.primary;
         this.partitions[partition.pid.get_pidx()] = primary_addr;
 
-        if(tools.isAddrExist(connected_rpc, primary_addr) === true){
+        if (tools.isAddrExist(connected_rpc, primary_addr) === true) {
             continue;
         }
         let session = tools.findSessionByAddr(current_sessions, primary_addr);
-        if(session === null){
-            session  = new ReplicaSession({'address':primary_addr});
+        if (session === null) {
+            session = new ReplicaSession({'address': primary_addr});
         }
         this.cluster.replicaSessions.push({
-            'key' : primary_addr,
-            'value' : session,
+            'key': primary_addr,
+            'value': session,
         });
         connected_rpc.push(primary_addr);
     }
@@ -138,31 +138,31 @@ TableHandler.prototype.updateResponse = function(oldResp, newResp){
  * @param {Operator}   op
  */
 //TODO: testing
-TableHandler.prototype.operate = function(gpid, op){
+TableHandler.prototype.operate = function (gpid, op) {
     let pidx = gpid.get_pidx();
     let address = this.partitions[pidx];
     let session = tools.findSessionByAddr(this.cluster.replicaSessions, address);
     //let self = this;
 
-    if(session === null || session === undefined){ //TODO: check when to meet this situation
+    if (session === null || session === undefined) { //TODO: check when to meet this situation
         log.error('Replica session not exist');
         return;
     }
 
     //let hashKey = op.hashKey;
-    if(session.retry){ // others are reconnecting this session
+    if (session.retry) { // others are reconnecting this session
         // console.log('%s is waiting', hashKey);
         // log.info('%s is waiting', hashKey);
         session.operatorQueue.push(op);
-    }else if(session.connection.connectError){ // connection has connected error
+    } else if (session.connection.connectError) { // connection has connected error
         // console.log('%s is retrying', hashKey);
         // log.info('%s is retrying', hashKey);
         session.retry = true;
         session.operatorQueue.push(op);
-        if(session.handleConnectedError(this, address)){
+        if (session.handleConnectedError(this, address)) {
             this.queryMeta(this.tableName, this.onUpdateResponse.bind(this));
         }
-    }else {
+    } else {
         // connection is normal
         let clientRound = new ClientRequestRound(this, op, op.handleResult.bind(op));
         session.operate(clientRound);
@@ -176,7 +176,7 @@ TableHandler.prototype.operate = function(gpid, op){
  * @param   {Number}        timeout
  * @constructor
  */
-function TableInfo(client, tableHandler, timeout){
+function TableInfo(client, tableHandler, timeout) {
     this.client = client;
     this.tableHandler = tableHandler;
     this.timeout = timeout;
@@ -187,17 +187,17 @@ function TableInfo(client, tableHandler, timeout){
  * @param  {blob}   blob_key
  * @return {gpid}   gpid
  */
-TableInfo.prototype.getGpid = function(blob_key){
+TableInfo.prototype.getGpid = function (blob_key) {
     let hash_value = this.tableHandler.keyHash.hash(blob_key.data);
     let app_id = this.tableHandler.app_id;
     let pidx = hash_value.mod(this.tableHandler.partition_count).getLowBits();
     //pidx should be greater than zero
-    while(pidx < 0 && pidx < this.tableHandler.partition_count){
+    while (pidx < 0 && pidx < this.tableHandler.partition_count) {
         pidx += this.tableHandler.partition_count;
     }
     return new Gpid({
-        'app_id' : app_id,
-        'pidx' : pidx,
+        'app_id': app_id,
+        'pidx': pidx,
     });
 };
 
@@ -206,17 +206,17 @@ TableInfo.prototype.getGpid = function(blob_key){
  * @param  {Buffer} hash_key
  * @return {gpid}   gpid
  */
-TableInfo.prototype.get_hash_key_pid = function(hash_key){
+TableInfo.prototype.get_hash_key_pid = function (hash_key) {
     let hash_value = this.tableHandler.keyHash.default_hash(hash_key);
     let app_id = this.tableHandler.app_id;
     let pidx = hash_value.mod(this.tableHandler.partition_count).getLowBits();
     //pidx should be greater than zero
-    while(pidx < 0 && pidx < this.tableHandler.partition_count){
+    while (pidx < 0 && pidx < this.tableHandler.partition_count) {
         pidx += this.tableHandler.partition_count;
     }
     return new Gpid({
-        'app_id' : app_id,
-        'pidx' : pidx,
+        'app_id': app_id,
+        'pidx': pidx,
     });
 };
 
@@ -228,7 +228,7 @@ TableInfo.prototype.get_hash_key_pid = function(hash_key){
  *        {Number}      args.timeout
  * @param {Function}    callback
  */
-TableInfo.prototype.get = function(args, callback){
+TableInfo.prototype.get = function (args, callback) {
     let timeout = args.timeout || this.timeout;
     let request = new Blob({
         'data': tools.generateKey(args.hashKey, args.sortKey),
@@ -246,25 +246,27 @@ TableInfo.prototype.get = function(args, callback){
  *        {Number}      argsArray[i].timeout(ms)
  * @param {Function}    callback
  */
-TableInfo.prototype.batchGet = function(argsArray, callback){
+TableInfo.prototype.batchGet = function (argsArray, callback) {
     let i, len = argsArray.length;
     let error = null, resultArray = [], sync = true;
 
-    for(i = 0; i < len; ++i){
+    for (i = 0; i < len; ++i) {
         let args = argsArray[i];
-        this.get(args, function(err, result){
-            if(err !== null){
+        this.get(args, function (err, result) {
+            if (err !== null) {
                 error = err;
-                sync =false;
-            }else{
+                sync = false;
+            } else {
                 resultArray.push(result);
             }
-            if(resultArray.length === len){
-                sync =false;
+            if (resultArray.length === len) {
+                sync = false;
             }
         });
     }
-    while(sync){deasync.sleep(1);}
+    while (sync) {
+        deasync.sleep(1);
+    }
     callback(error, resultArray);
 };
 
@@ -276,14 +278,14 @@ TableInfo.prototype.batchGet = function(argsArray, callback){
  *        {Number}      argsArray[i].timeout(ms)
  * @param {Function}    callback
  */
-TableInfo.prototype.batchGetPromise = function(argsArray, callback){
+TableInfo.prototype.batchGetPromise = function (argsArray, callback) {
     let tasks = [], i, len = argsArray.length, self = this;
-    for(i = 0; i < len; ++i){
-        tasks.push(new Promise(function(resolve){
+    for (i = 0; i < len; ++i) {
+        tasks.push(new Promise(function (resolve) {
 
             // let start = Date.now();
             // let hashKey = argsArray[i].hashKey;
-            self.get(argsArray[i], function(err, result){
+            self.get(argsArray[i], function (err, result) {
                 // if(err === null){
                 //     console.log('hashKey %s use time %s~%s, %dms', hashKey, start, Date.now(), Date.now()-start);
                 //     // log.info('hashKey %s use time %s~%s, %dms', hashKey, start, Date.now(), Date.now()-start);
@@ -293,11 +295,11 @@ TableInfo.prototype.batchGetPromise = function(argsArray, callback){
                 //     // log.info('hashKey %s', hashKey);
                 //     // log.error('error name is %s, type is %s, message is %s', err.name, err.err_type, err.message);
                 // }
-                resolve({'error' : err, 'data' : result});
+                resolve({'error': err, 'data': result});
             });
         }));
     }
-    Promise.all(tasks).then(function(values){
+    Promise.all(tasks).then(function (values) {
         callback(null, values);
     });
 };
@@ -313,24 +315,24 @@ TableInfo.prototype.batchGetPromise = function(argsArray, callback){
  *        {Number}      args.timeout
  * @param {Function}    callback
  */
-TableInfo.prototype.set = function(args, callback){
+TableInfo.prototype.set = function (args, callback) {
     //set ttl
-    if(!args.ttl || typeof(args.ttl) !== 'number' || args.ttl < 0){
+    if (!args.ttl || typeof(args.ttl) !== 'number' || args.ttl < 0) {
         args.ttl = 0;
     }
     let timeout = args.timeout || this.timeout;
     let key = new Blob({
-        'data' : tools.generateKey(args.hashKey, args.sortKey),
+        'data': tools.generateKey(args.hashKey, args.sortKey),
     });
     let blob_value = new Blob({
-        'data' : args.value,
+        'data': args.value,
     });
 
     let gpid = this.getGpid(key);
     let op = new Operator.RrdbPutOperator(gpid, new RrdbType.update_request({
-        'key' : key,
-        'value' : blob_value,
-        'expire_ts_seconds' : args.ttl,
+        'key': key,
+        'value': blob_value,
+        'expire_ts_seconds': args.ttl,
     }), timeout, callback);
     this.tableHandler.operate(gpid, op);
 };
@@ -345,25 +347,27 @@ TableInfo.prototype.set = function(args, callback){
  *        {Number}      argsArray[i].timeout(ms)
  * @param {Function}    callback
  */
-TableInfo.prototype.batchSet = function(argsArray, callback){
+TableInfo.prototype.batchSet = function (argsArray, callback) {
     let i, len = argsArray.length;
     let error = null, resultArray = [], sync = true;
 
-    for(i = 0; i < len; ++i){
+    for (i = 0; i < len; ++i) {
         let args = argsArray[i];
-        this.set(args, function(err, result){
-            if(err !== null){
+        this.set(args, function (err, result) {
+            if (err !== null) {
                 error = err;
-                sync =false;
-            }else{
+                sync = false;
+            } else {
                 resultArray.push(result);
             }
-            if(resultArray.length === len){
-                sync =false;
+            if (resultArray.length === len) {
+                sync = false;
             }
         });
     }
-    while(sync){deasync.sleep(1);}
+    while (sync) {
+        deasync.sleep(1);
+    }
     callback(error, resultArray);
 };
 
@@ -377,16 +381,16 @@ TableInfo.prototype.batchSet = function(argsArray, callback){
  *        {Number}      argsArray[i].timeout(ms)
  * @param {Function}    callback
  */
-TableInfo.prototype.batchSetPromise = function(argsArray, callback){
+TableInfo.prototype.batchSetPromise = function (argsArray, callback) {
     let tasks = [], i, len = argsArray.length, self = this;
-    for(i = 0; i < len; ++i){
-        tasks.push(new Promise(function(resolve){
-            self.set(argsArray[i], function(err, result){
-                resolve({'error' : err, 'data' : result});
+    for (i = 0; i < len; ++i) {
+        tasks.push(new Promise(function (resolve) {
+            self.set(argsArray[i], function (err, result) {
+                resolve({'error': err, 'data': result});
             });
         }));
     }
-    Promise.all(tasks).then(function(values){
+    Promise.all(tasks).then(function (values) {
         callback(null, values);
     });
 };
@@ -399,7 +403,7 @@ TableInfo.prototype.batchSetPromise = function(argsArray, callback){
  *        {Number}      args.timeout
  * @param {Function}    callback
  */
-TableInfo.prototype.del = function(args, callback){
+TableInfo.prototype.del = function (args, callback) {
     let timeout = args.timeout || this.timeout;
     let request = new Blob({
         'data': tools.generateKey(args.hashKey, args.sortKey),
@@ -420,7 +424,7 @@ TableInfo.prototype.del = function(args, callback){
  *        {Number}      args.maxFetchSize
  * @param {Function}    callback
  */
-TableInfo.prototype.multiGet = function(args, callback){
+TableInfo.prototype.multiGet = function (args, callback) {
     let timeout = args.timeout || this.timeout,
         maxFetchCount = args.maxFetchCount || DEFAULT_MULTI_COUNT,
         maxFetchSize = args.maxFetchSize || DEFAULT_MULTI_SIZE,
@@ -429,20 +433,20 @@ TableInfo.prototype.multiGet = function(args, callback){
     let gpid = this.get_hash_key_pid(args.hashKey);
 
     let hashKeyBlob = new Blob({
-        'data' : args.hashKey,
+        'data': args.hashKey,
     });
     let i, len = args.sortKeyArray.length, sortKeyBlobs = [];
-    for(i = 0; i < len; ++i){
+    for (i = 0; i < len; ++i) {
         sortKeyBlobs[i] = new Blob({
-            'data' : args.sortKeyArray[i],
+            'data': args.sortKeyArray[i],
         });
     }
     let request = new RrdbType.multi_get_request({
-        'hash_key' : hashKeyBlob,
-        'sork_keys' : sortKeyBlobs,
-        'max_kv_count' : maxFetchCount,
-        'max_kv_size' : maxFetchSize,
-        'no_value' : no_value
+        'hash_key': hashKeyBlob,
+        'sork_keys': sortKeyBlobs,
+        'max_kv_count': maxFetchCount,
+        'max_kv_size': maxFetchSize,
+        'no_value': no_value
     });
     let op = new Operator.RrdbMultiGetOperator(gpid, request, args.hashKey, timeout, callback);
     this.tableHandler.operate(gpid, op);
@@ -458,28 +462,28 @@ TableInfo.prototype.multiGet = function(args, callback){
  *        {Number}      args.ttl(s)
  * @param {Function}    callback
  */
-TableInfo.prototype.multiSet = function(args, callback){
-    if(!args.ttl || typeof(args.ttl) !== 'number' || args.ttl < 0){
+TableInfo.prototype.multiSet = function (args, callback) {
+    if (!args.ttl || typeof(args.ttl) !== 'number' || args.ttl < 0) {
         args.ttl = 0;
     }
     let timeout = args.timeout || this.timeout,
         gpid = this.get_hash_key_pid(args.hashKey);
 
     let hashKeyBlob = new Blob({
-        'data' : args.hashKey,
+        'data': args.hashKey,
     });
     let i, len = args.sortKeyValueArray.length, valueBlobs = [];
-    for(i = 0; i < len; ++i){
+    for (i = 0; i < len; ++i) {
         valueBlobs[i] = new RrdbType.key_value({
-            'key' : new Blob({'data' : args.sortKeyValueArray[i].key}),
-            'value' : new Blob({'data' : args.sortKeyValueArray[i].value}),
+            'key': new Blob({'data': args.sortKeyValueArray[i].key}),
+            'value': new Blob({'data': args.sortKeyValueArray[i].value}),
         });
     }
 
     let request = new RrdbType.multi_put_request({
-        'hash_key' : hashKeyBlob,
-        'kvs' : valueBlobs,
-        'expire_ts_seconds' : args.ttl,
+        'hash_key': hashKeyBlob,
+        'kvs': valueBlobs,
+        'expire_ts_seconds': args.ttl,
     });
 
     let op = new Operator.RrdbMultiPutOperator(gpid, request, timeout, callback);
@@ -490,7 +494,7 @@ TableInfo.prototype.multiSet = function(args, callback){
  * Constructor for helper class for calculating hash value
  * @constructor
  */
-function PegasusHash(){
+function PegasusHash() {
     this.crc64_table = [
         '0x0000000000000000', '0x7f6ef0c830358979', '0xfedde190606b12f2', '0x81b31158505e9b8b',
         '0xc962e5739841b68f', '0xb60c15bba8743ff6', '0x37bf04e3f82aa47d', '0x48d1f42bc81f2d04',
@@ -565,12 +569,12 @@ function PegasusHash(){
  * @param   {Number}    len
  * @return  {Long}      crc64
  */
-PegasusHash.prototype.crc64 = function(buf, offset, len){
+PegasusHash.prototype.crc64 = function (buf, offset, len) {
     let crc = new Long(-1, -1);
     let end = offset + len;
 
     let i;
-    for(i = offset; i < end; ++i){
+    for (i = offset; i < end; ++i) {
         let index = (buf[i] ^ crc.getLowBits()) & 0xFF;
         let other = this.toLong(index);
         crc = crc.shiftRightUnsigned(8).xor(other);
@@ -583,7 +587,7 @@ PegasusHash.prototype.crc64 = function(buf, offset, len){
  * @param   {Number}    index
  * @return  {Long}      result
  */
-PegasusHash.prototype.toLong = function(index){
+PegasusHash.prototype.toLong = function (index) {
     let value = this.crc64_table[index];
     let high = value.slice(2, 10);
     let low = value.slice(10);
@@ -595,21 +599,21 @@ PegasusHash.prototype.toLong = function(index){
  * @param   {Buffer}    blob_key
  * @return  {Long}      hash
  */
-PegasusHash.prototype.hash = function(blob_key){
-    if(!blob_key || blob_key.length < 2){
+PegasusHash.prototype.hash = function (blob_key) {
+    if (!blob_key || blob_key.length < 2) {
         log.error('blob_key is invalid');
         throw new Exception.InvalidParamException('blob_key is invalid');
     }
 
     let hashLen = blob_key.readInt16BE(0);
-    if(hashLen === 0xFFFF || (hashLen+2) > blob_key.length){
+    if (hashLen === 0xFFFF || (hashLen + 2) > blob_key.length) {
         log.error('blob_key hash key length is invalid');
         throw new Exception.InvalidParamException('blob_key is invalid');
     }
 
-    if(hashLen === 0){
-        return this.crc64(blob_key, 2, blob_key.length-2);
-    }else{
+    if (hashLen === 0) {
+        return this.crc64(blob_key, 2, blob_key.length - 2);
+    } else {
         return this.crc64(blob_key, 2, hashLen);
     }
 };
@@ -619,15 +623,15 @@ PegasusHash.prototype.hash = function(blob_key){
  * @param   {Buffer}    hashKey
  * @return  {Long}      crc64
  */
-PegasusHash.prototype.default_hash = function(hashKey){
-    if(!Buffer.isBuffer(hashKey)){
+PegasusHash.prototype.default_hash = function (hashKey) {
+    if (!Buffer.isBuffer(hashKey)) {
         hashKey = new Buffer(hashKey);
     }
     return this.crc64(hashKey, 0, hashKey.length);
 };
 
 module.exports = {
-    TableHandler : TableHandler,
-    TableInfo : TableInfo,
+    TableHandler: TableHandler,
+    TableInfo: TableInfo,
 };
 
