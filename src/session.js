@@ -85,23 +85,22 @@ Session.prototype.getConnection = function (args, callback) {
         'log': log,
     });
 
-    let sync = true, error = null;
-    connection.once('connectError', function (err) {
-        connection.emit('close');
-        error = err;
-        sync = false;
-    });
-    connection.once('connect', function () {
-        sync = false;
-    });
-    while (sync) {
-        deasync.sleep(1);
-    }
-    if (error === null) {
-        callback(null, connection);
-    } else {
-        callback(error, null);
-    }
+    // let sync = true, error = null;
+    // connection.once('connectError', function(err){
+    //     connection.emit('close');
+    //     error = err;
+    //     sync = false;
+    // });
+    // connection.once('connect', function(){
+    //     sync = false;
+    // });
+    // while(sync){deasync.sleep(1);}
+    // if(error === null){
+    //     callback(null, connection);
+    // }else{
+    //     callback(error, null);
+    // }
+    callback(null, connection);
 };
 
 /**
@@ -131,12 +130,13 @@ function MetaSession(args) {
             self.getConnection({
                 'rpc_address': address,
             }, function (err, connection) {
-                if (err === null && connection !== null) {
-                    self.metaList.push(connection);
-                    log.debug('Finish to get session to meta %s:%s', address.host, address.port);
-                } else {
-                    log.error('Failed to get meta connection, %s', err.message);
-                }
+                self.metaList.push(connection);
+                // if(err === null && connection !== null) {
+                //     self.metaList.push(connection);
+                //     log.debug('Finish to get session to meta %s:%s', address.host, address.port);
+                // }else{
+                //     log.error('Failed to get meta connection, %s', err.message);
+                // }
             });
         } else {
             log.error('invalid meta server address %s', args.metaList[i]);
@@ -280,11 +280,12 @@ function ReplicaSession(args) {
     this.getConnection({
         'rpc_address': addr,
     }, function (err, connection) {
-        if (err === null && connection !== null) {
-            self.connection = connection;
-        } else {
-            log.error('Failed to get replica connection, %s', err.message);
-        }
+        self.connection = connection;
+        // if(err === null && connection !== null) {
+        //     self.connection = connection;
+        // }else{
+        //     log.error('Failed to get replica connection, %s', err.message);
+        // }
     });
 }
 
