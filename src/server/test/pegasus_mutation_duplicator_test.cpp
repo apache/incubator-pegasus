@@ -44,6 +44,15 @@ TEST(pegasus_mutation_duplicator, get_hash_from_request)
         auto data = dsn::move_message_to_blob(msg);
         ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_PUT, data));
     }
+
+    {
+        dsn::blob key;
+        pegasus::pegasus_generate_key(key, hash_key, sort_key);
+        auto msg =
+            dsn::from_thrift_request_to_received_message(key, dsn::apps::RPC_RRDB_RRDB_REMOVE);
+        auto data = dsn::move_message_to_blob(msg);
+        ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_REMOVE, data));
+    }
 }
 
 // Verifies that calls on `get_hash_key_from_request` won't make

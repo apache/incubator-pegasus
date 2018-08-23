@@ -37,14 +37,15 @@ static inline bool is_delete_operation(dsn_message_t req)
 
 /*extern*/ uint64_t get_hash_from_request(dsn::task_code tc, const dsn::blob &data)
 {
-    if (tc == dsn::apps::RPC_RRDB_RRDB_PUT || tc == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+    if (tc == dsn::apps::RPC_RRDB_RRDB_PUT) {
         dsn::apps::update_request thrift_request;
         dsn::from_blob_to_thrift(data, thrift_request);
-        dassert_f(thrift_request.key.length() >= 2,
-                  "invalid raw key: [code:{}, size:{}]",
-                  tc.to_string(),
-                  data.length());
         return pegasus_key_hash(thrift_request.key);
+    }
+    if (tc == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+        dsn::blob raw_key;
+        dsn::from_blob_to_thrift(data, raw_key);
+        return pegasus_key_hash(raw_key);
     }
     if (tc == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         dsn::apps::multi_put_request thrift_request;
