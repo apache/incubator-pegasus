@@ -41,6 +41,7 @@ function TableHandler(cluster, tableName, callback) {
     this.partition_count = 0;
     this.partitions = {};       //partition pid -> primary rpc_address
 
+    //TODO(hyc): change to event handler
     if (this.cluster.metaSession.connectionError) {
         //Failed to get meta sessions
         callback(this.cluster.metaSession.connectionError, null);
@@ -64,14 +65,14 @@ TableHandler.prototype.queryMeta = function (tableName, callback) {
         session.maxRetryCounter,
         session.metaList[session.curLeader]);
 
+    //TODO(hyc): add table name map
     if (session.isQuery) {
         session.roundQueue.push(round);
-        // log.info('%d requests is waiting', session.roundQueue.length);
-        // console.log('%d requests is waiting', session.roundQueue.length);
+        log.info('table %s has %d requests is waiting', tableName, session.roundQueue.length);
     } else {
         session.isQuery = true;
-        //console.log('table %s is querying meta', tableName);
         session.query(round);
+        log.debug('table %s is querying meta', tableName);
     }
 };
 
@@ -134,6 +135,7 @@ TableHandler.prototype.updateResponse = function (oldResp, newResp) {
         connected_rpc.push(primary_addr);
     }
     this.queryCfgResponse = newResp;
+    log.info('table %s finish updating config from meta', this.tableName);
 };
 
 /**
@@ -153,14 +155,10 @@ TableHandler.prototype.operate = function (gpid, op) {
         return;
     }
 
-    //let hashKey = op.hashKey;
+    //TODO(hyc): how to handle timeout session's requests
     if (session.retry) { // others are reconnecting this session
-        // console.log('%s is waiting', hashKey);
-        // log.info('%s is waiting', hashKey);
         session.operatorQueue.push(op);
     } else if (session.connection.connectError) { // connection has connected error
-        // console.log('%s is retrying', hashKey);
-        // log.info('%s is retrying', hashKey);
         session.retry = true;
         session.operatorQueue.push(op);
         if (session.handleConnectedError(this, address)) {
@@ -242,6 +240,7 @@ TableInfo.prototype.get = function (args, callback) {
     this.tableHandler.operate(gpid, op);
 };
 
+// TODO(hyc): delete after whole test
 /**
  * Batch Get value
  * @param {Array}       argsArray
@@ -286,19 +285,7 @@ TableInfo.prototype.batchGetPromise = function (argsArray, callback) {
     let tasks = [], i, len = argsArray.length, self = this;
     for (i = 0; i < len; ++i) {
         tasks.push(new Promise(function (resolve) {
-
-            // let start = Date.now();
-            // let hashKey = argsArray[i].hashKey;
             self.get(argsArray[i], function (err, result) {
-                // if(err === null){
-                //     console.log('hashKey %s use time %s~%s, %dms', hashKey, start, Date.now(), Date.now()-start);
-                //     // log.info('hashKey %s use time %s~%s, %dms', hashKey, start, Date.now(), Date.now()-start);
-                // }else{
-                //     console.log('hashKey %s', hashKey);
-                //     console.log(err);
-                //     // log.info('hashKey %s', hashKey);
-                //     // log.error('error name is %s, type is %s, message is %s', err.name, err.err_type, err.message);
-                // }
                 resolve({'error': err, 'data': result});
             });
         }));
@@ -341,6 +328,7 @@ TableInfo.prototype.set = function (args, callback) {
     this.tableHandler.operate(gpid, op);
 };
 
+// TODO(hyc): delete after whole test
 /**
  * Batch Set value
  * @param {Array}       argsArray

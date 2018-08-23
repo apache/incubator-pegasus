@@ -90,7 +90,6 @@ Connection.prototype._handleClose = function () {
     this.emit('close');
     let err = this._closeError || this._socketError;
     if (!err) {
-        // err = new Exception.ConnectionClosedException(this.name + ' closed with no error.');
         err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' closed with no error.');
         log.debug(err.message);
     }
@@ -113,10 +112,9 @@ Connection.prototype._handleError = function (err) {
         err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
     } else {
         err = new Exception.RPCException('ERR_SESSION_RESET', this.name + ' error: ' + errorName + ', ' + err.message);
-        // err = new Exception.ConnectionClosedException(this.name + ' error: ' + errorName + ', ' + err.message);
     }
 
-    log.error(err.message);
+    log.error('%s sockect meet error %s', this.name, err.message);
     this._socketError = err;
     if (!this._connected) { //handle connection closed
         this.connectError = err;
@@ -133,16 +131,13 @@ Connection.prototype._handleError = function (err) {
 Connection.prototype._cleanupRequests = function (err) {
     let count = 0;
     let requests = this.requests;
-    // if(requests.length === 0){
-    //     return;
-    // }
     this.requests = {};
     for (let id in requests) {
         let request = requests[id];
         request.setException(err);
         count++;
     }
-    log.debug('%s cleanup %d requests', this.name, count);
+    log.info('%s cleanup %d requests', this.name, count);
 };
 
 /**
@@ -154,7 +149,7 @@ Connection.prototype._close = function (err) {
     this.closed = true;
     this._closeError = err;
     this.socket.destroy();
-    log.debug('%s socket destroy', this.name);
+    log.info('%s close and socket destroy', this.name);
 };
 
 /**
@@ -181,18 +176,18 @@ Connection.prototype.getResponse = function () {
 
                 let msgHeader = protocol.readMessageBegin();
                 let request = self.requests[msgHeader.rseqid];
-
                 if (request) {
                     let entry = request.entry;
                     entry.operator.rpc_error = ec;
                     if (ErrorType[ec.errno] === ErrorType.ERR_OK) {
                         entry.operator.recv_data(protocol);
                     } else {
-                        log.error('Request failed, error code is %s', entry.operator.rpc_error.errno);
+                        log.error('%s request#%d failed, error code is %s',
+                            self.name, msgHeader.rseqid, entry.operator.rpc_error.errno);
                     }
                     request.setResponse(entry.operator.response);
                 } else {
-                    log.error('%s Request#%d does not exist, maybe timeout', self.name, msgHeader.rseqid);
+                    log.error('%s request#%d does not exist, maybe timeout', self.name, msgHeader.rseqid);
                 }
 
                 transport_with_data.rollbackPosition();
@@ -224,7 +219,7 @@ Connection.prototype.setupStream = function () {
     self.socket.on('connect', function () {
         this._connected = true;
         self.getResponse();
-        self.emit('connect');
+        self.emit('connect'); //TODO(hyc): check handler of connection's connect event
         log.info('Connected to %s', self.name);
     });
 };
@@ -339,7 +334,7 @@ util.inherits(Request, EventEmitter);
 Request.prototype.handleTimeout = function () {
     let msg = this.connection.name + ' request#' + this.id + ' timeout, use ' + (Date.now() - this.startTime) + 'ms';
     this.entry.operator.rpc_error = new ErrorCode({'errno': 'ERR_TIMEOUT'});
-    log.info('%s has %d requests now', this.connection.name, Object.keys(this.connection.requests).length);
+    log.debug('%s has %d requests now', this.connection.name, Object.keys(this.connection.requests).length);
 
     let err = new Exception.RPCException('ERR_TIMEOUT', msg);
     this.setException(err);
@@ -352,7 +347,7 @@ Request.prototype.handleTimeout = function () {
  */
 Request.prototype.setException = function (err) {
     if (err.message.indexOf('no error') < 0) {
-        log.error('%s request#%d error %s', this.connection.name, this.id, err.message);
+        log.error('setException: %s request#%d error %s', this.connection.name, this.id, err.message);
     }
     this.error = err;
     if (err.err_type === 'ERR_SESSION_RESET') {
