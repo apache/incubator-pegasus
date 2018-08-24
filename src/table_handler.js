@@ -156,19 +156,33 @@ TableHandler.prototype.operate = function (gpid, op) {
     }
 
     //TODO(hyc): how to handle timeout session's requests
-    if (session.retry) { // others are reconnecting this session
-        session.operatorQueue.push(op);
-    } else if (session.connection.connectError) { // connection has connected error
-        session.retry = true;
-        session.operatorQueue.push(op);
-        if (session.handleConnectedError(this, address)) {
-            this.queryMeta(this.tableName, this.onUpdateResponse.bind(this));
-        }
-    } else {
-        // connection is normal
-        let clientRound = new ClientRequestRound(this, op, op.handleResult.bind(op));
-        session.operate(clientRound);
+    // if (session.retry) { // others are reconnecting this session
+    //     session.operatorQueue.push(op);
+    // } else if (session.connection.connectError) { // connection has connected error
+    //     session.retry = true;
+    //     session.operatorQueue.push(op);
+    //     if (session.handleConnectedError(this, address)) {
+    //         this.queryMeta(this.tableName, this.onUpdateResponse.bind(this));
+    //     }
+    // } else {
+    //     // connection is normal
+    //     let clientRound = new ClientRequestRound(this, op, op.handleResult.bind(op));
+    //     session.operate(clientRound);
+    // }
+
+    if (session.connection.connectError) { // connection has connected error
+        // session.retry = true;
+        // session.operatorQueue.push(op);
+        // if (session.handleConnectedError(this, address)) {
+        //     this.queryMeta(this.tableName, this.onUpdateResponse.bind(this));
+        // }
+        session.handleConnectedError(this, address);
     }
+    //else {
+    // connection is normal
+    let clientRound = new ClientRequestRound(this, op, op.handleResult.bind(op));
+    session.operate(clientRound);
+    //}
 };
 
 /**

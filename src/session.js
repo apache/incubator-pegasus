@@ -255,7 +255,7 @@ MetaSession.prototype.completeQueryMeta = function (err, round) {
  */
 function ReplicaSession(args) {
     ReplicaSession.super_.call(this, args, this.constructor);
-    this.operatorQueue = [];
+    // this.operatorQueue = [];
 
     if (!args || !args.address) {
         log.error('Invalid params, Missing rpc address while creating replica session');
@@ -294,7 +294,7 @@ ReplicaSession.prototype.operate = function (round) {
 //TODO: consider to change event emit
 ReplicaSession.prototype.handleConnectedError = function (tableHandler, address) {
     // 1. get requests in queue
-    let oriConnection = this.connection, needQueryMeta = false;
+    let oriConnection = this.connection; //, needQueryMeta = false;
     // if(requests.length > 0){
     //     for(let id in requests){
     //         let request = requests[id];
@@ -313,31 +313,31 @@ ReplicaSession.prototype.handleConnectedError = function (tableHandler, address)
             self.connection = connection;
             // console.log('%s build!', connection.name);
             // log.info('%s build!', connection.name);
-            self.retryRequests(tableHandler);
+            // self.retryRequests(tableHandler);
             oriConnection.emit('close');
         } else {
             log.error('Failed to get replica connection, %s', err.message);
-            needQueryMeta = true;
+            //needQueryMeta = true;
         }
     });
 
     // 3. retry = false
-    this.retry = false;
-    return needQueryMeta;
+    // this.retry = false;
+    //return needQueryMeta;
 };
 
-ReplicaSession.prototype.retryRequests = function (tableHandler) {
-    let len = this.operatorQueue.length, i;
-    if (len > 0) {
-        log.info('replica session(%s) %d request ready to retry', this.connection.name, len);
-        for (i = 0; i < len; ++i) {   //retry requests
-            let opRetry = this.operatorQueue[i];
-            let clientRoundRetry = new ClientRequestRound(tableHandler, opRetry, opRetry.handleResult.bind(opRetry));
-            this.operate(clientRoundRetry);
-        }
-        this.operatorQueue = [];
-    }
-};
+// ReplicaSession.prototype.retryRequests = function (tableHandler) {
+//     let len = this.operatorQueue.length, i;
+//     if (len > 0) {
+//         log.info('replica session(%s) %d request ready to retry', this.connection.name, len);
+//         for (i = 0; i < len; ++i) {   //retry requests
+//             let opRetry = this.operatorQueue[i];
+//             let clientRoundRetry = new ClientRequestRound(tableHandler, opRetry, opRetry.handleResult.bind(opRetry));
+//             this.operate(clientRoundRetry);
+//         }
+//         this.operatorQueue = [];
+//     }
+// };
 
 
 /**
