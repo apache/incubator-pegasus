@@ -30,6 +30,7 @@ function Cluster(args) {
     this.timeout = args.timeout;
     this.replicaSessions = [];      // {'key' :rpc_addr, 'value': ReplicaSession}
     this.metaSession = new MetaSession(args);
+    this.queryMetaDelay = this.timeout > 3 ? this.timeout / 3 : 1;
 }
 
 /**
@@ -119,8 +120,9 @@ function MetaSession(args) {
     this.metaList = [];
     this.curLeader = 0;
     this.maxRetryCounter = 5;
-    this.roundQueue = [];
-    this.isQuery = false;
+    // this.roundQueue = [];
+    this.queryingTableName = {};    // tableName -> isQueryingMeta
+    this.lastQueryTime = {}; // tableName -> lastQueryTime
 
     let i;
     let self = this;
@@ -235,14 +237,21 @@ MetaSession.prototype.onFinishQueryMeta = function (err, round) {
 MetaSession.prototype.completeQueryMeta = function (err, round) {
     let op = round.operator;
     round.callback(err, op);
+    this.queryingTableName[op.request.app_name] = false;
 
-    let len = this.roundQueue.length, i;
-    log.info('%d requests for querying meta will return', len);
-    for (i = 0; i < len; ++i) {
-        this.roundQueue[i].callback(err, op);
+    //TODO(hyc): change to debug and delete
+    log.info('finish query meta');
+    for(let key in this.queryingTableName){
+        log.info('table %s isQueryingMeta %s', key, this.queryingTableName[key]);
     }
-    this.roundQueue = [];
-    this.isQuery = false;
+
+    // let len = this.roundQueue.length, i;
+    // log.info('%d requests for querying meta will return', len);
+    // for (i = 0; i < len; ++i) {
+    //     this.roundQueue[i].callback(err, op);
+    // }
+    // this.roundQueue = [];
+    // this.isQuery = false;
 };
 
 /**

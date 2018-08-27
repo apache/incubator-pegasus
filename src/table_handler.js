@@ -41,6 +41,11 @@ function TableHandler(cluster, tableName, callback) {
     this.partition_count = 0;
     this.partitions = {};       //partition pid -> primary rpc_address
 
+    // this.isQueryingMeta = false;
+    // this.lastQueryMetaTime = 0;
+    // this.metaCfgVersion = 0;
+    // this.tryMetaCfgVersion = 0;
+
     //TODO(hyc): change to event handler
     if (this.cluster.metaSession.connectionError) {
         //Failed to get meta sessions
@@ -65,14 +70,29 @@ TableHandler.prototype.queryMeta = function (tableName, callback) {
         session.maxRetryCounter,
         session.metaList[session.curLeader]);
 
-    //TODO(hyc): add table name map
-    if (session.isQuery) {
-        session.roundQueue.push(round);
-        log.info('table %s has %d requests is waiting', tableName, session.roundQueue.length);
-    } else {
-        session.isQuery = true;
+    // session.query(round);
+    // log.debug('table %s is querying meta server', tableName);
+
+    //TODO(hyc): change to time and meta config version
+    // if (session.isQuery) {
+    //     log.info('table %s has %d requests is waiting', tableName, session.roundQueue.length);
+    // } else {
+    //     session.isQuery = true;
+    //     session.query(round);
+    //     log.debug('table %s is querying meta', tableName);
+    // }
+
+    let isQueryingMeta = session.queryingTableName[tableName];
+    let lastQueryTime = session.lastQueryTime[tableName] ? session.lastQueryTime[tableName] : 0;
+    if(!isQueryingMeta && Date.now() - lastQueryTime > this.cluster.queryMetaDelay){
+        session.queryingTableName[tableName] = true;
+        session.lastQueryTime[tableName] = Date.now();
         session.query(round);
-        log.debug('table %s is querying meta', tableName);
+        log.debug('table %s start to query meta', tableName);
+    } else if (isQueryingMeta ){
+        log.debug('table %s already exectute querying meta, ignore this request', tableName);
+    } else {
+        log.debug('table %s query meta too frequently, ignore this request', tableName);
     }
 };
 
