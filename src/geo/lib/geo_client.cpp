@@ -204,6 +204,7 @@ void geo_client::async_del(const std::string &hash_key,
             }
             if (del_count->load() == 0) {
                 cb(PERR_OK, std::move(pegasus_client::internal_info()));
+                return;
             }
 
             auto async_del_callback =
