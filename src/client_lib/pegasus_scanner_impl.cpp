@@ -169,9 +169,9 @@ void pegasus_client_impl::pegasus_scanner_impl::_next_batch()
     dassert(!_rpc_started, "");
     _rpc_started = true;
     _client->scan(req,
-                  [this](::dsn::error_code err, dsn_message_t req, dsn_message_t resp) mutable {
-                      _on_scan_response(err, req, resp);
-                  },
+                  [this](::dsn::error_code err,
+                         dsn::message_ex *req,
+                         dsn::message_ex *resp) mutable { _on_scan_response(err, req, resp); },
                   std::chrono::milliseconds(_options.timeout_ms),
                   0,
                   _hash);
@@ -200,18 +200,19 @@ void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
 
     dassert(!_rpc_started, "");
     _rpc_started = true;
-    _client->get_scanner(req,
-                         [this](::dsn::error_code err,
-                                dsn_message_t req,
-                                dsn_message_t resp) mutable { _on_scan_response(err, req, resp); },
-                         std::chrono::milliseconds(_options.timeout_ms),
-                         0,
-                         _hash);
+    _client->get_scanner(
+        req,
+        [this](::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) mutable {
+            _on_scan_response(err, req, resp);
+        },
+        std::chrono::milliseconds(_options.timeout_ms),
+        0,
+        _hash);
 }
 
 void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_code err,
-                                                                  dsn_message_t req,
-                                                                  dsn_message_t resp)
+                                                                  dsn::message_ex *req,
+                                                                  dsn::message_ex *resp)
 {
     dassert(_rpc_started, "");
     _rpc_started = false;

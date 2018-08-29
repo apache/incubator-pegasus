@@ -26,7 +26,7 @@ public:
             return ::dsn::ERR_INVALID_PARAMETERS;
         }
 
-        proxy_session::factory f = [](proxy_stub *p, dsn_message_t m) {
+        proxy_session::factory f = [](proxy_stub *p, dsn::message_ex *m) {
             return std::make_shared<redis_parser>(p, m);
         };
         _proxy = dsn::make_unique<proxy_stub>(

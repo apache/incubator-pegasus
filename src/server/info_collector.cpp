@@ -90,6 +90,7 @@ void info_collector::on_app_stat()
             all.multi_remove_qps += row.multi_remove_qps;
             all.incr_qps += row.incr_qps;
             all.check_and_set_qps += row.check_and_set_qps;
+            all.check_and_mutate_qps += row.check_and_mutate_qps;
             all.scan_qps += row.scan_qps;
             all.recent_expire_count += row.recent_expire_count;
             all.recent_filter_count += row.recent_filter_count;
@@ -98,12 +99,12 @@ void info_collector::on_app_stat()
             all.storage_count += row.storage_count;
             read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
             write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
-                           row.incr_qps + row.check_and_set_qps;
+                           row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps;
         }
         read_qps[read_qps.size() - 1] = all.get_qps + all.multi_get_qps + all.scan_qps;
         write_qps[read_qps.size() - 1] = all.put_qps + all.multi_put_qps + all.remove_qps +
                                          all.multi_remove_qps + all.incr_qps +
-                                         all.check_and_set_qps;
+                                         all.check_and_set_qps + all.check_and_mutate_qps;
         for (int i = 0; i < rows.size(); ++i) {
             row_data &row = rows[i];
             AppStatCounters *counters = get_app_counters(row.row_name);
@@ -115,6 +116,7 @@ void info_collector::on_app_stat()
             counters->multi_remove_qps->set(row.multi_remove_qps);
             counters->incr_qps->set(row.incr_qps);
             counters->check_and_set_qps->set(row.check_and_set_qps);
+            counters->check_and_mutate_qps->set(row.check_and_mutate_qps);
             counters->scan_qps->set(row.scan_qps);
             counters->recent_expire_count->set(row.recent_expire_count);
             counters->recent_filter_count->set(row.recent_filter_count);
@@ -157,6 +159,7 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNER(multi_remove_qps);
     INIT_COUNER(incr_qps);
     INIT_COUNER(check_and_set_qps);
+    INIT_COUNER(check_and_mutate_qps);
     INIT_COUNER(scan_qps);
     INIT_COUNER(recent_expire_count);
     INIT_COUNER(recent_filter_count);
@@ -168,5 +171,5 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     _app_stat_counters[app_name] = counters;
     return counters;
 }
-}
-} // namespace
+} // namespace server
+} // namespace pegasus

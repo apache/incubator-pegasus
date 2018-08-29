@@ -1454,6 +1454,251 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
     return true;
 }
 
+inline int mutation_check(int args_count, sds *args)
+{
+    int ret = -2;
+    if (args_count > 0) {
+        std::string op = unescape_str(args[0]);
+        if (op == "abort")
+            ret = -1;
+        else if (op == "ok")
+            ret = 0;
+        else if (op == "set" && (args_count == 3 || args_count == 4))
+            ret = 1;
+        else if (op == "del" && args_count == 2)
+            ret = 2;
+    }
+    return ret;
+}
+
+inline int load_mutations(shell_context *sc, pegasus::pegasus_client::mutations &mutations)
+{
+    while (true) {
+        int arg_count = 0;
+        sds *args = scanfCommand(&arg_count);
+        auto cleanup = dsn::defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
+        escape_sds_argv(arg_count, args);
+
+        std::string sort_key, value;
+        int ttl = 0;
+        int status = mutation_check(arg_count, args);
+        switch (status) {
+        case -1:
+            fprintf(stderr, "INFO: abort loading\n");
+            return -1;
+        case 0:
+            fprintf(stderr, "INFO: load mutations done.\n\n");
+            return 0;
+        case 1: // SET
+            ttl = 0;
+            if (arg_count == 4) {
+                if (!dsn::buf2int32(args[3], ttl)) {
+                    fprintf(stderr,
+                            "ERROR: parse \"%s\" as ttl failed, "
+                            "print \"ok\" to finish loading, print \"abort\" to abort this "
+                            "command\n",
+                            args[3]);
+                    break;
+                }
+                if (ttl <= 0) {
+                    fprintf(stderr,
+                            "ERROR: invalid ttl %s, "
+                            "print \"ok\" to finish loading, print \"abort\" to abort this "
+                            "command\n",
+                            args[3]);
+                    break;
+                }
+            }
+            sort_key = unescape_str(args[1]);
+            value = unescape_str(args[2]);
+            fprintf(stderr,
+                    "LOAD: set sortkey \"%s\", value \"%s\", ttl %d\n",
+                    pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str(),
+                    pegasus::utils::c_escape_string(value, sc->escape_all).c_str(),
+                    ttl);
+            mutations.set(sort_key, value, ttl);
+            break;
+        case 2: // DEL
+            sort_key = unescape_str(args[1]);
+            fprintf(stderr,
+                    "LOAD: del sortkey \"%s\"\n",
+                    pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str());
+            mutations.del(sort_key);
+            break;
+        default:
+            fprintf(stderr, "ERROR: invalid mutation, print \"ok\" to finish loading\n");
+            break;
+        }
+    }
+    return 0;
+}
+
+inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc < 2)
+        return false;
+
+    std::string hash_key = sds_to_string(args.argv[1]);
+    bool check_sort_key_provided = false;
+    std::string check_sort_key;
+    ::dsn::apps::cas_check_type::type check_type = ::dsn::apps::cas_check_type::CT_NO_CHECK;
+    std::string check_type_name;
+    bool check_operand_provided = false;
+    std::string check_operand;
+    pegasus::pegasus_client::mutations mutations;
+
+    pegasus::pegasus_client::check_and_mutate_options options;
+    static struct option long_options[] = {{"check_sort_key", required_argument, 0, 'c'},
+                                           {"check_type", required_argument, 0, 't'},
+                                           {"check_operand", required_argument, 0, 'o'},
+                                           {"return_check_value", no_argument, 0, 'r'},
+                                           {0, 0, 0, 0}};
+
+    escape_sds_argv(args.argc, args.argv);
+    std::string str;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "c:t:o:r", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'c':
+            check_sort_key_provided = true;
+            check_sort_key = unescape_str(optarg);
+            break;
+        case 't':
+            check_type = type_from_string(::dsn::apps::_cas_check_type_VALUES_TO_NAMES,
+                                          std::string("ct_value_") + optarg,
+                                          ::dsn::apps::cas_check_type::CT_NO_CHECK);
+            if (check_type == ::dsn::apps::cas_check_type::CT_NO_CHECK) {
+                fprintf(stderr, "ERROR: invalid check_type param\n");
+                return false;
+            }
+            check_type_name = optarg;
+            break;
+        case 'o':
+            check_operand_provided = true;
+            check_operand = unescape_str(optarg);
+            break;
+        case 'r':
+            options.return_check_value = true;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    if (!check_sort_key_provided) {
+        fprintf(stderr, "ERROR: check_sort_key not provided\n");
+        return false;
+    }
+    if (check_type == ::dsn::apps::cas_check_type::CT_NO_CHECK) {
+        fprintf(stderr, "ERROR: check_type not provided\n");
+        return false;
+    }
+    if (!check_operand_provided &&
+        check_type >= ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
+        fprintf(stderr, "ERROR: check_operand not provided\n");
+        return false;
+    }
+
+    fprintf(stderr,
+            "Load mutations, like\n"
+            "  set <sort_key> <value> [ttl]\n"
+            "  del <sort_key>\n"
+            "Print \"ok\" to finish loading, \"abort\" to abort this command\n");
+    if (load_mutations(sc, mutations)) {
+        fprintf(stderr, "INFO: abort check_and_mutate command\n");
+        return true;
+    }
+    if (mutations.is_empty()) {
+        fprintf(stderr, "ERROR: mutations not provided\n");
+        return false;
+    }
+
+    fprintf(stderr, "hash_key: \"%s\"\n", pegasus::utils::c_escape_string(hash_key).c_str());
+    fprintf(stderr,
+            "check_sort_key: \"%s\"\n",
+            pegasus::utils::c_escape_string(check_sort_key).c_str());
+    fprintf(stderr, "check_type: %s\n", check_type_name.c_str());
+    if (check_type >= ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
+        fprintf(stderr,
+                "check_operand: \"%s\"\n",
+                pegasus::utils::c_escape_string(check_operand).c_str());
+    }
+    fprintf(stderr, "return_check_value: %s\n", options.return_check_value ? "true" : "false");
+
+    std::vector<::dsn::apps::mutate> copy_of_mutations;
+    mutations.get_mutations(copy_of_mutations);
+    fprintf(stderr, "mutations:\n");
+    for (int i = 0; i < copy_of_mutations.size(); ++i) {
+        if (copy_of_mutations[i].operation == ::dsn::apps::mutate_operation::MO_PUT) {
+            fprintf(
+                stderr,
+                "  mutation[%d].type: SET\n  mutation[%d].sort_key: \"%s\"\n  "
+                "mutation[%d].value: "
+                "\"%s\"\n  mutation[%d].expire_seconds: %d\n",
+                i,
+                i,
+                pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key.to_string()).c_str(),
+                i,
+                pegasus::utils::c_escape_string(copy_of_mutations[i].value.to_string()).c_str(),
+                i,
+                copy_of_mutations[i].set_expire_ts_seconds);
+        } else {
+            fprintf(
+                stderr,
+                "  mutation[%d].type: DEL\n  mutation[%d].sort_key: \"%s\"\n",
+                i,
+                i,
+                pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key.to_string()).c_str());
+        }
+    }
+    fprintf(stderr, "\n");
+
+    pegasus::pegasus_client::check_and_mutate_results results;
+    pegasus::pegasus_client::internal_info info;
+    int ret = sc->pg_client->check_and_mutate(hash_key,
+                                              check_sort_key,
+                                              (pegasus::pegasus_client::cas_check_type)check_type,
+                                              check_operand,
+                                              mutations,
+                                              options,
+                                              results,
+                                              sc->timeout_ms,
+                                              &info);
+    if (ret != pegasus::PERR_OK) {
+        fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
+    } else {
+        if (results.mutate_succeed) {
+            fprintf(stderr, "Mutate succeed.\n");
+        } else {
+            fprintf(stderr, "Mutate failed, because check not passed.\n");
+        }
+        if (results.check_value_returned) {
+            fprintf(stderr, "\n");
+            if (results.check_value_exist) {
+                fprintf(
+                    stderr,
+                    "Check value: \"%s\"\n",
+                    pegasus::utils::c_escape_string(results.check_value, sc->escape_all).c_str());
+            } else {
+                fprintf(stderr, "Check value not exist.\n");
+            }
+        }
+    }
+
+    fprintf(stderr, "\n");
+    fprintf(stderr, "app_id          : %d\n", info.app_id);
+    fprintf(stderr, "partition_index : %d\n", info.partition_index);
+    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fprintf(stderr, "server          : %s\n", info.server.c_str());
+
+    return true;
+}
+
 inline bool get_ttl(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc != 3) {
@@ -2593,6 +2838,7 @@ inline bool data_operations(command_executor *e, shell_context *sc, arguments ar
         {"multi_del_range", multi_del_range},
         {"incr", incr},
         {"check_and_set", check_and_set},
+        {"check_and_mutate", check_and_mutate},
         {"exist", exist},
         {"count", sortkey_count},
         {"ttl", get_ttl},
@@ -2729,13 +2975,13 @@ inline bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream &os = *os_ptr;
 
-    std::function<void(int64_t decree, int64_t timestamp, dsn_message_t * requests, int count)>
+    std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex * *requests, int count)>
         callback;
     if (detailed) {
         callback = [&os, sc](
-            int64_t decree, int64_t timestamp, dsn_message_t *requests, int count) mutable {
+            int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count) mutable {
             for (int i = 0; i < count; ++i) {
-                dsn_message_t request = requests[i];
+                dsn::message_ex *request = requests[i];
                 dassert(request != nullptr, "");
                 ::dsn::message_ex *msg = (::dsn::message_ex *)request;
                 if (msg->local_rpc_code == RPC_REPLICATION_WRITE_EMPTY) {
@@ -3406,7 +3652,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         << std::setw(w) << std::right << "PUT" << std::setw(w) << std::right << "MPUT"
         << std::setw(w) << std::right << "DEL" << std::setw(w) << std::right << "MDEL"
         << std::setw(w) << std::right << "INCR" << std::setw(w) << std::right << "CAS"
-        << std::setw(w) << std::right << "SCAN";
+        << std::setw(w) << std::right << "CAM" << std::setw(w) << std::right << "SCAN";
     if (!only_qps) {
         out << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
             << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "file_mb"
@@ -3425,6 +3671,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.multi_remove_qps += row.multi_remove_qps;
         sum.incr_qps += row.incr_qps;
         sum.check_and_set_qps += row.check_and_set_qps;
+        sum.check_and_mutate_qps += row.check_and_mutate_qps;
         sum.scan_qps += row.scan_qps;
         sum.recent_expire_count += row.recent_expire_count;
         sum.recent_filter_count += row.recent_filter_count;
@@ -3450,6 +3697,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         PRINT_QPS(multi_remove_qps);
         PRINT_QPS(incr_qps);
         PRINT_QPS(check_and_set_qps);
+        PRINT_QPS(check_and_mutate_qps);
         PRINT_QPS(scan_qps);
         if (!only_qps) {
             out << std::setw(w) << std::right << (int64_t)row.recent_expire_count << std::setw(w)

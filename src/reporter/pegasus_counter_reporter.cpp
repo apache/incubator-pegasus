@@ -135,7 +135,7 @@ void pegasus_counter_reporter::stop()
 }
 
 void pegasus_counter_reporter::update_counters_to_falcon(const std::string &result,
-                                                        int64_t timestamp)
+                                                         int64_t timestamp)
 {
     ddebug("update counters to falcon with timestamp = %" PRId64, timestamp);
     http_post_request(
@@ -187,10 +187,10 @@ void pegasus_counter_reporter::update()
 }
 
 void pegasus_counter_reporter::http_post_request(const std::string &host,
-                                                int32_t port,
-                                                const std::string &path,
-                                                const std::string &contentType,
-                                                const std::string &data)
+                                                 int32_t port,
+                                                 const std::string &path,
+                                                 const std::string &contentType,
+                                                 const std::string &data)
 {
     dinfo("start update_request, %s", data.c_str());
     struct event_base *base = event_base_new();
@@ -242,7 +242,7 @@ void pegasus_counter_reporter::http_request_done(struct evhttp_request *req, voi
 }
 
 void pegasus_counter_reporter::on_report_timer(std::shared_ptr<boost::asio::deadline_timer> timer,
-                                              const boost::system::error_code &ec)
+                                               const boost::system::error_code &ec)
 {
     // NOTICE: the following code is running out of rDSN's tls_context
     if (!ec) {

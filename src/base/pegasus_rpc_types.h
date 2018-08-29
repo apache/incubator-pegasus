@@ -22,4 +22,7 @@ using incr_rpc = dsn::rpc_holder<dsn::apps::incr_request, dsn::apps::incr_respon
 using check_and_set_rpc =
     dsn::rpc_holder<dsn::apps::check_and_set_request, dsn::apps::check_and_set_response>;
 
+using check_and_mutate_rpc =
+    dsn::rpc_holder<dsn::apps::check_and_mutate_request, dsn::apps::check_and_mutate_response>;
+
 } // namespace pegasus

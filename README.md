@@ -19,12 +19,12 @@ The consensus algorithm it uses is [PacificA](https://www.microsoft.com/en-us/re
 
   Here are several key aspects that make Pegasus a high performance storage system: 
      - Implemented in C++
-     - [Staged event-driven archiecture](https://en.wikipedia.org/wiki/Staged_event-driven_architecture), a distinguished archiecture that Nginx adopts.
+     - [Staged event-driven architecture](https://en.wikipedia.org/wiki/Staged_event-driven_architecture), a distinguished architecture that Nginx adopts.
      - High performance storage-engine with [RocksDB](https://github.com/facebook/rocksdb), though slight change is made to support fast learning.
 
 * High availablility
 
-  Unlike Bigtable/HBase, a non-layered replication archiecture is adopted in pegasus in which an external DFS like GFS/HDFS isn't the dependency of the persistent data, which benefits the availablity a lot. Meanwhile, availablity problems in HBase which result from Java GC are totally eliminated for the use of C++.
+  Unlike Bigtable/HBase, a non-layered replication architecture is adopted in Pegasus in which an external DFS like GFS/HDFS isn't the dependency of the persistent data, which benefits the availability a lot. Meanwhile, availability problems in HBase which result from Java GC are totally eliminated for the use of C++.
 
 * Strong consistency
 
@@ -38,18 +38,18 @@ The consensus algorithm it uses is [PacificA](https://www.microsoft.com/en-us/re
 
   We provided C++ and Java client with simple interfaces to make it easy to use.
 
-## Archiecture overview
+## Architecture overview
 
-The following diagram shows the archiecture of Pegasus:
+The following diagram shows the architecture of Pegasus:
 
-![docs/media-img/pegasus-archiecture-overview.png](docs/media-img/pegasus-archiecture-overview.png)
+![docs/media-img/pegasus-architecture-overview.png](docs/media-img/pegasus-architecture-overview.png)
 
-Here is a brief explaination on the concepts and terms in the diagram:
+Here is a brief explanation on the concepts and terms in the diagram:
 
 * MetaServer: a component in Pegasus to do the whole cluster management. The meta-server is something like "HMaster" in HBase.
 * Zookeeper: the external dependency of Pegasus. We use zookeeper to store the meta state of the cluster and do meta-server's fault tolerance.
 * ReplicaServer: a component in Pegasus to serve client's read/write request. The replica-server is also the container for replicas.
-* Partition/replica: the whole key space is splitted into several partitions, and each partition has several replicas for fault tolerance. You may want to refer to the [PacificA](https://www.microsoft.com/en-us/research/publication/pacifica-replication-in-log-based-distributed-storage-systems/#) algorithm for more details.
+* Partition/replica: the whole key space is split into several partitions, and each partition has several replicas for fault tolerance. You may want to refer to the [PacificA](https://www.microsoft.com/en-us/research/publication/pacifica-replication-in-log-based-distributed-storage-systems/#) algorithm for more details.
 
 For more details about design and implementation, please refer to PPTs under [`docs/ppt/`](docs/ppt/).
 

@@ -21,7 +21,7 @@ public:
         working_root_dir = global_env::instance()._working_dir;
 
         chdir(pegasus_root_dir.c_str());
-        cluster_name = utils::filesystem::path_combine(pegasus_root_dir, backup_data_dir);
+        cluster_name = dsn::utils::filesystem::path_combine(pegasus_root_dir, backup_data_dir);
         system("pwd");
         // modify the config to enable backup, and restart onebox
         system("sed -i \"/^cold_backup_disabled/c cold_backup_disabled = false\" "
@@ -226,7 +226,7 @@ public:
 
     int64_t get_first_backup_timestamp()
     {
-        std::string policy_dir = utils::filesystem::path_combine(cluster_name, policy_name);
+        std::string policy_dir = dsn::utils::filesystem::path_combine(cluster_name, policy_name);
         std::string cmd = "cd " + policy_dir + "; "
                                                "ls -c > restore_app_from_backup_test_tmp; "
                                                "tail -n 1 restore_app_from_backup_test_tmp; "
@@ -250,7 +250,7 @@ public:
 
     bool find_second_backup_timestamp()
     {
-        std::string policy_dir = utils::filesystem::path_combine(cluster_name, policy_name);
+        std::string policy_dir = dsn::utils::filesystem::path_combine(cluster_name, policy_name);
         std::vector<std::string> dirs;
         ::dsn::utils::filesystem::get_subdirectories(policy_dir, dirs, false);
         return (dirs.size() >= 2);
