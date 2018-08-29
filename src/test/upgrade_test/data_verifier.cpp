@@ -91,16 +91,17 @@ void do_set(int thread_id)
             client->set(hash_key, sort_key, value, set_and_get_timeout_milliseconds, 0, &info);
         if (ret == PERR_OK) {
             long cur_time = get_time();
-//            ddebug("SetThread[%d]: set succeed: id=%lld, try=%d, time=%ld (gpid=%d.%d, "
-//                   "decree=%lld, server=%s)",
-//                   thread_id,
-//                   id,
-//                   try_count,
-//                   (cur_time - last_time),
-//                   info.app_id,
-//                   info.partition_index,
-//                   info.decree,
-//                   info.server.c_str());
+            //            ddebug("SetThread[%d]: set succeed: id=%lld, try=%d, time=%ld (gpid=%d.%d,
+            //            "
+            //                   "decree=%lld, server=%s)",
+            //                   thread_id,
+            //                   id,
+            //                   try_count,
+            //                   (cur_time - last_time),
+            //                   info.app_id,
+            //                   info.partition_index,
+            //                   info.decree,
+            //                   info.server.c_str());
             stat_time[stat_count++] = cur_time - last_time;
             if (stat_count == stat_batch) {
                 std::sort(stat_time.begin(), stat_time.end());

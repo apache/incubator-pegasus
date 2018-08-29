@@ -277,6 +277,50 @@ public:
                                 reply_thread_hash);
     }
 
+   // ---------- call RPC_RRDB_RRDB_CHECK_AND_MUTATE ------------
+    // - synchronous
+    std::pair<::dsn::error_code, check_and_mutate_response>
+    check_and_mutate_sync(const check_and_mutate_request &args,
+                       std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+                       int thread_hash = 0, // if thread_hash == 0 && partition_hash != 0,
+                                            // thread_hash is computed from partition_hash
+                       uint64_t partition_hash = 0,
+                       dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+    {
+        return ::dsn::rpc::wait_and_unwrap<check_and_mutate_response>(
+            ::dsn::rpc::call(server_addr.unwrap_or(_server),
+                             RPC_RRDB_RRDB_CHECK_AND_MUTATE,
+                             args,
+                             &_tracker,
+                             empty_rpc_handler,
+                             timeout,
+                             thread_hash,
+                             partition_hash));
+    }
+
+    // - asynchronous with on-stack check_and_mutate_request and check_and_mutate_response
+    template <typename TCallback>
+    ::dsn::task_ptr check_and_mutate(const check_and_mutate_request &args,
+                                  TCallback &&callback,
+                                  std::chrono::milliseconds timeout = std::chrono::milliseconds(0),
+                                  int request_thread_hash = 0, // if thread_hash == 0 &&
+                                                               // partition_hash != 0, thread_hash
+                                                               // is computed from partition_hash
+                                  uint64_t request_partition_hash = 0,
+                                  int reply_thread_hash = 0,
+                                  dsn::optional<::dsn::rpc_address> server_addr = dsn::none)
+    {
+        return ::dsn::rpc::call(server_addr.unwrap_or(_server),
+                                RPC_RRDB_RRDB_CHECK_AND_MUTATE,
+                                args,
+                                &_tracker,
+                                std::forward<TCallback>(callback),
+                                timeout,
+                                request_thread_hash,
+                                request_partition_hash,
+                                reply_thread_hash);
+    }
+
     // ---------- call RPC_RRDB_RRDB_GET ------------
     // - synchronous
     std::pair<::dsn::error_code, read_response>

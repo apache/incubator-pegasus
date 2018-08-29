@@ -124,51 +124,53 @@ do
     echo "ERROR: set lb.add_secondary_max_count_for_one_node to 0 failed"
     exit 1
   fi
+  echo
 
   echo "Migrating primary replicas out of node..."
-  ./run.sh migrate_node -c $meta_list -n $node -t run &>/tmp/$UID.$PID.pegasus.rolling_update.migrate_node
-  echo "Wait [$node] to migrate done..."
-  echo "Refer to /tmp/$UID.$PID.pegasus.rolling_update.migrate_node for details"
+  sleeped=0
   while true
   do
+    if [ $((sleeped%10)) -eq 0 ]; then
+      ./run.sh migrate_node -c $meta_list -n $node -t run &>/tmp/$UID.$PID.pegasus.rolling_update.migrate_node
+      echo "Send migrate propose, refer to /tmp/$UID.$PID.pegasus.rolling_update.migrate_node for details"
+    fi
     pri_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $4}'`
     if [ $pri_count -eq 0 ]; then
       echo "Migrate done."
       break
+    elif [ $sleeped -gt 28 ]; then
+      echo "Downgrade timeout."
+      break
     else
       echo "Still $pri_count primary replicas left on $node"
       sleep 1
+      sleeped=$((sleeped+1))
     fi
   done
   echo
   sleep 1
 
   echo "Downgrading replicas on node..."
-  ./run.sh downgrade_node -c $meta_list -n $node -t run &>/tmp/$UID.$PID.pegasus.rolling_update.downgrade_node
-  echo "Wait [$node] to downgrade done..."
-  echo "Refer to /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node for details"
+  sleeped=0
   while true
   do
+    if [ $((sleeped%10)) -eq 0 ]; then
+      ./run.sh downgrade_node -c $meta_list -n $node -t run &>/tmp/$UID.$PID.pegasus.rolling_update.downgrade_node
+      echo "Send downgrade propose, refer to /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node for details"
+    fi
     rep_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $3}'`
     if [ $rep_count -eq 0 ]; then
       echo "Downgrade done."
       break
+    elif [ $sleeped -gt 28 ]; then
+      echo "Downgrade timeout."
+      break
     else
       echo "Still $rep_count replicas left on $node"
       sleep 1
+      sleeped=$((sleeped+1))
     fi
   done
-  echo
-  sleep 1
-
-  echo "Send kill_partition commands to node..."
-  grep '^propose ' /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node >/tmp/$UID.$PID.pegasus.rolling_update.downgrade_node.propose
-  while read line2 
-  do
-    gpid=`echo $line2 | awk '{print $3}' | sed 's/\./ /'`
-    echo "remote_command -l $node replica.kill_partition $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.kill_partition
-  done </tmp/$UID.$PID.pegasus.rolling_update.downgrade_node.propose
-  echo "Sent to `cat /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node.propose | wc -l` partitions."
   echo
   sleep 1
 
@@ -176,6 +178,16 @@ do
   sleeped=0
   while true
   do
+    if [ $((sleeped%10)) -eq 0 ]; then
+      echo "Send kill_partition commands to node..."
+      grep '^propose ' /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node >/tmp/$UID.$PID.pegasus.rolling_update.downgrade_node.propose
+      while read line2
+      do
+        gpid=`echo $line2 | awk '{print $3}' | sed 's/\./ /'`
+        echo "remote_command -l $node replica.kill_partition $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.kill_partition
+      done </tmp/$UID.$PID.pegasus.rolling_update.downgrade_node.propose
+      echo "Sent to `cat /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node.propose | wc -l` partitions."
+    fi
     echo "remote_command -l $node perf-counters '.*replica(Count)'" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.replica_count_perf_counters
     serving_count=`grep -o 'replica_stub.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/$UID.$PID.pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
     opening_count=`grep -o 'replica_stub.opening.replica(Count)","type":"NUMBER","value":[0-9]*' /tmp/$UID.$PID.pegasus.rolling_update.replica_count_perf_counters | grep -o '[0-9]*$'`
@@ -188,7 +200,7 @@ do
     if [ $rep_count -eq 0 ]; then
       echo "Close done."
       break
-    elif [ $sleeped -gt 20 ]; then
+    elif [ $sleeped -gt 28 ]; then
       echo "Close timeout."
       break
     else

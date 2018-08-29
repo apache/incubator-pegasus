@@ -27,10 +27,10 @@ This document defines the roadmap for Pegasus.
 #### __Meta Server__
 
 - [x] Table management: create/drop/recall
-- [x] Persistence of meta data to zookeeper
+- [x] Persistence of metadata to zookeeper
 - [x] Load balancer according to replica count & replica distribution on disks of nodes
 - [ ] Load balancer according to replica size & capacity & rw load
-- [ ] Persistence of meta data by raft consensus
+- [ ] Persistence of metadata by raft consensus
 
 #### __Data Security__
 

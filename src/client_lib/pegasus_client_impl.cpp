@@ -110,7 +110,7 @@ void pegasus_client_impl::async_set(const std::string &hash_key,
 
     // wrap the user defined callback function, generate a new callback function.
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -199,7 +199,7 @@ void pegasus_client_impl::async_multi_set(const std::string &hash_key,
     auto partition_hash = pegasus_key_hash(tmp_key);
     // wrap the user-defined-callback-function, generate a new callback function.
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -261,7 +261,7 @@ void pegasus_client_impl::async_get(const std::string &hash_key,
     pegasus_generate_key(req, hash_key, sort_key);
     auto partition_hash = pegasus_key_hash(req);
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -352,7 +352,7 @@ void pegasus_client_impl::async_multi_get(const std::string &hash_key,
     pegasus_generate_key(tmp_key, req.hash_key, ::dsn::blob());
     auto partition_hash = pegasus_key_hash(tmp_key);
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -453,7 +453,7 @@ void pegasus_client_impl::async_multi_get(const std::string &hash_key,
     pegasus_generate_key(tmp_key, req.hash_key, ::dsn::blob());
     auto partition_hash = pegasus_key_hash(tmp_key);
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -533,7 +533,7 @@ void pegasus_client_impl::async_multi_get_sortkeys(const std::string &hash_key,
     pegasus_generate_key(tmp_key, req.hash_key, ::dsn::blob());
     auto partition_hash = pegasus_key_hash(tmp_key);
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -648,7 +648,7 @@ void pegasus_client_impl::async_del(const std::string &hash_key,
     auto partition_hash = pegasus_key_hash(req);
 
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -730,7 +730,7 @@ void pegasus_client_impl::async_multi_del(const std::string &hash_key,
     auto partition_hash = pegasus_key_hash(tmp_key);
 
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -799,7 +799,7 @@ void pegasus_client_impl::async_incr(const std::string &hash_key,
     auto partition_hash = pegasus_key_hash(req.key);
 
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -876,6 +876,14 @@ void pegasus_client_impl::async_check_and_set(const std::string &hash_key,
         return;
     }
 
+    if (dsn::apps::_cas_check_type_VALUES_TO_NAMES.find(check_type) ==
+        dsn::apps::_cas_check_type_VALUES_TO_NAMES.end()) {
+        derror("invalid check type: %d", (int)check_type);
+        if (callback != nullptr)
+            callback(PERR_INVALID_ARGUMENT, check_and_set_results(), internal_info());
+        return;
+    }
+
     ::dsn::apps::check_and_set_request req;
     req.hash_key.assign(hash_key.c_str(), 0, hash_key.size());
     req.check_sort_key.assign(check_sort_key.c_str(), 0, check_sort_key.size());
@@ -896,7 +904,7 @@ void pegasus_client_impl::async_check_and_set(const std::string &hash_key,
     pegasus_generate_key(tmp_key, req.hash_key, ::dsn::blob());
     auto partition_hash = pegasus_key_hash(tmp_key);
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         if (user_callback == nullptr) {
             return;
@@ -936,6 +944,123 @@ void pegasus_client_impl::async_check_and_set(const std::string &hash_key,
                            std::chrono::milliseconds(timeout_milliseconds),
                            0,
                            partition_hash);
+}
+
+int pegasus_client_impl::check_and_mutate(const std::string &hash_key,
+                                          const std::string &check_sort_key,
+                                          cas_check_type check_type,
+                                          const std::string &check_operand,
+                                          const mutations &mutations,
+                                          const check_and_mutate_options &options,
+                                          check_and_mutate_results &results,
+                                          int timeout_milliseconds,
+                                          internal_info *info)
+{
+    ::dsn::utils::notify_event op_completed;
+    int ret = -1;
+    auto callback = [&](int _err, check_and_mutate_results &&_results, internal_info &&_info) {
+        ret = _err;
+        results = std::move(_results);
+        if (info != nullptr)
+            (*info) = std::move(_info);
+        op_completed.notify();
+    };
+    async_check_and_mutate(hash_key,
+                           check_sort_key,
+                           check_type,
+                           check_operand,
+                           mutations,
+                           options,
+                           std::move(callback),
+                           timeout_milliseconds);
+    op_completed.wait();
+    return ret;
+}
+
+void pegasus_client_impl::async_check_and_mutate(const std::string &hash_key,
+                                                 const std::string &check_sort_key,
+                                                 cas_check_type check_type,
+                                                 const std::string &check_operand,
+                                                 const mutations &mutations,
+                                                 const check_and_mutate_options &options,
+                                                 async_check_and_mutate_callback_t &&callback,
+                                                 int timeout_milliseconds)
+{
+    // check params
+    if (hash_key.size() >= UINT16_MAX) {
+        derror("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
+               (int)hash_key.size());
+        if (callback != nullptr)
+            callback(PERR_INVALID_HASH_KEY, check_and_mutate_results(), internal_info());
+        return;
+    }
+
+    if (dsn::apps::_cas_check_type_VALUES_TO_NAMES.find(check_type) ==
+        dsn::apps::_cas_check_type_VALUES_TO_NAMES.end()) {
+        derror("invalid check type: %d", (int)check_type);
+        if (callback != nullptr)
+            callback(PERR_INVALID_ARGUMENT, check_and_mutate_results(), internal_info());
+        return;
+    }
+    if (mutations.is_empty()) {
+        derror("invalid mutations: mutations should not be empty.");
+        if (callback != nullptr)
+            callback(PERR_INVALID_ARGUMENT, check_and_mutate_results(), internal_info());
+        return;
+    }
+
+    ::dsn::apps::check_and_mutate_request req;
+    req.hash_key.assign(hash_key.c_str(), 0, hash_key.size());
+    req.check_sort_key.assign(check_sort_key.c_str(), 0, check_sort_key.size());
+    req.check_type = (dsn::apps::cas_check_type::type)check_type;
+    req.check_operand.assign(check_operand.c_str(), 0, check_operand.size());
+    mutations.get_mutations(req.mutate_list);
+    req.return_check_value = options.return_check_value;
+
+    ::dsn::blob tmp_key;
+    pegasus_generate_key(tmp_key, req.hash_key, ::dsn::blob());
+    auto partition_hash = pegasus_key_hash(tmp_key);
+    auto new_callback = [user_callback = std::move(callback)](
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
+    {
+        if (user_callback == nullptr) {
+            return;
+        }
+        check_and_mutate_results results;
+        internal_info info;
+        ::dsn::apps::check_and_mutate_response response;
+        if (err == ::dsn::ERR_OK) {
+            ::dsn::unmarshall(resp, response);
+            if (response.error == 0) {
+                results.mutate_succeed = true;
+            } else if (response.error == 13) { // kTryAgain
+                results.mutate_succeed = false;
+                response.error = 0;
+            } else {
+                results.mutate_succeed = false;
+            }
+            if (response.check_value_returned) {
+                results.check_value_returned = true;
+                if (response.check_value_exist) {
+                    results.check_value_exist = true;
+                    results.check_value.assign(response.check_value.data(),
+                                               response.check_value.length());
+                }
+            }
+            info.app_id = response.app_id;
+            info.partition_index = response.partition_index;
+            info.decree = response.decree;
+            info.server = response.server;
+        }
+        int ret =
+            get_client_error(err == ERR_OK ? get_rocksdb_server_error(response.error) : int(err));
+        user_callback(ret, std::move(results), std::move(info));
+    };
+    _client->check_and_mutate(req,
+                              std::move(new_callback),
+                              std::chrono::milliseconds(timeout_milliseconds),
+                              0,
+                              partition_hash);
 }
 
 int pegasus_client_impl::ttl(const std::string &hash_key,
@@ -1067,7 +1192,7 @@ void pegasus_client_impl::async_get_unordered_scanners(
     }
 
     auto new_callback = [ user_callback = std::move(callback), max_split_count, options, this ](
-        ::dsn::error_code err, dsn_message_t req, dsn_message_t resp)
+        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
     {
         std::vector<pegasus_scanner *> scanners;
         configuration_query_by_index_response response;
@@ -1171,5 +1296,5 @@ const char *pegasus_client_impl::get_error_string(int error_code) const
 {
     return (rocskdb_error == 0) ? 0 : ROCSKDB_ERROR_START - rocskdb_error;
 }
-}
-} // namespace
+} // namespace client
+} // namespace pegasus

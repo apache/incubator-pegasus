@@ -12,7 +12,7 @@ class rrdb_service : public replication::replication_app_base,
 public:
     rrdb_service(replication::replica *r) : replication::replication_app_base(r) {}
     virtual ~rrdb_service() {}
-    virtual int on_request(dsn_message_t request) override
+    virtual int on_request(dsn::message_ex *request) override
     {
         handle_request(request);
         return 0;
@@ -63,6 +63,14 @@ protected:
     {
         std::cout << "... exec RPC_RRDB_RRDB_CHECK_AND_SET ... (not implemented) " << std::endl;
         check_and_set_response resp;
+        reply(resp);
+    }
+    // RPC_RRDB_RRDB_CHECK_AND_MUTATE
+    virtual void on_check_and_mutate(const check_and_mutate_request &args,
+                                     ::dsn::rpc_replier<check_and_mutate_response> &reply)
+    {
+        std::cout << "... exec RPC_RRDB_RRDB_CHECK_AND_MUTATE ... (not implemented) " << std::endl;
+        check_and_mutate_response resp;
         reply(resp);
     }
     // RPC_RRDB_RRDB_GET
@@ -123,6 +131,8 @@ protected:
         register_async_rpc_handler(RPC_RRDB_RRDB_REMOVE, "remove", on_multi_remove);
         register_async_rpc_handler(RPC_RRDB_RRDB_INCR, "incr", on_incr);
         register_async_rpc_handler(RPC_RRDB_RRDB_CHECK_AND_SET, "check_and_set", on_check_and_set);
+        register_async_rpc_handler(
+            RPC_RRDB_RRDB_CHECK_AND_MUTATE, "check_and_mutate", on_check_and_mutate);
         register_async_rpc_handler(RPC_RRDB_RRDB_GET, "get", on_get);
         register_async_rpc_handler(RPC_RRDB_RRDB_MULTI_GET, "multi_get", on_multi_get);
         register_async_rpc_handler(RPC_RRDB_RRDB_SORTKEY_COUNT, "sortkey_count", on_sortkey_count);
@@ -168,6 +178,12 @@ private:
     {
         svc->on_check_and_set(args, reply);
     }
+    static void on_check_and_mutate(rrdb_service *svc,
+                                    const check_and_mutate_request &args,
+                                    ::dsn::rpc_replier<check_and_mutate_response> &reply)
+    {
+        svc->on_check_and_mutate(args, reply);
+    }
     static void
     on_get(rrdb_service *svc, const ::dsn::blob &args, ::dsn::rpc_replier<read_response> &reply)
     {
@@ -206,5 +222,5 @@ private:
         svc->on_clear_scanner(args);
     }
 };
-}
-}
+} // namespace apps
+} // namespace dsn

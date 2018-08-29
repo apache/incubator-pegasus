@@ -7,9 +7,9 @@ Currently Pegasus can only be installed from source. Binary package and docker i
 
 ### Hardware
 
-Pegasus can be deployed in standalone mode which runs all the pegasus jobs as different processes on a single host, or in distributed mode which runs different jobs on differrent hosts. For distributed mode, more than one hosts are need:
+Pegasus can be deployed in standalone mode which runs all the pegasus jobs as different processes on a single host, or in distributed mode which runs different jobs on different hosts. For distributed mode, more than one hosts are need:
 
-* One or more hosts to run zookeeper. We need zookeeper to make the cluster meta data persistence. For a fault tolerant zookeeper cluster, at least 3 are necessary.
+* One or more hosts to run zookeeper. We need zookeeper to make the cluster metadata persistence. For a fault tolerant zookeeper cluster, at least 3 are necessary.
 * One or more hosts to run Pegasus meta-server. At least 2 are needed for fault tolerance. You may share hosts between meta-server and zookeeper.
 * At least 3 hosts to run Pegasus replica-server.
 

@@ -32,7 +32,7 @@ protected:
     // generate cnt number belong to [a, b],
     // if cnt > (b - a + 1), then just return the numbers between a ~ b
     void generate_random(std::vector<int> &res, int cnt, int a, int b);
-    
+
     // generate one number belong to [a, b]
     int generate_one_number(int a, int b);
 

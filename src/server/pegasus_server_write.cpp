@@ -19,7 +19,7 @@ pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool ver
     _write_svc = dsn::make_unique<pegasus_write_service>(server);
 }
 
-int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
+int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
                                                     int count,
                                                     int64_t decree,
                                                     uint64_t timestamp)
@@ -33,7 +33,7 @@ int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
         return _write_svc->empty_put(_decree);
     }
 
-    dsn::task_code rpc_code(dsn_msg_task_code(requests[0]));
+    dsn::task_code rpc_code(requests[0]->rpc_code());
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         dassert(count == 1, "count = %d", count);
         auto rpc = multi_put_rpc::auto_reply(requests[0]);
@@ -54,11 +54,16 @@ int pegasus_server_write::on_batched_write_requests(dsn_message_t *requests,
         auto rpc = check_and_set_rpc::auto_reply(requests[0]);
         return _write_svc->check_and_set(_decree, rpc.request(), rpc.response());
     }
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+        dassert(count == 1, "count = %d", count);
+        auto rpc = check_and_mutate_rpc::auto_reply(requests[0]);
+        return _write_svc->check_and_mutate(_decree, rpc.request(), rpc.response());
+    }
 
     return on_batched_writes(requests, count);
 }
 
-int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count)
+int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int count)
 {
     int err = 0;
     {
@@ -72,7 +77,7 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count)
             // and respond for all RPCs regardless of their result.
 
             int local_err = 0;
-            dsn::task_code rpc_code(dsn_msg_task_code(requests[i]));
+            dsn::task_code rpc_code(requests[i]->rpc_code());
             if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
                 auto rpc = put_rpc::auto_reply(requests[i]);
                 local_err = on_single_put_in_batch(rpc);
@@ -109,7 +114,9 @@ int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count)
     return err;
 }
 
-void pegasus_server_write::request_key_check(int64_t decree, dsn_message_t m, const dsn::blob &key)
+void pegasus_server_write::request_key_check(int64_t decree,
+                                             dsn::message_ex *m,
+                                             const dsn::blob &key)
 {
     auto msg = (dsn::message_ex *)m;
     if (msg->header->client.partition_hash != 0) {
