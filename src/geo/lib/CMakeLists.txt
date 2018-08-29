@@ -19,4 +19,6 @@ set(MY_PROJ_LIBS
 
 set(MY_BOOST_PACKAGES system filesystem)
 
+add_definitions(-Wno-attributes)
+
 dsn_add_static_library()

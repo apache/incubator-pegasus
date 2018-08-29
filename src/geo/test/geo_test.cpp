@@ -144,6 +144,36 @@ TEST_F(geo_client_test, set_and_del)
     }
 }
 
+TEST_F(geo_client_test, set_and_del_on_undecoded_data)
+{
+    double lat_degrees = 23.456;
+    double lng_degrees = 78.901;
+    std::string test_hash_key = "test_hash_key";
+    std::string test_sort_key = "test_sort_key";
+    std::string test_undecoded_value = "undecoded_value";
+    std::string test_value = gen_value(lat_degrees, lng_degrees);
+
+    // set undecoded value into common data db
+    int ret = common_data_client()->set(test_hash_key, test_sort_key, test_undecoded_value);
+    ASSERT_EQ(ret, pegasus::PERR_OK);
+
+    // geo set
+    ret = _geo_client->set(test_hash_key, test_sort_key, test_value);
+    ASSERT_EQ(ret, pegasus::PERR_OK);
+
+    // geo del
+    ret = _geo_client->del(test_hash_key, test_sort_key);
+    ASSERT_EQ(ret, pegasus::PERR_OK);
+
+    // set undecoded value into common data db
+    ret = common_data_client()->set(test_hash_key, test_sort_key, test_undecoded_value);
+    ASSERT_EQ(ret, pegasus::PERR_OK);
+
+    // geo del
+    ret = _geo_client->del(test_hash_key, test_sort_key);
+    ASSERT_EQ(ret, pegasus::PERR_OK);
+}
+
 TEST_F(geo_client_test, set_geo_data)
 {
     double lat_degrees = 56.789;
