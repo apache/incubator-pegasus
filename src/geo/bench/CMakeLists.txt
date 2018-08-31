@@ -28,6 +28,4 @@ set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_BINPLACES "config.ini")
 
-add_definitions(-Wno-attributes)
-
 dsn_add_executable()
