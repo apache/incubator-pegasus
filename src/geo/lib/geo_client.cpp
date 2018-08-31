@@ -576,7 +576,10 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
     // extract latitude and longitude from value
     S2LatLng latlng;
     if (!_extractor->extract_from_value(value, latlng)) {
-        derror_f("extract_from_value failed. value={}", value);
+        derror_f("extract_from_value failed. hash_key={}, sort_key={}, value={}",
+                 hash_key,
+                 sort_key,
+                 value);
         return false;
     }
 
