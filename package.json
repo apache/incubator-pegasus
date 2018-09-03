@@ -22,7 +22,7 @@
   "dependencies": {
     "bunyan": "^1.8.12",
     "deasync": "^0.1.13",
-    "log4js": "^2.5.3",
+    "log4js": "^2.11.0",
     "long": "^4.0.0",
     "node-int64": "^0.4.0",
     "thrift": "^0.10.0"
@@ -31,8 +31,8 @@
     "assert": "^1.4.1",
     "eslint": "^4.19.1",
     "eslint-plugin-mocha": "^4.12.1",
-    "eslint-plugin-promise": "^3.7.0",
-    "mocha": "^5.1.1",
+    "eslint-plugin-promise": "^3.8.0",
+    "mocha": "^5.2.0",
     "sinon": "^4.5.0"
   }
 }
