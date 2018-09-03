@@ -6,12 +6,10 @@
 
 const type = require('./dsn/base_types');
 const tools = require('./tools');
-//const Buffer = require('buffer');
 const Int64 = require('node-int64');
 
 const meta = require('./dsn/meta');
 const rrdb = require('./dsn/rrdb');
-//const replica = require('../dsn/replication_types');
 
 const util = require('util');
 const thrift = require('thrift');
@@ -25,7 +23,7 @@ const HEADER_TYPE = 'THFT';
  * @param {gpid}    gpid
  * @constructor
  */
-function ThriftHeader(gpid){
+function ThriftHeader(gpid) {
     this.hdr_version = 0;
     this.header_length = HEADER_LEN;
     this.header_crc32 = 0;
@@ -42,7 +40,7 @@ function ThriftHeader(gpid){
  * Covert header to Buffer
  * @return {Buffer}
  */
-ThriftHeader.prototype.toBuffer = function(){
+ThriftHeader.prototype.toBuffer = function () {
     let buffer = Buffer.alloc(HEADER_LEN - 8);
     buffer.write(HEADER_TYPE, 0);
     buffer.writeInt32BE(this.hdr_version, 4);
@@ -63,7 +61,7 @@ ThriftHeader.prototype.toBuffer = function(){
  * @param {gpid}    gpid
  * @constructor
  */
-function Operator(gpid){
+function Operator(gpid) {
     this.header = new ThriftHeader(gpid);
     this.pid = gpid;
     this.rpc_error = new type.error_code();
@@ -76,7 +74,7 @@ function Operator(gpid){
  * @param  {Number} body_length
  * @return {Buffer}
  */
-Operator.prototype.prepare_thrift_header = function(body_length){
+Operator.prototype.prepare_thrift_header = function (body_length) {
     this.header.body_length = body_length;
     this.header.thread_hash = tools.dsn_gpid_to_thread_hash(this.pid.get_app_id(), this.pid.get_pidx());
     return (this.header.toBuffer());
@@ -90,11 +88,12 @@ Operator.prototype.prepare_thrift_header = function(body_length){
  * @constructor
  * @extends Operator
  */
-function QueryCfgOperator(gpid, request, timeout){
+function QueryCfgOperator(gpid, request, timeout) {
     QueryCfgOperator.super_.call(this, gpid, this.constructor);
     this.request = request;
     this.timeout = timeout;
 }
+
 util.inherits(QueryCfgOperator, Operator);
 
 /**
@@ -102,9 +101,9 @@ util.inherits(QueryCfgOperator, Operator);
  * @param protocol
  * @param seqid
  */
-QueryCfgOperator.prototype.send_data = function(protocol, seqid){
+QueryCfgOperator.prototype.send_data = function (protocol, seqid) {
     protocol.writeMessageBegin('RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX', thrift.Thrift.MessageType.CALL, seqid);
-    let args = new meta.meta_query_cfg_args({'query' : this.request});
+    let args = new meta.meta_query_cfg_args({'query': this.request});
     args.write(protocol);
     protocol.writeMessageEnd();
 };
@@ -113,13 +112,12 @@ QueryCfgOperator.prototype.send_data = function(protocol, seqid){
  * Receive data
  * @param protocol
  */
-QueryCfgOperator.prototype.recv_data = function(protocol){
+QueryCfgOperator.prototype.recv_data = function (protocol) {
     let result = new meta.meta_query_cfg_result();
     result.read(protocol);
-    if (result.success !== null && result.success !== undefined){
+    if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
-    }else{
-        //TODO: Thrift error check
+    } else {
         console.error("Fail to receive result while query config from meta.");
     }
 };
@@ -135,7 +133,7 @@ QueryCfgOperator.prototype.recv_data = function(protocol){
  * @constructor
  * @extends Operator
  */
-function RrdbGetOperator(gpid, request, hashKey, sortKey, timeout, callback){
+function RrdbGetOperator(gpid, request, hashKey, sortKey, timeout, callback) {
     RrdbGetOperator.super_.call(this, gpid, this.constructor);
     this.request = request;
     this.hashKey = hashKey;
@@ -143,6 +141,7 @@ function RrdbGetOperator(gpid, request, hashKey, sortKey, timeout, callback){
     this.timeout = timeout;
     this.userCallback = callback;
 }
+
 util.inherits(RrdbGetOperator, Operator);
 
 /**
@@ -150,9 +149,9 @@ util.inherits(RrdbGetOperator, Operator);
  * @param protocol
  * @param seqid
  */
-RrdbGetOperator.prototype.send_data = function(protocol, seqid){
+RrdbGetOperator.prototype.send_data = function (protocol, seqid) {
     protocol.writeMessageBegin('RPC_RRDB_RRDB_GET', thrift.Thrift.MessageType.CALL, seqid);
-    let args = new rrdb.rrdb_get_args({'key' : this.request});
+    let args = new rrdb.rrdb_get_args({'key': this.request});
     args.write(protocol);
     protocol.writeMessageEnd();
 };
@@ -161,13 +160,12 @@ RrdbGetOperator.prototype.send_data = function(protocol, seqid){
  * Receive data
  * @param protocol
  */
-RrdbGetOperator.prototype.recv_data = function(protocol){
+RrdbGetOperator.prototype.recv_data = function (protocol) {
     let result = new rrdb.rrdb_get_result();
     result.read(protocol);
-    if(result.success !== null && result.success !== undefined){
+    if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
-    }else{
-        //todo : check
+    } else {
         console.error('Fail to receive result while get data');
     }
 };
@@ -177,19 +175,19 @@ RrdbGetOperator.prototype.recv_data = function(protocol){
  * @param err
  * @param op
  */
-RrdbGetOperator.prototype.handleResult = function(err, op){
+RrdbGetOperator.prototype.handleResult = function (err, op) {
     let result = op.response;
     // rpc request succeed
-    if(err === null){
-        if(result.error !== 0 && result.error !== 1){
+    if (err === null) {
+        if (result.error !== 0 && result.error !== 1) {
             err = new Exception.RocksDBException(result.error, 'Failed to get result');
             result = null;
-        }else{
+        } else {
             let value = result.value.data;
             result = {
-                'hashKey' : this.hashKey,
-                'sortKey' : this.sortKey,
-                'value' : value,
+                'hashKey': this.hashKey,
+                'sortKey': this.sortKey,
+                'value': value,
             };
         }
     }
@@ -205,12 +203,13 @@ RrdbGetOperator.prototype.handleResult = function(err, op){
  * @param callback
  * @constructor
  */
-function RrdbPutOperator(gpid, request, timeout, callback){
+function RrdbPutOperator(gpid, request, timeout, callback) {
     RrdbPutOperator.super_.call(this, gpid, this.constructor);
     this.request = request;
     this.timeout = timeout;
     this.userCallback = callback;
 }
+
 util.inherits(RrdbPutOperator, Operator);
 
 /**
@@ -218,9 +217,9 @@ util.inherits(RrdbPutOperator, Operator);
  * @param protocol
  * @param seqid
  */
-RrdbPutOperator.prototype.send_data = function(protocol, seqid){
+RrdbPutOperator.prototype.send_data = function (protocol, seqid) {
     protocol.writeMessageBegin('RPC_RRDB_RRDB_PUT', thrift.Thrift.MessageType.CALL, seqid);
-    let args = new rrdb.rrdb_put_args({'update' : this.request});
+    let args = new rrdb.rrdb_put_args({'update': this.request});
     args.write(protocol);
     protocol.writeMessageEnd();
 };
@@ -229,13 +228,12 @@ RrdbPutOperator.prototype.send_data = function(protocol, seqid){
  * Receive data
  * @param protocol
  */
-RrdbPutOperator.prototype.recv_data = function(protocol){
+RrdbPutOperator.prototype.recv_data = function (protocol) {
     let result = new rrdb.rrdb_put_result();
     result.read(protocol);
-    if(result.success !== null && result.success !== undefined){
+    if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
-    }else{
-        //todo: check
+    } else {
         console.error('Fail to receive result while set data');
     }
 };
@@ -245,11 +243,11 @@ RrdbPutOperator.prototype.recv_data = function(protocol){
  * @param err
  * @param op
  */
-RrdbPutOperator.prototype.handleResult = function(err, op){
+RrdbPutOperator.prototype.handleResult = function (err, op) {
     let result = op.response;
     // rpc request succeed
-    if(err === null){
-        if(result.error !== 0){
+    if (err === null) {
+        if (result.error !== 0) {
             err = new Exception.RocksDBException(result.error, 'Failed to set result');
             result = null;
         }
@@ -265,12 +263,13 @@ RrdbPutOperator.prototype.handleResult = function(err, op){
  * @param callback
  * @constructor
  */
-function RrdbRemoveOperator(gpid, request, timeout, callback){
+function RrdbRemoveOperator(gpid, request, timeout, callback) {
     RrdbPutOperator.super_.call(this, gpid, this.constructor);
     this.request = request;
     this.timeout = timeout;
     this.userCallback = callback;
 }
+
 util.inherits(RrdbRemoveOperator, Operator);
 
 /**
@@ -278,9 +277,9 @@ util.inherits(RrdbRemoveOperator, Operator);
  * @param protocol
  * @param seqid
  */
-RrdbRemoveOperator.prototype.send_data = function(protocol, seqid){
+RrdbRemoveOperator.prototype.send_data = function (protocol, seqid) {
     protocol.writeMessageBegin('RPC_RRDB_RRDB_REMOVE', thrift.Thrift.MessageType.CALL, seqid);
-    let args = new rrdb.rrdb_remove_args({'key' : this.request});
+    let args = new rrdb.rrdb_remove_args({'key': this.request});
     args.write(protocol);
     protocol.writeMessageEnd();
 };
@@ -289,13 +288,12 @@ RrdbRemoveOperator.prototype.send_data = function(protocol, seqid){
  * Receive data
  * @param protocol
  */
-RrdbRemoveOperator.prototype.recv_data = function(protocol){
+RrdbRemoveOperator.prototype.recv_data = function (protocol) {
     let result = new rrdb.rrdb_remove_result();
     result.read(protocol);
-    if(result.success !== null && result.success !== undefined){
+    if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
-    }else{
-        //todo: check
+    } else {
         console.error('Fail to receive result while set data');
     }
 };
@@ -305,11 +303,11 @@ RrdbRemoveOperator.prototype.recv_data = function(protocol){
  * @param err
  * @param op
  */
-RrdbRemoveOperator.prototype.handleResult = function(err, op){
+RrdbRemoveOperator.prototype.handleResult = function (err, op) {
     let result = op.response;
     // rpc request succeed
-    if(err === null){
-        if(result.error !== 0){
+    if (err === null) {
+        if (result.error !== 0) {
             err = new Exception.RocksDBException(result.error, 'Failed to set result');
             result = null;
         }
@@ -327,13 +325,14 @@ RrdbRemoveOperator.prototype.handleResult = function(err, op){
  * @param callback
  * @constructor
  */
-function RrdbMultiGetOperator(gpid, request, hashKey, timeout, callback){
+function RrdbMultiGetOperator(gpid, request, hashKey, timeout, callback) {
     RrdbMultiGetOperator.super_.call(this, gpid, this.constructor);
     this.request = request;
     this.hashKey = hashKey;
     this.timeout = timeout;
     this.userCallback = callback;
 }
+
 util.inherits(RrdbMultiGetOperator, Operator);
 
 /**
@@ -341,9 +340,9 @@ util.inherits(RrdbMultiGetOperator, Operator);
  * @param protocol
  * @param seqid
  */
-RrdbMultiGetOperator.prototype.send_data = function(protocol, seqid){
+RrdbMultiGetOperator.prototype.send_data = function (protocol, seqid) {
     protocol.writeMessageBegin('RPC_RRDB_RRDB_MULTI_GET', thrift.Thrift.MessageType.CALL, seqid);
-    let args = new rrdb.rrdb_multi_get_args({'request' : this.request});
+    let args = new rrdb.rrdb_multi_get_args({'request': this.request});
     args.write(protocol);
     protocol.writeMessageEnd();
 };
@@ -352,13 +351,12 @@ RrdbMultiGetOperator.prototype.send_data = function(protocol, seqid){
  * Receive data
  * @param protocol
  */
-RrdbMultiGetOperator.prototype.recv_data = function(protocol){
+RrdbMultiGetOperator.prototype.recv_data = function (protocol) {
     let result = new rrdb.rrdb_multi_get_result();
     result.read(protocol);
-    if(result.success !== null && result.success !== undefined){
+    if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
-    }else{
-        //todo: check
+    } else {
         console.error('Fail to receive result while set data');
     }
 };
@@ -368,20 +366,20 @@ RrdbMultiGetOperator.prototype.recv_data = function(protocol){
  * @param err
  * @param op
  */
-RrdbMultiGetOperator.prototype.handleResult = function(err, op){
+RrdbMultiGetOperator.prototype.handleResult = function (err, op) {
     let result = op.response, data = [];
     // rpc request succeed
-    if(err === null){
-        if(result.error !== 0){
+    if (err === null) {
+        if (result.error !== 0) {
             err = new Exception.RocksDBException(result.error, 'Failed to set result');
             result = null;
-        }else{
+        } else {
             let kvs = result.kvs, len = kvs.length, i;
-            for(i = 0; i < len; ++i){
+            for (i = 0; i < len; ++i) {
                 data.push({
-                    'hashKey' : this.hashKey,
-                    'sortKey' : kvs[i].key.data,
-                    'value'   : kvs[i].value.data,
+                    'hashKey': this.hashKey,
+                    'sortKey': kvs[i].key.data,
+                    'value': kvs[i].value.data,
                 });
             }
         }
@@ -398,12 +396,13 @@ RrdbMultiGetOperator.prototype.handleResult = function(err, op){
  * @param callback
  * @constructor
  */
-function RrdbMultiPutOperator(gpid, request, timeout, callback){
+function RrdbMultiPutOperator(gpid, request, timeout, callback) {
     RrdbMultiPutOperator.super_.call(this, gpid, this.constructor);
     this.request = request;
     this.timeout = timeout;
     this.userCallback = callback;
 }
+
 util.inherits(RrdbMultiPutOperator, Operator);
 
 /**
@@ -411,9 +410,9 @@ util.inherits(RrdbMultiPutOperator, Operator);
  * @param protocol
  * @param seqid
  */
-RrdbMultiPutOperator.prototype.send_data = function(protocol, seqid){
+RrdbMultiPutOperator.prototype.send_data = function (protocol, seqid) {
     protocol.writeMessageBegin('RPC_RRDB_RRDB_MULTI_PUT', thrift.Thrift.MessageType.CALL, seqid);
-    let args = new rrdb.rrdb_multi_put_args({'request' : this.request});
+    let args = new rrdb.rrdb_multi_put_args({'request': this.request});
     args.write(protocol);
     protocol.writeMessageEnd();
 };
@@ -422,13 +421,12 @@ RrdbMultiPutOperator.prototype.send_data = function(protocol, seqid){
  * Receive data
  * @param protocol
  */
-RrdbMultiPutOperator.prototype.recv_data = function(protocol){
+RrdbMultiPutOperator.prototype.recv_data = function (protocol) {
     let result = new rrdb.rrdb_multi_put_result();
     result.read(protocol);
-    if(result.success !== null && result.success !== undefined){
+    if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
-    }else{
-        //todo: check
+    } else {
         console.error('Fail to receive result while set data');
     }
 };
@@ -438,11 +436,11 @@ RrdbMultiPutOperator.prototype.recv_data = function(protocol){
  * @param err
  * @param op
  */
-RrdbMultiPutOperator.prototype.handleResult = function(err, op){
+RrdbMultiPutOperator.prototype.handleResult = function (err, op) {
     let result = op.response;
     // rpc request succeed
-    if(err === null){
-        if(result.error !== 0){
+    if (err === null) {
+        if (result.error !== 0) {
             err = new Exception.RocksDBException(result.error, 'Failed to set result');
             result = null;
         }
@@ -451,15 +449,13 @@ RrdbMultiPutOperator.prototype.handleResult = function(err, op){
 };
 
 
-
-
 module.exports = {
-    ThriftHeader : ThriftHeader,
-    Operator : Operator,
-    QueryCfgOperator : QueryCfgOperator,
-    RrdbGetOperator : RrdbGetOperator,
-    RrdbPutOperator : RrdbPutOperator,
-    RrdbRemoveOperator : RrdbRemoveOperator,
-    RrdbMultiGetOperator : RrdbMultiGetOperator,
-    RrdbMultiPutOperator : RrdbMultiPutOperator,
+    ThriftHeader: ThriftHeader,
+    Operator: Operator,
+    QueryCfgOperator: QueryCfgOperator,
+    RrdbGetOperator: RrdbGetOperator,
+    RrdbPutOperator: RrdbPutOperator,
+    RrdbRemoveOperator: RrdbRemoveOperator,
+    RrdbMultiGetOperator: RrdbMultiGetOperator,
+    RrdbMultiPutOperator: RrdbMultiPutOperator,
 };
