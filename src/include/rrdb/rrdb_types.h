@@ -1518,10 +1518,13 @@ inline std::ostream &operator<<(std::ostream &out, const scan_response &obj)
 
 typedef struct _duplicate_request__isset
 {
-    _duplicate_request__isset() : timetag(false), task_code(false), raw_message(false) {}
+    _duplicate_request__isset() : timetag(false), task_code(false), raw_message(false), hash(false)
+    {
+    }
     bool timetag : 1;
     bool task_code : 1;
     bool raw_message : 1;
+    bool hash : 1;
 } _duplicate_request__isset;
 
 class duplicate_request
@@ -1531,12 +1534,13 @@ public:
     duplicate_request(duplicate_request &&);
     duplicate_request &operator=(const duplicate_request &);
     duplicate_request &operator=(duplicate_request &&);
-    duplicate_request() : timetag(0) {}
+    duplicate_request() : timetag(0), hash(0) {}
 
     virtual ~duplicate_request() throw();
     int64_t timetag;
     ::dsn::task_code task_code;
     ::dsn::blob raw_message;
+    int64_t hash;
 
     _duplicate_request__isset __isset;
 
@@ -1546,6 +1550,8 @@ public:
 
     void __set_raw_message(const ::dsn::blob &val);
 
+    void __set_hash(const int64_t val);
+
     bool operator==(const duplicate_request &rhs) const
     {
         if (!(timetag == rhs.timetag))
@@ -1553,6 +1559,8 @@ public:
         if (!(task_code == rhs.task_code))
             return false;
         if (!(raw_message == rhs.raw_message))
+            return false;
+        if (!(hash == rhs.hash))
             return false;
         return true;
     }

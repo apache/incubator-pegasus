@@ -215,6 +215,7 @@ struct duplicate_request
     1:i64                     timetag;
     2:dsn.task_code           task_code;
     3:dsn.blob                raw_message;
+    4:i64                     hash;
 }
 
 struct duplicate_response
@@ -243,9 +244,5 @@ service rrdb
     // On server side, this rpc will be handled one-by-one. (reply once
     // the write is applied, no batching, like multi_remove and multi_put)
     duplicate_response duplicate(1:duplicate_request request);
-
-    // An invariant of duplicate() that will be handled
-    // in batch like put and remove.
-    duplicate_response batched_duplicate(1:duplicate_request request);
 }
 

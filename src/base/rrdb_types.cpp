@@ -3583,6 +3583,8 @@ void duplicate_request::__set_task_code(const ::dsn::task_code &val) { this->tas
 
 void duplicate_request::__set_raw_message(const ::dsn::blob &val) { this->raw_message = val; }
 
+void duplicate_request::__set_hash(const int64_t val) { this->hash = val; }
+
 uint32_t duplicate_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -3626,6 +3628,14 @@ uint32_t duplicate_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 4:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->hash);
+                this->__isset.hash = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -3656,6 +3666,10 @@ uint32_t duplicate_request::write(::apache::thrift::protocol::TProtocol *oprot) 
     xfer += this->raw_message.write(oprot);
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("hash", ::apache::thrift::protocol::T_I64, 4);
+    xfer += oprot->writeI64(this->hash);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -3667,37 +3681,42 @@ void swap(duplicate_request &a, duplicate_request &b)
     swap(a.timetag, b.timetag);
     swap(a.task_code, b.task_code);
     swap(a.raw_message, b.raw_message);
+    swap(a.hash, b.hash);
     swap(a.__isset, b.__isset);
 }
 
-duplicate_request::duplicate_request(const duplicate_request &other93)
+duplicate_request::duplicate_request(const duplicate_request &other106)
 {
-    timetag = other93.timetag;
-    task_code = other93.task_code;
-    raw_message = other93.raw_message;
-    __isset = other93.__isset;
+    timetag = other106.timetag;
+    task_code = other106.task_code;
+    raw_message = other106.raw_message;
+    hash = other106.hash;
+    __isset = other106.__isset;
 }
-duplicate_request::duplicate_request(duplicate_request &&other94)
+duplicate_request::duplicate_request(duplicate_request &&other107)
 {
-    timetag = std::move(other94.timetag);
-    task_code = std::move(other94.task_code);
-    raw_message = std::move(other94.raw_message);
-    __isset = std::move(other94.__isset);
+    timetag = std::move(other107.timetag);
+    task_code = std::move(other107.task_code);
+    raw_message = std::move(other107.raw_message);
+    hash = std::move(other107.hash);
+    __isset = std::move(other107.__isset);
 }
-duplicate_request &duplicate_request::operator=(const duplicate_request &other95)
+duplicate_request &duplicate_request::operator=(const duplicate_request &other108)
 {
-    timetag = other95.timetag;
-    task_code = other95.task_code;
-    raw_message = other95.raw_message;
-    __isset = other95.__isset;
+    timetag = other108.timetag;
+    task_code = other108.task_code;
+    raw_message = other108.raw_message;
+    hash = other108.hash;
+    __isset = other108.__isset;
     return *this;
 }
-duplicate_request &duplicate_request::operator=(duplicate_request &&other96)
+duplicate_request &duplicate_request::operator=(duplicate_request &&other109)
 {
-    timetag = std::move(other96.timetag);
-    task_code = std::move(other96.task_code);
-    raw_message = std::move(other96.raw_message);
-    __isset = std::move(other96.__isset);
+    timetag = std::move(other109.timetag);
+    task_code = std::move(other109.task_code);
+    raw_message = std::move(other109.raw_message);
+    hash = std::move(other109.hash);
+    __isset = std::move(other109.__isset);
     return *this;
 }
 void duplicate_request::printTo(std::ostream &out) const
@@ -3709,6 +3728,8 @@ void duplicate_request::printTo(std::ostream &out) const
         << "task_code=" << to_string(task_code);
     out << ", "
         << "raw_message=" << to_string(raw_message);
+    out << ", "
+        << "hash=" << to_string(hash);
     out << ")";
 }
 
@@ -3777,26 +3798,26 @@ void swap(duplicate_response &a, duplicate_response &b)
     swap(a.__isset, b.__isset);
 }
 
-duplicate_response::duplicate_response(const duplicate_response &other97)
+duplicate_response::duplicate_response(const duplicate_response &other110)
 {
-    error = other97.error;
-    __isset = other97.__isset;
+    error = other110.error;
+    __isset = other110.__isset;
 }
-duplicate_response::duplicate_response(duplicate_response &&other98)
+duplicate_response::duplicate_response(duplicate_response &&other111)
 {
-    error = std::move(other98.error);
-    __isset = std::move(other98.__isset);
+    error = std::move(other111.error);
+    __isset = std::move(other111.__isset);
 }
-duplicate_response &duplicate_response::operator=(const duplicate_response &other99)
+duplicate_response &duplicate_response::operator=(const duplicate_response &other112)
 {
-    error = other99.error;
-    __isset = other99.__isset;
+    error = other112.error;
+    __isset = other112.__isset;
     return *this;
 }
-duplicate_response &duplicate_response::operator=(duplicate_response &&other100)
+duplicate_response &duplicate_response::operator=(duplicate_response &&other113)
 {
-    error = std::move(other100.error);
-    __isset = std::move(other100.__isset);
+    error = std::move(other113.error);
+    __isset = std::move(other113.__isset);
     return *this;
 }
 void duplicate_response::printTo(std::ostream &out) const

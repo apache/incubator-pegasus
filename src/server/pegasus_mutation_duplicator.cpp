@@ -29,12 +29,6 @@ namespace server {
 
 using namespace dsn::literals::chrono_literals;
 
-static inline bool is_delete_operation(dsn_message_t req)
-{
-    dsn::task_code tc = dsn_msg_task_code(req);
-    return tc == dsn::apps::RPC_RRDB_RRDB_REMOVE || tc == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
-}
-
 /*extern*/ uint64_t get_hash_from_request(dsn::task_code tc, const dsn::blob &data)
 {
     if (tc == dsn::apps::RPC_RRDB_RRDB_PUT) {
@@ -64,7 +58,7 @@ static inline bool is_delete_operation(dsn_message_t req)
 pegasus_mutation_duplicator::pegasus_mutation_duplicator(const dsn::replication::replica_base &r,
                                                          dsn::string_view remote_cluster,
                                                          dsn::string_view app)
-    : dsn::replication::replica_base(r)
+    : dsn::replication::replica_base(r), _remote_cluster(remote_cluster)
 {
     static bool _dummy = pegasus_client_factory::initialize(nullptr);
 
@@ -106,66 +100,93 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(const dsn::replication:
                                            "statistic the qps of failed DUPLICATE request");
 }
 
-void pegasus_mutation_duplicator::send_request(uint64_t timestamp,
-                                               dsn_message_t req,
-                                               dsn::blob data,
-                                               err_callback cb)
+static bool is_delete_operation(dsn::task_code code)
 {
-    dsn::task_code rpc_code(dsn_msg_task_code(req));
+    return code == dsn::apps::RPC_RRDB_RRDB_REMOVE || code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
+}
 
-    // validate the rpc to be duplicated
-    dsn::task_spec *task = dsn::task_spec::get(rpc_code);
-    dassert_replica(task != nullptr && task->rpc_request_is_write_operation,
-                    "invalid rpc type({})",
-                    rpc_code.to_string());
+void pegasus_mutation_duplicator::send(duplicate_rpc rpc, callback cb)
+{
+    uint64_t start = dsn_now_ns();
+    _client->async_duplicate(
+        rpc, [ cb = std::move(cb), rpc, start, this ](dsn::error_code err) mutable {
+            _duplicate_qps->increment();
+            if (err == dsn::ERR_OK) {
+                err = dsn::error_code(rpc.response().error);
+                /// failure is not taken into latency calculation
+                _duplicate_latency->set(dsn_now_ns() - start);
+            } else {
+                _duplicate_failed_qps->increment();
+                derror_replica("failed to ship mutation: {}, remote: {}", err, _remote_cluster);
 
-    // extract the rpc wrapped inside if this is a DUPLICATE rpc
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
-        dsn::apps::duplicate_request request;
-        dsn::from_blob_to_thrift(data, request);
+                dsn::replication::mutation_tuple mt =
+                    std::make_tuple(rpc.request().timetag,
+                                    rpc.request().task_code,
+                                    std::move(rpc.request().raw_message));
+                {
+                    dsn::service::zauto_lock _(_lock);
+                    _pending.insert(mt);
+                }
+            }
+        });
+}
 
-        uint8_t from_cluster_id =
-            extract_cluster_id_from_timetag(static_cast<uint64_t>(request.timetag));
-        if (from_cluster_id == _remote_cluster_id) {
-            // ignore this mutation to prevent infinite replication loop.
-            cb(dsn::error_s::ok());
-            return;
-        }
+void pegasus_mutation_duplicator::duplicate(dsn::replication::mutation_tuple_set muts, callback cb)
+{
+    for (const auto &mut : muts) {
+        uint64_t timestamp = std::get<0>(mut);
+        dsn::task_code rpc_code = std::get<1>(mut);
+        dsn::blob data = std::get<2>(mut);
+        uint64_t hash, timetag;
 
-        rpc_code = request.task_code;
-        data = std::move(request.raw_message);
-
-        // validate the rpc
-        task = dsn::task_spec::get(rpc_code);
+        // must be a write
+        dsn::task_spec *task = dsn::task_spec::get(rpc_code);
         dassert_replica(task != nullptr && task->rpc_request_is_write_operation,
                         "invalid rpc type({})",
-                        rpc_code.to_string());
+                        rpc_code);
+
+        // extract the rpc wrapped inside if this is a DUPLICATE rpc
+        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
+            dsn::apps::duplicate_request dreq;
+            dsn::from_blob_to_thrift(data, dreq);
+
+            timetag = static_cast<uint64_t>(dreq.timetag);
+            uint8_t from_cluster_id = extract_cluster_id_from_timetag(timetag);
+            if (from_cluster_id == _remote_cluster_id) {
+                // ignore this mutation to prevent infinite duplication loop.
+                continue;
+            }
+
+            hash = static_cast<uint64_t>(dreq.hash);
+            data = std::move(dreq.raw_message);
+            rpc_code = dreq.task_code;
+        } else {
+            hash = get_hash_from_request(rpc_code, data);
+            timetag = generate_timetag(
+                timestamp, get_current_cluster_id(), is_delete_operation(rpc_code));
+        }
+
+        if (_partition_hash_set.find(hash) != _partition_hash_set.end()) {
+            _pending.insert(mut);
+        } else {
+            _partition_hash_set.insert(hash);
+
+            // send immediately if it doesn't make conflict
+            auto dreq = dsn::make_unique<dsn::apps::duplicate_request>();
+            dreq->task_code = rpc_code;
+            dreq->hash = hash;
+            dreq->raw_message = std::move(data);
+            dreq->timetag = timetag;
+            duplicate_rpc rpc(std::move(dreq),
+                              dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
+                              10_s, // TODO(wutao1): configurable timeout.
+                              hash);
+            send(std::move(rpc), cb);
+        }
     }
 
-    auto request = dsn::make_unique<dsn::apps::duplicate_request>();
-    request->task_code = rpc_code;
-    request->timetag =
-        generate_timetag(timestamp, get_current_cluster_id(), is_delete_operation(req));
-    request->raw_message = std::move(data);
-
-    uint64_t partition_hash = get_hash_from_request(rpc_code, request->raw_message);
-    duplicate_rpc rpc(std::move(request),
-                      dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
-                      10_s, // TODO(wutao1): configurable timeout.
-                      partition_hash);
-
-    uint64_t start = dsn_now_ns();
-    _client->async_duplicate(rpc,
-                             [ cb = std::move(cb), rpc, start, this ](dsn::error_code err) mutable {
-                                 _duplicate_qps->increment();
-                                 if (err == dsn::ERR_OK) {
-                                     err = dsn::error_code(rpc.response().error);
-                                     _duplicate_latency->set(dsn_now_ns() - start);
-                                 } else {
-                                     _duplicate_failed_qps->increment();
-                                 }
-                                 cb(dsn::error_s::make(err));
-                             });
+    _partition_hash_set.clear();
+    cb(std::move(_pending));
 }
 
 } // namespace server

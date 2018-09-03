@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include <dsn/dist/replication/duplication_mutation_duplicator.h>
-#include <dsn/dist/fmt_logging.h>
+#include <dsn/dist/replication/mutation_duplicator.h>
 #include <dsn/dist/replication/replica_base.h>
 #include <rrdb/rrdb.code.definition.h>
 
@@ -23,18 +22,20 @@ public:
                                 dsn::string_view remote_cluster,
                                 dsn::string_view app);
 
-    void duplicate(dsn::replication::mutation_tuple mutation, err_callback cb) override
-    {
-        send_request(std::get<0>(mutation), std::get<1>(mutation), std::get<2>(mutation), cb);
-    }
+    void duplicate(dsn::replication::mutation_tuple_set muts, callback cb) override;
 
 private:
-    void send_request(uint64_t timestamp, dsn_message_t req, dsn::blob data, err_callback cb);
+    void send(dsn::apps::duplicate_rpc rpc, callback cb);
 
 private:
     client::pegasus_client_impl *_client;
 
     uint8_t _remote_cluster_id{0};
+    std::string _remote_cluster;
+
+    std::set<uint64_t> _partition_hash_set;
+    dsn::replication::mutation_tuple_set _pending;
+    dsn::service::zlock _lock;
 
     dsn::perf_counter_wrapper _duplicate_qps;
     dsn::perf_counter_wrapper _duplicate_failed_qps;
