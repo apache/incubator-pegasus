@@ -6,12 +6,10 @@
 
 const type = require('./dsn/base_types');
 const tools = require('./tools');
-//const Buffer = require('buffer');
 const Int64 = require('node-int64');
 
 const meta = require('./dsn/meta');
 const rrdb = require('./dsn/rrdb');
-//const replica = require('../dsn/replication_types');
 
 const util = require('util');
 const thrift = require('thrift');
@@ -120,7 +118,6 @@ QueryCfgOperator.prototype.recv_data = function (protocol) {
     if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
     } else {
-        //TODO: Thrift error check
         console.error("Fail to receive result while query config from meta.");
     }
 };
@@ -169,7 +166,6 @@ RrdbGetOperator.prototype.recv_data = function (protocol) {
     if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
     } else {
-        //todo : check
         console.error('Fail to receive result while get data');
     }
 };
@@ -238,7 +234,6 @@ RrdbPutOperator.prototype.recv_data = function (protocol) {
     if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
     } else {
-        //todo: check
         console.error('Fail to receive result while set data');
     }
 };
@@ -299,7 +294,6 @@ RrdbRemoveOperator.prototype.recv_data = function (protocol) {
     if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
     } else {
-        //todo: check
         console.error('Fail to receive result while set data');
     }
 };
@@ -363,7 +357,6 @@ RrdbMultiGetOperator.prototype.recv_data = function (protocol) {
     if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
     } else {
-        //todo: check
         console.error('Fail to receive result while set data');
     }
 };
@@ -434,7 +427,6 @@ RrdbMultiPutOperator.prototype.recv_data = function (protocol) {
     if (result.success !== null && result.success !== undefined) {
         this.response = result.success;
     } else {
-        //todo: check
         console.error('Fail to receive result while set data');
     }
 };

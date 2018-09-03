@@ -219,7 +219,7 @@ Connection.prototype.setupStream = function () {
     self.socket.on('connect', function () {
         this._connected = true;
         self.getResponse();
-        self.emit('connect'); //TODO(hyc): check handler of connection's connect event
+        self.emit('connect');
         log.info('Connected to %s', self.name);
     });
 };
@@ -239,7 +239,7 @@ Connection.prototype.call = function (entry) {
     rpcRequest.on('done', function (err, operator) {
         delete self.requests[rpcRequest.id];
         if (err) {
-            log.error(err.message);
+            log.debug(err.message);
         }
         entry.callback(err, operator);
     });
@@ -347,7 +347,7 @@ Request.prototype.handleTimeout = function () {
  */
 Request.prototype.setException = function (err) {
     if (err.message.indexOf('no error') < 0) {
-        log.error('setException: %s request#%d error %s', this.connection.name, this.id, err.message);
+        log.error('setException: %s request#%d error: %s', this.connection.name, this.id, err.message);
     }
     this.error = err;
     if (err.err_type === 'ERR_SESSION_RESET') {

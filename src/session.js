@@ -9,8 +9,6 @@ const ErrorType = require('./dsn/base_types').error_type;
 const Connection = require('./connection');
 const util = require('util');
 const Exception = require('./errors');
-// const EventEmitter = require('events').EventEmitter;
-// const deasync = require('deasync');
 const META_DELAY = 500;
 
 let log = null;
@@ -85,23 +83,6 @@ Session.prototype.getConnection = function (args, callback) {
         'rpcTimeOut': this.timeout,
         'log': log,
     });
-
-    // TODO(hyc): delete after whole test
-    // let sync = true, error = null;
-    // connection.once('connectError', function(err){
-    //     connection.emit('close');
-    //     error = err;
-    //     sync = false;
-    // });
-    // connection.once('connect', function(){
-    //     sync = false;
-    // });
-    // while(sync){deasync.sleep(1);}
-    // if(error === null){
-    //     callback(null, connection);
-    // }else{
-    //     callback(error, null);
-    // }
     callback(null, connection);
 };
 
@@ -120,7 +101,6 @@ function MetaSession(args) {
     this.metaList = [];
     this.curLeader = 0;
     this.maxRetryCounter = 5;
-    // this.roundQueue = [];
     this.queryingTableName = {};    // tableName -> isQueryingMeta
     this.lastQueryTime = {}; // tableName -> lastQueryTime
 
@@ -134,13 +114,6 @@ function MetaSession(args) {
                 'rpc_address': address,
             }, function (err, connection) {
                 self.metaList.push(connection);
-                // TODO(hyc): delete after whole test
-                // if(err === null && connection !== null) {
-                //     self.metaList.push(connection);
-                //     log.debug('Finish to get session to meta %s:%s', address.host, address.port);
-                // }else{
-                //     log.error('Failed to get meta connection, %s', err.message);
-                // }
             });
         } else {
             log.error('invalid meta server address %s', args.metaList[i]);
@@ -183,7 +156,6 @@ MetaSession.prototype.onFinishQueryMeta = function (err, round) {
 
     round.maxQueryCount--;
     if (round.maxQueryCount === 0) {
-        //TODO(hyc): consider reach maxQueryCount
         log.error('query meta exceed maxQueryCount, error is %s', err);
         this.completeQueryMeta(err, round);
         return;
@@ -234,24 +206,15 @@ MetaSession.prototype.onFinishQueryMeta = function (err, round) {
     }
 };
 
+/**
+ * Execute round callback function
+ * @param {Error} err
+ * @param {MetaRequestRound} round
+ */
 MetaSession.prototype.completeQueryMeta = function (err, round) {
     let op = round.operator;
     round.callback(err, op);
     this.queryingTableName[op.request.app_name] = false;
-
-    //TODO(hyc): change to debug and delete
-    log.info('finish query meta');
-    for(let key in this.queryingTableName){
-        log.info('table %s isQueryingMeta %s', key, this.queryingTableName[key]);
-    }
-
-    // let len = this.roundQueue.length, i;
-    // log.info('%d requests for querying meta will return', len);
-    // for (i = 0; i < len; ++i) {
-    //     this.roundQueue[i].callback(err, op);
-    // }
-    // this.roundQueue = [];
-    // this.isQuery = false;
 };
 
 /**
@@ -264,7 +227,6 @@ MetaSession.prototype.completeQueryMeta = function (err, round) {
  */
 function ReplicaSession(args) {
     ReplicaSession.super_.call(this, args, this.constructor);
-    // this.operatorQueue = [];
 
     if (!args || !args.address) {
         log.error('Invalid params, Missing rpc address while creating replica session');
@@ -277,12 +239,6 @@ function ReplicaSession(args) {
         'rpc_address': addr,
     }, function (err, connection) {
         self.connection = connection;
-        // TODO(hyc): delete after whole test
-        // if(err === null && connection !== null) {
-        //     self.connection = connection;
-        // }else{
-        //     log.error('Failed to get replica connection, %s', err.message);
-        // }
     });
 }
 
@@ -300,54 +256,25 @@ ReplicaSession.prototype.operate = function (round) {
     this.connection.call(entry);
 };
 
-//TODO: consider to change event emit
-ReplicaSession.prototype.handleConnectedError = function (tableHandler, address) {
-    // 1. get requests in queue
-    let oriConnection = this.connection; //, needQueryMeta = false;
-    // if(requests.length > 0){
-    //     for(let id in requests){
-    //         let request = requests[id];
-    //         this.operatorQueue.push(request.entry.operator);
-    //     }
-    // }
-    // console.log('origin queue length is %d, current queue length is %d', requests.length, this.operatorQueue.length);
-    // this.connection.requests = [];
+/**
+ * Reconnect to session when original session meet error or close
+ * @param address
+ */
+ReplicaSession.prototype.handleConnectedError = function (address) {
+    let oriConnection = this.connection;
 
-    // 2. create new connection
     let self = this;
     this.getConnection({
         'rpc_address': address,
     }, function (err, connection) {
         if (err === null && connection !== null) {
             self.connection = connection;
-            // console.log('%s build!', connection.name);
-            // log.info('%s build!', connection.name);
-            // self.retryRequests(tableHandler);
             oriConnection.emit('close');
         } else {
             log.error('Failed to get replica connection, %s', err.message);
-            //needQueryMeta = true;
         }
     });
-
-    // 3. retry = false
-    // this.retry = false;
-    //return needQueryMeta;
 };
-
-// ReplicaSession.prototype.retryRequests = function (tableHandler) {
-//     let len = this.operatorQueue.length, i;
-//     if (len > 0) {
-//         log.info('replica session(%s) %d request ready to retry', this.connection.name, len);
-//         for (i = 0; i < len; ++i) {   //retry requests
-//             let opRetry = this.operatorQueue[i];
-//             let clientRoundRetry = new ClientRequestRound(tableHandler, opRetry, opRetry.handleResult.bind(opRetry));
-//             this.operate(clientRoundRetry);
-//         }
-//         this.operatorQueue = [];
-//     }
-// };
-
 
 /**
  * Handle rpc error
@@ -406,9 +333,6 @@ ReplicaSession.prototype.onRpcReply = function (err, round) {
     if (needQueryMeta) {
         round.tableHandler.callback = function (err, handler) {
             // do nothing
-            // TODO(hyc): delete after whole test
-            // if (err !== null) {
-            // }
         }.bind(this);
         round.tableHandler.queryMeta(round.tableHandler.tableName, round.tableHandler.onUpdateResponse.bind(round.tableHandler));
     }
@@ -474,7 +398,6 @@ function ClientRequestRound(tableHandler, operator, callback) {
     this.tableHandler = tableHandler;
     this.operator = operator;
     this.callback = callback;
-    this.count = 0; //todo:delete
 }
 
 module.exports = {

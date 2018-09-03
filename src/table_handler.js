@@ -16,7 +16,6 @@ const ClientRequestRound = require('./session').ClientRequestRound;
 const Operator = require('./operator');
 const Long = require('long');
 const tools = require('./tools');
-// const deasync = require('deasync');
 
 const DEFAULT_MULTI_COUNT = 100;
 const DEFAULT_MULTI_SIZE = 1000000;
@@ -41,12 +40,6 @@ function TableHandler(cluster, tableName, callback) {
     this.partition_count = 0;
     this.partitions = {};       //partition pid -> primary rpc_address
 
-    // this.isQueryingMeta = false;
-    // this.lastQueryMetaTime = 0;
-    // this.metaCfgVersion = 0;
-    // this.tryMetaCfgVersion = 0;
-
-    //TODO(hyc): change to event handler
     if (this.cluster.metaSession.connectionError) {
         //Failed to get meta sessions
         callback(this.cluster.metaSession.connectionError, null);
@@ -69,18 +62,6 @@ TableHandler.prototype.queryMeta = function (tableName, callback) {
         callback,
         session.maxRetryCounter,
         session.metaList[session.curLeader]);
-
-    // session.query(round);
-    // log.debug('table %s is querying meta server', tableName);
-
-    //TODO(hyc): change to time and meta config version
-    // if (session.isQuery) {
-    //     log.info('table %s has %d requests is waiting', tableName, session.roundQueue.length);
-    // } else {
-    //     session.isQuery = true;
-    //     session.query(round);
-    //     log.debug('table %s is querying meta', tableName);
-    // }
 
     let isQueryingMeta = session.queryingTableName[tableName];
     let lastQueryTime = session.lastQueryTime[tableName] ? session.lastQueryTime[tableName] : 0;
@@ -147,11 +128,6 @@ TableHandler.prototype.updateResponse = function (oldResp, newResp) {
                 'value': session,
             });
         }
-        // TODO(hyc): delete after whole test
-        // this.cluster.replicaSessions.push({
-        //     'key': primary_addr,
-        //     'value': session,
-        // });
         connected_rpc.push(primary_addr);
     }
     this.queryCfgResponse = newResp;
@@ -163,46 +139,23 @@ TableHandler.prototype.updateResponse = function (oldResp, newResp) {
  * @param {gpid}        gpid
  * @param {Operator}   op
  */
-//TODO: testing
 TableHandler.prototype.operate = function (gpid, op) {
     let pidx = gpid.get_pidx();
     let address = this.partitions[pidx];
     let session = tools.findSessionByAddr(this.cluster.replicaSessions, address);
-    //let self = this;
 
-    if (session === null || session === undefined) { //TODO: check when to meet this situation
+    if (session === null || session === undefined) {
         log.error('Replica session not exist');
         return;
     }
 
-    //TODO(hyc): how to handle timeout session's requests
-    // if (session.retry) { // others are reconnecting this session
-    //     session.operatorQueue.push(op);
-    // } else if (session.connection.connectError) { // connection has connected error
-    //     session.retry = true;
-    //     session.operatorQueue.push(op);
-    //     if (session.handleConnectedError(this, address)) {
-    //         this.queryMeta(this.tableName, this.onUpdateResponse.bind(this));
-    //     }
-    // } else {
-    //     // connection is normal
-    //     let clientRound = new ClientRequestRound(this, op, op.handleResult.bind(op));
-    //     session.operate(clientRound);
-    // }
-
-    if (session.connection.connectError) { // connection has connected error
-        // session.retry = true;
-        // session.operatorQueue.push(op);
-        // if (session.handleConnectedError(this, address)) {
-        //     this.queryMeta(this.tableName, this.onUpdateResponse.bind(this));
-        // }
-        session.handleConnectedError(this, address);
+    // connection has error or closed
+    if (session.connection.connectError || session.connection.closed) {
+        session.handleConnectedError(address);
     }
-    //else {
-    // connection is normal
+
     let clientRound = new ClientRequestRound(this, op, op.handleResult.bind(op));
-    session.operate(clientRound);
-    //}
+    session.operate(clientRound, address);
 };
 
 /**
@@ -274,39 +227,6 @@ TableInfo.prototype.get = function (args, callback) {
     this.tableHandler.operate(gpid, op);
 };
 
-// TODO(hyc): delete after whole test
-/**
- * Batch Get value
- * @param {Array}       argsArray
- *        {Buffer}      argsArray[i].hashKey
- *        {Buffer}      argsArray[i].sortKey
- *        {Number}      argsArray[i].timeout(ms)
- * @param {Function}    callback
- */
-// TableInfo.prototype.batchGet = function (argsArray, callback) {
-//     let i, len = argsArray.length;
-//     let error = null, resultArray = [], sync = true;
-//
-//     for (i = 0; i < len; ++i) {
-//         let args = argsArray[i];
-//         this.get(args, function (err, result) {
-//             if (err !== null) {
-//                 error = err;
-//                 sync = false;
-//             } else {
-//                 resultArray.push(result);
-//             }
-//             if (resultArray.length === len) {
-//                 sync = false;
-//             }
-//         });
-//     }
-//     while (sync) {
-//         deasync.sleep(1);
-//     }
-//     callback(error, resultArray);
-// };
-
 /**
  * Batch Get value using promise
  * @param {Array}       argsArray
@@ -361,41 +281,6 @@ TableInfo.prototype.set = function (args, callback) {
     }), timeout, callback);
     this.tableHandler.operate(gpid, op);
 };
-
-// TODO(hyc): delete after whole test
-/**
- * Batch Set value
- * @param {Array}       argsArray
- *        {Buffer}      argsArray[i].hashKey
- *        {Buffer}      argsArray[i].sortKey
- *        {Buffer}      argsArray[i].value
- *        {Number}      argsArray[i].ttl
- *        {Number}      argsArray[i].timeout(ms)
- * @param {Function}    callback
- */
-// TableInfo.prototype.batchSet = function (argsArray, callback) {
-//     let i, len = argsArray.length;
-//     let error = null, resultArray = [], sync = true;
-//
-//     for (i = 0; i < len; ++i) {
-//         let args = argsArray[i];
-//         this.set(args, function (err, result) {
-//             if (err !== null) {
-//                 error = err;
-//                 sync = false;
-//             } else {
-//                 resultArray.push(result);
-//             }
-//             if (resultArray.length === len) {
-//                 sync = false;
-//             }
-//         });
-//     }
-//     while (sync) {
-//         deasync.sleep(1);
-//     }
-//     callback(error, resultArray);
-// };
 
 /**
  * Batch Set value using promise

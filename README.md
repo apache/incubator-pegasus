@@ -8,7 +8,7 @@ Official NodeJS client for [xiaomi/pegasus](https://github.com/XiaoMi/pegasus)
 ## Usage
 ### Create pegasus client:  `create(configs)`
 ```
-let pegasusClient = require('../');
+let pegasusClient = require('pegasus-nodejs-client');
 let configs = {
     'metaServers'      : [     // required - meta server address array
         '127.0.0.1:34601',
@@ -16,6 +16,7 @@ let configs = {
         '127.0.0.1:34603',
      ],
     'operationTimeout' : 5000, // optional - operation timeout in milliseconds - default value: 1000ms
+    'log' : log,               // optional - log4js logger - details in log section
 };
 let client = pegasusClient.create(configs);
 
@@ -121,14 +122,14 @@ batchGetArgArray[1] = {
     'timeout' : 2000,
 };
 client.batchGet(tableName, batchGetArgArray, function(err, result){
-    // err will be null, result will be hashKey-sortKey-value object array when all operations succeed
-    // result[i].hashKey is hashKey, result[i].sortKey is sortKey, result[i].value is value
-    // batchGet is not atomic, if any get operation failed, batchGet will stop
+    // err will be always be null, result is {'error': err, 'data': result} array
+    // if batchGet[i] operation succeed, result[i].error will be null
+    // result[i].data.hashKey is hashKey, result[i].data.sortKey is sortKey, result[i].data.value is value
+    // else result[i].error will be instance of PException, result[i].data will be nul
 });
 ```
 > Notice: batchGet is not atomic operation  
 > batchGet is different from multiGet, you can get values under several hashKeys.  
-> However, this operation will be stopped when any one of single get failed
 
 ### multiSet: `multiSet(tableName, args, callback)`
 ```
@@ -153,7 +154,7 @@ client.multiSet(tableName, args, function(err){
 });
 ```
 
-### batchSet: `batchGet(tableName, argsArray, callback)`
+### batchSet: `batchSet(tableName, argsArray, callback)`
 ```
 let argArray = [];
 argArray[0] = {
@@ -169,15 +170,40 @@ argArray[1] = {
     'timeout' : 2000,
 };
 client.batchSet(tableName, argArray, function(err){
-    // err will be null when all operations succeed
-    // batchSet is not atomic, if any get operation failed, batchSet will stop
+    // err will be always be null, result is {'error': err} array
+    // if batchSet[i] operation succeed, result[i].error will be null
+    // else result[i].error will be instance of PException
 });
 ```
 
-## Log and Exception
-File `error.log` will record error logs, we use [bunyan](https://www.npmjs.com/package/bunyan) as logging library.  
+## Log
+We use [log4js](https://github.com/log4js-node/log4js-node) as logging library.  
+Default log configuration is in `log_config.js` file:  
+```
+let filename = "./logs/"+process.pid+"/pegasus-nodejs-client.log";
+let logConfig = {
+   appenders: { 
+     pegasus: {
+       type: "file",            // logs are saved as file
+       filename: filename, 
+       maxLogSize: 104857600,   // max log size for each log is 100M
+       backups: 10              // keep 10 log files at most
+     } 
+   },
+   categories: {
+     default: { appenders: ["pegasus"], level: "INFO" } 
+   }
+};
+```
 
-All errors callback returns are instance of PException, basic exception in pegasus client.  
+## Exception and error type
+
+All errors returned from callback are instance of PException, basic exception in pegasus client.  
+Each exception has an error type to indicate reason of failure, here are some common error types:
+* ERR_TIMEOUT - caused by operation timeout, users can retry or lengthen timeout when creating client
+* ERR_SESSION_RESET - caused by socket reset or reconnecting
+* ERR_INVALID_STATE - caused by server reconfiguration
+* ERR_OBJECT_NOT_FOUND - caused by wrong table name or server reconfiguration
 
 ## Test
 Tests rely on pegasus onebox cluster, referring to [Using pegasus onebox](https://github.com/XiaoMi/pegasus/wiki/%E4%BD%93%E9%AA%8Conebox%E9%9B%86%E7%BE%A4)  
@@ -185,13 +211,11 @@ Before test, you should start onebox cluster.
 
 
 ## TODO
-* [ ] supplement README doc
-    * [ ] Exception
-    * [ ] Test
-* [ ] supplement error and exception in source code
+* [x] supplement README doc
+    * [x] Exception
+    * [x] Test
+* [x] supplement error and exception in source code
 * [ ] support other operations
-* [ ] add more unit tests and mock tests
 * [ ] benchmark
-
-
+* [x] kill test and stability test on both onebox and cluster  
 
