@@ -4335,6 +4335,10 @@ inline dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo)
         const ddd_node_info &secondary = last_dropped.front();
         const ddd_node_info &latest = last_dropped.back();
 
+        // Select a best node to be the new primary, following the rule:
+        //  - choose the node with the largest last committed decree
+        //  - if last committed decree is the same, choose node with the largest ballot
+
         if (latest.last_committed_decree == secondary.last_committed_decree &&
             latest.last_committed_decree >= pinfo.config.last_committed_decree)
             return latest.ballot >= secondary.ballot ? latest.node : secondary.node;
