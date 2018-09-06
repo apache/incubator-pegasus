@@ -405,6 +405,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         if (info.create_second > 0) {
             char buf[20];
             dsn::utils::time_ms_to_date_time((uint64_t)info.create_second * 1000, buf, 20);
+            buf[10] = '_';
             create_time = buf;
         }
         std::string drop_time = "-";
@@ -415,11 +416,13 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             if (info.drop_second > 0) {
                 char buf[20];
                 dsn::utils::time_ms_to_date_time((uint64_t)info.drop_second * 1000, buf, 20);
+                buf[10] = '_';
                 drop_time = buf;
             }
             if (info.expire_second > 0) {
                 char buf[20];
                 dsn::utils::time_ms_to_date_time((uint64_t)info.expire_second * 1000, buf, 20);
+                buf[10] = '_';
                 drop_expire_time = buf;
             }
         }
@@ -1554,6 +1557,30 @@ bool replication_ddl_client::print_table(const std::vector<std::vector<std::stri
     }
 
     return true;
+}
+
+dsn::error_code
+replication_ddl_client::ddd_diagnose(gpid pid, std::vector<ddd_partition_info> &ddd_partitions)
+{
+    std::shared_ptr<ddd_diagnose_request> req(new ddd_diagnose_request());
+    req->pid = pid;
+
+    auto resp_task = request_meta<ddd_diagnose_request>(RPC_CM_DDD_DIAGNOSE, req);
+
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK) {
+        return resp_task->error();
+    }
+
+    ddd_diagnose_response resp;
+    dsn::unmarshall(resp_task->get_response(), resp);
+    if (resp.err != dsn::ERR_OK) {
+        return resp.err;
+    }
+
+    ddd_partitions = std::move(resp.partitions);
+
+    return dsn::ERR_OK;
 }
 }
 } // namespace

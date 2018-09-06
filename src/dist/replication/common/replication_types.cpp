@@ -12141,5 +12141,627 @@ void duplication_sync_response::printTo(std::ostream &out) const
         << "dup_map=" << to_string(dup_map);
     out << ")";
 }
+
+ddd_diagnose_request::~ddd_diagnose_request() throw() {}
+
+void ddd_diagnose_request::__set_pid(const ::dsn::gpid &val) { this->pid = val; }
+
+uint32_t ddd_diagnose_request::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->pid.read(iprot);
+                this->__isset.pid = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t ddd_diagnose_request::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("ddd_diagnose_request");
+
+    xfer += oprot->writeFieldBegin("pid", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->pid.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(ddd_diagnose_request &a, ddd_diagnose_request &b)
+{
+    using ::std::swap;
+    swap(a.pid, b.pid);
+    swap(a.__isset, b.__isset);
+}
+
+ddd_diagnose_request::ddd_diagnose_request(const ddd_diagnose_request &other539)
+{
+    pid = other539.pid;
+    __isset = other539.__isset;
+}
+ddd_diagnose_request::ddd_diagnose_request(ddd_diagnose_request &&other540)
+{
+    pid = std::move(other540.pid);
+    __isset = std::move(other540.__isset);
+}
+ddd_diagnose_request &ddd_diagnose_request::operator=(const ddd_diagnose_request &other541)
+{
+    pid = other541.pid;
+    __isset = other541.__isset;
+    return *this;
+}
+ddd_diagnose_request &ddd_diagnose_request::operator=(ddd_diagnose_request &&other542)
+{
+    pid = std::move(other542.pid);
+    __isset = std::move(other542.__isset);
+    return *this;
+}
+void ddd_diagnose_request::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "ddd_diagnose_request(";
+    out << "pid=" << to_string(pid);
+    out << ")";
+}
+
+ddd_node_info::~ddd_node_info() throw() {}
+
+void ddd_node_info::__set_node(const ::dsn::rpc_address &val) { this->node = val; }
+
+void ddd_node_info::__set_drop_time_ms(const int64_t val) { this->drop_time_ms = val; }
+
+void ddd_node_info::__set_is_alive(const bool val) { this->is_alive = val; }
+
+void ddd_node_info::__set_is_collected(const bool val) { this->is_collected = val; }
+
+void ddd_node_info::__set_ballot(const int64_t val) { this->ballot = val; }
+
+void ddd_node_info::__set_last_committed_decree(const int64_t val)
+{
+    this->last_committed_decree = val;
+}
+
+void ddd_node_info::__set_last_prepared_decree(const int64_t val)
+{
+    this->last_prepared_decree = val;
+}
+
+uint32_t ddd_node_info::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->node.read(iprot);
+                this->__isset.node = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->drop_time_ms);
+                this->__isset.drop_time_ms = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 3:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->is_alive);
+                this->__isset.is_alive = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 4:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->is_collected);
+                this->__isset.is_collected = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 5:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->ballot);
+                this->__isset.ballot = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 6:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->last_committed_decree);
+                this->__isset.last_committed_decree = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 7:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->last_prepared_decree);
+                this->__isset.last_prepared_decree = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t ddd_node_info::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("ddd_node_info");
+
+    xfer += oprot->writeFieldBegin("node", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->node.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("drop_time_ms", ::apache::thrift::protocol::T_I64, 2);
+    xfer += oprot->writeI64(this->drop_time_ms);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("is_alive", ::apache::thrift::protocol::T_BOOL, 3);
+    xfer += oprot->writeBool(this->is_alive);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("is_collected", ::apache::thrift::protocol::T_BOOL, 4);
+    xfer += oprot->writeBool(this->is_collected);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("ballot", ::apache::thrift::protocol::T_I64, 5);
+    xfer += oprot->writeI64(this->ballot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("last_committed_decree", ::apache::thrift::protocol::T_I64, 6);
+    xfer += oprot->writeI64(this->last_committed_decree);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("last_prepared_decree", ::apache::thrift::protocol::T_I64, 7);
+    xfer += oprot->writeI64(this->last_prepared_decree);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(ddd_node_info &a, ddd_node_info &b)
+{
+    using ::std::swap;
+    swap(a.node, b.node);
+    swap(a.drop_time_ms, b.drop_time_ms);
+    swap(a.is_alive, b.is_alive);
+    swap(a.is_collected, b.is_collected);
+    swap(a.ballot, b.ballot);
+    swap(a.last_committed_decree, b.last_committed_decree);
+    swap(a.last_prepared_decree, b.last_prepared_decree);
+    swap(a.__isset, b.__isset);
+}
+
+ddd_node_info::ddd_node_info(const ddd_node_info &other543)
+{
+    node = other543.node;
+    drop_time_ms = other543.drop_time_ms;
+    is_alive = other543.is_alive;
+    is_collected = other543.is_collected;
+    ballot = other543.ballot;
+    last_committed_decree = other543.last_committed_decree;
+    last_prepared_decree = other543.last_prepared_decree;
+    __isset = other543.__isset;
+}
+ddd_node_info::ddd_node_info(ddd_node_info &&other544)
+{
+    node = std::move(other544.node);
+    drop_time_ms = std::move(other544.drop_time_ms);
+    is_alive = std::move(other544.is_alive);
+    is_collected = std::move(other544.is_collected);
+    ballot = std::move(other544.ballot);
+    last_committed_decree = std::move(other544.last_committed_decree);
+    last_prepared_decree = std::move(other544.last_prepared_decree);
+    __isset = std::move(other544.__isset);
+}
+ddd_node_info &ddd_node_info::operator=(const ddd_node_info &other545)
+{
+    node = other545.node;
+    drop_time_ms = other545.drop_time_ms;
+    is_alive = other545.is_alive;
+    is_collected = other545.is_collected;
+    ballot = other545.ballot;
+    last_committed_decree = other545.last_committed_decree;
+    last_prepared_decree = other545.last_prepared_decree;
+    __isset = other545.__isset;
+    return *this;
+}
+ddd_node_info &ddd_node_info::operator=(ddd_node_info &&other546)
+{
+    node = std::move(other546.node);
+    drop_time_ms = std::move(other546.drop_time_ms);
+    is_alive = std::move(other546.is_alive);
+    is_collected = std::move(other546.is_collected);
+    ballot = std::move(other546.ballot);
+    last_committed_decree = std::move(other546.last_committed_decree);
+    last_prepared_decree = std::move(other546.last_prepared_decree);
+    __isset = std::move(other546.__isset);
+    return *this;
+}
+void ddd_node_info::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "ddd_node_info(";
+    out << "node=" << to_string(node);
+    out << ", "
+        << "drop_time_ms=" << to_string(drop_time_ms);
+    out << ", "
+        << "is_alive=" << to_string(is_alive);
+    out << ", "
+        << "is_collected=" << to_string(is_collected);
+    out << ", "
+        << "ballot=" << to_string(ballot);
+    out << ", "
+        << "last_committed_decree=" << to_string(last_committed_decree);
+    out << ", "
+        << "last_prepared_decree=" << to_string(last_prepared_decree);
+    out << ")";
+}
+
+ddd_partition_info::~ddd_partition_info() throw() {}
+
+void ddd_partition_info::__set_config(const ::dsn::partition_configuration &val)
+{
+    this->config = val;
+}
+
+void ddd_partition_info::__set_dropped(const std::vector<ddd_node_info> &val)
+{
+    this->dropped = val;
+}
+
+void ddd_partition_info::__set_reason(const std::string &val) { this->reason = val; }
+
+uint32_t ddd_partition_info::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->config.read(iprot);
+                this->__isset.config = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_LIST) {
+                {
+                    this->dropped.clear();
+                    uint32_t _size547;
+                    ::apache::thrift::protocol::TType _etype550;
+                    xfer += iprot->readListBegin(_etype550, _size547);
+                    this->dropped.resize(_size547);
+                    uint32_t _i551;
+                    for (_i551 = 0; _i551 < _size547; ++_i551) {
+                        xfer += this->dropped[_i551].read(iprot);
+                    }
+                    xfer += iprot->readListEnd();
+                }
+                this->__isset.dropped = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 3:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->reason);
+                this->__isset.reason = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t ddd_partition_info::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("ddd_partition_info");
+
+    xfer += oprot->writeFieldBegin("config", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->config.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("dropped", ::apache::thrift::protocol::T_LIST, 2);
+    {
+        xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
+                                      static_cast<uint32_t>(this->dropped.size()));
+        std::vector<ddd_node_info>::const_iterator _iter552;
+        for (_iter552 = this->dropped.begin(); _iter552 != this->dropped.end(); ++_iter552) {
+            xfer += (*_iter552).write(oprot);
+        }
+        xfer += oprot->writeListEnd();
+    }
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("reason", ::apache::thrift::protocol::T_STRING, 3);
+    xfer += oprot->writeString(this->reason);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(ddd_partition_info &a, ddd_partition_info &b)
+{
+    using ::std::swap;
+    swap(a.config, b.config);
+    swap(a.dropped, b.dropped);
+    swap(a.reason, b.reason);
+    swap(a.__isset, b.__isset);
+}
+
+ddd_partition_info::ddd_partition_info(const ddd_partition_info &other553)
+{
+    config = other553.config;
+    dropped = other553.dropped;
+    reason = other553.reason;
+    __isset = other553.__isset;
+}
+ddd_partition_info::ddd_partition_info(ddd_partition_info &&other554)
+{
+    config = std::move(other554.config);
+    dropped = std::move(other554.dropped);
+    reason = std::move(other554.reason);
+    __isset = std::move(other554.__isset);
+}
+ddd_partition_info &ddd_partition_info::operator=(const ddd_partition_info &other555)
+{
+    config = other555.config;
+    dropped = other555.dropped;
+    reason = other555.reason;
+    __isset = other555.__isset;
+    return *this;
+}
+ddd_partition_info &ddd_partition_info::operator=(ddd_partition_info &&other556)
+{
+    config = std::move(other556.config);
+    dropped = std::move(other556.dropped);
+    reason = std::move(other556.reason);
+    __isset = std::move(other556.__isset);
+    return *this;
+}
+void ddd_partition_info::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "ddd_partition_info(";
+    out << "config=" << to_string(config);
+    out << ", "
+        << "dropped=" << to_string(dropped);
+    out << ", "
+        << "reason=" << to_string(reason);
+    out << ")";
+}
+
+ddd_diagnose_response::~ddd_diagnose_response() throw() {}
+
+void ddd_diagnose_response::__set_err(const ::dsn::error_code &val) { this->err = val; }
+
+void ddd_diagnose_response::__set_partitions(const std::vector<ddd_partition_info> &val)
+{
+    this->partitions = val;
+}
+
+uint32_t ddd_diagnose_response::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->err.read(iprot);
+                this->__isset.err = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_LIST) {
+                {
+                    this->partitions.clear();
+                    uint32_t _size557;
+                    ::apache::thrift::protocol::TType _etype560;
+                    xfer += iprot->readListBegin(_etype560, _size557);
+                    this->partitions.resize(_size557);
+                    uint32_t _i561;
+                    for (_i561 = 0; _i561 < _size557; ++_i561) {
+                        xfer += this->partitions[_i561].read(iprot);
+                    }
+                    xfer += iprot->readListEnd();
+                }
+                this->__isset.partitions = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t ddd_diagnose_response::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("ddd_diagnose_response");
+
+    xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->err.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("partitions", ::apache::thrift::protocol::T_LIST, 2);
+    {
+        xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
+                                      static_cast<uint32_t>(this->partitions.size()));
+        std::vector<ddd_partition_info>::const_iterator _iter562;
+        for (_iter562 = this->partitions.begin(); _iter562 != this->partitions.end(); ++_iter562) {
+            xfer += (*_iter562).write(oprot);
+        }
+        xfer += oprot->writeListEnd();
+    }
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(ddd_diagnose_response &a, ddd_diagnose_response &b)
+{
+    using ::std::swap;
+    swap(a.err, b.err);
+    swap(a.partitions, b.partitions);
+    swap(a.__isset, b.__isset);
+}
+
+ddd_diagnose_response::ddd_diagnose_response(const ddd_diagnose_response &other563)
+{
+    err = other563.err;
+    partitions = other563.partitions;
+    __isset = other563.__isset;
+}
+ddd_diagnose_response::ddd_diagnose_response(ddd_diagnose_response &&other564)
+{
+    err = std::move(other564.err);
+    partitions = std::move(other564.partitions);
+    __isset = std::move(other564.__isset);
+}
+ddd_diagnose_response &ddd_diagnose_response::operator=(const ddd_diagnose_response &other565)
+{
+    err = other565.err;
+    partitions = other565.partitions;
+    __isset = other565.__isset;
+    return *this;
+}
+ddd_diagnose_response &ddd_diagnose_response::operator=(ddd_diagnose_response &&other566)
+{
+    err = std::move(other566.err);
+    partitions = std::move(other566.partitions);
+    __isset = std::move(other566.__isset);
+    return *this;
+}
+void ddd_diagnose_response::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "ddd_diagnose_response(";
+    out << "err=" << to_string(err);
+    out << ", "
+        << "partitions=" << to_string(partitions);
+    out << ")";
+}
 }
 } // namespace

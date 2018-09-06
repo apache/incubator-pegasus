@@ -121,6 +121,10 @@ public:
     //
     virtual void unregister_ctrl_commands() {}
 
+    void get_ddd_partitions(gpid pid, std::vector<ddd_partition_info> &partitions);
+    void set_ddd_partition(ddd_partition_info &&partition);
+    void clear_ddd_partitions();
+
 public:
     typedef std::function<bool(const rpc_address &addr1, const rpc_address &addr2)> node_comparator;
     typedef std::function<bool(const node_state &ns)> node_filter;
@@ -178,6 +182,9 @@ public:
 protected:
     meta_service *_svc;
     perf_counter_wrapper _recent_choose_primary_fail_count;
+
+    mutable zlock _ddd_partitions_lock;
+    std::map<gpid, ddd_partition_info> _ddd_partitions;
 };
 
 class simple_load_balancer : public server_load_balancer

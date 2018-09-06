@@ -312,6 +312,8 @@ void meta_service::register_rpc_handlers()
                          &meta_service::on_query_restore_status);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_UPDATE_APP_ENV, "update_app_env(set/del/clear)", &meta_service::update_app_env);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_DDD_DIAGNOSE, "ddd_diagnose", &meta_service::ddd_diagnose);
 }
 
 int meta_service::check_leader(dsn::message_ex *req)
@@ -720,6 +722,15 @@ void meta_service::update_app_env(app_env_rpc env_rpc)
             "recv a invalid update_app_env request with op = APP_ENV_OP_INVALID";
         break;
     }
+}
+
+void meta_service::ddd_diagnose(ddd_diagnose_rpc rpc)
+{
+    auto &response = rpc.response();
+    RPC_CHECK_STATUS(rpc.dsn_request(), response);
+
+    get_balancer()->get_ddd_partitions(rpc.request().pid, response.partitions);
+    response.err = ERR_OK;
 }
 }
 }

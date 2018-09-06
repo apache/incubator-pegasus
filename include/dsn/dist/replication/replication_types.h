@@ -303,6 +303,14 @@ class duplication_sync_request;
 
 class duplication_sync_response;
 
+class ddd_diagnose_request;
+
+class ddd_node_info;
+
+class ddd_partition_info;
+
+class ddd_diagnose_response;
+
 typedef struct _mutation_header__isset
 {
     _mutation_header__isset()
@@ -5138,6 +5146,261 @@ public:
 void swap(duplication_sync_response &a, duplication_sync_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const duplication_sync_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _ddd_diagnose_request__isset
+{
+    _ddd_diagnose_request__isset() : pid(false) {}
+    bool pid : 1;
+} _ddd_diagnose_request__isset;
+
+class ddd_diagnose_request
+{
+public:
+    ddd_diagnose_request(const ddd_diagnose_request &);
+    ddd_diagnose_request(ddd_diagnose_request &&);
+    ddd_diagnose_request &operator=(const ddd_diagnose_request &);
+    ddd_diagnose_request &operator=(ddd_diagnose_request &&);
+    ddd_diagnose_request() {}
+
+    virtual ~ddd_diagnose_request() throw();
+    ::dsn::gpid pid;
+
+    _ddd_diagnose_request__isset __isset;
+
+    void __set_pid(const ::dsn::gpid &val);
+
+    bool operator==(const ddd_diagnose_request &rhs) const
+    {
+        if (!(pid == rhs.pid))
+            return false;
+        return true;
+    }
+    bool operator!=(const ddd_diagnose_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const ddd_diagnose_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(ddd_diagnose_request &a, ddd_diagnose_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const ddd_diagnose_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _ddd_node_info__isset
+{
+    _ddd_node_info__isset()
+        : node(false),
+          drop_time_ms(false),
+          is_alive(false),
+          is_collected(false),
+          ballot(false),
+          last_committed_decree(false),
+          last_prepared_decree(false)
+    {
+    }
+    bool node : 1;
+    bool drop_time_ms : 1;
+    bool is_alive : 1;
+    bool is_collected : 1;
+    bool ballot : 1;
+    bool last_committed_decree : 1;
+    bool last_prepared_decree : 1;
+} _ddd_node_info__isset;
+
+class ddd_node_info
+{
+public:
+    ddd_node_info(const ddd_node_info &);
+    ddd_node_info(ddd_node_info &&);
+    ddd_node_info &operator=(const ddd_node_info &);
+    ddd_node_info &operator=(ddd_node_info &&);
+    ddd_node_info()
+        : drop_time_ms(0),
+          is_alive(0),
+          is_collected(0),
+          ballot(0),
+          last_committed_decree(0),
+          last_prepared_decree(0)
+    {
+    }
+
+    virtual ~ddd_node_info() throw();
+    ::dsn::rpc_address node;
+    int64_t drop_time_ms;
+    bool is_alive;
+    bool is_collected;
+    int64_t ballot;
+    int64_t last_committed_decree;
+    int64_t last_prepared_decree;
+
+    _ddd_node_info__isset __isset;
+
+    void __set_node(const ::dsn::rpc_address &val);
+
+    void __set_drop_time_ms(const int64_t val);
+
+    void __set_is_alive(const bool val);
+
+    void __set_is_collected(const bool val);
+
+    void __set_ballot(const int64_t val);
+
+    void __set_last_committed_decree(const int64_t val);
+
+    void __set_last_prepared_decree(const int64_t val);
+
+    bool operator==(const ddd_node_info &rhs) const
+    {
+        if (!(node == rhs.node))
+            return false;
+        if (!(drop_time_ms == rhs.drop_time_ms))
+            return false;
+        if (!(is_alive == rhs.is_alive))
+            return false;
+        if (!(is_collected == rhs.is_collected))
+            return false;
+        if (!(ballot == rhs.ballot))
+            return false;
+        if (!(last_committed_decree == rhs.last_committed_decree))
+            return false;
+        if (!(last_prepared_decree == rhs.last_prepared_decree))
+            return false;
+        return true;
+    }
+    bool operator!=(const ddd_node_info &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const ddd_node_info &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(ddd_node_info &a, ddd_node_info &b);
+
+inline std::ostream &operator<<(std::ostream &out, const ddd_node_info &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _ddd_partition_info__isset
+{
+    _ddd_partition_info__isset() : config(false), dropped(false), reason(false) {}
+    bool config : 1;
+    bool dropped : 1;
+    bool reason : 1;
+} _ddd_partition_info__isset;
+
+class ddd_partition_info
+{
+public:
+    ddd_partition_info(const ddd_partition_info &);
+    ddd_partition_info(ddd_partition_info &&);
+    ddd_partition_info &operator=(const ddd_partition_info &);
+    ddd_partition_info &operator=(ddd_partition_info &&);
+    ddd_partition_info() : reason() {}
+
+    virtual ~ddd_partition_info() throw();
+    ::dsn::partition_configuration config;
+    std::vector<ddd_node_info> dropped;
+    std::string reason;
+
+    _ddd_partition_info__isset __isset;
+
+    void __set_config(const ::dsn::partition_configuration &val);
+
+    void __set_dropped(const std::vector<ddd_node_info> &val);
+
+    void __set_reason(const std::string &val);
+
+    bool operator==(const ddd_partition_info &rhs) const
+    {
+        if (!(config == rhs.config))
+            return false;
+        if (!(dropped == rhs.dropped))
+            return false;
+        if (!(reason == rhs.reason))
+            return false;
+        return true;
+    }
+    bool operator!=(const ddd_partition_info &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const ddd_partition_info &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(ddd_partition_info &a, ddd_partition_info &b);
+
+inline std::ostream &operator<<(std::ostream &out, const ddd_partition_info &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _ddd_diagnose_response__isset
+{
+    _ddd_diagnose_response__isset() : err(false), partitions(false) {}
+    bool err : 1;
+    bool partitions : 1;
+} _ddd_diagnose_response__isset;
+
+class ddd_diagnose_response
+{
+public:
+    ddd_diagnose_response(const ddd_diagnose_response &);
+    ddd_diagnose_response(ddd_diagnose_response &&);
+    ddd_diagnose_response &operator=(const ddd_diagnose_response &);
+    ddd_diagnose_response &operator=(ddd_diagnose_response &&);
+    ddd_diagnose_response() {}
+
+    virtual ~ddd_diagnose_response() throw();
+    ::dsn::error_code err;
+    std::vector<ddd_partition_info> partitions;
+
+    _ddd_diagnose_response__isset __isset;
+
+    void __set_err(const ::dsn::error_code &val);
+
+    void __set_partitions(const std::vector<ddd_partition_info> &val);
+
+    bool operator==(const ddd_diagnose_response &rhs) const
+    {
+        if (!(err == rhs.err))
+            return false;
+        if (!(partitions == rhs.partitions))
+            return false;
+        return true;
+    }
+    bool operator!=(const ddd_diagnose_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const ddd_diagnose_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(ddd_diagnose_response &a, ddd_diagnose_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const ddd_diagnose_response &obj)
 {
     obj.printTo(out);
     return out;

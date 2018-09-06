@@ -178,6 +178,8 @@ public:
                      std::ostream &output,
                      const std::string &column_delimiter = "   ");
 
+    dsn::error_code ddd_diagnose(gpid pid, std::vector<ddd_partition_info> &ddd_partitions);
+
 private:
     bool static valid_app_char(int c);
 

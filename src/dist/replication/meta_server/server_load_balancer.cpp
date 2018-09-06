@@ -219,6 +219,40 @@ void server_load_balancer::apply_balancer(meta_view view, const migration_list &
     }
 }
 
+void server_load_balancer::get_ddd_partitions(gpid pid, std::vector<ddd_partition_info> &partitions)
+{
+    zauto_lock l(_ddd_partitions_lock);
+    if (pid.get_app_id() == -1) {
+        partitions.reserve(_ddd_partitions.size());
+        for (const auto &kv : _ddd_partitions) {
+            partitions.push_back(kv.second);
+        }
+    } else if (pid.get_partition_index() == -1) {
+        for (const auto &kv : _ddd_partitions) {
+            if (kv.first.get_app_id() == pid.get_app_id()) {
+                partitions.push_back(kv.second);
+            }
+        }
+    } else {
+        auto find = _ddd_partitions.find(pid);
+        if (find != _ddd_partitions.end()) {
+            partitions.push_back(find->second);
+        }
+    }
+}
+
+void server_load_balancer::set_ddd_partition(ddd_partition_info &&partition)
+{
+    zauto_lock l(_ddd_partitions_lock);
+    _ddd_partitions[partition.config.pid] = std::move(partition);
+}
+
+void server_load_balancer::clear_ddd_partitions()
+{
+    zauto_lock l(_ddd_partitions_lock);
+    _ddd_partitions.clear();
+}
+
 void simple_load_balancer::reconfig(meta_view view, const configuration_update_request &request)
 {
     const dsn::gpid &gpid = request.config.pid;
@@ -456,6 +490,7 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
         // when considering how to handle the DDD state, we must keep in mind that our
         // shared/private-log data only write to OS-cache.
         // so the last removed replica can't act as primary directly.
+        std::string reason;
         config_context &cc = *get_config_context(*view.apps, gpid);
         action.node.set_invalid();
         for (int i = 0; i < cc.dropped.size(); ++i) {
@@ -476,10 +511,18 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
         }
 
         for (int i = 0; i < pc.last_drops.size(); ++i) {
-            ddebug("%s: config_context.last_drop[%d]: node(%s)",
+            int dropped_index = -1;
+            for (int k = 0; k < cc.dropped.size(); k++) {
+                if (cc.dropped[k].node == pc.last_drops[i]) {
+                    dropped_index = k;
+                    break;
+                }
+            }
+            ddebug("%s: config_context.last_drops[%d]: node(%s), dropped_index(%d)",
                    gpid_name,
                    i,
-                   pc.last_drops[i].to_string());
+                   pc.last_drops[i].to_string(),
+                   dropped_index);
         }
 
         if (pc.last_drops.size() == 1) {
@@ -492,7 +535,7 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
             std::vector<dropped_replica> collected_info(2);
             bool ready = true;
 
-            ddebug("%s: last two drops are %s and %s",
+            ddebug("%s: last two drops are %s and %s (the latest dropped)",
                    gpid_name,
                    nodes[0].to_string(),
                    nodes[1].to_string());
@@ -500,10 +543,10 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
             for (unsigned int i = 0; i < nodes.size(); ++i) {
                 node_state *ns = get_node_state(*view.nodes, nodes[i], false);
                 if (ns == nullptr || !ns->alive()) {
-                    dwarn("%s: last dropped node %s haven't come back yet",
-                          gpid_name,
-                          nodes[i].to_string());
                     ready = false;
+                    reason = "the last dropped node(" + nodes[i].to_std_string() +
+                             ") haven't come back yet";
+                    dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
                 } else {
                     std::vector<dropped_replica>::iterator it = cc.find_from_dropped(nodes[i]);
                     if (it == cc.dropped.end() || it->ballot == invalid_ballot) {
@@ -514,13 +557,15 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
                                    nodes[i].to_string());
                             collected_info[i] = {nodes[i], 0, -1, -1, -1};
                         } else {
-                            ddebug("%s: last dropped node %s's info haven't been collected, "
-                                   "reason(%s)",
-                                   gpid_name,
-                                   nodes[i].to_string(),
-                                   it == cc.dropped.end() ? "item not exist in dropped"
-                                                          : "no ballot/decree info");
                             ready = false;
+                            reason = "the last dropped node(" + nodes[i].to_std_string() +
+                                     ") is unavailable because ";
+                            if (it == cc.dropped.end()) {
+                                reason += "the node is not exist in dropped_nodes";
+                            } else {
+                                reason += "replica info has not been collected from the node";
+                            }
+                            dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
                         }
                     } else {
                         collected_info[i] = *it;
@@ -530,8 +575,8 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
 
             if (ready && collected_info[0].ballot == -1 && collected_info[1].ballot == -1) {
                 ready = false;
-                ddebug("%s: don't select primary as no info collected from non of last two drops",
-                       gpid_name);
+                reason = "no replica info collected from the last two drops";
+                dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
             }
 
             if (ready) {
@@ -550,10 +595,13 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
                                                  recent_dead.last_prepared_decree);
                     if (larger_pd >= pc.last_committed_decree && larger_pd >= larger_cd) {
                         if (gap1 != 0) {
+                            // 1. choose node with larger ballot
                             action.node = gap1 < 0 ? recent_dead.node : previous_dead.node;
                         } else if (gap2 != 0) {
+                            // 2. choose node with larger last_committed_decree
                             action.node = gap2 < 0 ? recent_dead.node : previous_dead.node;
                         } else {
+                            // 3. choose node with larger last_prepared_decree
                             action.node = previous_dead.last_prepared_decree >
                                                   recent_dead.last_prepared_decree
                                               ? previous_dead.node
@@ -562,18 +610,20 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
                         ddebug(
                             "%s: select %s as a new primary", gpid_name, action.node.to_string());
                     } else {
-                        ddebug("%s: don't select primary: larger_prepared_decree(%" PRId64 "), "
-                               "last committed decree on meta(%" PRId64
-                               "), larger_committed_decree(%" PRId64 ")",
-                               gpid_name,
-                               larger_pd,
-                               pc.last_committed_decree,
-                               larger_cd);
+                        char buf[1000];
+                        sprintf(buf,
+                                "for the last two drops, larger_prepared_decree(%" PRId64 "), "
+                                "last committed decree on meta(%" PRId64 "), "
+                                "larger_committed_decree(%" PRId64 ")",
+                                larger_pd,
+                                pc.last_committed_decree,
+                                larger_cd);
+                        dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
                     }
                 } else {
-                    ddebug("%s: don't select primary as the node with larger "
-                           "ballot has smaller last prepared decree",
-                           gpid_name);
+                    reason = "for the last two drops, the node with larger ballot has smaller last "
+                             "committed decree";
+                    dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
                 }
             }
         }
@@ -589,6 +639,30 @@ pc_status simple_load_balancer::on_missing_primary(meta_view &view, const dsn::g
                   "a proper one by shell",
                   gpid_name);
             _recent_choose_primary_fail_count->increment();
+            ddd_partition_info pinfo;
+            pinfo.config = pc;
+            for (int i = 0; i < cc.dropped.size(); ++i) {
+                const dropped_replica &dr = cc.dropped[i];
+                ddd_node_info ninfo;
+                ninfo.node = dr.node;
+                ninfo.drop_time_ms = dr.time;
+                ninfo.ballot = invalid_ballot;
+                ninfo.last_committed_decree = invalid_decree;
+                ninfo.last_prepared_decree = invalid_decree;
+                node_state *ns = get_node_state(*view.nodes, dr.node, false);
+                if (ns != nullptr && ns->alive()) {
+                    ninfo.is_alive = true;
+                    if (ns->has_collected()) {
+                        ninfo.is_collected = true;
+                        ninfo.ballot = dr.ballot;
+                        ninfo.last_committed_decree = dr.last_committed_decree;
+                        ninfo.last_prepared_decree = dr.last_prepared_decree;
+                    }
+                }
+                pinfo.dropped.emplace_back(std::move(ninfo));
+            }
+            pinfo.reason = reason;
+            set_ddd_partition(std::move(pinfo));
         }
 
         result = pc_status::dead;

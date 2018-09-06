@@ -2327,6 +2327,7 @@ bool server_state::check_all_partitions()
            "add_secondary_max_count_for_one_node = %d",
            _add_secondary_enable_flow_control ? "true" : "false",
            _add_secondary_max_count_for_one_node);
+    _meta_svc->get_balancer()->clear_ddd_partitions();
     int send_proposal_count = 0;
     std::vector<configuration_proposal_action> add_secondary_actions;
     std::vector<gpid> add_secondary_gpids;

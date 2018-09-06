@@ -63,6 +63,7 @@ DEFINE_TASK_CODE(LPC_DEFAULT_CALLBACK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DE
 
 typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
     app_env_rpc;
+typedef rpc_holder<ddd_diagnose_request, ddd_diagnose_response> ddd_diagnose_rpc;
 
 class meta_service : public serverlet<meta_service>
 {
@@ -148,6 +149,9 @@ private:
 
     // app env operations
     void update_app_env(app_env_rpc env_rpc);
+
+    // ddd diagnose
+    void ddd_diagnose(ddd_diagnose_rpc rpc);
 
     // cluster info
     void on_query_cluster_info(dsn::message_ex *req);
