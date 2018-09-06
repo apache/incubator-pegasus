@@ -375,7 +375,14 @@ static command_executor commands[] = {
         "del_app_envs", "delete current app envs", "<key> [key...]", del_app_envs,
     },
     {
-        "clear_app_envs", "clear current app envs", "<-a|--all> <-p|--prefix str>", clear_app_envs,
+        "clear_app_envs", "clear current app envs", "[-a|--all] [-p|--prefix str]", clear_app_envs,
+    },
+    {
+        "ddd_diagnose",
+        "diagnose three-dead partitions",
+        "[-g|--gpid appid|appid.pidx] [-d|--diagnose] [-a|--auto_diagnose] "
+        "[-s|--skip_prompt] [-o|--output file_name]",
+        ddd_diagnose,
     },
     {
         "exit", "exit shell", "", exit_shell,
