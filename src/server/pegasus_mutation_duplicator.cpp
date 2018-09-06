@@ -115,8 +115,13 @@ void pegasus_mutation_duplicator::send(duplicate_rpc rpc, callback cb)
 
             if (err == dsn::ERR_OK) {
                 err = dsn::error_code(rpc.response().error);
+            }
+            if (err == dsn::ERR_OK) {
                 /// failure is not taken into latency calculation
                 _duplicate_latency->set(dsn_now_ns() - start);
+
+                dsn::service::zauto_lock _(_lock);
+                _total_duplicated += 1;
             } else {
                 _duplicate_failed_qps->increment();
                 derror_replica("failed to ship mutation: {}, remote: {}", err, _remote_cluster);
@@ -133,7 +138,7 @@ void pegasus_mutation_duplicator::send(duplicate_rpc rpc, callback cb)
                 dsn::service::zauto_lock _(_lock);
                 _inflights.erase(rpc);
                 if (_inflights.empty()) {
-                    _request_hash_set.clear();
+                    ddebug_replica("total duplicated: ", _total_duplicated);
                     cb(_failed, std::move(_pendings));
                 }
             }
@@ -143,6 +148,7 @@ void pegasus_mutation_duplicator::send(duplicate_rpc rpc, callback cb)
 void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb)
 {
     _failed = false;
+    _request_hash_set.clear();
 
     for (auto mut : muts) {
         uint64_t timestamp = std::get<0>(mut);

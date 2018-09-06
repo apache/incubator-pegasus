@@ -42,6 +42,7 @@ private:
     std::set<duplicate_rpc> _inflights;
     dsn::service::zlock _lock;
     bool _failed{false};
+    uint64_t _total_duplicated{0};
 
     dsn::perf_counter_wrapper _duplicate_qps;
     dsn::perf_counter_wrapper _duplicate_failed_qps;

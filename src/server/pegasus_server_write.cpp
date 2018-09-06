@@ -4,6 +4,7 @@
 
 #include <dsn/cpp/message_utils.h>
 #include <dsn/dist/replication/duplication_common.h>
+#include <dsn/utility/defer.h>
 
 #include "base/pegasus_key_schema.h"
 #include "pegasus_server_write.h"
@@ -81,6 +82,12 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
     dassert(remote_timetag > 0, "timetag field is not set in duplicate_request");
     _write_ctx = db_write_context::create_duplicate(_decree, remote_timetag);
 
+    auto cleanup = dsn::defer([this]() {
+        uint64_t latency_us =
+            _write_ctx.timestamp - extract_timestamp_from_timetag(_write_ctx.remote_timetag);
+        _total_duplicate_latency->set(static_cast<int64_t>(latency_us * 1000));
+    });
+
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         // Consider the case where multi_put failed due to invalid argument,
         // though multi_put is responded with error, since the write
@@ -116,10 +123,6 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
         }
         return resp.error;
     }
-
-    int64_t latency_us =
-        _write_ctx.timestamp - extract_timestamp_from_timetag(_write_ctx.remote_timetag);
-    _total_duplicate_latency->set(latency_us * 1000);
 
     dfatal_replica("invalid rpc: {}", rpc_code.to_string());
     __builtin_unreachable();
