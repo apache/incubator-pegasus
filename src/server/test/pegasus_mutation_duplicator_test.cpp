@@ -65,7 +65,7 @@ TEST(pegasus_mutation_duplicator, read_after_get_hash_key)
     uint64_t hash =
         pegasus::pegasus_hash_key_hash(dsn::blob(hash_key.data(), 0, hash_key.length()));
 
-    dsn_message_t msg;
+    dsn::message_ex *msg;
     {
         dsn::apps::update_request request;
         pegasus::pegasus_generate_key(request.key, hash_key, sort_key);

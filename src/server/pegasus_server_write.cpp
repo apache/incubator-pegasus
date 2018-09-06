@@ -133,7 +133,6 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
     __builtin_unreachable();
 }
 
-int pegasus_server_write::on_batched_writes(dsn_message_t *requests, int count)
 int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int count)
 {
     int err = 0;

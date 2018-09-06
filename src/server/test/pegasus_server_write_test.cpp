@@ -116,7 +116,7 @@ public:
                 mput.kvs.back().key.assign(sort_key[i].data(), 0, sort_key[i].size());
                 mput.kvs.back().value.assign(value[i].data(), 0, value[i].size());
             }
-            dsn_message_t mput_msg = pegasus::create_multi_put_request(mput);
+            dsn::message_ex* mput_msg = pegasus::create_multi_put_request(mput);
 
             duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_PUT;
             duplicate.raw_message = dsn::move_message_to_blob(mput_msg);
@@ -131,7 +131,7 @@ public:
                 mremove.sort_keys.emplace_back();
                 mremove.sort_keys.back().assign(sort_key[i].data(), 0, sort_key[i].size());
             }
-            dsn_message_t mremove_msg = pegasus::create_multi_remove_request(mremove);
+            dsn::message_ex* mremove_msg = pegasus::create_multi_remove_request(mremove);
 
             duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
             duplicate.raw_message = dsn::move_message_to_blob(mremove_msg);
