@@ -17,15 +17,19 @@ namespace server {
 class pegasus_mutation_duplicator : public dsn::replication::mutation_duplicator,
                                     public dsn::replication::replica_base
 {
+    using mutation_tuple_set = dsn::replication::mutation_tuple_set;
+    using mutation_tuple = dsn::replication::mutation_tuple;
+    using duplicate_rpc = dsn::apps::duplicate_rpc;
+
 public:
     pegasus_mutation_duplicator(const dsn::replication::replica_base &r,
                                 dsn::string_view remote_cluster,
                                 dsn::string_view app);
 
-    void duplicate(dsn::replication::mutation_tuple_set muts, callback cb) override;
+    void duplicate(mutation_tuple_set muts, callback cb) override;
 
 private:
-    void send(dsn::apps::duplicate_rpc rpc, callback cb);
+    void send(duplicate_rpc rpc, callback cb);
 
 private:
     client::pegasus_client_impl *_client;
@@ -33,9 +37,11 @@ private:
     uint8_t _remote_cluster_id{0};
     std::string _remote_cluster;
 
-    std::set<uint64_t> _partition_hash_set;
-    dsn::replication::mutation_tuple_set _pending;
+    std::set<uint64_t> _request_hash_set;
+    mutation_tuple_set _pendings;
+    std::set<duplicate_rpc> _inflights;
     dsn::service::zlock _lock;
+    bool _failed{false};
 
     dsn::perf_counter_wrapper _duplicate_qps;
     dsn::perf_counter_wrapper _duplicate_failed_qps;

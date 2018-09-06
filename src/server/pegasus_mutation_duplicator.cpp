@@ -108,9 +108,11 @@ static bool is_delete_operation(dsn::task_code code)
 void pegasus_mutation_duplicator::send(duplicate_rpc rpc, callback cb)
 {
     uint64_t start = dsn_now_ns();
+
     _client->async_duplicate(
         rpc, [ cb = std::move(cb), rpc, start, this ](dsn::error_code err) mutable {
             _duplicate_qps->increment();
+
             if (err == dsn::ERR_OK) {
                 err = dsn::error_code(rpc.response().error);
                 /// failure is not taken into latency calculation
@@ -118,26 +120,35 @@ void pegasus_mutation_duplicator::send(duplicate_rpc rpc, callback cb)
             } else {
                 _duplicate_failed_qps->increment();
                 derror_replica("failed to ship mutation: {}, remote: {}", err, _remote_cluster);
+                _failed = true;
 
-                dsn::replication::mutation_tuple mt =
-                    std::make_tuple(rpc.request().timetag,
-                                    rpc.request().task_code,
-                                    std::move(rpc.request().raw_message));
-                {
-                    dsn::service::zauto_lock _(_lock);
-                    _pending.insert(mt);
+                // retry in next batch
+                uint64_t timestamp = extract_timestamp_from_timetag(rpc.request().timetag);
+                mutation_tuple mt =
+                    std::make_tuple(timestamp, rpc.request().task_code, rpc.request().raw_message);
+                _pendings.insert(std::move(mt));
+            }
+
+            {
+                dsn::service::zauto_lock _(_lock);
+                _inflights.erase(rpc);
+                if (_inflights.empty()) {
+                    _request_hash_set.clear();
+                    cb(_failed, std::move(_pendings));
                 }
             }
         });
 }
 
-void pegasus_mutation_duplicator::duplicate(dsn::replication::mutation_tuple_set muts, callback cb)
+void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb)
 {
-    for (const auto &mut : muts) {
+    _failed = false;
+
+    for (auto mut : muts) {
         uint64_t timestamp = std::get<0>(mut);
         dsn::task_code rpc_code = std::get<1>(mut);
         dsn::blob data = std::get<2>(mut);
-        uint64_t hash, timetag;
+        uint64_t hash;
 
         // must be a write
         dsn::task_spec *task = dsn::task_spec::get(rpc_code);
@@ -150,7 +161,7 @@ void pegasus_mutation_duplicator::duplicate(dsn::replication::mutation_tuple_set
             dsn::apps::duplicate_request dreq;
             dsn::from_blob_to_thrift(data, dreq);
 
-            timetag = static_cast<uint64_t>(dreq.timetag);
+            auto timetag = static_cast<uint64_t>(dreq.timetag);
             uint8_t from_cluster_id = extract_cluster_id_from_timetag(timetag);
             if (from_cluster_id == _remote_cluster_id) {
                 // ignore this mutation to prevent infinite duplication loop.
@@ -160,33 +171,35 @@ void pegasus_mutation_duplicator::duplicate(dsn::replication::mutation_tuple_set
             hash = static_cast<uint64_t>(dreq.hash);
             data = std::move(dreq.raw_message);
             rpc_code = dreq.task_code;
+            timestamp = extract_timestamp_from_timetag(timetag);
         } else {
             hash = get_hash_from_request(rpc_code, data);
-            timetag = generate_timetag(
-                timestamp, get_current_cluster_id(), is_delete_operation(rpc_code));
         }
 
-        if (_partition_hash_set.find(hash) != _partition_hash_set.end()) {
-            _pending.insert(mut);
+        mut = std::make_tuple(timestamp, rpc_code, data);
+        if (_request_hash_set.find(hash) != _request_hash_set.end()) {
+            _pendings.insert(mut);
         } else {
-            _partition_hash_set.insert(hash);
+            _request_hash_set.insert(hash);
 
-            // send immediately if it doesn't make conflict
             auto dreq = dsn::make_unique<dsn::apps::duplicate_request>();
             dreq->task_code = rpc_code;
             dreq->hash = hash;
             dreq->raw_message = std::move(data);
-            dreq->timetag = timetag;
+            dreq->timetag = generate_timetag(
+                timestamp, get_current_cluster_id(), is_delete_operation(rpc_code));
             duplicate_rpc rpc(std::move(dreq),
                               dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
                               10_s, // TODO(wutao1): configurable timeout.
                               hash);
-            send(std::move(rpc), cb);
+            _inflights.insert(std::move(rpc));
         }
     }
 
-    _partition_hash_set.clear();
-    cb(std::move(_pending));
+    dsn::service::zauto_lock _(_lock);
+    for (auto drpc : _inflights) {
+        send(std::move(drpc), cb);
+    }
 }
 
 } // namespace server
