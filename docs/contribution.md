@@ -14,8 +14,8 @@ After installed clang-format, you can format your code by the ".clang-format" co
 
 Basically, we follow the google-code-style, except for: 
 
-* We prefer to using reference rather than pointers for return value of functions.
-* The compilition of headers is controlled by "#progma once"
+* We prefer to use reference rather than pointers for return value of functions.
+* The compilation of headers is controlled by "#progma once"
 
 Reason for these exceptions is that we develop Pegasus based on Microsoft's open-source project [rDSN](https://github.com/Microsoft/rDSN), and we just follow its rules. Currently we fork a new repo on this project, and modification on our repo is hard to merge though we've made lots contributes to it.
 

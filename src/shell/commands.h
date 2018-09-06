@@ -1454,6 +1454,251 @@ inline bool check_and_set(command_executor *e, shell_context *sc, arguments args
     return true;
 }
 
+inline int mutation_check(int args_count, sds *args)
+{
+    int ret = -2;
+    if (args_count > 0) {
+        std::string op = unescape_str(args[0]);
+        if (op == "abort")
+            ret = -1;
+        else if (op == "ok")
+            ret = 0;
+        else if (op == "set" && (args_count == 3 || args_count == 4))
+            ret = 1;
+        else if (op == "del" && args_count == 2)
+            ret = 2;
+    }
+    return ret;
+}
+
+inline int load_mutations(shell_context *sc, pegasus::pegasus_client::mutations &mutations)
+{
+    while (true) {
+        int arg_count = 0;
+        sds *args = scanfCommand(&arg_count);
+        auto cleanup = dsn::defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
+        escape_sds_argv(arg_count, args);
+
+        std::string sort_key, value;
+        int ttl = 0;
+        int status = mutation_check(arg_count, args);
+        switch (status) {
+        case -1:
+            fprintf(stderr, "INFO: abort loading\n");
+            return -1;
+        case 0:
+            fprintf(stderr, "INFO: load mutations done.\n\n");
+            return 0;
+        case 1: // SET
+            ttl = 0;
+            if (arg_count == 4) {
+                if (!dsn::buf2int32(args[3], ttl)) {
+                    fprintf(stderr,
+                            "ERROR: parse \"%s\" as ttl failed, "
+                            "print \"ok\" to finish loading, print \"abort\" to abort this "
+                            "command\n",
+                            args[3]);
+                    break;
+                }
+                if (ttl <= 0) {
+                    fprintf(stderr,
+                            "ERROR: invalid ttl %s, "
+                            "print \"ok\" to finish loading, print \"abort\" to abort this "
+                            "command\n",
+                            args[3]);
+                    break;
+                }
+            }
+            sort_key = unescape_str(args[1]);
+            value = unescape_str(args[2]);
+            fprintf(stderr,
+                    "LOAD: set sortkey \"%s\", value \"%s\", ttl %d\n",
+                    pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str(),
+                    pegasus::utils::c_escape_string(value, sc->escape_all).c_str(),
+                    ttl);
+            mutations.set(sort_key, value, ttl);
+            break;
+        case 2: // DEL
+            sort_key = unescape_str(args[1]);
+            fprintf(stderr,
+                    "LOAD: del sortkey \"%s\"\n",
+                    pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str());
+            mutations.del(sort_key);
+            break;
+        default:
+            fprintf(stderr, "ERROR: invalid mutation, print \"ok\" to finish loading\n");
+            break;
+        }
+    }
+    return 0;
+}
+
+inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc < 2)
+        return false;
+
+    std::string hash_key = sds_to_string(args.argv[1]);
+    bool check_sort_key_provided = false;
+    std::string check_sort_key;
+    ::dsn::apps::cas_check_type::type check_type = ::dsn::apps::cas_check_type::CT_NO_CHECK;
+    std::string check_type_name;
+    bool check_operand_provided = false;
+    std::string check_operand;
+    pegasus::pegasus_client::mutations mutations;
+
+    pegasus::pegasus_client::check_and_mutate_options options;
+    static struct option long_options[] = {{"check_sort_key", required_argument, 0, 'c'},
+                                           {"check_type", required_argument, 0, 't'},
+                                           {"check_operand", required_argument, 0, 'o'},
+                                           {"return_check_value", no_argument, 0, 'r'},
+                                           {0, 0, 0, 0}};
+
+    escape_sds_argv(args.argc, args.argv);
+    std::string str;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "c:t:o:r", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'c':
+            check_sort_key_provided = true;
+            check_sort_key = unescape_str(optarg);
+            break;
+        case 't':
+            check_type = type_from_string(::dsn::apps::_cas_check_type_VALUES_TO_NAMES,
+                                          std::string("ct_value_") + optarg,
+                                          ::dsn::apps::cas_check_type::CT_NO_CHECK);
+            if (check_type == ::dsn::apps::cas_check_type::CT_NO_CHECK) {
+                fprintf(stderr, "ERROR: invalid check_type param\n");
+                return false;
+            }
+            check_type_name = optarg;
+            break;
+        case 'o':
+            check_operand_provided = true;
+            check_operand = unescape_str(optarg);
+            break;
+        case 'r':
+            options.return_check_value = true;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    if (!check_sort_key_provided) {
+        fprintf(stderr, "ERROR: check_sort_key not provided\n");
+        return false;
+    }
+    if (check_type == ::dsn::apps::cas_check_type::CT_NO_CHECK) {
+        fprintf(stderr, "ERROR: check_type not provided\n");
+        return false;
+    }
+    if (!check_operand_provided &&
+        check_type >= ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
+        fprintf(stderr, "ERROR: check_operand not provided\n");
+        return false;
+    }
+
+    fprintf(stderr,
+            "Load mutations, like\n"
+            "  set <sort_key> <value> [ttl]\n"
+            "  del <sort_key>\n"
+            "Print \"ok\" to finish loading, \"abort\" to abort this command\n");
+    if (load_mutations(sc, mutations)) {
+        fprintf(stderr, "INFO: abort check_and_mutate command\n");
+        return true;
+    }
+    if (mutations.is_empty()) {
+        fprintf(stderr, "ERROR: mutations not provided\n");
+        return false;
+    }
+
+    fprintf(stderr, "hash_key: \"%s\"\n", pegasus::utils::c_escape_string(hash_key).c_str());
+    fprintf(stderr,
+            "check_sort_key: \"%s\"\n",
+            pegasus::utils::c_escape_string(check_sort_key).c_str());
+    fprintf(stderr, "check_type: %s\n", check_type_name.c_str());
+    if (check_type >= ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
+        fprintf(stderr,
+                "check_operand: \"%s\"\n",
+                pegasus::utils::c_escape_string(check_operand).c_str());
+    }
+    fprintf(stderr, "return_check_value: %s\n", options.return_check_value ? "true" : "false");
+
+    std::vector<::dsn::apps::mutate> copy_of_mutations;
+    mutations.get_mutations(copy_of_mutations);
+    fprintf(stderr, "mutations:\n");
+    for (int i = 0; i < copy_of_mutations.size(); ++i) {
+        if (copy_of_mutations[i].operation == ::dsn::apps::mutate_operation::MO_PUT) {
+            fprintf(
+                stderr,
+                "  mutation[%d].type: SET\n  mutation[%d].sort_key: \"%s\"\n  "
+                "mutation[%d].value: "
+                "\"%s\"\n  mutation[%d].expire_seconds: %d\n",
+                i,
+                i,
+                pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key.to_string()).c_str(),
+                i,
+                pegasus::utils::c_escape_string(copy_of_mutations[i].value.to_string()).c_str(),
+                i,
+                copy_of_mutations[i].set_expire_ts_seconds);
+        } else {
+            fprintf(
+                stderr,
+                "  mutation[%d].type: DEL\n  mutation[%d].sort_key: \"%s\"\n",
+                i,
+                i,
+                pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key.to_string()).c_str());
+        }
+    }
+    fprintf(stderr, "\n");
+
+    pegasus::pegasus_client::check_and_mutate_results results;
+    pegasus::pegasus_client::internal_info info;
+    int ret = sc->pg_client->check_and_mutate(hash_key,
+                                              check_sort_key,
+                                              (pegasus::pegasus_client::cas_check_type)check_type,
+                                              check_operand,
+                                              mutations,
+                                              options,
+                                              results,
+                                              sc->timeout_ms,
+                                              &info);
+    if (ret != pegasus::PERR_OK) {
+        fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
+    } else {
+        if (results.mutate_succeed) {
+            fprintf(stderr, "Mutate succeed.\n");
+        } else {
+            fprintf(stderr, "Mutate failed, because check not passed.\n");
+        }
+        if (results.check_value_returned) {
+            fprintf(stderr, "\n");
+            if (results.check_value_exist) {
+                fprintf(
+                    stderr,
+                    "Check value: \"%s\"\n",
+                    pegasus::utils::c_escape_string(results.check_value, sc->escape_all).c_str());
+            } else {
+                fprintf(stderr, "Check value not exist.\n");
+            }
+        }
+    }
+
+    fprintf(stderr, "\n");
+    fprintf(stderr, "app_id          : %d\n", info.app_id);
+    fprintf(stderr, "partition_index : %d\n", info.partition_index);
+    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fprintf(stderr, "server          : %s\n", info.server.c_str());
+
+    return true;
+}
+
 inline bool get_ttl(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc != 3) {
@@ -2593,6 +2838,7 @@ inline bool data_operations(command_executor *e, shell_context *sc, arguments ar
         {"multi_del_range", multi_del_range},
         {"incr", incr},
         {"check_and_set", check_and_set},
+        {"check_and_mutate", check_and_mutate},
         {"exist", exist},
         {"count", sortkey_count},
         {"ttl", get_ttl},
@@ -2729,13 +2975,13 @@ inline bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream &os = *os_ptr;
 
-    std::function<void(int64_t decree, int64_t timestamp, dsn_message_t * requests, int count)>
+    std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex * *requests, int count)>
         callback;
     if (detailed) {
         callback = [&os, sc](
-            int64_t decree, int64_t timestamp, dsn_message_t *requests, int count) mutable {
+            int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count) mutable {
             for (int i = 0; i < count; ++i) {
-                dsn_message_t request = requests[i];
+                dsn::message_ex *request = requests[i];
                 dassert(request != nullptr, "");
                 ::dsn::message_ex *msg = (::dsn::message_ex *)request;
                 if (msg->local_rpc_code == RPC_REPLICATION_WRITE_EMPTY) {
@@ -3406,7 +3652,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         << std::setw(w) << std::right << "PUT" << std::setw(w) << std::right << "MPUT"
         << std::setw(w) << std::right << "DEL" << std::setw(w) << std::right << "MDEL"
         << std::setw(w) << std::right << "INCR" << std::setw(w) << std::right << "CAS"
-        << std::setw(w) << std::right << "SCAN";
+        << std::setw(w) << std::right << "CAM" << std::setw(w) << std::right << "SCAN";
     if (!only_qps) {
         out << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
             << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "file_mb"
@@ -3425,6 +3671,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.multi_remove_qps += row.multi_remove_qps;
         sum.incr_qps += row.incr_qps;
         sum.check_and_set_qps += row.check_and_set_qps;
+        sum.check_and_mutate_qps += row.check_and_mutate_qps;
         sum.scan_qps += row.scan_qps;
         sum.recent_expire_count += row.recent_expire_count;
         sum.recent_filter_count += row.recent_filter_count;
@@ -3450,6 +3697,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         PRINT_QPS(multi_remove_qps);
         PRINT_QPS(incr_qps);
         PRINT_QPS(check_and_set_qps);
+        PRINT_QPS(check_and_mutate_qps);
         PRINT_QPS(scan_qps);
         if (!only_qps) {
             out << std::setw(w) << std::right << (int64_t)row.recent_expire_count << std::setw(w)
@@ -4060,5 +4308,234 @@ inline bool clear_app_envs(command_executor *e, shell_context *sc, arguments arg
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "clear app envs failed with err = %s\n", ret.to_string());
     }
+    return true;
+}
+
+inline dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo)
+{
+    if (pinfo.config.last_drops.size() < 2)
+        return dsn::rpc_address();
+
+    std::vector<dsn::rpc_address> last_two_nodes(pinfo.config.last_drops.end() - 2,
+                                                 pinfo.config.last_drops.end());
+    std::vector<ddd_node_info> last_dropped;
+    for (auto &node : last_two_nodes) {
+        auto it = std::find_if(pinfo.dropped.begin(),
+                               pinfo.dropped.end(),
+                               [&node](const ddd_node_info &r) { return r.node == node; });
+        if (it->is_alive && it->is_collected)
+            last_dropped.push_back(*it);
+    }
+
+    if (last_dropped.size() == 1) {
+        const ddd_node_info &ninfo = last_dropped.back();
+        if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree)
+            return ninfo.node;
+    } else if (last_dropped.size() == 2) {
+        const ddd_node_info &secondary = last_dropped.front();
+        const ddd_node_info &latest = last_dropped.back();
+
+        // Select a best node to be the new primary, following the rule:
+        //  - choose the node with the largest last committed decree
+        //  - if last committed decree is the same, choose node with the largest ballot
+
+        if (latest.last_committed_decree == secondary.last_committed_decree &&
+            latest.last_committed_decree >= pinfo.config.last_committed_decree)
+            return latest.ballot >= secondary.ballot ? latest.node : secondary.node;
+
+        if (latest.last_committed_decree > secondary.last_committed_decree &&
+            latest.last_committed_decree >= pinfo.config.last_committed_decree)
+            return latest.node;
+
+        if (secondary.last_committed_decree > latest.last_committed_decree &&
+            secondary.last_committed_decree >= pinfo.config.last_committed_decree)
+            return secondary.node;
+    }
+
+    return dsn::rpc_address();
+}
+
+inline bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"gpid", required_argument, 0, 'g'},
+                                           {"diagnose", no_argument, 0, 'd'},
+                                           {"auto_diagnose", no_argument, 0, 'a'},
+                                           {"skip_prompt", no_argument, 0, 's'},
+                                           {"output", required_argument, 0, 'o'},
+                                           {0, 0, 0, 0}};
+
+    std::string out_file;
+    dsn::gpid id(-1, -1);
+    bool diagnose = false;
+    bool auto_diagnose = false;
+    bool skip_prompt = false;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "g:daso:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'g':
+            int pid;
+            if (id.parse_from(optarg)) {
+                // app_id.partition_index
+            } else if (sscanf(optarg, "%d", &pid) == 1) {
+                // app_id
+                id.set_app_id(pid);
+            } else {
+                fprintf(stderr, "ERROR: invalid gpid %s\n", optarg);
+                return false;
+            }
+            break;
+        case 'd':
+            diagnose = true;
+            break;
+        case 'a':
+            auto_diagnose = true;
+            break;
+        case 's':
+            skip_prompt = true;
+            break;
+        case 'o':
+            out_file = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    std::vector<ddd_partition_info> ddd_partitions;
+    ::dsn::error_code ret = sc->ddl_client->ddd_diagnose(id, ddd_partitions);
+    if (ret != dsn::ERR_OK) {
+        fprintf(stderr, "ERROR: DDD diagnose failed with err = %s\n", ret.to_string());
+        return true;
+    }
+
+    std::streambuf *buf;
+    std::ofstream of;
+
+    if (!out_file.empty()) {
+        of.open(out_file);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    out << "Total " << ddd_partitions.size() << " ddd partitions:" << std::endl;
+    out << std::endl;
+    int proposed_count = 0;
+    int i = 0;
+    for (const ddd_partition_info &pinfo : ddd_partitions) {
+        out << "(" << ++i << ") " << pinfo.config.pid.to_string() << std::endl;
+        out << "    config: ballot(" << pinfo.config.ballot << "), "
+            << "last_committed(" << pinfo.config.last_committed_decree << ")" << std::endl;
+        out << "    ----" << std::endl;
+        dsn::rpc_address latest_dropped, secondary_latest_dropped;
+        if (pinfo.config.last_drops.size() > 0)
+            latest_dropped = pinfo.config.last_drops[pinfo.config.last_drops.size() - 1];
+        if (pinfo.config.last_drops.size() > 1)
+            secondary_latest_dropped = pinfo.config.last_drops[pinfo.config.last_drops.size() - 2];
+        int j = 0;
+        for (const ddd_node_info &n : pinfo.dropped) {
+            char time_buf[30];
+            ::dsn::utils::time_ms_to_string(n.drop_time_ms, time_buf);
+            out << "    dropped[" << j++ << "]: "
+                << "node(" << n.node.to_string() << "), "
+                << "drop_time(" << time_buf << "), "
+                << "alive(" << (n.is_alive ? "true" : "false") << "), "
+                << "collected(" << (n.is_collected ? "true" : "false") << "), "
+                << "ballot(" << n.ballot << "), "
+                << "last_committed(" << n.last_committed_decree << "), "
+                << "last_prepared(" << n.last_prepared_decree << ")";
+            if (n.node == latest_dropped)
+                out << "  <== the latest";
+            else if (n.node == secondary_latest_dropped)
+                out << "  <== the secondary latest";
+            out << std::endl;
+        }
+        out << "    ----" << std::endl;
+        j = 0;
+        for (const ::dsn::rpc_address &r : pinfo.config.last_drops) {
+            out << "    last_drops[" << j++ << "]: "
+                << "node(" << r.to_string() << ")";
+            if (j == (int)pinfo.config.last_drops.size() - 1)
+                out << "  <== the secondary latest";
+            else if (j == (int)pinfo.config.last_drops.size())
+                out << "  <== the latest";
+            out << std::endl;
+        }
+        out << "    ----" << std::endl;
+        out << "    ddd_reason: " << pinfo.reason << std::endl;
+        if (diagnose) {
+            out << "    ----" << std::endl;
+
+            dsn::rpc_address primary = diagnose_recommend(pinfo);
+            out << "    recommend_primary: "
+                << (primary.is_invalid() ? "none" : primary.to_string());
+            if (primary == latest_dropped)
+                out << "  <== the latest";
+            else if (primary == secondary_latest_dropped)
+                out << "  <== the secondary latest";
+            out << std::endl;
+
+            bool skip_this = false;
+            if (!primary.is_invalid() && !auto_diagnose && !skip_prompt) {
+                do {
+                    std::cout << "    > Are you sure to use the recommend primary? [y/n/s(skip)]: ";
+                    char c;
+                    std::cin >> c;
+                    if (c == 'y') {
+                        break;
+                    } else if (c == 'n') {
+                        primary.set_invalid();
+                        break;
+                    } else if (c == 's') {
+                        skip_this = true;
+                        std::cout << "    > You have choosed to skip diagnosing this partition."
+                                  << std::endl;
+                        break;
+                    }
+                } while (true);
+            }
+
+            if (primary.is_invalid() && !skip_prompt && !skip_this) {
+                do {
+                    std::cout << "    > Please input the primary node: ";
+                    std::string addr;
+                    std::cin >> addr;
+                    if (primary.from_string_ipv4(addr.c_str())) {
+                        break;
+                    } else {
+                        std::cout << "    > Sorry, you have input an invalid node address."
+                                  << std::endl;
+                    }
+                } while (true);
+            }
+
+            if (!primary.is_invalid() && !skip_this) {
+                dsn::replication::configuration_balancer_request request;
+                request.gpid = pinfo.config.pid;
+                request.action_list = {configuration_proposal_action{
+                    primary, primary, config_type::CT_ASSIGN_PRIMARY}};
+                request.force = false;
+                dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
+                out << "    propose_request: propose -g " << request.gpid.to_string()
+                    << " -p ASSIGN_PRIMARY -t " << primary.to_string() << " -n "
+                    << primary.to_string() << std::endl;
+                out << "    propose_response: " << err.to_string() << std::endl;
+                proposed_count++;
+            } else {
+                out << "    propose_request: none" << std::endl;
+            }
+        }
+        out << std::endl;
+        out << "Proposed count: " << proposed_count << "/" << ddd_partitions.size() << std::endl;
+        out << std::endl;
+    }
+
+    std::cout << "Diagnose ddd done." << std::endl;
     return true;
 }

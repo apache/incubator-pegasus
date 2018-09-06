@@ -11,29 +11,29 @@
 
 namespace pegasus {
 
-inline dsn_message_t create_multi_put_request(const dsn::apps::multi_put_request &request)
+inline dsn::message_ex *create_multi_put_request(const dsn::apps::multi_put_request &request)
 {
     return dsn::from_thrift_request_to_received_message(request,
                                                         dsn::apps::RPC_RRDB_RRDB_MULTI_PUT);
 }
 
-inline dsn_message_t create_multi_remove_request(const dsn::apps::multi_remove_request &request)
+inline dsn::message_ex *create_multi_remove_request(const dsn::apps::multi_remove_request &request)
 {
     return dsn::from_thrift_request_to_received_message(request,
                                                         dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE);
 }
 
-inline dsn_message_t create_put_request(const dsn::apps::update_request &request)
+inline dsn::message_ex *create_put_request(const dsn::apps::update_request &request)
 {
     return dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
 }
 
-inline dsn_message_t create_remove_request(const dsn::blob &key)
+inline dsn::message_ex *create_remove_request(const dsn::blob &key)
 {
     return dsn::from_thrift_request_to_received_message(key, dsn::apps::RPC_RRDB_RRDB_REMOVE);
 }
 
-inline dsn_message_t create_incr_request(const dsn::apps::incr_request &request)
+inline dsn::message_ex *create_incr_request(const dsn::apps::incr_request &request)
 {
     return dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_INCR);
 }

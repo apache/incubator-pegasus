@@ -43,9 +43,9 @@ proxy_stub::proxy_stub(const proxy_session::factory &f,
     open_service();
 }
 
-void proxy_stub::on_rpc_request(dsn_message_t request)
+void proxy_stub::on_rpc_request(dsn::message_ex *request)
 {
-    ::dsn::rpc_address source = dsn_msg_from_address(request);
+    ::dsn::rpc_address source = request->header->from_address;
     std::shared_ptr<proxy_session> ps;
     {
         ::dsn::service::zauto_read_lock l(_lock);
@@ -68,9 +68,9 @@ void proxy_stub::on_rpc_request(dsn_message_t request)
     ps->on_recv_request(request);
 }
 
-void proxy_stub::on_recv_remove_session_request(dsn_message_t request)
+void proxy_stub::on_recv_remove_session_request(dsn::message_ex *request)
 {
-    ::dsn::rpc_address source = dsn_msg_from_address(request);
+    ::dsn::rpc_address source = request->header->from_address;
     std::shared_ptr<proxy_session> ps = remove_session(source);
     if (ps != nullptr) {
         ps->on_remove_session();
@@ -91,13 +91,13 @@ std::shared_ptr<proxy_session> proxy_stub::remove_session(dsn::rpc_address remot
     return result;
 }
 
-proxy_session::proxy_session(proxy_stub *op, dsn_message_t first_msg)
+proxy_session::proxy_session(proxy_stub *op, dsn::message_ex *first_msg)
     : stub(op), is_session_reset(false), backup_one_request(first_msg)
 {
     dassert(first_msg != nullptr, "null msg when create session");
-    dsn_msg_add_ref(backup_one_request);
+    backup_one_request->add_ref();
 
-    remote_address = dsn_msg_from_address(backup_one_request);
+    remote_address = backup_one_request->header->from_address;
     dassert(remote_address.type() == HOST_TYPE_IPV4,
             "invalid rpc_address type, type = %d",
             (int)remote_address.type());
@@ -105,11 +105,11 @@ proxy_session::proxy_session(proxy_stub *op, dsn_message_t first_msg)
 
 proxy_session::~proxy_session()
 {
-    dsn_msg_release_ref(backup_one_request);
+    backup_one_request->release_ref();
     ddebug("proxy session %s destroyed", remote_address.to_string());
 }
 
-void proxy_session::on_recv_request(dsn_message_t msg)
+void proxy_session::on_recv_request(dsn::message_ex *msg)
 {
     // NOTICE:
     // 1. in the implementation of "parse", the msg may add_ref & release_ref.
@@ -131,9 +131,6 @@ void proxy_session::on_recv_request(dsn_message_t msg)
 
 void proxy_session::on_remove_session() { is_session_reset.store(true); }
 
-dsn_message_t proxy_session::create_response()
-{
-    return dsn_msg_create_response(backup_one_request);
-}
+dsn::message_ex *proxy_session::create_response() { return backup_one_request->create_response(); }
 }
 } // namespace

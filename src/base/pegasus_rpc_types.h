@@ -24,4 +24,7 @@ using check_and_set_rpc =
 
 using duplicate_rpc = dsn::apps::duplicate_rpc;
 
+using check_and_mutate_rpc =
+    dsn::rpc_holder<dsn::apps::check_and_mutate_request, dsn::apps::check_and_mutate_response>;
+
 } // namespace pegasus

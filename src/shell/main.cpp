@@ -196,6 +196,19 @@ static command_executor commands[] = {
         data_operations,
     },
     {
+        "check_and_mutate",
+        "atomically check and mutate",
+        "<hash_key> "
+        "[-c|--check_sort_key str] "
+        "[-t|--check_type not_exist|not_exist_or_empty|exist|not_empty] "
+        "[match_anywhere|match_prefix|match_postfix] "
+        "[bytes_less|bytes_less_or_equal|bytes_equal|bytes_greater_or_equal|bytes_greater] "
+        "[int_less|int_less_or_equal|int_equal|int_greater_or_equal|int_greater] "
+        "[-o|--check_operand str] "
+        "[-r|--return_check_value]",
+        data_operations,
+    },
+    {
         "exist", "check value exist", "<hash_key> <sort_key>", data_operations,
     },
     {
@@ -363,7 +376,14 @@ static command_executor commands[] = {
         "del_app_envs", "delete current app envs", "<key> [key...]", del_app_envs,
     },
     {
-        "clear_app_envs", "clear current app envs", "<-a|--all> <-p|--prefix str>", clear_app_envs,
+        "clear_app_envs", "clear current app envs", "[-a|--all] [-p|--prefix str]", clear_app_envs,
+    },
+    {
+        "ddd_diagnose",
+        "diagnose three-dead partitions",
+        "[-g|--gpid appid|appid.pidx] [-d|--diagnose] [-a|--auto_diagnose] "
+        "[-s|--skip_prompt] [-o|--output file_name]",
+        ddd_diagnose,
     },
     {"add_dup", "add duplication", "<app_name> <remote_cluster_address>", add_dup},
     {"query_dup", "query duplication info", "<app_name>", query_dup},
@@ -556,7 +576,11 @@ void run()
         if (arg_count > 0) {
             auto iter = s_commands_map.find(args[0]);
             if (iter != s_commands_map.end()) {
+                // command executions(e.g. check_and_mutate) may have the different hints, so cancel
+                // the commands hints temporarily
+                linenoiseSetHintsCallback(nullptr);
                 execute_command(iter->second, arg_count, args);
+                linenoiseSetHintsCallback(hintsCallback);
             } else {
                 std::cout << "ERROR: invalid subcommand '" << args[0] << "'" << std::endl;
                 print_help();

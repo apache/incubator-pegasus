@@ -17,7 +17,7 @@ Message format sent to some single server of Pegasus Cluster:
 
 #### header
 
-The 48 bytes header consists of:
+The 48-byte header consists of:
 
 | bytes | type | comments
 |-------| -----|--------- |
@@ -52,7 +52,7 @@ You should write a thrift "TMessage" in TMessageBegin, the structure of TMessage
 
 ### response from server
 
-responsed got from pegasus server:
+response got from pegasus server:
 
 `
 total_response_length(4 bytes) +  error_code_thrift_struct + response_body
@@ -77,5 +77,5 @@ There are [3 IDL files](https://github.com/XiaoMi/pegasus-java-client/tree/thrif
 * replication.thrift: messages and RPCs used for communicate with meta server. Using generated code is ok.
 * rrdb.thrift: messages and RPCs used for communicate with replica server. Using generated code is ok.
 
-Due to some history reasons, RPC names defined in the IDL can't be reconginzed by server right now. A proper name should be set manually, please refer to [operators](https://github.com/XiaoMi/pegasus-java-client/tree/thrift-0.11.0-inlined/src/main/java/com/xiaomi/infra/pegasus/operator) for details. Besides, you may also need to refer
+Due to some history reasons, RPC names defined in the IDL can't be recognized by server right now. A proper name should be set manually, please refer to [operators](https://github.com/XiaoMi/pegasus-java-client/tree/thrift-0.11.0-inlined/src/main/java/com/xiaomi/infra/pegasus/operator) for details. Besides, you may also need to refer
 to [base](https://github.com/XiaoMi/pegasus-java-client/tree/thrift-0.11.0-inlined/src/main/java/com/xiaomi/infra/pegasus/base) for how to implement serialization for rDSN specific structures.

@@ -170,7 +170,7 @@ void geo_client::async_del(const std::string &hash_key,
         hash_key,
         sort_key,
         [ this, hash_key, sort_key, keep_common_data, timeout_ms, cb = std::move(callback) ](
-            int ec_, std::string &&value_, pegasus::pegasus_client::internal_info &&info_) {
+            int ec_, std::string &&value_, pegasus_client::internal_info &&info_) {
             if (ec_ == PERR_NOT_FOUND) {
                 if (cb != nullptr) {
                     cb(PERR_OK, std::move(info_));
@@ -185,16 +185,28 @@ void geo_client::async_del(const std::string &hash_key,
                 return;
             }
 
+            bool keep_geo_data = false;
             std::string geo_hash_key;
             std::string geo_sort_key;
             if (!generate_geo_keys(hash_key, sort_key, value_, geo_hash_key, geo_sort_key)) {
-                cb(PERR_GEO_DECODE_VALUE_ERROR, pegasus_client::internal_info());
-                return;
+                keep_geo_data = true;
+                dwarn_f("generate_geo_keys failed");
             }
 
             std::shared_ptr<int> ret = std::make_shared<int>(PERR_OK);
             std::shared_ptr<std::atomic<int32_t>> del_count =
-                std::make_shared<std::atomic<int32_t>>(keep_common_data ? 1 : 2);
+                std::make_shared<std::atomic<int32_t>>(2);
+            if (keep_common_data) {
+                del_count->fetch_sub(1);
+            }
+            if (keep_geo_data) {
+                del_count->fetch_sub(1);
+            }
+            if (del_count->load() == 0) {
+                cb(PERR_OK, std::move(pegasus_client::internal_info()));
+                return;
+            }
+
             auto async_del_callback =
                 [=](int ec__, pegasus_client::internal_info &&, DataType data_type_) mutable {
                     if (ec__ != PERR_OK) {
@@ -214,7 +226,9 @@ void geo_client::async_del(const std::string &hash_key,
             if (!keep_common_data) {
                 async_del_common_data(hash_key, sort_key, async_del_callback, timeout_ms);
             }
-            async_del_geo_data(geo_hash_key, geo_sort_key, async_del_callback, timeout_ms);
+            if (!keep_geo_data) {
+                async_del_geo_data(geo_hash_key, geo_sort_key, async_del_callback, timeout_ms);
+            }
         },
         timeout_ms);
 }
@@ -562,7 +576,10 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
     // extract latitude and longitude from value
     S2LatLng latlng;
     if (!_extractor->extract_from_value(value, latlng)) {
-        derror_f("extract_from_value failed. value={}", value);
+        derror_f("extract_from_value failed. hash_key={}, sort_key={}, value={}",
+                 hash_key,
+                 sort_key,
+                 value);
         return false;
     }
 

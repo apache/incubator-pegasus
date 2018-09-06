@@ -43,6 +43,12 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
                                             COUNTER_TYPE_RATE,
                                             "statistic the qps of CHECK_AND_SET request");
 
+    name = fmt::format("check_and_mutate_qps@{}", str_gpid);
+    _pfc_check_and_mutate_qps.init_app_counter("app.pegasus",
+                                               name.c_str(),
+                                               COUNTER_TYPE_RATE,
+                                               "statistic the qps of CHECK_AND_MUTATE request");
+
     name = fmt::format("put_latency@{}", str_gpid);
     _pfc_put_latency.init_app_counter("app.pegasus",
                                       name.c_str(),
@@ -78,6 +84,13 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
                                                 name.c_str(),
                                                 COUNTER_TYPE_NUMBER_PERCENTILES,
                                                 "statistic the latency of CHECK_AND_SET request");
+
+    name = fmt::format("check_and_mutate_latency@{}", str_gpid);
+    _pfc_check_and_mutate_latency.init_app_counter(
+        "app.pegasus",
+        name.c_str(),
+        COUNTER_TYPE_NUMBER_PERCENTILES,
+        "statistic the latency of CHECK_AND_MUTATE request");
 }
 
 pegasus_write_service::~pegasus_write_service() {}
@@ -125,6 +138,17 @@ int pegasus_write_service::check_and_set(int64_t decree,
     _pfc_check_and_set_qps->increment();
     int err = _impl->check_and_set(decree, update, resp);
     _pfc_check_and_set_latency->set(dsn_now_ns() - start_time);
+    return err;
+}
+
+int pegasus_write_service::check_and_mutate(int64_t decree,
+                                            const dsn::apps::check_and_mutate_request &update,
+                                            dsn::apps::check_and_mutate_response &resp)
+{
+    uint64_t start_time = dsn_now_ns();
+    _pfc_check_and_mutate_qps->increment();
+    int err = _impl->check_and_mutate(decree, update, resp);
+    _pfc_check_and_mutate_latency->set(dsn_now_ns() - start_time);
     return err;
 }
 

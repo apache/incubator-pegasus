@@ -30,7 +30,7 @@ public:
             return ::dsn::ERR_INVALID_PARAMETERS;
         }
 
-        proxy_session::factory f = [](proxy_stub *p, dsn_message_t m) {
+        proxy_session::factory f = [](proxy_stub *p, dsn::message_ex *m) {
             return std::make_shared<redis_parser>(p, m);
         };
         _proxy = dsn::make_unique<proxy_stub>(f, args[1].c_str(), args[2].c_str());
@@ -69,7 +69,7 @@ protected:
     }
 
 public:
-    redis_test_parser(proxy_stub *stub, dsn_message_t msg) : redis_parser(stub, msg)
+    redis_test_parser(proxy_stub *stub, dsn::message_ex *msg) : redis_parser(stub, msg)
     {
         reserved_entry.reserve(20);
         for (int i = 0; i < 20; ++i) {
@@ -191,7 +191,7 @@ public:
         std::cout << "test random cases" << std::endl;
 
         int total_requests = 10;
-        std::vector<dsn_message_t> fake_requests;
+        std::vector<dsn::message_ex *> fake_requests;
         int total_body_size = 0;
 
         // create several requests
@@ -214,14 +214,14 @@ public:
                     bs.data.assign(std::move(raw_buf), 0, bs.length);
                 }
             }
-            dsn_message_t fake_response = marshalling_array(ra);
-            dsn_message_t fake_request = dsn_msg_copy(fake_response, true, true);
+            dsn::message_ex *fake_response = marshalling_array(ra);
+            dsn::message_ex *fake_request = fake_response->copy(true, true);
 
-            dsn_msg_add_ref(fake_response);
-            dsn_msg_release_ref(fake_response);
+            fake_response->add_ref();
+            fake_response->release_ref();
 
             fake_requests.push_back(fake_request);
-            total_body_size += dsn_msg_body_size(fake_request);
+            total_body_size += fake_request->body_size();
         }
 
         // let's copy the messages
@@ -229,16 +229,16 @@ public:
                                          std::default_delete<char[]>());
         char *raw_msg_buffer = msg_buffer.get();
 
-        for (dsn_message_t r : fake_requests) {
+        for (dsn::message_ex *r : fake_requests) {
             void *rw_ptr;
             size_t length;
-            while (dsn_msg_read_next(r, &rw_ptr, &length)) {
+            while (r->read_next(&rw_ptr, &length)) {
                 memcpy(raw_msg_buffer, rw_ptr, length);
                 raw_msg_buffer += length;
-                dsn_msg_read_commit(r, length);
+                r->read_commit(length);
             }
-            dsn_msg_add_ref(r);
-            dsn_msg_release_ref(r);
+            r->add_ref();
+            r->release_ref();
         }
         *raw_msg_buffer = 0;
 
@@ -247,7 +247,7 @@ public:
         raw_msg_buffer = msg_buffer.get();
         // first create a big message, test the pipeline
         {
-            dsn_message_t msg = create_message(raw_msg_buffer, total_body_size);
+            dsn::message_ex *msg = create_message(raw_msg_buffer, total_body_size);
             entry_index = 0;
             ASSERT_TRUE(parse(msg));
             ASSERT_EQ(entry_index, total_requests);
@@ -268,7 +268,7 @@ public:
             for (unsigned i = 0; i < start_pos.size() - 1; ++i) {
                 if (start_pos[i] != start_pos[i + 1]) {
                     int length = start_pos[i + 1] - start_pos[i];
-                    dsn_message_t msg = create_message(raw_msg_buffer + start_pos[i], length);
+                    dsn::message_ex *msg = create_message(raw_msg_buffer + start_pos[i], length);
                     ASSERT_TRUE(parse(msg));
                 }
             }
@@ -410,34 +410,30 @@ public:
 
         {
             int ttl_seconds = 0;
-            std::vector<redis_bulk_string> opts({{"SET"},
-                                                 {"KK"},
-                                                 {"vv"},
-                                                 {"EX"},
-                                                 {"123"}});
+            std::vector<redis_bulk_string> opts({{"SET"}, {"KK"}, {"vv"}, {"EX"}, {"123"}});
             parse_set_parameters(opts, ttl_seconds);
             ASSERT_EQ(ttl_seconds, 123);
         }
     }
 
 public:
-    static dsn_message_t create_message(const char *data)
+    static dsn::message_ex *create_message(const char *data)
     {
-        dsn_message_t m = dsn_msg_create_received_request(
-            RPC_CALL_RAW_MESSAGE, DSF_THRIFT_BINARY, (void *)data, strlen(data));
+        dsn::message_ex *m = dsn::message_ex::create_received_request(
+            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, strlen(data));
         return m;
     }
-    static dsn_message_t create_message(const char *data, int length)
+    static dsn::message_ex *create_message(const char *data, int length)
     {
-        dsn_message_t m = dsn_msg_create_received_request(
-            RPC_CALL_RAW_MESSAGE, DSF_THRIFT_BINARY, (void *)data, length);
+        dsn::message_ex *m = dsn::message_ex::create_received_request(
+            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, length);
         return m;
     }
-    static dsn_message_t marshalling_array(const redis_request &ra)
+    static dsn::message_ex *marshalling_array(const redis_request &ra)
     {
-        dsn_message_t m = create_message("dummy");
+        dsn::message_ex *m = create_message("dummy");
 
-        dsn_message_t result = dsn_msg_create_response(m);
+        dsn::message_ex *result = m->create_response();
         ::dsn::rpc_write_stream stream(result);
 
         stream.write_pod('*');
@@ -450,7 +446,7 @@ public:
             ra.buffers[i].marshalling(stream);
         }
 
-        dsn_msg_release_ref(m);
+        m->release_ref();
         return result;
     }
 
@@ -461,9 +457,10 @@ public:
 
 TEST(proxy, parser)
 {
-    dsn_message_t m = nullptr;
+    dsn::message_ex *m = nullptr;
     {
-        m = dsn_msg_create_received_request(RPC_CALL_RAW_MESSAGE, DSF_THRIFT_BINARY, nullptr, 0);
+        m = dsn::message_ex::create_received_request(
+            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, nullptr, 0);
         dsn::message_ex *msg = (dsn::message_ex *)m;
         msg->header->from_address = dsn::rpc_address("127.0.0.1", 123);
     }
@@ -471,7 +468,7 @@ TEST(proxy, parser)
     parser->test_fixed_cases();
     parser->test_random_cases();
     parser->test_parse_parameters();
-    dsn_msg_release_ref(m);
+    m->release_ref();
 }
 
 TEST(proxy, utils)
