@@ -14,8 +14,7 @@ namespace pegasus {
 namespace server {
 
 // Duplicates the loaded mutations to the remote pegasus cluster.
-class pegasus_mutation_duplicator : public dsn::replication::mutation_duplicator,
-                                    public dsn::replication::replica_base
+class pegasus_mutation_duplicator : public dsn::replication::mutation_duplicator
 {
     using mutation_tuple_set = dsn::replication::mutation_tuple_set;
     using mutation_tuple = dsn::replication::mutation_tuple;
@@ -29,7 +28,7 @@ public:
     void duplicate(mutation_tuple_set muts, callback cb) override;
 
 private:
-    void send(duplicate_rpc rpc, callback cb);
+    void send(uint64_t hash, callback cb);
 
 private:
     client::pegasus_client_impl *_client;
@@ -37,12 +36,9 @@ private:
     uint8_t _remote_cluster_id{0};
     std::string _remote_cluster;
 
-    std::set<uint64_t> _request_hash_set;
-    mutation_tuple_set _pendings;
-    std::set<duplicate_rpc> _inflights;
+    // hash -> duplicate_rpc
+    std::map<uint64_t, std::deque<duplicate_rpc>> _inflights;
     dsn::service::zlock _lock;
-    bool _failed{false};
-    uint64_t _total_duplicated{0};
 
     dsn::perf_counter_wrapper _duplicate_qps;
     dsn::perf_counter_wrapper _duplicate_failed_qps;

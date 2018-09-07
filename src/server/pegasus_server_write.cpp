@@ -81,7 +81,8 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
                                        dsn::apps::duplicate_response &resp)
 {
     dsn::task_code rpc_code = request.task_code;
-    dsn::message_ex* write = dsn::from_blob_to_received_msg(rpc_code, dsn::blob(request.raw_message));
+    dsn::message_ex *write =
+        dsn::from_blob_to_received_msg(rpc_code, dsn::blob(request.raw_message));
 
     auto remote_timetag = static_cast<uint64_t>(request.timetag);
     dassert(remote_timetag > 0, "timetag field is not set in duplicate_request");
@@ -189,13 +190,11 @@ void pegasus_server_write::request_key_check(int64_t decree,
                                              dsn::message_ex *m,
                                              const dsn::blob &key)
 {
-    auto msg = (dsn::message_ex *)m;
-    if (msg->header->client.partition_hash != 0) {
+    if (m->header->client.partition_hash != 0) {
         uint64_t partition_hash = pegasus_key_hash(key);
-        dassert(msg->header->client.partition_hash == partition_hash,
-                "inconsistent partition hash");
+        dassert(m->header->client.partition_hash == partition_hash, "inconsistent partition hash");
         int thread_hash = get_gpid().thread_hash();
-        dassert(msg->header->client.thread_hash == thread_hash, "inconsistent thread hash");
+        dassert(m->header->client.thread_hash == thread_hash, "inconsistent thread hash");
     }
 
     if (_verbose_log) {
@@ -205,7 +204,7 @@ void pegasus_server_write::request_key_check(int64_t decree,
         ddebug_rocksdb("Write",
                        "decree: {}, code: {}, hash_key: {}, sort_key: {}",
                        decree,
-                       msg->local_rpc_code.to_string(),
+                       m->local_rpc_code.to_string(),
                        utils::c_escape_string(hash_key),
                        utils::c_escape_string(sort_key));
     }
