@@ -170,6 +170,14 @@ public:
         std::string sort_key;
         std::string value;
         int set_expire_ts_seconds; // 0 means no ttl
+        mutate() : operation(MO_PUT), set_expire_ts_seconds(0) {}
+        mutate(const mutate &o)
+            : operation(o.operation),
+              sort_key(o.sort_key),
+              value(o.value),
+              set_expire_ts_seconds(o.set_expire_ts_seconds)
+        {
+        }
     };
 
     struct mutations
