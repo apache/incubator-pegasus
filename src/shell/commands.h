@@ -1516,14 +1516,14 @@ inline int load_mutations(shell_context *sc, pegasus::pegasus_client::mutations 
                     pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str(),
                     pegasus::utils::c_escape_string(value, sc->escape_all).c_str(),
                     ttl);
-            mutations.set(sort_key, value, ttl);
+            mutations.set(std::move(sort_key), std::move(value), ttl);
             break;
         case 2: // DEL
             sort_key = unescape_str(args[1]);
             fprintf(stderr,
                     "LOAD: del sortkey \"%s\"\n",
                     pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str());
-            mutations.del(sort_key);
+            mutations.del(std::move(sort_key));
             break;
         default:
             fprintf(stderr, "ERROR: invalid mutation, print \"ok\" to finish loading\n");
@@ -1630,30 +1630,29 @@ inline bool check_and_mutate(command_executor *e, shell_context *sc, arguments a
     }
     fprintf(stderr, "return_check_value: %s\n", options.return_check_value ? "true" : "false");
 
-    std::vector<::dsn::apps::mutate> copy_of_mutations;
+    std::vector<pegasus::pegasus_client::mutate> copy_of_mutations;
     mutations.get_mutations(copy_of_mutations);
     fprintf(stderr, "mutations:\n");
     for (int i = 0; i < copy_of_mutations.size(); ++i) {
-        if (copy_of_mutations[i].operation == ::dsn::apps::mutate_operation::MO_PUT) {
-            fprintf(
-                stderr,
-                "  mutation[%d].type: SET\n  mutation[%d].sort_key: \"%s\"\n  "
-                "mutation[%d].value: "
-                "\"%s\"\n  mutation[%d].expire_seconds: %d\n",
-                i,
-                i,
-                pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key.to_string()).c_str(),
-                i,
-                pegasus::utils::c_escape_string(copy_of_mutations[i].value.to_string()).c_str(),
-                i,
-                copy_of_mutations[i].set_expire_ts_seconds);
+        if (copy_of_mutations[i].operation ==
+            pegasus::pegasus_client::mutate::mutate_operation::MO_PUT) {
+            fprintf(stderr,
+                    "  mutation[%d].type: SET\n  mutation[%d].sort_key: \"%s\"\n  "
+                    "mutation[%d].value: "
+                    "\"%s\"\n  mutation[%d].expire_seconds: %d\n",
+                    i,
+                    i,
+                    pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key).c_str(),
+                    i,
+                    pegasus::utils::c_escape_string(copy_of_mutations[i].value).c_str(),
+                    i,
+                    copy_of_mutations[i].set_expire_ts_seconds);
         } else {
-            fprintf(
-                stderr,
-                "  mutation[%d].type: DEL\n  mutation[%d].sort_key: \"%s\"\n",
-                i,
-                i,
-                pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key.to_string()).c_str());
+            fprintf(stderr,
+                    "  mutation[%d].type: DEL\n  mutation[%d].sort_key: \"%s\"\n",
+                    i,
+                    i,
+                    pegasus::utils::c_escape_string(copy_of_mutations[i].sort_key).c_str());
         }
     }
     fprintf(stderr, "\n");

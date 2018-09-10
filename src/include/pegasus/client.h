@@ -13,8 +13,6 @@
 #include <functional>
 #include <memory>
 
-#include <rrdb/rrdb_types.h>
-#include <base/pegasus_utils.h>
 namespace pegasus {
 
 class rrdb_client;
@@ -161,45 +159,80 @@ public:
         }
     };
 
+    struct mutate
+    {
+        enum mutate_operation
+        {
+            MO_PUT = 0,
+            MO_DELETE = 1
+        };
+        mutate_operation operation;
+        std::string sort_key;
+        std::string value;
+        int set_expire_ts_seconds;
+    };
+
     struct mutations
     {
     private:
-        std::vector<::dsn::apps::mutate> _mu_list;
-        std::vector<std::pair<int, int>> _ttl_list;
+        std::vector<mutate> mu_list;
+        std::vector<std::pair<int, int>> ttl_list;
+        static const uint32_t epoch_begin = 1451606400;
 
     public:
-        void set(dsn::string_view sort_key, dsn::string_view value, const int ttl_seconds = 0)
+        void set(const std::string &sort_key, const std::string &value, const int ttl_seconds = 0)
         {
-            ::dsn::apps::mutate mu;
-            mu.operation = ::dsn::apps::mutate_operation::MO_PUT;
-            mu.sort_key = ::dsn::blob::create_from_bytes(sort_key.data(), sort_key.size());
-            mu.value = ::dsn::blob::create_from_bytes(value.data(), value.size());
+            mutate mu;
+            mu.operation = mutate::mutate_operation::MO_PUT;
+            mu.sort_key = sort_key;
+            mu.value = value;
             // set_expire_ts_seconds will be set when check_and_mutate() gets the mutations (by
             // calling get_mutations())
             mu.set_expire_ts_seconds = 0;
-            _mu_list.emplace_back(std::move(mu));
+            mu_list.emplace_back(std::move(mu));
             if (ttl_seconds != 0) {
-                _ttl_list.emplace_back(std::make_pair(_mu_list.size() - 1, ttl_seconds));
+                ttl_list.emplace_back(std::make_pair(mu_list.size() - 1, ttl_seconds));
             }
         }
-        void del(dsn::string_view sort_key)
+        void set(std::string &&sort_key, std::string &&value, const int ttl_seconds = 0)
         {
-            ::dsn::apps::mutate mu;
-            mu.operation = ::dsn::apps::mutate_operation::MO_DELETE;
-            mu.sort_key = ::dsn::blob::create_from_bytes(sort_key.data(), sort_key.size());
+            mutate mu;
+            mu.operation = mutate::mutate_operation::MO_PUT;
+            mu.sort_key = std::move(sort_key);
+            mu.value = std::move(value);
+            // set_expire_ts_seconds will be set when check_and_mutate() gets the mutations (by
+            // calling get_mutations())
             mu.set_expire_ts_seconds = 0;
-            _mu_list.emplace_back(std::move(mu));
+            mu_list.emplace_back(std::move(mu));
+            if (ttl_seconds != 0) {
+                ttl_list.emplace_back(std::make_pair(mu_list.size() - 1, ttl_seconds));
+            }
         }
-        // TODO HW: distinguish copy from deepcopy
-        void get_mutations(std::vector<::dsn::apps::mutate> &mutations) const
+        void del(const std::string &sort_key)
         {
-            int current_time = ::pegasus::utils::epoch_now();
-            mutations = _mu_list;
-            for (auto &pair : _ttl_list) {
+            mutate mu;
+            mu.operation = mutate::mutate_operation::MO_DELETE;
+            mu.sort_key = std::move(sort_key);
+            mu.set_expire_ts_seconds = 0;
+            mu_list.emplace_back(std::move(mu));
+        }
+        void del(std::string &&sort_key)
+        {
+            mutate mu;
+            mu.operation = mutate::mutate_operation::MO_DELETE;
+            mu.sort_key = sort_key;
+            mu.set_expire_ts_seconds = 0;
+            mu_list.emplace_back(std::move(mu));
+        }
+        void get_mutations(std::vector<mutate> &mutations) const
+        {
+            int current_time = time(nullptr) - epoch_begin;
+            mutations = mu_list;
+            for (auto &pair : ttl_list) {
                 mutations[pair.first].set_expire_ts_seconds = pair.second + current_time;
             }
         }
-        bool is_empty() const { return _mu_list.empty(); }
+        bool is_empty() const { return mu_list.empty(); }
     };
 
     struct check_and_mutate_options
