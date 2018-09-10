@@ -24,18 +24,10 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "service_engine.h"
+
 #include <dsn/utility/synchronize.h>
 #include <dsn/tool-api/aio_provider.h>
 #include <dsn/utility/work_queue.h>
@@ -61,7 +53,6 @@ class disk_file
 {
 public:
     disk_file(dsn_handle_t handle);
-    void ctrl(dsn_ctrl_code_t code, int param);
     aio_task *read(aio_task *tsk);
     aio_task *write(aio_task *tsk, void *ctx);
 
@@ -91,7 +82,6 @@ public:
     void read(aio_task *aio);
     void write(aio_task *aio);
 
-    void ctrl(dsn_handle_t fh, dsn_ctrl_code_t code, int param);
     disk_aio *prepare_aio_context(aio_task *tsk) { return _provider->prepare_aio_context(tsk); }
     service_node *node() const { return _node; }
 
@@ -107,4 +97,4 @@ private:
     service_node *_node;
 };
 
-} // end namespace
+} // namespace dsn

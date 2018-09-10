@@ -24,20 +24,7 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "disk_engine.h"
-#include <dsn/perf_counter/perf_counter.h>
-#include <dsn/tool-api/aio_provider.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/transient_memory.h>
 
 using namespace dsn::utils;
 
@@ -88,12 +75,6 @@ aio_task *disk_write_queue::unlink_next_workload(void *plength)
 }
 
 disk_file::disk_file(dsn_handle_t handle) : _handle(handle) {}
-
-void disk_file::ctrl(dsn_ctrl_code_t code, int param)
-{
-    // TODO:
-    dassert(false, "NOT IMPLEMENTED");
-}
 
 aio_task *disk_file::read(aio_task *tsk)
 {
@@ -168,15 +149,6 @@ void disk_engine::start(aio_provider *provider)
     _provider = provider;
     _provider->start();
     _is_running = true;
-}
-
-void disk_engine::ctrl(dsn_handle_t fh, dsn_ctrl_code_t code, int param)
-{
-    if (nullptr == fh)
-        return;
-
-    auto df = (disk_file *)fh;
-    df->ctrl(code, param);
 }
 
 dsn_handle_t disk_engine::open(const char *file_name, int flag, int pmode)
@@ -365,4 +337,4 @@ void disk_engine::complete_io(aio_task *aio, error_code err, uint32_t bytes, int
     }
 }
 
-} // end namespace
+} // namespace dsn

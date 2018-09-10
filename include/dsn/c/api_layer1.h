@@ -24,16 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Service API  in rDSN
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     Feb., 2016, @imzhenyu (Zhenyu Guo), add comments for V1 release
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/c/api_common.h>
@@ -267,11 +257,6 @@ extern DSN_API dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server,
 /*! one-way RPC from client, no rpc response is expected */
 extern DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request);
 
-/*! this is to mimic a response is received when no real rpc is called */
-extern DSN_API void dsn_rpc_enqueue_response(dsn::rpc_response_task *rpc_call,
-                                             dsn::error_code err,
-                                             dsn::message_ex *response);
-
 /*@}*/
 
 /*@}*/
@@ -291,14 +276,6 @@ typedef struct
     int size;
 } dsn_file_buffer_t;
 
-/*! the following ctrl code are used by \ref dsn_file_ctrl. */
-typedef enum dsn_ctrl_code_t {
-    CTL_BATCH_INVALID = 0,
-    CTL_BATCH_WRITE = 1,            ///< (batch) set write batch size
-    CTL_MAX_CON_READ_OP_COUNT = 2,  ///< (throttling) maximum concurrent read ops
-    CTL_MAX_CON_WRITE_OP_COUNT = 3, ///< (throttling) maximum concurrent write ops
-} dsn_ctrl_code_t;
-
 /*!
  open file
 
@@ -315,9 +292,6 @@ extern DSN_API dsn::error_code dsn_file_close(dsn_handle_t file);
 
 /*! flush the buffer of the given file */
 extern DSN_API dsn::error_code dsn_file_flush(dsn_handle_t file);
-
-/*! get native handle: HANDLE for windows, int for non-windows */
-extern DSN_API void *dsn_file_native_handle(dsn_handle_t file);
 
 /*!
  read file asynchronously
