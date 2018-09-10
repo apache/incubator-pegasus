@@ -11,7 +11,8 @@
 int main(int argc, const char **argv)
 {
     if (argc < 3) {
-        printf("invalid arguments: pegasus_upgrade_test configfile worker_type(verifier|upgrader)\n");
+        printf(
+            "invalid arguments: pegasus_upgrade_test configfile worker_type(verifier|upgrader)\n");
         return -1;
     } else if (strcmp(argv[2], "verifier") == 0) {
         verifier_initialize(argv[1]);

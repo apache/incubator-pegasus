@@ -21,9 +21,9 @@ class proxy_stub;
 class proxy_session : public std::enable_shared_from_this<proxy_session>
 {
 public:
-    typedef std::function<std::shared_ptr<proxy_session>(proxy_stub *p, dsn_message_t first_msg)>
+    typedef std::function<std::shared_ptr<proxy_session>(proxy_stub *p, dsn::message_ex *first_msg)>
         factory;
-    proxy_session(proxy_stub *p, dsn_message_t first_msg);
+    proxy_session(proxy_stub *p, dsn::message_ex *first_msg);
     virtual ~proxy_session();
 
     // on_recv_request & on_remove_session are called by proxy_stub when messages are got from
@@ -35,21 +35,21 @@ public:
     //
     // however, during the running of on_recv_request, an "on_remove_session" may be called,
     // the proxy_session and its derived class may need to do some synchronization on this.
-    void on_recv_request(dsn_message_t msg);
+    void on_recv_request(dsn::message_ex *msg);
     void on_remove_session();
 
 protected:
     // return if parse ok
-    virtual bool parse(dsn_message_t msg) = 0;
-    dsn_message_t create_response();
+    virtual bool parse(dsn::message_ex *msg) = 0;
+    dsn::message_ex *create_response();
 
 protected:
     proxy_stub *stub;
     std::atomic_bool is_session_reset;
 
-    // when get message from raw parser, request & response of "dsn_message_t" are not in couple.
+    // when get message from raw parser, request & response of "dsn::message_ex*" are not in couple.
     // we need to backup one request to create a response struct.
-    dsn_message_t backup_one_request;
+    dsn::message_ex *backup_one_request;
     // the client address for which this session served
     dsn::rpc_address remote_address;
 };
@@ -81,8 +81,8 @@ public:
     std::shared_ptr<proxy_session> remove_session(dsn::rpc_address remote_address);
 
 private:
-    void on_rpc_request(dsn_message_t request);
-    void on_recv_remove_session_request(dsn_message_t);
+    void on_rpc_request(dsn::message_ex *request);
+    void on_recv_remove_session_request(dsn::message_ex *);
 
     ::dsn::service::zrwlock_nr _lock;
     std::unordered_map<::dsn::rpc_address, std::shared_ptr<proxy_session>> _sessions;

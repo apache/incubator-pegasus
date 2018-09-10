@@ -83,11 +83,11 @@ protected:
     struct message_entry
     {
         redis_request request;
-        std::atomic<dsn_message_t> response;
+        std::atomic<dsn::message_ex *> response;
         int64_t sequence_id = 0;
     };
 
-    bool parse(dsn_message_t msg) override;
+    bool parse(dsn::message_ex *msg) override;
 
     // this is virtual only because we can override and test other modules
     virtual void handle_command(std::unique_ptr<message_entry> &&entry);
@@ -106,7 +106,7 @@ private:
     std::string current_size;
 
     // data stream content
-    std::queue<dsn_message_t> recv_buffers;
+    std::queue<dsn::message_ex *> recv_buffers;
     size_t total_length;
     char *current_buffer;
     size_t current_buffer_length;
@@ -119,7 +119,7 @@ private:
 
 protected:
     // function for data stream
-    void append_message(dsn_message_t msg);
+    void append_message(dsn::message_ex *msg);
     void prepare_current_buffer();
     char peek();
     bool eat(char c);
@@ -179,16 +179,16 @@ protected:
 
     // function for pipeline reply
     void enqueue_pending_response(std::unique_ptr<message_entry> &&entry);
-    void fetch_and_dequeue_messages(std::vector<dsn_message_t> &msgs, bool only_ready_ones);
+    void fetch_and_dequeue_messages(std::vector<dsn::message_ex *> &msgs, bool only_ready_ones);
     void clear_reply_queue();
     void reply_all_ready();
 
     template <typename T>
     void reply_message(message_entry &entry, const T &value)
     {
-        dsn_message_t resp = create_response();
+        dsn::message_ex *resp = create_response();
         // release in reply_all_ready or reset
-        dsn_msg_add_ref(resp);
+        resp->add_ref();
 
         dsn::rpc_write_stream s(resp);
         value.marshalling(s);
@@ -204,7 +204,7 @@ protected:
     static std::atomic_llong s_next_seqid;
 
 public:
-    redis_parser(proxy_stub *op, dsn_message_t first_msg);
+    redis_parser(proxy_stub *op, dsn::message_ex *first_msg);
     ~redis_parser() override;
 };
 }

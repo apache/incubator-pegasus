@@ -46,10 +46,12 @@ protected:
 
         // 2. initialize the clients
         std::vector<dsn::rpc_address> meta_list;
-        replica_helper::load_meta_servers(meta_list, "uri-resolver.dsn://single_master_cluster", "arguments");
+        replica_helper::load_meta_servers(
+            meta_list, "uri-resolver.dsn://single_master_cluster", "arguments");
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
-        pg_client = pegasus::pegasus_client_factory::get_client("single_master_cluster", table_name.c_str());
+        pg_client = pegasus::pegasus_client_factory::get_client("single_master_cluster",
+                                                                table_name.c_str());
 
         // 3. write some data to the app
         dsn::error_code err;
