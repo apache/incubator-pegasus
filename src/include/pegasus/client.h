@@ -169,7 +169,7 @@ public:
         mutate_operation operation;
         std::string sort_key;
         std::string value;
-        int set_expire_ts_seconds;
+        int set_expire_ts_seconds; // 0 means no ttl
     };
 
     struct mutations

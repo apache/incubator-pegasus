@@ -1021,9 +1021,10 @@ void pegasus_client_impl::async_check_and_mutate(const std::string &hash_key,
     for (int i = 0; i < mutate_list.size(); ++i) {
         auto &mu = mutate_list[i];
         req.mutate_list[i].operation = (dsn::apps::mutate_operation::type)mu.operation;
-        req.mutate_list[i].sort_key.assign(mu.sort_key.c_str(), 0, mu.sort_key.size());
+        req.mutate_list[i].sort_key = blob::create_from_bytes(std::move(mu.sort_key));
+
         if (mu.operation == mutate::mutate_operation::MO_PUT) {
-            req.mutate_list[i].value.assign(mu.value.c_str(), 0, mu.value.size());
+            req.mutate_list[i].value = blob::create_from_bytes(std::move(mu.value));
             req.mutate_list[i].set_expire_ts_seconds = mu.set_expire_ts_seconds;
         }
     }
