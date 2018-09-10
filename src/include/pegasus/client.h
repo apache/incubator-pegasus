@@ -176,62 +176,15 @@ public:
     {
     private:
         std::vector<mutate> mu_list;
-        std::vector<std::pair<int, int>> ttl_list;
-        static const uint32_t epoch_begin = 1451606400;
+        std::vector<std::pair<int, int>> ttl_list; // pair<index in mu_list, ttl_seconds>
 
     public:
-        void set(const std::string &sort_key, const std::string &value, const int ttl_seconds = 0)
-        {
-            mutate mu;
-            mu.operation = mutate::mutate_operation::MO_PUT;
-            mu.sort_key = sort_key;
-            mu.value = value;
-            // set_expire_ts_seconds will be set when check_and_mutate() gets the mutations (by
-            // calling get_mutations())
-            mu.set_expire_ts_seconds = 0;
-            mu_list.emplace_back(std::move(mu));
-            if (ttl_seconds != 0) {
-                ttl_list.emplace_back(std::make_pair(mu_list.size() - 1, ttl_seconds));
-            }
-        }
-        void set(std::string &&sort_key, std::string &&value, const int ttl_seconds = 0)
-        {
-            mutate mu;
-            mu.operation = mutate::mutate_operation::MO_PUT;
-            mu.sort_key = std::move(sort_key);
-            mu.value = std::move(value);
-            // set_expire_ts_seconds will be set when check_and_mutate() gets the mutations (by
-            // calling get_mutations())
-            mu.set_expire_ts_seconds = 0;
-            mu_list.emplace_back(std::move(mu));
-            if (ttl_seconds != 0) {
-                ttl_list.emplace_back(std::make_pair(mu_list.size() - 1, ttl_seconds));
-            }
-        }
-        void del(const std::string &sort_key)
-        {
-            mutate mu;
-            mu.operation = mutate::mutate_operation::MO_DELETE;
-            mu.sort_key = std::move(sort_key);
-            mu.set_expire_ts_seconds = 0;
-            mu_list.emplace_back(std::move(mu));
-        }
-        void del(std::string &&sort_key)
-        {
-            mutate mu;
-            mu.operation = mutate::mutate_operation::MO_DELETE;
-            mu.sort_key = sort_key;
-            mu.set_expire_ts_seconds = 0;
-            mu_list.emplace_back(std::move(mu));
-        }
-        void get_mutations(std::vector<mutate> &mutations) const
-        {
-            int current_time = time(nullptr) - epoch_begin;
-            mutations = mu_list;
-            for (auto &pair : ttl_list) {
-                mutations[pair.first].set_expire_ts_seconds = pair.second + current_time;
-            }
-        }
+        void set(const std::string &sort_key, const std::string &value, const int ttl_seconds = 0);
+        void set(std::string &&sort_key, std::string &&value, const int ttl_seconds = 0);
+        void del(const std::string &sort_key);
+        void del(std::string &&sort_key);
+        void get_mutations(std::vector<mutate> &mutations) const;
+
         bool is_empty() const { return mu_list.empty(); }
     };
 
