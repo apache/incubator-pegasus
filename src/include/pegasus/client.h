@@ -816,15 +816,20 @@ public:
     /// \brief incr
     ///     atomically increment value by key from the cluster.
     ///     key is composed of hashkey and sortkey. must provide both to get the value.
+    ///
     ///     the increment semantic is the same as redis:
     ///       - if old data is not found or empty, then set initial value to 0.
     ///       - if old data is not an integer or out of range, then return PERR_INVALID_ARGUMENT,
     ///         and return `new_value' as 0.
     ///       - if new value is out of range, then return PERR_INVALID_ARGUMENT, and return old
     ///         value in `new_value'.
-    ///     the semantic involving with ttl is also the same as redis:
+    ///
+    ///     if ttl_seconds == 0, the semantic is also the same as redis:
     ///       - normally, increment will preserve the original ttl.
     ///       - if old data is expired by ttl, then set initial value to 0 and set no ttl.
+    ///     if ttl_seconds > 0, then update with the new ttl if incr succeed.
+    ///     if ttl_seconds == -1, then update to no ttl if incr succeed.
+    ///
     /// \param hashkey
     /// used to decide which partition to get this k-v
     /// \param sortkey
@@ -835,6 +840,8 @@ public:
     /// out param to return the new value if increment succeed.
     /// \param timeout_milliseconds
     /// if wait longer than this value, will return time out error
+    /// \param ttl_seconds
+    /// time to live of this value.
     /// \return
     /// int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string().
@@ -844,12 +851,27 @@ public:
                      int64_t increment,
                      int64_t &new_value,
                      int timeout_milliseconds = 5000,
+                     int ttl_seconds = 0,
                      internal_info *info = nullptr) = 0;
 
     ///
     /// \brief asynchronous incr
     ///     atomically increment value by key from the cluster.
     ///     will not be blocked, return immediately.
+    ///
+    ///     the increment semantic is the same as redis:
+    ///       - if old data is not found or empty, then set initial value to 0.
+    ///       - if old data is not an integer or out of range, then return PERR_INVALID_ARGUMENT,
+    ///         and return `new_value' as 0.
+    ///       - if new value is out of range, then return PERR_INVALID_ARGUMENT, and return old
+    ///         value in `new_value'.
+    ///
+    ///     if ttl_seconds == 0, the semantic is also the same as redis:
+    ///       - normally, increment will preserve the original ttl.
+    ///       - if old data is expired by ttl, then set initial value to 0 and set no ttl.
+    ///     if ttl_seconds > 0, then update with the new ttl if incr succeed.
+    ///     if ttl_seconds == -1, then update to no ttl if incr succeed.
+    ///
     /// \param hashkey
     /// used to decide which partition to get this k-v
     /// \param sortkey
@@ -860,6 +882,8 @@ public:
     /// the callback function will be invoked after operation finished or error occurred.
     /// \param timeout_milliseconds
     /// if wait longer than this value, will return time out error
+    /// \param ttl_seconds
+    /// time to live of this value.
     /// \return
     /// void.
     ///
@@ -867,7 +891,8 @@ public:
                             const std::string &sortkey,
                             int64_t increment,
                             async_incr_callback_t &&callback = nullptr,
-                            int timeout_milliseconds = 5000) = 0;
+                            int timeout_milliseconds = 5000,
+                            int ttl_seconds = 0) = 0;
 
     ///
     /// \brief check_and_set

@@ -1283,7 +1283,8 @@ inline bool incr(command_executor *e, shell_context *sc, arguments args)
 
     int64_t new_value;
     pegasus::pegasus_client::internal_info info;
-    int ret = sc->pg_client->incr(hash_key, sort_key, increment, new_value, sc->timeout_ms, &info);
+    int ret =
+        sc->pg_client->incr(hash_key, sort_key, increment, new_value, sc->timeout_ms, 0, &info);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
     } else {

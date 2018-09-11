@@ -143,13 +143,15 @@ public:
                      int64_t increment,
                      int64_t &new_value,
                      int timeout_milliseconds = 5000,
+                     int ttl_seconds = 0,
                      internal_info *info = nullptr) override;
 
     virtual void async_incr(const std::string &hashkey,
                             const std::string &sortkey,
                             int64_t increment,
                             async_incr_callback_t &&callback = nullptr,
-                            int timeout_milliseconds = 5000) override;
+                            int timeout_milliseconds = 5000,
+                            int ttl_seconds = 0) override;
 
     virtual int check_and_set(const std::string &hash_key,
                               const std::string &check_sort_key,
