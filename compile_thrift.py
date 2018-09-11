@@ -134,13 +134,8 @@ class CompileError(Exception):
         return self.msg
 
 def init_env():
-    if platform.system() == "Windows":
-        env_tools["dsn_gentool"] = os.getcwd() + "/bin/dsn.cg.bat"
-        env_tools["thrift_exe"] = os.getcwd() + "/bin/Windows/thrift.exe"
-    else:
-        env_tools["dsn_gentool"] = os.getcwd() + "/bin/dsn.cg.sh"
-        env_tools["thrift_exe"] = os.getcwd() + "/bin/Linux/thrift"
-    env_tools["root_dir"] = os.getcwd()
+    env_tools["dsn_gentool"] = os.getcwd() + "/bin/dsn.cg.sh"
+    env_tools["thrift_exe"] = os.getcwd() + "/bin/Linux/thrift"
 
 def find_struct_define(line, enum_class_list):
     if len(line)<7 or line[0:7] != "struct ":

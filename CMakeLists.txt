@@ -18,6 +18,5 @@ if(ENABLE_GCOV AND UNIX)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
 endif()
 dsn_common_setup()
-dsn_add_pseudo_projects()
 
 add_subdirectory(src)
