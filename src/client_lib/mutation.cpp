@@ -47,7 +47,7 @@ void pegasus_client::mutations::del(const std::string &sort_key)
 {
     mutate mu;
     mu.operation = mutate::mutate_operation::MO_DELETE;
-    mu.sort_key = std::move(sort_key);
+    mu.sort_key = sort_key;
     mu.set_expire_ts_seconds = 0;
     mu_list.emplace_back(std::move(mu));
 }
@@ -56,7 +56,7 @@ void pegasus_client::mutations::del(std::string &&sort_key)
 {
     mutate mu;
     mu.operation = mutate::mutate_operation::MO_DELETE;
-    mu.sort_key = sort_key;
+    mu.sort_key = std::move(sort_key);
     mu.set_expire_ts_seconds = 0;
     mu_list.emplace_back(std::move(mu));
 }
