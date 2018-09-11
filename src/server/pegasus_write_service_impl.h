@@ -128,17 +128,17 @@ public:
         resp.server = _primary_address;
 
         rocksdb::Slice raw_key(update.key.data(), update.key.length());
-        uint32_t expire_ts = 0;
         std::string raw_value;
         int64_t new_value = 0;
+        uint32_t new_expire_ts = 0;
         rocksdb::Status s = _db->Get(_rd_opts, raw_key, &raw_value);
         if (s.ok()) {
-            expire_ts = pegasus_extract_expire_ts(_value_schema_version, raw_value);
-            if (check_if_ts_expired(utils::epoch_now(), expire_ts)) {
-                // ttl timeout, set to 0 before increment, and set expire_ts to 0
+            uint32_t old_expire_ts = pegasus_extract_expire_ts(_value_schema_version, raw_value);
+            if (check_if_ts_expired(utils::epoch_now(), old_expire_ts)) {
+                // ttl timeout, set to 0 before increment
                 _pfc_recent_expire_count->increment();
                 new_value = update.increment;
-                expire_ts = 0;
+                new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
             } else {
                 ::dsn::blob old_value;
                 pegasus_extract_user_data(_value_schema_version, std::move(raw_value), old_value);
@@ -172,11 +172,18 @@ public:
                         return empty_put(decree);
                     }
                 }
+                // set new ttl
+                if (update.expire_ts_seconds == 0)
+                    new_expire_ts = old_expire_ts;
+                else if (update.expire_ts_seconds < 0)
+                    new_expire_ts = 0;
+                else // update.expire_ts_seconds > 0
+                    new_expire_ts = update.expire_ts_seconds;
             }
         } else if (s.IsNotFound()) {
-            // old value is not found, set to 0 before increment, and set expire_ts to 0
+            // old value is not found, set to 0 before increment
             new_value = update.increment;
-            expire_ts = 0;
+            new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
         } else {
             // read old value failed
             ::dsn::blob hash_key, sort_key;
@@ -191,7 +198,8 @@ public:
             return resp.error;
         }
 
-        resp.error = db_write_batch_put(decree, update.key, std::to_string(new_value), expire_ts);
+        resp.error =
+            db_write_batch_put(decree, update.key, std::to_string(new_value), new_expire_ts);
         if (resp.error) {
             clear_up_batch_states(decree, resp.error);
             return resp.error;
