@@ -1014,7 +1014,21 @@ void pegasus_client_impl::async_check_and_mutate(const std::string &hash_key,
     req.check_sort_key.assign(check_sort_key.c_str(), 0, check_sort_key.size());
     req.check_type = (dsn::apps::cas_check_type::type)check_type;
     req.check_operand.assign(check_operand.c_str(), 0, check_operand.size());
-    mutations.get_mutations(req.mutate_list);
+
+    std::vector<mutate> mutate_list;
+    mutations.get_mutations(mutate_list);
+    req.mutate_list.resize(mutate_list.size());
+    for (int i = 0; i < mutate_list.size(); ++i) {
+        auto &mu = mutate_list[i];
+        req.mutate_list[i].operation = (dsn::apps::mutate_operation::type)mu.operation;
+        req.mutate_list[i].sort_key = blob::create_from_bytes(std::move(mu.sort_key));
+
+        if (mu.operation == mutate::mutate_operation::MO_PUT) {
+            req.mutate_list[i].value = blob::create_from_bytes(std::move(mu.value));
+            req.mutate_list[i].set_expire_ts_seconds = mu.set_expire_ts_seconds;
+        }
+    }
+    
     req.return_check_value = options.return_check_value;
 
     ::dsn::blob tmp_key;
