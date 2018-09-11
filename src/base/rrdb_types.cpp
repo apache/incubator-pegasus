@@ -2121,6 +2121,8 @@ void incr_request::__set_key(const ::dsn::blob &val) { this->key = val; }
 
 void incr_request::__set_increment(const int64_t val) { this->increment = val; }
 
+void incr_request::__set_expire_ts_seconds(const int32_t val) { this->expire_ts_seconds = val; }
+
 uint32_t incr_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -2156,6 +2158,14 @@ uint32_t incr_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 3:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                xfer += iprot->readI32(this->expire_ts_seconds);
+                this->__isset.expire_ts_seconds = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -2182,6 +2192,10 @@ uint32_t incr_request::write(::apache::thrift::protocol::TProtocol *oprot) const
     xfer += oprot->writeI64(this->increment);
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("expire_ts_seconds", ::apache::thrift::protocol::T_I32, 3);
+    xfer += oprot->writeI32(this->expire_ts_seconds);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -2192,6 +2206,7 @@ void swap(incr_request &a, incr_request &b)
     using ::std::swap;
     swap(a.key, b.key);
     swap(a.increment, b.increment);
+    swap(a.expire_ts_seconds, b.expire_ts_seconds);
     swap(a.__isset, b.__isset);
 }
 
@@ -2199,18 +2214,21 @@ incr_request::incr_request(const incr_request &other69)
 {
     key = other69.key;
     increment = other69.increment;
+    expire_ts_seconds = other69.expire_ts_seconds;
     __isset = other69.__isset;
 }
 incr_request::incr_request(incr_request &&other70)
 {
     key = std::move(other70.key);
     increment = std::move(other70.increment);
+    expire_ts_seconds = std::move(other70.expire_ts_seconds);
     __isset = std::move(other70.__isset);
 }
 incr_request &incr_request::operator=(const incr_request &other71)
 {
     key = other71.key;
     increment = other71.increment;
+    expire_ts_seconds = other71.expire_ts_seconds;
     __isset = other71.__isset;
     return *this;
 }
@@ -2218,6 +2236,7 @@ incr_request &incr_request::operator=(incr_request &&other72)
 {
     key = std::move(other72.key);
     increment = std::move(other72.increment);
+    expire_ts_seconds = std::move(other72.expire_ts_seconds);
     __isset = std::move(other72.__isset);
     return *this;
 }
@@ -2228,6 +2247,8 @@ void incr_request::printTo(std::ostream &out) const
     out << "key=" << to_string(key);
     out << ", "
         << "increment=" << to_string(increment);
+    out << ", "
+        << "expire_ts_seconds=" << to_string(expire_ts_seconds);
     out << ")";
 }
 
@@ -4233,5 +4254,5 @@ void scan_response::printTo(std::ostream &out) const
         << "server=" << to_string(server);
     out << ")";
 }
-} // namespace apps
-} // namespace dsn
+}
+} // namespace

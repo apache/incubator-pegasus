@@ -762,6 +762,7 @@ int pegasus_client_impl::incr(const std::string &hash_key,
                               int64_t increment,
                               int64_t &new_value,
                               int timeout_milliseconds,
+                              int ttl_seconds,
                               internal_info *info)
 {
     ::dsn::utils::notify_event op_completed;
@@ -773,7 +774,8 @@ int pegasus_client_impl::incr(const std::string &hash_key,
             (*info) = std::move(_info);
         op_completed.notify();
     };
-    async_incr(hash_key, sort_key, increment, std::move(callback), timeout_milliseconds);
+    async_incr(
+        hash_key, sort_key, increment, std::move(callback), timeout_milliseconds, ttl_seconds);
     op_completed.wait();
     return ret;
 }
@@ -782,7 +784,8 @@ void pegasus_client_impl::async_incr(const std::string &hash_key,
                                      const std::string &sort_key,
                                      int64_t increment,
                                      async_incr_callback_t &&callback,
-                                     int timeout_milliseconds)
+                                     int timeout_milliseconds,
+                                     int ttl_seconds)
 {
     // check params
     if (hash_key.size() >= UINT16_MAX) {
@@ -792,14 +795,24 @@ void pegasus_client_impl::async_incr(const std::string &hash_key,
             callback(PERR_INVALID_HASH_KEY, 0, internal_info());
         return;
     }
+    if (ttl_seconds < -1) {
+        derror("invalid ttl seconds: should be no less than -1, but %d", ttl_seconds);
+        if (callback != nullptr)
+            callback(PERR_INVALID_ARGUMENT, 0, internal_info());
+        return;
+    }
 
     ::dsn::apps::incr_request req;
     pegasus_generate_key(req.key, hash_key, sort_key);
     req.increment = increment;
+    if (ttl_seconds <= 0)
+        req.expire_ts_seconds = ttl_seconds;
+    else
+        req.expire_ts_seconds = ttl_seconds + utils::epoch_now();
     auto partition_hash = pegasus_key_hash(req.key);
 
     auto new_callback = [user_callback = std::move(callback)](
-        ::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp)
+        ::dsn::error_code err, dsn::message_ex * req, dsn::message_ex * resp)
     {
         if (user_callback == nullptr) {
             return;
