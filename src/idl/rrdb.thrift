@@ -148,6 +148,9 @@ struct incr_request
 {
     1:dsn.blob      key;
     2:i64           increment;
+    3:i32           expire_ts_seconds; // 0 means keep original ttl
+                                       // >0 means reset to new ttl
+                                       // <0 means reset to no ttl
 }
 
 struct incr_response

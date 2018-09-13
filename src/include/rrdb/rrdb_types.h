@@ -931,9 +931,10 @@ inline std::ostream &operator<<(std::ostream &out, const multi_get_response &obj
 
 typedef struct _incr_request__isset
 {
-    _incr_request__isset() : key(false), increment(false) {}
+    _incr_request__isset() : key(false), increment(false), expire_ts_seconds(false) {}
     bool key : 1;
     bool increment : 1;
+    bool expire_ts_seconds : 1;
 } _incr_request__isset;
 
 class incr_request
@@ -943,11 +944,12 @@ public:
     incr_request(incr_request &&);
     incr_request &operator=(const incr_request &);
     incr_request &operator=(incr_request &&);
-    incr_request() : increment(0) {}
+    incr_request() : increment(0), expire_ts_seconds(0) {}
 
     virtual ~incr_request() throw();
     ::dsn::blob key;
     int64_t increment;
+    int32_t expire_ts_seconds;
 
     _incr_request__isset __isset;
 
@@ -955,11 +957,15 @@ public:
 
     void __set_increment(const int64_t val);
 
+    void __set_expire_ts_seconds(const int32_t val);
+
     bool operator==(const incr_request &rhs) const
     {
         if (!(key == rhs.key))
             return false;
         if (!(increment == rhs.increment))
+            return false;
+        if (!(expire_ts_seconds == rhs.expire_ts_seconds))
             return false;
         return true;
     }

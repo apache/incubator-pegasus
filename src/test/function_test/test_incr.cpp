@@ -224,6 +224,7 @@ TEST(incr, preserve_ttl)
 
 TEST(incr, reset_ttl)
 {
+    /// reset after old value ttl timeout
     int ret = client->set("incr_test_reset_ttl", "", "100", 5000, 3);
     ASSERT_EQ(0, ret);
 
@@ -235,6 +236,46 @@ TEST(incr, reset_ttl)
     ASSERT_EQ(1, new_value_int);
 
     int ttl_seconds;
+    ret = client->ttl("incr_test_reset_ttl", "", ttl_seconds);
+    ASSERT_EQ(0, ret);
+    ASSERT_GE(-1, ttl_seconds);
+
+    ret = client->del("incr_test_reset_ttl", "");
+    ASSERT_EQ(0, ret);
+
+    /// reset with new ttl
+    ret = client->set("incr_test_reset_ttl", "", "100");
+    ASSERT_EQ(0, ret);
+
+    ret = client->ttl("incr_test_reset_ttl", "", ttl_seconds);
+    ASSERT_EQ(0, ret);
+    ASSERT_GE(-1, ttl_seconds);
+
+    ret = client->incr("incr_test_reset_ttl", "", 1, new_value_int, 5000, 10);
+    ASSERT_EQ(0, ret);
+    ASSERT_EQ(101, new_value_int);
+
+    ret = client->ttl("incr_test_reset_ttl", "", ttl_seconds);
+    ASSERT_EQ(0, ret);
+    ASSERT_LT(0, ttl_seconds);
+    ASSERT_GE(10, ttl_seconds);
+
+    ret = client->del("incr_test_reset_ttl", "");
+    ASSERT_EQ(0, ret);
+
+    /// reset with no ttl
+    ret = client->set("incr_test_reset_ttl", "", "200", 5000, 10);
+    ASSERT_EQ(0, ret);
+
+    ret = client->ttl("incr_test_reset_ttl", "", ttl_seconds);
+    ASSERT_EQ(0, ret);
+    ASSERT_LT(0, ttl_seconds);
+    ASSERT_GE(10, ttl_seconds);
+
+    ret = client->incr("incr_test_reset_ttl", "", 1, new_value_int, 5000, -1);
+    ASSERT_EQ(0, ret);
+    ASSERT_EQ(201, new_value_int);
+
     ret = client->ttl("incr_test_reset_ttl", "", ttl_seconds);
     ASSERT_EQ(0, ret);
     ASSERT_GE(-1, ttl_seconds);
