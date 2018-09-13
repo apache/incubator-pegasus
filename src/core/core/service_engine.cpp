@@ -37,10 +37,10 @@
 #include "task_engine.h"
 #include "disk_engine.h"
 #include "rpc_engine.h"
-#include <dsn/tool-api/uri_address.h>
-#include <dsn/tool-api/env_provider.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/tool-api/uri_address.h>
+#include <dsn/tool-api/env_provider.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/perf_counter/perf_counter.h>
 #include <dsn/perf_counter/perf_counters.h>
@@ -255,27 +255,6 @@ void service_engine::init_after_toollets()
         _env = factory_store<env_provider>::create(it->c_str(), PROVIDER_TYPE_ASPECT, _env);
     }
     tls_dsn.env = _env;
-}
-
-// port == -1 for all node
-void service_engine::register_system_rpc_handler(dsn::task_code code,
-                                                 const char *name,
-                                                 const rpc_request_handler &cb,
-                                                 int port /*= -1*/
-                                                 )
-{
-    if (port == -1) {
-        for (auto &n : _nodes_by_app_id) {
-            n.second->rpc_register_handler(code, name, cb);
-        }
-    } else {
-        auto it = _nodes_by_app_port.find(port);
-        if (it != _nodes_by_app_port.end()) {
-            it->second->rpc_register_handler(code, name, cb);
-        } else {
-            dwarn("cannot find service node with port %d", port);
-        }
-    }
 }
 
 service_node *service_engine::start_node(service_app_spec &app_spec)

@@ -228,6 +228,11 @@ error_code meta_service::start()
     // can tell others who is the current leader
     register_rpc_handlers();
 
+    // start cli service before acquiring leader lock,
+    // so that the command line call can be handled
+    _cli_service = std::move(dsn::cli_service::create_service());
+    _cli_service->open_service();
+
     _failure_detector->acquire_leader_lock();
     dassert(_failure_detector->get_leader(nullptr), "must be primary at this point");
     ddebug("%s got the primary lock, start to recover server state from remote storage",

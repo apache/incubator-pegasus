@@ -24,35 +24,37 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for command_manager.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
+#pragma once
+#include <iostream>
+#include <dsn/cpp/serverlet.h>
+#include <dsn/dist/cli/cli.code.definition.h>
+#include <dsn/dist/cli/cli.types.h>
 
-#include <dsn/tool-api/command_manager.h>
-#include <gtest/gtest.h>
-
-using namespace ::dsn;
-
-void command_manager_module_init()
+namespace dsn {
+class cli_service : public ::dsn::serverlet<cli_service>
 {
-    dsn::command_manager::instance().register_command(
-        {"test-cmd"},
-        "test-cmd - just for command_manager unit-test",
-        "test-cmd arg1 arg2 ...",
-        [](const std::vector<std::string> &args) {
-            std::stringstream ss;
-            ss << "test-cmd response: [";
-            for (size_t i = 0; i < args.size(); ++i) {
-                if (i != 0)
-                    ss << " ";
-                ss << args[i];
-            }
-            ss << "]";
-            return ss.str();
-        });
+public:
+    static std::unique_ptr<cli_service> create_service();
+
+public:
+    cli_service() : ::dsn::serverlet<cli_service>("cli") {}
+    virtual ~cli_service() {}
+
+protected:
+    // all service handlers to be implemented further
+    // RPC_CLI_CLI_CALL
+    virtual void on_call(const command &request, ::dsn::rpc_replier<std::string> &reply)
+    {
+        std::cout << "... exec RPC_CLI_CLI_CALL ... (not implemented) " << std::endl;
+        std::string resp;
+        reply(resp);
+    }
+
+public:
+    void open_service()
+    {
+        this->register_async_rpc_handler(RPC_CLI_CLI_CALL, "call", &cli_service::on_call);
+    }
+    void close_service() { this->unregister_rpc_handler(RPC_CLI_CLI_CALL); }
+};
 }

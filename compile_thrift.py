@@ -100,20 +100,20 @@ thrift_description = [
     }, 
     {
         "name": "cli", 
-        "path": "src/apps/cli",
+        "path": "src/dist/cli",
         "file_move": {
-            ".types.h _types.h": "include/dsn/tool/cli"
+            ".types.h _types.h": "include/dsn/dist/cli"
         },
         "include_fix": {
             "_types.h": {
                 "remove": ["\"dsn_types.h\""]
             },
             "_types.cpp": {
-                "add": ["<dsn/tool/cli.h>"],
+                "add": ["<dsn/dist/cli/cli_types.h>"],
                 "remove": ["\"cli_types.h\""]
             },
             ".types.h": {
-                "add": ["<dsn/tool/cli/cli_types.h>"],
+                "add": ["<dsn/dist/cli/cli_types.h>"],
                 "remove": ["\"cli_types.h\""]
             }
         }

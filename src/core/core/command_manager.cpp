@@ -38,15 +38,8 @@
 #include <sstream>
 
 #include <dsn/utility/utils.h>
-#include <dsn/cpp/rpc_stream.h>
 #include <dsn/cpp/service_app.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/rpc_message.h>
 #include <dsn/tool-api/command_manager.h>
-#include <dsn/tool/cli.h>
-
-#include "service_engine.h"
-#include "rpc_engine.h"
 
 namespace dsn {
 
@@ -80,7 +73,6 @@ dsn_handle_t command_manager::register_command(const std::vector<std::string> &c
     }
 
     command_instance *c = new command_instance();
-    c->address.set_invalid();
     c->commands = commands;
     c->help_long = help_long;
     c->help_short = help_one_line;
@@ -108,30 +100,6 @@ void command_manager::deregister_command(dsn_handle_t handle)
     delete c;
 }
 
-bool command_manager::run_command(const std::string &cmdline, /*out*/ std::string &output)
-{
-    auto cnode = ::dsn::task::get_current_node2();
-    if (cnode == nullptr) {
-        auto &all_nodes = ::dsn::service_engine::fast_instance().get_all_nodes();
-        dassert(!all_nodes.empty(), "no node to mimic!");
-        dsn_mimic_app(all_nodes.begin()->second->spec().role_name.c_str(), 1);
-    }
-    std::string scmd = cmdline;
-    std::vector<std::string> args;
-
-    utils::split_args(scmd.c_str(), args, ' ');
-
-    if (args.size() < 1)
-        return false;
-
-    std::vector<std::string> args2;
-    for (size_t i = 1; i < args.size(); i++) {
-        args2.push_back(args[i]);
-    }
-
-    return run_command(args[0], args2, output);
-}
-
 bool command_manager::run_command(const std::string &cmd,
                                   const std::vector<std::string> &args,
                                   /*out*/ std::string &output)
@@ -148,64 +116,9 @@ bool command_manager::run_command(const std::string &cmd,
         output = std::string("unknown command '") + cmd + "'";
         return false;
     } else {
-        if (h->address.is_invalid() ||
-            h->address == dsn::task::get_current_rpc()->primary_address()) {
-            output = h->handler(args);
-            return true;
-        } else {
-            ::dsn::rpc_read_stream response;
-
-            dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CLI_CLI_CALL);
-            ::dsn::command rcmd;
-            rcmd.cmd = cmd;
-            rcmd.arguments = args;
-            ::dsn::marshall(msg, rcmd);
-            auto resp = dsn_rpc_call_wait(h->address, msg);
-            if (resp != nullptr) {
-                ::dsn::unmarshall(resp, output);
-                return true;
-            } else {
-                dwarn("cli run for %s is too long, timeout", cmd.c_str());
-                return false;
-            }
-        }
+        output = h->handler(args);
+        return true;
     }
-}
-
-void command_manager::start_remote_cli()
-{
-    ::dsn::service_engine::fast_instance().register_system_rpc_handler(
-        RPC_CLI_CLI_CALL, "dsn.cli", [](dsn::message_ex *req) {
-            command_manager::instance().on_remote_cli(req);
-        });
-}
-
-void command_manager::on_remote_cli(dsn::message_ex *req)
-{
-    ::dsn::command cmd;
-    std::string result;
-
-    ::dsn::unmarshall(req, cmd);
-
-    std::ostringstream oss;
-    for (int i = 0; i < cmd.arguments.size(); i++) {
-        oss << " \"" << cmd.arguments[i] << "\"";
-    }
-    ddebug("received remote command from %s: %s%s",
-           req->header->from_address.to_string(),
-           cmd.cmd.c_str(),
-           oss.str().c_str());
-
-    run_command(cmd.cmd, cmd.arguments, result);
-
-    auto resp = req->create_response();
-    ::dsn::marshall(resp, result);
-    dsn_rpc_reply(resp);
-}
-
-void command_manager::set_cli_target_address(dsn_handle_t handle, dsn::rpc_address address)
-{
-    reinterpret_cast<command_instance *>(handle)->address = address;
 }
 
 command_manager::command_manager()

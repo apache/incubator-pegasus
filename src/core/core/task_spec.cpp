@@ -37,6 +37,7 @@
 #include <dsn/utility/singleton.h>
 #include <dsn/perf_counter/perf_counter.h>
 #include <dsn/tool-api/command_manager.h>
+#include <dsn/tool-api/threadpool_spec.h>
 #include <sstream>
 #include <vector>
 #include <thread>

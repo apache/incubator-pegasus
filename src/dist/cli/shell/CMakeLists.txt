@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.cli.tool)
+set(MY_PROJ_NAME dsn_cli_shell)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -12,9 +12,9 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_INC_PATH "")
 
 if (UNIX)
-    set(MY_PROJ_LIBS pthread dsn.cli)
+    set(MY_PROJ_LIBS pthread dsn_cli)
 else()
-    set(MY_PROJ_LIBS dsn.cli)
+    set(MY_PROJ_LIBS dsn_cli)
 endif()
 
 set(MY_PROJ_LIB_PATH "")

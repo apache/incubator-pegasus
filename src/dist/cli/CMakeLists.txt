@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.cli)
+set(MY_PROJ_NAME dsn_cli)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -14,3 +14,5 @@ set(MY_PROJ_INC_PATH "")
 set(MY_PROJ_LIB_PATH "")
 
 dsn_add_static_library()
+
+add_subdirectory(shell)

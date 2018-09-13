@@ -1,5 +1,5 @@
 #pragma once
-#include <dsn/tool/cli/cli_types.h>
+#include <dsn/dist/cli/cli_types.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/cpp/serialization.h>
 

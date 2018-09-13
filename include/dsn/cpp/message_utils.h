@@ -26,8 +26,12 @@
 
 #pragma once
 
-#include <dsn/tool/cli.h>
 #include <dsn/utility/string_view.h>
+#include <dsn/utility/binary_writer.h>
+#include <dsn/utility/binary_reader.h>
+#include <dsn/cpp/rpc_stream.h>
+#include <dsn/cpp/serialization.h>
+#include <dsn/tool-api/rpc_message.h>
 
 namespace dsn {
 

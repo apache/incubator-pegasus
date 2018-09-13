@@ -28,7 +28,7 @@
 
 #include <dsn/utility/synchronize.h>
 #include <dsn/utility/singleton.h>
-#include <dsn/tool-api/rpc_message.h>
+#include <dsn/c/api_utilities.h>
 #include <map>
 
 namespace dsn {
@@ -48,13 +48,6 @@ public:
                                       const std::string &help_long,
                                       command_handler handler);
     void deregister_command(dsn_handle_t handle);
-
-    bool run_command(const std::string &cmdline, /*out*/ std::string &output);
-    void start_remote_cli();
-    void on_remote_cli(dsn::message_ex* req);
-    void set_cli_target_address(dsn_handle_t handle, dsn::rpc_address address);
-
-private:
     bool run_command(const std::string &cmd,
                      const std::vector<std::string> &args,
                      /*out*/ std::string &output);
@@ -62,7 +55,6 @@ private:
 private:
     struct command_instance
     {
-        dsn::rpc_address address;
         std::vector<std::string> commands;
         std::string help_short;
         std::string help_long;
