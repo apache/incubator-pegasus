@@ -13,7 +13,7 @@
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>
-#include <dsn/tool/cli/cli.client.h>
+#include <dsn/dist/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 #include <dsn/perf_counter/perf_counter_utils.h>

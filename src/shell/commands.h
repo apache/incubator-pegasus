@@ -15,7 +15,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/utility/string_view.h>
-#include <dsn/tool/cli/cli.client.h>
+#include <dsn/dist/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 
