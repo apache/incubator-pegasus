@@ -430,9 +430,18 @@ public interface PegasusClientInterface {
      * @param hashKey   the hash key to increment.
      * @param sortKey   the sort key to increment.
      * @param increment the increment to be added to the old value.
+     * @param ttlSeconds time to live in seconds for the new value.
+     *                   should be no less than -1. for the second method, the ttlSeconds is 0.
+     *                   - if ttlSeconds == 0, the semantic is the same as redis:
+     *                     - normally, increment will preserve the original ttl.
+     *                     - if old data is expired by ttl, then set initial value to 0 and set no ttl.
+     *                   - if ttlSeconds > 0, then update with the new ttl if increment succeed.
+     *                   - if ttlSeconds == -1, then update to no ttl if increment succeed.
      * @return the new value.
      * @throws PException throws exception if any error occurs.
      */
+    public long incr(String tableName, byte[] hashKey, byte[] sortKey, long increment, int ttlSeconds) throws PException;
+
     public long incr(String tableName, byte[] hashKey, byte[] sortKey, long increment) throws PException;
 
     /**

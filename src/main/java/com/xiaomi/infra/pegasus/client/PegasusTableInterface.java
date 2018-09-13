@@ -504,6 +504,13 @@ public interface PegasusTableInterface {
      * @param hashKey   the hash key to increment.
      * @param sortKey   the sort key to increment.
      * @param increment the increment to be added to the old value.
+     * @param ttlSeconds time to live in seconds for the new value. for the second method, the ttlSeconds is 0.
+     *                   should be no less than -1. for the second method, the ttlSeconds is 0.
+     *                   - if ttlSeconds == 0, the semantic is the same as redis:
+     *                     - normally, increment will preserve the original ttl.
+     *                     - if old data is expired by ttl, then set initial value to 0 and set no ttl.
+     *                   - if ttlSeconds > 0, then update with the new ttl if increment succeed.
+     *                   - if ttlSeconds == -1, then update to no ttl if increment succeed.
      * @param timeout   how long will the operation timeout in milliseconds.
      *                  if timeout > 0, it is a timeout value for current op,
      *                  else the timeout value in the configuration file will be used.
@@ -518,6 +525,8 @@ public interface PegasusTableInterface {
      * listeners for the same future are guaranteed to be executed as the same order as the listeners added.
      * But listeners for different tables are not guaranteed to be dispatched in the same thread.
      */
+    public Future<Long> asyncIncr(byte[] hashKey, byte[] sortKey, long increment, int ttlSeconds, int timeout/*ms*/);
+
     public Future<Long> asyncIncr(byte[] hashKey, byte[] sortKey, long increment, int timeout/*ms*/);
 
     ///< -------- CheckAndSet --------
@@ -1006,6 +1015,11 @@ public interface PegasusTableInterface {
      */
     public int batchMultiDel2(List<Pair<byte[], List<byte[]>>> keys,
                               List<PException> results, int timeout/*ms*/) throws PException;
+
+    /**
+     * sync version of Incr, please refer to the async version {@link #asyncIncr(byte[], byte[], long, int, int)}
+     */
+    public long incr(byte[] hashKey, byte[] sortKey, long increment, int ttlSeconds, int timeout/*ms*/) throws PException;
 
     /**
      * sync version of Incr, please refer to the async version {@link #asyncIncr(byte[], byte[], long, int)}

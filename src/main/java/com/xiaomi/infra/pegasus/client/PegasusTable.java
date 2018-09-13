@@ -465,9 +465,16 @@ public class PegasusTable implements PegasusTableInterface {
     }
 
     @Override
-    public Future<Long> asyncIncr(byte[] hashKey, byte[] sortKey, long increment, int timeout) {
+    public Future<Long> asyncIncr(byte[] hashKey, byte[] sortKey, long increment, int ttlSeconds, int timeout) {
         final DefaultPromise<Long> promise = table.newPromise();
-        incr_request request = new incr_request(new blob(PegasusClient.generateKey(hashKey, sortKey)), increment);
+        if (ttlSeconds < -1) {
+            promise.setFailure(new PException("Invalid parameter: ttlSeconds should be no less than -1"));
+            return promise;
+        }
+
+        blob key = new blob(PegasusClient.generateKey(hashKey, sortKey));
+        int expireSeconds = (ttlSeconds <= 0 ? ttlSeconds : ttlSeconds + (int) Tools.epoch_now());
+        incr_request request = new incr_request(key, increment, expireSeconds);
         gpid gpid = table.getGpid(request.key.data);
         rrdb_incr_operator op = new rrdb_incr_operator(gpid, table.getTableName(), request);
 
@@ -485,6 +492,11 @@ public class PegasusTable implements PegasusTableInterface {
             }
         }, timeout);
         return promise;
+    }
+
+    @Override
+    public Future<Long> asyncIncr(byte[] hashKey, byte[] sortKey, long increment, int timeout) {
+        return asyncIncr(hashKey, sortKey, increment, 0, timeout);
     }
 
     @Override
@@ -1262,6 +1274,21 @@ public class PegasusTable implements PegasusTableInterface {
             }
         }
         return count;
+    }
+
+    @Override
+    public long incr(byte[] hashKey, byte[] sortKey, long increment, int ttlSeconds, int timeout) throws PException {
+        if (timeout <= 0)
+            timeout = defaultTimeout;
+        try {
+            return asyncIncr(hashKey, sortKey, increment, ttlSeconds, timeout).get(timeout, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            throw new PException(new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+        } catch (TimeoutException e) {
+            throw new PException(new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+        } catch (ExecutionException e) {
+            throw new PException(e);
+        }
     }
 
     @Override
