@@ -282,7 +282,6 @@ service rrdb
     scan_response scan(1:scan_request request);
     oneway void clear_scanner(1:i64 context_id);
 
-    // For duplication of a write which may contains multiple updates.
     // On server side, this rpc will be handled one-by-one. (reply once
     // the write is applied, no batching, like multi_remove and multi_put)
     duplicate_response duplicate(1:duplicate_request request);

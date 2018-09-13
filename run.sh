@@ -802,6 +802,10 @@ function run_start_onebox_instance()
             echo "ERROR: invalid meta_id"
             exit 1
         fi
+        if ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" ; then
+            echo "INFO: meta@$META_ID already running"
+            exit 1
+        fi
         cd $dir
         echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list meta &>result &"
         $PWD/pegasus_server config.ini -app_list meta &>result &
@@ -814,6 +818,10 @@ function run_start_onebox_instance()
         dir=onebox/replica$REPLICA_ID
         if [ ! -d $dir ]; then
             echo "ERROR: invalid replica_id"
+            exit 1
+        fi
+        if ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" ; then
+            echo "INFO: replica@$REPLICA_ID already running"
             exit 1
         fi
         cd $dir
