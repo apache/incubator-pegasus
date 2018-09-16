@@ -194,7 +194,6 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             dsn::from_blob_to_thrift(data, raw_key);
             pegasus_restore_key(raw_key, hash_key, sort_key);
         }
-        ddebug_replica("fuck: {} {} {}", hash_key, sort_key, rpc_code.to_string());
 
         auto dreq = dsn::make_unique<dsn::apps::duplicate_request>();
         dreq->task_code = rpc_code;
