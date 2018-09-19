@@ -183,7 +183,7 @@ function run_build()
     if [ "$ENABLE_GCOV" == "YES" ]; then
         OPT="$OPT --enable_gcov"
     fi
-    ./run.sh build $OPT
+    ./run.sh build $OPT --notest
     if [ $? -ne 0 ]; then
         echo "ERROR: build rdsn failed"
         exit 1
