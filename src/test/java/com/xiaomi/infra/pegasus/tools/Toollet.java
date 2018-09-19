@@ -36,11 +36,10 @@ public class Toollet {
             int process_id = -1;
             while ((line = input.readLine()) != null) {
                 if (line.contains("pegasus_server") && line.contains("meta")) {
-                    String[] words = line.split(" ");
-                    for (String word : words) {
+                    String[] words = line.split("\\s+");
+                    if (words.length > 1) {
                         try {
-                            process_id = Integer.valueOf(word);
-                            break;
+                            process_id = Integer.valueOf(words[1]);
                         } catch (Throwable ex) {
                         }
                     }
