@@ -32,12 +32,10 @@
 #include <string>
 #include <cstdlib>
 #include <cstdint>
-
-#ifdef DSN_USE_THRIFT_SERIALIZATION
 #include <thrift/protocol/TProtocol.h>
-#endif
 
-typedef enum dsn_host_type_t {
+typedef enum dsn_host_type_t
+{
     HOST_TYPE_INVALID = 0,
     HOST_TYPE_IPV4 = 1,
     HOST_TYPE_GROUP = 2,
@@ -192,10 +190,9 @@ public:
         }
     }
 
-#ifdef DSN_USE_THRIFT_SERIALIZATION
+    // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-#endif
 
 private:
     union
@@ -220,9 +217,11 @@ private:
         uint64_t value;
     } _addr{.value = 0};
 };
-}
+
+} // namespace dsn
 
 namespace std {
+
 template <>
 struct hash<::dsn::rpc_address>
 {
@@ -240,4 +239,5 @@ struct hash<::dsn::rpc_address>
         }
     }
 };
-}
+
+} // namespace std

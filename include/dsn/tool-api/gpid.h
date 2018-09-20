@@ -26,10 +26,7 @@
 #pragma once
 
 #include <cstdint>
-
-#ifdef DSN_USE_THRIFT_SERIALIZATION
 #include <thrift/protocol/TProtocol.h>
-#endif
 
 namespace dsn {
 
@@ -68,10 +65,9 @@ public:
 
     const char *to_string() const;
 
-#ifdef DSN_USE_THRIFT_SERIALIZATION
+    // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-#endif
 
     int thread_hash() const { return _value.u.app_id * 7919 + _value.u.partition_index; }
 
@@ -98,4 +94,4 @@ struct hash<::dsn::gpid>
         return static_cast<std::size_t>(pid.thread_hash());
     }
 };
-}
+} // namespace std

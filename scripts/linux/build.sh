@@ -53,12 +53,6 @@ else
     echo "BUILD_TYPE=release"
 fi
 
-echo "SERIALIZE_TYPE=$SERIALIZE_TYPE"
-if [ -n "$SERIALIZE_TYPE" ]
-then
-    CMAKE_OPTIONS="$CMAKE_OPTIONS -DDSN_SERIALIZATION_TYPE=$SERIALIZE_TYPE"
-fi
-
 if [ "$ONLY_BUILD" == "YES" ]
 then
     echo "ONLY_BUILD=YES"

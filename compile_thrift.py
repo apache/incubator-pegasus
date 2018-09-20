@@ -241,21 +241,6 @@ def fix_include(thrift_name, include_fix_dict):
 
     os.chdir("..")
 
-def toggle_serialization_in_cpp(thrift_name):
-    # current dir is thrift file dir
-    os.chdir("output")
-    cpp_file = thrift_name + "_types.cpp"
-    new_file = cpp_file + ".swapfile"
-
-    os.system("pwd")
-    os.system("echo \"#ifdef DSN_USE_THRIFT_SERIALIZATION\" > %s"%(new_file) )
-    os.system("cat %s >> %s"%(cpp_file, new_file))
-    os.system("echo \"#endif\" >> %s"%(new_file) )
-
-    os.remove(cpp_file)
-    os.rename(new_file, cpp_file)
-    os.chdir("..")
-
 def compile_thrift_file(thrift_info):
     thrift_name = thrift_info["name"]
     print ">>>compiling thrift file %s.thrift ..."%(thrift_name)

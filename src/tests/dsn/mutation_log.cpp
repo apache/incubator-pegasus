@@ -318,13 +318,7 @@ TEST(replication, mutation_log)
     mlog->open(
         [&mutations, &mutation_index](int log_length, mutation_ptr &mu) -> bool {
             mutation_ptr wmu = mutations[++mutation_index];
-#ifdef DSN_USE_THRIFT_SERIALIZATION
             EXPECT_TRUE(wmu->data.header == mu->data.header);
-#else
-            EXPECT_TRUE(memcmp((const void *)&wmu->data.header,
-                               (const void *)&mu->data.header,
-                               sizeof(mu->data.header)) == 0);
-#endif
             EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
             EXPECT_TRUE(wmu->data.updates[0].data.length() == mu->data.updates[0].data.length());
             EXPECT_TRUE(memcmp((const void *)wmu->data.updates[0].data.data(),

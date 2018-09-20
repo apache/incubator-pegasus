@@ -29,10 +29,7 @@
 #include <dsn/utility/ports.h>
 #include <dsn/utility/enum_helper.h>
 #include <dsn/tool-api/threadpool_code.h>
-
-#ifdef DSN_USE_THRIFT_SERIALIZATION
 #include <thrift/protocol/TProtocol.h>
-#endif
 
 typedef enum dsn_task_type_t {
     TASK_TYPE_RPC_REQUEST,  ///< task handling rpc request
@@ -115,10 +112,9 @@ public:
 
     constexpr int code() const { return _internal_code; }
 
-#ifdef DSN_USE_THRIFT_SERIALIZATION
+    // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-#endif
 
     static int max();
     static bool is_exist(const char *name);

@@ -27,9 +27,7 @@
 #pragma once
 
 #include <memory>
-#ifdef DSN_USE_THRIFT_SERIALIZATION
 #include <thrift/protocol/TProtocol.h>
-#endif
 
 namespace dsn {
 
@@ -153,10 +151,10 @@ public:
         return std::string(_data, _length);
     }
 
-#ifdef DSN_USE_THRIFT_SERIALIZATION
+    // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-#endif
+
 private:
     friend class binary_writer;
     std::shared_ptr<char> _holder;
@@ -164,4 +162,5 @@ private:
     const char *_data{nullptr};
     unsigned int _length{0}; // data length
 };
-}
+
+} // namespace dsn

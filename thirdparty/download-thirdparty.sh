@@ -122,12 +122,6 @@ check_and_download "gperftools-2.7.tar.gz"\
     "gperftools-2.7"
 exit_if_fail $?
 
-## protobuf
-#check_and_download "protobuf-v3.5.0.tar.gz"\
-#    "https://codeload.github.com/google/protobuf/tar.gz/v3.5.0"\
-#    "d95db321e1a9901fffc51ed8994afd36"
-#exit_if_fail $?
-
 #rapidjson
 check_and_download "rapidjson-v1.1.0.tar.gz"\
     "https://codeload.github.com/Tencent/rapidjson/tar.gz/v1.1.0"\
