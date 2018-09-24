@@ -42,6 +42,7 @@
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/c/api_layer1.h>
 #include <gtest/gtest.h>
+#include <dsn/utility/rand.h>
 
 using namespace ::dsn;
 using namespace ::dsn::utils;
@@ -59,7 +60,7 @@ TEST(core, crc)
 {
     char buffer[24];
     for (int i = 0; i < sizeof(buffer) / sizeof(char); i++) {
-        buffer[i] = dsn_random32(0, 200);
+        buffer[i] = rand::next_u32(0, 200);
     }
 
     auto c1 = dsn::utils::crc32_calc(buffer, 12, 0);

@@ -39,6 +39,7 @@
 #include <dsn/tool-api/env_provider.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/synchronize.h>
+#include <dsn/utility/rand.h>
 #include <dsn/tool/node_scoper.h>
 
 #include "task_engine.h"
@@ -431,7 +432,7 @@ void timer_task::enqueue()
 {
     // enable timer randomization to avoid lots of timers execution simultaneously
     if (delay_milliseconds() == 0 && spec().randomize_timer_delay_if_zero) {
-        set_delay(dsn_random32(0, _interval_milliseconds));
+        set_delay(rand::next_u32(0, _interval_milliseconds));
     }
 
     return task::enqueue();

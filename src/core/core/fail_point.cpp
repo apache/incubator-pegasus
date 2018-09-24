@@ -19,6 +19,7 @@
 
 #include <dsn/c/api_layer1.h>
 #include <boost/regex.hpp>
+#include <dsn/utility/rand.h>
 
 namespace dsn {
 namespace fail {
@@ -97,7 +98,7 @@ bool fail_point::parse_from_string(string_view action)
 
 const std::string *fail_point::eval()
 {
-    uint32_t r = dsn_random32(0, 100);
+    uint32_t r = rand::next_u32(0, 100);
     if (r > _freq) {
         return nullptr;
     }

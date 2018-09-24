@@ -3,6 +3,8 @@
 #include <boost/lexical_cast.hpp>
 
 #include <dsn/dist/replication/replication.types.h>
+#include <dsn/utility/rand.h>
+
 #include "dist/replication/common/replication_common.h"
 #include "misc.h"
 
@@ -103,12 +105,12 @@ void generate_app_serving_replica_info(/*out*/ std::shared_ptr<dsn::replication:
         dsn::partition_configuration &pc = app->partitions[i];
         replica_info ri;
 
-        snprintf(buffer, 256, "disk%u", dsn_random32(1, total_disks));
+        snprintf(buffer, 256, "disk%u", dsn::rand::next_u32(1, total_disks));
         ri.disk_tag = buffer;
         cc.collect_serving_replica(pc.primary, ri);
 
         for (const dsn::rpc_address &addr : pc.secondaries) {
-            snprintf(buffer, 256, "disk%u", dsn_random32(1, total_disks));
+            snprintf(buffer, 256, "disk%u", dsn::rand::next_u32(1, total_disks));
             ri.disk_tag = buffer;
             cc.collect_serving_replica(addr, ri);
         }

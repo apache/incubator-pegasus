@@ -33,6 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <dsn/utility/rand.h>
+
 #include "asio_net_provider.h"
 #include "asio_rpc_session.h"
 
@@ -293,8 +295,8 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
             // refactored
             _address.assign_ipv4(get_local_ipv4(),
                                  std::numeric_limits<uint16_t>::max() -
-                                     dsn_random64(std::numeric_limits<uint64_t>::min(),
-                                                  std::numeric_limits<uint64_t>::max()) %
+                                         rand::next_u64(std::numeric_limits<uint64_t>::min(),
+                                                        std::numeric_limits<uint64_t>::max()) %
                                          5000);
             ::boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address_v4::any(),
                                                       _address.port());

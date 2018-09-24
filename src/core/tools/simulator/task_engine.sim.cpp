@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <dsn/utility/rand.h>
 #include "task_engine.sim.h"
 #include "scheduler.h"
 
@@ -51,13 +52,13 @@ void sim_task_queue::enqueue(task *t)
     dassert(0 == t->delay_milliseconds(), "delay time must be zero");
     if (_tasks.size() > 0) {
         do {
-            int random_pos = dsn_random32(0, 1000000);
+            int random_pos = rand::next_u32(0, 1000000);
             auto pr = _tasks.insert(std::map<uint32_t, task *>::value_type(random_pos, t));
             if (pr.second)
                 break;
         } while (true);
     } else {
-        int random_pos = dsn_random32(0, 1000000);
+        int random_pos = rand::next_u32(0, 1000000);
         _tasks.insert(std::map<uint32_t, task *>::value_type(random_pos, t));
     }
 
@@ -108,7 +109,7 @@ bool sim_semaphore_provider::wait(int timeout_milliseconds)
     } else {
         // wait success
         if (static_cast<unsigned int>(timeout_milliseconds) == TIME_MS_MAX ||
-            dsn_probability() <= 0.5) {
+                rand::next_double01() <= 0.5) {
             _wait_threads.push_back(scheduler::task_worker_ext::get(task::get_current_worker()));
             scheduler::instance().wait_schedule(true, false);
             return true;

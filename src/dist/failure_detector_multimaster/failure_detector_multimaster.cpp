@@ -37,6 +37,7 @@
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/dist/failure_detector_multimaster.h>
+#include <dsn/utility/rand.h>
 
 namespace dsn {
 namespace dist {
@@ -52,7 +53,7 @@ slave_failure_detector_with_multimaster::slave_failure_detector_with_multimaster
     }
 
     _meta_servers.group_address()->set_leader(
-        meta_servers[dsn_random32(0, (uint32_t)meta_servers.size() - 1)]);
+        meta_servers[rand::next_u32(0, (uint32_t)meta_servers.size() - 1)]);
 
     // ATTENTION: here we disable dsn_group_set_update_leader_automatically to avoid
     // failure detecting logic is affected by rpc failure or rpc forwarding.

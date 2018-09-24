@@ -345,19 +345,8 @@ replace the underneath implementation of these primitives.
 extern DSN_API uint64_t dsn_runtime_init_time_ms();
 extern DSN_API uint64_t dsn_now_ns();
 
-/*! return [min, max] */
-extern DSN_API uint64_t dsn_random64(uint64_t min, uint64_t max);
-
 __inline uint64_t dsn_now_us() { return dsn_now_ns() / 1000; }
 __inline uint64_t dsn_now_ms() { return dsn_now_ns() / 1000000; }
-
-/*! return [min, max] */
-__inline uint32_t dsn_random32(uint32_t min, uint32_t max)
-{
-    return (uint32_t)(dsn_random64(min, max));
-}
-
-__inline double dsn_probability() { return (double)(dsn_random64(0, 1000000000)) / 1000000000.0; }
 
 /*@}*/
 

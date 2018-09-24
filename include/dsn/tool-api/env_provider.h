@@ -59,11 +59,6 @@ public:
     env_provider(env_provider *inner_provider);
 
     DSN_API virtual uint64_t now_ns() const;
-
-    DSN_API virtual uint64_t random64(uint64_t min, uint64_t max);
-
-protected:
-    DSN_API static void set_thread_local_random_seed(int s);
 };
 /*@}*/
 } // end namespace

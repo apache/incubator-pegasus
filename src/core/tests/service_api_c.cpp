@@ -41,6 +41,7 @@
 #include <dsn/utility/filesystem.h>
 #include <gtest/gtest.h>
 #include <thread>
+#include <dsn/utility/rand.h>
 #include "core/core/service_engine.h"
 
 using namespace dsn;
@@ -288,7 +289,7 @@ TEST(core, dsn_env)
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     uint64_t now2 = dsn_now_ns();
     ASSERT_LE(now1 + 1000000, now2);
-    uint64_t r = dsn_random64(100, 200);
+    uint64_t r = rand::next_u64(100, 200);
     ASSERT_LE(100, r);
     ASSERT_GE(200, r);
 }

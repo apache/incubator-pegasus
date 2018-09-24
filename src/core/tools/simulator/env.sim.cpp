@@ -36,6 +36,8 @@
 #include "env.sim.h"
 #include "scheduler.h"
 
+#include <dsn/utility/rand.h>
+
 namespace dsn {
 namespace tools {
 
@@ -45,9 +47,9 @@ uint64_t sim_env_provider::now_ns() const { return scheduler::instance().now_ns(
 
 void sim_env_provider::on_worker_start(task_worker *worker)
 {
-    set_thread_local_random_seed(
-        (_seed + worker->index() + worker->index() * worker->pool_spec().pool_code) ^
-        worker->index());
+    rand::reseed_thread_local_rng(
+            (_seed + worker->index() + worker->index() * worker->pool_spec().pool_code) ^
+            worker->index());
 }
 
 sim_env_provider::sim_env_provider(env_provider *inner_provider) : env_provider(inner_provider)
@@ -65,5 +67,6 @@ sim_env_provider::sim_env_provider(env_provider *inner_provider) : env_provider(
 
     derror("simulation.random seed for this round is %d", _seed);
 }
-}
-} // end namespace
+
+} // namespace tools
+} // namespace dsn

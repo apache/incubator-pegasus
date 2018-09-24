@@ -36,6 +36,7 @@
 #include <boost/asio.hpp>
 #include <dsn/service_api_c.h>
 #include <dsn/utility/singleton_store.h>
+#include <dsn/utility/rand.h>
 #include <dsn/tool/node_scoper.h>
 #include "network.sim.h"
 
@@ -191,7 +192,7 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
 uint32_t sim_network_provider::net_delay_milliseconds() const
 {
     return static_cast<uint32_t>(
-               dsn_random32(_min_message_delay_microseconds, _max_message_delay_microseconds)) /
+               rand::next_u32(_min_message_delay_microseconds, _max_message_delay_microseconds)) /
            1000;
 }
 }

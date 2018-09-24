@@ -52,6 +52,7 @@
 #include <dsn/tool-api/task_queue.h>
 #include <dsn/tool-api/async_calls.h>
 #include <dsn/cpp/serialization.h>
+#include <dsn/utility/rand.h>
 #include <set>
 
 namespace dsn {
@@ -634,8 +635,8 @@ void rpc_engine::call(message_ex *request, const rpc_response_task_ptr &call)
 {
     auto &hdr = *request->header;
     hdr.from_address = primary_address();
-    hdr.trace_id = dsn_random64(std::numeric_limits<decltype(hdr.trace_id)>::min(),
-                                std::numeric_limits<decltype(hdr.trace_id)>::max());
+    hdr.trace_id = rand::next_u64(std::numeric_limits<decltype(hdr.trace_id)>::min(),
+                                  std::numeric_limits<decltype(hdr.trace_id)>::max());
 
     call_address(request->server_address, request, call);
 }

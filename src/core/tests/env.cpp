@@ -35,6 +35,7 @@
 
 #include <dsn/tool-api/env_provider.h>
 #include <gtest/gtest.h>
+#include <dsn/utility/rand.h>
 #include "../tools/simulator/env.sim.h"
 
 using namespace ::dsn;
@@ -44,10 +45,10 @@ TEST(core, env)
     uint64_t xs[] = {0, std::numeric_limits<uint64_t>::max() - 1, 0xdeadbeef};
 
     for (auto &x : xs) {
-        auto r = dsn_random64(x, x);
+        auto r = rand::next_u64(x, x);
         EXPECT_EQ(r, x);
 
-        r = dsn_random64(x, x + 1);
+        r = rand::next_u64(x, x + 1);
         EXPECT_TRUE(r == x || r == (x + 1));
     }
 }
