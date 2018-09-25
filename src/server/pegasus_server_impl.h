@@ -227,7 +227,7 @@ private:
     uint64_t get_random_nearby(uint64_t base_value)
     {
         uint64_t gap = base_value / 4;
-        return rand::next_u64(base_value - gap, base_value + gap);
+        return dsn::rand::next_u64(base_value - gap, base_value + gap);
     }
 
     // return true if expired

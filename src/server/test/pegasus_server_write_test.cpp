@@ -41,8 +41,8 @@ public:
                 req.key = key;
                 req.value.assign("value", 0, 5);
 
-                int put_rpc_cnt = rand::next_u32(1, 10);
-                int remove_rpc_cnt = rand::next_u32(1, 10);
+                int put_rpc_cnt = dsn::rand::next_u32(1, 10);
+                int remove_rpc_cnt = dsn::rand::next_u32(1, 10);
                 int total_rpc_cnt = put_rpc_cnt + remove_rpc_cnt;
                 auto writes = new dsn::message_ex *[total_rpc_cnt];
                 for (int i = 0; i < put_rpc_cnt; i++) {

@@ -7,6 +7,7 @@
 #include <map>
 #include <rocksdb/db.h>
 #include <dsn/tool_api.h>
+#include <dsn/utility/rand.h>
 #include <rrdb/rrdb_types.h>
 
 #include "base/pegasus_const.h"
@@ -76,7 +77,7 @@ public:
         //
         // however, currently the implementation is not 100% correct.
         //
-        _counter = rand::next_u64(0, 2L << 31);
+        _counter = dsn::rand::next_u64(0, 2L << 31);
         _counter <<= 32;
     }
 
