@@ -2330,7 +2330,7 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
             // write_buffer_size = random_nearby(db_opts.write_buffer_size)
             //
             uint64_t buffer_size =
-                dsn_random64(_db_opts.write_buffer_size, _db_opts.write_buffer_size * 2);
+                rand::next_u64(_db_opts.write_buffer_size, _db_opts.write_buffer_size * 2);
             new_options["write_buffer_size"] = boost::lexical_cast<std::string>(buffer_size);
 
             //

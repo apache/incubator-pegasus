@@ -298,7 +298,7 @@ TEST_F(recovery_test, recovery)
     {
         prepare_recovery();
         for (int i = 0; i < default_partitions; ++i) {
-            int replica_id = dsn_random32(1, 3);
+            int replica_id = rand::next_u32(1, 3);
             delete_replica(replica_id, 2, i);
         }
 

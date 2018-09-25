@@ -76,7 +76,7 @@ public:
         //
         // however, currently the implementation is not 100% correct.
         //
-        _counter = dsn_random64(0, 2L << 31);
+        _counter = rand::next_u64(0, 2L << 31);
         _counter <<= 32;
     }
 
