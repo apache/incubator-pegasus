@@ -9,6 +9,7 @@
 #include <boost/asio.hpp>
 
 #include <dsn/utility/string_conv.h>
+#include <dsn/utility/rand.h>
 
 #include <gtest/gtest.h>
 #include <rrdb/rrdb.client.h>
@@ -197,17 +198,17 @@ public:
         // create several requests
         for (entry_index = 0; entry_index < total_requests; ++entry_index) {
             redis_request &ra = reserved_entry[entry_index]->request;
-            ra.length = dsn_random32(1, 20);
+            ra.length = dsn::rand::next_u32(1, 20);
             ra.buffers.resize(ra.length);
             for (unsigned int i = 0; i != ra.length; ++i) {
                 redis_bulk_string &bs = ra.buffers[i];
-                bs.length = dsn_random32(0, 8);
+                bs.length = dsn::rand::next_u32(0, 8);
                 if (bs.length == 0) {
                     bs.length = -1;
                 } else if (bs.length == 1) {
                     bs.length = 0;
                 } else {
-                    bs.length = dsn_random32(1, 256);
+                    bs.length = dsn::rand::next_u32(1, 256);
                     std::shared_ptr<char> raw_buf(new char[bs.length],
                                                   std::default_delete<char[]>());
                     memset(raw_buf.get(), 't', bs.length);
@@ -256,11 +257,11 @@ public:
         // let's split the messages into different pieces
         {
             entry_index = 0;
-            size_t slice_count = dsn_random32(total_requests, total_body_size);
+            size_t slice_count = dsn::rand::next_u32(total_requests, total_body_size);
             std::vector<int> start_pos;
             start_pos.push_back(0);
             for (unsigned int i = 0; i < slice_count - 1; ++i) {
-                start_pos.push_back(dsn_random32(0, total_body_size - 1));
+                start_pos.push_back(dsn::rand::next_u32(0, total_body_size - 1));
             }
             start_pos.push_back(total_body_size);
             std::sort(start_pos.begin(), start_pos.end());
