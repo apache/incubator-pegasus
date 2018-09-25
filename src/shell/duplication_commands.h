@@ -15,6 +15,19 @@ inline bool add_dup(command_executor *e, shell_context *sc, arguments args)
     if (args.argc <= 2)
         return false;
 
+    static struct option long_options[] = {{"freezed", no_argument, 0, 'f'}, {0, 0, 0, 0}};
+    int c = getopt_long(args.argc, args.argv, "f:", long_options, &option_index);
+    bool freezed = false;
+    if (c == -1)
+        break;
+    switch (c) {
+    case 'f':
+        freezed = true;
+        break;
+    default:
+        return false;
+    }
+
     std::string app_name = args.argv[1];
     std::string remote_address = args.argv[2];
     auto err_resp = sc->ddl_client->add_dup(app_name, remote_address);
