@@ -15,30 +15,42 @@ inline bool add_dup(command_executor *e, shell_context *sc, arguments args)
     if (args.argc <= 2)
         return false;
 
-    static struct option long_options[] = {{"freezed", no_argument, 0, 'f'}, {0, 0, 0, 0}};
-    int c = getopt_long(args.argc, args.argv, "f:", long_options, &option_index);
-    bool freezed = false;
-    if (c == -1)
-        break;
-    switch (c) {
-    case 'f':
-        freezed = true;
-        break;
-    default:
-        return false;
-    }
-
     std::string app_name = args.argv[1];
     std::string remote_address = args.argv[2];
-    auto err_resp = sc->ddl_client->add_dup(app_name, remote_address);
-    if (!err_resp.is_ok()) {
-        fmt::print("adding duplication for app [{}] failed, error={}\n",
-                   app_name,
-                   err_resp.get_error().description());
+
+    static struct option long_options[] = {{"freezed", no_argument, 0, 'f'}, {0, 0, 0, 0}};
+    bool freezed = false;
+    while (true) {
+        int option_index;
+        int c = getopt_long(args.argc, args.argv, "f", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'f':
+            freezed = true;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    auto err_resp = sc->ddl_client->add_dup(app_name, remote_address, freezed);
+    dsn::error_s err = err_resp.get_error();
+    if (err.is_ok()) {
+        err = dsn::error_s::make(err_resp.get_value().err);
+    }
+    if (!err.is_ok()) {
+        fmt::print(
+            "adding duplication for app [{}] failed, error={}\n", app_name, err.description());
     } else {
         const auto &resp = err_resp.get_value();
-        fmt::print(
-            "Success for adding duplication [appid: {}, dupid: {}]\n", resp.appid, resp.dupid);
+        fmt::print("Success for adding duplication [app: {}, remote address: {}, appid: {}, dupid: "
+                   "{}, freezed: {}]\n",
+                   app_name,
+                   remote_address,
+                   resp.appid,
+                   resp.dupid,
+                   freezed);
     }
     return true;
 }
@@ -60,10 +72,13 @@ inline bool query_dup(command_executor *e, shell_context *sc, arguments args)
 
     std::string app_name = args.argv[1];
     auto err_resp = sc->ddl_client->query_dup(app_name);
-    if (!err_resp.is_ok()) {
-        fmt::print("querying duplications of app [{}] failed, error={}\n",
-                   app_name,
-                   err_resp.get_error().description());
+    dsn::error_s err = err_resp.get_error();
+    if (err.is_ok()) {
+        err = dsn::error_s::make(err_resp.get_value().err);
+    }
+    if (!err.is_ok()) {
+        fmt::print(
+            "querying duplications of app [{}] failed, error={}\n", app_name, err.description());
     } else {
         const auto &resp = err_resp.get_value();
         fmt::print("duplications of app [{}] are listed as below:\n", app_name);
@@ -149,14 +164,18 @@ inline bool change_dup_status(command_executor *e,
     }
 
     auto err_resp = sc->ddl_client->change_dup_status(app_name, dup_id, status);
-    if (err_resp.is_ok()) {
+    dsn::error_s err = err_resp.get_error();
+    if (err.is_ok()) {
+        err = dsn::error_s::make(err_resp.get_value().err);
+    }
+    if (err.is_ok()) {
         fmt::print("{}({}) for app [{}] succeed\n", operation, dup_id, app_name);
     } else {
         fmt::print("{}({}) for app [{}] failed, error={}\n",
                    operation,
                    dup_id,
                    app_name,
-                   err_resp.get_error().description());
+                   err.description());
     }
     return true;
 }

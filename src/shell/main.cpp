@@ -385,7 +385,7 @@ static command_executor commands[] = {
         "[-s|--skip_prompt] [-o|--output file_name]",
         ddd_diagnose,
     },
-    {"add_dup", "add duplication", "<app_name> <remote_cluster_address>", add_dup},
+    {"add_dup", "add duplication", "<app_name> <remote_cluster_address> [-f|--freezed]", add_dup},
     {"query_dup", "query duplication info", "<app_name>", query_dup},
     {"query_dup_detail",
      "query duplication info in detail",
