@@ -9,7 +9,6 @@
 #    CXX_COMPILER   <str>
 #    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
-#    WARNING_ALL    YES|NO
 #    ENABLE_GCOV    YES|NO
 #    BOOST_DIR      <dir>|""
 #    TEST_MODULE    "<module1> <module2> ..."
@@ -18,8 +17,6 @@
 #    -DCMAKE_C_COMPILER=gcc|clang
 #    -DCMAKE_CXX_COMPILER=g++|clang++
 #    [-DCMAKE_BUILD_TYPE=Debug]
-#    [-DDSN_GIT_SOURCE=github|xiaomi]
-#    [-DWARNING_ALL=TRUE]
 #    [-DENABLE_GCOV=TRUE]
 #    [-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON]
 
@@ -27,8 +24,6 @@ ROOT=`pwd`
 REPORT_DIR=$ROOT/test_reports
 BUILD_DIR="$ROOT/builder"
 GCOV_DIR="$ROOT/gcov_report"
-GCOV_TMP="$ROOT/.gcov_tmp"
-GCOV_PATTERN=`find $ROOT/include $ROOT/src -name '*.h' -o -name '*.cpp'`
 TIME=`date --rfc-3339=seconds`
 
 echo "C_COMPILER=$C_COMPILER"
@@ -66,14 +61,6 @@ then
     MAKE_OPTIONS="$MAKE_OPTIONS VERBOSE=1"
 else
     echo "RUN_VERBOSE=NO"
-fi
-
-if [ "$WARNING_ALL" == "YES" ]
-then
-    echo "WARNING_ALL=YES"
-    CMAKE_OPTIONS="$CMAKE_OPTIONS -DWARNING_ALL=TRUE"
-else
-    echo "WARNING_ALL=NO"
 fi
 
 if [ "$ENABLE_GCOV" == "YES" ]
@@ -181,42 +168,15 @@ then
     exit 0
 fi
 
-echo "#############################################################################"
+echo "################################# start testing ################################"
 
-##############################################
-## Supported test module:
-##  - dsn.core.tests
-##  - dsn.tests
-##  - dsn.rep_tests.simple_kv
-##  - dsn.replication.simple_kv
-##############################################
 if [ -z "$TEST_MODULE" ]
 then
+    # supported test module
     TEST_MODULE="dsn.core.tests,dsn.tests,dsn_nfs_test,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.meta.test,dsn.replica.test"
 fi
 
 echo "TEST_MODULE=$TEST_MODULE"
-
-if [ "$ENABLE_GCOV" == "YES" ]
-then
-    echo "Initializing gcov..."
-    cd $ROOT
-    rm -rf $GCOV_TMP &>/dev/null
-    mkdir -p $GCOV_TMP
-    lcov -q -d $BUILD_DIR -z
-    lcov -q -d $BUILD_DIR -b $ROOT --no-external --initial -c -o $GCOV_TMP/initial.info
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: lcov init failed, maybe need to run again with --clear option"
-        exit 1
-    fi
-    lcov -q -e $GCOV_TMP/initial.info $GCOV_PATTERN -o $GCOV_TMP/initial.extract.info
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: lcov init extract failed"
-        exit 1
-    fi
-fi
 
 if [ ! -d "$REPORT_DIR" ]
 then
@@ -233,7 +193,7 @@ for MODULE in `echo $TEST_MODULE | sed 's/,/ /g'`; do
     fi
     if [ ! -f "$MODULE_DIR/run.sh" ]
     then
-        echo "ERROR: module test entrance script $MODULE_DIR/run.sh not exist"
+        echo "ERROR: module test entrance script $MODULE_DIR/run.sh doesn't exist"
         exit 1
     fi
     cd $MODULE_DIR
@@ -250,28 +210,15 @@ if [ "$ENABLE_GCOV" == "YES" ]
 then
     echo "Generating gcov report..."
     cd $ROOT
-    lcov -q -d $BUILD_DIR -b $ROOT --no-external -c -o $GCOV_TMP/gcov.info
+    mkdir -p $GCOV_DIR
+
+    echo "Running gcovr to produce HTML code coverage report."
+    gcovr --html --html-details -r $ROOT --object-directory=$BUILD_DIR \
+          -o $GCOV_DIR/index.html
     if [ $? -ne 0 ]
     then
-        echo "ERROR: lcov generate failed"
         exit 1
     fi
-    lcov -q -e $GCOV_TMP/gcov.info $GCOV_PATTERN -o $GCOV_TMP/gcov.extract.info
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: lcov extract failed"
-        exit 1
-    fi
-    genhtml $GCOV_TMP/*.extract.info --show-details --legend --title "GCOV report at $TIME" -o $GCOV_TMP/report
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: gcov genhtml failed"
-        exit 1
-    fi
-    rm -rf $GCOV_DIR &>/dev/null
-    mv $GCOV_TMP/report $GCOV_DIR
-    rm -rf $GCOV_TMP
-    echo "View gcov report: firefox $GCOV_DIR/index.html"
 fi
 
 echo "Test succeed"

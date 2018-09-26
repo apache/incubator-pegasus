@@ -24,5 +24,5 @@ set(MY_BOOST_PACKAGES system filesystem)
 # Extra files that will be installed
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
-set(MY_DO_INSTALL TRUE)
 dsn_add_executable()
+dsn_install_executable()

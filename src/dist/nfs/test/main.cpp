@@ -146,6 +146,5 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
     dsn_run_config("config.ini", false);
-    int ans = RUN_ALL_TESTS();
-    dsn_exit(ans);
+    return RUN_ALL_TESTS();
 }

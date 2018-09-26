@@ -58,7 +58,6 @@ function usage_build()
     echo "                         default is \"gcc,g++\""
     echo "   -j|--jobs <num>       the number of jobs to run simultaneously, default 8"
     echo "   -b|--boost_dir <dir>  specify customized boost directory, use system boost if not set"
-    echo "   -w|--warning_all      open all warnings when build, default no"
     echo "   --enable_gcov         generate gcov code coverage report, default no"
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --notest              build without building unit tests, default no"
@@ -77,7 +76,6 @@ function run_build()
     CLEAR_THIRDPARTY=NO
     JOB_NUM=8
     BOOST_DIR=""
-    WARNING_ALL=NO
     ENABLE_GCOV=NO
     RUN_VERBOSE=NO
     NO_TEST=NO
@@ -118,11 +116,9 @@ function run_build()
                 BOOST_DIR="$2"
                 shift
                 ;;
-            -w|--warning_all)
-                WARNING_ALL=YES
-                ;;
             --enable_gcov)
                 ENABLE_GCOV=YES
+                BUILD_TYPE="debug"
                 ;;
             -v|--verbose)
                 RUN_VERBOSE=YES
@@ -179,7 +175,7 @@ function run_build()
     fi
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
-        BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
+        BOOST_DIR="$BOOST_DIR" ENABLE_GCOV="$ENABLE_GCOV" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" $scripts_dir/build.sh
 }
 

@@ -18,6 +18,7 @@
 # Sets COMPILER_FAMILY to 'clang' or 'gcc'
 # Sets COMPILER_VERSION to the version
 
+include(CMakeDetermineCXXCompiler)
 message("Running rdsn/bin/compiler_info.cmake")
 execute_process(COMMAND env LANG=C "${CMAKE_CXX_COMPILER}" -v
                 ERROR_VARIABLE COMPILER_VERSION_FULL)
