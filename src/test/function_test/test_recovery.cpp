@@ -12,6 +12,7 @@
 
 #include <dsn/service_api_c.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
+#include <dsn/utility/rand.h>
 
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
@@ -298,7 +299,7 @@ TEST_F(recovery_test, recovery)
     {
         prepare_recovery();
         for (int i = 0; i < default_partitions; ++i) {
-            int replica_id = dsn_random32(1, 3);
+            int replica_id = dsn::rand::next_u32(1, 3);
             delete_replica(replica_id, 2, i);
         }
 
