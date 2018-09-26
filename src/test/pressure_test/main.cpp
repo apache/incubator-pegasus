@@ -9,7 +9,7 @@
 
 #include <dsn/c/api_utilities.h>
 #include <dsn/c/api_layer1.h>
-#include <dsn/utility/utils.h>
+#include <dsn/utility/rand.h>
 #include <dsn/tool-api/async_calls.h>
 
 #include "pegasus/client.h"
@@ -18,9 +18,6 @@ using namespace std;
 using namespace ::pegasus;
 
 DEFINE_TASK_CODE(LPC_DEFAUT_TASK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
-
-//[min, max], min and max is unsigned
-//  dsn_random64(min, max);  or  dsn_random32(min, max)
 
 static int32_t hashkey_len;
 static int32_t sortkey_len;
@@ -45,7 +42,7 @@ std::string fill_string(const std::string &str, int len)
 
 std::string get_hashkey()
 {
-    std::string key = to_string(dsn_random64(0, hashkey_limit));
+    std::string key = to_string(dsn::rand::next_u64(0, hashkey_limit));
     if (key.size() >= hashkey_len) {
         return key;
     } else {
@@ -55,7 +52,7 @@ std::string get_hashkey()
 
 std::string get_sortkey()
 {
-    std::string key = to_string(dsn_random64(0, sortkey_limit));
+    std::string key = to_string(dsn::rand::next_u64(0, sortkey_limit));
     if (key.size() >= sortkey_len) {
         return key;
     } else {
