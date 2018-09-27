@@ -9,4 +9,5 @@ target/
 *.log
 
 .idea/
+.iml
 rolling_log/

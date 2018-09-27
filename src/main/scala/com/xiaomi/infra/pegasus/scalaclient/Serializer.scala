@@ -60,3 +60,7 @@ object Serializers {
         override def deserialize(bytes: Array[Byte]): T = if (bytes == null) null.asInstanceOf[T] else  SerializationUtils.deserialize(bytes).asInstanceOf[T]
     }
 }
+
+object AnyRefSerializer {
+    implicit def andRefSerializer[T <: java.io.Serializable] = Serializers.anyRefSerializer[T]
+}
