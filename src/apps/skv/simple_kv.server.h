@@ -40,7 +40,7 @@
 #include <dsn/dist/replication/storage_serverlet.h>
 
 #include "simple_kv.code.definition.h"
-#include "simple_kv.types.h"
+#include "simple_kv_types.h"
 
 namespace dsn {
 namespace replication {
@@ -51,7 +51,7 @@ public:
     simple_kv_service(replica *r) : replication_app_base(r) {}
     virtual ~simple_kv_service() {}
 
-    virtual int on_request(dsn::message_ex* request) override { return handle_request(request); }
+    virtual int on_request(dsn::message_ex *request) override { return handle_request(request); }
 protected:
     // all service handlers to be implemented further
     // RPC_SIMPLE_KV_SIMPLE_KV_READ

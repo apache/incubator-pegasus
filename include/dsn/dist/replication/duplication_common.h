@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <dsn/dist/replication/replication.types.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/cpp/rpc_holder.h>
 #include <dsn/cpp/json_helper.h>

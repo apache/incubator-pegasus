@@ -34,7 +34,6 @@
  */
 #pragma once
 #include <dsn/service_api_cpp.h>
-#include "echo.types.h"
 
 namespace dsn {
 namespace example {

@@ -28,7 +28,7 @@
 #include <iostream>
 #include <dsn/cpp/serverlet.h>
 #include <dsn/dist/cli/cli.code.definition.h>
-#include <dsn/dist/cli/cli.types.h>
+#include <dsn/dist/cli/cli_types.h>
 
 namespace dsn {
 class cli_service : public ::dsn::serverlet<cli_service>

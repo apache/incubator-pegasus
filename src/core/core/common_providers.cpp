@@ -35,8 +35,6 @@
 #include "partition_resolver_simple.h"
 #include <dsn/utility/factory_store.h>
 
-#include <dsn/dist/replication/replication.types.h>
-
 namespace dsn {
 namespace dist {
 static bool register_component_provider(const char *name,

@@ -36,7 +36,6 @@
 
 #include <string>
 #include <dsn/dist/replication.h>
-#include <dsn/dist/replication/replication.types.h>
 
 namespace dsn {
 namespace replication {

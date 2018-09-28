@@ -39,7 +39,6 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/nfs_node.h>
 
-#include "nfs.types.h"
 #include "nfs_client.h"
 
 namespace dsn {

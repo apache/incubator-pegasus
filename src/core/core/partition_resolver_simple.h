@@ -39,7 +39,7 @@
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/service_api_c.h>
 #include <dsn/cpp/zlocks.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2.types.h>
+#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 
 namespace dsn {
 namespace dist {

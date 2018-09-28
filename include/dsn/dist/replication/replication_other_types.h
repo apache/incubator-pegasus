@@ -36,7 +36,7 @@
 #define replication_OTHER_TYPES_H
 
 #include <sstream>
-#include <dsn/dist/replication/replication.types.h>
+#include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_enums.h>
 
 namespace dsn {

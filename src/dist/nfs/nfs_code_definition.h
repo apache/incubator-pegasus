@@ -33,7 +33,6 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #pragma once
-#include "nfs.types.h"
 
 namespace dsn {
 namespace service {

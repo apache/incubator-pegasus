@@ -29,7 +29,7 @@
 #include <dsn/utility/optional.h>
 #include <dsn/tool-api/async_calls.h>
 
-#include "nfs.types.h"
+#include "nfs_types.h"
 #include "nfs_code_definition.h"
 
 namespace dsn {

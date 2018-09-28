@@ -50,60 +50,35 @@ std::string no_registered_function_error_notice(const T &t, dsn_msg_serialize_fo
 
 } // namespace serialization
 
-#define THRIFT_MARSHALLER                                                                          \
-    case DSF_THRIFT_BINARY:                                                                        \
-        marshall_thrift_binary(writer, value);                                                     \
-        break;                                                                                     \
-    case DSF_THRIFT_JSON:                                                                          \
-        marshall_thrift_json(writer, value);                                                       \
-        break;
-
-#define THRIFT_UNMARSHALLER                                                                        \
-    case DSF_THRIFT_BINARY:                                                                        \
-        unmarshall_thrift_binary(reader, value);                                                   \
-        break;                                                                                     \
-    case DSF_THRIFT_JSON:                                                                          \
-        unmarshall_thrift_json(reader, value);                                                     \
-        break;
-
-// the following 2 functions is for thrift basic type serialization
-template <typename T>
-inline void marshall(binary_writer &writer, const T &value, dsn_msg_serialize_format fmt)
+template <typename ThriftType>
+inline void marshall(binary_writer &writer, const ThriftType &value, dsn_msg_serialize_format fmt)
 {
     switch (fmt) {
-        THRIFT_MARSHALLER
+    case DSF_THRIFT_BINARY:
+        marshall_thrift_binary(writer, value);
+        break;
+    case DSF_THRIFT_JSON:
+        marshall_thrift_json(writer, value);
+        break;
     default:
         dassert(false, serialization::no_registered_function_error_notice(value, fmt).c_str());
     }
 }
 
-template <typename T>
-inline void unmarshall(binary_reader &reader, T &value, dsn_msg_serialize_format fmt)
+template <typename ThriftType>
+inline void unmarshall(binary_reader &reader, ThriftType &value, dsn_msg_serialize_format fmt)
 {
     switch (fmt) {
-        THRIFT_UNMARSHALLER
+    case DSF_THRIFT_BINARY:
+        unmarshall_thrift_binary(reader, value);
+        break;
+    case DSF_THRIFT_JSON:
+        unmarshall_thrift_json(reader, value);
+        break;
     default:
         dassert(false, serialization::no_registered_function_error_notice(value, fmt).c_str());
     }
 }
-
-#define GENERATED_TYPE_SERIALIZATION(GType, SerializationType)                                     \
-    inline void marshall(binary_writer &writer, const GType &value, dsn_msg_serialize_format fmt)  \
-    {                                                                                              \
-        switch (fmt) {                                                                             \
-            SerializationType##_MARSHALLER default                                                 \
-                : dassert(false,                                                                   \
-                          serialization::no_registered_function_error_notice(value, fmt).c_str()); \
-        }                                                                                          \
-    }                                                                                              \
-    inline void unmarshall(binary_reader &reader, GType &value, dsn_msg_serialize_format fmt)      \
-    {                                                                                              \
-        switch (fmt) {                                                                             \
-            SerializationType##_UNMARSHALLER default                                               \
-                : dassert(false,                                                                   \
-                          serialization::no_registered_function_error_notice(value, fmt).c_str()); \
-        }                                                                                          \
-    }
 
 template <typename T>
 inline void marshall(dsn::message_ex *msg, const T &val)

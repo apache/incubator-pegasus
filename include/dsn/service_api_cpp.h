@@ -38,7 +38,6 @@
 #include <dsn/service_api_c.h>
 #include <dsn/tool-api/auto_codes.h>
 #include <dsn/cpp/serialization.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2.types.h>
 #include <dsn/cpp/rpc_stream.h>
 #include <dsn/cpp/zlocks.h>
 #include <dsn/cpp/serverlet.h>

@@ -32,6 +32,7 @@
 #include <dsn/cpp/rpc_stream.h>
 #include <dsn/cpp/serialization.h>
 #include <dsn/tool-api/rpc_message.h>
+#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 
 namespace dsn {
 
