@@ -7,19 +7,17 @@ include(${CMAKE_CURRENT_LIST_DIR}/compiler_info.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 
-# Set DSN_ROOT to ${PROJECT_BINARY_DIR}/output, this is where targets will be installed.
-# Users don't have to configure CMAKE_INSTALL_PREFIX unless they want to customize
-# the destination.
-set(DSN_ROOT ${PROJECT_BINARY_DIR}/output)
-message(STATUS "DSN_ROOT = ${DSN_ROOT}")
-set(CMAKE_INSTALL_PREFIX ${DSN_ROOT} CACHE STRING "" FORCE)
-message (STATUS "Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
+# Set DSN_PROJECT_DIR to rdsn/
+set(DSN_PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR})
+get_filename_component(DSN_PROJECT_DIR ${DSN_PROJECT_DIR} DIRECTORY)
 
-# Set DSN_THIRDPARTY_ROOT to rdsn/thirdparty
-set(RDSN_PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR})
-get_filename_component(RDSN_PROJECT_DIR ${RDSN_PROJECT_DIR} DIRECTORY)
-set(DSN_THIRDPARTY_ROOT ${RDSN_PROJECT_DIR}/thirdparty)
+# Set DSN_THIRDPARTY_ROOT to rdsn/thirdparty/output
+set(DSN_THIRDPARTY_ROOT ${DSN_PROJECT_DIR}/thirdparty/output)
 message(STATUS "DSN_THIRDPARTY_ROOT = ${DSN_THIRDPARTY_ROOT}")
+
+# Set DSN_ROOT to rdsn/DSN_ROOT, this is where rdsn will be installed
+set(DSN_ROOT ${DSN_PROJECT_DIR}/DSN_ROOT)
+message(STATUS "DSN_ROOT = ${DSN_ROOT}")
 
 
 # Install this target into ${CMAKE_INSTALL_PREFIX}/lib
@@ -85,9 +83,11 @@ endfunction(ms_add_project)
 #     "GLOB_RECURSE" for recursive search
 #     "GLOB" for non-recursive search
 # - MY_PROJ_SRC
-# - MY_PROJ_INC_PATH
+# - MY_PROJ_INC_PATH TODO(wutao1): remove this
 # - MY_PROJ_LIB_PATH TODO(wutao1): remove this
+# - MY_PROJ_LIBS
 # - MY_BINPLACES
+#     Extra files that will be installed
 # - MY_BOOST_PACKAGES
 function(dsn_add_project)
     if((NOT DEFINED MY_PROJ_TYPE) OR (MY_PROJ_TYPE STREQUAL ""))
@@ -198,10 +198,16 @@ function(dsn_setup_compiler_flags)
     endif()
     cmake_host_system_information(RESULT BUILD_HOSTNAME QUERY HOSTNAME)
     add_definitions(-DDSN_BUILD_HOSTNAME=${BUILD_HOSTNAME})
+
+    # We want access to the PRI* print format macros.
     add_definitions(-D__STDC_FORMAT_MACROS)
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y" CACHE STRING "" FORCE)
+
+    #  -Wall: Enable all warnings.
     add_compile_options(-Wall)
     add_compile_options(-Werror)
+    #  -Wno-sign-compare: suppress warnings for comparison between signed and unsigned integers
     add_compile_options(-Wno-sign-compare)
     add_compile_options(-Wno-strict-aliasing)
     add_compile_options(-Wuninitialized)
@@ -254,7 +260,7 @@ macro(ms_setup_boost STATIC_LINK PACKAGES BOOST_LIBS)
 endmacro(ms_setup_boost)
 
 # find necessary system libs
-function(dsn_setup_packages)
+function(dsn_setup_system_libs)
     find_package(Threads REQUIRED)
 
     set(DSN_SYSTEM_LIBS "")
@@ -277,7 +283,7 @@ function(dsn_setup_packages)
     endif()
     set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_DL})
 
-    # TODO(wutao1): maybe we do not need this?
+    # for md5 calculation
     find_library(DSN_LIB_CRYPTO NAMES crypto)
     if(DSN_LIB_CRYPTO STREQUAL "DSN_LIB_CRYPTO-NOTFOUND")
         message(FATAL_ERROR "Cannot find library crypto")
@@ -289,33 +295,19 @@ function(dsn_setup_packages)
         ${CMAKE_THREAD_LIBS_INIT} # the thread library found by FindThreads
         CACHE STRING "rDSN system libs" FORCE
     )
-endfunction(dsn_setup_packages)
+endfunction(dsn_setup_system_libs)
 
 function(dsn_setup_include_path)
     if(DEFINED BOOST_ROOT)
         include_directories(${BOOST_ROOT}/include)
     endif()
     include_directories(${BOOST_INCLUDEDIR})
-    if(DSN_BUILD_RUNTIME)
-        include_directories(${CMAKE_SOURCE_DIR}/include)
-        include_directories(${CMAKE_SOURCE_DIR}/include/dsn/cpp/serialization_helper)
-        include_directories(${CMAKE_SOURCE_DIR}/src)
-        include_directories(${CMAKE_SOURCE_DIR}/thirdparty/output/include)
-    else()
-        include_directories(${DSN_ROOT}/include)
-        include_directories(${DSN_ROOT}/include/dsn/cpp/serialization_helper)
-        include_directories(${DSN_THIRDPARTY_ROOT}/include)
-    endif()
+    include_directories(${DSN_THIRDPARTY_ROOT}/include)
 endfunction(dsn_setup_include_path)
 
 function(dsn_setup_link_path)
-    link_directories(${BOOST_LIBRARYDIR} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    if(DSN_BUILD_RUNTIME)
-        link_directories(${CMAKE_SOURCE_DIR}/thirdparty/output/lib)
-    else()
-        link_directories(${DSN_ROOT}/lib)
-        link_directories(${DSN_THIRDPARTY_ROOT}/lib)
-    endif()
+    link_directories(${BOOST_LIBRARYDIR})
+    link_directories(${DSN_THIRDPARTY_ROOT}/lib)
 endfunction(dsn_setup_link_path)
 
 function(dsn_common_setup)
@@ -341,7 +333,7 @@ function(dsn_common_setup)
         message(FATAL_ERROR "You need a compiler with C++1y support.")
     endif()
 
-    dsn_setup_packages()
+    dsn_setup_system_libs()
     dsn_setup_compiler_flags()
     dsn_setup_include_path()
     dsn_setup_link_path()

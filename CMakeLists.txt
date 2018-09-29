@@ -33,7 +33,16 @@ if(ENABLE_GCOV)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 endif()
 
+# Users don't have to configure CMAKE_INSTALL_PREFIX unless they want to customize
+# the destination.
+set(CMAKE_INSTALL_PREFIX ${DSN_ROOT} CACHE STRING "" FORCE)
+message (STATUS "dsn Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
+
 # install rdsn/include to ${CMAKE_INCLUDE_PREFIX}/include
 install(DIRECTORY include/ DESTINATION include)
+
+include_directories(${DSN_PROJECT_DIR}/include)
+include_directories(${DSN_PROJECT_DIR}/include/dsn/cpp/serialization_helper)
+include_directories(${DSN_PROJECT_DIR}/src)
 
 add_subdirectory(src)
