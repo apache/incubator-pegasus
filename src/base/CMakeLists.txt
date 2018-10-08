@@ -5,8 +5,6 @@ if(UNIX)
     add_compile_options(-fPIC)
 endif()
 
-project(${MY_PROJ_NAME} C CXX)
-
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search
 # "GLOB" for non-recursive search

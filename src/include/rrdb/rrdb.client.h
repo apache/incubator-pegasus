@@ -1,6 +1,6 @@
 #pragma once
 #include "rrdb.code.definition.h"
-#include "rrdb.types.h"
+#include "rrdb_types.h"
 #include <iostream>
 #include <dsn/utility/optional.h>
 #include <dsn/tool-api/task_tracker.h>

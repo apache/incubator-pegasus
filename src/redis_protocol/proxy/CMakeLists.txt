@@ -31,3 +31,4 @@ set(MY_BOOST_PACKAGES system filesystem)
 add_definitions(-Wno-attributes)
 
 dsn_add_executable()
+dsn_install_executable()

@@ -29,3 +29,4 @@ set(MY_BOOST_PACKAGES system filesystem)
 set(MY_BINPLACES "config.ini")
 
 dsn_add_executable()
+dsn_install_executable()
