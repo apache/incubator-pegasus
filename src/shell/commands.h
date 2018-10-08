@@ -20,7 +20,7 @@
 #include <dsn/dist/replication/mutation_log_tool.h>
 
 #include <rrdb/rrdb.code.definition.h>
-#include <rrdb/rrdb.types.h>
+#include <rrdb/rrdb_types.h>
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 #include <pegasus/error.h>
