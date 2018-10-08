@@ -248,7 +248,7 @@ fi
 
 # build s2geometry
 if [ ! -d $TP_OUTPUT/include/s2 ]; then
-    cd $TP_SRC/s2geometry-master
+    cd $TP_SRC/s2geometry-0239455c1e260d6d2c843649385b4fb9f5b28dba
     mkdir -p build && cd build
     cmake .. -DGTEST_INCLUDE=$TP_OUTPUT/include -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT
     make -j8 && make install

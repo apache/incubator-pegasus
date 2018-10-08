@@ -44,6 +44,8 @@ class http_service
 public:
     typedef std::function<void(const http_request &req, http_response &resp)> http_callback;
 
+    virtual ~http_service() = default;
+
     virtual std::string path() const = 0;
 
     void register_handler(std::string path, http_callback cb)
