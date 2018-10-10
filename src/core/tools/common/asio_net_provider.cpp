@@ -67,7 +67,9 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
             task_worker::set_name(buffer);
 
             boost::asio::io_service::work work(_io_service);
-            _io_service.run();
+            boost::system::error_code ec;
+            _io_service.run(ec);
+            dassert(false, "boost::asio::io_service run failed: err(%s)", ec.message().data());
         })));
     }
 
@@ -127,21 +129,26 @@ void asio_network_provider::do_accept()
 
     _acceptor->async_accept(*socket, [this, socket](boost::system::error_code ec) {
         if (!ec) {
-            auto ip = socket->remote_endpoint().address().to_v4().to_ulong();
-            auto port = socket->remote_endpoint().port();
-            ::dsn::rpc_address client_addr(ip, port);
+            auto remote = socket->remote_endpoint(ec);
+            if (ec) {
+                derror("failed to get the remote endpoint: %s", ec.message().data());
+            } else {
+                auto ip = remote.address().to_v4().to_ulong();
+                auto port = remote.port();
+                ::dsn::rpc_address client_addr(ip, port);
 
-            message_parser_ptr null_parser;
-            rpc_session_ptr s =
-                new asio_rpc_session(*this,
-                                     client_addr,
-                                     (std::shared_ptr<boost::asio::ip::tcp::socket> &)socket,
-                                     null_parser,
-                                     false);
-            on_server_session_accepted(s);
+                message_parser_ptr null_parser;
+                rpc_session_ptr s =
+                    new asio_rpc_session(*this,
+                                         client_addr,
+                                         (std::shared_ptr<boost::asio::ip::tcp::socket> &)socket,
+                                         null_parser,
+                                         false);
+                on_server_session_accepted(s);
 
-            // we should start read immediately after the rpc session is completely created.
-            s->start_read_next();
+                // we should start read immediately after the rpc session is completely created.
+                s->start_read_next();
+            }
         }
 
         do_accept();
@@ -295,8 +302,8 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
             // refactored
             _address.assign_ipv4(get_local_ipv4(),
                                  std::numeric_limits<uint16_t>::max() -
-                                         rand::next_u64(std::numeric_limits<uint64_t>::min(),
-                                                        std::numeric_limits<uint64_t>::max()) %
+                                     rand::next_u64(std::numeric_limits<uint64_t>::min(),
+                                                    std::numeric_limits<uint64_t>::max()) %
                                          5000);
             ::boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address_v4::any(),
                                                       _address.port());
@@ -350,7 +357,9 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
             task_worker::set_name(buffer);
 
             boost::asio::io_service::work work(_io_service);
-            _io_service.run();
+            boost::system::error_code ec;
+            _io_service.run(ec);
+            dassert(false, "boost::asio::io_service run failed: err(%s)", ec.message().data());
         })));
     }
 
