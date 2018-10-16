@@ -27,4 +27,4 @@ if (UNIX)
     SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
-dsn_add_executable()
+dsn_add_test()
