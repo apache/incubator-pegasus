@@ -147,7 +147,7 @@ TEST(core, dsn_config)
 
 TEST(core, dsn_exlock)
 {
-    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
         "dsn::tools::sim_semaphore_provider")
         return;
     {
@@ -176,7 +176,7 @@ TEST(core, dsn_exlock)
 
 TEST(core, dsn_rwlock)
 {
-    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
         "dsn::tools::sim_semaphore_provider")
         return;
     dsn_handle_t l = dsn_rwlock_nr_create();
@@ -190,7 +190,7 @@ TEST(core, dsn_rwlock)
 
 TEST(core, dsn_semaphore)
 {
-    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
         "dsn::tools::sim_semaphore_provider")
         return;
     dsn_handle_t s = dsn_semaphore_create(2);
@@ -283,7 +283,7 @@ TEST(core, dsn_file)
 
 TEST(core, dsn_env)
 {
-    if (dsn::service_engine::fast_instance().spec().tool == "simulator")
+    if (dsn::service_engine::instance().spec().tool == "simulator")
         return;
     uint64_t now1 = dsn_now_ns();
     std::this_thread::sleep_for(std::chrono::milliseconds(1));

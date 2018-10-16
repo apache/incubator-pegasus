@@ -113,7 +113,7 @@ void rpc_client_session_send(rpc_session_ptr client_session)
 
 TEST(tools_common, asio_net_provider)
 {
-    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
         "dsn::tools::sim_semaphore_provider")
         return;
 
@@ -160,7 +160,7 @@ TEST(tools_common, asio_net_provider)
 
 TEST(tools_common, asio_udp_provider)
 {
-    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
         "dsn::tools::sim_semaphore_provider")
         return;
 
@@ -202,7 +202,7 @@ TEST(tools_common, asio_udp_provider)
 
 TEST(tools_common, sim_net_provider)
 {
-    if (dsn::service_engine::fast_instance().spec().semaphore_factory_name ==
+    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
         "dsn::tools::sim_semaphore_provider")
         return;
 

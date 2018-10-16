@@ -70,7 +70,7 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST_2)
 
 TEST(core, task_engine)
 {
-    if (dsn::service_engine::fast_instance().spec().tool == "simulator")
+    if (dsn::service_engine::instance().spec().tool == "simulator")
         return;
     service_node *node = task::get_current_node2();
     ASSERT_NE(nullptr, node);

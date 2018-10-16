@@ -80,11 +80,11 @@ void task_worker_pool::create()
 
     for (int i = 0; i < qCount; ++i) {
         auto tsvc = factory_store<timer_service>::create(
-            service_engine::fast_instance().spec().timer_factory_name.c_str(),
+                service_engine::instance().spec().timer_factory_name.c_str(),
             PROVIDER_TYPE_MAIN,
             _node,
             nullptr);
-        for (auto &s : service_engine::fast_instance().spec().timer_aspects) {
+        for (auto &s : service_engine::instance().spec().timer_aspects) {
             tsvc =
                 factory_store<timer_service>::create(s.c_str(), PROVIDER_TYPE_ASPECT, _node, tsvc);
         }
@@ -230,7 +230,7 @@ void task_engine::create(const std::list<threadpool_code> &pools)
     // init pools
     _pools.resize(threadpool_code::max() + 1, nullptr);
     for (auto &p : pools) {
-        auto &s = service_engine::fast_instance().spec().threadpool_specs[p];
+        auto &s = service_engine::instance().spec().threadpool_specs[p];
         auto workerPool = new task_worker_pool(s, this);
         workerPool->create();
         _pools[p] = workerPool;

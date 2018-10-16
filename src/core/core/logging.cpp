@@ -45,7 +45,7 @@ DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMA
 
 static void log_on_sys_exit(::dsn::sys_exit_type)
 {
-    ::dsn::logging_provider *logger = ::dsn::service_engine::fast_instance().logging();
+    ::dsn::logging_provider *logger = ::dsn::service_engine::instance().logging();
     if (logger != nullptr) {
         logger->flush();
     }
@@ -76,7 +76,7 @@ void dsn_log_init()
         "flush-log - flush log to stderr or log file",
         "flush-log",
         [](const std::vector<std::string> &args) {
-            ::dsn::logging_provider *logger = ::dsn::service_engine::fast_instance().logging();
+            ::dsn::logging_provider *logger = ::dsn::service_engine::instance().logging();
             if (logger != nullptr) {
                 logger->flush();
             }

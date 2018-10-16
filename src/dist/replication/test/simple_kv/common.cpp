@@ -94,7 +94,7 @@ std::string address_to_node(rpc_address addr)
     if (addr.is_invalid())
         return "-";
     dassert(test_checker::s_inited, "");
-    return test_checker::fast_instance().address_to_node_name(addr);
+    return test_checker::instance().address_to_node_name(addr);
 }
 
 rpc_address node_to_address(const std::string &name)
@@ -102,7 +102,7 @@ rpc_address node_to_address(const std::string &name)
     if (name == "-")
         return rpc_address();
     dassert(test_checker::s_inited, "");
-    return test_checker::fast_instance().node_name_to_address(name);
+    return test_checker::instance().node_name_to_address(name);
 }
 
 std::string gpid_to_string(gpid gpid)

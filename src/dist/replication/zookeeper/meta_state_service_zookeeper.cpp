@@ -163,7 +163,7 @@ error_code meta_state_service_zookeeper::initialize(const std::vector<std::strin
                                             ref_this(this),
                                             std::placeholders::_1));
     if (_zoo_state != ZOO_CONNECTED_STATE) {
-        _notifier.wait_for(zookeeper_session_mgr::fast_instance().timeout());
+        _notifier.wait_for(zookeeper_session_mgr::instance().timeout());
         if (_zoo_state != ZOO_CONNECTED_STATE)
             return ERR_TIMEOUT;
     }

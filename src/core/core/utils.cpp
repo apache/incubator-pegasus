@@ -43,6 +43,7 @@
 #include <fstream>
 #include <memory>
 #include <array>
+#include <chrono>
 
 #if defined(__linux__)
 #include <sys/syscall.h>

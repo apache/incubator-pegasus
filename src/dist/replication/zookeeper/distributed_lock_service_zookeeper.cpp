@@ -102,7 +102,7 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
                                             lock_srv_ptr(this),
                                             std::placeholders::_1));
     if (_zoo_state != ZOO_CONNECTED_STATE) {
-        _waiting_attach.wait_for(zookeeper_session_mgr::fast_instance().timeout());
+        _waiting_attach.wait_for(zookeeper_session_mgr::instance().timeout());
         if (_zoo_state != ZOO_CONNECTED_STATE) {
             dwarn(
                 "attach to zookeeper session timeout, distributed lock service initialized failed");

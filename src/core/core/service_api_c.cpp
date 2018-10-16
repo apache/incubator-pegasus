@@ -81,12 +81,12 @@ DSN_API dsn_handle_t dsn_exlock_create(bool recursive)
 {
     if (recursive) {
         ::dsn::lock_provider *last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(
-            ::dsn::service_engine::fast_instance().spec().lock_factory_name.c_str(),
+                ::dsn::service_engine::instance().spec().lock_factory_name.c_str(),
             ::dsn::PROVIDER_TYPE_MAIN,
             nullptr);
 
         // TODO: perf opt by saving the func ptrs somewhere
-        for (auto &s : ::dsn::service_engine::fast_instance().spec().lock_aspects) {
+        for (auto &s : ::dsn::service_engine::instance().spec().lock_aspects) {
             last = ::dsn::utils::factory_store<::dsn::lock_provider>::create(
                 s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
         }
@@ -95,12 +95,12 @@ DSN_API dsn_handle_t dsn_exlock_create(bool recursive)
     } else {
         ::dsn::lock_nr_provider *last =
             ::dsn::utils::factory_store<::dsn::lock_nr_provider>::create(
-                ::dsn::service_engine::fast_instance().spec().lock_nr_factory_name.c_str(),
+                    ::dsn::service_engine::instance().spec().lock_nr_factory_name.c_str(),
                 ::dsn::PROVIDER_TYPE_MAIN,
                 nullptr);
 
         // TODO: perf opt by saving the func ptrs somewhere
-        for (auto &s : ::dsn::service_engine::fast_instance().spec().lock_nr_aspects) {
+        for (auto &s : ::dsn::service_engine::instance().spec().lock_nr_aspects) {
             last = ::dsn::utils::factory_store<::dsn::lock_nr_provider>::create(
                 s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
         }
@@ -137,12 +137,12 @@ DSN_API dsn_handle_t dsn_rwlock_nr_create()
 {
     ::dsn::rwlock_nr_provider *last =
         ::dsn::utils::factory_store<::dsn::rwlock_nr_provider>::create(
-            ::dsn::service_engine::fast_instance().spec().rwlock_nr_factory_name.c_str(),
+                ::dsn::service_engine::instance().spec().rwlock_nr_factory_name.c_str(),
             ::dsn::PROVIDER_TYPE_MAIN,
             nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
-    for (auto &s : ::dsn::service_engine::fast_instance().spec().rwlock_nr_aspects) {
+    for (auto &s : ::dsn::service_engine::instance().spec().rwlock_nr_aspects) {
         last = ::dsn::utils::factory_store<::dsn::rwlock_nr_provider>::create(
             s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
     }
@@ -195,13 +195,13 @@ DSN_API dsn_handle_t dsn_semaphore_create(int initial_count)
 {
     ::dsn::semaphore_provider *last =
         ::dsn::utils::factory_store<::dsn::semaphore_provider>::create(
-            ::dsn::service_engine::fast_instance().spec().semaphore_factory_name.c_str(),
+                ::dsn::service_engine::instance().spec().semaphore_factory_name.c_str(),
             ::dsn::PROVIDER_TYPE_MAIN,
             initial_count,
             nullptr);
 
     // TODO: perf opt by saving the func ptrs somewhere
-    for (auto &s : ::dsn::service_engine::fast_instance().spec().semaphore_aspects) {
+    for (auto &s : ::dsn::service_engine::instance().spec().semaphore_aspects) {
         last = ::dsn::utils::factory_store<::dsn::semaphore_provider>::create(
             s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, initial_count, last);
     }
@@ -606,7 +606,7 @@ bool run(const char *config_file,
     ::dsn::tls_trans_mem_init(tls_trans_memory_KB * 1024);
 
     // prepare minimum necessary
-    ::dsn::service_engine::fast_instance().init_before_toollets(spec);
+    ::dsn::service_engine::instance().init_before_toollets(spec);
 
     // init logging
     dsn_log_init();
@@ -630,7 +630,7 @@ bool run(const char *config_file,
     // TODO: register sys_exit execution
 
     // init runtime
-    ::dsn::service_engine::fast_instance().init_after_toollets();
+    ::dsn::service_engine::instance().init_after_toollets();
 
     dsn_all.engine_ready = true;
 
@@ -663,11 +663,11 @@ bool run(const char *config_file,
         }
 
         if (create_it) {
-            ::dsn::service_engine::fast_instance().start_node(sp);
+            ::dsn::service_engine::instance().start_node(sp);
         }
     }
 
-    if (::dsn::service_engine::fast_instance().get_all_nodes().size() == 0) {
+    if (::dsn::service_engine::instance().get_all_nodes().size() == 0) {
         printf("no app are created, usually because \n"
                "app_name is not specified correctly, should be 'xxx' in [apps.xxx]\n"
                "or app_index (1-based) is greater than specified count in config file\n");

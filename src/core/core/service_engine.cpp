@@ -71,7 +71,7 @@ bool service_node::rpc_unregister_handler(dsn::task_code rpc_code)
 
 error_code service_node::init_io_engine()
 {
-    auto &spec = service_engine::fast_instance().spec();
+    auto &spec = service_engine::instance().spec();
     error_code err = ERR_OK;
 
     // init disk engine
@@ -92,7 +92,7 @@ error_code service_node::init_io_engine()
 
 error_code service_node::start_io_engine_in_main()
 {
-    auto &spec = service_engine::fast_instance().spec();
+    auto &spec = service_engine::instance().spec();
     error_code err = ERR_OK;
 
     // start disk engine
@@ -294,16 +294,16 @@ std::string service_engine::get_runtime_info(const std::vector<std::string> &arg
 {
     std::stringstream ss;
     if (args.size() == 0) {
-        ss << "" << service_engine::fast_instance()._nodes_by_app_id.size()
+        ss << "" << service_engine::instance()._nodes_by_app_id.size()
            << " nodes available:" << std::endl;
-        for (auto &kv : service_engine::fast_instance()._nodes_by_app_id) {
+        for (auto &kv : service_engine::instance()._nodes_by_app_id) {
             ss << "\t" << kv.second->id() << "." << kv.second->full_name() << std::endl;
         }
     } else {
         std::string indent = "";
         int id = atoi(args[0].c_str());
-        auto it = service_engine::fast_instance()._nodes_by_app_id.find(id);
-        if (it != service_engine::fast_instance()._nodes_by_app_id.end()) {
+        auto it = service_engine::instance()._nodes_by_app_id.find(id);
+        if (it != service_engine::instance()._nodes_by_app_id.end()) {
             auto args2 = args;
             args2.erase(args2.begin());
             it->second->get_runtime_info(indent, args2, ss);
@@ -318,8 +318,8 @@ std::string service_engine::get_queue_info(const std::vector<std::string> &args)
 {
     std::stringstream ss;
     ss << "[";
-    for (auto &it : service_engine::fast_instance()._nodes_by_app_id) {
-        if (it.first != service_engine::fast_instance()._nodes_by_app_id.begin()->first)
+    for (auto &it : service_engine::instance()._nodes_by_app_id) {
+        if (it.first != service_engine::instance()._nodes_by_app_id.begin()->first)
             ss << ",";
         it.second->get_queue_info(ss);
     }
