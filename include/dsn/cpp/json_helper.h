@@ -550,10 +550,7 @@ public:
     {
         std::ostringstream os;
         encode(os, t);
-        std::string *result = new std::string(os.str());
-        return dsn::blob(std::shared_ptr<char>(const_cast<char *>(result->c_str()),
-                                               [result](char *) { delete result; }),
-                         result->length());
+        return blob::create_from_bytes(os.str());
     }
 
     static bool decode(const JsonObject &in, T &t)

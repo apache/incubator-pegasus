@@ -39,7 +39,6 @@
 #include <dsn/utility/config_helper.h>
 #include <dsn/utility/enum_helper.h>
 #include <dsn/utility/customizable_id.h>
-#include <dsn/utility/singleton_vector_store.h>
 #include <dsn/utility/join_point.h>
 #include <dsn/utility/extensible_object.h>
 #include <dsn/utility/exp_delay.h>
