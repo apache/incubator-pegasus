@@ -35,7 +35,7 @@
 
 #include <dsn/service_api_c.h>
 #include <dsn/tool_api.h>
-#include <dsn/tool-api/task.h>
+#include <dsn/tool-api/file_io.h>
 #include <dsn/tool-api/auto_codes.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
@@ -219,23 +219,32 @@ TEST(core, dsn_file)
     ASSERT_TRUE(utils::filesystem::file_size("command.txt", fin_size));
     ASSERT_LT(0, fin_size);
 
-    dsn_handle_t fin = dsn_file_open("command.txt", O_RDONLY, 0);
+    dsn::disk_file *fin = file::open("command.txt", O_RDONLY, 0);
     ASSERT_NE(nullptr, fin);
-    dsn_handle_t fout = dsn_file_open("command.copy.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
+    dsn::disk_file *fout = file::open("command.copy.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
     ASSERT_NE(nullptr, fout);
     char buffer[1024];
     uint64_t offset = 0;
     while (true) {
         aio_result rin;
-        dsn::aio_task_ptr tin = new dsn::aio_task(LPC_AIO_TEST_READ,
-                                                  [&rin](dsn::error_code err, size_t sz) {
-                                                      rin.err = err;
-                                                      rin.sz = sz;
-                                                  },
-                                                  0);
+        aio_task_ptr tin = file::read(fin,
+                                      buffer,
+                                      1024,
+                                      offset,
+                                      LPC_AIO_TEST_READ,
+                                      nullptr,
+                                      [&rin](dsn::error_code err, size_t sz) {
+                                          rin.err = err;
+                                          rin.sz = sz;
+                                      },
+                                      0);
         ASSERT_NE(nullptr, tin);
-        ASSERT_EQ(1, tin->get_count());
-        dsn_file_read(fin, buffer, 1024, offset, tin);
+
+        if (dsn::tools::get_current_tool()->name() != "simulator") {
+            // 1 for tin, 1 for disk_engine
+            ASSERT_EQ(2, tin->get_count());
+        }
+
         tin->wait();
         ASSERT_EQ(rin.err, tin->error());
         if (rin.err != ERR_OK) {
@@ -250,14 +259,18 @@ TEST(core, dsn_file)
         }
 
         aio_result rout;
-        dsn::aio_task_ptr tout = new dsn::aio_task(LPC_AIO_TEST_WRITE,
-                                                   [&rout](dsn::error_code err, size_t sz) {
-                                                       rout.err = err;
-                                                       rout.sz = sz;
-                                                   },
-                                                   0);
+        aio_task_ptr tout = file::write(fout,
+                                        buffer,
+                                        rin.sz,
+                                        offset,
+                                        LPC_AIO_TEST_WRITE,
+                                        nullptr,
+                                        [&rout](dsn::error_code err, size_t sz) {
+                                            rout.err = err;
+                                            rout.sz = sz;
+                                        },
+                                        0);
         ASSERT_NE(nullptr, tout);
-        dsn_file_write(fout, buffer, rin.sz, offset, tout);
         tout->wait();
         ASSERT_EQ(ERR_OK, rout.err);
         ASSERT_EQ(ERR_OK, tout->error());
@@ -268,14 +281,14 @@ TEST(core, dsn_file)
             ASSERT_EQ(1, tout->get_count());
         }
 
-        ASSERT_EQ(ERR_OK, dsn_file_flush(fout));
+        ASSERT_EQ(ERR_OK, file::flush(fout));
 
         offset += rin.sz;
     }
 
     ASSERT_EQ((uint64_t)fin_size, offset);
-    ASSERT_EQ(ERR_OK, dsn_file_close(fout));
-    ASSERT_EQ(ERR_OK, dsn_file_close(fin));
+    ASSERT_EQ(ERR_OK, file::close(fout));
+    ASSERT_EQ(ERR_OK, file::close(fin));
 
     ASSERT_TRUE(utils::filesystem::file_size("command.copy.txt", fout_size));
     ASSERT_EQ(fin_size, fout_size);

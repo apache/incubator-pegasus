@@ -81,6 +81,7 @@ protected:
 
 private:
     io_context_t _ctx;
+    std::thread _worker;
 };
 }
 }

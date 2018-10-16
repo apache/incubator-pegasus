@@ -55,7 +55,7 @@ TEST(core, aio)
     int len = (int)strlen(buffer);
 
     // write
-    auto fp = dsn_file_open("tmp", O_RDWR | O_CREAT | O_BINARY, 0666);
+    auto fp = file::open("tmp", O_RDWR | O_CREAT | O_BINARY, 0666);
 
     std::list<aio_task_ptr> tasks;
     uint64_t offset = 0;
@@ -101,12 +101,12 @@ TEST(core, aio)
         t->wait();
         EXPECT_TRUE(t->get_transferred_size() == 10 * len);
     }
-    auto err = dsn_file_close(fp);
+    auto err = file::close(fp);
     EXPECT_TRUE(err == ERR_OK);
 
     // read
     char *buffer2 = (char *)alloca((size_t)len);
-    fp = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0);
+    fp = file::open("tmp", O_RDONLY | O_BINARY, 0);
 
     // concurrent read
     offset = 0;
@@ -135,7 +135,7 @@ TEST(core, aio)
         EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
     }
 
-    err = dsn_file_close(fp);
+    err = file::close(fp);
     EXPECT_TRUE(err == ERR_OK);
 
     utils::filesystem::remove_path("tmp");
@@ -147,14 +147,14 @@ TEST(core, aio_share)
     if (task::get_current_disk() == nullptr)
         return;
 
-    auto fp = dsn_file_open("tmp", O_WRONLY | O_CREAT | O_BINARY, 0666);
+    auto fp = file::open("tmp", O_WRONLY | O_CREAT | O_BINARY, 0666);
     EXPECT_TRUE(fp != nullptr);
 
-    auto fp2 = dsn_file_open("tmp", O_RDONLY | O_BINARY, 0);
+    auto fp2 = file::open("tmp", O_RDONLY | O_BINARY, 0);
     EXPECT_TRUE(fp2 != nullptr);
 
-    dsn_file_close(fp);
-    dsn_file_close(fp2);
+    file::close(fp);
+    file::close(fp2);
 
     utils::filesystem::remove_path("tmp");
 }
@@ -165,7 +165,7 @@ TEST(core, operation_failed)
     if (task::get_current_disk() == nullptr)
         return;
 
-    auto fp = dsn_file_open("tmp_test_file", O_WRONLY, 0600);
+    auto fp = file::open("tmp_test_file", O_WRONLY, 0600);
     EXPECT_TRUE(fp == nullptr);
 
     ::dsn::error_code *err = new ::dsn::error_code;
@@ -175,7 +175,7 @@ TEST(core, operation_failed)
         *count = n;
     };
 
-    fp = dsn_file_open("tmp_test_file", O_WRONLY | O_CREAT | O_BINARY, 0666);
+    fp = file::open("tmp_test_file", O_WRONLY | O_CREAT | O_BINARY, 0666);
     EXPECT_TRUE(fp != nullptr);
     char buffer[512];
     const char *str = "hello file";
@@ -187,7 +187,7 @@ TEST(core, operation_failed)
     t->wait();
     EXPECT_TRUE(*err == ERR_FILE_OPERATION_FAILED);
 
-    auto fp2 = dsn_file_open("tmp_test_file", O_RDONLY | O_BINARY, 0);
+    auto fp2 = file::open("tmp_test_file", O_RDONLY | O_BINARY, 0);
     EXPECT_TRUE(fp2 != nullptr);
 
     t = ::dsn::file::read(fp2, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
@@ -201,8 +201,8 @@ TEST(core, operation_failed)
     t = ::dsn::file::read(fp2, buffer, 512, 100, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     ddebug("error code: %s", err->to_string());
-    dsn_file_close(fp);
-    dsn_file_close(fp2);
+    file::close(fp);
+    file::close(fp2);
 
     EXPECT_TRUE(utils::filesystem::remove_path("tmp_test_file"));
 }

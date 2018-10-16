@@ -288,7 +288,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
         }
     }
 
-    _log = dsn_file_open(log_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+    _log = file::open(log_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
     if (!_log) {
         derror("open file failed: %s", log_path.c_str());
         return ERR_FILE_OPERATION_FAILED;
@@ -504,7 +504,7 @@ task_ptr meta_state_service_simple::get_children(const std::string &node,
 meta_state_service_simple::~meta_state_service_simple()
 {
     _tracker.cancel_outstanding_tasks();
-    dsn_file_close(_log);
+    file::close(_log);
 }
 }
 }

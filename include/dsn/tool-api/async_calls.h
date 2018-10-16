@@ -28,7 +28,7 @@
 
 #include <dsn/service_api_c.h>
 #include <dsn/utility/function_traits.h>
-#include <dsn/tool-api/task.h>
+#include <dsn/tool-api/file_io.h>
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/cpp/serialization.h>
 
@@ -101,7 +101,7 @@ inline task_ptr enqueue_timer(task_code evt,
     tsk->enqueue();
     return tsk;
 }
-}
+} // namespace tasking
 
 namespace rpc {
 
@@ -128,7 +128,7 @@ create_rpc_response_task(dsn::message_ex *req,
         req,
         tracker,
         [cb_fwd = std::move(callback)](
-            error_code err, dsn::message_ex * req, dsn::message_ex * resp) mutable {
+            error_code err, dsn::message_ex *req, dsn::message_ex *resp) mutable {
             typename is_typed_rpc_callback<TCallback>::response_t response = {};
             if (err == ERR_OK) {
                 unmarshall(resp, response);
@@ -223,60 +223,5 @@ call_wait(rpc_address server,
                                            thread_hash,
                                            partition_hash));
 }
-}
-
-namespace file {
-
-inline aio_task_ptr
-create_aio_task(task_code code, task_tracker *tracker, aio_handler &&callback, int hash = 0)
-{
-    aio_task_ptr t(new aio_task(code, std::move(callback), hash));
-    t->set_tracker((task_tracker *)tracker);
-    t->spec().on_task_create.execute(task::get_current_task(), t);
-    return t;
-}
-
-inline aio_task_ptr read(dsn_handle_t fh,
-                         char *buffer,
-                         int count,
-                         uint64_t offset,
-                         task_code callback_code,
-                         task_tracker *tracker,
-                         aio_handler &&callback,
-                         int hash = 0)
-{
-    auto tsk = create_aio_task(callback_code, tracker, std::move(callback), hash);
-    dsn_file_read(fh, buffer, count, offset, tsk);
-    return tsk;
-}
-
-inline aio_task_ptr write(dsn_handle_t fh,
-                          const char *buffer,
-                          int count,
-                          uint64_t offset,
-                          task_code callback_code,
-                          task_tracker *tracker,
-                          aio_handler &&callback,
-                          int hash = 0)
-{
-    auto tsk = create_aio_task(callback_code, tracker, std::move(callback), hash);
-    dsn_file_write(fh, buffer, count, offset, tsk);
-    return tsk;
-}
-
-inline aio_task_ptr write_vector(dsn_handle_t fh,
-                                 const dsn_file_buffer_t *buffers,
-                                 int buffer_count,
-                                 uint64_t offset,
-                                 task_code callback_code,
-                                 task_tracker *tracker,
-                                 aio_handler &&callback,
-                                 int hash = 0)
-{
-    auto tsk = create_aio_task(callback_code, tracker, std::move(callback), hash);
-    dsn_file_write_vector(fh, buffers, buffer_count, offset, tsk.get());
-    return tsk;
-}
-}
-
-} // end namespace
+} // namespace rpc
+} // namespace dsn

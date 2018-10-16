@@ -60,7 +60,7 @@ native_linux_aio_provider::~native_linux_aio_provider()
 
 void native_linux_aio_provider::start()
 {
-    new std::thread([this]() {
+    _worker = std::thread([this]() {
         task::set_tls_dsn_context(node(), nullptr);
         get_event();
     });

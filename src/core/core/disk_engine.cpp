@@ -151,7 +151,7 @@ void disk_engine::start(aio_provider *provider)
     _is_running = true;
 }
 
-dsn_handle_t disk_engine::open(const char *file_name, int flag, int pmode)
+disk_file *disk_engine::open(const char *file_name, int flag, int pmode)
 {
     dsn_handle_t nh = _provider->open(file_name, flag, pmode);
     if (nh != DSN_INVALID_FILE_HANDLE) {
@@ -161,7 +161,7 @@ dsn_handle_t disk_engine::open(const char *file_name, int flag, int pmode)
     }
 }
 
-error_code disk_engine::close(dsn_handle_t fh)
+error_code disk_engine::close(disk_file *fh)
 {
     if (nullptr != fh) {
         auto df = (disk_file *)fh;
@@ -173,7 +173,7 @@ error_code disk_engine::close(dsn_handle_t fh)
     }
 }
 
-error_code disk_engine::flush(dsn_handle_t fh)
+error_code disk_engine::flush(disk_file *fh)
 {
     if (nullptr != fh) {
         auto df = (disk_file *)fh;

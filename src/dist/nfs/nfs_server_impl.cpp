@@ -69,7 +69,7 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
 
     std::string file_path =
         dsn::utils::filesystem::path_combine(request.source_dir, request.file_name);
-    dsn_handle_t hfile;
+    disk_file *hfile;
 
     {
         zauto_lock l(_handles_map_lock);
@@ -77,15 +77,14 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
 
         if (it == _handles_map.end()) // not found
         {
-            hfile = dsn_file_open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
+            hfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
             if (hfile) {
 
-                file_handle_info_on_server *fh = new file_handle_info_on_server;
+                auto fh = std::make_shared<file_handle_info_on_server>();
                 fh->file_handle = hfile;
                 fh->file_access_count = 1;
                 fh->last_access_time = dsn_now_ms();
-                _handles_map.insert(
-                    std::pair<std::string, file_handle_info_on_server *>(file_path, fh));
+                _handles_map.insert(std::make_pair(file_path, std::move(fh)));
             }
         } else // found
         {
@@ -236,10 +235,6 @@ void nfs_service_impl::close_file() // release out-of-date file handle
             dsn_now_ms() - fptr->last_access_time > (uint64_t)_opts.file_close_expire_time_ms) {
             dinfo("nfs: close file handle %s", it->first.c_str());
             it = _handles_map.erase(it);
-
-            ::dsn::error_code err = dsn_file_close(fptr->file_handle);
-            dassert(err == ERR_OK, "dsn_file_close failed, err = %s", err.to_string());
-            delete fptr;
         } else
             it++;
     }

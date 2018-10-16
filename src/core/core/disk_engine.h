@@ -59,6 +59,7 @@ public:
     aio_task *on_read_completed(aio_task *wk, error_code err, size_t size);
     aio_task *on_write_completed(aio_task *wk, void *ctx, error_code err, size_t size);
 
+    // TODO(wutao1): make it uint64_t
     dsn_handle_t native_handle() const { return _handle; }
 
 private:
@@ -76,9 +77,9 @@ public:
     void start(aio_provider *provider);
 
     // asynchonous file read/write
-    dsn_handle_t open(const char *file_name, int flag, int pmode);
-    error_code close(dsn_handle_t fh);
-    error_code flush(dsn_handle_t fh);
+    disk_file *open(const char *file_name, int flag, int pmode);
+    error_code close(disk_file *fh);
+    error_code flush(disk_file *fh);
     void read(aio_task *aio);
     void write(aio_task *aio);
 

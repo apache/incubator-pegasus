@@ -1745,7 +1745,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
 class log_file::file_streamer
 {
 public:
-    explicit file_streamer(dsn_handle_t fd, size_t file_offset)
+    explicit file_streamer(disk_file *fd, size_t file_offset)
         : _file_dispatched_bytes(file_offset), _file_handle(fd)
     {
         _current_buffer = _buffers + 0;
@@ -1891,7 +1891,7 @@ private:
 
     // number of bytes we have issued read operations
     size_t _file_dispatched_bytes;
-    dsn_handle_t _file_handle;
+    disk_file *_file_handle;
 };
 
 //------------------- log_file --------------------------
@@ -1940,7 +1940,7 @@ log_file::~log_file() { close(); }
         return nullptr;
     }
 
-    dsn_handle_t hfile = dsn_file_open(path, O_RDONLY | O_BINARY, 0);
+    disk_file *hfile = file::open(path, O_RDONLY | O_BINARY, 0);
     if (!hfile) {
         err = ERR_FILE_OPERATION_FAILED;
         dwarn("open log file %s failed", path);
@@ -1996,7 +1996,7 @@ log_file::~log_file() { close(); }
         return nullptr;
     }
 
-    dsn_handle_t hfile = dsn_file_open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
+    disk_file *hfile = file::open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
     if (!hfile) {
         dwarn("create log %s failed", path);
         return nullptr;
@@ -2006,7 +2006,7 @@ log_file::~log_file() { close(); }
 }
 
 log_file::log_file(
-    const char *path, dsn_handle_t handle, int index, int64_t start_offset, bool is_read)
+    const char *path, disk_file *handle, int index, int64_t start_offset, bool is_read)
 {
     _start_offset = start_offset;
     _end_offset = start_offset;
@@ -2033,8 +2033,8 @@ void log_file::close()
     // TODO: We need better abstraction to avoid those manual stuffs..
     _stream.reset(nullptr);
     if (_handle) {
-        error_code err = dsn_file_close(_handle);
-        dassert(err == ERR_OK, "dsn_file_close failed, err = %s", err.to_string());
+        error_code err = file::close(_handle);
+        dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
 
         _handle = nullptr;
     }
@@ -2045,8 +2045,8 @@ void log_file::flush() const
     dassert(!_is_read, "log file must be of write mode");
 
     if (_handle) {
-        error_code err = dsn_file_flush(_handle);
-        dassert(err == ERR_OK, "dsn_file_flush failed, err = %s", err.to_string());
+        error_code err = file::flush(_handle);
+        dassert(err == ERR_OK, "file::flush failed, err = %s", err.to_string());
     }
 }
 

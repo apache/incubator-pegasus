@@ -263,7 +263,7 @@ private:
     quick_map _quick_map; // <path, node*>
 
     zlock _log_lock;
-    dsn_handle_t _log;
+    disk_file *_log;
     uint64_t _offset;
 
     dsn::task_tracker _tracker;

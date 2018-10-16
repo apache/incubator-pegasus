@@ -35,6 +35,8 @@
 #pragma once
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
+
+#include "core/core/disk_engine.h"
 #include "nfs_server.h"
 #include "nfs_client_impl.h"
 
@@ -86,13 +88,19 @@ private:
 
     struct file_handle_info_on_server
     {
-        dsn_handle_t file_handle;
+        disk_file *file_handle;
         int32_t file_access_count; // concurrent r/w count
         uint64_t last_access_time; // last touch time
 
         file_handle_info_on_server()
             : file_handle(nullptr), file_access_count(0), last_access_time(0)
         {
+        }
+
+        ~file_handle_info_on_server()
+        {
+            error_code err = file::close(file_handle);
+            dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
         }
     };
 
@@ -104,7 +112,7 @@ private:
     nfs_opts &_opts;
 
     zlock _handles_map_lock;
-    std::unordered_map<std::string, file_handle_info_on_server *>
+    std::unordered_map<std::string, std::shared_ptr<file_handle_info_on_server>>
         _handles_map; // cache file handles
 
     ::dsn::task_ptr _file_close_timer;

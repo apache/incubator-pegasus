@@ -395,7 +395,7 @@ void nfs_client_impl::continue_write()
         zauto_lock l(fc->user_req->user_req_lock);
         if (!fc->file_holder->file_handle) {
             fc->file_holder->file_handle =
-                dsn_file_open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+                file::open(file_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
         }
     }
 
