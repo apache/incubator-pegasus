@@ -21,20 +21,10 @@ function usage()
     echo "   start_zk    start the local single zookeeper server"
     echo "   stop_zk     stop the local single zookeeper server"
     echo "   clear_zk    stop the local single zookeeper server and clear the data"
-    echo "   format      check the code format"
-    echo "   publish     publish the program"
-    echo "   publish_docker"
-    echo "               publish the program docker image"
-    echo "   republish   republish the program without changes to machinelist and config.ini files"
-    echo "   republish_docker"
-    echo "               republish the program docker image without changes to machinelist and config.ini files"
     echo "   deploy      deploy the program to remote machine"
     echo "   start       start program at remote machine"
     echo "   stop        stop program at remote machine"
     echo "   clean       clean deployed program at remote machine"
-    echo "   k8s_deploy  deploy onto kubernetes cluster"
-    echo "   k8s_undeploy"
-    echo "               undeploy from kubernetes cluster"
     echo
     echo "Command 'run.sh <command> -h' will print help for subcommands."
 }
@@ -61,6 +51,8 @@ function usage_build()
     echo "   --enable_gcov         generate gcov code coverage report, default no"
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --notest              build without building unit tests, default no"
+    echo "   --disable_gperf       build without gperftools, this flag is mainly used"
+    echo "                         to enable valgrind memcheck, default no"
     if [ "$ONLY_BUILD" == "NO" ]; then
         echo "   -m|--test_module      specify modules to test, split by ',',"
         echo "                         e.g., \"dsn.core.tests,dsn.tests\","
@@ -119,12 +111,19 @@ function run_build()
             --enable_gcov)
                 ENABLE_GCOV=YES
                 BUILD_TYPE="debug"
+                shift
                 ;;
             -v|--verbose)
                 RUN_VERBOSE=YES
+                shift
                 ;;
             --notest)
                 NO_TEST=YES
+                shift
+                ;;
+            --disable_gperf)
+                DISABLE_GPERF=YES
+                shift
                 ;;
             -m|--test_module)
                 if [ "$ONLY_BUILD" == "YES" ]; then
@@ -176,7 +175,8 @@ function run_build()
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" ENABLE_GCOV="$ENABLE_GCOV" \
-        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" $scripts_dir/build.sh
+        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" \
+        DISABLE_GPERF="$DISABLE_GPERF" $scripts_dir/build.sh
 }
 
 #####################
@@ -321,35 +321,6 @@ function run_clear_zk()
     DOWNLOADED_DIR="$DOWNLOADED_DIR" $scripts_dir/clear_zk.sh
 }
 
-#####################
-## format
-#####################
-function usage_format()
-{
-    echo "Options for subcommand 'format':"
-    echo "   -h|--help         print the help info"
-}
-function run_format()
-{
-    while [[ $# > 0 ]]; do
-        key="$1"
-        case $key in
-            -h|--help)
-                usage_format
-                exit 0
-                ;;
-            *)
-                echo "ERROR: unknown option \"$key\""
-                echo
-                usage_format
-                exit 1
-                ;;
-        esac
-        shift
-    done
-    $scripts_dir/format.sh
-}
-
 ####################################################################
 
 if [ $# -eq 0 ]; then
@@ -380,15 +351,8 @@ case $cmd in
     clear_zk)
         shift
         run_clear_zk $* ;;
-    format)
-        shift
-        run_format $* ;;
-    publish|publish_docker|republish|republish_docker)
-        $scripts_dir/publish.sh $* ;;
     deploy|start|stop|clean)
         $scripts_dir/deploy.sh $* ;;
-    k8s_deploy|k8s_undeploy)
-        $scripts_dir/k8s_deploy.sh $* ;;
     *)
         echo "ERROR: unknown command $cmd"
         echo

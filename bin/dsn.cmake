@@ -1,11 +1,9 @@
 include(${CMAKE_CURRENT_LIST_DIR}/compiler_info.cmake)
 
-
 # Always generate the compilation database file (compile_commands.json) for use
 # with various development tools, such as IWYU and Vim's YouCompleteMe plugin.
 # See http://clang.llvm.org/docs/JSONCompilationDatabase.html
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
-
 
 # Set DSN_PROJECT_DIR to rdsn/
 set(DSN_PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR})
@@ -18,6 +16,18 @@ message(STATUS "DSN_THIRDPARTY_ROOT = ${DSN_THIRDPARTY_ROOT}")
 # Set DSN_ROOT to rdsn/DSN_ROOT, this is where rdsn will be installed
 set(DSN_ROOT ${DSN_PROJECT_DIR}/DSN_ROOT)
 message(STATUS "DSN_ROOT = ${DSN_ROOT}")
+
+option(BUILD_TEST "build unit test" ON)
+message(STATUS "BUILD_TEST = ${BUILD_TEST}")
+
+option(ENABLE_GCOV "Enable gcov (for code coverage analysis)" OFF)
+message(STATUS "ENABLE_GCOV = ${ENABLE_GCOV}")
+
+# Disable this option before running valgrind.
+option(ENABLE_GPERF "Enable gperftools (for tcmalloc)" ON)
+message(STATUS "ENABLE_GPERF = ${ENABLE_GPERF}")
+
+# ================================================================== #
 
 
 # Install this target into ${CMAKE_INSTALL_PREFIX}/lib
@@ -139,10 +149,8 @@ function(dsn_add_project)
         else()
             set(TEMP_LIBS dsn_runtime)
         endif()
-        set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${TEMP_LIBS} ${MY_BOOST_LIBS} -ltcmalloc ${DSN_SYSTEM_LIBS})
+        set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${TEMP_LIBS} ${MY_BOOST_LIBS} ${DSN_SYSTEM_LIBS})
     endif()
-
-    list(APPEND MY_PROJ_LIBS thrift)
 
     ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_INC_PATH}" "${MY_PROJ_LIBS}" "${MY_PROJ_LIB_PATH}" "${MY_BINPLACES}")
 endfunction(dsn_add_project)
@@ -169,8 +177,6 @@ function(dsn_add_object)
     dsn_add_project()
 endfunction(dsn_add_object)
 
-option(BUILD_TEST "build unit test" ON)
-option(ENABLE_GCOV "Enable gcov (for code coverage analysis)" OFF)
 function(dsn_add_test)
     if(${BUILD_TEST})
         set(MY_EXECUTABLE_IS_TEST TRUE)
@@ -290,8 +296,13 @@ function(dsn_setup_system_libs)
     endif()
     set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_CRYPTO})
 
+    if(ENABLE_GPERF)
+        set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} tcmalloc)
+    endif()
+
     set(DSN_SYSTEM_LIBS
         ${DSN_SYSTEM_LIBS}
+        thrift
         ${CMAKE_THREAD_LIBS_INIT} # the thread library found by FindThreads
         CACHE STRING "rDSN system libs" FORCE
     )
