@@ -23,43 +23,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/utility/ports.h>
 #include <dsn/utility/utils.h>
-// using high performance versions from https://github.com/preshing/cpp11-on-multicore
-
-#include <dsn/ext/hpc-locks/benaphore.h>
-#include <dsn/ext/hpc-locks/autoresetevent.h>
-#include <dsn/ext/hpc-locks/rwlock.h>
+#include <dsn/utility/hpc_locks/benaphore.h>
+#include <dsn/utility/hpc_locks/autoresetevent.h>
+#include <dsn/utility/hpc_locks/rwlock.h>
 
 namespace dsn {
 namespace utils {
 
-#if 0
-//# if defined(_WIN32)
-        class ex_lock
-        {
-        public:
-            ex_lock() { ::InitializeCriticalSection(&_cs); }
-            ~ex_lock() { ::DeleteCriticalSection(&_cs); }
-            __inline void lock() { ::EnterCriticalSection(&_cs); }
-            __inline bool try_lock() { return ::TryEnterCriticalSection(&_cs) != 0; }
-            __inline void unlock() { ::LeaveCriticalSection(&_cs); }
-        private:
-            CRITICAL_SECTION _cs;
-        };
-#else
 class ex_lock
 {
 public:
@@ -69,7 +43,6 @@ public:
 private:
     RecursiveBenaphore _lock;
 };
-#endif
 
 class ex_lock_nr
 {

@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/ext/hpc-locks/sema.h>
+#include <dsn/utility/hpc_locks/sema.h>
 #include <gtest/gtest.h>
 #include <thread>
 

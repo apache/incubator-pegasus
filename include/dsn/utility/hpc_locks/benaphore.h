@@ -10,7 +10,7 @@
 #include <thread>
 #include <atomic>
 #include <dsn/utility/utils.h>
-#include <dsn/ext/hpc-locks/sema.h>
+#include <dsn/utility/hpc_locks/sema.h>
 
 //---------------------------------------------------------
 // NonRecursiveBenaphore

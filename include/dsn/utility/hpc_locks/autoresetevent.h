@@ -8,7 +8,7 @@
 
 #include <cassert>
 #include <thread>
-#include <dsn/ext/hpc-locks/sema.h>
+#include <dsn/utility/hpc_locks/sema.h>
 
 //---------------------------------------------------------
 // AutoResetEvent

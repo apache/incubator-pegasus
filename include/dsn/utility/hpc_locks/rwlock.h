@@ -9,8 +9,8 @@
 #include <cassert>
 #include <atomic>
 #include <random>
-#include <dsn/ext/hpc-locks/sema.h>
-#include <dsn/ext/hpc-locks/bitfield.h>
+#include <dsn/utility/hpc_locks/sema.h>
+#include <dsn/utility/hpc_locks/bitfield.h>
 
 //---------------------------------------------------------
 // NonRecursiveRWLock
