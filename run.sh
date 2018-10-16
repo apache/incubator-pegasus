@@ -111,19 +111,15 @@ function run_build()
             --enable_gcov)
                 ENABLE_GCOV=YES
                 BUILD_TYPE="debug"
-                shift
                 ;;
             -v|--verbose)
                 RUN_VERBOSE=YES
-                shift
                 ;;
             --notest)
                 NO_TEST=YES
-                shift
                 ;;
             --disable_gperf)
                 DISABLE_GPERF=YES
-                shift
                 ;;
             -m|--test_module)
                 if [ "$ONLY_BUILD" == "YES" ]; then
