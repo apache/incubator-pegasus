@@ -69,6 +69,8 @@ function usage_build()
     echo "   -w|--warning_all      open all warnings when building, default no"
     echo "   --enable_gcov         generate gcov code coverage report, default no"
     echo "   -v|--verbose          build in verbose mode, default no"
+    echo "   --disable_gperf       build without gperftools, this flag is mainly used"
+    echo "                         to enable valgrind memcheck, default no"
 }
 function run_build()
 {
@@ -132,6 +134,10 @@ function run_build()
             -v|--verbose)
                 RUN_VERBOSE=YES
                 ;;
+            --disable_gperf)
+                DISABLE_GPERF=YES
+                shift
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -182,6 +188,9 @@ function run_build()
     fi
     if [ "$ENABLE_GCOV" == "YES" ]; then
         OPT="$OPT --enable_gcov"
+    fi
+    if [ "$DISABLE_GPERF" == "YES" ]; then
+        OPT="$OPT --disable_gperf"
     fi
     ./run.sh build $OPT --notest
     if [ $? -ne 0 ]; then
@@ -266,7 +275,7 @@ function run_build()
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
         BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
-        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" ./build.sh
+        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" DISABLE_GPERF="$DISABLE_GPERF" ./build.sh
     if [ $? -ne 0 ]; then
         echo "ERROR: build pegasus failed"
         exit 1

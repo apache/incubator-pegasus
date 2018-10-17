@@ -79,6 +79,15 @@ else
     echo "ENABLE_GCOV=NO"
 fi
 
+# valgrind can not work together with gpertools
+# you may want to use this option when you want to run valgrind
+if [ "$DISABLE_GPERF" == "YES" ]
+    echo "DISABLE_GPERF=YES"
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DENABLE_GPERF=Off"
+then
+    echo "DISABLE_GPERF=NO"
+fi
+
 # You can specify customized boost by defining BOOST_DIR.
 # Install boost like this:
 #   wget http://downloads.sourceforge.net/project/boost/boost/1.54.0/boost_1_54_0.zip?r=&ts=1442891144&use_mirror=jaist
