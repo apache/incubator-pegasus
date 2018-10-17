@@ -44,4 +44,4 @@ set(MY_BOOST_PACKAGES system filesystem regex)
 
 set(MY_BINPLACES config.ini run.sh)
 
-dsn_add_executable()
+dsn_add_test()
