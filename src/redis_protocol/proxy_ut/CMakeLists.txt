@@ -32,4 +32,4 @@ set(MY_BINPLACES "config.ini" "run.sh")
 add_compile_options("-Wno-dangling-else")
 add_definitions(-Wno-attributes)
 
-dsn_add_executable()
+dsn_add_test()

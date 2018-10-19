@@ -28,3 +28,4 @@ if (UNIX)
 endif()
 
 dsn_add_executable()
+dsn_install_executable()

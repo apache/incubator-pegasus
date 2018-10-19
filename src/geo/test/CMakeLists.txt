@@ -24,4 +24,4 @@ add_definitions(-Wno-attributes)
 
 set(MY_BINPLACES "config.ini")
 
-dsn_add_executable()
+dsn_add_test()

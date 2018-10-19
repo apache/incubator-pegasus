@@ -32,4 +32,4 @@ set(MY_PROJ_LIB_PATH "../..")
 
 set(MY_BINPLACES "config.ini" "run.sh")
 
-dsn_add_executable()
+dsn_add_test()
