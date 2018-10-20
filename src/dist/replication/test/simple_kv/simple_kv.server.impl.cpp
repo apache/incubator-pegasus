@@ -54,7 +54,7 @@ void simple_kv_service_impl::reset_state()
 // RPC_SIMPLE_KV_READ
 void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply)
 {
-    dsn::service::zauto_lock l(_lock);
+    dsn::zauto_lock l(_lock);
 
     std::string value;
     auto it = _store.find(key);
@@ -72,7 +72,7 @@ void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<
 // RPC_SIMPLE_KV_WRITE
 void simple_kv_service_impl::on_write(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
 {
-    dsn::service::zauto_lock l(_lock);
+    dsn::zauto_lock l(_lock);
     _store[pr.key] = pr.value;
 
     // ddebug("=== on_exec_write:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(),
@@ -83,7 +83,7 @@ void simple_kv_service_impl::on_write(const kv_pair &pr, ::dsn::rpc_replier<int3
 // RPC_SIMPLE_KV_APPEND
 void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
 {
-    dsn::service::zauto_lock l(_lock);
+    dsn::zauto_lock l(_lock);
     auto it = _store.find(pr.key);
     if (it != _store.end())
         it->second.append(pr.value);
@@ -101,7 +101,7 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
         return ERR_CORRUPTION;
     }
 
-    dsn::service::zauto_lock l(_lock);
+    dsn::zauto_lock l(_lock);
     recover();
     ddebug("simple_kv_service_impl opened");
     return ERR_OK;
@@ -113,7 +113,7 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
         return ERR_CORRUPTION;
     }
 
-    dsn::service::zauto_lock l(_lock);
+    dsn::zauto_lock l(_lock);
     if (clear_state) {
         if (!dsn::utils::filesystem::remove_path(data_dir().c_str())) {
             dassert(false, "Fail to delete directory %s.", data_dir().c_str());
@@ -128,7 +128,7 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
 // checkpoint related
 void simple_kv_service_impl::recover()
 {
-    dsn::service::zauto_lock l(_lock);
+    dsn::zauto_lock l(_lock);
 
     _store.clear();
 
@@ -163,7 +163,7 @@ void simple_kv_service_impl::recover()
 
 void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 {
-    dsn::service::zauto_lock l(_lock);
+    dsn::zauto_lock l(_lock);
 
     std::ifstream is(name.c_str(), std::ios::binary);
     if (!is.is_open())
@@ -199,7 +199,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 
 ::dsn::error_code simple_kv_service_impl::sync_checkpoint()
 {
-    dsn::service::zauto_lock l(_lock);
+    dsn::zauto_lock l(_lock);
 
     int64_t last_commit = last_committed_decree();
     if (last_commit == last_durable_decree()) {

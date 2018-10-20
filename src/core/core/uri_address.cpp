@@ -186,7 +186,7 @@ dist::partition_resolver_ptr uri_resolver::get_app_resolver(const char *app)
     dist::partition_resolver_ptr rv = nullptr;
 
     {
-        service::zauto_read_lock l(_apps_lock);
+        zauto_read_lock l(_apps_lock);
         auto it = _apps.find(app);
         if (it != _apps.end()) {
             rv = it->second;
@@ -200,7 +200,7 @@ dist::partition_resolver_ptr uri_resolver::get_app_resolver(const char *app)
         rv = utils::factory_store<dist::partition_resolver>::create(
             _factory.c_str(), ::dsn::PROVIDER_TYPE_MAIN, _meta_server, app);
 
-        service::zauto_write_lock l(_apps_lock);
+        zauto_write_lock l(_apps_lock);
         auto it = _apps.find(app);
         if (it == _apps.end()) {
             _apps.emplace(std::string(app), rv);
@@ -217,7 +217,7 @@ std::map<std::string, dist::partition_resolver_ptr> uri_resolver::get_all_app_re
     std::map<std::string, dist::partition_resolver_ptr> result;
 
     {
-        service::zauto_read_lock l(_apps_lock);
+        zauto_read_lock l(_apps_lock);
         result.insert(_apps.begin(), _apps.end());
     }
 

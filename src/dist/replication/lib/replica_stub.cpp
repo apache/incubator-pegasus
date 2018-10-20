@@ -48,8 +48,6 @@
 namespace dsn {
 namespace replication {
 
-using namespace dsn::service;
-
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
@@ -2001,7 +1999,7 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
     }
 
     std::vector<task_ptr> tasks;
-    ::dsn::service::zlock results_lock;
+    ::dsn::zlock results_lock;
     std::map<gpid, std::pair<partition_status::type, std::string>> results; // id => status,result
     for (auto &kv : choosed_rs) {
         replica_ptr rep = kv.second;
@@ -2013,7 +2011,7 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
                                                 status != partition_status::PS_SECONDARY)
                                                 return;
                                             std::string result = func(rep);
-                                            ::dsn::service::zauto_lock l(results_lock);
+                                            ::dsn::zauto_lock l(results_lock);
                                             auto &value = results[rep->get_gpid()];
                                             value.first = status;
                                             value.second = result;

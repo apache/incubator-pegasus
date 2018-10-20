@@ -45,8 +45,6 @@
 namespace dsn {
 namespace replication {
 
-using namespace ::dsn::service;
-
 ::dsn::task_ptr mutation_log_shared::append(mutation_ptr &mu,
                                             dsn::task_code callback_code,
                                             dsn::task_tracker *tracker,

@@ -24,35 +24,14 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     lock abstraction
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/utility/extensible_object.h>
-
-namespace dsn {
-namespace service {
-class zlock;
-class zrwlock_nr;
-class zsemaphore;
-}
-}
+#include <dsn/utility/factory_store.h>
+#include <dsn/tool-api/zlocks.h>
 
 namespace dsn {
 
-/*!
-@addtogroup tool-api-providers
-@{
-*/
-
-/*! lock interface */
 class ilock
 {
 public:
@@ -62,9 +41,6 @@ public:
     virtual void unlock() = 0;
 };
 
-/*!
- recursive exclusive lock
-*/
 class lock_provider : public ilock, public extensible_object<lock_provider, 4>
 {
 public:
@@ -74,6 +50,12 @@ public:
         return new T(inner_provider);
     }
     typedef lock_provider *(*factory)(lock_provider *);
+
+    template <typename T>
+    static void register_component(const char *name)
+    {
+        utils::factory_store<lock_provider>::register_factory(name, create<T>, PROVIDER_TYPE_MAIN);
+    }
 
 public:
     lock_provider(lock_provider *inner_provider) { _inner_provider = inner_provider; }
@@ -88,9 +70,6 @@ private:
     lock_provider *_inner_provider;
 };
 
-/*!
- non-recursive exclusive lock
-*/
 class lock_nr_provider : public ilock, public extensible_object<lock_nr_provider, 4>
 {
 public:
@@ -101,6 +80,13 @@ public:
     }
 
     typedef lock_nr_provider *(*factory)(lock_nr_provider *);
+
+    template <typename T>
+    static void register_component(const char *name)
+    {
+        utils::factory_store<lock_nr_provider>::register_factory(
+            name, create<T>, PROVIDER_TYPE_MAIN);
+    }
 
 public:
     lock_nr_provider(lock_nr_provider *inner_provider) { _inner_provider = inner_provider; }
@@ -115,9 +101,6 @@ private:
     lock_nr_provider *_inner_provider;
 };
 
-/*!
- non-recursive rwlock
-*/
 class rwlock_nr_provider : public extensible_object<rwlock_nr_provider, 4>
 {
 public:
@@ -128,6 +111,13 @@ public:
     }
 
     typedef rwlock_nr_provider *(*factory)(rwlock_nr_provider *);
+
+    template <typename T>
+    static void register_component(const char *name)
+    {
+        utils::factory_store<rwlock_nr_provider>::register_factory(
+            name, create<T>, PROVIDER_TYPE_MAIN);
+    }
 
 public:
     rwlock_nr_provider(rwlock_nr_provider *inner_provider) { _inner_provider = inner_provider; }
@@ -151,9 +141,6 @@ private:
     rwlock_nr_provider *_inner_provider;
 };
 
-/*!
- semaphore
-*/
 class semaphore_provider : public extensible_object<semaphore_provider, 4>
 {
 public:
@@ -164,6 +151,13 @@ public:
     }
 
     typedef semaphore_provider *(*factory)(int, semaphore_provider *);
+
+    template <typename T>
+    static void register_component(const char *name)
+    {
+        utils::factory_store<semaphore_provider>::register_factory(
+            name, create<T>, PROVIDER_TYPE_MAIN);
+    }
 
 public:
     semaphore_provider(int initial_count, semaphore_provider *inner_provider)
@@ -185,5 +179,4 @@ public:
 private:
     semaphore_provider *_inner_provider;
 };
-/*@}*/
-} // end namespace
+}

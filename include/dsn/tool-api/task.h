@@ -53,14 +53,6 @@
 
 namespace dsn {
 
-namespace lock_checker {
-extern __thread int zlock_exclusive_count;
-extern __thread int zlock_shared_count;
-extern void check_wait_safety();
-extern void check_dangling_lock();
-extern void check_wait_task(task *waitee);
-}
-
 class task_worker;
 class task_worker_pool;
 class service_node;

@@ -37,8 +37,6 @@
 #include <chrono>
 #include <ctime>
 
-using namespace ::dsn::service;
-
 namespace dsn {
 namespace fd {
 

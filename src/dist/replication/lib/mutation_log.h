@@ -35,9 +35,10 @@
 
 #pragma once
 
-#include "../common/replication_common.h"
+#include "dist/replication/common/replication_common.h"
 #include "mutation.h"
 #include <atomic>
+#include <dsn/tool-api/zlocks.h>
 
 namespace dsn {
 namespace replication {

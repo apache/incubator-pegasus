@@ -44,8 +44,6 @@
 namespace dsn {
 namespace replication {
 
-using namespace dsn::service;
-
 error_code replica::initialize_on_new()
 {
     // if (dsn::utils::filesystem::directory_exists(_dir) &&

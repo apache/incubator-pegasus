@@ -36,6 +36,7 @@
 #include <vector>
 #include <deque>
 #include <dsn/tool-api/task_tracker.h>
+#include <dsn/tool-api/zlocks.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/nfs_node.h>
 

@@ -37,7 +37,7 @@
 #pragma once
 
 #include <dsn/service_api_cpp.h>
-#include <dsn/cpp/zlocks.h>
+#include <dsn/tool-api/zlocks.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/utility/error_code.h>
 #include <string>
@@ -247,7 +247,7 @@ protected:
 
     bool in_black_list(dsn::rpc_address addr)
     {
-        dsn::service::zauto_read_lock l(_black_list_lock);
+        dsn::zauto_read_lock l(_black_list_lock);
         return _assign_secondary_black_list.count(addr) != 0;
     }
 
@@ -260,7 +260,7 @@ protected:
     // NOTICE: the command handler is called in THREADPOOL_DEFAULT
     // but when adding secondary, the black list is accessed in THREADPOOL_META_STATE
     // so we need a lock to protect it
-    dsn::service::zrwlock_nr _black_list_lock;
+    dsn::zrwlock_nr _black_list_lock;
     std::set<dsn::rpc_address> _assign_secondary_black_list;
 };
 }

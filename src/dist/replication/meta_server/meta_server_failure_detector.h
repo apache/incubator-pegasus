@@ -136,7 +136,7 @@ private:
     std::atomic<uint64_t> _election_moment;
 
     // record the start time of a replica-server, check if it crashed frequently
-    mutable service::zlock _map_lock;
+    mutable zlock _map_lock;
     stability_map _stablity;
 
 public:

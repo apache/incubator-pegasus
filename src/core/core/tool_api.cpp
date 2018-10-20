@@ -144,34 +144,6 @@ bool register_component_provider(const char *name,
     return dsn::utils::factory_store<admission_controller>::register_factory(name, f, type);
 }
 
-bool register_component_provider(const char *name,
-                                 lock_provider::factory f,
-                                 ::dsn::provider_type type)
-{
-    return dsn::utils::factory_store<lock_provider>::register_factory(name, f, type);
-}
-
-bool register_component_provider(const char *name,
-                                 lock_nr_provider::factory f,
-                                 ::dsn::provider_type type)
-{
-    return dsn::utils::factory_store<lock_nr_provider>::register_factory(name, f, type);
-}
-
-bool register_component_provider(const char *name,
-                                 rwlock_nr_provider::factory f,
-                                 ::dsn::provider_type type)
-{
-    return dsn::utils::factory_store<rwlock_nr_provider>::register_factory(name, f, type);
-}
-
-bool register_component_provider(const char *name,
-                                 semaphore_provider::factory f,
-                                 ::dsn::provider_type type)
-{
-    return dsn::utils::factory_store<semaphore_provider>::register_factory(name, f, type);
-}
-
 bool register_component_provider(const char *name, network::factory f, ::dsn::provider_type type)
 {
     return dsn::utils::factory_store<network>::register_factory(name, f, type);

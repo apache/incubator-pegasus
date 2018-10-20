@@ -70,8 +70,6 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 
-using namespace dsn::service;
-
 namespace dsn {
 namespace tools {
 

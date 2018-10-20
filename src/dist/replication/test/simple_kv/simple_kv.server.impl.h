@@ -25,6 +25,7 @@
 */
 #pragma once
 
+#include <dsn/tool-api/zlocks.h>
 #include "simple_kv.server.h"
 
 namespace dsn {
@@ -97,7 +98,7 @@ private:
 private:
     typedef std::map<std::string, std::string> simple_kv;
     simple_kv _store;
-    ::dsn::service::zlock _lock;
+    ::dsn::zlock _lock;
     bool _test_file_learning;
 
     int64_t _last_durable_decree;

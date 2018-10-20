@@ -35,14 +35,14 @@ block_service_manager::block_service_manager()
 block_filesystem *block_service_manager::get_block_filesystem(const std::string &provider)
 {
     {
-        service::zauto_read_lock l(_fs_lock);
+        zauto_read_lock l(_fs_lock);
         auto iter = _fs_map.find(provider);
         if (iter != _fs_map.end())
             return iter->second.get();
     }
 
     {
-        service::zauto_write_lock l(_fs_lock);
+        zauto_write_lock l(_fs_lock);
         auto iter = _fs_map.find(provider);
         if (iter != _fs_map.end())
             return iter->second.get();

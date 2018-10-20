@@ -49,6 +49,8 @@
 namespace dsn {
 namespace replication {
 
+using namespace dsn::service;
+
 class replication_checker : public ::dsn::tools::checker
 {
 public:

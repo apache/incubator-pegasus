@@ -46,7 +46,7 @@
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/json_helper.h>
-#include <dsn/cpp/zlocks.h>
+#include <dsn/tool-api/zlocks.h>
 #include <dsn/dist/block_service.h>
 
 namespace dsn {

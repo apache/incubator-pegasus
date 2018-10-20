@@ -37,8 +37,8 @@
 
 #include <dsn/tool-api/partition_resolver.h>
 #include <dsn/tool-api/task_tracker.h>
+#include <dsn/tool-api/zlocks.h>
 #include <dsn/service_api_c.h>
-#include <dsn/cpp/zlocks.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 
 namespace dsn {
@@ -67,7 +67,7 @@ private:
         int timeout_count;
         ::dsn::partition_configuration config;
     };
-    mutable dsn::service::zrwlock_nr _config_lock;
+    mutable dsn::zrwlock_nr _config_lock;
     std::unordered_map<int, std::unique_ptr<partition_info>> _config_cache;
 
     int _app_id;
@@ -83,7 +83,7 @@ private:
         int timeout_ms;         // init timeout
         uint64_t timeout_ts_us; // timeout at this timing point
 
-        service::zlock lock;    // [
+        zlock lock;             // [
         task_ptr timeout_timer; // when partition config is unknown at the first place
         bool completed;
         // ]
@@ -98,7 +98,7 @@ private:
 
     typedef std::unordered_map<int, partition_context *> pending_replica_requests;
 
-    mutable service::zlock _requests_lock;
+    mutable zlock _requests_lock;
     pending_replica_requests _pending_requests;
     std::deque<request_context_ptr> _pending_requests_before_partition_count_unknown;
     task_ptr _query_config_task;
@@ -125,8 +125,8 @@ private:
     // with meta server
     task_ptr query_config(int partition_index);
     void query_config_reply(error_code err,
-                            dsn::message_ex* request,
-                            dsn::message_ex* response,
+                            dsn::message_ex *request,
+                            dsn::message_ex *response,
                             int partition_index);
 };
 #pragma pack(pop)

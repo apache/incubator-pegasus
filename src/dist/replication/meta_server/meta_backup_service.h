@@ -17,8 +17,6 @@ class meta_service;
 class server_state;
 class backup_service;
 
-using namespace dsn::service;
-
 struct backup_info_status
 {
     enum type
@@ -271,7 +269,7 @@ mock_private :
     backup_service *_backup_service;
 
     // lock the data-structure below
-    dsn::service::zlock _lock;
+    dsn::zlock _lock;
 
     // policy related
     policy _policy;

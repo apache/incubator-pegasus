@@ -30,7 +30,7 @@
  *
  * Revision history:
  *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     Dec., 2015, @shengofsun (Weijie Sun), make service::zlock preoteced,
+ *     Dec., 2015, @shengofsun (Weijie Sun), make zlock preoteced,
  *                 give the subClasses flexibility
  *     xxxx-xx-xx, author, fix bug about xxx
  */
@@ -61,6 +61,7 @@
  */
 #pragma once
 
+#include <dsn/tool-api/zlocks.h>
 #include <dsn/dist/failure_detector/fd.client.h>
 #include <dsn/dist/failure_detector/fd.server.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
@@ -214,7 +215,7 @@ private:
     perf_counter_wrapper _recent_beacon_fail_count;
 
 protected:
-    mutable service::zlock _lock;
+    mutable zlock _lock;
     dsn::task_tracker _tracker;
 
     // subClass can rewrite these method.

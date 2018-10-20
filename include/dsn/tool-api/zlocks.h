@@ -24,107 +24,72 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     lock implementation atop c service api
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include <dsn/service_api_c.h>
-#include <dsn/utility/utils.h>
-#include <atomic>
 #include <algorithm>
+#include <dsn/utility/utils.h>
+
+///
+/// synchronization objects of rDSN.
+///
+/// you MUST always use these objects to do synchronization when you write code
+/// in rdsn's "service_app", because different implementations may be provided
+/// when then program is running in different mode(nativerun/simulator).
+///
+/// As for the synchronize objects in "utility/synchronize.h", they are
+/// used for synchronization inner the rdsn core runtime.
+///
 
 namespace dsn {
-namespace service {
-
-/*!
-@addtogroup sync-exlock
-@{
-*/
+class ilock;
 class zlock
 {
 public:
-    zlock(bool recursive = false) { _h = dsn_exlock_create(recursive); }
-    ~zlock() { dsn_exlock_destroy(_h); }
+    zlock(bool recursive = false);
+    ~zlock();
 
-    void lock() { dsn_exlock_lock(_h); }
-    bool try_lock() { return dsn_exlock_try_lock(_h); }
-    void unlock() { dsn_exlock_unlock(_h); }
-
-private:
-    dsn_handle_t _h;
+    void lock();
+    bool try_lock();
+    void unlock();
 
 private:
-    // no assignment operator
-    zlock &operator=(const zlock &source);
-    zlock(const zlock &source);
+    DISALLOW_COPY_AND_ASSIGN(zlock);
+    ilock *_h;
 };
-/*@}*/
 
-/*!
-@addtogroup sync-rwlock
-@{
-*/
+class rwlock_nr_provider;
 class zrwlock_nr
 {
 public:
-    zrwlock_nr() { _h = dsn_rwlock_nr_create(); }
-    ~zrwlock_nr() { dsn_rwlock_nr_destroy(_h); }
+    zrwlock_nr();
+    ~zrwlock_nr();
 
-    void lock_read() { dsn_rwlock_nr_lock_read(_h); }
-    void unlock_read() { dsn_rwlock_nr_unlock_read(_h); }
-    bool try_lock_read() { return dsn_rwlock_nr_try_lock_read(_h); }
+    void lock_read();
+    void unlock_read();
+    bool try_lock_read();
 
-    void lock_write() { dsn_rwlock_nr_lock_write(_h); }
-    void unlock_write() { dsn_rwlock_nr_unlock_write(_h); }
-    bool try_lock_write() { return dsn_rwlock_nr_try_lock_write(_h); }
-
-private:
-    dsn_handle_t _h;
+    void lock_write();
+    void unlock_write();
+    bool try_lock_write();
 
 private:
-    // no assignment operator
-    zrwlock_nr &operator=(const zrwlock_nr &source);
-    zrwlock_nr(const zrwlock_nr &source);
+    DISALLOW_COPY_AND_ASSIGN(zrwlock_nr);
+    rwlock_nr_provider *_h;
 };
-/*@}*/
 
-/*!
-@addtogroup sync-sema
-@{
-*/
+class semaphore_provider;
 class zsemaphore
 {
 public:
-    zsemaphore(int initial_count = 0) { _h = dsn_semaphore_create(initial_count); }
-    ~zsemaphore() { dsn_semaphore_destroy(_h); }
+    zsemaphore(int initial_count = 0);
+    ~zsemaphore();
 
-public:
-    virtual void signal(int count = 1) { dsn_semaphore_signal(_h, count); }
-
-    virtual bool wait(int timeout_milliseconds = TIME_MS_MAX)
-    {
-        if (static_cast<unsigned int>(timeout_milliseconds) == TIME_MS_MAX) {
-            dsn_semaphore_wait(_h);
-            return true;
-        } else {
-            return dsn_semaphore_wait_timeout(_h, timeout_milliseconds);
-        }
-    }
+    void signal(int count = 1);
+    bool wait(int timeout_milliseconds = TIME_MS_MAX);
 
 private:
-    dsn_handle_t _h;
-
-private:
-    // no assignment operator
-    zsemaphore &operator=(const zsemaphore &source);
-    zsemaphore(const zsemaphore &source);
+    DISALLOW_COPY_AND_ASSIGN(zsemaphore);
+    semaphore_provider *_h;
 };
 
 class zevent
@@ -133,23 +98,22 @@ public:
     zevent(bool manualReset, bool initState = false);
     ~zevent();
 
-public:
     void set();
     void reset();
     bool wait(int timeout_milliseconds = TIME_MS_MAX);
 
 private:
+    DISALLOW_COPY_AND_ASSIGN(zevent);
     zsemaphore _sema;
     std::atomic<bool> _signaled;
     bool _manualReset;
-
-private:
-    // no assignment operator
-    zevent &operator=(const zevent &source);
-    zevent(const zevent &source);
 };
-/*@}*/
+}
 
+///
+/// RAII wrapper of rdsn's synchronization objects
+///
+namespace dsn {
 class zauto_lock
 {
 public:
@@ -222,4 +186,13 @@ private:
     zrwlock_nr *_lock;
 };
 }
-} // end namespace dsn::service
+
+///
+/// utils function used to check the lock safety
+///
+namespace dsn {
+namespace lock_checker {
+void check_wait_safety();
+void check_dangling_lock();
+}
+}

@@ -38,8 +38,6 @@
 #include <sstream>
 #include <dsn/utility/filesystem.h>
 
-using namespace ::dsn::service;
-
 namespace dsn {
 namespace replication {
 namespace application {

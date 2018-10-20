@@ -39,7 +39,6 @@
 #include <dsn/tool-api/auto_codes.h>
 #include <dsn/cpp/serialization.h>
 #include <dsn/cpp/rpc_stream.h>
-#include <dsn/cpp/zlocks.h>
 #include <dsn/cpp/serverlet.h>
 #include <dsn/cpp/service_app.h>
 #include <dsn/tool-api/rpc_address.h>

@@ -34,3 +34,17 @@
  */
 
 #include "lockp.std.h"
+
+namespace dsn {
+namespace tools {
+void register_std_lock_providers()
+{
+    lock_provider::register_component<std_lock_provider>("dsn::tools::std_lock_provider");
+    lock_nr_provider::register_component<std_lock_nr_provider>("dsn::tools::std_lock_nr_provider");
+    rwlock_nr_provider::register_component<std_rwlock_nr_provider>(
+        "dsn::tools::std_rwlock_nr_provider");
+    semaphore_provider::register_component<std_semaphore_provider>(
+        "dsn::tools::std_semaphore_provider");
+}
+}
+}

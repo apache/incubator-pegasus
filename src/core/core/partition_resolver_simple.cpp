@@ -41,7 +41,6 @@
 namespace dsn {
 namespace dist {
 //------------------------------------------------------------------------------------
-using namespace service;
 
 partition_resolver_simple::partition_resolver_simple(rpc_address meta_server, const char *app_path)
     : partition_resolver(meta_server, app_path),

@@ -55,10 +55,9 @@ void register_common_providers()
     register_component_provider<task_worker>("dsn::task_worker");
     register_component_provider<screen_logger>("dsn::tools::screen_logger");
     register_component_provider<simple_logger>("dsn::tools::simple_logger");
-    register_component_provider<std_lock_provider>("dsn::tools::std_lock_provider");
-    register_component_provider<std_lock_nr_provider>("dsn::tools::std_lock_nr_provider");
-    register_component_provider<std_rwlock_nr_provider>("dsn::tools::std_rwlock_nr_provider");
-    register_component_provider<std_semaphore_provider>("dsn::tools::std_semaphore_provider");
+
+    register_std_lock_providers();
+
     register_component_provider<asio_network_provider>("dsn::tools::asio_network_provider");
     register_component_provider<asio_udp_provider>("dsn::tools::asio_udp_provider");
     register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");

@@ -901,7 +901,7 @@ simple_load_balancer::ctrl_assign_secondary_black_list(const std::vector<std::st
     std::string invalid_arguments("invalid arguments");
     std::stringstream oss;
     if (args.size() <= 0) {
-        dsn::service::zauto_read_lock l(_black_list_lock);
+        dsn::zauto_read_lock l(_black_list_lock);
         oss << "get ok: ";
         for (auto iter = _assign_secondary_black_list.begin();
              iter != _assign_secondary_black_list.end();
@@ -917,7 +917,7 @@ simple_load_balancer::ctrl_assign_secondary_black_list(const std::vector<std::st
         return invalid_arguments;
     }
 
-    dsn::service::zauto_write_lock l(_black_list_lock);
+    dsn::zauto_write_lock l(_black_list_lock);
     if (args[0] == "clear") {
         _assign_secondary_black_list.clear();
         return "clear ok";

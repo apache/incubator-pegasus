@@ -55,10 +55,13 @@ void simulator::install(service_spec &spec)
     register_component_provider<sim_env_provider>("dsn::tools::sim_env_provider");
     register_component_provider<sim_task_queue>("dsn::tools::sim_task_queue");
     register_component_provider<sim_timer_service>("dsn::tools::sim_timer_service");
-    register_component_provider<sim_semaphore_provider>("dsn::tools::sim_semaphore_provider");
-    register_component_provider<sim_lock_provider>("dsn::tools::sim_lock_provider");
-    register_component_provider<sim_lock_nr_provider>("dsn::tools::sim_lock_nr_provider");
-    register_component_provider<sim_rwlock_nr_provider>("dsn::tools::sim_rwlock_nr_provider");
+
+    semaphore_provider::register_component<sim_semaphore_provider>(
+        "dsn::tools::sim_semaphore_provider");
+    lock_provider::register_component<sim_lock_provider>("dsn::tools::sim_lock_provider");
+    lock_nr_provider::register_component<sim_lock_nr_provider>("dsn::tools::sim_lock_nr_provider");
+    rwlock_nr_provider::register_component<sim_rwlock_nr_provider>(
+        "dsn::tools::sim_rwlock_nr_provider");
 
     scheduler::instance();
 

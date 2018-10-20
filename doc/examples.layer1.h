@@ -368,7 +368,7 @@ So far, we are using only 1 thread for serving the client requests because
 thread pool, and in the configuration file, we have **[threadpool.THREAD_POOL_DEFAULT] worker_count
 = 1**. To scale up the service, we increase the number of threads to 4. However, the service
 handlers in **counter.service.impl.h** must also be made thread safe, by using a lock with type
-**::dsn::service::zrwlock_nr**. In rNET_HDR_DSN, all non-deterministic behaviors must be implemented
+**::dsn::zrwlock_nr**. In rNET_HDR_DSN, all non-deterministic behaviors must be implemented
 using rDSN's service API (see
 [here](https://github.com/Microsoft/rDSN/wiki/Programming-Rules-and-FAQ)). However, if you are in
 favor of some other reader-writer locks, you can still use them by integrating them as rwlock
@@ -378,21 +378,21 @@ providers as we do with logging providers above.
  10 virtual void on_add(const ::dsn::example::count_op& op, ::dsn::service::rpc_replier<int32_t>&
 reply)
  11 {
- 12   ::dsn::service::zauto_write_lock l(_lock);
+ 12   ::dsn::zauto_write_lock l(_lock);
  13   auto result = (_counters[op.name] += op.operand);
  14   reply(result);
  15 }
  16
  17 virtual void on_read(const std::string& name, ::dsn::service::rpc_replier<int32_t>& reply)
  18 {
- 19   ::dsn::service::zauto_read_lock l(_lock);
+ 19   ::dsn::zauto_read_lock l(_lock);
  20   auto it = _counters.find(name);
  21   auto result = it != _counters.end() ? it->second : 0;
  22   reply(result);
  23 }
  24
  25 private:
- 26 ::dsn::service::zrwlock_nr _lock;
+ 26 ::dsn::zrwlock_nr _lock;
 ```
 
 Another approach without using locks is to partition the counter name space so that the **ADD** and

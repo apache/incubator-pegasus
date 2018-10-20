@@ -36,7 +36,6 @@
 #pragma once
 
 #include <dsn/tool_api.h>
-using namespace dsn::service;
 #include <dsn/dist/replication.h>
 
 namespace dsn {
@@ -51,8 +50,6 @@ public:
 private:
     virtual bool is_task_accepted(task *task);
     virtual int get_system_utilization();
-
-private:
 };
 }
 } // end namespace

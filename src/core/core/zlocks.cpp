@@ -33,12 +33,180 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/cpp/zlocks.h>
+#include <dsn/utility/factory_store.h>
+#include <dsn/tool-api/zlocks.h>
+#include "core/core/zlock_provider.h"
+#include "core/core/service_engine.h"
 
 namespace dsn {
-namespace service {
 
-//------------------------------- event ----------------------------------
+namespace lock_checker {
+__thread int zlock_exclusive_count;
+__thread int zlock_shared_count;
+
+void check_wait_safety()
+{
+    if (zlock_exclusive_count + zlock_shared_count > 0) {
+        dwarn("wait inside locks may lead to deadlocks - current thread owns %u exclusive locks "
+              "and %u shared locks now.",
+              zlock_exclusive_count,
+              zlock_shared_count);
+    }
+}
+
+void check_dangling_lock()
+{
+    if (zlock_exclusive_count + zlock_shared_count > 0) {
+        dwarn("locks should not be hold at this point - current thread owns %u exclusive locks and "
+              "%u shared locks now.",
+              zlock_exclusive_count,
+              zlock_shared_count);
+    }
+}
+}
+
+zlock::zlock(bool recursive)
+{
+    if (recursive) {
+        lock_provider *last = utils::factory_store<lock_provider>::create(
+            dsn::service_engine::instance().spec().lock_factory_name.c_str(),
+            dsn::PROVIDER_TYPE_MAIN,
+            nullptr);
+
+        // TODO: perf opt by saving the func ptrs somewhere
+        for (auto &s : dsn::service_engine::instance().spec().lock_aspects) {
+            last = utils::factory_store<::dsn::lock_provider>::create(
+                s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
+        }
+
+        _h = last;
+    } else {
+        lock_nr_provider *last = utils::factory_store<lock_nr_provider>::create(
+            dsn::service_engine::instance().spec().lock_nr_factory_name.c_str(),
+            dsn::PROVIDER_TYPE_MAIN,
+            nullptr);
+
+        // TODO: perf opt by saving the func ptrs somewhere
+        for (auto &s : dsn::service_engine::instance().spec().lock_nr_aspects) {
+            last = utils::factory_store<::dsn::lock_nr_provider>::create(
+                s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
+        }
+
+        _h = last;
+    }
+}
+
+zlock::~zlock() { delete _h; }
+
+void zlock::lock()
+{
+    _h->lock();
+    ++lock_checker::zlock_exclusive_count;
+}
+
+bool zlock::try_lock()
+{
+    auto r = _h->try_lock();
+    if (r) {
+        ++lock_checker::zlock_exclusive_count;
+    }
+    return r;
+}
+
+void zlock::unlock()
+{
+    --lock_checker::zlock_exclusive_count;
+    _h->unlock();
+}
+
+zrwlock_nr::zrwlock_nr()
+{
+    rwlock_nr_provider *last = utils::factory_store<rwlock_nr_provider>::create(
+        service_engine::instance().spec().rwlock_nr_factory_name.c_str(),
+        dsn::PROVIDER_TYPE_MAIN,
+        nullptr);
+
+    // TODO: perf opt by saving the func ptrs somewhere
+    for (auto &s : service_engine::instance().spec().rwlock_nr_aspects) {
+        last = utils::factory_store<rwlock_nr_provider>::create(
+            s.c_str(), dsn::PROVIDER_TYPE_ASPECT, last);
+    }
+
+    _h = last;
+}
+
+zrwlock_nr::~zrwlock_nr() { delete _h; }
+
+void zrwlock_nr::lock_read()
+{
+    _h->lock_read();
+    ++lock_checker::zlock_shared_count;
+}
+
+void zrwlock_nr::unlock_read()
+{
+    --lock_checker::zlock_shared_count;
+    _h->unlock_read();
+}
+
+bool zrwlock_nr::try_lock_read()
+{
+    auto r = _h->try_lock_read();
+    if (r)
+        ++lock_checker::zlock_shared_count;
+    return r;
+}
+
+void zrwlock_nr::lock_write()
+{
+    _h->lock_write();
+    ++lock_checker::zlock_exclusive_count;
+}
+
+void zrwlock_nr::unlock_write()
+{
+    --lock_checker::zlock_exclusive_count;
+    _h->unlock_write();
+}
+
+bool zrwlock_nr::try_lock_write()
+{
+    auto r = _h->try_lock_write();
+    if (r)
+        ++lock_checker::zlock_exclusive_count;
+    return r;
+}
+
+zsemaphore::zsemaphore(int initial_count)
+{
+    semaphore_provider *last = utils::factory_store<semaphore_provider>::create(
+        service_engine::instance().spec().semaphore_factory_name.c_str(),
+        PROVIDER_TYPE_MAIN,
+        initial_count,
+        nullptr);
+
+    // TODO: perf opt by saving the func ptrs somewhere
+    for (auto &s : service_engine::instance().spec().semaphore_aspects) {
+        last = utils::factory_store<::dsn::semaphore_provider>::create(
+            s.c_str(), dsn::PROVIDER_TYPE_ASPECT, initial_count, last);
+    }
+    _h = last;
+}
+
+zsemaphore::~zsemaphore() { delete _h; }
+
+void zsemaphore::signal(int count) { _h->signal(count); }
+
+bool zsemaphore::wait(int timeout_milliseconds)
+{
+    if (static_cast<unsigned int>(timeout_milliseconds) == TIME_MS_MAX) {
+        lock_checker::check_wait_safety();
+        _h->wait();
+        return true;
+    } else {
+        return _h->wait(timeout_milliseconds);
+    }
+}
 
 zevent::zevent(bool manualReset, bool initState /* = false*/)
 {
@@ -88,4 +256,3 @@ bool zevent::wait(int timeout_milliseconds)
     }
 }
 }
-} // end namespace dsn::service

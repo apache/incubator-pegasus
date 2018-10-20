@@ -35,7 +35,7 @@
 #pragma once
 
 #include <dsn/service_api_cpp.h>
-#include <dsn/cpp/zlocks.h>
+#include <dsn/tool-api/zlocks.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <memory>
 #include "dist/replication/common/replication_common.h"

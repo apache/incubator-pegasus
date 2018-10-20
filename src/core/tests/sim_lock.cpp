@@ -41,9 +41,9 @@
 #include <dsn/utility/synchronize.h>
 #include <gtest/gtest.h>
 #include <thread>
-#include "../core/service_engine.h"
-#include "../tools/simulator/task_engine.sim.h"
-#include "../tools/simulator/scheduler.h"
+#include "core/core/service_engine.h"
+#include "core/tools/simulator/task_engine.sim.h"
+#include "core/tools/simulator/scheduler.h"
 
 TEST(tools_simulator, dsn_semaphore)
 {
@@ -52,13 +52,12 @@ TEST(tools_simulator, dsn_semaphore)
     if (dsn::service_engine::instance().spec().semaphore_factory_name !=
         "dsn::tools::sim_semaphore_provider")
         return;
-    dsn_handle_t s = dsn_semaphore_create(2);
-    dsn_semaphore_wait(s);
-    ASSERT_TRUE(dsn_semaphore_wait_timeout(s, 10));
-    ASSERT_FALSE(dsn_semaphore_wait_timeout(s, 0));
-    dsn_semaphore_signal(s, 1);
-    dsn_semaphore_wait(s);
-    dsn_semaphore_destroy(s);
+    dsn::zsemaphore s(2);
+    s.wait();
+    ASSERT_TRUE(s.wait(10));
+    ASSERT_FALSE(s.wait(0));
+    s.signal(1);
+    s.wait();
 }
 
 TEST(tools_simulator, dsn_lock_nr)

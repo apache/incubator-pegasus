@@ -37,6 +37,7 @@
 #include <dsn/tool_api.h>
 #include <dsn/tool-api/file_io.h>
 #include <dsn/tool-api/auto_codes.h>
+#include <dsn/tool-api/zlocks.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <gtest/gtest.h>
@@ -151,26 +152,22 @@ TEST(core, dsn_exlock)
         "dsn::tools::sim_semaphore_provider")
         return;
     {
-        dsn_handle_t l = dsn_exlock_create(false);
-        ASSERT_NE(nullptr, l);
-        ASSERT_TRUE(dsn_exlock_try_lock(l));
-        dsn_exlock_unlock(l);
-        dsn_exlock_lock(l);
-        dsn_exlock_unlock(l);
-        dsn_exlock_destroy(l);
+        dsn::zlock l(false);
+        ASSERT_TRUE(l.try_lock());
+        l.unlock();
+        l.lock();
+        l.unlock();
     }
     {
-        dsn_handle_t l = dsn_exlock_create(true);
-        ASSERT_NE(nullptr, l);
-        ASSERT_TRUE(dsn_exlock_try_lock(l));
-        ASSERT_TRUE(dsn_exlock_try_lock(l));
-        dsn_exlock_unlock(l);
-        dsn_exlock_unlock(l);
-        dsn_exlock_lock(l);
-        dsn_exlock_lock(l);
-        dsn_exlock_unlock(l);
-        dsn_exlock_unlock(l);
-        dsn_exlock_destroy(l);
+        dsn::zlock l(true);
+        ASSERT_TRUE(l.try_lock());
+        ASSERT_TRUE(l.try_lock());
+        l.unlock();
+        l.unlock();
+        l.lock();
+        l.lock();
+        l.unlock();
+        l.unlock();
     }
 }
 
@@ -179,13 +176,11 @@ TEST(core, dsn_rwlock)
     if (dsn::service_engine::instance().spec().semaphore_factory_name ==
         "dsn::tools::sim_semaphore_provider")
         return;
-    dsn_handle_t l = dsn_rwlock_nr_create();
-    ASSERT_NE(nullptr, l);
-    dsn_rwlock_nr_lock_read(l);
-    dsn_rwlock_nr_unlock_read(l);
-    dsn_rwlock_nr_lock_write(l);
-    dsn_rwlock_nr_unlock_write(l);
-    dsn_rwlock_nr_destroy(l);
+    dsn::zrwlock_nr l;
+    l.lock_read();
+    l.unlock_read();
+    l.lock_write();
+    l.unlock_write();
 }
 
 TEST(core, dsn_semaphore)
@@ -193,13 +188,12 @@ TEST(core, dsn_semaphore)
     if (dsn::service_engine::instance().spec().semaphore_factory_name ==
         "dsn::tools::sim_semaphore_provider")
         return;
-    dsn_handle_t s = dsn_semaphore_create(2);
-    dsn_semaphore_wait(s);
-    ASSERT_TRUE(dsn_semaphore_wait_timeout(s, 10));
-    ASSERT_FALSE(dsn_semaphore_wait_timeout(s, 10));
-    dsn_semaphore_signal(s, 1);
-    dsn_semaphore_wait(s);
-    dsn_semaphore_destroy(s);
+    dsn::zsemaphore s(2);
+    s.wait();
+    ASSERT_TRUE(s.wait(10));
+    ASSERT_FALSE(s.wait(10));
+    s.signal(1);
+    s.wait();
 }
 
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)

@@ -86,7 +86,7 @@ void slave_failure_detector_with_multimaster::end_ping(::dsn::error_code err,
           ack.is_master ? "true" : "false",
           ack.allowed ? "true" : "false");
 
-    service::zauto_lock l(failure_detector::_lock);
+    zauto_lock l(failure_detector::_lock);
     if (!failure_detector::end_ping_internal(err, ack))
         return;
 

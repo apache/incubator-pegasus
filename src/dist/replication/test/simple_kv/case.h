@@ -38,7 +38,7 @@
 #include "common.h"
 
 #include <dsn/utility/singleton.h>
-#include <dsn/cpp/zlocks.h>
+#include <dsn/tool-api/zlocks.h>
 
 #include <fstream>
 
@@ -482,7 +482,7 @@ private:
     std::vector<case_line *> _case_lines;
     size_t _next;
     int _null_loop_count;
-    dsn::service::zsemaphore _client_sema;
+    dsn::zsemaphore _client_sema;
 };
 }
 }

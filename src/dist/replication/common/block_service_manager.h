@@ -1,7 +1,7 @@
 #pragma once
 
 #include <dsn/utility/singleton_store.h>
-#include <dsn/service_api_cpp.h>
+#include <dsn/tool-api/zlocks.h>
 
 namespace dsn {
 namespace dist {
@@ -33,7 +33,7 @@ public:
 private:
     block_service_registry &_registry_holder;
 
-    mutable service::zrwlock_nr _fs_lock;
+    mutable zrwlock_nr _fs_lock;
     std::map<std::string, std::unique_ptr<dist::block_service::block_filesystem>> _fs_map;
 };
 }

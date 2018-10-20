@@ -33,12 +33,10 @@
  *     2015-11-11, Tianyi WANG, first version done
  */
 
+#include <queue>
+#include <dsn/tool-api/zlocks.h>
 #include <dsn/dist/meta_state_service.h>
 #include "dist/replication/common/replication_common.h"
-
-#include <queue>
-
-using namespace dsn::service;
 
 namespace dsn {
 namespace dist {

@@ -38,8 +38,6 @@
 #include <dsn/dist/replication.h>
 #include <string>
 
-using namespace ::dsn::service;
-
 namespace dsn {
 namespace replication {
 

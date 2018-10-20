@@ -293,58 +293,6 @@ __inline uint64_t dsn_now_ms() { return dsn_now_ns() / 1000000; }
 
 /*@}*/
 
-/*!
-@defgroup sync Thread Synchornization
-
-Thread Synchornization Primitives
-
-Note developers can easily plugin their own implementation to
-replace the underneath implementation of these primitives.
-@{
-*/
-
-/*!
-@defgroup sync-exlock Exlusive Locks
-Exlusive Locks
-@{
-*/
-
-/*! create a recursive? or not exlusive lock*/
-extern DSN_API dsn_handle_t dsn_exlock_create(bool recursive);
-extern DSN_API void dsn_exlock_destroy(dsn_handle_t l);
-extern DSN_API void dsn_exlock_lock(dsn_handle_t l);
-extern DSN_API bool dsn_exlock_try_lock(dsn_handle_t l);
-extern DSN_API void dsn_exlock_unlock(dsn_handle_t l);
-/*@}*/
-
-/*!
-@defgroup sync-rwlock Non-recursive Read-Write Locks
-Non-recursive Read-Write Locks
-@{
-*/
-extern DSN_API dsn_handle_t dsn_rwlock_nr_create();
-extern DSN_API void dsn_rwlock_nr_destroy(dsn_handle_t l);
-extern DSN_API void dsn_rwlock_nr_lock_read(dsn_handle_t l);
-extern DSN_API void dsn_rwlock_nr_unlock_read(dsn_handle_t l);
-extern DSN_API bool dsn_rwlock_nr_try_lock_read(dsn_handle_t l);
-extern DSN_API void dsn_rwlock_nr_lock_write(dsn_handle_t l);
-extern DSN_API void dsn_rwlock_nr_unlock_write(dsn_handle_t l);
-extern DSN_API bool dsn_rwlock_nr_try_lock_write(dsn_handle_t l);
-/*@}*/
-
-/*!
-@defgroup sync-sema Semaphore
-Semaphore
-@{
-*/
-/*! create a semaphore with initial count equals to inital_count */
-extern DSN_API dsn_handle_t dsn_semaphore_create(int initial_count);
-extern DSN_API void dsn_semaphore_destroy(dsn_handle_t s);
-extern DSN_API void dsn_semaphore_signal(dsn_handle_t s, int count);
-extern DSN_API void dsn_semaphore_wait(dsn_handle_t s);
-extern DSN_API bool dsn_semaphore_wait_timeout(dsn_handle_t s, int timeout_milliseconds);
-/*@}*/
-
 /*@}*/
 
 /*@}*/

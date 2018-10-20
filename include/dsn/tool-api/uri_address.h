@@ -40,7 +40,7 @@
 #include <dsn/utility/synchronize.h>
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/partition_resolver.h>
-#include <dsn/cpp/zlocks.h>
+#include <dsn/tool-api/zlocks.h>
 
 namespace dsn {
 /** A RPC URI address. */
@@ -109,7 +109,7 @@ public:
 private:
     std::unordered_map<std::string, dist::partition_resolver_ptr>
         _apps; ///< app-path to app-resolver map
-    service::zrwlock_nr _apps_lock;
+    zrwlock_nr _apps_lock;
 
     rpc_address _meta_server;
     std::string _name;
