@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <iostream>
 #include <thread>
 #include <sstream>
@@ -196,4 +187,12 @@ command_manager::command_manager()
             return "repeat command completed";
         });
 }
+
+command_manager::~command_manager()
+{
+    for (command_instance *c : _commands) {
+        delete c;
+    }
 }
+
+} // namespace dsn

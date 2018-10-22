@@ -43,6 +43,7 @@
 #include <iostream>
 #include <algorithm>
 #include <dsn/toollet/profiler.h>
+#include <dsn/utility/smart_pointers.h>
 #include "profiler_header.h"
 
 namespace dsn {
@@ -57,8 +58,8 @@ struct sort_node
 
 extern task_spec_profiler *s_spec_profilers;
 extern counter_info *counter_info_ptr[PREF_COUNTER_COUNT];
-profiler_output_data_type *profiler_output_data =
-    new profiler_output_data_type(taskname_width, data_width, call_width);
+auto profiler_output_data =
+    make_unique<profiler_output_data_type>(taskname_width, data_width, call_width);
 
 static inline bool cmp(const sort_node &x, const sort_node &y)
 {
@@ -394,5 +395,5 @@ void profiler_data_top(std::stringstream &ss,
     }
     delete[] _tmp;
 }
-}
-}
+} // namespace tools
+} // namespace dsn

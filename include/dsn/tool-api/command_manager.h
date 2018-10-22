@@ -39,6 +39,8 @@ public:
     typedef std::function<std::string(const std::vector<std::string> &)> command_handler;
     command_manager();
 
+    ~command_manager();
+
     dsn_handle_t register_command(const std::vector<std::string> &commands,
                                   const std::string &help_one_line,
                                   const std::string &help_long,

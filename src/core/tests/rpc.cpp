@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for rpc related code.
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <vector>
 #include <string>
 #include <queue>
@@ -195,11 +186,11 @@ static void send_message(::dsn::rpc_address addr,
 {
     task_resp_queue q("response.queue");
     for (int i = 0; i != repeat_times; ++i) {
-        dsn::message_ex *request = dsn::message_ex::create_request(RPC_TEST_STRING_COMMAND);
-        ::dsn::marshall(request, command);
+        dsn::message_ptr request = dsn::message_ex::create_request(RPC_TEST_STRING_COMMAND);
+        ::dsn::marshall(request.get(), command);
         dsn::task_ptr resp_task = ::dsn::rpc::call(
             addr,
-            request,
+            request.get(),
             nullptr,
             [&](error_code err, dsn::message_ex *request, dsn::message_ex *response) {
                 rpc_group_callback(

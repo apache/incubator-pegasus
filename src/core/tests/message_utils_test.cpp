@@ -29,7 +29,7 @@
 #include <dsn/cpp/rpc_holder.h>
 #include <gtest/gtest.h>
 
-using namespace dsn;
+namespace dsn {
 
 DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
@@ -41,10 +41,10 @@ TEST(message_utils, msg_blob_convertion)
     std::string data = "hello";
 
     blob b(data.c_str(), 0, data.size());
-    dsn::message_ex *m = from_blob_to_received_msg(RPC_CODE_FOR_TEST, std::move(b));
+    message_ptr m = from_blob_to_received_msg(RPC_CODE_FOR_TEST, std::move(b));
 
     ASSERT_EQ(m->header->body_length, data.size());
-    ASSERT_EQ(b.to_string(), move_message_to_blob(m).to_string());
+    ASSERT_EQ(b.to_string(), move_message_to_blob(m.get()).to_string());
 }
 
 TEST(message_utils, thrift_msg_convertion)
@@ -52,10 +52,10 @@ TEST(message_utils, thrift_msg_convertion)
     configuration_query_by_index_request request;
     request.app_name = "haha";
 
-    dsn::message_ex *msg =
+    message_ptr msg =
         from_thrift_request_to_received_message(request, RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
 
-    t_rpc rpc(msg);
+    t_rpc rpc(msg.get());
     ASSERT_EQ(rpc.request().app_name, "haha");
 }
 
@@ -64,11 +64,13 @@ TEST(message_utils, complex_convertion)
     configuration_query_by_index_request request;
     request.app_name = "haha";
 
-    dsn::message_ex *msg =
+    message_ptr msg =
         from_thrift_request_to_received_message(request, RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
-    blob b = move_message_to_blob(msg);
+    blob b = move_message_to_blob(msg.get());
     msg = from_blob_to_received_msg(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, std::move(b));
 
-    t_rpc rpc(msg);
+    t_rpc rpc(msg.get());
     ASSERT_EQ(rpc.request().app_name, "haha");
 }
+
+} // namespace dsn

@@ -42,7 +42,6 @@ namespace dsn {
     msg->header->client.thread_hash = thread_hash;
     msg->header->client.partition_hash = partition_hash;
     msg->header->context.u.serialize_format = serialization_type;
-    msg->add_ref(); // released by callers explicitly using dsn_msg_release
     return msg;
 }
 

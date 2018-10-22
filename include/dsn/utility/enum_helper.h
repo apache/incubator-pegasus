@@ -38,6 +38,7 @@
 #include <map>
 #include <string>
 #include <mutex>
+#include <memory>
 
 // an invalid enum value must be provided so as to be the default value when parsing failed
 #define ENUM_BEGIN2(type, name, invalid_value)                                                     \
@@ -106,13 +107,13 @@ public:
     {
         if (_instance == nullptr) {
             static std::once_flag flag;
-            std::call_once(flag, [&]() { _instance = registor(); });
+            std::call_once(flag, [&]() { _instance.reset(registor()); });
         }
         return *_instance;
     }
 
 private:
-    static enum_helper_xxx *_instance;
+    static std::unique_ptr<enum_helper_xxx<TEnum>> _instance;
 
 private:
     TEnum _invalid;
@@ -121,6 +122,6 @@ private:
 };
 
 template <typename TEnum>
-enum_helper_xxx<TEnum> *enum_helper_xxx<TEnum>::_instance = 0;
+std::unique_ptr<enum_helper_xxx<TEnum>> enum_helper_xxx<TEnum>::_instance;
 
-} // end namespace
+} // namespace dsn
