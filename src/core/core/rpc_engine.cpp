@@ -24,24 +24,11 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     rpc engine implementation
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#ifdef _WIN32
-#include <WinSock2.h>
-#else
 #include <sys/socket.h>
 #include <netdb.h>
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#endif
 
 #include "rpc_engine.h"
 #include "service_engine.h"
@@ -464,7 +451,7 @@ error_code rpc_engine::start(const service_app_spec &aspec)
 
     // for each format
     for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++) {
-        std::vector<network *> &pnet = _client_nets[i];
+        std::vector<std::unique_ptr<network>> &pnet = _client_nets[i];
         pnet.resize(rpc_channel::max_value() + 1);
         auto client_hdr_format = network_header_format(network_header_format::to_string(i));
 
@@ -491,7 +478,7 @@ error_code rpc_engine::start(const service_app_spec &aspec)
             auto net = create_network(cs, true, client_hdr_format);
             if (!net)
                 return ERR_NETWORK_INIT_FAILED;
-            pnet[j] = net;
+            pnet[j].reset(net);
 
             ddebug("[%s] network client started at port %u, channel = %s, fmt = %s ...",
                    node()->full_name(),
@@ -505,13 +492,11 @@ error_code rpc_engine::start(const service_app_spec &aspec)
     for (auto &sp : aspec.network_server_confs) {
         int port = sp.second.port;
 
-        std::vector<network *> *pnets;
+        std::vector<std::unique_ptr<network>> *pnets;
         auto it = _server_nets.find(port);
 
         if (it == _server_nets.end()) {
-            std::vector<network *> nets;
-            auto pr =
-                _server_nets.insert(std::map<int, std::vector<network *>>::value_type(port, nets));
+            auto pr = _server_nets.emplace(port, std::vector<std::unique_ptr<network>>{});
             pnets = &pr.first->second;
             pnets->resize(rpc_channel::max_value() + 1);
         } else {
@@ -523,7 +508,7 @@ error_code rpc_engine::start(const service_app_spec &aspec)
             return ERR_NETWORK_INIT_FAILED;
         }
 
-        (*pnets)[sp.second.channel] = net;
+        (*pnets)[sp.second.channel].reset(net);
 
         dwarn("[%s] network server started at port %u, channel = %s, ...",
               node()->full_name(),
@@ -798,7 +783,7 @@ void rpc_engine::call_ip(rpc_address addr,
     auto sp = task_spec::get(request->local_rpc_code);
     auto &hdr = *request->header;
 
-    network *net = _client_nets[request->hdr_format][sp->rpc_call_channel];
+    network *net = _client_nets[request->hdr_format][sp->rpc_call_channel].get();
     dassert(nullptr != net,
             "network not present for rpc channel '%s' with format '%s' used by rpc %s",
             sp->rpc_call_channel.to_string(),
@@ -903,7 +888,7 @@ void rpc_engine::reply(message_ex *response, error_code err)
 
             // use the header format recorded in the message
             auto rpc_channel = sp ? sp->rpc_call_channel : RPC_CHANNEL_TCP;
-            network *net = _client_nets[response->hdr_format][rpc_channel];
+            network *net = _client_nets[response->hdr_format][rpc_channel].get();
             dassert(
                 nullptr != net,
                 "client network not present for rpc channel '%s' with format '%s' used by rpc %s",
@@ -925,7 +910,7 @@ void rpc_engine::reply(message_ex *response, error_code err)
                     "target address must have named port in this case");
 
         auto rpc_channel = sp ? sp->rpc_call_channel : RPC_CHANNEL_TCP;
-        network *net = _server_nets[response->header->from_address.port()][rpc_channel];
+        network *net = _server_nets[response->header->from_address.port()][rpc_channel].get();
 
         dassert(nullptr != net,
                 "server network not present for rpc channel '%s' on port %u used by rpc %s",
@@ -978,4 +963,5 @@ void rpc_engine::forward(message_ex *request, rpc_address address)
         call_ip(address, copied_request, nullptr, false, true);
     }
 }
-}
+
+} // namespace dsn

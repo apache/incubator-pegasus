@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -45,6 +36,8 @@ class asio_network_provider : public connection_oriented_network
 {
 public:
     asio_network_provider(rpc_engine *srv, network *inner_provider);
+
+    ~asio_network_provider() override;
 
     virtual error_code start(rpc_channel channel, int port, bool client_only) override;
     virtual ::dsn::rpc_address address() override { return _address; }
@@ -67,7 +60,7 @@ class asio_udp_provider : public network
 public:
     asio_udp_provider(rpc_engine *srv, network *inner_provider);
 
-    virtual ~asio_udp_provider();
+    ~asio_udp_provider() override;
 
     void send_message(message_ex *request) override;
 
@@ -99,5 +92,6 @@ private:
 
     static const size_t max_udp_packet_size = 1000;
 };
-}
-}
+
+} // namespace tools
+} // namespace dsn
