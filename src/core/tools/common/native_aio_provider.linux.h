@@ -24,18 +24,7 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
-
-#ifdef __linux__
 
 #include <dsn/tool_api.h>
 #include <dsn/utility/synchronize.h>
@@ -81,9 +70,9 @@ protected:
 
 private:
     io_context_t _ctx;
+    std::atomic<bool> _is_running{false};
     std::thread _worker;
 };
-}
-}
 
-#endif
+} // namespace tools
+} // namespace dsn

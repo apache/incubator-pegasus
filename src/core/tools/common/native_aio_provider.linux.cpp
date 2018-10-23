@@ -56,10 +56,17 @@ native_linux_aio_provider::~native_linux_aio_provider()
 {
     auto ret = io_destroy(_ctx);
     dassert(ret == 0, "io_destroy error, ret = %d", ret);
+
+    if (!_is_running) {
+        return;
+    }
+    _is_running = false;
+    _worker.join();
 }
 
 void native_linux_aio_provider::start()
 {
+    _is_running = true;
     _worker = std::thread([this]() {
         task::set_tls_dsn_context(node(), nullptr);
         get_event();
@@ -119,6 +126,9 @@ void native_linux_aio_provider::get_event()
     task_worker::set_name(buffer);
 
     while (true) {
+        if (dsn_unlikely(!_is_running.load(std::memory_order_relaxed))) {
+            break;
+        }
         ret = io_getevents(_ctx, 1, 1, events, NULL);
         if (ret > 0) // should be 1
         {
@@ -221,6 +231,7 @@ error_code native_linux_aio_provider::aio_internal(aio_task *aio_tsk,
         }
     }
 }
-}
-} // end namespace dsn::tools
+
+} // namespace tools
+} // namespace dsn
 #endif
