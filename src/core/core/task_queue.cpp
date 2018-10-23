@@ -61,10 +61,7 @@ task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_prov
     _spec = (threadpool_spec *)&pool->spec();
 }
 
-task_queue::~task_queue()
-{
-    perf_counters::instance().remove_counter(_queue_length_counter->full_name());
-}
+task_queue::~task_queue() = default;
 
 void task_queue::enqueue_internal(task *task)
 {

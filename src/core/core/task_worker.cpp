@@ -24,34 +24,10 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <dsn/tool-api/task_worker.h>
+#include <dsn/utility/smart_pointers.h>
+
 #include "task_engine.h"
-#include <sstream>
-#include <errno.h>
-
-#ifdef _WIN32
-
-#else
-#include <pthread.h>
-
-#ifdef __FreeBSD__
-#include <pthread_np.h>
-#endif
-
-#ifdef __APPLE__
-#include <mach/thread_policy.h>
-#endif
-
-#endif
 
 namespace dsn {
 
@@ -77,7 +53,14 @@ task_worker::task_worker(task_worker_pool *pool,
     _processed_task_count = 0;
 }
 
-task_worker::~task_worker() { stop(); }
+task_worker::~task_worker()
+{
+    if (!_is_running)
+        return;
+
+    // TODO(wutao1): use join, detach is not work with valgrind
+    _thread->detach();
+}
 
 void task_worker::start()
 {
@@ -86,7 +69,7 @@ void task_worker::start()
 
     _is_running = true;
 
-    _thread = new std::thread(std::bind(&task_worker::run_internal, this));
+    _thread = make_unique<std::thread>(std::bind(&task_worker::run_internal, this));
 
     _started.wait();
 }
@@ -99,116 +82,39 @@ void task_worker::stop()
     _is_running = false;
 
     _thread->join();
-    delete _thread;
-    _thread = nullptr;
-
-    _is_running = false;
 }
 
 void task_worker::set_name(const char *name)
 {
-#ifdef _WIN32
-
-#ifndef MS_VC_EXCEPTION
-#define MS_VC_EXCEPTION 0x406D1388
-#endif
-
-    typedef struct tagTHREADNAME_INFO
-    {
-        uint32_t dwType;     // Must be 0x1000.
-        LPCSTR szName;       // Pointer to name (in user addr space).
-        uint32_t dwThreadID; // Thread ID (-1=caller thread).
-        uint32_t dwFlags;    // Reserved for future use, must be zero.
-    } THREADNAME_INFO;
-
-    THREADNAME_INFO info;
-    info.dwType = 0x1000;
-    info.szName = name;
-    info.dwThreadID = (uint32_t)-1;
-    info.dwFlags = 0;
-
-    __try {
-        ::RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(uint32_t), (ULONG_PTR *)&info);
-    } __except (EXCEPTION_CONTINUE_EXECUTION) {
-    }
-
-#else
     std::string sname(name);
-    auto thread_name = sname
-#ifdef __linux__
-                           .substr(0, (16 - 1))
-#endif
-        ;
+    auto thread_name = sname.substr(0, (16 - 1));
     auto tid = pthread_self();
-    int err = 0;
-#ifdef __FreeBSD__
-    pthread_set_name_np(tid, thread_name.c_str());
-#elif defined(__linux__)
-    err = pthread_setname_np(tid, thread_name.c_str());
-#elif defined(__APPLE__)
-    err = pthread_setname_np(thread_name.c_str());
-#endif
+    int err = pthread_setname_np(tid, thread_name.c_str());
     if (err != 0) {
         dwarn("Fail to set pthread name. err = %d", err);
     }
-#endif
 }
 
 void task_worker::set_priority(worker_priority_t pri)
 {
-#ifndef _WIN32
-#ifndef __linux__
-    static int policy = SCHED_OTHER;
-#endif
-    static int prio_max =
-#ifdef __linux__
-        -20;
-#else
-        sched_get_priority_max(policy);
-#endif
-    static int prio_min =
-#ifdef __linux__
-        19;
-#else
-        sched_get_priority_min(policy);
-#endif
+    static int prio_max = -20;
+    static int prio_min = 19;
     static int prio_middle = ((prio_min + prio_max + 1) / 2);
-#endif
 
-    static int g_thread_priority_map[] = {
-#ifdef _WIN32
-        THREAD_PRIORITY_LOWEST,
-        THREAD_PRIORITY_BELOW_NORMAL,
-        THREAD_PRIORITY_NORMAL,
-        THREAD_PRIORITY_ABOVE_NORMAL,
-        THREAD_PRIORITY_HIGHEST
-#else
-        prio_min, (prio_min + prio_middle) / 2, prio_middle, (prio_middle + prio_max) / 2, prio_max
-#endif
-    };
+    static int g_thread_priority_map[] = {prio_min,
+                                          (prio_min + prio_middle) / 2,
+                                          prio_middle,
+                                          (prio_middle + prio_max) / 2,
+                                          prio_max};
 
     static_assert(ARRAYSIZE(g_thread_priority_map) == THREAD_xPRIORITY_COUNT,
                   "ARRAYSIZE(g_thread_priority_map) != THREAD_xPRIORITY_COUNT");
 
     int prio = g_thread_priority_map[static_cast<int>(pri)];
     bool succ = true;
-#if !defined(_WIN32) && !defined(__linux__)
-    struct sched_param param;
-    memset(&param, 0, sizeof(struct sched_param));
-    param.sched_priority = prio;
-#endif
-
-#ifdef _WIN32
-    succ = (::SetThreadPriority(::GetCurrentThread(), prio) == TRUE);
-#elif defined(__linux__)
     if ((nice(prio) == -1) && (errno != 0)) {
         succ = false;
     }
-#else
-    succ = (pthread_setschedparam(pthread_self(), policy, &param) == 0);
-//# error "not implemented"
-#endif
-
     if (!succ) {
         dwarn("You may need priviledge to set thread priority. errno = %d", errno);
     }
@@ -226,23 +132,6 @@ void task_worker::set_affinity(uint64_t affinity)
     }
 
     int err = 0;
-#ifdef _WIN32
-    if (::SetThreadAffinityMask(::GetCurrentThread(), static_cast<DWORD_PTR>(affinity)) == 0) {
-        err = static_cast<int>(::GetLastError());
-    }
-#elif defined(__APPLE__)
-    thread_affinity_policy_data_t policy;
-    policy.affinity_tag = static_cast<integer_t>(affinity);
-    err = static_cast<int>(thread_policy_set(static_cast<thread_t>(::dsn::utils::get_current_tid()),
-                                             THREAD_AFFINITY_POLICY,
-                                             (thread_policy_t)&policy,
-                                             THREAD_AFFINITY_POLICY_COUNT));
-#else
-#ifdef __FreeBSD__
-#ifndef cpu_set_t
-#define cpu_set_t cpuset_t
-#endif
-#endif
     cpu_set_t cpuset;
     int nr_bits = std::min(nr_cpu, static_cast<int>(sizeof(affinity) * 8));
 
@@ -253,7 +142,6 @@ void task_worker::set_affinity(uint64_t affinity)
         }
     }
     err = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
-#endif
 
     if (err != 0) {
         dwarn("Fail to set thread affinity. err = %d", err);
@@ -307,7 +195,6 @@ void task_worker::loop()
     task_queue *q = queue();
     int best_batch_size = pool_spec().dequeue_batch_size;
 
-    // try {
     while (_is_running) {
         int batch_size = best_batch_size;
         task *task = q->dequeue(batch_size), *next;
@@ -336,11 +223,6 @@ void task_worker::loop()
 
         _processed_task_count += batch_size;
     }
-    /*}
-    catch (std::exception& ex)
-    {
-        dassert (false, "%s: unhandled exception '%s'", name().c_str(), ex.what());
-    }*/
 }
 
 const threadpool_spec &task_worker::pool_spec() const { return pool()->spec(); }

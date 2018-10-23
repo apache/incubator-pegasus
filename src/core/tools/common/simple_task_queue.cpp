@@ -24,28 +24,19 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "simple_task_queue.h"
 
 namespace dsn {
 namespace tools {
+
 simple_timer_service::simple_timer_service(service_node *node, timer_service *inner_provider)
     : timer_service(node, inner_provider)
 {
-    _worker = nullptr;
 }
 
 void simple_timer_service::start()
 {
-    _worker = std::shared_ptr<std::thread>(new std::thread([this]() {
+    _worker = std::thread([this]() {
         task::set_tls_dsn_context(node(), nullptr);
 
         char buffer[128];
@@ -55,8 +46,18 @@ void simple_timer_service::start()
         task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);
 
         boost::asio::io_service::work work(_ios);
-        _ios.run();
-    }));
+        boost::system::error_code ec;
+        _ios.run(ec);
+        if (ec) {
+            dassert(false, "io_service in simple_timer_service run failed: %s", ec.message().data());
+        }
+    });
+}
+
+simple_timer_service::~simple_timer_service()
+{
+    _ios.stop();
+    _worker.join();
 }
 
 void simple_timer_service::add_timer(task *task)
@@ -93,5 +94,6 @@ task *simple_task_queue::dequeue(/*inout*/ int &batch_size)
     batch_size = 1;
     return t;
 }
-}
-}
+
+} // namespace tools
+} // namespace dsn

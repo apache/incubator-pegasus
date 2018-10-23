@@ -61,6 +61,8 @@ public:
 public:
     timer_service(service_node *node, timer_service *inner_provider) { _node = node; }
 
+    virtual ~timer_service() = default;
+
     virtual void start() = 0;
 
     // after milliseconds, the provider should call task->enqueue()

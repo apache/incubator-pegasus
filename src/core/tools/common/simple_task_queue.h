@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -45,6 +36,8 @@ class simple_task_queue : public task_queue
 {
 public:
     simple_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
+
+    ~simple_task_queue() override = default;
 
     virtual void enqueue(task *task) override;
     virtual task *dequeue(/*inout*/ int &batch_size) override;
@@ -59,6 +52,8 @@ class simple_timer_service : public timer_service
 public:
     simple_timer_service(service_node *node, timer_service *inner_provider);
 
+    ~simple_timer_service() override;
+
     // after milliseconds, the provider should call task->enqueue()
     virtual void add_timer(task *task) override;
 
@@ -66,7 +61,8 @@ public:
 
 private:
     boost::asio::io_service _ios;
-    std::shared_ptr<std::thread> _worker;
+    std::thread _worker;
 };
-}
-}
+
+} // namespace tools
+} // namespace dsn

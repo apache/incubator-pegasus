@@ -89,7 +89,7 @@ private:
     int _index;
     int _native_tid;
     std::string _name;
-    std::thread *_thread;
+    std::unique_ptr<std::thread> _thread;
     bool _is_running;
     utils::notify_event _started;
     int _processed_task_count;
