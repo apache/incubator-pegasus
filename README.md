@@ -22,7 +22,7 @@ The consensus algorithm it uses is [PacificA](https://www.microsoft.com/en-us/re
      - [Staged event-driven architecture](https://en.wikipedia.org/wiki/Staged_event-driven_architecture), a distinguished architecture that Nginx adopts.
      - High performance storage-engine with [RocksDB](https://github.com/facebook/rocksdb), though slight change is made to support fast learning.
 
-* High availablility
+* High availability
 
   Unlike Bigtable/HBase, a non-layered replication architecture is adopted in Pegasus in which an external DFS like GFS/HDFS isn't the dependency of the persistent data, which benefits the availability a lot. Meanwhile, availability problems in HBase which result from Java GC are totally eliminated for the use of C++.
 
@@ -87,7 +87,7 @@ Test tools:
 Data import/export tools:
 * [DataX](https://github.com/xiaomi/pegasus-datax)
 
-## How to contibute
+## How to contribute
 
 We open source this project because we known that the system is far from mature and needs lots of
 improvement. So we are looking forward to your [contribution](docs/contribution.md).
