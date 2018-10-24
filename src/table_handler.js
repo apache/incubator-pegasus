@@ -55,6 +55,15 @@ function TableHandler(cluster, tableName, callback) {
  */
 TableHandler.prototype.queryMeta = function (tableName, callback) {
     let session = this.cluster.metaSession;
+    let leader = session.metaList[session.curLeader];
+
+    // connection has error or closed
+    if (leader.connectError || leader.closed) {
+        session.handleConnectedError(session.curLeader);
+        session.queryingTableName[tableName] = false;
+        session.lastQueryTime[tableName] = 0;
+    }
+
     let queryCfgOperator = new Operator.QueryCfgOperator(new Gpid(-1, -1),
         new replica.query_cfg_request({'app_name': tableName}),
         this.cluster.timeout);
