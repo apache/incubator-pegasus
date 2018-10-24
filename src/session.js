@@ -98,6 +98,7 @@ Session.prototype.getConnection = function (args, callback) {
 function MetaSession(args) {
     MetaSession.super_.call(this, args, this.constructor);
 
+    this.metaAddress = [];
     this.metaList = [];
     this.curLeader = 0;
     this.maxRetryCounter = 5;
@@ -114,6 +115,7 @@ function MetaSession(args) {
                 'rpc_address': address,
             }, function (err, connection) {
                 self.metaList.push(connection);
+                self.metaAddress.push(address);
             });
         } else {
             log.error('invalid meta server address %s', args.metaList[i]);
@@ -215,6 +217,26 @@ MetaSession.prototype.completeQueryMeta = function (err, round) {
     let op = round.operator;
     round.callback(err, op);
     this.queryingTableName[op.request.app_name] = false;
+};
+
+/**
+ * Reconnect to session when original session meet error or close
+ * @param   {Number}    index
+ */
+MetaSession.prototype.handleConnectedError = function (index) {
+    let self = this;
+    let oriConnection = self.metaList[index];
+
+    this.getConnection({
+        'rpc_address': self.metaAddress[index],
+    }, function (err, connection) {
+        if (err === null && connection !== null) {
+            self.metaList[index] = connection;
+            oriConnection.emit('close');
+        } else {
+            log.error('Failed to get meta connection, %s', err.message);
+        }
+    });
 };
 
 /**
