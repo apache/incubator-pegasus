@@ -22,7 +22,7 @@ private:
     typedef std::unordered_map<std::string, pegasus_client_impl *> app_to_client_map;
     typedef std::unordered_map<std::string, app_to_client_map> cluster_to_app_map;
     static cluster_to_app_map _cluster_to_clients;
-    static ::dsn::service::zlock *_map_lock;
+    static ::dsn::zlock *_map_lock;
 };
 }
 } // namespace
