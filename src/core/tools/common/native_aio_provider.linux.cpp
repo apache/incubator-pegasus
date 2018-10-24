@@ -54,13 +54,14 @@ native_linux_aio_provider::native_linux_aio_provider(disk_engine *disk,
 
 native_linux_aio_provider::~native_linux_aio_provider()
 {
-    auto ret = io_destroy(_ctx);
-    dassert(ret == 0, "io_destroy error, ret = %d", ret);
-
     if (!_is_running) {
         return;
     }
     _is_running = false;
+
+    auto ret = io_destroy(_ctx);
+    dassert(ret == 0, "io_destroy error, ret = %d", ret);
+
     _worker.join();
 }
 

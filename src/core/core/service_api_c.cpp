@@ -45,7 +45,7 @@ static struct _all_info_
     unsigned int magic;
     bool engine_ready;
     bool config_completed;
-    ::dsn::tools::tool_app *tool;
+    std::unique_ptr<::dsn::tools::tool_app> tool;
     ::dsn::service_engine *engine;
     std::vector<::dsn::task_spec *> task_specs;
 
@@ -207,7 +207,7 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
     for (auto &n : nodes) {
         if (n.second->spec().role_name == std::string(app_role) &&
             n.second->spec().index == index) {
-            ::dsn::task::set_tls_dsn_context(n.second, nullptr);
+            ::dsn::task::set_tls_dsn_context(n.second.get(), nullptr);
             return true;
         }
     }
@@ -280,7 +280,7 @@ namespace tools {
 
 bool is_engine_ready() { return dsn_all.is_engine_ready(); }
 
-tool_app *get_current_tool() { return dsn_all.tool; }
+tool_app *get_current_tool() { return dsn_all.tool.get(); }
 
 } // namespace tools
 } // namespace dsn
@@ -288,11 +288,22 @@ tool_app *get_current_tool() { return dsn_all.tool; }
 extern void dsn_log_init();
 extern void dsn_core_init();
 
+inline void dsn_global_init()
+{
+    // ensure perf_counters is destructed after service_engine,
+    // because service_engine relies on the former to monitor
+    // task queues length.
+    dsn::perf_counters::instance();
+    dsn::service_engine::instance();
+}
+
 bool run(const char *config_file,
          const char *config_arguments,
          bool sleep_after_init,
          std::string &app_list)
 {
+    dsn_global_init();
+
     s_runtime_init_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::high_resolution_clock::now().time_since_epoch())
                                  .count();
@@ -364,8 +375,8 @@ bool run(const char *config_file,
     dsn::utils::filesystem::create_directory(spec.dir_log);
 
     // init tools
-    dsn_all.tool = ::dsn::utils::factory_store<::dsn::tools::tool_app>::create(
-        spec.tool.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.tool.c_str());
+    dsn_all.tool.reset(::dsn::utils::factory_store<::dsn::tools::tool_app>::create(
+        spec.tool.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.tool.c_str()));
     dsn_all.tool->install(spec);
 
     // init app specs
@@ -509,7 +520,7 @@ void service_app::get_all_service_apps(std::vector<service_app *> *apps)
 {
     const service_nodes_by_app_id &nodes = dsn_all.engine->get_all_nodes();
     for (const auto &kv : nodes) {
-        const service_node *node = kv.second;
+        const service_node *node = kv.second.get();
         apps->push_back(const_cast<service_app *>(node->get_service_app()));
     }
 }

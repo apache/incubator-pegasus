@@ -24,26 +24,16 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "service_engine.h"
 #include "task_engine.h"
 #include "disk_engine.h"
 #include "rpc_engine.h"
-#include <dsn/utility/factory_store.h>
+
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/smart_pointers.h>
 #include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/env_provider.h>
 #include <dsn/tool-api/command_manager.h>
-#include <dsn/perf_counter/perf_counter.h>
-#include <dsn/perf_counter/perf_counters.h>
 #include <dsn/tool_api.h>
 #include <dsn/tool/node_scoper.h>
 
@@ -51,11 +41,7 @@ using namespace dsn::utils;
 
 namespace dsn {
 
-service_node::service_node(service_app_spec &app_spec)
-{
-    _computation = nullptr;
-    _app_spec = app_spec;
-}
+service_node::service_node(service_app_spec &app_spec) { _app_spec = app_spec; }
 
 bool service_node::rpc_register_handler(task_code code,
                                         const char *extra_name,
@@ -75,17 +61,17 @@ error_code service_node::init_io_engine()
     error_code err = ERR_OK;
 
     // init disk engine
-    _node_io.disk = new disk_engine(this);
+    _node_io.disk = make_unique<disk_engine>(this);
     aio_provider *aio = factory_store<aio_provider>::create(
-        spec.aio_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, _node_io.disk, nullptr);
+        spec.aio_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, _node_io.disk.get(), nullptr);
     for (auto it = spec.aio_aspects.begin(); it != spec.aio_aspects.end(); it++) {
         aio = factory_store<aio_provider>::create(
-            it->c_str(), PROVIDER_TYPE_ASPECT, _node_io.disk, aio);
+            it->c_str(), PROVIDER_TYPE_ASPECT, _node_io.disk.get(), aio);
     }
-    _node_io.aio = aio;
+    _node_io.aio.reset(aio);
 
     // init rpc engine
-    _node_io.rpc = new rpc_engine(this);
+    _node_io.rpc = make_unique<rpc_engine>(this);
 
     return err;
 }
@@ -96,7 +82,7 @@ error_code service_node::start_io_engine_in_main()
     error_code err = ERR_OK;
 
     // start disk engine
-    _node_io.disk->start(_node_io.aio);
+    _node_io.disk->start(_node_io.aio.get());
 
     // start rpc engine
     err = _node_io.rpc->start(_app_spec);
@@ -149,7 +135,7 @@ error_code service_node::start()
         dsn::utils::filesystem::create_directory(spec().data_dir);
 
     // init task engine
-    _computation = new task_engine(this);
+    _computation = make_unique<task_engine>(this);
     _computation->create(_app_spec.pools);
     dassert(!_computation->is_started(), "task engine must not be started at this point");
 
@@ -208,12 +194,13 @@ rpc_request_task *service_node::generate_intercepted_request_task(message_ex *re
     return t;
 }
 
+service_node::~service_node() = default;
+
 //////////////////////////////////////////////////////////////////////////////////////////
 
-service_engine::service_engine(void)
+service_engine::service_engine()
 {
     _env = nullptr;
-    _logging = nullptr;
 
     ::dsn::command_manager::instance().register_command({"engine"},
                                                         "engine - get engine internal information",
@@ -226,13 +213,15 @@ service_engine::service_engine(void)
         &service_engine::get_queue_info);
 }
 
+service_engine::~service_engine() = default;
+
 void service_engine::init_before_toollets(const service_spec &spec)
 {
     _spec = spec;
 
     // init common providers (first half)
-    _logging = factory_store<logging_provider>::create(
-        spec.logging_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.dir_log.c_str());
+    _logging.reset(factory_store<logging_provider>::create(
+        spec.logging_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.dir_log.c_str()));
 
     // init common for all per-node providers
     message_ex::s_local_hash =
@@ -257,12 +246,10 @@ void service_engine::init_after_toollets()
     tls_dsn.env = _env;
 }
 
-service_node *service_engine::start_node(service_app_spec &app_spec)
+void service_engine::start_node(service_app_spec &app_spec)
 {
     auto it = _nodes_by_app_id.find(app_spec.id);
-    if (it != _nodes_by_app_id.end()) {
-        return it->second;
-    } else {
+    if (it == _nodes_by_app_id.end()) {
         for (auto p : app_spec.ports) {
             // union to existing node if any port is shared
             if (_nodes_by_app_port.find(p) != _nodes_by_app_port.end()) {
@@ -277,16 +264,16 @@ service_node *service_engine::start_node(service_app_spec &app_spec)
             }
         }
 
-        auto node = new service_node(app_spec);
+        auto node = std::make_shared<service_node>(app_spec);
         error_code err = node->start();
         dassert(err == ERR_OK, "service node start failed, err = %s", err.to_string());
 
         _nodes_by_app_id[node->id()] = node;
         for (auto p1 : node->spec().ports) {
-            _nodes_by_app_port[p1] = node;
+            _nodes_by_app_port[p1] = node.get();
         }
 
-        return node;
+        return;
     }
 }
 

@@ -66,20 +66,20 @@ class service_node
 public:
     struct io_engine
     {
-        rpc_engine *rpc;
-        disk_engine *disk;
-        aio_provider *aio;
-
-        io_engine() { memset((void *)this, 0, sizeof(io_engine)); }
+        std::unique_ptr<rpc_engine> rpc;
+        std::unique_ptr<disk_engine> disk;
+        std::unique_ptr<aio_provider> aio;
     };
 
 public:
     explicit service_node(service_app_spec &app_spec);
 
-    rpc_engine *rpc() const { return _node_io.rpc; }
-    disk_engine *disk() const { return _node_io.disk; }
+    ~service_node();
 
-    task_engine *computation() const { return _computation; }
+    rpc_engine *rpc() const { return _node_io.rpc.get(); }
+    disk_engine *disk() const { return _node_io.disk.get(); }
+    task_engine *computation() const { return _computation.get(); }
+
     void get_runtime_info(const std::string &indent,
                           const std::vector<std::string> &args,
                           /*out*/ std::stringstream &ss);
@@ -104,8 +104,8 @@ private:
     std::unique_ptr<service_app> _entity;
 
     service_app_spec _app_spec;
-    task_engine *_computation;
 
+    std::unique_ptr<task_engine> _computation;
     io_engine _node_io;
 
 private:
@@ -117,29 +117,31 @@ private:
     error_code start_io_engine_in_main();
 };
 
-typedef std::map<int, service_node *> service_nodes_by_app_id;
+typedef std::map<int, std::shared_ptr<service_node>> service_nodes_by_app_id;
 class service_engine : public utils::singleton<service_engine>
 {
 public:
     service_engine();
 
+    ~service_engine();
+
     // ServiceMode Mode() const { return _spec.Mode; }
     const service_spec &spec() const { return _spec; }
     env_provider *env() const { return _env; }
-    logging_provider *logging() const { return _logging; }
+    logging_provider *logging() const { return _logging.get(); }
     static std::string get_runtime_info(const std::vector<std::string> &args);
     static std::string get_queue_info(const std::vector<std::string> &args);
 
     void init_before_toollets(const service_spec &spec);
     void init_after_toollets();
 
-    service_node *start_node(service_app_spec &app_spec);
+    void start_node(service_app_spec &app_spec);
     const service_nodes_by_app_id &get_all_nodes() const { return _nodes_by_app_id; }
 
 private:
     service_spec _spec;
     env_provider *_env;
-    logging_provider *_logging;
+    std::unique_ptr<logging_provider> _logging;
 
     // <port, servicenode>
     typedef std::map<int, service_node *>
