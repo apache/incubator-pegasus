@@ -38,7 +38,7 @@ private:
 
     // hash -> duplicate_rpc
     std::map<uint64_t, std::deque<duplicate_rpc>> _inflights;
-    dsn::service::zlock _lock;
+    dsn::zlock _lock;
 
     dsn::perf_counter_wrapper _duplicate_qps;
     dsn::perf_counter_wrapper _duplicate_failed_qps;

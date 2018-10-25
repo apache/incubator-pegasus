@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="pegasus_bench"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;CMake Files\base\;CMake Files\base\test\;CMake Files\..\;CMake Files\..\rdsn\;CMake Files\..\rdsn\bin\;CMake Files\reporter\;CMake Files\client_lib\;CMake Files\server\;CMake Files\server\test\;CMake Files\shell\;CMake Files\geo\;CMake Files\geo\lib\;CMake Files\geo\test\;CMake Files\geo\bench\;CMake Files\redis_protocol\;CMake Files\redis_protocol\proxy\;CMake Files\redis_protocol\proxy_lib\;CMake Files\redis_protocol\proxy_ut\;CMake Files\test\;CMake Files\test\function_test\;CMake Files\test\kill_test\;CMake Files\test\upgrade_test\;CMake Files\test\pressure_test\;CMake Files\test\bench_test\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="pegasus_bench">
+				<Option output="/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/pegasus_bench" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DGTEST_HAS_TR1_TUPLE=0"/>
+					<Add option="-DGTEST_USE_OWN_TR1_TUPLE=0"/>
+					<Add option="-DDSN_BUILD_TYPE=Debug"/>
+					<Add option="-DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040"/>
+					<Add option="-D__STDC_FORMAT_MACROS"/>
+					<Add directory="/home/mi/git/pegasus/rdsn/thirdparty/output/include"/>
+					<Add directory="/home/mi/git/pegasus/src"/>
+					<Add directory="/home/mi/git/pegasus/src/include"/>
+					<Add directory="/home/mi/git/pegasus/rocksdb/include"/>
+					<Add directory="/home/mi/git/pegasus/DSN_ROOT/include"/>
+					<Add directory="/home/mi/git/pegasus/src/test/bench_test/../../include"/>
+					<Add directory="/home/mi/git/pegasus/src/test/bench_test/../../../rocksdb"/>
+					<Add directory="/usr/include/c++/6"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/6"/>
+					<Add directory="/usr/include/c++/6/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/6/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/6/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 pegasus_bench"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="pegasus_bench/fast">
+				<Option output="/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/pegasus_bench" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DGTEST_HAS_TR1_TUPLE=0"/>
+					<Add option="-DGTEST_USE_OWN_TR1_TUPLE=0"/>
+					<Add option="-DDSN_BUILD_TYPE=Debug"/>
+					<Add option="-DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040"/>
+					<Add option="-D__STDC_FORMAT_MACROS"/>
+					<Add directory="/home/mi/git/pegasus/rdsn/thirdparty/output/include"/>
+					<Add directory="/home/mi/git/pegasus/src"/>
+					<Add directory="/home/mi/git/pegasus/src/include"/>
+					<Add directory="/home/mi/git/pegasus/rocksdb/include"/>
+					<Add directory="/home/mi/git/pegasus/DSN_ROOT/include"/>
+					<Add directory="/home/mi/git/pegasus/src/test/bench_test/../../include"/>
+					<Add directory="/home/mi/git/pegasus/src/test/bench_test/../../../rocksdb"/>
+					<Add directory="/usr/include/c++/6"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/6"/>
+					<Add directory="/usr/include/c++/6/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/6/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/6/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 pegasus_bench/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/mi/git/pegasus/src/test/bench_test/pegasus_bench.cpp">
+			<Option target="pegasus_bench"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/base/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\base\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/base/test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\base\test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/base/test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\base\test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/../rdsn/bin/dsn.cmake">
+			<Option virtualFolder="CMake Files\..\rdsn\bin\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/../rdsn/bin/compiler_info.cmake">
+			<Option virtualFolder="CMake Files\..\rdsn\bin\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/reporter/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\reporter\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/reporter/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\reporter\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/client_lib/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\client_lib\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/server/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\server\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/server/test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\server\test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/shell/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\shell\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/shell/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\shell\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/geo/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\geo\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/geo/lib/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\geo\lib\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/geo/lib/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\geo\lib\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/geo/test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\geo\test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/geo/test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\geo\test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/geo/bench/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\geo\bench\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/geo/bench/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\geo\bench\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/redis_protocol/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\redis_protocol\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/redis_protocol/proxy/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\redis_protocol\proxy\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/redis_protocol/proxy_lib/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\redis_protocol\proxy_lib\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/redis_protocol/proxy_ut/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\redis_protocol\proxy_ut\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/redis_protocol/proxy_ut/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\redis_protocol\proxy_ut\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/function_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\function_test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/function_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\function_test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/kill_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\kill_test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/kill_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\kill_test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/upgrade_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\upgrade_test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/upgrade_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\upgrade_test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/pressure_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\pressure_test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/pressure_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\pressure_test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/bench_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\bench_test\"/>
+		</Unit>
+		<Unit filename="/home/mi/git/pegasus/src/test/bench_test/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\test\bench_test\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

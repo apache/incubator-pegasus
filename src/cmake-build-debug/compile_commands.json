@@ -1,0 +1,387 @@
+[
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/base",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/base/../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -fPIC -o CMakeFiles/pegasus.base.dir/pegasus_const.cpp.o -c /home/mi/git/pegasus/src/base/pegasus_const.cpp",
+  "file": "/home/mi/git/pegasus/src/base/pegasus_const.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/base",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/base/../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -fPIC -o CMakeFiles/pegasus.base.dir/pegasus_utils.cpp.o -c /home/mi/git/pegasus/src/base/pegasus_utils.cpp",
+  "file": "/home/mi/git/pegasus/src/base/pegasus_utils.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/base",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/base/../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -fPIC -o CMakeFiles/pegasus.base.dir/rrdb_types.cpp.o -c /home/mi/git/pegasus/src/base/rrdb_types.cpp",
+  "file": "/home/mi/git/pegasus/src/base/rrdb_types.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/reporter",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_reporter.dir/pegasus_counter_reporter.cpp.o -c /home/mi/git/pegasus/src/reporter/pegasus_counter_reporter.cpp",
+  "file": "/home/mi/git/pegasus/src/reporter/pegasus_counter_reporter.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/base/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/base_test.dir/main.cpp.o -c /home/mi/git/pegasus/src/base/test/main.cpp",
+  "file": "/home/mi/git/pegasus/src/base/test/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/base/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/base_test.dir/utils_test.cpp.o -c /home/mi/git/pegasus/src/base/test/utils_test.cpp",
+  "file": "/home/mi/git/pegasus/src/base/test/utils_test.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/client_lib",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -fPIC -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_client_impl_objects.dir/client_factory.cpp.o -c /home/mi/git/pegasus/src/client_lib/client_factory.cpp",
+  "file": "/home/mi/git/pegasus/src/client_lib/client_factory.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/client_lib",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -fPIC -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_client_impl_objects.dir/mutation.cpp.o -c /home/mi/git/pegasus/src/client_lib/mutation.cpp",
+  "file": "/home/mi/git/pegasus/src/client_lib/mutation.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/client_lib",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -fPIC -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_client_impl_objects.dir/pegasus_client_factory_impl.cpp.o -c /home/mi/git/pegasus/src/client_lib/pegasus_client_factory_impl.cpp",
+  "file": "/home/mi/git/pegasus/src/client_lib/pegasus_client_factory_impl.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/client_lib",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -fPIC -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_client_impl_objects.dir/pegasus_client_impl.cpp.o -c /home/mi/git/pegasus/src/client_lib/pegasus_client_impl.cpp",
+  "file": "/home/mi/git/pegasus/src/client_lib/pegasus_client_impl.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/client_lib",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -fPIC -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_client_impl_objects.dir/pegasus_scanner_impl.cpp.o -c /home/mi/git/pegasus/src/client_lib/pegasus_scanner_impl.cpp",
+  "file": "/home/mi/git/pegasus/src/client_lib/pegasus_scanner_impl.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/available_detector.cpp.o -c /home/mi/git/pegasus/src/server/available_detector.cpp",
+  "file": "/home/mi/git/pegasus/src/server/available_detector.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/brief_stat.cpp.o -c /home/mi/git/pegasus/src/server/brief_stat.cpp",
+  "file": "/home/mi/git/pegasus/src/server/brief_stat.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/info_collector.cpp.o -c /home/mi/git/pegasus/src/server/info_collector.cpp",
+  "file": "/home/mi/git/pegasus/src/server/info_collector.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/info_collector_app.cpp.o -c /home/mi/git/pegasus/src/server/info_collector_app.cpp",
+  "file": "/home/mi/git/pegasus/src/server/info_collector_app.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/main.cpp.o -c /home/mi/git/pegasus/src/server/main.cpp",
+  "file": "/home/mi/git/pegasus/src/server/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/pegasus_event_listener.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_event_listener.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_event_listener.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/pegasus_manual_compact_service.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_manual_compact_service.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_manual_compact_service.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/pegasus_mutation_duplicator.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_mutation_duplicator.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_mutation_duplicator.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/pegasus_server_impl.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_server_impl.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_server_impl.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/pegasus_server_write.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_server_write.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_server_write.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_server.dir/pegasus_write_service.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_write_service.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_write_service.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/main.cpp.o -c /home/mi/git/pegasus/src/server/test/main.cpp",
+  "file": "/home/mi/git/pegasus/src/server/test/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/manual_compact_service_test.cpp.o -c /home/mi/git/pegasus/src/server/test/manual_compact_service_test.cpp",
+  "file": "/home/mi/git/pegasus/src/server/test/manual_compact_service_test.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/pegasus_mutation_duplicator_test.cpp.o -c /home/mi/git/pegasus/src/server/test/pegasus_mutation_duplicator_test.cpp",
+  "file": "/home/mi/git/pegasus/src/server/test/pegasus_mutation_duplicator_test.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/pegasus_server_write_test.cpp.o -c /home/mi/git/pegasus/src/server/test/pegasus_server_write_test.cpp",
+  "file": "/home/mi/git/pegasus/src/server/test/pegasus_server_write_test.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/pegasus_value_schema_test.cpp.o -c /home/mi/git/pegasus/src/server/test/pegasus_value_schema_test.cpp",
+  "file": "/home/mi/git/pegasus/src/server/test/pegasus_value_schema_test.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/pegasus_write_service_test.cpp.o -c /home/mi/git/pegasus/src/server/test/pegasus_write_service_test.cpp",
+  "file": "/home/mi/git/pegasus/src/server/test/pegasus_write_service_test.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/__/pegasus_server_impl.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_server_impl.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_server_impl.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/__/pegasus_manual_compact_service.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_manual_compact_service.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_manual_compact_service.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/__/pegasus_event_listener.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_event_listener.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_event_listener.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/__/pegasus_write_service.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_write_service.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_write_service.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/__/pegasus_server_write.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_server_write.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_server_write.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/server/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DENABLE_FAIL -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -DPEGASUS_UNIT_TEST -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_unit_test.dir/__/pegasus_mutation_duplicator.cpp.o -c /home/mi/git/pegasus/src/server/pegasus_mutation_duplicator.cpp",
+  "file": "/home/mi/git/pegasus/src/server/pegasus_mutation_duplicator.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/shell",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/shell/../include -I/home/mi/git/pegasus/src/shell/../base   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_shell.dir/main.cpp.o -c /home/mi/git/pegasus/src/shell/main.cpp",
+  "file": "/home/mi/git/pegasus/src/shell/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/shell",
+  "command": "/usr/bin/gcc-6 -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/shell/../include -I/home/mi/git/pegasus/src/shell/../base  -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_shell.dir/linenoise/linenoise.c.o   -c /home/mi/git/pegasus/src/shell/linenoise/linenoise.c",
+  "file": "/home/mi/git/pegasus/src/shell/linenoise/linenoise.c"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/shell",
+  "command": "/usr/bin/gcc-6 -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/shell/../include -I/home/mi/git/pegasus/src/shell/../base  -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_shell.dir/sds/sds.c.o   -c /home/mi/git/pegasus/src/shell/sds/sds.c",
+  "file": "/home/mi/git/pegasus/src/shell/sds/sds.c"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/geo/lib",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/geo/lib/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_geo_lib.dir/geo_client.cpp.o -c /home/mi/git/pegasus/src/geo/lib/geo_client.cpp",
+  "file": "/home/mi/git/pegasus/src/geo/lib/geo_client.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/geo/lib",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/geo/lib/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_geo_lib.dir/latlng_extractor.cpp.o -c /home/mi/git/pegasus/src/geo/lib/latlng_extractor.cpp",
+  "file": "/home/mi/git/pegasus/src/geo/lib/latlng_extractor.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/geo/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_geo_test.dir/extractor_test.cpp.o -c /home/mi/git/pegasus/src/geo/test/extractor_test.cpp",
+  "file": "/home/mi/git/pegasus/src/geo/test/extractor_test.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/geo/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_geo_test.dir/geo_test.cpp.o -c /home/mi/git/pegasus/src/geo/test/geo_test.cpp",
+  "file": "/home/mi/git/pegasus/src/geo/test/geo_test.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/geo/test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_geo_test.dir/main.cpp.o -c /home/mi/git/pegasus/src/geo/test/main.cpp",
+  "file": "/home/mi/git/pegasus/src/geo/test/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/geo/bench",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/geo/bench/../../../rocksdb   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_geo_bench.dir/bench.cpp.o -c /home/mi/git/pegasus/src/geo/bench/bench.cpp",
+  "file": "/home/mi/git/pegasus/src/geo/bench/bench.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/redis_protocol/proxy",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/redis_protocol/proxy/../../include -I/home/mi/git/pegasus/src/redis_protocol/proxy/../../base -I/home/mi/git/pegasus/src/redis_protocol/proxy/../proxy_lib   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_rproxy.dir/main.cpp.o -c /home/mi/git/pegasus/src/redis_protocol/proxy/main.cpp",
+  "file": "/home/mi/git/pegasus/src/redis_protocol/proxy/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/redis_protocol/proxy_lib",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/redis_protocol/proxy_lib/../../include -I/home/mi/git/pegasus/src/redis_protocol/proxy_lib/../../base   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus.rproxylib.dir/proxy_layer.cpp.o -c /home/mi/git/pegasus/src/redis_protocol/proxy_lib/proxy_layer.cpp",
+  "file": "/home/mi/git/pegasus/src/redis_protocol/proxy_lib/proxy_layer.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/redis_protocol/proxy_lib",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/redis_protocol/proxy_lib/../../include -I/home/mi/git/pegasus/src/redis_protocol/proxy_lib/../../base   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus.rproxylib.dir/redis_parser.cpp.o -c /home/mi/git/pegasus/src/redis_protocol/proxy_lib/redis_parser.cpp",
+  "file": "/home/mi/git/pegasus/src/redis_protocol/proxy_lib/redis_parser.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/redis_protocol/proxy_ut",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/redis_protocol/proxy_ut/../../include -I/home/mi/git/pegasus/src/redis_protocol/proxy_ut/../../base -I/home/mi/git/pegasus/src/redis_protocol/proxy_ut/../proxy_lib   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wno-attributes -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -Wno-dangling-else -o CMakeFiles/pegasus_rproxy_test.dir/redis_proxy_test.cpp.o -c /home/mi/git/pegasus/src/redis_protocol/proxy_ut/redis_proxy_test.cpp",
+  "file": "/home/mi/git/pegasus/src/redis_protocol/proxy_ut/redis_proxy_test.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/global_env.cpp.o -c /home/mi/git/pegasus/src/test/function_test/global_env.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/global_env.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/main.cpp.o -c /home/mi/git/pegasus/src/test/function_test/main.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/test_basic.cpp.o -c /home/mi/git/pegasus/src/test/function_test/test_basic.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/test_basic.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/test_check_and_mutate.cpp.o -c /home/mi/git/pegasus/src/test/function_test/test_check_and_mutate.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/test_check_and_mutate.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/test_check_and_set.cpp.o -c /home/mi/git/pegasus/src/test/function_test/test_check_and_set.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/test_check_and_set.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/test_incr.cpp.o -c /home/mi/git/pegasus/src/test/function_test/test_incr.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/test_incr.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/test_recall.cpp.o -c /home/mi/git/pegasus/src/test/function_test/test_recall.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/test_recall.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/test_recovery.cpp.o -c /home/mi/git/pegasus/src/test/function_test/test_recovery.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/test_recovery.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/test_restore.cpp.o -c /home/mi/git/pegasus/src/test/function_test/test_restore.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/test_restore.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/test_scan.cpp.o -c /home/mi/git/pegasus/src/test/function_test/test_scan.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/test_scan.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/function_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/function_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_function_test.dir/test_slog_lost.cpp.o -c /home/mi/git/pegasus/src/test/function_test/test_slog_lost.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/test_slog_lost.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/kill_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/kill_test/../../include -I/home/mi/git/pegasus/src/test/kill_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_kill_test.dir/data_verifier.cpp.o -c /home/mi/git/pegasus/src/test/kill_test/data_verifier.cpp",
+  "file": "/home/mi/git/pegasus/src/test/kill_test/data_verifier.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/kill_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/kill_test/../../include -I/home/mi/git/pegasus/src/test/kill_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_kill_test.dir/job.cpp.o -c /home/mi/git/pegasus/src/test/kill_test/job.cpp",
+  "file": "/home/mi/git/pegasus/src/test/kill_test/job.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/kill_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/kill_test/../../include -I/home/mi/git/pegasus/src/test/kill_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_kill_test.dir/kill_testor.cpp.o -c /home/mi/git/pegasus/src/test/kill_test/kill_testor.cpp",
+  "file": "/home/mi/git/pegasus/src/test/kill_test/kill_testor.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/kill_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/kill_test/../../include -I/home/mi/git/pegasus/src/test/kill_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_kill_test.dir/killer_handler_shell.cpp.o -c /home/mi/git/pegasus/src/test/kill_test/killer_handler_shell.cpp",
+  "file": "/home/mi/git/pegasus/src/test/kill_test/killer_handler_shell.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/kill_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/kill_test/../../include -I/home/mi/git/pegasus/src/test/kill_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_kill_test.dir/killer_registry.cpp.o -c /home/mi/git/pegasus/src/test/kill_test/killer_registry.cpp",
+  "file": "/home/mi/git/pegasus/src/test/kill_test/killer_registry.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/kill_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/kill_test/../../include -I/home/mi/git/pegasus/src/test/kill_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_kill_test.dir/main.cpp.o -c /home/mi/git/pegasus/src/test/kill_test/main.cpp",
+  "file": "/home/mi/git/pegasus/src/test/kill_test/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/kill_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/kill_test/../../include -I/home/mi/git/pegasus/src/test/kill_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_kill_test.dir/partition_kill_testor.cpp.o -c /home/mi/git/pegasus/src/test/kill_test/partition_kill_testor.cpp",
+  "file": "/home/mi/git/pegasus/src/test/kill_test/partition_kill_testor.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/kill_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/kill_test/../../include -I/home/mi/git/pegasus/src/test/kill_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_kill_test.dir/process_kill_testor.cpp.o -c /home/mi/git/pegasus/src/test/kill_test/process_kill_testor.cpp",
+  "file": "/home/mi/git/pegasus/src/test/kill_test/process_kill_testor.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/kill_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/kill_test/../../include -I/home/mi/git/pegasus/src/test/kill_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_kill_test.dir/__/function_test/global_env.cpp.o -c /home/mi/git/pegasus/src/test/function_test/global_env.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/global_env.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/upgrade_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/upgrade_test/../../include -I/home/mi/git/pegasus/src/test/upgrade_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_upgrade_test.dir/data_verifier.cpp.o -c /home/mi/git/pegasus/src/test/upgrade_test/data_verifier.cpp",
+  "file": "/home/mi/git/pegasus/src/test/upgrade_test/data_verifier.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/upgrade_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/upgrade_test/../../include -I/home/mi/git/pegasus/src/test/upgrade_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_upgrade_test.dir/job.cpp.o -c /home/mi/git/pegasus/src/test/upgrade_test/job.cpp",
+  "file": "/home/mi/git/pegasus/src/test/upgrade_test/job.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/upgrade_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/upgrade_test/../../include -I/home/mi/git/pegasus/src/test/upgrade_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_upgrade_test.dir/main.cpp.o -c /home/mi/git/pegasus/src/test/upgrade_test/main.cpp",
+  "file": "/home/mi/git/pegasus/src/test/upgrade_test/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/upgrade_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/upgrade_test/../../include -I/home/mi/git/pegasus/src/test/upgrade_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_upgrade_test.dir/process_upgrader.cpp.o -c /home/mi/git/pegasus/src/test/upgrade_test/process_upgrader.cpp",
+  "file": "/home/mi/git/pegasus/src/test/upgrade_test/process_upgrader.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/upgrade_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/upgrade_test/../../include -I/home/mi/git/pegasus/src/test/upgrade_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_upgrade_test.dir/upgrade_testor.cpp.o -c /home/mi/git/pegasus/src/test/upgrade_test/upgrade_testor.cpp",
+  "file": "/home/mi/git/pegasus/src/test/upgrade_test/upgrade_testor.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/upgrade_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/upgrade_test/../../include -I/home/mi/git/pegasus/src/test/upgrade_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_upgrade_test.dir/upgrader_handler_shell.cpp.o -c /home/mi/git/pegasus/src/test/upgrade_test/upgrader_handler_shell.cpp",
+  "file": "/home/mi/git/pegasus/src/test/upgrade_test/upgrader_handler_shell.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/upgrade_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/upgrade_test/../../include -I/home/mi/git/pegasus/src/test/upgrade_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_upgrade_test.dir/upgrader_registry.cpp.o -c /home/mi/git/pegasus/src/test/upgrade_test/upgrader_registry.cpp",
+  "file": "/home/mi/git/pegasus/src/test/upgrade_test/upgrader_registry.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/upgrade_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/upgrade_test/../../include -I/home/mi/git/pegasus/src/test/upgrade_test/../function_test   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_upgrade_test.dir/__/function_test/global_env.cpp.o -c /home/mi/git/pegasus/src/test/function_test/global_env.cpp",
+  "file": "/home/mi/git/pegasus/src/test/function_test/global_env.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/pressure_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/pressure_test/../../include   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_pressureclient.dir/main.cpp.o -c /home/mi/git/pegasus/src/test/pressure_test/main.cpp",
+  "file": "/home/mi/git/pegasus/src/test/pressure_test/main.cpp"
+},
+{
+  "directory": "/home/mi/git/pegasus/src/cmake-build-debug/test/bench_test",
+  "command": "/usr/bin/g++-6  -DDSN_BUILD_HOSTNAME=mi-OptiPlex-7040 -DDSN_BUILD_TYPE=Debug -DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0 -D__STDC_FORMAT_MACROS -I/home/mi/git/pegasus/rdsn/thirdparty/output/include -I/home/mi/git/pegasus/src -I/home/mi/git/pegasus/src/include -I/home/mi/git/pegasus/rocksdb/include -I/home/mi/git/pegasus/DSN_ROOT/include -I/home/mi/git/pegasus/src/test/bench_test/../../include -I/home/mi/git/pegasus/src/test/bench_test/../../../rocksdb   -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -D__FILENAME__='\"$(notdir $(abspath $<))\"' -std=c++1y -g   -Wall -Werror -Wno-sign-compare -Wno-strict-aliasing -Wuninitialized -Wno-unused-result -Wno-unused-variable -Wno-deprecated-declarations -Wno-inconsistent-missing-override -Wno-attributes -o CMakeFiles/pegasus_bench.dir/pegasus_bench.cpp.o -c /home/mi/git/pegasus/src/test/bench_test/pegasus_bench.cpp",
+  "file": "/home/mi/git/pegasus/src/test/bench_test/pegasus_bench.cpp"
+}
+]
