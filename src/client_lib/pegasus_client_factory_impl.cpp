@@ -9,7 +9,7 @@ namespace client {
 
 std::unordered_map<std::string, pegasus_client_factory_impl::app_to_client_map>
     pegasus_client_factory_impl::_cluster_to_clients;
-dsn::service::zlock *pegasus_client_factory_impl::_map_lock;
+dsn::zlock *pegasus_client_factory_impl::_map_lock;
 
 bool pegasus_client_factory_impl::initialize(const char *config_file)
 {
@@ -29,7 +29,7 @@ bool pegasus_client_factory_impl::initialize(const char *config_file)
         }
     }
     pegasus_client_impl::init_error();
-    _map_lock = new ::dsn::service::zlock();
+    _map_lock = new ::dsn::zlock();
     return true;
 }
 
@@ -45,7 +45,7 @@ pegasus_client *pegasus_client_factory_impl::get_client(const char *cluster_name
         return nullptr;
     }
 
-    ::dsn::service::zauto_lock l(*_map_lock);
+    ::dsn::zauto_lock l(*_map_lock);
     auto it = _cluster_to_clients.find(cluster_name);
     if (it == _cluster_to_clients.end()) {
         it = _cluster_to_clients

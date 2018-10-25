@@ -76,7 +76,7 @@ void pegasus_client_impl::pegasus_scanner_impl::async_next(async_scan_next_callb
 
 bool pegasus_client_impl::pegasus_scanner_impl::safe_destructible() const
 {
-    ::dsn::service::zauto_lock l(_lock);
+    ::dsn::zauto_lock l(_lock);
     return _queue.empty();
 }
 
@@ -270,7 +270,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_split_reset()
 
 pegasus_client_impl::pegasus_scanner_impl::~pegasus_scanner_impl()
 {
-    dsn::service::zauto_lock l(_lock);
+    dsn::zauto_lock l(_lock);
 
     dassert(!_rpc_started, "all scan-rpc should be completed here");
     dassert(_queue.empty(), "queue should be empty");

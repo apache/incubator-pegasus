@@ -312,14 +312,14 @@ bool redis_parser::parse(dsn::message_ex *msg)
 
 void redis_parser::enqueue_pending_response(std::unique_ptr<message_entry> &&entry)
 {
-    dsn::service::zauto_lock l(response_lock);
+    dsn::zauto_lock l(response_lock);
     pending_response.emplace_back(std::move(entry));
 }
 
 void redis_parser::fetch_and_dequeue_messages(std::vector<dsn::message_ex *> &msgs,
                                               bool only_ready_ones)
 {
-    dsn::service::zauto_lock l(response_lock);
+    dsn::zauto_lock l(response_lock);
     while (!pending_response.empty()) {
         message_entry *entry = pending_response.front().get();
         dsn::message_ex *r = entry->response.load(std::memory_order_acquire);
