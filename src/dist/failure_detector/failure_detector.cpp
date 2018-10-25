@@ -500,7 +500,7 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
     beacon.time = time;
     beacon.from_addr = dsn_primary_address();
     beacon.to_addr = target;
-    beacon.__set_start_time(static_cast<int64_t>(dsn_runtime_init_time_ms()));
+    beacon.__set_start_time(static_cast<int64_t>(dsn::utils::process_start_millis()));
 
     dinfo("send ping message, from[%s], to[%s], time[%" PRId64 "]",
           beacon.from_addr.to_string(),

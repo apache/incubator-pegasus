@@ -77,41 +77,5 @@ int hh_mm_to_seconds(dsn::string_view hhmm);
 // eg. `18:10` => `1525947000` when called on May 10, 2018, CST
 // Return: -1 when invalid
 int64_t hh_mm_today_to_unix_sec(string_view hhmm_of_day);
-
-extern int get_current_tid_internal();
-
-typedef struct _tls_tid
-{
-    unsigned int magic;
-    int local_tid;
-} tls_tid;
-extern __thread tls_tid s_tid;
-
-inline int get_current_tid()
-{
-    if (s_tid.magic == 0xdeadbeef)
-        return s_tid.local_tid;
-    else {
-        s_tid.magic = 0xdeadbeef;
-        s_tid.local_tid = get_current_tid_internal();
-        return s_tid.local_tid;
-    }
-}
-
-inline int get_invalid_tid() { return -1; }
-
-// execute command in a seperate process,
-// read it's stdout to output
-// and return the retcode of command
-int pipe_execute(const char *command, std::ostream &output);
-
-//
-// process_mem_usage(double &, double &) - takes two doubles by reference,
-// attempts to read the system-dependent data for a process' virtual memory
-// size and resident set size, and return the results in KB.
-//
-// On failure, returns 0.0, 0.0
-//
-void process_mem_usage(double &vm_usage, double &resident_set);
 }
 }

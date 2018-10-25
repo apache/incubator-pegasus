@@ -9,7 +9,7 @@
 #include <cassert>
 #include <thread>
 #include <atomic>
-#include <dsn/utility/utils.h>
+#include <dsn/utility/process_utils.h>
 #include <dsn/utility/hpc_locks/sema.h>
 
 //---------------------------------------------------------
@@ -63,7 +63,7 @@ private:
 public:
     RecursiveBenaphore() : m_contentionCount(0), m_recursion(0)
     {
-        m_owner = ::dsn::utils::get_invalid_tid();
+        m_owner = ::dsn::utils::INVALID_TID;
     }
 
     void lock()
@@ -105,7 +105,7 @@ public:
 #endif
         int recur = --m_recursion;
         if (recur == 0)
-            m_owner.store(::dsn::utils::get_invalid_tid(), std::memory_order_relaxed);
+            m_owner.store(::dsn::utils::INVALID_TID, std::memory_order_relaxed);
         if (m_contentionCount.fetch_sub(1, std::memory_order_release) > 1) {
             if (recur == 0)
                 m_sema.signal();

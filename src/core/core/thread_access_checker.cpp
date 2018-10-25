@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <dsn/utility/utils.h>
+#include <dsn/utility/process_utils.h>
 #include <dsn/tool-api/thread_access_checker.h>
 #include <dsn/c/api_utilities.h>
 

@@ -285,7 +285,6 @@ Note developers can easily plugin their own implementation to
 replace the underneath implementation of these primitives.
 @{
 */
-extern DSN_API uint64_t dsn_runtime_init_time_ms();
 extern DSN_API uint64_t dsn_now_ns();
 
 __inline uint64_t dsn_now_us() { return dsn_now_ns() / 1000; }

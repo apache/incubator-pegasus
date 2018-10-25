@@ -28,6 +28,7 @@
 #include <dsn/tool_api.h>
 #include <dsn/cpp/serialization.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/process_utils.h>
 #include <dsn/tool-api/command_manager.h>
 #include <fstream>
 
@@ -157,9 +158,6 @@ DSN_API uint64_t dsn_now_ns()
     // return ::dsn::task::get_current_env()->now_ns();
     return ::dsn::service_engine::instance().env()->now_ns();
 }
-
-static uint64_t s_runtime_init_time_ms;
-DSN_API uint64_t dsn_runtime_init_time_ms() { return s_runtime_init_time_ms; }
 
 //------------------------------------------------------------------------------
 //
@@ -303,16 +301,6 @@ bool run(const char *config_file,
          std::string &app_list)
 {
     dsn_global_init();
-
-    s_runtime_init_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 std::chrono::high_resolution_clock::now().time_since_epoch())
-                                 .count();
-
-    char init_time_buf[32];
-    dsn::utils::time_ms_to_string(dsn_runtime_init_time_ms(), init_time_buf);
-    ddebug(
-        "dsn_runtime_init_time_ms = %" PRIu64 " (%s)", dsn_runtime_init_time_ms(), init_time_buf);
-
     dsn_core_init();
     ::dsn::task::set_tls_dsn_context(nullptr, nullptr);
 
@@ -399,10 +387,10 @@ bool run(const char *config_file,
     // init logging
     dsn_log_init();
 
-    ddebug("init rdsn runtime, pid = %d, dsn_runtime_init_time_ms = %" PRIu64 " (%s)",
-           (int)getpid(),
-           dsn_runtime_init_time_ms(),
-           init_time_buf);
+    ddebug("process(%ld) start: %" PRIu64 ", date: %s",
+           getpid(),
+           dsn::utils::process_start_millis(),
+           dsn::utils::process_start_date_time_mills());
 
     // init toollets
     for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it) {
