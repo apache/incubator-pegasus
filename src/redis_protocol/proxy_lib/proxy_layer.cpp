@@ -48,14 +48,14 @@ void proxy_stub::on_rpc_request(dsn::message_ex *request)
     ::dsn::rpc_address source = request->header->from_address;
     std::shared_ptr<proxy_session> ps;
     {
-        ::dsn::service::zauto_read_lock l(_lock);
+        ::dsn::zauto_read_lock l(_lock);
         auto it = _sessions.find(source);
         if (it != _sessions.end()) {
             ps = it->second;
         }
     }
     if (nullptr == ps) {
-        ::dsn::service::zauto_write_lock l(_lock);
+        ::dsn::zauto_write_lock l(_lock);
         auto it = _sessions.find(source);
         if (it != _sessions.end()) {
             ps = it->second;
@@ -79,7 +79,7 @@ void proxy_stub::on_recv_remove_session_request(dsn::message_ex *request)
 
 std::shared_ptr<proxy_session> proxy_stub::remove_session(dsn::rpc_address remote_address)
 {
-    ::dsn::service::zauto_write_lock l(_lock);
+    ::dsn::zauto_write_lock l(_lock);
     auto iter = _sessions.find(remote_address);
     if (iter == _sessions.end()) {
         dwarn("%s has been removed from proxy stub", remote_address.to_string());

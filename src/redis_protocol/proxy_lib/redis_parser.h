@@ -94,7 +94,7 @@ protected:
 
 private:
     // queue for pipeline the response
-    dsn::service::zlock response_lock;
+    dsn::zlock response_lock;
     std::deque<std::unique_ptr<message_entry>> pending_response;
 
     // recieving message and parsing status
