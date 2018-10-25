@@ -102,6 +102,9 @@ static command_executor commands[] = {
         use_app_as_current,
     },
     {
+        "cc", "check in the specified cluster", "[cluster_name]", cc_command,
+    },
+    {
         "escape_all",
         "if escape all characters when printing key/value bytes",
         "[true|false]",
@@ -507,6 +510,28 @@ static char *hintsCallback(const char *buf, int *color, int *bold)
 /* Linenoise free hints callback. */
 static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
 
+/*extern*/ void check_in_cluster(std::string cluster_name)
+{
+    s_global_context.current_cluster_name = cluster_name;
+    std::string section = "uri-resolver.dsn://" + s_global_context.current_cluster_name;
+    std::string key = "arguments";
+    std::string server_list = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
+
+    dsn::replication::replica_helper::load_meta_servers(
+        s_global_context.meta_list, section.c_str(), key.c_str());
+    s_global_context.ddl_client =
+        dsn::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
+
+    // get real cluster name from zk
+    std::string name;
+    ::dsn::error_code err = s_global_context.ddl_client->cluster_name(1000, name);
+    if (err == dsn::ERR_OK) {
+        cluster_name = name;
+    }
+    std::cout << "The cluster name is: " << cluster_name << std::endl;
+    std::cout << "The cluster meta list is: " << server_list << std::endl;
+}
+
 void initialize(int argc, char **argv)
 {
     std::cout << "Pegasus Shell " << PEGASUS_VERSION << std::endl;
@@ -523,24 +548,7 @@ void initialize(int argc, char **argv)
     }
 
     std::string cluster_name = argc > 2 ? argv[2] : "mycluster";
-    s_global_context.current_cluster_name = cluster_name;
-    std::string section = "uri-resolver.dsn://" + s_global_context.current_cluster_name;
-    std::string key = "arguments";
-    std::string server_list = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
-
-    dsn::replication::replica_helper::load_meta_servers(
-        s_global_context.meta_list, section.c_str(), key.c_str());
-    s_global_context.ddl_client.reset(
-        new dsn::replication::replication_ddl_client(s_global_context.meta_list));
-
-    // get real cluster name from zk
-    std::string name;
-    ::dsn::error_code err = s_global_context.ddl_client->cluster_name(1000, name);
-    if (err == dsn::ERR_OK) {
-        cluster_name = name;
-    }
-    std::cout << "The cluster name is: " << cluster_name << std::endl;
-    std::cout << "The cluster meta list is: " << server_list << std::endl;
+    check_in_cluster(cluster_name);
 
     linenoiseSetMultiLine(1);
     linenoiseSetCompletionCallback(completionCallback);
@@ -586,7 +594,6 @@ int main(int argc, char **argv)
     return 0;
 }
 
-#if defined(__linux__)
 #include <dsn/git_commit.h>
 #include <dsn/version.h>
 #include <pegasus/git_commit.h>
@@ -603,4 +610,3 @@ static char const rcsid[] =
 #endif
                 ", built at " __DATE__ " " __TIME__ " $";
 const char *pegasus_shell_rcsid() { return rcsid; }
-#endif
