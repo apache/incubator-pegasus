@@ -7,6 +7,7 @@
 #include <string>
 #include <pegasus/client.h>
 #include <rrdb/rrdb.client.h>
+#include <dsn/tool-api/zlocks.h>
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 
@@ -268,7 +269,7 @@ public:
         int32_t _p;
 
         int64_t _context;
-        mutable ::dsn::service::zlock _lock;
+        mutable ::dsn::zlock _lock;
         std::list<async_scan_next_callback_t> _queue;
         volatile bool _rpc_started;
 

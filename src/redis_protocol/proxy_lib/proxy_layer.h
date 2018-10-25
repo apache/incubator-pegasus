@@ -5,7 +5,7 @@
 #pragma once
 
 #include <dsn/service_api_cpp.h>
-#include <dsn/cpp/zlocks.h>
+#include <dsn/tool-api/zlocks.h>
 #include <unordered_map>
 #include <functional>
 
@@ -84,7 +84,7 @@ private:
     void on_rpc_request(dsn::message_ex *request);
     void on_recv_remove_session_request(dsn::message_ex *);
 
-    ::dsn::service::zrwlock_nr _lock;
+    ::dsn::zrwlock_nr _lock;
     std::unordered_map<::dsn::rpc_address, std::shared_ptr<proxy_session>> _sessions;
     proxy_session::factory _factory;
     ::dsn::rpc_address _uri_address;

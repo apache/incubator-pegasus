@@ -52,9 +52,6 @@ public:
                     writes[i] = pegasus::create_remove_request(key);
                 }
                 auto cleanup = dsn::defer([=]() {
-                    for (int i = 0; i < total_rpc_cnt; i++) {
-                        writes[i]->release_ref();
-                    }
                     delete[] writes;
                 });
 
