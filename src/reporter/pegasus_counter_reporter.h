@@ -8,7 +8,7 @@
 #include <dsn/utility/synchronize.h>
 #include <dsn/cpp/json_helper.h>
 
-#include <boost/asio.hpp>
+#include <boost/asio/deadline_timer.hpp>
 #include <event2/event.h>
 #include <event2/buffer.h>
 #include <event2/http.h>
