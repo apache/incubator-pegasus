@@ -18,36 +18,60 @@ namespace server {
 class KeyWithTTLCompactionFilter : public rocksdb::CompactionFilter
 {
 public:
-    KeyWithTTLCompactionFilter() : _value_schema_version(0), _enabled(false) {}
-    virtual bool Filter(int /*level*/,
-                        const rocksdb::Slice &key,
-                        const rocksdb::Slice &existing_value,
-                        std::string *new_value,
-                        bool *value_changed) const override
+    KeyWithTTLCompactionFilter(uint32_t value_schema_version, uint32_t default_ttl, bool enabled)
+        : _value_schema_version(value_schema_version), _default_ttl(default_ttl), _enabled(enabled)
     {
-        if (!_enabled.load(std::memory_order_acquire))
-            return false;
-        return check_if_record_expired(
-            _value_schema_version, utils::epoch_now(), utils::to_string_view(existing_value));
     }
-    virtual const char *Name() const override { return "KeyWithTTLCompactionFilter"; }
-    void SetValueSchemaVersion(uint32_t version) { _value_schema_version = version; }
-    void EnableFilter() { _enabled.store(true, std::memory_order_release); }
+
+    bool Filter(int /*level*/,
+                const rocksdb::Slice &key,
+                const rocksdb::Slice &existing_value,
+                std::string *new_value,
+                bool *value_changed) const override
+    {
+        if (!_enabled) {
+            return false;
+        }
+
+        return expire_or_set_ttl(_value_schema_version,
+                                 utils::to_string_view(existing_value),
+                                 utils::epoch_now(),
+                                 _default_ttl,
+                                 *new_value,
+                                 *value_changed);
+    }
+
+    const char *Name() const override { return "KeyWithTTLCompactionFilter"; }
+
 private:
     uint32_t _value_schema_version;
-    std::atomic_bool _enabled; // only process filtering when _enabled == true
+    uint32_t _default_ttl;
+    bool _enabled; // only process filtering when _enabled == true
 };
 
 class KeyWithTTLCompactionFilterFactory : public rocksdb::CompactionFilterFactory
 {
 public:
-    KeyWithTTLCompactionFilterFactory() {}
-    virtual std::unique_ptr<rocksdb::CompactionFilter>
+    KeyWithTTLCompactionFilterFactory() : _value_schema_version(0), _default_ttl(0), _enabled(false)
+    {
+    }
+    std::unique_ptr<rocksdb::CompactionFilter>
     CreateCompactionFilter(const rocksdb::CompactionFilter::Context & /*context*/) override
     {
-        return std::unique_ptr<KeyWithTTLCompactionFilter>(new KeyWithTTLCompactionFilter());
+        return std::unique_ptr<KeyWithTTLCompactionFilter>(new KeyWithTTLCompactionFilter(
+            _value_schema_version, _default_ttl.load(), _enabled.load()));
     }
-    virtual const char *Name() const override { return "KeyWithTTLCompactionFilterFactory"; }
+    const char *Name() const override { return "KeyWithTTLCompactionFilterFactory"; }
+
+    void SetValueSchemaVersion(uint32_t version) { _value_schema_version = version; }
+    void EnableFilter() { _enabled.store(true, std::memory_order_release); }
+    void set_default_ttl(uint32_t ttl) { _default_ttl.store(ttl, std::memory_order_release); }
+
+private:
+    uint32_t _value_schema_version;
+    std::atomic<uint32_t> _default_ttl;
+    std::atomic_bool _enabled; // only process filtering when _enabled == true
 };
-}
-} // namespace
+
+} // server
+} // pegasus

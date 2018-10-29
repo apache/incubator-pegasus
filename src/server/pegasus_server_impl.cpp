@@ -12,6 +12,7 @@
 #include <rocksdb/filter_policy.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
 
 #include "base/pegasus_key_schema.h"
@@ -236,6 +237,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     }
 
     _db_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
+    _db_opts.compaction_filter_factory.reset(&_key_ttl_compaction_filter_factory);
 
     _db_opts.listeners.emplace_back(new pegasus_event_listener());
 
@@ -1375,7 +1377,6 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     rocksdb::Options opts = _db_opts;
     opts.create_if_missing = true;
     opts.error_if_exists = false;
-    opts.compaction_filter = &_key_ttl_compaction_filter;
     opts.default_value_schema_version = PEGASUS_VALUE_SCHEMA_MAX_VERSION;
 
     // parse envs for parameters
@@ -1478,8 +1479,8 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         }
 
         // only enable filter after correct value_schema_version set
-        _key_ttl_compaction_filter.SetValueSchemaVersion(_value_schema_version);
-        _key_ttl_compaction_filter.EnableFilter();
+        _key_ttl_compaction_filter_factory.SetValueSchemaVersion(_value_schema_version);
+        _key_ttl_compaction_filter_factory.EnableFilter();
 
         // update LastManualCompactFinishTime
         _manual_compact_svc.init_last_finish_time_ms(_db->GetLastManualCompactFinishTime());
@@ -2252,7 +2253,9 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
 void pegasus_server_impl::update_app_envs(const std::map<std::string, std::string> &envs)
 {
     update_usage_scenario(envs);
+    update_default_ttl(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
+    _key_ttl_compaction_filter_factory.set_default_ttl(0);
 }
 
 void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
@@ -2282,6 +2285,20 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
                    old_usage_scenario.c_str(),
                    new_usage_scenario.c_str());
         }
+    }
+}
+
+void pegasus_server_impl::update_default_ttl(const std::map<std::string, std::string> &envs)
+{
+    auto find = envs.find(TABLE_LEVEL_TTL);
+    if (find != envs.end()) {
+        int32_t ttl = 0;
+        if (!dsn::buf2int32(find->second, ttl) || ttl < 0) {
+            derror("{}={} is invalid.", find->first, find->second);
+            return;
+        }
+        _server_write->update_default_ttl(static_cast<uint32_t>(ttl));
+        _key_ttl_compaction_filter_factory.set_default_ttl(static_cast<uint32_t>(ttl));
     }
 }
 

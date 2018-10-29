@@ -63,6 +63,11 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
     return on_batched_writes(requests, count);
 }
 
+void pegasus_server_write::update_default_ttl(uint32_t ttl)
+{
+    _write_svc->update_default_ttl(ttl);
+}
+
 int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int count)
 {
     int err = 0;

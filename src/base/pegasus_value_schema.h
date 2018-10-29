@@ -21,6 +21,57 @@ namespace pegasus {
 
 #define PEGASUS_VALUE_SCHEMA_MAX_VERSION 0u
 
+/// Helper class for generating value.
+/// NOTES:
+/// * the instance of pegasus_value_generator must be alive while the returned SliceParts is.
+/// * the data of user_data must be alive be alive while the returned SliceParts is, because
+///   we do not copy it.
+/// * the returned SliceParts is only valid before the next invoking of generate_value().
+class pegasus_value_generator
+{
+public:
+    pegasus_value_generator() = default;
+
+    /// A higher level utility for generating value with given version.
+    /// The value schema must be in v0.
+    rocksdb::SliceParts
+    generate_value(uint32_t value_schema_version, dsn::string_view user_data, uint32_t expire_ts)
+    {
+        if (value_schema_version == 0) {
+            return generate_value_v0(expire_ts, user_data);
+        } else {
+            dfatal_f("unsupported value schema version: {}", value_schema_version);
+            __builtin_unreachable();
+        }
+    }
+
+    /// The heading expire_ts is encoded to support TTL, and the record will be
+    /// automatically cleared (by \see pegasus::server::KeyWithTTLCompactionFilter)
+    /// after expiration reached. The expired record will be invisible even though
+    /// they are not yet compacted.
+    ///
+    /// rocksdb value (ver 0) = [expire_ts(uint32_t)] [user_data(bytes)]
+    /// \internal
+    rocksdb::SliceParts generate_value_v0(uint32_t expire_ts, dsn::string_view user_data)
+    {
+        _write_buf.resize(sizeof(uint32_t));
+        _write_slices.clear();
+
+        dsn::data_output(_write_buf).write_u32(expire_ts);
+        _write_slices.emplace_back(_write_buf.data(), _write_buf.size());
+
+        if (user_data.length() > 0) {
+            _write_slices.emplace_back(user_data.data(), user_data.length());
+        }
+
+        return rocksdb::SliceParts(&_write_slices[0], static_cast<int>(_write_slices.size()));
+    }
+
+private:
+    std::string _write_buf;
+    std::vector<rocksdb::Slice> _write_slices;
+};
+
 /// Extracts expire_ts from rocksdb value with given version.
 /// The value schema must be in v0.
 /// \return expire_ts in host endian
@@ -71,53 +122,30 @@ inline bool check_if_record_expired(uint32_t value_schema_version,
                                pegasus_extract_expire_ts(value_schema_version, raw_value));
 }
 
-/// Helper class for generating value.
-/// NOTES:
-/// * the instance of pegasus_value_generator must be alive while the returned SliceParts is.
-/// * the data of user_data must be alive be alive while the returned SliceParts is, because
-///   we do not copy it.
-/// * the returned SliceParts is only valid before the next invoking of generate_value().
-class pegasus_value_generator
+/// \return true if expired
+inline bool expire_or_set_ttl(uint32_t value_schema_version,
+                              dsn::string_view raw_value,
+                              uint32_t epoch_now,
+                              uint32_t default_ttl,
+                              std::string &new_value,
+                              bool &value_changed)
 {
-public:
-    /// A higher level utility for generating value with given version.
-    /// The value schema must be in v0.
-    rocksdb::SliceParts
-    generate_value(uint32_t value_schema_version, dsn::string_view user_data, uint32_t expire_ts)
-    {
-        if (value_schema_version == 0) {
-            return generate_value_v0(expire_ts, user_data);
-        } else {
-            dfatal_f("unsupported value schema version: {}", value_schema_version);
-            __builtin_unreachable();
+    uint32_t expire_ts = pegasus_extract_expire_ts(value_schema_version, raw_value);
+    if (default_ttl != 0 && expire_ts == 0) {
+        // should update ttl
+        dsn::blob user_data;
+        pegasus_extract_user_data(
+            value_schema_version, std::string(raw_value.data(), raw_value.length()), user_data);
+        rocksdb::SliceParts sparts = pegasus_value_generator().generate_value(
+            value_schema_version, dsn::string_view(user_data), epoch_now + default_ttl);
+        for (int i = 0; i < sparts.num_parts; i++) {
+            new_value += sparts.parts[i].ToString();
         }
+        value_changed = true;
+        return false;
     }
 
-    /// The heading expire_ts is encoded to support TTL, and the record will be
-    /// automatically cleared (by \see pegasus::server::KeyWithTTLCompactionFilter)
-    /// after expiration reached. The expired record will be invisible even though
-    /// they are not yet compacted.
-    ///
-    /// rocksdb value (ver 0) = [expire_ts(uint32_t)] [user_data(bytes)]
-    /// \internal
-    rocksdb::SliceParts generate_value_v0(uint32_t expire_ts, dsn::string_view user_data)
-    {
-        _write_buf.resize(sizeof(uint32_t));
-        _write_slices.clear();
-
-        dsn::data_output(_write_buf).write_u32(expire_ts);
-        _write_slices.emplace_back(_write_buf.data(), _write_buf.size());
-
-        if (user_data.length() > 0) {
-            _write_slices.emplace_back(user_data.data(), user_data.length());
-        }
-
-        return rocksdb::SliceParts(&_write_slices[0], static_cast<int>(_write_slices.size()));
-    }
-
-private:
-    std::string _write_buf;
-    std::vector<rocksdb::Slice> _write_slices;
-};
+    return check_if_ts_expired(epoch_now, expire_ts);
+}
 
 } // namespace pegasus
