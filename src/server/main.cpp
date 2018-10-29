@@ -64,7 +64,7 @@ void dsn_app_registration_pegasus()
         "server-info",
         [](const std::vector<std::string> &args) {
             char str[100];
-            ::dsn::utils::time_ms_to_date_time(dsn_runtime_init_time_ms(), str, 100);
+            ::dsn::utils::time_ms_to_date_time(dsn::utils::process_start_millis(), str, 100);
             std::ostringstream oss;
             oss << "Pegasus Server " << PEGASUS_VERSION << " (" << PEGASUS_GIT_COMMIT << ") "
                 << PEGASUS_BUILD_TYPE << ", Started at " << str;
