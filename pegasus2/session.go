@@ -32,7 +32,7 @@ func newNodeSession(addr string, ntype session.NodeType) session.NodeSession {
 	n := &nodeSession{
 		logger: pegalog.GetLogger(),
 		ntype:  ntype,
-		codec:  &session.PegasusCodec{},
+		codec:  session.NewPegasusCodec(),
 		addr:   addr,
 		seqId:  0,
 		conn:   rpc.NewRpcConn(addr),

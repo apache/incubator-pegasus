@@ -82,7 +82,7 @@ func newNodeSessionAddr(addr string, ntype NodeType) *nodeSession {
 		logger:      pegalog.GetLogger(),
 		ntype:       ntype,
 		seqId:       0,
-		codec:       &PegasusCodec{},
+		codec:       NewPegasusCodec(),
 		pendingResp: make(map[int32]*requestListener),
 		reqc:        make(chan *requestListener),
 		addr:        addr,

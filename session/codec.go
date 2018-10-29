@@ -21,6 +21,10 @@ type PegasusCodec struct {
 	logger pegalog.Logger
 }
 
+func NewPegasusCodec() *PegasusCodec {
+	return &PegasusCodec{logger: pegalog.GetLogger()}
+}
+
 func (p *PegasusCodec) Marshal(v interface{}) ([]byte, error) {
 	r, _ := v.(*PegasusRpcCall)
 
