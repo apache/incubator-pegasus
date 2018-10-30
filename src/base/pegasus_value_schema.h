@@ -80,8 +80,6 @@ inline bool check_if_record_expired(uint32_t value_schema_version,
 class pegasus_value_generator
 {
 public:
-    pegasus_value_generator() = default;
-
     /// A higher level utility for generating value with given version.
     /// The value schema must be in v0.
     rocksdb::SliceParts

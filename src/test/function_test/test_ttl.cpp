@@ -99,10 +99,9 @@ TEST(ttl, set_without_default_ttl)
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    dsn::error_code ec = ddl_client->set_app_envs(
-        client->get_app_name(),
-        {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
-        {std::to_string(time(nullptr))});
+    dsn::error_code ec = ddl_client->set_app_envs(client->get_app_name(),
+                                                  {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
+                                                  {std::to_string(time(nullptr))});
     ASSERT_EQ(ERR_OK, ec);
 
     // wait envs to be synced, and manual lcompaction has been finished.
@@ -192,10 +191,9 @@ TEST(ttl, set_with_default_ttl)
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    dsn::error_code ec = ddl_client->set_app_envs(
-        client->get_app_name(),
-        {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
-        {std::to_string(time(nullptr))});
+    dsn::error_code ec = ddl_client->set_app_envs(client->get_app_name(),
+                                                  {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
+                                                  {std::to_string(time(nullptr))});
     ASSERT_EQ(ERR_OK, ec);
 
     // wait envs to be synced, and manual compaction has been finished.

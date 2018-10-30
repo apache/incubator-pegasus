@@ -202,7 +202,7 @@ void pegasus_write_service::batch_abort(int64_t decree, int err)
     clear_up_batch_states();
 }
 
-void pegasus_write_service::update_default_ttl(uint32_t ttl)
+void pegasus_write_service::set_default_ttl(uint32_t ttl)
 {
     _impl->set_default_ttl(ttl);
 }

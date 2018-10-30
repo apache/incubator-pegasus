@@ -73,16 +73,19 @@ public:
     CreateCompactionFilter(const rocksdb::CompactionFilter::Context & /*context*/) override
     {
         return std::unique_ptr<KeyWithTTLCompactionFilter>(new KeyWithTTLCompactionFilter(
-            _value_schema_version, _default_ttl.load(), _enabled.load()));
+            _value_schema_version.load(), _default_ttl.load(), _enabled.load()));
     }
     const char *Name() const override { return "KeyWithTTLCompactionFilterFactory"; }
 
-    void SetValueSchemaVersion(uint32_t version) { _value_schema_version = version; }
+    void SetValueSchemaVersion(uint32_t version)
+    {
+        _value_schema_version.store(version, std::memory_order_release);
+    }
     void EnableFilter() { _enabled.store(true, std::memory_order_release); }
-    void set_default_ttl(uint32_t ttl) { _default_ttl.store(ttl, std::memory_order_release); }
+    void SetDefaultTTL(uint32_t ttl) { _default_ttl.store(ttl, std::memory_order_release); }
 
 private:
-    uint32_t _value_schema_version;
+    std::atomic<uint32_t> _value_schema_version;
     std::atomic<uint32_t> _default_ttl;
     std::atomic_bool _enabled; // only process filtering when _enabled == true
 };

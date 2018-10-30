@@ -84,7 +84,7 @@ public:
     // Abort batch write.
     void batch_abort(int64_t decree, int err);
 
-    void update_default_ttl(uint32_t ttl);
+    void set_default_ttl(uint32_t ttl);
 
 private:
     void clear_up_batch_states();

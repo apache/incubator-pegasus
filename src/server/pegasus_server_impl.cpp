@@ -2297,8 +2297,8 @@ void pegasus_server_impl::update_default_ttl(const std::map<std::string, std::st
             derror("{}={} is invalid.", find->first, find->second);
             return;
         }
-        _server_write->update_default_ttl(static_cast<uint32_t>(ttl));
-        _key_ttl_compaction_filter_factory->set_default_ttl(static_cast<uint32_t>(ttl));
+        _server_write->set_default_ttl(static_cast<uint32_t>(ttl));
+        _key_ttl_compaction_filter_factory->SetDefaultTTL(static_cast<uint32_t>(ttl));
     }
 }
 

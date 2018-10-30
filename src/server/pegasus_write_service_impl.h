@@ -486,10 +486,11 @@ public:
 
     void batch_abort(int64_t decree, int err) { clear_up_batch_states(decree, err); }
 
-    void set_default_ttl(uint32_t ttl) {
+    void set_default_ttl(uint32_t ttl)
+    {
         if (_default_ttl.load() != ttl) {
             _default_ttl.store(ttl);
-            dinfo_replica("update _default_ttl to {}.", ttl);
+            ddebug_replica("update _default_ttl to {}.", ttl);
         }
     }
 
@@ -689,9 +690,9 @@ private:
 
     uint32_t db_expire_ts(uint32_t expire_ts)
     {
-        // use '_default_ttl' when ttl is not set for this operation but table ttl is set.
+        // use '_default_ttl' when ttl is not set for this write operation.
         if (_default_ttl.load() != 0 && expire_ts == 0) {
-            return  utils::epoch_now() + _default_ttl.load();
+            return utils::epoch_now() + _default_ttl.load();
         }
 
         return expire_ts;
