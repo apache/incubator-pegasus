@@ -2256,7 +2256,6 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_usage_scenario(envs);
     update_default_ttl(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
-    _key_ttl_compaction_filter_factory->set_default_ttl(0);
 }
 
 void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)

@@ -33,12 +33,25 @@ public:
             return false;
         }
 
-        return expire_or_set_ttl(_value_schema_version,
-                                 utils::to_string_view(existing_value),
-                                 utils::epoch_now(),
-                                 _default_ttl,
-                                 *new_value,
-                                 *value_changed);
+        uint32_t expire_ts = pegasus_extract_expire_ts(
+            _value_schema_version,
+            dsn::string_view(existing_value.data(), existing_value.length()));
+        if (_default_ttl != 0 && expire_ts == 0) {
+            // should update ttl
+            dsn::blob user_data;
+            pegasus_extract_user_data(_value_schema_version,
+                                      std::string(existing_value.data(), existing_value.length()),
+                                      user_data);
+            rocksdb::SliceParts sparts = _gen.generate_value(_value_schema_version,
+                                                             dsn::string_view(user_data),
+                                                             utils::epoch_now() + _default_ttl);
+            for (int i = 0; i < sparts.num_parts; i++) {
+                *new_value += sparts.parts[i].ToString();
+            }
+            *value_changed = true;
+            return false;
+        }
+        return check_if_ts_expired(utils::epoch_now(), expire_ts);
     }
 
     const char *Name() const override { return "KeyWithTTLCompactionFilter"; }
@@ -47,6 +60,7 @@ private:
     uint32_t _value_schema_version;
     uint32_t _default_ttl;
     bool _enabled; // only process filtering when _enabled == true
+    mutable pegasus_value_generator _gen;
 };
 
 class KeyWithTTLCompactionFilterFactory : public rocksdb::CompactionFilterFactory
