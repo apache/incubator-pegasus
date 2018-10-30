@@ -249,7 +249,7 @@ private:
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
 
-    KeyWithTTLCompactionFilterFactory _key_ttl_compaction_filter_factory;
+    std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     rocksdb::Options _db_opts;
     rocksdb::WriteOptions _wt_opts;
     rocksdb::ReadOptions _rd_opts;

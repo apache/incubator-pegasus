@@ -237,7 +237,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     }
 
     _db_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
-    _db_opts.compaction_filter_factory.reset(&_key_ttl_compaction_filter_factory);
+    _key_ttl_compaction_filter_factory = std::make_shared<KeyWithTTLCompactionFilterFactory>();
+    _db_opts.compaction_filter_factory = _key_ttl_compaction_filter_factory;
 
     _db_opts.listeners.emplace_back(new pegasus_event_listener());
 
@@ -1479,8 +1480,8 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         }
 
         // only enable filter after correct value_schema_version set
-        _key_ttl_compaction_filter_factory.SetValueSchemaVersion(_value_schema_version);
-        _key_ttl_compaction_filter_factory.EnableFilter();
+        _key_ttl_compaction_filter_factory->SetValueSchemaVersion(_value_schema_version);
+        _key_ttl_compaction_filter_factory->EnableFilter();
 
         // update LastManualCompactFinishTime
         _manual_compact_svc.init_last_finish_time_ms(_db->GetLastManualCompactFinishTime());
@@ -2255,7 +2256,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_usage_scenario(envs);
     update_default_ttl(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
-    _key_ttl_compaction_filter_factory.set_default_ttl(0);
+    _key_ttl_compaction_filter_factory->set_default_ttl(0);
 }
 
 void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
@@ -2298,7 +2299,7 @@ void pegasus_server_impl::update_default_ttl(const std::map<std::string, std::st
             return;
         }
         _server_write->update_default_ttl(static_cast<uint32_t>(ttl));
-        _key_ttl_compaction_filter_factory.set_default_ttl(static_cast<uint32_t>(ttl));
+        _key_ttl_compaction_filter_factory->set_default_ttl(static_cast<uint32_t>(ttl));
     }
 }
 
