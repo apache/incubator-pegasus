@@ -2294,7 +2294,7 @@ void pegasus_server_impl::update_default_ttl(const std::map<std::string, std::st
     if (find != envs.end()) {
         int32_t ttl = 0;
         if (!dsn::buf2int32(find->second, ttl) || ttl < 0) {
-            derror("{}={} is invalid.", find->first, find->second);
+            derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }
         _server_write->set_default_ttl(static_cast<uint32_t>(ttl));
