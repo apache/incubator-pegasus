@@ -2291,7 +2291,7 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
 
 void pegasus_server_impl::update_default_ttl(const std::map<std::string, std::string> &envs)
 {
-    auto find = envs.find(TABLE_LEVEL_TTL);
+    auto find = envs.find(TABLE_LEVEL_DEFAULT_TTL);
     if (find != envs.end()) {
         int32_t ttl = 0;
         if (!dsn::buf2int32(find->second, ttl) || ttl < 0) {

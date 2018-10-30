@@ -36,5 +36,5 @@ extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY;
 extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
 extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
 
-extern const std::string TABLE_LEVEL_TTL;
+extern const std::string TABLE_LEVEL_DEFAULT_TTL;
 } // namespace pegasus
