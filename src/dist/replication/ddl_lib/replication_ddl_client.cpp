@@ -991,6 +991,22 @@ dsn::error_code replication_ddl_client::do_restore(const std::string &backup_pro
                                                    const std::string &new_app_name,
                                                    bool skip_bad_partition)
 {
+    if (old_app_name.empty() ||
+        !std::all_of(old_app_name.cbegin(),
+                     old_app_name.cend(),
+                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
+        std::cout << "restore app " << old_app_name << " failed: invalid old_app_name" << std::endl;
+        return ERR_INVALID_PARAMETERS;
+    }
+
+    if (new_app_name.empty() ||
+        !std::all_of(new_app_name.cbegin(),
+                     new_app_name.cend(),
+                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
+        std::cout << "restore app " << new_app_name << " failed: invalid new_app_name" << std::endl;
+        return ERR_INVALID_PARAMETERS;
+    }
+
     std::shared_ptr<configuration_restore_request> req =
         std::make_shared<configuration_restore_request>();
 
