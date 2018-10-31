@@ -488,8 +488,8 @@ public:
 
     void set_default_ttl(uint32_t ttl)
     {
-        if (_default_ttl.load() != ttl) {
-            _default_ttl.store(ttl);
+        if (_default_ttl != ttl) {
+            _default_ttl = ttl;
             ddebug_replica("update _default_ttl to {}.", ttl);
         }
     }
@@ -691,9 +691,8 @@ private:
     uint32_t db_expire_ts(uint32_t expire_ts)
     {
         // use '_default_ttl' when ttl is not set for this write operation.
-        uint32_t default_ttl = _default_ttl.load(std::memory_order_relaxed);
-        if (default_ttl != 0 && expire_ts == 0) {
-            return utils::epoch_now() + default_ttl;
+        if (_default_ttl != 0 && expire_ts == 0) {
+            return utils::epoch_now() + _default_ttl;
         }
 
         return expire_ts;
@@ -710,7 +709,7 @@ private:
     rocksdb::DB *_db;
     rocksdb::WriteOptions &_wt_opts;
     rocksdb::ReadOptions &_rd_opts;
-    std::atomic<uint32_t> _default_ttl;
+    volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
 
     pegasus_value_generator _value_generator;
