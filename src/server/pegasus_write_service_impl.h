@@ -691,8 +691,9 @@ private:
     uint32_t db_expire_ts(uint32_t expire_ts)
     {
         // use '_default_ttl' when ttl is not set for this write operation.
-        if (_default_ttl.load() != 0 && expire_ts == 0) {
-            return utils::epoch_now() + _default_ttl.load();
+        uint32_t default_ttl = _default_ttl.load(std::memory_order_relaxed);
+        if (default_ttl != 0 && expire_ts == 0) {
+            return utils::epoch_now() + default_ttl;
         }
 
         return expire_ts;

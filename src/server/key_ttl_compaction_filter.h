@@ -35,7 +35,7 @@ public:
 
         uint32_t expire_ts = pegasus_extract_expire_ts(
             _value_schema_version,
-            dsn::string_view(existing_value.data(), existing_value.length()));
+            utils::to_string_view(existing_value));
         if (_default_ttl != 0 && expire_ts == 0) {
             // should update ttl
             dsn::blob user_data;
@@ -90,5 +90,6 @@ private:
     std::atomic_bool _enabled; // only process filtering when _enabled == true
 };
 
-} // server
-} // pegasus
+} // namespace server
+} // namespace pegasus
+
