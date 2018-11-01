@@ -7,14 +7,18 @@
 #include <vector>
 #include <map>
 
+#include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/service_api_c.h>
 #include <unistd.h>
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
 
+using namespace ::dsn;
+using namespace ::replication;
 using namespace ::pegasus;
 
 pegasus_client *client = nullptr;
+std::shared_ptr<replication_ddl_client> ddl_client;
 
 GTEST_API_ int main(int argc, char **argv)
 {
@@ -31,6 +35,9 @@ GTEST_API_ int main(int argc, char **argv)
 
     const char *app_name = argv[2];
     client = pegasus_client_factory::get_client("mycluster", app_name);
+    std::vector<rpc_address> meta_list;
+    replica_helper::load_meta_servers(meta_list, "uri-resolver.dsn://mycluster", "arguments");
+    ddl_client = std::make_shared<replication_ddl_client>(meta_list);
     ddebug("MainThread: app_name=%s", app_name);
 
     int gargc = argc - 2;
