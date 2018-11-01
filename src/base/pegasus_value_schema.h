@@ -56,6 +56,21 @@ pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob
     user_data.assign(std::move(buf), 0, static_cast<unsigned int>(view.length()));
 }
 
+/// Update expire_ts in rocksdb value with given version.
+/// The value schema must be in v0.
+inline void pegasus_update_expire_ts(uint32_t version, std::string &value, uint32_t new_expire_ts)
+{
+    if (version == 0) {
+        dassert_f(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
+
+        new_expire_ts = dsn::endian::hton(new_expire_ts);
+        memcpy(const_cast<char *>(value.data()), &new_expire_ts, sizeof(uint32_t));
+    } else {
+        dfatal_f("unsupported value schema version: {}", version);
+        __builtin_unreachable();
+    }
+}
+
 /// \return true if expired
 inline bool check_if_ts_expired(uint32_t epoch_now, uint32_t expire_ts)
 {

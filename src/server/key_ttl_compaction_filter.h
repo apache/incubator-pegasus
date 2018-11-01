@@ -37,16 +37,8 @@ public:
             pegasus_extract_expire_ts(_value_schema_version, utils::to_string_view(existing_value));
         if (_default_ttl != 0 && expire_ts == 0) {
             // should update ttl
-            dsn::blob user_data;
-            pegasus_extract_user_data(_value_schema_version,
-                                      std::string(existing_value.data(), existing_value.length()),
-                                      user_data);
-            rocksdb::SliceParts sparts = _gen.generate_value(_value_schema_version,
-                                                             dsn::string_view(user_data),
-                                                             utils::epoch_now() + _default_ttl);
-            for (int i = 0; i < sparts.num_parts; i++) {
-                *new_value += sparts.parts[i].ToString();
-            }
+            *new_value = existing_value.ToString();
+            pegasus_update_expire_ts(_value_schema_version, *new_value, utils::epoch_now() + _default_ttl);
             *value_changed = true;
             return false;
         }
