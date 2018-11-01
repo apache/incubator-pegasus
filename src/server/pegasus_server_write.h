@@ -31,6 +31,8 @@ public:
                                   int64_t decree,
                                   uint64_t timestamp);
 
+    void set_default_ttl(uint32_t ttl);
+
 private:
     /// Delay replying for the batched requests until all of them complete.
     int on_batched_writes(dsn::message_ex **requests, int count);
