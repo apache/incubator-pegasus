@@ -212,6 +212,8 @@ private:
 
     void update_usage_scenario(const std::map<std::string, std::string> &envs);
 
+    void update_default_ttl(const std::map<std::string, std::string> &envs);
+
     // return finish time recorded in rocksdb
     uint64_t do_manual_compact(const rocksdb::CompactRangeOptions &options);
 
@@ -247,7 +249,7 @@ private:
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
 
-    KeyWithTTLCompactionFilter _key_ttl_compaction_filter;
+    std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     rocksdb::Options _db_opts;
     rocksdb::WriteOptions _wt_opts;
     rocksdb::ReadOptions _rd_opts;
