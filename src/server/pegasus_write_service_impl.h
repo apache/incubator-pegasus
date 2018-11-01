@@ -31,6 +31,7 @@ public:
           _db(server->_db),
           _wt_opts(server->_wt_opts),
           _rd_opts(server->_rd_opts),
+          _default_ttl(0),
           _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
     }
@@ -485,6 +486,14 @@ public:
 
     void batch_abort(int64_t decree, int err) { clear_up_batch_states(decree, err); }
 
+    void set_default_ttl(uint32_t ttl)
+    {
+        if (_default_ttl != ttl) {
+            _default_ttl = ttl;
+            ddebug_replica("update _default_ttl to {}.", ttl);
+        }
+    }
+
 private:
     int db_write_batch_put(int64_t decree,
                            dsn::string_view raw_key,
@@ -497,7 +506,7 @@ private:
         rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
         rocksdb::SliceParts skey_parts(&skey, 1);
         rocksdb::SliceParts svalue =
-            _value_generator.generate_value(_value_schema_version, value, expire_sec);
+            _value_generator.generate_value(_value_schema_version, value, db_expire_ts(expire_sec));
         rocksdb::Status s = _batch.Put(skey_parts, svalue);
         if (dsn_unlikely(!s.ok())) {
             ::dsn::blob hash_key, sort_key;
@@ -679,6 +688,16 @@ private:
         return false;
     }
 
+    uint32_t db_expire_ts(uint32_t expire_ts)
+    {
+        // use '_default_ttl' when ttl is not set for this write operation.
+        if (_default_ttl != 0 && expire_ts == 0) {
+            return utils::epoch_now() + _default_ttl;
+        }
+
+        return expire_ts;
+    }
+
 private:
     friend class pegasus_write_service_test;
     friend class pegasus_server_write_test;
@@ -690,6 +709,7 @@ private:
     rocksdb::DB *_db;
     rocksdb::WriteOptions &_wt_opts;
     rocksdb::ReadOptions &_rd_opts;
+    volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
 
     pegasus_value_generator _value_generator;
