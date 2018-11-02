@@ -142,7 +142,7 @@ static void fill_database()
 {
     ddebug("FILLING_DATABASE...");
 
-    srand((unsigned int)time(nullptr));
+    srandom((unsigned int)time(nullptr));
     for (auto &c : buffer) {
         c = CCH[random() % sizeof(CCH)];
     }
@@ -180,14 +180,14 @@ static void fill_database()
 class scan : public testing::Test
 {
 public:
-    void SetUp() override
+    static void SetUpTestCase()
     {
         ddebug("SetUp...");
         clear_database();
         fill_database();
     }
 
-    void TearDown() override
+    static void TearDownTestCase()
     {
         ddebug("TearDown...");
         clear_database();
