@@ -38,7 +38,8 @@ public:
         if (_default_ttl != 0 && expire_ts == 0) {
             // should update ttl
             *new_value = existing_value.ToString();
-            pegasus_update_expire_ts(_value_schema_version, *new_value, utils::epoch_now() + _default_ttl);
+            pegasus_update_expire_ts(
+                _value_schema_version, *new_value, utils::epoch_now() + _default_ttl);
             *value_changed = true;
             return false;
         }
