@@ -21,7 +21,7 @@ class pegasus_mutation_duplicator : public dsn::replication::mutation_duplicator
     using duplicate_rpc = dsn::apps::duplicate_rpc;
 
 public:
-    pegasus_mutation_duplicator(const dsn::replication::replica_base &r,
+    pegasus_mutation_duplicator(dsn::replication::replica_base *r,
                                 dsn::string_view remote_cluster,
                                 dsn::string_view app);
 

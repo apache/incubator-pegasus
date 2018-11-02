@@ -16,8 +16,8 @@ namespace replication {
 
 /// static definition of mutation_duplicator::creator.
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
-    const replica_base &, string_view, string_view)>
-    mutation_duplicator::creator = [](const replica_base &r, string_view remote, string_view app) {
+    replica_base *, string_view, string_view)>
+    mutation_duplicator::creator = [](replica_base *r, string_view remote, string_view app) {
         return make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
     };
 
@@ -55,7 +55,7 @@ uint64_t get_hash_from_request(dsn::task_code tc, const dsn::blob &data)
     __builtin_unreachable();
 }
 
-pegasus_mutation_duplicator::pegasus_mutation_duplicator(const dsn::replication::replica_base &r,
+pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::replica_base *r,
                                                          dsn::string_view remote_cluster,
                                                          dsn::string_view app)
     : mutation_duplicator(r), _remote_cluster(remote_cluster)
