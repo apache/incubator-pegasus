@@ -269,6 +269,11 @@ endmacro(ms_setup_boost)
 function(dsn_setup_system_libs)
     find_package(Threads REQUIRED)
 
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
+        message(STATUS "FIND_LIBRARY_USE_LIB64_PATHS = ON")
+    endif()
+
     set(DSN_SYSTEM_LIBS "")
 
     find_library(DSN_LIB_RT NAMES rt)
