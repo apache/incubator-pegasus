@@ -21,7 +21,7 @@ function get_stdcpp_lib()
     else
         libs=(`ldconfig -p|grep $libname|awk '{print $NF}'`)
 
-        for lib in ${libs[*]}; do 
+        for lib in ${libs[*]}; do
             if [ "`check_bit $lib`" = "true" ]; then
                 echo "$lib"
                 return
@@ -71,8 +71,8 @@ function check_bit()
         check_bit=`file $lib |grep "$bit_mode-bit"`
     else
         real_lib_name=`ls -l $lib |awk '{print $NF}'`
-    	lib_path=${lib%/*} 
-	    real_lib=${lib_path}"/"${real_lib_name}
+        lib_path=${lib%/*} 
+        real_lib=${lib_path}"/"${real_lib_name}
         check_bit=`file $real_lib |grep "$bit_mode-bit"`
     fi
     if [ -n "$check_bit" ]; then
