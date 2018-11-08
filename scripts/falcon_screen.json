@@ -413,7 +413,12 @@
           "disk.io.util/device=vdb",
           "disk.io.util/device=vdc",
           "disk.io.util/device=vdd",
-          "disk.io.util/device=vde"
+          "disk.io.util/device=vde",
+          "disk.io.util/device=xvda",
+          "disk.io.util/device=xvdb",
+          "disk.io.util/device=xvdc",
+          "disk.io.util/device=xvdd",
+          "disk.io.util/device=xvde"
       ],
       "graph_type": "a",
       "method": "",
@@ -439,7 +444,34 @@
           "disk.io.await/device=vdb",
           "disk.io.await/device=vdc",
           "disk.io.await/device=vdd",
-          "disk.io.await/device=vde"
+          "disk.io.await/device=vde",
+          "disk.io.await/device=xvda",
+          "disk.io.await/device=xvdb",
+          "disk.io.await/device=xvdc",
+          "disk.io.await/device=xvdd",
+          "disk.io.await/device=xvde"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "磁盘用量",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "df.bytes.used.percent/fstype=ext4,mount=/home",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd1",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd2",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd3",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd4",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd5",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd6",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd7",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd8",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd9",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd10",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd11",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd12"
       ],
       "graph_type": "a",
       "method": "",
