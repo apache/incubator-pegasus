@@ -7,9 +7,9 @@
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
 #include <rocksdb/convenience.h>
-#include <rocksdb/table.h>
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/filter_policy.h>
+#include <dsn/utility/chrono_literals.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
@@ -21,12 +21,20 @@
 #include "pegasus_event_listener.h"
 #include "pegasus_server_write.h"
 
+using namespace dsn::literals::chrono_literals;
+
 namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
-DEFINE_TASK_CODE(LPC_UPDATING_ROCKSDB_SSTSIZE, TASK_PRIORITY_COMMON, THREAD_POOL_REPLICATION_LONG)
+DEFINE_TASK_CODE(LPC_UPDATE_REPLICA_ROCKSDB_STATISTICS,
+                 TASK_PRIORITY_COMMON,
+                 THREAD_POOL_REPLICATION_LONG)
+
+DEFINE_TASK_CODE(LPC_UPDATE_SERVER_ROCKSDB_STATISTICS,
+                 TASK_PRIORITY_COMMON,
+                 THREAD_POOL_REPLICATION_LONG)
 
 static std::string chkpt_get_dir_name(int64_t decree)
 {
@@ -40,6 +48,9 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
     return 1 == sscanf(name, "checkpoint.%" PRId64 "", &decree) &&
            std::string(name) == chkpt_get_dir_name(decree);
 }
+
+::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
@@ -198,15 +209,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         }
     }
 
-    // read rocksdb::BlockBasedTableOptions configurations
-    rocksdb::BlockBasedTableOptions tbl_opts;
     // disable table block cache, default: false
     if (dsn_config_get_value_bool("pegasus.server",
                                   "rocksdb_disable_table_block_cache",
                                   false,
                                   "rocksdb tbl_opts.no_block_cache, default false")) {
-        tbl_opts.no_block_cache = true;
-        tbl_opts.block_restart_interval = 4;
+        _tbl_opts.no_block_cache = true;
+        _tbl_opts.block_restart_interval = 4;
     } else {
         // block cache capacity, default 10G
         static uint64_t capacity = dsn_config_get_value_uint64(
@@ -225,7 +234,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         // init block cache
         static std::shared_ptr<rocksdb::Cache> cache =
             rocksdb::NewLRUCache(capacity, num_shard_bits);
-        tbl_opts.block_cache = cache;
+        _tbl_opts.block_cache = cache;
     }
 
     // disable bloom filter, default: false
@@ -233,12 +242,16 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                    "rocksdb_disable_bloom_filter",
                                    false,
                                    "rocksdb tbl_opts.filter_policy, default nullptr")) {
-        tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+        _tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
     }
 
-    _db_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
+    _db_opts.table_factory.reset(NewBlockBasedTableFactory(_tbl_opts));
     _key_ttl_compaction_filter_factory = std::make_shared<KeyWithTTLCompactionFilterFactory>();
     _db_opts.compaction_filter_factory = _key_ttl_compaction_filter_factory;
+
+    _statistics = rocksdb::CreateDBStatistics();
+    _statistics->stats_level_ = rocksdb::kExceptDetailedTimers;
+    _db_opts.statistics = _statistics;
 
     _db_opts.listeners.emplace_back(new pegasus_event_listener());
 
@@ -254,12 +267,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                               0,
                                               "checkpoint_reserve_time_seconds, 0 means no check");
 
-    // get the _updating_sstsize_inteval_seconds.
-    _updating_rocksdb_sstsize_interval_seconds =
-        (uint32_t)dsn_config_get_value_uint64("pegasus.server",
-                                              "updating_rocksdb_sstsize_interval_seconds",
-                                              600,
-                                              "updating_rocksdb_sstsize_interval_seconds");
+    // get the _update_rdb_stat_interval.
+    _update_rdb_stat_interval =
+        std::chrono::seconds(dsn_config_get_value_uint64("pegasus.server",
+                                                         "updating_rocksdb_statistics_interval",
+                                                         600,
+                                                         "updating_rocksdb_statistics_interval"));
 
     // TODO: move the qps/latency counters and it's statistics to replication_app_base layer
     char str_gpid[128], buf[256];
@@ -315,14 +328,44 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                                 "statistic the recent abnormal read count");
 
     snprintf(buf, 255, "disk.storage.sst.count@%s", str_gpid);
-    _pfc_sst_count.init_app_counter(
+    _pfc_rdb_sst_count.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
 
     snprintf(buf, 255, "disk.storage.sst(MB)@%s", str_gpid);
-    _pfc_sst_size.init_app_counter(
+    _pfc_rdb_sst_size.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the size of sstable files");
 
-    updating_rocksdb_sstsize();
+    snprintf(buf, 255, "rdb.block_cache.hit_count@%s", str_gpid);
+    _pfc_rdb_block_cache_hit_count.init_app_counter(
+        "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the hit count of rocksdb block cache");
+
+    snprintf(buf, 255, "rdb.block_cache.total_count@%s", str_gpid);
+    _pfc_rdb_block_cache_total_count.init_app_counter(
+        "app.pegasus",
+        buf,
+        COUNTER_TYPE_NUMBER,
+        "statistic the total count of rocksdb block cache");
+
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        _pfc_rdb_block_cache_mem_usage.init_global_counter(
+            "replica",
+            "app.pegasus",
+            "rdb.block_cache.memory_usage",
+            COUNTER_TYPE_NUMBER,
+            "statistic the memory usage of rocksdb block cache");
+    });
+
+    snprintf(buf, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid);
+    _pfc_rdb_index_and_filter_blocks_mem_usage.init_app_counter(
+        "app.pegasus",
+        buf,
+        COUNTER_TYPE_NUMBER,
+        "statistic the memory usage of rocksdb index and filter blocks");
+
+    snprintf(buf, 255, "rdb.memtable.memory_usage@%s", str_gpid);
+    _pfc_rdb_memtable_mem_usage.init_app_counter(
+        "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
 }
 
 void pegasus_server_impl::parse_checkpoints()
@@ -1523,14 +1566,25 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
         _is_open = true;
 
-        dinfo("%s: start the updating sstsize timer task", replica_name());
-        _updating_rocksdb_sstsize_timer_task = ::dsn::tasking::enqueue_timer(
-            LPC_UPDATING_ROCKSDB_SSTSIZE,
-            &_tracker,
-            [this]() { this->updating_rocksdb_sstsize(); },
-            std::chrono::seconds(_updating_rocksdb_sstsize_interval_seconds),
-            0,
-            std::chrono::seconds(30));
+        dinfo("%s: start the update rocksdb statistics timer task", replica_name());
+        _update_replica_rdb_stat =
+            ::dsn::tasking::enqueue_timer(LPC_UPDATING_ROCKSDB_STATISTICS,
+                                          &_tracker,
+                                          [this]() { this->updating_rocksdb_statistics(); },
+                                          _update_rdb_stat_interval,
+                                          0,
+                                          30_s);
+
+        static std::once_flag flag;
+        std::call_once(flag, [&]() {
+            _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
+                LPC_UPDATING_ROCKSDB_STATISTICS_STATIC,
+                &_tracker,
+                [this]() { this->updating_rocksdb_statistics_static(); },
+                _update_rdb_stat_interval,
+                0,
+                30_s);
+        });
 
         // initialize write service after server being initialized.
         _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
@@ -1566,9 +1620,9 @@ void pegasus_server_impl::cancel_background_work(bool wait)
     }
 
     // stop all tracked tasks when pegasus server is stopped.
-    if (_updating_rocksdb_sstsize_timer_task != nullptr) {
-        _updating_rocksdb_sstsize_timer_task->cancel(true);
-        _updating_rocksdb_sstsize_timer_task = nullptr;
+    if (_update_replica_rdb_stat != nullptr) {
+        _update_replica_rdb_stat->cancel(true);
+        _update_replica_rdb_stat = nullptr;
     }
     _tracker.cancel_outstanding_tasks();
 
@@ -1600,8 +1654,13 @@ void pegasus_server_impl::cancel_background_work(bool wait)
             derror("%s: rmdir %s failed when stop app", replica_name(), data_dir().c_str());
             return ::dsn::ERR_FILE_OPERATION_FAILED;
         }
-        _pfc_sst_count->set(0);
-        _pfc_sst_size->set(0);
+        _pfc_rdb_sst_count->set(0);
+        _pfc_rdb_sst_size->set(0);
+        _pfc_rdb_block_cache_hit_count->set(0);
+        _pfc_rdb_block_cache_total_count->set(0);
+        _pfc_rdb_block_cache_mem_usage->set(0);
+        _pfc_rdb_index_and_filter_blocks_mem_usage->set(0);
+        _pfc_rdb_memtable_mem_usage->set(0);
     }
 
     ddebug(
@@ -2161,54 +2220,55 @@ int pegasus_server_impl::append_key_value_for_multi_get(
     return 1;
 }
 
-// statistic the count and size of files of this type. return (-1,-1) if failed.
-static std::pair<int64_t, int64_t> get_type_file_size(const std::string &path,
-                                                      const std::string &type)
+void pegasus_server_impl::updating_rocksdb_statistics()
 {
-    std::vector<std::string> files;
-    if (!::dsn::utils::filesystem::get_subfiles(path, files, false)) {
-        dwarn("get subfiles of dir %s failed", path.c_str());
-        return std::pair<int64_t, int64_t>(-1, -1);
-    }
-    int64_t res = 0;
-    int64_t cnt = 0;
-    for (auto &f : files) {
-        if (f.length() > type.length() && f.substr(f.length() - type.length()) == type) {
-            int64_t tsize = 0;
-            if (::dsn::utils::filesystem::file_size(f, tsize)) {
-                res += tsize;
-                cnt++;
-            } else {
-                dwarn("get size of file %s failed", f.c_str());
-                return std::pair<int64_t, int64_t>(-1, -1);
-            }
+    std::string str_val;
+    uint64_t val = 0;
+    for (int i = 0; i < _db_opts.num_levels; ++i) {
+        int cur_level_count = 0;
+        if (_db->GetProperty(rocksdb::DB::Properties::kNumFilesAtLevelPrefix + std::to_string(i),
+                             &str_val) &&
+            dsn::buf2int32(str_val, cur_level_count)) {
+            val += cur_level_count;
         }
     }
-    return std::pair<int64_t, int64_t>(cnt, res);
-}
+    _pfc_rdb_sst_count->set(val);
+    ddebug_replica("_pfc_rdb_sst_count: {}", val);
 
-std::pair<int64_t, int64_t> pegasus_server_impl::statistic_sst_size()
-{
-    // dir = data_dir()/rdb
-    return get_type_file_size(::dsn::utils::filesystem::path_combine(data_dir(), "rdb"), ".sst");
-}
-
-void pegasus_server_impl::updating_rocksdb_sstsize()
-{
-    std::pair<int64_t, int64_t> sst_size = statistic_sst_size();
-    if (sst_size.first == -1) {
-        dwarn("%s: statistic sst file size failed", replica_name());
-    } else {
-        int64_t sst_size_mb = sst_size.second / 1048576;
-        ddebug("%s: statistic sst file size succeed, sst_count = %" PRId64 ", sst_size = %" PRId64
-               "(%" PRId64 "MB)",
-               replica_name(),
-               sst_size.first,
-               sst_size.second,
-               sst_size_mb);
-        _pfc_sst_count->set(sst_size.first);
-        _pfc_sst_size->set(sst_size_mb);
+    if (_db->GetProperty(rocksdb::DB::Properties::kTotalSstFilesSize, &str_val) &&
+        dsn::buf2uint64(str_val, val)) {
+        static uint64_t bytes_per_mb = 1U << 20U;
+        _pfc_rdb_sst_size->set(val / bytes_per_mb);
+        ddebug_replica("_pfc_rdb_sst_size: {} bytes", val);
     }
+
+    uint64_t block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
+    _pfc_rdb_block_cache_hit_count->set(block_cache_hit);
+    ddebug_replica("_pfc_rdb_block_cache_hit_count: {}", block_cache_hit);
+
+    uint64_t block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
+    uint64_t block_cache_total = block_cache_hit + block_cache_miss;
+    _pfc_rdb_block_cache_total_count->set(block_cache_total);
+    ddebug_replica("_pfc_rdb_block_cache_total_count: {}", block_cache_total);
+
+    if (_db->GetProperty(rocksdb::DB::Properties::kEstimateTableReadersMem, &str_val) &&
+        dsn::buf2uint64(str_val, val)) {
+        _pfc_rdb_index_and_filter_blocks_mem_usage->set(val);
+        ddebug_replica("_pfc_rdb_index_and_filter_blocks_mem_usage: {} bytes", val);
+    }
+
+    if (_db->GetProperty(rocksdb::DB::Properties::kCurSizeAllMemTables, &str_val) &&
+        dsn::buf2uint64(str_val, val)) {
+        _pfc_rdb_memtable_mem_usage->set(val);
+        ddebug_replica("_pfc_rdb_memtable_mem_usage: {} bytes", val);
+    }
+}
+
+void pegasus_server_impl::updating_rocksdb_statistics_static()
+{
+    uint64_t val = _tbl_opts.block_cache->GetUsage();
+    _pfc_rdb_block_cache_mem_usage->set(val);
+    ddebug_replica("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
 }
 
 std::pair<std::string, bool>
@@ -2438,8 +2498,8 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
                    status.ToString().c_str(),
                    dsn_now_ms() - start_time);
 
-    // update size immediately
-    updating_rocksdb_sstsize();
+    // update rocksdb statistics immediately
+    updating_rocksdb_statistics();
 
     return _db->GetLastManualCompactFinishTime();
 }

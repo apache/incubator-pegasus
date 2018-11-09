@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <rocksdb/db.h>
+#include <rocksdb/table.h>
 #include <rocksdb/listener.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
@@ -198,10 +199,9 @@ private:
                          const ::dsn::blob &filter_pattern,
                          const ::dsn::blob &value);
 
-    // statistic the sst file info for this replica. return (-1,-1) if failed.
-    std::pair<int64_t, int64_t> statistic_sst_size();
+    void updating_rocksdb_statistics();
 
-    void updating_rocksdb_sstsize();
+    void updating_rocksdb_statistics_static();
 
     // get the absolute path of restore directory and the flag whether force restore from env
     // return
@@ -250,6 +250,8 @@ private:
     uint64_t _abnormal_multi_get_iterate_count_threshold;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
+    std::shared_ptr<rocksdb::Statistics> _statistics;
+    rocksdb::BlockBasedTableOptions _tbl_opts;
     rocksdb::Options _db_opts;
     rocksdb::WriteOptions _wt_opts;
     rocksdb::ReadOptions _rd_opts;
@@ -270,8 +272,9 @@ private:
 
     pegasus_context_cache _context_cache;
 
-    ::dsn::task_ptr _updating_rocksdb_sstsize_timer_task;
-    uint32_t _updating_rocksdb_sstsize_interval_seconds;
+    std::chrono::seconds _update_rdb_stat_interval;
+    ::dsn::task_ptr _update_replica_rdb_stat;
+    static ::dsn::task_ptr _update_server_rdb_stat;
 
     pegasus_manual_compact_service _manual_compact_svc;
 
@@ -289,8 +292,17 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
     ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
-    ::dsn::perf_counter_wrapper _pfc_sst_count;
-    ::dsn::perf_counter_wrapper _pfc_sst_size;
+
+    // rocksdb internal statistics
+    // server level
+    static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
+    // replica level
+    ::dsn::perf_counter_wrapper _pfc_rdb_sst_count;
+    ::dsn::perf_counter_wrapper _pfc_rdb_sst_size;
+    ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_hit_count;
+    ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
+    ::dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
+    ::dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
 };
 
 } // namespace server
