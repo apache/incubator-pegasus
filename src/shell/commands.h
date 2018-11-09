@@ -3603,6 +3603,32 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+struct output_matrix {
+    void add_column(const std::string &col_name) {
+        if (matrix_data.empty()) {
+            add_row();
+        }
+        dassert_f(matrix_data.size() == 1, "`add_column` must be called before real data appendding");
+        append_data(col_name);
+    }
+
+    void add_row() {
+        matrix_data.emplace_back(std::vector<std::string>());
+    }
+
+    void append_data(const std::string &data) {
+        matrix_data.rbegin()->emplace_back(data);
+    }
+
+    void output(std::ostream &out) {
+
+    }
+
+    static const int space_width = 2;
+    std::list<int> max_col_width;
+    std::vector<std::vector<std::string>> matrix_data;
+};
+
 inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
@@ -3652,7 +3678,10 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    static const size_t w = 10;
+    output_matrix om;
+
+
+    static const size_t w = 14;
     size_t first_column_width = w;
     if (app_name.empty()) {
         for (row_data &row : rows) {
