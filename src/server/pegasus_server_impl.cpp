@@ -267,12 +267,11 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                               0,
                                               "checkpoint_reserve_time_seconds, 0 means no check");
 
-    // get the _update_rdb_stat_interval.
     _update_rdb_stat_interval =
         std::chrono::seconds(dsn_config_get_value_uint64("pegasus.server",
-                                                         "updating_rocksdb_statistics_interval",
+                                                         "update_rdb_stat_interval",
                                                          600,
-                                                         "updating_rocksdb_statistics_interval"));
+                                                         "update_rdb_stat_interval, in seconds"));
 
     // TODO: move the qps/latency counters and it's statistics to replication_app_base layer
     char str_gpid[128], buf[256];
@@ -1570,7 +1569,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _update_replica_rdb_stat =
             ::dsn::tasking::enqueue_timer(LPC_UPDATE_REPLICA_ROCKSDB_STATISTICS,
                                           &_tracker,
-                                          [this]() { this->updating_rocksdb_statistics(); },
+                                          [this]() { this->update_replica_rocksdb_statistics(); },
                                           _update_rdb_stat_interval,
                                           0,
                                           30_s);
@@ -1580,7 +1579,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
                 LPC_UPDATE_SERVER_ROCKSDB_STATISTICS,
                 &_tracker,
-                [this]() { this->updating_rocksdb_statistics_static(); },
+                [this]() { this->update_server_rocksdb_statistics(); },
                 _update_rdb_stat_interval,
                 0,
                 30_s);
@@ -2220,7 +2219,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
     return 1;
 }
 
-void pegasus_server_impl::updating_rocksdb_statistics()
+void pegasus_server_impl::update_replica_rocksdb_statistics()
 {
     std::string str_val;
     uint64_t val = 0;
@@ -2264,7 +2263,7 @@ void pegasus_server_impl::updating_rocksdb_statistics()
     }
 }
 
-void pegasus_server_impl::updating_rocksdb_statistics_static()
+void pegasus_server_impl::update_server_rocksdb_statistics()
 {
     uint64_t val = _tbl_opts.block_cache->GetUsage();
     _pfc_rdb_block_cache_mem_usage->set(val);
@@ -2499,7 +2498,7 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
                    dsn_now_ms() - start_time);
 
     // update rocksdb statistics immediately
-    updating_rocksdb_statistics();
+    update_replica_rocksdb_statistics();
 
     return _db->GetLastManualCompactFinishTime();
 }

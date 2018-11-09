@@ -199,9 +199,9 @@ private:
                          const ::dsn::blob &filter_pattern,
                          const ::dsn::blob &value);
 
-    void updating_rocksdb_statistics();
+    void update_replica_rocksdb_statistics();
 
-    void updating_rocksdb_statistics_static();
+    void update_server_rocksdb_statistics();
 
     // get the absolute path of restore directory and the flag whether force restore from env
     // return
