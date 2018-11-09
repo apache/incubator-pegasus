@@ -177,6 +177,10 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNER(recent_abnormal_count);
     INIT_COUNER(storage_mb);
     INIT_COUNER(storage_count);
+    INIT_COUNER(rdb_block_cache_hit_rate);
+    INIT_COUNER(rdb_block_cache_mem_usage);
+    INIT_COUNER(rdb_index_and_filter_blocks_mem_usage);
+    INIT_COUNER(rdb_memtable_mem_usage);
     INIT_COUNER(read_qps);
     INIT_COUNER(write_qps);
     _app_stat_counters[app_name] = counters;

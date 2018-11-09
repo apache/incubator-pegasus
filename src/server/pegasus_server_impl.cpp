@@ -1568,7 +1568,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
         dinfo("%s: start the update rocksdb statistics timer task", replica_name());
         _update_replica_rdb_stat =
-            ::dsn::tasking::enqueue_timer(LPC_UPDATING_ROCKSDB_STATISTICS,
+            ::dsn::tasking::enqueue_timer(LPC_UPDATE_REPLICA_ROCKSDB_STATISTICS,
                                           &_tracker,
                                           [this]() { this->updating_rocksdb_statistics(); },
                                           _update_rdb_stat_interval,
@@ -1578,7 +1578,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         static std::once_flag flag;
         std::call_once(flag, [&]() {
             _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
-                LPC_UPDATING_ROCKSDB_STATISTICS_STATIC,
+                LPC_UPDATE_SERVER_ROCKSDB_STATISTICS,
                 &_tracker,
                 [this]() { this->updating_rocksdb_statistics_static(); },
                 _update_rdb_stat_interval,
