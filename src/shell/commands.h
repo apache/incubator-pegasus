@@ -3603,29 +3603,73 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-struct output_matrix {
-    void add_column(const std::string &col_name) {
-        if (matrix_data.empty()) {
-            add_row();
-        }
-        dassert_f(matrix_data.size() == 1, "`add_column` must be called before real data appendding");
+struct table_printer
+{
+    void add_title(const std::string &title)
+    {
+        dassert_f(matrix_data.empty() && max_col_width.empty(),
+                  "`add_title` must be called only once");
+        add_row(title);
+        max_col_width.push_back(title.length());
+    }
+
+    void add_column(const std::string &col_name)
+    {
+        dassert_f(matrix_data.size() == 1,
+                  "`add_column` must be called before real data appendding");
+        max_col_width.push_back(col_name.length());
         append_data(col_name);
     }
 
-    void add_row() {
+    void add_row(const std::string &row_name)
+    {
         matrix_data.emplace_back(std::vector<std::string>());
+        matrix_data.rbegin()->push_back(row_name);
     }
 
-    void append_data(const std::string &data) {
+    void append_data(const std::string &data)
+    {
         matrix_data.rbegin()->emplace_back(data);
+
+        // update column max length
+        int &cur_len = max_col_width[matrix_data.rbegin()->size() - 1];
+        if (cur_len < data.size()) {
+            cur_len = data.size();
+        }
     }
 
-    void output(std::ostream &out) {
+    void append_data(uint64_t data) { append_data(std::to_string(data)); }
 
+    void append_data(double data)
+    {
+        if (abs(data) < 1e-6) {
+            append_data("0.00");
+        } else {
+            std::stringstream s;
+            s << std::fixed << std::setprecision(precision) << data;
+            append_data(s.str());
+        }
     }
 
+    void output(std::ostream &out) const
+    {
+        if (max_col_width.empty()) {
+            return;
+        }
+
+        for (const auto &row : matrix_data) {
+            dassert_f(!row.empty(), "Row name must be exist at least");
+            out << std::setw(max_col_width[0] + space_width) << std::left << row[0];
+            for (size_t i = 1; i < row.size(); ++i) {
+                out << std::setw(max_col_width[i] + space_width) << std::right << row[i];
+            }
+            out << std::endl;
+        }
+    }
+
+    static const int precision = 2;
     static const int space_width = 2;
-    std::list<int> max_col_width;
+    std::vector<int> max_col_width;
     std::vector<std::vector<std::string>> matrix_data;
 };
 
@@ -3667,42 +3711,6 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    std::streambuf *buf;
-    std::ofstream of;
-
-    if (!out_file.empty()) {
-        of.open(out_file);
-        buf = of.rdbuf();
-    } else {
-        buf = std::cout.rdbuf();
-    }
-    std::ostream out(buf);
-
-    output_matrix om;
-
-
-    static const size_t w = 14;
-    size_t first_column_width = w;
-    if (app_name.empty()) {
-        for (row_data &row : rows) {
-            first_column_width = std::max(first_column_width, row.row_name.size() + 2);
-        }
-        out << std::setw(first_column_width) << std::left << "app";
-    } else {
-        out << std::setw(first_column_width) << std::left << "pidx";
-    }
-    out << std::setw(w) << std::right << "GET" << std::setw(w) << std::right << "MGET"
-        << std::setw(w) << std::right << "PUT" << std::setw(w) << std::right << "MPUT"
-        << std::setw(w) << std::right << "DEL" << std::setw(w) << std::right << "MDEL"
-        << std::setw(w) << std::right << "INCR" << std::setw(w) << std::right << "CAS"
-        << std::setw(w) << std::right << "CAM" << std::setw(w) << std::right << "SCAN";
-    if (!only_qps) {
-        out << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
-            << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "file_mb"
-            << std::setw(w) << std::right << "file_num" << std::setw(w) << std::right << "hit_rate"
-            << std::setw(w) << std::right << "rdbmem_mb";
-    }
-    out << std::endl;
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
     for (int i = 0; i < rows.size() - 1; ++i) {
@@ -3728,44 +3736,70 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         sum.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
     }
-#define PRINT_QPS(field)                                                                           \
-    do {                                                                                           \
-        if (row.field == 0)                                                                        \
-            out << std::setw(w) << std::right << 0;                                                \
-        else                                                                                       \
-            out << std::setw(w) << std::right << row.field;                                        \
-    } while (0)
+
+    std::streambuf *buf;
+    std::ofstream of;
+
+    if (!out_file.empty()) {
+        of.open(out_file);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    table_printer tp;
+    tp.add_title(app_name.empty() ? "app" : "pidx");
+    tp.add_column("GET");
+    tp.add_column("MGET");
+    tp.add_column("PUT");
+    tp.add_column("MPUT");
+    tp.add_column("DEL");
+    tp.add_column("MDEL");
+    tp.add_column("INCR");
+    tp.add_column("CAS");
+    tp.add_column("CAM");
+    tp.add_column("SCAN");
+    if (!only_qps) {
+        tp.add_column("expired");
+        tp.add_column("filtered");
+        tp.add_column("abnormal");
+        tp.add_column("file_size(MB)");
+        tp.add_column("file_num");
+        tp.add_column("hit_rate");
+        tp.add_column("mem_usage(MB)");
+    }
+
     for (row_data &row : rows) {
-        out << std::setw(first_column_width) << std::left << row.row_name << std::fixed
-            << std::setprecision(2);
-        PRINT_QPS(get_qps);
-        PRINT_QPS(multi_get_qps);
-        PRINT_QPS(put_qps);
-        PRINT_QPS(multi_put_qps);
-        PRINT_QPS(remove_qps);
-        PRINT_QPS(multi_remove_qps);
-        PRINT_QPS(incr_qps);
-        PRINT_QPS(check_and_set_qps);
-        PRINT_QPS(check_and_mutate_qps);
-        PRINT_QPS(scan_qps);
+        tp.add_row(row.row_name);
+        tp.append_data(row.get_qps);
+        tp.append_data(row.multi_get_qps);
+        tp.append_data(row.put_qps);
+        tp.append_data(row.multi_put_qps);
+        tp.append_data(row.remove_qps);
+        tp.append_data(row.multi_remove_qps);
+        tp.append_data(row.incr_qps);
+        tp.append_data(row.check_and_set_qps);
+        tp.append_data(row.check_and_mutate_qps);
+        tp.append_data(row.scan_qps);
         if (!only_qps) {
+            tp.append_data(row.recent_expire_count);
+            tp.append_data(row.recent_filter_count);
+            tp.append_data(row.recent_abnormal_count);
+            tp.append_data(row.storage_mb);
+            tp.append_data((uint64_t)row.storage_count);
             double block_cache_hit_rate =
                 abs(row.rdb_block_cache_total_count) < 1e-6
                     ? 0.0
                     : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
-            out << std::setw(w) << std::right << (int64_t)row.recent_expire_count << std::setw(w)
-                << std::right << (int64_t)row.recent_filter_count << std::setw(w) << std::right
-                << (int64_t)row.recent_abnormal_count << std::setw(w) << std::right
-                << (int64_t)row.storage_mb << std::setw(w) << std::right
-                << (int64_t)row.storage_count << std::setw(w) << std::right << block_cache_hit_rate
-                << std::setw(w) << std::right
-                << (row.rdb_block_cache_mem_usage + row.rdb_index_and_filter_blocks_mem_usage +
-                    row.rdb_memtable_mem_usage) /
-                       (1 << 20U);
+            tp.append_data(block_cache_hit_rate);
+            tp.append_data((row.rdb_block_cache_mem_usage +
+                            row.rdb_index_and_filter_blocks_mem_usage +
+                            row.rdb_memtable_mem_usage) /
+                           (1 << 20U));
         }
-        out << std::endl;
     }
-#undef PRINT_QPS
+    tp.output(out);
 
     std::cout << std::endl;
     if (app_name.empty())
