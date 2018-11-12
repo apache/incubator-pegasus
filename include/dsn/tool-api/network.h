@@ -225,7 +225,7 @@ public:
     ///
     void send_message(message_ex *msg);
     bool cancel(message_ex *request);
-    void delay_recv(int delay_ms);
+    bool delay_recv(int delay_ms);
     bool on_recv_message(message_ex *msg, int delay_ms);
 
 public:
@@ -312,12 +312,15 @@ private:
 };
 
 // --------- inline implementation --------------
-inline void rpc_session::delay_recv(int delay_ms)
+// return true if delay applied.
+inline bool rpc_session::delay_recv(int delay_ms)
 {
+    bool exchanged = false;
     int old_delay_ms = _delay_server_receive_ms.load();
-    while (delay_ms > old_delay_ms &&
-           !_delay_server_receive_ms.compare_exchange_weak(old_delay_ms, delay_ms)) {
+    while (!exchanged && delay_ms > old_delay_ms) {
+        exchanged = _delay_server_receive_ms.compare_exchange_weak(old_delay_ms, delay_ms);
     }
+    return exchanged;
 }
 
 /*@}*/

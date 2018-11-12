@@ -67,12 +67,12 @@ void task_queue::enqueue_internal(task *task)
                 sp.rpc_request_delayer.delay(ac_value, _spec->queue_length_throttling_threshold);
             if (delay_ms > 0) {
                 auto rtask = static_cast<rpc_request_task *>(task);
-                rtask->get_request()->io_session->delay_recv(delay_ms);
-
-                dwarn("too many pending tasks (%d), delay traffic from %s for %d milliseconds",
-                      ac_value,
-                      rtask->get_request()->header->from_address.to_string(),
-                      delay_ms);
+                if (rtask->get_request()->io_session->delay_recv(delay_ms)) {
+                    dwarn("too many pending tasks (%d), delay traffic from %s for %d milliseconds",
+                          ac_value,
+                          rtask->get_request()->header->from_address.to_string(),
+                          delay_ms);
+                }
             }
         } else {
             dbg_dassert(TM_REJECT == throttle_mode, "unknow mode %d", (int)throttle_mode);
