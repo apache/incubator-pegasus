@@ -3609,22 +3609,22 @@ struct table_printer
     {
         dassert_f(matrix_data.empty() && max_col_width.empty(),
                   "`add_title` must be called only once");
-        add_row(title);
         max_col_width.push_back(title.length());
+        add_row(title);
     }
 
     void add_column(const std::string &col_name)
     {
         dassert_f(matrix_data.size() == 1,
                   "`add_column` must be called before real data appendding");
-        max_col_width.push_back(col_name.length());
+        max_col_width.emplace_back(col_name.length());
         append_data(col_name);
     }
 
     void add_row(const std::string &row_name)
     {
         matrix_data.emplace_back(std::vector<std::string>());
-        matrix_data.rbegin()->push_back(row_name);
+        append_data(row_name);
     }
 
     void append_data(const std::string &data)
