@@ -49,6 +49,7 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
            std::string(name) == chkpt_get_dir_name(decree);
 }
 
+std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 
@@ -237,8 +238,11 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                 "block cache will be sharded into 2^num_shard_bits shards");
 
             // init block cache
-            _tbl_opts.block_cache = rocksdb::NewLRUCache(capacity, num_shard_bits);
+            _block_cache = rocksdb::NewLRUCache(capacity, num_shard_bits);
         });
+
+        // every replica has the same block cache
+        _tbl_opts.block_cache = _block_cache;
     }
 
     // disable bloom filter, default: false
@@ -1573,21 +1577,17 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             ::dsn::tasking::enqueue_timer(LPC_UPDATE_REPLICA_ROCKSDB_STATISTICS,
                                           &_tracker,
                                           [this]() { this->update_replica_rocksdb_statistics(); },
-                                          _update_rdb_stat_interval,
-                                          0,
-                                          30_s);
+                                          _update_rdb_stat_interval);
 
         // Block cache is a singleton on this server shared by all replicas, its metrics update task
-        // should be scheduled once an interval on the process view.
+        // should be scheduled once an interval on the server view.
         static std::once_flag flag;
         std::call_once(flag, [&]() {
             _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
                 LPC_UPDATE_SERVER_ROCKSDB_STATISTICS,
                 nullptr,
                 [this]() { this->update_server_rocksdb_statistics(); },
-                _update_rdb_stat_interval,
-                0,
-                30_s);
+                _update_rdb_stat_interval);
         });
 
         // initialize write service after server being initialized.

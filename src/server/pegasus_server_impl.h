@@ -258,6 +258,7 @@ private:
     std::string _usage_scenario;
 
     rocksdb::DB *_db;
+    static std::shared_ptr<rocksdb::Cache> _block_cache;
     volatile bool _is_open;
     uint32_t _value_schema_version;
     std::atomic<int64_t> _last_durable_decree;

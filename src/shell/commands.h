@@ -3722,7 +3722,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         if (!only_qps) {
             double block_cache_hit_rate =
                 abs(row.rdb_block_cache_total_count) < 1e-6
-                    ? 100.0
+                    ? 0.0
                     : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
             out << std::setw(w) << std::right << (int64_t)row.recent_expire_count << std::setw(w)
                 << std::right << (int64_t)row.recent_filter_count << std::setw(w) << std::right
