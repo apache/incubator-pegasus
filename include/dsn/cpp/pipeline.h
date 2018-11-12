@@ -229,6 +229,7 @@ struct base : environment
     {
         next.__conf.thread_pool_code = tc;
         next.__conf.thread_hash = thread_hash;
+        next.__conf.tracker = __conf.tracker;
 
         next.__pipeline = this;
         return node<NextStage>(&next);
@@ -239,7 +240,7 @@ private:
     std::atomic_bool _paused{true};
 };
 
-// A piece of execution, receiving argument `Input`, running in the environment
+// A piece of execution, receiving argument `Args`, running in the environment
 // created by `pipeline::base`.
 template <typename... Args>
 struct when : environment
@@ -278,6 +279,19 @@ inline void base::run_pipeline()
         stage->run();
     });
 }
+
+/// A simple utility for definition of a `when` using lambda.
+/// It's useful for unit test.
+template <typename... Args>
+struct do_when : when<Args...>
+{
+    explicit do_when(std::function<void(Args &&... args)> &&func) : _cb(std::move(func)) {}
+
+    void run(Args &&... args) override { _cb(std::forward<Args>(args)...); }
+
+private:
+    std::function<void(Args &&...)> _cb;
+};
 
 /// Runnable must extend from pipeline::environment and implement
 /// a public method: `void run();`

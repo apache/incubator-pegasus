@@ -24,18 +24,11 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "mutation_cache.h"
+
+#include <dsn/dist/replication/replica_base.h>
 
 namespace dsn {
 namespace replication {
@@ -48,13 +41,18 @@ enum commit_type
     // - only valid when partition_status::PS_SECONDARY or partition_status::PS_PRIMARY
 };
 
-class prepare_list : public mutation_cache
+// prepare_list origins from the concept of `prepared list` in PacificA.
+// It stores an continuous and ordered list of mutations.
+// The prefix of the prepared list up to a `committed point` is regarded as committed.
+// The prepare_list only stores the most updated part (the uncommitted suffix) of prepared list,
+// say, the committed prefix will be truncated automatically.
+class prepare_list : public mutation_cache, private replica_base
 {
 public:
     typedef std::function<void(mutation_ptr &)> mutation_committer;
 
 public:
-    prepare_list(decree init_decree, int max_count, mutation_committer committer);
+    prepare_list(replica_base *r, decree init_decree, int max_count, mutation_committer committer);
 
     decree last_committed_decree() const { return _last_committed_decree; }
     void reset(decree init_decree);
@@ -64,14 +62,12 @@ public:
     // for two-phase commit
     //
     error_code prepare(mutation_ptr &mu, partition_status::type status); // unordered prepare
-    bool commit(decree decree, commit_type ct);                          // ordered commit
-
-private:
-    void sanity_check();
+    void commit(decree decree, commit_type ct);                          // ordered commit
 
 private:
     decree _last_committed_decree;
     mutation_committer _committer;
 };
-}
-} // namespace
+
+} // namespace replication
+} // namespace dsn

@@ -24,18 +24,7 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "task_engine.h"
-#include <dsn/perf_counter/perf_counter.h>
-#include <dsn/utility/factory_store.h>
 
 using namespace dsn::utils;
 
@@ -100,7 +89,6 @@ void task_worker_pool::create()
                 it->c_str(), PROVIDER_TYPE_ASPECT, this, q, i, worker);
         }
         task_worker::on_create.execute(worker);
-        q->set_owner_worker(spec().partitioned ? worker : nullptr);
 
         _workers.push_back(worker);
     }

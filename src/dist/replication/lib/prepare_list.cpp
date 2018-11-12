@@ -24,29 +24,22 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "prepare_list.h"
-#include "mutation.h"
+
+#include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
 namespace replication {
 
-prepare_list::prepare_list(decree init_decree, int max_count, mutation_committer committer)
-    : mutation_cache(init_decree, max_count)
+prepare_list::prepare_list(replica_base *r,
+                           decree init_decree,
+                           int max_count,
+                           mutation_committer committer)
+    : mutation_cache(init_decree, max_count), replica_base(r)
 {
-    _committer = committer;
+    _committer = std::move(committer);
     _last_committed_decree = init_decree;
 }
-
-void prepare_list::sanity_check() {}
 
 void prepare_list::reset(decree init_decree)
 {
@@ -70,7 +63,7 @@ void prepare_list::truncate(decree init_decree)
 error_code prepare_list::prepare(mutation_ptr &mu, partition_status::type status)
 {
     decree d = mu->data.header.decree;
-    dassert(d > last_committed_decree(), "%" PRId64 " VS %" PRId64 "", d, last_committed_decree());
+    dcheck_gt_replica(d, last_committed_decree());
 
     error_code err;
     switch (status) {
@@ -90,7 +83,7 @@ error_code prepare_list::prepare(mutation_ptr &mu, partition_status::type status
             pop_min();
         }
         err = mutation_cache::put(mu);
-        dassert(err == ERR_OK, "mutation_cache::put failed, err = %s", err.to_string());
+        dassert_replica(err == ERR_OK, "mutation_cache::put failed, err = {}", err);
         return err;
 
     //// delayed commit - only when capacity is an issue
@@ -122,7 +115,7 @@ error_code prepare_list::prepare(mutation_ptr &mu, partition_status::type status
             pop_min();
         }
         err = mutation_cache::put(mu);
-        dassert(err == ERR_OK, "mutation_cache::put failed, err = %s", err.to_string());
+        dassert_replica(err == ERR_OK, "mutation_cache::put failed, err = {}", err);
         return err;
 
     default:
@@ -134,27 +127,27 @@ error_code prepare_list::prepare(mutation_ptr &mu, partition_status::type status
 //
 // ordered commit
 //
-bool prepare_list::commit(decree d, commit_type ct)
+void prepare_list::commit(decree d, commit_type ct)
 {
     if (d <= last_committed_decree())
-        return false;
+        return;
 
     ballot last_bt = 0;
     switch (ct) {
     case COMMIT_TO_DECREE_HARD: {
         for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++) {
             mutation_ptr mu = get_mutation_by_decree(d0);
-            dassert(mu != nullptr && (mu->is_logged()) && mu->data.header.ballot >= last_bt,
-                    "mutation %" PRId64 " is missing in prepare list",
-                    d0);
+
+            dassert_replica(
+                mu != nullptr && mu->is_logged(), "mutation {} is missing in prepare list", d0);
+            dcheck_ge_replica(mu->data.header.ballot, last_bt);
 
             _last_committed_decree++;
             last_bt = mu->data.header.ballot;
             _committer(mu);
         }
 
-        sanity_check();
-        return true;
+        return;
     }
     case COMMIT_TO_DECREE_SOFT: {
         for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++) {
@@ -167,12 +160,11 @@ bool prepare_list::commit(decree d, commit_type ct)
                 break;
         }
 
-        sanity_check();
-        return true;
+        return;
     }
     case COMMIT_ALL_READY: {
         if (d != last_committed_decree() + 1)
-            return false;
+            return;
 
         int count = 0;
         mutation_ptr mu = get_mutation_by_decree(last_committed_decree() + 1);
@@ -185,14 +177,13 @@ bool prepare_list::commit(decree d, commit_type ct)
             mu = mutation_cache::get_mutation_by_decree(_last_committed_decree + 1);
         }
 
-        sanity_check();
-        return count > 0;
+        return;
     }
     default:
         dassert(false, "invalid commit type %d", (int)ct);
     }
 
-    return false;
+    return;
 }
-}
-} // namespace end
+} // namespace replication
+} // namespace dsn

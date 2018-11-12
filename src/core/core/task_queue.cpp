@@ -24,20 +24,9 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <dsn/tool-api/task_queue.h>
 #include "task_engine.h"
-#include <dsn/perf_counter/perf_counters.h>
 #include <dsn/tool-api/network.h>
-#include <cstdio>
 #include "rpc_engine.h"
 
 namespace dsn {
@@ -50,8 +39,6 @@ task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_prov
     _index = index;
     _name = pool->spec().name + '.';
     _name.append(num);
-    _owner_worker = nullptr;
-    _worker_count = _pool->spec().partitioned ? 1 : _pool->spec().worker_count;
     _queue_length_counter.init_global_counter(_pool->node()->full_name(),
                                               "engine",
                                               (_name + ".queue.length").c_str(),

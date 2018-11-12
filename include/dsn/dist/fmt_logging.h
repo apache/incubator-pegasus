@@ -49,6 +49,20 @@
 #define dfatal_replica(...) dfatal_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
 #define dassert_replica(x, ...) dassert_f(x, "[{}] {}", replica_name(), fmt::format(__VA_ARGS__));
 
+// Macros to check expected condition. It will abort the application
+// and log a fatal message when the condition is not met.
+#define dcheck_eq(var1, var2) dassert_f(var1 == var2, "{} vs {}", var1, var2)
+#define dcheck_ge(var1, var2) dassert_f(var1 >= var2, "{} vs {}", var1, var2)
+#define dcheck_le(var1, var2) dassert_f(var1 <= var2, "{} vs {}", var1, var2)
+#define dcheck_gt(var1, var2) dassert_f(var1 > var2, "{} vs {}", var1, var2)
+#define dcheck_lt(var1, var2) dassert_f(var1 < var2, "{} vs {}", var1, var2)
+
+#define dcheck_eq_replica(var1, var2) dassert_replica(var1 == var2, "{} vs {}", var1, var2)
+#define dcheck_ge_replica(var1, var2) dassert_replica(var1 >= var2, "{} vs {}", var1, var2)
+#define dcheck_le_replica(var1, var2) dassert_replica(var1 <= var2, "{} vs {}", var1, var2)
+#define dcheck_gt_replica(var1, var2) dassert_replica(var1 > var2, "{} vs {}", var1, var2)
+#define dcheck_lt_replica(var1, var2) dassert_replica(var1 < var2, "{} vs {}", var1, var2)
+
 // Customized formatter for rDSN basic types, on which
 // users can easily call fmt::format("{}", xxx), without the effort
 // of converting them into string.

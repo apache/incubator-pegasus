@@ -87,9 +87,6 @@ public:
     }
     const std::string &get_name() { return _name; }
     task_worker_pool *pool() const { return _pool; }
-    bool is_shared() const { return _worker_count > 1; }
-    int worker_count() const { return _worker_count; }
-    task_worker *owner_worker() const { return _owner_worker; } // when not is_shared()
     int index() const { return _index; }
     volatile int *get_virtual_length_ptr() { return &_virtual_queue_length; }
 
@@ -98,16 +95,13 @@ public:
 
 private:
     friend class task_worker_pool;
-    void set_owner_worker(task_worker *worker) { _owner_worker = worker; }
     void enqueue_internal(task *task);
 
 private:
     task_worker_pool *_pool;
-    task_worker *_owner_worker;
     std::string _name;
     int _index;
     admission_controller *_controller;
-    int _worker_count;
     std::atomic<int> _queue_length;
     dsn::perf_counter_wrapper _queue_length_counter;
     threadpool_spec *_spec;

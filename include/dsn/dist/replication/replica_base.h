@@ -37,7 +37,7 @@ struct replica_base
 {
     replica_base(gpid id, string_view name) : _gpid(id), _name(name) {}
 
-    replica_base(const replica_base &rhs) : replica_base(rhs.get_gpid(), rhs.replica_name()) {}
+    explicit replica_base(replica_base *rhs) : replica_base(rhs->get_gpid(), rhs->replica_name()) {}
 
     gpid get_gpid() const { return _gpid; }
 

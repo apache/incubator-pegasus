@@ -98,7 +98,8 @@ void replica::init_state()
     _inactive_is_transient = false;
     _is_initializing = false;
     _prepare_list =
-        new prepare_list(0,
+        new prepare_list(this,
+                         0,
                          _options->max_mutation_count_in_prepare_list,
                          std::bind(&replica::execute_mutation, this, std::placeholders::_1));
 

@@ -199,6 +199,8 @@ public:
         return *_mail_box.get();
     }
 
+    friend bool operator<(const rpc_holder &lhs, const rpc_holder &rhs) { return lhs._i < rhs._i; }
+
 private:
     friend class rpc_holder_test;
 

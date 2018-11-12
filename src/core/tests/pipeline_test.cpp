@@ -97,4 +97,38 @@ TEST(pipeline_test, link_pipe)
     }
 }
 
+TEST(pipeline_test, verify_link_and_fork)
+{
+    struct mock_stage : pipeline::when<>, pipeline::result<>
+    {
+        void run() override { step_down_next_stage(); }
+    };
+    task_tracker tracker;
+    {
+        pipeline::base base;
+        base.thread_pool(LPC_MUTATION_LOG_PENDING_TIMER).task_tracker(&tracker).thread_hash(1);
+        mock_stage s1;
+        mock_stage s2;
+        base.from(s1).link(s2);
+        ASSERT_EQ(s1.__conf.tracker, &tracker);
+        ASSERT_EQ(s1.__conf.thread_hash, 1);
+        ASSERT_EQ(s1.__conf.thread_pool_code, LPC_MUTATION_LOG_PENDING_TIMER);
+        ASSERT_EQ(s1.__pipeline, &base);
+        ASSERT_EQ(s2.__conf.tracker, &tracker);
+        ASSERT_EQ(s2.__conf.thread_hash, 1);
+        ASSERT_EQ(s2.__conf.thread_pool_code, LPC_MUTATION_LOG_PENDING_TIMER);
+        ASSERT_EQ(s2.__pipeline, &base);
+        mock_stage s3;
+        base.fork(s3, LPC_REPLICA_SERVER_DELAY_START, 2).link(s2);
+        ASSERT_EQ(s3.__conf.thread_pool_code, LPC_REPLICA_SERVER_DELAY_START);
+        ASSERT_EQ(s3.__conf.tracker, &tracker);
+        ASSERT_EQ(s3.__conf.thread_hash, 2);
+        ASSERT_EQ(s3.__pipeline, &base);
+        ASSERT_EQ(s2.__conf.tracker, &tracker);
+        ASSERT_EQ(s2.__conf.thread_hash, 1);
+        ASSERT_EQ(s2.__conf.thread_pool_code, LPC_MUTATION_LOG_PENDING_TIMER);
+        ASSERT_EQ(s2.__pipeline, &base);
+    }
+}
+
 } // namespace dsn
