@@ -3669,9 +3669,9 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         << std::setw(w) << std::right << "CAM" << std::setw(w) << std::right << "SCAN";
     if (!only_qps) {
         out << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
-            << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right
-            << "file_size(MB)" << std::setw(w) << std::right << "file_num" << std::setw(w)
-            << std::right << "hit_rate" << std::setw(w) << std::right << "mem_usage(MB)";
+            << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "file_mb"
+            << std::setw(w) << std::right << "file_num" << std::setw(w) << std::right << "hit_rate"
+            << std::setw(w) << std::right << "rdb_mem_mb";
     }
     out << std::endl;
     rows.resize(rows.size() + 1);

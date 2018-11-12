@@ -217,24 +217,28 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         _tbl_opts.no_block_cache = true;
         _tbl_opts.block_restart_interval = 4;
     } else {
-        // block cache capacity, default 10G
-        static uint64_t capacity = dsn_config_get_value_uint64(
-            "pegasus.server",
-            "rocksdb_block_cache_capacity",
-            10 * 1024 * 1024 * 1024ULL,
-            "block cache capacity for one pegasus server, shared by all rocksdb instances");
+        // If block cache is enabled, all replicas on this server will share the same block cache
+        // object. It's convenient to control the total memory used by this server, and the LRU
+        // algorithm used by the block cache object can be more efficient in this way.
+        static std::once_flag flag;
+        std::call_once(flag, [&]() {
+            // block cache capacity, default 10G
+            uint64_t capacity = dsn_config_get_value_uint64(
+                "pegasus.server",
+                "rocksdb_block_cache_capacity",
+                10 * 1024 * 1024 * 1024ULL,
+                "block cache capacity for one pegasus server, shared by all rocksdb instances");
 
-        // block cache num shard bits, default -1(auto)
-        static int num_shard_bits = (int)dsn_config_get_value_int64(
-            "pegasus.server",
-            "rocksdb_block_cache_num_shard_bits",
-            -1,
-            "block cache will be sharded into 2^num_shard_bits shards");
+            // block cache num shard bits, default -1(auto)
+            int num_shard_bits = (int)dsn_config_get_value_int64(
+                "pegasus.server",
+                "rocksdb_block_cache_num_shard_bits",
+                -1,
+                "block cache will be sharded into 2^num_shard_bits shards");
 
-        // init block cache
-        static std::shared_ptr<rocksdb::Cache> cache =
-            rocksdb::NewLRUCache(capacity, num_shard_bits);
-        _tbl_opts.block_cache = cache;
+            // init block cache
+            _tbl_opts.block_cache = rocksdb::NewLRUCache(capacity, num_shard_bits);
+        });
     }
 
     // disable bloom filter, default: false
@@ -342,6 +346,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         COUNTER_TYPE_NUMBER,
         "statistic the total count of rocksdb block cache");
 
+    // Block cache is a singleton on this server shared by all replicas, so we initialize
+    // `_pfc_rdb_block_cache_mem_usage` only once.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         _pfc_rdb_block_cache_mem_usage.init_global_counter(
@@ -1571,11 +1577,13 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                                           0,
                                           30_s);
 
+        // Block cache is a singleton on this server shared by all replicas, its metrics update task
+        // should be scheduled once an interval on the process view.
         static std::once_flag flag;
         std::call_once(flag, [&]() {
             _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
                 LPC_UPDATE_SERVER_ROCKSDB_STATISTICS,
-                &_tracker,
+                nullptr,
                 [this]() { this->update_server_rocksdb_statistics(); },
                 _update_rdb_stat_interval,
                 0,
@@ -2264,7 +2272,7 @@ void pegasus_server_impl::update_server_rocksdb_statistics()
 {
     uint64_t val = _tbl_opts.block_cache->GetUsage();
     _pfc_rdb_block_cache_mem_usage->set(val);
-    ddebug_replica("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
+    ddebug_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
 }
 
 std::pair<std::string, bool>
