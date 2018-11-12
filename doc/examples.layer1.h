@@ -559,7 +559,6 @@ A simple approach is to limit the upper bound of the task queue size.
 [threadpool.THREAD_POOL_DEFAULT]
 name = default
 partitioned = false
-max_input_queue_length = 1024
 ```
 
 // TODO: You can also register your own admission controller and set it in the configuration file.
