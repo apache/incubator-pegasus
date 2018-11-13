@@ -15,6 +15,7 @@ import com.xiaomi.infra.pegasus.replication.query_cfg_request;
 import com.xiaomi.infra.pegasus.replication.query_cfg_response;
 import com.xiaomi.infra.pegasus.rpc.Table;
 import io.netty.util.concurrent.*;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -47,7 +48,21 @@ public class TableHandler extends Table {
     long lastQueryTime_;
 
     public TableHandler(ClusterManager mgr, String name, KeyHasher h) throws ReplicationException {
-        logger.debug("initialize table handler, table_name({})", name);
+        int i = 0;
+        for (; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+                    || c == '_' || c == '.' || c == ':')
+                continue;
+            else
+                break;
+        }
+        if (name.length() > 0 && i == name.length()) {
+            logger.info("initialize table handler, table name is \"{}\"", StringEscapeUtils.escapeJava(name));
+        } else {
+            logger.warn("initialize table handler, maybe invalid table name \"{}\"", StringEscapeUtils.escapeJava(name));
+        }
+
         query_cfg_request req = new query_cfg_request(name, new ArrayList<Integer>());
         query_cfg_operator op = new query_cfg_operator(new gpid(-1, -1), req);
 
