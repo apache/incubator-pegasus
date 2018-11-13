@@ -3652,7 +3652,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    static const size_t w = 14;
+    static const size_t w = 10;
     size_t first_column_width = w;
     if (app_name.empty()) {
         for (row_data &row : rows) {
@@ -3671,7 +3671,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         out << std::setw(w) << std::right << "expired" << std::setw(w) << std::right << "filtered"
             << std::setw(w) << std::right << "abnormal" << std::setw(w) << std::right << "file_mb"
             << std::setw(w) << std::right << "file_num" << std::setw(w) << std::right << "hit_rate"
-            << std::setw(w) << std::right << "rdb_mem_mb";
+            << std::setw(w) << std::right << "rdbmem_mb";
     }
     out << std::endl;
     rows.resize(rows.size() + 1);
