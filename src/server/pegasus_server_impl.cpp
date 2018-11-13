@@ -2270,7 +2270,7 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
 
 void pegasus_server_impl::update_server_rocksdb_statistics()
 {
-    uint64_t val = _tbl_opts.block_cache->GetUsage();
+    uint64_t val = _block_cache->GetUsage();
     _pfc_rdb_block_cache_mem_usage->set(val);
     ddebug_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
 }

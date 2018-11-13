@@ -201,7 +201,7 @@ private:
 
     void update_replica_rocksdb_statistics();
 
-    void update_server_rocksdb_statistics();
+    static void update_server_rocksdb_statistics();
 
     // get the absolute path of restore directory and the flag whether force restore from env
     // return
