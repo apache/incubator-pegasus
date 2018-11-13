@@ -1583,10 +1583,11 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         // should be scheduled once an interval on the server view.
         static std::once_flag flag;
         std::call_once(flag, [&]() {
+            // The timer task will always running even though there is no replicas
             _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
                 LPC_UPDATE_SERVER_ROCKSDB_STATISTICS,
-                nullptr,
-                [this]() { this->update_server_rocksdb_statistics(); },
+                nullptr,              // TODO: the tracker is nullptr, we will fix it later
+                [this]() { update_server_rocksdb_statistics(); },
                 _update_rdb_stat_interval);
         });
 
