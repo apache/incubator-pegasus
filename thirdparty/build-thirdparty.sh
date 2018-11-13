@@ -58,13 +58,6 @@ else
     echo "skip build concurrentqueue"
 fi
 
-## build gflags
-#mkdir -p $TP_BUILD/gflags
-#cd $TP_BUILD/gflags
-#cmake $TP_SRC/gflags -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT
-#make -j8 && make install
-#cd $TP_DIR
-
 # build gtest
 if [ ! -d $TP_OUTPUT/include/gtest ]; then
     mkdir -p $TP_BUILD/googletest
@@ -160,9 +153,9 @@ fi
 
 # build fmtlib
 if [ ! -d $TP_OUTPUT/include/fmt ]; then
-    cd $TP_SRC/fmt-4.0.0
-    mkdir -p build && cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT -DFMT_TEST=false
+    mkdir -p $TP_BUILD/fmt-4.0.0
+    cd $TP_BUILD/fmt-4.0.0
+    cmake $TP_SRC/fmt-4.0.0 -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT -DFMT_TEST=false
     make -j8 && make install
     cd $TP_DIR
     exit_if_fail "fmtlib" $?
@@ -248,9 +241,9 @@ fi
 
 # build s2geometry
 if [ ! -d $TP_OUTPUT/include/s2 ]; then
-    cd $TP_SRC/s2geometry-0239455c1e260d6d2c843649385b4fb9f5b28dba
-    mkdir -p build && cd build
-    cmake .. -DGTEST_INCLUDE=$TP_OUTPUT/include -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT
+    mkdir -p  $TP_BUILD/s2geometry
+    cd $TP_BUILD/s2geometry
+    cmake $TP_SRC/s2geometry-0239455c1e260d6d2c843649385b4fb9f5b28dba -DGTEST_INCLUDE=$TP_OUTPUT/include -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT
     make -j8 && make install
     res=$?
     exit_if_fail "s2geometry" $res
@@ -261,9 +254,9 @@ fi
 
 # build gflags
 if [ ! -d $TP_OUTPUT/include/gflags ]; then
-    cd $TP_SRC/gflags-2.2.1
-    mkdir -p build && cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT
+    mkdir -p $TP_BUILD/gflags-2.2.1
+    cd $TP_BUILD/gflags-2.2.1
+    cmake $TP_SRC/gflags-2.2.1 -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT
     make -j8 && make install
     res=$?
     exit_if_fail "gflags" $res
