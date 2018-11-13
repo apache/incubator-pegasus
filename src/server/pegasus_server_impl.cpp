@@ -14,6 +14,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/dist/replication/replication.codes.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
@@ -27,14 +28,6 @@ namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-
-DEFINE_TASK_CODE(LPC_UPDATE_REPLICA_ROCKSDB_STATISTICS,
-                 TASK_PRIORITY_COMMON,
-                 THREAD_POOL_REPLICATION_LONG)
-
-DEFINE_TASK_CODE(LPC_UPDATE_SERVER_ROCKSDB_STATISTICS,
-                 TASK_PRIORITY_COMMON,
-                 THREAD_POOL_REPLICATION_LONG)
 
 static std::string chkpt_get_dir_name(int64_t decree)
 {
@@ -1574,7 +1567,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
         dinfo("%s: start the update rocksdb statistics timer task", replica_name());
         _update_replica_rdb_stat =
-            ::dsn::tasking::enqueue_timer(LPC_UPDATE_REPLICA_ROCKSDB_STATISTICS,
+            ::dsn::tasking::enqueue_timer(LPC_REPLICATION_LONG_COMMON,
                                           &_tracker,
                                           [this]() { this->update_replica_rocksdb_statistics(); },
                                           _update_rdb_stat_interval);
@@ -1585,7 +1578,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         std::call_once(flag, [&]() {
             // The timer task will always running even though there is no replicas
             _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
-                LPC_UPDATE_SERVER_ROCKSDB_STATISTICS,
+                LPC_REPLICATION_LONG_COMMON,
                 nullptr,              // TODO: the tracker is nullptr, we will fix it later
                 [this]() { update_server_rocksdb_statistics(); },
                 _update_rdb_stat_interval);
