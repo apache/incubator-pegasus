@@ -3603,8 +3603,9 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-struct table_printer
+class table_printer
 {
+public:
     void add_title(const std::string &title)
     {
         dassert_f(matrix_data.empty() && max_col_width.empty(),
@@ -3625,17 +3626,6 @@ struct table_printer
     {
         matrix_data.emplace_back(std::vector<std::string>());
         append_data(row_name);
-    }
-
-    void append_data(const std::string &data)
-    {
-        matrix_data.rbegin()->emplace_back(data);
-
-        // update column max length
-        int &cur_len = max_col_width[matrix_data.rbegin()->size() - 1];
-        if (cur_len < data.size()) {
-            cur_len = data.size();
-        }
     }
 
     void append_data(uint64_t data) { append_data(std::to_string(data)); }
@@ -3667,6 +3657,19 @@ struct table_printer
         }
     }
 
+private:
+    void append_data(const std::string &data)
+    {
+        matrix_data.rbegin()->emplace_back(data);
+
+        // update column max length
+        int &cur_len = max_col_width[matrix_data.rbegin()->size() - 1];
+        if (cur_len < data.size()) {
+            cur_len = data.size();
+        }
+    }
+
+private:
     static const int precision = 2;
     static const int space_width = 2;
     std::vector<int> max_col_width;
