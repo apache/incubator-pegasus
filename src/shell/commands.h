@@ -3764,10 +3764,10 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("expired");
         tp.add_column("filtered");
         tp.add_column("abnormal");
-        tp.add_column("file_size(MB)");
+        tp.add_column("file_mb");
         tp.add_column("file_num");
         tp.add_column("hit_rate");
-        tp.add_column("mem_usage(MB)");
+        tp.add_column("rdb_mem_mb");
     }
 
     for (row_data &row : rows) {
