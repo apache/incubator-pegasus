@@ -2,7 +2,9 @@ FROM ubuntu:16.04
 
 MAINTAINER WU TAO <wutao1@xiaomi.com>
 
-RUN apt-get -y install build-essential cmake libboost-system-dev libboost-filesystem-dev libboost-regex-dev \
+RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/' /etc/apt/sources.list; \
+    apt-get update -y; \
+    apt-get -y install build-essential cmake libboost-system-dev libboost-filesystem-dev libboost-regex-dev \
                        libaio-dev libsnappy-dev libbz2-dev libtool \
                        zlib1g zlib1g.dev patch git curl zip automake libssl-dev;
 
