@@ -26,6 +26,7 @@ static std::map<std::string, std::string> s_brief_stat_map = {
     {"replica*eon.replica_stub*replicas.learning.count", "learning_count"},
     {"replica*app.pegasus*manual.compact.running.count", "manual_compact_running_count"},
     {"replica*app.pegasus*manual.compact.enqueue.count", "manual_compact_enqueue_count"},
+    {"replica*app.pegasus*rdb.block_cache.memory_usage", "rdb_block_cache_memory_usage"},
     {"replica*eon.replica_stub*shared.log.size(MB)", "shared_log_size(MB)"},
     {"replica*server*memused.virt(MB)", "memused_virt(MB)"},
     {"replica*server*memused.res(MB)", "memused_res(MB)"},

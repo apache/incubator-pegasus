@@ -368,40 +368,28 @@ inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
 struct row_data
 {
     std::string row_name;
-    double get_qps;
-    double multi_get_qps;
-    double put_qps;
-    double multi_put_qps;
-    double remove_qps;
-    double multi_remove_qps;
-    double incr_qps;
-    double check_and_set_qps;
-    double check_and_mutate_qps;
-    double scan_qps;
-    double recent_expire_count;
-    double recent_filter_count;
-    double recent_abnormal_count;
-    double storage_mb;
-    double storage_count;
-    row_data()
-        : get_qps(0),
-          multi_get_qps(0),
-          put_qps(0),
-          multi_put_qps(0),
-          remove_qps(0),
-          multi_remove_qps(0),
-          incr_qps(0),
-          check_and_set_qps(0),
-          check_and_mutate_qps(0),
-          scan_qps(0),
-          recent_expire_count(0),
-          recent_filter_count(0),
-          recent_abnormal_count(0),
-          storage_mb(0),
-          storage_count(0)
-    {
-    }
+    double get_qps = 0;
+    double multi_get_qps = 0;
+    double put_qps = 0;
+    double multi_put_qps = 0;
+    double remove_qps = 0;
+    double multi_remove_qps = 0;
+    double incr_qps = 0;
+    double check_and_set_qps = 0;
+    double check_and_mutate_qps = 0;
+    double scan_qps = 0;
+    double recent_expire_count = 0;
+    double recent_filter_count = 0;
+    double recent_abnormal_count = 0;
+    double storage_mb = 0;
+    double storage_count = 0;
+    double rdb_block_cache_hit_count = 0;
+    double rdb_block_cache_total_count = 0;
+    double rdb_block_cache_mem_usage = 0;
+    double rdb_index_and_filter_blocks_mem_usage = 0;
+    double rdb_memtable_mem_usage = 0;
 };
+
 inline bool
 update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, double value)
 {
@@ -435,6 +423,16 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.storage_mb += value;
     else if (counter_name == "disk.storage.sst.count")
         row.storage_count += value;
+    else if (counter_name == "rdb.block_cache.hit_count")
+        row.rdb_block_cache_hit_count += value;
+    else if (counter_name == "rdb.block_cache.total_count")
+        row.rdb_block_cache_total_count += value;
+    else if (counter_name == "rdb.block_cache.memory_usage")
+        row.rdb_block_cache_mem_usage += value;
+    else if (counter_name == "rdb.index_and_filter_blocks.memory_usage")
+        row.rdb_index_and_filter_blocks_mem_usage += value;
+    else if (counter_name == "rdb.memtable.memory_usage")
+        row.rdb_memtable_mem_usage += value;
     else
         return false;
     return true;
