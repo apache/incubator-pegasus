@@ -727,8 +727,6 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             it->Seek(start);
             bool first_exclusive = !start_inclusive;
             while (count < max_kv_count && size < max_kv_size && it->Valid()) {
-                iterate_count++;
-
                 // check stop sort key
                 int c = it->key().compare(stop);
                 if (c > 0 || (c == 0 && !stop_inclusive)) {
@@ -746,6 +744,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                         continue;
                     }
                 }
+
+                iterate_count++;
 
                 // extract value
                 int r = append_key_value_for_multi_get(resp.kvs,
@@ -778,8 +778,6 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             bool first_exclusive = !stop_inclusive;
             std::vector<::dsn::apps::key_value> reverse_kvs;
             while (count < max_kv_count && size < max_kv_size && it->Valid()) {
-                iterate_count++;
-
                 // check start sort key
                 int c = it->key().compare(start);
                 if (c < 0 || (c == 0 && !start_inclusive)) {
@@ -797,6 +795,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                         continue;
                     }
                 }
+
+                iterate_count++;
 
                 // extract value
                 int r = append_key_value_for_multi_get(reverse_kvs,
