@@ -2565,8 +2565,8 @@ static void print_current_scan_state(const std::vector<scan_data_context *> &con
     if (stat_size) {
         print_simple_histogram("hash_key_size", hash_key_size_histogram);
         print_simple_histogram("sort_key_size", sort_key_size_histogram);
-        print_simple_histogram("value_key_size", value_size_histogram);
-        print_simple_histogram("row_key_size", row_size_histogram);
+        print_simple_histogram("value_size", value_size_histogram);
+        print_simple_histogram("row_size", row_size_histogram);
     }
 }
 
