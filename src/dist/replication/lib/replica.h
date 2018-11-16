@@ -236,6 +236,7 @@ private:
 
     // return false when update fails or replica is going to be closed
     bool update_app_envs(const std::map<std::string, std::string> &envs);
+    void update_app_envs_internal(const std::map<std::string, std::string> &envs);
     bool query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
     bool update_configuration(const partition_configuration &config);
     bool update_local_configuration(const replica_configuration &config, bool same_ballot = false);
@@ -376,6 +377,7 @@ private:
 
     bool _inactive_is_transient; // upgrade to P/S is allowed only iff true
     bool _is_initializing;       // when initializing, switching to primary need to update ballot
+    volatile bool _deny_client_write = false;
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;

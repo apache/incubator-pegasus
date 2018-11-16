@@ -149,6 +149,12 @@ public:
     static const std::string SKIP_BAD_PARTITION;
 };
 
+class replica_envs
+{
+public:
+    static const std::string DENY_CLIENT_WRITE;
+};
+
 namespace cold_backup {
 //
 //  Attention: when compose the path on block service, we use appname_appid, because appname_appid
