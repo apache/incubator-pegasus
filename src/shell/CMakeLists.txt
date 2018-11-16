@@ -10,9 +10,13 @@ set(MY_PROJ_SRC "linenoise/linenoise.c" "sds/sds.c")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../include" "../base" "../../rocksdb")
+set(MY_PROJ_INC_PATH
+    "${PEGASUS_PROJECT_DIR}/src/include"
+    "${PEGASUS_PROJECT_DIR}/src/base"
+    "${PEGASUS_PROJECT_DIR}/rocksdb")
 
-set(MY_PROJ_LIB_PATH "../../rocksdb/build")
+set(MY_PROJ_LIB_PATH
+    "${PEGASUS_PROJECT_DIR}/rocksdb/build")
 
 set(MY_PROJ_LIBS
     dsn.replication.tool
