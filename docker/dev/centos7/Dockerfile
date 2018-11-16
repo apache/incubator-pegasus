@@ -12,7 +12,7 @@ FROM centos:7
 MAINTAINER Wu Tao <wutao1@xiaomi.com>
 
 RUN yum -y install gcc gcc-c++ automake autoconf libtool make cmake git file wget unzip python-devel which && \
-    yum -y install openssl-devel boost-devel libaio-devel snappy-devel bzip2-devel readline-devel zlib zlib-devel patch
+    yum -y install openssl-devel boost-devel libaio-devel snappy-devel bzip2-devel zlib zlib-devel patch
 
 RUN git clone --recursive https://github.com/XiaoMi/pegasus.git /pegasus
 
