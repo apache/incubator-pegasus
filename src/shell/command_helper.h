@@ -13,6 +13,8 @@
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>
+#include <rocksdb/env.h>
+#include <monitoring/histogram.h>
 #include <dsn/dist/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
@@ -107,13 +109,10 @@ struct scan_data_context
     std::atomic_long split_request_count;
     std::atomic_bool split_completed;
     bool stat_size;
-    std::atomic_long hash_key_size_sum;
-    std::atomic_long hash_key_size_max;
-    std::atomic_long sort_key_size_sum;
-    std::atomic_long sort_key_size_max;
-    std::atomic_long value_size_sum;
-    std::atomic_long value_size_max;
-    std::atomic_long row_size_max;
+    rocksdb::HistogramImpl hash_key_size_histogram;
+    rocksdb::HistogramImpl sort_key_size_histogram;
+    rocksdb::HistogramImpl value_size_histogram;
+    rocksdb::HistogramImpl row_size_histogram;
     int top_count;
     top_container top_rows;
     scan_data_context(scan_data_operator op_,
@@ -138,13 +137,6 @@ struct scan_data_context
           split_request_count(0),
           split_completed(false),
           stat_size(stat_size_),
-          hash_key_size_sum(0),
-          hash_key_size_max(0),
-          sort_key_size_sum(0),
-          sort_key_size_max(0),
-          value_size_sum(0),
-          value_size_max(0),
-          row_size_max(0),
           top_count(top_count_),
           top_rows(top_count_)
     {
@@ -224,16 +216,17 @@ inline void scan_data_next(scan_data_context *context)
                     context->split_rows++;
                     if (context->stat_size) {
                         long hash_key_size = hash_key.size();
-                        context->hash_key_size_sum += hash_key_size;
-                        update_atomic_max(context->hash_key_size_max, hash_key_size);
+                        context->hash_key_size_histogram.Add(hash_key_size);
+
                         long sort_key_size = sort_key.size();
-                        context->sort_key_size_sum += sort_key_size;
-                        update_atomic_max(context->sort_key_size_max, sort_key_size);
+                        context->sort_key_size_histogram.Add(sort_key_size);
+
                         long value_size = value.size();
-                        context->value_size_sum += value_size;
-                        update_atomic_max(context->value_size_max, value_size);
+                        context->value_size_histogram.Add(value_size);
+
                         long row_size = hash_key_size + sort_key_size + value_size;
-                        update_atomic_max(context->row_size_max, row_size);
+                        context->row_size_histogram.Add(row_size);
+
                         if (context->top_count > 0) {
                             context->top_rows.push(
                                 std::move(hash_key), std::move(sort_key), row_size);
