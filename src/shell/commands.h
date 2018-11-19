@@ -2530,6 +2530,46 @@ inline bool clear_data(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+static void print_simple_histogram(const std::string &name, const rocksdb::HistogramImpl &histogram)
+{
+    fprintf(stderr, "[%s]\n", name.c_str());
+    fprintf(stderr, "    max = %ld\n", histogram.max());
+    fprintf(stderr, "    med = %.2f\n", histogram.Median());
+    fprintf(stderr, "    avg = %.2f\n", histogram.Average());
+    fprintf(stderr, "    min = %ld\n", histogram.min());
+    fprintf(stderr, "    P99 = %.2f\n", histogram.Percentile(99.0));
+    fprintf(stderr, "    P95 = %.2f\n", histogram.Percentile(95.0));
+    fprintf(stderr, "    P90 = %.2f\n", histogram.Percentile(90.0));
+}
+
+static void print_current_scan_state(const std::vector<scan_data_context *> &contexts,
+                                     const std::string &stop_desc,
+                                     bool stat_size)
+{
+    rocksdb::HistogramImpl hash_key_size_histogram;
+    rocksdb::HistogramImpl sort_key_size_histogram;
+    rocksdb::HistogramImpl value_size_histogram;
+    rocksdb::HistogramImpl row_size_histogram;
+    for (const auto &context : contexts) {
+        hash_key_size_histogram.Merge(context->hash_key_size_histogram);
+        sort_key_size_histogram.Merge(context->sort_key_size_histogram);
+        value_size_histogram.Merge(context->value_size_histogram);
+        row_size_histogram.Merge(context->row_size_histogram);
+        fprintf(stderr,
+                "INFO: split[%d]: %ld rows\n",
+                context->split_id,
+                context->row_size_histogram.num());
+    }
+    fprintf(stderr, "Count %s, total %ld rows.\n\n", stop_desc.c_str(), row_size_histogram.num());
+
+    if (stat_size) {
+        print_simple_histogram("hash_key_size", hash_key_size_histogram);
+        print_simple_histogram("sort_key_size", sort_key_size_histogram);
+        print_simple_histogram("value_size", value_size_histogram);
+        print_simple_histogram("row_size", row_size_histogram);
+    }
+}
+
 inline bool count_data(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"max_split_count", required_argument, 0, 's'},
@@ -2702,46 +2742,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
             break;
         last_total_rows = cur_total_rows;
         if (stat_size && sleep_seconds % 10 == 0) {
-            long total_rows = 0;
-            long hash_key_size_sum = 0;
-            long hash_key_size_max = 0;
-            long sort_key_size_sum = 0;
-            long sort_key_size_max = 0;
-            long value_size_sum = 0;
-            long value_size_max = 0;
-            long row_size_max = 0;
-            for (int i = 0; i < scanners.size(); i++) {
-                total_rows += contexts[i]->split_rows.load();
-                hash_key_size_sum += contexts[i]->hash_key_size_sum.load();
-                hash_key_size_max =
-                    std::max(contexts[i]->hash_key_size_max.load(), hash_key_size_max);
-                sort_key_size_sum += contexts[i]->sort_key_size_sum.load();
-                sort_key_size_max =
-                    std::max(contexts[i]->sort_key_size_max.load(), sort_key_size_max);
-                value_size_sum += contexts[i]->value_size_sum.load();
-                value_size_max = std::max(contexts[i]->value_size_max.load(), value_size_max);
-                row_size_max = std::max(contexts[i]->row_size_max.load(), row_size_max);
-            }
-            long row_size_sum = hash_key_size_sum + sort_key_size_sum + value_size_sum;
-            double hash_key_size_avg =
-                total_rows == 0 ? 0.0 : (double)hash_key_size_sum / total_rows;
-            double sort_key_size_avg =
-                total_rows == 0 ? 0.0 : (double)sort_key_size_sum / total_rows;
-            double value_size_avg = total_rows == 0 ? 0.0 : (double)value_size_sum / total_rows;
-            double row_size_avg = total_rows == 0 ? 0.0 : (double)row_size_sum / total_rows;
-            fprintf(stderr, "[row].count = %ld\n", total_rows);
-            fprintf(stderr, "[hash_key].size_sum = %ld\n", hash_key_size_sum);
-            fprintf(stderr, "[hash_key].size_max = %ld\n", hash_key_size_max);
-            fprintf(stderr, "[hash_key].size_avg = %.2f\n", hash_key_size_avg);
-            fprintf(stderr, "[sort_key].size_sum = %ld\n", sort_key_size_sum);
-            fprintf(stderr, "[sort_key].size_max = %ld\n", sort_key_size_max);
-            fprintf(stderr, "[sort_key].size_avg = %.2f\n", sort_key_size_avg);
-            fprintf(stderr, "[value].size_sum = %ld\n", value_size_sum);
-            fprintf(stderr, "[value].size_max = %ld\n", value_size_max);
-            fprintf(stderr, "[value].size_avg = %.2f\n", value_size_avg);
-            fprintf(stderr, "[row].size_sum = %ld\n", row_size_sum);
-            fprintf(stderr, "[row].size_max = %ld\n", row_size_max);
-            fprintf(stderr, "[row].size_avg = %.2f\n", row_size_avg);
+            print_current_scan_state(contexts, "partially", stat_size);
         }
     }
 
@@ -2750,28 +2751,6 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
             fprintf(stderr, "INFO: reached run seconds, terminate processing\n");
         } else {
             fprintf(stderr, "ERROR: error occurred, terminate processing\n");
-        }
-    }
-
-    long total_rows = 0;
-    long hash_key_size_sum = 0;
-    long hash_key_size_max = 0;
-    long sort_key_size_sum = 0;
-    long sort_key_size_max = 0;
-    long value_size_sum = 0;
-    long value_size_max = 0;
-    long row_size_max = 0;
-    for (int i = 0; i < scanners.size(); i++) {
-        fprintf(stderr, "INFO: split[%d]: %ld rows\n", i, contexts[i]->split_rows.load());
-        total_rows += contexts[i]->split_rows.load();
-        if (stat_size) {
-            hash_key_size_sum += contexts[i]->hash_key_size_sum.load();
-            hash_key_size_max = std::max(contexts[i]->hash_key_size_max.load(), hash_key_size_max);
-            sort_key_size_sum += contexts[i]->sort_key_size_sum.load();
-            sort_key_size_max = std::max(contexts[i]->sort_key_size_max.load(), sort_key_size_max);
-            value_size_sum += contexts[i]->value_size_sum.load();
-            value_size_max = std::max(contexts[i]->value_size_max.load(), value_size_max);
-            row_size_max = std::max(contexts[i]->row_size_max.load(), row_size_max);
         }
     }
 
@@ -2785,26 +2764,10 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     } else {
         stop_desc = "done";
     }
-    fprintf(stderr, "\nCount %s, total %ld rows.\n", stop_desc.c_str(), total_rows);
+
+    print_current_scan_state(contexts, stop_desc, stat_size);
 
     if (stat_size) {
-        long row_size_sum = hash_key_size_sum + sort_key_size_sum + value_size_sum;
-        double hash_key_size_avg = total_rows == 0 ? 0.0 : (double)hash_key_size_sum / total_rows;
-        double sort_key_size_avg = total_rows == 0 ? 0.0 : (double)sort_key_size_sum / total_rows;
-        double value_size_avg = total_rows == 0 ? 0.0 : (double)value_size_sum / total_rows;
-        double row_size_avg = total_rows == 0 ? 0.0 : (double)row_size_sum / total_rows;
-        fprintf(stderr, "[hash_key].size_sum = %ld\n", hash_key_size_sum);
-        fprintf(stderr, "[hash_key].size_max = %ld\n", hash_key_size_max);
-        fprintf(stderr, "[hash_key].size_avg = %.2f\n", hash_key_size_avg);
-        fprintf(stderr, "[sort_key].size_sum = %ld\n", sort_key_size_sum);
-        fprintf(stderr, "[sort_key].size_max = %ld\n", sort_key_size_max);
-        fprintf(stderr, "[sort_key].size_avg = %.2f\n", sort_key_size_avg);
-        fprintf(stderr, "[value].size_sum = %ld\n", value_size_sum);
-        fprintf(stderr, "[value].size_max = %ld\n", value_size_max);
-        fprintf(stderr, "[value].size_avg = %.2f\n", value_size_avg);
-        fprintf(stderr, "[row].size_sum = %ld\n", row_size_sum);
-        fprintf(stderr, "[row].size_max = %ld\n", row_size_max);
-        fprintf(stderr, "[row].size_avg = %.2f\n", row_size_avg);
         if (top_count > 0) {
             top_container::top_heap heap;
             for (int i = 0; i < scanners.size(); i++) {

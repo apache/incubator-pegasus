@@ -10,7 +10,13 @@ set(MY_PROJ_SRC "linenoise/linenoise.c" "sds/sds.c")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../include" "../base")
+set(MY_PROJ_INC_PATH
+    "${PEGASUS_PROJECT_DIR}/src/include"
+    "${PEGASUS_PROJECT_DIR}/src/base"
+    "${PEGASUS_PROJECT_DIR}/rocksdb")
+
+set(MY_PROJ_LIB_PATH
+    "${PEGASUS_PROJECT_DIR}/rocksdb/build")
 
 set(MY_PROJ_LIBS
     dsn.replication.tool
@@ -31,24 +37,20 @@ set(MY_PROJ_LIBS
     fmt
     pegasus_geo_lib
     s2
-    )
-
-if (UNIX)
-    set(MY_PROJ_LIBS rocksdb ${MY_PROJ_LIBS} z bz2 snappy rt aio pthread)
-else()
-    set(MY_PROJ_LIBS rocksdblib ${MY_PROJ_LIBS} rpcrt4)
-endif()
-
-set(MY_PROJ_LIB_PATH "../../rocksdb/build")
+    rocksdb
+    z
+    bz2
+    snappy
+    rt
+    aio
+    pthread)
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
 set(MY_BOOST_PACKAGES system filesystem)
 
-if (UNIX)
-    SET(CMAKE_INSTALL_RPATH ".")
-    SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-endif()
+SET(CMAKE_INSTALL_RPATH ".")
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 add_definitions(-Wno-attributes)
 
