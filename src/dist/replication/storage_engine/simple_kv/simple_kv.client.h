@@ -8,14 +8,14 @@
 namespace dsn {
 namespace replication {
 namespace application {
-class simple_kv_client2
+class simple_kv_client
 {
 public:
-    simple_kv_client2(::dsn::rpc_address server) { _server = server; }
+    simple_kv_client(::dsn::rpc_address server) { _server = server; }
 
-    simple_kv_client2() {}
+    simple_kv_client() {}
 
-    virtual ~simple_kv_client2() {}
+    virtual ~simple_kv_client() {}
 
     // ---------- call RPC_SIMPLE_KV_SIMPLE_KV_READ ------------
     // - synchronous

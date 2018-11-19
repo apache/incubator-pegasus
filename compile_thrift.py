@@ -79,7 +79,7 @@ thrift_description = [
     },
     {
         "name": "simple_kv",
-        "path": "src/apps/skv"
+        "path": "src/dist/replication/storage_engine/simple_kv"
     },
     {
         "name": "cli",

@@ -34,7 +34,7 @@
  */
 
 #pragma once
-#include "simple_kv.client.2.h"
+#include "simple_kv.client.h"
 #include "simple_kv.server.h"
 
 #define TRANSPARENT_LAYER2_CLIENT
@@ -57,7 +57,7 @@ public:
 
         // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
         _server.assign_uri(args[1].c_str());
-        _simple_kv_client.reset(new simple_kv_client2(_server));
+        _simple_kv_client.reset(new simple_kv_client(_server));
 
         _timer = ::dsn::tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER,
                                                &_tracker,
@@ -123,7 +123,7 @@ public:
 private:
     ::dsn::task_ptr _timer;
     ::dsn::rpc_address _server;
-    std::unique_ptr<simple_kv_client2> _simple_kv_client;
+    std::unique_ptr<simple_kv_client> _simple_kv_client;
     dsn::task_tracker _tracker;
 };
 }

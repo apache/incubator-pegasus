@@ -22,7 +22,6 @@ file(GLOB
     RES_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/*.ini"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.sh"
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.cmd"
     )
 
 # Extra files that will be installed
