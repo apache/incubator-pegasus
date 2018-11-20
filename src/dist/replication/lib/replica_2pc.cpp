@@ -163,6 +163,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation)
                 "invalid log offset, offset = %" PRId64,
                 mu->data.header.log_offset);
         dassert(mu->log_task() == nullptr, "");
+        int64_t pending_size;
         mu->log_task() = _stub->_log->append(mu,
                                              LPC_WRITE_REPLICATION_LOG,
                                              &_tracker,
@@ -171,8 +172,23 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation)
                                                        mu,
                                                        std::placeholders::_1,
                                                        std::placeholders::_2),
-                                             get_gpid().thread_hash());
+                                             get_gpid().thread_hash(),
+                                             &pending_size);
         dassert(nullptr != mu->log_task(), "");
+        if (_options->log_shared_pending_size_throttling_threshold_kb > 0 &&
+            _options->log_shared_pending_size_throttling_delay_ms > 0 &&
+            pending_size >= _options->log_shared_pending_size_throttling_threshold_kb * 1024) {
+            int delay_ms = _options->log_shared_pending_size_throttling_delay_ms;
+            for (dsn::message_ex *r : mu->client_requests) {
+                if (r && r->io_session->delay_recv(delay_ms)) {
+                    dwarn("too large pending shared log (%" PRId64 "), "
+                          "delay traffic from %s for %d milliseconds",
+                          pending_size,
+                          r->header->from_address.to_string(),
+                          delay_ms);
+                }
+            }
+        }
     }
 
     _primary_states.last_prepare_ts_ms = mu->prepare_ts_ms();
