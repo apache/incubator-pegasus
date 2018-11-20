@@ -208,6 +208,11 @@ function(dsn_setup_compiler_flags)
     # We want access to the PRI* print format macros.
     add_definitions(-D__STDC_FORMAT_MACROS)
 
+    # -fno-omit-frame-pointer
+    #   use frame pointers to allow simple stack frame walking for backtraces.
+    #   This has a small perf hit but worth it for the ability to profile in production
+    add_definitions(-fno-omit-frame-pointer)
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y" CACHE STRING "" FORCE)
 
     #  -Wall: Enable all warnings.
