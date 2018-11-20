@@ -170,10 +170,10 @@
       "timespan": 86400
     },
     {
-      "title": "SST文件个数（统计各表的单备份数据sstable文件个数）",
-      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
+      "title": "各节点SharedLog大小（单位：MB）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
-          "collector*app.pegasus*app.stat.storage_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+          "replica*eon.replica_stub*shared.log.size(MB)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -190,10 +190,10 @@
       "timespan": 86400
     },
     {
-      "title": "各节点SharedLog大小（单位：MB）",
+      "title": "各节点SharedLog最近写入字节数",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
-          "replica*eon.replica_stub*shared.log.size(MB)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+          "replica*eon.replica_stub*shared.log.recent.write.size/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
