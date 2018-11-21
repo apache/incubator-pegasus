@@ -15,6 +15,8 @@
 namespace pegasus {
 namespace server {
 
+using namespace dsn::literals::chrono_literals;
+
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool verbose_log)
     : replica_base(*server),
       _write_svc(new pegasus_write_service(server)),
@@ -90,7 +92,8 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
 
     auto cleanup = dsn::defer([this]() {
         uint64_t latency_us =
-            _write_ctx.timestamp - extract_timestamp_from_timetag(_write_ctx.remote_timetag);
+            dsn_now_us() - extract_timestamp_from_timetag(_write_ctx.remote_timetag);
+        _TEST_last_duplicate_latency = latency_us * 1_us;
         _total_duplicate_latency->set(static_cast<int64_t>(latency_us * 1000));
     });
 

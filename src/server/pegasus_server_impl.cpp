@@ -1579,7 +1579,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             // The timer task will always running even though there is no replicas
             _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
                 LPC_REPLICATION_LONG_COMMON,
-                nullptr,              // TODO: the tracker is nullptr, we will fix it later
+                nullptr, // TODO: the tracker is nullptr, we will fix it later
                 [this]() { update_server_rocksdb_statistics(); },
                 _update_rdb_stat_interval);
         });

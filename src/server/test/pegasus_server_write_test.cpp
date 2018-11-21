@@ -14,6 +14,8 @@
 namespace pegasus {
 namespace server {
 
+using namespace dsn::literals::chrono_literals;
+
 class pegasus_server_write_test : public pegasus_server_test_base
 {
     std::unique_ptr<pegasus_server_write> _server_write;
@@ -111,7 +113,7 @@ public:
                 mput.kvs.back().key.assign(sort_key[i].data(), 0, sort_key[i].size());
                 mput.kvs.back().value.assign(value[i].data(), 0, value[i].size());
             }
-            dsn::message_ex* mput_msg = pegasus::create_multi_put_request(mput);
+            dsn::message_ex *mput_msg = pegasus::create_multi_put_request(mput);
 
             duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_PUT;
             duplicate.raw_message = dsn::move_message_to_blob(mput_msg);
@@ -126,7 +128,7 @@ public:
                 mremove.sort_keys.emplace_back();
                 mremove.sort_keys.back().assign(sort_key[i].data(), 0, sort_key[i].size());
             }
-            dsn::message_ex* mremove_msg = pegasus::create_multi_remove_request(mremove);
+            dsn::message_ex *mremove_msg = pegasus::create_multi_remove_request(mremove);
 
             duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
             duplicate.raw_message = dsn::move_message_to_blob(mremove_msg);
@@ -167,6 +169,28 @@ public:
         }
     }
 
+    void test_total_duplicate_latency()
+    {
+        std::string hash_key = "hash_key";
+        std::string sort_key = "sort_key";
+        std::string value = "value";
+
+        dsn::apps::duplicate_request duplicate;
+        duplicate.timetag = pegasus::generate_timetag(10, 0, 0);
+        dsn::apps::duplicate_response resp;
+
+        dsn::apps::update_request request;
+        pegasus::pegasus_generate_key(request.key, hash_key, sort_key);
+        request.value.assign(value.data(), 0, value.size());
+
+        duplicate.raw_message = dsn::move_message_to_blob(pegasus::create_put_request(request));
+        duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+        _server_write->on_duplicate(duplicate, resp);
+        ASSERT_EQ(resp.error, 0);
+
+        ASSERT_EQ(_server_write->_TEST_last_duplicate_latency, dsn_now_us() * 1_us - 10_us);
+    }
+
     void verify_response(const dsn::apps::update_response &response, int err, int64_t decree)
     {
         ASSERT_EQ(response.error, err);
@@ -182,6 +206,8 @@ TEST_F(pegasus_server_write_test, batch_writes) { test_batch_writes(); }
 TEST_F(pegasus_server_write_test, duplicate_not_batched) { test_duplicate_not_batched(); }
 
 TEST_F(pegasus_server_write_test, duplicate_batched) { test_duplicate_batched(); }
+
+TEST_F(pegasus_server_write_test, total_duplicate_latency) { test_total_duplicate_latency(); }
 
 } // namespace server
 } // namespace pegasus

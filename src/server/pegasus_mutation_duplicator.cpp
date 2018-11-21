@@ -124,7 +124,8 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
             _duplicate_latency->set(dsn_now_ns() - start);
         } else {
             _duplicate_failed_qps->increment();
-            derror_replica("failed to ship mutation: {}, remote: {}", err, _remote_cluster);
+            derror_replica(
+                "failed to ship mutation: {}, remote: {}", err.to_string(), _remote_cluster);
         }
 
         {
@@ -133,6 +134,7 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
                 // retry this rpc
                 _inflights[hash].push_front(rpc);
                 schedule_task([hash, cb, this]() { send(hash, cb); }, 1_s);
+                return;
             }
             if (_inflights[hash].empty()) {
                 _inflights.erase(hash);
@@ -142,6 +144,7 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
             } else {
                 // start next rpc immediately
                 schedule_task([hash, cb, this]() { send(hash, cb); });
+                return;
             }
         }
     });
