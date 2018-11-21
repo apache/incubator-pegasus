@@ -41,6 +41,9 @@ link_directories(${PEGASUS_ROOT}/lib)
 set(CMAKE_INSTALL_PREFIX ${PEGASUS_ROOT} CACHE STRING "" FORCE)
 message (STATUS "pegasus Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
 
+# rocksdb
+set(ROCKSDB_LINK_LIBRARIES rocksdb lz4 zstd snappy)
+
 add_subdirectory(base)
 add_subdirectory(reporter)
 add_subdirectory(base/test)

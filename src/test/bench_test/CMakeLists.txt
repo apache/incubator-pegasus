@@ -16,10 +16,8 @@ set(MY_PROJ_LIB_PATH "../../../rocksdb/build")
 
 set(MY_PROJ_LIBS
         pegasus_client_static
-        rocksdb
+        ${ROCKSDB_LINK_LIBRARIES}
         z
-        bz2
-        snappy
         gflags)
 
 set(MY_BOOST_PACKAGES system filesystem)
