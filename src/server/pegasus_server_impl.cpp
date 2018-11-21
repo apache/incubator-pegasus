@@ -193,7 +193,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     } else {
         dassert("unsupported compression type: %s", compression_str.c_str());
     }
-
     if (_db_opts.compression != rocksdb::kNoCompression) {
         // only compress levels >= 2
         // refer to ColumnFamilyOptions::OptimizeLevelStyleCompaction()
