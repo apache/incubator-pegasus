@@ -97,6 +97,11 @@ void info_collector::on_app_stat()
             all.recent_abnormal_count += row.recent_abnormal_count;
             all.storage_mb += row.storage_mb;
             all.storage_count += row.storage_count;
+            all.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
+            all.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
+            all.rdb_block_cache_mem_usage += row.rdb_block_cache_mem_usage;
+            all.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
+            all.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
             read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
             write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
                            row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps;
@@ -123,6 +128,12 @@ void info_collector::on_app_stat()
             counters->recent_abnormal_count->set(row.recent_abnormal_count);
             counters->storage_mb->set(row.storage_mb);
             counters->storage_count->set(row.storage_count);
+            counters->rdb_block_cache_hit_rate->set(row.rdb_block_cache_hit_count /
+                                                    row.rdb_block_cache_total_count);
+            counters->rdb_block_cache_mem_usage->set(row.rdb_block_cache_mem_usage);
+            counters->rdb_index_and_filter_blocks_mem_usage->set(
+                row.rdb_index_and_filter_blocks_mem_usage);
+            counters->rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
             counters->read_qps->set(read_qps[i]);
             counters->write_qps->set(write_qps[i]);
         }
@@ -166,6 +177,10 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNER(recent_abnormal_count);
     INIT_COUNER(storage_mb);
     INIT_COUNER(storage_count);
+    INIT_COUNER(rdb_block_cache_hit_rate);
+    INIT_COUNER(rdb_block_cache_mem_usage);
+    INIT_COUNER(rdb_index_and_filter_blocks_mem_usage);
+    INIT_COUNER(rdb_memtable_mem_usage);
     INIT_COUNER(read_qps);
     INIT_COUNER(write_qps);
     _app_stat_counters[app_name] = counters;

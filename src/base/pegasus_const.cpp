@@ -53,4 +53,9 @@ const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY("bottommost_lev
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
 
+/// default ttl for items in a table. If ttl is not set for
+///   * a new writen item, 'default_ttl' will be applied on this item.
+///   * an exist item, 'default_ttl' will be applied on this item when it was compacted.
+/// <= 0 means no effect
+const std::string TABLE_LEVEL_DEFAULT_TTL("default_ttl");
 } // namespace pegasus

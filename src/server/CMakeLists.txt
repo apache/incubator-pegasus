@@ -9,7 +9,11 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "")
+set(MY_PROJ_INC_PATH
+    "${PEGASUS_PROJECT_DIR}/rocksdb")
+
+set(MY_PROJ_LIB_PATH
+    "${PEGASUS_PROJECT_DIR}/rocksdb/build")
 
 set(MY_PROJ_LIBS
     dsn_replica_server
@@ -32,15 +36,13 @@ set(MY_PROJ_LIBS
     PocoJSON
     crypto
     fmt
-    )
-
-if (UNIX)
-    set(MY_PROJ_LIBS rocksdb ${MY_PROJ_LIBS} z bz2 snappy rt aio pthread)
-else()
-    set(MY_PROJ_LIBS rocksdblib ${MY_PROJ_LIBS} rpcrt4)
-endif()
-
-set(MY_PROJ_LIB_PATH "../../rocksdb/build")
+    rocksdb
+    z
+    bz2
+    snappy
+    rt
+    aio
+    pthread)
 
 set(MY_BOOST_PACKAGES system filesystem)
 
@@ -48,10 +50,8 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
 add_definitions(-Wno-attributes)
 
-if (UNIX)
-    SET(CMAKE_INSTALL_RPATH ".")
-    SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-endif()
+SET(CMAKE_INSTALL_RPATH ".")
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 dsn_add_executable()
 dsn_install_executable()

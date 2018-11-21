@@ -202,6 +202,8 @@ void pegasus_write_service::batch_abort(int64_t decree, int err)
     clear_up_batch_states();
 }
 
+void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_ttl(ttl); }
+
 void pegasus_write_service::clear_up_batch_states()
 {
     uint64_t latency = dsn_now_ns() - _batch_start_time;

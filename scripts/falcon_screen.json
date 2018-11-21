@@ -170,10 +170,10 @@
       "timespan": 86400
     },
     {
-      "title": "SST文件个数（统计各表的单备份数据sstable文件个数）",
-      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
+      "title": "各节点SharedLog大小（单位：MB）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
-          "collector*app.pegasus*app.stat.storage_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+          "replica*eon.replica_stub*shared.log.size(MB)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -190,10 +190,10 @@
       "timespan": 86400
     },
     {
-      "title": "各节点SharedLog大小（单位：MB）",
+      "title": "各节点SharedLog最近写入字节数",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
-          "replica*eon.replica_stub*shared.log.size(MB)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+          "replica*eon.replica_stub*shared.log.recent.write.size/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -324,6 +324,76 @@
       "timespan": 86400
     },
     {
+      "title": "CPU Load (1min)",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "load.1min"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "CPU Load (5min)",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "load.5min"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "CPU Load (15min)",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "load.15min"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "Memory Used Percent",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "mem.memused.percent"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "Network In Bytes",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "net.if.in.bytes/iface=eth0"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "Network Out Bytes",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "net.if.out.bytes/iface=eth0"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "Network Dropped",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "net.if.total.dropped/iface=eth0"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "SSD Util",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
@@ -338,7 +408,17 @@
           "disk.io.util/device=sdj",
           "disk.io.util/device=sdk",
           "disk.io.util/device=sdl",
-          "disk.io.util/device=sdm"
+          "disk.io.util/device=sdm",
+          "disk.io.util/device=vda",
+          "disk.io.util/device=vdb",
+          "disk.io.util/device=vdc",
+          "disk.io.util/device=vdd",
+          "disk.io.util/device=vde",
+          "disk.io.util/device=xvda",
+          "disk.io.util/device=xvdb",
+          "disk.io.util/device=xvdc",
+          "disk.io.util/device=xvdd",
+          "disk.io.util/device=xvde"
       ],
       "graph_type": "a",
       "method": "",
@@ -359,7 +439,39 @@
           "disk.io.await/device=sdj",
           "disk.io.await/device=sdk",
           "disk.io.await/device=sdl",
-          "disk.io.await/device=sdm"
+          "disk.io.await/device=sdm",
+          "disk.io.await/device=vda",
+          "disk.io.await/device=vdb",
+          "disk.io.await/device=vdc",
+          "disk.io.await/device=vdd",
+          "disk.io.await/device=vde",
+          "disk.io.await/device=xvda",
+          "disk.io.await/device=xvdb",
+          "disk.io.await/device=xvdc",
+          "disk.io.await/device=xvdd",
+          "disk.io.await/device=xvde"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "磁盘用量",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "df.bytes.used.percent/fstype=ext4,mount=/home",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd1",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd2",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd3",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd4",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd5",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd6",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd7",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd8",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd9",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd10",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd11",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd12"
       ],
       "graph_type": "a",
       "method": "",

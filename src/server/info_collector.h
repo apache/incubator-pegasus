@@ -43,6 +43,10 @@ public:
         ::dsn::perf_counter_wrapper recent_abnormal_count;
         ::dsn::perf_counter_wrapper storage_mb;
         ::dsn::perf_counter_wrapper storage_count;
+        ::dsn::perf_counter_wrapper rdb_block_cache_hit_rate;
+        ::dsn::perf_counter_wrapper rdb_block_cache_mem_usage;
+        ::dsn::perf_counter_wrapper rdb_index_and_filter_blocks_mem_usage;
+        ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
     };

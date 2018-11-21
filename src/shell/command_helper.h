@@ -13,6 +13,8 @@
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>
+#include <rocksdb/env.h>
+#include <monitoring/histogram.h>
 #include <dsn/dist/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
@@ -107,13 +109,10 @@ struct scan_data_context
     std::atomic_long split_request_count;
     std::atomic_bool split_completed;
     bool stat_size;
-    std::atomic_long hash_key_size_sum;
-    std::atomic_long hash_key_size_max;
-    std::atomic_long sort_key_size_sum;
-    std::atomic_long sort_key_size_max;
-    std::atomic_long value_size_sum;
-    std::atomic_long value_size_max;
-    std::atomic_long row_size_max;
+    rocksdb::HistogramImpl hash_key_size_histogram;
+    rocksdb::HistogramImpl sort_key_size_histogram;
+    rocksdb::HistogramImpl value_size_histogram;
+    rocksdb::HistogramImpl row_size_histogram;
     int top_count;
     top_container top_rows;
     scan_data_context(scan_data_operator op_,
@@ -138,13 +137,6 @@ struct scan_data_context
           split_request_count(0),
           split_completed(false),
           stat_size(stat_size_),
-          hash_key_size_sum(0),
-          hash_key_size_max(0),
-          sort_key_size_sum(0),
-          sort_key_size_max(0),
-          value_size_sum(0),
-          value_size_max(0),
-          row_size_max(0),
           top_count(top_count_),
           top_rows(top_count_)
     {
@@ -224,16 +216,17 @@ inline void scan_data_next(scan_data_context *context)
                     context->split_rows++;
                     if (context->stat_size) {
                         long hash_key_size = hash_key.size();
-                        context->hash_key_size_sum += hash_key_size;
-                        update_atomic_max(context->hash_key_size_max, hash_key_size);
+                        context->hash_key_size_histogram.Add(hash_key_size);
+
                         long sort_key_size = sort_key.size();
-                        context->sort_key_size_sum += sort_key_size;
-                        update_atomic_max(context->sort_key_size_max, sort_key_size);
+                        context->sort_key_size_histogram.Add(sort_key_size);
+
                         long value_size = value.size();
-                        context->value_size_sum += value_size;
-                        update_atomic_max(context->value_size_max, value_size);
+                        context->value_size_histogram.Add(value_size);
+
                         long row_size = hash_key_size + sort_key_size + value_size;
-                        update_atomic_max(context->row_size_max, row_size);
+                        context->row_size_histogram.Add(row_size);
+
                         if (context->top_count > 0) {
                             context->top_rows.push(
                                 std::move(hash_key), std::move(sort_key), row_size);
@@ -368,40 +361,28 @@ inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
 struct row_data
 {
     std::string row_name;
-    double get_qps;
-    double multi_get_qps;
-    double put_qps;
-    double multi_put_qps;
-    double remove_qps;
-    double multi_remove_qps;
-    double incr_qps;
-    double check_and_set_qps;
-    double check_and_mutate_qps;
-    double scan_qps;
-    double recent_expire_count;
-    double recent_filter_count;
-    double recent_abnormal_count;
-    double storage_mb;
-    double storage_count;
-    row_data()
-        : get_qps(0),
-          multi_get_qps(0),
-          put_qps(0),
-          multi_put_qps(0),
-          remove_qps(0),
-          multi_remove_qps(0),
-          incr_qps(0),
-          check_and_set_qps(0),
-          check_and_mutate_qps(0),
-          scan_qps(0),
-          recent_expire_count(0),
-          recent_filter_count(0),
-          recent_abnormal_count(0),
-          storage_mb(0),
-          storage_count(0)
-    {
-    }
+    double get_qps = 0;
+    double multi_get_qps = 0;
+    double put_qps = 0;
+    double multi_put_qps = 0;
+    double remove_qps = 0;
+    double multi_remove_qps = 0;
+    double incr_qps = 0;
+    double check_and_set_qps = 0;
+    double check_and_mutate_qps = 0;
+    double scan_qps = 0;
+    double recent_expire_count = 0;
+    double recent_filter_count = 0;
+    double recent_abnormal_count = 0;
+    double storage_mb = 0;
+    double storage_count = 0;
+    double rdb_block_cache_hit_count = 0;
+    double rdb_block_cache_total_count = 0;
+    double rdb_block_cache_mem_usage = 0;
+    double rdb_index_and_filter_blocks_mem_usage = 0;
+    double rdb_memtable_mem_usage = 0;
 };
+
 inline bool
 update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, double value)
 {
@@ -435,6 +416,16 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.storage_mb += value;
     else if (counter_name == "disk.storage.sst.count")
         row.storage_count += value;
+    else if (counter_name == "rdb.block_cache.hit_count")
+        row.rdb_block_cache_hit_count += value;
+    else if (counter_name == "rdb.block_cache.total_count")
+        row.rdb_block_cache_total_count += value;
+    else if (counter_name == "rdb.block_cache.memory_usage")
+        row.rdb_block_cache_mem_usage += value;
+    else if (counter_name == "rdb.index_and_filter_blocks.memory_usage")
+        row.rdb_index_and_filter_blocks_mem_usage += value;
+    else if (counter_name == "rdb.memtable.memory_usage")
+        row.rdb_memtable_mem_usage += value;
     else
         return false;
     return true;
@@ -598,3 +589,76 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     }
     return true;
 }
+
+class table_printer
+{
+public:
+    void add_title(const std::string &title)
+    {
+        dassert_f(matrix_data.empty() && max_col_width.empty(),
+                  "`add_title` must be called only once");
+        max_col_width.push_back(title.length());
+        add_row(title);
+    }
+
+    void add_column(const std::string &col_name)
+    {
+        dassert_f(matrix_data.size() == 1,
+                  "`add_column` must be called before real data appendding");
+        max_col_width.emplace_back(col_name.length());
+        append_data(col_name);
+    }
+
+    void add_row(const std::string &row_name)
+    {
+        matrix_data.emplace_back(std::vector<std::string>());
+        append_data(row_name);
+    }
+
+    void append_data(uint64_t data) { append_data(std::to_string(data)); }
+
+    void append_data(double data)
+    {
+        if (abs(data) < 1e-6) {
+            append_data("0.00");
+        } else {
+            std::stringstream s;
+            s << std::fixed << std::setprecision(precision) << data;
+            append_data(s.str());
+        }
+    }
+
+    void output(std::ostream &out) const
+    {
+        if (max_col_width.empty()) {
+            return;
+        }
+
+        for (const auto &row : matrix_data) {
+            dassert_f(!row.empty(), "Row name must be exist at least");
+            out << std::setw(max_col_width[0] + space_width) << std::left << row[0];
+            for (size_t i = 1; i < row.size(); ++i) {
+                out << std::setw(max_col_width[i] + space_width) << std::right << row[i];
+            }
+            out << std::endl;
+        }
+    }
+
+private:
+    void append_data(const std::string &data)
+    {
+        matrix_data.rbegin()->emplace_back(data);
+
+        // update column max length
+        int &cur_len = max_col_width[matrix_data.rbegin()->size() - 1];
+        if (cur_len < data.size()) {
+            cur_len = data.size();
+        }
+    }
+
+private:
+    static const int precision = 2;
+    static const int space_width = 2;
+    std::vector<int> max_col_width;
+    std::vector<std::vector<std::string>> matrix_data;
+};

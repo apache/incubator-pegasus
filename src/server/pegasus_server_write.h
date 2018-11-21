@@ -31,6 +31,8 @@ public:
                                   int64_t decree,
                                   uint64_t timestamp);
 
+    void set_default_ttl(uint32_t ttl);
+
 private:
     int on_duplicate(const dsn::apps::duplicate_request &request,
                      dsn::apps::duplicate_response &resp);

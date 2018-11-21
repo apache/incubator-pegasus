@@ -134,6 +134,8 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
     __builtin_unreachable();
 }
 
+void pegasus_server_write::set_default_ttl(uint32_t ttl) { _write_svc->set_default_ttl(ttl); }
+
 int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int count)
 {
     int err = 0;
