@@ -23,10 +23,10 @@ trait ScalaPegasusAsyncTable extends PegasusUtil {
     }
 
     @throws[PException]
-    def get[H, S, V](hashKey: H, sortKey: S, timeout: Duration = 0 milli)
-            (implicit hSer: SER[H], sSer: SER[S], vSer: SER[V]): Future[V] = {
+    def get[H, S](hashKey: H, sortKey: S, timeout: Duration = 0 milli)
+            (implicit hSer: SER[H], sSer: SER[S]): Future[PegasusResult] = {
         val result = table.asyncGet(hSer.serialize(hashKey), sSer.serialize(sortKey), timeout)
-        toScala(result)(vSer.deserialize)
+        toScala(result)(PegasusResult.apply)
     }
 
     @throws[PException]
@@ -46,7 +46,7 @@ trait ScalaPegasusAsyncTable extends PegasusUtil {
 
     @throws[PException]
     def multiGetSortKeys[H](hashKey: H, maxFetchCount: Int = 100, maxFetchSize: Int = 1000000, timeout: Duration = 0 milli)
-            (implicit hSer: SER[H]) = {
+            (implicit hSer: SER[H]): Future[MultiGetSortKeysResult[Array[Byte]]] = {
         val result = table.asyncMultiGetSortKeys(hashKey, maxFetchCount, maxFetchSize, timeout)
         toScala(result)(r => MultiGetSortKeysResult(r.allFetched, r.keys.toList))
     }
@@ -79,6 +79,12 @@ trait ScalaPegasusAsyncTable extends PegasusUtil {
     def ttl[H, S](hashKey: H, sortKey: S, timeout: Duration = 0 milli)
             (implicit hSer: SER[H], sSer: SER[S]): Future[Integer] = {
         toScala(table.asyncTTL(hashKey, sortKey, timeout))
+    }
+
+    @throws[PException]
+    def incr[H, S](hashKey: H, sortKey: S, increment: Long, ttl: Duration = 0 milli, timeout: Duration = 0 milli)
+            (implicit hSer: SER[H], sSer: SER[S]): Future[Long] = {
+        toScala(table.asyncIncr(hashKey, sortKey, increment, ttl.toSeconds.toInt, timeout.toMillis.toInt))
     }
 
     implicit private [scalaclient] def toScala[A, B](future: NFuture[A])(implicit f: A => B): Future[B] = {

@@ -15,6 +15,8 @@ class TableSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     "client basic get/set/del" should "work" in {
         withClient { c =>
             val hashKey = 12345L
+            delHashKey(c, table, hashKey)
+
             c.set(table, hashKey, "sort_1", "value_1")
 
             c.exists(table, hashKey, "sort_1") should equal(true)
@@ -37,6 +39,9 @@ class TableSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
             val values = Seq("sort_1" -> "value_1", "sort_2" -> "value_2", "sort_3" -> "value_3")
             val sortKeys = values.unzip._1
+
+            delHashKey(c, table, hashKey)
+
             c.multiSet(table, hashKey, values)
 
             sortKeys.foreach { k => c.exists(table, hashKey, k) should equal(true) }
@@ -64,6 +69,13 @@ class TableSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
             val multigetValues2 = c.multiGet(table, hashKey, sortKeys).as[String].values
             multigetValues2.size should equal(0)
+        }
+    }
+
+    private def delHashKey[A](c: ScalaPegasusClient, table: String, hashKey: A)(implicit ser: Serializer[A]) = {
+        val keys = c.multiGetSortKeys(table, hashKey)
+        if (keys.values.nonEmpty) {
+            c.multiDel(table, hashKey, keys.values)
         }
     }
 
