@@ -175,6 +175,7 @@ public:
         std::string sort_key = "sort_key";
         std::string value = "value";
 
+        // timestamp = 10
         dsn::apps::duplicate_request duplicate;
         duplicate.timetag = pegasus::generate_timetag(10, 0, 0);
         dsn::apps::duplicate_response resp;
@@ -188,7 +189,9 @@ public:
         _server_write->on_duplicate(duplicate, resp);
         ASSERT_EQ(resp.error, 0);
 
-        ASSERT_EQ(_server_write->_TEST_last_duplicate_latency, dsn_now_us() * 1_us - 10_us);
+        // last_duplicate_latency = [now-5 - timstamp, now - timestamp]
+        ASSERT_LE(_server_write->_TEST_last_duplicate_latency.count(), dsn_now_us() - 10);
+        ASSERT_GE(_server_write->_TEST_last_duplicate_latency.count(), dsn_now_us() - 5 - 10);
     }
 
     void verify_response(const dsn::apps::update_response &response, int err, int64_t decree)
