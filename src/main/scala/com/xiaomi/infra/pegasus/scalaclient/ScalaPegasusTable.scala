@@ -182,6 +182,12 @@ trait ScalaPegasusTable extends PegasusUtil {
             (implicit hSer: SER[H], sSer: SER[S]) = {
         table.ttl(hashKey, sortKey, timeout)
     }
+
+    @throws[PException]
+    def incr[H, S](hashKey: H, sortKey: S, increment: Long, ttl: Duration = 0 milli, timeout: Duration = 0 milli)
+            (implicit hSer: SER[H], sSer: SER[S]) = {
+        table.incr(hashKey, sortKey, increment, ttl.toSeconds.toInt, timeout.toMillis.toInt)
+    }
 }
 
 class ScalaPegasusTableImpl(val table: ITable) extends ScalaPegasusTable

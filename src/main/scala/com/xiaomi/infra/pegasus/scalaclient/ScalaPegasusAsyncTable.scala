@@ -81,6 +81,12 @@ trait ScalaPegasusAsyncTable extends PegasusUtil {
         toScala(table.asyncTTL(hashKey, sortKey, timeout))
     }
 
+    @throws[PException]
+    def incr[H, S](hashKey: H, sortKey: S, increment: Long, ttl: Duration = 0 milli, timeout: Duration = 0 milli)
+            (implicit hSer: SER[H], sSer: SER[S]): Future[Long] = {
+        toScala(table.asyncIncr(hashKey, sortKey, increment, ttl.toSeconds.toInt, timeout.toMillis.toInt))
+    }
+
     implicit private [scalaclient] def toScala[A, B](future: NFuture[A])(implicit f: A => B): Future[B] = {
         val promise = Promise[B]()
         future.addListener(new GenericFutureListener[NFuture[_ >: A]] {

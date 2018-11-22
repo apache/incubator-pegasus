@@ -165,6 +165,12 @@ trait ScalaPegasusClient extends PegasusUtil {
             (implicit hSer: SER[H], sSer: SER[S]) = {
         getTable(table).ttl(hashKey, sortKey)
     }
+
+    @throws[PException]
+    def incr[H, S](table: String, hashKey: H, sortKey: S, increment: Long, ttl: Duration = 0 milli)
+            (implicit hSer: SER[H], sSer: SER[S]) = {
+        getTable(table).incr(hashKey, sortKey, increment, ttl)
+    }
 }
 
 class ScalaPegasusClientImpl(val client: IClient) extends ScalaPegasusClient
