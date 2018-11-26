@@ -124,8 +124,6 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
             _duplicate_latency->set(dsn_now_ns() - start);
         } else {
             _duplicate_failed_qps->increment();
-            derror_replica(
-                "failed to ship mutation: {}, remote: {}", err.to_string(), _remote_cluster);
         }
 
         {
