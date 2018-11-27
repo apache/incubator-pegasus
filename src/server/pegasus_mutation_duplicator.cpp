@@ -109,7 +109,6 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
 {
     uint64_t start = dsn_now_ns();
 
-    dsn::zauto_lock _(_lock);
     auto rpc = _inflights[hash].front();
     _inflights[hash].pop_front();
 
@@ -127,7 +126,7 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
         }
 
         {
-            dsn::zauto_lock _g_(_lock);
+            dsn::zauto_lock _(_lock);
             if (err != dsn::ERR_OK) {
                 // retry this rpc
                 _inflights[hash].push_front(rpc);
@@ -209,6 +208,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         _inflights[hash].push_back(std::move(rpc));
     }
 
+    dsn::zauto_lock _(_lock);
     for (auto kv : _inflights) {
         send(kv.first, cb);
     }
