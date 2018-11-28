@@ -2549,10 +2549,8 @@ static void print_current_scan_state(const std::vector<scan_data_context *> &con
     long total_rows = 0;
     for (const auto &context : contexts) {
         total_rows += context->split_rows.load();
-        fprintf(stderr,
-                "INFO: split[%d]: %ld rows\n",
-                context->split_id,
-                context->split_rows.load());
+        fprintf(
+            stderr, "INFO: split[%d]: %ld rows\n", context->split_id, context->split_rows.load());
     }
     fprintf(stderr, "Count %s, total %ld rows.\n", stop_desc.c_str(), total_rows);
 

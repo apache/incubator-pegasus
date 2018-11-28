@@ -228,7 +228,8 @@ inline void scan_data_next(scan_data_context *context)
                         context->row_size_histogram.Add(row_size);
 
                         if (context->top_count > 0) {
-                            context->top_rows.push(std::move(hash_key), std::move(sort_key), row_size);
+                            context->top_rows.push(
+                                std::move(hash_key), std::move(sort_key), row_size);
                         }
                     }
                     scan_data_next(context);
