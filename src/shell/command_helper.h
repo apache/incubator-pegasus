@@ -212,28 +212,26 @@ inline void scan_data_next(scan_data_context *context)
                         },
                         context->timeout_ms);
                     break;
-                case SCAN_COUNT:
+                case SCAN_COUNT: {
                     context->split_rows++;
-                    if (context->stat_size) {
-                        long hash_key_size = hash_key.size();
-                        context->hash_key_size_histogram.Add(hash_key_size);
+                    long hash_key_size = hash_key.size();
+                    context->hash_key_size_histogram.Add(hash_key_size);
 
-                        long sort_key_size = sort_key.size();
-                        context->sort_key_size_histogram.Add(sort_key_size);
+                    long sort_key_size = sort_key.size();
+                    context->sort_key_size_histogram.Add(sort_key_size);
 
-                        long value_size = value.size();
-                        context->value_size_histogram.Add(value_size);
+                    long value_size = value.size();
+                    context->value_size_histogram.Add(value_size);
 
-                        long row_size = hash_key_size + sort_key_size + value_size;
-                        context->row_size_histogram.Add(row_size);
+                    long row_size = hash_key_size + sort_key_size + value_size;
+                    context->row_size_histogram.Add(row_size);
 
-                        if (context->top_count > 0) {
-                            context->top_rows.push(
-                                std::move(hash_key), std::move(sort_key), row_size);
-                        }
+                    if (context->top_count > 0) {
+                        context->top_rows.push(std::move(hash_key), std::move(sort_key), row_size);
                     }
                     scan_data_next(context);
                     break;
+                }
                 case SCAN_GEN_GEO:
                     context->split_request_count++;
                     context->geoclient->async_set(
