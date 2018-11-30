@@ -2546,23 +2546,25 @@ static void print_current_scan_state(const std::vector<scan_data_context *> &con
                                      const std::string &stop_desc,
                                      bool stat_size)
 {
-    rocksdb::HistogramImpl hash_key_size_histogram;
-    rocksdb::HistogramImpl sort_key_size_histogram;
-    rocksdb::HistogramImpl value_size_histogram;
-    rocksdb::HistogramImpl row_size_histogram;
+    long total_rows = 0;
     for (const auto &context : contexts) {
-        hash_key_size_histogram.Merge(context->hash_key_size_histogram);
-        sort_key_size_histogram.Merge(context->sort_key_size_histogram);
-        value_size_histogram.Merge(context->value_size_histogram);
-        row_size_histogram.Merge(context->row_size_histogram);
-        fprintf(stderr,
-                "INFO: split[%d]: %ld rows\n",
-                context->split_id,
-                context->row_size_histogram.num());
+        total_rows += context->split_rows.load();
+        fprintf(
+            stderr, "INFO: split[%d]: %ld rows\n", context->split_id, context->split_rows.load());
     }
-    fprintf(stderr, "Count %s, total %ld rows.\n\n", stop_desc.c_str(), row_size_histogram.num());
+    fprintf(stderr, "Count %s, total %ld rows.\n", stop_desc.c_str(), total_rows);
 
     if (stat_size) {
+        rocksdb::HistogramImpl hash_key_size_histogram;
+        rocksdb::HistogramImpl sort_key_size_histogram;
+        rocksdb::HistogramImpl value_size_histogram;
+        rocksdb::HistogramImpl row_size_histogram;
+        for (const auto &context : contexts) {
+            hash_key_size_histogram.Merge(context->hash_key_size_histogram);
+            sort_key_size_histogram.Merge(context->sort_key_size_histogram);
+            value_size_histogram.Merge(context->value_size_histogram);
+            row_size_histogram.Merge(context->row_size_histogram);
+        }
         print_simple_histogram("hash_key_size", hash_key_size_histogram);
         print_simple_histogram("sort_key_size", sort_key_size_histogram);
         print_simple_histogram("value_size", value_size_histogram);
