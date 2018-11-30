@@ -35,7 +35,7 @@
 
 #pragma once
 
-#include "simple_kv.server.h"
+#include "dist/replication/storage_engine/simple_kv/simple_kv.server.h"
 #include <dist/replication/lib/replica.h>
 
 namespace dsn {

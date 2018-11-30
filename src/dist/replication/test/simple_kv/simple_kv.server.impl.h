@@ -26,13 +26,15 @@
 #pragma once
 
 #include <dsn/tool-api/zlocks.h>
-#include "simple_kv.server.h"
+#include "dist/replication/storage_engine/simple_kv/simple_kv.server.h"
 
 namespace dsn {
 namespace replication {
 namespace test {
 
-class simple_kv_service_impl : public simple_kv_service
+using namespace dsn::replication::application;
+
+class simple_kv_service_impl : public application::simple_kv_service
 {
 public:
     static bool s_simple_kv_open_fail;

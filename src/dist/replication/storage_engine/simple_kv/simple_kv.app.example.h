@@ -37,8 +37,6 @@
 #include "simple_kv.client.h"
 #include "simple_kv.server.h"
 
-#define TRANSPARENT_LAYER2_CLIENT
-
 namespace dsn {
 namespace replication {
 namespace application {

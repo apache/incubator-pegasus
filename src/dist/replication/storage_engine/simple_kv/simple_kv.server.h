@@ -39,8 +39,8 @@
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/replication/storage_serverlet.h>
 
-#include "simple_kv.code.definition.h"
-#include "simple_kv_types.h"
+#include "dist/replication/storage_engine/simple_kv/simple_kv.code.definition.h"
+#include "dist/replication/storage_engine/simple_kv/simple_kv_types.h"
 
 namespace dsn {
 namespace replication {

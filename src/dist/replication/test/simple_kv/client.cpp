@@ -44,6 +44,9 @@ namespace dsn {
 namespace replication {
 namespace test {
 
+using namespace dsn::replication::application;
+DEFINE_TASK_CODE(LPC_SIMPLE_KV_TEST, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
+
 simple_kv_client_app::simple_kv_client_app(const service_app_info *info)
     : ::dsn::service_app(info), _simple_kv_client(nullptr)
 {
@@ -67,7 +70,7 @@ simple_kv_client_app::~simple_kv_client_app() { stop(); }
 
     // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
     _service_addr.assign_uri(args[1].c_str());
-    _simple_kv_client.reset(new simple_kv_client(_service_addr));
+    _simple_kv_client.reset(new application::simple_kv_client(_service_addr));
 
     dsn::tasking::enqueue(
         LPC_SIMPLE_KV_TEST, &_tracker, std::bind(&simple_kv_client_app::run, this));

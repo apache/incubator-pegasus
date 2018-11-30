@@ -35,7 +35,9 @@
 
 #pragma once
 
-#include "simple_kv.client.h"
+#include <dsn/cpp/service_app.h>
+#include <dsn/dist/replication/replication_types.h>
+#include "dist/replication/storage_engine/simple_kv/simple_kv.client.h"
 
 namespace dsn {
 namespace replication {
@@ -59,7 +61,7 @@ public:
                              const rpc_address &node);
 
 private:
-    std::unique_ptr<simple_kv_client> _simple_kv_client;
+    std::unique_ptr<application::simple_kv_client> _simple_kv_client;
     rpc_address _meta_server_group;
     rpc_address _service_addr;
     dsn::task_tracker _tracker;

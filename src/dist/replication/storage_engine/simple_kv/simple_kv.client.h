@@ -1,9 +1,9 @@
 #pragma once
-#include "simple_kv.code.definition.h"
-#include "simple_kv_types.h"
 #include <iostream>
 #include <dsn/utility/optional.h>
 #include <dsn/tool-api/async_calls.h>
+#include "dist/replication/storage_engine/simple_kv/simple_kv.code.definition.h"
+#include "dist/replication/storage_engine/simple_kv/simple_kv_types.h"
 
 namespace dsn {
 namespace replication {

@@ -6,6 +6,7 @@ set(DSN_IN_CORE "TRUE")
 # "GLOB_RECURSE" for recursive search
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
+set(MY_PROJ_SRC ${MY_PROJ_SRC} ../../storage_engine/simple_kv/simple_kv_types.cpp)
 
 set(MY_PROJ_INC_PATH)
 

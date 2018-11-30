@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "simple_kv.server.impl.h"
+#include "dist/replication/storage_engine/simple_kv/simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
 #include <dsn/utility/filesystem.h>

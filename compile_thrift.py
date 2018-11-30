@@ -64,10 +64,6 @@ thrift_description = [
         },
     },
     {
-        "name": "simple_kv",
-        "path": "src/dist/replication/test/simple_kv"
-    },
-    {
         "name": "nfs",
         "path": "src/dist/nfs",
         "include_fix": {
