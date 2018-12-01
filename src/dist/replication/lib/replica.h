@@ -126,7 +126,6 @@ public:
     //
     //  routine for testing purpose only
     //
-    void send_group_check_once_for_test(int delay_milliseconds);
     void inject_error(error_code err);
 
     //
@@ -142,10 +141,7 @@ public:
     decree last_durable_decree() const;
     decree last_flushed_decree() const;
     const std::string &dir() const { return _dir; }
-    bool group_configuration(/*out*/ partition_configuration &config) const;
     uint64_t create_time_milliseconds() const { return _create_time_ms; }
-    uint64_t last_config_change_time_milliseconds() const { return _last_config_change_time_ms; }
-    uint64_t last_checkpoint_generate_time_ms() const { return _last_checkpoint_generate_time_ms; }
     const char *name() const { return replica_name(); }
     mutation_log_ptr private_log() const { return _private_log; }
     const replication_options *options() const { return _options; }

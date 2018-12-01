@@ -353,15 +353,6 @@ mutation_ptr replica::new_mutation(decree decree)
     return mu;
 }
 
-bool replica::group_configuration(/*out*/ partition_configuration &config) const
-{
-    if (partition_status::PS_PRIMARY != status())
-        return false;
-
-    config = _primary_states.membership;
-    return true;
-}
-
 decree replica::last_durable_decree() const { return _app->last_durable_decree(); }
 
 decree replica::last_flushed_decree() const { return _app->last_flushed_decree(); }

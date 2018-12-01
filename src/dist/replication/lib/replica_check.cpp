@@ -213,19 +213,6 @@ void replica::on_group_check_reply(error_code err,
     }
 }
 
-// for testing purpose only
-void replica::send_group_check_once_for_test(int delay_milliseconds)
-{
-    dassert(_options->group_check_disabled, "");
-
-    _primary_states.group_check_task =
-        tasking::enqueue(LPC_GROUP_CHECK,
-                         &_tracker,
-                         [this] { broadcast_group_check(); },
-                         get_gpid().thread_hash(),
-                         std::chrono::milliseconds(delay_milliseconds));
-}
-
 void replica::inject_error(error_code err)
 {
     tasking::enqueue(LPC_REPLICATION_ERROR,
