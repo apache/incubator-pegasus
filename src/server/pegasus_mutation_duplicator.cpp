@@ -109,42 +109,57 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
 {
     uint64_t start = dsn_now_ns();
 
-    auto rpc = _inflights[hash].front();
-    _inflights[hash].pop_front();
+    duplicate_rpc rpc;
+    {
+        dsn::zauto_lock _(_lock);
+        rpc = _inflights[hash].front();
+        _inflights[hash].pop_front();
+    }
 
-    _client->async_duplicate(rpc, [cb, rpc, start, hash, this](dsn::error_code err) mutable {
-        _duplicate_qps->increment();
-
-        if (err == dsn::ERR_OK) {
-            err = dsn::error_code(rpc.response().error);
-        }
-        if (err == dsn::ERR_OK) {
-            /// failure is not taken into latency calculation
-            _duplicate_latency->set(dsn_now_ns() - start);
-        } else {
-            _duplicate_failed_qps->increment();
-        }
-
-        {
-            dsn::zauto_lock _(_lock);
-            if (err != dsn::ERR_OK) {
-                // retry this rpc
-                _inflights[hash].push_front(rpc);
-                schedule_task([hash, cb, this]() { send(hash, cb); }, 1_s);
-                return;
-            }
-            if (_inflights[hash].empty()) {
-                _inflights.erase(hash);
-                if (_inflights.empty()) {
-                    cb();
-                }
-            } else {
-                // start next rpc immediately
-                schedule_task([hash, cb, this]() { send(hash, cb); });
-                return;
-            }
-        }
+    dcheck_eq_replica(rpc.request().hash, hash);
+    _client->async_duplicate(rpc, [cb, rpc, start, this](dsn::error_code err) mutable {
+        on_duplicate_reply(std::move(cb), std::move(rpc), start, err);
     });
+}
+
+void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callback cb,
+                                                     duplicate_rpc rpc,
+                                                     uint64_t start_ns,
+                                                     dsn::error_code err)
+{
+    _duplicate_qps->increment();
+
+    if (err == dsn::ERR_OK) {
+        err = dsn::error_code(rpc.response().error);
+    }
+    if (err == dsn::ERR_OK) {
+        /// failure is not taken into latency calculation
+        _duplicate_latency->set(dsn_now_ns() - start_ns);
+    } else {
+        _duplicate_failed_qps->increment();
+    }
+
+    auto hash = static_cast<uint64_t>(rpc.request().hash);
+    {
+        dsn::zauto_lock _(_lock);
+        if (err != dsn::ERR_OK) {
+            // retry this rpc
+            _inflights[hash].push_front(rpc);
+            schedule_task([hash, cb, this]() { send(hash, cb); }, 1_s);
+            return;
+        }
+        if (_inflights[hash].empty()) {
+            _inflights.erase(hash);
+            if (_inflights.empty()) {
+                // move forward to the next step.
+                cb();
+            }
+        } else {
+            // start next rpc immediately
+            schedule_task([hash, cb, this]() { send(hash, cb); });
+            return;
+        }
+    }
 }
 
 void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb)
@@ -208,8 +223,8 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         _inflights[hash].push_back(std::move(rpc));
     }
 
-    dsn::zauto_lock _(_lock);
-    for (auto kv : _inflights) {
+    auto inflights = _inflights;
+    for (const auto &kv : inflights) {
         send(kv.first, cb);
     }
 }

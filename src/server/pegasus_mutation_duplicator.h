@@ -30,7 +30,11 @@ public:
 private:
     void send(uint64_t hash, callback cb);
 
+    void on_duplicate_reply(callback, duplicate_rpc, uint64_t start_ns, dsn::error_code err);
+
 private:
+    friend class pegasus_mutation_duplicator_test;
+
     client::pegasus_client_impl *_client;
 
     uint8_t _remote_cluster_id{0};
