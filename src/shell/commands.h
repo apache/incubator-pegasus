@@ -2552,26 +2552,20 @@ static void print_current_scan_state(const std::vector<scan_data_context *> &con
     for (const auto &context : contexts) {
         long rows = context->split_rows.load();
         total_rows += rows;
+        fprintf(stderr, "INFO: split[%d]: %ld rows", context->split_id, rows);
         if (count_hash_key) {
             long hash_key_count = context->split_hash_key_count.load();
             total_hash_key_count += hash_key_count;
-            fprintf(stderr,
-                    "INFO: split[%d]: %ld rows (%ld hash keys)\n",
-                    context->split_id,
-                    rows,
-                    hash_key_count);
+            fprintf(stderr, " (%ld hash keys)\n", hash_key_count);
         } else {
-            fprintf(stderr, "INFO: split[%d]: %ld rows\n", context->split_id, rows);
+            fprintf(stderr, "\n");
         }
     }
+    fprintf(stderr, "Count %s, total %ld rows", stop_desc.c_str(), total_rows);
     if (count_hash_key) {
-        fprintf(stderr,
-                "Count %s, total %ld rows (%ld hash keys).\n",
-                stop_desc.c_str(),
-                total_rows,
-                total_hash_key_count);
+        fprintf(stderr, " (%ld hash keys)\n", total_hash_key_count);
     } else {
-        fprintf(stderr, "Count %s, total %ld rows.\n", stop_desc.c_str(), total_rows);
+        fprintf(stderr, "\n");
     }
 
     if (stat_size) {
