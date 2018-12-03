@@ -247,7 +247,7 @@ do
   echo "Wait cluster to become healthy..."
   while true
   do
-    unhealthy_count=`echo "ls -d" | ./run.sh shell --cluster $meta_list | awk 'f{ if(NF<7){f=0} else if($3!=$4){print} } /fully_healthy/{f=1}' | wc -l`
+    unhealthy_count=`echo "ls -d" | ./run.sh shell --cluster $meta_list | awk 'f{ if(NF<7){f=0} else if($3!=$4){print} } / fully_healthy /{f=1}' | wc -l`
     if [ $unhealthy_count -eq 0 ]; then
       echo "Cluster becomes healthy."
       break

@@ -2223,17 +2223,17 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     }
 
     if (max_split_count <= 0) {
-        fprintf(stderr, "ERROR: max_split_count should no less than 0\n");
+        fprintf(stderr, "ERROR: max_split_count should be greater than 0\n");
         return false;
     }
 
-    if (max_batch_count <= 0) {
-        fprintf(stderr, "ERROR: max_batch_count should no less than 0\n");
+    if (max_batch_count <= 1) {
+        fprintf(stderr, "ERROR: max_batch_count should be greater than 1\n");
         return false;
     }
 
     if (timeout_ms <= 0) {
-        fprintf(stderr, "ERROR: timeout_ms should no less than 0\n");
+        fprintf(stderr, "ERROR: timeout_ms should be greater than 0\n");
         return false;
     }
 
@@ -2416,17 +2416,17 @@ inline bool clear_data(command_executor *e, shell_context *sc, arguments args)
     }
 
     if (max_split_count <= 0) {
-        fprintf(stderr, "ERROR: max_split_count should no less than 0\n");
+        fprintf(stderr, "ERROR: max_split_count should be greater than 0\n");
         return false;
     }
 
-    if (max_batch_count <= 0) {
-        fprintf(stderr, "ERROR: max_batch_count should no less than 0\n");
+    if (max_batch_count <= 1) {
+        fprintf(stderr, "ERROR: max_batch_count should be greater than 1\n");
         return false;
     }
 
     if (timeout_ms <= 0) {
-        fprintf(stderr, "ERROR: timeout_ms should no less than 0\n");
+        fprintf(stderr, "ERROR: timeout_ms should be greater than 0\n");
         return false;
     }
 
@@ -2544,15 +2544,29 @@ static void print_simple_histogram(const std::string &name, const rocksdb::Histo
 
 static void print_current_scan_state(const std::vector<scan_data_context *> &contexts,
                                      const std::string &stop_desc,
-                                     bool stat_size)
+                                     bool stat_size,
+                                     bool count_hash_key)
 {
     long total_rows = 0;
+    long total_hash_key_count = 0;
     for (const auto &context : contexts) {
-        total_rows += context->split_rows.load();
-        fprintf(
-            stderr, "INFO: split[%d]: %ld rows\n", context->split_id, context->split_rows.load());
+        long rows = context->split_rows.load();
+        total_rows += rows;
+        fprintf(stderr, "INFO: split[%d]: %ld rows", context->split_id, rows);
+        if (count_hash_key) {
+            long hash_key_count = context->split_hash_key_count.load();
+            total_hash_key_count += hash_key_count;
+            fprintf(stderr, " (%ld hash keys)\n", hash_key_count);
+        } else {
+            fprintf(stderr, "\n");
+        }
     }
-    fprintf(stderr, "Count %s, total %ld rows.\n", stop_desc.c_str(), total_rows);
+    fprintf(stderr, "Count %s, total %ld rows", stop_desc.c_str(), total_rows);
+    if (count_hash_key) {
+        fprintf(stderr, " (%ld hash keys)\n", total_hash_key_count);
+    } else {
+        fprintf(stderr, "\n");
+    }
 
     if (stat_size) {
         rocksdb::HistogramImpl hash_key_size_histogram;
@@ -2577,6 +2591,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     static struct option long_options[] = {{"max_split_count", required_argument, 0, 's'},
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
+                                           {"count_hash_key", no_argument, 0, 'h'},
                                            {"stat_size", no_argument, 0, 'z'},
                                            {"top_count", required_argument, 0, 'c'},
                                            {"run_seconds", required_argument, 0, 'r'},
@@ -2585,6 +2600,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     int max_split_count = 100000000;
     int max_batch_count = 500;
     int timeout_ms = sc->timeout_ms;
+    bool count_hash_key = false;
     bool stat_size = false;
     int top_count = 0;
     int run_seconds = 0;
@@ -2593,7 +2609,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "s:b:t:zc:r:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "s:b:t:hzc:r:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -2614,6 +2630,9 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
                 fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
+            break;
+        case 'h':
+            count_hash_key = true;
             break;
         case 'z':
             stat_size = true;
@@ -2640,8 +2659,8 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    if (max_batch_count <= 0) {
-        fprintf(stderr, "ERROR: max_batch_count should be greater than 0\n");
+    if (max_batch_count <= 1) {
+        fprintf(stderr, "ERROR: max_batch_count should be greater than 1\n");
         return false;
     }
 
@@ -2665,6 +2684,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "INFO: max_split_count = %d\n", max_split_count);
     fprintf(stderr, "INFO: max_batch_count = %d\n", max_batch_count);
     fprintf(stderr, "INFO: timeout_ms = %d\n", timeout_ms);
+    fprintf(stderr, "INFO: count_hash_key = %s\n", count_hash_key ? "true" : "false");
     fprintf(stderr, "INFO: stat_size = %s\n", stat_size ? "true" : "false");
     fprintf(stderr, "INFO: top_count = %d\n", top_count);
     fprintf(stderr, "INFO: run_seconds = %d\n", run_seconds);
@@ -2694,7 +2714,8 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            nullptr,
                                                            &error_occurred,
                                                            stat_size,
-                                                           top_count);
+                                                           top_count,
+                                                           count_hash_key);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
@@ -2716,35 +2737,45 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
         }
         int completed_split_count = 0;
         long cur_total_rows = 0;
+        long cur_total_hash_key_count = 0;
         for (int i = 0; i < scanners.size(); i++) {
             cur_total_rows += contexts[i]->split_rows.load();
+            if (count_hash_key)
+                cur_total_hash_key_count += contexts[i]->split_hash_key_count.load();
             if (contexts[i]->split_request_count.load() == 0)
                 completed_split_count++;
         }
+        char hash_key_count_str[100];
+        hash_key_count_str[0] = '\0';
+        if (count_hash_key) {
+            sprintf(hash_key_count_str, " (%ld hash keys)", cur_total_hash_key_count);
+        }
         if (!stopped_by_wait_seconds && error_occurred.load()) {
             fprintf(stderr,
-                    "INFO: processed for %d seconds, (%d/%d) splits, total %ld rows, last second "
+                    "INFO: processed for %d seconds, (%d/%d) splits, total %ld rows%s, last second "
                     "%ld rows, error occurred, terminating...\n",
                     sleep_seconds,
                     completed_split_count,
                     split_count,
                     cur_total_rows,
+                    hash_key_count_str,
                     cur_total_rows - last_total_rows);
         } else {
             fprintf(stderr,
-                    "INFO: processed for %d seconds, (%d/%d) splits, total %ld rows, last second "
+                    "INFO: processed for %d seconds, (%d/%d) splits, total %ld rows%s, last second "
                     "%ld rows\n",
                     sleep_seconds,
                     completed_split_count,
                     split_count,
                     cur_total_rows,
+                    hash_key_count_str,
                     cur_total_rows - last_total_rows);
         }
         if (completed_split_count == scanners.size())
             break;
         last_total_rows = cur_total_rows;
         if (stat_size && sleep_seconds % 10 == 0) {
-            print_current_scan_state(contexts, "partially", stat_size);
+            print_current_scan_state(contexts, "partially", stat_size, count_hash_key);
         }
     }
 
@@ -2767,7 +2798,7 @@ inline bool count_data(command_executor *e, shell_context *sc, arguments args)
         stop_desc = "done";
     }
 
-    print_current_scan_state(contexts, stop_desc, stat_size);
+    print_current_scan_state(contexts, stop_desc, stat_size, count_hash_key);
 
     if (stat_size) {
         if (top_count > 0) {
