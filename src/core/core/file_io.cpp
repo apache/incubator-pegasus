@@ -52,7 +52,6 @@ namespace file {
     auto cb = create_aio_task(callback_code, tracker, std::move(callback), hash);
     cb->aio()->buffer = buffer;
     cb->aio()->buffer_size = count;
-    cb->aio()->engine = nullptr;
     cb->aio()->file = file;
     cb->aio()->file_offset = offset;
     cb->aio()->type = AIO_Read;
@@ -73,7 +72,6 @@ namespace file {
     auto cb = create_aio_task(callback_code, tracker, std::move(callback), hash);
     cb->aio()->buffer = (char *)buffer;
     cb->aio()->buffer_size = count;
-    cb->aio()->engine = nullptr;
     cb->aio()->file = file;
     cb->aio()->file_offset = offset;
     cb->aio()->type = AIO_Write;
@@ -92,9 +90,6 @@ namespace file {
                                      int hash /*= 0*/)
 {
     auto cb = create_aio_task(callback_code, tracker, std::move(callback), hash);
-    cb->aio()->buffer = nullptr;
-    cb->aio()->buffer_size = 0;
-    cb->aio()->engine = nullptr;
     cb->aio()->file = file;
     cb->aio()->file_offset = offset;
     cb->aio()->type = AIO_Write;

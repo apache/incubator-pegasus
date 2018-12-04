@@ -105,11 +105,7 @@ error_code native_linux_aio_provider::flush(dsn_handle_t fh)
 
 disk_aio *native_linux_aio_provider::prepare_aio_context(aio_task *tsk)
 {
-    auto r = new linux_disk_aio_context;
-    bzero((char *)&r->cb, sizeof(r->cb));
-    r->tsk = tsk;
-    r->evt = nullptr;
-    return r;
+    return new linux_disk_aio_context(tsk);
 }
 
 void native_linux_aio_provider::aio(aio_task *aio_tsk) { aio_internal(aio_tsk, true); }
@@ -186,11 +182,23 @@ error_code native_linux_aio_provider::aio_internal(aio_task *aio_tsk,
                       aio->file_offset);
         break;
     case AIO_Write:
-        io_prep_pwrite(&aio->cb,
-                       static_cast<int>((ssize_t)aio->file),
-                       aio->buffer,
-                       aio->buffer_size,
-                       aio->file_offset);
+        if (aio->buffer) {
+            io_prep_pwrite(&aio->cb,
+                           static_cast<int>((ssize_t)aio->file),
+                           aio->buffer,
+                           aio->buffer_size,
+                           aio->file_offset);
+        } else {
+            int iovcnt = aio->write_buffer_vec->size();
+            struct iovec *iov = (struct iovec *)alloca(sizeof(struct iovec) * iovcnt);
+            for (int i = 0; i < iovcnt; i++) {
+                const dsn_file_buffer_t &buf = aio->write_buffer_vec->at(i);
+                iov[i].iov_base = buf.buffer;
+                iov[i].iov_len = buf.size;
+            }
+            io_prep_pwritev(
+                &aio->cb, static_cast<int>((ssize_t)aio->file), iov, iovcnt, aio->file_offset);
+        }
         break;
     default:
         derror("unknown aio type %u", static_cast<int>(aio->type));

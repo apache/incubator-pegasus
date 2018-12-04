@@ -42,6 +42,7 @@
 #include <dsn/utility/synchronize.h>
 #include <dsn/utility/rand.h>
 #include <dsn/tool/node_scoper.h>
+#include <dsn/dist/fmt_logging.h>
 
 #include "task_engine.h"
 #include "service_engine.h"
@@ -602,6 +603,24 @@ aio_task::aio_task(dsn::task_code code, aio_handler &&cb, int hash, service_node
 
     auto disk = get_current_disk();
     _aio = disk->prepare_aio_context(this);
+}
+
+void aio_task::collapse()
+{
+    if (!_unmerged_write_buffers.empty()) {
+        std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(_aio->buffer_size));
+        char *dest = buffer.get();
+        for (const dsn_file_buffer_t &b : _unmerged_write_buffers) {
+            ::memcpy(dest, b.buffer, b.size);
+            dest += b.size;
+        }
+        dassert(dest - buffer.get() == _aio->buffer_size,
+                "%u VS %u",
+                dest - buffer.get(),
+                _aio->buffer_size);
+        _aio->buffer = buffer.get();
+        _merged_write_buffer_holder.assign(std::move(buffer), 0, _aio->buffer_size);
+    }
 }
 
 aio_task::~aio_task()

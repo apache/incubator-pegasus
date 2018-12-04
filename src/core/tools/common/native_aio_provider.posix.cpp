@@ -81,23 +81,26 @@ error_code native_posix_aio_provider::flush(dsn_handle_t fh)
     }
 }
 
-struct posix_disk_aio_context : public disk_aio
+class posix_disk_aio_context : public disk_aio
 {
+public:
     struct aiocb cb;
     aio_task *tsk;
     native_posix_aio_provider *this_;
     utils::notify_event *evt;
     error_code err;
     uint32_t bytes;
+
+    explicit posix_disk_aio_context(aio_task *tsk_)
+        : disk_aio(), tsk(tsk_), this_(nullptr), evt(nullptr), err(ERR_UNKNOWN), bytes(0)
+    {
+        ::bzero((char *)&cb, sizeof(cb));
+    }
 };
 
 disk_aio *native_posix_aio_provider::prepare_aio_context(aio_task *tsk)
 {
-    auto r = new posix_disk_aio_context;
-    bzero((char *)&r->cb, sizeof(r->cb));
-    r->tsk = tsk;
-    r->evt = nullptr;
-    return r;
+    return new posix_disk_aio_context(tsk);
 }
 
 void native_posix_aio_provider::aio(aio_task *aio_tsk) { aio_internal(aio_tsk, true); }

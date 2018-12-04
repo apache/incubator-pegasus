@@ -53,14 +53,20 @@ public:
 
     virtual void start() override;
 
-    struct linux_disk_aio_context : public disk_aio
+    class linux_disk_aio_context : public disk_aio
     {
+    public:
         struct iocb cb;
         aio_task *tsk;
         native_linux_aio_provider *this_;
         utils::notify_event *evt;
         error_code err;
         uint32_t bytes;
+
+        explicit linux_disk_aio_context(aio_task *tsk_)
+            : disk_aio(), tsk(tsk_), this_(nullptr), evt(nullptr), err(ERR_UNKNOWN), bytes(0)
+        {
+        }
     };
 
 protected:

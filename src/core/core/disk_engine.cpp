@@ -211,8 +211,8 @@ void disk_engine::read(aio_task *aio)
 class batch_write_io_task : public aio_task
 {
 public:
-    batch_write_io_task(aio_task *tasks, blob &buffer)
-        : aio_task(LPC_AIO_BATCH_WRITE, nullptr), _tasks(tasks), _buffer(buffer)
+    explicit batch_write_io_task(aio_task *tasks)
+        : aio_task(LPC_AIO_BATCH_WRITE, nullptr), _tasks(tasks)
     {
     }
 
@@ -229,7 +229,6 @@ public:
 
 public:
     aio_task *_tasks;
-    blob _buffer;
 };
 
 void disk_engine::write(aio_task *aio)
@@ -260,44 +259,51 @@ void disk_engine::write(aio_task *aio)
 
 void disk_engine::process_write(aio_task *aio, uint32_t sz)
 {
+    disk_aio *dio = aio->aio();
+
     // no batching
-    if (aio->aio()->buffer_size == sz) {
-        aio->collapse();
-        return _provider->aio(aio);
+    if (dio->buffer_size == sz) {
+        if (dio->buffer == nullptr) {
+            if (dio->support_write_vec) {
+                dio->write_buffer_vec = &aio->_unmerged_write_buffers;
+            } else {
+                aio->collapse();
+            }
+        }
+        dassert(dio->buffer || dio->write_buffer_vec, "");
+        _provider->aio(aio);
     }
 
     // batching
     else {
-        // merge the buffers
-        auto bb = tls_trans_mem_alloc_blob((size_t)sz);
-        char *ptr = (char *)bb.data();
-        auto current_wk = aio;
-        do {
-            current_wk->copy_to(ptr);
-            ptr += current_wk->aio()->buffer_size;
-            current_wk = (aio_task *)current_wk->next;
-        } while (current_wk);
-
-        dassert(ptr == (char *)bb.data() + bb.length(),
-                "ptr = %" PRIu64 ", bb.data() = %" PRIu64 ", bb.length = %u",
-                (uint64_t)(ptr),
-                (uint64_t)(bb.data()),
-                bb.length());
-
         // setup io task
-        auto new_task = new batch_write_io_task(aio, bb);
-        auto dio = new_task->aio();
-        dio->buffer = (void *)bb.data();
-        dio->buffer_size = sz;
-        dio->file_offset = aio->aio()->file_offset;
+        auto new_task = new batch_write_io_task(aio);
+        auto new_dio = new_task->aio();
+        new_dio->buffer_size = sz;
+        new_dio->file_offset = dio->file_offset;
+        new_dio->file = dio->file;
+        new_dio->file_object = dio->file_object;
+        new_dio->engine = dio->engine;
+        new_dio->type = AIO_Write;
 
-        dio->file = aio->aio()->file;
-        dio->file_object = aio->aio()->file_object;
-        dio->engine = aio->aio()->engine;
-        dio->type = AIO_Write;
+        auto cur_task = aio;
+        do {
+            auto cur_dio = cur_task->aio();
+            if (cur_dio->buffer) {
+                dsn_file_buffer_t buf;
+                buf.buffer = cur_dio->buffer;
+                buf.size = cur_dio->buffer_size;
+                new_task->_unmerged_write_buffers.push_back(std::move(buf));
+            } else {
+                new_task->_unmerged_write_buffers.insert(new_task->_unmerged_write_buffers.end(),
+                                                         cur_task->_unmerged_write_buffers.begin(),
+                                                         cur_task->_unmerged_write_buffers.end());
+            }
+            cur_task = (aio_task *)cur_task->next;
+        } while (cur_task);
 
         new_task->add_ref(); // released in complete_io
-        return _provider->aio(new_task);
+        process_write(new_task, sz);
     }
 }
 
