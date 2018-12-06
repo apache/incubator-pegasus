@@ -3654,6 +3654,8 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.recent_expire_count += row.recent_expire_count;
         sum.recent_filter_count += row.recent_filter_count;
         sum.recent_abnormal_count += row.recent_abnormal_count;
+        sum.recent_throttling_delay_count += row.recent_throttling_delay_count;
+        sum.recent_throttling_reject_count += row.recent_throttling_reject_count;
         sum.storage_mb += row.storage_mb;
         sum.storage_count += row.storage_count;
         sum.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
@@ -3690,6 +3692,8 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("expired");
         tp.add_column("filtered");
         tp.add_column("abnormal");
+        tp.add_column("delayed");
+        tp.add_column("rejected");
         tp.add_column("file_mb");
         tp.add_column("file_num");
         tp.add_column("hit_rate");
@@ -3712,6 +3716,8 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.recent_expire_count);
             tp.append_data(row.recent_filter_count);
             tp.append_data(row.recent_abnormal_count);
+            tp.append_data(row.recent_throttling_delay_count);
+            tp.append_data(row.recent_throttling_reject_count);
             tp.append_data(row.storage_mb);
             tp.append_data((uint64_t)row.storage_count);
             double block_cache_hit_rate =
