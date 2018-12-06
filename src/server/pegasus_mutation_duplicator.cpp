@@ -137,6 +137,11 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
         _duplicate_latency->set(dsn_now_ns() - start_ns);
     } else {
         _duplicate_failed_qps->increment();
+
+        // randomly log the 1% of the failed duplicate rpc.
+        if (dsn::rand::next_double01() <= 0.1) {
+            derror_replica("duplicate_rpc failed: {}", err);
+        }
     }
 
     auto hash = static_cast<uint64_t>(rpc.request().hash);
