@@ -84,20 +84,23 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
     std::string name;
 
     name = fmt::format("duplicate_qps@{}", str_gpid);
-    _duplicate_qps.init_app_counter(
-        "app.pegasus", name.c_str(), COUNTER_TYPE_RATE, "statistic the qps of DUPLICATE request");
+    _duplicate_qps.init_app_counter("app.pegasus",
+                                    name.c_str(),
+                                    COUNTER_TYPE_RATE,
+                                    "the qps of total DUPLICATE requests sent from this app");
 
     name = fmt::format("duplicate_latency@{}", str_gpid);
     _duplicate_latency.init_app_counter("app.pegasus",
                                         name.c_str(),
                                         COUNTER_TYPE_NUMBER_PERCENTILES,
-                                        "statistic the latency of DUPLICATE request");
+                                        "the latency of successful DUPLICATE requests");
 
     name = fmt::format("duplicate_failed_qps@{}", str_gpid);
-    _duplicate_failed_qps.init_app_counter("app.pegasus",
-                                           name.c_str(),
-                                           COUNTER_TYPE_RATE,
-                                           "statistic the qps of failed DUPLICATE request");
+    _duplicate_failed_qps.init_app_counter(
+        "app.pegasus",
+        name.c_str(),
+        COUNTER_TYPE_RATE,
+        "the qps of failed DUPLICATE requests sent from this app");
 }
 
 static bool is_delete_operation(dsn::task_code code)

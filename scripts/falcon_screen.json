@@ -666,6 +666,17 @@
       "graph_type": "a",
       "method": "",
       "timespan": 86400
+    },
+    {
+      "title": "集群热备份发送 qps（总 qps 和失败 qps）",
+      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
+      "counters": [
+          "collector*app.pegasus*app.stat.duplicate_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
+          "collector*app.pegasus*app.stat.duplicate_failed_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
     }
   ]
 }

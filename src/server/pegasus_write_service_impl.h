@@ -575,8 +575,8 @@ private:
 
         rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
         rocksdb::SliceParts skey_parts(&skey, 1);
-        rocksdb::SliceParts svalue =
-            _value_generator.generate_value(_value_schema_version, value, db_expire_ts(expire_sec), new_timetag);
+        rocksdb::SliceParts svalue = _value_generator.generate_value(
+            _value_schema_version, value, db_expire_ts(expire_sec), new_timetag);
         rocksdb::Status s = _batch.Put(skey_parts, svalue);
         if (dsn_unlikely(!s.ok())) {
             ::dsn::blob hash_key, sort_key;

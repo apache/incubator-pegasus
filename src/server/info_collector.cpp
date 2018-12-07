@@ -183,6 +183,8 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNER(rdb_memtable_mem_usage);
     INIT_COUNER(read_qps);
     INIT_COUNER(write_qps);
+    INIT_COUNER(duplicate_qps);
+    INIT_COUNER(duplicate_failed_qps);
     _app_stat_counters[app_name] = counters;
     return counters;
 }

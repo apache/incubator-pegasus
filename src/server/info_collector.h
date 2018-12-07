@@ -49,6 +49,8 @@ public:
         ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
+        ::dsn::perf_counter_wrapper duplicate_qps;
+        ::dsn::perf_counter_wrapper duplicate_failed_qps;
     };
 
     info_collector();
