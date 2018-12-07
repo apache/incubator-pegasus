@@ -394,8 +394,8 @@ struct row_data
     double recent_expire_count = 0;
     double recent_filter_count = 0;
     double recent_abnormal_count = 0;
-    double recent_throttling_delay_count = 0;
-    double recent_throttling_reject_count = 0;
+    double recent_write_throttling_delay_count = 0;
+    double recent_write_throttling_reject_count = 0;
     double storage_mb = 0;
     double storage_count = 0;
     double rdb_block_cache_hit_count = 0;
@@ -434,10 +434,10 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.recent_filter_count += value;
     else if (counter_name == "recent.abnormal.count")
         row.recent_abnormal_count += value;
-    else if (counter_name == "recent.throttling.delay.count")
-        row.recent_throttling_delay_count += value;
-    else if (counter_name == "recent.throttling.reject.count")
-        row.recent_throttling_reject_count += value;
+    else if (counter_name == "recent.write.throttling.delay.count")
+        row.recent_write_throttling_delay_count += value;
+    else if (counter_name == "recent.write.throttling.reject.count")
+        row.recent_write_throttling_reject_count += value;
     else if (counter_name == "disk.storage.sst(MB)")
         row.storage_mb += value;
     else if (counter_name == "disk.storage.sst.count")
