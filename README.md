@@ -96,6 +96,6 @@ If you have more questions, please join our [slack channel](https://join.slack.c
 
 ## License
 
-Copyright 2015-2017 Xiaomi, Inc. Licensed under the Apache License, Version 2.0:
+Copyright 2015-2018 Xiaomi, Inc. Licensed under the Apache License, Version 2.0:
 http://www.apache.org/licenses/LICENSE-2.0
 
