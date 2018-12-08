@@ -91,6 +91,29 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
         name.c_str(),
         COUNTER_TYPE_NUMBER_PERCENTILES,
         "statistic the latency of CHECK_AND_MUTATE request");
+
+    _pfc_duplicated_put_qps.init_app_counter("app.pegasus",
+                                             fmt::format("duplicated_put_qps@{}", str_gpid).c_str(),
+                                             COUNTER_TYPE_RATE,
+                                             "statistic the qps of duplicated PUT request");
+
+    _pfc_duplicated_multi_put_qps.init_app_counter(
+        "app.pegasus",
+        fmt::format("duplicated_multi_put_qps@{}", str_gpid).c_str(),
+        COUNTER_TYPE_RATE,
+        "statistic the qps of duplicated MULTI_PUT request");
+
+    _pfc_duplicated_remove_qps.init_app_counter(
+        "app.pegasus",
+        fmt::format("duplicated_remove_qps@{}", str_gpid).c_str(),
+        COUNTER_TYPE_RATE,
+        "statistic the qps of duplicated REMOVE request");
+
+    _pfc_duplicated_multi_remove_qps.init_app_counter(
+        "app.pegasus",
+        fmt::format("duplicated_multi_remove_qps@{}", str_gpid).c_str(),
+        COUNTER_TYPE_RATE,
+        "statistic the qps of duplicated MULTI_REMOVE request");
 }
 
 pegasus_write_service::~pegasus_write_service() {}
@@ -215,6 +238,60 @@ void pegasus_write_service::clear_up_batch_states()
     _batch_qps_perfcounters.clear();
     _batch_latency_perfcounters.clear();
     _batch_start_time = 0;
+}
+
+int pegasus_write_service::duplicated_multi_put(const db_write_context &ctx,
+                                                const dsn::apps::multi_put_request &update,
+                                                dsn::apps::update_response &resp)
+{
+    uint64_t start_time = dsn_now_ns();
+    _pfc_duplicated_multi_put_qps->increment();
+    int err = _impl->multi_put(ctx, update, resp);
+    _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
+    return err;
+}
+
+int pegasus_write_service::duplicated_multi_remove(int64_t decree,
+                                                   const dsn::apps::multi_remove_request &update,
+                                                   dsn::apps::multi_remove_response &resp)
+{
+    uint64_t start_time = dsn_now_ns();
+    _pfc_duplicated_multi_remove_qps->increment();
+    int err = _impl->multi_remove(decree, update, resp);
+    _pfc_multi_remove_latency->set(dsn_now_ns() - start_time);
+    return err;
+}
+
+int pegasus_write_service::duplicated_put(const db_write_context &ctx,
+                                          const dsn::apps::update_request &update,
+                                          dsn::apps::update_response &resp)
+{
+    uint64_t start_time = dsn_now_ns();
+    _pfc_duplicated_put_qps->increment();
+    int err = _impl->batch_put(ctx, update, resp);
+    if (!err) {
+        err = _impl->batch_commit(ctx.decree);
+    } else {
+        _impl->batch_abort(ctx.decree, err);
+    }
+    _pfc_put_latency->set(dsn_now_ns() - start_time);
+    return err;
+}
+
+int pegasus_write_service::duplicated_remove(int64_t decree,
+                                             const dsn::blob &key,
+                                             dsn::apps::update_response &resp)
+{
+    uint64_t start_time = dsn_now_ns();
+    _pfc_duplicated_remove_qps->increment();
+    int err = _impl->batch_remove(decree, key, resp);
+    if (!err) {
+        err = _impl->batch_commit(decree);
+    } else {
+        _impl->batch_abort(decree, err);
+    }
+    _pfc_remove_latency->set(dsn_now_ns() - start_time);
+    return err;
 }
 
 } // namespace server

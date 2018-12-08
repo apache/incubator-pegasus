@@ -98,38 +98,23 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
     });
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-        // Consider the case where multi_put failed due to invalid argument,
-        // though multi_put is responded with error, since the write
-        // is well handled, it is regarded as being successfully duplicated.
         multi_put_rpc rpc(write);
-        resp.error = _write_svc->multi_put(_write_ctx, rpc.request(), rpc.response());
+        resp.error = _write_svc->duplicated_multi_put(_write_ctx, rpc.request(), rpc.response());
         return resp.error;
     }
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
         multi_remove_rpc rpc(write);
-        resp.error = _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
+        resp.error = _write_svc->duplicated_multi_remove(_decree, rpc.request(), rpc.response());
         return resp.error;
     }
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
         put_rpc rpc(write);
-        _write_svc->batch_prepare(_decree);
-        resp.error = _write_svc->batch_put(_write_ctx, rpc.request(), rpc.response());
-        if (!resp.error) {
-            resp.error = _write_svc->batch_commit(_decree);
-        } else {
-            _write_svc->batch_abort(_decree, resp.error);
-        }
+        resp.error = _write_svc->duplicated_put(_write_ctx, rpc.request(), rpc.response());
         return resp.error;
     }
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
         remove_rpc rpc(write);
-        _write_svc->batch_prepare(_decree);
-        resp.error = _write_svc->batch_remove(_decree, rpc.request(), rpc.response());
-        if (!resp.error) {
-            resp.error = _write_svc->batch_commit(_decree);
-        } else {
-            _write_svc->batch_abort(_decree, resp.error);
-        }
+        resp.error = _write_svc->duplicated_remove(_decree, rpc.request(), rpc.response());
         return resp.error;
     }
 

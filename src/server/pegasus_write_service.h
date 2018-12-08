@@ -123,6 +123,20 @@ public:
 
     void set_default_ttl(uint32_t ttl);
 
+    int duplicated_put(const db_write_context &ctx,
+                       const dsn::apps::update_request &update,
+                       dsn::apps::update_response &resp);
+
+    int duplicated_multi_put(const db_write_context &ctx,
+                             const dsn::apps::multi_put_request &update,
+                             dsn::apps::update_response &resp);
+
+    int duplicated_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp);
+
+    int duplicated_multi_remove(int64_t decree,
+                                const dsn::apps::multi_remove_request &update,
+                                dsn::apps::multi_remove_response &resp);
+
 private:
     void clear_up_batch_states();
 
@@ -150,6 +164,11 @@ private:
     ::dsn::perf_counter_wrapper _pfc_incr_latency;
     ::dsn::perf_counter_wrapper _pfc_check_and_set_latency;
     ::dsn::perf_counter_wrapper _pfc_check_and_mutate_latency;
+
+    ::dsn::perf_counter_wrapper _pfc_duplicated_put_qps;
+    ::dsn::perf_counter_wrapper _pfc_duplicated_multi_put_qps;
+    ::dsn::perf_counter_wrapper _pfc_duplicated_remove_qps;
+    ::dsn::perf_counter_wrapper _pfc_duplicated_multi_remove_qps;
 
     // Records all requests.
     std::vector<::dsn::perf_counter *> _batch_qps_perfcounters;
