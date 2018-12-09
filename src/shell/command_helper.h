@@ -381,6 +381,10 @@ struct row_data
     double rdb_block_cache_mem_usage = 0;
     double rdb_index_and_filter_blocks_mem_usage = 0;
     double rdb_memtable_mem_usage = 0;
+    double duplicated_put_qps = 0;
+    double duplicated_remove_qps = 0;
+    double duplicated_multi_put_qps = 0;
+    double duplicated_multi_remove_qps = 0;
 };
 
 inline bool
@@ -426,6 +430,14 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_index_and_filter_blocks_mem_usage += value;
     else if (counter_name == "rdb.memtable.memory_usage")
         row.rdb_memtable_mem_usage += value;
+    else if (counter_name == "duplicated_put_qps")
+        row.duplicated_put_qps += value;
+    else if (counter_name == "duplicated_remove_qps")
+        row.duplicated_remove_qps += value;
+    else if (counter_name == "duplicated_multi_put_qps")
+        row.duplicated_multi_put_qps += value;
+    else if (counter_name == "duplicated_multi_remove_qps")
+        row.duplicated_multi_remove_qps += value;
     else
         return false;
     return true;

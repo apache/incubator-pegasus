@@ -104,12 +104,15 @@ void info_collector::on_app_stat()
             all.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
             read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
             write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
-                           row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps;
+                           row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps +
+                           row.duplicated_put_qps + row.duplicated_multi_put_qps +
+                           row.duplicated_remove_qps + row.duplicated_remove_qps;
         }
         read_qps[read_qps.size() - 1] = all.get_qps + all.multi_get_qps + all.scan_qps;
-        write_qps[read_qps.size() - 1] = all.put_qps + all.multi_put_qps + all.remove_qps +
-                                         all.multi_remove_qps + all.incr_qps +
-                                         all.check_and_set_qps + all.check_and_mutate_qps;
+        write_qps[read_qps.size() - 1] =
+            all.put_qps + all.multi_put_qps + all.remove_qps + all.multi_remove_qps + all.incr_qps +
+            all.check_and_set_qps + all.check_and_mutate_qps + all.duplicated_put_qps +
+            all.duplicated_multi_put_qps + all.duplicated_remove_qps + all.duplicated_remove_qps;
         for (int i = 0; i < rows.size(); ++i) {
             row_data &row = rows[i];
             AppStatCounters *counters = get_app_counters(row.row_name);
@@ -136,6 +139,10 @@ void info_collector::on_app_stat()
             counters->rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
             counters->read_qps->set(read_qps[i]);
             counters->write_qps->set(write_qps[i]);
+            counters->duplicated_put_qps->set(row.duplicated_put_qps);
+            counters->duplicated_remove_qps->set(row.duplicated_remove_qps);
+            counters->duplicated_multi_put_qps->set(row.duplicated_multi_put_qps);
+            counters->duplicated_multi_remove_qps->set(row.duplicated_multi_remove_qps);
         }
         ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
                (int)(rows.size() - 1),
@@ -185,6 +192,10 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNER(write_qps);
     INIT_COUNER(duplicate_qps);
     INIT_COUNER(duplicate_failed_qps);
+    INIT_COUNER(duplicated_put_qps);
+    INIT_COUNER(duplicated_remove_qps);
+    INIT_COUNER(duplicated_multi_put_qps);
+    INIT_COUNER(duplicated_multi_remove_qps);
     _app_stat_counters[app_name] = counters;
     return counters;
 }

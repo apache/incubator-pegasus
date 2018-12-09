@@ -51,6 +51,10 @@ public:
         ::dsn::perf_counter_wrapper write_qps;
         ::dsn::perf_counter_wrapper duplicate_qps;
         ::dsn::perf_counter_wrapper duplicate_failed_qps;
+        ::dsn::perf_counter_wrapper duplicated_put_qps;
+        ::dsn::perf_counter_wrapper duplicated_remove_qps;
+        ::dsn::perf_counter_wrapper duplicated_multi_remove_qps;
+        ::dsn::perf_counter_wrapper duplicated_multi_put_qps;
     };
 
     info_collector();
