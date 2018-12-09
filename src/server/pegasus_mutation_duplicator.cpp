@@ -231,6 +231,10 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         _inflights[hash].push_back(std::move(rpc));
     }
 
+    if (_inflights.empty()) {
+        cb();
+        return;
+    }
     auto inflights = _inflights;
     for (const auto &kv : inflights) {
         send(kv.first, cb);
