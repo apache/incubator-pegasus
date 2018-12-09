@@ -57,13 +57,13 @@ info_collector::~info_collector()
 
 void info_collector::start()
 {
-    _app_stat_timer_task =
-        ::dsn::tasking::enqueue_timer(LPC_PEGASUS_APP_STAT_TIMER,
-                                      &_tracker,
-                                      [this] { on_app_stat(); },
-                                      std::chrono::seconds(_app_stat_interval_seconds),
-                                      0,
-                                      std::chrono::minutes(1));
+    _app_stat_timer_task = ::dsn::tasking::enqueue_timer(
+        LPC_PEGASUS_APP_STAT_TIMER,
+        &_tracker,
+        [this] { on_app_stat(); },
+        std::chrono::seconds(_app_stat_interval_seconds),
+        0,
+        std::chrono::minutes(1));
 }
 
 void info_collector::stop() { _app_stat_timer_task->cancel(true); }
@@ -102,11 +102,15 @@ void info_collector::on_app_stat()
             all.rdb_block_cache_mem_usage += row.rdb_block_cache_mem_usage;
             all.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
             all.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
+            all.duplicated_put_qps += row.duplicated_put_qps;
+            all.duplicated_multi_put_qps += row.duplicated_multi_put_qps;
+            all.duplicated_remove_qps += row.duplicated_remove_qps;
+            all.duplicated_multi_remove_qps += row.duplicated_multi_remove_qps;
             read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
             write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
                            row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps +
                            row.duplicated_put_qps + row.duplicated_multi_put_qps +
-                           row.duplicated_remove_qps + row.duplicated_remove_qps;
+                           row.duplicated_multi_remove_qps + row.duplicated_remove_qps;
         }
         read_qps[read_qps.size() - 1] = all.get_qps + all.multi_get_qps + all.scan_qps;
         write_qps[read_qps.size() - 1] =
