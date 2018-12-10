@@ -21,18 +21,19 @@ public class ThriftFrameEncoder extends MessageToByteEncoder<ReplicaSession.Requ
 
     @Override
     protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ReplicaSession.RequestEntry entry, boolean preferDirect) throws Exception {
-        return preferDirect?ctx.alloc().ioBuffer(256):ctx.alloc().heapBuffer(256);
+        return preferDirect ? ctx.alloc().ioBuffer(256) : ctx.alloc().heapBuffer(256);
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ReplicaSession.RequestEntry e, ByteBuf out) throws Exception{
+    protected void encode(ChannelHandlerContext ctx, ReplicaSession.RequestEntry e, ByteBuf out) throws Exception {
         int initIndex = out.writerIndex();
 
         // write the Memory buffer
         out.writerIndex(initIndex + ThriftHeader.HEADER_LENGTH);
         TBinaryProtocol protocol = new TBinaryProtocol(new TByteBufTransport(out));
         e.op.send_data(protocol, e.sequenceId);
-        out.setBytes(initIndex, e.op.prepare_thrift_header(out.readableBytes() - ThriftHeader.HEADER_LENGTH));
+        out.setBytes(initIndex, e.op.prepare_thrift_header(
+                out.readableBytes() - ThriftHeader.HEADER_LENGTH, (int) e.timeoutMs));
     }
 
     @Override

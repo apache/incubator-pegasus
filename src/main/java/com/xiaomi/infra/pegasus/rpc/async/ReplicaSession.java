@@ -34,6 +34,7 @@ public class ReplicaSession {
         public com.xiaomi.infra.pegasus.operator.client_operator op;
         public Runnable callback;
         public ScheduledFuture timeoutTask;
+        public long timeoutMs;
     }
 
     public enum ConnState {
@@ -83,6 +84,7 @@ public class ReplicaSession {
         //the timer task is scheduled.
         pendingResponse.put(new Integer(entry.sequenceId), entry);
         entry.timeoutTask = addTimer(entry.sequenceId, timeoutInMilliseconds);
+        entry.timeoutMs = timeoutInMilliseconds;
 
         // We store the connection_state & netty channel in a struct so that they can fetch and update in atomic.
         // Moreover, we can avoid the lock protection when we want to get the netty channel for send message
