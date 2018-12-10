@@ -42,7 +42,7 @@
 namespace dsn {
 namespace replication {
 
-void replica::on_client_write(task_code code, dsn::message_ex *request)
+void replica::on_client_write(task_code code, dsn::message_ex *request, bool ignore_throttling)
 {
     _checker.only_one_thread_access();
 
@@ -68,6 +68,37 @@ void replica::on_client_write(task_code code, dsn::message_ex *request)
         _options->mutation_2pc_min_replica_count) {
         response_client_message(false, request, ERR_NOT_ENOUGH_MEMBER);
         return;
+    }
+
+    if (_write_throttling_controller.enabled() && !ignore_throttling) {
+        int64_t delay_ms = 0;
+        auto type = _write_throttling_controller.control(request, delay_ms);
+        if (type != throttling_controller::PASS) {
+            if (type == throttling_controller::DELAY) {
+                tasking::enqueue(LPC_WRITE_THROTTLING_DELAY,
+                                 &_tracker,
+                                 [ this, code, req = message_ptr(request) ]() {
+                                     on_client_write(code, req, true);
+                                 },
+                                 get_gpid().thread_hash(),
+                                 std::chrono::milliseconds(delay_ms));
+                _counter_recent_write_throttling_delay_count->increment();
+            } else { // type == throttling_controller::REJECT
+                if (delay_ms > 0) {
+                    tasking::enqueue(LPC_WRITE_THROTTLING_DELAY,
+                                     &_tracker,
+                                     [ this, req = message_ptr(request) ]() {
+                                         response_client_message(false, req, ERR_BUSY);
+                                     },
+                                     get_gpid().thread_hash(),
+                                     std::chrono::milliseconds(delay_ms));
+                } else {
+                    response_client_message(false, request, ERR_BUSY);
+                }
+                _counter_recent_write_throttling_reject_count->increment();
+            }
+            return;
+        }
     }
 
     dinfo("%s: got write request from %s", name(), request->header->from_address.to_string());

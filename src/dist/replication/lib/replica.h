@@ -54,6 +54,7 @@
 #include "mutation_log.h"
 #include "prepare_list.h"
 #include "replica_context.h"
+#include "throttling_controller.h"
 
 namespace dsn {
 namespace replication {
@@ -93,7 +94,7 @@ public:
     //
     //    requests from clients
     //
-    void on_client_write(task_code code, dsn::message_ex *request);
+    void on_client_write(task_code code, dsn::message_ex *request, bool ignore_throttling = false);
     void on_client_read(task_code code, dsn::message_ex *request);
 
     //
@@ -373,10 +374,13 @@ private:
 
     bool _inactive_is_transient; // upgrade to P/S is allowed only iff true
     bool _is_initializing;       // when initializing, switching to primary need to update ballot
-    volatile bool _deny_client_write = false;
+    bool _deny_client_write;     // if deny all write requests
+    throttling_controller _write_throttling_controller;
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;
+    perf_counter_wrapper _counter_recent_write_throttling_delay_count;
+    perf_counter_wrapper _counter_recent_write_throttling_reject_count;
 
     dsn::task_tracker _tracker;
     // the thread access checker

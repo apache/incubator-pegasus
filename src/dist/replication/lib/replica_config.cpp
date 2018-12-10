@@ -544,13 +544,47 @@ bool replica::update_app_envs(const std::map<std::string, std::string> &envs)
 
 void replica::update_app_envs_internal(const std::map<std::string, std::string> &envs)
 {
+    // DENY_CLIENT_WRITE
     bool deny_client_write = false;
     auto find = envs.find(replica_envs::DENY_CLIENT_WRITE);
-    if (find != envs.end() && buf2bool(find->second, deny_client_write)) {
-        if (deny_client_write != _deny_client_write) {
-            _deny_client_write = deny_client_write;
-            ddebug_replica("switch _deny_client_write to {}", _deny_client_write);
+    if (find != envs.end()) {
+        if (!buf2bool(find->second, deny_client_write)) {
+            dwarn_replica(
+                "invalid value of env {}: \"{}\"", replica_envs::DENY_CLIENT_WRITE, find->second);
         }
+    }
+    if (deny_client_write != _deny_client_write) {
+        ddebug_replica(
+            "switch _deny_client_write from {} to {}", _deny_client_write, deny_client_write);
+        _deny_client_write = deny_client_write;
+    }
+
+    // WRITE_THROTTLING
+    bool throttling_changed = false;
+    std::string old_throttling;
+    std::string parse_error;
+    find = envs.find(replica_envs::WRITE_THROTTLING);
+    if (find != envs.end()) {
+        if (!_write_throttling_controller.parse_from_env(find->second,
+                                                         _app_info.partition_count,
+                                                         parse_error,
+                                                         throttling_changed,
+                                                         old_throttling)) {
+            dwarn_replica("parse env failed, key = \"{}\", value = \"{}\", error = \"{}\"",
+                          replica_envs::WRITE_THROTTLING,
+                          find->second,
+                          parse_error);
+            // reset if parse failed
+            _write_throttling_controller.reset(throttling_changed, old_throttling);
+        }
+    } else {
+        // reset if env not found
+        _write_throttling_controller.reset(throttling_changed, old_throttling);
+    }
+    if (throttling_changed) {
+        ddebug_replica("switch _write_throttling_controller from \"{}\" to \"{}\"",
+                       old_throttling,
+                       _write_throttling_controller.env_value());
     }
 }
 

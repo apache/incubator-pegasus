@@ -569,6 +569,7 @@ const std::string backup_restore_constant::BACKUP_ID("restore.backup_id");
 const std::string backup_restore_constant::SKIP_BAD_PARTITION("restore.skip_bad_partition");
 
 const std::string replica_envs::DENY_CLIENT_WRITE("replica.deny_client_write");
+const std::string replica_envs::WRITE_THROTTLING("replica.write_throttling");
 
 namespace cold_backup {
 std::string get_policy_path(const std::string &root, const std::string &policy_name)

@@ -86,6 +86,8 @@ void partition_resolver_simple::on_access_failure(int partition_index, error_cod
                                      // provider
         &&
         err != ERR_OPERATION_DISABLED // operation disabled
+        &&
+        err != ERR_BUSY //  busy (rpc busy or throttling busy)
         ) {
         ddebug("clear partition configuration cache %d.%d due to access failure %s",
                _app_id,
