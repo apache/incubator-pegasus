@@ -95,6 +95,8 @@ void info_collector::on_app_stat()
             all.recent_expire_count += row.recent_expire_count;
             all.recent_filter_count += row.recent_filter_count;
             all.recent_abnormal_count += row.recent_abnormal_count;
+            all.recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
+            all.recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
             all.storage_mb += row.storage_mb;
             all.storage_count += row.storage_count;
             all.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
@@ -126,6 +128,10 @@ void info_collector::on_app_stat()
             counters->recent_expire_count->set(row.recent_expire_count);
             counters->recent_filter_count->set(row.recent_filter_count);
             counters->recent_abnormal_count->set(row.recent_abnormal_count);
+            counters->recent_write_throttling_delay_count->set(
+                row.recent_write_throttling_delay_count);
+            counters->recent_write_throttling_reject_count->set(
+                row.recent_write_throttling_reject_count);
             counters->storage_mb->set(row.storage_mb);
             counters->storage_count->set(row.storage_count);
             counters->rdb_block_cache_hit_rate->set(row.rdb_block_cache_hit_count /
@@ -175,6 +181,8 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNER(recent_expire_count);
     INIT_COUNER(recent_filter_count);
     INIT_COUNER(recent_abnormal_count);
+    INIT_COUNER(recent_write_throttling_delay_count);
+    INIT_COUNER(recent_write_throttling_reject_count);
     INIT_COUNER(storage_mb);
     INIT_COUNER(storage_count);
     INIT_COUNER(rdb_block_cache_hit_rate);
