@@ -1297,9 +1297,11 @@ const char *pegasus_client_impl::get_error_string(int error_code) const
     _server_error_to_client[::dsn::ERR_NETWORK_FAILURE] = PERR_NETWORK_FAILURE;
     _server_error_to_client[::dsn::ERR_HANDLER_NOT_FOUND] = PERR_HANDLER_NOT_FOUND;
     _server_error_to_client[::dsn::ERR_OPERATION_DISABLED] = PERR_OPERATION_DISABLED;
+    _server_error_to_client[::dsn::ERR_NOT_ENOUGH_MEMBER] = PERR_NOT_ENOUGH_MEMBER;
 
     _server_error_to_client[::dsn::ERR_APP_NOT_EXIST] = PERR_APP_NOT_EXIST;
     _server_error_to_client[::dsn::ERR_APP_EXIST] = PERR_APP_EXIST;
+    _server_error_to_client[::dsn::ERR_BUSY] = PERR_APP_BUSY;
 
     // rocksdb error;
     for (int i = 1001; i < 1013; i++) {
