@@ -385,6 +385,8 @@ struct row_data
     double duplicated_remove_qps = 0;
     double duplicated_multi_put_qps = 0;
     double duplicated_multi_remove_qps = 0;
+    double duplicate_qps = 0;
+    double duplicate_failed_qps = 0;
 };
 
 inline bool
@@ -438,6 +440,10 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.duplicated_multi_put_qps += value;
     else if (counter_name == "duplicated_multi_remove_qps")
         row.duplicated_multi_remove_qps += value;
+    else if (counter_name == "duplicate_qps")
+        row.duplicate_qps += value;
+    else if (counter_name == "duplicate_failed_qps")
+        row.duplicate_failed_qps += value;
     else
         return false;
     return true;

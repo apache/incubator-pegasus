@@ -57,13 +57,13 @@ info_collector::~info_collector()
 
 void info_collector::start()
 {
-    _app_stat_timer_task = ::dsn::tasking::enqueue_timer(
-        LPC_PEGASUS_APP_STAT_TIMER,
-        &_tracker,
-        [this] { on_app_stat(); },
-        std::chrono::seconds(_app_stat_interval_seconds),
-        0,
-        std::chrono::minutes(1));
+    _app_stat_timer_task =
+        ::dsn::tasking::enqueue_timer(LPC_PEGASUS_APP_STAT_TIMER,
+                                      &_tracker,
+                                      [this] { on_app_stat(); },
+                                      std::chrono::seconds(_app_stat_interval_seconds),
+                                      0,
+                                      std::chrono::minutes(1));
 }
 
 void info_collector::stop() { _app_stat_timer_task->cancel(true); }
@@ -106,6 +106,8 @@ void info_collector::on_app_stat()
             all.duplicated_multi_put_qps += row.duplicated_multi_put_qps;
             all.duplicated_remove_qps += row.duplicated_remove_qps;
             all.duplicated_multi_remove_qps += row.duplicated_multi_remove_qps;
+            all.duplicate_qps += row.duplicate_qps;
+            all.duplicate_failed_qps += row.duplicate_failed_qps;
             read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
             write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
                            row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps +
@@ -147,6 +149,8 @@ void info_collector::on_app_stat()
             counters->duplicated_remove_qps->set(row.duplicated_remove_qps);
             counters->duplicated_multi_put_qps->set(row.duplicated_multi_put_qps);
             counters->duplicated_multi_remove_qps->set(row.duplicated_multi_remove_qps);
+            counters->duplicate_qps->set(row.duplicate_qps);
+            counters->duplicate_failed_qps->set(row.duplicate_failed_qps);
         }
         ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
                (int)(rows.size() - 1),
