@@ -194,6 +194,12 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             if (from_cluster_id == _remote_cluster_id) {
                 // ignore this mutation to prevent infinite duplication loop.
                 continue;
+            } else {
+                derror_replica(
+                    "impossible cluster_id:{}, [remote_cluster_id:{}, current_cluster_id:{}]",
+                    from_cluster_id,
+                    _remote_cluster_id,
+                    get_current_cluster_id());
             }
 
             hash = static_cast<uint64_t>(dreq.hash);
