@@ -10,7 +10,6 @@
 #include <dsn/cpp/message_utils.h>
 #include <dsn/dist/replication/replica_base.h>
 #include <condition_variable>
-#include <server/pegasus_mutation_duplicator.h>
 
 namespace pegasus {
 namespace server {
@@ -117,6 +116,108 @@ public:
             ASSERT_EQ(duplicator_impl->_inflights.begin()->second.size(), 9);
         }
     }
+
+    void test_duplicate_isolated_hashkeys()
+    {
+        replica_base replica(dsn::gpid(1, 1), "fake_replica");
+        auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
+
+        dsn::task_tracker tracker;
+        dsn::pipeline::environment env;
+        duplicator->set_task_environment(
+            env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&tracker));
+
+        size_t total_size = 3000;
+        mutation_tuple_set muts;
+        for (uint64_t i = 0; i < total_size; i++) {
+            uint64_t ts = 200 + i;
+            dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_PUT;
+
+            dsn::apps::update_request request;
+            pegasus::pegasus_generate_key(
+                request.key, std::string("hash") + std::to_string(i), std::string("sort"));
+            dsn::message_ex *msg = dsn::from_thrift_request_to_received_message(request, code);
+            auto data = dsn::move_message_to_blob(msg);
+
+            muts.insert(std::make_tuple(ts, code, data));
+        }
+
+        auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
+        RPC_MOCKING(duplicate_rpc)
+        {
+            duplicator->duplicate(muts, []() {});
+
+            // ensure each bucket has only 1 request and each request is
+            // isolated with others.
+            ASSERT_EQ(duplicator_impl->_inflights.size(), total_size);
+            ASSERT_EQ(duplicate_rpc::mail_box().size(), total_size);
+            for (const auto &ents : duplicator_impl->_inflights) {
+                ASSERT_EQ(ents.second.size(), 0);
+            }
+
+            // reply with success
+            auto rpc_list = std::move(duplicate_rpc::mail_box());
+            for (const auto &rpc : rpc_list) {
+                rpc.response().error = dsn::ERR_OK;
+                duplicator_impl->on_duplicate_reply([]() {}, rpc, dsn_now_ns(), dsn::ERR_OK);
+            }
+            tracker.wait_outstanding_tasks();
+            ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
+            ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
+        }
+    }
+
+    void test_all_mutations_are_duplicated_from_master()
+    {
+        replica_base replica(dsn::gpid(1, 1), "fake_replica");
+        auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
+
+        dsn::task_tracker tracker;
+        dsn::pipeline::environment env;
+        duplicator->set_task_environment(
+            env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&tracker));
+
+        mutation_tuple_set muts;
+        for (uint64_t i = 0; i < 3000; i++) {
+            uint64_t ts = 200 + i;
+            dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_DUPLICATE;
+            dsn::apps::duplicate_request request;
+
+            dsn::apps::update_request duplicated_request;
+            pegasus::pegasus_generate_key(duplicated_request.key,
+                                          std::string("hash") + std::to_string(i),
+                                          std::string("sort"));
+            request.timetag = generate_timetag(100, 2, false); // master(onebox2)'s cluster_id = 2
+            request.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+            request.hash = pegasus_key_hash(duplicated_request.key);
+            request.raw_message =
+                dsn::move_message_to_blob(dsn::from_thrift_request_to_received_message(
+                    duplicated_request, request.task_code));
+
+            dsn::message_ex *msg = dsn::from_thrift_request_to_received_message(request, code);
+            auto data = dsn::move_message_to_blob(msg);
+            muts.insert(std::make_tuple(ts, code, data));
+        }
+
+        auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
+        RPC_MOCKING(duplicate_rpc)
+        {
+            duplicator->duplicate(muts, []() {});
+
+            ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
+            ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
+        }
+    }
+
+    void test_create_duplicator()
+    {
+        replica_base replica(dsn::gpid(1, 1), "fake_replica");
+        auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
+        auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
+        ASSERT_EQ(duplicator_impl->_remote_cluster_id, 2);
+        ASSERT_EQ(duplicator_impl->_remote_cluster, "onebox2");
+        ASSERT_EQ(get_current_cluster_id(), 1);
+    }
 };
 
 TEST_F(pegasus_mutation_duplicator_test, get_hash_from_request)
@@ -192,6 +293,18 @@ TEST_F(pegasus_mutation_duplicator_test, read_after_get_hash_key)
 TEST_F(pegasus_mutation_duplicator_test, duplicate) { test_duplicate(); }
 
 TEST_F(pegasus_mutation_duplicator_test, duplicate_failed) { test_duplicate_failed(); }
+
+TEST_F(pegasus_mutation_duplicator_test, duplicate_isolated_hashkeys)
+{
+    test_duplicate_isolated_hashkeys();
+}
+
+TEST_F(pegasus_mutation_duplicator_test, all_mutations_are_duplicated_from_master)
+{
+    test_all_mutations_are_duplicated_from_master();
+}
+
+TEST_F(pegasus_mutation_duplicator_test, create_duplicator) { test_create_duplicator(); }
 
 } // namespace server
 } // namespace pegasus
