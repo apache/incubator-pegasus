@@ -228,6 +228,49 @@ public:
         }
     }
 
+    void test_mutation_is_duplicated_from_nowhere()
+    {
+        replica_base replica(dsn::gpid(1, 1), "fake_replica");
+        auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
+
+        dsn::task_tracker tracker;
+        dsn::pipeline::environment env;
+        duplicator->set_task_environment(
+            env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&tracker));
+
+        mutation_tuple_set muts;
+        for (uint64_t i = 0; i < 3000; i++) {
+            uint64_t ts = 200 + i;
+            dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_DUPLICATE;
+            dsn::apps::duplicate_request request;
+
+            dsn::apps::update_request duplicated_request;
+            pegasus::pegasus_generate_key(duplicated_request.key,
+                                          std::string("hash") + std::to_string(i),
+                                          std::string("sort"));
+            request.timetag = generate_timetag(100, 130, false); // cluster_id=130(nowhere)
+            request.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+            request.hash = pegasus_key_hash(duplicated_request.key);
+            request.raw_message =
+                dsn::move_message_to_blob(dsn::from_thrift_request_to_received_message(
+                    duplicated_request, request.task_code));
+
+            dsn::message_ex *msg = dsn::from_thrift_request_to_received_message(request, code);
+            auto data = dsn::move_message_to_blob(msg);
+            muts.insert(std::make_tuple(ts, code, data));
+        }
+
+        auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
+        RPC_MOCKING(duplicate_rpc)
+        {
+            duplicator->duplicate(muts, []() {});
+
+            // ignore those mutations that are duplicated from nowhere
+            ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
+            ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
+        }
+    }
+
     void test_create_duplicator()
     {
         replica_base replica(dsn::gpid(1, 1), "fake_replica");
@@ -324,6 +367,11 @@ TEST_F(pegasus_mutation_duplicator_test, all_mutations_are_duplicated_from_maste
 }
 
 TEST_F(pegasus_mutation_duplicator_test, create_duplicator) { test_create_duplicator(); }
+
+TEST_F(pegasus_mutation_duplicator_test, mutation_is_duplicated_from_nowhere)
+{
+    test_mutation_is_duplicated_from_nowhere();
+}
 
 } // namespace server
 } // namespace pegasus

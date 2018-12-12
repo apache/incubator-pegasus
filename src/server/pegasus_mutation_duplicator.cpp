@@ -146,8 +146,11 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
 
         // randomly log the 1% of the failed duplicate rpc.
         if (dsn::rand::next_double01() <= 0.01) {
-            derror_replica("duplicate_rpc failed: {}",
-                           err == dsn::ERR_OK ? _client->get_error_string(perr) : err.to_string());
+            derror_replica("duplicate_rpc failed: {} [code:{}, cluster_id:{}, timestamp:{}]",
+                           err == dsn::ERR_OK ? _client->get_error_string(perr) : err.to_string(),
+                           rpc.request().task_code,
+                           extract_cluster_id_from_timetag(rpc.request().timetag),
+                           extract_timestamp_from_timetag(rpc.request().timetag));
         }
     }
 
@@ -198,7 +201,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             if (from_cluster_id == _remote_cluster_id) {
                 // ignore this mutation to prevent infinite duplication loop.
                 continue;
-            } else if (dsn::replication::is_cluster_id_configured(from_cluster_id)) {
+            } else if (!dsn::replication::is_cluster_id_configured(from_cluster_id)) {
                 derror_replica(
                     "illegal duplicate request [from_cluster_id: {}, remote_cluster_id:{}]",
                     from_cluster_id,
