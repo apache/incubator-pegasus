@@ -212,7 +212,7 @@ public:
         duplicate.raw_message = dsn::move_message_to_blob(pegasus::create_put_request(request));
         duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
         _server_write->on_duplicate(duplicate, resp);
-        ASSERT_EQ(resp.error, -1004); // PERR_INVALID_ARGUMENT
+        ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);
     }
 
     void verify_response(const dsn::apps::update_response &response, int err, int64_t decree)
