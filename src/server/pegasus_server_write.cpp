@@ -83,10 +83,6 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
                                        dsn::apps::duplicate_response &resp)
 {
     auto remote_timetag = static_cast<uint64_t>(request.timetag);
-    if (remote_timetag <= 0) {
-        resp.error = PERR_INVALID_ARGUMENT;
-        return _write_svc->empty_put(_decree);
-    }
     uint8_t cluster_id = extract_cluster_id_from_timetag(remote_timetag);
     if (!dsn::replication::is_cluster_id_configured(cluster_id)) {
         resp.error = PERR_INVALID_ARGUMENT;

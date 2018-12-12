@@ -103,7 +103,7 @@ public:
         }
 
         dsn::apps::duplicate_request duplicate;
-        duplicate.timetag = 1000;
+        duplicate.timetag = pegasus::generate_timetag(1000, 2, false);
         dsn::apps::duplicate_response resp;
 
         {
@@ -152,7 +152,7 @@ public:
 
         {
             dsn::apps::duplicate_request duplicate;
-            duplicate.timetag = 1000;
+            duplicate.timetag = pegasus::generate_timetag(1000, 2, false);
             dsn::apps::duplicate_response resp;
 
             for (int i = 0; i < kv_num; i++) {
@@ -177,7 +177,7 @@ public:
 
         // timestamp = 10
         dsn::apps::duplicate_request duplicate;
-        duplicate.timetag = pegasus::generate_timetag(10, 0, 0);
+        duplicate.timetag = pegasus::generate_timetag(10, 2, false);
         dsn::apps::duplicate_response resp;
 
         dsn::apps::update_request request;
@@ -192,6 +192,27 @@ public:
         // last_duplicate_latency = [now-5 - timstamp, now - timestamp]
         ASSERT_LE(_server_write->_TEST_last_duplicate_latency.count(), dsn_now_us() - 10);
         ASSERT_GE(_server_write->_TEST_last_duplicate_latency.count(), dsn_now_us() - 5 - 10);
+    }
+
+    void test_illegal_duplicate_request()
+    {
+        std::string hash_key = "hash_key";
+        std::string sort_key = "sort_key";
+        std::string value = "value";
+
+        // cluster=130 is from nowhere
+        dsn::apps::duplicate_request duplicate;
+        duplicate.timetag = pegasus::generate_timetag(10, 130, false);
+        dsn::apps::duplicate_response resp;
+
+        dsn::apps::update_request request;
+        pegasus::pegasus_generate_key(request.key, hash_key, sort_key);
+        request.value.assign(value.data(), 0, value.size());
+
+        duplicate.raw_message = dsn::move_message_to_blob(pegasus::create_put_request(request));
+        duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+        _server_write->on_duplicate(duplicate, resp);
+        ASSERT_EQ(resp.error, -1004); // PERR_INVALID_ARGUMENT
     }
 
     void verify_response(const dsn::apps::update_response &response, int err, int64_t decree)
@@ -211,6 +232,8 @@ TEST_F(pegasus_server_write_test, duplicate_not_batched) { test_duplicate_not_ba
 TEST_F(pegasus_server_write_test, duplicate_batched) { test_duplicate_batched(); }
 
 TEST_F(pegasus_server_write_test, total_duplicate_latency) { test_total_duplicate_latency(); }
+
+TEST_F(pegasus_server_write_test, illegal_duplicate_request) { test_illegal_duplicate_request(); }
 
 } // namespace server
 } // namespace pegasus
