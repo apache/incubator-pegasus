@@ -13,39 +13,35 @@ TEST(value_schema, generate_and_extract_timetag)
     struct test_case
     {
         uint64_t timestamp;
-        uint8_t cluster_id;
         bool delete_tag;
 
         uint64_t wtimestamp;
     } tests[] = {
-        {1000, 1, true, 1000},
-        {1000, 1, false, 1000},
+        {1000, true, 1000},
+        {1000, false, 1000},
 
         {std::numeric_limits<uint64_t>::max() >> 8,
-         std::numeric_limits<uint8_t>::max(),
          true,
          std::numeric_limits<uint64_t>::max() >> 8},
 
         {std::numeric_limits<uint64_t>::max() >> 8,
-         std::numeric_limits<uint8_t>::max(),
          false,
          std::numeric_limits<uint64_t>::max() >> 8},
 
-        {std::numeric_limits<uint64_t>::max(),
-         std::numeric_limits<uint8_t>::max(),
-         false,
-         std::numeric_limits<uint64_t>::max() >> 8},
+        {std::numeric_limits<uint64_t>::max(), false, std::numeric_limits<uint64_t>::max() >> 8},
 
-        {std::numeric_limits<uint64_t>::max(),
-         std::numeric_limits<uint8_t>::max(),
-         false,
-         std::numeric_limits<uint64_t>::max() >> 8},
+        {std::numeric_limits<uint64_t>::max(), false, std::numeric_limits<uint64_t>::max() >> 8},
+
+        // Wed, 12 Dec 2018 09:48:48 GMT
+        {1544583472297055, false, 1544583472297055},
     };
 
     for (auto &t : tests) {
-        uint64_t timetag = generate_timetag(t.timestamp, t.cluster_id, false);
-        ASSERT_EQ(t.cluster_id, extract_cluster_id_from_timetag(timetag));
-        ASSERT_EQ(t.wtimestamp, extract_timestamp_from_timetag(timetag));
+        for (uint8_t cluster_id = 1; cluster_id <= 0x7F; cluster_id++) {
+            uint64_t timetag = generate_timetag(t.timestamp, cluster_id, t.delete_tag);
+            ASSERT_EQ(cluster_id, extract_cluster_id_from_timetag(timetag));
+            ASSERT_EQ(t.wtimestamp, extract_timestamp_from_timetag(timetag));
+        }
     }
 }
 
