@@ -85,9 +85,10 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
     auto remote_timetag = static_cast<uint64_t>(request.timetag);
     uint8_t cluster_id = extract_cluster_id_from_timetag(remote_timetag);
     if (!dsn::replication::is_cluster_id_configured(cluster_id)) {
-        resp.error = PERR_INVALID_ARGUMENT;
+        resp.error = rocksdb::Status::kInvalidArgument;
         return _write_svc->empty_put(_decree);
     }
+    dassert_replica(cluster_id != get_current_cluster_id(), "self-duplicating is impossible");
 
     _write_ctx = db_write_context::create_duplicate(_decree, remote_timetag);
 
