@@ -114,6 +114,25 @@ public:
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
             ASSERT_EQ(duplicator_impl->_inflights.begin()->second.size(), 9);
+            duplicate_rpc::mail_box().clear();
+
+            // with other error
+            rpc.response().error = PERR_INVALID_ARGUMENT;
+            duplicator_impl->on_duplicate_reply([]() {}, rpc, dsn_now_ns(), dsn::ERR_OK);
+            tracker.wait_outstanding_tasks();
+            ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
+            ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
+            ASSERT_EQ(duplicator_impl->_inflights.begin()->second.size(), 9);
+            duplicate_rpc::mail_box().clear();
+
+            // with other error
+            rpc.response().error = PERR_OK;
+            duplicator_impl->on_duplicate_reply([]() {}, rpc, dsn_now_ns(), dsn::ERR_IO_PENDING);
+            tracker.wait_outstanding_tasks();
+            ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
+            ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
+            ASSERT_EQ(duplicator_impl->_inflights.begin()->second.size(), 9);
+            duplicate_rpc::mail_box().clear();
         }
     }
 

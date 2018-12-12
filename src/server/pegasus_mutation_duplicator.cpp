@@ -132,12 +132,13 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
 {
     _duplicate_qps->increment();
 
-    int perr = client::pegasus_client_impl::get_client_error(
-        err == dsn::ERR_OK
-            ? client::pegasus_client_impl::get_rocksdb_server_error(rpc.response().error)
-            : int(err));
+    int perr = PERR_OK;
+    if (err == dsn::ERR_OK) {
+        perr = client::pegasus_client_impl::get_client_error(
+            client::pegasus_client_impl::get_rocksdb_server_error(rpc.response().error));
+    }
 
-    if (perr == PERR_OK) {
+    if (perr == PERR_OK && err == dsn::ERR_OK) {
         /// failure is not taken into latency calculation
         _duplicate_latency->set(dsn_now_ns() - start_ns);
     } else {
@@ -145,14 +146,15 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
 
         // randomly log the 1% of the failed duplicate rpc.
         if (dsn::rand::next_double01() <= 0.01) {
-            derror_replica("duplicate_rpc failed: {}", _client->get_error_string(perr));
+            derror_replica("duplicate_rpc failed: {}",
+                           err == dsn::ERR_OK ? _client->get_error_string(perr) : err.to_string());
         }
     }
 
     auto hash = static_cast<uint64_t>(rpc.request().hash);
     {
         dsn::zauto_lock _(_lock);
-        if (perr != PERR_OK) {
+        if (perr != PERR_OK || err != dsn::ERR_OK) {
             // retry this rpc
             _inflights[hash].push_front(rpc);
             schedule_task([hash, cb, this]() { send(hash, cb); }, 1_s);
