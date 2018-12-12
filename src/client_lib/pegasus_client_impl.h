@@ -285,6 +285,9 @@ public:
         static const ::dsn::blob _max;
     };
 
+    static int get_client_error(int server_error);
+    static int get_rocksdb_server_error(int rocskdb_error);
+
 private:
     class pegasus_scanner_impl_wrapper : public abstract_pegasus_scanner
     {
@@ -303,9 +306,6 @@ private:
             return _p->next(hashkey, sortkey, value, info);
         }
     };
-
-    static int get_client_error(int server_error);
-    static int get_rocksdb_server_error(int rocskdb_error);
 
 private:
     std::string _cluster_name;

@@ -29,7 +29,7 @@ namespace server {
 
 using namespace dsn::literals::chrono_literals;
 
-uint64_t get_hash_from_request(dsn::task_code tc, const dsn::blob &data)
+/*extern*/ uint64_t get_hash_from_request(dsn::task_code tc, const dsn::blob &data)
 {
     if (tc == dsn::apps::RPC_RRDB_RRDB_PUT) {
         dsn::apps::update_request thrift_request;
@@ -132,25 +132,27 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
 {
     _duplicate_qps->increment();
 
-    if (err == dsn::ERR_OK) {
-        err = dsn::error_code(rpc.response().error);
-    }
-    if (err == dsn::ERR_OK) {
+    int perr = client::pegasus_client_impl::get_client_error(
+        err == dsn::ERR_OK
+            ? client::pegasus_client_impl::get_rocksdb_server_error(rpc.response().error)
+            : int(err));
+
+    if (perr == PERR_OK) {
         /// failure is not taken into latency calculation
         _duplicate_latency->set(dsn_now_ns() - start_ns);
     } else {
         _duplicate_failed_qps->increment();
 
         // randomly log the 1% of the failed duplicate rpc.
-        if (dsn::rand::next_double01() <= 0.1) {
-            derror_replica("duplicate_rpc failed: {}", err);
+        if (dsn::rand::next_double01() <= 0.01) {
+            derror_replica("duplicate_rpc failed: {}", _client->get_error_string(perr));
         }
     }
 
     auto hash = static_cast<uint64_t>(rpc.request().hash);
     {
         dsn::zauto_lock _(_lock);
-        if (err != dsn::ERR_OK) {
+        if (perr != PERR_OK) {
             // retry this rpc
             _inflights[hash].push_front(rpc);
             schedule_task([hash, cb, this]() { send(hash, cb); }, 1_s);
@@ -194,12 +196,12 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             if (from_cluster_id == _remote_cluster_id) {
                 // ignore this mutation to prevent infinite duplication loop.
                 continue;
-            } else {
+            } else if (dsn::replication::is_cluster_id_configured(from_cluster_id)) {
                 derror_replica(
-                    "impossible cluster_id:{}, [remote_cluster_id:{}, current_cluster_id:{}]",
+                    "illegal duplicate request [from_cluster_id: {}, remote_cluster_id:{}]",
                     from_cluster_id,
-                    _remote_cluster_id,
-                    get_current_cluster_id());
+                    _remote_cluster_id);
+                continue;
             }
 
             hash = static_cast<uint64_t>(dreq.hash);
