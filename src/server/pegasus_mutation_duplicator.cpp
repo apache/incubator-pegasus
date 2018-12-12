@@ -214,20 +214,6 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             hash = get_hash_from_request(rpc_code, data);
         }
 
-        mut = std::make_tuple(timestamp, rpc_code, data);
-
-        std::string hash_key, sort_key;
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
-            dsn::apps::update_request thrift_request;
-            dsn::from_blob_to_thrift(data, thrift_request);
-            pegasus_restore_key(thrift_request.key, hash_key, sort_key);
-        }
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
-            dsn::blob raw_key;
-            dsn::from_blob_to_thrift(data, raw_key);
-            pegasus_restore_key(raw_key, hash_key, sort_key);
-        }
-
         auto dreq = dsn::make_unique<dsn::apps::duplicate_request>();
         dreq->task_code = rpc_code;
         dreq->hash = hash;
