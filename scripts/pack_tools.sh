@@ -108,7 +108,8 @@ copy_file `get_system_lib shell snappy` ${pack}/DSN_ROOT/lib/
 copy_file `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/
 copy_file `get_system_lib shell ssl` ${pack}/DSN_ROOT/lib/
 copy_file `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/
-copy_file `get_system_lib shell bz2` ${pack}/DSN_ROOT/lib/
+copy_file `get_system_lib shell zstd` ${pack}/DSN_ROOT/lib/
+copy_file `get_system_lib shell lz4` ${pack}/DSN_ROOT/lib/
 chmod -x ${pack}/DSN_ROOT/lib/*
 
 mkdir -p ${pack}/scripts

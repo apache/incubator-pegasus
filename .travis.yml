@@ -8,8 +8,15 @@ os: linux
 compiler:
     - gcc
 
+addons:
+  apt:
+    packages:
+      - libsnappy-dev
+      - liblz4-dev
+
 cache:
     - ccache
+    - apt
 
 before_install:
     - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/build-depends.tar.gz
@@ -19,9 +26,9 @@ before_install:
     - cd ..
 
 install:
-    - sudo apt-get -f install
-    - sudo apt-get -y install libsnappy-dev
-    - sudo apt-get -y install libgflags-dev
+    - wget https://github.com/facebook/zstd/archive/v1.3.7.zip; unzip v1.3.7; cd zstd-1.3.7;
+    - mkdir cmake-build; cd cmake-build; cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DZSTD_BUILD_PROGRAMS=OFF ../build/cmake; sudo make install -j8;
+    - cd ../..
 
 before_script:
     - cd rdsn/thirdparty

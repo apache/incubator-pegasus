@@ -102,7 +102,8 @@ copy_file `get_system_lib server snappy` ${pack}/bin
 copy_file `get_system_lib server crypto` ${pack}/bin
 copy_file `get_system_lib server ssl` ${pack}/bin
 copy_file `get_system_lib server aio` ${pack}/bin
-copy_file `get_system_lib server bz2` ${pack}/bin
+copy_file `get_system_lib server zstd` ${pack}/bin
+copy_file `get_system_lib server lz4` ${pack}/bin
 
 chmod +x ${pack}/bin/pegasus_* ${pack}/bin/*.sh
 chmod -x ${pack}/bin/lib*
