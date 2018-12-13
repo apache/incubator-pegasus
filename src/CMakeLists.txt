@@ -42,7 +42,11 @@ set(CMAKE_INSTALL_PREFIX ${PEGASUS_ROOT} CACHE STRING "" FORCE)
 message (STATUS "pegasus Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
 
 # rocksdb
-set(ROCKSDB_LINK_LIBRARIES rocksdb lz4 zstd snappy)
+set(CMAKE_MODULE_PATH "${PEGASUS_PROJECT_DIR}/rocksdb/cmake/modules")
+find_package(snappy REQUIRED)
+find_package(zstd REQUIRED)
+find_package(lz4 REQUIRED)
+set(ROCKSDB_LINK_LIBRARIES rocksdb ${ZSTD_LIBRARIES} ${LZ4_LIBRARIES} ${SNAPPY_LIBRARIES})
 
 add_subdirectory(base)
 add_subdirectory(reporter)
