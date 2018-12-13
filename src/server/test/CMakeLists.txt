@@ -32,10 +32,10 @@ set(MY_PROJ_LIBS
         PocoJSON
         crypto
         fmt
-        rocksdb
+        ${ROCKSDB_LINK_LIBRARIES}
         pegasus.base
         gtest
-        z bz2 snappy rt aio pthread
+        z rt aio pthread
         )
 add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)
