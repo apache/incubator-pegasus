@@ -119,7 +119,12 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
         _inflights[hash].pop_front();
     }
 
-    dcheck_eq_replica(rpc.request().hash, hash);
+    dassert_replica(rpc.request().hash == hash,
+                    "{} vs {}: rpc corrupted [code:{}, data-size:{}]",
+                    rpc.request().hash,
+                    hash,
+                    rpc.request().task_code,
+                    rpc.request().raw_message.length());
     _client->async_duplicate(rpc, [cb, rpc, start, this](dsn::error_code err) mutable {
         on_duplicate_reply(std::move(cb), std::move(rpc), start, err);
     });

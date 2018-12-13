@@ -223,6 +223,8 @@ public:
         {
             duplicator->duplicate(muts, []() {});
 
+            // all mutation duplicated from master will not be duplicated
+            // again to prevent infinite loop.
             ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
         }
