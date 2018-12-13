@@ -27,7 +27,7 @@ before_install:
 
 install:
     - wget https://github.com/facebook/zstd/archive/v1.3.7.zip; unzip v1.3.7; cd zstd-1.3.7;
-    - mkdir cmake-build; cd cmake-build; cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DZSTD_BUILD_PROGRAMS=OFF ../build/cmake; make install -j8;
+    - mkdir cmake-build; cd cmake-build; cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=/usr/lib -DZSTD_BUILD_PROGRAMS=OFF ../build/cmake; make install -j8;
     - cd ..
 
 before_script:
