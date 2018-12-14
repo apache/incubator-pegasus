@@ -44,6 +44,13 @@ function get_system_lib()
             return
         fi
     done;
+
+    # if get failed by ldconfig, then just extract lib from ldd result
+    libname=`ldd ./DSN_ROOT/bin/pegasus_$1/pegasus_$1 2>/dev/null | grep "lib${2}\.so"`
+    libname=`echo $libname | cut -f3 -d" "`
+    if echo "$libname" | grep -q "lib${2}\.so"; then
+        echo "$libname"
+    fi
 }
 
 #USAGE: copy_file src [src...] dest
