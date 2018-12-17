@@ -13,6 +13,8 @@
 namespace pegasus {
 namespace server {
 
+using namespace dsn::literals::chrono_literals;
+
 // Duplicates the loaded mutations to the remote pegasus cluster.
 class pegasus_mutation_duplicator : public dsn::replication::mutation_duplicator
 {
@@ -26,6 +28,8 @@ public:
                                 dsn::string_view app);
 
     void duplicate(mutation_tuple_set muts, callback cb) override;
+
+    ~pegasus_mutation_duplicator() override { _env.__conf.tracker->wait_outstanding_tasks(); }
 
 private:
     void send(uint64_t hash, callback cb);
@@ -43,9 +47,6 @@ private:
     // hash -> duplicate_rpc
     std::map<uint64_t, std::deque<duplicate_rpc>> _inflights;
     dsn::zlock _lock;
-
-    // used to wait until all duplicate_rpc to complete before destruction.
-    dsn::task_tracker _tracker;
 
     dsn::perf_counter_wrapper _duplicate_qps;
     dsn::perf_counter_wrapper _duplicate_failed_qps;

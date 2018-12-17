@@ -129,7 +129,7 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
                              [cb, rpc, start, this](dsn::error_code err) mutable {
                                  on_duplicate_reply(std::move(cb), std::move(rpc), start, err);
                              },
-                             &_tracker);
+                             _env.__conf.tracker);
 }
 
 void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callback cb,
@@ -167,7 +167,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
         if (perr != PERR_OK || err != dsn::ERR_OK) {
             // retry this rpc
             _inflights[hash].push_front(rpc);
-            schedule_task([hash, cb, this]() { send(hash, cb); }, 1_s);
+            _env.schedule([hash, cb, this]() { send(hash, cb); }, 1_s);
             return;
         }
         if (_inflights[hash].empty()) {
@@ -178,7 +178,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
             }
         } else {
             // start next rpc immediately
-            schedule_task([hash, cb, this]() { send(hash, cb); });
+            _env.schedule([hash, cb, this]() { send(hash, cb); });
             return;
         }
     }
