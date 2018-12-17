@@ -27,6 +27,8 @@ public:
 
     void duplicate(mutation_tuple_set muts, callback cb) override;
 
+    ~pegasus_mutation_duplicator() override;
+
 private:
     void send(uint64_t hash, callback cb);
 
@@ -43,6 +45,8 @@ private:
     // hash -> duplicate_rpc
     std::map<uint64_t, std::deque<duplicate_rpc>> _inflights;
     dsn::zlock _lock;
+
+    std::vector<dsn::task_ptr> _pending_duplicate_rpc_tasks;
 
     dsn::perf_counter_wrapper _duplicate_qps;
     dsn::perf_counter_wrapper _duplicate_failed_qps;
