@@ -224,8 +224,9 @@ public:
     /// \internal
     /// This is an internal function for duplication.
     /// \see pegasus::server::pegasus_mutation_duplicator
-    dsn::task_ptr async_duplicate(dsn::apps::duplicate_rpc rpc,
-                                  std::function<void(dsn::error_code)> &&callback);
+    void async_duplicate(dsn::apps::duplicate_rpc rpc,
+                         std::function<void(dsn::error_code)> &&callback,
+                         dsn::task_tracker *tracker);
 
     virtual const char *get_error_string(int error_code) const override;
 

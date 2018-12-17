@@ -604,9 +604,9 @@ public:
 
     // - asynchronous with on-stack duplicate_request and duplicate_response
     template <typename TCallback>
-    task_ptr duplicate(duplicate_rpc &rpc, TCallback &&callback, int reply_thread_hash = 0)
+    task_ptr duplicate(duplicate_rpc &rpc, TCallback &&callback, dsn::task_tracker *tracker)
     {
-        return rpc.call(_server, &_tracker, callback, reply_thread_hash);
+        return rpc.call(_server, tracker, callback);
     }
 
 private:

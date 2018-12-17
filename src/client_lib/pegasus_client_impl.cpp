@@ -1273,10 +1273,11 @@ int pegasus_client_impl::get_unordered_scanners(int max_split_count,
     return ret;
 }
 
-dsn::task_ptr pegasus_client_impl::async_duplicate(dsn::apps::duplicate_rpc rpc,
-                                                   std::function<void(dsn::error_code)> &&callback)
+void pegasus_client_impl::async_duplicate(dsn::apps::duplicate_rpc rpc,
+                                          std::function<void(dsn::error_code)> &&callback,
+                                          dsn::task_tracker *tracker)
 {
-    return _client->duplicate(rpc, std::move(callback));
+    _client->duplicate(rpc, std::move(callback), tracker);
 }
 
 const char *pegasus_client_impl::get_error_string(int error_code) const

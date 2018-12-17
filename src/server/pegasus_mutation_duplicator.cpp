@@ -103,13 +103,6 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
         "the qps of failed DUPLICATE requests sent from this app");
 }
 
-pegasus_mutation_duplicator::~pegasus_mutation_duplicator()
-{
-    for (dsn::task_ptr &tsk : _pending_duplicate_rpc_tasks) {
-        tsk->wait();
-    }
-}
-
 static bool is_delete_operation(dsn::task_code code)
 {
     return code == dsn::apps::RPC_RRDB_RRDB_REMOVE || code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
@@ -132,13 +125,11 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
                     hash,
                     rpc.request().task_code,
                     rpc.request().raw_message.length());
-    dsn::task_ptr tsk =
-        _client->async_duplicate(rpc, [cb, rpc, start, this](dsn::error_code err) mutable {
-            on_duplicate_reply(std::move(cb), std::move(rpc), start, err);
-        });
-    if (tsk) {
-        _pending_duplicate_rpc_tasks.push_back(std::move(tsk));
-    }
+    _client->async_duplicate(rpc,
+                             [cb, rpc, start, this](dsn::error_code err) mutable {
+                                 on_duplicate_reply(std::move(cb), std::move(rpc), start, err);
+                             },
+                             &_tracker);
 }
 
 void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callback cb,
@@ -251,8 +242,6 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         return;
     }
     auto inflights = _inflights;
-    _pending_duplicate_rpc_tasks.clear();
-    _pending_duplicate_rpc_tasks.reserve(inflights.size());
     for (const auto &kv : inflights) {
         send(kv.first, cb);
     }
