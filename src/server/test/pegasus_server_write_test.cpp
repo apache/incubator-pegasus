@@ -200,9 +200,9 @@ public:
         std::string sort_key = "sort_key";
         std::string value = "value";
 
-        // cluster=130 is from nowhere
+        // cluster=13 is from nowhere
         dsn::apps::duplicate_request duplicate;
-        duplicate.timetag = pegasus::generate_timetag(10, 130, false);
+        duplicate.timetag = pegasus::generate_timetag(10, 13, false);
         dsn::apps::duplicate_response resp;
 
         dsn::apps::update_request request;

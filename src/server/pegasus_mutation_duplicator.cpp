@@ -136,7 +136,9 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
         _client->async_duplicate(rpc, [cb, rpc, start, this](dsn::error_code err) mutable {
             on_duplicate_reply(std::move(cb), std::move(rpc), start, err);
         });
-    _pending_duplicate_rpc_tasks.push_back(std::move(tsk));
+    if (tsk) {
+        _pending_duplicate_rpc_tasks.push_back(std::move(tsk));
+    }
 }
 
 void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callback cb,
