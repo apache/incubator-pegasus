@@ -22,12 +22,16 @@ class pegasus_mutation_duplicator_test : public pegasus_server_test_base
     dsn::pipeline::environment _env;
 
 public:
+    pegasus_mutation_duplicator_test()
+    {
+        _env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&_tracker);
+    }
+
     void test_duplicate()
     {
         replica_base replica(dsn::gpid(1, 1), "fake_replica");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
-        duplicator->set_task_environment(
-            _env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&_tracker));
+        duplicator->set_task_environment(&_env);
 
         mutation_tuple_set muts;
         for (uint64_t i = 0; i < 3000; i++) {
@@ -75,8 +79,7 @@ public:
     {
         replica_base replica(dsn::gpid(1, 1), "fake_replica");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
-        duplicator->set_task_environment(
-            _env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&_tracker));
+        duplicator->set_task_environment(&_env);
 
         mutation_tuple_set muts;
         for (uint64_t i = 0; i < 10; i++) {
@@ -137,8 +140,7 @@ public:
     {
         replica_base replica(dsn::gpid(1, 1), "fake_replica");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
-        duplicator->set_task_environment(
-            _env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&_tracker));
+        duplicator->set_task_environment(&_env);
 
         size_t total_size = 3000;
         mutation_tuple_set muts;
@@ -184,8 +186,7 @@ public:
     {
         replica_base replica(dsn::gpid(1, 1), "fake_replica");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
-        duplicator->set_task_environment(
-            _env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&_tracker));
+        duplicator->set_task_environment(&_env);
 
         mutation_tuple_set muts;
         for (uint64_t i = 0; i < 3000; i++) {
@@ -225,8 +226,7 @@ public:
     {
         replica_base replica(dsn::gpid(1, 1), "fake_replica");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
-        duplicator->set_task_environment(
-            _env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&_tracker));
+        duplicator->set_task_environment(&_env);
 
         mutation_tuple_set muts;
         for (uint64_t i = 0; i < 3000; i++) {
@@ -265,8 +265,7 @@ public:
     {
         replica_base replica(dsn::gpid(1, 1), "fake_replica");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
-        duplicator->set_task_environment(
-            _env.thread_pool(LPC_REPLICATION_LOW).task_tracker(&_tracker));
+        duplicator->set_task_environment(&_env);
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         ASSERT_EQ(duplicator_impl->_remote_cluster_id, 2);
         ASSERT_EQ(duplicator_impl->_remote_cluster, "onebox2");
