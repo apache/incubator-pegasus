@@ -22,7 +22,7 @@ set(MY_PROJ_LIBS
         snappy
         gflags)
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_PACKAGES system filesystem regex)
 
 set(MY_BINPLACES "config.ini")
 
