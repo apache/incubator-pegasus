@@ -26,11 +26,15 @@ before_script:
     - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/pegasus-thirdparty-prebuild.tar.gz
     - tar xf pegasus-thirdparty-prebuild.tar.gz
     - rm -rf pegasus-thirdparty-prebuild.tar.gz
+    - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/zookeeper-3.4.10.tar.gz
+    - mkdir src/
+    - tar xf zookeeper-3.4.10.tar.gz -C src
+    - rm -rf zookeeper-3.4.10.tar.gz
     - cd ..
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh test
+    - ./run.sh test --skip_thirdparty
 
 after_script:
     - ./run.sh stop_zk

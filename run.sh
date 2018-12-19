@@ -53,6 +53,7 @@ function usage_build()
     echo "   --notest              build without building unit tests, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
+    echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     if [ "$ONLY_BUILD" == "NO" ]; then
         echo "   -m|--test_module      specify modules to test, split by ',',"
         echo "                         e.g., \"dsn.core.tests,dsn.tests\","
@@ -69,6 +70,7 @@ function run_build()
     JOB_NUM=8
     BOOST_DIR=""
     ENABLE_GCOV=NO
+    SKIP_THIRDPARTY=NO
     RUN_VERBOSE=NO
     NO_TEST=NO
     TEST_MODULE=""
@@ -121,6 +123,10 @@ function run_build()
             --disable_gperf)
                 DISABLE_GPERF=YES
                 ;;
+            --skip_thirdparty)
+                SKIP_THIRDPARTY=YES
+                echo "run.sh build: skip building third-parties"
+                ;;
             -m|--test_module)
                 if [ "$ONLY_BUILD" == "YES" ]; then
                     echo "ERROR: unknown option \"$key\""
@@ -141,23 +147,25 @@ function run_build()
         shift
     done
 
-    # build thirdparty first
-    cd thirdparty
-    if [ "$CLEAR_THIRDPARTY" == "YES" ]; then
-        echo "Clear thirdparty..."
-        rm -rf src build output &>/dev/null
-        CLEAR=YES
-    fi
-    ./download-thirdparty.sh
-    exit_if_fail $?
-    if [ "x"$BOOST_DIR != "x" ]; then
-        ./build-thirdparty.sh -b $BOOST_DIR
+    if [[ ${SKIP_THIRDPARTY} != "YES" ]]; then
+        # build thirdparty first
+        cd thirdparty
+        if [[ "$CLEAR_THIRDPARTY" == "YES" ]]; then
+            echo "Clear thirdparty..."
+            rm -rf src build output &>/dev/null
+            CLEAR=YES
+        fi
+        ./download-thirdparty.sh
         exit_if_fail $?
-    else
-        ./build-thirdparty.sh
-        exit_if_fail $?
+        if [[ "x"$BOOST_DIR != "x" ]]; then
+            ./build-thirdparty.sh -b $BOOST_DIR
+            exit_if_fail $?
+        else
+            ./build-thirdparty.sh
+            exit_if_fail $?
+        fi
+        cd ..
     fi
-    cd ..
 
     if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
         echo "ERROR: invalid build type \"$BUILD_TYPE\""
@@ -226,10 +234,13 @@ function usage_start_zk()
 }
 function run_start_zk()
 {
-    # download zk before start zk service
-    # as zk is a 3rdparty dependency of rdsn project,
-    # so we simply download the whole thirdparty for simplicity
-    `pwd`/thirdparty/download-thirdparty.sh
+    if [[ ! -d `pwd`/thirdparty/src/zookeeper-3.4.10/bin ]]; then
+        # download zk before starting zk service
+        # here we simply download all the third-parties
+        `pwd`/thirdparty/download-thirdparty.sh
+    else
+        echo "skip download zookeeper"
+    fi
     exit_if_fail $?
 
     DOWNLOADED_DIR=`pwd`/thirdparty/src
