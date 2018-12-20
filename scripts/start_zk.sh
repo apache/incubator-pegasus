@@ -30,7 +30,7 @@ if [ ! -f zookeeper-3.4.6.tar.gz ]; then
     download_url="http://git.n.xiaomi.com/pegasus/packages/raw/master/zookeeper-3.4.6.tar.gz"
     wget -T 5 -t 1 $download_url
     if [ $? -ne 0 ]; then
-        download_url="https://github.com/shengofsun/packages/raw/master/zookeeper-3.4.6.tar.gz"
+        download_url="https://github.com/xiaomi/pegasus-common/raw/master/zookeeper-3.4.6.tar.gz"
         wget -T 5 -t 1 $download_url
         if [ $? -ne 0 ]; then
             echo "ERROR: download zookeeper failed"
@@ -57,7 +57,7 @@ sed -i "s@clientPort=2181@clientPort=$ZOOKEEPER_PORT@" $ZOOKEEPER_HOME/conf/zoo.
 
 mkdir -p $ZOOKEEPER_HOME/data
 $ZOOKEEPER_HOME/bin/zkServer.sh start
-sleep 0.1
+sleep 1
 
 if echo ruok | nc localhost $ZOOKEEPER_PORT | grep -q imok; then
     echo "Zookeeper started at port $ZOOKEEPER_PORT"
@@ -66,4 +66,3 @@ else
     echo "ERROR: start zookeeper failed"
     exit 1
 fi
- 

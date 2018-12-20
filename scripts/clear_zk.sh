@@ -19,4 +19,3 @@ then
     rm -rf $ZOOKEEPER_HOME/data &>/dev/null
     echo "Clearing zookeeper ... CLEARED"
 fi
-
