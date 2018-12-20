@@ -17,4 +17,3 @@ if [ -d "$ZOOKEEPER_HOME" ]
 then
     $ZOOKEEPER_HOME/bin/zkServer.sh stop
 fi
-
