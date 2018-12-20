@@ -71,6 +71,7 @@ function usage_build()
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
+    echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
 }
 function run_build()
 {
@@ -85,6 +86,8 @@ function run_build()
     WARNING_ALL=NO
     ENABLE_GCOV=NO
     RUN_VERBOSE=NO
+    DISABLE_GPERF=NO
+    SKIP_THIRDPARTY=NO
     TEST_MODULE=""
     while [[ $# > 0 ]]; do
         key="$1"
@@ -136,7 +139,9 @@ function run_build()
                 ;;
             --disable_gperf)
                 DISABLE_GPERF=YES
-                shift
+                ;;
+            --skip_thirdparty)
+                SKIP_THIRDPARTY=YES
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -191,6 +196,9 @@ function run_build()
     fi
     if [ "$DISABLE_GPERF" == "YES" ]; then
         OPT="$OPT --disable_gperf"
+    fi
+    if [ "$SKIP_THIRDPARTY" == "YES" ]; then
+        OPT="$OPT --skip_thirdparty"
     fi
     ./run.sh build $OPT --notest
     if [ $? -ne 0 ]; then
