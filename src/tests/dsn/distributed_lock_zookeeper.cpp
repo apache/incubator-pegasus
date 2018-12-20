@@ -37,7 +37,8 @@ public:
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
         _dlock_service = new distributed_lock_service_zookeeper();
-        dassert(_dlock_service->initialize({"/dsn/tests/simple_adder_server"}) == ERR_OK, "");
+        auto err = _dlock_service->initialize({"/dsn/tests/simple_adder_server"});
+        dassert(err == ERR_OK, "err = %s", err.to_string());
 
         distributed_lock_service::lock_options opt = {true, true};
         while (!ss_finish) {

@@ -1,20 +1,19 @@
 #!/bin/bash
 #
 # Options:
-#    DOWNLOADED_DIR    <dir>
+#    INSTALL_DIR    <dir>
 
-if [ -z "$DOWNLOADED_DIR" ]
+if [ -z "$INSTALL_DIR" ]
 then
-    echo "ERROR: no DOWNLOADED_DIR specified"
+    echo "ERROR: no INSTALL_DIR specified"
     exit 1
 fi
 
-cd $DOWNLOADED_DIR
+cd $INSTALL_DIR
 
-ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.10
+ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.6
 
 if [ -d "$ZOOKEEPER_HOME" ]
 then
     $ZOOKEEPER_HOME/bin/zkServer.sh stop
 fi
-

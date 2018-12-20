@@ -105,7 +105,9 @@ uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
                     ret = (uint32_t)ntohl(ip_val);
                     break;
                 } else {
-                    ddebug("skip interface(%s), address(%08X)", i->ifa_name, ip_val);
+                    dinfo("skip interface(%s), address(%s)",
+                          i->ifa_name,
+                          rpc_address(ip_val, 0).ipv4_str());
                 }
             }
             i = i->ifa_next;
@@ -115,9 +117,9 @@ uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
             derror("get local ip from network interfaces failed, network_interface = %s",
                    network_interface);
         } else {
-            ddebug("get ip address from network interface(%s), addr(%08X), input interface(%s)",
+            ddebug("get ip address from network interface(%s), addr(%s), input interface(\"%s\")",
                    i->ifa_name,
-                   ret,
+                   rpc_address(ret, 0).ipv4_str(),
                    network_interface);
         }
 

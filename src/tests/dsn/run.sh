@@ -2,7 +2,7 @@
 
 function prepare_environment()
 {
-    if [ $1 = "distributed_lock_service_zookeeper.simple_lock_unlock" ]; then
+    if [ $1 == "distributed_lock_service_zookeeper.simple_lock_unlock" ]; then
         echo "test $1, try to restart to zookeeper service periodically"
         ./restart_zookeeper.sh >output.log 2>&1 &
     fi
@@ -10,7 +10,7 @@ function prepare_environment()
 
 function destroy_environment()
 {
-    if [ $1 = "distributed_lock_service_zookeeper.simple_lock_unlock" ]; then
+    if [ $1 == "distributed_lock_service_zookeeper.simple_lock_unlock" ]; then
         echo "stop restart-zookeeper process"
         ps aux | grep restart_zookeeper | grep -v "grep" | awk '{print $2}' | xargs kill -9
         echo "make sure the zookeeper is started"
@@ -26,6 +26,7 @@ fi
 filters="distributed_lock_service_zookeeper.simple_lock_unlock -distributed_lock_service_zookeeper.simple_lock_unlock"
 
 for filter in $filters; do
+    echo "============ run dsn.tests with gtest_filter ${filter} ============"
     output_xml="${REPORT_DIR}/dsn.tests.xml"
     #prepare_environment $filter
 
@@ -42,8 +43,10 @@ for filter in $filters; do
             echo "---- gdb ./dsn.tests core ----"
             gdb ./dsn.tests core -ex "thread apply all bt" -ex "set pagination 0" -batch
         fi
-        destroy_environment $filter
+        #destroy_environment $filter
         exit 1
     fi
+
     #destroy_environment $filter
+    echo "============ done dsn.tests with gtest_filter ${filter} ============"
 done

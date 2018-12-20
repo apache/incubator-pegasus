@@ -26,7 +26,8 @@ while read -r -a line; do
         fi
         exit 1
     fi
+    echo "============ done dsn.core.tests ${test_case} with gtest_filter ${gtest_filter} ============"
 done <gtest.filter
 
-echo "============ done ============"
+echo "============ done dsn.core.tests ============"
 
