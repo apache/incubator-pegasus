@@ -645,7 +645,7 @@ public:
 
     void append_data(double data)
     {
-        if (abs(data) < 1e-6) {
+        if (std::abs(data) < 1e-6) {
             append_data("0.00");
         } else {
             std::stringstream s;
