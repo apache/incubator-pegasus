@@ -89,13 +89,13 @@ Data import/export tools:
 
 ## How to contribute
 
-We open source this project because we known that the system is far from mature and needs lots of
+We open sourced this project because we know that it is far from mature and needs lots of
 improvement. So we are looking forward to your [contribution](docs/contribution.md).
 
 If you have more questions, please join our [slack channel](https://join.slack.com/t/pegasus-kv/shared_invite/enQtMjcyMjQzOTk4Njk1LWVkMjlkMGE5Mzg1Y2M3MDc0NGYyYzQ5YzYyMGE0ZjlhMDMyNjU1ZGViYzdjZmUwNjVmNGE0ZDdkMWJiN2Q1MDY).
 
 ## License
 
-Copyright 2015-2017 Xiaomi, Inc. Licensed under the Apache License, Version 2.0:
+Copyright 2015-2018 Xiaomi, Inc. Licensed under the Apache License, Version 2.0:
 http://www.apache.org/licenses/LICENSE-2.0
 

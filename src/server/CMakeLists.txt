@@ -36,10 +36,8 @@ set(MY_PROJ_LIBS
     PocoJSON
     crypto
     fmt
-    rocksdb
+    ${ROCKSDB_LINK_LIBRARIES}
     z
-    bz2
-    snappy
     rt
     aio
     pthread)

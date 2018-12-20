@@ -41,6 +41,8 @@ public:
         ::dsn::perf_counter_wrapper recent_expire_count;
         ::dsn::perf_counter_wrapper recent_filter_count;
         ::dsn::perf_counter_wrapper recent_abnormal_count;
+        ::dsn::perf_counter_wrapper recent_write_throttling_delay_count;
+        ::dsn::perf_counter_wrapper recent_write_throttling_reject_count;
         ::dsn::perf_counter_wrapper storage_mb;
         ::dsn::perf_counter_wrapper storage_count;
         ::dsn::perf_counter_wrapper rdb_block_cache_hit_rate;

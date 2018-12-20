@@ -227,15 +227,12 @@ void pegasus_counter_reporter::http_request_done(struct evhttp_request *req, voi
     } break;
 
     default:
-        derror("http post request receive ERROR: %u", req->response_code);
-
         struct evbuffer *buf = evhttp_request_get_input_buffer(req);
         size_t len = evbuffer_get_length(buf);
-        char *tmp = (char *)malloc(len + 1);
+        char *tmp = (char *)alloca(len + 1);
         memcpy(tmp, evbuffer_pullup(buf, -1), len);
         tmp[len] = '\0';
         derror("http post request receive ERROR: %u, %s", req->response_code, tmp);
-        free(tmp);
         event_base_loopexit(event, 0);
         return;
     }

@@ -19,10 +19,8 @@ set(MY_PROJ_LIBS
         s2
         pegasus_client_static
         fmt
-        rocksdb
-        z
-        bz2
-        snappy)
+        ${ROCKSDB_LINK_LIBRARIES}
+        z)
 
 set(MY_BOOST_PACKAGES system filesystem)
 

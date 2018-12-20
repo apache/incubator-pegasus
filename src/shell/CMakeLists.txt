@@ -37,10 +37,8 @@ set(MY_PROJ_LIBS
     fmt
     pegasus_geo_lib
     s2
-    rocksdb
+    ${ROCKSDB_LINK_LIBRARIES}
     z
-    bz2
-    snappy
     rt
     aio
     pthread)

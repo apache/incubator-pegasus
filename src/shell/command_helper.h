@@ -115,6 +115,9 @@ struct scan_data_context
     rocksdb::HistogramImpl row_size_histogram;
     int top_count;
     top_container top_rows;
+    bool count_hash_key;
+    std::string last_hash_key;
+    std::atomic_long split_hash_key_count;
     scan_data_context(scan_data_operator op_,
                       int split_id_,
                       int max_batch_count_,
@@ -124,7 +127,8 @@ struct scan_data_context
                       pegasus::geo::geo_client *geoclient_,
                       std::atomic_bool *error_occurred_,
                       bool stat_size_ = false,
-                      int top_count_ = 0)
+                      int top_count_ = 0,
+                      bool count_hash_key_ = false)
         : op(op_),
           split_id(split_id_),
           max_batch_count(max_batch_count_),
@@ -138,8 +142,13 @@ struct scan_data_context
           split_completed(false),
           stat_size(stat_size_),
           top_count(top_count_),
-          top_rows(top_count_)
+          top_rows(top_count_),
+          count_hash_key(count_hash_key_),
+          split_hash_key_count(0)
     {
+        // max_batch_count should > 1 because scan may be terminated
+        // when split_request_count = 1
+        dassert(max_batch_count > 1, "");
     }
 };
 inline void update_atomic_max(std::atomic_long &max, long value)
@@ -232,6 +241,12 @@ inline void scan_data_next(scan_data_context *context)
                                 std::move(hash_key), std::move(sort_key), row_size);
                         }
                     }
+                    if (context->count_hash_key) {
+                        if (hash_key != context->last_hash_key) {
+                            context->split_hash_key_count++;
+                            context->last_hash_key = std::move(hash_key);
+                        }
+                    }
                     scan_data_next(context);
                     break;
                 case SCAN_GEN_GEO:
@@ -278,6 +293,11 @@ inline void scan_data_next(scan_data_context *context)
             // to prevent that split_request_count becomes 0 in the middle.
             context->split_request_count--;
         });
+
+        if (context->count_hash_key) {
+            // disable parallel scan if count_hash_key == true
+            break;
+        }
     }
 }
 
@@ -374,6 +394,8 @@ struct row_data
     double recent_expire_count = 0;
     double recent_filter_count = 0;
     double recent_abnormal_count = 0;
+    double recent_write_throttling_delay_count = 0;
+    double recent_write_throttling_reject_count = 0;
     double storage_mb = 0;
     double storage_count = 0;
     double rdb_block_cache_hit_count = 0;
@@ -418,6 +440,10 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.recent_filter_count += value;
     else if (counter_name == "recent.abnormal.count")
         row.recent_abnormal_count += value;
+    else if (counter_name == "recent.write.throttling.delay.count")
+        row.recent_write_throttling_delay_count += value;
+    else if (counter_name == "recent.write.throttling.reject.count")
+        row.recent_write_throttling_reject_count += value;
     else if (counter_name == "disk.storage.sst(MB)")
         row.storage_mb += value;
     else if (counter_name == "disk.storage.sst.count")
@@ -482,9 +508,9 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     command.cmd = "perf-counters";
     char tmp[256];
     if (app_name.empty()) {
-        sprintf(tmp, ".*\\*app\\.pegasus\\*.*@.*");
+        sprintf(tmp, ".*@.*");
     } else {
-        sprintf(tmp, ".*\\*app\\.pegasus\\*.*@%d\\..*", app_info->app_id);
+        sprintf(tmp, ".*@%d\\..*", app_info->app_id);
     }
     command.arguments.push_back(tmp);
     std::vector<std::pair<bool, std::string>> results;
