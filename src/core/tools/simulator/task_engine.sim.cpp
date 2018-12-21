@@ -109,7 +109,7 @@ bool sim_semaphore_provider::wait(int timeout_milliseconds)
     } else {
         // wait success
         if (static_cast<unsigned int>(timeout_milliseconds) == TIME_MS_MAX ||
-                rand::next_double01() <= 0.5) {
+            rand::next_double01() <= 0.5) {
             _wait_threads.push_back(scheduler::task_worker_ext::get(task::get_current_worker()));
             scheduler::instance().wait_schedule(true, false);
             return true;

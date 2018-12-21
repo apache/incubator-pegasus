@@ -65,7 +65,8 @@ public:
 
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
-    virtual void on_intercepted_request(dsn::gpid gpid, bool is_write, dsn::message_ex* msg) override;
+    virtual void
+    on_intercepted_request(dsn::gpid gpid, bool is_write, dsn::message_ex *msg) override;
 
 private:
     friend class ::dsn::replication::replication_checker;

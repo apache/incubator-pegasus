@@ -54,6 +54,7 @@ function usage_build()
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
+    echo "   --check               whether to perform code check before building"
     if [ "$ONLY_BUILD" == "NO" ]; then
         echo "   -m|--test_module      specify modules to test, split by ',',"
         echo "                         e.g., \"dsn.core.tests,dsn.tests\","
@@ -74,6 +75,7 @@ function run_build()
     NO_TEST=NO
     DISABLE_GPERF=NO
     SKIP_THIRDPARTY=NO
+    CHECK=NO
     TEST_MODULE=""
     while [[ $# > 0 ]]; do
         key="$1"
@@ -127,6 +129,9 @@ function run_build()
             --skip_thirdparty)
                 SKIP_THIRDPARTY=YES
                 ;;
+            --check)
+                CHECK=YES
+                ;;
             -m|--test_module)
                 if [ "$ONLY_BUILD" == "YES" ]; then
                     echo "ERROR: unknown option \"$key\""
@@ -146,6 +151,11 @@ function run_build()
         esac
         shift
     done
+
+    if [[ ${CHECK} == "YES" ]]; then
+        ${scripts_dir}/run-clang-format.sh
+        exit_if_fail $?
+    fi
 
     if [[ ${SKIP_THIRDPARTY} == "YES" ]]; then
         echo "Skip building thirdparty..."

@@ -81,7 +81,7 @@ public:
         replier(r);
     }
 
-    void on_rpc_string_test(dsn::message_ex* message)
+    void on_rpc_string_test(dsn::message_ex *message)
     {
         std::string command;
         ::dsn::unmarshall(message, command);

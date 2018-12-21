@@ -53,8 +53,8 @@ static void apply_update_request(/*in-out*/ configuration_update_request &update
     }
 }
 
-static auto default_filter = [](const dsn::rpc_address &target, dsn::message_ex* request) {
-    dsn::message_ex* recv_request = create_corresponding_receive(request);
+static auto default_filter = [](const dsn::rpc_address &target, dsn::message_ex *request) {
+    dsn::message_ex *recv_request = create_corresponding_receive(request);
     cur_ptr update_req = std::make_shared<configuration_update_request>();
     ::dsn::unmarshall(recv_request, *update_req);
     destroy_message(recv_request);
@@ -65,11 +65,11 @@ static auto default_filter = [](const dsn::rpc_address &target, dsn::message_ex*
 class message_filter : public dsn::replication::meta_service
 {
 public:
-    typedef std::function<cur_ptr(const dsn::rpc_address &target, dsn::message_ex* request)> filter;
+    typedef std::function<cur_ptr(const dsn::rpc_address &target, dsn::message_ex *request)> filter;
     message_filter(meta_service_test_app *app) : meta_service(), _app(app) {}
     void set_filter(const filter &f) { _filter = f; }
-    virtual void reply_message(dsn::message_ex* request, dsn::message_ex* response) override {}
-    virtual void send_message(const dsn::rpc_address &target, dsn::message_ex* request) override
+    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override {}
+    virtual void send_message(const dsn::rpc_address &target, dsn::message_ex *request) override
     {
         // we expect this is a configuration_update_request proposal
         cur_ptr update_request = _filter(target, request);
@@ -137,8 +137,8 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then ignore the proposal
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -160,8 +160,8 @@ void meta_service_test_app::simple_lb_cure_test()
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -197,8 +197,8 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then inject a event that node[0] is dead
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -221,8 +221,8 @@ void meta_service_test_app::simple_lb_cure_test()
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -258,8 +258,8 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then ignore the proposal
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -281,8 +281,8 @@ void meta_service_test_app::simple_lb_cure_test()
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -317,8 +317,8 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then inject another update_request
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -358,8 +358,8 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then inject the nodes[2] dead
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -382,8 +382,8 @@ void meta_service_test_app::simple_lb_cure_test()
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -420,8 +420,8 @@ void meta_service_test_app::simple_lb_cure_test()
     proposal_sent = false;
 
     // check partitions, then ignore the proposal
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -453,8 +453,8 @@ void meta_service_test_app::simple_lb_cure_test()
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
 
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -518,8 +518,8 @@ void meta_service_test_app::simple_lb_cure_test()
     std::cerr << "Case: recover from DDD state, haven't collect nodes[2]'s info from replica, and "
                  "nodes[2]'s info have updated"
               << std::endl;
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -612,8 +612,8 @@ void meta_service_test_app::simple_lb_cure_test()
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 4, 3, 4},
     };
     pc.last_committed_decree = 2;
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
@@ -638,8 +638,8 @@ void meta_service_test_app::simple_lb_cure_test()
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, only one primary" << std::endl;
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex* req) -> cur_ptr {
-        dsn::message_ex* recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
+        dsn::message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
         ::dsn::unmarshall(recv_request, *update_req);
         destroy_message(recv_request);

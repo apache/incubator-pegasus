@@ -34,8 +34,7 @@
 #include <cstdint>
 #include <thrift/protocol/TProtocol.h>
 
-typedef enum dsn_host_type_t
-{
+typedef enum dsn_host_type_t {
     HOST_TYPE_INVALID = 0,
     HOST_TYPE_IPV4 = 1,
     HOST_TYPE_GROUP = 2,

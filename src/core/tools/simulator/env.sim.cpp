@@ -48,8 +48,8 @@ uint64_t sim_env_provider::now_ns() const { return scheduler::instance().now_ns(
 void sim_env_provider::on_worker_start(task_worker *worker)
 {
     rand::reseed_thread_local_rng(
-            (_seed + worker->index() + worker->index() * worker->pool_spec().pool_code) ^
-            worker->index());
+        (_seed + worker->index() + worker->index() * worker->pool_spec().pool_code) ^
+        worker->index());
 }
 
 sim_env_provider::sim_env_provider(env_provider *inner_provider) : env_provider(inner_provider)

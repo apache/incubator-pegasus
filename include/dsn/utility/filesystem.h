@@ -137,7 +137,6 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result);
 //          A is represent whether operation encounter some local error
 //          B is represent wheter the directory is empty, true means empty, otherwise false
 std::pair<error_code, bool> is_directory_empty(const std::string &dirname);
-
 }
 }
 }

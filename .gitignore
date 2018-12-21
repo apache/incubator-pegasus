@@ -26,3 +26,5 @@ zookeeper-3.4.6/
 thirdparty/build
 thirdparty/src
 thirdparty/output
+
+packages/

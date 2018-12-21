@@ -655,23 +655,23 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     std::ostream out(buf);
 
     if (detailed) {
-        out << std::setw(node_name_width) << std::left << "address" << std::setw(20)
-            << std::left << "status" << std::setw(20) << std::left << "replica_count"
-            << std::setw(20) << std::left << "primary_count" << std::setw(20) << std::left
-            << "secondary_count" << std::endl;
+        out << std::setw(node_name_width) << std::left << "address" << std::setw(20) << std::left
+            << "status" << std::setw(20) << std::left << "replica_count" << std::setw(20)
+            << std::left << "primary_count" << std::setw(20) << std::left << "secondary_count"
+            << std::endl;
         for (auto &kv : tmp_map) {
-            out << std::setw(node_name_width) << std::left << kv.second.node_name
-                << std::setw(20) << std::left << kv.second.node_status << std::setw(20) << std::left
+            out << std::setw(node_name_width) << std::left << kv.second.node_name << std::setw(20)
+                << std::left << kv.second.node_status << std::setw(20) << std::left
                 << kv.second.primary_count + kv.second.secondary_count << std::setw(20) << std::left
                 << kv.second.primary_count << std::setw(20) << std::left
                 << kv.second.secondary_count << std::endl;
         }
     } else {
-        out << std::setw(node_name_width) << std::left << "address" << std::setw(20)
-            << std::left << "status" << std::endl;
+        out << std::setw(node_name_width) << std::left << "address" << std::setw(20) << std::left
+            << "status" << std::endl;
         for (auto &kv : tmp_map) {
-            out << std::setw(node_name_width) << std::left << kv.second.node_name
-                << std::setw(20) << std::left << kv.second.node_status << std::endl;
+            out << std::setw(node_name_width) << std::left << kv.second.node_name << std::setw(20)
+                << std::left << kv.second.node_status << std::endl;
         }
     }
     out << std::endl;

@@ -68,8 +68,7 @@ from_blob_to_received_msg(task_code rpc_code,
 /// It's useful for unit test, especially when we need to create a fake message
 /// as test input.
 template <typename T>
-inline message_ex *from_thrift_request_to_received_message(const T &thrift_request,
-                                                                task_code tc)
+inline message_ex *from_thrift_request_to_received_message(const T &thrift_request, task_code tc)
 {
     binary_writer writer;
     marshall_thrift_binary(writer, thrift_request);

@@ -49,7 +49,8 @@ void simple_timer_service::start()
         boost::system::error_code ec;
         _ios.run(ec);
         if (ec) {
-            dassert(false, "io_service in simple_timer_service run failed: %s", ec.message().data());
+            dassert(
+                false, "io_service in simple_timer_service run failed: %s", ec.message().data());
         }
     });
 }

@@ -128,7 +128,7 @@ create_rpc_response_task(dsn::message_ex *req,
         req,
         tracker,
         [cb_fwd = std::move(callback)](
-            error_code err, dsn::message_ex *req, dsn::message_ex *resp) mutable {
+            error_code err, dsn::message_ex * req, dsn::message_ex * resp) mutable {
             typename is_typed_rpc_callback<TCallback>::response_t response = {};
             if (err == ERR_OK) {
                 unmarshall(resp, response);

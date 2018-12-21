@@ -35,24 +35,26 @@ namespace dsn {
 // uniq_timestamp_us is used to generate an increasing unique microsecond timestamp
 // in rdsn, it's mainly used for replica to set mutation's timestamp
 //
-// Notice: this module is not thread-safe, 
+// Notice: this module is not thread-safe,
 // please ensure that it is accessed only by one thread
 //
-class uniq_timestamp_us {
+class uniq_timestamp_us
+{
 private:
     uint64_t _last_ts;
+
 public:
     uniq_timestamp_us() { _last_ts = dsn_now_us(); }
 
     void try_update(uint64_t new_ts)
     {
-        if ( dsn_likely(new_ts > _last_ts) )
+        if (dsn_likely(new_ts > _last_ts))
             _last_ts = new_ts;
     }
 
     uint64_t next()
     {
-        _last_ts = std::max(dsn_now_us(), _last_ts+1);
+        _last_ts = std::max(dsn_now_us(), _last_ts + 1);
         return _last_ts;
     }
 };

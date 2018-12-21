@@ -10,6 +10,12 @@ compiler:
 
 cache:
     - ccache
+    - apt
+
+addons:
+    apt:
+        packages:
+            - clang-format-3.9
 
 before_install:
     - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/build-depends.tar.gz
@@ -31,7 +37,7 @@ before_script:
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh test --skip_thirdparty
+    - ./run.sh test --skip_thirdparty --check
 
 after_script:
     - ./run.sh stop_zk

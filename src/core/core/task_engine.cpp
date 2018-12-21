@@ -69,7 +69,7 @@ void task_worker_pool::create()
 
     for (int i = 0; i < qCount; ++i) {
         auto tsvc = factory_store<timer_service>::create(
-                service_engine::instance().spec().timer_factory_name.c_str(),
+            service_engine::instance().spec().timer_factory_name.c_str(),
             PROVIDER_TYPE_MAIN,
             _node,
             nullptr);
