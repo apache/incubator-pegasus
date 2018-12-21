@@ -2267,9 +2267,13 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
 
 void pegasus_server_impl::update_server_rocksdb_statistics()
 {
-    uint64_t val = _block_cache->GetUsage();
-    _pfc_rdb_block_cache_mem_usage->set(val);
-    ddebug_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
+    if (_block_cache) {
+        uint64_t val = _block_cache->GetUsage();
+        _pfc_rdb_block_cache_mem_usage->set(val);
+        ddebug_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
+    } else {
+        ddebug("_pfc_rdb_block_cache_mem_usage: 0 bytes because block cache is diabled");
+    }
 }
 
 std::pair<std::string, bool>
