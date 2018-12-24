@@ -9,6 +9,7 @@
 
 #include <dsn/tool-api/auto_codes.h>
 #include <dsn/tool-api/group_address.h>
+#include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 #include <rrdb/rrdb.code.definition.h>
 #include <pegasus/error.h>
@@ -27,33 +28,13 @@ std::unordered_map<int, int> pegasus_client_impl::_server_error_to_client;
 pegasus_client_impl::pegasus_client_impl(const char *cluster_name, const char *app_name)
     : _cluster_name(cluster_name), _app_name(app_name)
 {
-    _server_uri = "dsn://" + _cluster_name + "/" + _app_name;
-    _server_uri_address.assign_uri(_server_uri.c_str());
-    _client = new ::dsn::apps::rrdb_client(_server_uri_address);
-
-    std::string section = "uri-resolver.dsn://" + _cluster_name;
-    std::string server_list = dsn_config_get_value_string(section.c_str(), "arguments", "", "");
-    std::vector<std::string> lv;
-    ::dsn::utils::split_args(server_list.c_str(), lv, ',');
     std::vector<dsn::rpc_address> meta_servers;
-    for (auto &s : lv) {
-        ::dsn::rpc_address addr;
-        if (!addr.from_string_ipv4(s.c_str())) {
-            dassert(false,
-                    "invalid address '%s' specified in config [%s].arguments",
-                    s.c_str(),
-                    section.c_str());
-        }
-        meta_servers.push_back(addr);
-    }
-    dassert(meta_servers.size() > 0,
-            "no meta server specified in config [%s].arguments",
-            section.c_str());
-
+    dsn::replication::replica_helper::load_meta_servers(meta_servers, "cluster", cluster_name);
+    dassert(meta_servers.size() > 0, "");
     _meta_server.assign_group("meta-servers");
-    for (auto &ms : meta_servers) {
-        _meta_server.group_address()->add(ms);
-    }
+    _meta_server.group_address()->add_list(meta_servers);
+
+    _client = new ::dsn::apps::rrdb_client(cluster_name, meta_servers, app_name);
 }
 
 pegasus_client_impl::~pegasus_client_impl() { delete _client; }
@@ -130,7 +111,6 @@ void pegasus_client_impl::async_set(const std::string &hash_key,
     _client->put(req,
                  std::move(new_callback),
                  std::chrono::milliseconds(timeout_milliseconds),
-                 0,
                  partition_hash);
 }
 
@@ -219,7 +199,6 @@ void pegasus_client_impl::async_multi_set(const std::string &hash_key,
     _client->multi_put(req,
                        std::move(new_callback),
                        std::chrono::milliseconds(timeout_milliseconds),
-                       0,
                        partition_hash);
 }
 
@@ -284,7 +263,6 @@ void pegasus_client_impl::async_get(const std::string &hash_key,
     _client->get(req,
                  std::move(new_callback),
                  std::chrono::milliseconds(timeout_milliseconds),
-                 0,
                  partition_hash);
 }
 
@@ -375,7 +353,6 @@ void pegasus_client_impl::async_multi_get(const std::string &hash_key,
     _client->multi_get(req,
                        std::move(new_callback),
                        std::chrono::milliseconds(timeout_milliseconds),
-                       0,
                        partition_hash);
 }
 
@@ -476,7 +453,6 @@ void pegasus_client_impl::async_multi_get(const std::string &hash_key,
     _client->multi_get(req,
                        std::move(new_callback),
                        std::chrono::milliseconds(timeout_milliseconds),
-                       0,
                        partition_hash);
 }
 
@@ -555,7 +531,6 @@ void pegasus_client_impl::async_multi_get_sortkeys(const std::string &hash_key,
     _client->multi_get(req,
                        std::move(new_callback),
                        std::chrono::milliseconds(timeout_milliseconds),
-                       0,
                        partition_hash);
 }
 
@@ -589,7 +564,6 @@ int pegasus_client_impl::sortkey_count(const std::string &hash_key,
     auto partition_hash = pegasus_key_hash(tmp_key);
     auto pr = _client->sortkey_count_sync(::dsn::blob(hash_key.data(), 0, hash_key.length()),
                                           std::chrono::milliseconds(timeout_milliseconds),
-                                          0,
                                           partition_hash);
     if (pr.first == ERR_OK && pr.second.error == 0) {
         count = pr.second.count;
@@ -668,7 +642,6 @@ void pegasus_client_impl::async_del(const std::string &hash_key,
     _client->remove(req,
                     std::move(new_callback),
                     std::chrono::milliseconds(timeout_milliseconds),
-                    0,
                     partition_hash);
 }
 
@@ -752,7 +725,6 @@ void pegasus_client_impl::async_multi_del(const std::string &hash_key,
     _client->multi_remove(req,
                           std::move(new_callback),
                           std::chrono::milliseconds(timeout_milliseconds),
-                          0,
                           partition_hash);
 }
 
@@ -832,7 +804,6 @@ void pegasus_client_impl::async_incr(const std::string &hash_key,
     _client->incr(req,
                   std::move(new_callback),
                   std::chrono::milliseconds(timeout_milliseconds),
-                  0,
                   partition_hash);
 }
 
@@ -954,7 +925,6 @@ void pegasus_client_impl::async_check_and_set(const std::string &hash_key,
     _client->check_and_set(req,
                            std::move(new_callback),
                            std::chrono::milliseconds(timeout_milliseconds),
-                           0,
                            partition_hash);
 }
 
@@ -1085,7 +1055,6 @@ void pegasus_client_impl::async_check_and_mutate(const std::string &hash_key,
     _client->check_and_mutate(req,
                               std::move(new_callback),
                               std::chrono::milliseconds(timeout_milliseconds),
-                              0,
                               partition_hash);
 }
 
@@ -1106,7 +1075,7 @@ int pegasus_client_impl::ttl(const std::string &hash_key,
     pegasus_generate_key(req, hash_key, sort_key);
     auto partition_hash = pegasus_key_hash(req);
     auto pr =
-        _client->ttl_sync(req, std::chrono::milliseconds(timeout_milliseconds), 0, partition_hash);
+        _client->ttl_sync(req, std::chrono::milliseconds(timeout_milliseconds), partition_hash);
     if (pr.first == ERR_OK && pr.second.error == 0) {
         ttl_seconds = pr.second.ttl_seconds;
     }

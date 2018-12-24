@@ -34,7 +34,7 @@ public:
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
         std::vector<dsn::rpc_address> meta_list;
-        replica_helper::load_meta_servers(meta_list, "uri-resolver.dsn://mycluster", "arguments");
+        replica_helper::load_meta_servers(meta_list, "cluster", "mycluster");
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
         error_code err =

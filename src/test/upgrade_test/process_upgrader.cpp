@@ -133,9 +133,8 @@ void upgrader_initialize(const char *config_file)
 
     // load meta_list
     meta_list.clear();
-    std::string tmp_section = "uri-resolver.dsn://" + pegasus_cluster_name;
     dsn::replication::replica_helper::load_meta_servers(
-        meta_list, tmp_section.c_str(), "arguments");
+        meta_list, "cluster", pegasus_cluster_name.c_str());
     if (meta_list.empty()) {
         derror("Should config the meta address for upgrader");
         exit(-1);
