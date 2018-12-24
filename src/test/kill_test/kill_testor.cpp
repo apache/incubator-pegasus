@@ -9,6 +9,7 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
 
+#include "base/pegasus_const.h"
 #include "kill_testor.h"
 #include "killer_handler.h"
 #include "killer_handler_shell.h"
@@ -36,7 +37,7 @@ kill_testor::kill_testor(const char *config_file)
     // load meta_list
     meta_list.clear();
     dsn::replication::replica_helper::load_meta_servers(
-        meta_list, "pegasus.clusters", pegasus_cluster_name.c_str());
+        meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), pegasus_cluster_name.c_str());
     if (meta_list.empty()) {
         derror("Should config the meta address for killer");
         exit(-1);

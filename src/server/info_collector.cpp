@@ -13,6 +13,7 @@
 #include <dsn/tool-api/group_address.h>
 
 #include "base/pegasus_utils.h"
+#include "base/pegasus_const.h"
 
 #define METRICSNUM 3
 
@@ -34,8 +35,8 @@ info_collector::info_collector()
         _meta_servers.group_address()->add(ms);
     }
 
-    _cluster_name =
-        dsn_config_get_value_string("pegasus.collector", "pegasus.clusters", "", "cluster name");
+    _cluster_name = dsn_config_get_value_string(
+        "pegasus.collector", PEGASUS_CLUSTER_SECTION_NAME.c_str(), "", "cluster name");
     dassert(_cluster_name.size() > 0, "");
 
     _shell_context.current_cluster_name = _cluster_name;

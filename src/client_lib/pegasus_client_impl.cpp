@@ -14,6 +14,7 @@
 #include <rrdb/rrdb.code.definition.h>
 #include <pegasus/error.h>
 #include "pegasus_client_impl.h"
+#include "base/pegasus_const.h"
 
 using namespace ::dsn;
 
@@ -30,7 +31,7 @@ pegasus_client_impl::pegasus_client_impl(const char *cluster_name, const char *a
 {
     std::vector<dsn::rpc_address> meta_servers;
     dsn::replication::replica_helper::load_meta_servers(
-        meta_servers, "pegasus.clusters", cluster_name);
+        meta_servers, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name);
     dassert(meta_servers.size() > 0, "");
     _meta_server.assign_group("meta-servers");
     _meta_server.group_address()->add_list(meta_servers);
