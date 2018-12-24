@@ -53,9 +53,10 @@ public:
         if (args.size() < 2)
             return ::dsn::ERR_INVALID_PARAMETERS;
 
-        // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
-        _server.assign_uri(args[1].c_str());
-        _simple_kv_client.reset(new simple_kv_client(_server));
+        printf("%s %s %s\n", args[1].c_str(), args[2].c_str(), args[3].c_str());
+        dsn::rpc_address meta;
+        meta.from_string_ipv4(args[2].c_str());
+        _simple_kv_client.reset(new simple_kv_client(args[1].c_str(), {meta}, args[3].c_str()));
 
         _timer = ::dsn::tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER,
                                                &_tracker,
@@ -124,6 +125,6 @@ private:
     std::unique_ptr<simple_kv_client> _simple_kv_client;
     dsn::task_tracker _tracker;
 };
-}
-}
-}
+} // namespace application
+} // namespace replication
+} // namespace dsn

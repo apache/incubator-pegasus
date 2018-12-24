@@ -24,30 +24,21 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a simple uri resolver that queries meta server
- *
- * Revision history:
- *     Feb., 2016, @imzhenyu (Zhenyu Guo), first draft
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include <dsn/tool-api/partition_resolver.h>
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/tool-api/zlocks.h>
 #include <dsn/service_api_c.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
+#include <dsn/dist/replication/partition_resolver.h>
 
 namespace dsn {
-namespace dist {
-#pragma pack(push, 4)
+namespace replication {
+
 class partition_resolver_simple : public partition_resolver
 {
 public:
-    partition_resolver_simple(rpc_address meta_server, const char *app_path);
+    partition_resolver_simple(rpc_address meta_server, const char *app_name);
 
     virtual ~partition_resolver_simple();
 
@@ -129,6 +120,5 @@ private:
                             dsn::message_ex *response,
                             int partition_index);
 };
-#pragma pack(pop)
-}
-}
+} // namespace replication
+} // namespace dsn

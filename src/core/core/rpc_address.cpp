@@ -37,7 +37,6 @@
 #include <dsn/c/api_utilities.h>
 
 #include <dsn/tool-api/rpc_address.h>
-#include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/tool-api/task.h>
 
@@ -148,23 +147,10 @@ rpc_address &rpc_address::operator=(const rpc_address &another)
     case HOST_TYPE_GROUP:
         group_address()->add_ref();
         break;
-    case HOST_TYPE_URI:
-        uri_address()->add_ref();
-        break;
     default:
         break;
     }
     return *this;
-}
-
-void rpc_address::assign_uri(const char *host_uri)
-{
-    set_invalid();
-    _addr.uri.type = HOST_TYPE_URI;
-    dsn::rpc_uri_address *addr = new dsn::rpc_uri_address(host_uri);
-    // take the lifetime of rpc_uri_address, release_ref when change value or call destructor
-    addr->add_ref();
-    _addr.uri.uri = (uint64_t)addr;
 }
 
 void rpc_address::assign_group(const char *name)
@@ -182,9 +168,6 @@ void rpc_address::set_invalid()
     switch (type()) {
     case HOST_TYPE_GROUP:
         group_address()->release_ref();
-        break;
-    case HOST_TYPE_URI:
-        uri_address()->release_ref();
         break;
     default:
         break;
@@ -223,9 +206,6 @@ const char *rpc_address::to_string() const
         ip_len = strlen(p);
         snprintf_p(p + ip_len, sz - ip_len, ":%hu", port());
         break;
-    case HOST_TYPE_URI:
-        p = (char *)uri_address()->uri();
-        break;
     case HOST_TYPE_GROUP:
         p = (char *)group_address()->name();
         break;
@@ -236,4 +216,4 @@ const char *rpc_address::to_string() const
 
     return (const char *)p;
 }
-}
+} // namespace dsn

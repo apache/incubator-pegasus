@@ -501,7 +501,7 @@ public:
     //
     // TODO(sunweijie): totally elimite this feature
     //
-    const rpc_response_handler &current_handler() const { return _cb; }
+    void fetch_current_handler(rpc_response_handler &cb) { cb = std::move(_cb); }
     void replace_callback(rpc_response_handler &&cb)
     {
         task_state cur_state = state();
@@ -684,4 +684,4 @@ __inline /*static*/ env_provider *task::get_current_env()
     return tls_dsn.env;
 }
 
-} // end namespace
+} // namespace dsn

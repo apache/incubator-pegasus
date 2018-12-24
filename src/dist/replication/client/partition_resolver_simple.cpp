@@ -1,54 +1,43 @@
 /*
-* The MIT License (MIT)
-*
-* Copyright (c) 2015 Microsoft Corporation
-*
-* -=- Robust Distributed System Nucleus (rDSN) -=-
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*/
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
-/*
-* Description:
-*     partition resolver simple provider implementation
-*
-* Revision history:
-*     Feb., 2016, @imzhenyu (Zhenyu Guo), first draft
-*     xxxx-xx-xx, author, fix bug about xxx
-*/
-
-#include "partition_resolver_simple.h"
 #include <dsn/utility/utils.h>
 #include <dsn/utility/rand.h>
 #include <dsn/tool-api/async_calls.h>
+#include "dist/replication/client/partition_resolver_simple.h"
 
 namespace dsn {
-namespace dist {
-//------------------------------------------------------------------------------------
+namespace replication {
 
-partition_resolver_simple::partition_resolver_simple(rpc_address meta_server, const char *app_path)
-    : partition_resolver(meta_server, app_path),
+partition_resolver_simple::partition_resolver_simple(rpc_address meta_server, const char *app_name)
+    : partition_resolver(meta_server, app_name),
       _app_id(-1),
       _app_partition_count(-1),
       _app_is_stateful(true)
 {
-    dassert(meta_server.type() != HOST_TYPE_URI, "can not use uri address here");
 }
 
 void partition_resolver_simple::resolve(uint64_t partition_hash,
@@ -112,7 +101,7 @@ partition_resolver_simple::~partition_resolver_simple()
 
 void partition_resolver_simple::clear_all_pending_requests()
 {
-    dinfo("%s.client: clear all pending tasks", _app_path.c_str());
+    dinfo("%s.client: clear all pending tasks", _app_name.c_str());
     zauto_lock l(_requests_lock);
     // clear _pending_requests
     for (auto &pc : _pending_requests) {
@@ -238,11 +227,11 @@ DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
 task_ptr partition_resolver_simple::query_config(int partition_index)
 {
     dinfo(
-        "%s.client: start query config, gpid = %d.%d", _app_path.c_str(), _app_id, partition_index);
+        "%s.client: start query config, gpid = %d.%d", _app_name.c_str(), _app_id, partition_index);
     auto msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
 
     configuration_query_by_index_request req;
-    req.app_name = _app_path;
+    req.app_name = _app_name;
     if (partition_index != -1) {
         req.partition_indices.push_back(partition_index);
     }
@@ -293,7 +282,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
 
                 dinfo("%s.client: query config reply, gpid = %d.%d, ballot = %" PRId64
                       ", primary = %s",
-                      _app_path.c_str(),
+                      _app_name.c_str(),
                       new_config.pid.get_app_id(),
                       new_config.pid.get_partition_index(),
                       new_config.ballot,
@@ -317,7 +306,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
             }
         } else if (resp.err == ERR_OBJECT_NOT_FOUND) {
             derror("%s.client: query config reply, gpid = %d.%d, err = %s",
-                   _app_path.c_str(),
+                   _app_name.c_str(),
                    _app_id,
                    partition_index,
                    resp.err.to_string());
@@ -325,7 +314,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
             client_err = ERR_APP_NOT_EXIST;
         } else {
             derror("%s.client: query config reply, gpid = %d.%d, err = %s",
-                   _app_path.c_str(),
+                   _app_name.c_str(),
                    _app_id,
                    partition_index,
                    resp.err.to_string());
@@ -334,7 +323,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
         }
     } else {
         derror("%s.client: query config reply, gpid = %d.%d, err = %s",
-               _app_path.c_str(),
+               _app_name.c_str(),
                _app_id,
                partition_index,
                err.to_string());
@@ -424,34 +413,8 @@ rpc_address partition_resolver_simple::get_address(const partition_configuration
             return config.last_drops[rand::next_u32(0, config.last_drops.size() - 1)];
         }
     }
-
-    // if (is_write || semantic == read_semantic::ReadLastUpdate)
-    //    return config.primary;
-
-    //// readsnapshot or readoutdated, using random
-    // else
-    //{
-    //    bool has_primary = false;
-    //    int N = static_cast<int>(config.secondaries.size());
-    //    if (!config.primary.is_invalid())
-    //    {
-    //        N++;
-    //        has_primary = true;
-    //    }
-
-    //    if (0 == N) return config.primary;
-
-    //    int r = random32(0, 1000) % N;
-    //    if (has_primary && r == N - 1)
-    //        return config.primary;
-    //    else
-    //        return config.secondaries[r];
-    //}
 }
 
-// ERR_OBJECT_NOT_FOUND  not in cache.
-// ERR_IO_PENDING        in cache but invalid, remove from cache.
-// ERR_OK                in cache and valid
 error_code partition_resolver_simple::get_address(int partition_index, /*out*/ rpc_address &addr)
 {
     // partition_configuration config;
@@ -476,5 +439,5 @@ int partition_resolver_simple::get_partition_index(int partition_count, uint64_t
 {
     return partition_hash % static_cast<uint64_t>(partition_count);
 }
-}
-}
+} // namespace replication
+} // namespace dsn

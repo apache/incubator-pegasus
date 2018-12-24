@@ -51,6 +51,12 @@ public:
     rpc_group_address(const rpc_group_address &other);
     rpc_group_address &operator=(const rpc_group_address &other);
     bool add(rpc_address addr);
+    void add_list(const std::vector<rpc_address> &list)
+    {
+        for (const rpc_address &r : list) {
+            add(r);
+        }
+    }
     void set_leader(rpc_address addr);
     bool remove(rpc_address addr);
     bool contains(rpc_address addr);
@@ -206,4 +212,4 @@ inline rpc_address rpc_group_address::next(rpc_address current) const
         }
     }
 }
-}
+} // namespace dsn

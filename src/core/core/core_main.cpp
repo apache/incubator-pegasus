@@ -47,17 +47,11 @@
 #include <dsn/tool/providers.hpc.h>
 #include <dsn/utility/singleton.h>
 
-#include <dsn/dist/dist.providers.common.h>
-
-//# include <dsn/thrift_helper.h>
-
 void dsn_core_init()
 {
     // register all providers
     dsn::tools::register_common_providers();
     dsn::tools::register_hpc_providers();
-
-    // dsn::tools::register_component_provider<dsn::thrift_binary_message_parser>("thrift");
 
     // register all possible tools and toollets
     dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
@@ -66,9 +60,6 @@ void dsn_core_init()
     dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
     dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
     dsn::tools::register_toollet<dsn::tools::explorer>("explorer");
-
-    // register useful distributed framework providers
-    dsn::dist::register_common_providers();
 }
 
 #if defined(__linux__)

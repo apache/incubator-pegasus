@@ -35,7 +35,6 @@
 
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/group_address.h>
-#include <dsn/tool-api/uri_address.h>
 #include <gtest/gtest.h>
 
 using namespace ::dsn;
@@ -95,13 +94,6 @@ TEST(core, rpc_address_to_string)
     }
 
     {
-        const char *uri = "http://localhost:8080/";
-        dsn::rpc_address addr;
-        addr.assign_uri(uri);
-        ASSERT_EQ(std::string(uri), addr.to_std_string());
-    }
-
-    {
         const char *name = "test_group";
         dsn::rpc_address addr;
         addr.assign_group(name);
@@ -126,16 +118,6 @@ TEST(core, dsn_address_build)
         ASSERT_EQ(addr, dsn::rpc_address("localhost", 8080));
         ASSERT_EQ(addr, dsn::rpc_address("127.0.0.1", 8080));
         ASSERT_EQ(addr, dsn::rpc_address(host_ipv4(127, 0, 0, 1), 8080));
-    }
-
-    {
-        const char *uri = "http://localhost:8080/";
-        dsn::rpc_address addr;
-        addr.assign_uri(uri);
-
-        ASSERT_EQ(addr.type(), HOST_TYPE_URI);
-        ASSERT_STREQ(uri, addr.uri_address()->uri());
-        ASSERT_EQ(1, addr.uri_address()->get_count());
     }
 
     {

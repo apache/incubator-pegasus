@@ -35,7 +35,6 @@ namespace dsn {
 
 class service_node;
 class rpc_engine;
-class uri_resolver_manager;
 
 #define MAX_CLIENT_PORT 1023
 
@@ -160,10 +159,6 @@ public:
     service_node *node() const { return _node; }
     ::dsn::rpc_address primary_address() const { return _local_primary_address; }
     rpc_client_matcher *matcher() { return &_rpc_matcher; }
-    uri_resolver_manager *uri_resolver_mgr() { return _uri_resolver_mgr.get(); }
-
-    // call with URI address only
-    void call_uri(rpc_address addr, message_ex *request, const rpc_response_task_ptr &call);
 
     // call with group address only
     void call_group(rpc_address addr, message_ex *request, const rpc_response_task_ptr &call);
@@ -193,8 +188,6 @@ private:
     rpc_client_matcher _rpc_matcher;
     rpc_server_dispatcher _rpc_dispatcher;
 
-    std::unique_ptr<uri_resolver_manager> _uri_resolver_mgr;
-
     volatile bool _is_running;
     volatile bool _is_serving;
 };
@@ -207,9 +200,6 @@ rpc_engine::call_address(rpc_address addr, message_ex *request, const rpc_respon
     switch (addr.type()) {
     case HOST_TYPE_IPV4:
         call_ip(addr, request, call);
-        break;
-    case HOST_TYPE_URI:
-        call_uri(addr, request, call);
         break;
     case HOST_TYPE_GROUP:
         call_group(addr, request, call);

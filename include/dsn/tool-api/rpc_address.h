@@ -38,13 +38,11 @@ typedef enum dsn_host_type_t {
     HOST_TYPE_INVALID = 0,
     HOST_TYPE_IPV4 = 1,
     HOST_TYPE_GROUP = 2,
-    HOST_TYPE_URI = 3,
 } dsn_host_type_t;
 
 namespace dsn {
 
 class rpc_group_address;
-class rpc_uri_address;
 
 class rpc_address
 {
@@ -98,8 +96,6 @@ public:
         _addr.v4.port = port;
     }
 
-    void assign_uri(const char *host_uri);
-
     void assign_group(const char *name);
 
     const char *to_string() const;
@@ -145,8 +141,6 @@ public:
         return (rpc_group_address *)(uintptr_t)_addr.group.group;
     }
 
-    rpc_uri_address *uri_address() const { return (rpc_uri_address *)(uintptr_t)_addr.uri.uri; }
-
     bool is_invalid() const { return _addr.v4.type == HOST_TYPE_INVALID; }
 
     // before you assign new value, must call set_invalid() to release original value
@@ -161,8 +155,6 @@ public:
         switch (type()) {
         case HOST_TYPE_IPV4:
             return ip() == r.ip() && _addr.v4.port == r.port();
-        case HOST_TYPE_URI:
-            return strcmp(to_string(), r.to_string()) == 0;
         case HOST_TYPE_GROUP:
             return _addr.group.group == r._addr.group.group;
         default:
@@ -180,8 +172,6 @@ public:
         switch (type()) {
         case HOST_TYPE_IPV4:
             return ip() < r.ip() || (ip() == r.ip() && port() < r.port());
-        case HOST_TYPE_URI:
-            return strcmp(to_string(), r.to_string()) < 0;
         case HOST_TYPE_GROUP:
             return _addr.group.group < r._addr.group.group;
         default:
@@ -206,11 +196,6 @@ private:
         struct
         {
             unsigned long long type : 2;
-            unsigned long long uri : 62;
-        } uri; ///< \ref HOST_TYPE_URI
-        struct
-        {
-            unsigned long long type : 2;
             unsigned long long group : 62; ///< dsn_group_t
         } group;                           ///< \ref HOST_TYPE_GROUP
         uint64_t value;
@@ -229,8 +214,6 @@ struct hash<::dsn::rpc_address>
         switch (ep.type()) {
         case HOST_TYPE_IPV4:
             return std::hash<uint32_t>()(ep.ip()) ^ std::hash<uint16_t>()(ep.port());
-        case HOST_TYPE_URI:
-            return std::hash<std::string>()(std::string(ep.to_string()));
         case HOST_TYPE_GROUP:
             return std::hash<void *>()(ep.group_address());
         default:

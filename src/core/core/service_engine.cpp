@@ -31,7 +31,6 @@
 
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/smart_pointers.h>
-#include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/env_provider.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/tool_api.h>
@@ -314,4 +313,4 @@ std::string service_engine::get_queue_info(const std::vector<std::string> &args)
     return ss.str();
 }
 
-} // end namespace
+} // namespace dsn

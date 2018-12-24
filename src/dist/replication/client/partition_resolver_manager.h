@@ -24,30 +24,30 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     partition resolver providers
- *
- * Revision history:
- *     Feb., 2016, @imzhenyu (Zhenyu Guo), first draft
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-#include "partition_resolver_simple.h"
-#include <dsn/utility/factory_store.h>
+#pragma once
+
+#include <vector>
+#include <map>
+#include <dsn/utility/singleton.h>
+#include <dsn/tool-api/zlocks.h>
+#include <dsn/tool-api/rpc_address.h>
+#include <dsn/dist/replication/partition_resolver.h>
 
 namespace dsn {
-namespace dist {
-static bool register_component_provider(const char *name,
-                                        ::dsn::dist::partition_resolver::factory f)
-{
-    return dsn::utils::factory_store<::dsn::dist::partition_resolver>::register_factory(
-        name, f, PROVIDER_TYPE_MAIN);
-}
+namespace replication {
 
-void register_common_providers()
+class partition_resolver_manager : public dsn::utils::singleton<partition_resolver_manager>
 {
-    register_component_provider("partition_resolver_simple",
-                                partition_resolver::create<partition_resolver_simple>);
-}
-}
-}
+public:
+    partition_resolver_ptr find_or_create(const char *cluster_name,
+                                          const std::vector<rpc_address> &meta_list,
+                                          const char *app_name);
+
+private:
+    dsn::zlock _lock;
+    // cluster_name -> <app_name, resolver>
+    std::map<std::string, std::map<std::string, partition_resolver_ptr>> _resolvers;
+};
+
+} // namespace replication
+} // namespace dsn

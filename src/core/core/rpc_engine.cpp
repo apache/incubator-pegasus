@@ -35,7 +35,6 @@
 #include <dsn/utility/factory_store.h>
 #include <dsn/perf_counter/perf_counter.h>
 #include <dsn/tool-api/group_address.h>
-#include <dsn/tool-api/uri_address.h>
 #include <dsn/tool-api/task_queue.h>
 #include <dsn/tool-api/async_calls.h>
 #include <dsn/cpp/serialization.h>
@@ -57,6 +56,7 @@ public:
     }
 
     virtual void exec() { _matcher->on_rpc_timeout(_id); }
+
 private:
     // use the following if the matcher is per rpc session
     // rpc_client_matcher_ptr _matcher;
@@ -516,8 +516,6 @@ error_code rpc_engine::start(const service_app_spec &aspec)
               sp.second.channel.to_string());
     }
 
-    _uri_resolver_mgr.reset(new uri_resolver_manager());
-
     _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
     _local_primary_address.set_port(aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id);
 
@@ -624,114 +622,6 @@ void rpc_engine::call(message_ex *request, const rpc_response_task_ptr &call)
                                   std::numeric_limits<decltype(hdr.trace_id)>::max());
 
     call_address(request->server_address, request, call);
-}
-
-DEFINE_TASK_CODE(LPC_RPC_DELAY_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-
-void rpc_engine::call_uri(rpc_address addr, message_ex *request, const rpc_response_task_ptr &call)
-{
-    dbg_dassert(addr.type() == HOST_TYPE_URI, "only URI is now supported");
-    auto &hdr = *request->header;
-
-    auto resolver = request->server_address.uri_address()->get_resolver();
-    if (nullptr == resolver) {
-        derror("call uri failed as no partition resolver found, uri = %s",
-               request->server_address.uri_address()->uri());
-
-        if (call != nullptr) {
-            call->enqueue(ERR_SERVICE_NOT_FOUND, nullptr);
-        } else {
-            // as ref_count for request may be zero
-            request->add_ref();
-            request->release_ref();
-        }
-    } else { // resolver != nullptr
-        if (call) {
-            uint64_t deadline_ms = dsn_now_ms() + hdr.client.timeout_ms;
-            auto old_callback = call->current_handler();
-
-            auto new_callback = [deadline_ms, old_callback](
-                dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) {
-                message_ex *req2 = (message_ex *)req;
-                if (req2->header->gpid.value() != 0 && err != ERR_OK &&
-                    err != ERR_HANDLER_NOT_FOUND && err != ERR_APP_NOT_EXIST &&
-                    err != ERR_OPERATION_DISABLED) {
-                    auto resolver = req2->server_address.uri_address()->get_resolver();
-                    if (nullptr != resolver) {
-                        resolver->on_access_failure(req2->header->gpid.get_partition_index(), err);
-
-                        // still got time, retry
-                        uint64_t nms = dsn_now_ms();
-                        uint64_t gap = 8 << req2->send_retry_count;
-                        if (gap > 1000)
-                            gap = 1000;
-                        if (nms + gap < deadline_ms) {
-                            req2->send_retry_count++;
-                            req2->header->client.timeout_ms =
-                                static_cast<int>(deadline_ms - nms - gap);
-
-                            rpc_response_task_ptr ctask =
-                                dynamic_cast<rpc_response_task *>(task::get_current_task());
-                            dassert(ctask != nullptr, "current task must be rpc_response_task");
-                            ctask->replace_callback(std::move(old_callback));
-                            dassert(ctask->set_retry(false),
-                                    "rpc_response_task set retry failed, state = %s",
-                                    enum_to_string(ctask->state()));
-
-                            // sleep gap milliseconds before retry
-                            tasking::enqueue(LPC_RPC_DELAY_CALL,
-                                             nullptr,
-                                             [ server = req2->server_address, ctask ]() {
-                                                 dsn_rpc_call(server, ctask.get());
-                                             },
-                                             0,
-                                             std::chrono::milliseconds(gap));
-                            return;
-                        } else {
-                            derror("service access failed (%s), no more time for further "
-                                   "tries, set error = ERR_TIMEOUT, trace_id = %016" PRIx64,
-                                   error_code(err).to_string(),
-                                   req2->header->trace_id);
-                            err = ERR_TIMEOUT;
-                        }
-                    }
-                }
-
-                if (old_callback)
-                    old_callback(err, req, resp);
-            };
-
-            call->replace_callback(std::move(new_callback));
-        }
-
-        resolver->resolve(hdr.client.partition_hash,
-                          [=](dist::partition_resolver::resolve_result &&result) mutable {
-                              if (result.err == ERR_OK) {
-                                  // update gpid when necessary
-                                  auto &hdr2 = request->header;
-                                  if (hdr2->gpid.value() != result.pid.value()) {
-                                      dassert(hdr2->gpid.value() == 0, "inconsistent gpid");
-                                      hdr2->gpid = result.pid;
-
-                                      // update thread hash if not assigned by applications
-                                      if (hdr2->client.thread_hash == 0) {
-                                          hdr2->client.thread_hash = result.pid.thread_hash();
-                                      }
-                                  }
-
-                                  call_address(result.address, request, call);
-                              } else {
-                                  if (call != nullptr) {
-                                      call->enqueue(result.err, nullptr);
-                                  } else {
-                                      // as ref_count for request may be zero
-                                      request->add_ref();
-                                      request->release_ref();
-                                  }
-                              }
-                          },
-                          hdr.client.timeout_ms);
-    }
 }
 
 void rpc_engine::call_group(rpc_address addr,

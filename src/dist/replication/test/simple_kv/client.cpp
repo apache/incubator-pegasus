@@ -61,16 +61,11 @@ simple_kv_client_app::~simple_kv_client_app() { stop(); }
 
     std::vector<rpc_address> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
-
     _meta_server_group.assign_group("meta_servers");
-    rpc_group_address *g = _meta_server_group.group_address();
-    for (auto &ms : meta_servers) {
-        g->add(ms);
-    }
+    _meta_server_group.group_address()->add_list(meta_servers);
 
-    // argv[1]: e.g., dsn://mycluster/simple-kv.instance0
-    _service_addr.assign_uri(args[1].c_str());
-    _simple_kv_client.reset(new application::simple_kv_client(_service_addr));
+    _simple_kv_client.reset(
+        new application::simple_kv_client("mycluster", meta_servers, "simple_kv.instance0"));
 
     dsn::tasking::enqueue(
         LPC_SIMPLE_KV_TEST, &_tracker, std::bind(&simple_kv_client_app::run, this));
@@ -179,6 +174,6 @@ void simple_kv_client_app::begin_read(int id, const std::string &key, int timeou
                             },
                             std::chrono::milliseconds(timeout_ms));
 }
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn
