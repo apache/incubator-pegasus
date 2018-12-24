@@ -47,7 +47,7 @@ protected:
 
         // 2. initialize the clients
         std::vector<dsn::rpc_address> meta_list;
-        replica_helper::load_meta_servers(meta_list, "cluster", "single_master_cluster");
+        replica_helper::load_meta_servers(meta_list, "pegasus.clusters", "single_master_cluster");
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
         pg_client = pegasus::pegasus_client_factory::get_client("single_master_cluster",

@@ -29,7 +29,8 @@ pegasus_client_impl::pegasus_client_impl(const char *cluster_name, const char *a
     : _cluster_name(cluster_name), _app_name(app_name)
 {
     std::vector<dsn::rpc_address> meta_servers;
-    dsn::replication::replica_helper::load_meta_servers(meta_servers, "cluster", cluster_name);
+    dsn::replication::replica_helper::load_meta_servers(
+        meta_servers, "pegasus.clusters", cluster_name);
     dassert(meta_servers.size() > 0, "");
     _meta_server.assign_group("meta-servers");
     _meta_server.group_address()->add_list(meta_servers);

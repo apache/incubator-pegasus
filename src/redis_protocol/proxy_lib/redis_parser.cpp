@@ -62,7 +62,7 @@ redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
     if (op) {
         std::vector<dsn::rpc_address> meta_list;
         dsn::replication::replica_helper::load_meta_servers(
-            meta_list, "cluster", op->get_cluster());
+            meta_list, "pegasus.clusters", op->get_cluster());
         r = new ::dsn::apps::rrdb_client(op->get_cluster(), meta_list, op->get_app());
         if (strlen(op->get_geo_app()) != 0) {
             _geo_client = dsn::make_unique<geo::geo_client>("config.ini",
