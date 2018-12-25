@@ -304,8 +304,6 @@ private:
 private:
     std::string _cluster_name;
     std::string _app_name;
-    std::string _server_uri;
-    ::dsn::rpc_address _server_uri_address;
     ::dsn::rpc_address _meta_server;
     ::dsn::apps::rrdb_client *_client;
 

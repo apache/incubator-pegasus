@@ -16,9 +16,11 @@
 
 #include <dsn/dist/replication/replication_ddl_client.h>
 
+#include "base/pegasus_const.h"
 #include "utils.h"
 
 using namespace dsn::replication;
+using namespace pegasus;
 
 TEST(drop_and_recall, simple)
 {
@@ -29,7 +31,7 @@ TEST(drop_and_recall, simple)
     const int partition_count = 4;
 
     std::vector<dsn::rpc_address> meta_list;
-    replica_helper::load_meta_servers(meta_list, "uri-resolver.dsn://mycluster", "arguments");
+    replica_helper::load_meta_servers(meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
     replication_ddl_client *ddl_client = new replication_ddl_client(meta_list);
 
     // first create table

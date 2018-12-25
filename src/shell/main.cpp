@@ -10,6 +10,7 @@
 #include "args.h"
 #include "command_executor.h"
 #include "commands.h"
+#include "base/pegasus_const.h"
 
 std::map<std::string, command_executor *> s_commands_map;
 shell_context s_global_context;
@@ -513,12 +514,16 @@ static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
 /*extern*/ void check_in_cluster(std::string cluster_name)
 {
     s_global_context.current_cluster_name = cluster_name;
-    std::string section = "uri-resolver.dsn://" + s_global_context.current_cluster_name;
-    std::string key = "arguments";
-    std::string server_list = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
+    std::string server_list =
+        dsn_config_get_value_string(pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
+                                    s_global_context.current_cluster_name.c_str(),
+                                    "",
+                                    "");
 
     dsn::replication::replica_helper::load_meta_servers(
-        s_global_context.meta_list, section.c_str(), key.c_str());
+        s_global_context.meta_list,
+        pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
+        cluster_name.c_str());
     s_global_context.ddl_client =
         dsn::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
 

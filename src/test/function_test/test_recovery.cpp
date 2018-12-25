@@ -17,9 +17,11 @@
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
 
+#include "base/pegasus_const.h"
 #include "global_env.h"
 
 using namespace dsn::replication;
+using namespace pegasus;
 
 class recovery_test : public testing::Test
 {
@@ -48,7 +50,7 @@ protected:
         // 2. initialize the clients
         std::vector<dsn::rpc_address> meta_list;
         replica_helper::load_meta_servers(
-            meta_list, "uri-resolver.dsn://single_master_cluster", "arguments");
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster");
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
         pg_client = pegasus::pegasus_client_factory::get_client("single_master_cluster",

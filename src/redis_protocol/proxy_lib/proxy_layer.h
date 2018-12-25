@@ -61,7 +61,6 @@ public:
                const char *cluster,
                const char *app,
                const char *geo_app = "");
-    const ::dsn::rpc_address get_service_uri() const { return _uri_address; }
     const char *get_cluster() const { return _cluster.c_str(); }
     const char *get_app() const { return _app.c_str(); }
     const char *get_geo_app() const { return _geo_app.c_str(); }
@@ -92,5 +91,5 @@ private:
     std::string _app;
     std::string _geo_app;
 };
-}
-} // namespace
+} // namespace proxy
+} // namespace pegasus

@@ -15,10 +15,12 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
+#include "base/pegasus_const.h"
 #include "global_env.h"
 #include "utils.h"
 
 using namespace dsn::replication;
+using namespace pegasus;
 
 static const std::string table_for_lost_log = "table_for_lost_log";
 
@@ -59,7 +61,7 @@ TEST(lost_log, slog)
     const int partition_count = 4;
 
     std::vector<dsn::rpc_address> meta_list;
-    replica_helper::load_meta_servers(meta_list, "uri-resolver.dsn://mycluster", "arguments");
+    replica_helper::load_meta_servers(meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
     std::shared_ptr<replication_ddl_client> ddl_client(new replication_ddl_client(meta_list));
 
     // first create table

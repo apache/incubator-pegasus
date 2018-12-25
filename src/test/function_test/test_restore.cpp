@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include <boost/lexical_cast.hpp>
 
+#include "base/pegasus_const.h"
 #include "global_env.h"
 
 using namespace ::dsn;
@@ -34,7 +35,8 @@ public:
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
         std::vector<dsn::rpc_address> meta_list;
-        replica_helper::load_meta_servers(meta_list, "uri-resolver.dsn://mycluster", "arguments");
+        replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
         error_code err =
