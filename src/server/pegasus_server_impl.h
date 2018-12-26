@@ -152,7 +152,7 @@ public:
 
 private:
     friend class manual_compact_service_test;
-    friend class pegasus_storage_options_test;
+    friend class pegasus_compression_options_test;
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
@@ -222,8 +222,8 @@ private:
     bool parse_compression_types(const std::string &config,
                                  std::vector<rocksdb::CompressionType> &compression_per_level);
 
-    bool compression_str2type(const std::string &compression_str, rocksdb::CompressionType &type);
-    std::string compression_type2str(rocksdb::CompressionType type);
+    bool compression_str_to_type(const std::string &compression_str, rocksdb::CompressionType &type);
+    std::string compression_type_to_str(rocksdb::CompressionType type);
 
     // return finish time recorded in rocksdb
     uint64_t do_manual_compact(const rocksdb::CompactRangeOptions &options);
@@ -251,7 +251,7 @@ private:
     }
 
 private:
-    static const std::string compression_header;
+    static const std::string COMPRESSION_HEADER;
 
     dsn::gpid _gpid;
     std::string _primary_address;

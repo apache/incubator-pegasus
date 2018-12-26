@@ -36,11 +36,11 @@ public:
         std::unique_ptr<char *[]> argvs = dsn::make_unique<char *[]>(envs.size() * 2);
         char **argv = argvs.get();
         int idx = 0;
-        argv[idx++] = (char *)("unit_test_app");
+        argv[idx++] = const_cast<char *>("unit_test_app");
         if (!envs.empty()) {
             for (auto &kv : envs) {
-                argv[idx++] = (char *)(kv.first.c_str());
-                argv[idx++] = (char *)(kv.second.c_str());
+                argv[idx++] = const_cast<char *>(kv.first.c_str());
+                argv[idx++] = const_cast<char *>(kv.second.c_str());
             }
         }
         return _server->start(idx, argv);

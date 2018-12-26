@@ -12,24 +12,24 @@ auto snappy = rocksdb::kSnappyCompression;
 auto lz4 = rocksdb::kLZ4Compression;
 auto zstd = rocksdb::kZSTD;
 
-class pegasus_storage_options_test : public pegasus_server_test_base
+class pegasus_compression_options_test : public pegasus_server_test_base
 {
 public:
     std::string compression_header;
 
-    pegasus_storage_options_test()
+    pegasus_compression_options_test()
     {
         _server->_db_opts.num_levels = 7;
-        compression_header = _server->compression_header;
+        compression_header = _server->COMPRESSION_HEADER;
     }
 
     void compression_type_convert(const std::string &str, rocksdb::CompressionType type)
     {
         rocksdb::CompressionType tmp_type;
-        ASSERT_TRUE(_server->compression_str2type(str, tmp_type)) << str;
+        ASSERT_TRUE(_server->compression_str_to_type(str, tmp_type)) << str;
         ASSERT_EQ(tmp_type, type) << str << " vs. " << type;
 
-        ASSERT_EQ(str, _server->compression_type2str(type)) << str << " vs. " << type;
+        ASSERT_EQ(str, _server->compression_type_to_str(type)) << str << " vs. " << type;
     }
 
     void
@@ -50,14 +50,14 @@ public:
         ASSERT_EQ(tmp_compression_per_level, old_compression_per_level) << config;
     }
 
-    bool compression_str2type(const std::string &compression_str, rocksdb::CompressionType &type)
+    bool compression_str_to_type(const std::string &compression_str, rocksdb::CompressionType &type)
     {
-        return _server->compression_str2type(compression_str, type);
+        return _server->compression_str_to_type(compression_str, type);
     }
 
-    std::string compression_type2str(rocksdb::CompressionType type)
+    std::string compression_type_to_str(rocksdb::CompressionType type)
     {
-        return _server->compression_type2str(type);
+        return _server->compression_type_to_str(type);
     }
 
     void update_app_envs(const std::map<std::string, std::string> &envs) {
@@ -73,7 +73,7 @@ public:
     }
 };
 
-TEST_F(pegasus_storage_options_test, compression_type_convert_ok)
+TEST_F(pegasus_compression_options_test, compression_type_convert_ok)
 {
     compression_type_convert("none", none);
     compression_type_convert("snappy", snappy);
@@ -81,20 +81,20 @@ TEST_F(pegasus_storage_options_test, compression_type_convert_ok)
     compression_type_convert("zstd", zstd);
 }
 
-TEST_F(pegasus_storage_options_test, compression_type_convert_not_support)
+TEST_F(pegasus_compression_options_test, compression_type_convert_not_support)
 {
     rocksdb::CompressionType tmp_type;
-    ASSERT_FALSE(compression_str2type("not_support_zip", tmp_type));
+    ASSERT_FALSE(compression_str_to_type("not_support_zip", tmp_type));
 
-    ASSERT_EQ("", compression_type2str(rocksdb::kZlibCompression));
-    ASSERT_EQ("", compression_type2str(rocksdb::kBZip2Compression));
-    ASSERT_EQ("", compression_type2str(rocksdb::kLZ4HCCompression));
-    ASSERT_EQ("", compression_type2str(rocksdb::kXpressCompression));
-    ASSERT_EQ("", compression_type2str(rocksdb::kZSTDNotFinalCompression));
-    ASSERT_EQ("", compression_type2str(rocksdb::kDisableCompressionOption));
+    ASSERT_EQ("<unsupported>", compression_type_to_str(rocksdb::kZlibCompression));
+    ASSERT_EQ("<unsupported>", compression_type_to_str(rocksdb::kBZip2Compression));
+    ASSERT_EQ("<unsupported>", compression_type_to_str(rocksdb::kLZ4HCCompression));
+    ASSERT_EQ("<unsupported>", compression_type_to_str(rocksdb::kXpressCompression));
+    ASSERT_EQ("<unsupported>", compression_type_to_str(rocksdb::kZSTDNotFinalCompression));
+    ASSERT_EQ("<unsupported>", compression_type_to_str(rocksdb::kDisableCompressionOption));
 }
 
-TEST_F(pegasus_storage_options_test, compression_types_convert_ok)
+TEST_F(pegasus_compression_options_test, compression_types_convert_ok)
 {
     // Old style.
     compression_types_convert_ok("none", {none, none, none, none, none, none, none});
@@ -115,7 +115,7 @@ TEST_F(pegasus_storage_options_test, compression_types_convert_ok)
                                  {none, lz4, snappy, zstd, lz4, snappy, zstd});
 }
 
-TEST_F(pegasus_storage_options_test, compression_types_convert_fail)
+TEST_F(pegasus_compression_options_test, compression_types_convert_fail)
 {
     // Old style.
     compression_types_convert_fail("none1");
@@ -129,7 +129,7 @@ TEST_F(pegasus_storage_options_test, compression_types_convert_fail)
     compression_types_convert_fail("per_levelsnappy");
 }
 
-TEST_F(pegasus_storage_options_test, check_rocksdb_compression_types_default)
+TEST_F(pegasus_compression_options_test, check_rocksdb_compression_types_default)
 {
     start();
     check_db_compression_types({none, none, snappy, snappy, snappy, snappy, snappy}, "start with default");
