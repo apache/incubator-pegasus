@@ -20,10 +20,11 @@ def echo(message, color=None):
 
 
 class PegasusCluster(object):
-    def __init__(self, cfg_file):
-        self._cluster_name = os.path.basename(
-            cfg_file.name).lstrip("pegasus-").rstrip(".cfg")
+    def __init__(self, cfg_file_name):
+        self._cluster_name = os.path.basename(cfg_file_name).replace(
+            "pegasus-", "").replace(".cfg", "")
         self._shell_path = os.getenv("PEGASUS_SHELL_PATH")
+        self._cfg_file_name = cfg_file_name
         if self._shell_path is None:
             echo(
                 "Please configure environment variable PEGASUS_SHELL_PATH in your bashrc or zshrc",
@@ -64,6 +65,18 @@ class PegasusCluster(object):
         primaries_per_node.sort()
         if float(primaries_per_node[0]) / float(primaries_per_node[-1]) < 0.8:
             print nodes_detail
+
+    def get_meta_port(self):
+        with open(self._cfg_file_name) as cfg:
+            for line in cfg.readlines():
+                if line.strip().startswith("base_port"):
+                    return int(line.split("=")[1])
+
+    def get_meta_host(self):
+        with open(self._cfg_file_name) as cfg:
+            for line in cfg.readlines():
+                if line.strip().startswith("host.0"):
+                    return line.split("=")[1].strip()
 
     def _run_shell(self, args):
         """
@@ -109,6 +122,5 @@ def list_pegasus_clusters(config_path, env):
             continue
         if fname.endswith("proxy.cfg"):
             continue
-        f = open(config_path + "/" + fname, "r")
-        clusters.append(PegasusCluster(f))
+        clusters.append(PegasusCluster(config_path + "/" + fname))
     return clusters
