@@ -653,7 +653,7 @@
       "title": "Delay数据条数（统计各表最近10秒write throttling delay的数据条数）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
-          "collector*app.pegasus*app.stat.recent_throttling_delay_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+          "collector*app.pegasus*app.stat.recent_write_throttling_delay_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -663,7 +663,7 @@
       "title": "Reject数据条数（统计各表最近10秒write throttling reject的数据条数）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
-          "collector*app.pegasus*app.stat.recent_throttling_reject_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+          "collector*app.pegasus*app.stat.recent_write_throttling_reject_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",

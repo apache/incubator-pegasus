@@ -1898,7 +1898,7 @@ inline bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             }
             if (detailed) {
                 fprintf(file,
-                        " {app_id=%d,partition_index=%d, server=%s}",
+                        " {app_id=%d, partition_index=%d, server=%s}",
                         info.app_id,
                         info.partition_index,
                         info.server.c_str());
@@ -2112,7 +2112,7 @@ inline bool full_scan(command_executor *e, shell_context *sc, arguments args)
                 }
                 if (detailed) {
                     fprintf(file,
-                            " {app_id=%d,partition_index=%d, server=%s}",
+                            " {app_id=%d, partition_index=%d, server=%s}",
                             info.app_id,
                             info.partition_index,
                             info.server.c_str());
