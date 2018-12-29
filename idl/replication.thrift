@@ -28,4 +28,5 @@ struct query_cfg_response
     3:i32 partition_count;
     4:bool is_stateful;
     5:list<partition_configuration> partitions;
+    6:base.rpc_address forward_address;
 }

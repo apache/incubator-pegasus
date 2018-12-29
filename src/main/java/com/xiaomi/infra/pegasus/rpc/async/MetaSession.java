@@ -22,19 +22,20 @@ import java.util.concurrent.TimeUnit;
 public class MetaSession {
     public MetaSession(ClusterManager manager, String addrList[],
                        int eachQueryTimeoutInMills, int defaultMaxQueryCount, EventLoopGroup g) throws IllegalArgumentException {
+        clusterManager = manager;
         metaList = new ArrayList<ReplicaSession>();
         for (String addr: addrList) {
             rpc_address rpc_addr = new rpc_address();
             if (rpc_addr.fromString(addr)) {
                 logger.info("add {} as meta server", addr);
-                metaList.add(manager.getReplicaSession(rpc_addr));
+                metaList.add(clusterManager.getReplicaSession(rpc_addr));
             }
             else {
                 logger.error("invalid address {}", addr);
             }
         }
         if (metaList.isEmpty()) {
-            throw new IllegalArgumentException("can't find valid meta server address " + addrList.toString());
+            throw new IllegalArgumentException("no valid meta server address");
         }
         curLeader = 0;
 
@@ -48,6 +49,13 @@ public class MetaSession {
             return metaQueryOp.rpc_error.errno;
         query_cfg_operator op = (query_cfg_operator) metaQueryOp;
         return op.get_response().getErr().errno;
+    }
+
+    static public final rpc_address getMetaServiceForwardAddress(client_operator metaQueryOp) {
+        if (metaQueryOp.rpc_error.errno != error_types.ERR_OK)
+            return null;
+        query_cfg_operator op = (query_cfg_operator) metaQueryOp;
+        return op.get_response().getForward_address();
     }
 
     public final void asyncQuery(client_operator op, Runnable callbackFunc, int maxQueryCount) {
@@ -102,6 +110,7 @@ public class MetaSession {
 
         boolean needDelay = false;
         boolean needSwitchLeader = false;
+        rpc_address forwardAddress = null;
 
         --round.maxQueryCount;
         if (round.maxQueryCount == 0) {
@@ -119,6 +128,7 @@ public class MetaSession {
             else if (metaError == error_types.ERR_FORWARD_TO_OTHERS) {
                 needDelay = false;
                 needSwitchLeader = true;
+                forwardAddress = getMetaServiceForwardAddress(op);
             }
             else {
                 round.callbackFunc.run();
@@ -135,18 +145,36 @@ public class MetaSession {
             return;
         }
 
-        logger.info("query meta got error, rpc({}), meta({}), connected leader({}), remain retry count({}), " +
-                        "need switch leader({}), need delay({})",
+        logger.info("query meta got error, rpc error({}), meta error({}), forward address({}), current leader({}), " +
+                        "remain retry count({}), need switch leader({}), need delay({})",
                 op.rpc_error.errno.toString(),
                 metaError.toString(),
+                forwardAddress,
                 round.lastSession.name(),
                 round.maxQueryCount,
                 needSwitchLeader,
                 needDelay
                 );
         synchronized (this) {
-            if (needSwitchLeader && metaList.get(curLeader) == round.lastSession) {
-                curLeader = (curLeader + 1) % metaList.size();
+            if (needSwitchLeader) {
+                if (forwardAddress != null && !forwardAddress.isInvalid()) {
+                    boolean found = false;
+                    for (int i = 0; i < metaList.size(); i++) {
+                        if (metaList.get(i).getAddress().equals(forwardAddress)) {
+                            curLeader = i;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        logger.info("add forward address {} as meta server", forwardAddress);
+                        metaList.add(clusterManager.getReplicaSession(forwardAddress));
+                        curLeader = metaList.size() - 1;
+                    }
+                }
+                else if (metaList.get(curLeader) == round.lastSession) {
+                    curLeader = (curLeader + 1) % metaList.size();
+                }
             }
             round.lastSession = metaList.get(curLeader);
         }
@@ -173,6 +201,7 @@ public class MetaSession {
         }
     }
 
+    private ClusterManager clusterManager;
     private List<ReplicaSession> metaList;
     private int curLeader;
     private int eachQueryTimeoutInMills;
