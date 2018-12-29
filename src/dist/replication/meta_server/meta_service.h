@@ -172,7 +172,8 @@ private:
     //   1. the meta is leader
     //   0. meta isn't leader, and rpc-msg can forward to others
     //  -1. meta isn't leader, and rpc-msg can't forward to others
-    int check_leader(dsn::message_ex *req);
+    // if return -1 and `forward_address' != nullptr, then return leader by `forward_address'.
+    int check_leader(dsn::message_ex *req, dsn::rpc_address *forward_address);
     error_code remote_storage_initialize();
     bool check_freeze() const;
 

@@ -500,6 +500,11 @@ void configuration_query_by_index_response::__set_partitions(
     this->partitions = val;
 }
 
+void configuration_query_by_index_response::__set_forward_address(const ::dsn::rpc_address &val)
+{
+    this->forward_address = val;
+}
+
 uint32_t configuration_query_by_index_response::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -570,6 +575,14 @@ uint32_t configuration_query_by_index_response::read(::apache::thrift::protocol:
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 6:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->forward_address.read(iprot);
+                this->__isset.forward_address = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -617,6 +630,10 @@ configuration_query_by_index_response::write(::apache::thrift::protocol::TProtoc
     }
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("forward_address", ::apache::thrift::protocol::T_STRUCT, 6);
+    xfer += this->forward_address.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -630,6 +647,7 @@ void swap(configuration_query_by_index_response &a, configuration_query_by_index
     swap(a.partition_count, b.partition_count);
     swap(a.is_stateful, b.is_stateful);
     swap(a.partitions, b.partitions);
+    swap(a.forward_address, b.forward_address);
     swap(a.__isset, b.__isset);
 }
 
@@ -641,6 +659,7 @@ configuration_query_by_index_response::configuration_query_by_index_response(
     partition_count = other32.partition_count;
     is_stateful = other32.is_stateful;
     partitions = other32.partitions;
+    forward_address = other32.forward_address;
     __isset = other32.__isset;
 }
 configuration_query_by_index_response::configuration_query_by_index_response(
@@ -651,6 +670,7 @@ configuration_query_by_index_response::configuration_query_by_index_response(
     partition_count = std::move(other33.partition_count);
     is_stateful = std::move(other33.is_stateful);
     partitions = std::move(other33.partitions);
+    forward_address = std::move(other33.forward_address);
     __isset = std::move(other33.__isset);
 }
 configuration_query_by_index_response &configuration_query_by_index_response::
@@ -661,6 +681,7 @@ operator=(const configuration_query_by_index_response &other34)
     partition_count = other34.partition_count;
     is_stateful = other34.is_stateful;
     partitions = other34.partitions;
+    forward_address = other34.forward_address;
     __isset = other34.__isset;
     return *this;
 }
@@ -672,6 +693,7 @@ operator=(configuration_query_by_index_response &&other35)
     partition_count = std::move(other35.partition_count);
     is_stateful = std::move(other35.is_stateful);
     partitions = std::move(other35.partitions);
+    forward_address = std::move(other35.forward_address);
     __isset = std::move(other35.__isset);
     return *this;
 }
@@ -688,6 +710,8 @@ void configuration_query_by_index_response::printTo(std::ostream &out) const
         << "is_stateful=" << to_string(is_stateful);
     out << ", "
         << "partitions=" << to_string(partitions);
+    out << ", "
+        << "forward_address=" << to_string(forward_address);
     out << ")";
 }
 

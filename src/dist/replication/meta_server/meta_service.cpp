@@ -321,18 +321,23 @@ void meta_service::register_rpc_handlers()
         RPC_CM_DDD_DIAGNOSE, "ddd_diagnose", &meta_service::ddd_diagnose);
 }
 
-int meta_service::check_leader(dsn::message_ex *req)
+int meta_service::check_leader(dsn::message_ex *req, dsn::rpc_address *forward_address)
 {
     dsn::rpc_address leader;
     if (!_failure_detector->get_leader(&leader)) {
-        if (!req->header->context.u.is_forward_supported)
+        if (!req->header->context.u.is_forward_supported) {
+            if (forward_address != nullptr)
+                *forward_address = leader;
             return -1;
+        }
 
         dinfo("leader address: %s", leader.to_string());
         if (!leader.is_invalid()) {
             dsn_rpc_forward(req, leader);
             return 0;
         } else {
+            if (forward_address != nullptr)
+                forward_address->set_invalid();
             return -1;
         }
     }
@@ -341,7 +346,24 @@ int meta_service::check_leader(dsn::message_ex *req)
 
 #define RPC_CHECK_STATUS(dsn_msg, response_struct)                                                 \
     dinfo("rpc %s called", __FUNCTION__);                                                          \
-    int result = check_leader(dsn_msg);                                                            \
+    int result = check_leader(dsn_msg, nullptr);                                                   \
+    if (result == 0)                                                                               \
+        return;                                                                                    \
+    if (result == -1 || !_started) {                                                               \
+        if (result == -1)                                                                          \
+            response_struct.err = ERR_FORWARD_TO_OTHERS;                                           \
+        else if (_recovering)                                                                      \
+            response_struct.err = ERR_UNDER_RECOVERY;                                              \
+        else                                                                                       \
+            response_struct.err = ERR_SERVICE_NOT_ACTIVE;                                          \
+        ddebug("reject request with %s", response_struct.err.to_string());                         \
+        reply(dsn_msg, response_struct);                                                           \
+        return;                                                                                    \
+    }
+
+#define RPC_CHECK_STATUS_WITH_FORWARD(dsn_msg, response_struct)                                    \
+    dinfo("rpc %s called", __FUNCTION__);                                                          \
+    int result = check_leader(dsn_msg, &response_struct.forward_address);                          \
     if (result == 0)                                                                               \
         return;                                                                                    \
     if (result == -1 || !_started) {                                                               \
@@ -485,7 +507,7 @@ void meta_service::on_query_configuration_by_node(dsn::message_ex *msg)
 void meta_service::on_query_configuration_by_index(dsn::message_ex *msg)
 {
     configuration_query_by_index_response response;
-    RPC_CHECK_STATUS(msg, response);
+    RPC_CHECK_STATUS_WITH_FORWARD(msg, response);
 
     configuration_query_by_index_request request;
     dsn::unmarshall(msg, request);
@@ -588,7 +610,7 @@ void meta_service::on_start_recovery(dsn::message_ex *req)
 {
     configuration_recovery_response response;
     ddebug("got start recovery request, start to do recovery");
-    int result = check_leader(req);
+    int result = check_leader(req, nullptr);
     if (result == 0) // request has been forwarded to others
     {
         return;

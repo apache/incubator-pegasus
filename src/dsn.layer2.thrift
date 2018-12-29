@@ -29,6 +29,7 @@ struct configuration_query_by_index_response
     3:i32                           partition_count;
     4:bool                          is_stateful;
     5:list<partition_configuration> partitions;    
+    6:dsn.rpc_address               forward_address;
 }
 
 enum app_status
