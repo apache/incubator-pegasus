@@ -3721,7 +3721,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.storage_mb);
             tp.append_data((uint64_t)row.storage_count);
             double block_cache_hit_rate =
-                abs(row.rdb_block_cache_total_count) < 1e-6
+                std::abs(row.rdb_block_cache_total_count) < 1e-6
                     ? 0.0
                     : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
             tp.append_data(block_cache_hit_rate);
