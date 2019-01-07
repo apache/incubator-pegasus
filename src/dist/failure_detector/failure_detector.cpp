@@ -397,6 +397,14 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
         return true;
     }
 
+    // if ack is not from master meta, worker should not update its last send time
+    if (!ack.is_master) {
+        dwarn("node[%s] is not master, ack.primary_node[%s] is real master",
+              node.to_string(),
+              ack.primary_node.to_string());
+        return true;
+    }
+
     // update last_send_time_for_beacon_with_ack
     record.last_send_time_for_beacon_with_ack = beacon_send_time;
     record.rejected = false;
