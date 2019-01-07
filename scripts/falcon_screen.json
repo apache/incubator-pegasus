@@ -170,6 +170,16 @@
       "timespan": 86400
     },
     {
+      "title": "rocksdb缓存命中率（统计各表的rocksdb block cache命中率；单位：百分比*10000；1M表示100%）",
+      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
+      "counters": [
+          "collector*app.pegasus*app.stat.rdb_block_cache_hit_rate#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "各节点SharedLog大小（单位：MB）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [

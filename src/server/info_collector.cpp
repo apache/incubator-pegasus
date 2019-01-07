@@ -35,8 +35,7 @@ info_collector::info_collector()
         _meta_servers.group_address()->add(ms);
     }
 
-    _cluster_name = dsn_config_get_value_string(
-        "pegasus.collector", "cluster", "", "cluster name");
+    _cluster_name = dsn_config_get_value_string("pegasus.collector", "cluster", "", "cluster name");
     dassert(_cluster_name.size() > 0, "");
 
     _shell_context.current_cluster_name = _cluster_name;
@@ -136,8 +135,10 @@ void info_collector::on_app_stat()
                 row.recent_write_throttling_reject_count);
             counters->storage_mb->set(row.storage_mb);
             counters->storage_count->set(row.storage_count);
-            counters->rdb_block_cache_hit_rate->set(row.rdb_block_cache_hit_count /
-                                                    row.rdb_block_cache_total_count);
+            counters->rdb_block_cache_hit_rate->set(
+                std::abs(row.rdb_block_cache_total_count) < 1e-6
+                    ? 0
+                    : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count * 1000000);
             counters->rdb_block_cache_mem_usage->set(row.rdb_block_cache_mem_usage);
             counters->rdb_index_and_filter_blocks_mem_usage->set(
                 row.rdb_index_and_filter_blocks_mem_usage);
@@ -162,37 +163,40 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
         return find->second;
     }
     AppStatCounters *counters = new AppStatCounters();
-    char buf1[1024];
-    char buf2[1024];
-#define INIT_COUNER(type)                                                                          \
+
+    char counter_name[1024];
+    char counter_desc[1024];
+#define INIT_COUNTER(name)                                                                         \
     do {                                                                                           \
-        sprintf(buf1, "app.stat." #type "#%s", app_name.c_str());                                  \
-        sprintf(buf2, "statistic the " #type " of app %s", app_name.c_str());                      \
-        counters->type.init_app_counter("app.pegasus", buf1, COUNTER_TYPE_NUMBER, buf2);           \
+        sprintf(counter_name, "app.stat." #name "#%s", app_name.c_str());                          \
+        sprintf(counter_desc, "statistic the " #name " of app %s", app_name.c_str());              \
+        counters->name.init_app_counter(                                                           \
+            "app.pegasus", counter_name, COUNTER_TYPE_NUMBER, counter_desc);                       \
     } while (0)
-    INIT_COUNER(get_qps);
-    INIT_COUNER(multi_get_qps);
-    INIT_COUNER(put_qps);
-    INIT_COUNER(multi_put_qps);
-    INIT_COUNER(remove_qps);
-    INIT_COUNER(multi_remove_qps);
-    INIT_COUNER(incr_qps);
-    INIT_COUNER(check_and_set_qps);
-    INIT_COUNER(check_and_mutate_qps);
-    INIT_COUNER(scan_qps);
-    INIT_COUNER(recent_expire_count);
-    INIT_COUNER(recent_filter_count);
-    INIT_COUNER(recent_abnormal_count);
-    INIT_COUNER(recent_write_throttling_delay_count);
-    INIT_COUNER(recent_write_throttling_reject_count);
-    INIT_COUNER(storage_mb);
-    INIT_COUNER(storage_count);
-    INIT_COUNER(rdb_block_cache_hit_rate);
-    INIT_COUNER(rdb_block_cache_mem_usage);
-    INIT_COUNER(rdb_index_and_filter_blocks_mem_usage);
-    INIT_COUNER(rdb_memtable_mem_usage);
-    INIT_COUNER(read_qps);
-    INIT_COUNER(write_qps);
+
+    INIT_COUNTER(get_qps);
+    INIT_COUNTER(multi_get_qps);
+    INIT_COUNTER(put_qps);
+    INIT_COUNTER(multi_put_qps);
+    INIT_COUNTER(remove_qps);
+    INIT_COUNTER(multi_remove_qps);
+    INIT_COUNTER(incr_qps);
+    INIT_COUNTER(check_and_set_qps);
+    INIT_COUNTER(check_and_mutate_qps);
+    INIT_COUNTER(scan_qps);
+    INIT_COUNTER(recent_expire_count);
+    INIT_COUNTER(recent_filter_count);
+    INIT_COUNTER(recent_abnormal_count);
+    INIT_COUNTER(recent_write_throttling_delay_count);
+    INIT_COUNTER(recent_write_throttling_reject_count);
+    INIT_COUNTER(storage_mb);
+    INIT_COUNTER(storage_count);
+    INIT_COUNTER(rdb_block_cache_hit_rate);
+    INIT_COUNTER(rdb_block_cache_mem_usage);
+    INIT_COUNTER(rdb_index_and_filter_blocks_mem_usage);
+    INIT_COUNTER(rdb_memtable_mem_usage);
+    INIT_COUNTER(read_qps);
+    INIT_COUNTER(write_qps);
     _app_stat_counters[app_name] = counters;
     return counters;
 }
