@@ -957,7 +957,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             dwarn("%s: rocksdb abnormal multi_get from %s: hash_key = \"%s\", "
                   "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
                   "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
-                  "max_kv_count = %d, max_kv_size = %d, reverse = %s"
+                  "max_kv_count = %d, max_kv_size = %d, reverse = %s, "
                   "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
                   "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns",
                   replica_name(),
