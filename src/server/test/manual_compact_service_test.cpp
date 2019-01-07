@@ -11,38 +11,41 @@ namespace server {
 class manual_compact_service_test : public pegasus_server_test_base
 {
 public:
-    pegasus_manual_compact_service manual_compact_svc;
+    std::unique_ptr<pegasus_manual_compact_service> manual_compact_svc;
     static const uint64_t compacted_ts = 1500000000; // 2017.07.14 10:40:00 CST
 
 public:
-    manual_compact_service_test() : manual_compact_svc(this->_server.get()) {}
+    manual_compact_service_test() {
+        start();
+        manual_compact_svc = dsn::make_unique<pegasus_manual_compact_service>(_server.get());
+    }
 
     void set_compact_time(int64_t ts)
     {
-        manual_compact_svc._manual_compact_last_finish_time_ms.store(
+        manual_compact_svc->_manual_compact_last_finish_time_ms.store(
             static_cast<uint64_t>(ts * 1000));
     }
 
     void set_mock_now(uint64_t mock_now_sec)
     {
-        manual_compact_svc._mock_now_timestamp = mock_now_sec * 1000;
+        manual_compact_svc->_mock_now_timestamp = mock_now_sec * 1000;
     }
 
     void check_compact_disabled(const std::map<std::string, std::string> &envs, bool ok)
     {
-        ASSERT_EQ(ok, manual_compact_svc.check_compact_disabled(envs))
+        ASSERT_EQ(ok, manual_compact_svc->check_compact_disabled(envs))
             << dsn::utils::kv_map_to_string(envs, ';', '=');
     }
 
     void check_once_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
-        ASSERT_EQ(ok, manual_compact_svc.check_once_compact(envs))
+        ASSERT_EQ(ok, manual_compact_svc->check_once_compact(envs))
             << dsn::utils::kv_map_to_string(envs, ';', '=');
     }
 
     void check_periodic_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
-        ASSERT_EQ(ok, manual_compact_svc.check_periodic_compact(envs))
+        ASSERT_EQ(ok, manual_compact_svc->check_periodic_compact(envs))
             << dsn::utils::kv_map_to_string(envs, ';', '=');
     }
 
@@ -50,32 +53,32 @@ public:
                                      const std::string &key_prefix,
                                      rocksdb::CompactRangeOptions &options)
     {
-        manual_compact_svc.extract_manual_compact_opts(envs, key_prefix, options);
+        manual_compact_svc->extract_manual_compact_opts(envs, key_prefix, options);
     }
 
     void set_num_level(int level) { _server->_db_opts.num_levels = level; }
 
     void check_manual_compact_state(bool ok, const std::string &msg = "")
     {
-        ASSERT_EQ(ok, manual_compact_svc.check_manual_compact_state()) << msg;
+        ASSERT_EQ(ok, manual_compact_svc->check_manual_compact_state()) << msg;
     }
 
     void manual_compact(uint64_t mock_now_sec, uint64_t time_cost_sec)
     {
         set_mock_now(mock_now_sec);
-        uint64_t start = manual_compact_svc.now_timestamp();
-        manual_compact_svc._manual_compact_start_running_time_ms.store(start);
+        uint64_t start = manual_compact_svc->now_timestamp();
+        manual_compact_svc->_manual_compact_start_running_time_ms.store(start);
         // do compacting...
         set_mock_now(mock_now_sec + time_cost_sec);
-        uint64_t finish = manual_compact_svc.now_timestamp();
-        manual_compact_svc._manual_compact_last_finish_time_ms.store(finish);
-        manual_compact_svc._manual_compact_last_time_used_ms.store(finish - start);
-        manual_compact_svc._manual_compact_enqueue_time_ms.store(0);
+        uint64_t finish = manual_compact_svc->now_timestamp();
+        manual_compact_svc->_manual_compact_last_finish_time_ms.store(finish);
+        manual_compact_svc->_manual_compact_last_time_used_ms.store(finish - start);
+        manual_compact_svc->_manual_compact_enqueue_time_ms.store(0);
     }
 
     void set_manual_compact_interval(int sec)
     {
-        manual_compact_svc._manual_compact_min_interval_seconds = sec;
+        manual_compact_svc->_manual_compact_min_interval_seconds = sec;
     }
 };
 

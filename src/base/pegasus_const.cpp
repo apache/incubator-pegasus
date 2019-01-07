@@ -61,5 +61,4 @@ const std::string TABLE_LEVEL_DEFAULT_TTL("default_ttl");
 
 /// read cluster meta address from this section
 const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
-
 } // namespace pegasus
