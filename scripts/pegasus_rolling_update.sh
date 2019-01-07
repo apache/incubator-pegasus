@@ -281,7 +281,7 @@ if [ "$type" = "all" ]; then
   echo "=================================================================="
   echo "Rolling update meta servers and collectors..."
   cd $minos_client_dir
-  ./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 10 $update_options --job meta collector
+  ./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 20 $update_options --job meta collector
   cd $shell_dir
   echo
 
