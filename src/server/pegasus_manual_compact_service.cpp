@@ -21,6 +21,7 @@ pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_im
     : replica_base(*app),
       _app(app),
       _disabled(false),
+      _max_concurrent_running_count(INT_MAX),
       _manual_compact_enqueue_time_ms(0),
       _manual_compact_start_running_time_ms(0),
       _manual_compact_last_finish_time_ms(0),
@@ -53,6 +54,12 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
     const std::map<std::string, std::string> &envs)
 {
     if (check_compact_disabled(envs)) {
+        ddebug_replica("ignored compact because disabled");
+        return;
+    }
+
+    if (check_compact_max_concurrent_running_count(envs) <= 0) {
+        ddebug_replica("ignored compact because max_concurrent_running_count <= 0");
         return;
     }
 
@@ -79,8 +86,7 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
             manual_compact(options);
         });
     } else {
-        ddebug_replica(
-            "ignored this compact request because last one is on going or finished just now");
+        ddebug_replica("ignored compact because last one is on going or just finished");
     }
 }
 
@@ -106,6 +112,25 @@ bool pegasus_manual_compact_service::check_compact_disabled(
     }
 
     return new_disabled;
+}
+
+int pegasus_manual_compact_service::check_compact_max_concurrent_running_count(
+    const std::map<std::string, std::string> &envs)
+{
+    int new_count = INT_MAX;
+    auto find = envs.find(MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT_KEY);
+    if (find != envs.end() && !dsn::buf2int32(find->second, new_count)) {
+        derror_replica("{}={} is invalid.", find->first, find->second);
+    }
+
+    int old_count = _max_concurrent_running_count.load();
+    if (new_count != old_count) {
+        // count changed
+        ddebug_replica("max_concurrent_running_count changed from {} to {}", old_count, new_count);
+        _max_concurrent_running_count.store(new_count);
+    }
+
+    return new_count;
 }
 
 bool pegasus_manual_compact_service::check_once_compact(
@@ -238,6 +263,17 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     // if we find manual compaction is disabled when transfer from queue to running,
     // it would not to be started.
     if (_disabled.load()) {
+        ddebug_replica("ignored compact because disabled");
+        _manual_compact_enqueue_time_ms.store(0);
+        return;
+    }
+
+    // if current running count exceeds the limit, it would not to be started.
+    _pfc_manual_compact_running_count->increment();
+    if (_pfc_manual_compact_running_count->get_integer_value() > _max_concurrent_running_count) {
+        _pfc_manual_compact_running_count->decrement();
+        ddebug_replica("ignored compact because exceed max_concurrent_running_count({})",
+                       _max_concurrent_running_count.load());
         _manual_compact_enqueue_time_ms.store(0);
         return;
     }
@@ -245,12 +281,13 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     uint64_t start = begin_manual_compact();
     uint64_t finish = _app->do_manual_compact(options);
     end_manual_compact(start, finish);
+
+    _pfc_manual_compact_running_count->decrement();
 }
 
 uint64_t pegasus_manual_compact_service::begin_manual_compact()
 {
     ddebug_replica("start to execute manual compaction");
-    _pfc_manual_compact_running_count->increment();
     uint64_t start = now_timestamp();
     _manual_compact_start_running_time_ms.store(start);
     return start;
@@ -263,7 +300,6 @@ void pegasus_manual_compact_service::end_manual_compact(uint64_t start, uint64_t
     _manual_compact_last_time_used_ms.store(finish - start);
     _manual_compact_enqueue_time_ms.store(0);
     _manual_compact_start_running_time_ms.store(0);
-    _pfc_manual_compact_running_count->decrement();
 }
 
 std::string pegasus_manual_compact_service::query_compact_state() const

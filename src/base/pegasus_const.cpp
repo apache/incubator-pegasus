@@ -37,6 +37,8 @@ const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD("bulk_load");
 /// ```
 const std::string MANUAL_COMPACT_KEY_PREFIX("manual_compact.");
 const std::string MANUAL_COMPACT_DISABLED_KEY(MANUAL_COMPACT_KEY_PREFIX + "disabled");
+const std::string MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT_KEY(MANUAL_COMPACT_KEY_PREFIX +
+                                                                  "max_concurrent_running_count");
 
 const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX(MANUAL_COMPACT_KEY_PREFIX + "periodic.");
 const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX +
