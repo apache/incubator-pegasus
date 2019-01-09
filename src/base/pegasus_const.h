@@ -23,6 +23,7 @@ extern const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
 
 extern const std::string MANUAL_COMPACT_KEY_PREFIX;
 extern const std::string MANUAL_COMPACT_DISABLED_KEY;
+extern const std::string MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT_KEY;
 
 extern const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX;
 extern const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY;
