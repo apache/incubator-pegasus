@@ -31,6 +31,9 @@ private:
     // return true if manual compaction is disabled.
     bool check_compact_disabled(const std::map<std::string, std::string> &envs);
 
+    // return max concurrent count.
+    int check_compact_max_concurrent_running_count(const std::map<std::string, std::string> &envs);
+
     // return true if need do once manual compaction.
     bool check_once_compact(const std::map<std::string, std::string> &envs);
 
@@ -63,6 +66,7 @@ private:
 
     // manual compact state
     std::atomic<bool> _disabled;
+    std::atomic<int> _max_concurrent_running_count;
     std::atomic<uint64_t> _manual_compact_enqueue_time_ms;
     std::atomic<uint64_t> _manual_compact_start_running_time_ms;
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
