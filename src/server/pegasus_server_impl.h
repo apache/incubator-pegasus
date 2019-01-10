@@ -217,6 +217,8 @@ private:
 
     void update_default_ttl(const std::map<std::string, std::string> &envs);
 
+    void update_checkpoint_reserve(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -278,6 +280,8 @@ private:
 
     std::unique_ptr<pegasus_server_write> _server_write;
 
+    uint32_t _checkpoint_reserve_min_count_in_config;
+    uint32_t _checkpoint_reserve_time_seconds_in_config;
     uint32_t _checkpoint_reserve_min_count;
     uint32_t _checkpoint_reserve_time_seconds;
     std::atomic_bool _is_checkpointing;         // whether the db is doing checkpoint

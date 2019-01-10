@@ -246,13 +246,15 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _wt_opts.disableWAL = true;
 
     // get the checkpoint reserve options.
-    _checkpoint_reserve_min_count = (uint32_t)dsn_config_get_value_uint64(
+    _checkpoint_reserve_min_count_in_config = (uint32_t)dsn_config_get_value_uint64(
         "pegasus.server", "checkpoint_reserve_min_count", 3, "checkpoint_reserve_min_count");
-    _checkpoint_reserve_time_seconds =
+    _checkpoint_reserve_min_count = _checkpoint_reserve_min_count_in_config;
+    _checkpoint_reserve_time_seconds_in_config =
         (uint32_t)dsn_config_get_value_uint64("pegasus.server",
                                               "checkpoint_reserve_time_seconds",
                                               0,
                                               "checkpoint_reserve_time_seconds, 0 means no check");
+    _checkpoint_reserve_time_seconds = _checkpoint_reserve_time_seconds_in_config;
 
     _update_rdb_stat_interval = std::chrono::seconds(dsn_config_get_value_uint64(
         "pegasus.server", "update_rdb_stat_interval", 600, "update_rdb_stat_interval, in seconds"));
@@ -2309,6 +2311,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
 {
     update_usage_scenario(envs);
     update_default_ttl(envs);
+    update_checkpoint_reserve(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2327,17 +2330,15 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
     if (new_usage_scenario != _usage_scenario) {
         std::string old_usage_scenario = _usage_scenario;
         if (set_usage_scenario(new_usage_scenario)) {
-            ddebug("%s: update app env[%s] from %s to %s succeed",
-                   replica_name(),
-                   ROCKSDB_ENV_USAGE_SCENARIO_KEY.c_str(),
-                   old_usage_scenario.c_str(),
-                   new_usage_scenario.c_str());
+            ddebug_replica("update app env[{}] from {} to {} succeed",
+                           ROCKSDB_ENV_USAGE_SCENARIO_KEY,
+                           old_usage_scenario,
+                           new_usage_scenario);
         } else {
-            derror("%s: update app env[%s] from %s to %s failed",
-                   replica_name(),
-                   ROCKSDB_ENV_USAGE_SCENARIO_KEY.c_str(),
-                   old_usage_scenario.c_str(),
-                   new_usage_scenario.c_str());
+            derror_replica("update app env[{}] from {} to {} failed",
+                           ROCKSDB_ENV_USAGE_SCENARIO_KEY,
+                           old_usage_scenario,
+                           new_usage_scenario);
         }
     }
 }
@@ -2353,6 +2354,42 @@ void pegasus_server_impl::update_default_ttl(const std::map<std::string, std::st
         }
         _server_write->set_default_ttl(static_cast<uint32_t>(ttl));
         _key_ttl_compaction_filter_factory->SetDefaultTTL(static_cast<uint32_t>(ttl));
+    }
+}
+
+void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, std::string> &envs)
+{
+    int32_t count = _checkpoint_reserve_min_count_in_config;
+    int32_t time = _checkpoint_reserve_time_seconds_in_config;
+
+    auto find = envs.find(ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT);
+    if (find != envs.end()) {
+        if (!dsn::buf2int32(find->second, count) || count <= 0) {
+            derror_replica("{}={} is invalid.", find->first, find->second);
+            return;
+        }
+    }
+    find = envs.find(ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS);
+    if (find != envs.end()) {
+        if (!dsn::buf2int32(find->second, time) || time < 0) {
+            derror_replica("{}={} is invalid.", find->first, find->second);
+            return;
+        }
+    }
+
+    if (count != _checkpoint_reserve_min_count) {
+        ddebug_replica("update app env[{}] from {} to {} succeed",
+                       ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT,
+                       _checkpoint_reserve_min_count,
+                       count);
+        _checkpoint_reserve_min_count = count;
+    }
+    if (time != _checkpoint_reserve_time_seconds) {
+        ddebug_replica("update app env[{}] from {} to {} succeed",
+                       ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS,
+                       _checkpoint_reserve_time_seconds,
+                       time);
+        _checkpoint_reserve_time_seconds = time;
     }
 }
 
