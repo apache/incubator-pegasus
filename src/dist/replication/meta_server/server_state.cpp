@@ -35,6 +35,7 @@
  */
 
 #include <dsn/utility/factory_store.h>
+#include <dsn/utility/string_conv.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/async_calls.h>
@@ -128,15 +129,15 @@ void server_state::register_cli_commands()
             "control the max count to add secondary for one node",
             [this](const std::vector<std::string> &args) {
                 std::string result("OK");
-                if (args.size() <= 0) {
+                if (args.empty()) {
                     result = std::to_string(_add_secondary_max_count_for_one_node);
                 } else {
                     if (args[0] == "DEFAULT") {
                         _add_secondary_max_count_for_one_node =
                             _meta_svc->get_meta_options().add_secondary_max_count_for_one_node;
                     } else {
-                        int v = atoi(args[0].c_str());
-                        if (v < 0) {
+                        int32_t v = 0;
+                        if (!dsn::buf2int32(args[0], v) || v < 0) {
                             result = std::string("ERR: invalid arguments");
                         } else {
                             _add_secondary_max_count_for_one_node = v;

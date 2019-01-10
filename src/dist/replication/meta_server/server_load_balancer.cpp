@@ -1,5 +1,6 @@
 #include "server_load_balancer.h"
 #include <dsn/utility/extensible_object.h>
+#include <dsn/utility/string_conv.h>
 #include <dsn/tool-api/command_manager.h>
 #include <boost/lexical_cast.hpp>
 
@@ -877,15 +878,15 @@ void simple_load_balancer::unregister_ctrl_commands()
 std::string simple_load_balancer::ctrl_assign_delay_ms(const std::vector<std::string> &args)
 {
     std::string result("OK");
-    if (args.size() <= 0) {
+    if (args.empty()) {
         result = std::to_string(_replica_assign_delay_ms_for_dropouts);
     } else {
         if (args[0] == "DEFAULT") {
             _replica_assign_delay_ms_for_dropouts =
                 _svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
         } else {
-            int v = atoi(args[0].c_str());
-            if (v <= 0) {
+            int32_t v = 0;
+            if (!dsn::buf2int32(args[0], v) || v <= 0) {
                 result = std::string("ERR: invalid arguments");
             } else {
                 _replica_assign_delay_ms_for_dropouts = v;
@@ -900,7 +901,7 @@ simple_load_balancer::ctrl_assign_secondary_black_list(const std::vector<std::st
 {
     std::string invalid_arguments("invalid arguments");
     std::stringstream oss;
-    if (args.size() <= 0) {
+    if (args.empty()) {
         dsn::zauto_read_lock l(_black_list_lock);
         oss << "get ok: ";
         for (auto iter = _assign_secondary_black_list.begin();

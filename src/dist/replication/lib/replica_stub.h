@@ -243,10 +243,13 @@ private:
     dsn_handle_t _trigger_chkpt_command;
     dsn_handle_t _query_compact_command;
     dsn_handle_t _query_app_envs_command;
+    dsn_handle_t _useless_dir_reserve_seconds_command;
 
     bool _deny_client;
     bool _verbose_client_log;
     bool _verbose_commit_log;
+    int32_t _gc_disk_error_replica_interval_seconds;
+    int32_t _gc_disk_garbage_replica_interval_seconds;
 
     // we limit LT_APP max concurrent count, because nfs service implementation is
     // too simple, it do not support priority.

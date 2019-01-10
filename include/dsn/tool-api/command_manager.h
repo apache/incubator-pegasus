@@ -82,7 +82,7 @@ private:
 #define HANDLE_CLI_FLAGS(flag, args)                                                               \
     do {                                                                                           \
         std::string ret_msg("OK");                                                                 \
-        if (args.size() <= 0) {                                                                    \
+        if (args.empty()) {                                                                        \
             ret_msg = flag ? "true" : "false";                                                     \
         } else {                                                                                   \
             if (strcmp(args[0].c_str(), "true") == 0) {                                            \
