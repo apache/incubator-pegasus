@@ -2366,12 +2366,14 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
     if (find != envs.end()) {
         if (!dsn::buf2int32(find->second, count) || count <= 0) {
             derror_replica("{}={} is invalid.", find->first, find->second);
+            return;
         }
     }
     find = envs.find(ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS);
     if (find != envs.end()) {
         if (!dsn::buf2int32(find->second, time) || time < 0) {
             derror_replica("{}={} is invalid.", find->first, find->second);
+            return;
         }
     }
 
