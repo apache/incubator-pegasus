@@ -39,5 +39,8 @@ extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
 
 extern const std::string TABLE_LEVEL_DEFAULT_TTL;
 
+extern const std::string ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT;
+extern const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS;
+
 extern const std::string PEGASUS_CLUSTER_SECTION_NAME;
 } // namespace pegasus
