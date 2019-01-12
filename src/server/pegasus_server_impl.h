@@ -162,7 +162,8 @@ private:
     void parse_checkpoints();
 
     // garbage collection checkpoints
-    void gc_checkpoints();
+    // if force_reserve_one == true, then only reserve the last one checkpoint
+    void gc_checkpoints(bool force_reserve_one = false);
 
     void set_last_durable_decree(int64_t decree) { _last_durable_decree.store(decree); }
 
