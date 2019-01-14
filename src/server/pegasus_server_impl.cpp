@@ -388,12 +388,14 @@ void pegasus_server_impl::parse_checkpoints()
 
 pegasus_server_impl::~pegasus_server_impl() = default;
 
-void pegasus_server_impl::gc_checkpoints()
+void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
 {
+    int min_count = force_reserve_one ? 1 : _checkpoint_reserve_min_count;
+    uint64_t reserve_time = force_reserve_one ? 0 : _checkpoint_reserve_time_seconds;
     std::deque<int64_t> temp_list;
     {
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
-        if (_checkpoints.size() <= _checkpoint_reserve_min_count)
+        if (_checkpoints.size() <= min_count)
             return;
         temp_list = _checkpoints;
     }
@@ -402,10 +404,10 @@ void pegasus_server_impl::gc_checkpoints()
     int64_t max_del_d = -1;
     uint64_t current_time = dsn_now_ms() / 1000;
     for (int i = 0; i < temp_list.size(); ++i) {
-        if (i + _checkpoint_reserve_min_count >= temp_list.size())
+        if (i + min_count >= temp_list.size())
             break;
         int64_t d = temp_list[i];
-        if (_checkpoint_reserve_time_seconds > 0) {
+        if (reserve_time > 0) {
             // we check last write time of "CURRENT" instead of directory, because the directory's
             // last write time may be updated by previous incompleted garbage collection.
             auto cpt_dir =
@@ -421,7 +423,7 @@ void pegasus_server_impl::gc_checkpoints()
                 break;
             }
             uint64_t last_write_time = (uint64_t)tm;
-            if (last_write_time + _checkpoint_reserve_time_seconds >= current_time) {
+            if (last_write_time + reserve_time >= current_time) {
                 // not expired
                 break;
             }
@@ -444,7 +446,7 @@ void pegasus_server_impl::gc_checkpoints()
         int delete_max_index = -1;
         for (int i = 0; i < _checkpoints.size(); ++i) {
             int64_t del_d = _checkpoints[i];
-            if (i + _checkpoint_reserve_min_count >= _checkpoints.size() || del_d > max_del_d)
+            if (i + min_count >= _checkpoints.size() || del_d > max_del_d)
                 break;
             to_delete_list.push_back(del_d);
             delete_max_index = i;
@@ -2611,6 +2613,32 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
     ddebug_replica("CompactRange finished, status = {}, time_used = {}ms",
                    status.ToString().c_str(),
                    dsn_now_ms() - start_time);
+
+    // generate new checkpoint and remove old checkpoints, in order to release storage asap
+    ddebug_replica("generate new checkpoint immediately after manual compact");
+    int64_t old_last_durable = last_durable_decree();
+    sync_checkpoint();
+    gc_checkpoints(true);
+    if (last_durable_decree() == old_last_durable) {
+        // it is possible that the new checkpoint is not generated, if there was no data
+        // written into rocksdb when doing manual compact.
+        ddebug_replica("no new checkpoint generated, will retry after 5 minutes");
+        ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
+                                &_tracker,
+                                [this, old_last_durable]() {
+                                    ddebug_replica("retry gc checkpoints after manual compact");
+                                    if (last_durable_decree() == old_last_durable) {
+                                        // if the new checkpoint is still not generated in the
+                                        // last 5 minutes, we will try to generate it again, and
+                                        // it will probably succeed because at least some empty
+                                        // data is written into rocksdb by periodic group check.
+                                        sync_checkpoint();
+                                    }
+                                    gc_checkpoints(true);
+                                },
+                                0,
+                                std::chrono::minutes(5));
+    }
 
     // update rocksdb statistics immediately
     update_replica_rocksdb_statistics();
