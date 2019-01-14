@@ -7,6 +7,7 @@ import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.operator.query_cfg_operator;
+import com.xiaomi.infra.pegasus.replication.partition_configuration;
 import io.netty.channel.EventLoopGroup;
 
 import java.util.ArrayList;
@@ -55,7 +56,15 @@ public class MetaSession {
         if (metaQueryOp.rpc_error.errno != error_types.ERR_OK)
             return null;
         query_cfg_operator op = (query_cfg_operator) metaQueryOp;
-        return op.get_response().getForward_address();
+        if (op.get_response().getErr().errno != error_types.ERR_FORWARD_TO_OTHERS)
+            return null;
+        java.util.List<partition_configuration> partitions = op.get_response().getPartitions();
+        if (partitions == null || partitions.isEmpty())
+            return null;
+        rpc_address addr = partitions.get(0).getPrimary();
+        if (addr == null || addr.isInvalid())
+            return null;
+        return addr;
     }
 
     public final void asyncQuery(client_operator op, Runnable callbackFunc, int maxQueryCount) {
@@ -113,10 +122,6 @@ public class MetaSession {
         rpc_address forwardAddress = null;
 
         --round.maxQueryCount;
-        if (round.maxQueryCount == 0) {
-            round.callbackFunc.run();
-            return;
-        }
 
         error_types metaError = error_types.ERR_UNKNOWN;
         if (op.rpc_error.errno == error_types.ERR_OK) {
@@ -136,7 +141,7 @@ public class MetaSession {
             }
         }
         else if (op.rpc_error.errno == error_types.ERR_SESSION_RESET || op.rpc_error.errno == error_types.ERR_TIMEOUT) {
-            needDelay = true;
+            needDelay = false;
             needSwitchLeader = true;
         }
         else {
@@ -177,6 +182,11 @@ public class MetaSession {
                 }
             }
             round.lastSession = metaList.get(curLeader);
+        }
+
+        if (round.maxQueryCount == 0) {
+            round.callbackFunc.run();
+            return;
         }
 
         group.schedule(new Runnable() {
