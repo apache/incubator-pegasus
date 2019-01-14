@@ -203,12 +203,7 @@ inline std::ostream &operator<<(std::ostream &out, const configuration_query_by_
 typedef struct _configuration_query_by_index_response__isset
 {
     _configuration_query_by_index_response__isset()
-        : err(false),
-          app_id(false),
-          partition_count(false),
-          is_stateful(false),
-          partitions(false),
-          forward_address(false)
+        : err(false), app_id(false), partition_count(false), is_stateful(false), partitions(false)
     {
     }
     bool err : 1;
@@ -216,7 +211,6 @@ typedef struct _configuration_query_by_index_response__isset
     bool partition_count : 1;
     bool is_stateful : 1;
     bool partitions : 1;
-    bool forward_address : 1;
 } _configuration_query_by_index_response__isset;
 
 class configuration_query_by_index_response
@@ -234,7 +228,6 @@ public:
     int32_t partition_count;
     bool is_stateful;
     std::vector<partition_configuration> partitions;
-    ::dsn::rpc_address forward_address;
 
     _configuration_query_by_index_response__isset __isset;
 
@@ -248,8 +241,6 @@ public:
 
     void __set_partitions(const std::vector<partition_configuration> &val);
 
-    void __set_forward_address(const ::dsn::rpc_address &val);
-
     bool operator==(const configuration_query_by_index_response &rhs) const
     {
         if (!(err == rhs.err))
@@ -261,8 +252,6 @@ public:
         if (!(is_stateful == rhs.is_stateful))
             return false;
         if (!(partitions == rhs.partitions))
-            return false;
-        if (!(forward_address == rhs.forward_address))
             return false;
         return true;
     }

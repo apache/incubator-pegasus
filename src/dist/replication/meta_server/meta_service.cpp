@@ -361,23 +361,6 @@ int meta_service::check_leader(dsn::message_ex *req, dsn::rpc_address *forward_a
         return;                                                                                    \
     }
 
-#define RPC_CHECK_STATUS_WITH_FORWARD(dsn_msg, response_struct)                                    \
-    dinfo("rpc %s called", __FUNCTION__);                                                          \
-    int result = check_leader(dsn_msg, &response_struct.forward_address);                          \
-    if (result == 0)                                                                               \
-        return;                                                                                    \
-    if (result == -1 || !_started) {                                                               \
-        if (result == -1)                                                                          \
-            response_struct.err = ERR_FORWARD_TO_OTHERS;                                           \
-        else if (_recovering)                                                                      \
-            response_struct.err = ERR_UNDER_RECOVERY;                                              \
-        else                                                                                       \
-            response_struct.err = ERR_SERVICE_NOT_ACTIVE;                                          \
-        ddebug("reject request with %s", response_struct.err.to_string());                         \
-        reply(dsn_msg, response_struct);                                                           \
-        return;                                                                                    \
-    }
-
 // table operations
 void meta_service::on_create_app(dsn::message_ex *req)
 {
@@ -507,7 +490,31 @@ void meta_service::on_query_configuration_by_node(dsn::message_ex *msg)
 void meta_service::on_query_configuration_by_index(dsn::message_ex *msg)
 {
     configuration_query_by_index_response response;
-    RPC_CHECK_STATUS_WITH_FORWARD(msg, response);
+
+    // here we do not use RPC_CHECK_STATUS macro, but specially handle it
+    // to response forward address.
+    dinfo("rpc %s called", __FUNCTION__);
+    rpc_address forward_address;
+    int result = check_leader(msg, &forward_address);
+    if (result == 0)
+        return;
+    if (result == -1 || !_started) {
+        if (result == -1) {
+            response.err = ERR_FORWARD_TO_OTHERS;
+            if (!forward_address.is_invalid()) {
+                partition_configuration config;
+                config.primary = forward_address;
+                response.partitions.push_back(std::move(config));
+            }
+        } else if (_recovering) {
+            response.err = ERR_UNDER_RECOVERY;
+        } else {
+            response.err = ERR_SERVICE_NOT_ACTIVE;
+        }
+        ddebug("reject request with %s", response.err.to_string());
+        reply(msg, response);
+        return;
+    }
 
     configuration_query_by_index_request request;
     dsn::unmarshall(msg, request);
