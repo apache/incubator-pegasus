@@ -2621,7 +2621,7 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
     gc_checkpoints(true);
     if (last_durable_decree() == old_last_durable) {
         // it is possible that the new checkpoint is not generated, if there was no data
-        // writen into rocksdb when doing manual compact.
+        // written into rocksdb when doing manual compact.
         ddebug_replica("no new checkpoint generated, will retry after 5 minutes");
         ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
                                 &_tracker,
@@ -2631,7 +2631,7 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
                                         // if the new checkpoint is still not generated in the
                                         // last 5 minutes, we will try to generate it again, and
                                         // it will probably succeed because at least some empty
-                                        // data is writen into rocksdb by periodic group check.
+                                        // data is written into rocksdb by periodic group check.
                                         sync_checkpoint();
                                     }
                                     gc_checkpoints(true);
