@@ -235,8 +235,8 @@ TEST(core, dsn_file)
         ASSERT_NE(nullptr, tin);
 
         if (dsn::tools::get_current_tool()->name() != "simulator") {
-            // 1 for tin, 1 for disk_engine
-            ASSERT_EQ(2, tin->get_count());
+            // at least 1 for tin, but if already read completed, then only 1
+            ASSERT_LE(1, tin->get_count());
         }
 
         tin->wait();

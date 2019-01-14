@@ -408,7 +408,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
                 // FIXME : the file could have been closed
                 lf->flush();
 
-                // update _private_max_commit_on_disk after writen into log file done
+                // update _private_max_commit_on_disk after written into log file done
                 update_max_commit_on_disk(max_commit);
             } else {
                 derror("write private log failed, err = %s", err.to_string());

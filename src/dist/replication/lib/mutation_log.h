@@ -567,7 +567,7 @@ public:
     static log_block *prepare_log_block();
 
     // async write log entry into the file
-    // 'block' is the date to be writen
+    // 'block' is the date to be written
     // 'offset' is start offset of the entry in the global space
     // 'evt' is to indicate which thread pool to execute the callback
     // 'callback_host' is used to get tracer
