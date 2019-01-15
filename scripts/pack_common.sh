@@ -60,7 +60,7 @@ function copy_file()
         echo "ERROR: invalid copy file command: cp $*"
         exit 1
     fi
-    cp -v $*
+    cp -Lrv $*
     if [ $? -ne 0 ]; then
         echo "ERROR: copy file failed: cp $*"
         exit 1
