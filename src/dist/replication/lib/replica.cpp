@@ -42,7 +42,7 @@ namespace replication {
 replica::replica(
     replica_stub *stub, gpid gpid, const app_info &app, const char *dir, bool need_restore)
     : serverlet<replica>("replica"),
-      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address.to_string())),
+      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str)),
       _app_info(app),
       _primary_states(
           gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled),
@@ -140,8 +140,7 @@ void replica::on_client_read(task_code code, dsn::message_ex *request)
 {
     if (status() == partition_status::PS_INACTIVE ||
         status() == partition_status::PS_POTENTIAL_SECONDARY) {
-        derror("%s: invalid status: partition_status=%s", name(), enum_to_string(status()));
-        response_client_message(true, request, ERR_INVALID_STATE);
+        response_client_read(request, ERR_INVALID_STATE);
         return;
     }
 
@@ -150,18 +149,16 @@ void replica::on_client_read(task_code code, dsn::message_ex *request)
         // a small window where the state is not the latest yet
         last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary) {
         if (status() != partition_status::PS_PRIMARY) {
-            derror("%s: invalid status: partition_status=%s", name(), enum_to_string(status()));
-            response_client_message(true, request, ERR_INVALID_STATE);
+            response_client_read(request, ERR_INVALID_STATE);
             return;
         }
 
         if (last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary) {
-            derror("%s: last_committed_decree(%" PRId64
-                   ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
-                   name(),
-                   last_committed_decree(),
-                   _primary_states.last_prepare_decree_on_new_primary);
-            response_client_message(true, request, ERR_INVALID_STATE);
+            derror_replica("last_committed_decree(%" PRId64
+                           ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
+                           last_committed_decree(),
+                           _primary_states.last_prepare_decree_on_new_primary);
+            response_client_read(request, ERR_INVALID_STATE);
             return;
         }
     }
@@ -170,24 +167,14 @@ void replica::on_client_read(task_code code, dsn::message_ex *request)
     _app->on_request(request);
 }
 
-void replica::response_client_message(bool is_read, dsn::message_ex *request, error_code error)
+void replica::response_client_read(dsn::message_ex *request, error_code error)
 {
-    if (nullptr == request) {
-        return;
-    }
+    _stub->response_client(get_gpid(), true, request, status(), error);
+}
 
-    dsn_log_level_t level = LOG_LEVEL_INFORMATION;
-    if (_stub->_verbose_client_log && error != ERR_OK) {
-        level = LOG_LEVEL_ERROR;
-    }
-    dlog(level,
-         "%s: reply client %s to %s, err = %s",
-         name(),
-         is_read ? "read" : "write",
-         request->header->from_address.to_string(),
-         error.to_string());
-
-    dsn_rpc_reply(request->create_response(), error);
+void replica::response_client_write(dsn::message_ex *request, error_code error)
+{
+    _stub->response_client(get_gpid(), false, request, status(), error);
 }
 
 // error_code replica::check_and_fix_private_log_completeness()

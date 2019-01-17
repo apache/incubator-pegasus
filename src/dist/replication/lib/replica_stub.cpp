@@ -75,6 +75,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     _failure_detector = nullptr;
     _state = NS_Disconnected;
     _log = nullptr;
+    _primary_address_str[0] = '\0';
     install_perf_counters();
 }
 
@@ -266,6 +267,15 @@ void replica_stub::install_perf_counters()
         "cold.backup.max.upload.file.size",
         COUNTER_TYPE_NUMBER,
         "current cold backup max upload file size");
+
+    _counter_recent_read_fail_count.init_app_counter("eon.replica_stub",
+                                                     "recent.read.fail.count",
+                                                     COUNTER_TYPE_VOLATILE_NUMBER,
+                                                     "read fail count in the recent period");
+    _counter_recent_write_fail_count.init_app_counter("eon.replica_stub",
+                                                      "recent.write.fail.count",
+                                                      COUNTER_TYPE_VOLATILE_NUMBER,
+                                                      "write fail count in the recent period");
 }
 
 void replica_stub::initialize(bool clear /* = false*/)
@@ -278,7 +288,8 @@ void replica_stub::initialize(bool clear /* = false*/)
 void replica_stub::initialize(const replication_options &opts, bool clear /* = false*/)
 {
     _primary_address = dsn_primary_address();
-    ddebug("primary_address = %s", _primary_address.to_string());
+    strcpy(_primary_address_str, _primary_address.to_string());
+    ddebug("primary_address = %s", _primary_address_str);
 
     set_options(opts);
     std::ostringstream oss;
@@ -691,11 +702,19 @@ void replica_stub::on_client_write(gpid id, dsn::message_ex *request)
         // ignore and do not reply
         return;
     }
+    if (_verbose_client_log && request) {
+        ddebug("%s@%s: client = %s, code = %s, timeout = %d",
+               id.to_string(),
+               _primary_address_str,
+               request->header->from_address.to_string(),
+               request->header->rpc_name,
+               request->header->client.timeout_ms);
+    }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
         rep->on_client_write(request->rpc_code(), request);
     } else {
-        response_client_error(id, false, request, ERR_OBJECT_NOT_FOUND);
+        response_client(id, false, request, partition_status::PS_INVALID, ERR_OBJECT_NOT_FOUND);
     }
 }
 
@@ -705,11 +724,19 @@ void replica_stub::on_client_read(gpid id, dsn::message_ex *request)
         // ignore and do not reply
         return;
     }
+    if (_verbose_client_log && request) {
+        ddebug("%s@%s: client = %s, code = %s, timeout = %d",
+               id.to_string(),
+               _primary_address_str,
+               request->header->from_address.to_string(),
+               request->header->rpc_name,
+               request->header->client.timeout_ms);
+    }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
         rep->on_client_read(request->rpc_code(), request);
     } else {
-        response_client_error(id, true, request, ERR_OBJECT_NOT_FOUND);
+        response_client(id, true, request, partition_status::PS_INVALID, ERR_OBJECT_NOT_FOUND);
     }
 }
 
@@ -718,7 +745,7 @@ void replica_stub::on_config_proposal(const configuration_update_request &propos
     if (!is_connected()) {
         dwarn("%s@%s: received config proposal %s for %s: not connected, ignore",
               proposal.config.pid.to_string(),
-              _primary_address.to_string(),
+              _primary_address_str,
               enum_to_string(proposal.type),
               proposal.node.to_string());
         return;
@@ -726,7 +753,7 @@ void replica_stub::on_config_proposal(const configuration_update_request &propos
 
     ddebug("%s@%s: received config proposal %s for %s",
            proposal.config.pid.to_string(),
-           _primary_address.to_string(),
+           _primary_address_str,
            enum_to_string(proposal.type),
            proposal.node.to_string());
 
@@ -884,14 +911,14 @@ void replica_stub::on_group_check(const group_check_request &request,
     if (!is_connected()) {
         dwarn("%s@%s: received group check: not connected, ignore",
               request.config.pid.to_string(),
-              _primary_address.to_string());
+              _primary_address_str);
         return;
     }
 
     ddebug("%s@%s: received group check, primary = %s, ballot = %" PRId64
            ", status = %s, last_committed_decree = %" PRId64,
            request.config.pid.to_string(),
-           _primary_address.to_string(),
+           _primary_address_str,
            request.config.primary.to_string(),
            request.config.ballot,
            enum_to_string(request.config.status),
@@ -958,7 +985,7 @@ void replica_stub::on_add_learner(const group_check_request &request)
     if (!is_connected()) {
         dwarn("%s@%s: received add learner: not connected, ignore",
               request.config.pid.to_string(),
-              _primary_address.to_string(),
+              _primary_address_str,
               request.config.primary.to_string());
         return;
     }
@@ -966,7 +993,7 @@ void replica_stub::on_add_learner(const group_check_request &request)
     ddebug("%s@%s: received add learner, primary = %s, ballot = %" PRId64
            ", status = %s, last_committed_decree = %" PRId64,
            request.config.pid.to_string(),
-           _primary_address.to_string(),
+           _primary_address_str,
            request.config.primary.to_string(),
            request.config.ballot,
            enum_to_string(request.config.status),
@@ -1202,12 +1229,12 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_,
             ddebug("%s@%s: replica not exists on replica server, which is primary, remove it "
                    "from meta server",
                    req.config.pid.to_string(),
-                   _primary_address.to_string());
+                   _primary_address_str);
             remove_replica_on_meta_server(req.info, req.config);
         } else {
             ddebug("%s@%s: replica not exists on replica server, which is not primary, just ignore",
                    req.config.pid.to_string(),
-                   _primary_address.to_string());
+                   _primary_address_str);
         }
     }
 }
@@ -1299,31 +1326,31 @@ void replica_stub::on_meta_server_disconnected_scatter(replica_stub_ptr this_, g
     }
 }
 
-void replica_stub::response_client_error(gpid id,
-                                         bool is_read,
-                                         dsn::message_ex *request,
-                                         error_code error)
+void replica_stub::response_client(gpid id,
+                                   bool is_read,
+                                   dsn::message_ex *request,
+                                   partition_status::type status,
+                                   error_code error)
 {
-    if (nullptr == request) {
-        return;
-    }
-
-    if (error == ERR_OK) {
-        dinfo("%s@%s: reply client %s to %s, err = %s",
-              id.to_string(),
-              _primary_address.to_string(),
-              is_read ? "read" : "write",
-              request->header->from_address.to_string(),
-              error.to_string());
-    } else {
-        derror("%s@%s: reply client %s to %s, err = %s",
+    if (error != ERR_OK) {
+        if (is_read)
+            _counter_recent_read_fail_count->increment();
+        else
+            _counter_recent_write_fail_count->increment();
+        derror("%s@%s: %s fail: client = %s, code = %s, timeout = %d, status = %s, error = %s",
                id.to_string(),
-               _primary_address.to_string(),
+               _primary_address_str,
                is_read ? "read" : "write",
-               request->header->from_address.to_string(),
+               request == nullptr ? "null" : request->header->from_address.to_string(),
+               request == nullptr ? "null" : request->header->rpc_name,
+               request == nullptr ? 0 : request->header->client.timeout_ms,
+               enum_to_string(status),
                error.to_string());
     }
-    dsn_rpc_reply(request->create_response(), error);
+
+    if (request != nullptr) {
+        dsn_rpc_reply(request->create_response(), error);
+    }
 }
 
 void replica_stub::init_gc_for_test()
@@ -1701,7 +1728,7 @@ void replica_stub::open_replica(const app_info &app,
         // process below
         ddebug("%s@%s: start to load replica %s group check, dir = %s",
                id.to_string(),
-               _primary_address.to_string(),
+               _primary_address_str,
                req ? "with" : "without",
                dir.c_str());
         rep = replica::load(this, dir.c_str());
@@ -1733,7 +1760,7 @@ void replica_stub::open_replica(const app_info &app,
     if (rep == nullptr) {
         ddebug("%s@%s: open replica failed, erase from opening replicas",
                id.to_string(),
-               _primary_address.to_string());
+               _primary_address_str);
         zauto_write_lock l(_replicas_lock);
         auto ret = _opening_replicas.erase(id);
         dassert(ret > 0, "replica %s is not in _opening_replicas", id.to_string());
@@ -2084,7 +2111,7 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
     std::stringstream query_state;
     query_state << processed << " processed, " << not_found << " not found";
     for (auto &kv : results) {
-        query_state << "\n    " << kv.first.to_string() << "@" << _primary_address.to_string();
+        query_state << "\n    " << kv.first.to_string() << "@" << _primary_address_str;
         if (kv.second.first != partition_status::PS_INVALID)
             query_state << "@" << (kv.second.first == partition_status::PS_PRIMARY ? "P" : "S");
         query_state << " : " << kv.second.second;

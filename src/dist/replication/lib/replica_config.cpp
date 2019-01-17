@@ -102,7 +102,7 @@ void replica::assign_primary(configuration_update_request &proposal)
     dassert(proposal.node == _stub->_primary_address,
             "%s VS %s",
             proposal.node.to_string(),
-            _stub->_primary_address.to_string());
+            _stub->_primary_address_str);
 
     if (status() == partition_status::PS_PRIMARY) {
         dwarn("%s: invalid assgin primary proposal as the node is in %s",
@@ -978,7 +978,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
             _primary_states.write_queue.clear(queued);
             for (auto &m : queued) {
                 for (auto &r : m->client_requests) {
-                    response_client_message(false, r, ERR_NOT_ENOUGH_MEMBER);
+                    response_client_write(r, ERR_NOT_ENOUGH_MEMBER);
                 }
             }
         }

@@ -70,10 +70,8 @@ void replica::handle_remote_failure(partition_status::type st,
     dassert(status() == partition_status::PS_PRIMARY,
             "invalid partition_status, status = %s",
             enum_to_string(status()));
-    dassert(node != _stub->_primary_address,
-            "%s VS %s",
-            node.to_string(),
-            _stub->_primary_address.to_string());
+    dassert(
+        node != _stub->_primary_address, "%s VS %s", node.to_string(), _stub->_primary_address_str);
 
     switch (st) {
     case partition_status::PS_SECONDARY:

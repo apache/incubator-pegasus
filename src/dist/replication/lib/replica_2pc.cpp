@@ -55,18 +55,18 @@ void replica::on_client_write(task_code code, dsn::message_ex *request, bool ign
 
     task_spec *spec = task_spec::get(code);
     if (!_options->allow_non_idempotent_write && !spec->rpc_request_is_write_idempotent) {
-        response_client_message(false, request, ERR_OPERATION_DISABLED);
+        response_client_write(request, ERR_OPERATION_DISABLED);
         return;
     }
 
     if (partition_status::PS_PRIMARY != status()) {
-        response_client_message(false, request, ERR_INVALID_STATE);
+        response_client_write(request, ERR_INVALID_STATE);
         return;
     }
 
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 <
         _options->mutation_2pc_min_replica_count) {
-        response_client_message(false, request, ERR_NOT_ENOUGH_MEMBER);
+        response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
         return;
     }
 
@@ -88,12 +88,12 @@ void replica::on_client_write(task_code code, dsn::message_ex *request, bool ign
                     tasking::enqueue(LPC_WRITE_THROTTLING_DELAY,
                                      &_tracker,
                                      [ this, req = message_ptr(request) ]() {
-                                         response_client_message(false, req, ERR_BUSY);
+                                         response_client_write(req, ERR_BUSY);
                                      },
                                      get_gpid().thread_hash(),
                                      std::chrono::milliseconds(delay_ms));
                 } else {
-                    response_client_message(false, request, ERR_BUSY);
+                    response_client_write(request, ERR_BUSY);
                 }
                 _counter_recent_write_throttling_reject_count->increment();
             }
@@ -227,7 +227,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation)
 
 ErrOut:
     for (auto &r : mu->client_requests) {
-        response_client_message(false, r, err);
+        response_client_write(r, err);
     }
     return;
 }
