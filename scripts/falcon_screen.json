@@ -570,26 +570,6 @@
       "timespan": 86400
     },
     {
-      "title": "P99 单条写 排队时间（单位：纳秒）",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "zion*profiler*RPC_RRDB_RRDB_PUT.queue(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "P99 单条写 执行时间（单位：纳秒）",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "zion*profiler*RPC_RRDB_RRDB_PUT.exec(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
       "title": "P99 多条读 排队时间（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
@@ -610,6 +590,26 @@
       "timespan": 86400
     },
     {
+      "title": "P99 单条写 排队时间（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_PUT.queue(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "P99 单条写 执行时间（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_PUT.exec(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "P99 多条写 排队时间（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
@@ -624,6 +624,17 @@
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.exec(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各节点最近读写失败次数",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "replica*eon.replica_stub*recent.read.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+          "replica*eon.replica_stub*recent.write.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
