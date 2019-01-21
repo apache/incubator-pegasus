@@ -3,2144 +3,2251 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
-/**
- * @author qinzuoyan
- */
-
+/** @author qinzuoyan */
 import io.netty.util.concurrent.Future;
-import org.apache.commons.lang3.tuple.Pair;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.tuple.Pair;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * Created by mi on 16-3-22.
- */
+/** Created by mi on 16-3-22. */
 public class TestBasic {
-    private static final String basicSetGetDelHashKey = "TestBasic_testSetGetDel_hash_key_1";
-    private static final String multiSetGetDelHashKey = "TestBasic_testMultiSetGetDel_hash_key_1";
-    private static final String multiGetHashKey = "TestBasic_testMultiGet_hash_key_1";
-    private static final String multiGetReverseHashKey = "TestBasic_testMultiGetReverse_hash_key_1";
+  private static final String basicSetGetDelHashKey = "TestBasic_testSetGetDel_hash_key_1";
+  private static final String multiSetGetDelHashKey = "TestBasic_testMultiSetGetDel_hash_key_1";
+  private static final String multiGetHashKey = "TestBasic_testMultiGet_hash_key_1";
+  private static final String multiGetReverseHashKey = "TestBasic_testMultiGetReverse_hash_key_1";
 
-    private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
-    public static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for ( int j = 0; j < bytes.length; j++ ) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = hexArray[v >>> 4];
-            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-        }
-        return new String(hexChars);
+  private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
+
+  public static String bytesToHex(byte[] bytes) {
+    char[] hexChars = new char[bytes.length * 2];
+    for (int j = 0; j < bytes.length; j++) {
+      int v = bytes[j] & 0xFF;
+      hexChars[j * 2] = hexArray[v >>> 4];
+      hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+    }
+    return new String(hexChars);
+  }
+
+  @Test
+  public void testGenerateKey() throws PException {
+    Assert.assertEquals(
+        "00010A0BFEFF", bytesToHex(new byte[] {0x00, 0x01, 0x0A, 0x0B, (byte) 0xFE, (byte) 0xFF}));
+
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x00}, PegasusClient.generateKey(new byte[] {}, new byte[] {}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01, 0x44}, PegasusClient.generateKey(new byte[] {0x44}, new byte[] {}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x00, 0x55}, PegasusClient.generateKey(new byte[] {}, new byte[] {0x55}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01, 0x44, 0x55},
+        PegasusClient.generateKey(new byte[] {0x44}, new byte[] {0x55}));
+    try {
+      byte[] k = PegasusClient.generateKey(new byte[64 * 1024], new byte[] {0x55});
+      Assert.assertTrue(false);
+    } catch (Exception e) {
     }
 
-    @Test
-    public void testGenerateKey() throws PException {
-        Assert.assertEquals("00010A0BFEFF",
-                bytesToHex(new byte[]{0x00, 0x01, 0x0A, 0x0B, (byte)0xFE, (byte)0xFF}));
-
-        Assert.assertArrayEquals(new byte[]{0x00, 0x00},
-                PegasusClient.generateKey(new byte[]{}, new byte[]{}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01, 0x44},
-                PegasusClient.generateKey(new byte[]{0x44}, new byte[]{}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x00, 0x55},
-                PegasusClient.generateKey(new byte[]{}, new byte[]{0x55}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01, 0x44, 0x55},
-                PegasusClient.generateKey(new byte[]{0x44}, new byte[]{0x55}));
-        try {
-            byte[] k = PegasusClient.generateKey(new byte[64 * 1024], new byte[]{0x55});
-            Assert.assertTrue(false);
-        }
-        catch (Exception e) {
-        }
-
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01},
-                PegasusClient.generateNextBytes(new byte[]{}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01, 0x0B},
-                PegasusClient.generateNextBytes(new byte[]{0x0A}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01, (byte)0xFF},
-                PegasusClient.generateNextBytes(new byte[]{(byte)0xFE}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x02},
-                PegasusClient.generateNextBytes(new byte[]{(byte)0xFF}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x02, 0x0B},
-                PegasusClient.generateNextBytes(new byte[]{0x0A, (byte)0xFF}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x03},
-                PegasusClient.generateNextBytes(new byte[]{(byte)0xFF, (byte)0xFF}));
-        try {
-            byte[] k = PegasusClient.generateNextBytes(new byte[64 * 1024]);
-            Assert.assertTrue(false);
-        }
-        catch (Exception e) {
-        }
-
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01},
-                PegasusClient.generateNextBytes(new byte[]{}, new byte[]{}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01, 0x45},
-                PegasusClient.generateNextBytes(new byte[]{0x44}, new byte[]{}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x00, 0x56},
-                PegasusClient.generateNextBytes(new byte[]{}, new byte[]{0x55}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01, 0x44, 0x56},
-                PegasusClient.generateNextBytes(new byte[]{0x44}, new byte[]{0x55}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01, 0x45},
-                PegasusClient.generateNextBytes(new byte[]{0x44}, new byte[]{(byte)0xFF}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x02},
-                PegasusClient.generateNextBytes(new byte[]{(byte)0xFF}, new byte[]{}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x01, (byte)0xFF, 0x56},
-                PegasusClient.generateNextBytes(new byte[]{(byte)0xFF}, new byte[]{0x55}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x02},
-                PegasusClient.generateNextBytes(new byte[]{(byte)0xFF}, new byte[]{(byte)0xFF}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x02},
-                PegasusClient.generateNextBytes(new byte[]{(byte)0xFF}, new byte[]{(byte)0xFF, (byte)0xFF}));
-        Assert.assertArrayEquals(new byte[]{0x00, 0x03},
-                PegasusClient.generateNextBytes(new byte[]{(byte)0xFF, (byte)0xFF}, new byte[]{(byte)0xFF}));
-        try {
-            byte[] k = PegasusClient.generateNextBytes(new byte[64 * 1024], new byte[0]);
-            Assert.assertTrue(false);
-        }
-        catch (Exception e) {
-        }
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01}, PegasusClient.generateNextBytes(new byte[] {}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01, 0x0B}, PegasusClient.generateNextBytes(new byte[] {0x0A}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01, (byte) 0xFF},
+        PegasusClient.generateNextBytes(new byte[] {(byte) 0xFE}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x02}, PegasusClient.generateNextBytes(new byte[] {(byte) 0xFF}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x02, 0x0B},
+        PegasusClient.generateNextBytes(new byte[] {0x0A, (byte) 0xFF}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x03},
+        PegasusClient.generateNextBytes(new byte[] {(byte) 0xFF, (byte) 0xFF}));
+    try {
+      byte[] k = PegasusClient.generateNextBytes(new byte[64 * 1024]);
+      Assert.assertTrue(false);
+    } catch (Exception e) {
     }
 
-    @Test
-    public void testGetSingletonClient() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        PegasusClientInterface client1 = PegasusClientFactory.getSingletonClient();
-        Assert.assertEquals(client, client1);
-        try {
-            PegasusClientInterface client2 = PegasusClientFactory.getSingletonClient("resource:///xxx.properties");
-            Assert.assertTrue(false);
-        }
-        catch (PException e) {
-        }
-        PegasusClientFactory.closeSingletonClient();
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01}, PegasusClient.generateNextBytes(new byte[] {}, new byte[] {}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01, 0x45},
+        PegasusClient.generateNextBytes(new byte[] {0x44}, new byte[] {}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x00, 0x56},
+        PegasusClient.generateNextBytes(new byte[] {}, new byte[] {0x55}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01, 0x44, 0x56},
+        PegasusClient.generateNextBytes(new byte[] {0x44}, new byte[] {0x55}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01, 0x45},
+        PegasusClient.generateNextBytes(new byte[] {0x44}, new byte[] {(byte) 0xFF}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x02},
+        PegasusClient.generateNextBytes(new byte[] {(byte) 0xFF}, new byte[] {}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x01, (byte) 0xFF, 0x56},
+        PegasusClient.generateNextBytes(new byte[] {(byte) 0xFF}, new byte[] {0x55}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x02},
+        PegasusClient.generateNextBytes(new byte[] {(byte) 0xFF}, new byte[] {(byte) 0xFF}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x02},
+        PegasusClient.generateNextBytes(
+            new byte[] {(byte) 0xFF}, new byte[] {(byte) 0xFF, (byte) 0xFF}));
+    Assert.assertArrayEquals(
+        new byte[] {0x00, 0x03},
+        PegasusClient.generateNextBytes(
+            new byte[] {(byte) 0xFF, (byte) 0xFF}, new byte[] {(byte) 0xFF}));
+    try {
+      byte[] k = PegasusClient.generateNextBytes(new byte[64 * 1024], new byte[0]);
+      Assert.assertTrue(false);
+    } catch (Exception e) {
+    }
+  }
+
+  @Test
+  public void testGetSingletonClient() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    PegasusClientInterface client1 = PegasusClientFactory.getSingletonClient();
+    Assert.assertEquals(client, client1);
+    try {
+      PegasusClientInterface client2 =
+          PegasusClientFactory.getSingletonClient("resource:///xxx.properties");
+      Assert.assertTrue(false);
+    } catch (PException e) {
+    }
+    PegasusClientFactory.closeSingletonClient();
+  }
+
+  @Test
+  public void testSetGetDel() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    String tableName = "temp";
+    byte[] hashKey = basicSetGetDelHashKey.getBytes();
+
+    try {
+      // set
+      client.set(
+          tableName, hashKey, "basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
+
+      // check exist
+      boolean exist = client.exist(tableName, hashKey, "basic_test_sort_key_1".getBytes());
+      Assert.assertTrue(exist);
+
+      exist = client.exist(tableName, hashKey, "basic_test_sort_key_2".getBytes());
+      Assert.assertFalse(exist);
+
+      // check sortkey count
+      long sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(1, sortKeyCount);
+
+      // get
+      byte[] value = client.get(tableName, hashKey, "basic_test_sort_key_1".getBytes());
+      Assert.assertArrayEquals("basic_test_value_1".getBytes(), value);
+
+      value = client.get(tableName, hashKey, "basic_test_sort_key_2".getBytes());
+      Assert.assertEquals(null, value);
+
+      // del
+      client.del(tableName, hashKey, "basic_test_sort_key_1".getBytes());
+
+      // check exist
+      exist = client.exist(tableName, hashKey, "basic_test_sort_key_1".getBytes());
+      Assert.assertFalse(exist);
+
+      // check sortkey count
+      sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(0, sortKeyCount);
+
+      // check deleted
+      value = client.get(tableName, hashKey, "basic_test_sort_key_1".getBytes());
+      Assert.assertEquals(null, value);
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
     }
 
-    @Test
-    public void testSetGetDel() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        String tableName = "temp";
-        byte[] hashKey = basicSetGetDelHashKey.getBytes();
+    PegasusClientFactory.closeSingletonClient();
+  }
 
-        try {
-            // set
-            client.set(tableName, hashKey, "basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
+  @Test
+  public void testMultiSetGetDel() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    String tableName = "temp";
+    byte[] hashKey = multiSetGetDelHashKey.getBytes();
 
-            // check exist
-            boolean exist = client.exist(tableName, hashKey, "basic_test_sort_key_1".getBytes());
-            Assert.assertTrue(exist);
+    try {
+      // multi set
+      List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+      values.add(Pair.of("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes()));
+      values.add(Pair.of("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes()));
+      values.add(Pair.of("basic_test_sort_key_3".getBytes(), "basic_test_value_3".getBytes()));
+      values.add(Pair.of("basic_test_sort_key_4".getBytes(), "basic_test_value_4".getBytes()));
+      client.multiSet(tableName, hashKey, values);
 
-            exist = client.exist(tableName, hashKey, "basic_test_sort_key_2".getBytes());
-            Assert.assertFalse(exist);
+      // check exist
+      boolean exist = client.exist(tableName, hashKey, "basic_test_sort_key_1".getBytes());
+      Assert.assertTrue(exist);
 
-            // check sortkey count
-            long sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(1, sortKeyCount);
+      exist = client.exist(tableName, hashKey, "basic_test_sort_key_5".getBytes());
+      Assert.assertFalse(exist);
 
-            // get
-            byte[] value = client.get(tableName, hashKey, "basic_test_sort_key_1".getBytes());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), value);
+      // check sortkey count
+      long sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(4, sortKeyCount);
 
-            value = client.get(tableName, hashKey, "basic_test_sort_key_2".getBytes());
-            Assert.assertEquals(null, value);
+      // multi get
+      List<byte[]> sortKeys = new ArrayList<byte[]>();
+      sortKeys.add("basic_test_sort_key_0".getBytes());
+      sortKeys.add("basic_test_sort_key_1".getBytes());
+      sortKeys.add("basic_test_sort_key_2".getBytes());
+      sortKeys.add("basic_test_sort_key_3".getBytes());
+      sortKeys.add("basic_test_sort_key_4".getBytes());
+      List<Pair<byte[], byte[]>> newValues = new ArrayList<Pair<byte[], byte[]>>();
+      boolean ret = client.multiGet(tableName, hashKey, sortKeys, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(4, newValues.size());
+      Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("basic_test_value_1".getBytes(), newValues.get(0).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("basic_test_value_2".getBytes(), newValues.get(1).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("basic_test_value_3".getBytes(), newValues.get(2).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("basic_test_value_4".getBytes(), newValues.get(3).getValue());
 
-            // del
-            client.del(tableName, hashKey, "basic_test_sort_key_1".getBytes());
+      // multi get with count limit
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, sortKeys, 1, 0, newValues);
+      Assert.assertFalse(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("basic_test_value_1".getBytes(), newValues.get(0).getValue());
 
-            // check exist
-            exist = client.exist(tableName, hashKey, "basic_test_sort_key_1".getBytes());
-            Assert.assertFalse(exist);
+      // multi get with empty sortKeys
+      sortKeys.clear();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, sortKeys, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(4, newValues.size());
+      Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("basic_test_value_1".getBytes(), newValues.get(0).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("basic_test_value_2".getBytes(), newValues.get(1).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("basic_test_value_3".getBytes(), newValues.get(2).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("basic_test_value_4".getBytes(), newValues.get(3).getValue());
 
-            // check sortkey count
-            sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(0, sortKeyCount);
+      // multi get with null sortKeys
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(4, newValues.size());
+      Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("basic_test_value_1".getBytes(), newValues.get(0).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("basic_test_value_2".getBytes(), newValues.get(1).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("basic_test_value_3".getBytes(), newValues.get(2).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("basic_test_value_4".getBytes(), newValues.get(3).getValue());
 
-            // check deleted
-            value = client.get(tableName, hashKey, "basic_test_sort_key_1".getBytes());
-            Assert.assertEquals(null, value);
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
+      // multi get sort keys
+      sortKeys.clear();
+      ret = client.multiGetSortKeys(tableName, hashKey, sortKeys);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(4, sortKeys.size());
+      Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), sortKeys.get(0));
+      Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), sortKeys.get(1));
+      Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), sortKeys.get(2));
+      Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), sortKeys.get(3));
 
-        PegasusClientFactory.closeSingletonClient();
+      // multi del
+      sortKeys.clear();
+      sortKeys.add("basic_test_sort_key_0".getBytes());
+      sortKeys.add("basic_test_sort_key_1".getBytes());
+      sortKeys.add("basic_test_sort_key_2".getBytes());
+      client.multiDel(tableName, hashKey, sortKeys);
+
+      // check sortkey count
+      sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(2, sortKeyCount);
+
+      // check deleted
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("basic_test_value_3".getBytes(), newValues.get(0).getValue());
+      Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("basic_test_value_4".getBytes(), newValues.get(1).getValue());
+
+      // multi del all
+      sortKeys.clear();
+      sortKeys.add("basic_test_sort_key_3".getBytes());
+      sortKeys.add("basic_test_sort_key_4".getBytes());
+      sortKeys.add("basic_test_sort_key_5".getBytes());
+      client.multiDel(tableName, hashKey, sortKeys);
+
+      // check sortkey count
+      sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(0, sortKeyCount);
+
+      // check deleted by multiGet
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // check deleted by multiGetSortKeys
+      sortKeys.clear();
+      ret = client.multiGetSortKeys(tableName, hashKey, sortKeys);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, sortKeys.size());
+
+      // multi set many kvs
+      values.clear();
+      for (int i = 1; i <= 200; i++) {
+        String sortKey = "basic_test_sort_key_" + String.format("%03d", i);
+        String value = "basic_test_value_" + String.valueOf(i);
+        values.add(Pair.of(sortKey.getBytes(), value.getBytes()));
+      }
+      client.multiSet(tableName, hashKey, values);
+
+      // multi get with no limit
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, 0, 0, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(200, newValues.size());
+      for (int i = 1; i <= 200; i++) {
+        String sortKey = "basic_test_sort_key_" + String.format("%03d", i);
+        String value = "basic_test_value_" + String.valueOf(i);
+        Assert.assertArrayEquals(sortKey.getBytes(), newValues.get(i - 1).getKey());
+        Assert.assertArrayEquals(value.getBytes(), newValues.get(i - 1).getValue());
+      }
+
+      // multi del all
+      sortKeys.clear();
+      for (int i = 1; i <= 200; i++) {
+        String sortKey = "basic_test_sort_key_" + String.format("%03d", i);
+        Assert.assertArrayEquals(sortKey.getBytes(), newValues.get(i - 1).getKey());
+        sortKeys.add(sortKey.getBytes());
+      }
+      client.multiDel(tableName, hashKey, sortKeys);
+
+      // check sortkey count
+      sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(0, sortKeyCount);
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
     }
 
-    @Test
-    public void testMultiSetGetDel() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        String tableName = "temp";
-        byte[] hashKey = multiSetGetDelHashKey.getBytes();
+    PegasusClientFactory.closeSingletonClient();
+  }
 
-        try {
-            // multi set
-            List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
-            values.add(Pair.of("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes()));
-            values.add(Pair.of("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes()));
-            values.add(Pair.of("basic_test_sort_key_3".getBytes(), "basic_test_value_3".getBytes()));
-            values.add(Pair.of("basic_test_sort_key_4".getBytes(), "basic_test_value_4".getBytes()));
-            client.multiSet(tableName, hashKey, values);
+  @Test
+  public void testMultiGet() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    String tableName = "temp";
+    byte[] hashKey = multiGetHashKey.getBytes();
 
-            // check exist
-            boolean exist = client.exist(tableName, hashKey, "basic_test_sort_key_1".getBytes());
-            Assert.assertTrue(exist);
+    try {
+      // multi set
+      List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+      values.add(Pair.of("".getBytes(), "0".getBytes()));
+      values.add(Pair.of("1".getBytes(), "1".getBytes()));
+      values.add(Pair.of("1-abcdefg".getBytes(), "1-abcdefg".getBytes()));
+      values.add(Pair.of("2".getBytes(), "2".getBytes()));
+      values.add(Pair.of("2-abcdefg".getBytes(), "2-abcdefg".getBytes()));
+      values.add(Pair.of("3".getBytes(), "3".getBytes()));
+      values.add(Pair.of("3-efghijk".getBytes(), "3-efghijk".getBytes()));
+      values.add(Pair.of("4".getBytes(), "4".getBytes()));
+      values.add(Pair.of("4-hijklmn".getBytes(), "4-hijklmn".getBytes()));
+      values.add(Pair.of("5".getBytes(), "5".getBytes()));
+      values.add(Pair.of("5-hijklmn".getBytes(), "5-hijklmn".getBytes()));
+      values.add(Pair.of("6".getBytes(), "6".getBytes()));
+      values.add(Pair.of("7".getBytes(), "7".getBytes()));
+      client.multiSet(tableName, hashKey, values);
 
-            exist = client.exist(tableName, hashKey, "basic_test_sort_key_5".getBytes());
-            Assert.assertFalse(exist);
+      // check sortkey count
+      long sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(13, sortKeyCount);
 
-            // check sortkey count
-            long sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(4, sortKeyCount);
+      // [null, null)
+      MultiGetOptions options = new MultiGetOptions();
+      Assert.assertTrue(options.startInclusive);
+      Assert.assertFalse(options.stopInclusive);
+      List<Pair<byte[], byte[]>> newValues = new ArrayList<Pair<byte[], byte[]>>();
+      boolean ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(13, newValues.size());
+      Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(4).getKey());
+      Assert.assertArrayEquals("3".getBytes(), newValues.get(5).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(6).getKey());
+      Assert.assertArrayEquals("4".getBytes(), newValues.get(7).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(8).getKey());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(9).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(10).getKey());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(11).getKey());
+      Assert.assertArrayEquals("7".getBytes(), newValues.get(12).getKey());
 
-            // multi get
-            List<byte[]> sortKeys = new ArrayList<byte[]>();
-            sortKeys.add("basic_test_sort_key_0".getBytes());
-            sortKeys.add("basic_test_sort_key_1".getBytes());
-            sortKeys.add("basic_test_sort_key_2".getBytes());
-            sortKeys.add("basic_test_sort_key_3".getBytes());
-            sortKeys.add("basic_test_sort_key_4".getBytes());
-            List<Pair<byte[], byte[]>> newValues = new ArrayList<Pair<byte[], byte[]>>();
-            boolean ret = client.multiGet(tableName, hashKey, sortKeys, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(4, newValues.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), newValues.get(0).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("basic_test_value_2".getBytes(), newValues.get(1).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("basic_test_value_3".getBytes(), newValues.get(2).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("basic_test_value_4".getBytes(), newValues.get(3).getValue());
+      // [null, null]
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(13, newValues.size());
+      Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(4).getKey());
+      Assert.assertArrayEquals("3".getBytes(), newValues.get(5).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(6).getKey());
+      Assert.assertArrayEquals("4".getBytes(), newValues.get(7).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(8).getKey());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(9).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(10).getKey());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(11).getKey());
+      Assert.assertArrayEquals("7".getBytes(), newValues.get(12).getKey());
 
-            // multi get with count limit
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, sortKeys, 1, 0, newValues);
-            Assert.assertFalse(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), newValues.get(0).getValue());
+      // (null, null)
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = false;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(12, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("2".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("3".getBytes(), newValues.get(4).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(5).getKey());
+      Assert.assertArrayEquals("4".getBytes(), newValues.get(6).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(7).getKey());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(8).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(9).getKey());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(10).getKey());
+      Assert.assertArrayEquals("7".getBytes(), newValues.get(11).getKey());
 
-            // multi get with empty sortKeys
-            sortKeys.clear();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, sortKeys, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(4, newValues.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), newValues.get(0).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("basic_test_value_2".getBytes(), newValues.get(1).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("basic_test_value_3".getBytes(), newValues.get(2).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("basic_test_value_4".getBytes(), newValues.get(3).getValue());
+      // (null, null]
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(12, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("2".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("3".getBytes(), newValues.get(4).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(5).getKey());
+      Assert.assertArrayEquals("4".getBytes(), newValues.get(6).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(7).getKey());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(8).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(9).getKey());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(10).getKey());
+      Assert.assertArrayEquals("7".getBytes(), newValues.get(11).getKey());
 
-            // multi get with null sortKeys
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(4, newValues.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), newValues.get(0).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("basic_test_value_2".getBytes(), newValues.get(1).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("basic_test_value_3".getBytes(), newValues.get(2).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("basic_test_value_4".getBytes(), newValues.get(3).getValue());
+      // [null, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
 
-            // multi get sort keys
-            sortKeys.clear();
-            ret = client.multiGetSortKeys(tableName, hashKey, sortKeys);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(4, sortKeys.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), sortKeys.get(0));
-            Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), sortKeys.get(1));
-            Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), sortKeys.get(2));
-            Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), sortKeys.get(3));
+      // [null, 1)
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = false;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
 
-            // multi del
-            sortKeys.clear();
-            sortKeys.add("basic_test_sort_key_0".getBytes());
-            sortKeys.add("basic_test_sort_key_1".getBytes());
-            sortKeys.add("basic_test_sort_key_2".getBytes());
-            client.multiDel(tableName, hashKey, sortKeys);
+      // (null, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
 
-            // check sortkey count
-            sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(2, sortKeyCount);
+      // (null, 1)
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = false;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // check deleted
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("basic_test_value_3".getBytes(), newValues.get(0).getValue());
-            Assert.assertArrayEquals("basic_test_sort_key_4".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("basic_test_value_4".getBytes(), newValues.get(1).getValue());
+      // [1, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
 
-            // multi del all
-            sortKeys.clear();
-            sortKeys.add("basic_test_sort_key_3".getBytes());
-            sortKeys.add("basic_test_sort_key_4".getBytes());
-            sortKeys.add("basic_test_sort_key_5".getBytes());
-            client.multiDel(tableName, hashKey, sortKeys);
+      // [1, 1)
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = false;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // check sortkey count
-            sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(0, sortKeyCount);
+      // (1, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // check deleted by multiGet
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // (1, 1)
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = false;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // check deleted by multiGetSortKeys
-            sortKeys.clear();
-            ret = client.multiGetSortKeys(tableName, hashKey, sortKeys);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, sortKeys.size());
+      // [2, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = false;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "2".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // multi set many kvs
-            values.clear();
-            for (int i = 1; i <= 200; i++)
-            {
-                String sortKey = "basic_test_sort_key_" + String.format("%03d", i);
-                String value = "basic_test_value_" + String.valueOf(i);
-                values.add(Pair.of(sortKey.getBytes(), value.getBytes()));
-            }
-            client.multiSet(tableName, hashKey, values);
+      // match-anywhere("-")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
+      options.sortKeyFilterPattern = "-".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(5, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(4).getKey());
 
-            // multi get with no limit
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, 0, 0, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(200, newValues.size());
-            for (int i = 1; i <= 200; i++)
-            {
-                String sortKey = "basic_test_sort_key_" + String.format("%03d", i);
-                String value = "basic_test_value_" + String.valueOf(i);
-                Assert.assertArrayEquals(sortKey.getBytes(), newValues.get(i - 1).getKey());
-                Assert.assertArrayEquals(value.getBytes(), newValues.get(i - 1).getValue());
-            }
+      // match-anywhere("1")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
+      options.sortKeyFilterPattern = "1".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
 
-            // multi del all
-            sortKeys.clear();
-            for (int i = 1; i <= 200; i++)
-            {
-                String sortKey = "basic_test_sort_key_" + String.format("%03d", i);
-                Assert.assertArrayEquals(sortKey.getBytes(), newValues.get(i - 1).getKey());
-                sortKeys.add(sortKey.getBytes());
-            }
-            client.multiDel(tableName, hashKey, sortKeys);
+      // match-anywhere("1-")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
+      options.sortKeyFilterPattern = "1-".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
 
-            // check sortkey count
-            sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(0, sortKeyCount);
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
+      // match-anywhere("abc")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
+      options.sortKeyFilterPattern = "abc".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
 
-        PegasusClientFactory.closeSingletonClient();
+      // match-prefix("1")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
+
+      // match-prefix("1") in [0, 1)
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = true;
+      options.stopInclusive = false;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "0".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-prefix("1") in [0, 1]
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "0".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+
+      // match-prefix("1") in [1, 2]
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "2".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
+
+      // match-prefix("1") in (1, 2]
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "2".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+
+      // match-prefix("1") in (1-abcdefg, 2]
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      newValues.clear();
+      ret =
+          client.multiGet(
+              tableName, hashKey, "1-abcdefg".getBytes(), "2".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-prefix("1-")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1-".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+
+      // match-prefix("1-x")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1-x".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-prefix("abc")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "abc".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-prefix("efg")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "efg".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-prefix("ijk")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "ijk".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-prefix("lnm")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "lmn".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-postfix("5-hijklmn")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "5-hijklmn".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(0).getKey());
+
+      // match-postfix("1")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+
+      // match-postfix("1-")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "1-".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-postfix("1-x")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "1-x".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-postfix("abc")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "abc".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
+
+      // match-postfix("efg")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "efg".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
+
+      // match-postfix("ijk")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "ijk".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(0).getKey());
+
+      // match-postfix("lmn")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "lmn".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(1).getKey());
+
+      // match-postfix("5-hijklmn")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "5-hijklmn".getBytes();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(0).getKey());
+
+      // maxCount = 4
+      options = new MultiGetOptions();
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, 4, -1, newValues);
+      Assert.assertFalse(ret);
+      Assert.assertEquals(4, newValues.size());
+      Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
+
+      // maxCount = 1
+      options = new MultiGetOptions();
+      newValues.clear();
+      ret =
+          client.multiGet(
+              tableName, hashKey, "5".getBytes(), "6".getBytes(), options, 1, -1, newValues);
+      Assert.assertFalse(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(0).getKey());
+
+      // multi del all
+      List<byte[]> sortKeys = new ArrayList<byte[]>();
+      sortKeys.add("".getBytes());
+      sortKeys.add("1".getBytes());
+      sortKeys.add("1-abcdefg".getBytes());
+      sortKeys.add("2".getBytes());
+      sortKeys.add("2-abcdefg".getBytes());
+      sortKeys.add("3".getBytes());
+      sortKeys.add("3-efghijk".getBytes());
+      sortKeys.add("4".getBytes());
+      sortKeys.add("4-hijklmn".getBytes());
+      sortKeys.add("5".getBytes());
+      sortKeys.add("5-hijklmn".getBytes());
+      sortKeys.add("6".getBytes());
+      sortKeys.add("7".getBytes());
+      client.multiDel(tableName, hashKey, sortKeys);
+
+      // check sortkey count
+      sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(0, sortKeyCount);
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
     }
 
-    @Test
-    public void testMultiGet() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        String tableName = "temp";
-        byte[] hashKey = multiGetHashKey.getBytes();
+    PegasusClientFactory.closeSingletonClient();
+  }
 
-        try {
-            // multi set
-            List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
-            values.add(Pair.of("".getBytes(), "0".getBytes()));
-            values.add(Pair.of("1".getBytes(), "1".getBytes()));
-            values.add(Pair.of("1-abcdefg".getBytes(), "1-abcdefg".getBytes()));
-            values.add(Pair.of("2".getBytes(), "2".getBytes()));
-            values.add(Pair.of("2-abcdefg".getBytes(), "2-abcdefg".getBytes()));
-            values.add(Pair.of("3".getBytes(), "3".getBytes()));
-            values.add(Pair.of("3-efghijk".getBytes(), "3-efghijk".getBytes()));
-            values.add(Pair.of("4".getBytes(), "4".getBytes()));
-            values.add(Pair.of("4-hijklmn".getBytes(), "4-hijklmn".getBytes()));
-            values.add(Pair.of("5".getBytes(), "5".getBytes()));
-            values.add(Pair.of("5-hijklmn".getBytes(), "5-hijklmn".getBytes()));
-            values.add(Pair.of("6".getBytes(), "6".getBytes()));
-            values.add(Pair.of("7".getBytes(), "7".getBytes()));
-            client.multiSet(tableName, hashKey, values);
+  @Test
+  public void testMultiGetReverse() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    String tableName = "temp";
+    byte[] hashKey = multiGetReverseHashKey.getBytes();
 
-            // check sortkey count
-            long sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(13, sortKeyCount);
+    try {
+      // multi set
+      List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+      values.add(Pair.of("".getBytes(), "0".getBytes()));
+      values.add(Pair.of("1".getBytes(), "1".getBytes()));
+      values.add(Pair.of("1-abcdefg".getBytes(), "1-abcdefg".getBytes()));
+      values.add(Pair.of("2".getBytes(), "2".getBytes()));
+      values.add(Pair.of("2-abcdefg".getBytes(), "2-abcdefg".getBytes()));
+      values.add(Pair.of("3".getBytes(), "3".getBytes()));
+      values.add(Pair.of("3-efghijk".getBytes(), "3-efghijk".getBytes()));
+      values.add(Pair.of("4".getBytes(), "4".getBytes()));
+      values.add(Pair.of("4-hijklmn".getBytes(), "4-hijklmn".getBytes()));
+      values.add(Pair.of("5".getBytes(), "5".getBytes()));
+      values.add(Pair.of("5-hijklmn".getBytes(), "5-hijklmn".getBytes()));
+      values.add(Pair.of("6".getBytes(), "6".getBytes()));
+      values.add(Pair.of("7".getBytes(), "7".getBytes()));
+      client.multiSet(tableName, hashKey, values);
 
-            // [null, null)
-            MultiGetOptions options = new MultiGetOptions();
-            Assert.assertTrue(options.startInclusive);
-            Assert.assertFalse(options.stopInclusive);
-            List<Pair<byte[], byte[]>> newValues = new ArrayList<Pair<byte[], byte[]>>();
-            boolean ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(13, newValues.size());
-            Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(4).getKey());
-            Assert.assertArrayEquals("3".getBytes(), newValues.get(5).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(6).getKey());
-            Assert.assertArrayEquals("4".getBytes(), newValues.get(7).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(8).getKey());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(9).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(10).getKey());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(11).getKey());
-            Assert.assertArrayEquals("7".getBytes(), newValues.get(12).getKey());
+      // check sortkey count
+      long sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(13, sortKeyCount);
 
-            // [null, null]
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(13, newValues.size());
-            Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(4).getKey());
-            Assert.assertArrayEquals("3".getBytes(), newValues.get(5).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(6).getKey());
-            Assert.assertArrayEquals("4".getBytes(), newValues.get(7).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(8).getKey());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(9).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(10).getKey());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(11).getKey());
-            Assert.assertArrayEquals("7".getBytes(), newValues.get(12).getKey());
+      // [null, null)
+      MultiGetOptions options = new MultiGetOptions();
+      Assert.assertTrue(options.startInclusive);
+      Assert.assertFalse(options.stopInclusive);
+      options.reverse = true;
+      List<Pair<byte[], byte[]>> newValues = new ArrayList<Pair<byte[], byte[]>>();
+      boolean ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(13, newValues.size());
+      Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(4).getKey());
+      Assert.assertArrayEquals("3".getBytes(), newValues.get(5).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(6).getKey());
+      Assert.assertArrayEquals("4".getBytes(), newValues.get(7).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(8).getKey());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(9).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(10).getKey());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(11).getKey());
+      Assert.assertArrayEquals("7".getBytes(), newValues.get(12).getKey());
 
-            // (null, null)
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = false;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(12, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("2".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("3".getBytes(), newValues.get(4).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(5).getKey());
-            Assert.assertArrayEquals("4".getBytes(), newValues.get(6).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(7).getKey());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(8).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(9).getKey());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(10).getKey());
-            Assert.assertArrayEquals("7".getBytes(), newValues.get(11).getKey());
+      // [null, null]
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(13, newValues.size());
+      Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(4).getKey());
+      Assert.assertArrayEquals("3".getBytes(), newValues.get(5).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(6).getKey());
+      Assert.assertArrayEquals("4".getBytes(), newValues.get(7).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(8).getKey());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(9).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(10).getKey());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(11).getKey());
+      Assert.assertArrayEquals("7".getBytes(), newValues.get(12).getKey());
 
-            // (null, null]
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(12, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("2".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("3".getBytes(), newValues.get(4).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(5).getKey());
-            Assert.assertArrayEquals("4".getBytes(), newValues.get(6).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(7).getKey());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(8).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(9).getKey());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(10).getKey());
-            Assert.assertArrayEquals("7".getBytes(), newValues.get(11).getKey());
+      // (null, null)
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = false;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(12, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("2".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("3".getBytes(), newValues.get(4).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(5).getKey());
+      Assert.assertArrayEquals("4".getBytes(), newValues.get(6).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(7).getKey());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(8).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(9).getKey());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(10).getKey());
+      Assert.assertArrayEquals("7".getBytes(), newValues.get(11).getKey());
 
-            // [null, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
+      // (null, null]
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(12, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("2".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("3".getBytes(), newValues.get(4).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(5).getKey());
+      Assert.assertArrayEquals("4".getBytes(), newValues.get(6).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(7).getKey());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(8).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(9).getKey());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(10).getKey());
+      Assert.assertArrayEquals("7".getBytes(), newValues.get(11).getKey());
 
-            // [null, 1)
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = false;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
+      // [null, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
 
-            // (null, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      // [null, 1)
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = false;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
 
-            // (null, 1)
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = false;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // (null, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
 
-            // [1, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      // (null, 1)
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = false;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // [1, 1)
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = false;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // [1, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
 
-            // (1, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // [1, 1)
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = false;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // (1, 1)
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = false;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // (1, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // [2, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = false;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "2".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // (1, 1)
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = false;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-anywhere("-")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
-            options.sortKeyFilterPattern = "-".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(5, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(4).getKey());
+      // [2, 1]
+      options = new MultiGetOptions();
+      options.startInclusive = false;
+      options.stopInclusive = false;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "2".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-anywhere("1")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
-            options.sortKeyFilterPattern = "1".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
+      // match-anywhere("-")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
+      options.sortKeyFilterPattern = "-".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(5, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(3).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(4).getKey());
 
-            // match-anywhere("1-")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
-            options.sortKeyFilterPattern = "1-".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+      // match-anywhere("1")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
 
-            // match-anywhere("abc")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
-            options.sortKeyFilterPattern = "abc".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
+      // match-anywhere("1-")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
+      options.sortKeyFilterPattern = "1-".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
 
-            // match-prefix("1")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
+      // match-anywhere("abc")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
+      options.sortKeyFilterPattern = "abc".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
 
-            // match-prefix("1") in [0, 1)
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = true;
-            options.stopInclusive = false;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "0".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-prefix("1")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
 
-            // match-prefix("1") in [0, 1]
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "0".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      // match-prefix("1") in [0, 1)
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = true;
+      options.stopInclusive = false;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "0".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-prefix("1") in [1, 2]
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "2".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
+      // match-prefix("1") in [0, 1]
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "0".getBytes(), "1".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
 
-            // match-prefix("1") in (1, 2]
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "2".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+      // match-prefix("1") in [1, 2]
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "2".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
 
-            // match-prefix("1") in (1-abcdefg, 2]
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1-abcdefg".getBytes(), "2".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-prefix("1") in (1, 2]
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, "1".getBytes(), "2".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
 
-            // match-prefix("1-")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1-".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+      // match-prefix("1") in (1-abcdefg, 2]
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.startInclusive = false;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret =
+          client.multiGet(
+              tableName, hashKey, "1-abcdefg".getBytes(), "2".getBytes(), options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-prefix("1-x")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1-x".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-prefix("1-")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1-".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
 
-            // match-prefix("abc")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "abc".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-prefix("1-x")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "1-x".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-prefix("efg")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "efg".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-prefix("abc")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "abc".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-prefix("ijk")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "ijk".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-prefix("efg")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "efg".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-prefix("lnm")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "lmn".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-prefix("ijk")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "ijk".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-postfix("5-hijklmn")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "5-hijklmn".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(0).getKey());
+      // match-prefix("lnm")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "lmn".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-postfix("1")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
+      // match-postfix("5-hijklmn")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "5-hijklmn".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(0).getKey());
 
-            // match-postfix("1-")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "1-".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-postfix("1")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "1".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
 
-            // match-postfix("1-x")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "1-x".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-postfix("1-")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "1-".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-postfix("abc")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "abc".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
+      // match-postfix("1-x")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "1-x".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-postfix("efg")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "efg".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
+      // match-postfix("abc")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "abc".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(0, newValues.size());
 
-            // match-postfix("ijk")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "ijk".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(0).getKey());
+      // match-postfix("efg")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "efg".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
 
-            // match-postfix("lmn")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "lmn".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(1).getKey());
+      // match-postfix("ijk")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "ijk".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(0).getKey());
 
-            // match-postfix("5-hijklmn")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "5-hijklmn".getBytes();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(0).getKey());
+      // match-postfix("lmn")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "lmn".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(2, newValues.size());
+      Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(1).getKey());
 
-            // maxCount = 4
-            options = new MultiGetOptions();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, 4, -1, newValues);
-            Assert.assertFalse(ret);
-            Assert.assertEquals(4, newValues.size());
-            Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
+      // match-postfix("5-hijklmn")
+      options = new MultiGetOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
+      options.sortKeyFilterPattern = "5-hijklmn".getBytes();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
+      Assert.assertTrue(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(0).getKey());
 
-            // maxCount = 1
-            options = new MultiGetOptions();
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "5".getBytes(), "6".getBytes(), options, 1, -1, newValues);
-            Assert.assertFalse(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(0).getKey());
+      // maxCount = 4
+      options = new MultiGetOptions();
+      options.reverse = true;
+      newValues.clear();
+      ret = client.multiGet(tableName, hashKey, null, null, options, 4, -1, newValues);
+      Assert.assertFalse(ret);
+      Assert.assertEquals(4, newValues.size());
+      Assert.assertArrayEquals("5".getBytes(), newValues.get(0).getKey());
+      Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(1).getKey());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(2).getKey());
+      Assert.assertArrayEquals("7".getBytes(), newValues.get(3).getKey());
 
-            // multi del all
-            List<byte[]> sortKeys = new ArrayList<byte[]>();
-            sortKeys.add("".getBytes());
-            sortKeys.add("1".getBytes());
-            sortKeys.add("1-abcdefg".getBytes());
-            sortKeys.add("2".getBytes());
-            sortKeys.add("2-abcdefg".getBytes());
-            sortKeys.add("3".getBytes());
-            sortKeys.add("3-efghijk".getBytes());
-            sortKeys.add("4".getBytes());
-            sortKeys.add("4-hijklmn".getBytes());
-            sortKeys.add("5".getBytes());
-            sortKeys.add("5-hijklmn".getBytes());
-            sortKeys.add("6".getBytes());
-            sortKeys.add("7".getBytes());
-            client.multiDel(tableName, hashKey, sortKeys);
+      // maxCount = 1
+      options = new MultiGetOptions();
+      options.startInclusive = true;
+      options.stopInclusive = true;
+      options.reverse = true;
+      newValues.clear();
+      ret =
+          client.multiGet(
+              tableName, hashKey, "5".getBytes(), "6".getBytes(), options, 1, -1, newValues);
+      Assert.assertFalse(ret);
+      Assert.assertEquals(1, newValues.size());
+      Assert.assertArrayEquals("6".getBytes(), newValues.get(0).getKey());
 
-            // check sortkey count
-            sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(0, sortKeyCount);
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
+      // multi del all
+      List<byte[]> sortKeys = new ArrayList<byte[]>();
+      sortKeys.add("".getBytes());
+      sortKeys.add("1".getBytes());
+      sortKeys.add("1-abcdefg".getBytes());
+      sortKeys.add("2".getBytes());
+      sortKeys.add("2-abcdefg".getBytes());
+      sortKeys.add("3".getBytes());
+      sortKeys.add("3-efghijk".getBytes());
+      sortKeys.add("4".getBytes());
+      sortKeys.add("4-hijklmn".getBytes());
+      sortKeys.add("5".getBytes());
+      sortKeys.add("5-hijklmn".getBytes());
+      sortKeys.add("6".getBytes());
+      sortKeys.add("7".getBytes());
+      client.multiDel(tableName, hashKey, sortKeys);
 
-        PegasusClientFactory.closeSingletonClient();
+      // check sortkey count
+      sortKeyCount = client.sortKeyCount(tableName, hashKey);
+      Assert.assertEquals(0, sortKeyCount);
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
     }
 
+    PegasusClientFactory.closeSingletonClient();
+  }
 
-    @Test
-    public void testMultiGetReverse() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        String tableName = "temp";
-        byte[] hashKey = multiGetReverseHashKey.getBytes();
+  @Test
+  public void testBatchSetGetDel() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    String tableName = "temp";
 
-        try {
-            // multi set
-            List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
-            values.add(Pair.of("".getBytes(), "0".getBytes()));
-            values.add(Pair.of("1".getBytes(), "1".getBytes()));
-            values.add(Pair.of("1-abcdefg".getBytes(), "1-abcdefg".getBytes()));
-            values.add(Pair.of("2".getBytes(), "2".getBytes()));
-            values.add(Pair.of("2-abcdefg".getBytes(), "2-abcdefg".getBytes()));
-            values.add(Pair.of("3".getBytes(), "3".getBytes()));
-            values.add(Pair.of("3-efghijk".getBytes(), "3-efghijk".getBytes()));
-            values.add(Pair.of("4".getBytes(), "4".getBytes()));
-            values.add(Pair.of("4-hijklmn".getBytes(), "4-hijklmn".getBytes()));
-            values.add(Pair.of("5".getBytes(), "5".getBytes()));
-            values.add(Pair.of("5-hijklmn".getBytes(), "5-hijklmn".getBytes()));
-            values.add(Pair.of("6".getBytes(), "6".getBytes()));
-            values.add(Pair.of("7".getBytes(), "7".getBytes()));
-            client.multiSet(tableName, hashKey, values);
+    try {
+      // batch set
+      List<SetItem> items = new ArrayList<SetItem>();
+      items.add(
+          new SetItem(
+              "TestBasic_testBatchSetGetDel_hash_key_1".getBytes(),
+              "basic_test_sort_key".getBytes(),
+              "basic_test_value_1".getBytes()));
+      items.add(
+          new SetItem(
+              "TestBasic_testBatchSetGetDel_hash_key_2".getBytes(),
+              "basic_test_sort_key".getBytes(),
+              "basic_test_value_2".getBytes()));
+      items.add(
+          new SetItem(
+              "TestBasic_testBatchSetGetDel_hash_key_3".getBytes(),
+              "basic_test_sort_key".getBytes(),
+              "basic_test_value_3".getBytes()));
+      client.batchSet(tableName, items);
 
-            // check sortkey count
-            long sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(13, sortKeyCount);
+      // check exist
+      boolean exist =
+          client.exist(
+              tableName,
+              "TestBasic_testBatchSetGetDel_hash_key_1".getBytes(),
+              "basic_test_sort_key".getBytes());
+      Assert.assertTrue(exist);
+      exist =
+          client.exist(
+              tableName,
+              "TestBasic_testBatchSetGetDel_hash_key_2".getBytes(),
+              "basic_test_sort_key".getBytes());
+      Assert.assertTrue(exist);
+      exist =
+          client.exist(
+              tableName,
+              "TestBasic_testBatchSetGetDel_hash_key_3".getBytes(),
+              "basic_test_sort_key".getBytes());
+      Assert.assertTrue(exist);
 
-            // [null, null)
-            MultiGetOptions options = new MultiGetOptions();
-            Assert.assertTrue(options.startInclusive);
-            Assert.assertFalse(options.stopInclusive);
-            options.reverse = true;
-            List<Pair<byte[], byte[]>> newValues = new ArrayList<Pair<byte[], byte[]>>();
-            boolean ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(13, newValues.size());
-            Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(4).getKey());
-            Assert.assertArrayEquals("3".getBytes(), newValues.get(5).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(6).getKey());
-            Assert.assertArrayEquals("4".getBytes(), newValues.get(7).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(8).getKey());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(9).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(10).getKey());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(11).getKey());
-            Assert.assertArrayEquals("7".getBytes(), newValues.get(12).getKey());
+      // batch get
+      List<Pair<byte[], byte[]>> keys = new ArrayList<Pair<byte[], byte[]>>();
+      keys.add(
+          Pair.of(
+              "TestBasic_testBatchSetGetDel_hash_key_1".getBytes(),
+              "basic_test_sort_key".getBytes()));
+      keys.add(
+          Pair.of(
+              "TestBasic_testBatchSetGetDel_hash_key_2".getBytes(),
+              "basic_test_sort_key".getBytes()));
+      keys.add(
+          Pair.of(
+              "TestBasic_testBatchSetGetDel_hash_key_3".getBytes(),
+              "basic_test_sort_key".getBytes()));
+      List<byte[]> values = new ArrayList<byte[]>();
+      client.batchGet(tableName, keys, values);
+      Assert.assertEquals(3, values.size());
+      Assert.assertArrayEquals("basic_test_value_1".getBytes(), values.get(0));
+      Assert.assertArrayEquals("basic_test_value_2".getBytes(), values.get(1));
+      Assert.assertArrayEquals("basic_test_value_3".getBytes(), values.get(2));
 
-            // [null, null]
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(13, newValues.size());
-            Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("2".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(4).getKey());
-            Assert.assertArrayEquals("3".getBytes(), newValues.get(5).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(6).getKey());
-            Assert.assertArrayEquals("4".getBytes(), newValues.get(7).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(8).getKey());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(9).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(10).getKey());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(11).getKey());
-            Assert.assertArrayEquals("7".getBytes(), newValues.get(12).getKey());
+      // batch del
+      client.batchDel(tableName, keys);
 
-            // (null, null)
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = false;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(12, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("2".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("3".getBytes(), newValues.get(4).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(5).getKey());
-            Assert.assertArrayEquals("4".getBytes(), newValues.get(6).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(7).getKey());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(8).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(9).getKey());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(10).getKey());
-            Assert.assertArrayEquals("7".getBytes(), newValues.get(11).getKey());
-
-            // (null, null]
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(12, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("2".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("3".getBytes(), newValues.get(4).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(5).getKey());
-            Assert.assertArrayEquals("4".getBytes(), newValues.get(6).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(7).getKey());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(8).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(9).getKey());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(10).getKey());
-            Assert.assertArrayEquals("7".getBytes(), newValues.get(11).getKey());
-
-            // [null, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(1).getKey());
-
-            // [null, 1)
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = false;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("".getBytes(), newValues.get(0).getKey());
-
-            // (null, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-
-            // (null, 1)
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = false;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // [1, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-
-            // [1, 1)
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = false;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // (1, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // (1, 1)
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = false;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // [2, 1]
-            options = new MultiGetOptions();
-            options.startInclusive = false;
-            options.stopInclusive = false;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "2".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-anywhere("-")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
-            options.sortKeyFilterPattern = "-".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(5, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(3).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(4).getKey());
-
-            // match-anywhere("1")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
-
-            // match-anywhere("1-")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
-            options.sortKeyFilterPattern = "1-".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
-
-            // match-anywhere("abc")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_ANYWHERE;
-            options.sortKeyFilterPattern = "abc".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
-
-            // match-prefix("1")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
-
-            // match-prefix("1") in [0, 1)
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = true;
-            options.stopInclusive = false;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "0".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-prefix("1") in [0, 1]
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "0".getBytes(), "1".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-
-            // match-prefix("1") in [1, 2]
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "2".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(1).getKey());
-
-            // match-prefix("1") in (1, 2]
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1".getBytes(), "2".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
-
-            // match-prefix("1") in (1-abcdefg, 2]
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.startInclusive = false;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "1-abcdefg".getBytes(), "2".getBytes(), options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-prefix("1-")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1-".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
-
-            // match-prefix("1-x")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "1-x".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-prefix("abc")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "abc".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-prefix("efg")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "efg".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-prefix("ijk")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "ijk".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-prefix("lnm")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "lmn".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-postfix("5-hijklmn")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "5-hijklmn".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(0).getKey());
-
-            // match-postfix("1")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "1".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("1".getBytes(), newValues.get(0).getKey());
-
-            // match-postfix("1-")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "1-".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-postfix("1-x")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "1-x".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-postfix("abc")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "abc".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(0, newValues.size());
-
-            // match-postfix("efg")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "efg".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("1-abcdefg".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("2-abcdefg".getBytes(), newValues.get(1).getKey());
-
-            // match-postfix("ijk")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "ijk".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("3-efghijk".getBytes(), newValues.get(0).getKey());
-
-            // match-postfix("lmn")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "lmn".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(2, newValues.size());
-            Assert.assertArrayEquals("4-hijklmn".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(1).getKey());
-
-            // match-postfix("5-hijklmn")
-            options = new MultiGetOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
-            options.sortKeyFilterPattern = "5-hijklmn".getBytes();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, newValues);
-            Assert.assertTrue(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(0).getKey());
-
-            // maxCount = 4
-            options = new MultiGetOptions();
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, null, null, options, 4, -1, newValues);
-            Assert.assertFalse(ret);
-            Assert.assertEquals(4, newValues.size());
-            Assert.assertArrayEquals("5".getBytes(), newValues.get(0).getKey());
-            Assert.assertArrayEquals("5-hijklmn".getBytes(), newValues.get(1).getKey());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(2).getKey());
-            Assert.assertArrayEquals("7".getBytes(), newValues.get(3).getKey());
-
-            // maxCount = 1
-            options = new MultiGetOptions();
-            options.startInclusive = true;
-            options.stopInclusive = true;
-            options.reverse = true;
-            newValues.clear();
-            ret = client.multiGet(tableName, hashKey, "5".getBytes(), "6".getBytes(), options,1, -1, newValues);
-            Assert.assertFalse(ret);
-            Assert.assertEquals(1, newValues.size());
-            Assert.assertArrayEquals("6".getBytes(), newValues.get(0).getKey());
-
-            // multi del all
-            List<byte[]> sortKeys = new ArrayList<byte[]>();
-            sortKeys.add("".getBytes());
-            sortKeys.add("1".getBytes());
-            sortKeys.add("1-abcdefg".getBytes());
-            sortKeys.add("2".getBytes());
-            sortKeys.add("2-abcdefg".getBytes());
-            sortKeys.add("3".getBytes());
-            sortKeys.add("3-efghijk".getBytes());
-            sortKeys.add("4".getBytes());
-            sortKeys.add("4-hijklmn".getBytes());
-            sortKeys.add("5".getBytes());
-            sortKeys.add("5-hijklmn".getBytes());
-            sortKeys.add("6".getBytes());
-            sortKeys.add("7".getBytes());
-            client.multiDel(tableName, hashKey, sortKeys);
-
-            // check sortkey count
-            sortKeyCount = client.sortKeyCount(tableName, hashKey);
-            Assert.assertEquals(0, sortKeyCount);
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
-
-        PegasusClientFactory.closeSingletonClient();
+      // check deleted
+      client.batchGet(tableName, keys, values);
+      Assert.assertEquals(3, values.size());
+      Assert.assertNull(values.get(0));
+      Assert.assertNull(values.get(1));
+      Assert.assertNull(values.get(2));
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
     }
 
-    @Test
-    public void testBatchSetGetDel() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        String tableName = "temp";
+    PegasusClientFactory.closeSingletonClient();
+  }
 
-        try {
-            // batch set
-            List<SetItem> items = new ArrayList<SetItem>();
-            items.add(new SetItem("TestBasic_testBatchSetGetDel_hash_key_1".getBytes(),
-                        "basic_test_sort_key".getBytes(), "basic_test_value_1".getBytes()));
-            items.add(new SetItem("TestBasic_testBatchSetGetDel_hash_key_2".getBytes(),
-                        "basic_test_sort_key".getBytes(), "basic_test_value_2".getBytes()));
-            items.add(new SetItem("TestBasic_testBatchSetGetDel_hash_key_3".getBytes(),
-                        "basic_test_sort_key".getBytes(), "basic_test_value_3".getBytes()));
-            client.batchSet(tableName, items);
+  @Test
+  public void testBatchSetGetDel2() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    String tableName = "temp";
 
-            // check exist
-            boolean exist = client.exist(tableName,
-                    "TestBasic_testBatchSetGetDel_hash_key_1".getBytes(),
-                    "basic_test_sort_key".getBytes());
-            Assert.assertTrue(exist);
-            exist = client.exist(tableName,
-                    "TestBasic_testBatchSetGetDel_hash_key_2".getBytes(),
-                    "basic_test_sort_key".getBytes());
-            Assert.assertTrue(exist);
-            exist = client.exist(tableName,
-                    "TestBasic_testBatchSetGetDel_hash_key_3".getBytes(),
-                    "basic_test_sort_key".getBytes());
-            Assert.assertTrue(exist);
+    try {
+      // batch set
+      List<SetItem> items = new ArrayList<SetItem>();
+      items.add(
+          new SetItem(
+              "TestBasic_testBatchSetGetDel2_hash_key_1".getBytes(),
+              "basic_test_sort_key".getBytes(),
+              "basic_test_value_1".getBytes()));
+      items.add(
+          new SetItem(
+              "TestBasic_testBatchSetGetDel2_hash_key_2".getBytes(),
+              "basic_test_sort_key".getBytes(),
+              "basic_test_value_2".getBytes()));
+      items.add(
+          new SetItem(
+              "TestBasic_testBatchSetGetDel2_hash_key_3".getBytes(),
+              "basic_test_sort_key".getBytes(),
+              "basic_test_value_3".getBytes()));
+      List<PException> resultsBatchSet = new ArrayList<PException>();
+      int count = client.batchSet2(tableName, items, resultsBatchSet);
+      Assert.assertEquals(3, count);
+      Assert.assertEquals(3, resultsBatchSet.size());
+      Assert.assertNull(resultsBatchSet.get(0));
+      Assert.assertNull(resultsBatchSet.get(1));
+      Assert.assertNull(resultsBatchSet.get(2));
 
-            // batch get
-            List<Pair<byte[], byte[]>> keys = new ArrayList<Pair<byte[], byte[]>>();
-            keys.add(Pair.of("TestBasic_testBatchSetGetDel_hash_key_1".getBytes(),
-                        "basic_test_sort_key".getBytes()));
-            keys.add(Pair.of("TestBasic_testBatchSetGetDel_hash_key_2".getBytes(),
-                        "basic_test_sort_key".getBytes()));
-            keys.add(Pair.of("TestBasic_testBatchSetGetDel_hash_key_3".getBytes(),
-                        "basic_test_sort_key".getBytes()));
-            List<byte[]> values = new ArrayList<byte[]>();
-            client.batchGet(tableName, keys, values);
-            Assert.assertEquals(3, values.size());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), values.get(0));
-            Assert.assertArrayEquals("basic_test_value_2".getBytes(), values.get(1));
-            Assert.assertArrayEquals("basic_test_value_3".getBytes(), values.get(2));
+      // check exist
+      boolean exist =
+          client.exist(
+              tableName,
+              "TestBasic_testBatchSetGetDel2_hash_key_1".getBytes(),
+              "basic_test_sort_key".getBytes());
+      Assert.assertTrue(exist);
+      exist =
+          client.exist(
+              tableName,
+              "TestBasic_testBatchSetGetDel2_hash_key_2".getBytes(),
+              "basic_test_sort_key".getBytes());
+      Assert.assertTrue(exist);
+      exist =
+          client.exist(
+              tableName,
+              "TestBasic_testBatchSetGetDel2_hash_key_3".getBytes(),
+              "basic_test_sort_key".getBytes());
+      Assert.assertTrue(exist);
 
-            // batch del
-            client.batchDel(tableName, keys);
+      // batch get
+      List<Pair<byte[], byte[]>> keys = new ArrayList<Pair<byte[], byte[]>>();
+      keys.add(
+          Pair.of(
+              "TestBasic_testBatchSetGetDel2_hash_key_1".getBytes(),
+              "basic_test_sort_key".getBytes()));
+      keys.add(
+          Pair.of(
+              "TestBasic_testBatchSetGetDel2_hash_key_2".getBytes(),
+              "basic_test_sort_key".getBytes()));
+      keys.add(
+          Pair.of(
+              "TestBasic_testBatchSetGetDel2_hash_key_3".getBytes(),
+              "basic_test_sort_key".getBytes()));
+      List<Pair<PException, byte[]>> resultsBatchGet = new ArrayList<Pair<PException, byte[]>>();
+      count = client.batchGet2(tableName, keys, resultsBatchGet);
+      Assert.assertEquals(3, count);
+      Assert.assertEquals(3, resultsBatchGet.size());
+      Assert.assertNull(resultsBatchGet.get(0).getLeft());
+      Assert.assertArrayEquals("basic_test_value_1".getBytes(), resultsBatchGet.get(0).getRight());
+      Assert.assertNull(resultsBatchGet.get(1).getLeft());
+      Assert.assertArrayEquals("basic_test_value_2".getBytes(), resultsBatchGet.get(1).getRight());
+      Assert.assertNull(resultsBatchGet.get(2).getLeft());
+      Assert.assertArrayEquals("basic_test_value_3".getBytes(), resultsBatchGet.get(2).getRight());
 
-            // check deleted
-            client.batchGet(tableName, keys, values);
-            Assert.assertEquals(3, values.size());
-            Assert.assertNull(values.get(0));
-            Assert.assertNull(values.get(1));
-            Assert.assertNull(values.get(2));
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
+      // batch del
+      List<PException> resultsBatchDel = new ArrayList<PException>();
+      count = client.batchDel2(tableName, keys, resultsBatchDel);
+      Assert.assertEquals(3, count);
+      Assert.assertEquals(3, resultsBatchSet.size());
+      Assert.assertNull(resultsBatchSet.get(0));
+      Assert.assertNull(resultsBatchSet.get(1));
+      Assert.assertNull(resultsBatchSet.get(2));
 
-        PegasusClientFactory.closeSingletonClient();
+      // check deleted
+      List<byte[]> values = new ArrayList<byte[]>();
+      client.batchGet(tableName, keys, values);
+      Assert.assertEquals(3, values.size());
+      Assert.assertNull(values.get(0));
+      Assert.assertNull(values.get(1));
+      Assert.assertNull(values.get(2));
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
     }
 
-    @Test
-    public void testBatchSetGetDel2() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        String tableName = "temp";
+    PegasusClientFactory.closeSingletonClient();
+  }
 
-        try {
-            // batch set
-            List<SetItem> items = new ArrayList<SetItem>();
-            items.add(new SetItem("TestBasic_testBatchSetGetDel2_hash_key_1".getBytes(),
-                    "basic_test_sort_key".getBytes(), "basic_test_value_1".getBytes()));
-            items.add(new SetItem("TestBasic_testBatchSetGetDel2_hash_key_2".getBytes(),
-                    "basic_test_sort_key".getBytes(), "basic_test_value_2".getBytes()));
-            items.add(new SetItem("TestBasic_testBatchSetGetDel2_hash_key_3".getBytes(),
-                    "basic_test_sort_key".getBytes(), "basic_test_value_3".getBytes()));
-            List<PException> resultsBatchSet = new ArrayList<PException>();
-            int count = client.batchSet2(tableName, items, resultsBatchSet);
-            Assert.assertEquals(3, count);
-            Assert.assertEquals(3, resultsBatchSet.size());
-            Assert.assertNull(resultsBatchSet.get(0));
-            Assert.assertNull(resultsBatchSet.get(1));
-            Assert.assertNull(resultsBatchSet.get(2));
+  @Test
+  public void testBatchMultiSetGetDel() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    String tableName = "temp";
 
-            // check exist
-            boolean exist = client.exist(tableName,
-                    "TestBasic_testBatchSetGetDel2_hash_key_1".getBytes(),
-                    "basic_test_sort_key".getBytes());
-            Assert.assertTrue(exist);
-            exist = client.exist(tableName,
-                    "TestBasic_testBatchSetGetDel2_hash_key_2".getBytes(),
-                    "basic_test_sort_key".getBytes());
-            Assert.assertTrue(exist);
-            exist = client.exist(tableName,
-                    "TestBasic_testBatchSetGetDel2_hash_key_3".getBytes(),
-                    "basic_test_sort_key".getBytes());
-            Assert.assertTrue(exist);
+    try {
+      // batch multi set
+      List<HashKeyData> items = new ArrayList<HashKeyData>();
+      items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel_hash_key_1".getBytes()));
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes());
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_3".getBytes(), "basic_test_value_3".getBytes());
+      items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel_hash_key_2".getBytes()));
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes());
+      items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel_hash_key_3".getBytes()));
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
+      client.batchMultiSet(tableName, items);
 
-            // batch get
-            List<Pair<byte[], byte[]>> keys = new ArrayList<Pair<byte[], byte[]>>();
-            keys.add(Pair.of("TestBasic_testBatchSetGetDel2_hash_key_1".getBytes(),
-                    "basic_test_sort_key".getBytes()));
-            keys.add(Pair.of("TestBasic_testBatchSetGetDel2_hash_key_2".getBytes(),
-                    "basic_test_sort_key".getBytes()));
-            keys.add(Pair.of("TestBasic_testBatchSetGetDel2_hash_key_3".getBytes(),
-                    "basic_test_sort_key".getBytes()));
-            List<Pair<PException, byte[]>> resultsBatchGet = new ArrayList<Pair<PException, byte[]>>();
-            count = client.batchGet2(tableName, keys, resultsBatchGet);
-            Assert.assertEquals(3, count);
-            Assert.assertEquals(3, resultsBatchGet.size());
-            Assert.assertNull(resultsBatchGet.get(0).getLeft());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), resultsBatchGet.get(0).getRight());
-            Assert.assertNull(resultsBatchGet.get(1).getLeft());
-            Assert.assertArrayEquals("basic_test_value_2".getBytes(), resultsBatchGet.get(1).getRight());
-            Assert.assertNull(resultsBatchGet.get(2).getLeft());
-            Assert.assertArrayEquals("basic_test_value_3".getBytes(), resultsBatchGet.get(2).getRight());
+      // batch multi get
+      List<Pair<byte[], List<byte[]>>> keys = new ArrayList<Pair<byte[], List<byte[]>>>();
+      List<byte[]> nullSortKeys = null;
+      keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_1".getBytes(), nullSortKeys));
+      keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_2".getBytes(), nullSortKeys));
+      keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_3".getBytes(), nullSortKeys));
+      keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_4".getBytes(), nullSortKeys));
+      List<HashKeyData> values = new ArrayList<HashKeyData>();
+      client.batchMultiGet(tableName, keys, values);
+      Assert.assertEquals(4, values.size());
 
-            // batch del
-            List<PException> resultsBatchDel = new ArrayList<PException>();
-            count = client.batchDel2(tableName, keys, resultsBatchDel);
-            Assert.assertEquals(3, count);
-            Assert.assertEquals(3, resultsBatchSet.size());
-            Assert.assertNull(resultsBatchSet.get(0));
-            Assert.assertNull(resultsBatchSet.get(1));
-            Assert.assertNull(resultsBatchSet.get(2));
+      Assert.assertArrayEquals(keys.get(0).getLeft(), values.get(0).hashKey);
+      Assert.assertEquals(3, values.get(0).values.size());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_1".getBytes(), values.get(0).values.get(0).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_1".getBytes(), values.get(0).values.get(0).getRight());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_2".getBytes(), values.get(0).values.get(1).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_2".getBytes(), values.get(0).values.get(1).getRight());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_3".getBytes(), values.get(0).values.get(2).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_3".getBytes(), values.get(0).values.get(2).getRight());
 
-            // check deleted
-            List<byte[]> values = new ArrayList<byte[]>();
-            client.batchGet(tableName, keys, values);
-            Assert.assertEquals(3, values.size());
-            Assert.assertNull(values.get(0));
-            Assert.assertNull(values.get(1));
-            Assert.assertNull(values.get(2));
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
+      Assert.assertArrayEquals(keys.get(1).getLeft(), values.get(1).hashKey);
+      Assert.assertEquals(2, values.get(1).values.size());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_1".getBytes(), values.get(1).values.get(0).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_1".getBytes(), values.get(1).values.get(0).getRight());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_2".getBytes(), values.get(1).values.get(1).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_2".getBytes(), values.get(1).values.get(1).getRight());
 
-        PegasusClientFactory.closeSingletonClient();
+      Assert.assertArrayEquals(keys.get(2).getLeft(), values.get(2).hashKey);
+      Assert.assertEquals(1, values.get(2).values.size());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_1".getBytes(), values.get(2).values.get(0).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_1".getBytes(), values.get(2).values.get(0).getRight());
+
+      Assert.assertArrayEquals(keys.get(3).getLeft(), values.get(3).hashKey);
+      Assert.assertEquals(0, values.get(3).values.size());
+
+      // batch multi del
+      List<Pair<byte[], List<byte[]>>> delKeys = new ArrayList<Pair<byte[], List<byte[]>>>();
+      List<byte[]> delSortKeys = new ArrayList<byte[]>();
+      delSortKeys.add("basic_test_sort_key_1".getBytes());
+      delSortKeys.add("basic_test_sort_key_2".getBytes());
+      delSortKeys.add("basic_test_sort_key_3".getBytes());
+      delSortKeys.add("basic_test_sort_key_4".getBytes());
+      delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_1".getBytes(), delSortKeys));
+      delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_2".getBytes(), delSortKeys));
+      delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_3".getBytes(), delSortKeys));
+      client.batchMultiDel(tableName, delKeys);
+
+      // check deleted
+      client.batchMultiGet(tableName, keys, values);
+      Assert.assertEquals(4, values.size());
+      Assert.assertEquals(0, values.get(0).values.size());
+      Assert.assertEquals(0, values.get(1).values.size());
+      Assert.assertEquals(0, values.get(2).values.size());
+      Assert.assertEquals(0, values.get(3).values.size());
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
     }
 
-    @Test
-    public void testBatchMultiSetGetDel() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        String tableName = "temp";
+    PegasusClientFactory.closeSingletonClient();
+  }
 
-        try {
-            // batch multi set
-            List<HashKeyData> items = new ArrayList<HashKeyData>();
-            items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel_hash_key_1".getBytes()));
-            items.get(items.size()-1).addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
-            items.get(items.size()-1).addData("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes());
-            items.get(items.size()-1).addData("basic_test_sort_key_3".getBytes(), "basic_test_value_3".getBytes());
-            items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel_hash_key_2".getBytes()));
-            items.get(items.size()-1).addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
-            items.get(items.size()-1).addData("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes());
-            items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel_hash_key_3".getBytes()));
-            items.get(items.size()-1).addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
-            client.batchMultiSet(tableName, items);
+  @Test
+  public void testBatchMultiSetGetDel2() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    String tableName = "temp";
 
-            // batch multi get
-            List<Pair<byte[], List<byte[]>>> keys = new ArrayList<Pair<byte[], List<byte[]>>>();
-            List<byte[]> nullSortKeys = null;
-            keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_1".getBytes(), nullSortKeys));
-            keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_2".getBytes(), nullSortKeys));
-            keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_3".getBytes(), nullSortKeys));
-            keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_4".getBytes(), nullSortKeys));
-            List<HashKeyData> values = new ArrayList<HashKeyData>();
-            client.batchMultiGet(tableName, keys, values);
-            Assert.assertEquals(4, values.size());
+    try {
+      // batch multi set
+      List<HashKeyData> items = new ArrayList<HashKeyData>();
+      items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel2_hash_key_1".getBytes()));
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes());
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_3".getBytes(), "basic_test_value_3".getBytes());
+      items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel2_hash_key_2".getBytes()));
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes());
+      items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel2_hash_key_3".getBytes()));
+      items
+          .get(items.size() - 1)
+          .addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
+      List<PException> resultsBatchMultiSet = new ArrayList<PException>();
+      int count = client.batchMultiSet2(tableName, items, resultsBatchMultiSet);
+      Assert.assertEquals(3, count);
+      Assert.assertEquals(3, resultsBatchMultiSet.size());
+      Assert.assertNull(resultsBatchMultiSet.get(0));
+      Assert.assertNull(resultsBatchMultiSet.get(1));
+      Assert.assertNull(resultsBatchMultiSet.get(2));
 
-            Assert.assertArrayEquals(keys.get(0).getLeft(), values.get(0).hashKey);
-            Assert.assertEquals(3, values.get(0).values.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), values.get(0).values.get(0).getLeft());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), values.get(0).values.get(0).getRight());
-            Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), values.get(0).values.get(1).getLeft());
-            Assert.assertArrayEquals("basic_test_value_2".getBytes(), values.get(0).values.get(1).getRight());
-            Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), values.get(0).values.get(2).getLeft());
-            Assert.assertArrayEquals("basic_test_value_3".getBytes(), values.get(0).values.get(2).getRight());
+      // batch multi get
+      List<Pair<byte[], List<byte[]>>> keys = new ArrayList<Pair<byte[], List<byte[]>>>();
+      List<byte[]> nullSortKeys = null;
+      keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_1".getBytes(), nullSortKeys));
+      keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_2".getBytes(), nullSortKeys));
+      keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_3".getBytes(), nullSortKeys));
+      keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_4".getBytes(), nullSortKeys));
+      List<Pair<PException, HashKeyData>> resultsBatchMultiGet =
+          new ArrayList<Pair<PException, HashKeyData>>();
+      count = client.batchMultiGet2(tableName, keys, resultsBatchMultiGet);
+      Assert.assertEquals(4, count);
+      Assert.assertEquals(4, resultsBatchMultiGet.size());
 
-            Assert.assertArrayEquals(keys.get(1).getLeft(), values.get(1).hashKey);
-            Assert.assertEquals(2, values.get(1).values.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), values.get(1).values.get(0).getLeft());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), values.get(1).values.get(0).getRight());
-            Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), values.get(1).values.get(1).getLeft());
-            Assert.assertArrayEquals("basic_test_value_2".getBytes(), values.get(1).values.get(1).getRight());
+      Assert.assertNull(resultsBatchMultiGet.get(0).getLeft());
+      Assert.assertArrayEquals(
+          keys.get(0).getLeft(), resultsBatchMultiGet.get(0).getRight().hashKey);
+      Assert.assertEquals(3, resultsBatchMultiGet.get(0).getRight().values.size());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_1".getBytes(),
+          resultsBatchMultiGet.get(0).getRight().values.get(0).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_1".getBytes(),
+          resultsBatchMultiGet.get(0).getRight().values.get(0).getRight());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_2".getBytes(),
+          resultsBatchMultiGet.get(0).getRight().values.get(1).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_2".getBytes(),
+          resultsBatchMultiGet.get(0).getRight().values.get(1).getRight());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_3".getBytes(),
+          resultsBatchMultiGet.get(0).getRight().values.get(2).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_3".getBytes(),
+          resultsBatchMultiGet.get(0).getRight().values.get(2).getRight());
 
-            Assert.assertArrayEquals(keys.get(2).getLeft(), values.get(2).hashKey);
-            Assert.assertEquals(1, values.get(2).values.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), values.get(2).values.get(0).getLeft());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), values.get(2).values.get(0).getRight());
+      Assert.assertNull(resultsBatchMultiGet.get(1).getLeft());
+      Assert.assertArrayEquals(
+          keys.get(1).getLeft(), resultsBatchMultiGet.get(1).getRight().hashKey);
+      Assert.assertEquals(2, resultsBatchMultiGet.get(1).getRight().values.size());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_1".getBytes(),
+          resultsBatchMultiGet.get(1).getRight().values.get(0).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_1".getBytes(),
+          resultsBatchMultiGet.get(1).getRight().values.get(0).getRight());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_2".getBytes(),
+          resultsBatchMultiGet.get(1).getRight().values.get(1).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_2".getBytes(),
+          resultsBatchMultiGet.get(1).getRight().values.get(1).getRight());
 
-            Assert.assertArrayEquals(keys.get(3).getLeft(), values.get(3).hashKey);
-            Assert.assertEquals(0, values.get(3).values.size());
+      Assert.assertNull(resultsBatchMultiGet.get(2).getLeft());
+      Assert.assertArrayEquals(
+          keys.get(2).getLeft(), resultsBatchMultiGet.get(2).getRight().hashKey);
+      Assert.assertEquals(1, resultsBatchMultiGet.get(2).getRight().values.size());
+      Assert.assertArrayEquals(
+          "basic_test_sort_key_1".getBytes(),
+          resultsBatchMultiGet.get(2).getRight().values.get(0).getLeft());
+      Assert.assertArrayEquals(
+          "basic_test_value_1".getBytes(),
+          resultsBatchMultiGet.get(2).getRight().values.get(0).getRight());
 
-            // batch multi del
-            List<Pair<byte[], List<byte[]>>> delKeys = new ArrayList<Pair<byte[], List<byte[]>>>();
-            List<byte[]> delSortKeys = new ArrayList<byte[]>();
-            delSortKeys.add("basic_test_sort_key_1".getBytes());
-            delSortKeys.add("basic_test_sort_key_2".getBytes());
-            delSortKeys.add("basic_test_sort_key_3".getBytes());
-            delSortKeys.add("basic_test_sort_key_4".getBytes());
-            delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_1".getBytes(), delSortKeys));
-            delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_2".getBytes(), delSortKeys));
-            delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel_hash_key_3".getBytes(), delSortKeys));
-            client.batchMultiDel(tableName, delKeys);
+      Assert.assertNull(resultsBatchMultiGet.get(3).getLeft());
+      Assert.assertArrayEquals(
+          keys.get(3).getLeft(), resultsBatchMultiGet.get(3).getRight().hashKey);
+      Assert.assertEquals(0, resultsBatchMultiGet.get(3).getRight().values.size());
 
-            // check deleted
-            client.batchMultiGet(tableName, keys, values);
-            Assert.assertEquals(4, values.size());
-            Assert.assertEquals(0, values.get(0).values.size());
-            Assert.assertEquals(0, values.get(1).values.size());
-            Assert.assertEquals(0, values.get(2).values.size());
-            Assert.assertEquals(0, values.get(3).values.size());
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
+      // batch multi del
+      List<Pair<byte[], List<byte[]>>> delKeys = new ArrayList<Pair<byte[], List<byte[]>>>();
+      List<byte[]> delSortKeys = new ArrayList<byte[]>();
+      delSortKeys.add("basic_test_sort_key_1".getBytes());
+      delSortKeys.add("basic_test_sort_key_2".getBytes());
+      delSortKeys.add("basic_test_sort_key_3".getBytes());
+      delSortKeys.add("basic_test_sort_key_4".getBytes());
+      delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_1".getBytes(), delSortKeys));
+      delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_2".getBytes(), delSortKeys));
+      delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_3".getBytes(), delSortKeys));
+      List<PException> resultsBatchMultiDel = new ArrayList<PException>();
+      count = client.batchMultiDel2(tableName, delKeys, resultsBatchMultiDel);
+      Assert.assertEquals(3, count);
+      Assert.assertEquals(3, resultsBatchMultiSet.size());
+      Assert.assertNull(resultsBatchMultiSet.get(0));
+      Assert.assertNull(resultsBatchMultiSet.get(1));
+      Assert.assertNull(resultsBatchMultiSet.get(2));
 
-        PegasusClientFactory.closeSingletonClient();
+      // check deleted
+      List<HashKeyData> values = new ArrayList<HashKeyData>();
+      client.batchMultiGet(tableName, keys, values);
+      Assert.assertEquals(4, values.size());
+      Assert.assertEquals(0, values.get(0).values.size());
+      Assert.assertEquals(0, values.get(1).values.size());
+      Assert.assertEquals(0, values.get(2).values.size());
+      Assert.assertEquals(0, values.get(3).values.size());
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
     }
 
-    @Test
-    public void testBatchMultiSetGetDel2() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        String tableName = "temp";
+    PegasusClientFactory.closeSingletonClient();
+  }
 
-        try {
-            // batch multi set
-            List<HashKeyData> items = new ArrayList<HashKeyData>();
-            items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel2_hash_key_1".getBytes()));
-            items.get(items.size()-1).addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
-            items.get(items.size()-1).addData("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes());
-            items.get(items.size()-1).addData("basic_test_sort_key_3".getBytes(), "basic_test_value_3".getBytes());
-            items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel2_hash_key_2".getBytes()));
-            items.get(items.size()-1).addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
-            items.get(items.size()-1).addData("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes());
-            items.add(new HashKeyData("TestBasic_testBatchMultiSetGetDel2_hash_key_3".getBytes()));
-            items.get(items.size()-1).addData("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes());
-            List<PException> resultsBatchMultiSet = new ArrayList<PException>();
-            int count = client.batchMultiSet2(tableName, items, resultsBatchMultiSet);
-            Assert.assertEquals(3, count);
-            Assert.assertEquals(3, resultsBatchMultiSet.size());
-            Assert.assertNull(resultsBatchMultiSet.get(0));
-            Assert.assertNull(resultsBatchMultiSet.get(1));
-            Assert.assertNull(resultsBatchMultiSet.get(2));
+  @Test
+  public void asyncApiTest() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    PegasusTableInterface tb = client.openTable("temp");
 
-            // batch multi get
-            List<Pair<byte[], List<byte[]>>> keys = new ArrayList<Pair<byte[], List<byte[]>>>();
-            List<byte[]> nullSortKeys = null;
-            keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_1".getBytes(), nullSortKeys));
-            keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_2".getBytes(), nullSortKeys));
-            keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_3".getBytes(), nullSortKeys));
-            keys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_4".getBytes(), nullSortKeys));
-            List<Pair<PException, HashKeyData>> resultsBatchMultiGet = new ArrayList<Pair<PException, HashKeyData>>();
-            count = client.batchMultiGet2(tableName, keys, resultsBatchMultiGet);
-            Assert.assertEquals(4, count);
-            Assert.assertEquals(4, resultsBatchMultiGet.size());
+    String asyncHashPrefix = "AsyncApiTestHash";
+    String asyncSortPrefix = "AsyncApiTestSort";
+    String asyncValuePrefix = "AsyncApiTestValue";
+    String key = asyncHashPrefix + "_0";
 
-            Assert.assertNull(resultsBatchMultiGet.get(0).getLeft());
-            Assert.assertArrayEquals(keys.get(0).getLeft(), resultsBatchMultiGet.get(0).getRight().hashKey);
-            Assert.assertEquals(3, resultsBatchMultiGet.get(0).getRight().values.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), resultsBatchMultiGet.get(0).getRight().values.get(0).getLeft());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), resultsBatchMultiGet.get(0).getRight().values.get(0).getRight());
-            Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), resultsBatchMultiGet.get(0).getRight().values.get(1).getLeft());
-            Assert.assertArrayEquals("basic_test_value_2".getBytes(), resultsBatchMultiGet.get(0).getRight().values.get(1).getRight());
-            Assert.assertArrayEquals("basic_test_sort_key_3".getBytes(), resultsBatchMultiGet.get(0).getRight().values.get(2).getLeft());
-            Assert.assertArrayEquals("basic_test_value_3".getBytes(), resultsBatchMultiGet.get(0).getRight().values.get(2).getRight());
-
-            Assert.assertNull(resultsBatchMultiGet.get(1).getLeft());
-            Assert.assertArrayEquals(keys.get(1).getLeft(), resultsBatchMultiGet.get(1).getRight().hashKey);
-            Assert.assertEquals(2, resultsBatchMultiGet.get(1).getRight().values.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), resultsBatchMultiGet.get(1).getRight().values.get(0).getLeft());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), resultsBatchMultiGet.get(1).getRight().values.get(0).getRight());
-            Assert.assertArrayEquals("basic_test_sort_key_2".getBytes(), resultsBatchMultiGet.get(1).getRight().values.get(1).getLeft());
-            Assert.assertArrayEquals("basic_test_value_2".getBytes(), resultsBatchMultiGet.get(1).getRight().values.get(1).getRight());
-
-            Assert.assertNull(resultsBatchMultiGet.get(2).getLeft());
-            Assert.assertArrayEquals(keys.get(2).getLeft(), resultsBatchMultiGet.get(2).getRight().hashKey);
-            Assert.assertEquals(1, resultsBatchMultiGet.get(2).getRight().values.size());
-            Assert.assertArrayEquals("basic_test_sort_key_1".getBytes(), resultsBatchMultiGet.get(2).getRight().values.get(0).getLeft());
-            Assert.assertArrayEquals("basic_test_value_1".getBytes(), resultsBatchMultiGet.get(2).getRight().values.get(0).getRight());
-
-            Assert.assertNull(resultsBatchMultiGet.get(3).getLeft());
-            Assert.assertArrayEquals(keys.get(3).getLeft(),resultsBatchMultiGet.get(3).getRight().hashKey);
-            Assert.assertEquals(0, resultsBatchMultiGet.get(3).getRight().values.size());
-
-            // batch multi del
-            List<Pair<byte[], List<byte[]>>> delKeys = new ArrayList<Pair<byte[], List<byte[]>>>();
-            List<byte[]> delSortKeys = new ArrayList<byte[]>();
-            delSortKeys.add("basic_test_sort_key_1".getBytes());
-            delSortKeys.add("basic_test_sort_key_2".getBytes());
-            delSortKeys.add("basic_test_sort_key_3".getBytes());
-            delSortKeys.add("basic_test_sort_key_4".getBytes());
-            delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_1".getBytes(), delSortKeys));
-            delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_2".getBytes(), delSortKeys));
-            delKeys.add(Pair.of("TestBasic_testBatchMultiSetGetDel2_hash_key_3".getBytes(), delSortKeys));
-            List<PException> resultsBatchMultiDel = new ArrayList<PException>();
-            count = client.batchMultiDel2(tableName, delKeys, resultsBatchMultiDel);
-            Assert.assertEquals(3, count);
-            Assert.assertEquals(3, resultsBatchMultiSet.size());
-            Assert.assertNull(resultsBatchMultiSet.get(0));
-            Assert.assertNull(resultsBatchMultiSet.get(1));
-            Assert.assertNull(resultsBatchMultiSet.get(2));
-
-            // check deleted
-            List<HashKeyData> values = new ArrayList<HashKeyData>();
-            client.batchMultiGet(tableName, keys, values);
-            Assert.assertEquals(4, values.size());
-            Assert.assertEquals(0, values.get(0).values.size());
-            Assert.assertEquals(0, values.get(1).values.size());
-            Assert.assertEquals(0, values.get(2).values.size());
-            Assert.assertEquals(0, values.get(3).values.size());
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
-
-        PegasusClientFactory.closeSingletonClient();
+    // Exist
+    System.out.println("Test exist");
+    try {
+      Assert.assertFalse(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
+      Assert.assertFalse(tb.asyncExist(null, null, 0).await().getNow());
+      Assert.assertFalse(tb.asyncExist(null, key.getBytes(), 0).await().getNow());
+      Assert.assertFalse(tb.asyncExist(key.getBytes(), null, 0).await().getNow());
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
     }
 
-    @Test
-    public void asyncApiTest() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        PegasusTableInterface tb = client.openTable("temp");
-
-        String asyncHashPrefix = "AsyncApiTestHash";
-        String asyncSortPrefix = "AsyncApiTestSort";
-        String asyncValuePrefix = "AsyncApiTestValue";
-        String key = asyncHashPrefix + "_0";
-
-        // Exist
-        System.out.println("Test exist");
-        try {
-            Assert.assertFalse(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
-            Assert.assertFalse(tb.asyncExist(null, null, 0).await().getNow());
-            Assert.assertFalse(tb.asyncExist(null, key.getBytes(), 0).await().getNow());
-            Assert.assertFalse(tb.asyncExist(key.getBytes(), null, 0).await().getNow());
-        } catch (Throwable e) {
-            e.printStackTrace();
-            Assert.fail();
-        }
-
-        try {
-            Assert.assertNull( tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(),0).await().getNow() );
-            Assert.assertTrue( tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow() );
-        } catch (Throwable e) {
-            e.printStackTrace();
-            Assert.fail();
-        }
-
-        // SortKeyCount
-        System.out.println("Test sortkeycount");
-        try {
-            Long ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
-            Assert.assertEquals(1, (long)ans);
-
-            Assert.assertNull( tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow() );
-            ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
-            Assert.assertEquals(0, (long)ans);
-
-            Future<Long> future = tb.asyncSortKeyCount(null, 0).await();
-            Assert.assertFalse( future.isSuccess() );
-            Assert.assertTrue( future.cause() instanceof PException );
-        } catch (Throwable e) {
-            e.printStackTrace();
-            Assert.fail();
-        }
-
-        // Get
-        System.out.println("Test get");
-        try {
-            Assert.assertNull( tb.asyncGet(null, null, 0).await().getNow() );
-            Assert.assertNull( tb.asyncGet(null, key.getBytes(), 0).await().getNow() );
-            Assert.assertNull( tb.asyncGet(key.getBytes(), null, 0).await().getNow() );
-            Assert.assertNull( tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow() );
-
-            Assert.assertNull( tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow() );
-            Assert.assertArrayEquals( key.getBytes(), tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow() );
-
-            Assert.assertNull( tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow() );
-        } catch (Throwable e) {
-            e.printStackTrace();
-            Assert.fail();
-        }
-
-        // Set & ttl
-        System.out.println("Test set & ttl");
-        try {
-            Assert.assertNull( tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 5, 0).await().getNow() );
-            Assert.assertArrayEquals( key.getBytes(), tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow() );
-
-            Integer ttlSeconds = tb.asyncTTL(key.getBytes(), key.getBytes(), 0).await().getNow();
-            Assert.assertEquals( 5, (int)ttlSeconds );
-
-            Thread.sleep(6000);
-            Assert.assertFalse( tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow() );
-        } catch (Throwable e) {
-            e.printStackTrace();
-            Assert.fail();
-        }
-
-        // multiGet exeception handle
-        System.out.println("Test multiget exception handle");
-        try {
-            Future<PegasusTableInterface.MultiGetResult> f = tb.asyncMultiGet(null, null, 0).await();
-            Assert.assertFalse( f.isSuccess() );
-            Assert.assertTrue( f.cause() instanceof PException );
-
-            f = tb.asyncMultiGet("".getBytes(), null, 0).await();
-            Assert.assertFalse(f.isSuccess());
-            Assert.assertTrue( f.cause() instanceof PException );
-        } catch (Throwable e) {
-            e.printStackTrace();
-            Assert.fail();
-        }
-
-        // multiset exception handle
-        System.out.println("Test multiset exception handle");
-        try {
-            Future<Void> f = tb.asyncMultiSet(null, null, 0).await();
-            Assert.assertFalse( f.isSuccess() );
-            Assert.assertTrue( f.cause() instanceof PException );
-
-            f = tb.asyncMultiSet("hehe".getBytes(), null, 0).await();
-            Assert.assertFalse(f.isSuccess());
-            Assert.assertTrue( f.cause() instanceof PException );
-
-            f = tb.asyncMultiSet("hehe".getBytes(), new ArrayList<Pair<byte[], byte[]>>(), 0).await();
-            Assert.assertFalse(f.isSuccess());
-            Assert.assertTrue( f.cause() instanceof PException );
-        } catch (Throwable e) {
-            e.printStackTrace();
-            Assert.fail();
-        }
-
-        // multiDel exception handle
-        System.out.println("Test multidel exception handle");
-        try {
-            Future<Void> f = tb.asyncMultiDel(null, null, 0).await();
-            Assert.assertFalse( f.isSuccess() );
-            Assert.assertTrue( f.cause() instanceof PException );
-
-            f = tb.asyncMultiDel("hehe".getBytes(), null, 0).await();
-            Assert.assertFalse(f.isSuccess());
-            Assert.assertTrue( f.cause() instanceof PException );
-
-            f = tb.asyncMultiDel("hehe".getBytes(), new ArrayList<byte[]>(), 0).await();
-            Assert.assertFalse(f.isSuccess());
-            Assert.assertTrue( f.cause() instanceof PException );
-        } catch (Throwable e) {
-            e.printStackTrace();
-            Assert.fail();
-        }
-
-        // Set/get pipeline
-        System.out.println("Test set/get pipeline");
-        try {
-            ArrayList<Future<Void>> fl = new ArrayList<Future<Void>>();
-
-            int totalNumber = 100;
-            for (int i=0; i<totalNumber; ++i) {
-                String formatted = String.format("%03d", i);
-                String sortKey = asyncSortPrefix + "_" + formatted;
-                String value = asyncValuePrefix + "_" + formatted;
-                Future<Void> f = tb.asyncSet(asyncHashPrefix.getBytes(), sortKey.getBytes(), value.getBytes(), 0, 0);
-                fl.add(f);
-            }
-
-            for (int i=0; i<totalNumber; ++i) {
-                fl.get(i).await();
-                Assert.assertTrue( fl.get(i).isSuccess() );
-            }
-
-            Long sortCount = tb.asyncSortKeyCount(asyncHashPrefix.getBytes(), 0).await().getNow();
-            Assert.assertEquals(totalNumber, (long)sortCount);
-
-            PegasusTableInterface.MultiGetSortKeysResult result =
-                    tb.asyncMultiGetSortKeys(asyncHashPrefix.getBytes(), 150, 1000000, 0).await().getNow();
-            Assert.assertEquals(totalNumber, result.keys.size());
-
-            ArrayList<Future<byte[]>> fl2 = new ArrayList<Future<byte[]>>();
-            for (byte[] sortKey: result.keys) {
-                Future<byte[]> f = tb.asyncGet(asyncHashPrefix.getBytes(), sortKey, 0);
-                fl2.add(f);
-            }
-
-            for (int i=0; i<totalNumber; ++i) {
-                byte[] value = fl2.get(i).await().getNow();
-                String formatted = String.format("%03d", i);
-                String expectValue = asyncValuePrefix + "_" + formatted;
-                Assert.assertArrayEquals(expectValue.getBytes(), value);
-            }
-
-            fl.clear();
-            for (byte[] sortKey: result.keys) {
-                Future<Void> f = tb.asyncDel(asyncHashPrefix.getBytes(), sortKey, 0);
-                fl.add(f);
-            }
-
-            for (Future<Void> f: fl) {
-                f.await();
-                Assert.assertTrue( f.isSuccess() );
-            }
-
-            Long sortKeyCount = tb.sortKeyCount(asyncHashPrefix.getBytes(), 0);
-            Assert.assertEquals(0, (long)sortKeyCount);
-
-        } catch (Throwable e) {
-            e.printStackTrace();
-            Assert.fail();
-        }
+    try {
+      Assert.assertNull(
+          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
+      Assert.assertTrue(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
     }
 
-    @Test
-    public void asyncApiSample() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        PegasusTableInterface table = client.openTable("temp");
+    // SortKeyCount
+    System.out.println("Test sortkeycount");
+    try {
+      Long ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
+      Assert.assertEquals(1, (long) ans);
 
-        String key = "hello";
-        String value = "world";
+      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
+      ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
+      Assert.assertEquals(0, (long) ans);
 
-        Future<Void> f = table.asyncSet(null, null, null, 0);
-        f.addListener(
-                new PegasusTableInterface.SetListener() {
-                    @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
-                        if (future.isSuccess()) {
-                            System.out.println("set succeed");
-                            Assert.fail();
-                        }
-                        else {
-                            assert future.cause() instanceof PException;
-                        }
-                    }
-                }
-        );
-        f.awaitUninterruptibly();
+      Future<Long> future = tb.asyncSortKeyCount(null, 0).await();
+      Assert.assertFalse(future.isSuccess());
+      Assert.assertTrue(future.cause() instanceof PException);
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
     }
 
-    @Test
-    public void scanWithFilter() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        PegasusTableInterface table = client.openTable("temp");
-        byte[] hashKey = "x".getBytes();
-        List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
-        values.add(Pair.of("m_1".getBytes(), "a".getBytes()));
-        values.add(Pair.of("m_2".getBytes(), "a".getBytes()));
-        values.add(Pair.of("m_3".getBytes(), "a".getBytes()));
-        values.add(Pair.of("m_4".getBytes(), "a".getBytes()));
-        values.add(Pair.of("m_5".getBytes(), "a".getBytes()));
-        values.add(Pair.of("n_1".getBytes(), "b".getBytes()));
-        values.add(Pair.of("n_2".getBytes(), "b".getBytes()));
-        values.add(Pair.of("n_3".getBytes(), "b".getBytes()));
+    // Get
+    System.out.println("Test get");
+    try {
+      Assert.assertNull(tb.asyncGet(null, null, 0).await().getNow());
+      Assert.assertNull(tb.asyncGet(null, key.getBytes(), 0).await().getNow());
+      Assert.assertNull(tb.asyncGet(key.getBytes(), null, 0).await().getNow());
+      Assert.assertNull(tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
 
-        try {
-            // multi set
-            table.multiSet(hashKey, values, 0);
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
+      Assert.assertNull(
+          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
+      Assert.assertArrayEquals(
+          key.getBytes(), tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
 
-        try {
-            // scan with batch_size = 10
-            ScanOptions options = new ScanOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "m".getBytes();
-            options.batchSize = 10;
-            Map<String, String> data = new HashMap<String, String>();
-            PegasusScannerInterface scanner = table.getScanner(hashKey, null, null, options);
-            Assert.assertNotNull(scanner);
-            Pair<Pair<byte[], byte[]>, byte[]> item;
-            while((item = scanner.next()) != null) {
-                Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
-                Assert.assertArrayEquals("a".getBytes(), item.getRight());
-                data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
-            }
-            Assert.assertEquals(5, data.size());
-            Assert.assertTrue(data.containsKey("m_1"));
-            Assert.assertTrue(data.containsKey("m_2"));
-            Assert.assertTrue(data.containsKey("m_3"));
-            Assert.assertTrue(data.containsKey("m_4"));
-            Assert.assertTrue(data.containsKey("m_5"));
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
-
-        try {
-            // scan with batch_size = 3
-            ScanOptions options = new ScanOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "m".getBytes();
-            options.batchSize = 3;
-            Map<String, String> data = new HashMap<String, String>();
-            PegasusScannerInterface scanner = table.getScanner(hashKey, null, null, options);
-            Assert.assertNotNull(scanner);
-            Pair<Pair<byte[], byte[]>, byte[]> item;
-            while((item = scanner.next()) != null) {
-                Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
-                Assert.assertArrayEquals("a".getBytes(), item.getRight());
-                data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
-            }
-            Assert.assertEquals(5, data.size());
-            Assert.assertTrue(data.containsKey("m_1"));
-            Assert.assertTrue(data.containsKey("m_2"));
-            Assert.assertTrue(data.containsKey("m_3"));
-            Assert.assertTrue(data.containsKey("m_4"));
-            Assert.assertTrue(data.containsKey("m_5"));
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
-
-        try {
-            // multi del
-            List<byte[]> sortKeys = new ArrayList<byte[]>();
-            for (int i = 0; i < values.size(); i++) {
-                sortKeys.add(values.get(i).getKey());
-            }
-            table.multiDel(hashKey, sortKeys, 0);
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
-
-        PegasusClientFactory.closeSingletonClient();
+      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
     }
 
-    @Test
-    public void fullScanWithFilter() throws PException {
-        PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-        PegasusTableInterface table = client.openTable("temp");
-        byte[] hashKey = "x".getBytes();
-        List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
-        values.add(Pair.of("m_1".getBytes(), "a".getBytes()));
-        values.add(Pair.of("m_2".getBytes(), "a".getBytes()));
-        values.add(Pair.of("m_3".getBytes(), "a".getBytes()));
-        values.add(Pair.of("m_4".getBytes(), "a".getBytes()));
-        values.add(Pair.of("m_5".getBytes(), "a".getBytes()));
-        values.add(Pair.of("n_1".getBytes(), "b".getBytes()));
-        values.add(Pair.of("n_2".getBytes(), "b".getBytes()));
-        values.add(Pair.of("n_3".getBytes(), "b".getBytes()));
+    // Set & ttl
+    System.out.println("Test set & ttl");
+    try {
+      Assert.assertNull(
+          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 5, 0).await().getNow());
+      Assert.assertArrayEquals(
+          key.getBytes(), tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
 
-        try {
-            // multi set
-            table.multiSet(hashKey, values, 0);
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
+      Integer ttlSeconds = tb.asyncTTL(key.getBytes(), key.getBytes(), 0).await().getNow();
+      Assert.assertEquals(5, (int) ttlSeconds);
 
-        try {
-            // scan with batch_size = 10
-            ScanOptions options = new ScanOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "m".getBytes();
-            options.batchSize = 10;
-            Map<String, String> data = new HashMap<String, String>();
-            List<PegasusScannerInterface> scanners = table.getUnorderedScanners(1, options);
-            Assert.assertEquals(1, scanners.size());
-            PegasusScannerInterface scanner = scanners.get(0);
-            Pair<Pair<byte[], byte[]>, byte[]> item;
-            while((item = scanner.next()) != null) {
-                Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
-                Assert.assertArrayEquals("a".getBytes(), item.getRight());
-                data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
-            }
-            Assert.assertEquals(5, data.size());
-            Assert.assertTrue(data.containsKey("m_1"));
-            Assert.assertTrue(data.containsKey("m_2"));
-            Assert.assertTrue(data.containsKey("m_3"));
-            Assert.assertTrue(data.containsKey("m_4"));
-            Assert.assertTrue(data.containsKey("m_5"));
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
-
-        try {
-            // scan with batch_size = 3
-            ScanOptions options = new ScanOptions();
-            options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
-            options.sortKeyFilterPattern = "m".getBytes();
-            options.batchSize = 3;
-            Map<String, String> data = new HashMap<String, String>();
-            List<PegasusScannerInterface> scanners = table.getUnorderedScanners(1, options);
-            Assert.assertEquals(1, scanners.size());
-            PegasusScannerInterface scanner = scanners.get(0);
-            Pair<Pair<byte[], byte[]>, byte[]> item;
-            while((item = scanner.next()) != null) {
-                Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
-                Assert.assertArrayEquals("a".getBytes(), item.getRight());
-                data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
-            }
-            Assert.assertEquals(5, data.size());
-            Assert.assertTrue(data.containsKey("m_1"));
-            Assert.assertTrue(data.containsKey("m_2"));
-            Assert.assertTrue(data.containsKey("m_3"));
-            Assert.assertTrue(data.containsKey("m_4"));
-            Assert.assertTrue(data.containsKey("m_5"));
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
-
-        try {
-            // multi del
-            List<byte[]> sortKeys = new ArrayList<byte[]>();
-            for (int i = 0; i < values.size(); i++) {
-                sortKeys.add(values.get(i).getKey());
-            }
-            table.multiDel(hashKey, sortKeys, 0);
-        }
-        catch (PException e) {
-            e.printStackTrace();
-            Assert.assertTrue(false);
-        }
-
-        PegasusClientFactory.closeSingletonClient();
+      Thread.sleep(6000);
+      Assert.assertFalse(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
     }
+
+    // multiGet exeception handle
+    System.out.println("Test multiget exception handle");
+    try {
+      Future<PegasusTableInterface.MultiGetResult> f = tb.asyncMultiGet(null, null, 0).await();
+      Assert.assertFalse(f.isSuccess());
+      Assert.assertTrue(f.cause() instanceof PException);
+
+      f = tb.asyncMultiGet("".getBytes(), null, 0).await();
+      Assert.assertFalse(f.isSuccess());
+      Assert.assertTrue(f.cause() instanceof PException);
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+
+    // multiset exception handle
+    System.out.println("Test multiset exception handle");
+    try {
+      Future<Void> f = tb.asyncMultiSet(null, null, 0).await();
+      Assert.assertFalse(f.isSuccess());
+      Assert.assertTrue(f.cause() instanceof PException);
+
+      f = tb.asyncMultiSet("hehe".getBytes(), null, 0).await();
+      Assert.assertFalse(f.isSuccess());
+      Assert.assertTrue(f.cause() instanceof PException);
+
+      f = tb.asyncMultiSet("hehe".getBytes(), new ArrayList<Pair<byte[], byte[]>>(), 0).await();
+      Assert.assertFalse(f.isSuccess());
+      Assert.assertTrue(f.cause() instanceof PException);
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+
+    // multiDel exception handle
+    System.out.println("Test multidel exception handle");
+    try {
+      Future<Void> f = tb.asyncMultiDel(null, null, 0).await();
+      Assert.assertFalse(f.isSuccess());
+      Assert.assertTrue(f.cause() instanceof PException);
+
+      f = tb.asyncMultiDel("hehe".getBytes(), null, 0).await();
+      Assert.assertFalse(f.isSuccess());
+      Assert.assertTrue(f.cause() instanceof PException);
+
+      f = tb.asyncMultiDel("hehe".getBytes(), new ArrayList<byte[]>(), 0).await();
+      Assert.assertFalse(f.isSuccess());
+      Assert.assertTrue(f.cause() instanceof PException);
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+
+    // Set/get pipeline
+    System.out.println("Test set/get pipeline");
+    try {
+      ArrayList<Future<Void>> fl = new ArrayList<Future<Void>>();
+
+      int totalNumber = 100;
+      for (int i = 0; i < totalNumber; ++i) {
+        String formatted = String.format("%03d", i);
+        String sortKey = asyncSortPrefix + "_" + formatted;
+        String value = asyncValuePrefix + "_" + formatted;
+        Future<Void> f =
+            tb.asyncSet(asyncHashPrefix.getBytes(), sortKey.getBytes(), value.getBytes(), 0, 0);
+        fl.add(f);
+      }
+
+      for (int i = 0; i < totalNumber; ++i) {
+        fl.get(i).await();
+        Assert.assertTrue(fl.get(i).isSuccess());
+      }
+
+      Long sortCount = tb.asyncSortKeyCount(asyncHashPrefix.getBytes(), 0).await().getNow();
+      Assert.assertEquals(totalNumber, (long) sortCount);
+
+      PegasusTableInterface.MultiGetSortKeysResult result =
+          tb.asyncMultiGetSortKeys(asyncHashPrefix.getBytes(), 150, 1000000, 0).await().getNow();
+      Assert.assertEquals(totalNumber, result.keys.size());
+
+      ArrayList<Future<byte[]>> fl2 = new ArrayList<Future<byte[]>>();
+      for (byte[] sortKey : result.keys) {
+        Future<byte[]> f = tb.asyncGet(asyncHashPrefix.getBytes(), sortKey, 0);
+        fl2.add(f);
+      }
+
+      for (int i = 0; i < totalNumber; ++i) {
+        byte[] value = fl2.get(i).await().getNow();
+        String formatted = String.format("%03d", i);
+        String expectValue = asyncValuePrefix + "_" + formatted;
+        Assert.assertArrayEquals(expectValue.getBytes(), value);
+      }
+
+      fl.clear();
+      for (byte[] sortKey : result.keys) {
+        Future<Void> f = tb.asyncDel(asyncHashPrefix.getBytes(), sortKey, 0);
+        fl.add(f);
+      }
+
+      for (Future<Void> f : fl) {
+        f.await();
+        Assert.assertTrue(f.isSuccess());
+      }
+
+      Long sortKeyCount = tb.sortKeyCount(asyncHashPrefix.getBytes(), 0);
+      Assert.assertEquals(0, (long) sortKeyCount);
+
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+  }
+
+  @Test
+  public void asyncApiSample() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    PegasusTableInterface table = client.openTable("temp");
+
+    String key = "hello";
+    String value = "world";
+
+    Future<Void> f = table.asyncSet(null, null, null, 0);
+    f.addListener(
+        new PegasusTableInterface.SetListener() {
+          @Override
+          public void operationComplete(Future<Void> future) throws Exception {
+            if (future.isSuccess()) {
+              System.out.println("set succeed");
+              Assert.fail();
+            } else {
+              assert future.cause() instanceof PException;
+            }
+          }
+        });
+    f.awaitUninterruptibly();
+  }
+
+  @Test
+  public void scanWithFilter() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    PegasusTableInterface table = client.openTable("temp");
+    byte[] hashKey = "x".getBytes();
+    List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+    values.add(Pair.of("m_1".getBytes(), "a".getBytes()));
+    values.add(Pair.of("m_2".getBytes(), "a".getBytes()));
+    values.add(Pair.of("m_3".getBytes(), "a".getBytes()));
+    values.add(Pair.of("m_4".getBytes(), "a".getBytes()));
+    values.add(Pair.of("m_5".getBytes(), "a".getBytes()));
+    values.add(Pair.of("n_1".getBytes(), "b".getBytes()));
+    values.add(Pair.of("n_2".getBytes(), "b".getBytes()));
+    values.add(Pair.of("n_3".getBytes(), "b".getBytes()));
+
+    try {
+      // multi set
+      table.multiSet(hashKey, values, 0);
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
+    }
+
+    try {
+      // scan with batch_size = 10
+      ScanOptions options = new ScanOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "m".getBytes();
+      options.batchSize = 10;
+      Map<String, String> data = new HashMap<String, String>();
+      PegasusScannerInterface scanner = table.getScanner(hashKey, null, null, options);
+      Assert.assertNotNull(scanner);
+      Pair<Pair<byte[], byte[]>, byte[]> item;
+      while ((item = scanner.next()) != null) {
+        Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
+        Assert.assertArrayEquals("a".getBytes(), item.getRight());
+        data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
+      }
+      Assert.assertEquals(5, data.size());
+      Assert.assertTrue(data.containsKey("m_1"));
+      Assert.assertTrue(data.containsKey("m_2"));
+      Assert.assertTrue(data.containsKey("m_3"));
+      Assert.assertTrue(data.containsKey("m_4"));
+      Assert.assertTrue(data.containsKey("m_5"));
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
+    }
+
+    try {
+      // scan with batch_size = 3
+      ScanOptions options = new ScanOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "m".getBytes();
+      options.batchSize = 3;
+      Map<String, String> data = new HashMap<String, String>();
+      PegasusScannerInterface scanner = table.getScanner(hashKey, null, null, options);
+      Assert.assertNotNull(scanner);
+      Pair<Pair<byte[], byte[]>, byte[]> item;
+      while ((item = scanner.next()) != null) {
+        Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
+        Assert.assertArrayEquals("a".getBytes(), item.getRight());
+        data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
+      }
+      Assert.assertEquals(5, data.size());
+      Assert.assertTrue(data.containsKey("m_1"));
+      Assert.assertTrue(data.containsKey("m_2"));
+      Assert.assertTrue(data.containsKey("m_3"));
+      Assert.assertTrue(data.containsKey("m_4"));
+      Assert.assertTrue(data.containsKey("m_5"));
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
+    }
+
+    try {
+      // multi del
+      List<byte[]> sortKeys = new ArrayList<byte[]>();
+      for (int i = 0; i < values.size(); i++) {
+        sortKeys.add(values.get(i).getKey());
+      }
+      table.multiDel(hashKey, sortKeys, 0);
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
+    }
+
+    PegasusClientFactory.closeSingletonClient();
+  }
+
+  @Test
+  public void fullScanWithFilter() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    PegasusTableInterface table = client.openTable("temp");
+    byte[] hashKey = "x".getBytes();
+    List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+    values.add(Pair.of("m_1".getBytes(), "a".getBytes()));
+    values.add(Pair.of("m_2".getBytes(), "a".getBytes()));
+    values.add(Pair.of("m_3".getBytes(), "a".getBytes()));
+    values.add(Pair.of("m_4".getBytes(), "a".getBytes()));
+    values.add(Pair.of("m_5".getBytes(), "a".getBytes()));
+    values.add(Pair.of("n_1".getBytes(), "b".getBytes()));
+    values.add(Pair.of("n_2".getBytes(), "b".getBytes()));
+    values.add(Pair.of("n_3".getBytes(), "b".getBytes()));
+
+    try {
+      // multi set
+      table.multiSet(hashKey, values, 0);
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
+    }
+
+    try {
+      // scan with batch_size = 10
+      ScanOptions options = new ScanOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "m".getBytes();
+      options.batchSize = 10;
+      Map<String, String> data = new HashMap<String, String>();
+      List<PegasusScannerInterface> scanners = table.getUnorderedScanners(1, options);
+      Assert.assertEquals(1, scanners.size());
+      PegasusScannerInterface scanner = scanners.get(0);
+      Pair<Pair<byte[], byte[]>, byte[]> item;
+      while ((item = scanner.next()) != null) {
+        Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
+        Assert.assertArrayEquals("a".getBytes(), item.getRight());
+        data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
+      }
+      Assert.assertEquals(5, data.size());
+      Assert.assertTrue(data.containsKey("m_1"));
+      Assert.assertTrue(data.containsKey("m_2"));
+      Assert.assertTrue(data.containsKey("m_3"));
+      Assert.assertTrue(data.containsKey("m_4"));
+      Assert.assertTrue(data.containsKey("m_5"));
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
+    }
+
+    try {
+      // scan with batch_size = 3
+      ScanOptions options = new ScanOptions();
+      options.sortKeyFilterType = FilterType.FT_MATCH_PREFIX;
+      options.sortKeyFilterPattern = "m".getBytes();
+      options.batchSize = 3;
+      Map<String, String> data = new HashMap<String, String>();
+      List<PegasusScannerInterface> scanners = table.getUnorderedScanners(1, options);
+      Assert.assertEquals(1, scanners.size());
+      PegasusScannerInterface scanner = scanners.get(0);
+      Pair<Pair<byte[], byte[]>, byte[]> item;
+      while ((item = scanner.next()) != null) {
+        Assert.assertArrayEquals(hashKey, item.getLeft().getLeft());
+        Assert.assertArrayEquals("a".getBytes(), item.getRight());
+        data.put(new String(item.getLeft().getRight()), new String(item.getRight()));
+      }
+      Assert.assertEquals(5, data.size());
+      Assert.assertTrue(data.containsKey("m_1"));
+      Assert.assertTrue(data.containsKey("m_2"));
+      Assert.assertTrue(data.containsKey("m_3"));
+      Assert.assertTrue(data.containsKey("m_4"));
+      Assert.assertTrue(data.containsKey("m_5"));
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
+    }
+
+    try {
+      // multi del
+      List<byte[]> sortKeys = new ArrayList<byte[]>();
+      for (int i = 0; i < values.size(); i++) {
+        sortKeys.add(values.get(i).getKey());
+      }
+      table.multiDel(hashKey, sortKeys, 0);
+    } catch (PException e) {
+      e.printStackTrace();
+      Assert.assertTrue(false);
+    }
+
+    PegasusClientFactory.closeSingletonClient();
+  }
 }

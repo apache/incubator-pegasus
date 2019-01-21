@@ -9,7 +9,6 @@ cd "${PROJECT_DIR}" || exit -1
 # lint all scripts, abort if there's any warning.
 function shellcheck_must_pass()
 {
-    echo "$1"
     if [[ $(shellcheck "$1") ]]; then
         echo "shellcheck $1 failed"
         shellcheck "$1"
@@ -18,6 +17,14 @@ function shellcheck_must_pass()
 }
 shellcheck_must_pass ./scripts/format-all.sh
 shellcheck_must_pass ./scripts/travis.sh
+
+# ensure source files are well formatted
+./scripts/format-all.sh
+if [[ $(git status -s) ]]; then
+    git status -s
+    echo "please format the above files before commit"
+    exit 1
+fi
 
 # start pegasus onebox environment
 wget https://github.com/XiaoMi/pegasus/releases/download/v1.11.2/pegasus-tools-1.11.2-a186d38-ubuntu-18.04-release.tar.gz
