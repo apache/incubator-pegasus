@@ -5,22 +5,21 @@ package com.xiaomi.infra.pegasus.client;
 
 /**
  * @author qinzuoyan
- *
- * Filter type.
+ *     <p>Filter type.
  */
 public enum FilterType {
-    FT_NO_FILTER(0),
-    FT_MATCH_ANYWHERE(1), // match filter string at any position
-    FT_MATCH_PREFIX(2),   // match filter string at prefix
-    FT_MATCH_POSTFIX(3);  // match filter string at postfix
+  FT_NO_FILTER(0),
+  FT_MATCH_ANYWHERE(1), // match filter string at any position
+  FT_MATCH_PREFIX(2), // match filter string at prefix
+  FT_MATCH_POSTFIX(3); // match filter string at postfix
 
-    private final int value;
+  private final int value;
 
-    private FilterType(int value) {
-        this.value = value;
-    }
+  private FilterType(int value) {
+    this.value = value;
+  }
 
-    public int getValue() {
-        return value;
-    }
+  public int getValue() {
+    return value;
+  }
 }

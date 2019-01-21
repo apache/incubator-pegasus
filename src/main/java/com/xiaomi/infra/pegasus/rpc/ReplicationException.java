@@ -6,30 +6,30 @@ package com.xiaomi.infra.pegasus.rpc;
 import com.xiaomi.infra.pegasus.base.error_code;
 
 public class ReplicationException extends Exception {
-    private static final long serialVersionUID = 4186015142427786503L;
+  private static final long serialVersionUID = 4186015142427786503L;
 
-    public error_code.error_types err_type;
+  public error_code.error_types err_type;
 
-    public ReplicationException() {
-        super();
-    }
+  public ReplicationException() {
+    super();
+  }
 
-    public ReplicationException(error_code.error_types t) {
-        super(t.name());
-        err_type = t;
-    }
+  public ReplicationException(error_code.error_types t) {
+    super(t.name());
+    err_type = t;
+  }
 
-    public ReplicationException(error_code.error_types t, String message) {
-        super(t.name()+": "+message);
-        err_type = t;
-    }
+  public ReplicationException(error_code.error_types t, String message) {
+    super(t.name() + ": " + message);
+    err_type = t;
+  }
 
-    public ReplicationException(Throwable cause) {
-        super(cause);
-        err_type = error_code.error_types.ERR_UNKNOWN;
-    }
+  public ReplicationException(Throwable cause) {
+    super(cause);
+    err_type = error_code.error_types.ERR_UNKNOWN;
+  }
 
-    public ReplicationException(String message, Throwable cause) {
-        super(message, cause);
-    }    
+  public ReplicationException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

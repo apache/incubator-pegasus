@@ -9,7 +9,6 @@ import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.operator.query_cfg_operator;
 import com.xiaomi.infra.pegasus.replication.partition_configuration;
 import io.netty.channel.EventLoopGroup;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -17,206 +16,209 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Created by weijiesun on 17-9-13.
- */
+/** Created by weijiesun on 17-9-13. */
 public class MetaSession {
-    public MetaSession(ClusterManager manager, String addrList[],
-                       int eachQueryTimeoutInMills, int defaultMaxQueryCount, EventLoopGroup g) throws IllegalArgumentException {
-        clusterManager = manager;
-        metaList = new ArrayList<ReplicaSession>();
-        for (String addr: addrList) {
-            rpc_address rpc_addr = new rpc_address();
-            if (rpc_addr.fromString(addr)) {
-                logger.info("add {} as meta server", addr);
-                metaList.add(clusterManager.getReplicaSession(rpc_addr));
-            }
-            else {
-                logger.error("invalid address {}", addr);
-            }
-        }
-        if (metaList.isEmpty()) {
-            throw new IllegalArgumentException("no valid meta server address");
-        }
-        curLeader = 0;
-
-        this.eachQueryTimeoutInMills = eachQueryTimeoutInMills;
-        this.defaultMaxQueryCount = defaultMaxQueryCount;
-        this.group = g;
+  public MetaSession(
+      ClusterManager manager,
+      String addrList[],
+      int eachQueryTimeoutInMills,
+      int defaultMaxQueryCount,
+      EventLoopGroup g)
+      throws IllegalArgumentException {
+    clusterManager = manager;
+    metaList = new ArrayList<ReplicaSession>();
+    for (String addr : addrList) {
+      rpc_address rpc_addr = new rpc_address();
+      if (rpc_addr.fromString(addr)) {
+        logger.info("add {} as meta server", addr);
+        metaList.add(clusterManager.getReplicaSession(rpc_addr));
+      } else {
+        logger.error("invalid address {}", addr);
+      }
     }
-
-    static public final error_types getMetaServiceError(client_operator metaQueryOp) {
-        if (metaQueryOp.rpc_error.errno != error_types.ERR_OK)
-            return metaQueryOp.rpc_error.errno;
-        query_cfg_operator op = (query_cfg_operator) metaQueryOp;
-        return op.get_response().getErr().errno;
+    if (metaList.isEmpty()) {
+      throw new IllegalArgumentException("no valid meta server address");
     }
+    curLeader = 0;
 
-    static public final rpc_address getMetaServiceForwardAddress(client_operator metaQueryOp) {
-        if (metaQueryOp.rpc_error.errno != error_types.ERR_OK)
-            return null;
-        query_cfg_operator op = (query_cfg_operator) metaQueryOp;
-        if (op.get_response().getErr().errno != error_types.ERR_FORWARD_TO_OTHERS)
-            return null;
-        java.util.List<partition_configuration> partitions = op.get_response().getPartitions();
-        if (partitions == null || partitions.isEmpty())
-            return null;
-        rpc_address addr = partitions.get(0).getPrimary();
-        if (addr == null || addr.isInvalid())
-            return null;
-        return addr;
+    this.eachQueryTimeoutInMills = eachQueryTimeoutInMills;
+    this.defaultMaxQueryCount = defaultMaxQueryCount;
+    this.group = g;
+  }
+
+  public static final error_types getMetaServiceError(client_operator metaQueryOp) {
+    if (metaQueryOp.rpc_error.errno != error_types.ERR_OK) return metaQueryOp.rpc_error.errno;
+    query_cfg_operator op = (query_cfg_operator) metaQueryOp;
+    return op.get_response().getErr().errno;
+  }
+
+  public static final rpc_address getMetaServiceForwardAddress(client_operator metaQueryOp) {
+    if (metaQueryOp.rpc_error.errno != error_types.ERR_OK) return null;
+    query_cfg_operator op = (query_cfg_operator) metaQueryOp;
+    if (op.get_response().getErr().errno != error_types.ERR_FORWARD_TO_OTHERS) return null;
+    java.util.List<partition_configuration> partitions = op.get_response().getPartitions();
+    if (partitions == null || partitions.isEmpty()) return null;
+    rpc_address addr = partitions.get(0).getPrimary();
+    if (addr == null || addr.isInvalid()) return null;
+    return addr;
+  }
+
+  public final void asyncQuery(client_operator op, Runnable callbackFunc, int maxQueryCount) {
+    if (maxQueryCount == 0) {
+      maxQueryCount = defaultMaxQueryCount;
     }
-
-    public final void asyncQuery(client_operator op, Runnable callbackFunc, int maxQueryCount) {
-        if (maxQueryCount == 0) {
-            maxQueryCount = defaultMaxQueryCount;
-        }
-        MetaRequestRound round;
-        synchronized (this) {
-            round = new MetaRequestRound(op, callbackFunc, maxQueryCount, metaList.get(curLeader));
-        }
-        asyncCall(round);
+    MetaRequestRound round;
+    synchronized (this) {
+      round = new MetaRequestRound(op, callbackFunc, maxQueryCount, metaList.get(curLeader));
     }
+    asyncCall(round);
+  }
 
-    public final void query(client_operator op, int maxQueryCount) {
-        FutureTask<Void> v = new FutureTask<Void>(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
+  public final void query(client_operator op, int maxQueryCount) {
+    FutureTask<Void> v =
+        new FutureTask<Void>(
+            new Callable<Void>() {
+              @Override
+              public Void call() throws Exception {
                 return null;
-            }
-        });
-        asyncQuery(op, v, maxQueryCount);
-        while (true) {
-            try {
-                v.get();
-                return;
-            } catch (InterruptedException e) {
-                logger.info("operation {} got interrupt exception: ", op.get_gpid().toString(), e);
-            } catch (ExecutionException e) {
-                logger.warn("operation {} got execution exception, just return: ", op.get_gpid().toString(), e);
-                return;
-            }
-        }
+              }
+            });
+    asyncQuery(op, v, maxQueryCount);
+    while (true) {
+      try {
+        v.get();
+        return;
+      } catch (InterruptedException e) {
+        logger.info("operation {} got interrupt exception: ", op.get_gpid().toString(), e);
+      } catch (ExecutionException e) {
+        logger.warn(
+            "operation {} got execution exception, just return: ", op.get_gpid().toString(), e);
+        return;
+      }
+    }
+  }
+
+  public final void closeSession() {
+    for (ReplicaSession rs : metaList) {
+      rs.closeSession();
+    }
+  }
+
+  private final void asyncCall(final MetaRequestRound round) {
+    round.lastSession.asyncSend(
+        round.op,
+        new Runnable() {
+          @Override
+          public void run() {
+            onFinishQueryMeta(round);
+          }
+        },
+        eachQueryTimeoutInMills);
+  }
+
+  private final void onFinishQueryMeta(final MetaRequestRound round) {
+    client_operator op = round.op;
+
+    boolean needDelay = false;
+    boolean needSwitchLeader = false;
+    rpc_address forwardAddress = null;
+
+    --round.maxQueryCount;
+
+    error_types metaError = error_types.ERR_UNKNOWN;
+    if (op.rpc_error.errno == error_types.ERR_OK) {
+      metaError = getMetaServiceError(op);
+      if (metaError == error_types.ERR_SERVICE_NOT_ACTIVE) {
+        needDelay = true;
+        needSwitchLeader = false;
+      } else if (metaError == error_types.ERR_FORWARD_TO_OTHERS) {
+        needDelay = false;
+        needSwitchLeader = true;
+        forwardAddress = getMetaServiceForwardAddress(op);
+      } else {
+        round.callbackFunc.run();
+        return;
+      }
+    } else if (op.rpc_error.errno == error_types.ERR_SESSION_RESET
+        || op.rpc_error.errno == error_types.ERR_TIMEOUT) {
+      needDelay = false;
+      needSwitchLeader = true;
+    } else {
+      logger.error("unknown error: {}", op.rpc_error.errno.toString());
+      round.callbackFunc.run();
+      return;
     }
 
-    public final void closeSession() {
-        for (ReplicaSession rs: metaList) {
-            rs.closeSession();
+    logger.info(
+        "query meta got error, rpc error({}), meta error({}), forward address({}), current leader({}), "
+            + "remain retry count({}), need switch leader({}), need delay({})",
+        op.rpc_error.errno.toString(),
+        metaError.toString(),
+        forwardAddress,
+        round.lastSession.name(),
+        round.maxQueryCount,
+        needSwitchLeader,
+        needDelay);
+    synchronized (this) {
+      if (needSwitchLeader) {
+        if (forwardAddress != null && !forwardAddress.isInvalid()) {
+          boolean found = false;
+          for (int i = 0; i < metaList.size(); i++) {
+            if (metaList.get(i).getAddress().equals(forwardAddress)) {
+              curLeader = i;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            logger.info("add forward address {} as meta server", forwardAddress);
+            metaList.add(clusterManager.getReplicaSession(forwardAddress));
+            curLeader = metaList.size() - 1;
+          }
+        } else if (metaList.get(curLeader) == round.lastSession) {
+          curLeader = (curLeader + 1) % metaList.size();
         }
+      }
+      round.lastSession = metaList.get(curLeader);
     }
 
-    private final void asyncCall(final MetaRequestRound round) {
-        round.lastSession.asyncSend(round.op, new Runnable() {
-            @Override
-            public void run() {
-                onFinishQueryMeta(round);
-            }
-        }, eachQueryTimeoutInMills);
+    if (round.maxQueryCount == 0) {
+      round.callbackFunc.run();
+      return;
     }
 
-    private final void onFinishQueryMeta(final MetaRequestRound round) {
-        client_operator op = round.op;
+    group.schedule(
+        new Runnable() {
+          @Override
+          public void run() {
+            asyncCall(round);
+          }
+        },
+        needDelay ? 1 : 0,
+        TimeUnit.SECONDS);
+  }
 
-        boolean needDelay = false;
-        boolean needSwitchLeader = false;
-        rpc_address forwardAddress = null;
+  private static final class MetaRequestRound {
+    public client_operator op;
+    public Runnable callbackFunc;
+    public int maxQueryCount;
+    public ReplicaSession lastSession;
 
-        --round.maxQueryCount;
-
-        error_types metaError = error_types.ERR_UNKNOWN;
-        if (op.rpc_error.errno == error_types.ERR_OK) {
-            metaError = getMetaServiceError(op);
-            if (metaError == error_types.ERR_SERVICE_NOT_ACTIVE) {
-                needDelay = true;
-                needSwitchLeader = false;
-            }
-            else if (metaError == error_types.ERR_FORWARD_TO_OTHERS) {
-                needDelay = false;
-                needSwitchLeader = true;
-                forwardAddress = getMetaServiceForwardAddress(op);
-            }
-            else {
-                round.callbackFunc.run();
-                return;
-            }
-        }
-        else if (op.rpc_error.errno == error_types.ERR_SESSION_RESET || op.rpc_error.errno == error_types.ERR_TIMEOUT) {
-            needDelay = false;
-            needSwitchLeader = true;
-        }
-        else {
-            logger.error("unknown error: {}", op.rpc_error.errno.toString());
-            round.callbackFunc.run();
-            return;
-        }
-
-        logger.info("query meta got error, rpc error({}), meta error({}), forward address({}), current leader({}), " +
-                        "remain retry count({}), need switch leader({}), need delay({})",
-                op.rpc_error.errno.toString(),
-                metaError.toString(),
-                forwardAddress,
-                round.lastSession.name(),
-                round.maxQueryCount,
-                needSwitchLeader,
-                needDelay
-                );
-        synchronized (this) {
-            if (needSwitchLeader) {
-                if (forwardAddress != null && !forwardAddress.isInvalid()) {
-                    boolean found = false;
-                    for (int i = 0; i < metaList.size(); i++) {
-                        if (metaList.get(i).getAddress().equals(forwardAddress)) {
-                            curLeader = i;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        logger.info("add forward address {} as meta server", forwardAddress);
-                        metaList.add(clusterManager.getReplicaSession(forwardAddress));
-                        curLeader = metaList.size() - 1;
-                    }
-                }
-                else if (metaList.get(curLeader) == round.lastSession) {
-                    curLeader = (curLeader + 1) % metaList.size();
-                }
-            }
-            round.lastSession = metaList.get(curLeader);
-        }
-
-        if (round.maxQueryCount == 0) {
-            round.callbackFunc.run();
-            return;
-        }
-
-        group.schedule(new Runnable() {
-            @Override
-            public void run() {
-                asyncCall(round);
-            }
-        }, needDelay ? 1 : 0, TimeUnit.SECONDS);
+    public MetaRequestRound(client_operator o, Runnable r, int q, ReplicaSession l) {
+      op = o;
+      callbackFunc = r;
+      maxQueryCount = q;
+      lastSession = l;
     }
+  }
 
-    private static final class MetaRequestRound {
-        public client_operator op;
-        public Runnable callbackFunc;
-        public int maxQueryCount;
-        public ReplicaSession lastSession;
+  private ClusterManager clusterManager;
+  private List<ReplicaSession> metaList;
+  private int curLeader;
+  private int eachQueryTimeoutInMills;
+  private int defaultMaxQueryCount;
+  private EventLoopGroup group;
 
-        public MetaRequestRound(client_operator o, Runnable r, int q, ReplicaSession l) {
-            op = o;
-            callbackFunc = r;
-            maxQueryCount = q;
-            lastSession = l;
-        }
-    }
-
-    private ClusterManager clusterManager;
-    private List<ReplicaSession> metaList;
-    private int curLeader;
-    private int eachQueryTimeoutInMills;
-    private int defaultMaxQueryCount;
-    private EventLoopGroup group;
-
-    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MetaSession.class);
+  private static final org.slf4j.Logger logger =
+      org.slf4j.LoggerFactory.getLogger(MetaSession.class);
 }

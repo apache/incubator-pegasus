@@ -5,28 +5,27 @@ package com.xiaomi.infra.pegasus.client;
 
 /**
  * @author qinzuoyan
- *
- * Set item.
+ *     <p>Set item.
  */
-public class SetItem{
-    public byte[] hashKey = null;
-    public byte[] sortKey = null;
-    public byte[] value = null;
-    public int ttlSeconds = 0; // 0 means no ttl
+public class SetItem {
+  public byte[] hashKey = null;
+  public byte[] sortKey = null;
+  public byte[] value = null;
+  public int ttlSeconds = 0; // 0 means no ttl
 
-    public SetItem() {}
+  public SetItem() {}
 
-    public SetItem(byte[] hashKey, byte[] sortKey, byte[] value, int ttlSeconds) {
-        this.hashKey = hashKey;
-        this.sortKey = sortKey;
-        this.value = value;
-        this.ttlSeconds = ttlSeconds;
-    }
+  public SetItem(byte[] hashKey, byte[] sortKey, byte[] value, int ttlSeconds) {
+    this.hashKey = hashKey;
+    this.sortKey = sortKey;
+    this.value = value;
+    this.ttlSeconds = ttlSeconds;
+  }
 
-    public SetItem(byte[] hashKey, byte[] sortKey, byte[] value) {
-        this.hashKey = hashKey;
-        this.sortKey = sortKey;
-        this.value = value;
-        this.ttlSeconds = 0;
-    }
+  public SetItem(byte[] hashKey, byte[] sortKey, byte[] value) {
+    this.hashKey = hashKey;
+    this.sortKey = sortKey;
+    this.value = value;
+    this.ttlSeconds = 0;
+  }
 }

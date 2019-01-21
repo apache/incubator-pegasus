@@ -5,16 +5,14 @@ package com.xiaomi.infra.pegasus.client;
 
 /**
  * @author huangwei
- *
- * check_and_mutate options.
+ *     <p>check_and_mutate options.
  */
 public class CheckAndMutateOptions {
-    public boolean returnCheckValue = false; // whether return the check value in results.
+  public boolean returnCheckValue = false; // whether return the check value in results.
 
-    public CheckAndMutateOptions() {
-    }
+  public CheckAndMutateOptions() {}
 
-    public CheckAndMutateOptions(CheckAndMutateOptions o) {
-        returnCheckValue = o.returnCheckValue;
-    }
+  public CheckAndMutateOptions(CheckAndMutateOptions o) {
+    returnCheckValue = o.returnCheckValue;
+  }
 }

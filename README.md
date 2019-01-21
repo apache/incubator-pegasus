@@ -1,5 +1,7 @@
 # Pegasus Java Client
 
+[![Build Status](https://travis-ci.org/XiaoMi/pegasus-java-client.svg?branch=thrift-0.11.0-inlined)](https://travis-ci.org/XiaoMi/pegasus-java-client)
+
 ## Build
 
 ```

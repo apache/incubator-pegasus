@@ -154,6 +154,77 @@
           </execution>
         </executions>
       </plugin>
+
+      <!-- Checkstyle -->
+      <plugin>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>3.0.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>8.12</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>checkstyle</id>
+            <phase>validate</phase>
+            <configuration>
+              <configLocation>dev-support/google-checks.xml</configLocation>
+              <suppressionsLocation>dev-support/checkstyle-suppressions.xml</suppressionsLocation>
+              <encoding>UTF-8</encoding>
+              <consoleOutput>true</consoleOutput>
+              <failsOnError>true</failsOnError>
+              <excludes>
+                com/xiaomi/infra/pegasus/apps/*,
+                com/xiaomi/infra/pegasus/base/*,
+                com/xiaomi/infra/pegasus/replication/*,
+                com/xiaomi/infra/pegasus/thrift/*,
+                com/xiaomi/infra/pegasus/thrift/meta_data/*,
+                com/xiaomi/infra/pegasus/thrift/async/*,
+                com/xiaomi/infra/pegasus/thrift/server/*,
+                com/xiaomi/infra/pegasus/thrift/transport/*,
+                com/xiaomi/infra/pegasus/thrift/protocol/*,
+                com/xiaomi/infra/pegasus/thrift/scheme/*,
+              </excludes>
+            </configuration>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- FindBugs -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
+        <version>3.0.4</version>
+        <configuration>
+          <excludeFilterFile>dev-support/findbugs-exclude.xml</excludeFilterFile>
+          <!--
+              Enables analysis which takes more memory but finds more bugs.
+              If you run out of memory, changes the value of the effort element
+              to 'Low'.
+            -->
+          <effort>Max</effort>
+          <failOnError>true</failOnError>
+          <threshold>Low</threshold>
+          <findbugsXmlOutput>true</findbugsXmlOutput>
+          <xmlOutput>true</xmlOutput>
+        </configuration>
+        <executions>
+          <execution>
+            <id>findbugs</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
   </build>
 </project>

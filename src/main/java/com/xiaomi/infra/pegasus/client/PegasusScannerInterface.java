@@ -3,34 +3,31 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
+import java.util.concurrent.Future;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.concurrent.Future;
 /**
  * @author shenyuannan
- *
- * This class provides interfaces to scan data of a specified table.
+ *     <p>This class provides interfaces to scan data of a specified table.
  */
 public interface PegasusScannerInterface {
-    /**
-     * Get the next item.
-     * @return item like <<hashKey, sortKey>, value>; null returned if scan completed.
-     * @throws PException
-     */
-    public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException;
+  /**
+   * Get the next item.
+   *
+   * @return item like <<hashKey, sortKey>, value>; null returned if scan completed.
+   * @throws PException
+   */
+  public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException;
 
-    /**
-     * Get the next item asynchronously.
-     * @return A future for current op.
-     *
-     * Future return:
-     *      On success: if scan haven't reach the end then return the kv-pair, else return null.
-     *      On failure: a throwable, which is an instance of PException.
-     */
-    public Future<Pair<Pair<byte[], byte[]>, byte[]>> asyncNext();
+  /**
+   * Get the next item asynchronously.
+   *
+   * @return A future for current op.
+   *     <p>Future return: On success: if scan haven't reach the end then return the kv-pair, else
+   *     return null. On failure: a throwable, which is an instance of PException.
+   */
+  public Future<Pair<Pair<byte[], byte[]>, byte[]>> asyncNext();
 
-    /**
-     * Close the scanner. Should be called when scan completed.
-     */
-    public void close();
+  /** Close the scanner. Should be called when scan completed. */
+  public void close();
 }
