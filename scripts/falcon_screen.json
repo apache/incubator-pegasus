@@ -633,7 +633,7 @@
       "title": "各节点最近读写失败次数",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
-          "replica*eon.replica_stub*recent.read.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+          "replica*eon.replica_stub*recent.read.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
           "replica*eon.replica_stub*recent.write.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
