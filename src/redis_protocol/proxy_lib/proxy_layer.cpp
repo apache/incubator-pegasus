@@ -3,7 +3,6 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include <dsn/tool-api/task_spec.h>
-#include <dsn/tool-api/uri_address.h>
 
 #include <rrdb/rrdb.code.definition.h>
 #include "proxy_layer.h"
@@ -36,9 +35,6 @@ proxy_stub::proxy_stub(const proxy_session::factory &f,
     dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_SCAN_ACK)->allow_inline = true;
     dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_CLEAR_SCANNER_ACK)->allow_inline = true;
     dsn::task_spec::get(dsn::apps::RPC_RRDB_RRDB_INCR_ACK)->allow_inline = true;
-
-    _uri_address.assign_uri(
-        std::string("dsn://").append(_cluster).append("/").append(_app).c_str());
 
     open_service();
 }
@@ -132,5 +128,5 @@ void proxy_session::on_recv_request(dsn::message_ex *msg)
 void proxy_session::on_remove_session() { is_session_reset.store(true); }
 
 dsn::message_ex *proxy_session::create_response() { return backup_one_request->create_response(); }
-}
-} // namespace
+} // namespace proxy
+} // namespace pegasus

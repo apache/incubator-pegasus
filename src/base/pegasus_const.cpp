@@ -37,6 +37,8 @@ const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD("bulk_load");
 /// ```
 const std::string MANUAL_COMPACT_KEY_PREFIX("manual_compact.");
 const std::string MANUAL_COMPACT_DISABLED_KEY(MANUAL_COMPACT_KEY_PREFIX + "disabled");
+const std::string MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT_KEY(MANUAL_COMPACT_KEY_PREFIX +
+                                                                  "max_concurrent_running_count");
 
 const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX(MANUAL_COMPACT_KEY_PREFIX + "periodic.");
 const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY(MANUAL_COMPACT_PERIODIC_KEY_PREFIX +
@@ -54,8 +56,14 @@ const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
 
 /// default ttl for items in a table. If ttl is not set for
-///   * a new writen item, 'default_ttl' will be applied on this item.
+///   * a new written item, 'default_ttl' will be applied on this item.
 ///   * an exist item, 'default_ttl' will be applied on this item when it was compacted.
 /// <= 0 means no effect
 const std::string TABLE_LEVEL_DEFAULT_TTL("default_ttl");
+
+const std::string ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT("rocksdb.checkpoint.reserve_min_count");
+const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS("rocksdb.checkpoint.reserve_time_seconds");
+
+/// read cluster meta address from this section
+const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
 } // namespace pegasus

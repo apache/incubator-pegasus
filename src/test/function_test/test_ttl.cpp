@@ -28,7 +28,7 @@ int specify_ttl = 5;
 int sleep_for_expiring = 10;
 int sleep_for_envs_effect = 65;
 int error_allow = 2;
-int timeout = 5;
+int timeout = 5000;
 
 void set_default_ttl(int ttl)
 {

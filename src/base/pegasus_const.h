@@ -23,6 +23,7 @@ extern const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
 
 extern const std::string MANUAL_COMPACT_KEY_PREFIX;
 extern const std::string MANUAL_COMPACT_DISABLED_KEY;
+extern const std::string MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT_KEY;
 
 extern const std::string MANUAL_COMPACT_PERIODIC_KEY_PREFIX;
 extern const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY;
@@ -37,4 +38,9 @@ extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
 extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
 
 extern const std::string TABLE_LEVEL_DEFAULT_TTL;
+
+extern const std::string ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT;
+extern const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS;
+
+extern const std::string PEGASUS_CLUSTER_SECTION_NAME;
 } // namespace pegasus

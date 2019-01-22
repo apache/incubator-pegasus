@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
+#include "base/pegasus_const.h"
 
 using namespace ::dsn;
 using namespace ::replication;
@@ -36,7 +37,7 @@ GTEST_API_ int main(int argc, char **argv)
     const char *app_name = argv[2];
     client = pegasus_client_factory::get_client("mycluster", app_name);
     std::vector<rpc_address> meta_list;
-    replica_helper::load_meta_servers(meta_list, "uri-resolver.dsn://mycluster", "arguments");
+    replica_helper::load_meta_servers(meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
     ddl_client = std::make_shared<replication_ddl_client>(meta_list);
     ddebug("MainThread: app_name=%s", app_name);
 

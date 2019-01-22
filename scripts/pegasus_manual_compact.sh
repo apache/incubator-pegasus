@@ -28,6 +28,10 @@ function usage()
     echo "                              skip or force, default is skip"
     echo "                              more details: https://github.com/facebook/rocksdb/wiki/Manual-Compaction"
     echo
+    echo "  --max_concurrent_running_count <num>"
+    echo "                              max concurrent running count limit, should be positive integer."
+    echo "                              if not set, means no limit."
+    echo
     echo "for example:"
     echo
     echo "  1) Start once type manual compact with default options:"
@@ -149,6 +153,7 @@ trigger_time=""
 wait_only="false"
 target_level="-1"
 bottommost_level_compaction="skip"
+max_concurrent_running_count=""
 while [[ $# > 0 ]]; do
     option_key="$1"
     case ${option_key} in
@@ -177,6 +182,10 @@ while [[ $# > 0 ]]; do
             ;;
         --bottommost_level_compaction)
             bottommost_level_compaction="$2"
+            shift
+            ;;
+        --max_concurrent_running_count)
+            max_concurrent_running_count="$2"
             shift
             ;;
         -h|--help)
@@ -255,6 +264,19 @@ if [ "${bottommost_level_compaction}" != "skip" -a "${bottommost_level_compactio
     exit 1
 fi
 
+# check max_concurrent_running_count
+if [ "${max_concurrent_running_count}" != "" ]; then
+    expr ${max_concurrent_running_count} + 0 &>/dev/null
+    if [ $? -ne 0 ]; then
+        echo "ERROR: invalid max_concurrent_running_count: ${max_concurrent_running_count}"
+        exit 1
+    fi
+    if [ ${max_concurrent_running_count} -lt 0 ]; then
+        echo "ERROR: invalid max_concurrent_running_count: ${max_concurrent_running_count}"
+        exit 1
+    fi
+fi
+
 # record start time
 all_start_time=`date +%s`
 echo "UID: $UID"
@@ -275,6 +297,9 @@ if [ "${type}" == "periodic" ] || [ "${type}" == "once" -a "${wait_only}" == "fa
     fi
     if [ "${bottommost_level_compaction}" != "" ]; then
         set_env ${cluster} ${app_name} "manual_compact.${type}.bottommost_level_compaction" ${bottommost_level_compaction}
+    fi
+    if [ "${max_concurrent_running_count}" != "" ]; then
+        set_env ${cluster} ${app_name} "manual_compact.max_concurrent_running_count" ${max_concurrent_running_count}
     fi
     set_env ${cluster} ${app_name} "manual_compact.${type}.trigger_time" ${trigger_time}
     echo

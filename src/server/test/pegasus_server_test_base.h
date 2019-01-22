@@ -30,7 +30,20 @@ public:
             dsn::replication::create_test_replica(_replica_stub, _gpid, app_info, "./", false);
 
         _server = dsn::make_unique<pegasus_server_impl>(_replica);
-        _server->start(0, {});
+    }
+
+    dsn::error_code start(const std::map<std::string, std::string>& envs = {}) {
+        std::unique_ptr<char *[]> argvs = dsn::make_unique<char *[]>(envs.size() * 2);
+        char **argv = argvs.get();
+        int idx = 0;
+        argv[idx++] = const_cast<char *>("unit_test_app");
+        if (!envs.empty()) {
+            for (auto &kv : envs) {
+                argv[idx++] = const_cast<char *>(kv.first.c_str());
+                argv[idx++] = const_cast<char *>(kv.second.c_str());
+            }
+        }
+        return _server->start(idx, argv);
     }
 
     ~pegasus_server_test_base() override

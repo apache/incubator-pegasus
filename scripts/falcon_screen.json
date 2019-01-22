@@ -174,6 +174,16 @@
       "timespan": 86400
     },
     {
+      "title": "rocksdb缓存命中率（统计各表的rocksdb block cache命中率；单位：百分比*10000；1M表示100%）",
+      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
+      "counters": [
+          "collector*app.pegasus*app.stat.rdb_block_cache_hit_rate#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "各节点SharedLog大小（单位：MB）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
@@ -564,26 +574,6 @@
       "timespan": 86400
     },
     {
-      "title": "P99 单条写 排队时间（单位：纳秒）",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "zion*profiler*RPC_RRDB_RRDB_PUT.queue(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "P99 单条写 执行时间（单位：纳秒）",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "zion*profiler*RPC_RRDB_RRDB_PUT.exec(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
       "title": "P99 多条读 排队时间（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
@@ -604,6 +594,26 @@
       "timespan": 86400
     },
     {
+      "title": "P99 单条写 排队时间（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_PUT.queue(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "P99 单条写 执行时间（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_PUT.exec(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "P99 多条写 排队时间（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
@@ -618,6 +628,17 @@
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.exec(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各节点最近读写失败次数",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "replica*eon.replica_stub*recent.read.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+          "replica*eon.replica_stub*recent.write.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -657,7 +678,7 @@
       "title": "Delay数据条数（统计各表最近10秒write throttling delay的数据条数）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
-          "collector*app.pegasus*app.stat.recent_throttling_delay_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+          "collector*app.pegasus*app.stat.recent_write_throttling_delay_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -667,7 +688,7 @@
       "title": "Reject数据条数（统计各表最近10秒write throttling reject的数据条数）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
-          "collector*app.pegasus*app.stat.recent_throttling_reject_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+          "collector*app.pegasus*app.stat.recent_write_throttling_reject_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",

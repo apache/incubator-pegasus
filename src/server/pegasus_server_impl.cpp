@@ -45,6 +45,7 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
+const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
@@ -122,7 +123,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     // rocksdb default: 7
     _db_opts.num_levels = (int)dsn_config_get_value_int64(
-        "pegasus.server", "rocksdb_num_levels", 6, "rocksdb options.num_levels, default 6");
+        "pegasus.server", "rocksdb_num_levels", 7, "rocksdb options.num_levels, default 7");
 
     // rocksdb default: 2MB
     _db_opts.target_file_size_base =
@@ -181,30 +182,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "pegasus.server",
         "rocksdb_compression_type",
         "snappy",
-        "rocksdb options.compression, default snappy. Supported: none, snappy, zstd, lz4.");
-    if (compression_str == "none") {
-        _db_opts.compression = rocksdb::kNoCompression;
-    } else if (compression_str == "snappy") {
-        _db_opts.compression = rocksdb::kSnappyCompression;
-    } else if (compression_str == "zstd") {
-        _db_opts.compression = rocksdb::kZSTD;
-    } else if (compression_str == "lz4") {
-        _db_opts.compression = rocksdb::kLZ4Compression;
-    } else {
-        dassert("unsupported compression type: %s", compression_str.c_str());
-    }
-    if (_db_opts.compression != rocksdb::kNoCompression) {
-        // only compress levels >= 2
-        // refer to ColumnFamilyOptions::OptimizeLevelStyleCompaction()
-        _db_opts.compression_per_level.resize(_db_opts.num_levels);
-        for (int i = 0; i < _db_opts.num_levels; ++i) {
-            if (i < 2) {
-                _db_opts.compression_per_level[i] = rocksdb::kNoCompression;
-            } else {
-                _db_opts.compression_per_level[i] = _db_opts.compression;
-            }
-        }
-    }
+        "rocksdb options.compression, default 'snappy'. Available config: '[none|snappy|zstd|lz4]' "
+        "for all level 2 and higher levels, and "
+        "'per_level:[none|snappy|zstd|lz4],[none|snappy|zstd|lz4],...' for each level 0,1,..., the "
+        "last compression type will be used for levels not specified in the list.");
+    dassert(parse_compression_types(compression_str, _db_opts.compression_per_level),
+            "parse rocksdb_compression_type failed.");
 
     // disable table block cache, default: false
     if (dsn_config_get_value_bool("pegasus.server",
@@ -263,13 +246,15 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _wt_opts.disableWAL = true;
 
     // get the checkpoint reserve options.
-    _checkpoint_reserve_min_count = (uint32_t)dsn_config_get_value_uint64(
+    _checkpoint_reserve_min_count_in_config = (uint32_t)dsn_config_get_value_uint64(
         "pegasus.server", "checkpoint_reserve_min_count", 3, "checkpoint_reserve_min_count");
-    _checkpoint_reserve_time_seconds =
+    _checkpoint_reserve_min_count = _checkpoint_reserve_min_count_in_config;
+    _checkpoint_reserve_time_seconds_in_config =
         (uint32_t)dsn_config_get_value_uint64("pegasus.server",
                                               "checkpoint_reserve_time_seconds",
                                               0,
                                               "checkpoint_reserve_time_seconds, 0 means no check");
+    _checkpoint_reserve_time_seconds = _checkpoint_reserve_time_seconds_in_config;
 
     _update_rdb_stat_interval = std::chrono::seconds(dsn_config_get_value_uint64(
         "pegasus.server", "update_rdb_stat_interval", 600, "update_rdb_stat_interval, in seconds"));
@@ -403,12 +388,14 @@ void pegasus_server_impl::parse_checkpoints()
 
 pegasus_server_impl::~pegasus_server_impl() = default;
 
-void pegasus_server_impl::gc_checkpoints()
+void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
 {
+    int min_count = force_reserve_one ? 1 : _checkpoint_reserve_min_count;
+    uint64_t reserve_time = force_reserve_one ? 0 : _checkpoint_reserve_time_seconds;
     std::deque<int64_t> temp_list;
     {
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
-        if (_checkpoints.size() <= _checkpoint_reserve_min_count)
+        if (_checkpoints.size() <= min_count)
             return;
         temp_list = _checkpoints;
     }
@@ -417,10 +404,10 @@ void pegasus_server_impl::gc_checkpoints()
     int64_t max_del_d = -1;
     uint64_t current_time = dsn_now_ms() / 1000;
     for (int i = 0; i < temp_list.size(); ++i) {
-        if (i + _checkpoint_reserve_min_count >= temp_list.size())
+        if (i + min_count >= temp_list.size())
             break;
         int64_t d = temp_list[i];
-        if (_checkpoint_reserve_time_seconds > 0) {
+        if (reserve_time > 0) {
             // we check last write time of "CURRENT" instead of directory, because the directory's
             // last write time may be updated by previous incompleted garbage collection.
             auto cpt_dir =
@@ -436,7 +423,7 @@ void pegasus_server_impl::gc_checkpoints()
                 break;
             }
             uint64_t last_write_time = (uint64_t)tm;
-            if (last_write_time + _checkpoint_reserve_time_seconds >= current_time) {
+            if (last_write_time + reserve_time >= current_time) {
                 // not expired
                 break;
             }
@@ -459,7 +446,7 @@ void pegasus_server_impl::gc_checkpoints()
         int delete_max_index = -1;
         for (int i = 0; i < _checkpoints.size(); ++i) {
             int64_t del_d = _checkpoints[i];
-            if (i + _checkpoint_reserve_min_count >= _checkpoints.size() || del_d > max_del_d)
+            if (i + min_count >= _checkpoints.size() || del_d > max_del_d)
                 break;
             to_delete_list.push_back(del_d);
             delete_max_index = i;
@@ -957,6 +944,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             dwarn("%s: rocksdb abnormal multi_get from %s: hash_key = \"%s\", "
                   "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
                   "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
+                  "max_kv_count = %d, max_kv_size = %d, reverse = %s, "
                   "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
                   "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns",
                   replica_name(),
@@ -969,6 +957,9 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                   ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
                       ->second,
                   ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
+                  request.max_kv_count,
+                  request.max_kv_size,
+                  request.reverse ? "true" : "false",
                   count,
                   size,
                   iterate_count,
@@ -1417,22 +1408,19 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
 ::dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 {
-    dassert(!_is_open, "");
-    ddebug("%s: start to open app %s", replica_name(), data_dir().c_str());
-
-    rocksdb::Options opts = _db_opts;
-    opts.create_if_missing = true;
-    opts.error_if_exists = false;
-    opts.default_value_schema_version = PEGASUS_VALUE_SCHEMA_MAX_VERSION;
+    dassert_replica(!_is_open, "replica is already opened.");
+    ddebug_replica("start to open app {}", data_dir());
 
     // parse envs for parameters
     // envs is compounded in replication_app_base::open() function
     std::map<std::string, std::string> envs;
     if (argc > 0) {
-        if (((argc - 1) % 2 != 0) || argv == nullptr) {
-            derror("%s: parse envs failed, because invalid argc = %d or argv = nullptr",
-                   replica_name(),
-                   argc);
+        if ((argc - 1) % 2 != 0) {
+            derror_replica("parse envs failed, invalid argc = {}", argc);
+            return ::dsn::ERR_INVALID_PARAMETERS;
+        }
+        if (argv == nullptr) {
+            derror_replica("parse envs failed, invalid argv = nullptr");
             return ::dsn::ERR_INVALID_PARAMETERS;
         }
         int idx = 1;
@@ -1442,6 +1430,13 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             envs.emplace(key, value);
         }
     }
+    // Update all envs before opening db, ensure all envs are effective for the newly opened db.
+    update_app_envs(envs);
+
+    rocksdb::Options opts = _db_opts;
+    opts.create_if_missing = true;
+    opts.error_if_exists = false;
+    opts.default_value_schema_version = PEGASUS_VALUE_SCHEMA_MAX_VERSION;
 
     //
     // here, we must distinguish three cases, such as:
@@ -1533,8 +1528,6 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
         // set default usage scenario
         set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
-
-        update_app_envs(envs);
 
         parse_checkpoints();
 
@@ -2267,9 +2260,13 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
 
 void pegasus_server_impl::update_server_rocksdb_statistics()
 {
-    uint64_t val = _block_cache->GetUsage();
-    _pfc_rdb_block_cache_mem_usage->set(val);
-    ddebug_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
+    if (_block_cache) {
+        uint64_t val = _block_cache->GetUsage();
+        _pfc_rdb_block_cache_mem_usage->set(val);
+        ddebug_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
+    } else {
+        ddebug("_pfc_rdb_block_cache_mem_usage: 0 bytes because block cache is diabled");
+    }
 }
 
 std::pair<std::string, bool>
@@ -2316,6 +2313,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
 {
     update_usage_scenario(envs);
     update_default_ttl(envs);
+    update_checkpoint_reserve(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2334,17 +2332,15 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
     if (new_usage_scenario != _usage_scenario) {
         std::string old_usage_scenario = _usage_scenario;
         if (set_usage_scenario(new_usage_scenario)) {
-            ddebug("%s: update app env[%s] from %s to %s succeed",
-                   replica_name(),
-                   ROCKSDB_ENV_USAGE_SCENARIO_KEY.c_str(),
-                   old_usage_scenario.c_str(),
-                   new_usage_scenario.c_str());
+            ddebug_replica("update app env[{}] from {} to {} succeed",
+                           ROCKSDB_ENV_USAGE_SCENARIO_KEY,
+                           old_usage_scenario,
+                           new_usage_scenario);
         } else {
-            derror("%s: update app env[%s] from %s to %s failed",
-                   replica_name(),
-                   ROCKSDB_ENV_USAGE_SCENARIO_KEY.c_str(),
-                   old_usage_scenario.c_str(),
-                   new_usage_scenario.c_str());
+            derror_replica("update app env[{}] from {} to {} failed",
+                           ROCKSDB_ENV_USAGE_SCENARIO_KEY,
+                           old_usage_scenario,
+                           new_usage_scenario);
         }
     }
 }
@@ -2360,6 +2356,120 @@ void pegasus_server_impl::update_default_ttl(const std::map<std::string, std::st
         }
         _server_write->set_default_ttl(static_cast<uint32_t>(ttl));
         _key_ttl_compaction_filter_factory->SetDefaultTTL(static_cast<uint32_t>(ttl));
+    }
+}
+
+void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, std::string> &envs)
+{
+    int32_t count = _checkpoint_reserve_min_count_in_config;
+    int32_t time = _checkpoint_reserve_time_seconds_in_config;
+
+    auto find = envs.find(ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT);
+    if (find != envs.end()) {
+        if (!dsn::buf2int32(find->second, count) || count <= 0) {
+            derror_replica("{}={} is invalid.", find->first, find->second);
+            return;
+        }
+    }
+    find = envs.find(ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS);
+    if (find != envs.end()) {
+        if (!dsn::buf2int32(find->second, time) || time < 0) {
+            derror_replica("{}={} is invalid.", find->first, find->second);
+            return;
+        }
+    }
+
+    if (count != _checkpoint_reserve_min_count) {
+        ddebug_replica("update app env[{}] from {} to {} succeed",
+                       ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT,
+                       _checkpoint_reserve_min_count,
+                       count);
+        _checkpoint_reserve_min_count = count;
+    }
+    if (time != _checkpoint_reserve_time_seconds) {
+        ddebug_replica("update app env[{}] from {} to {} succeed",
+                       ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS,
+                       _checkpoint_reserve_time_seconds,
+                       time);
+        _checkpoint_reserve_time_seconds = time;
+    }
+}
+
+bool pegasus_server_impl::parse_compression_types(
+    const std::string &config, std::vector<rocksdb::CompressionType> &compression_per_level)
+{
+    std::vector<rocksdb::CompressionType> tmp(_db_opts.num_levels, rocksdb::kNoCompression);
+    size_t i = config.find(COMPRESSION_HEADER);
+    if (i != std::string::npos) {
+        // New compression config style.
+        // 'per_level:[none|snappy|zstd|lz4],[none|snappy|zstd|lz4],...' for each level 0,1,...
+        // The last compression type will be used for levels not specified in the list.
+        std::vector<std::string> compression_types;
+        dsn::utils::split_args(
+            config.substr(COMPRESSION_HEADER.length()).c_str(), compression_types, ',');
+        rocksdb::CompressionType last_type = rocksdb::kNoCompression;
+        for (int i = 0; i < _db_opts.num_levels; ++i) {
+            if (i < compression_types.size()) {
+                if (!compression_str_to_type(compression_types[i], last_type)) {
+                    return false;
+                }
+            }
+            tmp[i] = last_type;
+        }
+    } else {
+        // Old compression config style.
+        // '[none|snappy|zstd|lz4]' for all level 2 and higher levels
+        rocksdb::CompressionType compression;
+        if (!compression_str_to_type(config, compression)) {
+            return false;
+        }
+        if (compression != rocksdb::kNoCompression) {
+            // only compress levels >= 2
+            // refer to ColumnFamilyOptions::OptimizeLevelStyleCompaction()
+            for (int i = 0; i < _db_opts.num_levels; ++i) {
+                if (i >= 2) {
+                    tmp[i] = compression;
+                }
+            }
+        }
+    }
+
+    compression_per_level = tmp;
+    return true;
+}
+
+bool pegasus_server_impl::compression_str_to_type(const std::string &compression_str,
+                                                  rocksdb::CompressionType &type)
+{
+    if (compression_str == "none") {
+        type = rocksdb::kNoCompression;
+    } else if (compression_str == "snappy") {
+        type = rocksdb::kSnappyCompression;
+    } else if (compression_str == "lz4") {
+        type = rocksdb::kLZ4Compression;
+    } else if (compression_str == "zstd") {
+        type = rocksdb::kZSTD;
+    } else {
+        derror_replica("Unsupported compression type: {}.", compression_str);
+        return false;
+    }
+    return true;
+}
+
+std::string pegasus_server_impl::compression_type_to_str(rocksdb::CompressionType type)
+{
+    switch (type) {
+    case rocksdb::kNoCompression:
+        return "none";
+    case rocksdb::kSnappyCompression:
+        return "snappy";
+    case rocksdb::kLZ4Compression:
+        return "lz4";
+    case rocksdb::kZSTD:
+        return "zstd";
+    default:
+        derror_replica("Unsupported compression type: {}.", type);
+        return "<unsupported>";
     }
 }
 
@@ -2450,6 +2560,11 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
 bool pegasus_server_impl::set_options(
     const std::unordered_map<std::string, std::string> &new_options)
 {
+    if (!_is_open) {
+        dwarn_replica("set_options failed, db is not open");
+        return false;
+    }
+
     std::ostringstream oss;
     int i = 0;
     for (auto &kv : new_options) {
@@ -2498,6 +2613,32 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
     ddebug_replica("CompactRange finished, status = {}, time_used = {}ms",
                    status.ToString().c_str(),
                    dsn_now_ms() - start_time);
+
+    // generate new checkpoint and remove old checkpoints, in order to release storage asap
+    ddebug_replica("generate new checkpoint immediately after manual compact");
+    int64_t old_last_durable = last_durable_decree();
+    sync_checkpoint();
+    gc_checkpoints(true);
+    if (last_durable_decree() == old_last_durable) {
+        // it is possible that the new checkpoint is not generated, if there was no data
+        // written into rocksdb when doing manual compact.
+        ddebug_replica("no new checkpoint generated, will retry after 5 minutes");
+        ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
+                                &_tracker,
+                                [this, old_last_durable]() {
+                                    ddebug_replica("retry gc checkpoints after manual compact");
+                                    if (last_durable_decree() == old_last_durable) {
+                                        // if the new checkpoint is still not generated in the
+                                        // last 5 minutes, we will try to generate it again, and
+                                        // it will probably succeed because at least some empty
+                                        // data is written into rocksdb by periodic group check.
+                                        sync_checkpoint();
+                                    }
+                                    gc_checkpoints(true);
+                                },
+                                0,
+                                std::chrono::minutes(5));
+    }
 
     // update rocksdb statistics immediately
     update_replica_rocksdb_statistics();
