@@ -53,7 +53,16 @@ public class ThriftFrameDecoder extends ByteToMessageDecoder {
           e.timeoutTask.cancel(true);
           e.op.rpc_error.errno = ec.errno;
           if (e.op.rpc_error.errno == error_code.error_types.ERR_OK) {
-            e.op.recv_data(iprot);
+            try {
+              e.op.recv_data(iprot);
+            } catch (TException readException) {
+              logger.error(
+                  "{}: unable to parse message body [seqId: {}, error: {}]",
+                  ctx.channel().toString(),
+                  msgHeader.seqid,
+                  readException);
+              e.op.rpc_error.errno = error_code.error_types.ERR_INVALID_DATA;
+            }
           }
           out.add(e);
         } else {

@@ -3,12 +3,16 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.rpc.async;
 
-import com.xiaomi.infra.pegasus.apps.*;
+import com.xiaomi.infra.pegasus.apps.update_request;
 import com.xiaomi.infra.pegasus.base.blob;
 import com.xiaomi.infra.pegasus.base.error_code;
+import com.xiaomi.infra.pegasus.base.gpid;
 import com.xiaomi.infra.pegasus.base.rpc_address;
-import com.xiaomi.infra.pegasus.operator.*;
+import com.xiaomi.infra.pegasus.operator.client_operator;
+import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
+import com.xiaomi.infra.pegasus.thrift.TException;
 import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
+import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import com.xiaomi.infra.pegasus.tools.Tools;
 import java.util.ArrayList;
@@ -159,5 +163,49 @@ public class ReplicaSessionTest {
     rs.setMessageResponseFilter(null);
 
     Toollet.tryStartServer(addr);
+  }
+
+  // ensure if response decode throws an exception, client is able to be informed.
+  @Test
+  public void testRecvInvalidData() throws Exception {
+    class test_operator extends rrdb_put_operator {
+      private test_operator(gpid gpid, update_request request) {
+        super(gpid, "", request);
+      }
+
+      // should be called on ThriftFrameDecoder#decode
+      @Override
+      public void recv_data(TProtocol iprot) throws TException {
+        throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
+            com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
+            "put failed: unknown result");
+      }
+    }
+
+    rpc_address addr = new rpc_address();
+    addr.fromString("127.0.0.1:34801");
+    ReplicaSession rs = manager.getReplicaSession(addr);
+
+    for (int pid = 0; pid < 16; pid++) {
+      // find a valid partition held on 127.0.0.1:34801
+      update_request req =
+          new update_request(new blob("a".getBytes()), new blob("a".getBytes()), 0);
+      final client_operator op = new test_operator(new gpid(1, pid), req);
+      FutureTask<Void> cb =
+          new FutureTask<Void>(
+              new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                  if (op.rpc_error.errno != error_code.error_types.ERR_OBJECT_NOT_FOUND
+                      && op.rpc_error.errno != error_code.error_types.ERR_INVALID_STATE) {
+                    Assert.assertEquals(
+                        error_code.error_types.ERR_INVALID_DATA, op.rpc_error.errno);
+                  }
+                  return null;
+                }
+              });
+      rs.asyncSend(op, cb, 2000);
+      Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
+    }
   }
 }
