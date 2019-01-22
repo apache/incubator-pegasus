@@ -4,6 +4,19 @@
 # stores the thirdparty packages necessary.
 OSS_URL_PREFIX="http://pegasus-thirdparties.oss-cn-beijing.aliyuncs.com"
 
+function auto_download()
+{
+    curl -L $1 > $2
+    if [ $? -eq 0 ]; then return 0; fi
+    echo "curl download $2 failed, try wget"
+
+    wget $1 -O $2
+    if [ $? -eq 0 ]; then return 0; fi
+    echo "wget download $2 failed, no more download utilities to try"
+
+    return 1
+}
+
 # check_and_download package_name url md5sum extracted_folder_name
 # return:
 #   0 if download and extract ok
@@ -33,7 +46,7 @@ function check_and_download()
         fi
     else
         echo "download package $package_name"
-        curl -L $url > $package_name
+        auto_download "$url" "$package_name"
         local ret_code=$?
         if [ $ret_code -ne 0 ]; then
             rm -f $1
@@ -43,8 +56,8 @@ function check_and_download()
 
         md5=`md5sum $1 | cut -d ' ' -f1`
         if [ "$md5"x != "$correct_md5sum"x ]; then
-            rm -f $1
-            echo "package $package_name is broken, already deleted"
+            #rm -f $1
+            #echo "package $package_name is broken, already deleted"
             return 2
         fi
 

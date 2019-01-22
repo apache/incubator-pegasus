@@ -1,4 +1,5 @@
 include(${CMAKE_CURRENT_LIST_DIR}/compiler_info.cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR};${CMAKE_MODULE_PATH}) # TODO: move all Find*.cmake into cmake/
 
 # Always generate the compilation database file (compile_commands.json) for use
 # with various development tools, such as IWYU and Vim's YouCompleteMe plugin.
@@ -281,30 +282,18 @@ function(dsn_setup_system_libs)
 
     set(DSN_SYSTEM_LIBS "")
 
-    find_library(DSN_LIB_RT NAMES rt)
-    if(DSN_LIB_RT STREQUAL "DSN_LIB_RT-NOTFOUND")
-        message(FATAL_ERROR "Cannot find library rt")
-    endif()
-    set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_RT})
+    find_package(RT REQUIRED)
+    set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${RT_LIBRARIES})
 
-    find_library(DSN_LIB_AIO NAMES aio)
-    if(DSN_LIB_AIO STREQUAL "DSN_LIB_AIO-NOTFOUND")
-        message(FATAL_ERROR "Cannot find library aio")
-    endif()
-    set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_AIO})
+    find_package(AIO REQUIRED)
+    set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${AIO_LIBRARIES})
 
-    find_library(DSN_LIB_DL NAMES dl)
-    if(DSN_LIB_DL STREQUAL "DSN_LIB_DL-NOTFOUND")
-        message(FATAL_ERROR "Cannot find library dl")
-    endif()
-    set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_DL})
+    find_package(DL REQUIRED)
+    set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DL_LIBRARIES})
 
     # for md5 calculation
-    find_library(DSN_LIB_CRYPTO NAMES crypto)
-    if(DSN_LIB_CRYPTO STREQUAL "DSN_LIB_CRYPTO-NOTFOUND")
-        message(FATAL_ERROR "Cannot find library crypto")
-    endif()
-    set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DSN_LIB_CRYPTO})
+    find_package(OpenSSL REQUIRED)
+    set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${OPENSSL_CRYPTO_LIBRARY})
 
     if(ENABLE_GPERF)
         set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} tcmalloc)

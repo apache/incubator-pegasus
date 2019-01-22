@@ -46,4 +46,3 @@ if("${COMPILER_VERSION_FULL}" MATCHES "Configured with: .* --prefix=([^ ]*)")
   set(COMPILER_SYSTEM_PREFIX_PATH ${CMAKE_MATCH_1})
   message("Selected compiler built with --prefix=${COMPILER_SYSTEM_PREFIX_PATH}")
 endif()
-
