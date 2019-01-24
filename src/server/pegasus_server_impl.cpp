@@ -1755,10 +1755,6 @@ private:
                 "%" PRId64 " VS %" PRId64 "",
                 last_commit,
                 last_durable_decree());
-        dassert(last_commit == _db->GetLastFlushedDecree(),
-                "%" PRId64 " VS %" PRId64 "",
-                last_commit,
-                _db->GetLastFlushedDecree());
         if (!_checkpoints.empty()) {
             dassert(last_commit > _checkpoints.back(),
                     "%" PRId64 " VS %" PRId64 "",
