@@ -3139,7 +3139,7 @@ inline bool recover(command_executor *e, shell_context *sc, arguments args)
     std::vector<dsn::rpc_address> node_list;
     if (!node_list_str.empty()) {
         std::vector<std::string> tokens;
-        dsn::utils::split_args(args.argv[1], tokens, ',');
+        dsn::utils::split_args(node_list_str.c_str(), tokens, ',');
         if (tokens.empty()) {
             fprintf(stderr, "can't parse node from node_list_str\n");
             return true;
