@@ -637,7 +637,7 @@
       "title": "各节点最近读写失败次数",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
-          "replica*eon.replica_stub*recent.read.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+          "replica*eon.replica_stub*recent.read.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
           "replica*eon.replica_stub*recent.write.fail.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
@@ -720,8 +720,22 @@
       "title": "集群热备份发送 qps（总 qps 和失败 qps）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
-          "collector*app.pegasus*app.stat.duplicate_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
-          "collector*app.pegasus*app.stat.duplicate_failed_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+          "collector*app.pegasus*app.stat.dup_shipped_ops#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
+          "collector*app.pegasus*app.stat.dup_failed_shipping_ops#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各节点热备份状态",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+        "replica*eon.replica_stub*dup.log_mutations_read_rate/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "replica*eon.replica_stub*dup.log_read_in_bytes_rate/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "replica*eon.replica_stub*dup.shipped_size_in_bytes_rate/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "replica*eon.replica_stub*dup.pending_mutations_count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "replica*eon.replica_stub*dup.time_lag(ms)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",

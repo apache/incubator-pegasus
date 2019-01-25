@@ -109,8 +109,8 @@ void info_collector::on_app_stat()
             all.duplicated_multi_put_qps += row.duplicated_multi_put_qps;
             all.duplicated_remove_qps += row.duplicated_remove_qps;
             all.duplicated_multi_remove_qps += row.duplicated_multi_remove_qps;
-            all.duplicate_qps += row.duplicate_qps;
-            all.duplicate_failed_qps += row.duplicate_failed_qps;
+            all.dup_shipped_ops += row.dup_shipped_ops;
+            all.dup_failed_shipping_ops += row.dup_failed_shipping_ops;
             read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
             write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
                            row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps +
@@ -121,7 +121,8 @@ void info_collector::on_app_stat()
         write_qps[read_qps.size() - 1] =
             all.put_qps + all.multi_put_qps + all.remove_qps + all.multi_remove_qps + all.incr_qps +
             all.check_and_set_qps + all.check_and_mutate_qps + all.duplicated_put_qps +
-            all.duplicated_multi_put_qps + all.duplicated_remove_qps + all.duplicated_remove_qps;
+            all.duplicated_multi_put_qps + all.duplicated_multi_remove_qps +
+            all.duplicated_remove_qps;
         for (int i = 0; i < rows.size(); ++i) {
             row_data &row = rows[i];
             AppStatCounters *counters = get_app_counters(row.row_name);
@@ -158,9 +159,12 @@ void info_collector::on_app_stat()
             counters->duplicated_remove_qps->set(row.duplicated_remove_qps);
             counters->duplicated_multi_put_qps->set(row.duplicated_multi_put_qps);
             counters->duplicated_multi_remove_qps->set(row.duplicated_multi_remove_qps);
-            counters->duplicate_qps->set(row.duplicate_qps);
-            counters->duplicate_failed_qps->set(row.duplicate_failed_qps);
+            counters->dup_shipped_ops->set(row.dup_shipped_ops);
+            counters->dup_failed_shipping_ops->set(row.dup_failed_shipping_ops);
         }
+        ddebug_f("stat duplication: all.dup_shipped_ops = {}, all.dup_failed_shipping_ops = {}",
+                 all.dup_shipped_ops,
+                 all.dup_failed_shipping_ops);
         ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
                (int)(rows.size() - 1),
                read_qps[read_qps.size() - 1],
@@ -211,8 +215,8 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(rdb_memtable_mem_usage);
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
-    INIT_COUNTER(duplicate_qps);
-    INIT_COUNTER(duplicate_failed_qps);
+    INIT_COUNTER(dup_shipped_ops);
+    INIT_COUNTER(dup_failed_shipping_ops);
     INIT_COUNTER(duplicated_put_qps);
     INIT_COUNTER(duplicated_remove_qps);
     INIT_COUNTER(duplicated_multi_put_qps);

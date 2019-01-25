@@ -20,13 +20,9 @@ using namespace dsn::literals::chrono_literals;
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool verbose_log)
     : replica_base(*server),
       _write_svc(new pegasus_write_service(server)),
+      _server(server),
       _verbose_log(verbose_log)
 {
-    _total_duplicate_latency.init_app_counter(
-        "app.pegasus",
-        fmt::format("total_duplicate_latency@{}", get_gpid()).data(),
-        COUNTER_TYPE_NUMBER_PERCENTILES,
-        "total latency of a write request from source cluster duplicated to remote cluster");
 }
 
 int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
@@ -85,6 +81,7 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
     auto remote_timetag = static_cast<uint64_t>(request.timetag);
     uint8_t cluster_id = extract_cluster_id_from_timetag(remote_timetag);
     if (!dsn::replication::is_cluster_id_configured(cluster_id)) {
+        dwarn_replica("handle {} from unknown cluster_id({})", request.task_code, cluster_id);
         resp.error = rocksdb::Status::kInvalidArgument;
         return _write_svc->empty_put(_decree);
     }
@@ -100,7 +97,7 @@ int pegasus_server_write::on_duplicate(const dsn::apps::duplicate_request &reque
         uint64_t latency_us =
             dsn_now_us() - extract_timestamp_from_timetag(_write_ctx.remote_timetag);
         _TEST_last_duplicate_latency = latency_us * 1_us;
-        _total_duplicate_latency->set(static_cast<int64_t>(latency_us * 1000));
+        _server->update_stub_counter_dup_time_lag(latency_us);
     });
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {

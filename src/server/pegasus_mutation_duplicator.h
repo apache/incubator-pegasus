@@ -48,9 +48,8 @@ private:
     std::map<uint64_t, std::deque<duplicate_rpc>> _inflights;
     dsn::zlock _lock;
 
-    dsn::perf_counter_wrapper _duplicate_qps;
-    dsn::perf_counter_wrapper _duplicate_failed_qps;
-    dsn::perf_counter_wrapper _duplicate_latency;
+    dsn::perf_counter_wrapper _shipped_ops;
+    dsn::perf_counter_wrapper _failed_shipping_ops;
 };
 
 extern uint64_t get_hash_from_request(dsn::task_code rpc_code, const dsn::blob &request_data);

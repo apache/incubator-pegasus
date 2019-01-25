@@ -81,24 +81,13 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
                     "invalid configuration of cluster_id");
 
     std::string str_gpid = fmt::format("{}", get_gpid());
-    std::string name;
-
-    name = fmt::format("duplicate_qps@{}", str_gpid);
-    _duplicate_qps.init_app_counter("app.pegasus",
-                                    name.c_str(),
-                                    COUNTER_TYPE_RATE,
-                                    "the qps of total DUPLICATE requests sent from this app");
-
-    name = fmt::format("duplicate_latency@{}", str_gpid);
-    _duplicate_latency.init_app_counter("app.pegasus",
-                                        name.c_str(),
-                                        COUNTER_TYPE_NUMBER_PERCENTILES,
-                                        "the latency of successful DUPLICATE requests");
-
-    name = fmt::format("duplicate_failed_qps@{}", str_gpid);
-    _duplicate_failed_qps.init_app_counter(
+    _shipped_ops.init_app_counter("app.pegasus",
+                                  fmt::format("dup_shipped_ops@{}", str_gpid).c_str(),
+                                  COUNTER_TYPE_RATE,
+                                  "the total ops of DUPLICATE requests sent from this app");
+    _failed_shipping_ops.init_app_counter(
         "app.pegasus",
-        name.c_str(),
+        fmt::format("dup_failed_shipping_ops@{}", str_gpid).c_str(),
         COUNTER_TYPE_RATE,
         "the qps of failed DUPLICATE requests sent from this app");
 }
@@ -137,19 +126,14 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
                                                      uint64_t start_ns,
                                                      dsn::error_code err)
 {
-    _duplicate_qps->increment();
-
     int perr = PERR_OK;
     if (err == dsn::ERR_OK) {
         perr = client::pegasus_client_impl::get_client_error(
             client::pegasus_client_impl::get_rocksdb_server_error(rpc.response().error));
     }
 
-    if (perr == PERR_OK && err == dsn::ERR_OK) {
-        /// failure is not taken into latency calculation
-        _duplicate_latency->set(dsn_now_ns() - start_ns);
-    } else {
-        _duplicate_failed_qps->increment();
+    if (perr != PERR_OK || err != dsn::ERR_OK) {
+        _failed_shipping_ops->increment();
 
         // randomly log the 1% of the failed duplicate rpc.
         if (dsn::rand::next_double01() <= 0.01) {
@@ -159,6 +143,8 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
                            extract_cluster_id_from_timetag(rpc.request().timetag),
                            extract_timestamp_from_timetag(rpc.request().timetag));
         }
+    } else {
+        _shipped_ops->increment();
     }
 
     auto hash = static_cast<uint64_t>(rpc.request().hash);

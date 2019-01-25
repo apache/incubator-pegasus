@@ -39,7 +39,6 @@ set(MY_PROJ_LIBS
         z rt aio pthread
         )
 add_definitions(-DPEGASUS_UNIT_TEST)
-add_definitions(-DENABLE_FAIL)
 
 set(MY_BOOST_PACKAGES system filesystem regex)
 

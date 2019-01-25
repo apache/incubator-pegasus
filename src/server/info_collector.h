@@ -51,8 +51,8 @@ public:
         ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
-        ::dsn::perf_counter_wrapper duplicate_qps;
-        ::dsn::perf_counter_wrapper duplicate_failed_qps;
+        ::dsn::perf_counter_wrapper dup_shipped_ops;
+        ::dsn::perf_counter_wrapper dup_failed_shipping_ops;
         ::dsn::perf_counter_wrapper duplicated_put_qps;
         ::dsn::perf_counter_wrapper duplicated_remove_qps;
         ::dsn::perf_counter_wrapper duplicated_multi_remove_qps;
