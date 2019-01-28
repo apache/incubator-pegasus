@@ -90,6 +90,7 @@ public:
     //  - ERR_WRONG_TIMING: another checkpoint is running now
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
     //  - ERR_FILE_OPERATION_FAILED: some file failure
+    // ATTENTION: make sure that no other threads is writing into the replica.
     virtual ::dsn::error_code sync_checkpoint() override;
 
     // returns:
@@ -230,6 +231,10 @@ private:
 
     // return finish time recorded in rocksdb
     uint64_t do_manual_compact(const rocksdb::CompactRangeOptions &options);
+
+    // generate new checkpoint and remove old checkpoints, in order to release storage asap
+    // return true if release succeed (new checkpointed generated).
+    bool release_storage_after_manual_compact();
 
     std::string query_compact_state() const override;
 

@@ -2591,50 +2591,38 @@ bool pegasus_server_impl::set_options(
 
 uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options)
 {
-    uint64_t start_time;
-    rocksdb::Status status;
-
     // wait flush before compact to make all data compacted.
-    ddebug_replica("start to Flush");
-    start_time = dsn_now_ms();
-    status = _db->Flush(rocksdb::FlushOptions());
-    ddebug_replica("Flush finished, status = {}, time_used = {}ms",
-                   status.ToString().c_str(),
+    ddebug_replica("start Flush");
+    uint64_t start_time = dsn_now_ms();
+    rocksdb::Status status = _db->Flush(rocksdb::FlushOptions());
+    ddebug_replica("finish Flush, status = {}, time_used = {}ms",
+                   status.ToString(),
                    dsn_now_ms() - start_time);
 
     // do compact
-    ddebug_replica("start to CompactRange, target_level = {}, bottommost_level_compaction = {}",
+    ddebug_replica("start CompactRange, target_level = {}, bottommost_level_compaction = {}",
                    options.target_level,
                    options.bottommost_level_compaction == rocksdb::BottommostLevelCompaction::kForce
                        ? "force"
                        : "skip");
     start_time = dsn_now_ms();
     status = _db->CompactRange(options, nullptr, nullptr);
-    ddebug_replica("CompactRange finished, status = {}, time_used = {}ms",
-                   status.ToString().c_str(),
+    ddebug_replica("finish CompactRange, status = {}, time_used = {}ms",
+                   status.ToString(),
                    dsn_now_ms() - start_time);
 
     // generate new checkpoint and remove old checkpoints, in order to release storage asap
-    ddebug_replica("generate new checkpoint immediately after manual compact");
-    int64_t old_last_durable = last_durable_decree();
-    sync_checkpoint();
-    gc_checkpoints(true);
-    if (last_durable_decree() == old_last_durable) {
+    if (!release_storage_after_manual_compact()) {
         // it is possible that the new checkpoint is not generated, if there was no data
         // written into rocksdb when doing manual compact.
-        ddebug_replica("no new checkpoint generated, will retry after 5 minutes");
+        // we will try to generate it again, and it will probably succeed because at least some
+        // empty data is written into rocksdb by periodic group check.
+        ddebug_replica("release storage failed after manual compact, will retry after 5 minutes");
         ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
                                 &_tracker,
-                                [this, old_last_durable]() {
-                                    ddebug_replica("retry gc checkpoints after manual compact");
-                                    if (last_durable_decree() == old_last_durable) {
-                                        // if the new checkpoint is still not generated in the
-                                        // last 5 minutes, we will try to generate it again, and
-                                        // it will probably succeed because at least some empty
-                                        // data is written into rocksdb by periodic group check.
-                                        sync_checkpoint();
-                                    }
-                                    gc_checkpoints(true);
+                                [this]() {
+                                    ddebug_replica("retry release storage after manual compact");
+                                    release_storage_after_manual_compact();
                                 },
                                 0,
                                 std::chrono::minutes(5));
@@ -2644,6 +2632,44 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
     update_replica_rocksdb_statistics();
 
     return _db->GetLastManualCompactFinishTime();
+}
+
+bool pegasus_server_impl::release_storage_after_manual_compact()
+{
+    int64_t old_last_durable = last_durable_decree();
+
+    // wait flush before async checkpoint to make all data compacted
+    ddebug_replica("start Flush");
+    uint64_t start_time = dsn_now_ms();
+    rocksdb::Status status = _db->Flush(rocksdb::FlushOptions());
+    ddebug_replica("finish Flush, status = {}, time_used = {}ms",
+                   status.ToString(),
+                   dsn_now_ms() - start_time);
+
+    // async checkpoint
+    ddebug_replica("start async_checkpoint");
+    start_time = dsn_now_ms();
+    ::dsn::error_code err = async_checkpoint(false);
+    ddebug_replica("finish async_checkpoint, return = {}, time_used = {}ms",
+                   err.to_string(),
+                   dsn_now_ms() - start_time);
+
+    // gc checkpoints
+    ddebug_replica("start gc_checkpoints");
+    start_time = dsn_now_ms();
+    gc_checkpoints(true);
+    ddebug_replica("finish gc_checkpoints, time_used = {}ms", dsn_now_ms() - start_time);
+
+    int64_t new_last_durable = last_flushed_decree();
+    if (new_last_durable > old_last_durable) {
+        ddebug_replica("release storage succeed, last_durable_decree changed from {} to {}",
+                       old_last_durable,
+                       new_last_durable);
+        return true;
+    } else {
+        ddebug_replica("release storage failed, last_durable_decree remains {}", new_last_durable);
+        return false;
+    }
 }
 
 std::string pegasus_server_impl::query_compact_state() const
