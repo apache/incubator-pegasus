@@ -259,6 +259,19 @@
       "timespan": 86400
     },
     {
+      "title": "负载均衡情况",
+      "endpoints": ["cluster=${cluster.name} job=meta service=pegasus"],
+      "counters": [
+          "meta*eon.greedy_balancer*balance_operation_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
+          "meta*eon.greedy_balancer*recent_balance_move_primary_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
+          "meta*eon.greedy_balancer*recent_balance_copy_primary_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
+          "meta*eon.greedy_balancer*recent_balance_copy_secondary_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "ReplicaServer异常统计（心跳失败次数、Prepare失败次数、Error文件夹个数、Garbage文件夹个数等）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
