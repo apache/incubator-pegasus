@@ -6,7 +6,7 @@ if [ $# -lt 2 ]; then
   echo "USGAE: $0 <cluster> <filter1> [<filter2> ...]"
   echo "   eg: $0 onebox 2017-07 2017-08 2017-09"
   echo
-  echo "Result: <cluster> <serve_days> <available> <app_count> <data_size>"
+  echo "Result: <cluster> <serve_minutes> <available> <app_count> <data_size>"
   exit 1
 fi
 
@@ -16,18 +16,6 @@ shift
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
-
-#minos_config_dir=$(dirname $MINOS_CONFIG_FILE)/xiaomi-config/conf/pegasus
-#minos_config=$minos_config_dir/pegasus-${cluster}.cfg
-#if [ ! -f $minos_config and ! -f ]; then
-#  echo "ERROR: minos config \"$minos_config\" not found"
-#  exit 1
-#fi
-#detect_table=`grep '^ *available_detect_app = ' $minos_config | awk '{print $3}'`
-#if [ "$detect_table" == "" ]; then
-#  echo "ERROR: get detect table from $minos_config failed"
-#  exit 1
-#fi
 
 detect_table="test"
 app_stat_result="/tmp/$UID.$PID.pegasus.stat_available.app_stat_result"
