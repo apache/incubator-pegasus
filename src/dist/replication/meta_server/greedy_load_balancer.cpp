@@ -38,6 +38,7 @@
 #include <iostream>
 #include <queue>
 #include <dsn/tool-api/command_manager.h>
+#include <dsn/utility/math.h>
 #include "greedy_load_balancer.h"
 #include "meta_data.h"
 
@@ -48,7 +49,8 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc)
     : simple_load_balancer(_svc),
       _ctrl_balancer_in_turn(nullptr),
       _ctrl_only_primary_balancer(nullptr),
-      _ctrl_only_move_primary(nullptr)
+      _ctrl_only_move_primary(nullptr),
+      _get_balance_operation_count(nullptr)
 {
     if (_svc != nullptr) {
         _balancer_in_turn = _svc->get_meta_options()._lb_opts.balancer_in_turn;
@@ -59,13 +61,37 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc)
         _only_primary_balancer = false;
         _only_move_primary = false;
     }
+
+    ::memset(t_operation_counters, 0, sizeof(t_operation_counters));
+
+    // init perf counters
+    _balance_operation_count.init_app_counter("eon.greedy_balancer",
+                                              "balance_operation_count",
+                                              COUNTER_TYPE_NUMBER,
+                                              "balance operation count to be done");
+    _recent_balance_move_primary_count.init_app_counter(
+        "eon.greedy_balancer",
+        "recent_balance_move_primary_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "move primary count by balancer in the recent period");
+    _recent_balance_copy_primary_count.init_app_counter(
+        "eon.greedy_balancer",
+        "recent_balance_copy_primary_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "copy primary count by balancer in the recent period");
+    _recent_balance_copy_secondary_count.init_app_counter(
+        "eon.greedy_balancer",
+        "recent_balance_copy_secondary_count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "copy secondary count by balancer in the recent period");
 }
 
 greedy_load_balancer::~greedy_load_balancer()
 {
     UNREGISTER_VALID_HANDLER(_ctrl_balancer_in_turn);
+    UNREGISTER_VALID_HANDLER(_ctrl_only_primary_balancer);
     UNREGISTER_VALID_HANDLER(_ctrl_only_move_primary);
-    UNREGISTER_VALID_HANDLER(_ctrl_only_move_primary);
+    UNREGISTER_VALID_HANDLER(_get_balance_operation_count);
 }
 
 void greedy_load_balancer::register_ctrl_commands()
@@ -96,15 +122,86 @@ void greedy_load_balancer::register_ctrl_commands()
         [this](const std::vector<std::string> &args) {
             HANDLE_CLI_FLAGS(_only_move_primary, args);
         });
+
+    _get_balance_operation_count = dsn::command_manager::instance().register_app_command(
+        {"lb.get_balance_operation_count"},
+        "lb.get_balance_operation_count [total | move_pri | copy_pri | copy_sec | detail]",
+        "get balance operation count",
+        [this](const std::vector<std::string> &args) { return get_balance_operation_count(args); });
 }
 
 void greedy_load_balancer::unregister_ctrl_commands()
 {
     UNREGISTER_VALID_HANDLER(_ctrl_balancer_in_turn);
+    UNREGISTER_VALID_HANDLER(_ctrl_only_primary_balancer);
     UNREGISTER_VALID_HANDLER(_ctrl_only_move_primary);
-    UNREGISTER_VALID_HANDLER(_ctrl_only_move_primary);
+    UNREGISTER_VALID_HANDLER(_get_balance_operation_count);
 
     simple_load_balancer::unregister_ctrl_commands();
+}
+
+std::string greedy_load_balancer::get_balance_operation_count(const std::vector<std::string> &args)
+{
+    if (args.empty()) {
+        return std::string("total=" + std::to_string(t_operation_counters[ALL_COUNT]));
+    }
+
+    if (args[0] == "total") {
+        return std::string("total=" + std::to_string(t_operation_counters[ALL_COUNT]));
+    }
+
+    std::string result("unknown");
+    if (args[0] == "move_pri")
+        result = std::string("move_pri=" + std::to_string(t_operation_counters[MOVE_PRI_COUNT]));
+    else if (args[0] == "copy_pri")
+        result = std::string("copy_pri=" + std::to_string(t_operation_counters[COPY_PRI_COUNT]));
+    else if (args[0] == "copy_sec")
+        result = std::string("copy_sec=" + std::to_string(t_operation_counters[COPY_SEC_COUNT]));
+    else if (args[0] == "detail")
+        result = std::string("move_pri=" + std::to_string(t_operation_counters[MOVE_PRI_COUNT]) +
+                             ",copy_pri=" + std::to_string(t_operation_counters[COPY_PRI_COUNT]) +
+                             ",copy_sec=" + std::to_string(t_operation_counters[COPY_SEC_COUNT]) +
+                             ",total=" + std::to_string(t_operation_counters[ALL_COUNT]));
+    else
+        result = std::string("ERR: invalid arguments");
+
+    return result;
+}
+
+void greedy_load_balancer::score(meta_view view, double &primary_stddev, double &total_stddev)
+{
+    // Calculate stddev of primary and partition count for current meta-view
+    std::vector<uint32_t> primary_count;
+    std::vector<uint32_t> partition_count;
+
+    primary_stddev = 0.0;
+    total_stddev = 0.0;
+
+    bool primary_partial_sample = false;
+    bool partial_sample = false;
+
+    for (auto iter = view.nodes->begin(); iter != view.nodes->end(); ++iter) {
+        const node_state &node = iter->second;
+        if (node.alive()) {
+            if (node.partition_count() != 0) {
+                primary_count.emplace_back(node.primary_count());
+                partition_count.emplace_back(node.partition_count());
+            }
+        } else {
+            if (node.primary_count() != 0) {
+                primary_partial_sample = true;
+            }
+            if (node.partition_count() != 0) {
+                partial_sample = true;
+            }
+        }
+    }
+
+    if (primary_count.size() <= 1 || partition_count.size() <= 1)
+        return;
+
+    primary_stddev = utils::mean_stddev(primary_count, primary_partial_sample);
+    total_stddev = utils::mean_stddev(partition_count, partial_sample);
 }
 
 std::shared_ptr<configuration_balancer_request>
@@ -120,6 +217,7 @@ greedy_load_balancer::generate_balancer_request(const partition_configuration &p
     switch (type) {
     case balance_type::move_primary:
         ans = "move_primary";
+        result.balance_type = balancer_request_type::move_primary;
         result.action_list.emplace_back(
             configuration_proposal_action{from, from, config_type::CT_DOWNGRADE_TO_SECONDARY});
         result.action_list.emplace_back(
@@ -127,6 +225,7 @@ greedy_load_balancer::generate_balancer_request(const partition_configuration &p
         break;
     case balance_type::copy_primary:
         ans = "copy_primary";
+        result.balance_type = balancer_request_type::copy_primary;
         result.action_list.emplace_back(
             configuration_proposal_action{from, to, config_type::CT_ADD_SECONDARY_FOR_LB});
         result.action_list.emplace_back(
@@ -138,6 +237,7 @@ greedy_load_balancer::generate_balancer_request(const partition_configuration &p
         break;
     case balance_type::copy_secondary:
         ans = "copy_secondary";
+        result.balance_type = balancer_request_type::copy_secondary;
         result.action_list.emplace_back(
             configuration_proposal_action{pc.primary, to, config_type::CT_ADD_SECONDARY_FOR_LB});
         result.action_list.emplace_back(
@@ -823,7 +923,7 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
     return ns.for_each_partition([this, n](const dsn::gpid &pid) {
         config_context &cc = *get_config_context(*(t_global_view->apps), pid);
         if (cc.find_from_serving(n) == cc.serving.end()) {
-            ddebug("meta server hasn't colected gpid(%d.%d)'s info of %s",
+            ddebug("meta server hasn't collected gpid(%d.%d)'s info of %s",
                    pid.get_app_id(),
                    pid.get_partition_index(),
                    n.to_string());
@@ -833,7 +933,7 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
     });
 }
 
-void greedy_load_balancer::greedy_balancer()
+void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 {
     const app_mapper &apps = *t_global_view->apps;
 
@@ -859,11 +959,13 @@ void greedy_load_balancer::greedy_balancer()
             // t_migration_result->empty();
             return;
         }
-        if (!t_migration_result->empty()) {
-            if (_balancer_in_turn) {
-                ddebug("stop to handle more apps after we found some actions for %s",
-                       app->get_logname());
-                return;
+        if (!balance_checker) {
+            if (!t_migration_result->empty()) {
+                if (_balancer_in_turn) {
+                    ddebug("stop to handle more apps after we found some actions for %s",
+                           app->get_logname());
+                    return;
+                }
             }
         }
     }
@@ -872,9 +974,11 @@ void greedy_load_balancer::greedy_balancer()
     // make decision according to disk load.
     // primary_balancer_globally();
 
-    if (!t_migration_result->empty()) {
-        ddebug("stop to do secondary balance coz we already has actions to do");
-        return;
+    if (!balance_checker) {
+        if (!t_migration_result->empty()) {
+            ddebug("stop to do secondary balance coz we already has actions to do");
+            return;
+        }
     }
     if (_only_primary_balancer) {
         ddebug("stop to do secondary balancer coz it is not allowed");
@@ -897,11 +1001,13 @@ void greedy_load_balancer::greedy_balancer()
             // t_migration_result->empty();
             return;
         }
-        if (!t_migration_result->empty()) {
-            if (_balancer_in_turn) {
-                ddebug("stop to handle more apps after we found some actions for %s",
-                       app->get_logname());
-                return;
+        if (!balance_checker) {
+            if (!t_migration_result->empty()) {
+                if (_balancer_in_turn) {
+                    ddebug("stop to handle more apps after we found some actions for %s",
+                           app->get_logname());
+                    return;
+                }
             }
         }
     }
@@ -918,8 +1024,56 @@ bool greedy_load_balancer::balance(meta_view view, migration_list &list)
     t_migration_result = &list;
     t_migration_result->clear();
 
-    greedy_balancer();
+    greedy_balancer(false);
     return !t_migration_result->empty();
+}
+
+bool greedy_load_balancer::check(meta_view view, migration_list &list)
+{
+    ddebug("balance checker round");
+    list.clear();
+
+    t_total_partitions = count_partitions(*(view.apps));
+    t_alive_nodes = view.nodes->size();
+    t_global_view = &view;
+    t_migration_result = &list;
+    t_migration_result->clear();
+
+    greedy_balancer(true);
+    return !t_migration_result->empty();
+}
+
+void greedy_load_balancer::report(const dsn::replication::migration_list &list,
+                                  bool balance_checker)
+{
+    int counters[MAX_COUNT];
+    ::memset(counters, 0, sizeof(counters));
+
+    counters[ALL_COUNT] = list.size();
+    for (const auto &action : list) {
+        switch (action.second.get()->balance_type) {
+        case balancer_request_type::move_primary:
+            counters[MOVE_PRI_COUNT]++;
+            break;
+        case balancer_request_type::copy_primary:
+            counters[COPY_PRI_COUNT]++;
+            break;
+        case balancer_request_type::copy_secondary:
+            counters[COPY_SEC_COUNT]++;
+            break;
+        default:
+            dassert(false, "");
+        }
+    }
+    ::memcpy(t_operation_counters, counters, sizeof(counters));
+
+    // update perf counters
+    _balance_operation_count->set(list.size());
+    if (!balance_checker) {
+        _recent_balance_move_primary_count->add(counters[MOVE_PRI_COUNT]);
+        _recent_balance_copy_primary_count->add(counters[COPY_PRI_COUNT]);
+        _recent_balance_copy_secondary_count->add(counters[COPY_SEC_COUNT]);
+    }
 }
 }
 }

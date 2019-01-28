@@ -2440,7 +2440,7 @@ bool server_state::check_all_partitions()
            ignored_add_secondary_count);
 
     // then the balancer stage
-    if (level <= meta_function_level::fl_steady) {
+    if (level < meta_function_level::fl_steady) {
         ddebug("don't do replica migration coz meta server is in level(%s)",
                _meta_function_level_VALUES_TO_NAMES.find(level)->second);
         return false;
@@ -2458,9 +2458,21 @@ bool server_state::check_all_partitions()
         return false;
     }
 
-    ddebug("try to do replica migration");
+    if (level == meta_function_level::fl_steady) {
+        ddebug("check if any replica migration can be done when meta server is in level(%s)",
+               _meta_function_level_VALUES_TO_NAMES.find(level)->second);
+        _meta_svc->get_balancer()->check({&_all_apps, &_nodes}, _temporary_list);
+        ddebug("balance checker operation count = %d", _temporary_list.size());
+        // update balance checker operation count
+        _meta_svc->get_balancer()->report(_temporary_list, true);
+        return false;
+    }
+
     if (_meta_svc->get_balancer()->balance({&_all_apps, &_nodes}, _temporary_list)) {
+        ddebug("try to do replica migration");
         _meta_svc->get_balancer()->apply_balancer({&_all_apps, &_nodes}, _temporary_list);
+        // update balancer action details
+        _meta_svc->get_balancer()->report(_temporary_list, false);
         if (_replica_migration_subscriber)
             _replica_migration_subscriber(_temporary_list);
         tasking::enqueue(LPC_META_STATE_NORMAL,
@@ -2468,7 +2480,20 @@ bool server_state::check_all_partitions()
                          std::bind(&meta_service::balancer_run, _meta_svc));
         return false;
     }
+
+    ddebug("check if any replica migration left");
+    _meta_svc->get_balancer()->check({&_all_apps, &_nodes}, _temporary_list);
+    ddebug("balance checker operation count = %d", _temporary_list.size());
+    // update balance checker operation count
+    _meta_svc->get_balancer()->report(_temporary_list, true);
+
     return true;
+}
+
+void server_state::get_cluster_balance_score(double &primary_stddev, double &total_stddev)
+{
+    zauto_read_lock l(_lock);
+    _meta_svc->get_balancer()->score({&_all_apps, &_nodes}, primary_stddev, total_stddev);
 }
 
 void server_state::check_consistency(const dsn::gpid &gpid)

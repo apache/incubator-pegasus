@@ -180,6 +180,7 @@ public:
 
     // return true if no need to do any actions
     bool check_all_partitions();
+    void get_cluster_balance_score(double &primary_stddev /*out*/, double &total_stddev /*out*/);
     void clear_proposals();
 
     int count_staging_app();

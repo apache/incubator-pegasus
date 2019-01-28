@@ -46,9 +46,14 @@ public:
     greedy_load_balancer(meta_service *svc);
     virtual ~greedy_load_balancer();
     bool balance(meta_view view, migration_list &list) override;
+    bool check(meta_view view, migration_list &list) override;
+    void report(const migration_list &list, bool balance_checker) override;
+    void score(meta_view view, double &primary_stddev, double &total_stddev) override;
 
     void register_ctrl_commands() override;
     void unregister_ctrl_commands() override;
+
+    std::string get_balance_operation_count(const std::vector<std::string> &args) override;
 
 private:
     enum class balance_type
@@ -58,11 +63,21 @@ private:
         copy_secondary
     };
 
+    enum operation_counters
+    {
+        MOVE_PRI_COUNT = 0,
+        COPY_PRI_COUNT = 1,
+        COPY_SEC_COUNT = 2,
+        ALL_COUNT = 3,
+        MAX_COUNT = 4
+    };
+
     // these variables are temporarily assigned by interface "balance"
     const meta_view *t_global_view;
     migration_list *t_migration_result;
     int t_total_partitions;
     int t_alive_nodes;
+    int t_operation_counters[MAX_COUNT];
 
     // this is used to assign an integer id for every node
     // and these are generated from the above data, which are tempory too
@@ -80,6 +95,13 @@ private:
     dsn_handle_t _ctrl_balancer_in_turn;
     dsn_handle_t _ctrl_only_primary_balancer;
     dsn_handle_t _ctrl_only_move_primary;
+    dsn_handle_t _get_balance_operation_count;
+
+    // perf counters
+    perf_counter_wrapper _balance_operation_count;
+    perf_counter_wrapper _recent_balance_move_primary_count;
+    perf_counter_wrapper _recent_balance_copy_primary_count;
+    perf_counter_wrapper _recent_balance_copy_secondary_count;
 
 private:
     void number_nodes(const node_mapper &nodes);
@@ -108,7 +130,7 @@ private:
     bool copy_secondary_per_app(const std::shared_ptr<app_state> &app);
     bool secondary_balancer_globally();
 
-    void greedy_balancer();
+    void greedy_balancer(const bool balance_checker);
 
     bool all_replica_infos_collected(const node_state &ns);
     // using t_global_view to get disk_tag of node's pid

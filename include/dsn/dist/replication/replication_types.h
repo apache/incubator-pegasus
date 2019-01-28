@@ -123,6 +123,18 @@ struct meta_function_level
 
 extern const std::map<int, const char *> _meta_function_level_VALUES_TO_NAMES;
 
+struct balancer_request_type
+{
+    enum type
+    {
+        move_primary = 0,
+        copy_primary = 1,
+        copy_secondary = 2
+    };
+};
+
+extern const std::map<int, const char *> _balancer_request_type_VALUES_TO_NAMES;
+
 struct app_env_operation
 {
     enum type
@@ -2375,10 +2387,14 @@ inline std::ostream &operator<<(std::ostream &out, const configuration_proposal_
 
 typedef struct _configuration_balancer_request__isset
 {
-    _configuration_balancer_request__isset() : gpid(false), action_list(false), force(true) {}
+    _configuration_balancer_request__isset()
+        : gpid(false), action_list(false), force(true), balance_type(false)
+    {
+    }
     bool gpid : 1;
     bool action_list : 1;
     bool force : 1;
+    bool balance_type : 1;
 } _configuration_balancer_request__isset;
 
 class configuration_balancer_request
@@ -2388,12 +2404,13 @@ public:
     configuration_balancer_request(configuration_balancer_request &&);
     configuration_balancer_request &operator=(const configuration_balancer_request &);
     configuration_balancer_request &operator=(configuration_balancer_request &&);
-    configuration_balancer_request() : force(false) {}
+    configuration_balancer_request() : force(false), balance_type((balancer_request_type::type)0) {}
 
     virtual ~configuration_balancer_request() throw();
     ::dsn::gpid gpid;
     std::vector<configuration_proposal_action> action_list;
     bool force;
+    balancer_request_type::type balance_type;
 
     _configuration_balancer_request__isset __isset;
 
@@ -2402,6 +2419,8 @@ public:
     void __set_action_list(const std::vector<configuration_proposal_action> &val);
 
     void __set_force(const bool val);
+
+    void __set_balance_type(const balancer_request_type::type val);
 
     bool operator==(const configuration_balancer_request &rhs) const
     {
@@ -2412,6 +2431,10 @@ public:
         if (__isset.force != rhs.__isset.force)
             return false;
         else if (__isset.force && !(force == rhs.force))
+            return false;
+        if (__isset.balance_type != rhs.__isset.balance_type)
+            return false;
+        else if (__isset.balance_type && !(balance_type == rhs.balance_type))
             return false;
         return true;
     }
