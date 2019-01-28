@@ -9,48 +9,61 @@
 #include <dsn/dist/replication/duplication_common.h>
 
 #include "command_executor.h"
+#include "argh.h"
 
 inline bool add_dup(command_executor *e, shell_context *sc, arguments args)
 {
-    if (args.argc <= 2)
+    // add_dup <app_name> <remote_address> [-f]
+
+    argh::parser cmd(args.argc, args.argv);
+    if (cmd.pos_args().size() > 3) {
+        fmt::print("too much params\n");
         return false;
-
-    std::string app_name = args.argv[1];
-    std::string remote_address = args.argv[2];
-
-    static struct option long_options[] = {{"freezed", no_argument, 0, 'f'}, {0, 0, 0, 0}};
-    bool freezed = false;
-    while (true) {
-        int option_index;
-        int c = getopt_long(args.argc, args.argv, "f", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 'f':
-            freezed = true;
-            break;
-        default:
+    }
+    for (const auto &flag : cmd.flags()) {
+        if (flag != "f" && flag != "freeze") {
+            fmt::print("unknown flag {}\n", flag);
             return false;
         }
     }
 
-    auto err_resp = sc->ddl_client->add_dup(app_name, remote_address, freezed);
+    std::string app_name;
+    if (!cmd(1)) {
+        fmt::print("missing param <app_name>\n");
+        return false;
+    }
+    app_name = cmd(1).str();
+
+    std::string remote_address;
+    if (!cmd(2)) {
+        fmt::print("missing param <remote_address>\n");
+        return false;
+    }
+    remote_address = cmd(2).str();
+
+    bool freeze = cmd[{"-f", "--freeze"}];
+
+    auto err_resp = sc->ddl_client->add_dup(app_name, remote_address, freeze);
     dsn::error_s err = err_resp.get_error();
     if (err.is_ok()) {
         err = dsn::error_s::make(err_resp.get_value().err);
     }
     if (!err.is_ok()) {
         fmt::print(
-            "adding duplication for app [{}] failed, error={}\n", app_name, err.description());
+            "adding duplication failed [app: {}, remote address: {}, freeze: {}, error: {}]\n",
+            app_name,
+            remote_address,
+            freeze,
+            err.description());
     } else {
         const auto &resp = err_resp.get_value();
         fmt::print("Success for adding duplication [app: {}, remote address: {}, appid: {}, dupid: "
-                   "{}, freezed: {}]\n",
+                   "{}, freeze: {}]\n",
                    app_name,
                    remote_address,
                    resp.appid,
                    resp.dupid,
-                   freezed);
+                   freeze);
     }
     return true;
 }
@@ -67,10 +80,29 @@ inline bool string2dupid(const std::string &str, dsn::replication::dupid_t *dup_
 
 inline bool query_dup(command_executor *e, shell_context *sc, arguments args)
 {
-    if (args.argc <= 1)
-        return false;
+    // query_dup <app_name> [-d]
 
-    std::string app_name = args.argv[1];
+    argh::parser cmd(args.argc, args.argv);
+    if (cmd.pos_args().size() > 2) {
+        fmt::print("too much params\n");
+        return false;
+    }
+    for (const auto &flag : cmd.flags()) {
+        if (flag != "d" && flag != "detail") {
+            fmt::print("unknown flag {}\n", flag);
+            return false;
+        }
+    }
+
+    std::string app_name;
+    if (!cmd(1)) {
+        fmt::print("missing param <app_name>\n");
+        return false;
+    }
+    app_name = cmd(1).str();
+
+    bool detail = cmd[{"-d", "--detail"}];
+
     auto err_resp = sc->ddl_client->query_dup(app_name);
     dsn::error_s err = err_resp.get_error();
     if (err.is_ok()) {
@@ -79,6 +111,12 @@ inline bool query_dup(command_executor *e, shell_context *sc, arguments args)
     if (!err.is_ok()) {
         fmt::print(
             "querying duplications of app [{}] failed, error={}\n", app_name, err.description());
+    } else if (detail) {
+        fmt::print("duplications of app [{}] in detail:\n", app_name);
+        const auto &resp = err_resp.get_value();
+        for (auto info : resp.entry_list) {
+            fmt::print("{}\n\n", duplication_entry_to_string(info));
+        }
     } else {
         const auto &resp = err_resp.get_value();
         fmt::print("duplications of app [{}] are listed as below:\n", app_name);
@@ -95,36 +133,6 @@ inline bool query_dup(command_executor *e, shell_context *sc, arguments args)
                        duplication_status_to_string(info.status),
                        info.remote_address,
                        create_time);
-        }
-    }
-    return true;
-}
-
-inline bool query_dup_detail(command_executor *e, shell_context *sc, arguments args)
-{
-    if (args.argc <= 2)
-        return false;
-
-    std::string app_name = args.argv[1];
-
-    dsn::replication::dupid_t dup_id;
-    if (!string2dupid(args.argv[2], &dup_id)) {
-        return false;
-    }
-
-    auto err_resp = sc->ddl_client->query_dup(app_name);
-    if (!err_resp.is_ok()) {
-        fmt::print("querying duplication of [app({}) dupid({})] failed, error={}\n",
-                   app_name,
-                   dup_id,
-                   err_resp.get_error().description());
-    } else {
-        fmt::print("duplication [{}] of app [{}]:\n", dup_id, app_name);
-        const auto &resp = err_resp.get_value();
-        for (auto info : resp.entry_list) {
-            if (info.dupid == dup_id) {
-                fmt::print("{}\n", duplication_entry_to_string(info));
-            }
         }
     }
     return true;
