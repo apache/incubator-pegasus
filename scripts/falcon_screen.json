@@ -22,7 +22,7 @@
       "timespan": 86400
     },
     {
-      "title": "集群总QPS（统计所有表get、multi_get、put、multi_put、remove、multi_remove、scan各操作的总QPS）",
+      "title": "各操作总QPS（统计get、multi_get、put、multi_put、remove、multi_remove、scan各操作的总QPS）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
           "collector*app.pegasus*app.stat.get_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
@@ -53,7 +53,7 @@
       "timespan": 86400
     },
     {
-      "title": "ReplicaServer内存用量（单位：MB）",
+      "title": "各ReplicaServer内存用量（单位：MB）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "replica*server*memused.res(MB)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
@@ -63,7 +63,7 @@
       "timespan": 86400
     },
     {
-      "title": "各节点存储用量（百分比）",
+      "title": "各节点存储使用率（百分比）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "df.bytes.used.percent/fstype=ext4,mount=/home",
@@ -85,7 +85,7 @@
       "timespan": 86400
     },
     {
-      "title": "各节点内存用量（百分比）",
+      "title": "各节点内存使用率（百分比）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "mem.memused.percent"
@@ -215,7 +215,7 @@
       "timespan": 86400
     },
     {
-      "title": "P99 Prepare 客户端延迟（单位：纳秒）",
+      "title": "P99 Prepare 发送端延迟（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_PREPARE_ACK.latency.client(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
