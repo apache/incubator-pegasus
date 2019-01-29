@@ -22,7 +22,7 @@
       "timespan": 86400
     },
     {
-      "title": "总QPS（统计所有表get、multi_get、put、multi_put、remove、multi_remove、scan各操作的总QPS）",
+      "title": "各操作总QPS（统计get、multi_get、put、multi_put、remove、multi_remove、scan各操作的总QPS）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
           "collector*app.pegasus*app.stat.get_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
@@ -34,6 +34,81 @@
           "collector*app.pegasus*app.stat.incr_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.check_and_set_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.scan_qps#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "集群Load-Balance状态（待执行的balance操作数、已执行的balance操作数等）",
+      "endpoints": ["cluster=${cluster.name} job=meta service=pegasus"],
+      "counters": [
+          "meta*eon.greedy_balancer*balance_operation_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
+          "meta*eon.greedy_balancer*recent_balance_move_primary_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
+          "meta*eon.greedy_balancer*recent_balance_copy_primary_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
+          "meta*eon.greedy_balancer*recent_balance_copy_secondary_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各ReplicaServer内存用量（单位：MB）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "replica*server*memused.res(MB)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各节点存储使用率（百分比）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "df.bytes.used.percent/fstype=ext4,mount=/home",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd1",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd2",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd3",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd4",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd5",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd6",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd7",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd8",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd9",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd10",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd11",
+          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd12"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各节点内存使用率（百分比）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "mem.memused.percent"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各表存储用量（统计各表的单备份数据存储用量；单位：MB）",
+      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
+      "counters": [
+          "collector*app.pegasus*app.stat.storage_mb#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各表RocksDB缓存命中率（统计各表的RocksDB Block Cache命中率；单位：百分比*10000；1M表示100%）",
+      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
+      "counters": [
+          "collector*app.pegasus*app.stat.rdb_block_cache_hit_rate#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -120,10 +195,10 @@
       "timespan": 86400
     },
     {
-      "title": "P99 GetScanner 服务端延迟（单位：纳秒）",
+      "title": "P99 CheckAndMutate 服务端延迟（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
-          "zion*profiler*RPC_RRDB_RRDB_GET_SCANNER.latency.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+          "zion*profiler*RPC_RRDB_RRDB_CHECK_AND_MUTATE.latency.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -140,7 +215,7 @@
       "timespan": 86400
     },
     {
-      "title": "P99 Prepare 客户端延迟（单位：纳秒）",
+      "title": "P99 Prepare 发送端延迟（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_PREPARE_ACK.latency.client(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
@@ -154,56 +229,6 @@
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_PREPARE.latency.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "SSD存储用量（统计各表的单备份数据存储用量；单位：MB）",
-      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
-      "counters": [
-          "collector*app.pegasus*app.stat.storage_mb#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "rocksdb缓存命中率（统计各表的rocksdb block cache命中率；单位：百分比*10000；1M表示100%）",
-      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
-      "counters": [
-          "collector*app.pegasus*app.stat.rdb_block_cache_hit_rate#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "各节点SharedLog大小（单位：MB）",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "replica*eon.replica_stub*shared.log.size(MB)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "各节点内存用量（单位：MB）",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "replica*server*memused.res(MB)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "各节点SharedLog最近写入字节数",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "replica*eon.replica_stub*shared.log.recent.write.size/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -230,7 +255,27 @@
       "timespan": 86400
     },
     {
-      "title": "Partition健康状况（处于heathy、writable_ill、unwritable、unreadable、dead状态的partition个数）",
+      "title": "各节点SharedLog大小（单位：MB）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "replica*eon.replica_stub*shared.log.size(MB)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各节点SharedLog最近写入字节数",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "replica*eon.replica_stub*shared.log.recent.write.size/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "集群Partition健康状况（处于heathy、writable_ill、unwritable、unreadable、dead状态的partition个数）",
       "endpoints": ["cluster=${cluster.name} job=meta service=pegasus"],
       "counters": [
           "meta*eon.server_state*dead_partition_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
@@ -244,7 +289,7 @@
       "timespan": 86400
     },
     {
-      "title": "Config更新情况（节点失联个数、config变化次数等）",
+      "title": "集群Config更新情况（节点失联个数、config变化次数等）",
       "endpoints": ["cluster=${cluster.name} job=meta service=pegasus"],
       "counters": [
           "meta*eon.meta_service*recent_disconnect_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
@@ -259,20 +304,7 @@
       "timespan": 86400
     },
     {
-      "title": "负载均衡情况",
-      "endpoints": ["cluster=${cluster.name} job=meta service=pegasus"],
-      "counters": [
-          "meta*eon.greedy_balancer*balance_operation_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
-          "meta*eon.greedy_balancer*recent_balance_move_primary_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
-          "meta*eon.greedy_balancer*recent_balance_copy_primary_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus",
-          "meta*eon.greedy_balancer*recent_balance_copy_secondary_count/cluster=${cluster.name},job=meta,port=${meta.port},service=pegasus"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "ReplicaServer异常统计（心跳失败次数、Prepare失败次数、Error文件夹个数、Garbage文件夹个数等）",
+      "title": "各节点ReplicaServer异常统计（心跳失败次数、Prepare失败次数、Error文件夹个数、Garbage文件夹个数等）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "replica*eon.failure_detector*recent_beacon_fail_count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
@@ -288,7 +320,7 @@
       "timespan": 86400
     },
     {
-      "title": "Learning相关统计",
+      "title": "各节点Learning相关统计（执行次数、执行时间、传输数据量等）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "replica*eon.nfs_client*recent_copy_data_size/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
@@ -317,7 +349,7 @@
       "timespan": 86400
     },
     {
-      "title": "冷备份相关统计",
+      "title": "各节点Cold-Backup相关统计（执行次数、执行时间、上传数据量等）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "replica*eon.replica_stub*cold.backup.max.duration.time.ms/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
@@ -337,6 +369,16 @@
       "timespan": 86400
     },
     {
+      "title": "各节点Manual-Compact相关统计（当前执行个数等）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "replica*app.pegasus*manual.compact.running.count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "CPU Busy",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
@@ -347,40 +389,10 @@
       "timespan": 86400
     },
     {
-      "title": "CPU Load (1min)",
+      "title": "Network Dropped",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
-          "load.1min"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "CPU Load (5min)",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "load.5min"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "CPU Load (15min)",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "load.15min"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "Memory Used Percent",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "mem.memused.percent"
+          "net.if.total.dropped/iface=eth0"
       ],
       "graph_type": "a",
       "method": "",
@@ -401,16 +413,6 @@
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "net.if.out.bytes/iface=eth0"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "Network Dropped",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "net.if.total.dropped/iface=eth0"
       ],
       "graph_type": "a",
       "method": "",
@@ -473,28 +475,6 @@
           "disk.io.await/device=xvdc",
           "disk.io.await/device=xvdd",
           "disk.io.await/device=xvde"
-      ],
-      "graph_type": "a",
-      "method": "",
-      "timespan": 86400
-    },
-    {
-      "title": "磁盘用量",
-      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
-      "counters": [
-          "df.bytes.used.percent/fstype=ext4,mount=/home",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd1",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd2",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd3",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd4",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd5",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd6",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd7",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd8",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd9",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd10",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd11",
-          "df.bytes.used.percent/fstype=ext4,mount=/home/work/ssd12"
       ],
       "graph_type": "a",
       "method": "",
@@ -654,7 +634,7 @@
       "timespan": 86400
     },
     {
-      "title": "异常查询条数（统计各表最近10秒异常的查询条数）",
+      "title": "异常查询条数（统计各表最近10秒执行时间超过100毫秒的查询条数）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
           "collector*app.pegasus*app.stat.recent_abnormal_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
@@ -664,7 +644,7 @@
       "timespan": 86400
     },
     {
-      "title": "过期数据条数（统计各表最近10秒查询的过期数据条数）",
+      "title": "Expire数据条数（统计各表最近10秒查询的过期数据条数）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
           "collector*app.pegasus*app.stat.recent_expire_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
@@ -674,7 +654,7 @@
       "timespan": 86400
     },
     {
-      "title": "过滤数据条数（统计各表最近10秒过滤的数据条数）",
+      "title": "Filter数据条数（统计各表最近10秒过滤的数据条数）",
       "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
       "counters": [
           "collector*app.pegasus*app.stat.recent_filter_count#${for.each.table}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
