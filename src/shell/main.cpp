@@ -253,7 +253,7 @@ static command_executor commands[] = {
         "[-v|--value_filter_type anywhere|prefix|postfix] "
         "[-z|--value_filter_pattern str] "
         "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
-        "[-g|--geo_data] [-i|--no_value]",
+        "[-g|--geo_data] [-i|--no_value] [-n|--no_overwrite]",
         data_operations,
     },
     {

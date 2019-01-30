@@ -102,6 +102,7 @@ struct scan_data_context
     int split_id;
     int max_batch_count;
     int timeout_ms;
+    bool no_overwrite; // for copy_data
     pegasus::pegasus_client::filter_type value_filter_type;
     std::string value_filter_pattern;
     pegasus::pegasus_client::pegasus_scanner_wrapper scanner;
@@ -136,6 +137,7 @@ struct scan_data_context
           split_id(split_id_),
           max_batch_count(max_batch_count_),
           timeout_ms(timeout_ms_),
+          no_overwrite(false),
           value_filter_type(pegasus::pegasus_client::FT_NO_FILTER),
           scanner(scanner_),
           client(client_),
@@ -159,6 +161,7 @@ struct scan_data_context
         value_filter_type = type;
         value_filter_pattern = pattern;
     }
+    void set_no_overwrite() { no_overwrite = true; }
 };
 inline void update_atomic_max(std::atomic_long &max, long value)
 {
@@ -216,28 +219,65 @@ inline void scan_data_next(scan_data_context *context)
                     switch (context->op) {
                     case SCAN_COPY:
                         context->split_request_count++;
-                        context->client->async_set(
-                            hash_key,
-                            sort_key,
-                            value,
-                            [context](int err, pegasus::pegasus_client::internal_info &&info) {
+                        if (context->no_overwrite) {
+                            auto callback = [context](
+                                int err,
+                                pegasus::pegasus_client::check_and_set_results &&results,
+                                pegasus::pegasus_client::internal_info &&info) {
                                 if (err != pegasus::PERR_OK) {
                                     if (!context->split_completed.exchange(true)) {
                                         fprintf(stderr,
-                                                "ERROR: split[%d] async set failed: %s\n",
+                                                "ERROR: split[%d] async check and set failed: %s\n",
                                                 context->split_id,
                                                 context->client->get_error_string(err));
                                         context->error_occurred->store(true);
                                     }
                                 } else {
-                                    context->split_rows++;
+                                    if (results.set_succeed) {
+                                        context->split_rows++;
+                                    }
                                     scan_data_next(context);
                                 }
                                 // should put "split_request_count--" at end of the scope,
                                 // to prevent that split_request_count becomes 0 in the middle.
                                 context->split_request_count--;
-                            },
-                            context->timeout_ms);
+                            };
+                            pegasus::pegasus_client::check_and_set_options options;
+                            context->client->async_check_and_set(
+                                hash_key,
+                                sort_key,
+                                pegasus::pegasus_client::cas_check_type::CT_VALUE_NOT_EXIST,
+                                "",
+                                sort_key,
+                                value,
+                                options,
+                                std::move(callback),
+                                context->timeout_ms);
+                        } else {
+                            auto callback =
+                                [context](int err, pegasus::pegasus_client::internal_info &&info) {
+                                    if (err != pegasus::PERR_OK) {
+                                        if (!context->split_completed.exchange(true)) {
+                                            fprintf(stderr,
+                                                    "ERROR: split[%d] async set failed: %s\n",
+                                                    context->split_id,
+                                                    context->client->get_error_string(err));
+                                            context->error_occurred->store(true);
+                                        }
+                                    } else {
+                                        context->split_rows++;
+                                        scan_data_next(context);
+                                    }
+                                    // should put "split_request_count--" at end of the scope,
+                                    // to prevent that split_request_count becomes 0 in the middle.
+                                    context->split_request_count--;
+                                };
+                            context->client->async_set(hash_key,
+                                                       sort_key,
+                                                       value,
+                                                       std::move(callback),
+                                                       context->timeout_ms);
+                        }
                         break;
                     case SCAN_CLEAR:
                         context->split_request_count++;

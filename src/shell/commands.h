@@ -2166,6 +2166,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                            {"sort_key_filter_pattern", required_argument, 0, 'y'},
                                            {"value_filter_type", required_argument, 0, 'v'},
                                            {"value_filter_pattern", required_argument, 0, 'z'},
+                                           {"no_overwrite", no_argument, 0, 'n'},
                                            {"no_value", no_argument, 0, 'i'},
                                            {"geo_data", no_argument, 0, 'g'},
                                            {0, 0, 0, 0}};
@@ -2178,6 +2179,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     int max_batch_count = 500;
     int timeout_ms = sc->timeout_ms;
     bool is_geo_data = false;
+    bool no_overwrite = false;
     std::string hash_key_filter_type_name("no_filter");
     std::string sort_key_filter_type_name("no_filter");
     std::string value_filter_type_name("no_filter");
@@ -2190,7 +2192,7 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
         int option_index = 0;
         int c;
         c = getopt_long(
-            args.argc, args.argv, "c:a:p:b:t:h:x:s:y:v:z:i:g", long_options, &option_index);
+            args.argc, args.argv, "c:a:p:b:t:h:x:s:y:v:z:nig", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -2264,6 +2266,9 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'z':
             value_filter_pattern = unescape_str(optarg);
+            break;
+        case 'n':
+            no_overwrite = true;
             break;
         case 'i':
             options.no_value = true;
@@ -2402,6 +2407,8 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                                            target_geo_client,
                                                            &error_occurred);
         context->set_value_filter(value_filter_type, value_filter_pattern);
+        if (no_overwrite)
+            context->set_no_overwrite();
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
