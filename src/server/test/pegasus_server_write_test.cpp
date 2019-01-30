@@ -114,10 +114,10 @@ public:
                 mput.kvs.back().key.assign(sort_key[i].data(), 0, sort_key[i].size());
                 mput.kvs.back().value.assign(value[i].data(), 0, value[i].size());
             }
-            dsn::message_ex *mput_msg = pegasus::create_multi_put_request(mput);
+            dsn::message_ptr mput_msg = pegasus::create_multi_put_request(mput);
 
             duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_PUT;
-            duplicate.raw_message = dsn::move_message_to_blob(mput_msg);
+            duplicate.raw_message = dsn::move_message_to_blob(mput_msg.get());
 
             _server_write->on_duplicate(duplicate, resp);
             ASSERT_EQ(resp.error, 0);
@@ -129,10 +129,10 @@ public:
                 mremove.sort_keys.emplace_back();
                 mremove.sort_keys.back().assign(sort_key[i].data(), 0, sort_key[i].size());
             }
-            dsn::message_ex *mremove_msg = pegasus::create_multi_remove_request(mremove);
+            dsn::message_ptr mremove_msg = pegasus::create_multi_remove_request(mremove);
 
             duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
-            duplicate.raw_message = dsn::move_message_to_blob(mremove_msg);
+            duplicate.raw_message = dsn::move_message_to_blob(mremove_msg.get());
 
             _server_write->on_duplicate(duplicate, resp);
             ASSERT_EQ(resp.error, 0);
@@ -161,8 +161,8 @@ public:
                 pegasus::pegasus_generate_key(request.key, hash_key, sort_key[i]);
                 request.value.assign(value[i].data(), 0, value[i].size());
 
-                duplicate.raw_message =
-                    dsn::move_message_to_blob(pegasus::create_put_request(request));
+                dsn::message_ptr msg_ptr = pegasus::create_put_request(request);
+                duplicate.raw_message = dsn::move_message_to_blob(msg_ptr.get());
                 duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
                 _server_write->on_duplicate(duplicate, resp);
                 ASSERT_EQ(resp.error, 0);
@@ -185,14 +185,15 @@ public:
         pegasus::pegasus_generate_key(request.key, hash_key, sort_key);
         request.value.assign(value.data(), 0, value.size());
 
-        duplicate.raw_message = dsn::move_message_to_blob(pegasus::create_put_request(request));
+        dsn::message_ptr msg_ptr = pegasus::create_put_request(request);
+        duplicate.raw_message = dsn::move_message_to_blob(msg_ptr.get());
         duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
         _server_write->on_duplicate(duplicate, resp);
         ASSERT_EQ(resp.error, 0);
 
-        // last_duplicate_latency = [now-5 - timstamp, now - timestamp]
+        // last_duplicate_latency = [now-200 - timestamp, now - timestamp]
         ASSERT_LE(_server_write->_TEST_last_duplicate_latency.count(), dsn_now_us() - 10);
-        ASSERT_GE(_server_write->_TEST_last_duplicate_latency.count(), dsn_now_us() - 5 - 10);
+        ASSERT_GE(_server_write->_TEST_last_duplicate_latency.count(), dsn_now_us() - 200 - 10);
     }
 
     void test_illegal_duplicate_request()
@@ -210,7 +211,8 @@ public:
         pegasus::pegasus_generate_key(request.key, hash_key, sort_key);
         request.value.assign(value.data(), 0, value.size());
 
-        duplicate.raw_message = dsn::move_message_to_blob(pegasus::create_put_request(request));
+        dsn::message_ptr msg_ptr = pegasus::create_put_request(request);
+        duplicate.raw_message = dsn::move_message_to_blob(msg_ptr.get());
         duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
         _server_write->on_duplicate(duplicate, resp);
         ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);

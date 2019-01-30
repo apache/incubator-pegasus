@@ -34,15 +34,15 @@ public:
         duplicator->set_task_environment(&_env);
 
         mutation_tuple_set muts;
-        for (uint64_t i = 0; i < 3000; i++) {
+        for (uint64_t i = 0; i < 100; i++) {
             uint64_t ts = 200 + i;
             dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_PUT;
 
             dsn::apps::update_request request;
             pegasus::pegasus_generate_key(request.key, std::string("hash"), std::string("sort"));
-            dsn::message_ex *msg =
+            dsn::message_ptr msg =
                 dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
-            auto data = dsn::move_message_to_blob(msg);
+            auto data = dsn::move_message_to_blob(msg.get());
 
             muts.insert(std::make_tuple(ts, code, data));
         }
@@ -52,7 +52,7 @@ public:
         {
             duplicator->duplicate(muts, []() {});
 
-            size_t total_size = 3000;
+            size_t total_size = 100;
             while (total_size > 0) {
                 // ensure mutations having the same hash are sending sequentially.
                 ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
@@ -88,9 +88,9 @@ public:
 
             dsn::apps::update_request request;
             pegasus::pegasus_generate_key(request.key, std::string("hash"), std::string("sort"));
-            dsn::message_ex *msg =
+            dsn::message_ptr msg =
                 dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
-            auto data = dsn::move_message_to_blob(msg);
+            auto data = dsn::move_message_to_blob(msg.get());
 
             muts.insert(std::make_tuple(ts, code, data));
         }
@@ -151,8 +151,8 @@ public:
             dsn::apps::update_request request;
             pegasus::pegasus_generate_key(
                 request.key, std::string("hash") + std::to_string(i), std::string("sort"));
-            dsn::message_ex *msg = dsn::from_thrift_request_to_received_message(request, code);
-            auto data = dsn::move_message_to_blob(msg);
+            dsn::message_ptr msg = dsn::from_thrift_request_to_received_message(request, code);
+            auto data = dsn::move_message_to_blob(msg.get());
 
             muts.insert(std::make_tuple(ts, code, data));
         }
@@ -201,12 +201,13 @@ public:
             request.timetag = generate_timetag(100, 2, false); // master(onebox2)'s cluster_id = 2
             request.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
             request.hash = pegasus_key_hash(duplicated_request.key);
-            request.raw_message =
-                dsn::move_message_to_blob(dsn::from_thrift_request_to_received_message(
-                    duplicated_request, request.task_code));
 
-            dsn::message_ex *msg = dsn::from_thrift_request_to_received_message(request, code);
-            auto data = dsn::move_message_to_blob(msg);
+            dsn::message_ptr msg =
+                dsn::from_thrift_request_to_received_message(duplicated_request, request.task_code);
+            request.raw_message = dsn::move_message_to_blob(msg.get());
+
+            msg = dsn::from_thrift_request_to_received_message(request, code);
+            auto data = dsn::move_message_to_blob(msg.get());
             muts.insert(std::make_tuple(ts, code, data));
         }
 
@@ -241,12 +242,13 @@ public:
             request.timetag = generate_timetag(100, 130, false); // cluster_id=130(nowhere)
             request.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
             request.hash = pegasus_key_hash(duplicated_request.key);
-            request.raw_message =
-                dsn::move_message_to_blob(dsn::from_thrift_request_to_received_message(
-                    duplicated_request, request.task_code));
 
-            dsn::message_ex *msg = dsn::from_thrift_request_to_received_message(request, code);
-            auto data = dsn::move_message_to_blob(msg);
+            dsn::message_ptr msg =
+                dsn::from_thrift_request_to_received_message(duplicated_request, request.task_code);
+            request.raw_message = dsn::move_message_to_blob(msg.get());
+
+            msg = dsn::from_thrift_request_to_received_message(request, code);
+            auto data = dsn::move_message_to_blob(msg.get());
             muts.insert(std::make_tuple(ts, code, data));
         }
 
@@ -283,37 +285,37 @@ TEST_F(pegasus_mutation_duplicator_test, get_hash_from_request)
     {
         dsn::apps::multi_put_request request;
         request.hash_key.assign(hash_key.data(), 0, hash_key.length());
-        auto msg = dsn::from_thrift_request_to_received_message(request,
-                                                                dsn::apps::RPC_RRDB_RRDB_MULTI_PUT);
-        auto data = dsn::move_message_to_blob(msg);
+        dsn::message_ptr msg = dsn::from_thrift_request_to_received_message(
+            request, dsn::apps::RPC_RRDB_RRDB_MULTI_PUT);
+        auto data = dsn::move_message_to_blob(msg.get());
         ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_MULTI_PUT, data));
     }
 
     {
         dsn::apps::multi_remove_request request;
         request.hash_key.assign(hash_key.data(), 0, hash_key.length());
-        auto msg = dsn::from_thrift_request_to_received_message(
+        dsn::message_ptr msg = dsn::from_thrift_request_to_received_message(
             request, dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE);
 
-        auto data = dsn::move_message_to_blob(msg);
+        auto data = dsn::move_message_to_blob(msg.get());
         ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE, data));
     }
 
     {
         dsn::apps::update_request request;
         pegasus::pegasus_generate_key(request.key, hash_key, sort_key);
-        auto msg =
+        dsn::message_ptr msg =
             dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
-        auto data = dsn::move_message_to_blob(msg);
+        auto data = dsn::move_message_to_blob(msg.get());
         ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_PUT, data));
     }
 
     {
         dsn::blob key;
         pegasus::pegasus_generate_key(key, hash_key, sort_key);
-        auto msg =
+        dsn::message_ptr msg =
             dsn::from_thrift_request_to_received_message(key, dsn::apps::RPC_RRDB_RRDB_REMOVE);
-        auto data = dsn::move_message_to_blob(msg);
+        auto data = dsn::move_message_to_blob(msg.get());
         ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_REMOVE, data));
     }
 }
