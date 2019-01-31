@@ -13,6 +13,7 @@
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/output_utils.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/utility/string_view.h>
 #include <dsn/dist/cli/cli.client.h>
@@ -82,24 +83,24 @@ inline bool query_app(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
+    dsn::utils::table_printer tp;
     if (!(app_name.empty() && out_file.empty())) {
         std::cout << "[Parameters]" << std::endl;
         if (!app_name.empty())
-            std::cout << "app_name: " << app_name << std::endl;
+            tp.add_row_name_and_data("app_name", app_name);
         if (!out_file.empty())
-            std::cout << "out_file: " << out_file << std::endl;
+            tp.add_row_name_and_data("out_file", out_file);
     }
-    if (detailed)
-        std::cout << "detailed: true" << std::endl;
-    else
-        std::cout << "detailed: false" << std::endl;
+    tp.add_row_name_and_data("detailed", detailed);
+    tp.output(std::cout, ": ");
+
     std::cout << std::endl << "[Result]" << std::endl;
 
     if (app_name.empty()) {
         std::cout << "ERROR: null app name" << std::endl;
         return false;
     }
-    ::dsn::error_code err = sc->ddl_client->list_app(app_name, detailed, out_file);
+    ::dsn::error_code err = sc->ddl_client->list_app(app_name, detailed, out_file);  // TODO resolve ip
     if (err == ::dsn::ERR_OK)
         std::cout << "list app " << app_name << " succeed" << std::endl;
     else
@@ -195,12 +196,14 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
     if (!(status.empty() && output_file.empty())) {
         std::cout << "[Parameters]" << std::endl;
+        dsn::utils::table_printer tp;
         if (!status.empty())
-            std::cout << "status: " << status << std::endl;
+          tp.add_row_name_and_data("status", status);
         if (!output_file.empty())
-            std::cout << "out_file: " << output_file << std::endl;
-        std::cout << std::endl << "[Result]" << std::endl;
+          tp.add_row_name_and_data("out_file", output_file);
+        tp.output(std::cout, ": ");
     }
+    std::cout << std::endl << "[Result]" << std::endl;
 
     ::dsn::replication::node_status::type s = ::dsn::replication::node_status::NS_INVALID;
     if (!status.empty() && status != "all") {
@@ -616,9 +619,8 @@ inline bool calculate_hash_value(command_executor *e, shell_context *sc, argumen
     pegasus::pegasus_generate_key(key, hash_key, sort_key);
     uint64_t key_hash = pegasus::pegasus_key_hash(key);
 
-    int width = strlen("partition_index");
-    std::cout << std::setw(width) << std::left << "key_hash"
-              << " : " << key_hash << std::endl;
+    ::dsn::utils::table_printer tp;
+    tp.add_row_name_and_data("key_hash", key_hash);
 
     if (!sc->current_app_name.empty()) {
         int32_t app_id;
@@ -632,28 +634,24 @@ inline bool calculate_hash_value(command_executor *e, shell_context *sc, argumen
             return true;
         }
         uint64_t partition_index = key_hash % (uint64_t)partition_count;
-        std::cout << std::setw(width) << std::left << "app_name"
-                  << " : " << sc->current_app_name << std::endl;
-        std::cout << std::setw(width) << std::left << "app_id"
-                  << " : " << app_id << std::endl;
-        std::cout << std::setw(width) << std::left << "partition_count"
-                  << " : " << partition_count << std::endl;
-        std::cout << std::setw(width) << std::left << "partition_index"
-                  << " : " << partition_index << std::endl;
+        tp.add_row_name_and_data("app_name", sc->current_app_name);
+        tp.add_row_name_and_data("app_id", app_id);
+        tp.add_row_name_and_data("partition_count", partition_count);
+        tp.add_row_name_and_data("partition_index", partition_index);
         if (partitions.size() > partition_index) {
             ::dsn::partition_configuration &pc = partitions[partition_index];
-            std::cout << std::setw(width) << std::left << "primary"
-                      << " : " << pc.primary.to_string() << std::endl;
+            tp.add_row_name_and_data("primary", pc.primary.to_string());
+
             std::ostringstream oss;
             for (int i = 0; i < pc.secondaries.size(); ++i) {
                 if (i != 0)
                     oss << ",";
                 oss << pc.secondaries[i].to_string();
             }
-            std::cout << std::setw(width) << std::left << "secondaries"
-                      << " : " << oss.str() << std::endl;
+            tp.add_row_name_and_data("secondaries", oss.str());
         }
     }
+    tp.output(std::cout, ": ");
     return true;
 }
 
@@ -3280,6 +3278,7 @@ inline bool remote_command(command_executor *e, shell_context *sc, arguments arg
 
     int succeed = 0;
     int failed = 0;
+    // TODO (yingchun) output is hard to read, need do some refactor
     for (int i = 0; i < node_list.size(); ++i) {
         node_desc &n = node_list[i];
         fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), n.address.to_string());
@@ -3362,17 +3361,17 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
+    dsn::utils::table_printer tp_params;
     if (!(app_name.empty() && out_file.empty())) {
         std::cout << "[Parameters]" << std::endl;
         if (!app_name.empty())
-            std::cout << "app_name: " << app_name << std::endl;
+          tp_params.add_row_name_and_data("app_name", app_name);
         if (!out_file.empty())
-            std::cout << "out_file: " << out_file << std::endl;
+            tp_params.add_row_name_and_data("out_file", out_file);
     }
-    if (detailed)
-        std::cout << "detailed: true" << std::endl;
-    else
-        std::cout << "detailed: false" << std::endl;
+    tp_params.add_row_name_and_data("detailed", detailed);
+    tp_params.output(std::cout, ": ");
+
     std::cout << std::endl << "[Result]" << std::endl;
 
     if (app_name.empty()) {
@@ -3454,21 +3453,19 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    int width = strlen("disk_used_for_primary_replicas(MB)");
-    out << std::setw(width) << std::left << "app_name"
-        << " : " << app_name << std::endl;
-    out << std::setw(width) << std::left << "app_id"
-        << " : " << app_id << std::endl;
-    out << std::setw(width) << std::left << "partition_count"
-        << " : " << partition_count << std::endl;
-    out << std::setw(width) << std::left << "max_replica_count"
-        << " : " << max_replica_count << std::endl;
+    ::dsn::utils::table_printer tp_general;
+    tp_general.add_row_name_and_data("app_name", app_name);
+    tp_general.add_row_name_and_data("app_id", app_id);
+    tp_general.add_row_name_and_data("partition_count", partition_count);
+    tp_general.add_row_name_and_data("max_replica_count", max_replica_count);
+
+    ::dsn::utils::table_printer tp_details;
     if (detailed) {
-        out << std::setw(width) << std::left << "details"
-            << " : " << std::endl
-            << std::setw(10) << std::left << "pidx" << std::setw(10) << std::left << "ballot"
-            << std::setw(20) << std::left << "replica_count" << std::setw(40) << std::left
-            << "primary" << std::setw(80) << std::left << "secondaries" << std::endl;
+        tp_details.add_title("pidx");
+        tp_details.add_column("ballot");
+        tp_details.add_column("replica_count");
+        tp_details.add_column("primary");
+        tp_details.add_column("secondaries");
     }
     double disk_used_for_primary_replicas = 0;
     int primary_replicas_count = 0;
@@ -3575,26 +3572,32 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
             oss << "]";
             secondary_str = oss.str();
         }
+
         if (detailed) {
-            out << std::setw(10) << std::left << p.pid.get_partition_index() << std::setw(10)
-                << std::left << p.ballot << std::setw(20) << std::left << replica_count_str
-                << std::setw(40) << std::left << primary_str << std::setw(80) << std::left
-                << secondary_str << std::endl;
+            tp_details.add_row(std::to_string(p.pid.get_partition_index()));
+            tp_details.append_data(p.ballot);
+            tp_details.append_data(replica_count_str);
+            tp_details.append_data(primary_str);
+            tp_details.append_data(secondary_str);
         }
     }
-    out << std::setw(width) << std::left << "disk_used_for_primary_replicas(MB)"
-        << " : " << disk_used_for_primary_replicas;
-    if (primary_replicas_count < partition_count)
+    tp_general.add_row_name_and_data("disk_used_for_primary_replicas(MB)", disk_used_for_primary_replicas);
+    tp_general.add_row_name_and_data("disk_used_for_all_replicas(MB)", disk_used_for_all_replicas);
+    tp_general.output(out, ": ");
+    if (detailed) {
+      out << "details" << std::endl;
+      tp_details.output(out);
+    }
+    out << std::endl;
+
+    if (primary_replicas_count < partition_count) {
         out << " (" << (partition_count - primary_replicas_count) << "/" << partition_count
-            << " partitions not counted)";
-    out << std::endl;
-    out << std::setw(width) << std::left << "disk_used_for_all_replicas(MB)"
-        << " : " << disk_used_for_all_replicas;
-    if (all_replicas_count < partition_count * max_replica_count)
+            << " partitions not counted)" << std::endl;
+    }
+    if (all_replicas_count < partition_count * max_replica_count) {
         out << " (" << (partition_count * max_replica_count - all_replicas_count) << "/"
-            << (partition_count * max_replica_count) << " replicas not counted)";
-    out << std::endl;
-    out << std::endl;
+            << (partition_count * max_replica_count) << " replicas not counted)" << std::endl;
+    }
     std::cout << "list disk usage for app " << app_name << " succeed" << std::endl;
     return true;
 }
@@ -3676,7 +3679,7 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    table_printer tp;
+    ::dsn::utils::table_printer tp;
     tp.add_title(app_name.empty() ? "app" : "pidx");
     tp.add_column("GET");
     tp.add_column("MGET");
