@@ -17,29 +17,35 @@ inline bool add_dup(command_executor *e, shell_context *sc, arguments args)
 
     argh::parser cmd(args.argc, args.argv);
     if (cmd.pos_args().size() > 3) {
-        fmt::print("too much params\n");
+        fmt::print(stderr, "too much params\n");
         return false;
     }
     for (const auto &flag : cmd.flags()) {
         if (flag != "f" && flag != "freeze") {
-            fmt::print("unknown flag {}\n", flag);
+            fmt::print(stderr, "unknown flag {}\n", flag);
             return false;
         }
     }
 
     std::string app_name;
     if (!cmd(1)) {
-        fmt::print("missing param <app_name>\n");
+        fmt::print(stderr, "missing param <app_name>\n");
         return false;
     }
     app_name = cmd(1).str();
 
     std::string remote_address;
     if (!cmd(2)) {
-        fmt::print("missing param <remote_address>\n");
+        fmt::print(stderr, "missing param <remote_address>\n");
         return false;
     }
     remote_address = cmd(2).str();
+    if (remote_address == sc->current_cluster_name) {
+        fmt::print(stderr,
+                   "illegal operation: adding duplication to itself [remote: {}]\n",
+                   remote_address);
+        return true;
+    }
 
     bool freeze = cmd[{"-f", "--freeze"}];
 
@@ -50,6 +56,7 @@ inline bool add_dup(command_executor *e, shell_context *sc, arguments args)
     }
     if (!err.is_ok()) {
         fmt::print(
+            stderr,
             "adding duplication failed [app: {}, remote address: {}, freeze: {}, error: {}]\n",
             app_name,
             remote_address,
@@ -84,19 +91,19 @@ inline bool query_dup(command_executor *e, shell_context *sc, arguments args)
 
     argh::parser cmd(args.argc, args.argv);
     if (cmd.pos_args().size() > 2) {
-        fmt::print("too much params\n");
+        fmt::print(stderr, "too much params\n");
         return false;
     }
     for (const auto &flag : cmd.flags()) {
         if (flag != "d" && flag != "detail") {
-            fmt::print("unknown flag {}\n", flag);
+            fmt::print(stderr, "unknown flag {}\n", flag);
             return false;
         }
     }
 
     std::string app_name;
     if (!cmd(1)) {
-        fmt::print("missing param <app_name>\n");
+        fmt::print(stderr, "missing param <app_name>\n");
         return false;
     }
     app_name = cmd(1).str();
@@ -109,8 +116,10 @@ inline bool query_dup(command_executor *e, shell_context *sc, arguments args)
         err = dsn::error_s::make(err_resp.get_value().err);
     }
     if (!err.is_ok()) {
-        fmt::print(
-            "querying duplications of app [{}] failed, error={}\n", app_name, err.description());
+        fmt::print(stderr,
+                   "querying duplications of app [{}] failed, error={}\n",
+                   app_name,
+                   err.description());
     } else if (detail) {
         fmt::print("duplications of app [{}] in detail:\n", app_name);
         const auto &resp = err_resp.get_value();
@@ -179,7 +188,8 @@ inline bool change_dup_status(command_executor *e,
     if (err.is_ok()) {
         fmt::print("{}({}) for app [{}] succeed\n", operation, dup_id, app_name);
     } else {
-        fmt::print("{}({}) for app [{}] failed, error={}\n",
+        fmt::print(stderr,
+                   "{}({}) for app [{}] failed, error={}\n",
                    operation,
                    dup_id,
                    app_name,
