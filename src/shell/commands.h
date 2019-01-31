@@ -100,7 +100,8 @@ inline bool query_app(command_executor *e, shell_context *sc, arguments args)
         std::cout << "ERROR: null app name" << std::endl;
         return false;
     }
-    ::dsn::error_code err = sc->ddl_client->list_app(app_name, detailed, out_file);  // TODO resolve ip
+    ::dsn::error_code err =
+        sc->ddl_client->list_app(app_name, detailed, out_file); // TODO resolve ip
     if (err == ::dsn::ERR_OK)
         std::cout << "list app " << app_name << " succeed" << std::endl;
     else
@@ -198,9 +199,9 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         std::cout << "[Parameters]" << std::endl;
         dsn::utils::table_printer tp;
         if (!status.empty())
-          tp.add_row_name_and_data("status", status);
+            tp.add_row_name_and_data("status", status);
         if (!output_file.empty())
-          tp.add_row_name_and_data("out_file", output_file);
+            tp.add_row_name_and_data("out_file", output_file);
         tp.output(std::cout, ": ");
     }
     std::cout << std::endl << "[Result]" << std::endl;
@@ -3365,7 +3366,7 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
     if (!(app_name.empty() && out_file.empty())) {
         std::cout << "[Parameters]" << std::endl;
         if (!app_name.empty())
-          tp_params.add_row_name_and_data("app_name", app_name);
+            tp_params.add_row_name_and_data("app_name", app_name);
         if (!out_file.empty())
             tp_params.add_row_name_and_data("out_file", out_file);
     }
@@ -3581,12 +3582,13 @@ inline bool app_disk(command_executor *e, shell_context *sc, arguments args)
             tp_details.append_data(secondary_str);
         }
     }
-    tp_general.add_row_name_and_data("disk_used_for_primary_replicas(MB)", disk_used_for_primary_replicas);
+    tp_general.add_row_name_and_data("disk_used_for_primary_replicas(MB)",
+                                     disk_used_for_primary_replicas);
     tp_general.add_row_name_and_data("disk_used_for_all_replicas(MB)", disk_used_for_all_replicas);
     tp_general.output(out, ": ");
     if (detailed) {
-      out << "details" << std::endl;
-      tp_details.output(out);
+        out << "details" << std::endl;
+        tp_details.output(out);
     }
     out << std::endl;
 
