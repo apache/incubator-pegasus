@@ -24,16 +24,10 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replication ddl client implementation
- *
- * Revision history:
- *     2015-12-30, xiaotz, first version
- */
 #include <boost/lexical_cast.hpp>
-#include <dsn/utility/error_code.h>
 
+#include <dsn/utility/error_code.h>
+#include <dsn/utility/output_utils.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/replication_other_types.h>
@@ -383,19 +377,19 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         max_app_name_size = std::max(max_app_name_size, info.app_name.size() + 2);
     }
 
-    std::vector<std::vector<std::string>> table;
-    std::vector<std::string> head{"app_id",
-                                  "status",
-                                  "app_name",
-                                  "app_type",
-                                  "partition_count",
-                                  "replica_count",
-                                  "is_stateful",
-                                  "create_time",
-                                  "drop_time",
-                                  "drop_expire",
-                                  "envs_count"};
-    table.emplace_back(std::move(head));
+    dsn::utils::table_printer tp_general;
+    tp_general.add_title("app_id");
+    tp_general.add_column("status");
+    tp_general.add_column("app_name");
+    tp_general.add_column("app_type");
+    tp_general.add_column("partition_count");
+    tp_general.add_column("replica_count");
+    tp_general.add_column("is_stateful");
+    tp_general.add_column("create_time");
+    tp_general.add_column("drop_time");
+    tp_general.add_column("drop_expire");
+    tp_general.add_column("envs_count");
+
     int available_app_count = 0;
     for (int i = 0; i < apps.size(); i++) {
         dsn::app_info info = apps[i];
@@ -429,22 +423,19 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                 drop_expire_time = buf;
             }
         }
-        std::vector<std::string> row;
-        row.push_back(std::to_string(info.app_id));
-        row.push_back(status_str);
-        row.push_back(info.app_name);
-        row.push_back(info.app_type);
-        row.push_back(std::to_string(info.partition_count));
-        row.push_back(std::to_string(info.max_replica_count));
-        row.push_back(info.is_stateful ? "true" : "false");
-        row.push_back(create_time);
-        row.push_back(drop_time);
-        row.push_back(drop_expire_time);
-        row.push_back(std::to_string(info.envs.size()));
-        table.emplace_back(std::move(row));
+        tp_general.add_row(info.app_id);
+        tp_general.append_data(status_str);
+        tp_general.append_data(info.app_name);
+        tp_general.append_data(info.app_type);
+        tp_general.append_data(info.partition_count);
+        tp_general.append_data(info.max_replica_count);
+        tp_general.append_data(info.is_stateful);
+        tp_general.append_data(create_time);
+        tp_general.append_data(drop_time);
+        tp_general.append_data(drop_expire_time);
+        tp_general.append_data(info.envs.size());
     }
-    bool pr = print_table(table, out);
-    dassert(pr, "bad table format");
+    tp_general.output(out);
     out << std::endl;
 
     int total_fully_healthy_app_count = 0;
@@ -452,15 +443,14 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
     int total_write_unhealthy_app_count = 0;
     int total_read_unhealthy_app_count = 0;
     if (detailed && available_app_count > 0) {
-        std::vector<std::vector<std::string>> detail_table;
-        std::vector<std::string> detail_head{"app_id",
-                                             "app_name",
-                                             "partition_count",
-                                             "fully_healthy",
-                                             "unhealthy",
-                                             "write_unhealthy",
-                                             "read_unhealthy"};
-        detail_table.emplace_back(std::move(detail_head));
+        dsn::utils::table_printer tp_health;
+        tp_health.add_title("app_id");
+        tp_health.add_column("app_name");
+        tp_health.add_column("partition_count");
+        tp_health.add_column("fully_healthy");
+        tp_health.add_column("unhealthy");
+        tp_health.add_column("write_unhealthy");
+        tp_health.add_column("read_unhealthy");
         for (auto &info : apps) {
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
@@ -498,15 +488,14 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                     read_unhealthy++;
                 }
             }
-            std::vector<std::string> row;
-            row.push_back(std::to_string(info.app_id));
-            row.push_back(info.app_name);
-            row.push_back(std::to_string(info.partition_count));
-            row.push_back(std::to_string(fully_healthy));
-            row.push_back(std::to_string(info.partition_count - fully_healthy));
-            row.push_back(std::to_string(write_unhealthy));
-            row.push_back(std::to_string(read_unhealthy));
-            detail_table.emplace_back(std::move(row));
+            tp_health.add_row(info.app_id);
+            tp_health.append_data(info.app_name);
+            tp_health.append_data(info.partition_count);
+            tp_health.append_data(fully_healthy);
+            tp_health.append_data(info.partition_count - fully_healthy);
+            tp_health.append_data(write_unhealthy);
+            tp_health.append_data(read_unhealthy);
+
             if (fully_healthy == info.partition_count)
                 total_fully_healthy_app_count++;
             else
@@ -517,28 +506,20 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                 total_read_unhealthy_app_count++;
         }
         out << "[App Healthy Info]" << std::endl;
-        pr = print_table(detail_table, out);
-        dassert(pr, "bad table format");
+        tp_health.output(out);
         out << std::endl;
     }
 
+    dsn::utils::table_printer tp_count;
+    tp_count.add_row_name_and_data("total_app_count", available_app_count);
     if (detailed && available_app_count > 0) {
-        int width = strlen("write_unhealthy_app_count");
-        out << std::setw(width) << std::left << "total_app_count"
-            << " : " << available_app_count << std::endl;
-        out << std::setw(width) << std::left << "fully_healthy_app_count"
-            << " : " << total_fully_healthy_app_count << std::endl;
-        out << std::setw(width) << std::left << "unhealthy_app_count"
-            << " : " << total_unhealthy_app_count << std::endl;
-        out << std::setw(width) << std::left << "write_unhealthy_app_count"
-            << " : " << total_write_unhealthy_app_count << std::endl;
-        out << std::setw(width) << std::left << "read_unhealthy_app_count"
-            << " : " << total_read_unhealthy_app_count << std::endl;
-    } else {
-        int width = strlen("total_app_count");
-        out << std::setw(width) << std::left << "total_app_count"
-            << " : " << available_app_count << std::endl;
+        tp_count.add_row_name_and_data("fully_healthy_app_count", total_fully_healthy_app_count);
+        tp_count.add_row_name_and_data("unhealthy_app_count", total_unhealthy_app_count);
+        tp_count.add_row_name_and_data("write_unhealthy_app_count",
+                                       total_write_unhealthy_app_count);
+        tp_count.add_row_name_and_data("read_unhealthy_app_count", total_read_unhealthy_app_count);
     }
+    tp_count.output(out);
     out << std::endl;
 
     return dsn::ERR_OK;
@@ -595,18 +576,14 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     }
 
     std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
-    int node_name_width = 0;
     int alive_node_count = 0;
     for (auto &kv : nodes) {
         if (kv.second == dsn::replication::node_status::NS_ALIVE)
             alive_node_count++;
         std::string status_str = enum_to_string(kv.second);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        auto result = tmp_map.emplace(
-            kv.first, list_nodes_helper(RESOLVE(kv.first.to_std_string()), status_str));
-        node_name_width = std::max(node_name_width, (int)result.first->second.node_name.size());
+        tmp_map.emplace(kv.first, list_nodes_helper(RESOLVE(kv.first.to_std_string()), status_str));
     }
-    node_name_width = std::max(node_name_width + 5, 20);
 
     if (detailed) {
         std::vector<::dsn::app_info> apps;
@@ -654,35 +631,32 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
     }
     std::ostream out(buf);
 
+    dsn::utils::table_printer tp;
+    tp.add_title("address");
+    tp.add_column("status");
     if (detailed) {
-        out << std::setw(node_name_width) << std::left << "address" << std::setw(20) << std::left
-            << "status" << std::setw(20) << std::left << "replica_count" << std::setw(20)
-            << std::left << "primary_count" << std::setw(20) << std::left << "secondary_count"
-            << std::endl;
-        for (auto &kv : tmp_map) {
-            out << std::setw(node_name_width) << std::left << kv.second.node_name << std::setw(20)
-                << std::left << kv.second.node_status << std::setw(20) << std::left
-                << kv.second.primary_count + kv.second.secondary_count << std::setw(20) << std::left
-                << kv.second.primary_count << std::setw(20) << std::left
-                << kv.second.secondary_count << std::endl;
-        }
-    } else {
-        out << std::setw(node_name_width) << std::left << "address" << std::setw(20) << std::left
-            << "status" << std::endl;
-        for (auto &kv : tmp_map) {
-            out << std::setw(node_name_width) << std::left << kv.second.node_name << std::setw(20)
-                << std::left << kv.second.node_status << std::endl;
+        tp.add_column("replica_count");
+        tp.add_column("primary_count");
+        tp.add_column("secondary_count");
+    }
+    for (auto &kv : tmp_map) {
+        tp.add_row(kv.second.node_name);
+        tp.append_data(kv.second.node_status);
+        if (detailed) {
+            tp.append_data(kv.second.primary_count + kv.second.secondary_count);
+            tp.append_data(kv.second.primary_count);
+            tp.append_data(kv.second.secondary_count);
         }
     }
+    tp.output(out);
     out << std::endl;
-    int width = strlen("unalive_node_count");
-    out << std::setw(width) << std::left << "total_node_count"
-        << " : " << nodes.size() << std::endl;
-    out << std::setw(width) << std::left << "alive_node_count"
-        << " : " << alive_node_count << std::endl;
-    out << std::setw(width) << std::left << "unalive_node_count"
-        << " : " << nodes.size() - alive_node_count << std::endl;
-    out << std::endl << std::flush;
+
+    dsn::utils::table_printer tp_count;
+    tp_count.add_row_name_and_data("total_node_count", nodes.size());
+    tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
+    tp_count.add_row_name_and_data("unalive_node_count", nodes.size() - alive_node_count);
+    tp_count.output(out, ": ");
+    out << std::endl;
 
     return dsn::ERR_OK;
 #undef RESOLVE
@@ -750,12 +724,6 @@ dsn::error_code replication_ddl_client::cluster_info(const std::string &file_nam
     }
     std::ostream out(buf);
 
-    size_t width = 0;
-    for (int i = 0; i < resp.keys.size(); i++) {
-        if (resp.keys[i].size() > width)
-            width = resp.keys[i].size();
-    }
-
     if (resolve_ip) {
         for (int i = 0; i < resp.keys.size(); ++i) {
             if (resp.keys[i] == "meta_servers") {
@@ -766,10 +734,11 @@ dsn::error_code replication_ddl_client::cluster_info(const std::string &file_nam
         }
     }
 
+    dsn::utils::table_printer tp;
     for (int i = 0; i < resp.keys.size(); i++) {
-        out << std::setw(width) << std::left << resp.keys[i] << " : " << resp.values[i]
-            << std::endl;
+        tp.add_row_name_and_data(resp.keys[i], resp.values[i]);
     }
+    tp.output(out, ": ");
     out << std::endl << std::flush;
     return dsn::ERR_OK;
 }
@@ -804,29 +773,30 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
     }
     std::ostream out(buf);
 
-    int width = strlen("max_replica_count");
-    out << std::setw(width) << std::left << "app_name"
-        << " : " << app_name << std::endl;
-    out << std::setw(width) << std::left << "app_id"
-        << " : " << app_id << std::endl;
-    out << std::setw(width) << std::left << "partition_count"
-        << " : " << partition_count << std::endl;
-    out << std::setw(width) << std::left << "max_replica_count"
-        << " : " << max_replica_count << std::endl;
+    dsn::utils::table_printer tp_general;
+    tp_general.add_row_name_and_data("app_name", app_name);
+    tp_general.add_row_name_and_data("app_id", app_id);
+    tp_general.add_row_name_and_data("partition_count", partition_count);
+    tp_general.add_row_name_and_data("max_replica_count", max_replica_count);
+    if (detailed)
+        tp_general.add_row_name_and_data("details", "");
+    tp_general.output(out, ": ");
+
     if (detailed) {
+        dsn::utils::table_printer tp_details;
+        tp_details.add_title("pidx");
+        tp_details.add_column("ballot");
+        tp_details.add_column("replica_count");
+        tp_details.add_column("primary");
+        tp_details.add_column("secondaries");
         std::map<rpc_address, std::pair<int, int>> node_stat;
-        out << std::setw(width) << std::left << "details"
-            << " : " << std::endl;
-        out << std::setw(10) << std::left << "pidx" << std::setw(10) << std::left << "ballot"
-            << std::setw(20) << std::left << "replica_count" << std::setw(40) << std::left
-            << "primary" << std::setw(40) << std::left << "secondaries" << std::endl;
+
         int total_prim_count = 0;
         int total_sec_count = 0;
         int fully_healthy = 0;
         int write_unhealthy = 0;
         int read_unhealthy = 0;
-        for (int i = 0; i < partitions.size(); i++) {
-            const dsn::partition_configuration &p = partitions[i];
+        for (const auto &p : partitions) {
             int replica_count = 0;
             if (!p.primary.is_invalid()) {
                 replica_count++;
@@ -844,44 +814,56 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
                 write_unhealthy++;
                 read_unhealthy++;
             }
+            tp_details.add_row(p.pid.get_partition_index());
+            tp_details.append_data(p.ballot);
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
-            out << std::setw(10) << std::left << p.pid.get_partition_index() << std::setw(10)
-                << std::left << p.ballot << std::setw(20) << std::left << oss.str() << std::setw(40)
-                << std::left << (p.primary.is_invalid() ? "-" : RESOLVE(p.primary.to_std_string()))
-                << std::left << "[";
+            tp_details.append_data(oss.str());
+            tp_details.append_data(
+                (p.primary.is_invalid() ? "-" : RESOLVE(p.primary.to_std_string())));
+            oss.str("");
+            oss << "[";
+            // TODO (yingchun) join
             for (int j = 0; j < p.secondaries.size(); j++) {
                 if (j != 0)
-                    out << ",";
-                out << RESOLVE(p.secondaries[j].to_std_string());
+                    oss << ",";
+                oss << RESOLVE(p.secondaries[j].to_std_string());
                 node_stat[p.secondaries[j]].second++;
             }
-            out << "]" << std::endl;
+            oss << "]";
+            tp_details.append_data(oss.str());
         }
+        tp_details.output(out);
         out << std::endl;
-        out << std::setw(40) << std::left << "node" << std::setw(10) << std::left << "primary"
-            << std::setw(10) << std::left << "secondary" << std::setw(10) << std::left << "total"
-            << std::endl;
+
+        // 'node' section.
+        dsn::utils::table_printer tp_nodes;
+        tp_nodes.add_title("node");
+        tp_nodes.add_column("primary");
+        tp_nodes.add_column("secondary");
+        tp_nodes.add_column("total");
         for (auto &kv : node_stat) {
-            out << std::setw(40) << std::left << RESOLVE(kv.first.to_std_string()) << std::setw(10)
-                << std::left << kv.second.first << std::setw(10) << std::left << kv.second.second
-                << std::setw(10) << std::left << (kv.second.first + kv.second.second) << std::endl;
+            tp_nodes.add_row(RESOLVE(kv.first.to_std_string()));
+            tp_nodes.append_data(kv.second.first);
+            tp_nodes.append_data(kv.second.second);
+            tp_nodes.append_data(kv.second.first + kv.second.second);
         }
-        out << std::setw(40) << std::left << "" << std::setw(10) << std::left << total_prim_count
-            << std::setw(10) << std::left << total_sec_count << std::setw(10) << std::left
-            << total_prim_count + total_sec_count << std::endl;
+        tp_nodes.add_row("");
+        tp_nodes.append_data(total_prim_count);
+        tp_nodes.append_data(total_sec_count);
+        tp_nodes.append_data(total_prim_count + total_sec_count);
+        tp_nodes.output(out);
         out << std::endl;
-        width = strlen("write_unhealthy_partition_count");
-        out << std::setw(width) << std::left << "fully_healthy_partition_count"
-            << " : " << fully_healthy << std::endl;
-        out << std::setw(width) << std::left << "unhealthy_partition_count"
-            << " : " << (partition_count - fully_healthy) << std::endl;
-        out << std::setw(width) << std::left << "write_unhealthy_partition_count"
-            << " : " << write_unhealthy << std::endl;
-        out << std::setw(width) << std::left << "read_unhealthy_partition_count"
-            << " : " << read_unhealthy << std::endl;
+
+        // healthy partition count section.
+        dsn::utils::table_printer tp_hpc;
+        tp_hpc.add_row_name_and_data("fully_healthy_partition_count", fully_healthy);
+        tp_hpc.add_row_name_and_data("unhealthy_partition_count", partition_count - fully_healthy);
+        tp_hpc.add_row_name_and_data("write_unhealthy_partition_count", write_unhealthy);
+        tp_hpc.add_row_name_and_data("read_unhealthy_partition_count", read_unhealthy);
+        tp_hpc.output(out, ": ");
+        out << std::endl;
     }
-    out << std::endl;
     return dsn::ERR_OK;
 #undef RESOLVE
 }
@@ -1188,6 +1170,7 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
 
 // help functions
 
+// TODO (yingchun) use join
 template <typename T>
 // make sure T support cout << T;
 std::string print_set(const std::set<T> &set)
@@ -1208,30 +1191,19 @@ std::string print_set(const std::set<T> &set)
 
 static void print_policy_entry(const policy_entry &entry)
 {
-    int width = strlen("backup_provider_type");
-
-    std::cout << "    " << std::setw(width) << std::left << "name"
-              << " : " << entry.policy_name << std::endl
-              << "    " << std::setw(width) << std::left << "backup_provider_type"
-              << " : " << entry.backup_provider_type << std::endl
-              << "    " << std::setw(width) << std::left << "backup_interval"
-              << " : " << entry.backup_interval_seconds << "s" << std::endl
-              << "    " << std::setw(width) << std::left << "app_ids"
-              << " : " << print_set(entry.app_ids) << std::endl;
-
-    std::string status = (entry.is_disable) ? std::string("disabled") : std::string("enabled");
-    std::cout << "    " << std::setw(width) << std::left << "start_time"
-              << " : " << entry.start_time << std::endl
-              << "    " << std::setw(width) << std::left << "status"
-              << " : " << status << std::endl
-              << "    " << std::setw(width) << std::left << "backup_history_count"
-              << " : " << entry.backup_history_count_to_keep << std::endl;
+    dsn::utils::table_printer tp;
+    tp.add_row_name_and_data("    name", entry.policy_name);
+    tp.add_row_name_and_data("    backup_provider_type", entry.backup_provider_type);
+    tp.add_row_name_and_data("    backup_interval", entry.backup_interval_seconds + "s");
+    tp.add_row_name_and_data("    app_ids", print_set(entry.app_ids));
+    tp.add_row_name_and_data("    start_time", entry.start_time);
+    tp.add_row_name_and_data("    status", entry.is_disable ? "disabled" : "enabled");
+    tp.add_row_name_and_data("    backup_history_count", entry.backup_history_count_to_keep);
+    tp.output(std::cout, ": ");
 }
 
 static void print_backup_entry(const backup_entry &bentry)
 {
-    int width = strlen("start_time");
-
     char start_time[30] = {'\0'};
     char end_time[30] = {'\0'};
     ::dsn::utils::time_ms_to_date_time(bentry.start_time_ms, start_time, 30);
@@ -1242,14 +1214,12 @@ static void print_backup_entry(const backup_entry &bentry)
         ::dsn::utils::time_ms_to_date_time(bentry.end_time_ms, end_time, 30);
     }
 
-    std::cout << "    " << std::setw(width) << std::left << "id"
-              << " : " << bentry.backup_id << std::endl
-              << "    " << std::setw(width) << std::left << "start_time"
-              << " : " << start_time << std::endl
-              << "    " << std::setw(width) << std::left << "end_time"
-              << " : " << end_time << std::endl
-              << "    " << std::setw(width) << std::left << "app_ids"
-              << " : " << print_set(bentry.app_ids) << std::endl;
+    dsn::utils::table_printer tp;
+    tp.add_row_name_and_data("    id", bentry.backup_id);
+    tp.add_row_name_and_data("    start_time", start_time);
+    tp.add_row_name_and_data("    end_time", end_time);
+    tp.add_row_name_and_data("    app_ids", print_set(bentry.app_ids));
+    tp.output(std::cout, ": ");
 }
 
 dsn::error_code replication_ddl_client::ls_backup_policy()
@@ -1582,43 +1552,6 @@ dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name
         }
     }
     return ERR_OK;
-}
-
-bool replication_ddl_client::print_table(const std::vector<std::vector<std::string>> &table,
-                                         std::ostream &output,
-                                         const std::string &column_delimiter)
-{
-    if (table.empty())
-        return true;
-
-    int row_count = table.size();
-    int column_count = table[0].size();
-    std::vector<int> column_widths(column_count);
-    for (int r = 0; r < row_count; ++r) {
-        const std::vector<std::string> &row = table[r];
-        if ((int)row.size() != column_count)
-            return false;
-        for (int c = 0; c < column_count; ++c) {
-            int w = row[c].size();
-            if (w > column_widths[c])
-                column_widths[c] = w;
-        }
-    }
-
-    for (int r = 0; r < row_count; ++r) {
-        const std::vector<std::string> &row = table[r];
-        for (int c = 0; c < column_count; ++c) {
-            if (c == 0) {
-                output << std::setw(column_widths[c]) << std::left << row[c];
-            } else {
-                output << column_delimiter;
-                output << std::setw(column_widths[c]) << std::left << row[c];
-            }
-        }
-        output << std::endl;
-    }
-
-    return true;
 }
 
 dsn::error_code

@@ -172,12 +172,6 @@ public:
     dsn::error_code
     clear_app_envs(const std::string &app_name, bool clear_all, const std::string &prefix);
 
-    // print table to format columns as the same width.
-    // return false if column count is not the same for all rows.
-    bool print_table(const std::vector<std::vector<std::string>> &table,
-                     std::ostream &output,
-                     const std::string &column_delimiter = "   ");
-
     dsn::error_code ddd_diagnose(gpid pid, std::vector<ddd_partition_info> &ddd_partitions);
 
 private:
