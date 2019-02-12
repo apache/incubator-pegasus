@@ -80,14 +80,20 @@ private:
     };
 
 public:
+    enum class alignment
+    {
+        kLeft = 0,
+        kRight = 1,
+    };
+
     table_printer(int space_width = 2, int precision = 2)
         : mode_(data_mode::kUninitialized), space_width_(space_width), precision_(precision)
     {
     }
 
     // KMultiColumns
-    void add_title(const std::string &title);
-    void add_column(const std::string &col_name);
+    void add_title(const std::string &title, alignment align = alignment::kLeft);
+    void add_column(const std::string &col_name, alignment align = alignment::kLeft);
     template <typename T>
     void add_row(const T &row_name)
     {
@@ -127,6 +133,7 @@ private:
     data_mode mode_;
     int space_width_;
     int precision_;
+    std::vector<bool> align_left_;
     std::vector<int> max_col_width_;
     std::vector<std::vector<std::string>> matrix_data_;
 };

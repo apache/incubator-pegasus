@@ -31,27 +31,34 @@
 namespace dsn {
 namespace utils {
 
-void table_printer::add_title(const std::string &title)
+void table_printer::add_title(const std::string &title, alignment align)
 {
     check_mode(data_mode::KMultiColumns);
     dassert(matrix_data_.empty() && max_col_width_.empty(), "`add_title` must be called only once");
     max_col_width_.push_back(title.length());
+    align_left_.push_back(align == alignment::kLeft);
     add_row(title);
 }
 
-void table_printer::add_column(const std::string &col_name)
+void table_printer::add_column(const std::string &col_name, alignment align)
 {
     check_mode(data_mode::KMultiColumns);
     dassert(matrix_data_.size() == 1, "`add_column` must be called before real data appendding");
     max_col_width_.emplace_back(col_name.length());
+    align_left_.push_back(align == alignment::kLeft);
     append_data(col_name);
 }
 
 void table_printer::add_row_name_and_string_data(const std::string &row_name,
                                                  const std::string &data)
 {
-    max_col_width_.push_back(row_name.length());
-    max_col_width_.push_back(data.length());
+    // The first row added to the table.
+    if (max_col_width_.empty()) {
+        max_col_width_.push_back(row_name.length());
+        align_left_.push_back(true);
+        max_col_width_.push_back(data.length());
+        align_left_.push_back(true);
+    }
 
     matrix_data_.emplace_back(std::vector<std::string>());
     append_string_data(row_name);
@@ -67,7 +74,8 @@ void table_printer::output(std::ostream &out, const std::string &separator) cons
     for (const auto &row : matrix_data_) {
         for (size_t i = 0; i < row.size(); ++i) {
             auto data = (i == 0 ? "" : separator) + row[i];
-            out << std::setw(max_col_width_[i] + space_width_) << std::left << data;
+            out << std::setw(max_col_width_[i] + space_width_)
+                << (align_left_[i] ? std::left : std::right) << data;
         }
         out << std::endl;
     }
