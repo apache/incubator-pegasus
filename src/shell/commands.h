@@ -32,6 +32,7 @@
 #include "args.h"
 
 using namespace dsn::replication;
+using tp_alignment = ::dsn::utils::table_printer::alignment;
 
 inline bool version(command_executor *e, shell_context *sc, arguments args)
 {
@@ -3789,26 +3790,26 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
 
     ::dsn::utils::table_printer tp;
     tp.add_title(app_name.empty() ? "app" : "pidx");
-    tp.add_column("GET");
-    tp.add_column("MGET");
-    tp.add_column("PUT");
-    tp.add_column("MPUT");
-    tp.add_column("DEL");
-    tp.add_column("MDEL");
-    tp.add_column("INCR");
-    tp.add_column("CAS");
-    tp.add_column("CAM");
-    tp.add_column("SCAN");
+    tp.add_column("GET", tp_alignment::kRight);
+    tp.add_column("MGET", tp_alignment::kRight);
+    tp.add_column("PUT", tp_alignment::kRight);
+    tp.add_column("MPUT", tp_alignment::kRight);
+    tp.add_column("DEL", tp_alignment::kRight);
+    tp.add_column("MDEL", tp_alignment::kRight);
+    tp.add_column("INCR", tp_alignment::kRight);
+    tp.add_column("CAS", tp_alignment::kRight);
+    tp.add_column("CAM", tp_alignment::kRight);
+    tp.add_column("SCAN", tp_alignment::kRight);
     if (!only_qps) {
-        tp.add_column("expired");
-        tp.add_column("filtered");
-        tp.add_column("abnormal");
-        tp.add_column("delayed");
-        tp.add_column("rejected");
-        tp.add_column("file_mb");
-        tp.add_column("file_num");
-        tp.add_column("hit_rate");
-        tp.add_column("rdb_mem_mb");
+        tp.add_column("expired", tp_alignment::kRight);
+        tp.add_column("filtered", tp_alignment::kRight);
+        tp.add_column("abnormal", tp_alignment::kRight);
+        tp.add_column("delayed", tp_alignment::kRight);
+        tp.add_column("rejected", tp_alignment::kRight);
+        tp.add_column("file_mb", tp_alignment::kRight);
+        tp.add_column("file_num", tp_alignment::kRight);
+        tp.add_column("hit_rate", tp_alignment::kRight);
+        tp.add_column("rdb_mem_mb", tp_alignment::kRight);
     }
 
     for (row_data &row : rows) {
