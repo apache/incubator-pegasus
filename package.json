@@ -21,7 +21,7 @@
   "homepage": "https://github.com/XiaoMi/pegasus-nodejs-client#readme",
   "dependencies": {
     "bunyan": "^1.8.12",
-    "deasync": "^0.1.13",
+    "deasync": "^0.1.14",
     "log4js": "^2.11.0",
     "long": "^4.0.0",
     "node-int64": "^0.4.0",
