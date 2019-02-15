@@ -102,7 +102,9 @@ struct scan_data_context
     int split_id;
     int max_batch_count;
     int timeout_ms;
-    bool no_overwrite; // for copy_data
+    bool no_overwrite; // if set true, then use check_and_set() instead of set()
+                       // when inserting data to destination table for copy_data,
+                       // to not overwrite old data if it aleady exist.
     pegasus::pegasus_client::filter_type value_filter_type;
     std::string value_filter_pattern;
     pegasus::pegasus_client::pegasus_scanner_wrapper scanner;
