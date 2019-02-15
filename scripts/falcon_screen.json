@@ -735,7 +735,8 @@
         "replica*eon.replica_stub*dup.log_read_in_bytes_rate/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
         "replica*eon.replica_stub*dup.shipped_size_in_bytes_rate/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
         "replica*eon.replica_stub*dup.pending_mutations_count/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
-        "replica*eon.replica_stub*dup.time_lag(ms)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+        "replica*eon.replica_stub*dup.time_lag(ms)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "replica*eon.replica_stub*dup.confirmed_rate/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
