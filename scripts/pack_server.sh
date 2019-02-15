@@ -98,12 +98,12 @@ copy_file ./src/server/config.ini ${pack}/bin
 copy_file `get_boost_lib $custom_boost_lib system` ${pack}/bin
 copy_file `get_boost_lib $custom_boost_lib filesystem` ${pack}/bin
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/bin
-copy_file `get_system_lib server snappy` ${pack}/bin
-copy_file `get_system_lib server crypto` ${pack}/bin
-copy_file `get_system_lib server ssl` ${pack}/bin
-copy_file `get_system_lib server aio` ${pack}/bin
-copy_file `get_system_lib server zstd` ${pack}/bin
-copy_file `get_system_lib server lz4` ${pack}/bin
+copy_file `get_system_lib server snappy` ${pack}/bin/`get_system_libname server snappy`
+copy_file `get_system_lib server crypto` ${pack}/bin/`get_system_libname server crypto`
+copy_file `get_system_lib server ssl` ${pack}/bin/`get_system_libname server ssl`
+copy_file `get_system_lib server aio` ${pack}/bin/`get_system_libname server aio`
+copy_file `get_system_lib server zstd` ${pack}/bin/`get_system_libname server zstd`
+copy_file `get_system_lib server lz4` ${pack}/bin/`get_system_libname server lz4`
 
 chmod +x ${pack}/bin/pegasus_* ${pack}/bin/*.sh
 chmod -x ${pack}/bin/lib*
