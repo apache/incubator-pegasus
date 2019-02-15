@@ -2157,9 +2157,17 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"target_cluster_name", required_argument, 0, 'c'},
                                            {"target_app_name", required_argument, 0, 'a'},
-                                           {"max_split_count", required_argument, 0, 's'},
+                                           {"partition", required_argument, 0, 'p'},
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
+                                           {"hash_key_filter_type", required_argument, 0, 'h'},
+                                           {"hash_key_filter_pattern", required_argument, 0, 'x'},
+                                           {"sort_key_filter_type", required_argument, 0, 's'},
+                                           {"sort_key_filter_pattern", required_argument, 0, 'y'},
+                                           {"value_filter_type", required_argument, 0, 'v'},
+                                           {"value_filter_pattern", required_argument, 0, 'z'},
+                                           {"no_overwrite", no_argument, 0, 'n'},
+                                           {"no_value", no_argument, 0, 'i'},
                                            {"geo_data", no_argument, 0, 'g'},
                                            {0, 0, 0, 0}};
 
@@ -2167,15 +2175,24 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     std::string target_app_name;
     std::string target_geo_app_name;
     int max_split_count = 100000000;
+    int32_t partition = -1;
     int max_batch_count = 500;
     int timeout_ms = sc->timeout_ms;
     bool is_geo_data = false;
+    bool no_overwrite = false;
+    std::string hash_key_filter_type_name("no_filter");
+    std::string sort_key_filter_type_name("no_filter");
+    std::string value_filter_type_name("no_filter");
+    pegasus::pegasus_client::filter_type value_filter_type = pegasus::pegasus_client::FT_NO_FILTER;
+    std::string value_filter_pattern;
+    pegasus::pegasus_client::scan_options options;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "c:a:s:b:t:g", long_options, &option_index);
+        c = getopt_long(
+            args.argc, args.argv, "c:a:p:b:t:h:x:s:y:v:z:nig", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -2186,23 +2203,75 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
             target_app_name = optarg;
             target_geo_app_name = target_app_name + "_geo";
             break;
-        case 's':
-            if (!dsn::buf2int32(optarg, max_split_count)) {
-                fprintf(stderr, "parse %s as max_split_count failed\n", optarg);
+        case 'p':
+            if (!dsn::buf2int32(optarg, partition)) {
+                fprintf(stderr, "ERROR: parse %s as partition failed\n", optarg);
+                return false;
+            }
+            if (partition < 0) {
+                fprintf(stderr, "ERROR: partition should be greater than 0\n");
                 return false;
             }
             break;
         case 'b':
             if (!dsn::buf2int32(optarg, max_batch_count)) {
-                fprintf(stderr, "parse %s as max_batch_count failed\n", optarg);
+                fprintf(stderr, "ERROR: parse %s as max_batch_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
             if (!dsn::buf2int32(optarg, timeout_ms)) {
-                fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
+                fprintf(stderr, "ERROR: parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
+            break;
+        case 'h':
+            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
+                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
+                std::string("ft_match_") + optarg,
+                ::dsn::apps::filter_type::FT_NO_FILTER);
+            if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid hash_key_filter_type param\n");
+                return false;
+            }
+            hash_key_filter_type_name = optarg;
+            break;
+        case 'x':
+            options.hash_key_filter_pattern = unescape_str(optarg);
+            break;
+        case 's':
+            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
+                dsn::apps::_filter_type_VALUES_TO_NAMES,
+                std::string("ft_match_") + optarg,
+                ::dsn::apps::filter_type::FT_NO_FILTER);
+            if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
+                return false;
+            }
+            sort_key_filter_type_name = optarg;
+            break;
+        case 'y':
+            options.sort_key_filter_pattern = unescape_str(optarg);
+            break;
+        case 'v':
+            value_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
+                dsn::apps::_filter_type_VALUES_TO_NAMES,
+                std::string("ft_match_") + optarg,
+                ::dsn::apps::filter_type::FT_NO_FILTER);
+            if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid value_filter_type param\n");
+                return false;
+            }
+            value_filter_type_name = optarg;
+            break;
+        case 'z':
+            value_filter_pattern = unescape_str(optarg);
+            break;
+        case 'n':
+            no_overwrite = true;
+            break;
+        case 'i':
+            options.no_value = true;
             break;
         case 'g':
             is_geo_data = true;
@@ -2244,6 +2313,28 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     if (is_geo_data) {
         fprintf(stderr, "INFO: target_geo_app_name = %s\n", target_geo_app_name.c_str());
     }
+    fprintf(stderr,
+            "INFO: partition = %s\n",
+            partition >= 0 ? boost::lexical_cast<std::string>(partition).c_str() : "all");
+    fprintf(stderr, "INFO: hash_key_filter_type = %s\n", hash_key_filter_type_name.c_str());
+    if (options.hash_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        fprintf(stderr,
+                "INFO: hash_key_filter_pattern = \"%s\"\n",
+                pegasus::utils::c_escape_string(options.hash_key_filter_pattern).c_str());
+    }
+    fprintf(stderr, "INFO: sort_key_filter_type = %s\n", sort_key_filter_type_name.c_str());
+    if (options.sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        fprintf(stderr,
+                "INFO: sort_key_filter_pattern = \"%s\"\n",
+                pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
+    }
+    fprintf(stderr, "INFO: value_filter_type = %s\n", value_filter_type_name.c_str());
+    if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        fprintf(stderr,
+                "INFO: value_filter_pattern = \"%s\"\n",
+                pegasus::utils::c_escape_string(value_filter_pattern).c_str());
+    }
+    fprintf(stderr, "INFO: no_value = %s\n", options.no_value ? "true" : "false");
     fprintf(stderr, "INFO: max_split_count = %d\n", max_split_count);
     fprintf(stderr, "INFO: max_batch_count = %d\n", max_batch_count);
     fprintf(stderr, "INFO: timeout_ms = %d\n", timeout_ms);
@@ -2279,7 +2370,6 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
-    pegasus::pegasus_client::scan_options options;
     options.timeout_ms = timeout_ms;
     ret = sc->pg_client->get_unordered_scanners(max_split_count, options, scanners);
     if (ret != pegasus::PERR_OK) {
@@ -2289,8 +2379,21 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
         delete target_geo_client;
         return true;
     }
+    fprintf(stderr,
+            "INFO: open source app scanner succeed, partition_count = %d\n",
+            (int)scanners.size());
+    if (partition != -1) {
+        if (partition >= scanners.size()) {
+            fprintf(stderr, "ERROR: invalid partition param: %d\n", partition);
+            delete target_geo_client;
+            return true;
+        }
+        std::vector<pegasus::pegasus_client::pegasus_scanner *> tmp_scanners;
+        tmp_scanners.push_back(scanners[partition]);
+        tmp_scanners.swap(scanners);
+    }
     int split_count = scanners.size();
-    fprintf(stderr, "INFO: open source app scanner succeed, split_count = %d\n", split_count);
+    fprintf(stderr, "INFO: prepare scanners succeed, split_count = %d\n", split_count);
 
     std::atomic_bool error_occurred(false);
     std::vector<scan_data_context *> contexts;
@@ -2303,6 +2406,9 @@ inline bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                                            target_client,
                                                            target_geo_client,
                                                            &error_occurred);
+        context->set_value_filter(value_filter_type, value_filter_pattern);
+        if (no_overwrite)
+            context->set_no_overwrite();
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
