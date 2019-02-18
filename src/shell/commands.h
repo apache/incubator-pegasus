@@ -167,6 +167,7 @@ inline bool ls_apps(command_executor *e, shell_context *sc, arguments args)
 inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
+                                           {"resolve_ip", no_argument, 0, 'r'},
                                            {"status", required_argument, 0, 's'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
@@ -174,16 +175,20 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     std::string status;
     std::string output_file;
     bool detailed = false;
+    bool resolve_ip = false;
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "ds:o:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "drs:o:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
         case 'd':
             detailed = true;
+            break;
+        case 'r':
+            resolve_ip = true;
             break;
         case 's':
             status = optarg;
@@ -217,7 +222,7 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                       status.c_str());
     }
 
-    ::dsn::error_code err = sc->ddl_client->list_nodes(s, detailed, output_file);
+    ::dsn::error_code err = sc->ddl_client->list_nodes(s, detailed, output_file, resolve_ip);
     if (err != ::dsn::ERR_OK)
         std::cout << "list nodes failed, error=" << err.to_string() << std::endl;
     return true;
@@ -3772,7 +3777,6 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.storage_count += row.storage_count;
         sum.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
         sum.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
-        sum.rdb_block_cache_mem_usage += row.rdb_block_cache_mem_usage;
         sum.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         sum.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
     }
@@ -3808,8 +3812,9 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("rejected", tp_alignment::kRight);
         tp.add_column("file_mb", tp_alignment::kRight);
         tp.add_column("file_num", tp_alignment::kRight);
+        tp.add_column("mem_tbl_mb", tp_alignment::kRight);
+        tp.add_column("mem_idx_mb", tp_alignment::kRight);
         tp.add_column("hit_rate", tp_alignment::kRight);
-        tp.add_column("rdb_mem_mb", tp_alignment::kRight);
     }
 
     for (row_data &row : rows) {
@@ -3832,15 +3837,13 @@ inline bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.recent_write_throttling_reject_count);
             tp.append_data(row.storage_mb);
             tp.append_data((uint64_t)row.storage_count);
+            tp.append_data(row.rdb_memtable_mem_usage / (1 << 20U));
+            tp.append_data(row.rdb_index_and_filter_blocks_mem_usage / (1 << 20U));
             double block_cache_hit_rate =
                 std::abs(row.rdb_block_cache_total_count) < 1e-6
                     ? 0.0
                     : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
             tp.append_data(block_cache_hit_rate);
-            tp.append_data((row.rdb_block_cache_mem_usage +
-                            row.rdb_index_and_filter_blocks_mem_usage +
-                            row.rdb_memtable_mem_usage) /
-                           (1 << 20U));
         }
     }
     tp.output(out);

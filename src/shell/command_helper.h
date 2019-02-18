@@ -485,7 +485,6 @@ struct row_data
     double storage_count = 0;
     double rdb_block_cache_hit_count = 0;
     double rdb_block_cache_total_count = 0;
-    double rdb_block_cache_mem_usage = 0;
     double rdb_index_and_filter_blocks_mem_usage = 0;
     double rdb_memtable_mem_usage = 0;
 };
@@ -531,8 +530,6 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_block_cache_hit_count += value;
     else if (counter_name == "rdb.block_cache.total_count")
         row.rdb_block_cache_total_count += value;
-    else if (counter_name == "rdb.block_cache.memory_usage")
-        row.rdb_block_cache_mem_usage += value;
     else if (counter_name == "rdb.index_and_filter_blocks.memory_usage")
         row.rdb_index_and_filter_blocks_mem_usage += value;
     else if (counter_name == "rdb.memtable.memory_usage")
