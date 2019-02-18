@@ -56,7 +56,7 @@ static command_executor commands[] = {
     {
         "nodes",
         "get the node status for this cluster",
-        "[-d|--detailed] [-r|--resolve_ip] [-m|--memory_usage] "
+        "[-d|--detailed] [-r|--resolve_ip] [-u|--resource_usage] "
         "[-o|--output file_name] [-s|--status all|alive|unalive]",
         ls_nodes,
     },

@@ -174,6 +174,8 @@ struct list_nodes_helper
     int64_t block_cache_mb;
     int64_t mem_tbl_mb;
     int64_t mem_idx_mb;
+    int64_t disk_available_total_ratio;
+    int64_t disk_available_min_ratio;
     list_nodes_helper(const std::string &n, const std::string &s)
         : node_name(n),
           node_status(s),
@@ -182,7 +184,9 @@ struct list_nodes_helper
           memused_res(0),
           block_cache_mb(0),
           mem_tbl_mb(0),
-          mem_idx_mb(0)
+          mem_idx_mb(0),
+          disk_available_total_ratio(0),
+          disk_available_min_ratio(0)
     {
     }
 };
@@ -190,7 +194,7 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
                                            {"resolve_ip", no_argument, 0, 'r'},
-                                           {"memory_usage", no_argument, 0, 'm'},
+                                           {"resource_usage", no_argument, 0, 'u'},
                                            {"status", required_argument, 0, 's'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
@@ -199,12 +203,12 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     std::string output_file;
     bool detailed = false;
     bool resolve_ip = false;
-    bool stat_memory = false;
+    bool resource_usage = false;
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "drms:o:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "drus:o:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -214,8 +218,8 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         case 'r':
             resolve_ip = true;
             break;
-        case 'm':
-            stat_memory = true;
+        case 'u':
+            resource_usage = true;
             break;
         case 's':
             status = optarg;
@@ -305,7 +309,7 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    if (stat_memory) {
+    if (resource_usage) {
         std::vector<node_desc> nodes;
         if (!fill_nodes(sc, "replica-server", nodes)) {
             derror("get replica server node list failed");
@@ -316,6 +320,8 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         command.cmd = "perf-counters";
         command.arguments.push_back(".*memused.res(MB)");
         command.arguments.push_back(".*rdb.block_cache.memory_usage");
+        command.arguments.push_back(".*disk.available.total.ratio");
+        command.arguments.push_back(".*disk.available.min.ratio");
         command.arguments.push_back(".*@.*");
         std::vector<std::pair<bool, std::string>> results;
         call_remote_command(sc, nodes, command, results);
@@ -349,6 +355,10 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                     h.memused_res = m.value;
                 else if (m.name == "replica*app.pegasus*rdb.block_cache.memory_usage")
                     h.block_cache_mb = m.value / (1 << 20U);
+                else if (m.name == "replica*eon.replica_stub*disk.available.total.ratio")
+                    h.disk_available_total_ratio = m.value;
+                else if (m.name == "replica*eon.replica_stub*disk.available.min.ratio")
+                    h.disk_available_min_ratio = m.value;
                 else {
                     int32_t app_id_x, partition_index_x;
                     std::string counter_name;
@@ -384,11 +394,13 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("primary_count", dsn::utils::table_printer::alignment::kRight);
         tp.add_column("secondary_count", dsn::utils::table_printer::alignment::kRight);
     }
-    if (stat_memory) {
+    if (resource_usage) {
         tp.add_column("memused_res", dsn::utils::table_printer::alignment::kRight);
         tp.add_column("block_cache_mb", dsn::utils::table_printer::alignment::kRight);
         tp.add_column("mem_tbl_mb", dsn::utils::table_printer::alignment::kRight);
         tp.add_column("mem_idx_mb", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("disk_avl_total_ratio", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("disk_avl_min_ratio", dsn::utils::table_printer::alignment::kRight);
     }
     for (auto &kv : tmp_map) {
         tp.add_row(kv.second.node_name);
@@ -398,11 +410,13 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(kv.second.primary_count);
             tp.append_data(kv.second.secondary_count);
         }
-        if (stat_memory) {
+        if (resource_usage) {
             tp.append_data(kv.second.memused_res);
             tp.append_data(kv.second.block_cache_mb);
             tp.append_data(kv.second.mem_tbl_mb);
             tp.append_data(kv.second.mem_idx_mb);
+            tp.append_data(kv.second.disk_available_total_ratio);
+            tp.append_data(kv.second.disk_available_min_ratio);
         }
     }
     tp.output(out);
