@@ -164,10 +164,33 @@ inline bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+struct list_nodes_helper
+{
+    std::string node_name;
+    std::string node_status;
+    int primary_count;
+    int secondary_count;
+    int64_t memused_res;
+    int64_t block_cache_mb;
+    int64_t mem_tbl_mb;
+    int64_t mem_idx_mb;
+    list_nodes_helper(const std::string &n, const std::string &s)
+        : node_name(n),
+          node_status(s),
+          primary_count(0),
+          secondary_count(0),
+          memused_res(0),
+          block_cache_mb(0),
+          mem_tbl_mb(0),
+          mem_idx_mb(0)
+    {
+    }
+};
 inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
                                            {"resolve_ip", no_argument, 0, 'r'},
+                                           {"memory_usage", no_argument, 0, 'm'},
                                            {"status", required_argument, 0, 's'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
@@ -176,11 +199,12 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     std::string output_file;
     bool detailed = false;
     bool resolve_ip = false;
+    bool stat_memory = false;
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "drs:o:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "drms:o:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -189,6 +213,9 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'r':
             resolve_ip = true;
+            break;
+        case 'm':
+            stat_memory = true;
             break;
         case 's':
             status = optarg;
@@ -222,9 +249,172 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                       status.c_str());
     }
 
-    ::dsn::error_code err = sc->ddl_client->list_nodes(s, detailed, output_file, resolve_ip);
-    if (err != ::dsn::ERR_OK)
-        std::cout << "list nodes failed, error=" << err.to_string() << std::endl;
+    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
+    auto r = sc->ddl_client->list_nodes(s, nodes);
+    if (r != dsn::ERR_OK) {
+        std::cout << "list nodes failed, error=" << r.to_string() << std::endl;
+        return true;
+    }
+
+    std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
+    int alive_node_count = 0;
+#define RESOLVE(value) (resolve_ip ? sc->ddl_client->hostname_from_ip_port(value.c_str()) : value)
+    for (auto &kv : nodes) {
+        if (kv.second == dsn::replication::node_status::NS_ALIVE)
+            alive_node_count++;
+        std::string status_str = dsn::enum_to_string(kv.second);
+        status_str = status_str.substr(status_str.find("NS_") + 3);
+        tmp_map.emplace(kv.first, list_nodes_helper(RESOLVE(kv.first.to_std_string()), status_str));
+    }
+#undef RESOLVE
+
+    if (detailed) {
+        std::vector<::dsn::app_info> apps;
+        r = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
+        if (r != dsn::ERR_OK) {
+            std::cout << "list apps failed, error=" << r.to_string() << std::endl;
+            return true;
+        }
+
+        for (auto &app : apps) {
+            int32_t app_id;
+            int32_t partition_count;
+            std::vector<dsn::partition_configuration> partitions;
+            r = sc->ddl_client->list_app(app.app_name, app_id, partition_count, partitions);
+            if (r != dsn::ERR_OK) {
+                std::cout << "list app " << app.app_name << " failed, error=" << r.to_string()
+                          << std::endl;
+                return true;
+            }
+
+            for (int i = 0; i < partitions.size(); i++) {
+                const dsn::partition_configuration &p = partitions[i];
+                if (!p.primary.is_invalid()) {
+                    auto find = tmp_map.find(p.primary);
+                    if (find != tmp_map.end()) {
+                        find->second.primary_count++;
+                    }
+                }
+                for (int j = 0; j < p.secondaries.size(); j++) {
+                    auto find = tmp_map.find(p.secondaries[j]);
+                    if (find != tmp_map.end()) {
+                        find->second.secondary_count++;
+                    }
+                }
+            }
+        }
+    }
+
+    if (stat_memory) {
+        std::vector<node_desc> nodes;
+        if (!fill_nodes(sc, "replica-server", nodes)) {
+            derror("get replica server node list failed");
+            return true;
+        }
+
+        ::dsn::command command;
+        command.cmd = "perf-counters";
+        command.arguments.push_back(".*memused.res(MB)");
+        command.arguments.push_back(".*rdb.block_cache.memory_usage");
+        command.arguments.push_back(".*@.*");
+        std::vector<std::pair<bool, std::string>> results;
+        call_remote_command(sc, nodes, command, results);
+
+        for (int i = 0; i < nodes.size(); ++i) {
+            dsn::rpc_address node_addr = nodes[i].address;
+            auto find = tmp_map.find(node_addr);
+            if (find == tmp_map.end())
+                continue;
+            if (!results[i].first) {
+                derror("query perf counter info from node %s failed", node_addr.to_string());
+                return true;
+            }
+            dsn::perf_counter_info info;
+            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
+            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+                derror("decode perf counter info from node %s failed, result = %s",
+                       node_addr.to_string(),
+                       results[i].second.c_str());
+                return true;
+            }
+            if (info.result != "OK") {
+                derror("query perf counter info from node %s returns error, error = %s",
+                       node_addr.to_string(),
+                       info.result.c_str());
+                return true;
+            }
+            list_nodes_helper &h = find->second;
+            for (dsn::perf_counter_metric &m : info.counters) {
+                if (m.name == "replica*server*memused.res(MB)")
+                    h.memused_res = m.value;
+                else if (m.name == "replica*app.pegasus*rdb.block_cache.memory_usage")
+                    h.block_cache_mb = m.value / (1 << 20U);
+                else {
+                    int32_t app_id_x, partition_index_x;
+                    std::string counter_name;
+                    bool parse_ret = parse_app_pegasus_perf_counter_name(
+                        m.name, app_id_x, partition_index_x, counter_name);
+                    dassert(parse_ret, "name = %s", m.name.c_str());
+                    if (counter_name == "rdb.memtable.memory_usage")
+                        h.mem_tbl_mb += m.value / (1 << 20U);
+                    else if (counter_name == "rdb.index_and_filter_blocks.memory_usage")
+                        h.mem_idx_mb += m.value / (1 << 20U);
+                }
+            }
+        }
+    }
+
+    // print configuration_list_nodes_response
+    std::streambuf *buf;
+    std::ofstream of;
+
+    if (!output_file.empty()) {
+        of.open(output_file);
+        buf = of.rdbuf();
+    } else {
+        buf = std::cout.rdbuf();
+    }
+    std::ostream out(buf);
+
+    dsn::utils::table_printer tp;
+    tp.add_title("address");
+    tp.add_column("status");
+    if (detailed) {
+        tp.add_column("replica_count", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("primary_count", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("secondary_count", dsn::utils::table_printer::alignment::kRight);
+    }
+    if (stat_memory) {
+        tp.add_column("memused_res", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("block_cache_mb", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("mem_tbl_mb", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("mem_idx_mb", dsn::utils::table_printer::alignment::kRight);
+    }
+    for (auto &kv : tmp_map) {
+        tp.add_row(kv.second.node_name);
+        tp.append_data(kv.second.node_status);
+        if (detailed) {
+            tp.append_data(kv.second.primary_count + kv.second.secondary_count);
+            tp.append_data(kv.second.primary_count);
+            tp.append_data(kv.second.secondary_count);
+        }
+        if (stat_memory) {
+            tp.append_data(kv.second.memused_res);
+            tp.append_data(kv.second.block_cache_mb);
+            tp.append_data(kv.second.mem_tbl_mb);
+            tp.append_data(kv.second.mem_idx_mb);
+        }
+    }
+    tp.output(out);
+    out << std::endl;
+
+    dsn::utils::table_printer tp_count;
+    tp_count.add_row_name_and_data("total_node_count", nodes.size());
+    tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
+    tp_count.add_row_name_and_data("unalive_node_count", nodes.size() - alive_node_count);
+    tp_count.output(out, ": ");
+    out << std::endl;
+
     return true;
 }
 
