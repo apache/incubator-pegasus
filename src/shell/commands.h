@@ -170,10 +170,10 @@ struct list_nodes_helper
     std::string node_status;
     int primary_count;
     int secondary_count;
-    int64_t memused_res;
-    int64_t block_cache_mb;
-    int64_t mem_tbl_mb;
-    int64_t mem_idx_mb;
+    int64_t memused_res_mb;
+    int64_t block_cache_bytes;
+    int64_t mem_tbl_bytes;
+    int64_t mem_idx_bytes;
     int64_t disk_available_total_ratio;
     int64_t disk_available_min_ratio;
     list_nodes_helper(const std::string &n, const std::string &s)
@@ -181,10 +181,10 @@ struct list_nodes_helper
           node_status(s),
           primary_count(0),
           secondary_count(0),
-          memused_res(0),
-          block_cache_mb(0),
-          mem_tbl_mb(0),
-          mem_idx_mb(0),
+          memused_res_mb(0),
+          block_cache_bytes(0),
+          mem_tbl_bytes(0),
+          mem_idx_bytes(0),
           disk_available_total_ratio(0),
           disk_available_min_ratio(0)
     {
@@ -352,9 +352,9 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             list_nodes_helper &h = find->second;
             for (dsn::perf_counter_metric &m : info.counters) {
                 if (m.name == "replica*server*memused.res(MB)")
-                    h.memused_res = m.value;
+                    h.memused_res_mb = m.value;
                 else if (m.name == "replica*app.pegasus*rdb.block_cache.memory_usage")
-                    h.block_cache_mb = m.value / (1 << 20U);
+                    h.block_cache_bytes = m.value;
                 else if (m.name == "replica*eon.replica_stub*disk.available.total.ratio")
                     h.disk_available_total_ratio = m.value;
                 else if (m.name == "replica*eon.replica_stub*disk.available.min.ratio")
@@ -366,9 +366,9 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                         m.name, app_id_x, partition_index_x, counter_name);
                     dassert(parse_ret, "name = %s", m.name.c_str());
                     if (counter_name == "rdb.memtable.memory_usage")
-                        h.mem_tbl_mb += m.value / (1 << 20U);
+                        h.mem_tbl_bytes += m.value;
                     else if (counter_name == "rdb.index_and_filter_blocks.memory_usage")
-                        h.mem_idx_mb += m.value / (1 << 20U);
+                        h.mem_idx_bytes += m.value;
                 }
             }
         }
@@ -395,7 +395,7 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("secondary_count", dsn::utils::table_printer::alignment::kRight);
     }
     if (resource_usage) {
-        tp.add_column("memused_res", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("memused_res_mb", dsn::utils::table_printer::alignment::kRight);
         tp.add_column("block_cache_mb", dsn::utils::table_printer::alignment::kRight);
         tp.add_column("mem_tbl_mb", dsn::utils::table_printer::alignment::kRight);
         tp.add_column("mem_idx_mb", dsn::utils::table_printer::alignment::kRight);
@@ -411,10 +411,10 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(kv.second.secondary_count);
         }
         if (resource_usage) {
-            tp.append_data(kv.second.memused_res);
-            tp.append_data(kv.second.block_cache_mb);
-            tp.append_data(kv.second.mem_tbl_mb);
-            tp.append_data(kv.second.mem_idx_mb);
+            tp.append_data(kv.second.memused_res_mb);
+            tp.append_data(kv.second.block_cache_bytes / (1 << 20U));
+            tp.append_data(kv.second.mem_tbl_bytes / (1 << 20U));
+            tp.append_data(kv.second.mem_idx_bytes / (1 << 20U));
             tp.append_data(kv.second.disk_available_total_ratio);
             tp.append_data(kv.second.disk_available_min_ratio);
         }
