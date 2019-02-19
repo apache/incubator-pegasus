@@ -262,15 +262,18 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
     std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
-#define RESOLVE(value) (resolve_ip ? sc->ddl_client->hostname_from_ip_port(value.c_str()) : value)
     for (auto &kv : nodes) {
         if (kv.second == dsn::replication::node_status::NS_ALIVE)
             alive_node_count++;
         std::string status_str = dsn::enum_to_string(kv.second);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        tmp_map.emplace(kv.first, list_nodes_helper(RESOLVE(kv.first.to_std_string()), status_str));
+        std::string node_name = kv.first.to_std_string();
+        if (resolve_ip) {
+            // TODO: put hostname_from_ip_port into common utils
+            node_name = sc->ddl_client->hostname_from_ip_port(node_name.c_str());
+        }
+        tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
     }
-#undef RESOLVE
 
     if (detailed) {
         std::vector<::dsn::app_info> apps;
@@ -291,16 +294,15 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 return true;
             }
 
-            for (int i = 0; i < partitions.size(); i++) {
-                const dsn::partition_configuration &p = partitions[i];
+            for (const dsn::partition_configuration &p : partitions) {
                 if (!p.primary.is_invalid()) {
                     auto find = tmp_map.find(p.primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (int j = 0; j < p.secondaries.size(); j++) {
-                    auto find = tmp_map.find(p.secondaries[j]);
+                for (const dsn::rpc_address &addr : p.secondaries) {
+                    auto find = tmp_map.find(addr);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;
                     }
@@ -328,8 +330,8 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
         for (int i = 0; i < nodes.size(); ++i) {
             dsn::rpc_address node_addr = nodes[i].address;
-            auto find = tmp_map.find(node_addr);
-            if (find == tmp_map.end())
+            auto tmp_it = tmp_map.find(node_addr);
+            if (tmp_it == tmp_map.end())
                 continue;
             if (!results[i].first) {
                 derror("query perf counter info from node %s failed", node_addr.to_string());
@@ -349,7 +351,7 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                        info.result.c_str());
                 return true;
             }
-            list_nodes_helper &h = find->second;
+            list_nodes_helper &h = tmp_it->second;
             for (dsn::perf_counter_metric &m : info.counters) {
                 if (m.name == "replica*server*memused.res(MB)")
                     h.memused_res_mb = m.value;
@@ -390,17 +392,17 @@ inline bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     tp.add_title("address");
     tp.add_column("status");
     if (detailed) {
-        tp.add_column("replica_count", dsn::utils::table_printer::alignment::kRight);
-        tp.add_column("primary_count", dsn::utils::table_printer::alignment::kRight);
-        tp.add_column("secondary_count", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("replica_count", tp_alignment::kRight);
+        tp.add_column("primary_count", tp_alignment::kRight);
+        tp.add_column("secondary_count", tp_alignment::kRight);
     }
     if (resource_usage) {
-        tp.add_column("memused_res_mb", dsn::utils::table_printer::alignment::kRight);
-        tp.add_column("block_cache_mb", dsn::utils::table_printer::alignment::kRight);
-        tp.add_column("mem_tbl_mb", dsn::utils::table_printer::alignment::kRight);
-        tp.add_column("mem_idx_mb", dsn::utils::table_printer::alignment::kRight);
-        tp.add_column("disk_avl_total_ratio", dsn::utils::table_printer::alignment::kRight);
-        tp.add_column("disk_avl_min_ratio", dsn::utils::table_printer::alignment::kRight);
+        tp.add_column("memused_res_mb", tp_alignment::kRight);
+        tp.add_column("block_cache_mb", tp_alignment::kRight);
+        tp.add_column("mem_tbl_mb", tp_alignment::kRight);
+        tp.add_column("mem_idx_mb", tp_alignment::kRight);
+        tp.add_column("disk_avl_total_ratio", tp_alignment::kRight);
+        tp.add_column("disk_avl_min_ratio", tp_alignment::kRight);
     }
     for (auto &kv : tmp_map) {
         tp.add_row(kv.second.node_name);
