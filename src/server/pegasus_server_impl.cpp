@@ -1699,14 +1699,15 @@ private:
         return ::dsn::ERR_OK;
     }
 
-    rocksdb::Checkpoint *chkpt = nullptr;
-    auto status = rocksdb::Checkpoint::Create(_db, &chkpt);
+    rocksdb::Checkpoint *chkpt_raw = nullptr;
+    auto status = rocksdb::Checkpoint::Create(_db, &chkpt_raw);
     if (!status.ok()) {
         derror("%s: create Checkpoint object failed, error = %s",
                replica_name(),
                status.ToString().c_str());
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
+    std::unique_ptr<rocksdb::Checkpoint> chkpt(chkpt_raw);
 
     auto dir = chkpt_get_dir_name(last_commit);
     auto chkpt_dir = ::dsn::utils::filesystem::path_combine(data_dir(), dir);
@@ -1717,8 +1718,6 @@ private:
         if (!::dsn::utils::filesystem::remove_path(chkpt_dir)) {
             derror(
                 "%s: remove old checkpoint directory %s failed", replica_name(), chkpt_dir.c_str());
-            delete chkpt;
-            chkpt = nullptr;
             return ::dsn::ERR_FILE_OPERATION_FAILED;
         }
     }
@@ -1732,10 +1731,6 @@ private:
                status.ToString().c_str());
         status = chkpt->CreateCheckpoint(chkpt_dir, 0);
     }
-
-    // destroy Checkpoint object
-    delete chkpt;
-    chkpt = nullptr;
 
     if (!status.ok()) {
         derror(
@@ -1918,16 +1913,15 @@ private:
 ::dsn::error_code pegasus_server_impl::copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
                                                                      int64_t *checkpoint_decree)
 {
-    rocksdb::Checkpoint *chkpt = nullptr;
-    rocksdb::Status status = rocksdb::Checkpoint::Create(_db, &chkpt);
+    rocksdb::Checkpoint *chkpt_raw = nullptr;
+    rocksdb::Status status = rocksdb::Checkpoint::Create(_db, &chkpt_raw);
     if (!status.ok()) {
-        if (chkpt != nullptr)
-            delete chkpt, chkpt = nullptr;
         derror("%s: create Checkpoint object failed, error = %s",
                replica_name(),
                status.ToString().c_str());
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
+    std::unique_ptr<rocksdb::Checkpoint> chkpt(chkpt_raw);
 
     if (::dsn::utils::filesystem::directory_exists(checkpoint_dir)) {
         ddebug("%s: checkpoint directory %s is already exist, remove it first",
@@ -1941,8 +1935,6 @@ private:
 
     uint64_t ci = 0;
     status = chkpt->CreateCheckpointQuick(checkpoint_dir, &ci);
-    delete chkpt, chkpt = nullptr;
-
     if (!status.ok()) {
         derror("%s: async create checkpoint failed, error = %s",
                replica_name(),
