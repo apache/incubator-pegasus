@@ -56,7 +56,7 @@ fi
 cd $shell_dir
 
 echo "Generating /tmp/$UID.$PID.pegasus.offline_node_list.cluster_info..."
-echo cluster_info | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.cluster_info
+echo cluster_info | ./run.sh shell --cluster $meta_list 2>&1 | sed 's/ *$//' >/tmp/$UID.$PID.pegasus.offline_node_list.cluster_info
 cname=`grep zookeeper_root /tmp/$UID.$PID.pegasus.offline_node_list.cluster_info | grep -o '/[^/]*$' | grep -o '[^/]*$'`
 if [ "$cname" != "$cluster" ]; then
   echo "ERROR: cluster name and meta list not matched"
