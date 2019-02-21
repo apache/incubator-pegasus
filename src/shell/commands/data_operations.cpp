@@ -1,3 +1,7 @@
+// Copyright (c) 2019, Xiaomi, Inc.  All rights reserved.
+// This source code is licensed under the Apache License Version 2.0, which
+// can be found in the LICENSE file in the root directory of this source tree.
+
 #include "shell/commands.h"
 
 static void print_current_scan_state(const std::vector<scan_data_context *> &contexts,
