@@ -62,17 +62,43 @@ struct list_nodes_helper
     }
 };
 
+// == miscellaneous (see 'commands/misc.cpp') == //
 bool help_info(command_executor *e, shell_context *sc, arguments args);
 
 bool version(command_executor *e, shell_context *sc, arguments args);
 
+bool exit_shell(command_executor *e, shell_context *sc, arguments args);
+
+// == global properties (see 'commands/global_properties.cpp') == //
+bool use_app_as_current(command_executor *e, shell_context *sc, arguments args);
+
+bool process_escape_all(command_executor *e, shell_context *sc, arguments args);
+
+bool process_timeout(command_executor *e, shell_context *sc, arguments args);
+
+bool cc_command(command_executor *e, shell_context *sc, arguments args);
+
+// == node management (see 'commands/node_management.cpp') == //
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args);
+
+bool ls_nodes(command_executor *e, shell_context *sc, arguments args);
+
+bool server_info(command_executor *e, shell_context *sc, arguments args);
+
+bool server_stat(command_executor *e, shell_context *sc, arguments args);
+
+bool remote_command(command_executor *e, shell_context *sc, arguments args);
+
+bool flush_log(command_executor *e, shell_context *sc, arguments args);
+
+// == table management (see 'commands/table_management.cpp') == //
+bool ls_apps(command_executor *e, shell_context *sc, arguments args);
 
 bool query_app(command_executor *e, shell_context *sc, arguments args);
 
-bool ls_apps(command_executor *e, shell_context *sc, arguments args);
+bool app_disk(command_executor *e, shell_context *sc, arguments args);
 
-bool ls_nodes(command_executor *e, shell_context *sc, arguments args);
+bool app_stat(command_executor *e, shell_context *sc, arguments args);
 
 bool create_app(command_executor *e, shell_context *sc, arguments args);
 
@@ -80,23 +106,20 @@ bool drop_app(command_executor *e, shell_context *sc, arguments args);
 
 bool recall_app(command_executor *e, shell_context *sc, arguments args);
 
-bool set_meta_level(command_executor *e, shell_context *sc, arguments args);
+bool get_app_envs(command_executor *e, shell_context *sc, arguments args);
 
-bool get_meta_level(command_executor *e, shell_context *sc, arguments args);
+bool set_app_envs(command_executor *e, shell_context *sc, arguments args);
 
-bool propose(command_executor *e, shell_context *sc, arguments args);
+bool del_app_envs(command_executor *e, shell_context *sc, arguments args);
 
-bool balance(command_executor *e, shell_context *sc, arguments args);
+bool clear_app_envs(command_executor *e, shell_context *sc, arguments args);
 
-bool use_app_as_current(command_executor *e, shell_context *sc, arguments args);
+// == data operations (see 'commands/data_operations.cpp') == //
+bool data_operations(command_executor *e, shell_context *sc, arguments args);
 
-bool cc_command(command_executor *e, shell_context *sc, arguments args);
+bool set_value(command_executor *e, shell_context *sc, arguments args);
 
-bool process_escape_all(command_executor *e, shell_context *sc, arguments args);
-
-bool process_timeout(command_executor *e, shell_context *sc, arguments args);
-
-bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args);
+bool multi_set_value(command_executor *e, shell_context *sc, arguments args);
 
 bool get_value(command_executor *e, shell_context *sc, arguments args);
 
@@ -105,14 +128,6 @@ bool multi_get_value(command_executor *e, shell_context *sc, arguments args);
 bool multi_get_range(command_executor *e, shell_context *sc, arguments args);
 
 bool multi_get_sortkeys(command_executor *e, shell_context *sc, arguments args);
-
-bool exist(command_executor *e, shell_context *sc, arguments args);
-
-bool sortkey_count(command_executor *e, shell_context *sc, arguments args);
-
-bool set_value(command_executor *e, shell_context *sc, arguments args);
-
-bool multi_set_value(command_executor *e, shell_context *sc, arguments args);
 
 bool delete_value(command_executor *e, shell_context *sc, arguments args);
 
@@ -124,13 +139,15 @@ bool incr(command_executor *e, shell_context *sc, arguments args);
 
 bool check_and_set(command_executor *e, shell_context *sc, arguments args);
 
-int mutation_check(int args_count, sds *args);
-
-int load_mutations(shell_context *sc, pegasus::pegasus_client::mutations &mutations);
-
 bool check_and_mutate(command_executor *e, shell_context *sc, arguments args);
 
+bool exist(command_executor *e, shell_context *sc, arguments args);
+
+bool sortkey_count(command_executor *e, shell_context *sc, arguments args);
+
 bool get_ttl(command_executor *e, shell_context *sc, arguments args);
+
+bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args);
 
 bool hash_scan(command_executor *e, shell_context *sc, arguments args);
 
@@ -142,37 +159,22 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args);
 
 bool count_data(command_executor *e, shell_context *sc, arguments args);
 
-bool data_operations(command_executor *e, shell_context *sc, arguments args);
+// == load balancing(see 'commands/rebalance.cpp') == //
+bool set_meta_level(command_executor *e, shell_context *sc, arguments args);
 
-bool local_get(command_executor *e, shell_context *sc, arguments args);
+bool get_meta_level(command_executor *e, shell_context *sc, arguments args);
 
-bool sst_dump(command_executor *e, shell_context *sc, arguments args);
+bool propose(command_executor *e, shell_context *sc, arguments args);
 
-bool mlog_dump(command_executor *e, shell_context *sc, arguments args);
+bool balance(command_executor *e, shell_context *sc, arguments args);
 
+// == metadata recovery(see 'commands/metadata_recovery.cpp') == //
 bool recover(command_executor *e, shell_context *sc, arguments args);
 
-bool remote_command(command_executor *e, shell_context *sc, arguments args);
-
-bool server_info(command_executor *e, shell_context *sc, arguments args);
-
-bool server_stat(command_executor *e, shell_context *sc, arguments args);
-
-bool flush_log(command_executor *e, shell_context *sc, arguments args);
-
-bool app_disk(command_executor *e, shell_context *sc, arguments args);
-
-bool app_stat(command_executor *e, shell_context *sc, arguments args);
-
-bool restore(command_executor *e, shell_context *sc, arguments args);
-
-bool query_restore_status(command_executor *e, shell_context *sc, arguments args);
-
+// == cold backup (see 'commands/cold_backup.cpp') == //
 bool add_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
 bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args);
-
-bool query_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
 bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
@@ -180,16 +182,17 @@ bool disable_backup_policy(command_executor *e, shell_context *sc, arguments arg
 
 bool enable_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
-bool exit_shell(command_executor *e, shell_context *sc, arguments args);
+bool restore(command_executor *e, shell_context *sc, arguments args);
 
-bool get_app_envs(command_executor *e, shell_context *sc, arguments args);
+bool query_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
-bool set_app_envs(command_executor *e, shell_context *sc, arguments args);
+bool query_restore_status(command_executor *e, shell_context *sc, arguments args);
 
-bool del_app_envs(command_executor *e, shell_context *sc, arguments args);
+// == debugger (see 'commands/debugger.cpp') == //Debugging tool
+bool sst_dump(command_executor *e, shell_context *sc, arguments args);
 
-bool clear_app_envs(command_executor *e, shell_context *sc, arguments args);
+bool mlog_dump(command_executor *e, shell_context *sc, arguments args);
 
-dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo);
+bool local_get(command_executor *e, shell_context *sc, arguments args);
 
 bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args);

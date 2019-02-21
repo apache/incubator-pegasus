@@ -6,8 +6,12 @@ static void print_current_scan_state(const std::vector<scan_data_context *> &con
                                      bool count_hash_key);
 static void print_simple_histogram(const std::string &name,
                                    const rocksdb::HistogramImpl &histogram);
-std::string unescape_str(const char *escaped);
+
 void escape_sds_argv(int argc, sds *argv);
+int mutation_check(int args_count, sds *args);
+int load_mutations(shell_context *sc, pegasus::pegasus_client::mutations &mutations);
+
+std::string unescape_str(const char *escaped);
 
 bool data_operations(command_executor *e, shell_context *sc, arguments args)
 {
