@@ -104,7 +104,7 @@ static command_executor commands[] = {
         use_app_as_current,
     },
     {
-        "cc", "check in the specified cluster", "[cluster_name]", cc_command,
+        "cc", "change to the specified cluster", "[cluster_name]", cc_command,
     },
     {
         "escape_all",
