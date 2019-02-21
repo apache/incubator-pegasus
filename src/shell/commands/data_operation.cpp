@@ -6,6 +6,8 @@ static void print_current_scan_state(const std::vector<scan_data_context *> &con
                                      bool count_hash_key);
 static void print_simple_histogram(const std::string &name,
                                    const rocksdb::HistogramImpl &histogram);
+std::string unescape_str(const char *escaped);
+void escape_sds_argv(int argc, sds *argv);
 
 bool data_operations(command_executor *e, shell_context *sc, arguments args)
 {
@@ -2336,46 +2338,6 @@ static void print_current_scan_state(const std::vector<scan_data_context *> &con
         print_simple_histogram("value_size", value_size_histogram);
         print_simple_histogram("row_size", row_size_histogram);
     }
-}
-
-bool local_get(command_executor *e, shell_context *sc, arguments args)
-{
-    if (args.argc != 4) {
-        return false;
-    }
-
-    std::string db_path = args.argv[1];
-    std::string hash_key = args.argv[2];
-    std::string sort_key = args.argv[3];
-
-    rocksdb::Options db_opts;
-    rocksdb::DB *db;
-    rocksdb::Status status = rocksdb::DB::OpenForReadOnly(db_opts, db_path, &db);
-    if (!status.ok()) {
-        fprintf(stderr, "ERROR: open db failed: %s\n", status.ToString().c_str());
-        return true;
-    }
-
-    ::dsn::blob key;
-    pegasus::pegasus_generate_key(key, hash_key, sort_key);
-    rocksdb::Slice skey(key.data(), key.length());
-    std::string value;
-    rocksdb::ReadOptions rd_opts;
-    status = db->Get(rd_opts, skey, &value);
-    if (!status.ok()) {
-        fprintf(stderr, "ERROR: get failed: %s\n", status.ToString().c_str());
-    } else {
-        uint32_t expire_ts = pegasus::pegasus_extract_expire_ts(0, value);
-        dsn::blob user_data;
-        pegasus::pegasus_extract_user_data(0, std::move(value), user_data);
-        fprintf(stderr,
-                "%u : \"%s\"\n",
-                expire_ts,
-                pegasus::utils::c_escape_string(user_data, sc->escape_all).c_str());
-    }
-
-    delete db;
-    return true;
 }
 
 bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args)

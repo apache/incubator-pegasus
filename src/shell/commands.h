@@ -90,8 +90,6 @@ bool balance(command_executor *e, shell_context *sc, arguments args);
 
 bool use_app_as_current(command_executor *e, shell_context *sc, arguments args);
 
-extern void check_in_cluster(std::string cluster_name);
-
 bool cc_command(command_executor *e, shell_context *sc, arguments args);
 
 bool process_escape_all(command_executor *e, shell_context *sc, arguments args);
@@ -99,10 +97,6 @@ bool process_escape_all(command_executor *e, shell_context *sc, arguments args);
 bool process_timeout(command_executor *e, shell_context *sc, arguments args);
 
 bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args);
-
-std::string unescape_str(const char *escaped);
-
-void escape_sds_argv(int argc, sds *argv);
 
 bool get_value(command_executor *e, shell_context *sc, arguments args);
 

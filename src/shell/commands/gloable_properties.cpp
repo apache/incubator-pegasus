@@ -64,3 +64,17 @@ bool process_timeout(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 }
+
+extern void check_in_cluster(std::string cluster_name);
+
+bool cc_command(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc == 2) {
+        std::string cluster_name = args.argv[1];
+        if (!cluster_name.empty()) {
+            check_in_cluster(cluster_name);
+            return true;
+        }
+    }
+    return false;
+}
