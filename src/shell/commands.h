@@ -168,8 +168,10 @@ bool propose(command_executor *e, shell_context *sc, arguments args);
 
 bool balance(command_executor *e, shell_context *sc, arguments args);
 
-// == metadata recovery(see 'commands/metadata_recovery.cpp') == //
+// == data recovery(see 'commands/recovery.cpp') == //
 bool recover(command_executor *e, shell_context *sc, arguments args);
+
+bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args);
 
 // == cold backup (see 'commands/cold_backup.cpp') == //
 bool add_backup_policy(command_executor *e, shell_context *sc, arguments args);
@@ -194,5 +196,3 @@ bool sst_dump(command_executor *e, shell_context *sc, arguments args);
 bool mlog_dump(command_executor *e, shell_context *sc, arguments args);
 
 bool local_get(command_executor *e, shell_context *sc, arguments args);
-
-bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args);
