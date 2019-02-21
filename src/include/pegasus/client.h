@@ -798,8 +798,7 @@ public:
     /// \param hashkey
     /// used to decide which partition to get this k-v
     /// \param sortkeys
-    /// all the k-v under hashkey will be sorted by sortkey.
-    /// if empty, means delete all sortkeys under the hashkey.
+    /// all the k-v under hashkey will be sorted by sortkey. should not be empty.
     /// \param callback
     /// the callback function will be invoked after operation finished or error occurred.
     /// \param timeout_milliseconds
