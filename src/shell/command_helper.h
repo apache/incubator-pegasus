@@ -466,6 +466,8 @@ inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
 struct row_data
 {
     std::string row_name;
+    int32_t app_id = 0;
+    int32_t partition_count = 0;
     double get_qps = 0;
     double multi_get_qps = 0;
     double put_qps = 0;
@@ -603,6 +605,8 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
         std::map<int32_t, int> app_row_idx; // app_id --> row_idx
         for (::dsn::app_info &app : apps) {
             rows[idx].row_name = app.app_name;
+            rows[idx].app_id = app.app_id;
+            rows[idx].partition_count = app.partition_count;
             app_row_idx[app.app_id] = idx;
             idx++;
         }
