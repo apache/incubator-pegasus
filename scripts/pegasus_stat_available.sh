@@ -29,8 +29,9 @@ fi
 
 app_count=`cat $app_stat_result | wc -l`
 app_count=$((app_count-2))
-data_size=`cat $app_stat_result | tail -n 1 | awk '{print $(NF-3)}' | sed 's/\.00$//'`
-data_size=$(((data_size+1024)/1024))
+data_size_column=`cat $app_stat_result | awk '/file_mb/{ for(i = 1; i <= NF; i++) { if ($i == "file_mb") print i; } }'`
+data_size=`cat $app_stat_result | tail -n 1 | awk '{print $'$data_size_column'}' | sed 's/\.00$//'`
+data_size=$(((data_size+1023)/1024))
 
 all_result="/tmp/$UID.$PID.pegasus.stat_available.all_result"
 rm -f $all_result
