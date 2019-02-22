@@ -428,8 +428,10 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
 
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
+    sum.row_name = "(sum)";
     for (int i = 0; i < rows.size() - 1; ++i) {
         row_data &row = rows[i];
+        sum.partition_count += row.partition_count;
         sum.get_qps += row.get_qps;
         sum.multi_get_qps += row.multi_get_qps;
         sum.put_qps += row.put_qps;
@@ -465,7 +467,11 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     std::ostream out(buf);
 
     ::dsn::utils::table_printer tp;
-    tp.add_title(app_name.empty() ? "app" : "pidx");
+    tp.add_title(app_name.empty() ? "app_name" : "pidx");
+    if (app_name.empty()) {
+        tp.add_column("app_id", tp_alignment::kRight);
+        tp.add_column("pcount", tp_alignment::kRight);
+    }
     tp.add_column("GET", tp_alignment::kRight);
     tp.add_column("MGET", tp_alignment::kRight);
     tp.add_column("PUT", tp_alignment::kRight);
@@ -491,6 +497,10 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
 
     for (row_data &row : rows) {
         tp.add_row(row.row_name);
+        if (app_name.empty()) {
+            tp.append_data(row.app_id);
+            tp.append_data(row.partition_count);
+        }
         tp.append_data(row.get_qps);
         tp.append_data(row.multi_get_qps);
         tp.append_data(row.put_qps);
