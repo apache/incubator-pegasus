@@ -494,13 +494,13 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("CAS", tp_alignment::kRight);
         tp.add_column("CAM", tp_alignment::kRight);
         tp.add_column("SCAN", tp_alignment::kRight);
+        tp.add_column("expire", tp_alignment::kRight);
+        tp.add_column("filter", tp_alignment::kRight);
+        tp.add_column("abnormal", tp_alignment::kRight);
+        tp.add_column("delay", tp_alignment::kRight);
+        tp.add_column("reject", tp_alignment::kRight);
     }
     if (!only_qps) {
-        tp.add_column("expired", tp_alignment::kRight);
-        tp.add_column("filtered", tp_alignment::kRight);
-        tp.add_column("abnormal", tp_alignment::kRight);
-        tp.add_column("delayed", tp_alignment::kRight);
-        tp.add_column("rejected", tp_alignment::kRight);
         tp.add_column("file_mb", tp_alignment::kRight);
         tp.add_column("file_num", tp_alignment::kRight);
         tp.add_column("mem_tbl_mb", tp_alignment::kRight);
@@ -525,13 +525,13 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.check_and_set_qps);
             tp.append_data(row.check_and_mutate_qps);
             tp.append_data(row.scan_qps);
-        }
-        if (!only_qps) {
             tp.append_data(row.recent_expire_count);
             tp.append_data(row.recent_filter_count);
             tp.append_data(row.recent_abnormal_count);
             tp.append_data(row.recent_write_throttling_delay_count);
             tp.append_data(row.recent_write_throttling_reject_count);
+        }
+        if (!only_qps) {
             tp.append_data(row.storage_mb);
             tp.append_data((uint64_t)row.storage_count);
             tp.append_data(row.rdb_memtable_mem_usage / (1 << 20U));
