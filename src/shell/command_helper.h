@@ -547,7 +547,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     dsn::error_code err = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
     if (err != dsn::ERR_OK) {
         derror("list apps failed, error = %s", err.to_string());
-        return true;
+        return false;
     }
 
     ::dsn::app_info *app_info = nullptr;
@@ -560,14 +560,14 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
         }
         if (app_info == nullptr) {
             derror("app %s not found", app_name.c_str());
-            return true;
+            return false;
         }
     }
 
     std::vector<node_desc> nodes;
     if (!fill_nodes(sc, "replica-server", nodes)) {
         derror("get replica server node list failed");
-        return true;
+        return false;
     }
 
     ::dsn::command command;
@@ -591,7 +591,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 app.app_name, app_id, partition_count, app_partitions[app.app_id]);
             if (err != ::dsn::ERR_OK) {
                 derror("list app %s failed, error = %s", app_name.c_str(), err.to_string());
-                return true;
+                return false;
             }
             dassert(app_id == app.app_id, "%d VS %d", app_id, app.app_id);
             dassert(partition_count == app.partition_count,
@@ -615,7 +615,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             dsn::rpc_address node_addr = nodes[i].address;
             if (!results[i].first) {
                 derror("query perf counter info from node %s failed", node_addr.to_string());
-                return true;
+                return false;
             }
             dsn::perf_counter_info info;
             dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
@@ -623,13 +623,13 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 derror("decode perf counter info from node %s failed, result = %s",
                        node_addr.to_string(),
                        results[i].second.c_str());
-                return true;
+                return false;
             }
             if (info.result != "OK") {
                 derror("query perf counter info from node %s returns error, error = %s",
                        node_addr.to_string(),
                        info.result.c_str());
-                return true;
+                return false;
             }
             for (dsn::perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
@@ -657,7 +657,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
         if (err != ::dsn::ERR_OK) {
             derror("list app %s failed, error = %s", app_name.c_str(), err.to_string());
-            return true;
+            return false;
         }
         dassert(app_id == app_info->app_id, "%d VS %d", app_id, app_info->app_id);
         dassert(partition_count == app_info->partition_count,
@@ -669,7 +669,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             dsn::rpc_address node_addr = nodes[i].address;
             if (!results[i].first) {
                 derror("query perf counter info from node %s failed", node_addr.to_string());
-                return true;
+                return false;
             }
             dsn::perf_counter_info info;
             dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
@@ -677,13 +677,13 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 derror("decode perf counter info from node %s failed, result = %s",
                        node_addr.to_string(),
                        results[i].second.c_str());
-                return true;
+                return false;
             }
             if (info.result != "OK") {
                 derror("query perf counter info from node %s returns error, error = %s",
                        node_addr.to_string(),
                        info.result.c_str());
-                return true;
+                return false;
             }
             for (dsn::perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
