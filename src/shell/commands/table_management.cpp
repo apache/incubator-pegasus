@@ -392,20 +392,20 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
                                            {"only_qps", required_argument, 0, 'q'},
-                                           {"no_qps", required_argument, 0, 'n'},
+                                           {"only_usage", required_argument, 0, 'u'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
 
     std::string app_name;
     std::string out_file;
     bool only_qps = false;
-    bool no_qps = false;
+    bool only_usage = false;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "a:qno:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "a:quo:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -415,8 +415,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         case 'q':
             only_qps = true;
             break;
-        case 'n':
-            no_qps = true;
+        case 'u':
+            only_usage = true;
             break;
         case 'o':
             out_file = optarg;
@@ -426,8 +426,9 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    if (only_qps && no_qps) {
-        std::cout << "ERROR: only_qps and no_qps should not be set at the same time" << std::endl;
+    if (only_qps && only_usage) {
+        std::cout << "ERROR: only_qps and only_usage should not be set at the same time"
+                  << std::endl;
         return true;
     }
 
@@ -483,7 +484,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("app_id", tp_alignment::kRight);
         tp.add_column("pcount", tp_alignment::kRight);
     }
-    if (!no_qps) {
+    if (!only_usage) {
         tp.add_column("GET", tp_alignment::kRight);
         tp.add_column("MGET", tp_alignment::kRight);
         tp.add_column("PUT", tp_alignment::kRight);
@@ -514,7 +515,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.app_id);
             tp.append_data(row.partition_count);
         }
-        if (!no_qps) {
+        if (!only_usage) {
             tp.append_data(row.get_qps);
             tp.append_data(row.multi_get_qps);
             tp.append_data(row.put_qps);
