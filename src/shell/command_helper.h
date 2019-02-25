@@ -701,4 +701,3 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     }
     return true;
 }
-

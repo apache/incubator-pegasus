@@ -63,6 +63,7 @@ struct list_nodes_helper
 };
 
 // == miscellaneous (see 'commands/misc.cpp') == //
+
 bool help_info(command_executor *e, shell_context *sc, arguments args);
 
 bool version(command_executor *e, shell_context *sc, arguments args);
@@ -70,6 +71,7 @@ bool version(command_executor *e, shell_context *sc, arguments args);
 bool exit_shell(command_executor *e, shell_context *sc, arguments args);
 
 // == global properties (see 'commands/global_properties.cpp') == //
+
 bool use_app_as_current(command_executor *e, shell_context *sc, arguments args);
 
 bool process_escape_all(command_executor *e, shell_context *sc, arguments args);
@@ -79,6 +81,7 @@ bool process_timeout(command_executor *e, shell_context *sc, arguments args);
 bool cc_command(command_executor *e, shell_context *sc, arguments args);
 
 // == node management (see 'commands/node_management.cpp') == //
+
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args);
 
 bool ls_nodes(command_executor *e, shell_context *sc, arguments args);
@@ -92,6 +95,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args);
 bool flush_log(command_executor *e, shell_context *sc, arguments args);
 
 // == table management (see 'commands/table_management.cpp') == //
+
 bool ls_apps(command_executor *e, shell_context *sc, arguments args);
 
 bool query_app(command_executor *e, shell_context *sc, arguments args);
@@ -115,6 +119,7 @@ bool del_app_envs(command_executor *e, shell_context *sc, arguments args);
 bool clear_app_envs(command_executor *e, shell_context *sc, arguments args);
 
 // == data operations (see 'commands/data_operations.cpp') == //
+
 bool data_operations(command_executor *e, shell_context *sc, arguments args);
 
 bool set_value(command_executor *e, shell_context *sc, arguments args);
@@ -160,6 +165,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args);
 bool count_data(command_executor *e, shell_context *sc, arguments args);
 
 // == load balancing(see 'commands/rebalance.cpp') == //
+
 bool set_meta_level(command_executor *e, shell_context *sc, arguments args);
 
 bool get_meta_level(command_executor *e, shell_context *sc, arguments args);
@@ -169,11 +175,13 @@ bool propose(command_executor *e, shell_context *sc, arguments args);
 bool balance(command_executor *e, shell_context *sc, arguments args);
 
 // == data recovery(see 'commands/recovery.cpp') == //
+
 bool recover(command_executor *e, shell_context *sc, arguments args);
 
 bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args);
 
 // == cold backup (see 'commands/cold_backup.cpp') == //
+
 bool add_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
 bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args);
@@ -191,6 +199,7 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 bool query_restore_status(command_executor *e, shell_context *sc, arguments args);
 
 // == debugger (see 'commands/debugger.cpp') == //Debugging tool
+
 bool sst_dump(command_executor *e, shell_context *sc, arguments args);
 
 bool mlog_dump(command_executor *e, shell_context *sc, arguments args);

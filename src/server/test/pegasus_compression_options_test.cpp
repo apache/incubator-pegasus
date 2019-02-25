@@ -60,7 +60,8 @@ public:
         return _server->compression_type_to_str(type);
     }
 
-    void update_app_envs(const std::map<std::string, std::string> &envs) {
+    void update_app_envs(const std::map<std::string, std::string> &envs)
+    {
         _server->update_app_envs(envs);
     }
 
@@ -132,7 +133,8 @@ TEST_F(pegasus_compression_options_test, compression_types_convert_fail)
 TEST_F(pegasus_compression_options_test, check_rocksdb_compression_types_default)
 {
     start();
-    check_db_compression_types({none, none, snappy, snappy, snappy, snappy, snappy}, "start with default");
+    check_db_compression_types({none, none, snappy, snappy, snappy, snappy, snappy},
+                               "start with default");
 }
 
 } // namespace server

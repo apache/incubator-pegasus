@@ -82,9 +82,10 @@ fi
 # valgrind can not work together with gpertools
 # you may want to use this option when you want to run valgrind
 if [ "$DISABLE_GPERF" == "YES" ]
+then
     echo "DISABLE_GPERF=YES"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DENABLE_GPERF=Off"
-then
+else
     echo "DISABLE_GPERF=NO"
 fi
 
