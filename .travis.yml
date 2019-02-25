@@ -37,7 +37,7 @@ before_script:
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh test --skip_thirdparty --check
+    - ./run.sh test --skip_thirdparty --check --disable_gperf
 
 after_script:
     - ./run.sh stop_zk

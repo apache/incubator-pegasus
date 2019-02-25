@@ -76,7 +76,7 @@ fi
 # gperftools
 if [ ! -f $TP_OUTPUT/lib/libtcmalloc.so ]; then
     cd $TP_SRC/gperftools-2.7
-    ./configure --prefix=$TP_OUTPUT --enable-static=no
+    ./configure --prefix=$TP_OUTPUT --enable-static=no --enable-frame-pointers=yes
     make -j8 && make install
     res=$?
     cd $TP_DIR

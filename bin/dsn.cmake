@@ -212,9 +212,7 @@ function(dsn_setup_compiler_flags)
     # -fno-omit-frame-pointer
     #   use frame pointers to allow simple stack frame walking for backtraces.
     #   This has a small perf hit but worth it for the ability to profile in production
-    add_definitions(-fno-omit-frame-pointer)
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y" CACHE STRING "" FORCE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -fno-omit-frame-pointer" CACHE STRING "" FORCE)
 
     #  -Wall: Enable all warnings.
     add_compile_options(-Wall)
