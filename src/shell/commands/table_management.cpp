@@ -392,18 +392,20 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
                                            {"only_qps", required_argument, 0, 'q'},
+                                           {"only_usage", required_argument, 0, 'u'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
 
     std::string app_name;
     std::string out_file;
     bool only_qps = false;
+    bool only_usage = false;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "a:qo:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "a:quo:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -413,6 +415,9 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         case 'q':
             only_qps = true;
             break;
+        case 'u':
+            only_usage = true;
+            break;
         case 'o':
             out_file = optarg;
             break;
@@ -421,14 +426,21 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
+    if (only_qps && only_usage) {
+        std::cout << "ERROR: only_qps and only_usage should not be set at the same time"
+                  << std::endl;
+        return true;
+    }
+
     std::vector<row_data> rows;
     if (!get_app_stat(sc, app_name, rows)) {
-        return false;
+        std::cout << "ERROR: query app stat from server failed" << std::endl;
+        return true;
     }
 
     rows.resize(rows.size() + 1);
     row_data &sum = rows.back();
-    sum.row_name = "(sum)";
+    sum.row_name = "(total:" + std::to_string(rows.size() - 1) + ")";
     for (int i = 0; i < rows.size() - 1; ++i) {
         row_data &row = rows[i];
         sum.partition_count += row.partition_count;
@@ -472,22 +484,24 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("app_id", tp_alignment::kRight);
         tp.add_column("pcount", tp_alignment::kRight);
     }
-    tp.add_column("GET", tp_alignment::kRight);
-    tp.add_column("MGET", tp_alignment::kRight);
-    tp.add_column("PUT", tp_alignment::kRight);
-    tp.add_column("MPUT", tp_alignment::kRight);
-    tp.add_column("DEL", tp_alignment::kRight);
-    tp.add_column("MDEL", tp_alignment::kRight);
-    tp.add_column("INCR", tp_alignment::kRight);
-    tp.add_column("CAS", tp_alignment::kRight);
-    tp.add_column("CAM", tp_alignment::kRight);
-    tp.add_column("SCAN", tp_alignment::kRight);
-    if (!only_qps) {
-        tp.add_column("expired", tp_alignment::kRight);
-        tp.add_column("filtered", tp_alignment::kRight);
+    if (!only_usage) {
+        tp.add_column("GET", tp_alignment::kRight);
+        tp.add_column("MGET", tp_alignment::kRight);
+        tp.add_column("PUT", tp_alignment::kRight);
+        tp.add_column("MPUT", tp_alignment::kRight);
+        tp.add_column("DEL", tp_alignment::kRight);
+        tp.add_column("MDEL", tp_alignment::kRight);
+        tp.add_column("INCR", tp_alignment::kRight);
+        tp.add_column("CAS", tp_alignment::kRight);
+        tp.add_column("CAM", tp_alignment::kRight);
+        tp.add_column("SCAN", tp_alignment::kRight);
+        tp.add_column("expire", tp_alignment::kRight);
+        tp.add_column("filter", tp_alignment::kRight);
         tp.add_column("abnormal", tp_alignment::kRight);
-        tp.add_column("delayed", tp_alignment::kRight);
-        tp.add_column("rejected", tp_alignment::kRight);
+        tp.add_column("delay", tp_alignment::kRight);
+        tp.add_column("reject", tp_alignment::kRight);
+    }
+    if (!only_qps) {
         tp.add_column("file_mb", tp_alignment::kRight);
         tp.add_column("file_num", tp_alignment::kRight);
         tp.add_column("mem_tbl_mb", tp_alignment::kRight);
@@ -501,22 +515,24 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.app_id);
             tp.append_data(row.partition_count);
         }
-        tp.append_data(row.get_qps);
-        tp.append_data(row.multi_get_qps);
-        tp.append_data(row.put_qps);
-        tp.append_data(row.multi_put_qps);
-        tp.append_data(row.remove_qps);
-        tp.append_data(row.multi_remove_qps);
-        tp.append_data(row.incr_qps);
-        tp.append_data(row.check_and_set_qps);
-        tp.append_data(row.check_and_mutate_qps);
-        tp.append_data(row.scan_qps);
-        if (!only_qps) {
+        if (!only_usage) {
+            tp.append_data(row.get_qps);
+            tp.append_data(row.multi_get_qps);
+            tp.append_data(row.put_qps);
+            tp.append_data(row.multi_put_qps);
+            tp.append_data(row.remove_qps);
+            tp.append_data(row.multi_remove_qps);
+            tp.append_data(row.incr_qps);
+            tp.append_data(row.check_and_set_qps);
+            tp.append_data(row.check_and_mutate_qps);
+            tp.append_data(row.scan_qps);
             tp.append_data(row.recent_expire_count);
             tp.append_data(row.recent_filter_count);
             tp.append_data(row.recent_abnormal_count);
             tp.append_data(row.recent_write_throttling_delay_count);
             tp.append_data(row.recent_write_throttling_reject_count);
+        }
+        if (!only_qps) {
             tp.append_data(row.storage_mb);
             tp.append_data((uint64_t)row.storage_count);
             tp.append_data(row.rdb_memtable_mem_usage / (1 << 20U));
