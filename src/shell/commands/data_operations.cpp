@@ -2392,6 +2392,6 @@ bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args
             tp.add_row_name_and_data("secondaries", oss.str());
         }
     }
-    tp.output(std::cout, ": ");
+    tp.output(std::cout);
     return true;
 }
