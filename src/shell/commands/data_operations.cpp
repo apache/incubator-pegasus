@@ -2323,7 +2323,7 @@ static void print_current_scan_state(const std::vector<scan_data_context *> &con
             fprintf(stderr, "\n");
         }
     }
-    fprintf(stderr, "Count %s, total %ld rows", stop_desc.c_str(), total_rows);
+    fprintf(stderr, "Count %s, total %ld rows.", stop_desc.c_str(), total_rows);
     if (count_hash_key) {
         fprintf(stderr, " (%ld hash keys)\n", total_hash_key_count);
     } else {
