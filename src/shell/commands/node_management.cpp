@@ -61,14 +61,14 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    dsn::utils::table_printer_container tp_container;
+    dsn::utils::multi_table_printer mtp;
     if (!(status.empty() && output_file.empty())) {
         dsn::utils::table_printer tp("parameters");
         if (!status.empty())
             tp.add_row_name_and_data("status", status);
         if (!output_file.empty())
             tp.add_row_name_and_data("out_file", output_file);
-        tp_container.add(std::move(tp));
+        mtp.add(std::move(tp));
     }
 
     ::dsn::replication::node_status::type s = ::dsn::replication::node_status::NS_INVALID;
@@ -249,16 +249,16 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(kv.second.disk_available_min_ratio);
         }
     }
-    tp_container.add(std::move(tp));
+    mtp.add(std::move(tp));
     out << std::endl;
 
     dsn::utils::table_printer tp_count("summary");
     tp_count.add_row_name_and_data("total_node_count", nodes.size());
     tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
     tp_count.add_row_name_and_data("unalive_node_count", nodes.size() - alive_node_count);
-    tp_container.add(std::move(tp_count));
+    mtp.add(std::move(tp_count));
 
-    tp_container.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kSpace);
+    mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
     out << std::endl;
 
     return true;
