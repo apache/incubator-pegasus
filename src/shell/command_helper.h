@@ -362,6 +362,8 @@ inline void scan_data_next(scan_data_context *context)
                         dassert(false, "op = %d", context->op);
                         break;
                     }
+                } else {
+                    scan_data_next(context);
                 }
             } else if (ret == pegasus::PERR_SCAN_COMPLETE) {
                 context->split_completed.store(true);
