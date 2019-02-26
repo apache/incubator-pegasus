@@ -164,7 +164,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args);
 
 bool count_data(command_executor *e, shell_context *sc, arguments args);
 
-// == load balancing(see 'commands/rebalance.cpp') == //
+// == load balancing (see 'commands/rebalance.cpp') == //
 
 bool set_meta_level(command_executor *e, shell_context *sc, arguments args);
 
@@ -174,7 +174,7 @@ bool propose(command_executor *e, shell_context *sc, arguments args);
 
 bool balance(command_executor *e, shell_context *sc, arguments args);
 
-// == data recovery(see 'commands/recovery.cpp') == //
+// == data recovery (see 'commands/recovery.cpp') == //
 
 bool recover(command_executor *e, shell_context *sc, arguments args);
 
@@ -198,10 +198,22 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
 bool query_restore_status(command_executor *e, shell_context *sc, arguments args);
 
-// == debugger (see 'commands/debugger.cpp') == //Debugging tool
+// == debugging tools (see 'commands/debugger.cpp') == //
 
 bool sst_dump(command_executor *e, shell_context *sc, arguments args);
 
 bool mlog_dump(command_executor *e, shell_context *sc, arguments args);
 
 bool local_get(command_executor *e, shell_context *sc, arguments args);
+
+// == duplication (see 'commands/duplication.cpp') == //
+
+bool add_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool query_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool remove_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool start_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool pause_dup(command_executor *e, shell_context *sc, arguments args);
