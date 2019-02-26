@@ -2,8 +2,8 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "duplication_commands.h"
-#include "argh.h"
+#include "shell/commands.h"
+#include "shell/argh.h"
 
 #include <fmt/ostream.h>
 #include <dsn/utility/errors.h>
@@ -14,7 +14,7 @@
 using dsn::replication::duplication_status;
 using dsn::replication::dupid_t;
 
-/*extern*/ bool add_dup(command_executor *e, shell_context *sc, arguments args)
+bool add_dup(command_executor *e, shell_context *sc, arguments args)
 {
     // add_dup <app_name> <remote_address> [-f]
 
@@ -88,7 +88,7 @@ bool string2dupid(const std::string &str, dupid_t *dup_id)
     return true;
 }
 
-/*extern*/ bool query_dup(command_executor *e, shell_context *sc, arguments args)
+bool query_dup(command_executor *e, shell_context *sc, arguments args)
 {
     // query_dup <app_name> [-d]
 
@@ -204,17 +204,17 @@ bool change_dup_status(command_executor *e,
     return true;
 }
 
-/*extern*/ bool remove_dup(command_executor *e, shell_context *sc, arguments args)
+bool remove_dup(command_executor *e, shell_context *sc, arguments args)
 {
     return change_dup_status(e, sc, args, duplication_status::DS_REMOVED);
 }
 
-/*extern*/ bool start_dup(command_executor *e, shell_context *sc, arguments args)
+bool start_dup(command_executor *e, shell_context *sc, arguments args)
 {
     return change_dup_status(e, sc, args, duplication_status::DS_START);
 }
 
-/*extern*/ bool pause_dup(command_executor *e, shell_context *sc, arguments args)
+bool pause_dup(command_executor *e, shell_context *sc, arguments args)
 {
     return change_dup_status(e, sc, args, duplication_status::DS_PAUSE);
 }
