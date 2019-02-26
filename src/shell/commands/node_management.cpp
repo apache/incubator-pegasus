@@ -258,8 +258,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     tp_count.add_row_name_and_data("unalive_node_count", nodes.size() - alive_node_count);
     tp_container.add(std::move(tp_count));
 
-    tp_container.output(
-        out, json ? tp_output_format::kJsonPretty: tp_output_format::kSpace);
+    tp_container.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kSpace);
     out << std::endl;
 
     return true;
