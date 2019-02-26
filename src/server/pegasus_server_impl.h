@@ -226,7 +226,8 @@ private:
     bool parse_compression_types(const std::string &config,
                                  std::vector<rocksdb::CompressionType> &compression_per_level);
 
-    bool compression_str_to_type(const std::string &compression_str, rocksdb::CompressionType &type);
+    bool compression_str_to_type(const std::string &compression_str,
+                                 rocksdb::CompressionType &type);
     std::string compression_type_to_str(rocksdb::CompressionType type);
 
     // return finish time recorded in rocksdb

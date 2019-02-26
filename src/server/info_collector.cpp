@@ -102,7 +102,6 @@ void info_collector::on_app_stat()
             all.storage_count += row.storage_count;
             all.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
             all.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
-            all.rdb_block_cache_mem_usage += row.rdb_block_cache_mem_usage;
             all.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
             all.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
             all.duplicated_put_qps += row.duplicated_put_qps;
@@ -149,7 +148,6 @@ void info_collector::on_app_stat()
                 std::abs(row.rdb_block_cache_total_count) < 1e-6
                     ? 0
                     : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count * 1000000);
-            counters->rdb_block_cache_mem_usage->set(row.rdb_block_cache_mem_usage);
             counters->rdb_index_and_filter_blocks_mem_usage->set(
                 row.rdb_index_and_filter_blocks_mem_usage);
             counters->rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
@@ -210,7 +208,6 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(storage_mb);
     INIT_COUNTER(storage_count);
     INIT_COUNTER(rdb_block_cache_hit_rate);
-    INIT_COUNTER(rdb_block_cache_mem_usage);
     INIT_COUNTER(rdb_index_and_filter_blocks_mem_usage);
     INIT_COUNTER(rdb_memtable_mem_usage);
     INIT_COUNTER(read_qps);

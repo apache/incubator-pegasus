@@ -53,6 +53,14 @@ function get_system_lib()
     fi
 }
 
+# USAGE: get_system_libname server snappy
+function get_system_libname()
+{
+    libname=`ldd ./DSN_ROOT/bin/pegasus_$1/pegasus_$1 2>/dev/null | grep "lib${2}\.so"`
+    libname=`echo $libname | cut -f1 -d" "`
+    echo "$libname"
+}
+
 #USAGE: copy_file src [src...] dest
 function copy_file()
 {
