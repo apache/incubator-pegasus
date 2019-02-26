@@ -1958,6 +1958,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
                                                            sc->pg_client,
                                                            nullptr,
                                                            &error_occurred);
+        context->set_value_filter(value_filter_type, value_filter_pattern);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
@@ -2234,6 +2235,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            stat_size,
                                                            top_count,
                                                            diff_hash_key);
+        context->set_value_filter(value_filter_type, value_filter_pattern);
         contexts.push_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
