@@ -4,10 +4,11 @@
 
 #include "shell/commands.h"
 
-static void print_current_scan_state(const std::vector<scan_data_context *> &contexts,
-                                     const std::string &stop_desc,
-                                     bool stat_size,
-                                     bool count_hash_key);
+static void
+print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &contexts,
+                         const std::string &stop_desc,
+                         bool stat_size,
+                         bool count_hash_key);
 static void print_simple_histogram(const std::string &name,
                                    const rocksdb::HistogramImpl &histogram);
 
@@ -1674,9 +1675,9 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                          new pegasus::geo::latlng_extractor_for_lbs()));
     }
 
-    std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
+    std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
     options.timeout_ms = timeout_ms;
-    ret = sc->pg_client->get_unordered_scanners(INT_MAX, options, scanners);
+    ret = sc->pg_client->get_unordered_scanners(INT_MAX, options, raw_scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr,
                 "ERROR: open source app scanner failed: %s\n",
@@ -1685,22 +1686,27 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
     }
     fprintf(stderr,
             "INFO: open source app scanner succeed, partition_count = %d\n",
-            (int)scanners.size());
+            (int)raw_scanners.size());
+
+    std::vector<std::unique_ptr<pegasus::pegasus_client::pegasus_scanner>> scanners;
+    for (auto p : raw_scanners) {
+        scanners.emplace_back(p);
+    }
     if (partition != -1) {
         if (partition >= scanners.size()) {
             fprintf(stderr, "ERROR: invalid partition param: %d\n", partition);
             return true;
         }
-        std::vector<pegasus::pegasus_client::pegasus_scanner *> tmp_scanners;
-        tmp_scanners.push_back(scanners[partition]);
-        tmp_scanners.swap(scanners);
+        std::unique_ptr<pegasus::pegasus_client::pegasus_scanner> s(std::move(scanners[partition]));
+        scanners.clear();
+        scanners.push_back(std::move(s));
     }
     int split_count = scanners.size();
     fprintf(stderr, "INFO: prepare scanners succeed, split_count = %d\n", split_count);
 
     std::atomic_bool error_occurred(false);
-    std::vector<scan_data_context *> contexts;
-    for (int i = 0; i < scanners.size(); i++) {
+    std::vector<std::unique_ptr<scan_data_context>> contexts;
+    for (int i = 0; i < split_count; i++) {
         scan_data_context *context = new scan_data_context(is_geo_data ? SCAN_GEN_GEO : SCAN_COPY,
                                                            i,
                                                            max_batch_count,
@@ -1712,7 +1718,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         context->set_value_filter(value_filter_type, value_filter_pattern);
         if (no_overwrite)
             context->set_no_overwrite();
-        contexts.push_back(context);
+        contexts.emplace_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
 
@@ -1724,7 +1730,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         sleep_seconds++;
         int completed_split_count = 0;
         long cur_total_rows = 0;
-        for (int i = 0; i < scanners.size(); i++) {
+        for (int i = 0; i < split_count; i++) {
             cur_total_rows += contexts[i]->split_rows.load();
             if (contexts[i]->split_request_count.load() == 0)
                 completed_split_count++;
@@ -1748,7 +1754,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                     cur_total_rows,
                     cur_total_rows - last_total_rows);
         }
-        if (completed_split_count == scanners.size())
+        if (completed_split_count == split_count)
             break;
         last_total_rows = cur_total_rows;
     }
@@ -1758,15 +1764,10 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
     }
 
     long total_rows = 0;
-    for (int i = 0; i < scanners.size(); i++) {
+    for (int i = 0; i < split_count; i++) {
         fprintf(stderr, "INFO: split[%d]: %ld rows\n", i, contexts[i]->split_rows.load());
         total_rows += contexts[i]->split_rows.load();
     }
-
-    for (int i = 0; i < scanners.size(); i++) {
-        delete contexts[i];
-    }
-    contexts.clear();
 
     fprintf(stderr,
             "\nCopy %s, total %ld rows.\n",
@@ -1925,34 +1926,40 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
+    std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
     options.timeout_ms = timeout_ms;
     if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER)
         options.no_value = false;
     else
         options.no_value = true;
-    int ret = sc->pg_client->get_unordered_scanners(INT_MAX, options, scanners);
+    int ret = sc->pg_client->get_unordered_scanners(INT_MAX, options, raw_scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(
             stderr, "ERROR: open app scanner failed: %s\n", sc->pg_client->get_error_string(ret));
         return true;
     }
-    fprintf(stderr, "INFO: open app scanner succeed, partition_count = %d\n", (int)scanners.size());
+    fprintf(
+        stderr, "INFO: open app scanner succeed, partition_count = %d\n", (int)raw_scanners.size());
+
+    std::vector<std::unique_ptr<pegasus::pegasus_client::pegasus_scanner>> scanners;
+    for (auto p : raw_scanners) {
+        scanners.emplace_back(p);
+    }
     if (partition != -1) {
         if (partition >= scanners.size()) {
             fprintf(stderr, "ERROR: invalid partition param: %d\n", partition);
             return true;
         }
-        std::vector<pegasus::pegasus_client::pegasus_scanner *> tmp_scanners;
-        tmp_scanners.push_back(scanners[partition]);
-        tmp_scanners.swap(scanners);
+        std::unique_ptr<pegasus::pegasus_client::pegasus_scanner> s(std::move(scanners[partition]));
+        scanners.clear();
+        scanners.push_back(std::move(s));
     }
     int split_count = scanners.size();
     fprintf(stderr, "INFO: prepare scanners succeed, split_count = %d\n", split_count);
 
     std::atomic_bool error_occurred(false);
-    std::vector<scan_data_context *> contexts;
-    for (int i = 0; i < scanners.size(); i++) {
+    std::vector<std::unique_ptr<scan_data_context>> contexts;
+    for (int i = 0; i < split_count; i++) {
         scan_data_context *context = new scan_data_context(SCAN_CLEAR,
                                                            i,
                                                            max_batch_count,
@@ -1962,7 +1969,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
                                                            nullptr,
                                                            &error_occurred);
         context->set_value_filter(value_filter_type, value_filter_pattern);
-        contexts.push_back(context);
+        contexts.emplace_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
 
@@ -1973,7 +1980,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
         sleep_seconds++;
         int completed_split_count = 0;
         long cur_total_rows = 0;
-        for (int i = 0; i < scanners.size(); i++) {
+        for (int i = 0; i < split_count; i++) {
             cur_total_rows += contexts[i]->split_rows.load();
             if (contexts[i]->split_request_count.load() == 0)
                 completed_split_count++;
@@ -1997,7 +2004,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
                     cur_total_rows,
                     cur_total_rows - last_total_rows);
         }
-        if (completed_split_count == scanners.size())
+        if (completed_split_count == split_count)
             break;
         last_total_rows = cur_total_rows;
     }
@@ -2007,15 +2014,10 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
     }
 
     long total_rows = 0;
-    for (int i = 0; i < scanners.size(); i++) {
+    for (int i = 0; i < split_count; i++) {
         fprintf(stderr, "INFO: split[%d]: %ld rows\n", i, contexts[i]->split_rows.load());
         total_rows += contexts[i]->split_rows.load();
     }
-
-    for (int i = 0; i < scanners.size(); i++) {
-        delete contexts[i];
-    }
-    contexts.clear();
 
     fprintf(stderr,
             "\nClear %s, total %ld rows.\n",
@@ -2202,34 +2204,40 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "INFO: top_count = %d\n", top_count);
     fprintf(stderr, "INFO: run_seconds = %d\n", run_seconds);
 
-    std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
+    std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
     options.timeout_ms = timeout_ms;
     if (stat_size || value_filter_type != pegasus::pegasus_client::FT_NO_FILTER)
         options.no_value = false;
     else
         options.no_value = true;
-    int ret = sc->pg_client->get_unordered_scanners(INT_MAX, options, scanners);
+    int ret = sc->pg_client->get_unordered_scanners(INT_MAX, options, raw_scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(
             stderr, "ERROR: open app scanner failed: %s\n", sc->pg_client->get_error_string(ret));
         return true;
     }
-    fprintf(stderr, "INFO: open app scanner succeed, partition_count = %d\n", (int)scanners.size());
+    fprintf(
+        stderr, "INFO: open app scanner succeed, partition_count = %d\n", (int)raw_scanners.size());
+
+    std::vector<std::unique_ptr<pegasus::pegasus_client::pegasus_scanner>> scanners;
+    for (auto p : raw_scanners) {
+        scanners.emplace_back(p);
+    }
     if (partition != -1) {
         if (partition >= scanners.size()) {
             fprintf(stderr, "ERROR: invalid partition param: %d\n", partition);
             return true;
         }
-        std::vector<pegasus::pegasus_client::pegasus_scanner *> tmp_scanners;
-        tmp_scanners.push_back(scanners[partition]);
-        tmp_scanners.swap(scanners);
+        std::unique_ptr<pegasus::pegasus_client::pegasus_scanner> s(std::move(scanners[partition]));
+        scanners.clear();
+        scanners.push_back(std::move(s));
     }
     int split_count = scanners.size();
     fprintf(stderr, "INFO: prepare scanners succeed, split_count = %d\n", split_count);
 
     std::atomic_bool error_occurred(false);
-    std::vector<scan_data_context *> contexts;
-    for (int i = 0; i < scanners.size(); i++) {
+    std::vector<std::unique_ptr<scan_data_context>> contexts;
+    for (int i = 0; i < split_count; i++) {
         scan_data_context *context = new scan_data_context(SCAN_COUNT,
                                                            i,
                                                            max_batch_count,
@@ -2242,7 +2250,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            top_count,
                                                            diff_hash_key);
         context->set_value_filter(value_filter_type, value_filter_pattern);
-        contexts.push_back(context);
+        contexts.emplace_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
     }
 
@@ -2264,7 +2272,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         int completed_split_count = 0;
         long cur_total_rows = 0;
         long cur_total_hash_key_count = 0;
-        for (int i = 0; i < scanners.size(); i++) {
+        for (int i = 0; i < split_count; i++) {
             cur_total_rows += contexts[i]->split_rows.load();
             if (diff_hash_key)
                 cur_total_hash_key_count += contexts[i]->split_hash_key_count.load();
@@ -2297,7 +2305,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                     hash_key_count_str,
                     cur_total_rows - last_total_rows);
         }
-        if (completed_split_count == scanners.size())
+        if (completed_split_count == split_count)
             break;
         last_total_rows = cur_total_rows;
         if (stat_size && sleep_seconds % 10 == 0) {
@@ -2329,7 +2337,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
     if (stat_size) {
         if (top_count > 0) {
             top_container::top_heap heap;
-            for (int i = 0; i < scanners.size(); i++) {
+            for (int i = 0; i < split_count; i++) {
                 top_container::top_heap &h = contexts[i]->top_rows.all();
                 while (!h.empty()) {
                     heap.push(h.top());
@@ -2351,11 +2359,6 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             }
         }
     }
-
-    for (int i = 0; i < scanners.size(); i++) {
-        delete contexts[i];
-    }
-    contexts.clear();
 
     return true;
 }
@@ -2469,10 +2472,11 @@ static void print_simple_histogram(const std::string &name, const rocksdb::Histo
     fprintf(stderr, "    P90 = %.2f\n", histogram.Percentile(90.0));
 }
 
-static void print_current_scan_state(const std::vector<scan_data_context *> &contexts,
-                                     const std::string &stop_desc,
-                                     bool stat_size,
-                                     bool count_hash_key)
+static void
+print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &contexts,
+                         const std::string &stop_desc,
+                         bool stat_size,
+                         bool count_hash_key)
 {
     long total_rows = 0;
     long total_hash_key_count = 0;
