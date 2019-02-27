@@ -250,7 +250,6 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
     }
     mtp.add(std::move(tp));
-    out << std::endl;
 
     dsn::utils::table_printer tp_count("summary");
     tp_count.add_row_name_and_data("total_node_count", nodes.size());
@@ -259,7 +258,6 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     mtp.add(std::move(tp_count));
 
     mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
-    out << std::endl;
 
     return true;
 }
