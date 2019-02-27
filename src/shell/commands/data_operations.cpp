@@ -1688,16 +1688,17 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
             "INFO: open source app scanner succeed, partition_count = %d\n",
             (int)raw_scanners.size());
 
-    std::vector<std::unique_ptr<pegasus::pegasus_client::pegasus_scanner>> scanners;
-    for (auto p : raw_scanners) {
-        scanners.emplace_back(p);
-    }
+    std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
+    for (auto p : raw_scanners)
+        scanners.emplace_back(p->get_smart_wrapper());
+    raw_scanners.clear();
+
     if (partition != -1) {
         if (partition >= scanners.size()) {
             fprintf(stderr, "ERROR: invalid partition param: %d\n", partition);
             return true;
         }
-        std::unique_ptr<pegasus::pegasus_client::pegasus_scanner> s(std::move(scanners[partition]));
+        pegasus::pegasus_client::pegasus_scanner_wrapper s = std::move(scanners[partition]);
         scanners.clear();
         scanners.push_back(std::move(s));
     }
@@ -1711,7 +1712,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                                            i,
                                                            max_batch_count,
                                                            timeout_ms,
-                                                           scanners[i]->get_smart_wrapper(),
+                                                           scanners[i],
                                                            target_client,
                                                            target_geo_client.get(),
                                                            &error_occurred);
@@ -1941,16 +1942,17 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
     fprintf(
         stderr, "INFO: open app scanner succeed, partition_count = %d\n", (int)raw_scanners.size());
 
-    std::vector<std::unique_ptr<pegasus::pegasus_client::pegasus_scanner>> scanners;
-    for (auto p : raw_scanners) {
-        scanners.emplace_back(p);
-    }
+    std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
+    for (auto p : raw_scanners)
+        scanners.emplace_back(p->get_smart_wrapper());
+    raw_scanners.clear();
+
     if (partition != -1) {
         if (partition >= scanners.size()) {
             fprintf(stderr, "ERROR: invalid partition param: %d\n", partition);
             return true;
         }
-        std::unique_ptr<pegasus::pegasus_client::pegasus_scanner> s(std::move(scanners[partition]));
+        pegasus::pegasus_client::pegasus_scanner_wrapper s = std::move(scanners[partition]);
         scanners.clear();
         scanners.push_back(std::move(s));
     }
@@ -1964,7 +1966,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
                                                            i,
                                                            max_batch_count,
                                                            timeout_ms,
-                                                           scanners[i]->get_smart_wrapper(),
+                                                           scanners[i],
                                                            sc->pg_client,
                                                            nullptr,
                                                            &error_occurred);
@@ -2219,16 +2221,17 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
     fprintf(
         stderr, "INFO: open app scanner succeed, partition_count = %d\n", (int)raw_scanners.size());
 
-    std::vector<std::unique_ptr<pegasus::pegasus_client::pegasus_scanner>> scanners;
-    for (auto p : raw_scanners) {
-        scanners.emplace_back(p);
-    }
+    std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
+    for (auto p : raw_scanners)
+        scanners.emplace_back(p->get_smart_wrapper());
+    raw_scanners.clear();
+
     if (partition != -1) {
         if (partition >= scanners.size()) {
             fprintf(stderr, "ERROR: invalid partition param: %d\n", partition);
             return true;
         }
-        std::unique_ptr<pegasus::pegasus_client::pegasus_scanner> s(std::move(scanners[partition]));
+        pegasus::pegasus_client::pegasus_scanner_wrapper s = std::move(scanners[partition]);
         scanners.clear();
         scanners.push_back(std::move(s));
     }
@@ -2242,7 +2245,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            i,
                                                            max_batch_count,
                                                            timeout_ms,
-                                                           scanners[i]->get_smart_wrapper(),
+                                                           scanners[i],
                                                            sc->pg_client,
                                                            nullptr,
                                                            &error_occurred,
