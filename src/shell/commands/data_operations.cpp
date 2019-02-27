@@ -1690,7 +1690,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto p : raw_scanners)
-        scanners.emplace_back(p->get_smart_wrapper());
+        scanners.push_back(p->get_smart_wrapper());
     raw_scanners.clear();
 
     if (partition != -1) {
@@ -1944,7 +1944,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto p : raw_scanners)
-        scanners.emplace_back(p->get_smart_wrapper());
+        scanners.push_back(p->get_smart_wrapper());
     raw_scanners.clear();
 
     if (partition != -1) {
@@ -2223,7 +2223,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto p : raw_scanners)
-        scanners.emplace_back(p->get_smart_wrapper());
+        scanners.push_back(p->get_smart_wrapper());
     raw_scanners.clear();
 
     if (partition != -1) {
