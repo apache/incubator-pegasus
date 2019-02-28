@@ -145,6 +145,8 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
         }
     } else {
         _shipped_ops->increment();
+        _total_shipped_size +=
+            rpc.dsn_request()->header->body_length + rpc.dsn_request()->header->hdr_length;
     }
 
     auto hash = static_cast<uint64_t>(rpc.request().hash);
@@ -160,7 +162,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
             _inflights.erase(hash);
             if (_inflights.empty()) {
                 // move forward to the next step.
-                cb();
+                cb(_total_shipped_size);
             }
         } else {
             // start next rpc immediately
@@ -172,6 +174,8 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
 
 void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb)
 {
+    _total_shipped_size = 0;
+
     for (auto mut : muts) {
         uint64_t timestamp = std::get<0>(mut);
         dsn::task_code rpc_code = std::get<1>(mut);
@@ -224,7 +228,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
     }
 
     if (_inflights.empty()) {
-        cb();
+        cb(0);
         return;
     }
     auto inflights = _inflights;

@@ -47,10 +47,11 @@ public:
             muts.insert(std::make_tuple(ts, code, data));
         }
 
+        size_t total_shipped_size = 0;
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         RPC_MOCKING(duplicate_rpc)
         {
-            duplicator->duplicate(muts, []() {});
+            duplicator->duplicate(muts, [](size_t) {});
 
             size_t total_size = 100;
             while (total_size > 0) {
@@ -64,12 +65,21 @@ public:
                 auto rpc = duplicate_rpc::mail_box().back();
                 duplicate_rpc::mail_box().pop_back();
 
-                duplicator_impl->on_duplicate_reply([]() {}, rpc, dsn_now_ns(), dsn::ERR_OK);
+                total_shipped_size +=
+                    rpc.dsn_request()->body_size() + rpc.dsn_request()->header->hdr_length;
+                duplicator_impl->on_duplicate_reply(
+                    [total_shipped_size](size_t final_size) {
+                        ASSERT_EQ(total_shipped_size, final_size);
+                    },
+                    rpc,
+                    dsn_now_ns(),
+                    dsn::ERR_OK);
 
                 // schedule next round
                 _tracker.wait_outstanding_tasks();
             }
 
+            ASSERT_EQ(duplicator_impl->_total_shipped_size, total_shipped_size);
             ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
         }
@@ -98,14 +108,14 @@ public:
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         RPC_MOCKING(duplicate_rpc)
         {
-            duplicator->duplicate(muts, []() {});
+            duplicator->duplicate(muts, [](size_t) {});
 
             auto rpc = duplicate_rpc::mail_box().back();
             duplicate_rpc::mail_box().pop_back();
             ASSERT_EQ(duplicator_impl->_inflights.begin()->second.size(), 9);
 
             // failed
-            duplicator_impl->on_duplicate_reply([]() {}, rpc, dsn_now_ns(), dsn::ERR_TIMEOUT);
+            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn_now_ns(), dsn::ERR_TIMEOUT);
 
             // schedule next round
             _tracker.wait_outstanding_tasks();
@@ -118,7 +128,7 @@ public:
 
             // with other error
             rpc.response().error = PERR_INVALID_ARGUMENT;
-            duplicator_impl->on_duplicate_reply([]() {}, rpc, dsn_now_ns(), dsn::ERR_OK);
+            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn_now_ns(), dsn::ERR_OK);
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
@@ -127,7 +137,8 @@ public:
 
             // with other error
             rpc.response().error = PERR_OK;
-            duplicator_impl->on_duplicate_reply([]() {}, rpc, dsn_now_ns(), dsn::ERR_IO_PENDING);
+            duplicator_impl->on_duplicate_reply(
+                [](size_t) {}, rpc, dsn_now_ns(), dsn::ERR_IO_PENDING);
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
@@ -160,7 +171,7 @@ public:
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         RPC_MOCKING(duplicate_rpc)
         {
-            duplicator->duplicate(muts, []() {});
+            duplicator->duplicate(muts, [](size_t) {});
 
             // ensure each bucket has only 1 request and each request is
             // isolated with others.
@@ -174,7 +185,7 @@ public:
             auto rpc_list = std::move(duplicate_rpc::mail_box());
             for (const auto &rpc : rpc_list) {
                 rpc.response().error = dsn::ERR_OK;
-                duplicator_impl->on_duplicate_reply([]() {}, rpc, dsn_now_ns(), dsn::ERR_OK);
+                duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn_now_ns(), dsn::ERR_OK);
             }
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
@@ -214,12 +225,13 @@ public:
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         RPC_MOCKING(duplicate_rpc)
         {
-            duplicator->duplicate(muts, []() {});
+            duplicator->duplicate(muts, [](size_t total) { ASSERT_EQ(total, 0); });
 
             // all mutation duplicated from master will not be duplicated
             // again to prevent infinite loop.
             ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
+            ASSERT_EQ(duplicator_impl->_total_shipped_size, 0);
         }
     }
 
@@ -255,11 +267,12 @@ public:
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         RPC_MOCKING(duplicate_rpc)
         {
-            duplicator->duplicate(muts, []() {});
+            duplicator->duplicate(muts, [](size_t total) { ASSERT_EQ(total, 0); });
 
             // ignore those mutations that are duplicated from nowhere
             ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
+            ASSERT_EQ(duplicator_impl->_total_shipped_size, 0);
         }
     }
 

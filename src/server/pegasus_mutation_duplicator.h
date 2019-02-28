@@ -48,6 +48,8 @@ private:
     std::map<uint64_t, std::deque<duplicate_rpc>> _inflights;
     dsn::zlock _lock;
 
+    size_t _total_shipped_size{0};
+
     dsn::perf_counter_wrapper _shipped_ops;
     dsn::perf_counter_wrapper _failed_shipping_ops;
 };
