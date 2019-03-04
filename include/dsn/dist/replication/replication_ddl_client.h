@@ -65,6 +65,7 @@ public:
     dsn::error_code list_apps(const dsn::app_status::type status,
                               bool show_all,
                               bool detailed,
+                              bool json,
                               const std::string &file_name);
 
     dsn::error_code list_apps(const dsn::app_status::type status,
