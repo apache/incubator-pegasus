@@ -18,6 +18,11 @@ if [ $# -le 3 ]; then
   exit 1
 fi
 
+if [ -z ${TMUX} ]; then
+  echo "ERROR: This script must be run in a tmux session"
+  exit 1
+fi
+
 update_options="--update_package --update_config"
 
 cluster=$1
