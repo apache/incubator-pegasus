@@ -49,14 +49,14 @@ static command_executor commands[] = {
     {
         "ls",
         "list all apps",
-        "[-a|-all] [-d|--detailed] [-o|--output file_name] "
+        "[-a|-all] [-d|--detailed] [-j|--json_pretty] [-o|--output file_name]"
         "[-s|--status all|available|creating|dropping|dropped]",
         ls_apps,
     },
     {
         "nodes",
         "get the node status for this cluster",
-        "[-d|--detailed] [-r|--resolve_ip] [-u|--resource_usage] "
+        "[-d|--detailed] [-j|--json_pretty] [-r|--resolve_ip] [-u|--resource_usage]"
         "[-o|--output file_name] [-s|--status all|alive|unalive]",
         ls_nodes,
     },

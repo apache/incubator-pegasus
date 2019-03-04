@@ -7,6 +7,7 @@
 import click
 import commands
 import os
+import json
 
 _global_verbose = False
 
@@ -32,17 +33,11 @@ class PegasusCluster(object):
             exit(1)
 
     def print_unhealthy_partitions(self):
-        list_detail = self._run_shell("ls -d").strip()
+        list_detail = self._run_shell("ls -d -j").strip()
 
-        read_unhealthy_app_count = int([
-            line for line in list_detail.splitlines()
-            if line.startswith("read_unhealthy_app_count")
-        ][0].split(":")[1])
-        write_unhealthy_app_count = int([
-            line for line in list_detail.splitlines()
-            if line.startswith("write_unhealthy_app_count")
-        ][0].split(":")[1])
-
+        list_detail_json = json.loads(list_detail)
+        read_unhealthy_app_count = int(list_detail_json["summary"]["read_unhealthy_app_count"])
+        write_unhealthy_app_count = int(list_detail_json["summary"]["write_unhealthy_app_count"])
         if write_unhealthy_app_count > 0:
             echo("cluster is write unhealthy, write_unhealthy_app_count = " +
                  str(write_unhealthy_app_count))
@@ -53,18 +48,18 @@ class PegasusCluster(object):
             return
 
     def print_imbalance_nodes(self):
-        nodes_detail = self._run_shell("nodes -d").strip()
+        nodes_detail = self._run_shell("nodes -d -j").strip()
 
-        primaries_per_node = []
-        for line in nodes_detail.splitlines()[1:]:
-            columns = line.strip().split()
-            if len(columns) < 5 or not columns[4].isdigit():
-                continue
-            primary_count = int(columns[3])
-            primaries_per_node.append(primary_count)
-        primaries_per_node.sort()
-        if float(primaries_per_node[0]) / float(primaries_per_node[-1]) < 0.8:
-            print nodes_detail
+        primaries_per_node = {}
+        min_ = 0
+        max_ = 0
+        for ip_port, node_info in json.loads(nodes_detail)["details"].items():
+            primary_count = int(node_info["primary_count"])
+            min_ = min(min_, primary_count)
+            max_ = max(max_, primary_count)
+            primaries_per_node[ip_port] = primary_count
+        if float(min_) / float(max_) < 0.8:
+            print json.dumps(primaries_per_node, indent=4)
 
     def get_meta_port(self):
         with open(self._cfg_file_name) as cfg:
