@@ -23,6 +23,8 @@ if [ -z ${TMUX} ]; then
   exit 1
 fi
 
+update_options="--update_package --update_config"
+
 cluster=$1
 meta_list=$2
 type=$3
