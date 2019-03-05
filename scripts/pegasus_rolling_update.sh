@@ -289,13 +289,13 @@ if [ "$type" = "all" ]; then
   echo
 
   echo "Wait cluster to become balanced..."
-  sleep 30
+  sleep 60
   while true
   do
     op_count=`echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2`
     if [ -z "op_count" ]; then
-      echo "Wait for 3 minutes to do load balance..."
-      sleep 180
+      echo "Wait for 2 minutes to do load balance..."
+      sleep 120
       break
     fi
     if [ $op_count -eq 0 ]; then
