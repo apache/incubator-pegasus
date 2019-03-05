@@ -289,6 +289,7 @@ if [ "$type" = "all" ]; then
   echo
 
   echo "Wait cluster to become balanced..."
+  sleep 30
   while true
   do
     op_count=`echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2`
