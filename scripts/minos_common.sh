@@ -1,5 +1,19 @@
 #!/bin/bash
 
+#
+# You should set these environment variables:
+#   * MINOS_CONFIG_FILE
+#   * MINOS_CLIENT_DIR
+#   * MINOS2_CONFIG_FILE
+#   * MINOS2_CLIENT_DIR
+#
+# For example:
+#   export MINOS_CONFIG_FILE=$HOME/infra/deployment-config/deploy.cfg
+#   export MINOS_CLIENT_DIR=$HOME/infra/minos/client
+#   export MINOS2_CONFIG_FILE=$HOME/infra/deployment/deploy.cfg
+#   export MINOS2_CLIENT_DIR=$HOME/infra/minos2/client
+#
+
 # usage: find_cluster <cluster_name>
 #
 # return 0 if found
