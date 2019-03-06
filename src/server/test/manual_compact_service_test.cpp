@@ -15,7 +15,8 @@ public:
     static const uint64_t compacted_ts = 1500000000; // 2017.07.14 10:40:00 CST
 
 public:
-    manual_compact_service_test() {
+    manual_compact_service_test()
+    {
         start();
         manual_compact_svc = dsn::make_unique<pegasus_manual_compact_service>(_server.get());
     }

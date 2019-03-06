@@ -49,14 +49,15 @@ static command_executor commands[] = {
     {
         "ls",
         "list all apps",
-        "[-a|-all] [-d|--detailed] [-o|--output file_name] "
+        "[-a|-all] [-d|--detailed] [-j|--json_pretty] [-o|--output file_name]"
         "[-s|--status all|available|creating|dropping|dropped]",
         ls_apps,
     },
     {
         "nodes",
         "get the node status for this cluster",
-        "[-d|--detailed] [-o|--output file_name] [-s|--status all|alive|unalive]",
+        "[-d|--detailed] [-j|--json_pretty] [-r|--resolve_ip] [-u|--resource_usage]"
+        "[-o|--output file_name] [-s|--status all|alive|unalive]",
         ls_nodes,
     },
     {
@@ -103,7 +104,7 @@ static command_executor commands[] = {
         use_app_as_current,
     },
     {
-        "cc", "check in the specified cluster", "[cluster_name]", cc_command,
+        "cc", "change to the specified cluster", "[cluster_name]", cc_command,
     },
     {
         "escape_all",
@@ -246,23 +247,40 @@ static command_executor commands[] = {
         "copy_data",
         "copy app data",
         "<-c|--target_cluster_name str> <-a|--target_app_name str> "
-        "[-s|--max_split_count num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
-        "[-g|--geo_data]",
+        "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
+        "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
+        "[-x|--hash_key_filter_pattern str] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
+        "[-y|--sort_key_filter_pattern str] "
+        "[-v|--value_filter_type anywhere|prefix|postfix] "
+        "[-z|--value_filter_pattern str] "
+        "[-n|--no_overwrite] [-i|--no_value] [-g|--geo_data]",
         data_operations,
     },
     {
         "clear_data",
         "clear app data",
-        "[-f|--force] [-s|--max_split_count num] [-b|--max_batch_count num] "
-        "[-t|--timeout_ms num]",
+        "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
+        "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
+        "[-x|--hash_key_filter_pattern str] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
+        "[-y|--sort_key_filter_pattern str] "
+        "[-v|--value_filter_type anywhere|prefix|postfix] "
+        "[-z|--value_filter_pattern str] "
+        "[-f|--force]",
         data_operations,
     },
     {
         "count_data",
         "get app row count",
-        "[-s|--max_split_count num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
-        "[-h|--count_hash_key] [-z|--stat_size] [-c|--top_count num] "
-        "[-r|--run_seconds num]",
+        "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
+        "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
+        "[-x|--hash_key_filter_pattern str] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
+        "[-y|--sort_key_filter_pattern str] "
+        "[-v|--value_filter_type anywhere|prefix|postfix] "
+        "[-z|--value_filter_pattern str] "
+        "[-d|--diff_hash_key] [-a|--stat_size] [-n|--top_count num] [-r|--run_seconds num]",
         data_operations,
     },
     {
@@ -287,7 +305,7 @@ static command_executor commands[] = {
     {
         "app_stat",
         "get stat of apps",
-        "[-a|--app_name str] [-q|--only_qps] [-o|--output file_name]",
+        "[-a|--app_name str] [-q|--only_qps] [-u|--only_usage] [-o|--output file_name]",
         app_stat,
     },
     {
