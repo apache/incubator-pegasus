@@ -26,10 +26,8 @@ cd $shell_dir
 
 all_result="/tmp/pegasus.stat_available.all_result"
 rm $all_result &>/dev/null
-echo "UID=$UID"
-echo "PID=$PID"
 echo "stat_time = `date`"
-echo "months = $months"
+echo "month_list = $months"
 echo
 echo "Stat method:"
 echo "  - for each cluster, there is a collector which sends get/set requests to detect table every 3 seconds."
@@ -107,6 +105,7 @@ fi
 
 if [ "$format" == "table" ]; then
   printf '%-30s%-12s%-12s%-12s%-12s%-12s%-12s\n' "(total:$cluster_count)" $rs_count_sum "-" $minutes $available $app_count_sum $data_size_sum
+  echo
 elif [ "$format" == "csv" ]; then
   echo -e "(total:$cluster_count),$rs_count_sum,,$minutes,=\"$available_str\",$app_count_sum,$data_size_sum"
 else
