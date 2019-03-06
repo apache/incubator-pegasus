@@ -20,19 +20,12 @@ target_zk=$3
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
-minos_config_dir=$(dirname $MINOS_CONFIG_FILE)/xiaomi-config/conf/pegasus
-minos_client_dir=/home/work/pegasus/infra/minos/client
 cd $shell_dir
 
-minos_config=$minos_config_dir/pegasus-${cluster}.cfg
-if [ ! -f $minos_config ]; then
-  echo "ERROR: minos config \"$minos_config\" not found"
-  exit 1
-fi
-
-minos_client=$minos_client_dir/deploy
-if [ ! -f $minos_client ]; then
-  echo "ERROR: minos client \"$minos_client\" not found"
+source ./scripts/minos_common.sh
+find_cluster $cluster
+if [ $? -ne 0 ]; then
+  echo "ERROR: cluster \"$cluster\" not found"
   exit 1
 fi
 
@@ -85,41 +78,20 @@ sed -i "s/ recover_from_replica_server = .*/ recover_from_replica_server = true/
 sed -i "s/ hosts_list = .*/ hosts_list = ${target_zk}/" $minos_config
 
 echo ">>>> Stopping all meta-servers..."
-cd $minos_client_dir
-./deploy stop pegasus $cluster --skip_confirm --job meta 2>&1 | tee /tmp/$UID.$PID.pegasus.migrate_zookeeper.minos.stop.meta.all
-cd $shell_dir
+minos_stop $cluster meta
 
 echo ">>>> Sleep for 15 seconds..."
 sleep 15
-
-function rolling_update_meta()
-{
-  task_id=$1
-  cd $minos_client_dir
-  ./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 10 --update_config --job meta --task $task_id 2>&1 | tee /tmp/$UID.$PID.pegasus.migrate_zookeeper.minos.rolling.meta.$task_id
-  if [ `cat /tmp/$UID.$PID.pegasus.migrate_zookeeper.minos.rolling.meta.$task_id | grep "Start task $task_id of meta .* success" | wc -l` -ne 1 ]; then
-    echo "ERROR: rolling update meta-servers task $task_id failed, refer to /tmp/$UID.$PID.pegasus.migrate_zookeeper.minos.rolling.meta.$task_id"
-    cd $shell_dir
-    return 1
-  fi
-  cd $shell_dir
-  return 0
-}
 
 function undo()
 {
   echo ">>>> Undo..."
   mv -f ${minos_config}.bak $minos_config
-  rolling_update_meta 0
-  rolling_update_meta 1
+  minos_rolling_update $cluster meta
 }
 
 echo ">>>> Rolling update meta-server task 0..."
-rolling_update_meta 0
-if [ $? -ne 0 ]; then
-  undo
-  exit 1
-fi
+minos_rolling_update $cluster meta 0
 
 echo ">>>> Sending recover command..."
 echo "recover -f ${cluster}.recover.nodes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.migrate_zookeeper.shell.recover
@@ -152,16 +124,10 @@ echo ">>>> Modifying config..."
 sed -i "s/ recover_from_replica_server = .*/ recover_from_replica_server = false/" $minos_config
 
 echo ">>>> Rolling update meta-server task 1..."
-rolling_update_meta 1
-if [ $? -ne 0 ]; then
-  exit 1
-fi
+minos_rolling_update $cluster meta 1
 
 echo ">>>> Rolling update meta-server task 0..."
-rolling_update_meta 0
-if [ $? -ne 0 ]; then
-  exit 1
-fi
+minos_rolling_update $cluster meta 0
 
 echo ">>>> Querying cluster info..."
 echo "cluster_info" | ./run.sh shell --cluster $meta_list

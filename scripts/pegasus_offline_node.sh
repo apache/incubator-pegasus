@@ -20,19 +20,12 @@ replica_task_id=$3
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
-minos_config_dir=$(dirname $MINOS_CONFIG_FILE)/xiaomi-config/conf/pegasus
-minos_client_dir=/home/work/pegasus/infra/minos/client
 cd $shell_dir
 
-minos_config=$minos_config_dir/pegasus-${cluster}.cfg
-if [ ! -f $minos_config ]; then
-  echo "ERROR: minos config \"$minos_config\" not found"
-  exit 1
-fi
-
-minos_client=$minos_client_dir/deploy
-if [ ! -f $minos_client ]; then
-  echo "ERROR: minos client \"$minos_client\" not found"
+source ./scripts/minos_common.sh
+find_cluster $cluster
+if [ $? -ne 0 ]; then
+  echo "ERROR: cluster \"$cluster\" not found"
   exit 1
 fi
 
@@ -42,18 +35,14 @@ echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
 
-echo "Generating /tmp/$UID.$PID.pegasus.offline_node.minos.show..."
-cd $minos_client_dir
-./deploy show pegasus $cluster &>/tmp/$UID.$PID.pegasus.offline_node.minos.show
-
-echo "Generating /tmp/$UID.$PID.pegasus.offline_node.rs.list..."
-grep 'Showing task [0-9][0-9]* of replica' /tmp/$UID.$PID.pegasus.offline_node.minos.show | awk '{print $5,$9}' | sed 's/(.*)$//' >/tmp/$UID.$PID.pegasus.offline_node.rs.list
-replica_server_count=`cat /tmp/$UID.$PID.pegasus.offline_node.rs.list | wc -l`
+rs_list_file="/tmp/$UID.$PID.pegasus.rolling_update.rs.list"
+echo "Generating $rs_list_file..."
+minos_show_replica $cluster $rs_list_file
+replica_server_count=`cat $rs_list_file | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
   exit 1
 fi
-cd $shell_dir
 
 echo "Generating /tmp/$UID.$PID.pegasus.offline_node.cluster_info..."
 echo cluster_info | ./run.sh shell --cluster $meta_list 2>&1 | sed 's/ *$//' >/tmp/$UID.$PID.pegasus.offline_node.cluster_info
@@ -161,9 +150,7 @@ do
   sleep 1
 
   echo "Stop node by minos..."
-  cd $minos_client_dir
-  ./deploy stop pegasus $cluster --skip_confirm --job replica --task $task_id
-  cd $shell_dir
+  minos_stop $cluster replica $task_id
   echo "Stop node by minos done."
   echo
   sleep 1
@@ -182,7 +169,7 @@ do
   done
   echo
   sleep 1
-done </tmp/$UID.$PID.pegasus.offline_node.rs.list
+done <$rs_list_file
 
 echo "Set lb.assign_delay_ms to DEFAULT..."
 echo "remote_command -l $pmeta meta.lb.assign_delay_ms DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms
