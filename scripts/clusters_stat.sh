@@ -1,7 +1,5 @@
 #!/bin/bash
 
-PID=$$
-
 if [ $# -lt 3 ]; then
   echo "USAGE: $0 <cluster-list-file> <month-list> <result-format>"
   echo
@@ -18,7 +16,7 @@ clusters_file=$1
 months=$2
 format=$3
 if [ "$format" != "table" -a "$format" != "csv" ]; then
-  echo "ERROR: invalid result format, should be table or csv."
+  echo "ERROR: invalid result format, should be 'table' or 'csv'."
   exit 1
 fi
 
@@ -26,7 +24,7 @@ pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
 
-all_result="/tmp/$UID.$PID.pegasus.stat_available.all_result"
+all_result="/tmp/pegasus.stat_available.all_result"
 rm $all_result &>/dev/null
 echo "UID=$UID"
 echo "PID=$PID"
