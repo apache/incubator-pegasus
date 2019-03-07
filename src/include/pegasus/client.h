@@ -314,7 +314,7 @@ public:
         /// \return
         /// int, the error indicates whether or not the operation is succeeded.
         /// this error can be converted to a string using get_error_string()
-        /// PEER_OK means a valid k-v pair got
+        /// PERR_OK means a valid k-v pair got
         /// PERR_SCAN_COMPLETE means all k-v have been iterated before this call
         /// otherwise some error orrured
         ///
@@ -328,7 +328,7 @@ public:
         /// thread-safe
         /// \param callback
         /// status and result will be passed to callback
-        /// status(PEER_OK) means a valid k-v pair got
+        /// status(PERR_OK) means a valid k-v pair got
         /// status(PERR_SCAN_COMPLETE) means all k-v have been iterated before this call
         /// otherwise some error orrured
         ///
