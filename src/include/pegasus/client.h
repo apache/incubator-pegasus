@@ -1045,12 +1045,13 @@ public:
     /// \param sortkey
     /// all the k-v under hashkey will be sorted by sortkey.
     /// \param ttl_seconds
-    /// the returned ttl value in seconds.
+    /// the returned ttl value in seconds. -1 means no ttl.
     /// \param timeout_milliseconds
     /// if wait longer than this value, will return time out error
     /// \return
     /// int, the error indicates whether or not the operation is succeeded.
-    /// this error can be converted to a string using get_error_string()
+    /// this error can be converted to a string using get_error_string().
+    /// returns PERR_NOT_FOUND if no value is found under the <hashkey,sortkey>.
     ///
     virtual int ttl(const std::string &hashkey,
                     const std::string &sortkey,
