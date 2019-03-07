@@ -148,7 +148,7 @@ TEST(ttl, set_with_default_ttl)
     int ttl_seconds;
     ret = client->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
-    ASSERT_TRUE(ttl_seconds > specify_ttl - error_allow && ttl_seconds <= specify_ttl)
+    ASSERT_TRUE(ttl_seconds >= specify_ttl - error_allow && ttl_seconds <= specify_ttl)
         << "ttl is " << ttl_seconds;
 
     // set without ttl
@@ -161,7 +161,7 @@ TEST(ttl, set_with_default_ttl)
 
     ret = client->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
-    ASSERT_TRUE(ttl_seconds > default_ttl - error_allow && ttl_seconds <= default_ttl)
+    ASSERT_TRUE(ttl_seconds >= default_ttl - error_allow && ttl_seconds <= default_ttl)
         << "ttl is " << ttl_seconds;
 
     // sleep a while
@@ -182,8 +182,8 @@ TEST(ttl, set_with_default_ttl)
     // check exist one
     ret = client->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
-    ASSERT_TRUE(ttl_seconds > default_ttl - sleep_for_expiring - error_allow &&
-                ttl_seconds <= default_ttl - sleep_for_expiring)
+    ASSERT_TRUE(ttl_seconds >= default_ttl - sleep_for_expiring - error_allow &&
+                ttl_seconds <= default_ttl - sleep_for_expiring + error_allow)
         << "ttl is " << ttl_seconds;
 
     ret = client->get(ttl_hash_key, ttl_test_sort_key_2, value);
@@ -202,8 +202,8 @@ TEST(ttl, set_with_default_ttl)
     // check forever one
     ret = client->ttl(ttl_hash_key, ttl_test_sort_key_0, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
-    ASSERT_TRUE(ttl_seconds > default_ttl - sleep_for_envs_effect - error_allow &&
-                ttl_seconds <= default_ttl - error_allow)
+    ASSERT_TRUE(ttl_seconds >= default_ttl - sleep_for_envs_effect - error_allow &&
+                ttl_seconds <= default_ttl + error_allow)
         << "ttl is " << ttl_seconds;
 
     // check expired one
@@ -216,8 +216,8 @@ TEST(ttl, set_with_default_ttl)
     // check exist one
     ret = client->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
-    ASSERT_TRUE(ttl_seconds >
-                    default_ttl - sleep_for_expiring - sleep_for_envs_effect - error_allow &&
-                ttl_seconds <= default_ttl - sleep_for_expiring - sleep_for_envs_effect)
+    ASSERT_TRUE(
+        ttl_seconds >= default_ttl - sleep_for_expiring - sleep_for_envs_effect - error_allow &&
+        ttl_seconds <= default_ttl - sleep_for_expiring - sleep_for_envs_effect + error_allow)
         << "ttl is " << ttl_seconds;
 }
