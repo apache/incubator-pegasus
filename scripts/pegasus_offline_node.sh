@@ -81,14 +81,6 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
-echo "Set live_percentage to 0..."
-echo "remote_command -l $pmeta meta.live_percentage 0" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.live_percentage
-set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.live_percentage | wc -l`
-if [ $set_ok -ne 1 ]; then
-  echo "ERROR: set live_percentage to 0 failed"
-  exit 1
-fi
-
 echo
 while read line
 do
@@ -184,14 +176,6 @@ echo "remote_command -l $pmeta meta.lb.assign_delay_ms DEFAULT" | ./run.sh shell
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to DEFAULT failed"
-  exit 1
-fi
-
-echo "Set live_percentage to DEFAULT..."
-echo "remote_command -l $pmeta meta.live_percentage DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.live_percentage
-set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.live_percentage | wc -l`
-if [ $set_ok -ne 1 ]; then
-  echo "ERROR: set live_percentage to 0 failed"
   exit 1
 fi
 echo

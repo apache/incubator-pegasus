@@ -101,6 +101,14 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
+echo "Set live_percentage to 0...(No need to set it back to default. When this offline task is done, meta-server should be restarted, and live_percentage will be loaded from the config file)"
+echo "remote_command -l $pmeta meta.live_percentage 0" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.live_percentage
+set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.live_percentage | wc -l`
+if [ $set_ok -ne 1 ]; then
+  echo "ERROR: set live_percentage to 0 failed"
+  exit 1
+fi
+
 echo
 for id in $id_list
 do
