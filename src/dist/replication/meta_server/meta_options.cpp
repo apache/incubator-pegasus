@@ -163,6 +163,16 @@ void meta_options::initialize()
 
     cold_backup_disabled = dsn_config_get_value_bool(
         "meta_server", "cold_backup_disabled", true, "whether to disable cold backup");
+
+    enable_white_list =
+        dsn_config_get_value_bool("meta_server",
+                                  "enable_white_list",
+                                  false,
+                                  "whether to enable white list of replica servers");
+
+    const char *replica_white_list_raw = dsn_config_get_value_string(
+        "meta_server", "replica_white_list", "", "white list of replica-servers in meta-server");
+    utils::split_args(replica_white_list_raw, replica_white_list, ',');
 }
 }
 }

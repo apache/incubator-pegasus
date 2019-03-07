@@ -38,6 +38,8 @@
 #include <fmt/format.h>
 
 #include <dsn/utility/factory_store.h>
+#include <dsn/utility/extensible_object.h>
+#include <dsn/utility/string_conv.h>
 #include <dsn/dist/meta_state_service.h>
 #include <dsn/tool-api/command_manager.h>
 #include <algorithm> // for std::remove_if
@@ -56,6 +58,8 @@ meta_service::meta_service()
 {
     _opts.initialize();
     _meta_opts.initialize();
+    _node_live_percentage_threshold_for_update =
+        _meta_opts.node_live_percentage_threshold_for_update;
     _state.reset(new server_state());
     _function_level.store(_meta_opts.meta_function_level_on_start);
     if (_meta_opts.recover_from_replica_server) {
@@ -76,7 +80,11 @@ meta_service::meta_service()
         "eon.meta_service", "unalive_nodes", COUNTER_TYPE_NUMBER, "current count of unalive nodes");
 }
 
-meta_service::~meta_service() { _tracker.cancel_outstanding_tasks(); }
+meta_service::~meta_service()
+{
+    _tracker.cancel_outstanding_tasks();
+    unregister_ctrl_commands();
+}
 
 bool meta_service::check_freeze() const
 {
@@ -84,7 +92,7 @@ bool meta_service::check_freeze() const
     if (_alive_set.size() < _meta_opts.min_live_node_count_for_unfreeze)
         return true;
     int total = _alive_set.size() + _dead_set.size();
-    return _alive_set.size() * 100 < _meta_opts.node_live_percentage_threshold_for_update * total;
+    return _alive_set.size() * 100 < _node_live_percentage_threshold_for_update * total;
 }
 
 error_code meta_service::remote_storage_initialize()
@@ -159,6 +167,39 @@ void meta_service::get_node_state(/*out*/ std::map<rpc_address, bool> &all_nodes
 
 void meta_service::balancer_run() { _state->check_all_partitions(); }
 
+void meta_service::register_ctrl_commands()
+{
+    _ctrl_node_live_percentage_threshold_for_update =
+        dsn::command_manager::instance().register_app_command(
+            {"live_percentage"},
+            "live_percentage [num | DEFAULT]",
+            "node live percentage threshold for update",
+            [this](const std::vector<std::string> &args) {
+                std::string result("OK");
+                if (args.empty()) {
+                    result = std::to_string(_node_live_percentage_threshold_for_update);
+                } else {
+                    if (args[0] == "DEFAULT") {
+                        _node_live_percentage_threshold_for_update =
+                            _meta_opts.node_live_percentage_threshold_for_update;
+                    } else {
+                        int32_t v = 0;
+                        if (!dsn::buf2int32(args[0], v) || v < 0) {
+                            result = std::string("ERR: invalid arguments");
+                        } else {
+                            _node_live_percentage_threshold_for_update = v;
+                        }
+                    }
+                }
+                return result;
+            });
+}
+
+void meta_service::unregister_ctrl_commands()
+{
+    UNREGISTER_VALID_HANDLER(_ctrl_node_live_percentage_threshold_for_update);
+}
+
 void meta_service::start_service()
 {
     zauto_lock l(_failure_detector->_lock);
@@ -208,22 +249,29 @@ void meta_service::start_service()
 error_code meta_service::start()
 {
     dassert(!_started, "meta service is already started");
+    register_ctrl_commands();
+
     error_code err;
 
     err = remote_storage_initialize();
     dreturn_not_ok_logged(err, "init remote storage failed, err = %s", err.to_string());
     ddebug("remote storage is successfully initialized");
 
-    // start failure detector, and try to acqure the leader lock
+    // start failure detector, and try to acquire the leader lock
     _failure_detector.reset(new meta_server_failure_detector(this));
+    if (_meta_opts.enable_white_list)
+        _failure_detector->set_allow_list(_meta_opts.replica_white_list);
+    _failure_detector->register_ctrl_commands();
+
     err = _failure_detector->start(_opts.fd_check_interval_seconds,
                                    _opts.fd_beacon_interval_seconds,
                                    _opts.fd_lease_seconds,
                                    _opts.fd_grace_seconds,
-                                   false);
+                                   _meta_opts.enable_white_list);
 
     dreturn_not_ok_logged(err, "start failure_detector failed, err = %s", err.to_string());
-    ddebug("meta service failure detector is successfully started");
+    ddebug("meta service failure detector is successfully started %s",
+           _meta_opts.enable_white_list ? "with whitelist enabled" : "");
 
     // should register rpc handlers before acquiring leader lock, so that this meta service
     // can tell others who is the current leader

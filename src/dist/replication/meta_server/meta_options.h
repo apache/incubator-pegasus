@@ -83,6 +83,9 @@ public:
 
     bool cold_backup_disabled;
 
+    bool enable_white_list;
+    std::vector<std::string> replica_white_list;
+
 public:
     void initialize();
 
