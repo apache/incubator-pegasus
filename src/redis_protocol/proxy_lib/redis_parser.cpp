@@ -451,7 +451,10 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
         ::dsn::blob null_blob;
         pegasus_generate_key(req.key, request.buffers[1].data, null_blob);
         req.value = request.buffers[2].data;
-        req.expire_ts_seconds = ttl_seconds;
+        if (ttl_seconds == 0)
+            req.expire_ts_seconds = 0;
+        else
+            req.expire_ts_seconds = ttl_seconds + utils::epoch_now();
         auto partition_hash = pegasus_key_hash(req.key);
         // TODO: set the timeout
         client->put(req, on_set_reply, std::chrono::milliseconds(2000), 0, partition_hash);
