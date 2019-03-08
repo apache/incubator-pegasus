@@ -157,6 +157,7 @@ struct base : environment
 
     // Await for all running tasks to complete.
     void wait_all() { __conf.tracker->wait_outstanding_tasks(); }
+    void cancel_all() { __conf.tracker->cancel_outstanding_tasks(); }
 
     /// === Pipeline Declaration === ///
     /// Declaration of pipeline is not thread-safe.
