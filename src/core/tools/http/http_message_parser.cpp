@@ -81,10 +81,10 @@ http_message_parser::http_message_parser()
 
         message_header *header = msg->header;
         if (parser->type == HTTP_REQUEST && parser->method == HTTP_GET) {
-            header->hdr_type = *(uint32_t *)"GET ";
+            header->hdr_type = http_method::HTTP_METHOD_GET;
             header->context.u.is_request = 1;
         } else if (parser->type == HTTP_REQUEST && parser->method == HTTP_POST) {
-            header->hdr_type = *(uint32_t *)"POST";
+            header->hdr_type = http_method::HTTP_METHOD_POST;
             header->context.u.is_request = 1;
         } else {
             derror("invalid http type %d and method %d", parser->type, parser->method);

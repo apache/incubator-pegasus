@@ -12,6 +12,7 @@ class root_http_service : public http_service
 public:
     root_http_service()
     {
+        // url: ip:port/
         register_handler("",
                          std::bind(&root_http_service::default_handler,
                                    this,

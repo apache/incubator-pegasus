@@ -116,7 +116,7 @@ function(dsn_add_project)
         set(MY_PROJ_SRC "")
     endif()
     set(TEMP_SRC "")
-    # We restrict the file suffix to keep our codes consitent.
+    # We restrict the file suffix to keep our codes consistent.
     file(${MY_SRC_SEARCH_MODE} TEMP_SRC
          "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
          "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
@@ -294,7 +294,8 @@ function(dsn_setup_system_libs)
     set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${OPENSSL_CRYPTO_LIBRARY})
 
     if(ENABLE_GPERF)
-        set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} tcmalloc)
+        set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} tcmalloc_and_profiler)
+        add_definitions(-DDSN_ENABLE_GPERF)
     endif()
 
     set(DSN_SYSTEM_LIBS

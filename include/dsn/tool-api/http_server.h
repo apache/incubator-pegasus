@@ -11,13 +11,21 @@
 
 namespace dsn {
 
+enum http_method
+{
+    HTTP_METHOD_GET = 1,
+    HTTP_METHOD_POST = 2,
+};
+
 struct http_request
 {
     static error_with<http_request> parse(dsn::message_ex *m);
 
+    // http://ip:port/<service>/<method>
     std::pair<std::string, std::string> service_method;
     blob body;
     blob full_url;
+    http_method method;
 };
 
 enum class http_status_code
@@ -60,7 +68,7 @@ public:
             it->second(req, resp);
         } else {
             resp.status_code = http_status_code::bad_request;
-            resp.body = "method not found";
+            resp.body = std::string("method not found for \"") + req.service_method.second + "\"";
         }
     }
 
