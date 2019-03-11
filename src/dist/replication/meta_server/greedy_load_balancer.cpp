@@ -104,7 +104,7 @@ void greedy_load_balancer::register_ctrl_commands()
         "lb.balancer_in_turn <true|false>",
         "control whether do app balancer in turn",
         [this](const std::vector<std::string> &args) {
-            HANDLE_CLI_FLAGS(_balancer_in_turn, args);
+            return remote_command_set_bool_flag(_balancer_in_turn, "lb.balancer_in_turn", args);
         });
 
     _ctrl_only_primary_balancer = dsn::command_manager::instance().register_app_command(
@@ -112,7 +112,8 @@ void greedy_load_balancer::register_ctrl_commands()
         "lb.only_primary_balancer <true|false>",
         "control whether do only primary balancer",
         [this](const std::vector<std::string> &args) {
-            HANDLE_CLI_FLAGS(_only_primary_balancer, args);
+            return remote_command_set_bool_flag(
+                _only_primary_balancer, "lb.only_primary_balancer", args);
         });
 
     _ctrl_only_move_primary = dsn::command_manager::instance().register_app_command(
@@ -120,7 +121,7 @@ void greedy_load_balancer::register_ctrl_commands()
         "lb.only_move_primary <true|false>",
         "control whether only move primary in balancer",
         [this](const std::vector<std::string> &args) {
-            HANDLE_CLI_FLAGS(_only_move_primary, args);
+            return remote_command_set_bool_flag(_only_move_primary, "lb.only_move_primary", args);
         });
 
     _get_balance_operation_count = dsn::command_manager::instance().register_app_command(

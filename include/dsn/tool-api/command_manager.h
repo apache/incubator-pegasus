@@ -37,6 +37,7 @@ class command_manager : public ::dsn::utils::singleton<command_manager>
 {
 public:
     typedef std::function<std::string(const std::vector<std::string> &)> command_handler;
+
     command_manager();
 
     ~command_manager();
@@ -45,11 +46,13 @@ public:
                                   const std::string &help_one_line,
                                   const std::string &help_long,
                                   command_handler handler);
+
     dsn_handle_t register_app_command(const std::vector<std::string> &commands,
                                       const std::string &help_one_line,
                                       const std::string &help_long,
                                       command_handler handler);
     void deregister_command(dsn_handle_t handle);
+
     bool run_command(const std::string &cmd,
                      const std::vector<std::string> &args,
                      /*out*/ std::string &output);
@@ -67,7 +70,8 @@ private:
     std::map<std::string, command_instance *> _handlers;
     std::vector<command_instance *> _commands;
 };
-}
+
+} // namespace dsn
 
 #define UNREGISTER_VALID_HANDLER(ptr)                                                              \
     do {                                                                                           \
@@ -77,23 +81,25 @@ private:
         }                                                                                          \
     } while (0)
 
-// handle bool-flag "flag" with "args": if args are empty, then return the old flag; otherwise
-// set the proper "flag" according to args
-#define HANDLE_CLI_FLAGS(flag, args)                                                               \
-    do {                                                                                           \
-        std::string ret_msg("OK");                                                                 \
-        if (args.empty()) {                                                                        \
-            ret_msg = flag ? "true" : "false";                                                     \
-        } else {                                                                                   \
-            if (strcmp(args[0].c_str(), "true") == 0) {                                            \
-                flag = true;                                                                       \
-                ddebug("set " #flag " to true by remote command");                                 \
-            } else if (strcmp(args[0].c_str(), "false") == 0) {                                    \
-                flag = false;                                                                      \
-                ddebug("set " #flag " to false by remote command");                                \
-            } else {                                                                               \
-                ret_msg = "ERR: invalid arguments";                                                \
-            }                                                                                      \
-        }                                                                                          \
-        return ret_msg;                                                                            \
-    } while (0)
+// if args are empty, then return the old flag;
+// otherwise set the proper "flag" according to args
+inline std::string remote_command_set_bool_flag(bool &flag,
+                                                const char *flag_name,
+                                                const std::vector<std::string> &args)
+{
+    std::string ret_msg("OK");
+    if (args.empty()) {
+        ret_msg = flag ? "true" : "false";
+    } else {
+        if (args[0] == "true") {
+            flag = true;
+            ddebug("set %s to true by remote command", flag_name);
+        } else if (args[0] == "false") {
+            flag = false;
+            ddebug("set %s to false by remote command", flag_name);
+        } else {
+            ret_msg = "ERR: invalid arguments";
+        }
+    }
+    return ret_msg;
+}

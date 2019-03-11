@@ -1928,14 +1928,16 @@ void replica_stub::open_service()
         {"deny-client"},
         "deny-client <true|false>",
         "deny-client - control if deny client read & write request",
-        [this](const std::vector<std::string> &args) { HANDLE_CLI_FLAGS(_deny_client, args); });
+        [this](const std::vector<std::string> &args) {
+            return remote_command_set_bool_flag(_deny_client, "deny-client", args);
+        });
 
     _verbose_client_log_command = ::dsn::command_manager::instance().register_app_command(
         {"verbose-client-log"},
         "verbose-client-log <true|false>",
         "verbose-client-log - control if print verbose error log when reply read & write request",
         [this](const std::vector<std::string> &args) {
-            HANDLE_CLI_FLAGS(_verbose_client_log, args);
+            return remote_command_set_bool_flag(_verbose_client_log, "verbose-client-log", args);
         });
 
     _verbose_commit_log_command = ::dsn::command_manager::instance().register_app_command(
@@ -1943,7 +1945,7 @@ void replica_stub::open_service()
         "verbose-commit-log <true|false>",
         "verbose-commit-log - control if print verbose log when commit mutation",
         [this](const std::vector<std::string> &args) {
-            HANDLE_CLI_FLAGS(_verbose_commit_log, args);
+            return remote_command_set_bool_flag(_verbose_commit_log, "verbose-commit-log", args);
         });
 
     _trigger_chkpt_command = ::dsn::command_manager::instance().register_app_command(

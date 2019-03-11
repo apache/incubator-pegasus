@@ -118,7 +118,8 @@ void server_state::register_cli_commands()
         "lb.add_secondary_enable_flow_control <true|false>",
         "control whether enable add secondary flow control",
         [this](const std::vector<std::string> &args) {
-            HANDLE_CLI_FLAGS(_add_secondary_enable_flow_control, args);
+            return remote_command_set_bool_flag(
+                _add_secondary_enable_flow_control, "lb.add_secondary_enable_flow_control", args);
         });
     dassert(_ctrl_add_secondary_enable_flow_control, "register cli handler failed");
 
