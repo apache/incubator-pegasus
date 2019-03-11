@@ -24,21 +24,21 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "replication_common.h"
 #include <dsn/utility/filesystem.h>
 #include <fstream>
 
 namespace dsn {
 namespace replication {
+
+/*extern*/ const char *partition_status_to_string(partition_status::type status)
+{
+    auto it = _partition_status_VALUES_TO_NAMES.find(status);
+    dassert(it != _partition_status_VALUES_TO_NAMES.end(),
+            "unexpected type of partition_status: %d",
+            status);
+    return it->second;
+}
 
 replication_options::replication_options()
 {
@@ -48,6 +48,7 @@ replication_options::replication_options()
     delay_for_fd_timeout_on_start = false;
     empty_write_disabled = false;
     allow_non_idempotent_write = false;
+    duplication_disabled = false;
 
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;
@@ -264,6 +265,12 @@ void replication_options::initialize()
                                   "allow_non_idempotent_write",
                                   allow_non_idempotent_write,
                                   "whether to allow non-idempotent write, default is false");
+
+    duplication_disabled = dsn_config_get_value_bool(
+        "replication", "duplication_disabled", false, "is duplication disabled");
+    if (allow_non_idempotent_write && !duplication_disabled) {
+        dfatal("duplication and idempotent write cannot be enabled together");
+    }
 
     prepare_timeout_ms_for_secondaries = (int)dsn_config_get_value_uint64(
         "replication",
@@ -691,6 +698,6 @@ std::string get_remote_chkpt_meta_file(const std::string &root,
     return ss.str();
 }
 
-} // end cold_backup namespace
-}
-} // end namespace
+} // namespace cold_backup
+} // namespace replication
+} // namespace dsn

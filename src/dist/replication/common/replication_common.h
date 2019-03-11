@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/dist/replication.h>
@@ -61,6 +52,7 @@ public:
     bool delay_for_fd_timeout_on_start;
     bool empty_write_disabled;
     bool allow_non_idempotent_write;
+    bool duplication_disabled;
 
     int32_t prepare_timeout_ms_for_secondaries;
     int32_t prepare_timeout_ms_for_potential_secondaries;
@@ -126,6 +118,8 @@ public:
 private:
     void sanity_check();
 };
+
+extern const char *partition_status_to_string(partition_status::type status);
 
 class cold_backup_constant
 {
@@ -310,6 +304,6 @@ std::string get_remote_chkpt_meta_file(const std::string &root,
                                        const std::string &app_name,
                                        gpid pid,
                                        int64_t backup_id);
-} // end cold_backup namespace
-}
-} // namespace
+} // namespace cold_backup
+} // namespace replication
+} // namespace dsn
