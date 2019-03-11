@@ -22,6 +22,7 @@
 #include <dsn/utility/string_view.h>
 
 #include <rrdb/rrdb.code.definition.h>
+#include <rrdb/rrdb_types.h>
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 #include <pegasus/error.h>
@@ -181,6 +182,17 @@ inline void update_atomic_max(std::atomic_long &max, long value)
             break;
         }
     }
+}
+inline pegasus::pegasus_client::filter_type parse_filter_type(const std::string &name,
+                                                              bool include_exact)
+{
+    if (include_exact && name == "exact")
+        return pegasus::pegasus_client::FT_MATCH_EXACT;
+    else
+        return (pegasus::pegasus_client::filter_type)type_from_string(
+            dsn::apps::_filter_type_VALUES_TO_NAMES,
+            std::string("ft_match_") + name,
+            ::dsn::apps::filter_type::FT_NO_FILTER);
 }
 // return true if the data is valid for the filter
 inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,

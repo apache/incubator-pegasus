@@ -1135,10 +1135,7 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 's':
-            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.sort_key_filter_type = parse_filter_type(optarg, false);
             if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
                 return false;
@@ -1149,17 +1146,10 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
             options.sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'v':
-            if (std::string("exact") == optarg) {
-                value_filter_type = pegasus::pegasus_client::FT_MATCH_EXACT;
-            } else {
-                value_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                    dsn::apps::_filter_type_VALUES_TO_NAMES,
-                    std::string("ft_match_") + optarg,
-                    ::dsn::apps::filter_type::FT_NO_FILTER);
-                if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                    fprintf(stderr, "ERROR: invalid value_filter_type param\n");
-                    return false;
-                }
+            value_filter_type = parse_filter_type(optarg, true);
+            if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid value_filter_type param\n");
+                return false;
             }
             value_filter_type_name = optarg;
             break;
@@ -1350,10 +1340,7 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.hash_key_filter_type = parse_filter_type(optarg, false);
             if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid hash_key_filter_type param\n");
                 return false;
@@ -1364,17 +1351,10 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            if (std::string("exact") == optarg) {
-                sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_EXACT;
-            } else {
-                sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                    dsn::apps::_filter_type_VALUES_TO_NAMES,
-                    std::string("ft_match_") + optarg,
-                    ::dsn::apps::filter_type::FT_NO_FILTER);
-                if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                    fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
-                    return false;
-                }
+            sort_key_filter_type = parse_filter_type(optarg, true);
+            if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
+                return false;
             }
             sort_key_filter_type_name = optarg;
             break;
@@ -1382,17 +1362,10 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
             sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'v':
-            if (std::string("exact") == optarg) {
-                value_filter_type = pegasus::pegasus_client::FT_MATCH_EXACT;
-            } else {
-                value_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                    dsn::apps::_filter_type_VALUES_TO_NAMES,
-                    std::string("ft_match_") + optarg,
-                    ::dsn::apps::filter_type::FT_NO_FILTER);
-                if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                    fprintf(stderr, "ERROR: invalid value_filter_type param\n");
-                    return false;
-                }
+            value_filter_type = parse_filter_type(optarg, true);
+            if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid value_filter_type param\n");
+                return false;
             }
             value_filter_type_name = optarg;
             break;
@@ -1610,10 +1583,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.hash_key_filter_type = parse_filter_type(optarg, false);
             if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid hash_key_filter_type param\n");
                 return false;
@@ -1624,17 +1594,10 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            if (std::string("exact") == optarg) {
-                sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_EXACT;
-            } else {
-                sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                    dsn::apps::_filter_type_VALUES_TO_NAMES,
-                    std::string("ft_match_") + optarg,
-                    ::dsn::apps::filter_type::FT_NO_FILTER);
-                if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                    fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
-                    return false;
-                }
+            sort_key_filter_type = parse_filter_type(optarg, true);
+            if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
+                return false;
             }
             sort_key_filter_type_name = optarg;
             break;
@@ -1642,17 +1605,10 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
             sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'v':
-            if (std::string("exact") == optarg) {
-                value_filter_type = pegasus::pegasus_client::FT_MATCH_EXACT;
-            } else {
-                value_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                    dsn::apps::_filter_type_VALUES_TO_NAMES,
-                    std::string("ft_match_") + optarg,
-                    ::dsn::apps::filter_type::FT_NO_FILTER);
-                if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                    fprintf(stderr, "ERROR: invalid value_filter_type param\n");
-                    return false;
-                }
+            value_filter_type = parse_filter_type(optarg, true);
+            if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid value_filter_type param\n");
+                return false;
             }
             value_filter_type_name = optarg;
             break;
@@ -1931,10 +1887,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.hash_key_filter_type = parse_filter_type(optarg, false);
             if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid hash_key_filter_type param\n");
                 return false;
@@ -1945,17 +1898,10 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            if (std::string("exact") == optarg) {
-                sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_EXACT;
-            } else {
-                sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                    dsn::apps::_filter_type_VALUES_TO_NAMES,
-                    std::string("ft_match_") + optarg,
-                    ::dsn::apps::filter_type::FT_NO_FILTER);
-                if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                    fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
-                    return false;
-                }
+            sort_key_filter_type = parse_filter_type(optarg, true);
+            if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
+                return false;
             }
             sort_key_filter_type_name = optarg;
             break;
@@ -1963,17 +1909,10 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
             sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'v':
-            if (std::string("exact") == optarg) {
-                value_filter_type = pegasus::pegasus_client::FT_MATCH_EXACT;
-            } else {
-                value_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                    dsn::apps::_filter_type_VALUES_TO_NAMES,
-                    std::string("ft_match_") + optarg,
-                    ::dsn::apps::filter_type::FT_NO_FILTER);
-                if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                    fprintf(stderr, "ERROR: invalid value_filter_type param\n");
-                    return false;
-                }
+            value_filter_type = parse_filter_type(optarg, true);
+            if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid value_filter_type param\n");
+                return false;
             }
             value_filter_type_name = optarg;
             break;
@@ -2208,10 +2147,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.hash_key_filter_type = parse_filter_type(optarg, false);
             if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid hash_key_filter_type param\n");
                 return false;
@@ -2222,17 +2158,10 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            if (std::string("exact") == optarg) {
-                sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_EXACT;
-            } else {
-                sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                    dsn::apps::_filter_type_VALUES_TO_NAMES,
-                    std::string("ft_match_") + optarg,
-                    ::dsn::apps::filter_type::FT_NO_FILTER);
-                if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                    fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
-                    return false;
-                }
+            sort_key_filter_type = parse_filter_type(optarg, true);
+            if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
+                return false;
             }
             sort_key_filter_type_name = optarg;
             break;
@@ -2240,17 +2169,10 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'v':
-            if (std::string("exact") == optarg) {
-                value_filter_type = pegasus::pegasus_client::FT_MATCH_EXACT;
-            } else {
-                value_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                    dsn::apps::_filter_type_VALUES_TO_NAMES,
-                    std::string("ft_match_") + optarg,
-                    ::dsn::apps::filter_type::FT_NO_FILTER);
-                if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                    fprintf(stderr, "ERROR: invalid value_filter_type param\n");
-                    return false;
-                }
+            value_filter_type = parse_filter_type(optarg, true);
+            if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid value_filter_type param\n");
+                return false;
             }
             value_filter_type_name = optarg;
             break;
