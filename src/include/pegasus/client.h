@@ -69,7 +69,8 @@ public:
         FT_NO_FILTER = 0,
         FT_MATCH_ANYWHERE = 1,
         FT_MATCH_PREFIX = 2,
-        FT_MATCH_POSTFIX = 3
+        FT_MATCH_POSTFIX = 3,
+        FT_MATCH_EXACT = 4
     };
 
     struct multi_get_options

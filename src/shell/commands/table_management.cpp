@@ -515,8 +515,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("file_num", tp_alignment::kRight);
         tp.add_column("mem_tbl_mb", tp_alignment::kRight);
         tp.add_column("mem_idx_mb", tp_alignment::kRight);
-        tp.add_column("hit_rate", tp_alignment::kRight);
     }
+    tp.add_column("hit_rate", tp_alignment::kRight);
 
     for (row_data &row : rows) {
         tp.add_row(row.row_name);
@@ -548,12 +548,12 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data((uint64_t)row.storage_count);
             tp.append_data(row.rdb_memtable_mem_usage / (1 << 20U));
             tp.append_data(row.rdb_index_and_filter_blocks_mem_usage / (1 << 20U));
-            double block_cache_hit_rate =
-                std::abs(row.rdb_block_cache_total_count) < 1e-6
-                    ? 0.0
-                    : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
-            tp.append_data(block_cache_hit_rate);
         }
+        double block_cache_hit_rate =
+            std::abs(row.rdb_block_cache_total_count) < 1e-6
+                ? 0.0
+                : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
+        tp.append_data(block_cache_hit_rate);
     }
     tp.output(out);
 

@@ -228,8 +228,10 @@ static command_executor commands[] = {
         "[-a|--start_inclusive true|false] [-b|--stop_inclusive true|false] "
         "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-o|--output file_name] [-z|--batch_size num] [-n|--max_count num] "
-        "[-t|--timeout_ms num] [-d|--detailed] [-i|--no_value]",
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
+        "[-z|--value_filter_pattern str] "
+        "[-o|--output file_name] [-n|--max_count num] [-t|--timeout_ms num] "
+        "[-d|--detailed] [-i|--no_value]",
         data_operations,
     },
     {
@@ -237,10 +239,12 @@ static command_executor commands[] = {
         "scan all hash keys",
         "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
         "[-x|--hash_key_filter_pattern str] "
-        "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-o|--output file_name] [-z|--batch_size num] [-n|--max_count num] "
-        "[-t|--timeout_ms num] [-d|--detailed] [-i|--no_value] [-p|--partition num]",
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
+        "[-z|--value_filter_pattern str] "
+        "[-o|--output file_name] [-n|--max_count num] [-t|--timeout_ms num] "
+        "[-d|--detailed] [-i|--no_value] [-p|--partition num]",
         data_operations,
     },
     {
@@ -250,9 +254,9 @@ static command_executor commands[] = {
         "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
         "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
         "[-x|--hash_key_filter_pattern str] "
-        "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-v|--value_filter_type anywhere|prefix|postfix] "
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
         "[-z|--value_filter_pattern str] "
         "[-n|--no_overwrite] [-i|--no_value] [-g|--geo_data]",
         data_operations,
@@ -263,9 +267,9 @@ static command_executor commands[] = {
         "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
         "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
         "[-x|--hash_key_filter_pattern str] "
-        "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-v|--value_filter_type anywhere|prefix|postfix] "
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
         "[-z|--value_filter_pattern str] "
         "[-f|--force]",
         data_operations,
@@ -276,9 +280,9 @@ static command_executor commands[] = {
         "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
         "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
         "[-x|--hash_key_filter_pattern str] "
-        "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-v|--value_filter_type anywhere|prefix|postfix] "
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
         "[-z|--value_filter_pattern str] "
         "[-d|--diff_hash_key] [-a|--stat_size] [-n|--top_count num] [-r|--run_seconds num]",
         data_operations,

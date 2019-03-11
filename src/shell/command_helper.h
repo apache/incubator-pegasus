@@ -23,6 +23,7 @@
 #include <dsn/utility/string_view.h>
 
 #include <rrdb/rrdb.code.definition.h>
+#include <rrdb/rrdb_types.h>
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 #include <pegasus/error.h>
@@ -106,6 +107,8 @@ struct scan_data_context
     bool no_overwrite; // if set true, then use check_and_set() instead of set()
                        // when inserting data to destination table for copy_data,
                        // to not overwrite old data if it aleady exist.
+    pegasus::pegasus_client::filter_type sort_key_filter_type;
+    std::string sort_key_filter_pattern;
     pegasus::pegasus_client::filter_type value_filter_type;
     std::string value_filter_pattern;
     pegasus::pegasus_client::pegasus_scanner_wrapper scanner;
@@ -141,6 +144,7 @@ struct scan_data_context
           max_batch_count(max_batch_count_),
           timeout_ms(timeout_ms_),
           no_overwrite(false),
+          sort_key_filter_type(pegasus::pegasus_client::FT_NO_FILTER),
           value_filter_type(pegasus::pegasus_client::FT_NO_FILTER),
           scanner(scanner_),
           client(client_),
@@ -159,6 +163,11 @@ struct scan_data_context
         // when split_request_count = 1
         dassert(max_batch_count > 1, "");
     }
+    void set_sort_key_filter(pegasus::pegasus_client::filter_type type, const std::string &pattern)
+    {
+        sort_key_filter_type = type;
+        sort_key_filter_pattern = pattern;
+    }
     void set_value_filter(pegasus::pegasus_client::filter_type type, const std::string &pattern)
     {
         value_filter_type = type;
@@ -175,6 +184,17 @@ inline void update_atomic_max(std::atomic_long &max, long value)
         }
     }
 }
+inline pegasus::pegasus_client::filter_type parse_filter_type(const std::string &name,
+                                                              bool include_exact)
+{
+    if (include_exact && name == "exact")
+        return pegasus::pegasus_client::FT_MATCH_EXACT;
+    else
+        return (pegasus::pegasus_client::filter_type)type_from_string(
+            dsn::apps::_filter_type_VALUES_TO_NAMES,
+            std::string("ft_match_") + name,
+            ::dsn::apps::filter_type::FT_NO_FILTER);
+}
 // return true if the data is valid for the filter
 inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
                             const std::string &filter_pattern,
@@ -183,6 +203,8 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
     switch (filter_type) {
     case pegasus::pegasus_client::FT_NO_FILTER:
         return true;
+    case pegasus::pegasus_client::FT_MATCH_EXACT:
+        return filter_pattern == value;
     case pegasus::pegasus_client::FT_MATCH_ANYWHERE:
     case pegasus::pegasus_client::FT_MATCH_PREFIX:
     case pegasus::pegasus_client::FT_MATCH_POSTFIX: {
@@ -205,6 +227,17 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
     }
     return false;
 }
+// return true if the data is valid for the filter
+inline bool
+validate_filter(scan_data_context *context, const std::string &sort_key, const std::string &value)
+{
+    // for sort key, we only need to check MATCH_EXACT, because it is not supported
+    // on the server side, but MATCH_PREFIX is already satisified.
+    if (context->sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT &&
+        sort_key.length() > context->sort_key_filter_pattern.length())
+        return false;
+    return validate_filter(context->value_filter_type, context->value_filter_pattern, value);
+}
 inline void scan_data_next(scan_data_context *context)
 {
     while (!context->split_completed.load() && !context->error_occurred->load() &&
@@ -216,9 +249,7 @@ inline void scan_data_next(scan_data_context *context)
                                                std::string &&value,
                                                pegasus::pegasus_client::internal_info &&info) {
             if (ret == pegasus::PERR_OK) {
-                if (context->value_filter_type == pegasus::pegasus_client::FT_NO_FILTER ||
-                    validate_filter(
-                        context->value_filter_type, context->value_filter_pattern, value)) {
+                if (validate_filter(context, sort_key, value)) {
                     switch (context->op) {
                     case SCAN_COPY:
                         context->split_request_count++;

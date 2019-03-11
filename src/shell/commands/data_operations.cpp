@@ -1068,16 +1068,17 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     std::string start_sort_key = sds_to_string(args.argv[2]);
     std::string stop_sort_key = sds_to_string(args.argv[3]);
 
-    int32_t batch_size = 100;
     int32_t max_count = -1;
     bool detailed = false;
     FILE *file = stderr;
     int32_t timeout_ms = sc->timeout_ms;
     std::string sort_key_filter_type_name("no_filter");
+    std::string value_filter_type_name("no_filter");
+    pegasus::pegasus_client::filter_type value_filter_type = pegasus::pegasus_client::FT_NO_FILTER;
+    std::string value_filter_pattern;
     pegasus::pegasus_client::scan_options options;
 
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
-                                           {"batch_size", required_argument, 0, 'z'},
                                            {"max_count", required_argument, 0, 'n'},
                                            {"timeout_ms", required_argument, 0, 't'},
                                            {"output", required_argument, 0, 'o'},
@@ -1085,6 +1086,8 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
                                            {"stop_inclusive", required_argument, 0, 'b'},
                                            {"sort_key_filter_type", required_argument, 0, 's'},
                                            {"sort_key_filter_pattern", required_argument, 0, 'y'},
+                                           {"value_filter_type", required_argument, 0, 'v'},
+                                           {"value_filter_pattern", required_argument, 0, 'z'},
                                            {"no_value", no_argument, 0, 'i'},
                                            {0, 0, 0, 0}};
 
@@ -1093,57 +1096,48 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "dz:n:t:o:a:b:s:y:i", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "dn:t:o:a:b:s:y:v:z:i", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
         case 'd':
             detailed = true;
             break;
-        case 'z':
-            if (!dsn::buf2int32(optarg, batch_size)) {
-                fprintf(stderr, "parse %s as batch_size failed\n", optarg);
-                return false;
-            }
-            break;
         case 'n':
             if (!dsn::buf2int32(optarg, max_count)) {
-                fprintf(stderr, "parse %s as max_count failed\n", optarg);
+                fprintf(stderr, "ERROR: parse %s as max_count failed\n", optarg);
                 return false;
             }
             break;
         case 't':
             if (!dsn::buf2int32(optarg, timeout_ms)) {
-                fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
+                fprintf(stderr, "ERROR: parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
             break;
         case 'o':
             file = fopen(optarg, "w");
             if (!file) {
-                fprintf(stderr, "open filename %s failed\n", optarg);
+                fprintf(stderr, "ERROR: open filename %s failed\n", optarg);
                 return false;
             }
             break;
         case 'a':
             if (!dsn::buf2bool(optarg, options.start_inclusive)) {
-                fprintf(stderr, "invalid start_inclusive param\n");
+                fprintf(stderr, "ERROR: invalid start_inclusive param\n");
                 return false;
             }
             break;
         case 'b':
             if (!dsn::buf2bool(optarg, options.stop_inclusive)) {
-                fprintf(stderr, "invalid stop_inclusive param\n");
+                fprintf(stderr, "ERROR: invalid stop_inclusive param\n");
                 return false;
             }
             break;
         case 's':
-            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.sort_key_filter_type = parse_filter_type(optarg, false);
             if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                fprintf(stderr, "invalid sort_key_filter_type param\n");
+                fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
                 return false;
             }
             sort_key_filter_type_name = optarg;
@@ -1151,12 +1145,28 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
         case 'y':
             options.sort_key_filter_pattern = unescape_str(optarg);
             break;
+        case 'v':
+            value_filter_type = parse_filter_type(optarg, true);
+            if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid value_filter_type param\n");
+                return false;
+            }
+            value_filter_type_name = optarg;
+            break;
+        case 'z':
+            value_filter_pattern = unescape_str(optarg);
+            break;
         case 'i':
             options.no_value = true;
             break;
         default:
             return false;
         }
+    }
+
+    if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER && options.no_value) {
+        fprintf(stderr, "ERROR: no_value should not be set when value_filter_type is set\n");
+        return false;
     }
 
     fprintf(stderr, "hash_key: \"%s\"\n", pegasus::utils::c_escape_string(hash_key).c_str());
@@ -1173,17 +1183,21 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
                 "sort_key_filter_pattern: \"%s\"\n",
                 pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
     }
-    fprintf(stderr, "batch_size: %d\n", batch_size);
+    fprintf(stderr, "value_filter_type: %s\n", value_filter_type_name.c_str());
+    if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        fprintf(stderr,
+                "value_filter_pattern: \"%s\"\n",
+                pegasus::utils::c_escape_string(value_filter_pattern).c_str());
+    }
     fprintf(stderr, "max_count: %d\n", max_count);
     fprintf(stderr, "timout_ms: %d\n", timeout_ms);
     fprintf(stderr, "detailed: %s\n", detailed ? "true" : "false");
     fprintf(stderr, "no_value: %s\n", options.no_value ? "true" : "false");
     fprintf(stderr, "\n");
 
-    int i = 0;
+    int count = 0;
     pegasus::pegasus_client::pegasus_scanner *scanner = nullptr;
     options.timeout_ms = timeout_ms;
-    options.batch_size = batch_size;
     int ret = sc->pg_client->get_scanner(hash_key, start_sort_key, stop_sort_key, options, scanner);
     if (ret != pegasus::PERR_OK) {
         fprintf(file, "ERROR: get scanner failed: %s\n", sc->pg_client->get_error_string(ret));
@@ -1196,9 +1210,10 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
         std::string sort_key;
         std::string value;
         pegasus::pegasus_client::internal_info info;
-        for (; (max_count <= 0 || i < max_count) &&
-               !(ret = scanner->next(hash_key, sort_key, value, &info));
-             i++) {
+        while ((max_count <= 0 || count < max_count) &&
+               !(ret = scanner->next(hash_key, sort_key, value, &info))) {
+            if (!validate_filter(value_filter_type, value_filter_pattern, value))
+                continue;
             fprintf(file,
                     "\"%s\" : \"%s\"",
                     pegasus::utils::c_escape_string(hash_key, sc->escape_all).c_str(),
@@ -1216,6 +1231,7 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
                         info.server.c_str());
             }
             fprintf(file, "\n");
+            count++;
         }
         if (ret != pegasus::PERR_SCAN_COMPLETE && ret != pegasus::PERR_OK) {
             fprintf(file,
@@ -1243,17 +1259,16 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
         fclose(file);
     }
 
-    if (file == stderr && i > 0) {
+    if (file == stderr && count > 0) {
         fprintf(stderr, "\n");
     }
-    fprintf(stderr, "%d key-value pairs got.\n", i);
+    fprintf(stderr, "%d key-value pairs got.\n", count);
     return true;
 }
 
 bool full_scan(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
-                                           {"batch_size", required_argument, 0, 'z'},
                                            {"max_count", required_argument, 0, 'n'},
                                            {"partition", required_argument, 0, 'p'},
                                            {"timeout_ms", required_argument, 0, 't'},
@@ -1262,10 +1277,11 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
                                            {"hash_key_filter_pattern", required_argument, 0, 'x'},
                                            {"sort_key_filter_type", required_argument, 0, 's'},
                                            {"sort_key_filter_pattern", required_argument, 0, 'y'},
+                                           {"value_filter_type", required_argument, 0, 'v'},
+                                           {"value_filter_pattern", required_argument, 0, 'z'},
                                            {"no_value", no_argument, 0, 'i'},
                                            {0, 0, 0, 0}};
 
-    int32_t batch_size = 100;
     int32_t max_count = -1;
     bool detailed = false;
     FILE *file = stderr;
@@ -1273,6 +1289,12 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
     int32_t partition = -1;
     std::string hash_key_filter_type_name("no_filter");
     std::string sort_key_filter_type_name("no_filter");
+    pegasus::pegasus_client::filter_type sort_key_filter_type =
+        pegasus::pegasus_client::FT_NO_FILTER;
+    std::string sort_key_filter_pattern;
+    std::string value_filter_type_name("no_filter");
+    pegasus::pegasus_client::filter_type value_filter_type = pegasus::pegasus_client::FT_NO_FILTER;
+    std::string value_filter_pattern;
     pegasus::pegasus_client::scan_options options;
 
     escape_sds_argv(args.argc, args.argv);
@@ -1280,55 +1302,47 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "dz:n:p:t:o:h:x:s:y:i", long_options, &option_index);
+        c = getopt_long(
+            args.argc, args.argv, "dn:p:t:o:h:x:s:y:v:z:i", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
         case 'd':
             detailed = true;
             break;
-        case 'z':
-            if (!dsn::buf2int32(optarg, batch_size)) {
-                fprintf(stderr, "parse %s as batch_size failed\n", optarg);
-                return false;
-            }
-            break;
         case 'n':
             if (!dsn::buf2int32(optarg, max_count)) {
-                fprintf(stderr, "parse %s as max_count failed\n", optarg);
+                fprintf(stderr, "ERROR: parse %s as max_count failed\n", optarg);
                 return false;
             }
             break;
         case 'p':
             if (!dsn::buf2int32(optarg, partition)) {
-                fprintf(stderr, "parse %s as partition id failed\n", optarg);
+                fprintf(stderr, "ERROR: parse %s as partition id failed\n", optarg);
                 return false;
             }
             if (partition < 0) {
-                fprintf(stderr, "invalid partition param, should > 0\n");
+                fprintf(stderr, "ERROR: invalid partition param, should > 0\n");
                 return false;
             }
             break;
         case 't':
             if (!dsn::buf2int32(optarg, timeout_ms)) {
-                fprintf(stderr, "parse %s as timeout_ms failed\n", optarg);
+                fprintf(stderr, "ERROR: parse %s as timeout_ms failed\n", optarg);
                 return false;
             }
             break;
         case 'o':
             file = fopen(optarg, "w");
             if (!file) {
-                fprintf(stderr, "open filename %s failed\n", optarg);
+                fprintf(stderr, "ERROR: open filename %s failed\n", optarg);
                 return false;
             }
             break;
         case 'h':
-            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.hash_key_filter_type = parse_filter_type(optarg, false);
             if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                fprintf(stderr, "invalid hash_key_filter_type param\n");
+                fprintf(stderr, "ERROR: invalid hash_key_filter_type param\n");
                 return false;
             }
             hash_key_filter_type_name = optarg;
@@ -1337,18 +1351,26 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
-            if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
-                fprintf(stderr, "invalid sort_key_filter_type param\n");
+            sort_key_filter_type = parse_filter_type(optarg, true);
+            if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
                 return false;
             }
             sort_key_filter_type_name = optarg;
             break;
         case 'y':
-            options.sort_key_filter_pattern = unescape_str(optarg);
+            sort_key_filter_pattern = unescape_str(optarg);
+            break;
+        case 'v':
+            value_filter_type = parse_filter_type(optarg, true);
+            if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+                fprintf(stderr, "ERROR: invalid value_filter_type param\n");
+                return false;
+            }
+            value_filter_type_name = optarg;
+            break;
+        case 'z':
+            value_filter_pattern = unescape_str(optarg);
             break;
         case 'i':
             options.no_value = true;
@@ -1356,6 +1378,11 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
         default:
             return false;
         }
+    }
+
+    if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER && options.no_value) {
+        fprintf(stderr, "ERROR: no_value should not be set when value_filter_type is set\n");
+        return false;
     }
 
     fprintf(stderr,
@@ -1368,22 +1395,33 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
                 pegasus::utils::c_escape_string(options.hash_key_filter_pattern).c_str());
     }
     fprintf(stderr, "sort_key_filter_type: %s\n", sort_key_filter_type_name.c_str());
-    if (options.sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+    if (sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
         fprintf(stderr,
                 "sort_key_filter_pattern: \"%s\"\n",
-                pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
+                pegasus::utils::c_escape_string(sort_key_filter_pattern).c_str());
     }
-    fprintf(stderr, "batch_size: %d\n", batch_size);
+    fprintf(stderr, "value_filter_type: %s\n", value_filter_type_name.c_str());
+    if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        fprintf(stderr,
+                "value_filter_pattern: \"%s\"\n",
+                pegasus::utils::c_escape_string(value_filter_pattern).c_str());
+    }
     fprintf(stderr, "max_count: %d\n", max_count);
     fprintf(stderr, "timout_ms: %d\n", timeout_ms);
     fprintf(stderr, "detailed: %s\n", detailed ? "true" : "false");
     fprintf(stderr, "no_value: %s\n", options.no_value ? "true" : "false");
     fprintf(stderr, "\n");
 
-    int i = 0;
+    int count = 0;
     std::vector<pegasus::pegasus_client::pegasus_scanner *> scanners;
     options.timeout_ms = timeout_ms;
-    options.batch_size = batch_size;
+    if (sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        if (sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT)
+            options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        else
+            options.sort_key_filter_type = sort_key_filter_type;
+        options.sort_key_filter_pattern = sort_key_filter_pattern;
+    }
     int ret = sc->pg_client->get_unordered_scanners(10000, options, scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(file, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
@@ -1402,17 +1440,21 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
                     (int)scanners.size() - 1);
         }
     } else {
-        for (int j = 0; j < scanners.size(); j++) {
-            if (partition >= 0 && partition != j)
+        for (int i = 0; i < scanners.size(); i++) {
+            if (partition >= 0 && partition != i)
                 continue;
             std::string hash_key;
             std::string sort_key;
             std::string value;
             pegasus::pegasus_client::internal_info info;
-            pegasus::pegasus_client::pegasus_scanner *scanner = scanners[j];
-            for (; (max_count <= 0 || i < max_count) &&
-                   !(ret = scanner->next(hash_key, sort_key, value, &info));
-                 i++) {
+            pegasus::pegasus_client::pegasus_scanner *scanner = scanners[i];
+            while ((max_count <= 0 || count < max_count) &&
+                   !(ret = scanner->next(hash_key, sort_key, value, &info))) {
+                if (sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT &&
+                    sort_key.length() > sort_key_filter_pattern.length())
+                    continue;
+                if (!validate_filter(value_filter_type, value_filter_pattern, value))
+                    continue;
                 fprintf(file,
                         "\"%s\" : \"%s\"",
                         pegasus::utils::c_escape_string(hash_key, sc->escape_all).c_str(),
@@ -1430,6 +1472,7 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
                             info.server.c_str());
                 }
                 fprintf(file, "\n");
+                count++;
             }
             if (ret != pegasus::PERR_SCAN_COMPLETE && ret != pegasus::PERR_OK) {
                 fprintf(file,
@@ -1458,10 +1501,10 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
         fclose(file);
     }
 
-    if (file == stderr && i > 0) {
+    if (file == stderr && count > 0) {
         fprintf(stderr, "\n");
     }
-    fprintf(stderr, "%d key-value pairs got.\n", i);
+    fprintf(stderr, "%d key-value pairs got.\n", count);
     return true;
 }
 
@@ -1493,6 +1536,9 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
     bool no_overwrite = false;
     std::string hash_key_filter_type_name("no_filter");
     std::string sort_key_filter_type_name("no_filter");
+    pegasus::pegasus_client::filter_type sort_key_filter_type =
+        pegasus::pegasus_client::FT_NO_FILTER;
+    std::string sort_key_filter_pattern;
     std::string value_filter_type_name("no_filter");
     pegasus::pegasus_client::filter_type value_filter_type = pegasus::pegasus_client::FT_NO_FILTER;
     std::string value_filter_pattern;
@@ -1537,10 +1583,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.hash_key_filter_type = parse_filter_type(optarg, false);
             if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid hash_key_filter_type param\n");
                 return false;
@@ -1551,24 +1594,18 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
-            if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+            sort_key_filter_type = parse_filter_type(optarg, true);
+            if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
                 return false;
             }
             sort_key_filter_type_name = optarg;
             break;
         case 'y':
-            options.sort_key_filter_pattern = unescape_str(optarg);
+            sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'v':
-            value_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            value_filter_type = parse_filter_type(optarg, true);
             if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid value_filter_type param\n");
                 return false;
@@ -1612,6 +1649,11 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
+    if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER && options.no_value) {
+        fprintf(stderr, "ERROR: no_value should not be set when value_filter_type is set\n");
+        return false;
+    }
+
     fprintf(stderr, "INFO: source_cluster_name = %s\n", sc->pg_client->get_cluster_name());
     fprintf(stderr, "INFO: source_app_name = %s\n", sc->pg_client->get_app_name());
     fprintf(stderr, "INFO: target_cluster_name = %s\n", target_cluster_name.c_str());
@@ -1631,10 +1673,10 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                 pegasus::utils::c_escape_string(options.hash_key_filter_pattern).c_str());
     }
     fprintf(stderr, "INFO: sort_key_filter_type = %s\n", sort_key_filter_type_name.c_str());
-    if (options.sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+    if (sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
         fprintf(stderr,
                 "INFO: sort_key_filter_pattern = \"%s\"\n",
-                pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
+                pegasus::utils::c_escape_string(sort_key_filter_pattern).c_str());
     }
     fprintf(stderr, "INFO: value_filter_type = %s\n", value_filter_type_name.c_str());
     if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
@@ -1677,6 +1719,13 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
     options.timeout_ms = timeout_ms;
+    if (sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        if (sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT)
+            options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        else
+            options.sort_key_filter_type = sort_key_filter_type;
+        options.sort_key_filter_pattern = sort_key_filter_pattern;
+    }
     ret = sc->pg_client->get_unordered_scanners(INT_MAX, options, raw_scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr,
@@ -1716,6 +1765,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                                            target_client,
                                                            target_geo_client.get(),
                                                            &error_occurred);
+        context->set_sort_key_filter(sort_key_filter_type, sort_key_filter_pattern);
         context->set_value_filter(value_filter_type, value_filter_pattern);
         if (no_overwrite)
             context->set_no_overwrite();
@@ -1797,6 +1847,9 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
     int timeout_ms = sc->timeout_ms;
     std::string hash_key_filter_type_name("no_filter");
     std::string sort_key_filter_type_name("no_filter");
+    pegasus::pegasus_client::filter_type sort_key_filter_type =
+        pegasus::pegasus_client::FT_NO_FILTER;
+    std::string sort_key_filter_pattern;
     std::string value_filter_type_name("no_filter");
     pegasus::pegasus_client::filter_type value_filter_type = pegasus::pegasus_client::FT_NO_FILTER;
     std::string value_filter_pattern;
@@ -1834,10 +1887,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.hash_key_filter_type = parse_filter_type(optarg, false);
             if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid hash_key_filter_type param\n");
                 return false;
@@ -1848,24 +1898,18 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
-            if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+            sort_key_filter_type = parse_filter_type(optarg, true);
+            if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
                 return false;
             }
             sort_key_filter_type_name = optarg;
             break;
         case 'y':
-            options.sort_key_filter_pattern = unescape_str(optarg);
+            sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'v':
-            value_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            value_filter_type = parse_filter_type(optarg, true);
             if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid value_filter_type param\n");
                 return false;
@@ -1907,10 +1951,10 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
                 pegasus::utils::c_escape_string(options.hash_key_filter_pattern).c_str());
     }
     fprintf(stderr, "INFO: sort_key_filter_type = %s\n", sort_key_filter_type_name.c_str());
-    if (options.sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+    if (sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
         fprintf(stderr,
                 "INFO: sort_key_filter_pattern = \"%s\"\n",
-                pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
+                pegasus::utils::c_escape_string(sort_key_filter_pattern).c_str());
     }
     fprintf(stderr, "INFO: value_filter_type = %s\n", value_filter_type_name.c_str());
     if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
@@ -1929,6 +1973,13 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
     options.timeout_ms = timeout_ms;
+    if (sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        if (sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT)
+            options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        else
+            options.sort_key_filter_type = sort_key_filter_type;
+        options.sort_key_filter_pattern = sort_key_filter_pattern;
+    }
     if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER)
         options.no_value = false;
     else
@@ -1970,6 +2021,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
                                                            sc->pg_client,
                                                            nullptr,
                                                            &error_occurred);
+        context->set_sort_key_filter(sort_key_filter_type, sort_key_filter_pattern);
         context->set_value_filter(value_filter_type, value_filter_pattern);
         contexts.emplace_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
@@ -2051,6 +2103,9 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
     int timeout_ms = sc->timeout_ms;
     std::string hash_key_filter_type_name("no_filter");
     std::string sort_key_filter_type_name("no_filter");
+    pegasus::pegasus_client::filter_type sort_key_filter_type =
+        pegasus::pegasus_client::FT_NO_FILTER;
+    std::string sort_key_filter_pattern;
     std::string value_filter_type_name("no_filter");
     pegasus::pegasus_client::filter_type value_filter_type = pegasus::pegasus_client::FT_NO_FILTER;
     std::string value_filter_pattern;
@@ -2092,10 +2147,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             }
             break;
         case 'h':
-            options.hash_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                ::dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            options.hash_key_filter_type = parse_filter_type(optarg, false);
             if (options.hash_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid hash_key_filter_type param\n");
                 return false;
@@ -2106,24 +2158,18 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             options.hash_key_filter_pattern = unescape_str(optarg);
             break;
         case 's':
-            options.sort_key_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
-            if (options.sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
+            sort_key_filter_type = parse_filter_type(optarg, true);
+            if (sort_key_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid sort_key_filter_type param\n");
                 return false;
             }
             sort_key_filter_type_name = optarg;
             break;
         case 'y':
-            options.sort_key_filter_pattern = unescape_str(optarg);
+            sort_key_filter_pattern = unescape_str(optarg);
             break;
         case 'v':
-            value_filter_type = (pegasus::pegasus_client::filter_type)type_from_string(
-                dsn::apps::_filter_type_VALUES_TO_NAMES,
-                std::string("ft_match_") + optarg,
-                ::dsn::apps::filter_type::FT_NO_FILTER);
+            value_filter_type = parse_filter_type(optarg, true);
             if (value_filter_type == pegasus::pegasus_client::FT_NO_FILTER) {
                 fprintf(stderr, "ERROR: invalid value_filter_type param\n");
                 return false;
@@ -2190,10 +2236,10 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                 pegasus::utils::c_escape_string(options.hash_key_filter_pattern).c_str());
     }
     fprintf(stderr, "INFO: sort_key_filter_type = %s\n", sort_key_filter_type_name.c_str());
-    if (options.sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+    if (sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
         fprintf(stderr,
                 "INFO: sort_key_filter_pattern = \"%s\"\n",
-                pegasus::utils::c_escape_string(options.sort_key_filter_pattern).c_str());
+                pegasus::utils::c_escape_string(sort_key_filter_pattern).c_str());
     }
     fprintf(stderr, "INFO: value_filter_type = %s\n", value_filter_type_name.c_str());
     if (value_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
@@ -2208,6 +2254,13 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
     options.timeout_ms = timeout_ms;
+    if (sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        if (sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT)
+            options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        else
+            options.sort_key_filter_type = sort_key_filter_type;
+        options.sort_key_filter_pattern = sort_key_filter_pattern;
+    }
     if (stat_size || value_filter_type != pegasus::pegasus_client::FT_NO_FILTER)
         options.no_value = false;
     else
@@ -2252,6 +2305,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            stat_size,
                                                            top_count,
                                                            diff_hash_key);
+        context->set_sort_key_filter(sort_key_filter_type, sort_key_filter_pattern);
         context->set_value_filter(value_filter_type, value_filter_pattern);
         contexts.emplace_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
