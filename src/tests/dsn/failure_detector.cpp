@@ -169,7 +169,20 @@ public:
 
         _master_fd = new master_fd_test();
         _master_fd->set_options(&_opts);
-        _master_fd->start(1, 1, 4, 5);
+        bool use_allow_list = false;
+        if (args.size() >= 3 && args[1] == "whitelist") {
+            std::vector<std::string> ports;
+            utils::split_args(args[2].c_str(), ports, ',');
+            for (auto &port : ports) {
+                rpc_address addr;
+                addr.assign_ipv4(network::get_local_ipv4(), std::stoi(port));
+                _master_fd->add_allow_list(addr);
+            }
+            use_allow_list = true;
+        }
+
+        _master_fd->start(1, 1, 4, 5, use_allow_list);
+        dinfo("%s", _master_fd->get_allow_list(std::vector<std::string>{}).c_str());
         ++started_apps;
 
         return ERR_OK;
@@ -659,4 +672,25 @@ TEST(fd, update_stability)
     fd->reset_stability_stat(msg.from_addr);
     ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
     ASSERT_EQ(0, ws.unstable_restart_count);
+}
+
+TEST(fd, not_in_whitelist)
+{
+    test_worker *worker;
+    std::vector<test_master *> masters;
+    ASSERT_TRUE(get_worker_and_master(worker, masters));
+
+    clear(worker, masters);
+    // set master with smallest index as the leader
+    master_group_set_leader(masters, 0);
+    // set the worker contact leader
+    worker_set_leader(worker, 0);
+
+    std::atomic_int wait_count;
+    wait_count.store(1);
+    auto cb = [&wait_count](rpc_address) mutable { --wait_count; };
+    worker->fd()->when_connected(cb);
+    worker->fd()->toggle_send_ping(true);
+
+    ASSERT_TRUE(spin_wait_condition([&wait_count] { return wait_count == 1; }, 20));
 }

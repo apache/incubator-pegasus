@@ -18,21 +18,20 @@ function destroy_environment()
     fi
 }
 
-./clear.sh
 if [ -z "${REPORT_DIR}" ]; then
     REPORT_DIR="."
 fi
 
-filters="distributed_lock_service_zookeeper.simple_lock_unlock -distributed_lock_service_zookeeper.simple_lock_unlock"
+while read -r -a line; do
+    test_case=${line[0]}
+    gtest_filter=${line[1]}
+    output_xml="${REPORT_DIR}/dsn.tests_${test_case/.ini/.xml}"
+    echo "============ run dsn.tests ${test_case} with gtest_filter ${gtest_filter} ============"
+    ./clear.sh
+    GTEST_OUTPUT="xml:${output_xml}" GTEST_FILTER=${gtest_filter} ./dsn.tests ${test_case}
 
-for filter in $filters; do
-    echo "============ run dsn.tests with gtest_filter ${filter} ============"
-    output_xml="${REPORT_DIR}/dsn.tests.xml"
-    #prepare_environment $filter
-
-    GTEST_OUTPUT="xml:${output_xml}" GTEST_FILTER=$filter ./dsn.tests config-test.ini
     if [ $? -ne 0 ]; then
-        echo "run dsn.tests failed"
+        echo "run dsn.tests $test_case failed"
         echo "---- ls ----"
         ls -l
         if find . -name log.1.txt; then
@@ -43,10 +42,7 @@ for filter in $filters; do
             echo "---- gdb ./dsn.tests core ----"
             gdb ./dsn.tests core -ex "thread apply all bt" -ex "set pagination 0" -batch
         fi
-        #destroy_environment $filter
         exit 1
     fi
-
-    #destroy_environment $filter
-    echo "============ done dsn.tests with gtest_filter ${filter} ============"
-done
+    echo "============ done dsn.tests ${test_case} with gtest_filter ${gtest_filter} ============"
+done <gtest.filter

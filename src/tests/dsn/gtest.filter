@@ -1,0 +1,4 @@
+config-test.ini distributed_lock_service_zookeeper.simple_lock_unlock
+config-test.ini -distributed_lock_service_zookeeper.simple_lock_unlock:fd.not_in_whitelist
+config-whitelist-test.ini -distributed_lock_service_zookeeper.simple_lock_unlock:fd.not_in_whitelist
+config-whitelist-test-failed.ini fd.not_in_whitelist

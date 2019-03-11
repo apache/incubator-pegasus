@@ -136,7 +136,6 @@ public:
     network_header_format unknown_msg_hdr_format() const { return _unknown_msg_header_format; }
     int message_buffer_block_size() const { return _message_buffer_block_size; }
 
-protected:
     DSN_API static uint32_t get_local_ipv4();
 
 protected:

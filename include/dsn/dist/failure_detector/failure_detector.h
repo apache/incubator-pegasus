@@ -141,6 +141,8 @@ public:
 
     void set_allow_list(const std::vector<std::string> &replica_addrs);
 
+    std::string get_allow_list(const std::vector<std::string> &args) const;
+
     int worker_count() const { return static_cast<int>(_workers.size()); }
 
     int master_count() const { return static_cast<int>(_masters.size()); }
@@ -157,8 +159,6 @@ protected:
 
 private:
     void check_all_records();
-
-    std::string get_allow_list(const std::vector<std::string> &args) const;
 
 private:
     class master_record

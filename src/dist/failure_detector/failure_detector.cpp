@@ -67,22 +67,6 @@ void failure_detector::register_ctrl_commands()
 
 void failure_detector::unregister_ctrl_commands() { UNREGISTER_VALID_HANDLER(_get_allow_list); }
 
-std::string failure_detector::get_allow_list(const std::vector<std::string> &args) const
-{
-    if (!_is_started)
-        return "error: fd is not started";
-
-    std::stringstream oss;
-    dsn::zauto_lock l(_lock);
-    oss << "get ok: allow list " << (_use_allow_list ? "enabled. list: " : "disabled.");
-    for (auto iter = _allow_list.begin(); iter != _allow_list.end(); ++iter) {
-        if (iter != _allow_list.begin())
-            oss << ",";
-        oss << iter->to_string();
-    }
-    return oss.str();
-}
-
 error_code failure_detector::start(uint32_t check_interval_seconds,
                                    uint32_t beacon_interval_seconds,
                                    uint32_t lease_seconds,
@@ -321,7 +305,7 @@ bool failure_detector::remove_from_allow_list(::dsn::rpc_address node)
 
 void failure_detector::set_allow_list(const std::vector<std::string> &replica_addrs)
 {
-    dassert(_is_started, "FD is already started, the allow list should really not be modified");
+    dassert(!_is_started, "FD is already started, the allow list should really not be modified");
 
     std::vector<rpc_address> nodes;
     for (auto &addr : replica_addrs) {
@@ -336,6 +320,22 @@ void failure_detector::set_allow_list(const std::vector<std::string> &replica_ad
 
     for (auto &node : nodes)
         add_allow_list(node);
+}
+
+std::string failure_detector::get_allow_list(const std::vector<std::string> &args) const
+{
+    if (!_is_started)
+        return "error: FD is not started";
+
+    std::stringstream oss;
+    dsn::zauto_lock l(_lock);
+    oss << "get ok: allow list " << (_use_allow_list ? "enabled. list: " : "disabled.");
+    for (auto iter = _allow_list.begin(); iter != _allow_list.end(); ++iter) {
+        if (iter != _allow_list.begin())
+            oss << ",";
+        oss << iter->to_string();
+    }
+    return oss.str();
 }
 
 void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon_ack &ack)
