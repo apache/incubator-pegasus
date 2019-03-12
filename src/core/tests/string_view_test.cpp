@@ -379,4 +379,58 @@ TEST(StringViewTest, FindConformance)
     }
 }
 
-} // namespace dsn
+class StringViewStreamTest : public ::testing::Test
+{
+public:
+    // Set negative 'width' for right justification.
+    template <typename T>
+    std::string Pad(const T &s, int width, char fill = 0)
+    {
+        std::ostringstream oss;
+        if (fill != 0) {
+            oss << std::setfill(fill);
+        }
+        if (width < 0) {
+            width = -width;
+            oss << std::right;
+        }
+        oss << std::setw(width) << s;
+        return oss.str();
+    }
+};
+
+TEST_F(StringViewStreamTest, Padding)
+{
+    std::string s("hello");
+    dsn::string_view sp(s);
+    for (int w = -64; w < 64; ++w) {
+        SCOPED_TRACE(w);
+        EXPECT_EQ(Pad(s, w), Pad(sp, w));
+    }
+    for (int w = -64; w < 64; ++w) {
+        SCOPED_TRACE(w);
+        EXPECT_EQ(Pad(s, w, '#'), Pad(sp, w, '#'));
+    }
+}
+
+TEST_F(StringViewStreamTest, ResetsWidth)
+{
+    // Width should reset after one formatted write.
+    // If we weren't resetting width after formatting the string_view,
+    // we'd have width=5 carrying over to the printing of the "]",
+    // creating "[###hi####]".
+    std::string s = "hi";
+    dsn::string_view sp = s;
+    {
+        std::ostringstream oss;
+        oss << "[" << std::setfill('#') << std::setw(5) << s << "]";
+        ASSERT_EQ("[###hi]", oss.str());
+    }
+    {
+        std::ostringstream oss;
+        oss << "[" << std::setfill('#') << std::setw(5) << sp << "]";
+        EXPECT_EQ("[###hi]", oss.str());
+    }
+}
+
+} // namespace

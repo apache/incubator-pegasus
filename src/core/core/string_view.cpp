@@ -14,10 +14,48 @@
 // limitations under the License.
 
 #include <dsn/utility/string_view.h>
+#include <ostream>
 
 #include "memutil.h"
 
 namespace dsn {
+
+namespace {
+void WritePadding(std::ostream &o, size_t pad)
+{
+    char fill_buf[32];
+    memset(fill_buf, o.fill(), sizeof(fill_buf));
+    while (pad) {
+        size_t n = std::min(pad, sizeof(fill_buf));
+        o.write(fill_buf, n);
+        pad -= n;
+    }
+}
+} // namespace
+
+std::ostream &operator<<(std::ostream &o, string_view piece)
+{
+    std::ostream::sentry sentry(o);
+    if (sentry) {
+        size_t lpad = 0;
+        size_t rpad = 0;
+        if (static_cast<size_t>(o.width()) > piece.size()) {
+            size_t pad = o.width() - piece.size();
+            if ((o.flags() & o.adjustfield) == o.left) {
+                rpad = pad;
+            } else {
+                lpad = pad;
+            }
+        }
+        if (lpad)
+            WritePadding(o, lpad);
+        o.write(piece.data(), piece.size());
+        if (rpad)
+            WritePadding(o, rpad);
+        o.width(0);
+    }
+    return o;
+}
 
 namespace strings_internal {
 
