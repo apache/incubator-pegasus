@@ -91,7 +91,7 @@ copy_file ./DSN_ROOT/bin/pegasus_server/pegasus_server ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_meta_server.so ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_replica_server.so ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libtcmalloc.so.4 ${pack}/bin
+copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 
