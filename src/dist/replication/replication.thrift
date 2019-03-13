@@ -104,6 +104,9 @@ struct learn_state
     2:i64            to_decree_included;
     3:dsn.blob       meta;
     4:list<string>   files;
+
+    // Used by duplication. Holds the start_decree of this round of learn.
+    5:optional i64   learn_start_decree;
 }
 
 enum learner_status
@@ -124,6 +127,11 @@ struct learn_request
     4:i64                 last_committed_decree_in_app; // last committed decree of learner's app
     5:i64                 last_committed_decree_in_prepare_list; // last committed decree of learner's prepare list
     6:dsn.blob            app_specific_learn_request; // learning request data by app.prepare_learn_request()
+
+    // Used by duplication to determine if learner has enough logs on disk to
+    // be duplicated (ie. max_gced_decree < confirmed_decree), if not,
+    // learnee will copy the missing logs.
+    7:optional i64        max_gced_decree;
 }
 
 struct learn_response
@@ -147,10 +155,15 @@ struct learn_notify_response
 
 struct group_check_request
 {
-    1:dsn.layer2.app_info          app;
+    1:dsn.layer2.app_info   app;
     2:dsn.rpc_address       node;
     3:replica_configuration config;
     4:i64                   last_committed_decree;
+
+    // Used to sync duplication progress between primaries
+    // and secondaries, so that secondaries can be allowed to GC
+    // their WALs after this decree.
+    5:optional i64          confirmed_decree;
 }
 
 struct group_check_response
@@ -615,8 +628,11 @@ enum duplication_status
 // This request is sent from client to meta.
 struct duplication_add_request
 {
-    1:string                    app_name;
-    2:string                    remote_cluster_address;
+    1:string  app_name;
+    2:string  remote_cluster_address;
+
+    // True means to initialize the duplication in DS_PAUSE.
+    3:bool    freezed;
 }
 
 struct duplication_add_response
@@ -674,7 +690,8 @@ struct duplication_query_response
     4:list<duplication_entry>    entry_list;
 }
 
-struct duplication_confirm_entry {
+struct duplication_confirm_entry
+{
     1:i32       dupid;
     2:i64       confirmed_decree;
 }
@@ -703,9 +720,9 @@ struct duplication_sync_response
     // - ERR_OBJECT_NOT_FOUND: node is not found
     1:dsn.error_code                                   err;
 
-    // appid -> list<dup_entry>
+    // appid -> map<dupid, dup_entry>
     // this rpc will not return the apps that were not assigned duplication.
-    2:map<i32, list<duplication_entry>>                dup_map;
+    2:map<i32, map<i32, duplication_entry>>            dup_map;
 }
 
 struct ddd_diagnose_request

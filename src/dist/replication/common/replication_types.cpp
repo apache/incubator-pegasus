@@ -1508,6 +1508,12 @@ void learn_state::__set_meta(const ::dsn::blob &val) { this->meta = val; }
 
 void learn_state::__set_files(const std::vector<std::string> &val) { this->files = val; }
 
+void learn_state::__set_learn_start_decree(const int64_t val)
+{
+    this->learn_start_decree = val;
+    __isset.learn_start_decree = true;
+}
+
 uint32_t learn_state::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -1570,6 +1576,14 @@ uint32_t learn_state::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 5:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->learn_start_decree);
+                this->__isset.learn_start_decree = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -1612,6 +1626,11 @@ uint32_t learn_state::write(::apache::thrift::protocol::TProtocol *oprot) const
     }
     xfer += oprot->writeFieldEnd();
 
+    if (this->__isset.learn_start_decree) {
+        xfer += oprot->writeFieldBegin("learn_start_decree", ::apache::thrift::protocol::T_I64, 5);
+        xfer += oprot->writeI64(this->learn_start_decree);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -1624,6 +1643,7 @@ void swap(learn_state &a, learn_state &b)
     swap(a.to_decree_included, b.to_decree_included);
     swap(a.meta, b.meta);
     swap(a.files, b.files);
+    swap(a.learn_start_decree, b.learn_start_decree);
     swap(a.__isset, b.__isset);
 }
 
@@ -1633,6 +1653,7 @@ learn_state::learn_state(const learn_state &other50)
     to_decree_included = other50.to_decree_included;
     meta = other50.meta;
     files = other50.files;
+    learn_start_decree = other50.learn_start_decree;
     __isset = other50.__isset;
 }
 learn_state::learn_state(learn_state &&other51)
@@ -1641,6 +1662,7 @@ learn_state::learn_state(learn_state &&other51)
     to_decree_included = std::move(other51.to_decree_included);
     meta = std::move(other51.meta);
     files = std::move(other51.files);
+    learn_start_decree = std::move(other51.learn_start_decree);
     __isset = std::move(other51.__isset);
 }
 learn_state &learn_state::operator=(const learn_state &other52)
@@ -1649,6 +1671,7 @@ learn_state &learn_state::operator=(const learn_state &other52)
     to_decree_included = other52.to_decree_included;
     meta = other52.meta;
     files = other52.files;
+    learn_start_decree = other52.learn_start_decree;
     __isset = other52.__isset;
     return *this;
 }
@@ -1658,6 +1681,7 @@ learn_state &learn_state::operator=(learn_state &&other53)
     to_decree_included = std::move(other53.to_decree_included);
     meta = std::move(other53.meta);
     files = std::move(other53.files);
+    learn_start_decree = std::move(other53.learn_start_decree);
     __isset = std::move(other53.__isset);
     return *this;
 }
@@ -1672,6 +1696,9 @@ void learn_state::printTo(std::ostream &out) const
         << "meta=" << to_string(meta);
     out << ", "
         << "files=" << to_string(files);
+    out << ", "
+        << "learn_start_decree=";
+    (__isset.learn_start_decree ? (out << to_string(learn_start_decree)) : (out << "<null>"));
     out << ")";
 }
 
@@ -1696,6 +1723,12 @@ void learn_request::__set_last_committed_decree_in_prepare_list(const int64_t va
 void learn_request::__set_app_specific_learn_request(const ::dsn::blob &val)
 {
     this->app_specific_learn_request = val;
+}
+
+void learn_request::__set_max_gced_decree(const int64_t val)
+{
+    this->max_gced_decree = val;
+    __isset.max_gced_decree = true;
 }
 
 uint32_t learn_request::read(::apache::thrift::protocol::TProtocol *iprot)
@@ -1765,6 +1798,14 @@ uint32_t learn_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 7:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->max_gced_decree);
+                this->__isset.max_gced_decree = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -1810,6 +1851,11 @@ uint32_t learn_request::write(::apache::thrift::protocol::TProtocol *oprot) cons
     xfer += this->app_specific_learn_request.write(oprot);
     xfer += oprot->writeFieldEnd();
 
+    if (this->__isset.max_gced_decree) {
+        xfer += oprot->writeFieldBegin("max_gced_decree", ::apache::thrift::protocol::T_I64, 7);
+        xfer += oprot->writeI64(this->max_gced_decree);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -1824,6 +1870,7 @@ void swap(learn_request &a, learn_request &b)
     swap(a.last_committed_decree_in_app, b.last_committed_decree_in_app);
     swap(a.last_committed_decree_in_prepare_list, b.last_committed_decree_in_prepare_list);
     swap(a.app_specific_learn_request, b.app_specific_learn_request);
+    swap(a.max_gced_decree, b.max_gced_decree);
     swap(a.__isset, b.__isset);
 }
 
@@ -1835,6 +1882,7 @@ learn_request::learn_request(const learn_request &other54)
     last_committed_decree_in_app = other54.last_committed_decree_in_app;
     last_committed_decree_in_prepare_list = other54.last_committed_decree_in_prepare_list;
     app_specific_learn_request = other54.app_specific_learn_request;
+    max_gced_decree = other54.max_gced_decree;
     __isset = other54.__isset;
 }
 learn_request::learn_request(learn_request &&other55)
@@ -1846,6 +1894,7 @@ learn_request::learn_request(learn_request &&other55)
     last_committed_decree_in_prepare_list =
         std::move(other55.last_committed_decree_in_prepare_list);
     app_specific_learn_request = std::move(other55.app_specific_learn_request);
+    max_gced_decree = std::move(other55.max_gced_decree);
     __isset = std::move(other55.__isset);
 }
 learn_request &learn_request::operator=(const learn_request &other56)
@@ -1856,6 +1905,7 @@ learn_request &learn_request::operator=(const learn_request &other56)
     last_committed_decree_in_app = other56.last_committed_decree_in_app;
     last_committed_decree_in_prepare_list = other56.last_committed_decree_in_prepare_list;
     app_specific_learn_request = other56.app_specific_learn_request;
+    max_gced_decree = other56.max_gced_decree;
     __isset = other56.__isset;
     return *this;
 }
@@ -1868,6 +1918,7 @@ learn_request &learn_request::operator=(learn_request &&other57)
     last_committed_decree_in_prepare_list =
         std::move(other57.last_committed_decree_in_prepare_list);
     app_specific_learn_request = std::move(other57.app_specific_learn_request);
+    max_gced_decree = std::move(other57.max_gced_decree);
     __isset = std::move(other57.__isset);
     return *this;
 }
@@ -1887,6 +1938,9 @@ void learn_request::printTo(std::ostream &out) const
         << to_string(last_committed_decree_in_prepare_list);
     out << ", "
         << "app_specific_learn_request=" << to_string(app_specific_learn_request);
+    out << ", "
+        << "max_gced_decree=";
+    (__isset.max_gced_decree ? (out << to_string(max_gced_decree)) : (out << "<null>"));
     out << ")";
 }
 
@@ -2290,6 +2344,12 @@ void group_check_request::__set_last_committed_decree(const int64_t val)
     this->last_committed_decree = val;
 }
 
+void group_check_request::__set_confirmed_decree(const int64_t val)
+{
+    this->confirmed_decree = val;
+    __isset.confirmed_decree = true;
+}
+
 uint32_t group_check_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -2341,6 +2401,14 @@ uint32_t group_check_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 5:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->confirmed_decree);
+                this->__isset.confirmed_decree = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -2375,6 +2443,11 @@ uint32_t group_check_request::write(::apache::thrift::protocol::TProtocol *oprot
     xfer += oprot->writeI64(this->last_committed_decree);
     xfer += oprot->writeFieldEnd();
 
+    if (this->__isset.confirmed_decree) {
+        xfer += oprot->writeFieldBegin("confirmed_decree", ::apache::thrift::protocol::T_I64, 5);
+        xfer += oprot->writeI64(this->confirmed_decree);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -2387,6 +2460,7 @@ void swap(group_check_request &a, group_check_request &b)
     swap(a.node, b.node);
     swap(a.config, b.config);
     swap(a.last_committed_decree, b.last_committed_decree);
+    swap(a.confirmed_decree, b.confirmed_decree);
     swap(a.__isset, b.__isset);
 }
 
@@ -2396,6 +2470,7 @@ group_check_request::group_check_request(const group_check_request &other67)
     node = other67.node;
     config = other67.config;
     last_committed_decree = other67.last_committed_decree;
+    confirmed_decree = other67.confirmed_decree;
     __isset = other67.__isset;
 }
 group_check_request::group_check_request(group_check_request &&other68)
@@ -2404,6 +2479,7 @@ group_check_request::group_check_request(group_check_request &&other68)
     node = std::move(other68.node);
     config = std::move(other68.config);
     last_committed_decree = std::move(other68.last_committed_decree);
+    confirmed_decree = std::move(other68.confirmed_decree);
     __isset = std::move(other68.__isset);
 }
 group_check_request &group_check_request::operator=(const group_check_request &other69)
@@ -2412,6 +2488,7 @@ group_check_request &group_check_request::operator=(const group_check_request &o
     node = other69.node;
     config = other69.config;
     last_committed_decree = other69.last_committed_decree;
+    confirmed_decree = other69.confirmed_decree;
     __isset = other69.__isset;
     return *this;
 }
@@ -2421,6 +2498,7 @@ group_check_request &group_check_request::operator=(group_check_request &&other7
     node = std::move(other70.node);
     config = std::move(other70.config);
     last_committed_decree = std::move(other70.last_committed_decree);
+    confirmed_decree = std::move(other70.confirmed_decree);
     __isset = std::move(other70.__isset);
     return *this;
 }
@@ -2435,6 +2513,9 @@ void group_check_request::printTo(std::ostream &out) const
         << "config=" << to_string(config);
     out << ", "
         << "last_committed_decree=" << to_string(last_committed_decree);
+    out << ", "
+        << "confirmed_decree=";
+    (__isset.confirmed_decree ? (out << to_string(confirmed_decree)) : (out << "<null>"));
     out << ")";
 }
 
@@ -10736,6 +10817,8 @@ void duplication_add_request::__set_remote_cluster_address(const std::string &va
     this->remote_cluster_address = val;
 }
 
+void duplication_add_request::__set_freezed(const bool val) { this->freezed = val; }
+
 uint32_t duplication_add_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -10771,6 +10854,14 @@ uint32_t duplication_add_request::read(::apache::thrift::protocol::TProtocol *ip
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 3:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->freezed);
+                this->__isset.freezed = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -10798,6 +10889,10 @@ uint32_t duplication_add_request::write(::apache::thrift::protocol::TProtocol *o
     xfer += oprot->writeString(this->remote_cluster_address);
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("freezed", ::apache::thrift::protocol::T_BOOL, 3);
+    xfer += oprot->writeBool(this->freezed);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -10808,6 +10903,7 @@ void swap(duplication_add_request &a, duplication_add_request &b)
     using ::std::swap;
     swap(a.app_name, b.app_name);
     swap(a.remote_cluster_address, b.remote_cluster_address);
+    swap(a.freezed, b.freezed);
     swap(a.__isset, b.__isset);
 }
 
@@ -10815,18 +10911,21 @@ duplication_add_request::duplication_add_request(const duplication_add_request &
 {
     app_name = other456.app_name;
     remote_cluster_address = other456.remote_cluster_address;
+    freezed = other456.freezed;
     __isset = other456.__isset;
 }
 duplication_add_request::duplication_add_request(duplication_add_request &&other457)
 {
     app_name = std::move(other457.app_name);
     remote_cluster_address = std::move(other457.remote_cluster_address);
+    freezed = std::move(other457.freezed);
     __isset = std::move(other457.__isset);
 }
 duplication_add_request &duplication_add_request::operator=(const duplication_add_request &other458)
 {
     app_name = other458.app_name;
     remote_cluster_address = other458.remote_cluster_address;
+    freezed = other458.freezed;
     __isset = other458.__isset;
     return *this;
 }
@@ -10834,6 +10933,7 @@ duplication_add_request &duplication_add_request::operator=(duplication_add_requ
 {
     app_name = std::move(other459.app_name);
     remote_cluster_address = std::move(other459.remote_cluster_address);
+    freezed = std::move(other459.freezed);
     __isset = std::move(other459.__isset);
     return *this;
 }
@@ -10844,6 +10944,8 @@ void duplication_add_request::printTo(std::ostream &out) const
     out << "app_name=" << to_string(app_name);
     out << ", "
         << "remote_cluster_address=" << to_string(remote_cluster_address);
+    out << ", "
+        << "freezed=" << to_string(freezed);
     out << ")";
 }
 
@@ -12018,7 +12120,7 @@ duplication_sync_response::~duplication_sync_response() throw() {}
 void duplication_sync_response::__set_err(const ::dsn::error_code &val) { this->err = val; }
 
 void duplication_sync_response::__set_dup_map(
-    const std::map<int32_t, std::vector<duplication_entry>> &val)
+    const std::map<int32_t, std::map<int32_t, duplication_entry>> &val)
 {
     this->dup_map = val;
 }
@@ -12062,18 +12164,21 @@ uint32_t duplication_sync_response::read(::apache::thrift::protocol::TProtocol *
                     for (_i526 = 0; _i526 < _size522; ++_i526) {
                         int32_t _key527;
                         xfer += iprot->readI32(_key527);
-                        std::vector<duplication_entry> &_val528 = this->dup_map[_key527];
+                        std::map<int32_t, duplication_entry> &_val528 = this->dup_map[_key527];
                         {
                             _val528.clear();
                             uint32_t _size529;
-                            ::apache::thrift::protocol::TType _etype532;
-                            xfer += iprot->readListBegin(_etype532, _size529);
-                            _val528.resize(_size529);
+                            ::apache::thrift::protocol::TType _ktype530;
+                            ::apache::thrift::protocol::TType _vtype531;
+                            xfer += iprot->readMapBegin(_ktype530, _vtype531, _size529);
                             uint32_t _i533;
                             for (_i533 = 0; _i533 < _size529; ++_i533) {
-                                xfer += _val528[_i533].read(iprot);
+                                int32_t _key534;
+                                xfer += iprot->readI32(_key534);
+                                duplication_entry &_val535 = _val528[_key534];
+                                xfer += _val535.read(iprot);
                             }
-                            xfer += iprot->readListEnd();
+                            xfer += iprot->readMapEnd();
                         }
                     }
                     xfer += iprot->readMapEnd();
@@ -12108,20 +12213,22 @@ uint32_t duplication_sync_response::write(::apache::thrift::protocol::TProtocol 
     xfer += oprot->writeFieldBegin("dup_map", ::apache::thrift::protocol::T_MAP, 2);
     {
         xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_I32,
-                                     ::apache::thrift::protocol::T_LIST,
+                                     ::apache::thrift::protocol::T_MAP,
                                      static_cast<uint32_t>(this->dup_map.size()));
-        std::map<int32_t, std::vector<duplication_entry>>::const_iterator _iter534;
-        for (_iter534 = this->dup_map.begin(); _iter534 != this->dup_map.end(); ++_iter534) {
-            xfer += oprot->writeI32(_iter534->first);
+        std::map<int32_t, std::map<int32_t, duplication_entry>>::const_iterator _iter536;
+        for (_iter536 = this->dup_map.begin(); _iter536 != this->dup_map.end(); ++_iter536) {
+            xfer += oprot->writeI32(_iter536->first);
             {
-                xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
-                                              static_cast<uint32_t>(_iter534->second.size()));
-                std::vector<duplication_entry>::const_iterator _iter535;
-                for (_iter535 = _iter534->second.begin(); _iter535 != _iter534->second.end();
-                     ++_iter535) {
-                    xfer += (*_iter535).write(oprot);
+                xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_I32,
+                                             ::apache::thrift::protocol::T_STRUCT,
+                                             static_cast<uint32_t>(_iter536->second.size()));
+                std::map<int32_t, duplication_entry>::const_iterator _iter537;
+                for (_iter537 = _iter536->second.begin(); _iter537 != _iter536->second.end();
+                     ++_iter537) {
+                    xfer += oprot->writeI32(_iter537->first);
+                    xfer += _iter537->second.write(oprot);
                 }
-                xfer += oprot->writeListEnd();
+                xfer += oprot->writeMapEnd();
             }
         }
         xfer += oprot->writeMapEnd();
@@ -12141,32 +12248,32 @@ void swap(duplication_sync_response &a, duplication_sync_response &b)
     swap(a.__isset, b.__isset);
 }
 
-duplication_sync_response::duplication_sync_response(const duplication_sync_response &other536)
-{
-    err = other536.err;
-    dup_map = other536.dup_map;
-    __isset = other536.__isset;
-}
-duplication_sync_response::duplication_sync_response(duplication_sync_response &&other537)
-{
-    err = std::move(other537.err);
-    dup_map = std::move(other537.dup_map);
-    __isset = std::move(other537.__isset);
-}
-duplication_sync_response &duplication_sync_response::
-operator=(const duplication_sync_response &other538)
+duplication_sync_response::duplication_sync_response(const duplication_sync_response &other538)
 {
     err = other538.err;
     dup_map = other538.dup_map;
     __isset = other538.__isset;
-    return *this;
 }
-duplication_sync_response &duplication_sync_response::
-operator=(duplication_sync_response &&other539)
+duplication_sync_response::duplication_sync_response(duplication_sync_response &&other539)
 {
     err = std::move(other539.err);
     dup_map = std::move(other539.dup_map);
     __isset = std::move(other539.__isset);
+}
+duplication_sync_response &duplication_sync_response::
+operator=(const duplication_sync_response &other540)
+{
+    err = other540.err;
+    dup_map = other540.dup_map;
+    __isset = other540.__isset;
+    return *this;
+}
+duplication_sync_response &duplication_sync_response::
+operator=(duplication_sync_response &&other541)
+{
+    err = std::move(other541.err);
+    dup_map = std::move(other541.dup_map);
+    __isset = std::move(other541.__isset);
     return *this;
 }
 void duplication_sync_response::printTo(std::ostream &out) const
@@ -12244,26 +12351,26 @@ void swap(ddd_diagnose_request &a, ddd_diagnose_request &b)
     swap(a.__isset, b.__isset);
 }
 
-ddd_diagnose_request::ddd_diagnose_request(const ddd_diagnose_request &other540)
-{
-    pid = other540.pid;
-    __isset = other540.__isset;
-}
-ddd_diagnose_request::ddd_diagnose_request(ddd_diagnose_request &&other541)
-{
-    pid = std::move(other541.pid);
-    __isset = std::move(other541.__isset);
-}
-ddd_diagnose_request &ddd_diagnose_request::operator=(const ddd_diagnose_request &other542)
+ddd_diagnose_request::ddd_diagnose_request(const ddd_diagnose_request &other542)
 {
     pid = other542.pid;
     __isset = other542.__isset;
-    return *this;
 }
-ddd_diagnose_request &ddd_diagnose_request::operator=(ddd_diagnose_request &&other543)
+ddd_diagnose_request::ddd_diagnose_request(ddd_diagnose_request &&other543)
 {
     pid = std::move(other543.pid);
     __isset = std::move(other543.__isset);
+}
+ddd_diagnose_request &ddd_diagnose_request::operator=(const ddd_diagnose_request &other544)
+{
+    pid = other544.pid;
+    __isset = other544.__isset;
+    return *this;
+}
+ddd_diagnose_request &ddd_diagnose_request::operator=(ddd_diagnose_request &&other545)
+{
+    pid = std::move(other545.pid);
+    __isset = std::move(other545.__isset);
     return *this;
 }
 void ddd_diagnose_request::printTo(std::ostream &out) const
@@ -12435,29 +12542,7 @@ void swap(ddd_node_info &a, ddd_node_info &b)
     swap(a.__isset, b.__isset);
 }
 
-ddd_node_info::ddd_node_info(const ddd_node_info &other544)
-{
-    node = other544.node;
-    drop_time_ms = other544.drop_time_ms;
-    is_alive = other544.is_alive;
-    is_collected = other544.is_collected;
-    ballot = other544.ballot;
-    last_committed_decree = other544.last_committed_decree;
-    last_prepared_decree = other544.last_prepared_decree;
-    __isset = other544.__isset;
-}
-ddd_node_info::ddd_node_info(ddd_node_info &&other545)
-{
-    node = std::move(other545.node);
-    drop_time_ms = std::move(other545.drop_time_ms);
-    is_alive = std::move(other545.is_alive);
-    is_collected = std::move(other545.is_collected);
-    ballot = std::move(other545.ballot);
-    last_committed_decree = std::move(other545.last_committed_decree);
-    last_prepared_decree = std::move(other545.last_prepared_decree);
-    __isset = std::move(other545.__isset);
-}
-ddd_node_info &ddd_node_info::operator=(const ddd_node_info &other546)
+ddd_node_info::ddd_node_info(const ddd_node_info &other546)
 {
     node = other546.node;
     drop_time_ms = other546.drop_time_ms;
@@ -12467,9 +12552,8 @@ ddd_node_info &ddd_node_info::operator=(const ddd_node_info &other546)
     last_committed_decree = other546.last_committed_decree;
     last_prepared_decree = other546.last_prepared_decree;
     __isset = other546.__isset;
-    return *this;
 }
-ddd_node_info &ddd_node_info::operator=(ddd_node_info &&other547)
+ddd_node_info::ddd_node_info(ddd_node_info &&other547)
 {
     node = std::move(other547.node);
     drop_time_ms = std::move(other547.drop_time_ms);
@@ -12479,6 +12563,29 @@ ddd_node_info &ddd_node_info::operator=(ddd_node_info &&other547)
     last_committed_decree = std::move(other547.last_committed_decree);
     last_prepared_decree = std::move(other547.last_prepared_decree);
     __isset = std::move(other547.__isset);
+}
+ddd_node_info &ddd_node_info::operator=(const ddd_node_info &other548)
+{
+    node = other548.node;
+    drop_time_ms = other548.drop_time_ms;
+    is_alive = other548.is_alive;
+    is_collected = other548.is_collected;
+    ballot = other548.ballot;
+    last_committed_decree = other548.last_committed_decree;
+    last_prepared_decree = other548.last_prepared_decree;
+    __isset = other548.__isset;
+    return *this;
+}
+ddd_node_info &ddd_node_info::operator=(ddd_node_info &&other549)
+{
+    node = std::move(other549.node);
+    drop_time_ms = std::move(other549.drop_time_ms);
+    is_alive = std::move(other549.is_alive);
+    is_collected = std::move(other549.is_collected);
+    ballot = std::move(other549.ballot);
+    last_committed_decree = std::move(other549.last_committed_decree);
+    last_prepared_decree = std::move(other549.last_prepared_decree);
+    __isset = std::move(other549.__isset);
     return *this;
 }
 void ddd_node_info::printTo(std::ostream &out) const
@@ -12546,13 +12653,13 @@ uint32_t ddd_partition_info::read(::apache::thrift::protocol::TProtocol *iprot)
             if (ftype == ::apache::thrift::protocol::T_LIST) {
                 {
                     this->dropped.clear();
-                    uint32_t _size548;
-                    ::apache::thrift::protocol::TType _etype551;
-                    xfer += iprot->readListBegin(_etype551, _size548);
-                    this->dropped.resize(_size548);
-                    uint32_t _i552;
-                    for (_i552 = 0; _i552 < _size548; ++_i552) {
-                        xfer += this->dropped[_i552].read(iprot);
+                    uint32_t _size550;
+                    ::apache::thrift::protocol::TType _etype553;
+                    xfer += iprot->readListBegin(_etype553, _size550);
+                    this->dropped.resize(_size550);
+                    uint32_t _i554;
+                    for (_i554 = 0; _i554 < _size550; ++_i554) {
+                        xfer += this->dropped[_i554].read(iprot);
                     }
                     xfer += iprot->readListEnd();
                 }
@@ -12595,9 +12702,9 @@ uint32_t ddd_partition_info::write(::apache::thrift::protocol::TProtocol *oprot)
     {
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
                                       static_cast<uint32_t>(this->dropped.size()));
-        std::vector<ddd_node_info>::const_iterator _iter553;
-        for (_iter553 = this->dropped.begin(); _iter553 != this->dropped.end(); ++_iter553) {
-            xfer += (*_iter553).write(oprot);
+        std::vector<ddd_node_info>::const_iterator _iter555;
+        for (_iter555 = this->dropped.begin(); _iter555 != this->dropped.end(); ++_iter555) {
+            xfer += (*_iter555).write(oprot);
         }
         xfer += oprot->writeListEnd();
     }
@@ -12621,34 +12728,34 @@ void swap(ddd_partition_info &a, ddd_partition_info &b)
     swap(a.__isset, b.__isset);
 }
 
-ddd_partition_info::ddd_partition_info(const ddd_partition_info &other554)
-{
-    config = other554.config;
-    dropped = other554.dropped;
-    reason = other554.reason;
-    __isset = other554.__isset;
-}
-ddd_partition_info::ddd_partition_info(ddd_partition_info &&other555)
-{
-    config = std::move(other555.config);
-    dropped = std::move(other555.dropped);
-    reason = std::move(other555.reason);
-    __isset = std::move(other555.__isset);
-}
-ddd_partition_info &ddd_partition_info::operator=(const ddd_partition_info &other556)
+ddd_partition_info::ddd_partition_info(const ddd_partition_info &other556)
 {
     config = other556.config;
     dropped = other556.dropped;
     reason = other556.reason;
     __isset = other556.__isset;
-    return *this;
 }
-ddd_partition_info &ddd_partition_info::operator=(ddd_partition_info &&other557)
+ddd_partition_info::ddd_partition_info(ddd_partition_info &&other557)
 {
     config = std::move(other557.config);
     dropped = std::move(other557.dropped);
     reason = std::move(other557.reason);
     __isset = std::move(other557.__isset);
+}
+ddd_partition_info &ddd_partition_info::operator=(const ddd_partition_info &other558)
+{
+    config = other558.config;
+    dropped = other558.dropped;
+    reason = other558.reason;
+    __isset = other558.__isset;
+    return *this;
+}
+ddd_partition_info &ddd_partition_info::operator=(ddd_partition_info &&other559)
+{
+    config = std::move(other559.config);
+    dropped = std::move(other559.dropped);
+    reason = std::move(other559.reason);
+    __isset = std::move(other559.__isset);
     return *this;
 }
 void ddd_partition_info::printTo(std::ostream &out) const
@@ -12703,13 +12810,13 @@ uint32_t ddd_diagnose_response::read(::apache::thrift::protocol::TProtocol *ipro
             if (ftype == ::apache::thrift::protocol::T_LIST) {
                 {
                     this->partitions.clear();
-                    uint32_t _size558;
-                    ::apache::thrift::protocol::TType _etype561;
-                    xfer += iprot->readListBegin(_etype561, _size558);
-                    this->partitions.resize(_size558);
-                    uint32_t _i562;
-                    for (_i562 = 0; _i562 < _size558; ++_i562) {
-                        xfer += this->partitions[_i562].read(iprot);
+                    uint32_t _size560;
+                    ::apache::thrift::protocol::TType _etype563;
+                    xfer += iprot->readListBegin(_etype563, _size560);
+                    this->partitions.resize(_size560);
+                    uint32_t _i564;
+                    for (_i564 = 0; _i564 < _size560; ++_i564) {
+                        xfer += this->partitions[_i564].read(iprot);
                     }
                     xfer += iprot->readListEnd();
                 }
@@ -12744,9 +12851,9 @@ uint32_t ddd_diagnose_response::write(::apache::thrift::protocol::TProtocol *opr
     {
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
                                       static_cast<uint32_t>(this->partitions.size()));
-        std::vector<ddd_partition_info>::const_iterator _iter563;
-        for (_iter563 = this->partitions.begin(); _iter563 != this->partitions.end(); ++_iter563) {
-            xfer += (*_iter563).write(oprot);
+        std::vector<ddd_partition_info>::const_iterator _iter565;
+        for (_iter565 = this->partitions.begin(); _iter565 != this->partitions.end(); ++_iter565) {
+            xfer += (*_iter565).write(oprot);
         }
         xfer += oprot->writeListEnd();
     }
@@ -12765,30 +12872,30 @@ void swap(ddd_diagnose_response &a, ddd_diagnose_response &b)
     swap(a.__isset, b.__isset);
 }
 
-ddd_diagnose_response::ddd_diagnose_response(const ddd_diagnose_response &other564)
-{
-    err = other564.err;
-    partitions = other564.partitions;
-    __isset = other564.__isset;
-}
-ddd_diagnose_response::ddd_diagnose_response(ddd_diagnose_response &&other565)
-{
-    err = std::move(other565.err);
-    partitions = std::move(other565.partitions);
-    __isset = std::move(other565.__isset);
-}
-ddd_diagnose_response &ddd_diagnose_response::operator=(const ddd_diagnose_response &other566)
+ddd_diagnose_response::ddd_diagnose_response(const ddd_diagnose_response &other566)
 {
     err = other566.err;
     partitions = other566.partitions;
     __isset = other566.__isset;
-    return *this;
 }
-ddd_diagnose_response &ddd_diagnose_response::operator=(ddd_diagnose_response &&other567)
+ddd_diagnose_response::ddd_diagnose_response(ddd_diagnose_response &&other567)
 {
     err = std::move(other567.err);
     partitions = std::move(other567.partitions);
     __isset = std::move(other567.__isset);
+}
+ddd_diagnose_response &ddd_diagnose_response::operator=(const ddd_diagnose_response &other568)
+{
+    err = other568.err;
+    partitions = other568.partitions;
+    __isset = other568.__isset;
+    return *this;
+}
+ddd_diagnose_response &ddd_diagnose_response::operator=(ddd_diagnose_response &&other569)
+{
+    err = std::move(other569.err);
+    partitions = std::move(other569.partitions);
+    __isset = std::move(other569.__isset);
     return *this;
 }
 void ddd_diagnose_response::printTo(std::ostream &out) const

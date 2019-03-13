@@ -905,13 +905,18 @@ inline std::ostream &operator<<(std::ostream &out, const prepare_ack &obj)
 typedef struct _learn_state__isset
 {
     _learn_state__isset()
-        : from_decree_excluded(false), to_decree_included(false), meta(false), files(false)
+        : from_decree_excluded(false),
+          to_decree_included(false),
+          meta(false),
+          files(false),
+          learn_start_decree(false)
     {
     }
     bool from_decree_excluded : 1;
     bool to_decree_included : 1;
     bool meta : 1;
     bool files : 1;
+    bool learn_start_decree : 1;
 } _learn_state__isset;
 
 class learn_state
@@ -921,13 +926,14 @@ public:
     learn_state(learn_state &&);
     learn_state &operator=(const learn_state &);
     learn_state &operator=(learn_state &&);
-    learn_state() : from_decree_excluded(0), to_decree_included(0) {}
+    learn_state() : from_decree_excluded(0), to_decree_included(0), learn_start_decree(0) {}
 
     virtual ~learn_state() throw();
     int64_t from_decree_excluded;
     int64_t to_decree_included;
     ::dsn::blob meta;
     std::vector<std::string> files;
+    int64_t learn_start_decree;
 
     _learn_state__isset __isset;
 
@@ -939,6 +945,8 @@ public:
 
     void __set_files(const std::vector<std::string> &val);
 
+    void __set_learn_start_decree(const int64_t val);
+
     bool operator==(const learn_state &rhs) const
     {
         if (!(from_decree_excluded == rhs.from_decree_excluded))
@@ -948,6 +956,10 @@ public:
         if (!(meta == rhs.meta))
             return false;
         if (!(files == rhs.files))
+            return false;
+        if (__isset.learn_start_decree != rhs.__isset.learn_start_decree)
+            return false;
+        else if (__isset.learn_start_decree && !(learn_start_decree == rhs.learn_start_decree))
             return false;
         return true;
     }
@@ -977,7 +989,8 @@ typedef struct _learn_request__isset
           signature(false),
           last_committed_decree_in_app(false),
           last_committed_decree_in_prepare_list(false),
-          app_specific_learn_request(false)
+          app_specific_learn_request(false),
+          max_gced_decree(false)
     {
     }
     bool pid : 1;
@@ -986,6 +999,7 @@ typedef struct _learn_request__isset
     bool last_committed_decree_in_app : 1;
     bool last_committed_decree_in_prepare_list : 1;
     bool app_specific_learn_request : 1;
+    bool max_gced_decree : 1;
 } _learn_request__isset;
 
 class learn_request
@@ -996,7 +1010,10 @@ public:
     learn_request &operator=(const learn_request &);
     learn_request &operator=(learn_request &&);
     learn_request()
-        : signature(0), last_committed_decree_in_app(0), last_committed_decree_in_prepare_list(0)
+        : signature(0),
+          last_committed_decree_in_app(0),
+          last_committed_decree_in_prepare_list(0),
+          max_gced_decree(0)
     {
     }
 
@@ -1007,6 +1024,7 @@ public:
     int64_t last_committed_decree_in_app;
     int64_t last_committed_decree_in_prepare_list;
     ::dsn::blob app_specific_learn_request;
+    int64_t max_gced_decree;
 
     _learn_request__isset __isset;
 
@@ -1022,6 +1040,8 @@ public:
 
     void __set_app_specific_learn_request(const ::dsn::blob &val);
 
+    void __set_max_gced_decree(const int64_t val);
+
     bool operator==(const learn_request &rhs) const
     {
         if (!(pid == rhs.pid))
@@ -1035,6 +1055,10 @@ public:
         if (!(last_committed_decree_in_prepare_list == rhs.last_committed_decree_in_prepare_list))
             return false;
         if (!(app_specific_learn_request == rhs.app_specific_learn_request))
+            return false;
+        if (__isset.max_gced_decree != rhs.__isset.max_gced_decree)
+            return false;
+        else if (__isset.max_gced_decree && !(max_gced_decree == rhs.max_gced_decree))
             return false;
         return true;
     }
@@ -1222,13 +1246,18 @@ inline std::ostream &operator<<(std::ostream &out, const learn_notify_response &
 typedef struct _group_check_request__isset
 {
     _group_check_request__isset()
-        : app(false), node(false), config(false), last_committed_decree(false)
+        : app(false),
+          node(false),
+          config(false),
+          last_committed_decree(false),
+          confirmed_decree(false)
     {
     }
     bool app : 1;
     bool node : 1;
     bool config : 1;
     bool last_committed_decree : 1;
+    bool confirmed_decree : 1;
 } _group_check_request__isset;
 
 class group_check_request
@@ -1238,13 +1267,14 @@ public:
     group_check_request(group_check_request &&);
     group_check_request &operator=(const group_check_request &);
     group_check_request &operator=(group_check_request &&);
-    group_check_request() : last_committed_decree(0) {}
+    group_check_request() : last_committed_decree(0), confirmed_decree(0) {}
 
     virtual ~group_check_request() throw();
     ::dsn::app_info app;
     ::dsn::rpc_address node;
     replica_configuration config;
     int64_t last_committed_decree;
+    int64_t confirmed_decree;
 
     _group_check_request__isset __isset;
 
@@ -1256,6 +1286,8 @@ public:
 
     void __set_last_committed_decree(const int64_t val);
 
+    void __set_confirmed_decree(const int64_t val);
+
     bool operator==(const group_check_request &rhs) const
     {
         if (!(app == rhs.app))
@@ -1265,6 +1297,10 @@ public:
         if (!(config == rhs.config))
             return false;
         if (!(last_committed_decree == rhs.last_committed_decree))
+            return false;
+        if (__isset.confirmed_decree != rhs.__isset.confirmed_decree)
+            return false;
+        else if (__isset.confirmed_decree && !(confirmed_decree == rhs.confirmed_decree))
             return false;
         return true;
     }
@@ -4617,9 +4653,13 @@ inline std::ostream &operator<<(std::ostream &out, const configuration_update_ap
 
 typedef struct _duplication_add_request__isset
 {
-    _duplication_add_request__isset() : app_name(false), remote_cluster_address(false) {}
+    _duplication_add_request__isset()
+        : app_name(false), remote_cluster_address(false), freezed(false)
+    {
+    }
     bool app_name : 1;
     bool remote_cluster_address : 1;
+    bool freezed : 1;
 } _duplication_add_request__isset;
 
 class duplication_add_request
@@ -4629,11 +4669,12 @@ public:
     duplication_add_request(duplication_add_request &&);
     duplication_add_request &operator=(const duplication_add_request &);
     duplication_add_request &operator=(duplication_add_request &&);
-    duplication_add_request() : app_name(), remote_cluster_address() {}
+    duplication_add_request() : app_name(), remote_cluster_address(), freezed(0) {}
 
     virtual ~duplication_add_request() throw();
     std::string app_name;
     std::string remote_cluster_address;
+    bool freezed;
 
     _duplication_add_request__isset __isset;
 
@@ -4641,11 +4682,15 @@ public:
 
     void __set_remote_cluster_address(const std::string &val);
 
+    void __set_freezed(const bool val);
+
     bool operator==(const duplication_add_request &rhs) const
     {
         if (!(app_name == rhs.app_name))
             return false;
         if (!(remote_cluster_address == rhs.remote_cluster_address))
+            return false;
+        if (!(freezed == rhs.freezed))
             return false;
         return true;
     }
@@ -5140,13 +5185,13 @@ public:
 
     virtual ~duplication_sync_response() throw();
     ::dsn::error_code err;
-    std::map<int32_t, std::vector<duplication_entry>> dup_map;
+    std::map<int32_t, std::map<int32_t, duplication_entry>> dup_map;
 
     _duplication_sync_response__isset __isset;
 
     void __set_err(const ::dsn::error_code &val);
 
-    void __set_dup_map(const std::map<int32_t, std::vector<duplication_entry>> &val);
+    void __set_dup_map(const std::map<int32_t, std::map<int32_t, duplication_entry>> &val);
 
     bool operator==(const duplication_sync_response &rhs) const
     {
