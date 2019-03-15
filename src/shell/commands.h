@@ -33,6 +33,7 @@
 
 using namespace dsn::replication;
 using tp_alignment = ::dsn::utils::table_printer::alignment;
+using tp_output_format = ::dsn::utils::table_printer::output_format;
 
 static const char *INDENT = "  ";
 struct list_nodes_helper

@@ -18,7 +18,10 @@ if [ $# -le 3 ]; then
   exit 1
 fi
 
-update_options="--update_package --update_config"
+if [ -z ${TMUX} ]; then
+  echo "ERROR: This script must be run in a tmux session"
+  exit 1
+fi
 
 cluster=$1
 meta_list=$2
@@ -31,19 +34,12 @@ fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
-minos_config_dir=$(dirname $MINOS_CONFIG_FILE)/xiaomi-config/conf/pegasus
-minos_client_dir=/home/work/pegasus/infra/minos/client
 cd $shell_dir
 
-minos_config=$minos_config_dir/pegasus-${cluster}.cfg
-if [ ! -f $minos_config ]; then
-  echo "ERROR: minos config \"$minos_config\" not found"
-  exit 1
-fi
-
-minos_client=$minos_client_dir/deploy
-if [ ! -f $minos_client ]; then
-  echo "ERROR: minos client \"$minos_client\" not found"
+source ./scripts/minos_common.sh
+find_cluster $cluster
+if [ $? -ne 0 ]; then
+  echo "ERROR: cluster \"$cluster\" not found"
   exit 1
 fi
 
@@ -53,18 +49,14 @@ echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
 
-echo "Generating /tmp/$UID.$PID.pegasus.rolling_update.minos.show..."
-cd $minos_client_dir
-./deploy show pegasus $cluster &>/tmp/$UID.$PID.pegasus.rolling_update.minos.show
-
-echo "Generating /tmp/$UID.$PID.pegasus.rolling_update.rs.list..."
-grep 'Showing task [0-9][0-9]* of replica' /tmp/$UID.$PID.pegasus.rolling_update.minos.show | awk '{print $5,$9}' | sed 's/(.*)$//' >/tmp/$UID.$PID.pegasus.rolling_update.rs.list
-replica_server_count=`cat /tmp/$UID.$PID.pegasus.rolling_update.rs.list | wc -l`
+rs_list_file="/tmp/$UID.$PID.pegasus.rolling_update.rs.list"
+echo "Generating $rs_list_file..."
+minos_show_replica $cluster $rs_list_file
+replica_server_count=`cat $rs_list_file | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
   exit 1
 fi
-cd $shell_dir
 
 echo "Generating /tmp/$UID.$PID.pegasus.rolling_update.cluster_info..."
 echo cluster_info | ./run.sh shell --cluster $meta_list 2>&1 | sed 's/ *$//' >/tmp/$UID.$PID.pegasus.rolling_update.cluster_info
@@ -223,9 +215,7 @@ do
   fi
 
   echo "Rolling update by minos..."
-  cd $minos_client_dir
-  ./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 10 $update_options --job replica --task $task_id
-  cd $shell_dir
+  minos_rolling_update $cluster replica $task_id
   echo "Rolling update by minos done."
   echo
   sleep 1
@@ -266,7 +256,7 @@ do
   if [ "$type" = "one" ]; then
     break
   fi
-done </tmp/$UID.$PID.pegasus.rolling_update.rs.list
+done <$rs_list_file
 
 echo "Set lb.add_secondary_max_count_for_one_node to DEFAULT..."
 echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
@@ -279,10 +269,14 @@ fi
 if [ "$type" = "all" ]; then
   echo "=================================================================="
   echo "=================================================================="
-  echo "Rolling update meta servers and collectors..."
-  cd $minos_client_dir
-  ./deploy rolling_update pegasus $cluster --skip_confirm --time_interval 20 $update_options --job meta collector
-  cd $shell_dir
+  echo "Rolling update meta servers..."
+  minos_rolling_update $cluster meta
+  echo "Rolling update meta servers done."
+  echo
+
+  echo "Rolling update collectors..."
+  minos_rolling_update $cluster collector
+  echo "Rolling update collectors done."
   echo
 
   echo "Set meta level to lively..."
@@ -294,8 +288,23 @@ if [ "$type" = "all" ]; then
   fi
   echo
 
+  echo "Wait cluster to become balanced..."
   echo "Wait for 3 minutes to do load balance..."
   sleep 180
+  while true
+  do
+    op_count=`echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2`
+    if [ -z "op_count" ]; then
+      break
+    fi
+    if [ $op_count -eq 0 ]; then
+      echo "Cluster becomes balanced."
+      break
+    else
+      echo "Still $op_count balance operations to do..."
+      sleep 10
+    fi
+  done
   echo
 
   echo "Set meta level to steady..."

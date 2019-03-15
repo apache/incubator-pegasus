@@ -20,19 +20,12 @@ replica_task_id_list=$3
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
-minos_config_dir=$(dirname $MINOS_CONFIG_FILE)/xiaomi-config/conf/pegasus
-minos_client_dir=/home/work/pegasus/infra/minos/client
 cd $shell_dir
 
-minos_config=$minos_config_dir/pegasus-${cluster}.cfg
-if [ ! -f $minos_config ]; then
-  echo "ERROR: minos config \"$minos_config\" not found"
-  exit 1
-fi
-
-minos_client=$minos_client_dir/deploy
-if [ ! -f $minos_client ]; then
-  echo "ERROR: minos client \"$minos_client\" not found"
+source ./scripts/minos_common.sh
+find_cluster $cluster
+if [ $? -ne 0 ]; then
+  echo "ERROR: cluster \"$cluster\" not found"
   exit 1
 fi
 
@@ -42,18 +35,15 @@ echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
 
-echo "Generating /tmp/$UID.$PID.pegasus.offline_node_list.minos.show..."
-cd $minos_client_dir
-./deploy show pegasus $cluster &>/tmp/$UID.$PID.pegasus.offline_node_list.minos.show
-
-echo "Generating /tmp/$UID.$PID.pegasus.offline_node_list.rs.list..."
-grep 'Showing task [0-9][0-9]* of replica' /tmp/$UID.$PID.pegasus.offline_node_list.minos.show | awk '{print $5,$9}' | sed 's/(.*)$//' >/tmp/$UID.$PID.pegasus.offline_node_list.rs.list
-replica_server_count=`cat /tmp/$UID.$PID.pegasus.offline_node_list.rs.list | wc -l`
+rs_list_file="/tmp/$UID.$PID.pegasus.rolling_update.rs.list"
+echo "Generating $rs_list_file..."
+minos_show_replica $cluster $rs_list_file
+replica_server_count=`cat $rs_list_file | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
   exit 1
 fi
-cd $shell_dir
+
 
 echo "Generating /tmp/$UID.$PID.pegasus.offline_node_list.cluster_info..."
 echo cluster_info | ./run.sh shell --cluster $meta_list 2>&1 | sed 's/ *$//' >/tmp/$UID.$PID.pegasus.offline_node_list.cluster_info
@@ -86,18 +76,20 @@ for id in `echo $replica_task_id_list | sed 's/,/ /g'` ; do
       exit 1;
     fi
   fi
-  pair=`grep "^$id " /tmp/$UID.$PID.pegasus.offline_node_list.rs.list`
+  pair=`grep "^$id " $rs_list_file`
   if [ "$pair" == "" ]; then
-    echo "ERROR: replica task id $id not found, refer to /tmp/$UID.$PID.pegasus.offline_node_list.minos.show"
+    echo "ERROR: replica task id $id not found, refer to $rs_list_file"
     exit 1;
   fi
-  address=`echo $pair | awk '{print $2}'`
+  node_str=`echo $pair | awk '{print $2}'`
+  node_ip=`getent hosts $node_str | awk '{print $1}'`
+  node=${node_ip}:${rs_port}
   if [ "$id_list" != "" ]; then
     id_list="$id_list $id"
-    address_list="$address_list,$address:$rs_port"
+    address_list="$address_list,$node"
   else
     id_list="$id"
-    address_list="$address:$rs_port"
+    address_list="$node"
   fi
 done
 
@@ -106,6 +98,14 @@ echo "remote_command -l $pmeta meta.lb.assign_secondary_black_list $address_list
 set_ok=`grep "set ok" /tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_secondary_black_list failed, refer to /tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list"
+  exit 1
+fi
+
+echo "Set live_percentage to 0...(No need to set it back to default. When this offline task is done, meta-server should be restarted, and live_percentage will be loaded from the config file)"
+echo "remote_command -l $pmeta meta.live_percentage 0" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.live_percentage
+set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.live_percentage | wc -l`
+if [ $set_ok -ne 1 ]; then
+  echo "ERROR: set live_percentage to 0 failed"
   exit 1
 fi
 

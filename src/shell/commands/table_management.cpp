@@ -8,19 +8,21 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"all", no_argument, 0, 'a'},
                                            {"detailed", no_argument, 0, 'd'},
+                                           {"json", no_argument, 0, 'j'},
                                            {"status", required_argument, 0, 's'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
 
     bool show_all = false;
     bool detailed = false;
+    bool json = false;
     std::string status;
     std::string output_file;
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "ads:o:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "adjs:o:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -29,6 +31,9 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'd':
             detailed = true;
+            break;
+        case 'j':
+            json = true;
             break;
         case 's':
             status = optarg;
@@ -50,10 +55,8 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
                       "parse %s as app_status::type failed",
                       status.c_str());
     }
-    ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, output_file);
-    if (err == ::dsn::ERR_OK)
-        std::cout << "list apps succeed" << std::endl;
-    else
+    ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
+    if (err != ::dsn::ERR_OK)
         std::cout << "list apps failed, error=" << err.to_string() << std::endl;
     return true;
 }
@@ -98,7 +101,7 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
             tp.add_row_name_and_data("out_file", out_file);
     }
     tp.add_row_name_and_data("detailed", detailed);
-    tp.output(std::cout, ": ");
+    tp.output(std::cout);
 
     std::cout << std::endl << "[Result]" << std::endl;
 
@@ -155,7 +158,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             tp_params.add_row_name_and_data("out_file", out_file);
     }
     tp_params.add_row_name_and_data("detailed", detailed);
-    tp_params.output(std::cout, ": ");
+    tp_params.output(std::cout);
 
     std::cout << std::endl << "[Result]" << std::endl;
 
@@ -369,7 +372,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     tp_general.add_row_name_and_data("disk_used_for_primary_replicas(MB)",
                                      disk_used_for_primary_replicas);
     tp_general.add_row_name_and_data("disk_used_for_all_replicas(MB)", disk_used_for_all_replicas);
-    tp_general.output(out, ": ");
+    tp_general.output(out);
     if (detailed) {
         out << "details" << std::endl;
         tp_details.output(out);
@@ -506,8 +509,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("file_num", tp_alignment::kRight);
         tp.add_column("mem_tbl_mb", tp_alignment::kRight);
         tp.add_column("mem_idx_mb", tp_alignment::kRight);
-        tp.add_column("hit_rate", tp_alignment::kRight);
     }
+    tp.add_column("hit_rate", tp_alignment::kRight);
 
     for (row_data &row : rows) {
         tp.add_row(row.row_name);
@@ -537,12 +540,12 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data((uint64_t)row.storage_count);
             tp.append_data(row.rdb_memtable_mem_usage / (1 << 20U));
             tp.append_data(row.rdb_index_and_filter_blocks_mem_usage / (1 << 20U));
-            double block_cache_hit_rate =
-                std::abs(row.rdb_block_cache_total_count) < 1e-6
-                    ? 0.0
-                    : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
-            tp.append_data(block_cache_hit_rate);
         }
+        double block_cache_hit_rate =
+            std::abs(row.rdb_block_cache_total_count) < 1e-6
+                ? 0.0
+                : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
+        tp.append_data(block_cache_hit_rate);
     }
     tp.output(out);
 

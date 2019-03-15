@@ -69,7 +69,8 @@ public:
         FT_NO_FILTER = 0,
         FT_MATCH_ANYWHERE = 1,
         FT_MATCH_PREFIX = 2,
-        FT_MATCH_POSTFIX = 3
+        FT_MATCH_POSTFIX = 3,
+        FT_MATCH_EXACT = 4
     };
 
     struct multi_get_options
@@ -314,7 +315,7 @@ public:
         /// \return
         /// int, the error indicates whether or not the operation is succeeded.
         /// this error can be converted to a string using get_error_string()
-        /// PEER_OK means a valid k-v pair got
+        /// PERR_OK means a valid k-v pair got
         /// PERR_SCAN_COMPLETE means all k-v have been iterated before this call
         /// otherwise some error orrured
         ///
@@ -328,7 +329,7 @@ public:
         /// thread-safe
         /// \param callback
         /// status and result will be passed to callback
-        /// status(PEER_OK) means a valid k-v pair got
+        /// status(PERR_OK) means a valid k-v pair got
         /// status(PERR_SCAN_COMPLETE) means all k-v have been iterated before this call
         /// otherwise some error orrured
         ///
@@ -1045,12 +1046,13 @@ public:
     /// \param sortkey
     /// all the k-v under hashkey will be sorted by sortkey.
     /// \param ttl_seconds
-    /// the returned ttl value in seconds.
+    /// the returned ttl value in seconds. -1 means no ttl.
     /// \param timeout_milliseconds
     /// if wait longer than this value, will return time out error
     /// \return
     /// int, the error indicates whether or not the operation is succeeded.
-    /// this error can be converted to a string using get_error_string()
+    /// this error can be converted to a string using get_error_string().
+    /// returns PERR_NOT_FOUND if no value is found under the <hashkey,sortkey>.
     ///
     virtual int ttl(const std::string &hashkey,
                     const std::string &sortkey,

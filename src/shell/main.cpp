@@ -49,14 +49,14 @@ static command_executor commands[] = {
     {
         "ls",
         "list all apps",
-        "[-a|-all] [-d|--detailed] [-o|--output file_name] "
+        "[-a|-all] [-d|--detailed] [-j|--json_pretty] [-o|--output file_name]"
         "[-s|--status all|available|creating|dropping|dropped]",
         ls_apps,
     },
     {
         "nodes",
         "get the node status for this cluster",
-        "[-d|--detailed] [-r|--resolve_ip] [-u|--resource_usage] "
+        "[-d|--detailed] [-j|--json_pretty] [-r|--resolve_ip] [-u|--resource_usage]"
         "[-o|--output file_name] [-s|--status all|alive|unalive]",
         ls_nodes,
     },
@@ -228,8 +228,10 @@ static command_executor commands[] = {
         "[-a|--start_inclusive true|false] [-b|--stop_inclusive true|false] "
         "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-o|--output file_name] [-z|--batch_size num] [-n|--max_count num] "
-        "[-t|--timeout_ms num] [-d|--detailed] [-i|--no_value]",
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
+        "[-z|--value_filter_pattern str] "
+        "[-o|--output file_name] [-n|--max_count num] [-t|--timeout_ms num] "
+        "[-d|--detailed] [-i|--no_value]",
         data_operations,
     },
     {
@@ -237,39 +239,52 @@ static command_executor commands[] = {
         "scan all hash keys",
         "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
         "[-x|--hash_key_filter_pattern str] "
-        "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-o|--output file_name] [-z|--batch_size num] [-n|--max_count num] "
-        "[-t|--timeout_ms num] [-d|--detailed] [-i|--no_value] [-p|--partition num]",
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
+        "[-z|--value_filter_pattern str] "
+        "[-o|--output file_name] [-n|--max_count num] [-t|--timeout_ms num] "
+        "[-d|--detailed] [-i|--no_value] [-p|--partition num]",
         data_operations,
     },
     {
         "copy_data",
         "copy app data",
         "<-c|--target_cluster_name str> <-a|--target_app_name str> "
+        "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
         "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
         "[-x|--hash_key_filter_pattern str] "
-        "[-s|--sort_key_filter_type anywhere|prefix|postfix] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
         "[-y|--sort_key_filter_pattern str] "
-        "[-v|--value_filter_type anywhere|prefix|postfix] "
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
         "[-z|--value_filter_pattern str] "
-        "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
-        "[-g|--geo_data] [-i|--no_value] [-n|--no_overwrite]",
+        "[-n|--no_overwrite] [-i|--no_value] [-g|--geo_data]",
         data_operations,
     },
     {
         "clear_data",
         "clear app data",
-        "[-f|--force] [-s|--max_split_count num] [-b|--max_batch_count num] "
-        "[-t|--timeout_ms num]",
+        "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
+        "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
+        "[-x|--hash_key_filter_pattern str] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
+        "[-y|--sort_key_filter_pattern str] "
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
+        "[-z|--value_filter_pattern str] "
+        "[-f|--force]",
         data_operations,
     },
     {
         "count_data",
         "get app row count",
-        "[-s|--max_split_count num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
-        "[-h|--count_hash_key] [-z|--stat_size] [-c|--top_count num] "
-        "[-r|--run_seconds num]",
+        "[-p|--partition num] [-b|--max_batch_count num] [-t|--timeout_ms num] "
+        "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
+        "[-x|--hash_key_filter_pattern str] "
+        "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
+        "[-y|--sort_key_filter_pattern str] "
+        "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
+        "[-z|--value_filter_pattern str] "
+        "[-d|--diff_hash_key] [-a|--stat_size] [-n|--top_count num] [-r|--run_seconds num]",
         data_operations,
     },
     {

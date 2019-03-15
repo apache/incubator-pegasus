@@ -19,6 +19,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
                                            {"resolve_ip", no_argument, 0, 'r'},
                                            {"resource_usage", no_argument, 0, 'u'},
+                                           {"json", no_argument, 0, 'j'},
                                            {"status", required_argument, 0, 's'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
@@ -28,11 +29,12 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     bool detailed = false;
     bool resolve_ip = false;
     bool resource_usage = false;
+    bool json = false;
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "drus:o:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "drujs:o:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -45,6 +47,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         case 'u':
             resource_usage = true;
             break;
+        case 'j':
+            json = true;
+            break;
         case 's':
             status = optarg;
             break;
@@ -56,16 +61,15 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
+    dsn::utils::multi_table_printer mtp;
     if (!(status.empty() && output_file.empty())) {
-        std::cout << "[Parameters]" << std::endl;
-        dsn::utils::table_printer tp;
+        dsn::utils::table_printer tp("parameters");
         if (!status.empty())
             tp.add_row_name_and_data("status", status);
         if (!output_file.empty())
             tp.add_row_name_and_data("out_file", output_file);
-        tp.output(std::cout, ": ");
+        mtp.add(std::move(tp));
     }
-    std::cout << std::endl << "[Result]" << std::endl;
 
     ::dsn::replication::node_status::type s = ::dsn::replication::node_status::NS_INVALID;
     if (!status.empty() && status != "all") {
@@ -212,7 +216,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    dsn::utils::table_printer tp;
+    dsn::utils::table_printer tp("details");
     tp.add_title("address");
     tp.add_column("status");
     if (detailed) {
@@ -245,15 +249,15 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(kv.second.disk_available_min_ratio);
         }
     }
-    tp.output(out);
-    out << std::endl;
+    mtp.add(std::move(tp));
 
-    dsn::utils::table_printer tp_count;
+    dsn::utils::table_printer tp_count("summary");
     tp_count.add_row_name_and_data("total_node_count", nodes.size());
     tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
     tp_count.add_row_name_and_data("unalive_node_count", nodes.size() - alive_node_count);
-    tp_count.output(out, ": ");
-    out << std::endl;
+    mtp.add(std::move(tp_count));
+
+    mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
     return true;
 }
