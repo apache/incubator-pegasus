@@ -4,7 +4,7 @@ networks:
   frontend:
     ipam:
       config:
-        - subnet: @META_IP_PREFIX@.0/24
+        - subnet: @NODE_IP_PREFIX@.0/24
 services:
   meta1:
     image: @IMAGE_NAME@
@@ -17,7 +17,7 @@ services:
       - meta
     networks:
       frontend:
-        ipv4_address: @META_IP_PREFIX@.11
+        ipv4_address: @NODE_IP_PREFIX@.11
     restart: on-failure
   meta2:
     image: @IMAGE_NAME@
@@ -30,7 +30,7 @@ services:
       - meta
     networks:
       frontend:
-        ipv4_address: @META_IP_PREFIX@.12
+        ipv4_address: @NODE_IP_PREFIX@.12
     restart: on-failure
   replica1:
     image: @IMAGE_NAME@
@@ -44,7 +44,7 @@ services:
       - replica
     networks:
       frontend:
-        ipv4_address: @META_IP_PREFIX@.21
+        ipv4_address: @NODE_IP_PREFIX@.21
     restart: on-failure
   replica2:
     image: @IMAGE_NAME@
@@ -58,7 +58,7 @@ services:
       - replica
     networks:
       frontend:
-        ipv4_address: @META_IP_PREFIX@.22
+        ipv4_address: @NODE_IP_PREFIX@.22
     restart: on-failure
   replica3:
     image: @IMAGE_NAME@
@@ -72,7 +72,7 @@ services:
       - replica
     networks:
       frontend:
-        ipv4_address: @META_IP_PREFIX@.23
+        ipv4_address: @NODE_IP_PREFIX@.23
     restart: on-failure
   replica4:
     image: @IMAGE_NAME@
@@ -86,7 +86,7 @@ services:
       - replica
     networks:
       frontend:
-        ipv4_address: @META_IP_PREFIX@.24
+        ipv4_address: @NODE_IP_PREFIX@.24
     restart: on-failure
   replica5:
     image: @IMAGE_NAME@
@@ -100,5 +100,5 @@ services:
       - replica
     networks:
       frontend:
-        ipv4_address: @META_IP_PREFIX@.25
+        ipv4_address: @NODE_IP_PREFIX@.25
     restart: on-failure

@@ -7,14 +7,30 @@ ROOT=$(
 )
 LOCAL_IP=$(scripts/get_local_ip)
 
-META_COUNT=2
+# Configure the following variables to customize the docker cluster. #
+
 PARTITION_COUNT=8
 APP_NAME=temp
-META_IP_PREFIX=172.21.0
+
+# The ip prefix for each nodes.
+# Meta-x's ip address is 172.21.0.{x}:34601.
+# Replica-x's ip address is 172.21.0.2{x}:34801
+NODE_IP_PREFIX=172.21.0
+
 CLUSTER_NAME=onebox2
+
 IMAGE_NAME=pegasus:latest
 
-DOCKER_DIR=${CLUSTER_NAME}-docker
+# Config ends #
+
+DOCKER_DIR=${CLUSTER_NAME}-docker # Where docker onebox resides.
+META_COUNT=2 # Number of meta instances.
+
+if [ -d ${DOCKER_DIR} ]; then
+    echo "ERROR: ${DOCKER_DIR} already exists, please remove it first" >&2
+    exit 1
+fi
+
 mkdir -p ${DOCKER_DIR}
 
 cp -f "${ROOT}"/src/server/config.ini ${DOCKER_DIR}/config.ini
@@ -26,19 +42,28 @@ sed -i 's/%{slog.dir}/\/pegasus\/slog/g' ${DOCKER_DIR}/config.ini
 sed -i 's/%{data.dirs}//g' ${DOCKER_DIR}/config.ini
 sed -i 's@%{home.dir}@'"/pegasus"'@g' ${DOCKER_DIR}/config.ini
 for i in $(seq ${META_COUNT}); do
-	meta_port=34601
-	meta_ip=${META_IP_PREFIX}.1$((i))
-	if [ "${i}" -eq 1 ]; then
-		meta_list="${meta_ip}:$meta_port"
-	else
-		meta_list="$meta_list,${meta_ip}:$meta_port"
-	fi
+    meta_port=34601
+    meta_ip=${NODE_IP_PREFIX}.1$((i))
+    if [ "${i}" -eq 1 ]; then
+        meta_list="${meta_ip}:$meta_port"
+    else
+        meta_list="$meta_list,${meta_ip}:$meta_port"
+    fi
 done
 sed -i 's/%{meta.server.list}/'"$meta_list"'/g' ${DOCKER_DIR}/config.ini
 sed -i 's/%{zk.server.list}/'"${LOCAL_IP}"':22181/g' ${DOCKER_DIR}/config.ini
 sed -i 's/app_name = .*$/app_name = '"$APP_NAME"'/' ${DOCKER_DIR}/config.ini
 sed -i 's/partition_count = .*$/partition_count = '"$PARTITION_COUNT"'/' ${DOCKER_DIR}/config.ini
 
-cp -f "${ROOT}"/docker-compose.yml ${DOCKER_DIR}
-sed -i 's/@META_IP_PREFIX@/'"${META_IP_PREFIX}"'/' ${DOCKER_DIR}/docker-compose.yml
+cp -f "${SCRIPT_DIR}"/docker-compose.yml ${DOCKER_DIR}
+sed -i 's/@NODE_IP_PREFIX@/'"${NODE_IP_PREFIX}"'/' ${DOCKER_DIR}/docker-compose.yml
 sed -i 's/@IMAGE_NAME@/'"${IMAGE_NAME}"'/' ${DOCKER_DIR}/docker-compose.yml
+
+if ! [ -x "$(command -v docker-compose)" ]; then
+  echo 'ERROR: docker-compose is not installed.' >&2
+  echo 'See this document for installation manual:' >&2
+  echo '    https://docs.docker.com/compose/install' >&2
+  exit 1
+fi
+
+echo "${DOCKER_DIR} is ready: `pwd`/${DOCKER_DIR}"
