@@ -40,6 +40,7 @@
 #include <atomic>
 #include <dsn/tool-api/zlocks.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
+#include <dsn/dist/replication/replica_base.h>
 
 namespace dsn {
 namespace replication {
@@ -164,7 +165,8 @@ public:
     // when is_private = true, should specify "private_gpid"
     //
     mutation_log(const std::string &dir, int32_t max_log_file_mb, gpid gpid, replica *r = nullptr);
-    virtual ~mutation_log();
+
+    virtual ~mutation_log() = default;
 
     //
     // initialization
@@ -349,6 +351,8 @@ protected:
     dsn::task_tracker _tracker;
 
 private:
+    friend class mutation_log_test;
+
     ///////////////////////////////////////////////
     //// memory states
     ///////////////////////////////////////////////
@@ -396,7 +400,12 @@ public:
     {
     }
 
-    virtual ~mutation_log_shared() override { _tracker.cancel_outstanding_tasks(); }
+    virtual ~mutation_log_shared() override
+    {
+        close();
+        _tracker.cancel_outstanding_tasks();
+    }
+
     virtual ::dsn::task_ptr append(mutation_ptr &mu,
                                    dsn::task_code callback_code,
                                    dsn::task_tracker *tracker,
@@ -435,25 +444,28 @@ private:
     perf_counter_wrapper *_write_size_counter;
 };
 
-class mutation_log_private : public mutation_log
+class mutation_log_private : public mutation_log, private replica_base
 {
 public:
+    // Parameters:
+    //  - batch_buffer_max_count, batch_buffer_bytes
+    //    The hint of limited size for the write buffer storing the pending mutations.
+    //    Note that the actual log block is still possible to be larger than the
+    //    hinted size.
     mutation_log_private(const std::string &dir,
                          int32_t max_log_file_mb,
                          gpid gpid,
                          replica *r,
                          uint32_t batch_buffer_bytes,
                          uint32_t batch_buffer_max_count,
-                         uint64_t batch_buffer_flush_interval_ms)
-        : mutation_log(dir, max_log_file_mb, gpid, r),
-          _batch_buffer_bytes(batch_buffer_bytes),
-          _batch_buffer_max_count(batch_buffer_max_count),
-          _batch_buffer_flush_interval_ms(batch_buffer_flush_interval_ms)
+                         uint64_t batch_buffer_flush_interval_ms);
+
+    ~mutation_log_private() override
     {
-        mutation_log_private::init_states();
+        close();
+        _tracker.cancel_outstanding_tasks();
     }
 
-    virtual ~mutation_log_private() override { _tracker.cancel_outstanding_tasks(); }
     virtual ::dsn::task_ptr append(mutation_ptr &mu,
                                    dsn::task_code callback_code,
                                    dsn::task_tracker *tracker,
@@ -639,5 +651,5 @@ private:
     // for write, the value is set by write_file_header().
     replica_log_info_map _previous_log_max_decrees;
 };
-}
-} // namespace
+} // namespace replication
+} // namespace dsn

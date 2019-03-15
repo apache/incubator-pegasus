@@ -24,18 +24,11 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #include "dist/replication/lib/mutation_log.h"
+#include "dist/replication/test/replica_test/unit_test/replica_test_base.h"
+
 #include <dsn/utility/filesystem.h>
 #include <gtest/gtest.h>
-#include <cstdio>
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -269,69 +262,194 @@ TEST(replication, log_file)
     utils::filesystem::remove_path(fpath);
 }
 
-TEST(replication, mutation_log)
+namespace dsn {
+namespace replication {
+
+class mutation_log_test : public replica_test_base
 {
-    gpid gpid(1, 0);
-    std::string str = "hello, world!";
-    std::string logp = "./test-log";
-    std::vector<mutation_ptr> mutations;
+public:
+    mutation_log_test() : gpid(_replica->get_gpid()) {}
 
-    // prepare
-    utils::filesystem::remove_path(logp);
-    utils::filesystem::create_directory(logp);
+    void SetUp() override
+    {
+        utils::filesystem::remove_path(_log_dir);
+        utils::filesystem::create_directory(_log_dir);
 
-    // writing logs
-    mutation_log_ptr mlog = new mutation_log_private(logp, 4, gpid, nullptr, 1024, 512, 10000);
+        utils::filesystem::remove_path(_log_dir + ".test");
+    }
 
-    auto err = mlog->open(nullptr, nullptr);
-    EXPECT_EQ(err, ERR_OK);
+    void TearDown() override { utils::filesystem::remove_path(_log_dir); }
 
-    for (int i = 0; i < 1000; i++) {
+    mutation_ptr create_test_mutation(const std::string &data, decree d)
+    {
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
-        mu->data.header.decree = 2 + i;
+        mu->data.header.decree = d;
         mu->data.header.pid = gpid;
-        mu->data.header.last_committed_decree = i;
+        mu->data.header.last_committed_decree = d - 1;
         mu->data.header.log_offset = 0;
 
         binary_writer writer;
         for (int j = 0; j < 100; j++) {
-            writer.write(str);
+            writer.write(data);
         }
-        mu->data.updates.push_back(mutation_update());
+        mu->data.updates.emplace_back(mutation_update());
         mu->data.updates.back().code = RPC_REPLICATION_WRITE_EMPTY;
         mu->data.updates.back().data = writer.get_buffer();
 
         mu->client_requests.push_back(nullptr);
 
-        mutations.push_back(mu);
-
-        mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+        return mu;
     }
 
-    mlog->close();
+    static void ASSERT_BLOB_EQ(const blob &lhs, const blob &rhs)
+    {
+        ASSERT_EQ(std::string(lhs.data(), lhs.length()), std::string(rhs.data(), rhs.length()));
+    }
 
-    // reading logs
-    mlog = new mutation_log_private(logp, 4, gpid, nullptr, 1024, 512, 10000);
+    void test_replay_single_file(int num_entries)
+    {
+        std::vector<mutation_ptr> mutations;
 
-    int mutation_index = -1;
-    mlog->open(
-        [&mutations, &mutation_index](int log_length, mutation_ptr &mu) -> bool {
-            mutation_ptr wmu = mutations[++mutation_index];
-            EXPECT_TRUE(wmu->data.header == mu->data.header);
-            EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
-            EXPECT_TRUE(wmu->data.updates[0].data.length() == mu->data.updates[0].data.length());
-            EXPECT_TRUE(memcmp((const void *)wmu->data.updates[0].data.data(),
-                               (const void *)mu->data.updates[0].data.data(),
-                               mu->data.updates[0].data.length()) == 0);
-            EXPECT_TRUE(wmu->data.updates[0].code == mu->data.updates[0].code);
-            EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
-            return true;
-        },
-        nullptr);
-    EXPECT_TRUE(mutation_index + 1 == (int)mutations.size());
-    mlog->close();
+        { // writing logs
+            mutation_log_ptr mlog =
+                new mutation_log_private(_log_dir, 1024, gpid, _replica.get(), 1024, 512, 10000);
 
-    // clear all
-    utils::filesystem::remove_path(logp);
+            EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+
+            for (int i = 0; i < num_entries; i++) {
+                mutation_ptr mu = create_test_mutation("hello!", 2 + i);
+                mutations.push_back(mu);
+                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+            }
+        }
+
+        { // replaying logs
+            std::string log_file_path = _log_dir + "/log.1.0";
+
+            error_code ec;
+            log_file_ptr file = log_file::open_read(log_file_path.c_str(), ec);
+            ASSERT_EQ(ec, ERR_OK) << ec.to_string();
+
+            int64_t end_offset;
+            int mutation_index = -1;
+            ec = mutation_log::replay(
+                file,
+                [&mutations, &mutation_index](int log_length, mutation_ptr &mu) -> bool {
+                    mutation_ptr wmu = mutations[++mutation_index];
+                    EXPECT_EQ(wmu->data.header, mu->data.header);
+                    EXPECT_EQ(wmu->data.updates.size(), mu->data.updates.size());
+                    ASSERT_BLOB_EQ(wmu->data.updates[0].data, mu->data.updates[0].data);
+                    EXPECT_EQ(wmu->data.updates[0].code, mu->data.updates[0].code);
+                    EXPECT_EQ(wmu->client_requests.size(), mu->client_requests.size());
+                    return true;
+                },
+                end_offset);
+            ASSERT_EQ(ec, ERR_HANDLE_EOF) << ec.to_string();
+        }
+    }
+
+    void test_replay_multiple_files(int num_entries, int private_log_file_size_mb)
+    {
+        std::vector<mutation_ptr> mutations;
+
+        { // writing logs
+            mutation_log_ptr mlog = new mutation_log_private(
+                _log_dir, private_log_file_size_mb, gpid, _replica.get(), 1024, 512, 10000);
+            EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+
+            for (int i = 0; i < num_entries; i++) {
+                mutation_ptr mu = create_test_mutation("hello!", 2 + i);
+                mutations.push_back(mu);
+                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+            }
+        }
+
+        { // reading logs
+            mutation_log_ptr mlog =
+                new mutation_log_private(_log_dir, 4, gpid, _replica.get(), 1024, 512, 10000);
+
+            std::vector<std::string> log_files;
+            ASSERT_TRUE(utils::filesystem::get_subfiles(mlog->dir(), log_files, false));
+
+            int64_t end_offset;
+            int mutation_index = -1;
+            mutation_log::replay(
+                log_files,
+                [&mutations, &mutation_index](int log_length, mutation_ptr &mu) -> bool {
+                    mutation_ptr wmu = mutations[++mutation_index];
+                    EXPECT_EQ(wmu->data.header, mu->data.header);
+                    EXPECT_EQ(wmu->data.updates.size(), mu->data.updates.size());
+                    ASSERT_BLOB_EQ(wmu->data.updates[0].data, mu->data.updates[0].data);
+                    EXPECT_EQ(wmu->data.updates[0].code, mu->data.updates[0].code);
+                    EXPECT_EQ(wmu->client_requests.size(), mu->client_requests.size());
+                    return true;
+                },
+                end_offset);
+            ASSERT_EQ(mutation_index + 1, (int)mutations.size());
+
+            ASSERT_GE(log_files.size(), 1);
+        }
+    }
+
+    const dsn::gpid gpid;
+};
+
+TEST_F(mutation_log_test, replay_single_file_1000) { test_replay_single_file(1000); }
+
+TEST_F(mutation_log_test, replay_single_file_2000) { test_replay_single_file(2000); }
+
+TEST_F(mutation_log_test, replay_single_file_5000) { test_replay_single_file(5000); }
+
+TEST_F(mutation_log_test, replay_single_file_10000) { test_replay_single_file(10000); }
+
+TEST_F(mutation_log_test, replay_single_file_1) { test_replay_single_file(1); }
+
+TEST_F(mutation_log_test, replay_single_file_10) { test_replay_single_file(10); }
+
+// mutation_log::open
+TEST_F(mutation_log_test, open)
+{
+    std::vector<mutation_ptr> mutations;
+
+    { // writing logs
+        mutation_log_ptr mlog =
+            new mutation_log_private(_log_dir, 4, gpid, _replica.get(), 1024, 512, 10000);
+
+        EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+
+        for (int i = 0; i < 1000; i++) {
+            mutation_ptr mu = create_test_mutation("hello!", 2 + i);
+            mutations.push_back(mu);
+            mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+        }
+    }
+
+    { // reading logs
+        mutation_log_ptr mlog =
+            new mutation_log_private(_log_dir, 4, gpid, _replica.get(), 1024, 512, 10000);
+
+        int mutation_index = -1;
+        mlog->open(
+            [&mutations, &mutation_index](int log_length, mutation_ptr &mu) -> bool {
+                mutation_ptr wmu = mutations[++mutation_index];
+                EXPECT_EQ(wmu->data.header, mu->data.header);
+                EXPECT_EQ(wmu->data.updates.size(), mu->data.updates.size());
+                ASSERT_BLOB_EQ(wmu->data.updates[0].data, mu->data.updates[0].data);
+                EXPECT_EQ(wmu->data.updates[0].code, mu->data.updates[0].code);
+                EXPECT_EQ(wmu->client_requests.size(), mu->client_requests.size());
+                return true;
+            },
+            nullptr);
+        ASSERT_EQ(mutation_index + 1, (int)mutations.size());
+    }
 }
+
+TEST_F(mutation_log_test, replay_multiple_files_10000_1mb) { test_replay_multiple_files(10000, 1); }
+
+TEST_F(mutation_log_test, replay_multiple_files_20000_1mb) { test_replay_multiple_files(20000, 1); }
+
+TEST_F(mutation_log_test, replay_multiple_files_50000_1mb) { test_replay_multiple_files(50000, 1); }
+
+} // namespace replication
+} // namespace dsn

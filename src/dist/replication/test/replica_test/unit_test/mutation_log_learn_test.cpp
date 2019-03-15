@@ -24,29 +24,27 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #include "dist/replication/lib/mutation_log.h"
+#include "dist/replication/test/replica_test/unit_test/replica_test_base.h"
+
 #include <dsn/utility/filesystem.h>
 #include <gtest/gtest.h>
 #include <chrono>
 #include <condition_variable>
 
-using namespace ::dsn;
-using namespace ::dsn::replication;
+namespace dsn {
+namespace replication {
 
-TEST(replication, mutation_log_learn)
+class mutation_log_test : public replica_test_base
+{
+};
+
+TEST_F(mutation_log_test, learn)
 {
     std::chrono::steady_clock clock;
     gpid gpid(1, 1);
     std::string str = "hello, world!";
-    std::string logp = "./test-log";
+    std::string logp = _log_dir;
 
     // prepare mutations
     std::vector<mutation_ptr> mutations;
@@ -86,7 +84,8 @@ TEST(replication, mutation_log_learn)
 
         // writing logs
         time_tic = clock.now();
-        mutation_log_ptr mlog = new mutation_log_private(logp, 32, gpid, nullptr, 4096, 512, 10000);
+        mutation_log_ptr mlog =
+            new mutation_log_private(logp, 32, gpid, _replica.get(), 4096, 512, 10000);
         mlog->open(nullptr, nullptr);
         for (auto &mu : mutations) {
             mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
@@ -111,7 +110,7 @@ TEST(replication, mutation_log_learn)
 
         // reading logs
         time_tic = clock.now();
-        mlog = new mutation_log_private(logp, 1, gpid, nullptr, 1024, 512, 10000);
+        mlog = new mutation_log_private(logp, 1, gpid, _replica.get(), 1024, 512, 10000);
         mlog->open([](int log_length, mutation_ptr &mu) -> bool { return true; }, nullptr);
         time_toc = clock.now();
         std::cout
@@ -182,3 +181,6 @@ TEST(replication, mutation_log_learn)
         utils::filesystem::remove_path(logp);
     }
 }
+
+} // namespace replication
+} // namespace dsn

@@ -220,6 +220,22 @@ void mutation_log_shared::write_pending_mutations(bool release_lock_required)
 
 ////////////////////////////////////////////////////
 
+mutation_log_private::mutation_log_private(const std::string &dir,
+                                           int32_t max_log_file_mb,
+                                           gpid gpid,
+                                           replica *r,
+                                           uint32_t batch_buffer_bytes,
+                                           uint32_t batch_buffer_max_count,
+                                           uint64_t batch_buffer_flush_interval_ms)
+    : mutation_log(dir, max_log_file_mb, gpid, r),
+      replica_base(r),
+      _batch_buffer_bytes(batch_buffer_bytes),
+      _batch_buffer_max_count(batch_buffer_max_count),
+      _batch_buffer_flush_interval_ms(batch_buffer_flush_interval_ms)
+{
+    mutation_log_private::init_states();
+}
+
 ::dsn::task_ptr mutation_log_private::append(mutation_ptr &mu,
                                              dsn::task_code callback_code,
                                              dsn::task_tracker *tracker,
@@ -483,8 +499,6 @@ void mutation_log::init_states()
     _private_max_commit_on_disk = 0;
 }
 
-mutation_log::~mutation_log() { close(); }
-
 error_code mutation_log::open(replay_callback read_callback,
                               io_failure_callback write_error_callback)
 {
@@ -538,7 +552,7 @@ error_code mutation_log::open(replay_callback read_callback,
 
         if (_is_private) {
             ddebug("open private log %s succeed, start_offset = %" PRId64 ", end_offset = %" PRId64
-                   ", size = %" PRId64 ", privious_max_decree = %" PRId64,
+                   ", size = %" PRId64 ", previous_max_decree = %" PRId64,
                    fpath.c_str(),
                    log->start_offset(),
                    log->end_offset(),
@@ -2266,5 +2280,5 @@ int log_file::write_file_header(binary_writer &writer, const replica_log_info_ma
 
     return get_file_header_size();
 }
-}
-} // end namespace
+} // namespace replication
+} // namespace dsn
