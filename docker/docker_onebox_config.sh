@@ -69,8 +69,8 @@ fi
 
 echo "${DOCKER_DIR} is ready: $(pwd)/${DOCKER_DIR}"
 for i in $(seq ${META_COUNT}); do
-    echo "META${i}: ${NODE_IP_PREFIX}.1$((i))"
+    echo "META${i}: ${NODE_IP_PREFIX}.1$((i)):34601"
 done
 for i in $(seq ${REPLICA_COUNT}); do
-    echo "REPLICA${i}: ${NODE_IP_PREFIX}.2$((i))"
+    echo "REPLICA${i}: ${NODE_IP_PREFIX}.2$((i)):34801"
 done
