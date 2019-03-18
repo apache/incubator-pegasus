@@ -1,4 +1,5 @@
-FROM ubuntu:18.04
+# Support ssh to be testable by Jepsen.
+FROM rastasheep/ubuntu-sshd:18.04
 
 # Usage:
 #
