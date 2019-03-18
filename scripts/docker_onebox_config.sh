@@ -13,7 +13,7 @@ PARTITION_COUNT=8
 APP_NAME=temp
 
 # The ip prefix for each nodes.
-# Meta-x's ip address is 172.21.0.{x}:34601.
+# Meta-x's ip address is 172.21.0.1{x}:34601.
 # Replica-x's ip address is 172.21.0.2{x}:34801
 NODE_IP_PREFIX=172.21.0
 
@@ -25,6 +25,7 @@ IMAGE_NAME=pegasus:latest
 
 DOCKER_DIR=${CLUSTER_NAME}-docker # Where docker onebox resides.
 META_COUNT=2 # Number of meta instances.
+REPLICA_COUNT=5 # Number of replica instances.
 
 if [ -d ${DOCKER_DIR} ]; then
     echo "ERROR: ${DOCKER_DIR} already exists, please remove it first" >&2
@@ -66,4 +67,10 @@ if ! [ -x "$(command -v docker-compose)" ]; then
   exit 1
 fi
 
-echo "${DOCKER_DIR} is ready: `pwd`/${DOCKER_DIR}"
+echo "${DOCKER_DIR} is ready: $(pwd)/${DOCKER_DIR}"
+for i in $(seq ${META_COUNT}); do
+    echo "META${i}: ${NODE_IP_PREFIX}.1$((i))"
+done
+for i in $(seq ${REPLICA_COUNT}); do
+    echo "REPLICA${i}: ${NODE_IP_PREFIX}.2$((i))"
+done
