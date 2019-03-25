@@ -14,6 +14,10 @@ export CLUSTER_NAME=onebox2
 
 export IMAGE_NAME=pegasus:latest
 
+# allow_non_idempotent_write = true
+# for jepsen test this option must be enabled.
+export IDEMPOTENT=true
+
 # Config End #
 ##############
 

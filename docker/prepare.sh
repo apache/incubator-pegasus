@@ -43,6 +43,7 @@ sed -i 's/%{app.dir}/\/pegasus\/data/g' "${DOCKER_DIR}/config.ini"
 sed -i 's/%{slog.dir}/\/pegasus\/slog/g' "${DOCKER_DIR}/config.ini"
 sed -i 's/%{data.dirs}//g' "${DOCKER_DIR}/config.ini"
 sed -i 's@%{home.dir}@'"/pegasus"'@g' "${DOCKER_DIR}/config.ini"
+sed -i "s/allow_non_idempotent_write = false/allow_non_idempotent_write = ${IDEMPOTENT}/" "${DOCKER_DIR}/config.ini"
 for i in $(seq "${META_COUNT}"); do
     meta_port=34601
     meta_ip=${NODE_IP_PREFIX}.1$((i))
