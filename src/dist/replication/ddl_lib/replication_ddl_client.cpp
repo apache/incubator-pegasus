@@ -25,12 +25,14 @@
  */
 
 #include <boost/lexical_cast.hpp>
+#include <fmt/format.h>
 
 #include <dsn/utility/error_code.h>
 #include <dsn/utility/output_utils.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/replication_other_types.h>
+#include <dsn/dist/replication/duplication_common.h>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -1415,6 +1417,34 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
     return ERR_OK;
 }
 
+error_with<duplication_add_response>
+replication_ddl_client::add_dup(std::string app_name, std::string remote_address, bool freezed)
+{
+    auto req = make_unique<duplication_add_request>();
+    req->app_name = std::move(app_name);
+    req->remote_cluster_address = std::move(remote_address);
+    req->freezed = freezed;
+    return call_rpc_sync(duplication_add_rpc(std::move(req), RPC_CM_ADD_DUPLICATION));
+}
+
+error_with<duplication_status_change_response> replication_ddl_client::change_dup_status(
+    std::string app_name, int dupid, duplication_status::type status)
+{
+    auto req = make_unique<duplication_status_change_request>();
+    req->app_name = std::move(app_name);
+    req->dupid = dupid;
+    req->status = status;
+    return call_rpc_sync(
+        duplication_status_change_rpc(std::move(req), RPC_CM_CHANGE_DUPLICATION_STATUS));
+}
+
+error_with<duplication_query_response> replication_ddl_client::query_dup(std::string app_name)
+{
+    auto req = make_unique<duplication_query_request>();
+    req->app_name = std::move(app_name);
+    return call_rpc_sync(duplication_query_rpc(std::move(req), RPC_CM_QUERY_DUPLICATION));
+}
+
 bool replication_ddl_client::valid_app_char(int c)
 {
     return (bool)std::isalnum(c) || c == '_' || c == '.' || c == ':';
@@ -1579,5 +1609,5 @@ replication_ddl_client::ddd_diagnose(gpid pid, std::vector<ddd_partition_info> &
 
     return dsn::ERR_OK;
 }
-}
-} // namespace
+} // namespace replication
+} // namespace dsn
