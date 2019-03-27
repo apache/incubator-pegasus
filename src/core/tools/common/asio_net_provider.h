@@ -48,6 +48,7 @@ private:
 
 private:
     friend class asio_rpc_session;
+    friend class asio_network_provider_test;
 
     std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;
     boost::asio::io_service _io_service;

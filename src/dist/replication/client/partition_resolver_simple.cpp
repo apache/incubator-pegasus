@@ -208,12 +208,12 @@ void partition_resolver_simple::call(request_context_ptr &&request, bool from_me
 
             // init configuration query task if necessary
             if (nullptr == it->second->query_config_task) {
-                it->second->query_config_task = query_config(pindex);
+                it->second->query_config_task = query_config(pindex, timeout_ms);
             }
         } else {
             _pending_requests_before_partition_count_unknown.push_back(std::move(request));
             if (_pending_requests_before_partition_count_unknown.size() == 1) {
-                _query_config_task = query_config(pindex);
+                _query_config_task = query_config(pindex, timeout_ms);
             }
         }
     }
@@ -224,11 +224,17 @@ DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
                      TASK_PRIORITY_COMMON,
                      THREAD_POOL_DEFAULT)
 
-task_ptr partition_resolver_simple::query_config(int partition_index)
+task_ptr partition_resolver_simple::query_config(int partition_index, int timeout_ms)
 {
-    dinfo(
-        "%s.client: start query config, gpid = %d.%d", _app_name.c_str(), _app_id, partition_index);
-    auto msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
+    dinfo("%s.client: start query config, gpid = %d.%d, timeout_ms = %d",
+          _app_name.c_str(),
+          _app_id,
+          partition_index,
+          timeout_ms);
+    task_spec *sp = task_spec::get(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
+    if (timeout_ms >= sp->rpc_timeout_milliseconds)
+        timeout_ms = 0;
+    auto msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, timeout_ms);
 
     configuration_query_by_index_request req;
     req.app_name = _app_name;

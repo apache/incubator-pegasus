@@ -53,6 +53,23 @@
 using namespace dsn;
 using namespace dsn::tools;
 
+class asio_network_provider_test : public asio_network_provider
+{
+public:
+    asio_network_provider_test(rpc_engine *srv, network *inner_provider)
+        : asio_network_provider(srv, inner_provider)
+    {
+    }
+
+public:
+    void change_test_cfg_conn_threshold_per_ip(uint32_t n)
+    {
+        ddebug(
+            "change _cfg_conn_threshold_per_ip %u -> %u for test", _cfg_conn_threshold_per_ip, n);
+        _cfg_conn_threshold_per_ip = n;
+    }
+};
+
 static int TEST_PORT = 20401;
 DEFINE_TASK_CODE_RPC(RPC_TEST_NETPROVIDER, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
@@ -73,6 +90,12 @@ void response_handler(dsn::error_code ec,
     wait_flag = 1;
 }
 
+void reject_response_handler(dsn::error_code ec)
+{
+    wait_flag = 1;
+    ASSERT_TRUE(ERR_TIMEOUT == ec);
+}
+
 void rpc_server_response(dsn::message_ex *request)
 {
     std::string str_command;
@@ -88,7 +111,7 @@ void wait_response()
         std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-void rpc_client_session_send(rpc_session_ptr client_session)
+void rpc_client_session_send(rpc_session_ptr client_session, bool reject = false)
 {
     message_ex *msg = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
     std::unique_ptr<char[]> buf(new char[128]);
@@ -97,17 +120,21 @@ void rpc_client_session_send(rpc_session_ptr client_session)
     ::dsn::marshall(msg, std::string(buf.get()));
 
     wait_flag = 0;
-    rpc_response_task *t = new rpc_response_task(msg,
-                                                 std::bind(&response_handler,
-                                                           std::placeholders::_1,
-                                                           std::placeholders::_2,
-                                                           std::placeholders::_3,
-                                                           buf.get()),
-                                                 0);
-
-    client_session->net().engine()->matcher()->on_call(msg, t);
+    if (!reject) {
+        rpc_response_task *t = new rpc_response_task(msg,
+                                                     std::bind(&response_handler,
+                                                               std::placeholders::_1,
+                                                               std::placeholders::_2,
+                                                               std::placeholders::_3,
+                                                               buf.get()),
+                                                     0);
+        client_session->net().engine()->matcher()->on_call(msg, t);
+    } else {
+        rpc_response_task *t = new rpc_response_task(
+            msg, std::bind(&reject_response_handler, std::placeholders::_1), 0);
+        client_session->net().engine()->matcher()->on_call(msg, t);
+    }
     client_session->send_message(msg);
-
     wait_response();
 }
 
@@ -223,6 +250,53 @@ TEST(tools_common, sim_net_provider)
     client_session->connect();
 
     rpc_client_session_send(client_session);
+
+    ASSERT_TRUE(dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
+
+    TEST_PORT++;
+}
+
+TEST(tools_common, asio_network_provider_connection_threshold)
+{
+    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
+        "dsn::tools::sim_semaphore_provider")
+        return;
+
+    ASSERT_TRUE(dsn_rpc_register_handler(
+        RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
+
+    asio_network_provider_test *asio_network =
+        new asio_network_provider_test(task::get_current_rpc(), nullptr);
+
+    error_code start_result;
+    start_result = asio_network->start(RPC_CHANNEL_TCP, TEST_PORT, false);
+    ASSERT_TRUE(start_result == ERR_OK);
+    asio_network->change_test_cfg_conn_threshold_per_ip(10);
+
+    for (int count = 0; count < 20; count++) {
+        ddebug("client # %d", count);
+        rpc_session_ptr client_session =
+            asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
+        client_session->connect();
+
+        rpc_client_session_send(client_session);
+
+        client_session->close();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
+    bool reject = false;
+    for (int count = 0; count < 20; count++) {
+
+        ddebug("client # %d", count);
+        rpc_session_ptr client_session =
+            asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
+        client_session->connect();
+
+        if (count >= 10)
+            reject = true;
+        rpc_client_session_send(client_session, reject);
+    }
 
     ASSERT_TRUE(dsn_rpc_unregiser_handler(RPC_TEST_NETPROVIDER));
 

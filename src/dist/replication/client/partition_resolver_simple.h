@@ -114,7 +114,7 @@ private:
     void on_timeout(request_context_ptr &&rc) const;
 
     // with meta server
-    task_ptr query_config(int partition_index);
+    task_ptr query_config(int partition_index, int timeout_ms);
     void query_config_reply(error_code err,
                             dsn::message_ex *request,
                             dsn::message_ex *response,
