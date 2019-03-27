@@ -55,11 +55,12 @@ function TableHandler(cluster, tableName, callback) {
  */
 TableHandler.prototype.queryMeta = function (tableName, callback) {
     let session = this.cluster.metaSession;
-    let leader = session.metaList[session.curLeader];
+    let index = session.curLeader;
+    let leader = session.metaList[index];
 
     // connection has error or closed
     if (leader.connectError || leader.closed) {
-        session.handleConnectedError(session.curLeader);
+        session.handleConnectedError(index);
         session.queryingTableName[tableName] = false;
         session.lastQueryTime[tableName] = 0;
     }
@@ -70,7 +71,8 @@ TableHandler.prototype.queryMeta = function (tableName, callback) {
     let round = new MetaRequestRound(queryCfgOperator,
         callback,
         session.maxRetryCounter,
-        session.metaList[session.curLeader]);
+        index,
+        leader);
 
     let isQueryingMeta = session.queryingTableName[tableName];
     let lastQueryTime = session.lastQueryTime[tableName] ? session.lastQueryTime[tableName] : 0;

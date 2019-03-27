@@ -9,7 +9,7 @@ const ErrorType = require('./dsn/base_types').error_type;
 const Connection = require('./connection');
 const util = require('util');
 const Exception = require('./errors');
-const META_DELAY = 500;
+const META_DELAY = 1000;
 
 let log = null;
 
@@ -140,6 +140,25 @@ MetaSession.prototype.query = function (round) {
             round.operator = op;
             this.onFinishQueryMeta(err, round);
         }.bind(this));
+        if (round.lastConnection.connectError || round.lastConnection.closed) {
+            if (this.metaList[round.lastIndex] === round.lastConnection) {
+                log.error('%s meet error, reconnect it', round.lastConnection.name);
+                this.handleConnectedError(round.lastIndex);
+            } else if (this.metaList[round.lastIndex].connectError || this.metaList[round.lastIndex].closed || !this.metaList[round.lastIndex].connected ){
+                log.error('%s meet error, metaList[%d]: %s also meet error, reconnect lastIndex',
+                    round.lastConnection.name,
+                    round.lastIndex,
+                    this.metaList[round.lastIndex].name);
+                round.lastConnection = this.metaList[round.lastIndex];
+                this.handleConnectedError(round.lastIndex);
+            }else {
+                log.info('%s meet error, but metaList[%d]: %s connected, use lastIndex connection',
+                    round.lastConnection.name,
+                    round.lastIndex,
+                    this.metaList[round.lastIndex].name);
+                round.lastConnection = this.metaList[round.lastIndex];
+            }
+        }
         round.lastConnection.call(entry);
     } else {
         log.error('There is no meta session exist');
@@ -192,10 +211,12 @@ MetaSession.prototype.onFinishQueryMeta = function (err, round) {
     }
 
     // switch leader meta server
-    if (needSwitch && this.metaList[this.curLeader] === round.lastConnection) {
+    if (needSwitch && this.metaList[this.curLeader].hostnamePort === round.lastConnection.hostnamePort) {
         this.curLeader = (this.curLeader + 1) % this.metaList.length;
     }
-    round.lastConnection = this.metaList[this.curLeader];
+    round.lastIndex = this.curLeader;
+    round.lastConnection = this.metaList[round.lastIndex];
+    log.info("Will query meta index[%d]: %s", round.lastIndex, round.lastConnection.name);
 
     // delay to query meta
     let fun = function () {
@@ -399,13 +420,15 @@ function RequestEntry(operator, callback) {
  * @param   {Operator}    operator
  * @param   {Function}    callback
  * @param   {Number}      maxQueryCount
+ * @param   {Number}      index
  * @param   {Connection}  lastConnection
  * @constructor
  */
-function MetaRequestRound(operator, callback, maxQueryCount, lastConnection) {
+function MetaRequestRound(operator, callback, maxQueryCount, index, lastConnection) {
     this.operator = operator;
     this.callback = callback;
     this.maxQueryCount = maxQueryCount;
+    this.lastIndex = index;
     this.lastConnection = lastConnection;
 }
 
