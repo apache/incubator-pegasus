@@ -4,7 +4,6 @@
 
 #include "pegasus_server_impl.h"
 
-#include <algorithm>
 #include <boost/lexical_cast.hpp>
 #include <rocksdb/convenience.h>
 #include <rocksdb/utilities/checkpoint.h>
@@ -260,6 +259,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _update_rdb_stat_interval = std::chrono::seconds(dsn_config_get_value_uint64(
         "pegasus.server", "update_rdb_stat_interval", 600, "update_rdb_stat_interval, in seconds"));
 
+    _capacity_unit_size =
+        dsn_config_get_value_double("pegasus.server",
+                                    "perf_counter_capacity_unit_size",
+                                    1024.0,
+                                    "capacity unit size of read/write requests, default 1KB");
+
     // TODO: move the qps/latency counters and it's statistics to replication_app_base layer
     char str_gpid[128], buf[256];
     snprintf(str_gpid, 128, "%d.%d", _gpid.get_app_id(), _gpid.get_partition_index());
@@ -312,6 +317,14 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                                 buf,
                                                 COUNTER_TYPE_VOLATILE_NUMBER,
                                                 "statistic the recent abnormal read count");
+
+    snprintf(buf, 255, "recent.read.units@%s", str_gpid);
+    _pfc_recent_read_units.init_app_counter(
+        "app.pegasus", buf, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent read units");
+
+    snprintf(buf, 255, "recent.write.units@%s", str_gpid);
+    _pfc_recent_write_units.init_app_counter(
+        "app.pegasus", buf, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent write units");
 
     snprintf(buf, 255, "disk.storage.sst.count@%s", str_gpid);
     _pfc_rdb_sst_count.init_app_counter(
@@ -550,7 +563,12 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     std::string value;
     rocksdb::Status status = _db->Get(_rd_opts, skey, &value);
 
+    if (status.IsNotFound()) {
+        _pfc_recent_read_units->increment();
+    }
+
     if (status.ok()) {
+        _pfc_recent_read_units->add(ceil((key.length() + value.length()) / _capacity_unit_size));
         if (check_if_record_expired(utils::epoch_now(), value)) {
             _pfc_recent_expire_count->increment();
             if (_verbose_log) {
@@ -630,6 +648,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                reply.to_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
+        _pfc_recent_read_units->increment();
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
@@ -707,6 +726,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                       stop_inclusive ? "inclusive" : "exclusive");
             }
             resp.error = rocksdb::Status::kOk;
+            _pfc_recent_read_units->increment();
             _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
             reply(resp);
             return;
@@ -824,6 +844,10 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 }
             }
         }
+        for (const auto &kv : resp.kvs) {
+            _pfc_recent_read_units->add(
+                ceil((kv.key.length() + kv.value.length()) / _capacity_unit_size));
+        }
 
         resp.error = it->status().code();
         if (!it->status().ok()) {
@@ -885,6 +909,9 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                            reply.to_address().to_string(),
                            status.ToString().c_str());
                 }
+            }
+            if (status.IsNotFound()) {
+                _pfc_recent_read_units->increment();
             }
             // check ttl
             if (status.ok()) {
@@ -1124,6 +1151,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                reply.to_address().to_string(),
                request.hash_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
+        _pfc_recent_read_units->increment();
         reply(resp);
         return;
     }
@@ -1134,6 +1162,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                reply.to_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
+        _pfc_recent_read_units->increment();
         reply(resp);
         return;
     }
@@ -1172,6 +1201,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                   request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
+        _pfc_recent_read_units->increment();
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
@@ -1227,6 +1257,10 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         }
 
         it->Next();
+    }
+    for (const auto &kv : resp.kvs) {
+        _pfc_recent_read_units->add(
+            ceil((kv.key.length() + kv.value.length()) / _capacity_unit_size));
     }
 
     resp.error = it->status().code();
@@ -1289,6 +1323,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     }
 
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
+
     reply(resp);
 }
 
@@ -1354,6 +1389,10 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
 
             it->Next();
         }
+        for (const auto &kv : resp.kvs) {
+            _pfc_recent_read_units->add(
+                ceil((kv.key.length() + kv.value.length()) / _capacity_unit_size));
+        }
 
         resp.error = it->status().code();
         if (!it->status().ok()) {
@@ -1399,6 +1438,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         }
     } else {
         resp.error = rocksdb::Status::Code::kNotFound;
+        _pfc_recent_read_units->increment();
     }
 
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
@@ -1752,10 +1792,8 @@ private:
                 last_commit,
                 last_durable_decree());
         int64_t last_flushed = static_cast<int64_t>(_db->GetLastFlushedDecree());
-        dassert(last_commit == last_flushed,
-                "%" PRId64 " VS %" PRId64 "",
-                last_commit,
-                last_flushed);
+        dassert(
+            last_commit == last_flushed, "%" PRId64 " VS %" PRId64 "", last_commit, last_flushed);
         if (!_checkpoints.empty()) {
             dassert(last_commit > _checkpoints.back(),
                     "%" PRId64 " VS %" PRId64 "",

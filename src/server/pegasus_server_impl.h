@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <vector>
 #include <rocksdb/db.h>
 #include <rocksdb/table.h>
@@ -270,6 +271,7 @@ private:
     uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
+    double _capacity_unit_size;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
@@ -317,6 +319,8 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
     ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
+    ::dsn::perf_counter_wrapper _pfc_recent_read_units;
+    ::dsn::perf_counter_wrapper _pfc_recent_write_units;
 
     // rocksdb internal statistics
     // server level

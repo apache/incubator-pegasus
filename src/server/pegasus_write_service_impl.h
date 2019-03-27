@@ -32,12 +32,15 @@ public:
           _wt_opts(server->_wt_opts),
           _rd_opts(server->_rd_opts),
           _default_ttl(0),
-          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
+          _pfc_recent_expire_count(server->_pfc_recent_expire_count),
+          _pfc_recent_read_units(server->_pfc_recent_read_units),
+          _pfc_recent_write_units(server->_pfc_recent_write_units)
     {
     }
 
     int empty_put(int64_t decree)
     {
+        //_pfc_recent_write_units->increment();
         int err = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
         if (err) {
             clear_up_batch_states(decree, err);
@@ -182,6 +185,7 @@ public:
                     new_expire_ts = update.expire_ts_seconds;
             }
         } else if (s.IsNotFound()) {
+            _pfc_recent_read_units->increment();
             // old value is not found, set to 0 before increment
             new_value = update.increment;
             new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
@@ -261,6 +265,7 @@ public:
         dassert_f(check_status.ok() || check_status.IsNotFound(),
                   "status = %s",
                   check_status.ToString().c_str());
+        _pfc_recent_read_units->increment();
 
         ::dsn::blob check_value;
         if (check_status.ok()) {
@@ -391,6 +396,7 @@ public:
         dassert_f(check_status.ok() || check_status.IsNotFound(),
                   "status = %s",
                   check_status.ToString().c_str());
+        _pfc_recent_read_units->increment();
 
         ::dsn::blob check_value;
         if (check_status.ok()) {
@@ -500,6 +506,8 @@ private:
                            dsn::string_view value,
                            uint32_t expire_sec)
     {
+        _pfc_recent_write_units->add(
+            ceil((raw_key.length() + value.length()) / _capacity_unit_size));
         FAIL_POINT_INJECT_F("db_write_batch_put",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
@@ -524,6 +532,7 @@ private:
 
     int db_write_batch_delete(int64_t decree, dsn::string_view raw_key)
     {
+        _pfc_recent_write_units->increment();
         FAIL_POINT_INJECT_F("db_write_batch_delete",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_DELETE; });
 
@@ -711,6 +720,8 @@ private:
     rocksdb::ReadOptions &_rd_opts;
     volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
+    ::dsn::perf_counter_wrapper &_pfc_recent_read_units;
+    ::dsn::perf_counter_wrapper &_pfc_recent_write_units;
 
     pegasus_value_generator _value_generator;
 

@@ -176,7 +176,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
                                         const dsn::blob &key,
                                         dsn::apps::update_response &resp)
 {
-    dassert(_batch_start_time != 0, "batch_put must be called after batch_prepare");
+    dassert(_batch_start_time != 0, "batch_remove must be called after batch_prepare");
 
     _batch_qps_perfcounters.push_back(_pfc_remove_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_remove_latency.get());

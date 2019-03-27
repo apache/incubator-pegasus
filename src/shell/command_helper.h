@@ -15,6 +15,7 @@
 #include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/env.h>
 #include <monitoring/histogram.h>
+#include <dsn/cpp/json_helper.h>
 #include <dsn/dist/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
@@ -511,6 +512,8 @@ struct row_data
     double check_and_set_qps = 0;
     double check_and_mutate_qps = 0;
     double scan_qps = 0;
+    double recent_read_units = 0;
+    double recent_write_units = 0;
     double recent_expire_count = 0;
     double recent_filter_count = 0;
     double recent_abnormal_count = 0;
@@ -547,6 +550,10 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.check_and_mutate_qps += value;
     else if (counter_name == "scan_qps")
         row.scan_qps += value;
+    else if (counter_name == "recent.read.units")
+        row.recent_read_units += value;
+    else if (counter_name == "recent.write.units")
+        row.recent_write_units += value;
     else if (counter_name == "recent.expire.count")
         row.recent_expire_count += value;
     else if (counter_name == "recent.filter.count")
@@ -573,15 +580,77 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         return false;
     return true;
 }
-inline bool
-get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_data> &rows)
+
+inline bool get_apps_and_nodes(shell_context *sc,
+                               std::vector<::dsn::app_info> &apps,
+                               std::vector<node_desc> &nodes)
 {
-    std::vector<::dsn::app_info> apps;
     dsn::error_code err = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
     if (err != dsn::ERR_OK) {
         derror("list apps failed, error = %s", err.to_string());
         return false;
     }
+    if (!fill_nodes(sc, "replica-server", nodes)) {
+        derror("get replica server node list failed");
+        return false;
+    }
+    return true;
+}
+
+inline bool
+get_app_partitions(shell_context *sc,
+                   const std::vector<::dsn::app_info> &apps,
+                   std::map<int32_t, std::vector<dsn::partition_configuration>> &app_partitions)
+{
+    for (const ::dsn::app_info &app : apps) {
+        int32_t app_id = 0;
+        int32_t partition_count = 0;
+        dsn::error_code err = sc->ddl_client->list_app(
+            app.app_name, app_id, partition_count, app_partitions[app.app_id]);
+        if (err != ::dsn::ERR_OK) {
+            derror("list app %s failed, error = %s", app.app_name.c_str(), err.to_string());
+            return false;
+        }
+        dassert(app_id == app.app_id, "%d VS %d", app_id, app.app_id);
+        dassert(partition_count == app.partition_count,
+                "%d VS %d",
+                partition_count,
+                app.partition_count);
+    }
+    return true;
+}
+
+inline bool decode_node_perf_counter_info(const dsn::rpc_address &node_addr,
+                                          const std::pair<bool, std::string> &result,
+                                          dsn::perf_counter_info &info)
+{
+    if (!result.first) {
+        derror("query perf counter info from node %s failed", node_addr.to_string());
+        return false;
+    }
+    dsn::blob bb(result.second.data(), 0, result.second.size());
+    if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+        derror("decode perf counter info from node %s failed, result = %s",
+               node_addr.to_string(),
+               result.second.c_str());
+        return false;
+    }
+    if (info.result != "OK") {
+        derror("query perf counter info from node %s returns error, error = %s",
+               node_addr.to_string(),
+               info.result.c_str());
+        return false;
+    }
+    return true;
+}
+
+inline bool
+get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_data> &rows)
+{
+    std::vector<::dsn::app_info> apps;
+    std::vector<node_desc> nodes;
+    if (!get_apps_and_nodes(sc, apps, nodes))
+        return false;
 
     ::dsn::app_info *app_info = nullptr;
     if (!app_name.empty()) {
@@ -595,12 +664,6 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             derror("app %s not found", app_name.c_str());
             return false;
         }
-    }
-
-    std::vector<node_desc> nodes;
-    if (!fill_nodes(sc, "replica-server", nodes)) {
-        derror("get replica server node list failed");
-        return false;
     }
 
     ::dsn::command command;
@@ -617,21 +680,8 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
 
     if (app_name.empty()) {
         std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
-        for (::dsn::app_info &app : apps) {
-            int32_t app_id = 0;
-            int32_t partition_count = 0;
-            dsn::error_code err = sc->ddl_client->list_app(
-                app.app_name, app_id, partition_count, app_partitions[app.app_id]);
-            if (err != ::dsn::ERR_OK) {
-                derror("list app %s failed, error = %s", app_name.c_str(), err.to_string());
-                return false;
-            }
-            dassert(app_id == app.app_id, "%d VS %d", app_id, app.app_id);
-            dassert(partition_count == app.partition_count,
-                    "%d VS %d",
-                    partition_count,
-                    app.partition_count);
-        }
+        if (!get_app_partitions(sc, apps, app_partitions))
+            return false;
 
         rows.resize(app_partitions.size());
         int idx = 0;
@@ -646,24 +696,9 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
 
         for (int i = 0; i < nodes.size(); ++i) {
             dsn::rpc_address node_addr = nodes[i].address;
-            if (!results[i].first) {
-                derror("query perf counter info from node %s failed", node_addr.to_string());
-                return false;
-            }
             dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                derror("decode perf counter info from node %s failed, result = %s",
-                       node_addr.to_string(),
-                       results[i].second.c_str());
+            if (!decode_node_perf_counter_info(node_addr, results[i], info))
                 return false;
-            }
-            if (info.result != "OK") {
-                derror("query perf counter info from node %s returns error, error = %s",
-                       node_addr.to_string(),
-                       info.result.c_str());
-                return false;
-            }
             for (dsn::perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
                 std::string counter_name;
@@ -700,24 +735,9 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
 
         for (int i = 0; i < nodes.size(); ++i) {
             dsn::rpc_address node_addr = nodes[i].address;
-            if (!results[i].first) {
-                derror("query perf counter info from node %s failed", node_addr.to_string());
-                return false;
-            }
             dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                derror("decode perf counter info from node %s failed, result = %s",
-                       node_addr.to_string(),
-                       results[i].second.c_str());
+            if (!decode_node_perf_counter_info(node_addr, results[i], info))
                 return false;
-            }
-            if (info.result != "OK") {
-                derror("query perf counter info from node %s returns error, error = %s",
-                       node_addr.to_string(),
-                       info.result.c_str());
-                return false;
-            }
             for (dsn::perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
                 std::string counter_name;
@@ -729,6 +749,107 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 if (partitions[partition_index_x].primary != node_addr)
                     continue;
                 update_app_pegasus_perf_counter(rows[partition_index_x], counter_name, m.value);
+            }
+        }
+    }
+    return true;
+}
+
+struct capacity_unit_metric
+{
+    int32_t partition_index;
+    double value;
+    capacity_unit_metric(int32_t index, double v) : partition_index(index), value(v) {}
+};
+
+struct node_capacity_unit_stat
+{
+    string timestamp_str;
+    std::string address;
+    // Mapping app_id --> capacity_unit_metric
+    std::map<int32_t, std::vector<capacity_unit_metric>> read_cu;
+    std::map<int32_t, std::vector<capacity_unit_metric>> write_cu;
+
+    void cu_value_output_in_json(std::ostream &out) const
+    {
+        rapidjson::OStreamWrapper wrapper(out);
+        dsn::json::JsonWriter writer(wrapper);
+        writer.StartObject();
+        dsn::json::json_encode(writer, "r");
+        writer.StartObject();
+        for (auto elem : read_cu) {
+            dsn::json::json_encode(writer, std::to_string(elem.first));
+            writer.StartObject();
+            for (auto metric : elem.second) {
+                dsn::json::json_encode(writer, std::to_string(metric.partition_index));
+                dsn::json::json_encode(writer, metric.value);
+            }
+            writer.EndObject();
+        }
+        writer.EndObject();
+        dsn::json::json_encode(writer, "w");
+        writer.StartObject();
+        for (auto elem : write_cu) {
+            dsn::json::json_encode(writer, std::to_string(elem.first));
+            writer.StartObject();
+            for (auto metric : elem.second) {
+                dsn::json::json_encode(writer, std::to_string(metric.partition_index));
+                dsn::json::json_encode(writer, metric.value);
+            }
+            writer.EndObject();
+        }
+        writer.EndObject();
+        writer.EndObject();
+    }
+};
+
+inline bool get_capacity_unit_stat(shell_context *sc,
+                                   std::vector<node_capacity_unit_stat> &nodes_stat)
+{
+    std::vector<::dsn::app_info> apps;
+    std::vector<node_desc> nodes;
+    if (!get_apps_and_nodes(sc, apps, nodes))
+        return false;
+    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
+    if (!get_app_partitions(sc, apps, app_partitions))
+        return false;
+
+    ::dsn::command command;
+    command.cmd = "perf-counters";
+    char tmp[256];
+    sprintf(tmp, ".*\\*recent\\..*\\.units@.*");
+    command.arguments.push_back(tmp);
+    std::vector<std::pair<bool, std::string>> results;
+    call_remote_command(sc, nodes, command, results);
+
+    nodes_stat.resize(nodes.size());
+    for (int i = 0; i < nodes.size(); ++i) {
+        dsn::rpc_address node_addr = nodes[i].address;
+        dsn::perf_counter_info info;
+        if (!decode_node_perf_counter_info(node_addr, results[i], info))
+            return false;
+        nodes_stat[i].timestamp_str = info.timestamp_str;
+        nodes_stat[i].address = node_addr.to_string();
+        for (dsn::perf_counter_metric &m : info.counters) {
+            int32_t app_id, partition_index;
+            std::string counter_name;
+            bool parse_ret =
+                parse_app_pegasus_perf_counter_name(m.name, app_id, partition_index, counter_name);
+            dassert(parse_ret, "name = %s", m.name.c_str());
+            auto find = app_partitions.find(app_id);
+            if (find == app_partitions.end())
+                continue;
+            if (find->second[partition_index].primary != node_addr)
+                continue;
+            if (counter_name == "recent.read.units") {
+                if (nodes_stat[i].read_cu.find(app_id) == nodes_stat[i].read_cu.end())
+                    nodes_stat[i].read_cu.emplace(app_id, std::vector<capacity_unit_metric>());
+                nodes_stat[i].read_cu[app_id].emplace_back(partition_index, m.value);
+            }
+            if (counter_name == "recent.write.units") {
+                if (nodes_stat[i].write_cu.find(app_id) == nodes_stat[i].write_cu.end())
+                    nodes_stat[i].write_cu.emplace(app_id, std::vector<capacity_unit_metric>());
+                nodes_stat[i].write_cu[app_id].emplace_back(partition_index, m.value);
             }
         }
     }

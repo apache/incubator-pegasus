@@ -14,6 +14,7 @@
 
 #include "base/pegasus_utils.h"
 #include "base/pegasus_const.h"
+#include "zstd.h"
 
 #define METRICSNUM 3
 
@@ -24,6 +25,9 @@ namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+                 TASK_PRIORITY_COMMON,
+                 ::dsn::THREAD_POOL_DEFAULT)
 
 info_collector::info_collector()
 {
@@ -46,28 +50,71 @@ info_collector::info_collector()
                                                                        "app_stat_interval_seconds",
                                                                        10, // default value 10s
                                                                        "app stat interval seconds");
+
+    _capacity_unit_stat_app = dsn_config_get_value_string(
+        "pegasus.collector", "capacity_unit_stat_app", "", "capacity unit stat app name");
+    dassert(_capacity_unit_stat_app.size() > 0, "");
+    // initialize the _client.
+    if (!pegasus_client_factory::initialize(nullptr)) {
+        dassert(false, "Initialize the pegasus client failed");
+    }
+    _client =
+        pegasus_client_factory::get_client(_cluster_name.c_str(), _capacity_unit_stat_app.c_str());
+    dassert(_client != nullptr, "Initialize the _client failed");
+
+    _capacity_unit_stat_fetch_interval_seconds =
+        (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
+                                              "capacity_unit_stat_fetch_interval_seconds",
+                                              8, // default value 8s
+                                              "capacity unit stat fetch interval seconds");
+
+    _capacity_unit_compression_type = dsn_config_get_value_string(
+        "pegasus.collector",
+        "capacity_unit_compression_type",
+        "none",
+        "capacity unit value compression type, default 'none'. Available config: '[none|zstd]'");
 }
 
 info_collector::~info_collector()
 {
-    _tracker.cancel_outstanding_tasks();
+    _app_stat_task_tracker.cancel_outstanding_tasks();
+    _capacity_unit_stat_task_tracker.cancel_outstanding_tasks();
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
+    // don't delete _client, just set _client to nullptr.
+    _client = nullptr;
+    _capacity_unit_update_info.clear();
+    stop();
 }
 
 void info_collector::start()
 {
     _app_stat_timer_task =
         ::dsn::tasking::enqueue_timer(LPC_PEGASUS_APP_STAT_TIMER,
-                                      &_tracker,
+                                      &_app_stat_task_tracker,
                                       [this] { on_app_stat(); },
                                       std::chrono::seconds(_app_stat_interval_seconds),
                                       0,
                                       std::chrono::minutes(1));
+
+    _capacity_unit_stat_timer_task = ::dsn::tasking::enqueue_timer(
+        LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+        &_capacity_unit_stat_task_tracker,
+        [this] { on_capacity_unit_stat(); },
+        std::chrono::seconds(_capacity_unit_stat_fetch_interval_seconds),
+        0,
+        std::chrono::minutes(1));
 }
 
-void info_collector::stop() { _app_stat_timer_task->cancel(true); }
+void info_collector::stop()
+{
+    if (_app_stat_timer_task != nullptr)
+        _app_stat_timer_task->cancel(true);
+
+    if (_capacity_unit_stat_timer_task != nullptr)
+        _capacity_unit_stat_timer_task->cancel(true);
+}
 
 void info_collector::on_app_stat()
 {
@@ -93,6 +140,8 @@ void info_collector::on_app_stat()
             all.check_and_set_qps += row.check_and_set_qps;
             all.check_and_mutate_qps += row.check_and_mutate_qps;
             all.scan_qps += row.scan_qps;
+            all.recent_read_units += row.recent_read_units;
+            all.recent_write_units += row.recent_write_units;
             all.recent_expire_count += row.recent_expire_count;
             all.recent_filter_count += row.recent_filter_count;
             all.recent_abnormal_count += row.recent_abnormal_count;
@@ -125,6 +174,8 @@ void info_collector::on_app_stat()
             counters->check_and_set_qps->set(row.check_and_set_qps);
             counters->check_and_mutate_qps->set(row.check_and_mutate_qps);
             counters->scan_qps->set(row.scan_qps);
+            counters->recent_read_units->set(row.recent_read_units);
+            counters->recent_write_units->set(row.recent_write_units);
             counters->recent_expire_count->set(row.recent_expire_count);
             counters->recent_filter_count->set(row.recent_filter_count);
             counters->recent_abnormal_count->set(row.recent_abnormal_count);
@@ -182,6 +233,8 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(check_and_set_qps);
     INIT_COUNTER(check_and_mutate_qps);
     INIT_COUNTER(scan_qps);
+    INIT_COUNTER(recent_read_units);
+    INIT_COUNTER(recent_write_units);
     INIT_COUNTER(recent_expire_count);
     INIT_COUNTER(recent_filter_count);
     INIT_COUNTER(recent_abnormal_count);
@@ -196,6 +249,123 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(write_qps);
     _app_stat_counters[app_name] = counters;
     return counters;
+}
+
+void info_collector::on_capacity_unit_stat()
+{
+    ddebug("start to stat capacity unit");
+    std::vector<node_capacity_unit_stat> nodes_stat;
+    if (get_capacity_unit_stat(&_shell_context, nodes_stat)) {
+        for (int i = 0; i < nodes_stat.size(); ++i) {
+            if (is_capacity_unit_updated(nodes_stat[i].address, nodes_stat[i].timestamp_str)) {
+                std::string hash_key(nodes_stat[i].timestamp_str);
+                std::string sort_key(nodes_stat[i].address);
+                std::string value;
+                std::stringstream ss;
+                nodes_stat[i].cu_value_output_in_json(ss);
+                dassert(compress_value(ss.str(), value), "compress capacity unit value failed");
+                set_capacity_unit_stat(hash_key, sort_key, value, 3000);
+            } else {
+                ddebug("recent read/write units value of node %s is not updated",
+                       nodes_stat[i].address.c_str());
+            }
+        }
+    } else {
+        derror("call get_capacity_unit_stat() failed");
+    }
+}
+
+bool info_collector::is_capacity_unit_updated(const std::string &node_address,
+                                              const std::string &timestamp)
+{
+    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_capacity_unit_update_info_lock);
+    auto find = _capacity_unit_update_info.find(node_address);
+    if (find == _capacity_unit_update_info.end()) {
+        _capacity_unit_update_info[node_address] = timestamp;
+        return true;
+    }
+    if (timestamp > find->second) {
+        _capacity_unit_update_info[node_address] = timestamp;
+        return true;
+    }
+    return false;
+}
+
+bool info_collector::compress_value(const std::string raw_value, std::string &value)
+{
+    if (_capacity_unit_compression_type == "none") {
+        value = raw_value;
+        return true;
+    } else if (_capacity_unit_compression_type == "zstd") {
+        return zstd_compress(raw_value, value);
+    } else {
+        derror("Unsupported compression type: %s.", _capacity_unit_compression_type);
+        return false;
+    }
+}
+
+bool info_collector::zstd_compress(const std::string raw_value, std::string &value)
+{
+    void *src = (void *)raw_value.c_str();
+    size_t src_size = raw_value.length();
+    size_t dst_capacity = ZSTD_compressBound(src_size);
+    void *dst = malloc(dst_capacity);
+    // The compression level is set 3, which is default level of zstd.
+    // Zstd library supports regular compression levels from 1 up to ZSTD_maxCLevel(),
+    // which is currently 22.
+    // The lower the level, the faster the speed (at the cost of compression).
+    size_t result = ZSTD_compress(dst, dst_capacity, src, src_size, 3);
+    if (ZSTD_isError(result)) {
+        derror("error compressing %s : %s", raw_value, ZSTD_getErrorName(result));
+        return false;
+    }
+    value = (char *)dst;
+    return true;
+}
+
+void info_collector::set_capacity_unit_stat(const std::string &hash_key,
+                                            const std::string &sort_key,
+                                            const std::string &value,
+                                            int try_count)
+{
+    auto async_set_callback = [this, hash_key, sort_key, value, try_count](
+        int err, pegasus_client::internal_info &&info) {
+        if (err != PERR_OK) {
+            int new_try_count = try_count - 1;
+            if (new_try_count > 0) {
+                derror("set_detect_result fail, hash_key = %s, sort_key = %s, value = %s, "
+                       "error = %s, left_try_count = %d, try again after 1 minute",
+                       hash_key.c_str(),
+                       sort_key.c_str(),
+                       value.c_str(),
+                       _client->get_error_string(err),
+                       new_try_count);
+                ::dsn::tasking::enqueue(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+                                        nullptr,
+                                        [this, hash_key, sort_key, value, new_try_count]() {
+                                            set_capacity_unit_stat(
+                                                hash_key, sort_key, value, new_try_count);
+                                        },
+                                        0,
+                                        std::chrono::minutes(1));
+            } else {
+                derror("set_detect_result fail, hash_key = %s, sort_key = %s, value = %s, "
+                       "error = %s, left_try_count = %d, do not try again",
+                       hash_key.c_str(),
+                       sort_key.c_str(),
+                       value.c_str(),
+                       _client->get_error_string(err),
+                       new_try_count);
+            }
+        } else {
+            ddebug("set_detect_result succeed, hash_key = %s, sort_key = %s, value = %s",
+                   hash_key.c_str(),
+                   sort_key.c_str(),
+                   value.c_str());
+        }
+    };
+
+    _client->async_set(hash_key, sort_key, value, std::move(async_set_callback));
 }
 } // namespace server
 } // namespace pegasus
