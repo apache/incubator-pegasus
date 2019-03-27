@@ -51,7 +51,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
       _db(nullptr),
       _is_open(false),
-      _value_schema_version(0),
+      _pegasus_data_version(0),
       _last_durable_decree(0),
       _is_checkpointing(false),
       _manual_compact_svc(this)
@@ -89,6 +89,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "rocksdb_abnormal_multi_get_iterate_count_threshold, default is 0, means no check");
 
     // init db options
+    _db_opts.pegasus_data = true;
 
     // read rocksdb::Options configurations
     // rocksdb default: 4MB
@@ -602,7 +603,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
 
     resp.error = status.code();
     if (status.ok()) {
-        pegasus_extract_user_data(_value_schema_version, std::move(value), resp.value);
+        pegasus_extract_user_data(_pegasus_data_version, std::move(value), resp.value);
     }
 
     _pfc_get_latency->set(dsn_now_ns() - start_time);
@@ -887,7 +888,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             }
             // check ttl
             if (status.ok()) {
-                uint32_t expire_ts = pegasus_extract_expire_ts(_value_schema_version, value);
+                uint32_t expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, value);
                 if (expire_ts > 0 && expire_ts <= epoch_now) {
                     expire_count++;
                     if (_verbose_log) {
@@ -908,7 +909,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 ::dsn::apps::key_value kv;
                 kv.key = request.sort_keys[i];
                 if (!request.no_value) {
-                    pegasus_extract_user_data(_value_schema_version, std::move(value), kv.value);
+                    pegasus_extract_user_data(_pegasus_data_version, std::move(value), kv.value);
                 }
                 count++;
                 size += kv.key.length() + kv.value.length();
@@ -1060,7 +1061,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
     uint32_t expire_ts = 0;
     uint32_t now_ts = ::pegasus::utils::epoch_now();
     if (status.ok()) {
-        expire_ts = pegasus_extract_expire_ts(_value_schema_version, value);
+        expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, value);
         if (check_if_ts_expired(now_ts, expire_ts)) {
             _pfc_recent_expire_count->increment();
             if (_verbose_log) {
@@ -1436,7 +1437,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     rocksdb::Options opts = _db_opts;
     opts.create_if_missing = true;
     opts.error_if_exists = false;
-    opts.default_value_schema_version = PEGASUS_VALUE_SCHEMA_MAX_VERSION;
+    opts.pegasus_data_version = MAX_PEGASUS_DATA_VERSION;
 
     //
     // here, we must distinguish three cases, such as:
@@ -1509,18 +1510,18 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     auto status = rocksdb::DB::Open(opts, path, &_db);
     if (status.ok()) {
         _last_committed_decree = _db->GetLastFlushedDecree();
-        _value_schema_version = _db->GetValueSchemaVersion();
-        if (_value_schema_version > PEGASUS_VALUE_SCHEMA_MAX_VERSION) {
-            derror("%s: open app failed, unsupported value schema version %" PRIu32,
+        _pegasus_data_version = _db->GetPegasusDataVersion();
+        if (_pegasus_data_version > MAX_PEGASUS_DATA_VERSION) {
+            derror("%s: open app failed, unsupported data version %" PRIu32,
                    replica_name(),
-                   _value_schema_version);
+                   _pegasus_data_version);
             delete _db;
             _db = nullptr;
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
 
         // only enable filter after correct value_schema_version set
-        _key_ttl_compaction_filter_factory->SetValueSchemaVersion(_value_schema_version);
+        _key_ttl_compaction_filter_factory->SetPegasusDataVersion(_pegasus_data_version);
         _key_ttl_compaction_filter_factory->EnableFilter();
 
         // update LastManualCompactFinishTime
@@ -1553,10 +1554,10 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                     last_durable_decree());
         }
 
-        ddebug("%s: open app succeed, value_schema_version = %" PRIu32
+        ddebug("%s: open app succeed, pegasus_data_version = %" PRIu32
                ", last_durable_decree = %" PRId64 "",
                replica_name(),
-               _value_schema_version,
+               _pegasus_data_version,
                last_durable_decree());
 
         _is_open = true;
@@ -2156,7 +2157,7 @@ int pegasus_server_impl::append_key_value_for_scan(
     // extract value
     if (!no_value) {
         std::string value_buf(value.data(), value.size());
-        pegasus_extract_user_data(_value_schema_version, std::move(value_buf), kv.value);
+        pegasus_extract_user_data(_pegasus_data_version, std::move(value_buf), kv.value);
     }
 
     kvs.emplace_back(std::move(kv));
@@ -2199,7 +2200,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
     // extract value
     if (!no_value) {
         std::string value_buf(value.data(), value.size());
-        pegasus_extract_user_data(_value_schema_version, std::move(value_buf), kv.value);
+        pegasus_extract_user_data(_pegasus_data_version, std::move(value_buf), kv.value);
     }
 
     kvs.emplace_back(std::move(kv));

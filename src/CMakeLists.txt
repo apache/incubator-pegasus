@@ -46,7 +46,7 @@ set(CMAKE_MODULE_PATH "${PEGASUS_PROJECT_DIR}/rocksdb/cmake/modules")
 find_package(snappy REQUIRED)
 find_package(zstd REQUIRED)
 find_package(lz4 REQUIRED)
-set(ROCKSDB_LINK_LIBRARIES rocksdb ${ZSTD_LIBRARIES} ${LZ4_LIBRARIES} ${SNAPPY_LIBRARIES})
+set(ROCKSDB_LINK_LIBRARIES librocksdb.a ${ZSTD_LIBRARIES} ${LZ4_LIBRARIES} ${SNAPPY_LIBRARIES})
 
 add_subdirectory(base)
 add_subdirectory(reporter)
