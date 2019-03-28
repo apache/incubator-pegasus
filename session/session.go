@@ -239,7 +239,7 @@ func (n *nodeSession) loopForResponse() error {
 				}
 			} else {
 				n.logger.Printf("failed to read response from %s: %s", n, err)
-				return nil
+				return err
 			}
 		}
 
