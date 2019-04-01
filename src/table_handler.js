@@ -183,31 +183,11 @@ function TableInfo(client, tableHandler, timeout) {
 }
 
 /**
- * Create Gpid object by blob_key Calculated by hashKey and sortKey
- * @param  {blob}   blob_key
- * @return {gpid}   gpid
+ * Create Gpid object by hash_value
+ * @param   {Long}  hash_value
+ * @return  {gpid}  gpid
  */
-TableInfo.prototype.getGpid = function (blob_key) {
-    let hash_value = this.tableHandler.keyHash.hash(blob_key.data);
-    let app_id = this.tableHandler.app_id;
-    let pidx = hash_value.mod(this.tableHandler.partition_count).getLowBits();
-    //pidx should be greater than zero
-    while (pidx < 0 && pidx < this.tableHandler.partition_count) {
-        pidx += this.tableHandler.partition_count;
-    }
-    return new Gpid({
-        'app_id': app_id,
-        'pidx': pidx,
-    });
-};
-
-/**
- * Create Gpid object by hashKey
- * @param  {Buffer} hash_key
- * @return {gpid}   gpid
- */
-TableInfo.prototype.get_hash_key_pid = function (hash_key) {
-    let hash_value = this.tableHandler.keyHash.default_hash(hash_key);
+TableInfo.prototype.getGpidByHash = function(hash_value) {
     let app_id = this.tableHandler.app_id;
     let pidx = hash_value.mod(this.tableHandler.partition_count).getLowBits();
     //pidx should be greater than zero
@@ -233,8 +213,9 @@ TableInfo.prototype.get = function (args, callback) {
     let request = new Blob({
         'data': tools.generateKey(args.hashKey, args.sortKey),
     });
-    let gpid = this.getGpid(request);
-    let op = new Operator.RrdbGetOperator(gpid, request, args.hashKey, args.sortKey, timeout, callback);
+    let hash_value = this.tableHandler.keyHash.hash(request.data);
+    let gpid = this.getGpidByHash(hash_value);
+    let op = new Operator.RrdbGetOperator(gpid, request, args.hashKey, args.sortKey, hash_value, timeout, callback);
     this.tableHandler.operate(gpid, op);
 };
 
@@ -284,12 +265,14 @@ TableInfo.prototype.set = function (args, callback) {
         'data': args.value,
     });
 
-    let gpid = this.getGpid(key);
+    let hash_value = this.tableHandler.keyHash.hash(key.data);
+    let gpid = this.getGpidByHash(hash_value);
+
     let op = new Operator.RrdbPutOperator(gpid, new RrdbType.update_request({
         'key': key,
         'value': blob_value,
         'expire_ts_seconds': args.ttl,
-    }), timeout, callback);
+    }), hash_value, timeout, callback);
     this.tableHandler.operate(gpid, op);
 };
 
@@ -331,8 +314,9 @@ TableInfo.prototype.del = function (args, callback) {
         'data': tools.generateKey(args.hashKey, args.sortKey),
     });
 
-    let gpid = this.getGpid(request);
-    let op = new Operator.RrdbRemoveOperator(gpid, request, timeout, callback);
+    let hash_value = this.tableHandler.keyHash.hash(request.data);
+    let gpid = this.getGpidByHash(hash_value);
+    let op = new Operator.RrdbRemoveOperator(gpid, request, hash_value, timeout, callback);
     this.tableHandler.operate(gpid, op);
 };
 
@@ -352,7 +336,8 @@ TableInfo.prototype.multiGet = function (args, callback) {
         maxFetchSize = args.maxFetchSize || DEFAULT_MULTI_SIZE,
         no_value = false;
 
-    let gpid = this.get_hash_key_pid(args.hashKey);
+    let hash_value = this.tableHandler.keyHash.default_hash(args.hashKey);
+    let gpid = this.getGpidByHash(hash_value);
 
     let hashKeyBlob = new Blob({
         'data': args.hashKey,
@@ -370,7 +355,7 @@ TableInfo.prototype.multiGet = function (args, callback) {
         'max_kv_size': maxFetchSize,
         'no_value': no_value
     });
-    let op = new Operator.RrdbMultiGetOperator(gpid, request, args.hashKey, timeout, callback);
+    let op = new Operator.RrdbMultiGetOperator(gpid, request, args.hashKey, hash_value, timeout, callback);
     this.tableHandler.operate(gpid, op);
 };
 
@@ -389,7 +374,8 @@ TableInfo.prototype.multiSet = function (args, callback) {
         args.ttl = 0;
     }
     let timeout = args.timeout || this.timeout,
-        gpid = this.get_hash_key_pid(args.hashKey);
+        hash_value = this.tableHandler.keyHash.default_hash(args.hashKey),
+        gpid = this.getGpidByHash(hash_value);
 
     let hashKeyBlob = new Blob({
         'data': args.hashKey,
@@ -408,7 +394,7 @@ TableInfo.prototype.multiSet = function (args, callback) {
         'expire_ts_seconds': args.ttl,
     });
 
-    let op = new Operator.RrdbMultiPutOperator(gpid, request, timeout, callback);
+    let op = new Operator.RrdbMultiPutOperator(gpid, request, hash_value, timeout, callback);
     this.tableHandler.operate(gpid, op);
 };
 
