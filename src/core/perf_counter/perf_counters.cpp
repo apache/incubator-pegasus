@@ -201,7 +201,7 @@ std::string perf_counters::list_snapshot_by_regexp(const std::vector<std::string
     }
 
     std::stringstream ss;
-    info.timestamp = dsn_now_ms() / 1000;
+    info.timestamp = _timestamp;
     char buf[20];
     utils::time_ms_to_date_time(info.timestamp * 1000, buf, sizeof(buf));
     info.timestamp_str = buf;
@@ -235,6 +235,8 @@ void perf_counters::take_snapshot()
             cs.value = c->get_percentile(COUNTER_PERCENTILE_99);
         }
     }
+
+    _timestamp = dsn_now_ms() / 1000;
 
     // delete old counters
     std::vector<std::string> old_counters;
