@@ -1,7 +1,8 @@
 #pragma once
 
 #include <cstdio>
-
+#include <sstream>
+#include <iomanip> // std::setfill, std::setw
 #include <functional>
 #include <dsn/dist/block_service.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
@@ -64,11 +65,12 @@ struct backup_start_time
     int32_t minute; // [0 ~ 60)
     backup_start_time() : hour(0), minute(0) {}
     backup_start_time(int32_t h, int32_t m) : hour(h), minute(m) {}
-    std::string to_string()
+    std::string to_string() const
     {
-        char res[10] = {"\0"};
-        sprintf(res, "%02d:%02d", hour, minute);
-        return std::string(res);
+        std::stringstream ss;
+        ss << std::setw(2) << std::setfill('0') << std::to_string(hour) << ":" << std::setw(2)
+           << std::setfill('0') << std::to_string(minute);
+        return ss.str();
     }
     // NOTICE: this function will modify hour and minute, if time is invalid, this func will set
     // hour = 24, minute = 0

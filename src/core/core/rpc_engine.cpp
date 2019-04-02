@@ -741,7 +741,8 @@ void rpc_engine::reply(message_ex *response, error_code err)
 
     strncpy(response->header->server.error_name,
             err.to_string(),
-            sizeof(response->header->server.error_name));
+            sizeof(response->header->server.error_name) - 1);
+    response->header->server.error_name[sizeof(response->header->server.error_name) - 1] = '\0';
     response->header->server.error_code.local_code = err;
     response->header->server.error_code.local_hash = message_ex::s_local_hash;
 

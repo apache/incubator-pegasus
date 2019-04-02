@@ -281,6 +281,7 @@ bool cold_backup_context::fail_check(const char *failure_reason)
     int checking = ColdBackupChecking;
     if (_status.compare_exchange_strong(checking, ColdBackupFailed)) {
         strncpy(_reason, failure_reason, sizeof(_reason) - 1);
+        _reason[sizeof(_reason) - 1] = '\0';
         if (_owner_replica != nullptr) {
             _owner_replica->get_replica_stub()->_counter_cold_backup_recent_fail_count->increment();
         }
@@ -319,6 +320,7 @@ bool cold_backup_context::fail_checkpoint(const char *failure_reason)
     int checkpointing = ColdBackupCheckpointing;
     if (_status.compare_exchange_strong(checkpointing, ColdBackupFailed)) {
         strncpy(_reason, failure_reason, sizeof(_reason) - 1);
+        _reason[sizeof(_reason) - 1] = '\0';
         if (_owner_replica != nullptr) {
             _owner_replica->get_replica_stub()->_counter_cold_backup_recent_fail_count->increment();
         }
@@ -359,6 +361,7 @@ bool cold_backup_context::fail_upload(const char *failure_reason)
     if (_status.compare_exchange_strong(uploading, ColdBackupFailed) ||
         _status.compare_exchange_strong(paused, ColdBackupFailed)) {
         strncpy(_reason, failure_reason, sizeof(_reason) - 1);
+        _reason[sizeof(_reason) - 1] = '\0';
         if (_owner_replica != nullptr) {
             _owner_replica->get_replica_stub()->_counter_cold_backup_recent_fail_count->increment();
         }

@@ -37,7 +37,8 @@ namespace dsn {
     auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = rpc_code;
     const char *name = rpc_code.to_string();
-    strncpy(msg->header->rpc_name, name, strlen(name));
+    strncpy(msg->header->rpc_name, name, sizeof(msg->header->rpc_name) - 1);
+    msg->header->rpc_name[sizeof(msg->header->rpc_name) - 1] = '\0';
 
     msg->header->client.thread_hash = thread_hash;
     msg->header->client.partition_hash = partition_hash;

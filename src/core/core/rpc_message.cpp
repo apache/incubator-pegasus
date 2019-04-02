@@ -144,7 +144,8 @@ message_ex *message_ex::create_received_request(dsn::task_code code,
     auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = code;
     const char *name = code.to_string();
-    strncpy(msg->header->rpc_name, name, strlen(name));
+    strncpy(msg->header->rpc_name, name, sizeof(msg->header->rpc_name) - 1);
+    msg->header->rpc_name[sizeof(msg->header->rpc_name) - 1] = '\0';
 
     msg->header->client.thread_hash = thread_hash;
     msg->header->client.partition_hash = partition_hash;
@@ -160,7 +161,8 @@ message_ex *message_ex::create_receive_message_with_standalone_header(const blob
         static_cast<char *>(dsn::tls_trans_malloc(sizeof(message_header))),
         [](char *c) { dsn::tls_trans_free(c); });
     msg->header = reinterpret_cast<message_header *>(header_holder.get());
-    memset(msg->header, 0, sizeof(message_header));
+    memset(static_cast<void *>(msg->header), 0, sizeof(message_header));
+
     msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
     msg->buffers.push_back(data);
 
@@ -272,7 +274,7 @@ message_ex *message_ex::create_request(dsn::task_code rpc_code,
 
     // init header
     auto &hdr = *msg->header;
-    memset(&hdr, 0, sizeof(hdr));
+    memset(static_cast<void *>(&hdr), 0, sizeof(hdr));
     hdr.hdr_type = *(uint32_t *)"RDSN";
     hdr.hdr_length = sizeof(message_header);
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
@@ -290,7 +292,8 @@ message_ex *message_ex::create_request(dsn::task_code rpc_code,
     }
 
     msg->local_rpc_code = rpc_code;
-    strncpy(hdr.rpc_name, sp->name.c_str(), sizeof(hdr.rpc_name));
+    strncpy(hdr.rpc_name, sp->name.c_str(), sizeof(hdr.rpc_name) - 1);
+    hdr.rpc_name[sizeof(hdr.rpc_name) - 1] = '\0';
     hdr.rpc_code.local_code = (uint32_t)rpc_code;
     hdr.rpc_code.local_hash = s_local_hash;
 
@@ -331,6 +334,7 @@ message_ex *message_ex::create_response()
         task_spec *response_sp = task_spec::get(request_sp->rpc_paired_code);
         msg->local_rpc_code = response_sp->code;
         strncpy(hdr.rpc_name, response_sp->name.c_str(), sizeof(hdr.rpc_name) - 1);
+        hdr.rpc_name[sizeof(hdr.rpc_name) - 1] = '\0';
         hdr.rpc_code.local_code = msg->local_rpc_code;
         hdr.rpc_code.local_hash = s_local_hash;
 
@@ -341,6 +345,7 @@ message_ex *message_ex::create_response()
         std::string ack_rpc_name(header->rpc_name);
         ack_rpc_name += "_ACK";
         strncpy(hdr.rpc_name, ack_rpc_name.c_str(), sizeof(hdr.rpc_name) - 1);
+        hdr.rpc_name[sizeof(hdr.rpc_name) - 1] = '\0';
         hdr.rpc_code.local_code = TASK_CODE_INVALID;
         hdr.rpc_code.local_hash = s_local_hash;
     }
