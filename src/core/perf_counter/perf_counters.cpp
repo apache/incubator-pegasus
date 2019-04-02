@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #include <regex>
 
 #include <dsn/perf_counter/perf_counter.h>
@@ -53,16 +45,16 @@ namespace dsn {
 
 perf_counters::perf_counters()
 {
-    dsn::command_manager::instance().register_command(
+    command_manager::instance().register_command(
         {"perf-counters"},
         "perf-counters - query perf counters, supporting filter by POSIX basic regular expressions",
         "perf-counters [name-filter]...",
         [](const std::vector<std::string> &args) {
-            return dsn::perf_counters::instance().list_snapshot_by_regexp(args);
+            return perf_counters::instance().list_snapshot_by_regexp(args);
         });
 }
 
-perf_counters::~perf_counters() {}
+perf_counters::~perf_counters() = default;
 
 perf_counter_ptr perf_counters::get_app_counter(const char *section,
                                                 const char *name,
@@ -70,7 +62,7 @@ perf_counter_ptr perf_counters::get_app_counter(const char *section,
                                                 const char *dsptr,
                                                 bool create_if_not_exist)
 {
-    auto cnode = dsn::task::get_current_node2();
+    auto cnode = task::get_current_node2();
     dassert(cnode != nullptr, "cannot get current service node!");
     return get_global_counter(cnode->full_name(), section, name, flags, dsptr, create_if_not_exist);
 }
@@ -153,7 +145,7 @@ perf_counter *perf_counters::new_counter(const char *app,
     }
 }
 
-void perf_counters::get_all_counters(std::vector<perf_counter_ptr> *all)
+void perf_counters::get_all_counters(std::vector<perf_counter_ptr> *all) const
 {
     all->clear();
     utils::auto_read_lock l(_lock);
@@ -163,7 +155,7 @@ void perf_counters::get_all_counters(std::vector<perf_counter_ptr> *all)
     }
 }
 
-std::string perf_counters::list_snapshot_by_regexp(const std::vector<std::string> &args)
+std::string perf_counters::list_snapshot_by_regexp(const std::vector<std::string> &args) const
 {
     perf_counter_info info;
 
@@ -179,13 +171,13 @@ std::string perf_counters::list_snapshot_by_regexp(const std::vector<std::string
     }
 
     if (info.result.empty()) {
-        snapshot_iterator visitor = [&regs, &info](const dsn::perf_counter_ptr &ptr, double val) {
+        snapshot_iterator visitor = [&regs, &info](const counter_snapshot &cs) {
             bool matched = false;
             if (regs.empty()) {
                 matched = true;
             } else {
                 for (auto &reg : regs) {
-                    if (std::regex_match(ptr->full_name(), reg)) {
+                    if (std::regex_match(cs.name, reg)) {
                         matched = true;
                         break;
                     }
@@ -193,7 +185,7 @@ std::string perf_counters::list_snapshot_by_regexp(const std::vector<std::string
             }
 
             if (matched) {
-                info.counters.emplace_back(ptr->full_name(), ptr->type(), val);
+                info.counters.emplace_back(cs.name.c_str(), cs.type, cs.value);
             }
         };
         iterate_snapshot(visitor);
@@ -213,7 +205,7 @@ void perf_counters::take_snapshot()
 {
     builtin_counters::instance().update_counters();
 
-    std::vector<dsn::perf_counter_ptr> all_counters;
+    std::vector<perf_counter_ptr> all_counters;
     get_all_counters(&all_counters);
 
     utils::auto_write_lock l(_snapshot_lock);
@@ -222,17 +214,26 @@ void perf_counters::take_snapshot()
     }
 
     // updated counters from current value
-    for (const dsn::perf_counter_ptr &c : all_counters) {
+    for (const perf_counter_ptr &c : all_counters) {
         counter_snapshot &cs = _snapshots[c->full_name()];
-        if (cs.counter == nullptr) {
+        if (cs.name.empty()) {
             // recently created counter, which wasn't in snapshot before
-            cs.counter = c;
+            cs.name = c->full_name();
+            cs.type = c->type();
         }
         cs.updated_recently = true;
         if (c->type() != COUNTER_TYPE_NUMBER_PERCENTILES) {
             cs.value = c->get_value();
         } else {
             cs.value = c->get_percentile(COUNTER_PERCENTILE_99);
+
+            // take P999 metrics into account as well.
+            std::string name_p999 = std::string(c->full_name()) + ".p999";
+            counter_snapshot &cs999 = _snapshots[name_p999];
+            cs999.name = std::move(name_p999);
+            cs999.type = c->type();
+            cs999.updated_recently = true;
+            cs999.value = c->get_percentile(COUNTER_PERCENTILE_999);
         }
     }
 
@@ -247,18 +248,17 @@ void perf_counters::take_snapshot()
         _snapshots.erase(n);
 }
 
-void perf_counters::iterate_snapshot(const snapshot_iterator &v)
+void perf_counters::iterate_snapshot(const snapshot_iterator &v) const
 {
     utils::auto_read_lock l(_snapshot_lock);
     for (auto &kv : _snapshots) {
-        const counter_snapshot &cs = kv.second;
-        v(cs.counter, cs.value);
+        v(kv.second);
     }
 }
 
 void perf_counters::query_snapshot(const std::vector<std::string> &counters,
                                    const snapshot_iterator &v,
-                                   std::vector<bool> *found)
+                                   std::vector<bool> *found) const
 {
     std::vector<bool> result;
     if (found == nullptr)
@@ -272,9 +272,9 @@ void perf_counters::query_snapshot(const std::vector<std::string> &counters,
             found->push_back(false);
         } else {
             found->push_back(true);
-            const counter_snapshot &cs = iter->second;
-            v(cs.counter, cs.value);
+            v(iter->second);
         }
     }
 }
-} // end namespace
+
+} // namespace dsn

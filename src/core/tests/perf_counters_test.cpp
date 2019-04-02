@@ -40,7 +40,7 @@
 
 using namespace ::dsn;
 
-TEST(perf_counters, counter_create_remove)
+TEST(perf_counters_test, counter_create_remove)
 {
     perf_counter_ptr p;
 
@@ -119,16 +119,16 @@ bool check_map_contains(const std::map<K, V> &super, const std::map<K, V> &sub)
     return true;
 }
 
-TEST(perf_counters, snapshot)
+TEST(perf_counters_test, snapshot)
 {
     std::map<std::string, dsn_perf_counter_type_t> expected;
 
     std::map<std::string, dsn_perf_counter_type_t> counter_keys;
     perf_counters::instance().take_snapshot();
-    perf_counters::snapshot_iterator iter = [&counter_keys](const dsn::perf_counter_ptr &ptr,
-                                                            double value) mutable {
-        counter_keys.emplace(ptr->full_name(), ptr->type());
-    };
+    perf_counters::snapshot_iterator iter =
+        [&counter_keys](const perf_counters::counter_snapshot &cs) mutable {
+            counter_keys.emplace(cs.name, cs.type);
+        };
 
     counter_keys.clear();
     expected = {
@@ -252,7 +252,7 @@ TEST(perf_counters, snapshot)
     ASSERT_EQ(expected, counter_keys);
 }
 
-TEST(perf_counters, query_snapshot_by_regexp)
+TEST(perf_counters_test, query_snapshot_by_regexp)
 {
     dsn::perf_counter_wrapper c1;
     c1.init_global_counter("a", "s", "test_counter", COUNTER_TYPE_NUMBER, "");
@@ -284,13 +284,14 @@ TEST(perf_counters, query_snapshot_by_regexp)
     ASSERT_GT(info.timestamp, 0);
     ASSERT_TRUE(!info.timestamp_str.empty());
     printf("got timestamp: %s\n", info.timestamp_str.c_str());
-    ASSERT_EQ(4, info.counters.size());
+    ASSERT_EQ(4 + 1, info.counters.size()); // add 1 for p999 counter
 
     std::map<std::string, std::string> expected = {
         {"a*s*test_counter", dsn_counter_type_to_string(COUNTER_TYPE_NUMBER)},
         {"b*s*test_counter", dsn_counter_type_to_string(COUNTER_TYPE_VOLATILE_NUMBER)},
         {"c*s*test_counter", dsn_counter_type_to_string(COUNTER_TYPE_RATE)},
         {"d*s*test_counter", dsn_counter_type_to_string(COUNTER_TYPE_NUMBER_PERCENTILES)},
+        {"d*s*test_counter.p999", dsn_counter_type_to_string(COUNTER_TYPE_NUMBER_PERCENTILES)},
     };
     std::map<std::string, std::string> actual;
     for (const dsn::perf_counter_metric &m : info.counters) {

@@ -74,7 +74,7 @@ public:
         build_full_name(app, section, name, _full_name);
     }
 
-    virtual ~perf_counter(void) {}
+    virtual ~perf_counter() {}
 
     virtual void increment() = 0;
     virtual void decrement() = 0;
@@ -102,7 +102,6 @@ public:
     const char *dsptr() const { return _dsptr.c_str(); }
     dsn_perf_counter_type_t type() const { return _type; }
 
-public:
     static void build_full_name(const char *app,
                                 const char *section,
                                 const char *name,
@@ -125,4 +124,4 @@ private:
 };
 typedef ref_ptr<perf_counter> perf_counter_ptr;
 
-} // end namespace
+} // namespace dsn

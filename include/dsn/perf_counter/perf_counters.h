@@ -36,13 +36,11 @@
 
 namespace dsn {
 
-///
-/// manager of all perf counters of the process, perf counter users can use get_xxx_counter
-/// functions to get a specific perf counter and change the value.
-/// monitor system can user get_all_counters to get all the perf counters values and push it to
-/// some monitor dashboard
-///
-class perf_counters : public dsn::utils::singleton<perf_counters>
+/// Registry of all perf counters, users can get/create a specific perf counter
+/// via `get_app_counter` and `get_global_counter`.
+/// To push metrics to some monitoring systems (e.g Prometheus), users can
+/// collect all the perf counters via `take_snapshot`.
+class perf_counters : public utils::singleton<perf_counters>
 {
 public:
     perf_counters();
@@ -74,6 +72,17 @@ public:
     ///
     bool remove_counter(const char *full_name);
 
+    struct counter_snapshot
+    {
+        double value{0.0};
+        std::string name;
+        dsn_perf_counter_type_t type;
+
+    private:
+        friend class perf_counters;
+        bool updated_recently{false};
+    };
+
     ///
     /// Some types of perf counters(rate, volatile_number) may change it's value after you visit
     /// it, so we'd better take a snapshot of all counters before the visiting in case that
@@ -97,10 +106,9 @@ public:
     /// TODO: totally eliminate this stupid snapshot feature with a better metrics library
     /// (a metric library which doesn't have SIDE EFFECT when you visit metric!!!)
     ///
-    typedef std::function<void(const dsn::perf_counter_ptr &counter, double value)>
-        snapshot_iterator;
+    typedef std::function<void(const counter_snapshot &)> snapshot_iterator;
     void take_snapshot();
-    void iterate_snapshot(const snapshot_iterator &v);
+    void iterate_snapshot(const snapshot_iterator &v) const;
 
     // if found is not nullptr, then whether a counter was found will be stored in it
     // that is to say:
@@ -109,12 +117,12 @@ public:
     //    }
     void query_snapshot(const std::vector<std::string> &counters,
                         const snapshot_iterator &v,
-                        std::vector<bool> *found);
+                        std::vector<bool> *found) const;
 
     // this function collects all counters to perf_counter_info which matches
     // any of the regular expressions in args and returns the json representation
     // of perf_counter_info
-    std::string list_snapshot_by_regexp(const std::vector<std::string> &args);
+    std::string list_snapshot_by_regexp(const std::vector<std::string> &args) const;
 
 private:
     // full_name = perf_counter::build_full_name(...);
@@ -123,7 +131,8 @@ private:
                               const char *name,
                               dsn_perf_counter_type_t type,
                               const char *dsptr);
-    void get_all_counters(std::vector<dsn::perf_counter_ptr> *all);
+
+    void get_all_counters(std::vector<perf_counter_ptr> *all) const;
 
     mutable utils::rw_lock_nr _lock;
     // keep counter as a refptr to make the counter can be safely accessed
@@ -139,16 +148,10 @@ private:
     std::unordered_map<std::string, counter_object> _counters;
 
     mutable utils::rw_lock_nr _snapshot_lock;
-    struct counter_snapshot
-    {
-        perf_counter_ptr counter{nullptr};
-        double value{0.0};
-        bool updated_recently{false};
-    };
     std::unordered_map<std::string, counter_snapshot> _snapshots;
 
     // timestamp in seconds when take snapshot of current counters
     int64_t _timestamp;
 };
 
-} // end namespace dsn::utils
+} // namespace dsn
