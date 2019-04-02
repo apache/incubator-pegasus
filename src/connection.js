@@ -43,7 +43,8 @@ function Connection(options) {
 
     this.socket = null;
     this.out = null;
-    this._connected = false;
+    this.connected = false;
+    this.closed = false;
     this._requestNums = 0;
     this.requests = {}; //current active requests
 
@@ -116,10 +117,8 @@ Connection.prototype._handleError = function (err) {
 
     log.error('%s sockect meet error %s', this.name, err.message);
     this._socketError = err;
-    if (!this._connected) { //handle connection closed
-        this.connectError = err;
-        this.emit('connectError', err);
-    }
+    this.connectError = err;
+    this.emit('connectError', err);
     this._cleanupRequests(err);
 };
 
@@ -217,7 +216,7 @@ Connection.prototype.setupStream = function () {
     self.out = new DataOutputStream(this.socket);
 
     self.socket.on('connect', function () {
-        this._connected = true;
+        self.connected = true;
         self.getResponse();
         self.emit('connect');
         log.info('Connected to %s', self.name);
