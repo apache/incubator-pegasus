@@ -105,6 +105,7 @@ public:
     const char *data() const noexcept { return _data; }
 
     unsigned int length() const noexcept { return _length; }
+    unsigned int size() const noexcept { return _length; }
 
     std::shared_ptr<char> buffer() const { return _holder; }
 
