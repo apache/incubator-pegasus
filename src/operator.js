@@ -7,6 +7,7 @@
 const type = require('./dsn/base_types');
 const tools = require('./tools');
 const Int64 = require('node-int64');
+const Long = require('long');
 
 const meta = require('./dsn/meta');
 const rrdb = require('./dsn/rrdb');
@@ -21,9 +22,10 @@ const HEADER_TYPE = 'THFT';
 /**
  * Constructor of thrift header
  * @param {gpid}    gpid
+ * @param {Long}    partition_hash
  * @constructor
  */
-function ThriftHeader(gpid) {
+function ThriftHeader(gpid, partition_hash) {
     this.hdr_version = 0;
     this.header_length = HEADER_LEN;
     this.header_crc32 = 0;
@@ -33,7 +35,7 @@ function ThriftHeader(gpid) {
     this.partition_index = gpid.get_pidx();
     this.client_timeout = 0;
     this.thread_hash = 0;
-    this.partition_hash = 0;
+    this.partition_hash = partition_hash;
 }
 
 /**
@@ -52,17 +54,20 @@ ThriftHeader.prototype.toBuffer = function () {
     buffer.writeInt32BE(this.partition_index, 28);
     buffer.writeInt32BE(this.client_timeout, 32);
     buffer.writeInt32BE(this.thread_hash, 36);
-    let buf = new Int64(this.partition_hash);
-    return (Buffer.concat([buffer, buf.toBuffer()]));
+    let buf = new Buffer(8);
+    buf.writeInt32BE(this.partition_hash.getHighBits(), 0);
+    buf.writeInt32BE(this.partition_hash.getLowBits(), 4);
+    return (Buffer.concat([buffer, buf]));
 };
 
 /**
  * Constructor of base operator
  * @param {gpid}    gpid
+ * @param {Long}    partition_hash
  * @constructor
  */
-function Operator(gpid) {
-    this.header = new ThriftHeader(gpid);
+function Operator(gpid, partition_hash) {
+    this.header = new ThriftHeader(gpid, partition_hash);
     this.pid = gpid;
     this.rpc_error = new type.error_code();
     this.request = null;
@@ -89,7 +94,7 @@ Operator.prototype.prepare_thrift_header = function (body_length) {
  * @extends Operator
  */
 function QueryCfgOperator(gpid, request, timeout) {
-    QueryCfgOperator.super_.call(this, gpid, this.constructor);
+    QueryCfgOperator.super_.call(this, gpid, new Long(0, 0), this.constructor);
     this.request = request;
     this.timeout = timeout;
 }
@@ -128,13 +133,14 @@ QueryCfgOperator.prototype.recv_data = function (protocol) {
  * @param  request
  * @param  hashKey
  * @param  sortKey
+ * @param  partition_hash
  * @param  timeout
  * @param  callback
  * @constructor
  * @extends Operator
  */
-function RrdbGetOperator(gpid, request, hashKey, sortKey, timeout, callback) {
-    RrdbGetOperator.super_.call(this, gpid, this.constructor);
+function RrdbGetOperator(gpid, request, hashKey, sortKey, partition_hash, timeout, callback) {
+    RrdbGetOperator.super_.call(this, gpid, partition_hash, this.constructor);
     this.request = request;
     this.hashKey = hashKey;
     this.sortKey = sortKey;
@@ -199,12 +205,13 @@ RrdbGetOperator.prototype.handleResult = function (err, op) {
  * Constructor of RrdbPutOperator
  * @param gpid
  * @param request
+ * @param partition_hash
  * @param timeout
  * @param callback
  * @constructor
  */
-function RrdbPutOperator(gpid, request, timeout, callback) {
-    RrdbPutOperator.super_.call(this, gpid, this.constructor);
+function RrdbPutOperator(gpid, request, partition_hash, timeout, callback) {
+    RrdbPutOperator.super_.call(this, gpid, partition_hash, this.constructor);
     this.request = request;
     this.timeout = timeout;
     this.userCallback = callback;
@@ -258,13 +265,14 @@ RrdbPutOperator.prototype.handleResult = function (err, op) {
 /**
  * Constructor of RrdbRemoveOperator
  * @param gpid
+ * @param partition_hash
  * @param request
  * @param timeout
  * @param callback
  * @constructor
  */
-function RrdbRemoveOperator(gpid, request, timeout, callback) {
-    RrdbPutOperator.super_.call(this, gpid, this.constructor);
+function RrdbRemoveOperator(gpid, request, partition_hash, timeout, callback) {
+    RrdbPutOperator.super_.call(this, gpid, partition_hash, this.constructor);
     this.request = request;
     this.timeout = timeout;
     this.userCallback = callback;
@@ -321,12 +329,13 @@ RrdbRemoveOperator.prototype.handleResult = function (err, op) {
  * @param gpid
  * @param request
  * @param hashKey
+ * @param partition_hash
  * @param timeout
  * @param callback
  * @constructor
  */
-function RrdbMultiGetOperator(gpid, request, hashKey, timeout, callback) {
-    RrdbMultiGetOperator.super_.call(this, gpid, this.constructor);
+function RrdbMultiGetOperator(gpid, request, hashKey, partition_hash, timeout, callback) {
+    RrdbMultiGetOperator.super_.call(this, gpid, partition_hash, this.constructor);
     this.request = request;
     this.hashKey = hashKey;
     this.timeout = timeout;
@@ -392,12 +401,13 @@ RrdbMultiGetOperator.prototype.handleResult = function (err, op) {
  * Constructor of RrdbMultiPutOperator
  * @param gpid
  * @param request
+ * @param partition_hash
  * @param timeout
  * @param callback
  * @constructor
  */
-function RrdbMultiPutOperator(gpid, request, timeout, callback) {
-    RrdbMultiPutOperator.super_.call(this, gpid, this.constructor);
+function RrdbMultiPutOperator(gpid, request, partition_hash, timeout, callback) {
+    RrdbMultiPutOperator.super_.call(this, gpid, partition_hash, this.constructor);
     this.request = request;
     this.timeout = timeout;
     this.userCallback = callback;
