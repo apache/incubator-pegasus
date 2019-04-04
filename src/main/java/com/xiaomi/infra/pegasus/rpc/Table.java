@@ -13,15 +13,15 @@ public abstract class Table {
     public void onCompletion(client_operator clientOP) throws Throwable;
   }
 
-  public final gpid getGpid(byte[] data) {
-    long hash_value = hasher_.hash(data);
-    com.xiaomi.infra.pegasus.base.gpid result = new com.xiaomi.infra.pegasus.base.gpid(appID_, -1);
-    result.set_pidx((int) remainder_unsigned(hash_value, getPartitionCount()));
-    return result;
+  public final long getHash(byte[] data) {
+    return hasher_.hash(data);
   }
 
-  public final gpid getHashKeyGpid(byte[] data) {
-    long hash_value = KeyHasher.DEFAULT.hash(data);
+  public final long getKeyHash(byte[] data) {
+    return KeyHasher.DEFAULT.hash(data);
+  }
+
+  public final gpid getGpidByHash(long hash_value) {
     com.xiaomi.infra.pegasus.base.gpid result = new com.xiaomi.infra.pegasus.base.gpid(appID_, -1);
     result.set_pidx((int) remainder_unsigned(hash_value, getPartitionCount()));
     return result;

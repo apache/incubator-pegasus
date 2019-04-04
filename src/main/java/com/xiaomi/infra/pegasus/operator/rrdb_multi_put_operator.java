@@ -13,8 +13,11 @@ import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
 
 public class rrdb_multi_put_operator extends client_operator {
   public rrdb_multi_put_operator(
-      com.xiaomi.infra.pegasus.base.gpid gpid, String tableName, multi_put_request request) {
-    super(gpid, tableName);
+      com.xiaomi.infra.pegasus.base.gpid gpid,
+      String tableName,
+      multi_put_request request,
+      long partitionHash) {
+    super(gpid, tableName, partitionHash);
     this.request = request;
   }
 

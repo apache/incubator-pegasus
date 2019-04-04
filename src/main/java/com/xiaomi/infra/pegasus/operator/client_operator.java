@@ -19,12 +19,16 @@ public abstract class client_operator {
     this.rpc_error = new error_code();
   }
 
+  public client_operator(gpid gpid, String tableName, long partitionHash) {
+    this(gpid, tableName);
+    this.header.partition_hash = partitionHash;
+  }
+
   public final byte[] prepare_thrift_header(int body_length, int client_timeout) {
     header.body_length = body_length;
     header.header_length = ThriftHeader.HEADER_LENGTH;
     header.client_timeout = client_timeout;
     header.thread_hash = Tools.dsn_gpid_to_thread_hash(header.app_id, header.partition_index);
-    header.partition_hash = 0;
     return header.toByteArray();
   }
 

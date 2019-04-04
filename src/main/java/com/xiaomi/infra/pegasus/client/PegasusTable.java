@@ -68,9 +68,10 @@ public class PegasusTable implements PegasusTableInterface {
     }
 
     blob hashKeyRequest = new blob(hashKey);
-    gpid pid = table.getHashKeyGpid(hashKey);
+    long partitionHash = table.getKeyHash(hashKey);
+    gpid pid = table.getGpidByHash(partitionHash);
     rrdb_sortkey_count_operator op =
-        new rrdb_sortkey_count_operator(pid, table.getTableName(), hashKeyRequest);
+        new rrdb_sortkey_count_operator(pid, table.getTableName(), hashKeyRequest, partitionHash);
     Table.ClientOPCallback callback =
         new Table.ClientOPCallback() {
           @Override
@@ -94,8 +95,10 @@ public class PegasusTable implements PegasusTableInterface {
   public Future<byte[]> asyncGet(byte[] hashKey, byte[] sortKey, int timeout /*ms*/) {
     final DefaultPromise<byte[]> promise = table.newPromise();
     blob request = new blob(PegasusClient.generateKey(hashKey, sortKey));
-    gpid gpid = table.getGpid(request.data);
-    rrdb_get_operator op = new rrdb_get_operator(gpid, table.getTableName(), request);
+    long partitionHash = table.getHash(request.data);
+    gpid gpid = table.getGpidByHash(partitionHash);
+    rrdb_get_operator op =
+        new rrdb_get_operator(gpid, table.getTableName(), request, partitionHash);
     Table.ClientOPCallback callback =
         new Table.ClientOPCallback() {
           @Override
@@ -131,8 +134,9 @@ public class PegasusTable implements PegasusTableInterface {
     int expireSeconds = (ttlSeconds == 0 ? 0 : ttlSeconds + (int) Tools.epoch_now());
     update_request req = new update_request(k, v, expireSeconds);
 
-    gpid gpid = table.getGpid(k.data);
-    rrdb_put_operator op = new rrdb_put_operator(gpid, table.getTableName(), req);
+    long partitionHash = table.getHash(k.data);
+    gpid gpid = table.getGpidByHash(partitionHash);
+    rrdb_put_operator op = new rrdb_put_operator(gpid, table.getTableName(), req, partitionHash);
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
@@ -209,8 +213,10 @@ public class PegasusTable implements PegasusTableInterface {
             filter_type.FT_NO_FILTER,
             null,
             false);
-    gpid gpid = table.getHashKeyGpid(request.hash_key.data);
-    rrdb_multi_get_operator op = new rrdb_multi_get_operator(gpid, table.getTableName(), request);
+    long partitionHash = table.getKeyHash(request.hash_key.data);
+    gpid gpid = table.getGpidByHash(partitionHash);
+    rrdb_multi_get_operator op =
+        new rrdb_multi_get_operator(gpid, table.getTableName(), request, partitionHash);
     final Map<ByteBuffer, byte[]> finalSetKeyMap = setKeyMap;
 
     table.asyncOperate(
@@ -299,8 +305,10 @@ public class PegasusTable implements PegasusTableInterface {
             filter_type.findByValue(options.sortKeyFilterType.getValue()),
             sortKeyFilterPatternBlob,
             options.reverse);
-    gpid gpid = table.getHashKeyGpid(request.hash_key.data);
-    rrdb_multi_get_operator op = new rrdb_multi_get_operator(gpid, table.getTableName(), request);
+    long partitionHash = table.getKeyHash(request.hash_key.data);
+    gpid gpid = table.getGpidByHash(partitionHash);
+    rrdb_multi_get_operator op =
+        new rrdb_multi_get_operator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
@@ -409,8 +417,10 @@ public class PegasusTable implements PegasusTableInterface {
     int expireTsSseconds = (ttlSeconds == 0 ? 0 : ttlSeconds + (int) Tools.epoch_now());
     multi_put_request request = new multi_put_request(hash_key_blob, values_blob, expireTsSseconds);
 
-    gpid gpid = table.getHashKeyGpid(hashKey);
-    rrdb_multi_put_operator op = new rrdb_multi_put_operator(gpid, table.getTableName(), request);
+    long partitionHash = table.getKeyHash(hashKey);
+    gpid gpid = table.getGpidByHash(partitionHash);
+    rrdb_multi_put_operator op =
+        new rrdb_multi_put_operator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
@@ -441,8 +451,10 @@ public class PegasusTable implements PegasusTableInterface {
   public Future<Void> asyncDel(byte[] hashKey, byte[] sortKey, int timeout) {
     final DefaultPromise<Void> promise = table.newPromise();
     blob request = new blob(PegasusClient.generateKey(hashKey, sortKey));
-    gpid gpid = table.getGpid(request.data);
-    rrdb_remove_operator op = new rrdb_remove_operator(gpid, table.getTableName(), request);
+    long partitionHash = table.getHash(request.data);
+    gpid gpid = table.getGpidByHash(partitionHash);
+    rrdb_remove_operator op =
+        new rrdb_remove_operator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
@@ -492,9 +504,10 @@ public class PegasusTable implements PegasusTableInterface {
     }
     multi_remove_request request = new multi_remove_request(new blob(hashKey), sortKeyBlobs, 100);
 
-    gpid pid = table.getHashKeyGpid(hashKey);
+    long partitionHash = table.getKeyHash(hashKey);
+    gpid pid = table.getGpidByHash(partitionHash);
     rrdb_multi_remove_operator op =
-        new rrdb_multi_remove_operator(pid, table.getTableName(), request);
+        new rrdb_multi_remove_operator(pid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
@@ -527,8 +540,10 @@ public class PegasusTable implements PegasusTableInterface {
     blob key = new blob(PegasusClient.generateKey(hashKey, sortKey));
     int expireSeconds = (ttlSeconds <= 0 ? ttlSeconds : ttlSeconds + (int) Tools.epoch_now());
     incr_request request = new incr_request(key, increment, expireSeconds);
-    gpid gpid = table.getGpid(request.key.data);
-    rrdb_incr_operator op = new rrdb_incr_operator(gpid, table.getTableName(), request);
+    long partitionHash = table.getHash(request.key.data);
+    gpid gpid = table.getGpidByHash(partitionHash);
+    rrdb_incr_operator op =
+        new rrdb_incr_operator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
@@ -603,9 +618,10 @@ public class PegasusTable implements PegasusTableInterface {
             expireSeconds,
             options.returnCheckValue);
 
-    gpid gpid = table.getHashKeyGpid(hashKey);
+    long partitionHash = table.getKeyHash(hashKey);
+    gpid gpid = table.getGpidByHash(partitionHash);
     rrdb_check_and_set_operator op =
-        new rrdb_check_and_set_operator(gpid, table.getTableName(), request);
+        new rrdb_check_and_set_operator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
@@ -686,9 +702,10 @@ public class PegasusTable implements PegasusTableInterface {
             mutations.getMutations(),
             options.returnCheckValue);
 
-    gpid gpid = table.getHashKeyGpid(hashKey);
+    long partitionHash = table.getKeyHash(hashKey);
+    gpid gpid = table.getGpidByHash(partitionHash);
     rrdb_check_and_mutate_operator op =
-        new rrdb_check_and_mutate_operator(gpid, table.getTableName(), request);
+        new rrdb_check_and_mutate_operator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
@@ -769,9 +786,10 @@ public class PegasusTable implements PegasusTableInterface {
             expireSeconds,
             true);
 
-    gpid gpid = table.getHashKeyGpid(hashKey);
+    long partitionHash = table.getKeyHash(hashKey);
+    gpid gpid = table.getGpidByHash(partitionHash);
     rrdb_check_and_set_operator op =
-        new rrdb_check_and_set_operator(gpid, table.getTableName(), request);
+        new rrdb_check_and_set_operator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
@@ -810,8 +828,9 @@ public class PegasusTable implements PegasusTableInterface {
     final DefaultPromise<Integer> promise = table.newPromise();
     blob request = new blob(PegasusClient.generateKey(hashKey, sortKey));
 
-    gpid pid = table.getGpid(request.data);
-    rrdb_ttl_operator op = new rrdb_ttl_operator(pid, table.getTableName(), request);
+    long partitionHash = table.getHash(request.data);
+    gpid pid = table.getGpidByHash(partitionHash);
+    rrdb_ttl_operator op = new rrdb_ttl_operator(pid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
@@ -1572,14 +1591,19 @@ public class PegasusTable implements PegasusTableInterface {
 
     // check if range is empty
     int cmp = PegasusClient.bytesCompare(start, stop);
-    gpid[] v =
-        cmp < 0 || cmp == 0 && o.startInclusive && o.stopInclusive
-            ?
-            // (start < stop) or (start == stop and bounds are inclusive)
-            new gpid[] {table.getGpid(start)}
-            : new gpid[0];
 
-    return new PegasusScanner(table, v, o, new blob(start), new blob(stop));
+    long[] hash;
+    gpid[] v;
+    if (cmp < 0 || cmp == 0 && o.startInclusive && o.stopInclusive) {
+      long startHash = table.getHash(start);
+      hash = new long[] {startHash};
+      v = new gpid[] {table.getGpidByHash(startHash)};
+    } else {
+      hash = new long[] {0};
+      v = new gpid[0];
+    }
+
+    return new PegasusScanner(table, v, o, new blob(start), new blob(stop), hash, false);
   }
 
   @Override
@@ -1612,8 +1636,14 @@ public class PegasusTable implements PegasusTableInterface {
     for (int i = 0; i < split; i++) {
       int s = i < more ? size + 1 : size;
       gpid[] v = new gpid[s];
-      for (int j = 0; j < s; j++) v[j] = all[--count];
-      ret.add(new PegasusScanner(table, v, opt));
+      long[] hash = new long[s];
+      for (int j = 0; j < s; j++) {
+        --count;
+        v[j] = all[count];
+        hash[j] = count;
+      }
+      PegasusScanner scanner = new PegasusScanner(table, v, opt, hash, true);
+      ret.add(scanner);
     }
     return ret;
   }

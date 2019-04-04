@@ -13,8 +13,8 @@ import com.xiaomi.infra.pegasus.thrift.protocol.TMessageType;
 
 public class rrdb_get_operator extends client_operator {
   public rrdb_get_operator(
-      com.xiaomi.infra.pegasus.base.gpid gpid, String tableName, blob request) {
-    super(gpid, tableName);
+      com.xiaomi.infra.pegasus.base.gpid gpid, String tableName, blob request, long partitionHash) {
+    super(gpid, tableName, partitionHash);
     this.request = request;
   }
 

@@ -13,7 +13,7 @@ import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
 
 public class query_cfg_operator extends client_operator {
   public query_cfg_operator(com.xiaomi.infra.pegasus.base.gpid gpid, query_cfg_request request) {
-    super(gpid, "");
+    super(gpid, "", 0);
     this.request = request;
   }
 

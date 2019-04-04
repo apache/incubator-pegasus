@@ -70,7 +70,9 @@ public class TableHandlerTest {
         new com.xiaomi.infra.pegasus.apps.update_request();
     request.key = new com.xiaomi.infra.pegasus.base.blob("hello".getBytes());
     request.value = new com.xiaomi.infra.pegasus.base.blob("value".getBytes());
-    final com.xiaomi.infra.pegasus.base.gpid pid = table.getGpid(request.key.data);
+
+    long partitionHash = table.getHash(request.key.data);
+    final com.xiaomi.infra.pegasus.base.gpid pid = table.getGpidByHash(partitionHash);
 
     ReplicaConfiguration handle = table.getReplicaConfig(pid.get_pidx());
 

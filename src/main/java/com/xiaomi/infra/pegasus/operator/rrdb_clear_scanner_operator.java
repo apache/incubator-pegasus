@@ -12,8 +12,8 @@ import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
 
 public class rrdb_clear_scanner_operator extends client_operator {
   public rrdb_clear_scanner_operator(
-      com.xiaomi.infra.pegasus.base.gpid gpid, String tableName, long request) {
-    super(gpid, tableName);
+      com.xiaomi.infra.pegasus.base.gpid gpid, String tableName, long request, long partitionHash) {
+    super(gpid, tableName, partitionHash);
     this.request = request;
   }
 

@@ -233,6 +233,7 @@ struct get_scanner_request
     8:base.blob    hash_key_filter_pattern;
     9:filter_type  sort_key_filter_type;
     10:base.blob   sort_key_filter_pattern;
+    11:optional bool    need_check_hash;
 }
 
 struct scan_request

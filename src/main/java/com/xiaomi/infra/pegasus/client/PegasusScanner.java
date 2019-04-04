@@ -37,16 +37,24 @@ public class PegasusScanner implements PegasusScannerInterface {
   private static final int CONTEXT_ID_COMPLETED = -1;
   private static final int CONTEXT_ID_NOT_EXIST = -2;
 
-  public PegasusScanner(Table table, gpid[] splitHash, ScanOptions options) {
-    this(table, splitHash, options, min, max);
+  public PegasusScanner(
+      Table table, gpid[] splitGpid, ScanOptions options, long[] splitHash, boolean needCheckHash) {
+    this(table, splitGpid, options, min, max, splitHash, needCheckHash);
     options.startInclusive = true;
     options.stopInclusive = false;
   }
 
   public PegasusScanner(
-      Table table, gpid[] splitHash, ScanOptions options, blob startKey, blob stopKey) {
+      Table table,
+      gpid[] splitGpid,
+      ScanOptions options,
+      blob startKey,
+      blob stopKey,
+      long[] splitHash,
+      boolean needCheckHash) {
     _table = table;
-    _split_gpid = splitHash == null ? new gpid[0] : splitHash;
+    _split_hash = splitHash;
+    _split_gpid = splitGpid == null ? new gpid[0] : splitGpid;
     _options = options;
     _startKey = startKey;
     _stopKey = stopKey;
@@ -57,6 +65,7 @@ public class PegasusScanner implements PegasusScannerInterface {
     _promises = new LinkedList<DefaultPromise<Pair<Pair<byte[], byte[]>, byte[]>>>();
     _rpcRunning = false;
     _encounterError = false;
+    _needCheckHash = needCheckHash;
   }
 
   public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException {
@@ -90,7 +99,7 @@ public class PegasusScanner implements PegasusScannerInterface {
     if (_context >= CONTEXT_ID_VALID_MIN) {
       try {
         rrdb_clear_scanner_operator op =
-            new rrdb_clear_scanner_operator(_gpid, _table.getTableName(), _context);
+            new rrdb_clear_scanner_operator(_gpid, _table.getTableName(), _context, _hash);
         _table.operate(op, 0);
       } catch (Throwable e) {
         // ignore
@@ -130,9 +139,10 @@ public class PegasusScanner implements PegasusScannerInterface {
     request.sort_key_filter_type = filter_type.findByValue(_options.sortKeyFilterType.getValue());
     request.sort_key_filter_pattern =
         (_options.sortKeyFilterPattern == null ? null : new blob(_options.sortKeyFilterPattern));
+    request.need_check_hash = _needCheckHash;
 
     rrdb_get_scanner_operator op =
-        new rrdb_get_scanner_operator(_gpid, _table.getTableName(), request);
+        new rrdb_get_scanner_operator(_gpid, _table.getTableName(), request, _hash);
     Table.ClientOPCallback callback =
         new Table.ClientOPCallback() {
           @Override
@@ -161,7 +171,7 @@ public class PegasusScanner implements PegasusScannerInterface {
     }
     _rpcRunning = true;
     scan_request request = new scan_request(_context);
-    rrdb_scan_operator op = new rrdb_scan_operator(_gpid, _table.getTableName(), request);
+    rrdb_scan_operator op = new rrdb_scan_operator(_gpid, _table.getTableName(), request, _hash);
     Table.ClientOPCallback callback =
         new Table.ClientOPCallback() {
           @Override
@@ -230,6 +240,7 @@ public class PegasusScanner implements PegasusScannerInterface {
             return;
           } else {
             _gpid = _split_gpid[--_hash_p];
+            _hash = _split_hash[_hash_p];
             splitReset();
           }
         } else if (_context == CONTEXT_ID_NOT_EXIST) {
@@ -260,9 +271,12 @@ public class PegasusScanner implements PegasusScannerInterface {
   private blob _stopKey;
   private ScanOptions _options;
   private gpid[] _split_gpid;
+  private long[] _split_hash;
   private int _hash_p;
 
   private gpid _gpid;
+  private long _hash;
+
   private List<key_value> _kvs;
   private int _p;
 
@@ -274,6 +288,8 @@ public class PegasusScanner implements PegasusScannerInterface {
   // mark whether scan operation encounter error
   private boolean _encounterError;
   Throwable _cause;
+
+  private boolean _needCheckHash;
 
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(PegasusScanner.class);
 }

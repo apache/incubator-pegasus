@@ -13,8 +13,11 @@ import com.xiaomi.infra.pegasus.thrift.protocol.TMessageType;
 /** Created by weijiesun on 16-12-8. */
 public class rrdb_multi_remove_operator extends client_operator {
   public rrdb_multi_remove_operator(
-      com.xiaomi.infra.pegasus.base.gpid gpid, String tableName, multi_remove_request request) {
-    super(gpid, tableName);
+      com.xiaomi.infra.pegasus.base.gpid gpid,
+      String tableName,
+      multi_remove_request request,
+      long partitionHash) {
+    super(gpid, tableName, partitionHash);
     this.request = request;
   }
 

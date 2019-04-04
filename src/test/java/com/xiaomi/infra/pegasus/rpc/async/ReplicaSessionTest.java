@@ -8,8 +8,10 @@ import com.xiaomi.infra.pegasus.base.blob;
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.gpid;
 import com.xiaomi.infra.pegasus.base.rpc_address;
+import com.xiaomi.infra.pegasus.client.PegasusClient;
 import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
+import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.thrift.TException;
 import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
 import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
@@ -58,7 +60,7 @@ public class ReplicaSessionTest {
 
     for (int i = 0; i < 100; ++i) {
       final client_operator op =
-          new rrdb_put_operator(new com.xiaomi.infra.pegasus.base.gpid(-1, -1), "", null);
+          new rrdb_put_operator(new com.xiaomi.infra.pegasus.base.gpid(-1, -1), "", null, 0);
       final FutureTask<Void> cb =
           new FutureTask<Void>(
               new Callable<Void>() {
@@ -170,7 +172,7 @@ public class ReplicaSessionTest {
   public void testRecvInvalidData() throws Exception {
     class test_operator extends rrdb_put_operator {
       private test_operator(gpid gpid, update_request request) {
-        super(gpid, "", request);
+        super(gpid, "", request, KeyHasher.DEFAULT.hash("a".getBytes()));
       }
 
       // should be called on ThriftFrameDecoder#decode
@@ -189,7 +191,10 @@ public class ReplicaSessionTest {
     for (int pid = 0; pid < 16; pid++) {
       // find a valid partition held on 127.0.0.1:34801
       update_request req =
-          new update_request(new blob("a".getBytes()), new blob("a".getBytes()), 0);
+          new update_request(
+              new blob(PegasusClient.generateKey("a".getBytes(), "".getBytes())),
+              new blob("a".getBytes()),
+              0);
       final client_operator op = new test_operator(new gpid(1, pid), req);
       FutureTask<Void> cb =
           new FutureTask<Void>(
@@ -197,7 +202,8 @@ public class ReplicaSessionTest {
                 @Override
                 public Void call() throws Exception {
                   if (op.rpc_error.errno != error_code.error_types.ERR_OBJECT_NOT_FOUND
-                      && op.rpc_error.errno != error_code.error_types.ERR_INVALID_STATE) {
+                      && op.rpc_error.errno != error_code.error_types.ERR_INVALID_STATE
+                      && op.rpc_error.errno != error_code.error_types.ERR_SESSION_RESET) {
                     Assert.assertEquals(
                         error_code.error_types.ERR_INVALID_DATA, op.rpc_error.errno);
                   }

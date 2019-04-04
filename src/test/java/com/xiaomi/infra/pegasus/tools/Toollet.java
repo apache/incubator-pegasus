@@ -143,7 +143,7 @@ public class Toollet {
 
   public static class test_operator extends rrdb_put_operator {
     public test_operator(gpid gpid, update_request request) {
-      super(gpid, "", request);
+      super(gpid, "", request, 0);
     }
 
     public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid)

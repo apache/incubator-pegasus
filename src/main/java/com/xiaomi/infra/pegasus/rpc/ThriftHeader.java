@@ -34,4 +34,4 @@ public class ThriftHeader {
     bf.putLong(partition_hash);
     return bf.array();
   }
-};
+}
