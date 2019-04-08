@@ -16,23 +16,6 @@
 using namespace dsn;
 using namespace dsn::replication;
 
-dsn::message_ex *create_corresponding_receive(dsn::message_ex *request_msg)
-{
-    return request_msg->copy(true, true);
-}
-
-#define fake_create_app(state, request_data)                                                       \
-    fake_rpc_call(                                                                                 \
-        RPC_CM_CREATE_APP, LPC_META_STATE_NORMAL, state, &server_state::create_app, request_data)
-
-#define fake_drop_app(state, request_data)                                                         \
-    fake_rpc_call(                                                                                 \
-        RPC_CM_DROP_APP, LPC_META_STATE_NORMAL, state, &server_state::drop_app, request_data)
-
-#define fake_recall_app(state, request_data)                                                       \
-    fake_rpc_call(                                                                                 \
-        RPC_CM_RECALL_APP, LPC_META_STATE_NORMAL, state, &server_state::recall_app, request_data)
-
 inline void test_logger(const char *str)
 {
     fprintf(stderr, "%s", str);

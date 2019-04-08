@@ -1,8 +1,12 @@
 set(MY_PROJ_NAME dsn_meta_server)
 
+set(DUPLICATION_SRC
+        duplication/duplication_info.cpp
+        )
+
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+set(MY_PROJ_SRC "${DUPLICATION_SRC}")
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search

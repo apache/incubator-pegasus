@@ -1,5 +1,30 @@
-#ifndef MISC_FUNCTIONS_H
-#define MISC_FUNCTIONS_H
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#pragma once
 
 #include <vector>
 #include <dsn/service_api_c.h>
@@ -18,12 +43,28 @@ inline dsn::replication::fs_manager *get_fs_manager(nodes_fs_manager &nfm,
     return iter->second.get();
 }
 
+// Generates a random number between [min, max]
 uint32_t random32(uint32_t min, uint32_t max);
 
+// Generates a random number [min_count, max_count] of node addresses
+// each node is given a random port value in range of [min_count, max_count]
 void generate_node_list(/*out*/ std::vector<dsn::rpc_address> &output_list,
                         int min_count,
                         int max_count);
 
+// Generates `size` of node addresses, each with port value in range [start_port, start_port + size]
+inline std::vector<dsn::rpc_address> generate_node_list(size_t size, int start_port = 12321)
+{
+    std::vector<dsn::rpc_address> result;
+    result.resize(size);
+    for (int i = 0; i < size; ++i)
+        result[i].assign_ipv4("127.0.0.1", static_cast<uint16_t>(start_port + i + 1));
+    return result;
+}
+
+// This func randomly picks 3 nodes from `node_list` for each of the partition of the app.
+// For each partition, it picks one node as primary, the others as secondaries.
+// REQUIRES: node_list.size() >= 3
 void generate_app(
     /*out*/ std::shared_ptr<dsn::replication::app_state> &app,
     const std::vector<dsn::rpc_address> &node_list);
@@ -78,4 +119,3 @@ void app_mapper_compare(const dsn::replication::app_mapper &mapper1,
 void verbose_apps(const dsn::replication::app_mapper &input_apps);
 
 bool spin_wait_condition(const std::function<bool()> &pred, int seconds);
-#endif

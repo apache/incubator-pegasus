@@ -1,12 +1,40 @@
-#ifndef META_SERVICE_TEST_APP_H
-#define META_SERVICE_TEST_APP_H
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#pragma once
 
 #include <dsn/service_api_cpp.h>
 #include <dsn/tool-api/async_calls.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/meta_service_app.h>
+
 #include "dist/replication/meta_server/server_state.h"
 #include "dist/replication/meta_server/meta_service.h"
+
+#include <gtest/gtest.h>
 
 class spin_counter
 {
@@ -29,8 +57,13 @@ struct reply_context
     dsn::message_ex *response;
     spin_counter e;
 };
-dsn::message_ex *create_corresponding_receive(dsn::message_ex *req);
 
+inline dsn::message_ex *create_corresponding_receive(dsn::message_ex *request_msg)
+{
+    return request_msg->copy(true, true);
+}
+
+// fake_receiver_meta_service overrides `reply_message` of meta_service
 class fake_receiver_meta_service : public dsn::replication::meta_service
 {
 public:
@@ -58,13 +91,6 @@ inline void destroy_message(dsn::message_ex *msg)
     msg->add_ref();
     msg->release_ref();
 }
-
-#define fake_wait_rpc(context, response_data)                                                      \
-    do {                                                                                           \
-        context->e.wait();                                                                         \
-        unmarshall(context->response, response_data);                                              \
-        context->response->release_ref();                                                          \
-    } while (0)
 
 class meta_service_test_app : public dsn::service_app
 {
@@ -106,42 +132,56 @@ public:
         dsn::replication::meta_service *svc,
         std::shared_ptr<dsn::replication::configuration_query_by_node_request> &request);
 
-    template <typename TRequest, typename RequestHandler>
-    std::shared_ptr<reply_context>
-    fake_rpc_call(dsn::task_code rpc_code,
-                  dsn::task_code server_state_write_code,
-                  RequestHandler *handle_class,
-                  void (RequestHandler::*handle)(dsn::message_ex *request),
-                  const TRequest &data,
-                  int hash = 0,
-                  std::chrono::milliseconds delay = std::chrono::milliseconds(0))
-    {
-        dsn::message_ex *msg = dsn::message_ex::create_request(rpc_code);
-        dsn::marshall(msg, data);
-
-        std::shared_ptr<reply_context> result = std::make_shared<reply_context>();
-        result->e.block();
-        uint64_t ptr = reinterpret_cast<uint64_t>(result.get());
-        dsn::marshall(msg, ptr);
-
-        dsn::message_ex *received = create_corresponding_receive(msg);
-        received->add_ref();
-        dsn::tasking::enqueue(server_state_write_code,
-                              nullptr,
-                              std::bind(handle, handle_class, received),
-                              hash,
-                              delay);
-
-        // release the sending message
-        destroy_message(msg);
-
-        return result;
-    }
-
 private:
     typedef std::function<bool(const dsn::replication::app_mapper &)> state_validator;
     bool
     wait_state(dsn::replication::server_state *ss, const state_validator &validator, int time = -1);
 };
 
-#endif // META_SERVICE_TEST_APP_H
+template <typename TRequest, typename RequestHandler>
+std::shared_ptr<reply_context>
+fake_rpc_call(dsn::task_code rpc_code,
+              dsn::task_code server_state_write_code,
+              RequestHandler *handle_class,
+              void (RequestHandler::*handle)(dsn::message_ex *request),
+              const TRequest &data,
+              int hash = 0,
+              std::chrono::milliseconds delay = std::chrono::milliseconds(0))
+{
+    dsn::message_ex *msg = dsn::message_ex::create_request(rpc_code);
+    dsn::marshall(msg, data);
+
+    std::shared_ptr<reply_context> result = std::make_shared<reply_context>();
+    result->e.block();
+    uint64_t ptr = reinterpret_cast<uint64_t>(result.get());
+    dsn::marshall(msg, ptr);
+
+    dsn::message_ex *received = create_corresponding_receive(msg);
+    received->add_ref();
+    dsn::tasking::enqueue(
+        server_state_write_code, nullptr, std::bind(handle, handle_class, received), hash, delay);
+
+    // release the sending message
+    destroy_message(msg);
+
+    return result;
+}
+
+#define fake_create_app(state, request_data)                                                       \
+    fake_rpc_call(                                                                                 \
+        RPC_CM_CREATE_APP, LPC_META_STATE_NORMAL, state, &server_state::create_app, request_data)
+
+#define fake_drop_app(state, request_data)                                                         \
+    fake_rpc_call(                                                                                 \
+        RPC_CM_DROP_APP, LPC_META_STATE_NORMAL, state, &server_state::drop_app, request_data)
+
+#define fake_recall_app(state, request_data)                                                       \
+    fake_rpc_call(                                                                                 \
+        RPC_CM_RECALL_APP, LPC_META_STATE_NORMAL, state, &server_state::recall_app, request_data)
+
+#define fake_wait_rpc(context, response_data)                                                      \
+    do {                                                                                           \
+        context->e.wait();                                                                         \
+        ::dsn::unmarshall(context->response, response_data);                                       \
+        context->response->release_ref();                                                          \
+    } while (0)
