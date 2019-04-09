@@ -522,10 +522,9 @@ private:
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
         // If pegasus server is configured to ignore timetag,
-        // for every write the timetag is set to 0.
+        // for every write the new_timetag is set to 0.
         uint64_t new_timetag = 0;
 
-        // timetag == 0 if this is an empty write.
         if (_verify_timetag) {
             std::string raw_value;
             bool found, expired;
