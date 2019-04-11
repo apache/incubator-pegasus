@@ -213,12 +213,19 @@ public:
         ASSERT_EQ(read_timestamp_from(raw_key), old_timestamp);
 
         /// insert timestamp 15 from remote, which will overwrite the previous record,
-        /// since its cluster id is larger
+        /// since its cluster id is larger (current cluster_id=1)
         timestamp = 15;
         ctx.remote_timetag = pegasus::generate_timetag(timestamp, 2, false);
-        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
+        write_impl->db_write_batch_put_ctx(ctx, raw_key, value + "_new", 0);
         write_impl->db_write(ctx.decree);
         ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
+        std::string raw_value;
+        dsn::blob user_value;
+        rocksdb::Status s = write_impl->_db->Get(
+            write_impl->_rd_opts, utils::to_rocksdb_slice(raw_key), &raw_value);
+        pegasus_extract_user_data(
+            write_impl->_value_schema_version, std::move(raw_value), user_value);
+        ASSERT_EQ(user_value.to_string(), "value_new");
 
         /// insert timestamp 16 from local, which will overwrite the remote record,
         /// since its timestamp is larger
@@ -229,6 +236,18 @@ public:
         ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
 
         const_cast<bool &>(write_impl->_verify_timetag) = false;
+    }
+
+    void test_empty_write_verify_timetag()
+    {
+        auto write_impl = _write_svc->_impl.get();
+        const_cast<bool &>(write_impl->_verify_timetag) = true;
+
+        int err = write_impl->empty_put(1);
+        ASSERT_EQ(err, 0);
+
+        err = write_impl->empty_put(1);
+        ASSERT_EQ(err, 0);
     }
 
     uint64_t read_timestamp_from(dsn::string_view raw_key)
@@ -252,6 +271,11 @@ TEST_F(pegasus_write_service_test, multi_remove) { test_multi_remove(); }
 TEST_F(pegasus_write_service_test, batched_writes) { test_batched_writes(); }
 
 TEST_F(pegasus_write_service_test, put_verify_timetag) { test_put_verify_timetag(); }
+
+TEST_F(pegasus_write_service_test, empty_write_verify_timetag)
+{
+    test_empty_write_verify_timetag();
+}
 
 } // namespace server
 } // namespace pegasus

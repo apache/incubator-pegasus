@@ -525,7 +525,8 @@ private:
         // for every write the new_timetag is set to 0.
         uint64_t new_timetag = 0;
 
-        if (_verify_timetag) {
+        if (_verify_timetag && !raw_key.empty()) {
+            // raw_key.empty() means this is an empty write
             std::string raw_value;
             bool found, expired;
             uint32_t expire_ts;
