@@ -40,7 +40,6 @@ public:
 
     int empty_put(int64_t decree)
     {
-        //_pfc_recent_write_units->increment();
         int err = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
         if (err) {
             clear_up_batch_states(decree, err);

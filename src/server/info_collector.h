@@ -85,14 +85,11 @@ private:
     pegasus_client *_client;
     std::string _capacity_unit_stat_app;
     uint32_t _capacity_unit_stat_fetch_interval_seconds;
-    std::string _capacity_unit_compression_type;
     dsn::task_tracker _capacity_unit_stat_task_tracker;
     ::dsn::task_ptr _capacity_unit_stat_timer_task;
     ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
-    bool compress_value(const std::string raw_value, std::string &value);
-    bool zstd_compress(const std::string raw_value, std::string &value);
 };
 } // namespace server
 } // namespace pegasus

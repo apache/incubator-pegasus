@@ -755,50 +755,27 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     return true;
 }
 
-struct capacity_unit_metric
-{
-    int32_t partition_index;
-    double value;
-    capacity_unit_metric(int32_t index, double v) : partition_index(index), value(v) {}
-};
-
 struct node_capacity_unit_stat
 {
-    string timestamp_str;
-    std::string address;
-    // Mapping app_id --> capacity_unit_metric
-    std::map<int32_t, std::vector<capacity_unit_metric>> read_cu;
-    std::map<int32_t, std::vector<capacity_unit_metric>> write_cu;
+    std::string timestamp_str;
+    std::string node_address;
+    // Mapping app_name --> (read_cu, write_cu)
+    std::map<std::string, std::pair<double, double>> cu_value;
 
     void cu_value_output_in_json(std::ostream &out) const
     {
         rapidjson::OStreamWrapper wrapper(out);
         dsn::json::JsonWriter writer(wrapper);
         writer.StartObject();
-        dsn::json::json_encode(writer, "r");
-        writer.StartObject();
-        for (auto elem : read_cu) {
-            dsn::json::json_encode(writer, std::to_string(elem.first));
-            writer.StartObject();
-            for (auto metric : elem.second) {
-                dsn::json::json_encode(writer, std::to_string(metric.partition_index));
-                dsn::json::json_encode(writer, metric.value);
-            }
-            writer.EndObject();
+        for (auto elem : cu_value) {
+            auto tuple = elem.second;
+            if (tuple.first < 1e-6 && tuple.second < 1e-6)
+                continue;
+            char tuple_str[50];
+            sprintf(tuple_str, "[%.2f,%.2f]", tuple.first, tuple.second);
+            dsn::json::json_encode(writer, elem.first);
+            dsn::json::json_encode(writer, tuple_str);
         }
-        writer.EndObject();
-        dsn::json::json_encode(writer, "w");
-        writer.StartObject();
-        for (auto elem : write_cu) {
-            dsn::json::json_encode(writer, std::to_string(elem.first));
-            writer.StartObject();
-            for (auto metric : elem.second) {
-                dsn::json::json_encode(writer, std::to_string(metric.partition_index));
-                dsn::json::json_encode(writer, metric.value);
-            }
-            writer.EndObject();
-        }
-        writer.EndObject();
         writer.EndObject();
     }
 };
@@ -813,6 +790,9 @@ inline bool get_capacity_unit_stat(shell_context *sc,
     std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
     if (!get_app_partitions(sc, apps, app_partitions))
         return false;
+    std::map<int32_t, std::string> app_name_map;
+    for (auto elem : apps)
+        app_name_map.emplace(elem.app_id, elem.app_name);
 
     ::dsn::command command;
     command.cmd = "perf-counters";
@@ -829,7 +809,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
         if (!decode_node_perf_counter_info(node_addr, results[i], info))
             return false;
         nodes_stat[i].timestamp_str = info.timestamp_str;
-        nodes_stat[i].address = node_addr.to_string();
+        nodes_stat[i].node_address = node_addr.to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
             int32_t app_id, partition_index;
             std::string counter_name;
@@ -841,15 +821,18 @@ inline bool get_capacity_unit_stat(shell_context *sc,
                 continue;
             if (find->second[partition_index].primary != node_addr)
                 continue;
+            if (app_name_map.find(app_id) == app_name_map.end())
+                continue;
+            std::string app_name = app_name_map[app_id];
             if (counter_name == "recent.read.units") {
-                if (nodes_stat[i].read_cu.find(app_id) == nodes_stat[i].read_cu.end())
-                    nodes_stat[i].read_cu.emplace(app_id, std::vector<capacity_unit_metric>());
-                nodes_stat[i].read_cu[app_id].emplace_back(partition_index, m.value);
+                if (nodes_stat[i].cu_value.find(app_name) == nodes_stat[i].cu_value.end())
+                    nodes_stat[i].cu_value.emplace(app_name, std::make_pair(0.0, 0.0));
+                nodes_stat[i].cu_value[app_name].first += m.value;
             }
             if (counter_name == "recent.write.units") {
-                if (nodes_stat[i].write_cu.find(app_id) == nodes_stat[i].write_cu.end())
-                    nodes_stat[i].write_cu.emplace(app_id, std::vector<capacity_unit_metric>());
-                nodes_stat[i].write_cu[app_id].emplace_back(partition_index, m.value);
+                if (nodes_stat[i].cu_value.find(app_name) == nodes_stat[i].cu_value.end())
+                    nodes_stat[i].cu_value.emplace(app_name, std::make_pair(0.0, 0.0));
+                nodes_stat[i].cu_value[app_name].second += m.value;
             }
         }
     }

@@ -67,12 +67,6 @@ info_collector::info_collector()
                                               "capacity_unit_stat_fetch_interval_seconds",
                                               8, // default value 8s
                                               "capacity unit stat fetch interval seconds");
-
-    _capacity_unit_compression_type = dsn_config_get_value_string(
-        "pegasus.collector",
-        "capacity_unit_compression_type",
-        "none",
-        "capacity unit value compression type, default 'none'. Available config: '[none|zstd]'");
 }
 
 info_collector::~info_collector()
@@ -257,17 +251,16 @@ void info_collector::on_capacity_unit_stat()
     std::vector<node_capacity_unit_stat> nodes_stat;
     if (get_capacity_unit_stat(&_shell_context, nodes_stat)) {
         for (int i = 0; i < nodes_stat.size(); ++i) {
-            if (is_capacity_unit_updated(nodes_stat[i].address, nodes_stat[i].timestamp_str)) {
+            if (is_capacity_unit_updated(nodes_stat[i].node_address, nodes_stat[i].timestamp_str)) {
                 std::string hash_key(nodes_stat[i].timestamp_str);
-                std::string sort_key(nodes_stat[i].address);
-                std::string value;
+                std::string sort_key(nodes_stat[i].node_address);
                 std::stringstream ss;
                 nodes_stat[i].cu_value_output_in_json(ss);
-                dassert(compress_value(ss.str(), value), "compress capacity unit value failed");
+                std::string value = ss.str();
                 set_capacity_unit_stat(hash_key, sort_key, value, 3000);
             } else {
                 ddebug("recent read/write units value of node %s is not updated",
-                       nodes_stat[i].address.c_str());
+                       nodes_stat[i].node_address.c_str());
             }
         }
     } else {
@@ -289,38 +282,6 @@ bool info_collector::is_capacity_unit_updated(const std::string &node_address,
         return true;
     }
     return false;
-}
-
-bool info_collector::compress_value(const std::string raw_value, std::string &value)
-{
-    if (_capacity_unit_compression_type == "none") {
-        value = raw_value;
-        return true;
-    } else if (_capacity_unit_compression_type == "zstd") {
-        return zstd_compress(raw_value, value);
-    } else {
-        derror("Unsupported compression type: %s.", _capacity_unit_compression_type);
-        return false;
-    }
-}
-
-bool info_collector::zstd_compress(const std::string raw_value, std::string &value)
-{
-    void *src = (void *)raw_value.c_str();
-    size_t src_size = raw_value.length();
-    size_t dst_capacity = ZSTD_compressBound(src_size);
-    void *dst = malloc(dst_capacity);
-    // The compression level is set 3, which is default level of zstd.
-    // Zstd library supports regular compression levels from 1 up to ZSTD_maxCLevel(),
-    // which is currently 22.
-    // The lower the level, the faster the speed (at the cost of compression).
-    size_t result = ZSTD_compress(dst, dst_capacity, src, src_size, 3);
-    if (ZSTD_isError(result)) {
-        derror("error compressing %s : %s", raw_value, ZSTD_getErrorName(result));
-        return false;
-    }
-    value = (char *)dst;
-    return true;
 }
 
 void info_collector::set_capacity_unit_stat(const std::string &hash_key,
