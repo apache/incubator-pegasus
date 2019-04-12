@@ -24,6 +24,11 @@ public:
         _write_svc = _server_write->_write_svc.get();
     }
 
+    void set_app_duplicating()
+    {
+        dsn::replication::replica_app_set_duplicating(_replica, _server.get(), true);
+    }
+
     void test_multi_put()
     {
         dsn::fail::setup();
@@ -183,6 +188,7 @@ public:
 
     void test_put_verify_timetag()
     {
+        set_app_duplicating();
         auto write_impl = _write_svc->_impl.get();
         const_cast<bool &>(write_impl->_verify_timetag) = true;
 
@@ -238,8 +244,11 @@ public:
         const_cast<bool &>(write_impl->_verify_timetag) = false;
     }
 
+    // ensure empty_writes must skip verify_timetag, since its
+    // raw_key can't be normally restored.
     void test_empty_write_verify_timetag()
     {
+        set_app_duplicating();
         auto write_impl = _write_svc->_impl.get();
         const_cast<bool &>(write_impl->_verify_timetag) = true;
 
@@ -248,6 +257,47 @@ public:
 
         err = write_impl->empty_put(1);
         ASSERT_EQ(err, 0);
+    }
+
+    void test_verify_timetag_compatible_with_old_schema()
+    {
+        set_app_duplicating();
+        auto write_impl = _write_svc->_impl.get();
+        const_cast<bool &>(write_impl->_verify_timetag) = true;
+        const_cast<uint32_t &>(write_impl->_value_schema_version) = 0;
+
+        std::string raw_key = "key";
+        std::string value = "value";
+        int64_t decree = 10;
+        uint64_t timestamp = 10;
+        auto ctx = db_write_context::create(decree, timestamp);
+        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
+        write_impl->db_write(ctx.decree);
+
+        ctx = db_write_context::create(decree, timestamp);
+        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
+        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+    }
+
+    void test_verify_timetag_on_duplicating_table_only()
+    {
+        dsn::fail::setup();
+        auto write_impl = _write_svc->_impl.get();
+        const_cast<bool &>(write_impl->_verify_timetag) = true;
+
+        { // if db_write_batch_put_ctx causes a db_get, it will definitely fail here.
+            dsn::fail::cfg("db_get", "100%1*return()");
+
+            std::string raw_key = "key";
+            std::string value = "value";
+            int64_t decree = 10;
+            uint64_t timestamp = 10;
+            auto ctx = db_write_context::create(decree, timestamp);
+            ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
+            ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        }
+
+        dsn::fail::teardown();
     }
 
     uint64_t read_timestamp_from(dsn::string_view raw_key)
@@ -275,6 +325,16 @@ TEST_F(pegasus_write_service_test, put_verify_timetag) { test_put_verify_timetag
 TEST_F(pegasus_write_service_test, empty_write_verify_timetag)
 {
     test_empty_write_verify_timetag();
+}
+
+TEST_F(pegasus_write_service_test, verify_timetag_compatible_with_old_schema)
+{
+    test_verify_timetag_compatible_with_old_schema();
+}
+
+TEST_F(pegasus_write_service_test, verify_timetag_on_duplicating_table_only)
+{
+    test_verify_timetag_on_duplicating_table_only();
 }
 
 } // namespace server

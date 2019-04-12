@@ -34,7 +34,8 @@ public:
           _wt_opts(server->_wt_opts),
           _rd_opts(server->_rd_opts),
           _default_ttl(0),
-          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
+          _pfc_recent_expire_count(server->_pfc_recent_expire_count),
+          _server(server)
     {
         const_cast<bool &>(_verify_timetag) = dsn_config_get_value_bool(
             "pegasus.server", "verify_timetag", false, "verify_timetag, default false");
@@ -525,8 +526,11 @@ private:
         // for every write the new_timetag is set to 0.
         uint64_t new_timetag = 0;
 
-        if (_verify_timetag && !raw_key.empty()) {
-            // raw_key.empty() means this is an empty write
+        if (_verify_timetag && _value_schema_version >= 1 && _server->is_duplicating() &&
+            !raw_key.empty()) {
+            // - _value_schema_version==0 doesn't support timetag.
+            // - not-duplicating tables are not required to verify every write.
+            // - raw_key.empty() means this is an empty write.
             std::string raw_value;
             bool found, expired;
             uint32_t expire_ts;
@@ -819,7 +823,7 @@ private:
     rocksdb::ReadOptions &_rd_opts;
     volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
-
+    pegasus_server_impl *_server;
     pegasus_value_generator _value_generator;
 
     // for setting update_response.error after committed.
