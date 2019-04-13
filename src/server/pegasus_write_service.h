@@ -92,6 +92,24 @@ public:
                          const dsn::apps::check_and_mutate_request &update,
                          dsn::apps::check_and_mutate_response &resp);
 
+    // Write PUT record duplicated from remote.
+    int duplicated_put(const db_write_context &ctx,
+                       const dsn::apps::update_request &update,
+                       dsn::apps::update_response &resp);
+
+    // Write MULTI_PUT record duplicated from remote.
+    int duplicated_multi_put(const db_write_context &ctx,
+                             const dsn::apps::multi_put_request &update,
+                             dsn::apps::update_response &resp);
+
+    // Write REMOVE record duplicated from remote.
+    int duplicated_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp);
+
+    // Write MULTI_REMOVE record duplicated from remote.
+    int duplicated_multi_remove(int64_t decree,
+                                const dsn::apps::multi_remove_request &update,
+                                dsn::apps::multi_remove_response &resp);
+
     /// For batch write.
     /// NOTE: A batch write may incur a database read for consistency check of timetag.
     /// (see pegasus::pegasus_value_generator::generate_value_v1 for more info about timetag)
@@ -122,20 +140,6 @@ public:
     void batch_abort(int64_t decree, int err);
 
     void set_default_ttl(uint32_t ttl);
-
-    int duplicated_put(const db_write_context &ctx,
-                       const dsn::apps::update_request &update,
-                       dsn::apps::update_response &resp);
-
-    int duplicated_multi_put(const db_write_context &ctx,
-                             const dsn::apps::multi_put_request &update,
-                             dsn::apps::update_response &resp);
-
-    int duplicated_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp);
-
-    int duplicated_multi_remove(int64_t decree,
-                                const dsn::apps::multi_remove_request &update,
-                                dsn::apps::multi_remove_response &resp);
 
 private:
     void clear_up_batch_states();

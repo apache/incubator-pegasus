@@ -547,23 +547,9 @@ private:
             if (found && !expired) {
                 uint64_t local_timetag = pegasus_extract_timetag(_value_schema_version, raw_value);
 
-                if (ctx.is_duplicated_write()) {
-                    if (local_timetag == new_timetag) {
-                        /// ignore if this is a retry attempt from remote.
-                        return 0;
-                    }
-                } else {
-                    if (local_timetag == new_timetag) {
-                        ::dsn::blob hash_key, sort_key;
-                        pegasus_restore_key(
-                            ::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-                        dfatal_replica(
-                            "timestamps are generated having the same value: [timetag:{}, "
-                            "hash_key:{}, sort_key:{}]",
-                            local_timetag,
-                            utils::c_escape_string(hash_key),
-                            utils::c_escape_string(sort_key));
-                    }
+                if (local_timetag == new_timetag) {
+                    // ignore if this is a write replay
+                    return 0;
                 }
 
                 if (local_timetag > new_timetag) {
@@ -618,7 +604,11 @@ private:
     // Apply the write batch into rocksdb.
     int db_write(int64_t decree)
     {
-        dassert(_batch.Count() != 0, "");
+        if (_batch.Count() == 0) {
+            // possible when verify_timetag is on, perhaps this write is stale
+            // compared to local data.
+            return 0;
+        }
 
         FAIL_POINT_INJECT_F("db_write", [](dsn::string_view) -> int { return FAIL_DB_WRITE; });
 
@@ -685,7 +675,7 @@ private:
         _batch.Clear();
     }
 
-    dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
+    static dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, sort_key);
@@ -693,7 +683,7 @@ private:
     }
 
     // return true if the check type is supported
-    bool is_check_type_supported(::dsn::apps::cas_check_type::type check_type)
+    static bool is_check_type_supported(::dsn::apps::cas_check_type::type check_type)
     {
         return check_type >= ::dsn::apps::cas_check_type::CT_NO_CHECK &&
                check_type <= ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER;

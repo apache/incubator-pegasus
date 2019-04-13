@@ -192,38 +192,44 @@ public:
         auto write_impl = _write_svc->_impl.get();
         const_cast<bool &>(write_impl->_verify_timetag) = true;
 
-        std::string raw_key = "key";
+        dsn::blob raw_key;
+        pegasus::pegasus_generate_key(
+            raw_key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
         std::string value = "value";
         int64_t decree = 10;
 
         /// insert timestamp 10
         uint64_t timestamp = 10;
         auto ctx = db_write_context::create(decree, timestamp);
-        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
-        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
+        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        write_impl->clear_up_batch_states(decree, 0);
         ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
 
         /// insert timestamp 15, which overwrites the previous record
         timestamp = 15;
         ctx = db_write_context::create(decree, timestamp);
-        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
-        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
+        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        write_impl->clear_up_batch_states(decree, 0);
         ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
 
         /// insert timestamp 11, which will be ignored
         uint64_t old_timestamp = timestamp;
         timestamp = 11;
         ctx = db_write_context::create(decree, timestamp);
-        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
-        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
+        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        write_impl->clear_up_batch_states(decree, 0);
         ASSERT_EQ(read_timestamp_from(raw_key), old_timestamp);
 
         /// insert timestamp 15 from remote, which will overwrite the previous record,
         /// since its cluster id is larger (current cluster_id=1)
         timestamp = 15;
         ctx.remote_timetag = pegasus::generate_timetag(timestamp, 2, false);
-        write_impl->db_write_batch_put_ctx(ctx, raw_key, value + "_new", 0);
-        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value + "_new", 0));
+        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        write_impl->clear_up_batch_states(decree, 0);
         ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
         std::string raw_value;
         dsn::blob user_value;
@@ -233,13 +239,24 @@ public:
             write_impl->_value_schema_version, std::move(raw_value), user_value);
         ASSERT_EQ(user_value.to_string(), "value_new");
 
+        // write replay
+        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value + "_new", 0));
+        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        write_impl->clear_up_batch_states(decree, 0);
+
         /// insert timestamp 16 from local, which will overwrite the remote record,
         /// since its timestamp is larger
         timestamp = 16;
         ctx = db_write_context::create(decree, timestamp);
-        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
-        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
+        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        write_impl->clear_up_batch_states(decree, 0);
         ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
+
+        // write replay
+        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
+        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        write_impl->clear_up_batch_states(decree, 0);
 
         const_cast<bool &>(write_impl->_verify_timetag) = false;
     }
@@ -271,12 +288,14 @@ public:
         int64_t decree = 10;
         uint64_t timestamp = 10;
         auto ctx = db_write_context::create(decree, timestamp);
-        write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0);
-        write_impl->db_write(ctx.decree);
+        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
+        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        write_impl->clear_up_batch_states(decree, 0);
 
         ctx = db_write_context::create(decree, timestamp);
         ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
         ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+        write_impl->clear_up_batch_states(decree, 0);
     }
 
     void test_verify_timetag_on_duplicating_table_only()
@@ -295,6 +314,7 @@ public:
             auto ctx = db_write_context::create(decree, timestamp);
             ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
             ASSERT_EQ(0, write_impl->db_write(ctx.decree));
+            write_impl->clear_up_batch_states(decree, 0);
         }
 
         dsn::fail::teardown();
