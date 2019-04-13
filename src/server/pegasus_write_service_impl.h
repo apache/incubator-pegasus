@@ -547,18 +547,10 @@ private:
             if (found && !expired) {
                 uint64_t local_timetag = pegasus_extract_timetag(_value_schema_version, raw_value);
 
-                if (local_timetag == new_timetag) {
-                    // ignore if this is a write replay
-                    return 0;
-                }
-
-                if (local_timetag > new_timetag) {
-                    ddebug_replica("ignored a stale update with lower timetag [new: "
-                                   "{}, local: {}, from_remote: {}]",
-                                   new_timetag,
-                                   local_timetag,
-                                   ctx.is_duplicated_write());
-                    return 0;
+                if (local_timetag >= new_timetag) {
+                    // ignore this stale update with lower timetag,
+                    // and write an empty record instead
+                    raw_key = value = dsn::string_view();
                 }
             }
         }

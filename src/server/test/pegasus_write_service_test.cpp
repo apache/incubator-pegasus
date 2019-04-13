@@ -239,7 +239,7 @@ public:
             write_impl->_value_schema_version, std::move(raw_value), user_value);
         ASSERT_EQ(user_value.to_string(), "value_new");
 
-        // write replay
+        // write retry
         ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value + "_new", 0));
         ASSERT_EQ(0, write_impl->db_write(ctx.decree));
         write_impl->clear_up_batch_states(decree, 0);
@@ -253,7 +253,7 @@ public:
         write_impl->clear_up_batch_states(decree, 0);
         ASSERT_EQ(read_timestamp_from(raw_key), timestamp);
 
-        // write replay
+        // write retry
         ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
         ASSERT_EQ(0, write_impl->db_write(ctx.decree));
         write_impl->clear_up_batch_states(decree, 0);
