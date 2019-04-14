@@ -10,6 +10,7 @@ import com.xiaomi.infra.pegasus.base.gpid;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.client.PegasusClient;
 import com.xiaomi.infra.pegasus.operator.client_operator;
+import com.xiaomi.infra.pegasus.operator.rrdb_get_operator;
 import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.thrift.TException;
@@ -170,8 +171,8 @@ public class ReplicaSessionTest {
   // ensure if response decode throws an exception, client is able to be informed.
   @Test
   public void testRecvInvalidData() throws Exception {
-    class test_operator extends rrdb_put_operator {
-      private test_operator(gpid gpid, update_request request) {
+    class test_operator extends rrdb_get_operator {
+      private test_operator(gpid gpid, blob request) {
         super(gpid, "", request, KeyHasher.DEFAULT.hash("a".getBytes()));
       }
 
@@ -180,7 +181,7 @@ public class ReplicaSessionTest {
       public void recv_data(TProtocol iprot) throws TException {
         throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
             com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
-            "put failed: unknown result");
+            "get failed: unknown result");
       }
     }
 
@@ -190,11 +191,7 @@ public class ReplicaSessionTest {
 
     for (int pid = 0; pid < 16; pid++) {
       // find a valid partition held on 127.0.0.1:34801
-      update_request req =
-          new update_request(
-              new blob(PegasusClient.generateKey("a".getBytes(), "".getBytes())),
-              new blob("a".getBytes()),
-              0);
+      blob req = new blob(PegasusClient.generateKey("a".getBytes(), "".getBytes()));
       final client_operator op = new test_operator(new gpid(1, pid), req);
       FutureTask<Void> cb =
           new FutureTask<Void>(
