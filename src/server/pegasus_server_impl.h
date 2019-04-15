@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <algorithm>
 #include <vector>
 #include <rocksdb/db.h>
 #include <rocksdb/table.h>

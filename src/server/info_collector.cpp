@@ -14,7 +14,6 @@
 
 #include "base/pegasus_utils.h"
 #include "base/pegasus_const.h"
-#include "zstd.h"
 
 #define METRICSNUM 3
 
@@ -78,7 +77,7 @@ info_collector::~info_collector()
     }
     // don't delete _client, just set _client to nullptr.
     _client = nullptr;
-    _capacity_unit_update_info.clear();
+    _capacity_unit_stat_update_info.clear();
     stop();
 }
 
@@ -251,7 +250,8 @@ void info_collector::on_capacity_unit_stat()
     std::vector<node_capacity_unit_stat> nodes_stat;
     if (get_capacity_unit_stat(&_shell_context, nodes_stat)) {
         for (int i = 0; i < nodes_stat.size(); ++i) {
-            if (is_capacity_unit_updated(nodes_stat[i].node_address, nodes_stat[i].timestamp_str)) {
+            if (is_capacity_unit_stat_updated(nodes_stat[i].node_address,
+                                              nodes_stat[i].timestamp_str)) {
                 std::string hash_key(nodes_stat[i].timestamp_str);
                 std::string sort_key(nodes_stat[i].node_address);
                 std::stringstream ss;
@@ -268,17 +268,17 @@ void info_collector::on_capacity_unit_stat()
     }
 }
 
-bool info_collector::is_capacity_unit_updated(const std::string &node_address,
-                                              const std::string &timestamp)
+bool info_collector::is_capacity_unit_stat_updated(const std::string &node_address,
+                                                   const std::string &timestamp)
 {
-    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_capacity_unit_update_info_lock);
-    auto find = _capacity_unit_update_info.find(node_address);
-    if (find == _capacity_unit_update_info.end()) {
-        _capacity_unit_update_info[node_address] = timestamp;
+    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_cu_stat_update_info_lock);
+    auto find = _capacity_unit_stat_update_info.find(node_address);
+    if (find == _capacity_unit_stat_update_info.end()) {
+        _capacity_unit_stat_update_info[node_address] = timestamp;
         return true;
     }
     if (timestamp > find->second) {
-        _capacity_unit_update_info[node_address] = timestamp;
+        _capacity_unit_stat_update_info[node_address] = timestamp;
         return true;
     }
     return false;

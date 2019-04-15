@@ -65,7 +65,8 @@ public:
     AppStatCounters *get_app_counters(const std::string &app_name);
 
     void on_capacity_unit_stat();
-    bool is_capacity_unit_updated(const std::string &node_address, const std::string &timestamp);
+    bool is_capacity_unit_stat_updated(const std::string &node_address,
+                                       const std::string &timestamp);
     void set_capacity_unit_stat(const std::string &hash_key,
                                 const std::string &sort_key,
                                 const std::string &value,
@@ -87,9 +88,9 @@ private:
     uint32_t _capacity_unit_stat_fetch_interval_seconds;
     dsn::task_tracker _capacity_unit_stat_task_tracker;
     ::dsn::task_ptr _capacity_unit_stat_timer_task;
-    ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
+    ::dsn::utils::ex_lock_nr _cu_stat_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
-    std::map<std::string, string> _capacity_unit_update_info;
+    std::map<std::string, string> _capacity_unit_stat_update_info;
 };
 } // namespace server
 } // namespace pegasus

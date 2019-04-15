@@ -4,6 +4,7 @@
 
 #include "pegasus_server_impl.h"
 
+#include <algorithm>
 #include <boost/lexical_cast.hpp>
 #include <rocksdb/convenience.h>
 #include <rocksdb/utilities/checkpoint.h>
