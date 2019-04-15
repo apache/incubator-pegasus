@@ -95,7 +95,13 @@ public class PConfigUtil {
     ZkClient client =
         new ZkClient(
             server, ZK_SESSION_TIMEOUT, ZK_CONNECTION_TIMEOUT, new BytesPushThroughSerializer());
-    return client.readData(path);
+    try {
+      return client.readData(path);
+    } catch (Exception e) {
+      throw new PException(e);
+    } finally {
+      client.close();
+    }
   }
 
   protected static String getBusinessConfigZkPath(String businessName) {

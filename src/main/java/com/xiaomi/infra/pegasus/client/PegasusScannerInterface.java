@@ -14,7 +14,7 @@ public interface PegasusScannerInterface {
   /**
    * Get the next item.
    *
-   * @return item like <<hashKey, sortKey>, value>; null returned if scan completed.
+   * @return item like {@literal <<hashKey, sortKey>, value>}; null returned if scan completed.
    * @throws PException
    */
   public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException;

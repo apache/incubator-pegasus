@@ -27,24 +27,16 @@ if [[ $(git status -s) ]]; then
 fi
 
 # start pegasus onebox environment
-wget https://github.com/XiaoMi/pegasus/releases/download/v1.11.2/pegasus-tools-1.11.2-a186d38-ubuntu-18.04-release.tar.gz
-tar xvf pegasus-tools-1.11.2-a186d38-ubuntu-18.04-release.tar.gz
-cd pegasus-tools-1.11.2-a186d38-ubuntu-release
+wget https://github.com/XiaoMi/pegasus/releases/download/v1.11.3/pegasus-1.11.3-b45cb06-linux-x86_64-release.zip
+unzip pegasus-1.11.3-b45cb06-linux-x86_64-release.zip
+cd pegasus-1.11.3-b45cb06-linux-x86_64-release
 
-# download zookeeper
-# TODO(wutao1): remove this when upgrading the server to latest version
-mkdir -p .zk_install && cd .zk_install
-wget "https://github.com/xiaomi/pegasus-common/raw/master/zookeeper-3.4.6.tar.gz"
-cd ..
-
-./run.sh start_onebox
-sleep 4
-./run.sh list_onebox
+./run.sh start_onebox -w
 cd ../
 
 if ! mvn clean test
 then
-    cd pegasus-tools-1.11.2-a186d38-ubuntu-release
+    cd pegasus-1.11.3-b45cb06-linux-x86_64-release
     ./run.sh list_onebox
     exit 1
 fi

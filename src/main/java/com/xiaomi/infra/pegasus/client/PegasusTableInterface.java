@@ -18,7 +18,7 @@ import org.apache.commons.lang3.tuple.Pair;
  *     <p>A synchronous example: <code>
  *     PegasusTableInterface table;
  *     ....
- *     Future<Boolean> future = table.asyncExist(hashKey, sortKey, 0);
+ *     Future{@literal <Boolean>} future = table.asyncExist(hashKey, sortKey, 0);
  *     future.await();
  *     if (future.isSuccess()) {
  *         Boolean result = future.getNow();
@@ -31,7 +31,7 @@ import org.apache.commons.lang3.tuple.Pair;
  *     ....
  *     table.asyncExist(hashKey, sortKey, 0).addListener(
  *         new ExistListener() {
- *             public void operationComplete(Future<Boolean> future) throws Exception {
+ *             public void operationComplete(Future{@literal <Boolean>} future) throws Exception {
  *                 if (future.isSuccess()) {
  *                     Boolean result = future.getNow();
  *                 }

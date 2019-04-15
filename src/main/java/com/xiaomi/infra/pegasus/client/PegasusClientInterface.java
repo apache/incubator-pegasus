@@ -279,7 +279,7 @@ public interface PegasusClientInterface {
    *
    * @param tableName table name
    * @param hashKey used to decide which partition to put this k-v, should not be null or empty.
-   * @param values all <sortkey,value> pairs to be set, should not be null or empty.
+   * @param values all {@literal <sortkey,value>} pairs to be set, should not be null or empty.
    * @param ttlSeconds time to live in seconds, 0 means no ttl. default value is 0.
    * @throws PException throws exception if any error occurs.
    */
