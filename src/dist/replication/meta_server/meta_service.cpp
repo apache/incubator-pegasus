@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #include <sys/stat.h>
 
 #include <boost/lexical_cast.hpp>
@@ -41,6 +33,7 @@
 #include <dsn/utility/extensible_object.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/meta_state_service.h>
+#include <dsn/dist/replication/duplication_common.h>
 #include <dsn/tool-api/command_manager.h>
 #include <algorithm> // for std::remove_if
 #include <cctype>    // for ::isspace
@@ -49,6 +42,7 @@
 #include "server_state.h"
 #include "meta_server_failure_detector.h"
 #include "server_load_balancer.h"
+#include "duplication/meta_duplication_service.h"
 
 namespace dsn {
 namespace replication {
@@ -107,6 +101,7 @@ error_code meta_service::remote_storage_initialize()
         return err;
     }
     _storage.reset(storage);
+    _meta_storage.reset(new mss::meta_storage(_storage.get(), &_tracker));
 
     std::vector<std::string> slices;
     utils::split_args(_meta_opts.cluster_root.c_str(), slices, '/');
@@ -317,6 +312,8 @@ error_code meta_service::start()
         derror("initialize server state from remote storage failed, err = %s, retry ...",
                err.to_string());
     }
+
+    initialize_duplication_service();
 
     _state->register_cli_commands();
 
@@ -786,6 +783,13 @@ void meta_service::on_query_restore_status(dsn::message_ex *req)
                      std::bind(&server_state::on_query_restore_status, _state.get(), req));
 }
 
+void meta_service::initialize_duplication_service()
+{
+    if (!_opts.duplication_disabled) {
+        _dup_svc = make_unique<meta_duplication_service>(_state.get(), this);
+    }
+}
+
 void meta_service::update_app_env(app_env_rpc env_rpc)
 {
     auto &response = env_rpc.response();
@@ -825,5 +829,6 @@ void meta_service::ddd_diagnose(ddd_diagnose_rpc rpc)
     get_balancer()->get_ddd_partitions(rpc.request().pid, response.partitions);
     response.err = ERR_OK;
 }
-}
-}
+
+} // namespace replication
+} // namespace dsn
