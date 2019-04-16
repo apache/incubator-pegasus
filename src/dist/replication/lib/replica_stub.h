@@ -323,6 +323,8 @@ private:
 
     perf_counter_wrapper _counter_recent_read_fail_count;
     perf_counter_wrapper _counter_recent_write_fail_count;
+    perf_counter_wrapper _counter_recent_read_busy_count;
+    perf_counter_wrapper _counter_recent_write_busy_count;
 
     dsn::task_tracker _tracker;
 };
