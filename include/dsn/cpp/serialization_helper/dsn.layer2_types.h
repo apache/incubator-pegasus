@@ -289,7 +289,8 @@ typedef struct _app_info__isset
           max_replica_count(false),
           expire_second(false),
           create_second(false),
-          drop_second(false)
+          drop_second(false),
+          duplicating(false)
     {
     }
     bool status : 1;
@@ -303,6 +304,7 @@ typedef struct _app_info__isset
     bool expire_second : 1;
     bool create_second : 1;
     bool drop_second : 1;
+    bool duplicating : 1;
 } _app_info__isset;
 
 class app_info
@@ -322,7 +324,8 @@ public:
           max_replica_count(0),
           expire_second(0),
           create_second(0),
-          drop_second(0)
+          drop_second(0),
+          duplicating(0)
     {
         status = (app_status::type)0;
     }
@@ -339,6 +342,7 @@ public:
     int64_t expire_second;
     int64_t create_second;
     int64_t drop_second;
+    bool duplicating;
 
     _app_info__isset __isset;
 
@@ -364,6 +368,8 @@ public:
 
     void __set_drop_second(const int64_t val);
 
+    void __set_duplicating(const bool val);
+
     bool operator==(const app_info &rhs) const
     {
         if (!(status == rhs.status))
@@ -387,6 +393,10 @@ public:
         if (!(create_second == rhs.create_second))
             return false;
         if (!(drop_second == rhs.drop_second))
+            return false;
+        if (__isset.duplicating != rhs.__isset.duplicating)
+            return false;
+        else if (__isset.duplicating && !(duplicating == rhs.duplicating))
             return false;
         return true;
     }

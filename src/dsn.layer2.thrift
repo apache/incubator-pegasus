@@ -30,7 +30,7 @@ struct configuration_query_by_index_response
     2:i32                           app_id;
     3:i32                           partition_count;
     4:bool                          is_stateful;
-    5:list<partition_configuration> partitions;    
+    5:list<partition_configuration> partitions;
 }
 
 enum app_status
@@ -60,4 +60,9 @@ struct app_info
     // new fields added from v1.11.0
     10:i64          create_second;
     11:i64          drop_second;
+
+    // New fields added from v1.12.0
+    // Whether this app is duplicating.
+    // If true it should prevent its unconfirmed WAL from being compacted.
+    12:optional bool duplicating;
 }

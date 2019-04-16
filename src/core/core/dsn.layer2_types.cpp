@@ -715,6 +715,12 @@ void app_info::__set_create_second(const int64_t val) { this->create_second = va
 
 void app_info::__set_drop_second(const int64_t val) { this->drop_second = val; }
 
+void app_info::__set_duplicating(const bool val)
+{
+    this->duplicating = val;
+    __isset.duplicating = true;
+}
+
 uint32_t app_info::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -838,6 +844,14 @@ uint32_t app_info::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 12:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->duplicating);
+                this->__isset.duplicating = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -910,6 +924,11 @@ uint32_t app_info::write(::apache::thrift::protocol::TProtocol *oprot) const
     xfer += oprot->writeI64(this->drop_second);
     xfer += oprot->writeFieldEnd();
 
+    if (this->__isset.duplicating) {
+        xfer += oprot->writeFieldBegin("duplicating", ::apache::thrift::protocol::T_BOOL, 12);
+        xfer += oprot->writeBool(this->duplicating);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -929,6 +948,7 @@ void swap(app_info &a, app_info &b)
     swap(a.expire_second, b.expire_second);
     swap(a.create_second, b.create_second);
     swap(a.drop_second, b.drop_second);
+    swap(a.duplicating, b.duplicating);
     swap(a.__isset, b.__isset);
 }
 
@@ -945,6 +965,7 @@ app_info::app_info(const app_info &other45)
     expire_second = other45.expire_second;
     create_second = other45.create_second;
     drop_second = other45.drop_second;
+    duplicating = other45.duplicating;
     __isset = other45.__isset;
 }
 app_info::app_info(app_info &&other46)
@@ -960,6 +981,7 @@ app_info::app_info(app_info &&other46)
     expire_second = std::move(other46.expire_second);
     create_second = std::move(other46.create_second);
     drop_second = std::move(other46.drop_second);
+    duplicating = std::move(other46.duplicating);
     __isset = std::move(other46.__isset);
 }
 app_info &app_info::operator=(const app_info &other47)
@@ -975,6 +997,7 @@ app_info &app_info::operator=(const app_info &other47)
     expire_second = other47.expire_second;
     create_second = other47.create_second;
     drop_second = other47.drop_second;
+    duplicating = other47.duplicating;
     __isset = other47.__isset;
     return *this;
 }
@@ -991,6 +1014,7 @@ app_info &app_info::operator=(app_info &&other48)
     expire_second = std::move(other48.expire_second);
     create_second = std::move(other48.create_second);
     drop_second = std::move(other48.drop_second);
+    duplicating = std::move(other48.duplicating);
     __isset = std::move(other48.__isset);
     return *this;
 }
@@ -1019,6 +1043,9 @@ void app_info::printTo(std::ostream &out) const
         << "create_second=" << to_string(create_second);
     out << ", "
         << "drop_second=" << to_string(drop_second);
+    out << ", "
+        << "duplicating=";
+    (__isset.duplicating ? (out << to_string(duplicating)) : (out << "<null>"));
     out << ")";
 }
 

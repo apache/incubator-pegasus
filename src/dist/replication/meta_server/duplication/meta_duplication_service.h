@@ -41,6 +41,23 @@ public:
         dassert(_meta_svc, "_meta_svc should not be null");
     }
 
+    // get lock to protect access of app table
+    zrwlock_nr &app_lock() const { return _state->_lock; }
+
+    // `duplicating` will be set to true if any dup is valid among app->duplications.
+    // ensure app_lock (write lock) is held before calling this function
+    static void refresh_duplicating_no_lock(const std::shared_ptr<app_state> &app)
+    {
+        for (const auto &kv : app->duplications) {
+            const auto &dup = kv.second;
+            if (dup->is_valid()) {
+                app->__set_duplicating(true);
+                return;
+            }
+        }
+        app->__set_duplicating(false);
+    }
+
 private:
     friend class meta_duplication_service_test;
 
