@@ -114,12 +114,12 @@ public:
 
     // duplication_query_rpc is handled in THREAD_POOL_META_SERVER,
     // which is not thread safe for read.
-    void to_duplication_entry_for_query(std::vector<duplication_entry> &entry_list) const
+    void append_if_valid(std::vector<duplication_entry> &entry_list) const
     {
         zauto_read_lock l(_lock);
 
-        // the removed duplication is not visible to user.
-        if (status != duplication_status::DS_REMOVED) {
+        // the invalid duplication is not visible to user.
+        if (is_valid()) {
             entry_list.emplace_back(to_duplication_entry());
         }
     }

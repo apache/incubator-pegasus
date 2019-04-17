@@ -361,6 +361,8 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler(RPC_CM_QUERY_RESTORE_STATUS,
                          "query_restore_status",
                          &meta_service::on_query_restore_status);
+
+    register_duplication_rpc_handlers();
     register_rpc_handler_with_rpc_holder(
         RPC_CM_UPDATE_APP_ENV, "update_app_env(set/del/clear)", &meta_service::update_app_env);
     register_rpc_handler_with_rpc_holder(
@@ -781,6 +783,24 @@ void meta_service::on_query_restore_status(dsn::message_ex *req)
     tasking::enqueue(LPC_META_STATE_NORMAL,
                      nullptr,
                      std::bind(&server_state::on_query_restore_status, _state.get(), req));
+}
+
+void meta_service::on_query_duplication_info(duplication_query_rpc rpc)
+{
+    RPC_CHECK_STATUS(rpc.dsn_request(), rpc.response());
+
+    if (_dup_svc) {
+        _dup_svc->query_duplication_info(rpc.request(), rpc.response());
+    } else {
+        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+    }
+}
+
+void meta_service::register_duplication_rpc_handlers()
+{
+    register_rpc_handler_with_rpc_holder(RPC_CM_QUERY_DUPLICATION,
+                                         "query duplication info",
+                                         &meta_service::on_query_duplication_info);
 }
 
 void meta_service::initialize_duplication_service()

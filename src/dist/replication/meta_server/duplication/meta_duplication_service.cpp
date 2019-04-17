@@ -24,51 +24,40 @@
  * THE SOFTWARE.
  */
 
-#pragma once
+#include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/chrono_literals.h>
+#include <dsn/utility/string_conv.h>
 
-#include "dist/replication/meta_server/server_state.h"
-#include "dist/replication/meta_server/meta_data.h"
+#include "dist/replication/meta_server/meta_service.h"
+#include "meta_duplication_service.h"
 
 namespace dsn {
 namespace replication {
 
-class meta_duplication_service
+using namespace literals::chrono_literals;
+
+// ThreadPool(READ): THREAD_POOL_META_SERVER
+void meta_duplication_service::query_duplication_info(const duplication_query_request &request,
+                                                      duplication_query_response &response)
 {
-public:
-    meta_duplication_service(server_state *ss, meta_service *ms) : _state(ss), _meta_svc(ms)
+    ddebug_f("query duplication info for app: {}", request.app_name);
+
+    response.err = ERR_OK;
     {
-        dassert(_state, "_state should not be null");
-        dassert(_meta_svc, "_meta_svc should not be null");
-    }
-
-    /// See replication.thrift for possible errors for each rpc.
-
-    void query_duplication_info(const duplication_query_request &, duplication_query_response &);
-
-    // get lock to protect access of app table
-    zrwlock_nr &app_lock() const { return _state->_lock; }
-
-    // `duplicating` will be set to true if any dup is valid among app->duplications.
-    // ensure app_lock (write lock) is held before calling this function
-    static void refresh_duplicating_no_lock(const std::shared_ptr<app_state> &app)
-    {
-        for (const auto &kv : app->duplications) {
-            const auto &dup = kv.second;
-            if (dup->is_valid()) {
-                app->__set_duplicating(true);
-                return;
+        zauto_read_lock l(app_lock());
+        std::shared_ptr<app_state> app = _state->get_app(request.app_name);
+        if (!app || app->status != app_status::AS_AVAILABLE) {
+            response.err = ERR_APP_NOT_EXIST;
+        } else {
+            response.appid = app->app_id;
+            for (auto &dup_id_to_info : app->duplications) {
+                const duplication_info_s_ptr &dup = dup_id_to_info.second;
+                dup->append_if_valid(response.entry_list);
             }
         }
-        app->__set_duplicating(false);
     }
-
-private:
-    friend class meta_duplication_service_test;
-
-    server_state *_state;
-
-    meta_service *_meta_svc;
-};
+}
 
 } // namespace replication
 } // namespace dsn
