@@ -51,7 +51,7 @@ info_collector::info_collector()
                                                                        "app stat interval seconds");
 
     _app_name = dsn_config_get_value_string(
-        "pegasus.collector", "capacity_unit_stat_app", "", "capacity unit stat app name");
+        "pegasus.collector", "cu_info_app", "", "app for recording capacity unit info");
     dassert(!_app_name.empty(), "");
     // initialize the _client.
     if (!pegasus_client_factory::initialize(nullptr)) {
@@ -60,11 +60,11 @@ info_collector::info_collector()
     _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _app_name.c_str());
     dassert(_client != nullptr, "Initialize the _client failed");
 
-    _capacity_unit_stat_fetch_interval_seconds =
+    _cu_fetch_interval_seconds =
         (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
-                                              "capacity_unit_stat_fetch_interval_seconds",
+                                              "cu_fetch_interval_seconds",
                                               8, // default value 8s
-                                              "capacity unit stat fetch interval seconds");
+                                              "capacity unit fetch interval seconds");
 }
 
 info_collector::~info_collector()
@@ -88,13 +88,13 @@ void info_collector::start()
                                       0,
                                       std::chrono::minutes(1));
 
-    _capacity_unit_stat_timer_task = ::dsn::tasking::enqueue_timer(
-        LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
-        &_tracker,
-        [this] { on_capacity_unit_stat(); },
-        std::chrono::seconds(_capacity_unit_stat_fetch_interval_seconds),
-        0,
-        std::chrono::minutes(1));
+    _cu_stat_timer_task =
+        ::dsn::tasking::enqueue_timer(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+                                      &_tracker,
+                                      [this] { on_capacity_unit_stat(); },
+                                      std::chrono::seconds(_cu_fetch_interval_seconds),
+                                      0,
+                                      std::chrono::minutes(1));
 }
 
 void info_collector::stop()
@@ -102,8 +102,8 @@ void info_collector::stop()
     if (_app_stat_timer_task != nullptr)
         _app_stat_timer_task->cancel(true);
 
-    if (_capacity_unit_stat_timer_task != nullptr)
-        _capacity_unit_stat_timer_task->cancel(true);
+    if (_cu_stat_timer_task != nullptr)
+        _cu_stat_timer_task->cancel(true);
 }
 
 void info_collector::on_app_stat()
@@ -249,7 +249,7 @@ void info_collector::on_capacity_unit_stat()
         return;
     }
     for (auto elem : nodes_stat) {
-        if (!has_capacity_unit_stat_updated(elem.node_address, elem.timestamp)) {
+        if (!has_capacity_unit_updated(elem.node_address, elem.timestamp)) {
             ddebug("recent read/write capacity unit value of node %s is not updated",
                    elem.node_address.c_str());
             continue;
@@ -258,17 +258,17 @@ void info_collector::on_capacity_unit_stat()
     }
 }
 
-bool info_collector::has_capacity_unit_stat_updated(const std::string &node_address,
-                                                    const std::string &timestamp)
+bool info_collector::has_capacity_unit_updated(const std::string &node_address,
+                                               const std::string &timestamp)
 {
-    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_cu_stat_update_info_lock);
-    auto find = _capacity_unit_stat_update_info.find(node_address);
-    if (find == _capacity_unit_stat_update_info.end()) {
-        _capacity_unit_stat_update_info[node_address] = timestamp;
+    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_cu_update_info_lock);
+    auto find = _cu_update_info.find(node_address);
+    if (find == _cu_update_info.end()) {
+        _cu_update_info[node_address] = timestamp;
         return true;
     }
     if (timestamp > find->second) {
-        _capacity_unit_stat_update_info[node_address] = timestamp;
+        _cu_update_info[node_address] = timestamp;
         return true;
     }
     return false;
