@@ -512,8 +512,8 @@ struct row_data
     double check_and_set_qps = 0;
     double check_and_mutate_qps = 0;
     double scan_qps = 0;
-    double recent_read_units = 0;
-    double recent_write_units = 0;
+    double recent_read_cu = 0;
+    double recent_write_cu = 0;
     double recent_expire_count = 0;
     double recent_filter_count = 0;
     double recent_abnormal_count = 0;
@@ -550,10 +550,10 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.check_and_mutate_qps += value;
     else if (counter_name == "scan_qps")
         row.scan_qps += value;
-    else if (counter_name == "recent.read.units")
-        row.recent_read_units += value;
-    else if (counter_name == "recent.write.units")
-        row.recent_write_units += value;
+    else if (counter_name == "recent.read.cu")
+        row.recent_read_cu += value;
+    else if (counter_name == "recent.write.cu")
+        row.recent_write_cu += value;
     else if (counter_name == "recent.expire.count")
         row.recent_expire_count += value;
     else if (counter_name == "recent.filter.count")
@@ -757,26 +757,29 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
 
 struct node_capacity_unit_stat
 {
-    std::string timestamp_str;
+    // timestamp when node perf_counter_info has updated.
+    std::string timestamp;
     std::string node_address;
-    // Mapping app_name --> (read_cu, write_cu)
-    std::map<std::string, std::pair<double, double>> cu_value;
+    // mapping app_name --> (read_cu, write_cu)
+    std::map<std::string, std::pair<double, double>> cu_value_by_app;
 
-    void cu_value_output_in_json(std::ostream &out) const
+    std::string dump_to_json() const
     {
+        std::stringstream out;
         rapidjson::OStreamWrapper wrapper(out);
         dsn::json::JsonWriter writer(wrapper);
         writer.StartObject();
-        for (auto elem : cu_value) {
-            auto tuple = elem.second;
-            if (tuple.first < 1e-6 && tuple.second < 1e-6)
+        for (auto elem : cu_value_by_app) {
+            auto cu_tuple = elem.second;
+            if (cu_tuple.first < 1e-6 && cu_tuple.second < 1e-6)
                 continue;
             char tuple_str[50];
-            sprintf(tuple_str, "[%.2f,%.2f]", tuple.first, tuple.second);
+            sprintf(tuple_str, "[%.2f,%.2f]", cu_tuple.first, cu_tuple.second);
             dsn::json::json_encode(writer, elem.first);
             dsn::json::json_encode(writer, tuple_str);
         }
         writer.EndObject();
+        return out.str();
     }
 };
 
@@ -797,7 +800,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
     ::dsn::command command;
     command.cmd = "perf-counters";
     char tmp[256];
-    sprintf(tmp, ".*\\*recent\\..*\\.units@.*");
+    sprintf(tmp, ".*\\*recent\\..*\\.cu@.*");
     command.arguments.push_back(tmp);
     std::vector<std::pair<bool, std::string>> results;
     call_remote_command(sc, nodes, command, results);
@@ -808,7 +811,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
         dsn::perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info))
             return false;
-        nodes_stat[i].timestamp_str = info.timestamp_str;
+        nodes_stat[i].timestamp = info.timestamp_str;
         nodes_stat[i].node_address = node_addr.to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
             int32_t app_id, partition_index;
@@ -824,15 +827,17 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             if (app_name_map.find(app_id) == app_name_map.end())
                 continue;
             std::string app_name = app_name_map[app_id];
-            if (counter_name == "recent.read.units") {
-                if (nodes_stat[i].cu_value.find(app_name) == nodes_stat[i].cu_value.end())
-                    nodes_stat[i].cu_value.emplace(app_name, std::make_pair(0.0, 0.0));
-                nodes_stat[i].cu_value[app_name].first += m.value;
+            if (counter_name == "recent.read.cu") {
+                if (nodes_stat[i].cu_value_by_app.find(app_name) ==
+                    nodes_stat[i].cu_value_by_app.end())
+                    nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0.0, 0.0));
+                nodes_stat[i].cu_value_by_app[app_name].first += m.value;
             }
-            if (counter_name == "recent.write.units") {
-                if (nodes_stat[i].cu_value.find(app_name) == nodes_stat[i].cu_value.end())
-                    nodes_stat[i].cu_value.emplace(app_name, std::make_pair(0.0, 0.0));
-                nodes_stat[i].cu_value[app_name].second += m.value;
+            if (counter_name == "recent.write.cu") {
+                if (nodes_stat[i].cu_value_by_app.find(app_name) ==
+                    nodes_stat[i].cu_value_by_app.end())
+                    nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0.0, 0.0));
+                nodes_stat[i].cu_value_by_app[app_name].second += m.value;
             }
         }
     }

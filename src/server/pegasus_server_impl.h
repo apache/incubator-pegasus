@@ -259,6 +259,18 @@ private:
             _pegasus_data_version, epoch_now, utils::to_string_view(raw_value));
     }
 
+    uint64_t calc_read_cu(uint64_t data_len)
+    {
+        return data_len > 0 ? (data_len + _read_capacity_unit_size - 1) / _read_capacity_unit_size
+                            : 1;
+    }
+
+    uint64_t calc_write_cu(uint64_t data_len)
+    {
+        return data_len > 0 ? (data_len + _write_capacity_unit_size - 1) / _write_capacity_unit_size
+                            : 1;
+    }
+
 private:
     static const std::string COMPRESSION_HEADER;
 
@@ -270,7 +282,6 @@ private:
     uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
-    double _capacity_unit_size;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
@@ -306,6 +317,9 @@ private:
 
     dsn::task_tracker _tracker;
 
+    uint64_t _read_capacity_unit_size;
+    uint64_t _write_capacity_unit_size;
+
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_get_qps;
@@ -318,8 +332,8 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
     ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
-    ::dsn::perf_counter_wrapper _pfc_recent_read_units;
-    ::dsn::perf_counter_wrapper _pfc_recent_write_units;
+    ::dsn::perf_counter_wrapper _pfc_recent_read_cu;
+    ::dsn::perf_counter_wrapper _pfc_recent_write_cu;
 
     // rocksdb internal statistics
     // server level

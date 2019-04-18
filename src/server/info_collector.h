@@ -38,8 +38,8 @@ public:
         ::dsn::perf_counter_wrapper check_and_set_qps;
         ::dsn::perf_counter_wrapper check_and_mutate_qps;
         ::dsn::perf_counter_wrapper scan_qps;
-        ::dsn::perf_counter_wrapper recent_read_units;
-        ::dsn::perf_counter_wrapper recent_write_units;
+        ::dsn::perf_counter_wrapper recent_read_cu;
+        ::dsn::perf_counter_wrapper recent_write_cu;
         ::dsn::perf_counter_wrapper recent_expire_count;
         ::dsn::perf_counter_wrapper recent_filter_count;
         ::dsn::perf_counter_wrapper recent_abnormal_count;
@@ -65,28 +65,31 @@ public:
     AppStatCounters *get_app_counters(const std::string &app_name);
 
     void on_capacity_unit_stat();
-    bool is_capacity_unit_stat_updated(const std::string &node_address,
-                                       const std::string &timestamp);
-    void set_capacity_unit_stat(const std::string &hash_key,
-                                const std::string &sort_key,
-                                const std::string &value,
-                                int try_count);
+    bool has_capacity_unit_stat_updated(const std::string &node_address,
+                                        const std::string &timestamp);
+    void set_capacity_unit_result(const std::string &hash_key,
+                                  const std::string &sort_key,
+                                  const std::string &value);
+    void set_capacity_unit_result(const std::string &hash_key,
+                                  const std::string &sort_key,
+                                  const std::string &value,
+                                  int try_count);
 
 private:
+    dsn::task_tracker _tracker;
     ::dsn::rpc_address _meta_servers;
     std::string _cluster_name;
     shell_context _shell_context;
     uint32_t _app_stat_interval_seconds;
     ::dsn::task_ptr _app_stat_timer_task;
-    dsn::task_tracker _app_stat_task_tracker;
     ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
     std::map<std::string, AppStatCounters *> _app_stat_counters;
 
     // client to access server.
     pegasus_client *_client;
-    std::string _capacity_unit_stat_app;
+    // app for recording read/write cu.
+    std::string _app_name;
     uint32_t _capacity_unit_stat_fetch_interval_seconds;
-    dsn::task_tracker _capacity_unit_stat_task_tracker;
     ::dsn::task_ptr _capacity_unit_stat_timer_task;
     ::dsn::utils::ex_lock_nr _cu_stat_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'

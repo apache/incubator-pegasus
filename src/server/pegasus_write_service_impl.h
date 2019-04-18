@@ -33,8 +33,8 @@ public:
           _rd_opts(server->_rd_opts),
           _default_ttl(0),
           _pfc_recent_expire_count(server->_pfc_recent_expire_count),
-          _pfc_recent_read_units(server->_pfc_recent_read_units),
-          _pfc_recent_write_units(server->_pfc_recent_write_units)
+          _pfc_recent_read_cu(server->_pfc_recent_read_cu),
+          _pfc_recent_write_cu(server->_pfc_recent_write_cu)
     {
     }
 
@@ -138,11 +138,9 @@ public:
         if (s.ok()) {
             uint32_t old_expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, raw_value);
             if (check_if_ts_expired(utils::epoch_now(), old_expire_ts)) {
-                // ttl timeout, set to 0 before increment
-                _pfc_recent_expire_count->increment();
-                new_value = update.increment;
-                new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
+                _pfc_recent_read_cu->increment();
             } else {
+                _pfc_recent_read_cu->add(calc_read_cu(raw_key.length() + raw_value.length()));
                 ::dsn::blob old_value;
                 pegasus_extract_user_data(_pegasus_data_version, std::move(raw_value), old_value);
                 if (old_value.length() == 0) {
@@ -184,7 +182,6 @@ public:
                     new_expire_ts = update.expire_ts_seconds;
             }
         } else if (s.IsNotFound()) {
-            _pfc_recent_read_units->increment();
             // old value is not found, set to 0 before increment
             new_value = update.increment;
             new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
@@ -247,8 +244,11 @@ public:
             if (check_if_record_expired(
                     _pegasus_data_version, utils::epoch_now(), check_raw_value)) {
                 // check value ttl timeout
+                _pfc_recent_read_cu->increment();
                 _pfc_recent_expire_count->increment();
                 check_status = rocksdb::Status::NotFound();
+            } else {
+                _pfc_recent_read_cu->add(check_raw_key.length() + check_raw_value.length());
             }
         } else if (!check_status.IsNotFound()) {
             // read check value failed
@@ -264,7 +264,6 @@ public:
         dassert_f(check_status.ok() || check_status.IsNotFound(),
                   "status = %s",
                   check_status.ToString().c_str());
-        _pfc_recent_read_units->increment();
 
         ::dsn::blob check_value;
         if (check_status.ok()) {
@@ -378,8 +377,11 @@ public:
             if (check_if_record_expired(
                     _pegasus_data_version, utils::epoch_now(), check_raw_value)) {
                 // check value ttl timeout
+                _pfc_recent_read_cu->increment();
                 _pfc_recent_expire_count->increment();
                 check_status = rocksdb::Status::NotFound();
+            } else {
+                _pfc_recent_read_cu->add(check_raw_key.length() + check_raw_value.length());
             }
         } else if (!check_status.IsNotFound()) {
             // read check value failed
@@ -395,7 +397,6 @@ public:
         dassert_f(check_status.ok() || check_status.IsNotFound(),
                   "status = %s",
                   check_status.ToString().c_str());
-        _pfc_recent_read_units->increment();
 
         ::dsn::blob check_value;
         if (check_status.ok()) {
@@ -500,13 +501,24 @@ public:
     }
 
 private:
+    uint64_t calc_read_cu(uint64_t data_len)
+    {
+        return data_len > 0 ? (data_len + _read_capacity_unit_size - 1) / _read_capacity_unit_size
+                            : 1;
+    }
+
+    uint64_t calc_write_cu(uint64_t data_len)
+    {
+        return data_len > 0 ? (data_len + _write_capacity_unit_size - 1) / _write_capacity_unit_size
+                            : 1;
+    }
+
     int db_write_batch_put(int64_t decree,
                            dsn::string_view raw_key,
                            dsn::string_view value,
                            uint32_t expire_sec)
     {
-        _pfc_recent_write_units->add(
-            ceil((raw_key.length() + value.length()) / _capacity_unit_size));
+        _pfc_recent_write_cu->add(calc_write_cu(raw_key.length() + value.length()));
         FAIL_POINT_INJECT_F("db_write_batch_put",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
@@ -531,7 +543,7 @@ private:
 
     int db_write_batch_delete(int64_t decree, dsn::string_view raw_key)
     {
-        _pfc_recent_write_units->increment();
+        _pfc_recent_write_cu->add(calc_write_cu(raw_key.length()));
         FAIL_POINT_INJECT_F("db_write_batch_delete",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_DELETE; });
 
@@ -719,8 +731,8 @@ private:
     rocksdb::ReadOptions &_rd_opts;
     volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
-    ::dsn::perf_counter_wrapper &_pfc_recent_read_units;
-    ::dsn::perf_counter_wrapper &_pfc_recent_write_units;
+    ::dsn::perf_counter_wrapper &_pfc_recent_read_cu;
+    ::dsn::perf_counter_wrapper &_pfc_recent_write_cu;
 
     pegasus_value_generator _value_generator;
 
