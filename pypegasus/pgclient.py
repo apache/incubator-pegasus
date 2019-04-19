@@ -486,9 +486,16 @@ class PegasusScanner(object):
 
 
 class PegasusHash(object):
-
-    polynomial = 0x9a6c9329ac4bc9b5
+    polynomial, = struct.unpack('<q', struct.pack('<Q', 0x9a6c9329ac4bc9b5L))
     table_forward = [0] * 256
+
+    @classmethod
+    def unsigned_right_shift(cls, val, n):
+        if val >= 0:
+            val >>= n
+        else:
+            val = ((val + 0x10000000000000000) >> n)
+        return val
 
     @classmethod
     def populate_table(cls):
@@ -496,10 +503,10 @@ class PegasusHash(object):
             crc = i
             for j in range(8):
                 if crc & 1:
-                    crc >>= 1
+                    crc = cls.unsigned_right_shift(crc, 1)
                     crc ^= cls.polynomial
                 else:
-                    crc >>= 1
+                    crc = cls.unsigned_right_shift(crc, 1)
             cls.table_forward[i] = crc
 
     @classmethod
@@ -507,7 +514,7 @@ class PegasusHash(object):
         crc = 0xffffffffffffffff
         end = offset + length
         for c in data[offset:end:1]:
-            crc = cls.table_forward[(ord(c) ^ crc) & 0xFF] ^ (crc >> 8)
+            crc = cls.table_forward[(ord(c) ^ crc) & 0xFF] ^ cls.unsigned_right_shift(crc, 8)
         return ~crc
 
     @classmethod
