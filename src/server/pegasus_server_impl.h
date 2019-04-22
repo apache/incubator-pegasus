@@ -259,18 +259,6 @@ private:
             _pegasus_data_version, epoch_now, utils::to_string_view(raw_value));
     }
 
-    uint64_t calc_read_cu(uint64_t data_len)
-    {
-        return data_len > 0 ? (data_len + _read_capacity_unit_size - 1) / _read_capacity_unit_size
-                            : 1;
-    }
-
-    uint64_t calc_write_cu(uint64_t data_len)
-    {
-        return data_len > 0 ? (data_len + _write_capacity_unit_size - 1) / _write_capacity_unit_size
-                            : 1;
-    }
-
 private:
     static const std::string COMPRESSION_HEADER;
 
@@ -346,6 +334,11 @@ private:
     ::dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
     ::dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
 };
+
+inline uint64_t calc_cu(uint64_t data_len, uint64_t cu_size)
+{
+    return data_len > 0 ? (data_len + cu_size - 1) / cu_size : 1;
+}
 
 } // namespace server
 } // namespace pegasus

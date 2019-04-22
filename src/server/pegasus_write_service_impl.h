@@ -140,7 +140,8 @@ public:
             if (check_if_ts_expired(utils::epoch_now(), old_expire_ts)) {
                 _pfc_recent_read_cu->increment();
             } else {
-                _pfc_recent_read_cu->add(calc_read_cu(raw_key.length() + raw_value.length()));
+                _pfc_recent_read_cu->add(
+                    calc_cu(raw_key.length() + raw_value.length(), _read_capacity_unit_size));
                 ::dsn::blob old_value;
                 pegasus_extract_user_data(_pegasus_data_version, std::move(raw_value), old_value);
                 if (old_value.length() == 0) {
@@ -185,6 +186,7 @@ public:
             // old value is not found, set to 0 before increment
             new_value = update.increment;
             new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
+            _pfc_recent_read_cu->increment();
         } else {
             // read old value failed
             ::dsn::blob hash_key, sort_key;
@@ -244,11 +246,8 @@ public:
             if (check_if_record_expired(
                     _pegasus_data_version, utils::epoch_now(), check_raw_value)) {
                 // check value ttl timeout
-                _pfc_recent_read_cu->increment();
                 _pfc_recent_expire_count->increment();
                 check_status = rocksdb::Status::NotFound();
-            } else {
-                _pfc_recent_read_cu->add(check_raw_key.length() + check_raw_value.length());
             }
         } else if (!check_status.IsNotFound()) {
             // read check value failed
@@ -377,11 +376,8 @@ public:
             if (check_if_record_expired(
                     _pegasus_data_version, utils::epoch_now(), check_raw_value)) {
                 // check value ttl timeout
-                _pfc_recent_read_cu->increment();
                 _pfc_recent_expire_count->increment();
                 check_status = rocksdb::Status::NotFound();
-            } else {
-                _pfc_recent_read_cu->add(check_raw_key.length() + check_raw_value.length());
             }
         } else if (!check_status.IsNotFound()) {
             // read check value failed
@@ -501,24 +497,13 @@ public:
     }
 
 private:
-    uint64_t calc_read_cu(uint64_t data_len)
-    {
-        return data_len > 0 ? (data_len + _read_capacity_unit_size - 1) / _read_capacity_unit_size
-                            : 1;
-    }
-
-    uint64_t calc_write_cu(uint64_t data_len)
-    {
-        return data_len > 0 ? (data_len + _write_capacity_unit_size - 1) / _write_capacity_unit_size
-                            : 1;
-    }
-
     int db_write_batch_put(int64_t decree,
                            dsn::string_view raw_key,
                            dsn::string_view value,
                            uint32_t expire_sec)
     {
-        _pfc_recent_write_cu->add(calc_write_cu(raw_key.length() + value.length()));
+        _pfc_recent_write_cu->add(
+            calc_cu(raw_key.length() + value.length(), _write_capacity_unit_size));
         FAIL_POINT_INJECT_F("db_write_batch_put",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
@@ -543,7 +528,7 @@ private:
 
     int db_write_batch_delete(int64_t decree, dsn::string_view raw_key)
     {
-        _pfc_recent_write_cu->add(calc_write_cu(raw_key.length()));
+        _pfc_recent_write_cu->add(calc_cu(raw_key.length(), _write_capacity_unit_size));
         FAIL_POINT_INJECT_F("db_write_batch_delete",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_DELETE; });
 
