@@ -41,7 +41,7 @@ class BaseSession(object):
         self._oprot_factory = oprot_factory
         self._container = container
         self._seqid = 0
-        self._reqs = {}
+        self._requests = {}
         self._default_timeout = timeout
 
     def __del__(self):
@@ -51,10 +51,10 @@ class BaseSession(object):
         return self._transport.get_peer_addr()
 
     def cb_send(self, _, seqid):
-        return self._reqs[seqid]
+        return self._requests[seqid]
 
     def eb_send(self, f, seqid):
-        d = self._reqs.pop(seqid)
+        d = self._requests.pop(seqid)
         d.errback(f)
         logger.warning('peer: %s, failure: %s',
                        self.get_peer_addr(), f)
@@ -78,7 +78,7 @@ class BaseSession(object):
         seqid = self._seqid = self._seqid + 1           # TODO should keep atomic
         dr = defer.Deferred()
         dr.addErrback(self.eb_recv)
-        self._reqs[seqid] = dr
+        self._requests[seqid] = dr
 
         # ds(deferred send) will wait dr(deferred receive)
         ds = defer.maybeDeferred(self.send_req, op, seqid)
@@ -100,11 +100,11 @@ class BaseSession(object):
         oprot.trans.flush()
 
     def recv_ACK(self, iprot, mtype, rseqid, errno, result_type, parser):
-        if rseqid not in self._reqs:
+        if rseqid not in self._requests:
             logger.warning('peer: %s rseqid: %s not found',
                            self.get_peer_addr(), rseqid)
             return
-        d = self._reqs.pop(rseqid)
+        d = self._requests.pop(rseqid)
         if errno != 'ERR_OK':
             rc = error_code.value_of(errno)
             self._container.update_state(rc)
