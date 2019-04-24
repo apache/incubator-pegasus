@@ -145,7 +145,7 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
 
             printer.add_row(info.dupid);
             printer.append_data(duplication_status_to_string(info.status));
-            printer.append_data(info.remote_address);
+            printer.append_data(info.remote);
             printer.append_data(create_time);
 
             printer.output(std::cout);
