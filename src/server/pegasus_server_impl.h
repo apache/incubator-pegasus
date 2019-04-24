@@ -308,9 +308,6 @@ private:
 
     dsn::task_tracker _tracker;
 
-    uint64_t _read_capacity_unit_size;
-    uint64_t _write_capacity_unit_size;
-
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_get_qps;

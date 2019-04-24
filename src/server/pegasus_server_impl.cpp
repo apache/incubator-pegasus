@@ -260,17 +260,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _update_rdb_stat_interval = std::chrono::seconds(dsn_config_get_value_uint64(
         "pegasus.server", "update_rdb_stat_interval", 600, "update_rdb_stat_interval, in seconds"));
 
-    _read_capacity_unit_size =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "perf_counter_read_capacity_unit_size",
-                                    1024,
-                                    "capacity unit size of read requests, default 1KB");
-    _write_capacity_unit_size =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "perf_counter_write_capacity_unit_size",
-                                    1024,
-                                    "capacity unit size of write requests, default 1KB");
-
     // TODO: move the qps/latency counters and it's statistics to replication_app_base layer
     char str_gpid[128], buf[256];
     snprintf(str_gpid, 128, "%d.%d", _gpid.get_app_id(), _gpid.get_partition_index());
@@ -771,7 +760,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                     read_size += kv.key.length() + kv.value.length();
                 } else if (r == 2) {
                     expire_count++;
-                    read_size += _read_capacity_unit_size;
+                    _cu_calculator->add_read(1);
                 } else { // r == 3
                     filter_count++;
                 }
@@ -824,7 +813,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                     read_size += kv.key.length() + kv.value.length();
                 } else if (r == 2) {
                     expire_count++;
-                    read_size += _read_capacity_unit_size;
+                    _cu_calculator->add_read(1);
                 } else { // r == 3
                     filter_count++;
                 }
@@ -945,7 +934,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 break;
             }
             if (status.IsNotFound()) {
-                read_size += _read_capacity_unit_size;
+                _cu_calculator->add_read(1);
             }
         }
 
@@ -1004,7 +993,9 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         _pfc_recent_filter_count->add(filter_count);
     }
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-    _cu_calculator->add_read(read_size);
+    if (read_size > 0) {
+        _cu_calculator->add_read(read_size);
+    }
     reply(resp);
 }
 

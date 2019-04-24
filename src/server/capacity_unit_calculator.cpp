@@ -5,7 +5,6 @@
 #include "capacity_unit_calculator.h"
 
 #include <dsn/utility/config_api.h>
-#include <fmt/format.h>
 
 namespace pegasus {
 namespace server {
@@ -40,10 +39,9 @@ capacity_unit_calculator::capacity_unit_calculator(const dsn::gpid &pid)
 
 void capacity_unit_calculator::add_read(int64_t data_len)
 {
-    if (data_len > 0) {
-        int64_t read_cu = (data_len + _read_capacity_unit_size - 1) / _read_capacity_unit_size;
-        _pfc_recent_read_cu->add(read_cu);
-    }
+    int64_t read_cu =
+        data_len > 0 ? (data_len + _read_capacity_unit_size - 1) / _read_capacity_unit_size : 1;
+    _pfc_recent_read_cu->add(read_cu);
 }
 
 void capacity_unit_calculator::add_write(int64_t data_len)
