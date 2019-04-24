@@ -17,6 +17,6 @@ set(MY_PROJ_LIBS
         pegasus_client_static
         fmt)
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 dsn_add_static_library()

@@ -12,6 +12,4 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS "")
 
-set(MY_BOOST_PACKAGES system)
-
 dsn_add_static_library()
