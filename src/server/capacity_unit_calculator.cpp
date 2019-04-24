@@ -4,40 +4,52 @@
 
 #include "capacity_unit_calculator.h"
 
+#include <dsn/utility/config_api.h>
+#include <fmt/format.h>
+
 namespace pegasus {
 namespace server {
 
-capacity_unit_calculator::capacity_unit_calculator(size_t read_cu_size,
-                                                   size_t write_cu_size,
-                                                   std::string str_gpid)
-    : _read_capacity_unit_size(read_cu_size), _write_capacity_unit_size(write_cu_size)
+capacity_unit_calculator::capacity_unit_calculator(const dsn::gpid &pid)
 {
-    std::string name;
+    _read_capacity_unit_size =
+        dsn_config_get_value_int64("pegasus.server",
+                                   "perf_counter_read_capacity_unit_size",
+                                   1024,
+                                   "capacity unit size of read requests, default 1KB");
+    _write_capacity_unit_size =
+        dsn_config_get_value_int64("pegasus.server",
+                                   "perf_counter_write_capacity_unit_size",
+                                   1024,
+                                   "capacity unit size of write requests, default 1KB");
 
-    name = fmt::format("recent.read.cu@{}", str_gpid);
+    char str_gpid[128], buf[256];
+    snprintf(str_gpid, 128, "%d.%d", pid.get_app_id(), pid.get_partition_index());
+
+    snprintf(buf, 255, "recent.read.cu@%s", str_gpid);
     _pfc_recent_read_cu.init_app_counter("app.pegasus",
-                                         name.c_str(),
+                                         buf,
                                          COUNTER_TYPE_VOLATILE_NUMBER,
                                          "statistic the recent read capacity units");
-    name = fmt::format("recent.write.cu@{}", str_gpid);
+    snprintf(buf, 255, "recent.write.cu@%s", str_gpid);
     _pfc_recent_write_cu.init_app_counter("app.pegasus",
-                                          name.c_str(),
+                                          buf,
                                           COUNTER_TYPE_VOLATILE_NUMBER,
                                           "statistic the recent write capacity units");
 }
 
-void capacity_unit_calculator::add_read(size_t data_len)
+void capacity_unit_calculator::add_read(int64_t data_len)
 {
     if (data_len > 0) {
-        size_t read_cu = (data_len + _read_capacity_unit_size - 1) / _read_capacity_unit_size;
+        int64_t read_cu = (data_len + _read_capacity_unit_size - 1) / _read_capacity_unit_size;
         _pfc_recent_read_cu->add(read_cu);
     }
 }
 
-void capacity_unit_calculator::add_write(size_t data_len)
+void capacity_unit_calculator::add_write(int64_t data_len)
 {
-    size_t write_cu =
-        data_len == 0 ? (data_len + _read_capacity_unit_size - 1) / _read_capacity_unit_size : 1;
+    int64_t write_cu =
+        data_len > 0 ? (data_len + _write_capacity_unit_size - 1) / _write_capacity_unit_size : 1;
     _pfc_recent_write_cu->add(write_cu);
 }
 

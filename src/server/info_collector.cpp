@@ -51,7 +51,7 @@ info_collector::info_collector()
                                                                        "app stat interval seconds");
 
     _app_name = dsn_config_get_value_string(
-        "pegasus.collector", "cu_info_app", "", "app for recording capacity unit info");
+        "pegasus.collector", "cu_stat_app", "", "app for recording capacity unit info");
     dassert(!_app_name.empty(), "");
     // initialize the _client.
     if (!pegasus_client_factory::initialize(nullptr)) {
@@ -278,7 +278,9 @@ void info_collector::set_capacity_unit_result(const std::string &hash_key,
                                               const std::string &sort_key,
                                               const std::string &value)
 {
-    set_capacity_unit_result(hash_key, sort_key, value, 100);
+    // set try_count to 300 (keep on retrying for 300 minutes) to avoid losting cu result
+    // if the result table is also unavailable for a long time.
+    set_capacity_unit_result(hash_key, sort_key, value, 300);
 }
 
 void info_collector::set_capacity_unit_result(const std::string &hash_key,

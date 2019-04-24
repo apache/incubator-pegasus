@@ -324,18 +324,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                                 COUNTER_TYPE_VOLATILE_NUMBER,
                                                 "statistic the recent abnormal read count");
 
-    snprintf(buf, 255, "recent.read.cu@%s", str_gpid);
-    _pfc_recent_read_cu.init_app_counter("app.pegasus",
-                                         buf,
-                                         COUNTER_TYPE_VOLATILE_NUMBER,
-                                         "statistic the recent read capacity units");
-
-    snprintf(buf, 255, "recent.write.cu@%s", str_gpid);
-    _pfc_recent_write_cu.init_app_counter("app.pegasus",
-                                          buf,
-                                          COUNTER_TYPE_VOLATILE_NUMBER,
-                                          "statistic the recent write capacity units");
-
     snprintf(buf, 255, "disk.storage.sst.count@%s", str_gpid);
     _pfc_rdb_sst_count.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
@@ -378,8 +366,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _pfc_rdb_memtable_mem_usage.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
 
-    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
-        _read_capacity_unit_size, _write_capacity_unit_size, str_gpid);
+    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(_gpid);
 }
 
 void pegasus_server_impl::parse_checkpoints()

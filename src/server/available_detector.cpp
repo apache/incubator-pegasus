@@ -13,6 +13,8 @@
 namespace pegasus {
 namespace server {
 
+DEFINE_TASK_CODE(LPC_DETECT_AVAILABLE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
 available_detector::available_detector()
     : _client(nullptr),
       _ddl_client(nullptr),
@@ -426,9 +428,7 @@ void available_detector::on_day_report()
         }
     }
 
-    // set try_count to 3000 (keep on retrying for 3000 minutes) to avoid losting detect result
-    // if the result table is also unavailable for a long time.
-    set_detect_result(hash_key, sort_key, value, 3000);
+    set_detect_result(hash_key, sort_key, value);
 }
 
 void available_detector::on_hour_report()
@@ -452,9 +452,7 @@ void available_detector::on_hour_report()
     _pfc_fail_times_hour->set(fail_times);
     _pfc_available_hour->set(available);
 
-    // set try_count to 3000 (keep on retrying for 3000 minutes) to avoid losting detect result
-    // if the result table is also unavailable for a long time.
-    set_detect_result(hash_key, sort_key, value, 3000);
+    set_detect_result(hash_key, sort_key, value);
 }
 
 void available_detector::on_minute_report()
@@ -478,9 +476,15 @@ void available_detector::on_minute_report()
     _pfc_fail_times_minute->set(fail_times);
     _pfc_available_minute->set(available);
 
-    // set try_count to 3000 (keep on retrying for 3000 minutes) to avoid losting detect result
+    set_detect_result(hash_key, sort_key, value);
+}
+void available_detector::set_detect_result(const std::string &hash_key,
+                                           const std::string &sort_key,
+                                           const std::string &value)
+{
+    // set try_count to 300 (keep on retrying for 300 minutes) to avoid losting detect result
     // if the result table is also unavailable for a long time.
-    set_detect_result(hash_key, sort_key, value, 3000);
+    set_detect_result(hash_key, sort_key, value, 300);
 }
 
 void available_detector::set_detect_result(const std::string &hash_key,
@@ -489,11 +493,7 @@ void available_detector::set_detect_result(const std::string &hash_key,
                                            int try_count)
 {
     _client->async_set(
-        hash_key,
-        sort_key,
-        value,
-        [this, hash_key, sort_key, value, try_count](int err,
-                                                     pegasus_client::internal_info &&info) {
+        hash_key, sort_key, value, [&](int err, pegasus_client::internal_info &&info) {
             if (err != PERR_OK) {
                 int new_try_count = try_count - 1;
                 if (new_try_count > 0) {
@@ -504,14 +504,12 @@ void available_detector::set_detect_result(const std::string &hash_key,
                            value.c_str(),
                            _client->get_error_string(err),
                            new_try_count);
-                    ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
-                                            nullptr,
-                                            [this, hash_key, sort_key, value, new_try_count]() {
-                                                set_detect_result(
-                                                    hash_key, sort_key, value, new_try_count);
-                                            },
-                                            0,
-                                            std::chrono::minutes(1));
+                    ::dsn::tasking::enqueue(
+                        LPC_DETECT_AVAILABLE,
+                        nullptr,
+                        [&]() { set_detect_result(hash_key, sort_key, value, new_try_count); },
+                        0,
+                        std::chrono::minutes(1));
                 } else {
                     derror("set_detect_result fail, hash_key = %s, sort_key = %s, value = %s, "
                            "error = %s, left_try_count = %d, do not try again",
@@ -522,10 +520,10 @@ void available_detector::set_detect_result(const std::string &hash_key,
                            new_try_count);
                 }
             } else {
-                ddebug("set_detect_result succeed, hash_key = %s, sort_key = %s, value = %s",
-                       hash_key.c_str(),
-                       sort_key.c_str(),
-                       value.c_str());
+                dinfo("set_detect_result succeed, hash_key = %s, sort_key = %s, value = %s",
+                      hash_key.c_str(),
+                      sort_key.c_str(),
+                      value.c_str());
             }
         });
 }

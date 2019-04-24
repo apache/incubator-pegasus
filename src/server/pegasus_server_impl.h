@@ -23,7 +23,6 @@
 namespace pegasus {
 namespace server {
 
-class capacity_unit_calculator;
 class pegasus_server_write;
 
 class pegasus_server_impl : public ::dsn::apps::rrdb_service
@@ -324,8 +323,6 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
     ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
-    ::dsn::perf_counter_wrapper _pfc_recent_read_cu;
-    ::dsn::perf_counter_wrapper _pfc_recent_write_cu;
 
     // rocksdb internal statistics
     // server level

@@ -22,7 +22,7 @@ static constexpr int FAIL_DB_WRITE_BATCH_PUT = -101;
 static constexpr int FAIL_DB_WRITE_BATCH_DELETE = -102;
 static constexpr int FAIL_DB_WRITE = -103;
 
-class capacity_unit_calculator;
+//class capacity_unit_calculator;
 
 class pegasus_write_service::impl : public dsn::replication::replica_base
 {

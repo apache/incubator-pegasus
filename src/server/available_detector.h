@@ -13,8 +13,6 @@ namespace server {
 
 using ::dsn::replication::replication_ddl_client;
 
-DEFINE_TASK_CODE(LPC_DETECT_AVAILABLE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-
 class available_detector
 {
 public:
@@ -25,6 +23,9 @@ public:
     void stop();
 
 private:
+    void set_detect_result(const std::string &hash_key,
+                           const std::string &sort_key,
+                           const std::string &value);
     void set_detect_result(const std::string &hash_key,
                            const std::string &sort_key,
                            const std::string &value,
