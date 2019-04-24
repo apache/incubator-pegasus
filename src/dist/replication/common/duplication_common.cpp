@@ -122,9 +122,7 @@ public:
 
     doc.AddMember("dupid", dup.dupid, alloc);
     doc.AddMember("status", rapidjson::StringRef(duplication_status_to_string(dup.status)), alloc);
-    doc.AddMember("remote",
-                  rapidjson::StringRef(dup.remote_address.data(), dup.remote_address.length()),
-                  alloc);
+    doc.AddMember("remote", rapidjson::StringRef(dup.remote.data(), dup.remote.length()), alloc);
     doc.AddMember("create_ts", dup.create_ts, alloc);
 
     doc.AddMember("progress", rapidjson::Value(), alloc);

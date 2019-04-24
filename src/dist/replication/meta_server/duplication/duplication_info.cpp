@@ -24,7 +24,8 @@
  * THE SOFTWARE.
  */
 
-#include "dist/replication/meta_server/duplication/duplication_info.h"
+#include "duplication_info.h"
+#include "dist/replication/meta_server/meta_data.h"
 
 #include <rapidjson/prettywriter.h>
 #include <dsn/dist/fmt_logging.h>
@@ -77,9 +78,9 @@ error_code duplication_info::do_alter_status(duplication_status::type to_status)
         return ERR_INVALID_PARAMETERS;
     }
 
-    if (status != to_status) {
+    if (_status != to_status) {
         _is_altering = true;
-        next_status = to_status;
+        _next_status = to_status;
     }
 
     return ERR_OK;
@@ -135,8 +136,8 @@ void duplication_info::persist_status()
 
     dassert_dup(_is_altering, this, "");
     _is_altering = false;
-    status = next_status;
-    next_status = duplication_status::DS_INIT;
+    _status = _next_status;
+    _next_status = duplication_status::DS_INIT;
 }
 
 std::string duplication_info::to_string() const
@@ -144,13 +145,13 @@ std::string duplication_info::to_string() const
     return duplication_entry_to_string(to_duplication_entry());
 }
 
-blob duplication_info::to_json_blob_in_status(duplication_status::type to_status) const
+blob duplication_info::to_json_blob() const
 {
-    duplication_info copy;
-    const_cast<uint64_t &>(copy.create_timestamp_ms) = create_timestamp_ms;
-    const_cast<std::string &>(copy.remote) = remote;
-    copy.status = to_status;
-    return json::json_forwarder<duplication_info>::encode(copy);
+    json_helper copy;
+    copy.create_timestamp_ms = create_timestamp_ms;
+    copy.remote = remote;
+    copy.status = _next_status;
+    return json::json_forwarder<json_helper>::encode(copy);
 }
 
 void duplication_info::report_progress_if_time_up()
@@ -160,6 +161,22 @@ void duplication_info::report_progress_if_time_up()
         _last_progress_report_ms = dsn_now_ms();
         ddebug_f("duplication report: {}", to_string());
     }
+}
+
+duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
+                                                          int32_t app_id,
+                                                          int32_t partition_count,
+                                                          std::string store_path,
+                                                          const blob &json)
+{
+    json_helper info;
+    if (!json::json_forwarder<json_helper>::decode(json, info)) {
+        return nullptr;
+    }
+    auto dup = std::make_shared<duplication_info>(
+        dup_id, app_id, partition_count, std::move(info.remote), std::move(store_path));
+    dup->_status = info.status;
+    return dup;
 }
 
 } // namespace replication

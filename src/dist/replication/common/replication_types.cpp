@@ -10812,9 +10812,9 @@ duplication_add_request::~duplication_add_request() throw() {}
 
 void duplication_add_request::__set_app_name(const std::string &val) { this->app_name = val; }
 
-void duplication_add_request::__set_remote_cluster_address(const std::string &val)
+void duplication_add_request::__set_remote_cluster_name(const std::string &val)
 {
-    this->remote_cluster_address = val;
+    this->remote_cluster_name = val;
 }
 
 void duplication_add_request::__set_freezed(const bool val) { this->freezed = val; }
@@ -10848,8 +10848,8 @@ uint32_t duplication_add_request::read(::apache::thrift::protocol::TProtocol *ip
             break;
         case 2:
             if (ftype == ::apache::thrift::protocol::T_STRING) {
-                xfer += iprot->readString(this->remote_cluster_address);
-                this->__isset.remote_cluster_address = true;
+                xfer += iprot->readString(this->remote_cluster_name);
+                this->__isset.remote_cluster_name = true;
             } else {
                 xfer += iprot->skip(ftype);
             }
@@ -10884,9 +10884,8 @@ uint32_t duplication_add_request::write(::apache::thrift::protocol::TProtocol *o
     xfer += oprot->writeString(this->app_name);
     xfer += oprot->writeFieldEnd();
 
-    xfer +=
-        oprot->writeFieldBegin("remote_cluster_address", ::apache::thrift::protocol::T_STRING, 2);
-    xfer += oprot->writeString(this->remote_cluster_address);
+    xfer += oprot->writeFieldBegin("remote_cluster_name", ::apache::thrift::protocol::T_STRING, 2);
+    xfer += oprot->writeString(this->remote_cluster_name);
     xfer += oprot->writeFieldEnd();
 
     xfer += oprot->writeFieldBegin("freezed", ::apache::thrift::protocol::T_BOOL, 3);
@@ -10902,7 +10901,7 @@ void swap(duplication_add_request &a, duplication_add_request &b)
 {
     using ::std::swap;
     swap(a.app_name, b.app_name);
-    swap(a.remote_cluster_address, b.remote_cluster_address);
+    swap(a.remote_cluster_name, b.remote_cluster_name);
     swap(a.freezed, b.freezed);
     swap(a.__isset, b.__isset);
 }
@@ -10910,21 +10909,21 @@ void swap(duplication_add_request &a, duplication_add_request &b)
 duplication_add_request::duplication_add_request(const duplication_add_request &other456)
 {
     app_name = other456.app_name;
-    remote_cluster_address = other456.remote_cluster_address;
+    remote_cluster_name = other456.remote_cluster_name;
     freezed = other456.freezed;
     __isset = other456.__isset;
 }
 duplication_add_request::duplication_add_request(duplication_add_request &&other457)
 {
     app_name = std::move(other457.app_name);
-    remote_cluster_address = std::move(other457.remote_cluster_address);
+    remote_cluster_name = std::move(other457.remote_cluster_name);
     freezed = std::move(other457.freezed);
     __isset = std::move(other457.__isset);
 }
 duplication_add_request &duplication_add_request::operator=(const duplication_add_request &other458)
 {
     app_name = other458.app_name;
-    remote_cluster_address = other458.remote_cluster_address;
+    remote_cluster_name = other458.remote_cluster_name;
     freezed = other458.freezed;
     __isset = other458.__isset;
     return *this;
@@ -10932,7 +10931,7 @@ duplication_add_request &duplication_add_request::operator=(const duplication_ad
 duplication_add_request &duplication_add_request::operator=(duplication_add_request &&other459)
 {
     app_name = std::move(other459.app_name);
-    remote_cluster_address = std::move(other459.remote_cluster_address);
+    remote_cluster_name = std::move(other459.remote_cluster_name);
     freezed = std::move(other459.freezed);
     __isset = std::move(other459.__isset);
     return *this;
@@ -10943,7 +10942,7 @@ void duplication_add_request::printTo(std::ostream &out) const
     out << "duplication_add_request(";
     out << "app_name=" << to_string(app_name);
     out << ", "
-        << "remote_cluster_address=" << to_string(remote_cluster_address);
+        << "remote_cluster_name=" << to_string(remote_cluster_name);
     out << ", "
         << "freezed=" << to_string(freezed);
     out << ")";
@@ -11367,7 +11366,7 @@ void duplication_entry::__set_dupid(const int32_t val) { this->dupid = val; }
 
 void duplication_entry::__set_status(const duplication_status::type val) { this->status = val; }
 
-void duplication_entry::__set_remote_address(const std::string &val) { this->remote_address = val; }
+void duplication_entry::__set_remote(const std::string &val) { this->remote = val; }
 
 void duplication_entry::__set_create_ts(const int64_t val) { this->create_ts = val; }
 
@@ -11415,8 +11414,8 @@ uint32_t duplication_entry::read(::apache::thrift::protocol::TProtocol *iprot)
             break;
         case 3:
             if (ftype == ::apache::thrift::protocol::T_STRING) {
-                xfer += iprot->readString(this->remote_address);
-                this->__isset.remote_address = true;
+                xfer += iprot->readString(this->remote);
+                this->__isset.remote = true;
             } else {
                 xfer += iprot->skip(ftype);
             }
@@ -11477,8 +11476,8 @@ uint32_t duplication_entry::write(::apache::thrift::protocol::TProtocol *oprot) 
     xfer += oprot->writeI32((int32_t)this->status);
     xfer += oprot->writeFieldEnd();
 
-    xfer += oprot->writeFieldBegin("remote_address", ::apache::thrift::protocol::T_STRING, 3);
-    xfer += oprot->writeString(this->remote_address);
+    xfer += oprot->writeFieldBegin("remote", ::apache::thrift::protocol::T_STRING, 3);
+    xfer += oprot->writeString(this->remote);
     xfer += oprot->writeFieldEnd();
 
     xfer += oprot->writeFieldBegin("create_ts", ::apache::thrift::protocol::T_I64, 4);
@@ -11509,7 +11508,7 @@ void swap(duplication_entry &a, duplication_entry &b)
     using ::std::swap;
     swap(a.dupid, b.dupid);
     swap(a.status, b.status);
-    swap(a.remote_address, b.remote_address);
+    swap(a.remote, b.remote);
     swap(a.create_ts, b.create_ts);
     swap(a.progress, b.progress);
     swap(a.__isset, b.__isset);
@@ -11519,7 +11518,7 @@ duplication_entry::duplication_entry(const duplication_entry &other482)
 {
     dupid = other482.dupid;
     status = other482.status;
-    remote_address = other482.remote_address;
+    remote = other482.remote;
     create_ts = other482.create_ts;
     progress = other482.progress;
     __isset = other482.__isset;
@@ -11528,7 +11527,7 @@ duplication_entry::duplication_entry(duplication_entry &&other483)
 {
     dupid = std::move(other483.dupid);
     status = std::move(other483.status);
-    remote_address = std::move(other483.remote_address);
+    remote = std::move(other483.remote);
     create_ts = std::move(other483.create_ts);
     progress = std::move(other483.progress);
     __isset = std::move(other483.__isset);
@@ -11537,7 +11536,7 @@ duplication_entry &duplication_entry::operator=(const duplication_entry &other48
 {
     dupid = other484.dupid;
     status = other484.status;
-    remote_address = other484.remote_address;
+    remote = other484.remote;
     create_ts = other484.create_ts;
     progress = other484.progress;
     __isset = other484.__isset;
@@ -11547,7 +11546,7 @@ duplication_entry &duplication_entry::operator=(duplication_entry &&other485)
 {
     dupid = std::move(other485.dupid);
     status = std::move(other485.status);
-    remote_address = std::move(other485.remote_address);
+    remote = std::move(other485.remote);
     create_ts = std::move(other485.create_ts);
     progress = std::move(other485.progress);
     __isset = std::move(other485.__isset);
@@ -11561,7 +11560,7 @@ void duplication_entry::printTo(std::ostream &out) const
     out << ", "
         << "status=" << to_string(status);
     out << ", "
-        << "remote_address=" << to_string(remote_address);
+        << "remote=" << to_string(remote);
     out << ", "
         << "create_ts=" << to_string(create_ts);
     out << ", "

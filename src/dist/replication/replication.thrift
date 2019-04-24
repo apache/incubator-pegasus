@@ -629,7 +629,7 @@ enum duplication_status
 struct duplication_add_request
 {
     1:string  app_name;
-    2:string  remote_cluster_address;
+    2:string  remote_cluster_name;
 
     // True means to initialize the duplication in DS_PAUSE.
     3:bool    freezed;
@@ -668,7 +668,7 @@ struct duplication_entry
 {
     1:i32                  dupid;
     2:duplication_status   status;
-    3:string               remote_address;
+    3:string               remote;
     4:i64                  create_ts;
 
     // partition_index => confirmed decree

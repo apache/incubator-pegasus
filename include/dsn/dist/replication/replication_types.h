@@ -4653,12 +4653,11 @@ inline std::ostream &operator<<(std::ostream &out, const configuration_update_ap
 
 typedef struct _duplication_add_request__isset
 {
-    _duplication_add_request__isset()
-        : app_name(false), remote_cluster_address(false), freezed(false)
+    _duplication_add_request__isset() : app_name(false), remote_cluster_name(false), freezed(false)
     {
     }
     bool app_name : 1;
-    bool remote_cluster_address : 1;
+    bool remote_cluster_name : 1;
     bool freezed : 1;
 } _duplication_add_request__isset;
 
@@ -4669,18 +4668,18 @@ public:
     duplication_add_request(duplication_add_request &&);
     duplication_add_request &operator=(const duplication_add_request &);
     duplication_add_request &operator=(duplication_add_request &&);
-    duplication_add_request() : app_name(), remote_cluster_address(), freezed(0) {}
+    duplication_add_request() : app_name(), remote_cluster_name(), freezed(0) {}
 
     virtual ~duplication_add_request() throw();
     std::string app_name;
-    std::string remote_cluster_address;
+    std::string remote_cluster_name;
     bool freezed;
 
     _duplication_add_request__isset __isset;
 
     void __set_app_name(const std::string &val);
 
-    void __set_remote_cluster_address(const std::string &val);
+    void __set_remote_cluster_name(const std::string &val);
 
     void __set_freezed(const bool val);
 
@@ -4688,7 +4687,7 @@ public:
     {
         if (!(app_name == rhs.app_name))
             return false;
-        if (!(remote_cluster_address == rhs.remote_cluster_address))
+        if (!(remote_cluster_name == rhs.remote_cluster_name))
             return false;
         if (!(freezed == rhs.freezed))
             return false;
@@ -4885,12 +4884,12 @@ inline std::ostream &operator<<(std::ostream &out, const duplication_status_chan
 typedef struct _duplication_entry__isset
 {
     _duplication_entry__isset()
-        : dupid(false), status(false), remote_address(false), create_ts(false), progress(false)
+        : dupid(false), status(false), remote(false), create_ts(false), progress(false)
     {
     }
     bool dupid : 1;
     bool status : 1;
-    bool remote_address : 1;
+    bool remote : 1;
     bool create_ts : 1;
     bool progress : 1;
 } _duplication_entry__isset;
@@ -4902,15 +4901,12 @@ public:
     duplication_entry(duplication_entry &&);
     duplication_entry &operator=(const duplication_entry &);
     duplication_entry &operator=(duplication_entry &&);
-    duplication_entry()
-        : dupid(0), status((duplication_status::type)0), remote_address(), create_ts(0)
-    {
-    }
+    duplication_entry() : dupid(0), status((duplication_status::type)0), remote(), create_ts(0) {}
 
     virtual ~duplication_entry() throw();
     int32_t dupid;
     duplication_status::type status;
-    std::string remote_address;
+    std::string remote;
     int64_t create_ts;
     std::map<int32_t, int64_t> progress;
 
@@ -4920,7 +4916,7 @@ public:
 
     void __set_status(const duplication_status::type val);
 
-    void __set_remote_address(const std::string &val);
+    void __set_remote(const std::string &val);
 
     void __set_create_ts(const int64_t val);
 
@@ -4932,7 +4928,7 @@ public:
             return false;
         if (!(status == rhs.status))
             return false;
-        if (!(remote_address == rhs.remote_address))
+        if (!(remote == rhs.remote))
             return false;
         if (!(create_ts == rhs.create_ts))
             return false;
