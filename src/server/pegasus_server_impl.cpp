@@ -377,6 +377,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     snprintf(buf, 255, "rdb.memtable.memory_usage@%s", str_gpid);
     _pfc_rdb_memtable_mem_usage.init_app_counter(
         "app.pegasus", buf, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
+
+    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
+        _read_capacity_unit_size, _write_capacity_unit_size, str_gpid);
 }
 
 void pegasus_server_impl::parse_checkpoints()
@@ -563,7 +566,6 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     dassert(_is_open, "");
     _pfc_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
-    uint64_t read_cu = 0;
 
     ::dsn::apps::read_response resp;
     resp.app_id = _gpid.get_app_id();
@@ -576,16 +578,12 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
 
     if (status.ok()) {
         if (check_if_record_expired(utils::epoch_now(), value)) {
-            _pfc_recent_expire_count->increment();
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for get from %s",
                        replica_name(),
                        reply.to_address().to_string());
             }
             status = rocksdb::Status::NotFound();
-        } else {
-            _pfc_recent_read_cu->add(
-                calc_cu(key.length() + value.length(), _read_capacity_unit_size));
         }
     }
 
@@ -607,8 +605,10 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                    status.ToString().c_str());
         }
         if (status.IsNotFound()) {
-            _pfc_recent_read_cu->increment();
+            _cu_calculator->add_read(1);
         }
+    } else {
+        _cu_calculator->add_read(key.length() + value.length());
     }
 
     if (_abnormal_get_time_threshold_ns || _abnormal_get_size_threshold) {
@@ -670,10 +670,10 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
     int32_t count = 0;
     int64_t size = 0;
-    uint64_t read_size = 0;
     int32_t iterate_count = 0;
     int32_t expire_count = 0;
     int32_t filter_count = 0;
+    uint64_t read_size = 0;
 
     if (request.sort_keys.empty()) {
         ::dsn::blob range_start_key, range_stop_key;
@@ -1017,9 +1017,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         _pfc_recent_filter_count->add(filter_count);
     }
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-    if (read_size > 0) {
-        _pfc_recent_read_cu->add(calc_cu(read_size, _read_capacity_unit_size));
-    }
+    _cu_calculator->add_read(read_size);
     reply(resp);
 }
 
@@ -1046,9 +1044,8 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
     resp.count = 0;
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
     uint64_t expire_count = 0;
-    uint64_t read_cu = 0;
     while (it->Valid()) {
-        read_cu++;
+        _cu_calculator->add_read(1);
         if (check_if_record_expired(epoch_now, it->value())) {
             expire_count++;
             if (_verbose_log) {
@@ -1083,9 +1080,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
         }
         resp.count = 0;
     }
-    if (read_cu > 0) {
-        _pfc_recent_read_cu->add(read_cu);
-    }
+
     reply(resp);
 }
 
@@ -1139,7 +1134,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
 
     resp.error = status.code();
     if (status.ok()) {
-        _pfc_recent_read_cu->add(calc_cu(key.length() + value.length(), _read_capacity_unit_size));
+        _cu_calculator->add_read(key.length() + value.length());
         if (expire_ts > 0) {
             resp.ttl_seconds = expire_ts - now_ts;
         } else {
@@ -1147,7 +1142,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
             resp.ttl_seconds = -1;
         }
     } else if (status.IsNotFound()) {
-        _pfc_recent_read_cu->increment();
+        _cu_calculator->add_read(1);
     }
 
     reply(resp);
@@ -1233,7 +1228,6 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     uint64_t expire_count = 0;
     uint64_t filter_count = 0;
     int32_t count = 0;
-    uint64_t read_cu = 0;
     resp.kvs.reserve(request.batch_size);
     while (count < request.batch_size && it->Valid()) {
         int c = it->key().compare(stop);
@@ -1264,10 +1258,10 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         if (r == 1) {
             count++;
             auto &kv = resp.kvs.back();
-            read_cu += calc_cu(kv.key.length() + kv.value.length(), _read_capacity_unit_size);
+            _cu_calculator->add_read(kv.key.length() + kv.value.length());
         } else if (r == 2) {
             expire_count++;
-            read_cu++;
+            _cu_calculator->add_read(1);
         } else { // r == 3
             filter_count++;
         }
@@ -1341,9 +1335,6 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     }
 
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
-    if (read_cu > 0) {
-        _pfc_recent_read_cu->add(read_cu);
-    }
     reply(resp);
 }
 
@@ -1353,7 +1344,6 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
     dassert(_is_open, "");
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
-    uint64_t read_cu = 0;
 
     ::dsn::apps::scan_response resp;
     resp.app_id = _gpid.get_app_id();
@@ -1397,10 +1387,10 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
             if (r == 1) {
                 auto &kv = resp.kvs.back();
                 count++;
-                read_cu += calc_cu(kv.key.length() + kv.value.length(), _read_capacity_unit_size);
+                _cu_calculator->add_read(kv.key.length() + kv.value.length());
             } else if (r == 2) {
                 expire_count++;
-                read_cu++;
+                _cu_calculator->add_read(1);
             } else { // r == 3
                 filter_count++;
             }
@@ -1461,9 +1451,6 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
     }
 
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
-    if (read_cu > 0) {
-        _pfc_recent_read_cu->add(read_cu);
-    }
     reply(resp);
 }
 

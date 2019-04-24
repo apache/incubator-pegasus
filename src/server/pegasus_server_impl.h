@@ -14,6 +14,7 @@
 #include <rrdb/rrdb_types.h>
 #include <rrdb/rrdb.server.h>
 
+#include "capacity_unit_calculator.h"
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
 #include "pegasus_manual_compact_service.h"
@@ -22,6 +23,7 @@
 namespace pegasus {
 namespace server {
 
+class capacity_unit_calculator;
 class pegasus_server_write;
 
 class pegasus_server_impl : public ::dsn::apps::rrdb_service
@@ -157,6 +159,7 @@ private:
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
+    friend class capacity_unit_calculator;
 
     // parse checkpoint directories in the data dir
     // checkpoint directory format is: "checkpoint.{decree}"
@@ -286,6 +289,7 @@ private:
     std::atomic<int64_t> _last_durable_decree;
 
     std::unique_ptr<pegasus_server_write> _server_write;
+    std::unique_ptr<capacity_unit_calculator> _cu_calculator;
 
     uint32_t _checkpoint_reserve_min_count_in_config;
     uint32_t _checkpoint_reserve_time_seconds_in_config;
@@ -334,11 +338,6 @@ private:
     ::dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
     ::dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
 };
-
-inline uint64_t calc_cu(uint64_t data_len, uint64_t cu_size)
-{
-    return data_len > 0 ? (data_len + cu_size - 1) / cu_size : 1;
-}
 
 } // namespace server
 } // namespace pegasus
