@@ -21,14 +21,14 @@ capacity_unit_calculator::capacity_unit_calculator(pegasus_server_impl *server)
                                    1024,
                                    "capacity unit size of write requests, default 1KB");
 
-    const char *str_gpid = server->get_gpid().to_string();
+    std::string str_gpid = server->get_gpid().to_string();
     char name[256];
-    snprintf(name, 255, "recent.read.cu@%s", str_gpid);
+    snprintf(name, 255, "recent.read.cu@%s", str_gpid.c_str());
     _pfc_recent_read_cu.init_app_counter("app.pegasus",
                                          name,
                                          COUNTER_TYPE_VOLATILE_NUMBER,
                                          "statistic the recent read capacity units");
-    snprintf(name, 255, "recent.write.cu@%s", str_gpid);
+    snprintf(name, 255, "recent.write.cu@%s", str_gpid.c_str());
     _pfc_recent_write_cu.init_app_counter("app.pegasus",
                                           name,
                                           COUNTER_TYPE_VOLATILE_NUMBER,

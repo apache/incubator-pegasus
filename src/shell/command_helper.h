@@ -761,7 +761,7 @@ struct node_capacity_unit_stat
     std::string timestamp;
     std::string node_address;
     // mapping app_name --> (read_cu, write_cu)
-    std::map<std::string, std::pair<double, double>> cu_value_by_app;
+    std::map<std::string, std::pair<int64_t, int64_t>> cu_value_by_app;
 
     std::string dump_to_json() const
     {
@@ -774,7 +774,7 @@ struct node_capacity_unit_stat
             if (cu_tuple.first < 1e-6 && cu_tuple.second < 1e-6)
                 continue;
             char tuple_str[50];
-            sprintf(tuple_str, "[%.2f,%.2f]", cu_tuple.first, cu_tuple.second);
+            sprintf(tuple_str, "[%ld,%ld]", cu_tuple.first, cu_tuple.second);
             dsn::json::json_encode(writer, elem.first);
             dsn::json::json_encode(writer, tuple_str);
         }
@@ -830,14 +830,14 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             if (counter_name == "recent.read.cu") {
                 if (nodes_stat[i].cu_value_by_app.find(app_name) ==
                     nodes_stat[i].cu_value_by_app.end())
-                    nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0.0, 0.0));
-                nodes_stat[i].cu_value_by_app[app_name].first += m.value;
+                    nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0, 0));
+                nodes_stat[i].cu_value_by_app[app_name].first += (int64_t)m.value;
             }
             if (counter_name == "recent.write.cu") {
                 if (nodes_stat[i].cu_value_by_app.find(app_name) ==
                     nodes_stat[i].cu_value_by_app.end())
-                    nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0.0, 0.0));
-                nodes_stat[i].cu_value_by_app[app_name].second += m.value;
+                    nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0, 0));
+                nodes_stat[i].cu_value_by_app[app_name].second += (int64_t)m.value;
             }
         }
     }

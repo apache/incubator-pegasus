@@ -262,71 +262,71 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "pegasus.server", "update_rdb_stat_interval", 600, "update_rdb_stat_interval, in seconds"));
 
     // TODO: move the qps/latency counters and it's statistics to replication_app_base layer
-    const char *str_gpid = _gpid.to_string();
+    std::string str_gpid = _gpid.to_string();
     char name[256];
 
     // register the perf counters
-    snprintf(name, 255, "get_qps@%s", str_gpid);
+    snprintf(name, 255, "get_qps@%s", str_gpid.c_str());
     _pfc_get_qps.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of GET request");
 
-    snprintf(name, 255, "multi_get_qps@%s", str_gpid);
+    snprintf(name, 255, "multi_get_qps@%s", str_gpid.c_str());
     _pfc_multi_get_qps.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of MULTI_GET request");
 
-    snprintf(name, 255, "scan_qps@%s", str_gpid);
+    snprintf(name, 255, "scan_qps@%s", str_gpid.c_str());
     _pfc_scan_qps.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of SCAN request");
 
-    snprintf(name, 255, "get_latency@%s", str_gpid);
+    snprintf(name, 255, "get_latency@%s", str_gpid.c_str());
     _pfc_get_latency.init_app_counter("app.pegasus",
                                       name,
                                       COUNTER_TYPE_NUMBER_PERCENTILES,
                                       "statistic the latency of GET request");
 
-    snprintf(name, 255, "multi_get_latency@%s", str_gpid);
+    snprintf(name, 255, "multi_get_latency@%s", str_gpid.c_str());
     _pfc_multi_get_latency.init_app_counter("app.pegasus",
                                             name,
                                             COUNTER_TYPE_NUMBER_PERCENTILES,
                                             "statistic the latency of MULTI_GET request");
 
-    snprintf(name, 255, "scan_latency@%s", str_gpid);
+    snprintf(name, 255, "scan_latency@%s", str_gpid.c_str());
     _pfc_scan_latency.init_app_counter("app.pegasus",
                                        name,
                                        COUNTER_TYPE_NUMBER_PERCENTILES,
                                        "statistic the latency of SCAN request");
 
-    snprintf(name, 255, "recent.expire.count@%s", str_gpid);
+    snprintf(name, 255, "recent.expire.count@%s", str_gpid.c_str());
     _pfc_recent_expire_count.init_app_counter("app.pegasus",
                                               name,
                                               COUNTER_TYPE_VOLATILE_NUMBER,
                                               "statistic the recent expired value read count");
 
-    snprintf(name, 255, "recent.filter.count@%s", str_gpid);
+    snprintf(name, 255, "recent.filter.count@%s", str_gpid.c_str());
     _pfc_recent_filter_count.init_app_counter("app.pegasus",
                                               name,
                                               COUNTER_TYPE_VOLATILE_NUMBER,
                                               "statistic the recent filtered value read count");
 
-    snprintf(name, 255, "recent.abnormal.count@%s", str_gpid);
+    snprintf(name, 255, "recent.abnormal.count@%s", str_gpid.c_str());
     _pfc_recent_abnormal_count.init_app_counter("app.pegasus",
                                                 name,
                                                 COUNTER_TYPE_VOLATILE_NUMBER,
                                                 "statistic the recent abnormal read count");
 
-    snprintf(name, 255, "disk.storage.sst.count@%s", str_gpid);
+    snprintf(name, 255, "disk.storage.sst.count@%s", str_gpid.c_str());
     _pfc_rdb_sst_count.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
 
-    snprintf(name, 255, "disk.storage.sst(MB)@%s", str_gpid);
+    snprintf(name, 255, "disk.storage.sst(MB)@%s", str_gpid.c_str());
     _pfc_rdb_sst_size.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the size of sstable files");
 
-    snprintf(name, 255, "rdb.block_cache.hit_count@%s", str_gpid);
+    snprintf(name, 255, "rdb.block_cache.hit_count@%s", str_gpid.c_str());
     _pfc_rdb_block_cache_hit_count.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the hit count of rocksdb block cache");
 
-    snprintf(name, 255, "rdb.block_cache.total_count@%s", str_gpid);
+    snprintf(name, 255, "rdb.block_cache.total_count@%s", str_gpid.c_str());
     _pfc_rdb_block_cache_total_count.init_app_counter(
         "app.pegasus",
         name,
@@ -345,14 +345,14 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "statistic the memory usage of rocksdb block cache");
     });
 
-    snprintf(name, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid);
+    snprintf(name, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid.c_str());
     _pfc_rdb_index_and_filter_blocks_mem_usage.init_app_counter(
         "app.pegasus",
         name,
         COUNTER_TYPE_NUMBER,
         "statistic the memory usage of rocksdb index and filter blocks");
 
-    snprintf(name, 255, "rdb.memtable.memory_usage@%s", str_gpid);
+    snprintf(name, 255, "rdb.memtable.memory_usage@%s", str_gpid.c_str());
     _pfc_rdb_memtable_mem_usage.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
 }
@@ -606,10 +606,8 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         pegasus_extract_user_data(_pegasus_data_version, std::move(value), resp.value);
     }
 
-    if (resp.error == rocksdb::Status::kOk) {
+    if (resp.error == rocksdb::Status::kOk || resp.error == rocksdb::Status::kNotFound) {
         _cu_calculator->add_read(resp.value.size());
-    } else if (resp.error == rocksdb::Status::kNotFound) {
-        _cu_calculator->add_read(0);
     }
 
     _pfc_get_latency->set(dsn_now_ns() - start_time);
@@ -1373,7 +1371,6 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
                                               epoch_now,
                                               no_value);
             if (r == 1) {
-                auto &kv = resp.kvs.back();
                 count++;
             } else if (r == 2) {
                 expire_count++;
