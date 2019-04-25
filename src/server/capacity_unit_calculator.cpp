@@ -4,12 +4,11 @@
 
 #include "capacity_unit_calculator.h"
 
-#include <dsn/utility/config_api.h>
-
 namespace pegasus {
 namespace server {
 
-capacity_unit_calculator::capacity_unit_calculator(const dsn::gpid &pid)
+capacity_unit_calculator::capacity_unit_calculator(pegasus_server_impl *server)
+    : replica_base(*server)
 {
     _read_capacity_unit_size =
         dsn_config_get_value_int64("pegasus.server",
@@ -22,17 +21,16 @@ capacity_unit_calculator::capacity_unit_calculator(const dsn::gpid &pid)
                                    1024,
                                    "capacity unit size of write requests, default 1KB");
 
-    char str_gpid[128], buf[256];
-    snprintf(str_gpid, 128, "%d.%d", pid.get_app_id(), pid.get_partition_index());
-
-    snprintf(buf, 255, "recent.read.cu@%s", str_gpid);
+    const char *str_gpid = server->get_gpid().to_string();
+    char name[256];
+    snprintf(name, 255, "recent.read.cu@%s", str_gpid);
     _pfc_recent_read_cu.init_app_counter("app.pegasus",
-                                         buf,
+                                         name,
                                          COUNTER_TYPE_VOLATILE_NUMBER,
                                          "statistic the recent read capacity units");
-    snprintf(buf, 255, "recent.write.cu@%s", str_gpid);
+    snprintf(name, 255, "recent.write.cu@%s", str_gpid);
     _pfc_recent_write_cu.init_app_counter("app.pegasus",
-                                          buf,
+                                          name,
                                           COUNTER_TYPE_VOLATILE_NUMBER,
                                           "statistic the recent write capacity units");
 }

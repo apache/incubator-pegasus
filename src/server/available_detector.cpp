@@ -122,6 +122,7 @@ available_detector::available_detector()
 
 available_detector::~available_detector()
 {
+    _tracker.cancel_outstanding_tasks();
     // don't delete _client, just set _client to nullptr.
     _client = nullptr;
     stop();
@@ -131,7 +132,7 @@ void available_detector::start()
 {
     // available detector delay 60s to wait the pegasus finishing the initialization.
     _detect_timer = ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
-                                            nullptr,
+                                            &_tracker,
                                             std::bind(&available_detector::detect_available, this),
                                             0,
                                             std::chrono::minutes(1));
@@ -158,7 +159,7 @@ void available_detector::detect_available()
         derror("initialize hash_keys failed, do not detect available, retry after 60 seconds");
         _detect_timer =
             ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
-                                    nullptr,
+                                    &_tracker,
                                     std::bind(&available_detector::detect_available, this),
                                     0,
                                     std::chrono::minutes(1));
@@ -174,7 +175,7 @@ void available_detector::detect_available()
         auto call_func = std::bind(&available_detector::on_detect, this, i);
         _detect_tasks[i] =
             ::dsn::tasking::enqueue_timer(LPC_DETECT_AVAILABLE,
-                                          nullptr,
+                                          &_tracker,
                                           std::move(call_func),
                                           std::chrono::seconds(_detect_interval_seconds));
     }
@@ -227,7 +228,7 @@ void available_detector::report_availability_info()
     };
     _report_task = ::dsn::tasking::enqueue_timer(
         LPC_DETECT_AVAILABLE,
-        nullptr,
+        &_tracker,
         std::move(call_func),
         std::chrono::minutes(1),
         0,
@@ -478,14 +479,6 @@ void available_detector::on_minute_report()
 
     set_detect_result(hash_key, sort_key, value);
 }
-void available_detector::set_detect_result(const std::string &hash_key,
-                                           const std::string &sort_key,
-                                           const std::string &value)
-{
-    // set try_count to 300 (keep on retrying for 300 minutes) to avoid losting detect result
-    // if the result table is also unavailable for a long time.
-    set_detect_result(hash_key, sort_key, value, 300);
-}
 
 void available_detector::set_detect_result(const std::string &hash_key,
                                            const std::string &sort_key,
@@ -493,7 +486,7 @@ void available_detector::set_detect_result(const std::string &hash_key,
                                            int try_count)
 {
     _client->async_set(
-        hash_key, sort_key, value, [&](int err, pegasus_client::internal_info &&info) {
+        hash_key, sort_key, value, [=](int err, pegasus_client::internal_info &&info) {
             if (err != PERR_OK) {
                 int new_try_count = try_count - 1;
                 if (new_try_count > 0) {
@@ -506,8 +499,8 @@ void available_detector::set_detect_result(const std::string &hash_key,
                            new_try_count);
                     ::dsn::tasking::enqueue(
                         LPC_DETECT_AVAILABLE,
-                        nullptr,
-                        [&]() { set_detect_result(hash_key, sort_key, value, new_try_count); },
+                        &_tracker,
+                        [=]() { set_detect_result(hash_key, sort_key, value, new_try_count); },
                         0,
                         std::chrono::minutes(1));
                 } else {

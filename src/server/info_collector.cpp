@@ -276,19 +276,10 @@ bool info_collector::has_capacity_unit_updated(const std::string &node_address,
 
 void info_collector::set_capacity_unit_result(const std::string &hash_key,
                                               const std::string &sort_key,
-                                              const std::string &value)
-{
-    // set try_count to 300 (keep on retrying for 300 minutes) to avoid losting cu result
-    // if the result table is also unavailable for a long time.
-    set_capacity_unit_result(hash_key, sort_key, value, 300);
-}
-
-void info_collector::set_capacity_unit_result(const std::string &hash_key,
-                                              const std::string &sort_key,
                                               const std::string &value,
                                               int try_count)
 {
-    auto async_set_callback = [&](int err, pegasus_client::internal_info &&info) {
+    auto async_set_callback = [=](int err, pegasus_client::internal_info &&info) {
         if (err != PERR_OK) {
             int new_try_count = try_count - 1;
             if (new_try_count > 0) {
@@ -302,7 +293,7 @@ void info_collector::set_capacity_unit_result(const std::string &hash_key,
                 ::dsn::tasking::enqueue(
                     LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
                     &_tracker,
-                    [&]() { set_capacity_unit_result(hash_key, sort_key, value, new_try_count); },
+                    [=]() { set_capacity_unit_result(hash_key, sort_key, value, new_try_count); },
                     0,
                     std::chrono::minutes(1));
             } else {

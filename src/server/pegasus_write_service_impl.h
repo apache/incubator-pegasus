@@ -22,8 +22,6 @@ static constexpr int FAIL_DB_WRITE_BATCH_PUT = -101;
 static constexpr int FAIL_DB_WRITE_BATCH_DELETE = -102;
 static constexpr int FAIL_DB_WRITE = -103;
 
-//class capacity_unit_calculator;
-
 class pegasus_write_service::impl : public dsn::replication::replica_base
 {
 public:
@@ -35,9 +33,9 @@ public:
           _wt_opts(server->_wt_opts),
           _rd_opts(server->_rd_opts),
           _default_ttl(0),
-          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
+          _pfc_recent_expire_count(server->_pfc_recent_expire_count),
+          _cu_calculator(server->_cu_calculator.get())
     {
-        _cu_calculator = server->_cu_calculator.get();
     }
 
     int empty_put(int64_t decree)

@@ -66,13 +66,12 @@ public:
 
     void on_capacity_unit_stat();
     bool has_capacity_unit_updated(const std::string &node_address, const std::string &timestamp);
-    void set_capacity_unit_result(const std::string &hash_key,
-                                  const std::string &sort_key,
-                                  const std::string &value);
+    // set try_count to 300 (keep on retrying at one minute interval) to avoid losing cu result
+    // if the result table is also unavailable for a long time
     void set_capacity_unit_result(const std::string &hash_key,
                                   const std::string &sort_key,
                                   const std::string &value,
-                                  int try_count);
+                                  int try_count = 300);
 
 private:
     dsn::task_tracker _tracker;

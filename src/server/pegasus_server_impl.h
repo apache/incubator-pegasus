@@ -14,7 +14,6 @@
 #include <rrdb/rrdb_types.h>
 #include <rrdb/rrdb.server.h>
 
-#include "capacity_unit_calculator.h"
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
 #include "pegasus_manual_compact_service.h"
@@ -23,6 +22,7 @@
 namespace pegasus {
 namespace server {
 
+class capacity_unit_calculator;
 class pegasus_server_write;
 
 class pegasus_server_impl : public ::dsn::apps::rrdb_service
@@ -287,8 +287,8 @@ private:
     uint32_t _pegasus_data_version;
     std::atomic<int64_t> _last_durable_decree;
 
-    std::unique_ptr<pegasus_server_write> _server_write;
     std::unique_ptr<capacity_unit_calculator> _cu_calculator;
+    std::unique_ptr<pegasus_server_write> _server_write;
 
     uint32_t _checkpoint_reserve_min_count_in_config;
     uint32_t _checkpoint_reserve_time_seconds_in_config;
