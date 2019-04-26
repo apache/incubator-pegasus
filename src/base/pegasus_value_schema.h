@@ -19,17 +19,17 @@
 
 namespace pegasus {
 
-#define MAX_PEGASUS_DATA_VERSION 0u
+#define PEGASUS_DATA_VERSION_MAX 0u
 
 /// Extracts expire_ts from rocksdb value with given version.
 /// The value schema must be in v0.
 /// \return expire_ts in host endian
 inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view value)
 {
-    dassert_f(version <= MAX_PEGASUS_DATA_VERSION,
+    dassert_f(version <= PEGASUS_DATA_VERSION_MAX,
               "data version({}) must be <= {}",
               version,
-              MAX_PEGASUS_DATA_VERSION);
+              PEGASUS_DATA_VERSION_MAX);
 
     return dsn::data_input(value).read_u32();
 }
@@ -41,10 +41,10 @@ inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view val
 inline void
 pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob &user_data)
 {
-    dassert_f(version <= MAX_PEGASUS_DATA_VERSION,
+    dassert_f(version <= PEGASUS_DATA_VERSION_MAX,
               "data version({}) must be <= {}",
               version,
-              MAX_PEGASUS_DATA_VERSION);
+              PEGASUS_DATA_VERSION_MAX);
 
     std::string *s = new std::string(std::move(raw_value));
     dsn::data_input input(*s);

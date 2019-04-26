@@ -1437,7 +1437,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     rocksdb::Options opts = _db_opts;
     opts.create_if_missing = true;
     opts.error_if_exists = false;
-    opts.pegasus_data_version = MAX_PEGASUS_DATA_VERSION;
+    opts.pegasus_data_version = PEGASUS_DATA_VERSION_MAX;
 
     //
     // here, we must distinguish three cases, such as:
@@ -1511,7 +1511,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     if (status.ok()) {
         _last_committed_decree = _db->GetLastFlushedDecree();
         _pegasus_data_version = _db->GetPegasusDataVersion();
-        if (_pegasus_data_version > MAX_PEGASUS_DATA_VERSION) {
+        if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
             derror("%s: open app failed, unsupported data version %" PRIu32,
                    replica_name(),
                    _pegasus_data_version);
