@@ -24,9 +24,7 @@ namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
-                 TASK_PRIORITY_COMMON,
-                 ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_CU_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 info_collector::info_collector()
 {
@@ -50,14 +48,14 @@ info_collector::info_collector()
                                                                        10, // default value 10s
                                                                        "app stat interval seconds");
 
-    _app_name = dsn_config_get_value_string(
+    _cu_stat_app_name = dsn_config_get_value_string(
         "pegasus.collector", "cu_stat_app", "", "app for recording capacity unit info");
-    dassert(!_app_name.empty(), "");
+    dassert(!_cu_stat_app_name.empty(), "");
     // initialize the _client.
     if (!pegasus_client_factory::initialize(nullptr)) {
         dassert(false, "Initialize the pegasus client failed");
     }
-    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _app_name.c_str());
+    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _cu_stat_app_name.c_str());
     dassert(_client != nullptr, "Initialize the _client failed");
 
     _cu_fetch_interval_seconds =
@@ -89,7 +87,7 @@ void info_collector::start()
                                       std::chrono::minutes(1));
 
     _cu_stat_timer_task =
-        ::dsn::tasking::enqueue_timer(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+        ::dsn::tasking::enqueue_timer(LPC_PEGASUS_CU_STAT_TIMER,
                                       &_tracker,
                                       [this] { on_capacity_unit_stat(); },
                                       std::chrono::seconds(_cu_fetch_interval_seconds),
@@ -250,8 +248,8 @@ void info_collector::on_capacity_unit_stat()
     }
     for (auto elem : nodes_stat) {
         if (!has_capacity_unit_updated(elem.node_address, elem.timestamp)) {
-            ddebug("recent read/write capacity unit value of node %s is not updated",
-                   elem.node_address.c_str());
+            dinfo("recent read/write capacity unit value of node %s is not updated",
+                  elem.node_address.c_str());
             continue;
         }
         set_capacity_unit_result(elem.timestamp, elem.node_address, elem.dump_to_json());
@@ -283,7 +281,7 @@ void info_collector::set_capacity_unit_result(const std::string &hash_key,
         if (err != PERR_OK) {
             int new_try_count = try_count - 1;
             if (new_try_count > 0) {
-                derror("set_detect_result fail, hash_key = %s, sort_key = %s, value = %s, "
+                derror("set_capacity_unit_result fail, hash_key = %s, sort_key = %s, value = %s, "
                        "error = %s, left_try_count = %d, try again after 1 minute",
                        hash_key.c_str(),
                        sort_key.c_str(),
@@ -291,13 +289,13 @@ void info_collector::set_capacity_unit_result(const std::string &hash_key,
                        _client->get_error_string(err),
                        new_try_count);
                 ::dsn::tasking::enqueue(
-                    LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+                    LPC_PEGASUS_CU_STAT_TIMER,
                     &_tracker,
                     [=]() { set_capacity_unit_result(hash_key, sort_key, value, new_try_count); },
                     0,
                     std::chrono::minutes(1));
             } else {
-                derror("set_detect_result fail, hash_key = %s, sort_key = %s, value = %s, "
+                derror("set_capacity_unit_result fail, hash_key = %s, sort_key = %s, value = %s, "
                        "error = %s, left_try_count = %d, do not try again",
                        hash_key.c_str(),
                        sort_key.c_str(),
@@ -306,7 +304,7 @@ void info_collector::set_capacity_unit_result(const std::string &hash_key,
                        new_try_count);
             }
         } else {
-            dinfo("set_detect_result succeed, hash_key = %s, sort_key = %s, value = %s",
+            dinfo("set_capacity_unit_result succeed, hash_key = %s, sort_key = %s, value = %s",
                   hash_key.c_str(),
                   sort_key.c_str(),
                   value.c_str());

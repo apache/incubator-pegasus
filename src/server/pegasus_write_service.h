@@ -9,6 +9,7 @@
 
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
+#include "capacity_unit_calculator.h"
 #include "rrdb/rrdb_types.h"
 
 namespace pegasus {
@@ -97,6 +98,8 @@ private:
     std::unique_ptr<impl> _impl;
 
     uint64_t _batch_start_time;
+
+    capacity_unit_calculator *_cu_calculator;
 
     ::dsn::perf_counter_wrapper _pfc_put_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_put_qps;

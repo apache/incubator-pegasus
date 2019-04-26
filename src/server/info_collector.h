@@ -86,7 +86,7 @@ private:
     // client to access server.
     pegasus_client *_client;
     // app for recording read/write cu.
-    std::string _app_name;
+    std::string _cu_stat_app_name;
     uint32_t _cu_fetch_interval_seconds;
     ::dsn::task_ptr _cu_stat_timer_task;
     ::dsn::utils::ex_lock_nr _cu_update_info_lock;

@@ -553,6 +553,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
 
     if (status.ok()) {
         if (check_if_record_expired(utils::epoch_now(), value)) {
+            _pfc_recent_expire_count->increment();
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for get from %s",
                        replica_name(),

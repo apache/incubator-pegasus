@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "pegasus_server_impl.h"
+#include <dsn/dist/replication/replica_base.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include <dsn/utility/config_api.h>
 
 namespace pegasus {
 namespace server {
@@ -12,7 +14,7 @@ namespace server {
 class capacity_unit_calculator : public dsn::replication::replica_base
 {
 public:
-    capacity_unit_calculator(pegasus_server_impl *server);
+    explicit capacity_unit_calculator(replica_base *r);
 
     // add at least one read/write cu when called.
     void add_read(int64_t data_len);

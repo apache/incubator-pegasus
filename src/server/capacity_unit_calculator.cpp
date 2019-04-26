@@ -7,21 +7,20 @@
 namespace pegasus {
 namespace server {
 
-capacity_unit_calculator::capacity_unit_calculator(pegasus_server_impl *server)
-    : replica_base(*server)
+capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_base(r)
 {
     _read_capacity_unit_size =
         dsn_config_get_value_int64("pegasus.server",
                                    "perf_counter_read_capacity_unit_size",
-                                   1024,
-                                   "capacity unit size of read requests, default 1KB");
+                                   4 * 1024,
+                                   "capacity unit size of read requests, default 4KB");
     _write_capacity_unit_size =
         dsn_config_get_value_int64("pegasus.server",
                                    "perf_counter_write_capacity_unit_size",
-                                   1024,
-                                   "capacity unit size of write requests, default 1KB");
+                                   4 * 1024,
+                                   "capacity unit size of write requests, default 4KB");
 
-    std::string str_gpid = server->get_gpid().to_string();
+    std::string str_gpid = r->get_gpid().to_string();
     char name[256];
     snprintf(name, 255, "recent.read.cu@%s", str_gpid.c_str());
     _pfc_recent_read_cu.init_app_counter("app.pegasus",

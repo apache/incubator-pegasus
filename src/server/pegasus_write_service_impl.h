@@ -9,7 +9,6 @@
 #include "logging_utils.h"
 
 #include "base/pegasus_key_schema.h"
-#include "capacity_unit_calculator.h"
 
 #include <dsn/utility/fail_point.h>
 #include <dsn/utility/string_conv.h>
@@ -33,8 +32,7 @@ public:
           _wt_opts(server->_wt_opts),
           _rd_opts(server->_rd_opts),
           _default_ttl(0),
-          _pfc_recent_expire_count(server->_pfc_recent_expire_count),
-          _cu_calculator(server->_cu_calculator.get())
+          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
     }
 
@@ -138,9 +136,11 @@ public:
         if (s.ok()) {
             uint32_t old_expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, raw_value);
             if (check_if_ts_expired(utils::epoch_now(), old_expire_ts)) {
-                _pfc_recent_read_cu->increment();
+                // ttl timeout, set to 0 before increment
+                _pfc_recent_expire_count->increment();
+                new_value = update.increment;
+                new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
             } else {
-                _cu_calculator->add_read(raw_key.length() + raw_value.length());
                 ::dsn::blob old_value;
                 pegasus_extract_user_data(_pegasus_data_version, std::move(raw_value), old_value);
                 if (old_value.length() == 0) {
@@ -185,7 +185,6 @@ public:
             // old value is not found, set to 0 before increment
             new_value = update.increment;
             new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
-            _cu_calculator->add_read(1);
         } else {
             // read old value failed
             ::dsn::blob hash_key, sort_key;
@@ -501,7 +500,6 @@ private:
                            dsn::string_view value,
                            uint32_t expire_sec)
     {
-        _cu_calculator->add_write(raw_key.length() + value.length());
         FAIL_POINT_INJECT_F("db_write_batch_put",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
@@ -526,7 +524,6 @@ private:
 
     int db_write_batch_delete(int64_t decree, dsn::string_view raw_key)
     {
-        _cu_calculator->add_write(raw_key.length());
         FAIL_POINT_INJECT_F("db_write_batch_delete",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_DELETE; });
 
@@ -716,7 +713,6 @@ private:
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
 
     pegasus_value_generator _value_generator;
-    capacity_unit_calculator *_cu_calculator;
 
     // for setting update_response.error after committed.
     std::vector<dsn::apps::update_response *> _update_responses;
