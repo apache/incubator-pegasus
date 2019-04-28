@@ -256,7 +256,7 @@ private:
     bool check_if_record_expired(uint32_t epoch_now, rocksdb::Slice raw_value)
     {
         return pegasus::check_if_record_expired(
-            _value_schema_version, epoch_now, utils::to_string_view(raw_value));
+            _pegasus_data_version, epoch_now, utils::to_string_view(raw_value));
     }
 
 private:
@@ -282,7 +282,7 @@ private:
     rocksdb::DB *_db;
     static std::shared_ptr<rocksdb::Cache> _block_cache;
     volatile bool _is_open;
-    uint32_t _value_schema_version;
+    uint32_t _pegasus_data_version;
     std::atomic<int64_t> _last_durable_decree;
 
     std::unique_ptr<pegasus_server_write> _server_write;

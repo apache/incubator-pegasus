@@ -27,7 +27,7 @@ public:
     explicit impl(pegasus_server_impl *server)
         : replica_base(*server),
           _primary_address(server->_primary_address),
-          _value_schema_version(server->_value_schema_version),
+          _pegasus_data_version(server->_pegasus_data_version),
           _db(server->_db),
           _wt_opts(server->_wt_opts),
           _rd_opts(server->_rd_opts),
@@ -134,7 +134,7 @@ public:
         uint32_t new_expire_ts = 0;
         rocksdb::Status s = _db->Get(_rd_opts, raw_key, &raw_value);
         if (s.ok()) {
-            uint32_t old_expire_ts = pegasus_extract_expire_ts(_value_schema_version, raw_value);
+            uint32_t old_expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, raw_value);
             if (check_if_ts_expired(utils::epoch_now(), old_expire_ts)) {
                 // ttl timeout, set to 0 before increment
                 _pfc_recent_expire_count->increment();
@@ -142,7 +142,7 @@ public:
                 new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
             } else {
                 ::dsn::blob old_value;
-                pegasus_extract_user_data(_value_schema_version, std::move(raw_value), old_value);
+                pegasus_extract_user_data(_pegasus_data_version, std::move(raw_value), old_value);
                 if (old_value.length() == 0) {
                     // empty old value, set to 0 before increment
                     new_value = update.increment;
@@ -242,7 +242,7 @@ public:
         if (check_status.ok()) {
             // read check value succeed
             if (check_if_record_expired(
-                    _value_schema_version, utils::epoch_now(), check_raw_value)) {
+                    _pegasus_data_version, utils::epoch_now(), check_raw_value)) {
                 // check value ttl timeout
                 _pfc_recent_expire_count->increment();
                 check_status = rocksdb::Status::NotFound();
@@ -265,7 +265,7 @@ public:
         ::dsn::blob check_value;
         if (check_status.ok()) {
             pegasus_extract_user_data(
-                _value_schema_version, std::move(check_raw_value), check_value);
+                _pegasus_data_version, std::move(check_raw_value), check_value);
         }
 
         if (update.return_check_value) {
@@ -372,7 +372,7 @@ public:
         if (check_status.ok()) {
             // read check value succeed
             if (check_if_record_expired(
-                    _value_schema_version, utils::epoch_now(), check_raw_value)) {
+                    _pegasus_data_version, utils::epoch_now(), check_raw_value)) {
                 // check value ttl timeout
                 _pfc_recent_expire_count->increment();
                 check_status = rocksdb::Status::NotFound();
@@ -395,7 +395,7 @@ public:
         ::dsn::blob check_value;
         if (check_status.ok()) {
             pegasus_extract_user_data(
-                _value_schema_version, std::move(check_raw_value), check_value);
+                _pegasus_data_version, std::move(check_raw_value), check_value);
         }
 
         if (update.return_check_value) {
@@ -506,7 +506,7 @@ private:
         rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
         rocksdb::SliceParts skey_parts(&skey, 1);
         rocksdb::SliceParts svalue =
-            _value_generator.generate_value(_value_schema_version, value, db_expire_ts(expire_sec));
+            _value_generator.generate_value(_pegasus_data_version, value, db_expire_ts(expire_sec));
         rocksdb::Status s = _batch.Put(skey_parts, svalue);
         if (dsn_unlikely(!s.ok())) {
             ::dsn::blob hash_key, sort_key;
@@ -703,7 +703,7 @@ private:
     friend class pegasus_server_write_test;
 
     const std::string _primary_address;
-    const uint32_t _value_schema_version;
+    const uint32_t _pegasus_data_version;
 
     rocksdb::WriteBatch _batch;
     rocksdb::DB *_db;
