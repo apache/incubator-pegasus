@@ -38,7 +38,7 @@ void result_writer::set_result(const std::string &hash_key,
         if (err != PERR_OK) {
             int new_try_count = try_count - 1;
             if (new_try_count > 0) {
-                derror("set_capacity_unit_result fail, hash_key = %s, sort_key = %s, value = %s, "
+                derror("set_result fail, hash_key = %s, sort_key = %s, value = %s, "
                        "error = %s, left_try_count = %d, try again after 1 minute",
                        hash_key.c_str(),
                        sort_key.c_str(),
@@ -52,7 +52,7 @@ void result_writer::set_result(const std::string &hash_key,
                     0,
                     std::chrono::minutes(1));
             } else {
-                derror("set_capacity_unit_result fail, hash_key = %s, sort_key = %s, value = %s, "
+                derror("set_result fail, hash_key = %s, sort_key = %s, value = %s, "
                        "error = %s, left_try_count = %d, do not try again",
                        hash_key.c_str(),
                        sort_key.c_str(),
@@ -61,7 +61,7 @@ void result_writer::set_result(const std::string &hash_key,
                        new_try_count);
             }
         } else {
-            dinfo("set_capacity_unit_result succeed, hash_key = %s, sort_key = %s, value = %s",
+            dinfo("set_result succeed, hash_key = %s, sort_key = %s, value = %s",
                   hash_key.c_str(),
                   sort_key.c_str(),
                   value.c_str());

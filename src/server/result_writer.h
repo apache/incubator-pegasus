@@ -21,7 +21,7 @@ public:
 
     pegasus_client *get_client();
 
-    // set try_count to 300 (keep on retrying at one minute interval) to avoid losing detect result
+    // set try_count to 300 (keep on retrying at one minute interval) to avoid losing result
     // if the result table is also unavailable for a long time.
     void set_result(const std::string &hash_key,
                     const std::string &sort_key,
