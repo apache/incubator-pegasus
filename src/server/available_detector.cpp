@@ -60,12 +60,9 @@ available_detector::available_detector()
                                               "available_detect_timeout",
                                               1000, // unit is millisecond,default is 1s = 1000ms
                                               "available detect timeout");
-    // initialize the _client.
-    if (!pegasus_client_factory::initialize(nullptr)) {
-        dassert(false, "Initialize the pegasus client failed");
-    }
-    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _app_name.c_str());
-    dassert(_client != nullptr, "Initialize the _client failed");
+
+    _result_writer = dsn::make_unique<result_writer>(_cluster_name, _app_name);
+    _client = _result_writer->get_client();
     _ddl_client.reset(new replication_ddl_client(_meta_list));
     dassert(_ddl_client != nullptr, "Initialize the _ddl_client failed");
     if (!_alert_email_address.empty()) {
@@ -122,10 +119,8 @@ available_detector::available_detector()
 
 available_detector::~available_detector()
 {
-    _tracker.cancel_outstanding_tasks();
-    // don't delete _client, just set _client to nullptr.
-    _client = nullptr;
     stop();
+    _tracker.cancel_outstanding_tasks();
 }
 
 void available_detector::start()
@@ -429,7 +424,7 @@ void available_detector::on_day_report()
         }
     }
 
-    set_detect_result(hash_key, sort_key, value);
+    _result_writer->set_result(hash_key, sort_key, value);
 }
 
 void available_detector::on_hour_report()
@@ -453,7 +448,7 @@ void available_detector::on_hour_report()
     _pfc_fail_times_hour->set(fail_times);
     _pfc_available_hour->set(available);
 
-    set_detect_result(hash_key, sort_key, value);
+    _result_writer->set_result(hash_key, sort_key, value);
 }
 
 void available_detector::on_minute_report()
@@ -477,48 +472,7 @@ void available_detector::on_minute_report()
     _pfc_fail_times_minute->set(fail_times);
     _pfc_available_minute->set(available);
 
-    set_detect_result(hash_key, sort_key, value);
-}
-
-void available_detector::set_detect_result(const std::string &hash_key,
-                                           const std::string &sort_key,
-                                           const std::string &value,
-                                           int try_count)
-{
-    _client->async_set(
-        hash_key, sort_key, value, [=](int err, pegasus_client::internal_info &&info) {
-            if (err != PERR_OK) {
-                int new_try_count = try_count - 1;
-                if (new_try_count > 0) {
-                    derror("set_detect_result fail, hash_key = %s, sort_key = %s, value = %s, "
-                           "error = %s, left_try_count = %d, try again after 1 minute",
-                           hash_key.c_str(),
-                           sort_key.c_str(),
-                           value.c_str(),
-                           _client->get_error_string(err),
-                           new_try_count);
-                    ::dsn::tasking::enqueue(
-                        LPC_DETECT_AVAILABLE,
-                        &_tracker,
-                        [=]() { set_detect_result(hash_key, sort_key, value, new_try_count); },
-                        0,
-                        std::chrono::minutes(1));
-                } else {
-                    derror("set_detect_result fail, hash_key = %s, sort_key = %s, value = %s, "
-                           "error = %s, left_try_count = %d, do not try again",
-                           hash_key.c_str(),
-                           sort_key.c_str(),
-                           value.c_str(),
-                           _client->get_error_string(err),
-                           new_try_count);
-                }
-            } else {
-                dinfo("set_detect_result succeed, hash_key = %s, sort_key = %s, value = %s",
-                      hash_key.c_str(),
-                      sort_key.c_str(),
-                      value.c_str());
-            }
-        });
+    _result_writer->set_result(hash_key, sort_key, value);
 }
 }
 } // namespace

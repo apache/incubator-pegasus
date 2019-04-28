@@ -8,6 +8,8 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 
+#include "result_writer.h"
+
 namespace pegasus {
 namespace server {
 
@@ -23,12 +25,6 @@ public:
     void stop();
 
 private:
-    // set try_count to 300 (keep on retrying at one minute interval) to avoid losing detect result
-    // if the result table is also unavailable for a long time.
-    void set_detect_result(const std::string &hash_key,
-                           const std::string &sort_key,
-                           const std::string &value,
-                           int try_count = 300);
     // generate hash_keys that can access every partition.
     bool generate_hash_keys();
     void on_detect(int32_t idx);
@@ -44,6 +40,8 @@ private:
     dsn::task_tracker _tracker;
     std::string _cluster_name;
     std::string _app_name;
+    // for writing detect result
+    std::unique_ptr<result_writer> _result_writer;
     // client to access server.
     pegasus_client *_client;
     std::shared_ptr<replication_ddl_client> _ddl_client;

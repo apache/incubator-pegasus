@@ -19,6 +19,7 @@
 #include <fstream>
 
 #include "../shell/commands.h"
+#include "result_writer.h"
 
 namespace pegasus {
 namespace server {
@@ -66,12 +67,6 @@ public:
 
     void on_capacity_unit_stat();
     bool has_capacity_unit_updated(const std::string &node_address, const std::string &timestamp);
-    // set try_count to 300 (keep on retrying at one minute interval) to avoid losing cu result
-    // if the result table is also unavailable for a long time
-    void set_capacity_unit_result(const std::string &hash_key,
-                                  const std::string &sort_key,
-                                  const std::string &value,
-                                  int try_count = 300);
 
 private:
     dsn::task_tracker _tracker;
@@ -83,10 +78,10 @@ private:
     ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
     std::map<std::string, AppStatCounters *> _app_stat_counters;
 
-    // client to access server.
-    pegasus_client *_client;
     // app for recording read/write cu.
-    std::string _cu_stat_app_name;
+    std::string _cu_stat_app;
+    // for writing cu stat result
+    std::unique_ptr<result_writer> _result_writer;
     uint32_t _cu_fetch_interval_seconds;
     ::dsn::task_ptr _cu_stat_timer_task;
     ::dsn::utils::ex_lock_nr _cu_update_info_lock;

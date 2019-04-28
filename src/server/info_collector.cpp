@@ -48,15 +48,10 @@ info_collector::info_collector()
                                                                        10, // default value 10s
                                                                        "app stat interval seconds");
 
-    _cu_stat_app_name = dsn_config_get_value_string(
+    _cu_stat_app = dsn_config_get_value_string(
         "pegasus.collector", "cu_stat_app", "", "app for recording capacity unit info");
-    dassert(!_cu_stat_app_name.empty(), "");
-    // initialize the _client.
-    if (!pegasus_client_factory::initialize(nullptr)) {
-        dassert(false, "Initialize the pegasus client failed");
-    }
-    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _cu_stat_app_name.c_str());
-    dassert(_client != nullptr, "Initialize the _client failed");
+    dassert(!_cu_stat_app.empty(), "");
+    _result_writer = dsn::make_unique<result_writer>(_cluster_name, _cu_stat_app);
 
     _cu_fetch_interval_seconds =
         (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
@@ -67,13 +62,11 @@ info_collector::info_collector()
 
 info_collector::~info_collector()
 {
+    stop();
     _tracker.cancel_outstanding_tasks();
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
-    // don't delete _client, just set _client to nullptr.
-    _client = nullptr;
-    stop();
 }
 
 void info_collector::start()
@@ -252,7 +245,7 @@ void info_collector::on_capacity_unit_stat()
                   elem.node_address.c_str());
             continue;
         }
-        set_capacity_unit_result(elem.timestamp, elem.node_address, elem.dump_to_json());
+        _result_writer->set_result(elem.timestamp, elem.node_address, elem.dump_to_json());
     }
 }
 
@@ -270,48 +263,6 @@ bool info_collector::has_capacity_unit_updated(const std::string &node_address,
         return true;
     }
     return false;
-}
-
-void info_collector::set_capacity_unit_result(const std::string &hash_key,
-                                              const std::string &sort_key,
-                                              const std::string &value,
-                                              int try_count)
-{
-    auto async_set_callback = [=](int err, pegasus_client::internal_info &&info) {
-        if (err != PERR_OK) {
-            int new_try_count = try_count - 1;
-            if (new_try_count > 0) {
-                derror("set_capacity_unit_result fail, hash_key = %s, sort_key = %s, value = %s, "
-                       "error = %s, left_try_count = %d, try again after 1 minute",
-                       hash_key.c_str(),
-                       sort_key.c_str(),
-                       value.c_str(),
-                       _client->get_error_string(err),
-                       new_try_count);
-                ::dsn::tasking::enqueue(
-                    LPC_PEGASUS_CU_STAT_TIMER,
-                    &_tracker,
-                    [=]() { set_capacity_unit_result(hash_key, sort_key, value, new_try_count); },
-                    0,
-                    std::chrono::minutes(1));
-            } else {
-                derror("set_capacity_unit_result fail, hash_key = %s, sort_key = %s, value = %s, "
-                       "error = %s, left_try_count = %d, do not try again",
-                       hash_key.c_str(),
-                       sort_key.c_str(),
-                       value.c_str(),
-                       _client->get_error_string(err),
-                       new_try_count);
-            }
-        } else {
-            dinfo("set_capacity_unit_result succeed, hash_key = %s, sort_key = %s, value = %s",
-                  hash_key.c_str(),
-                  sort_key.c_str(),
-                  value.c_str());
-        }
-    };
-
-    _client->async_set(hash_key, sort_key, value, std::move(async_set_callback));
 }
 } // namespace server
 } // namespace pegasus
