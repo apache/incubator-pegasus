@@ -25,22 +25,6 @@
  */
 
 /*
- * Description:
- *     Entry of profiler
- *
- * Revision history:
- *     2015-06-01, zjc95, first version
- *     2015-06-01, zjc95, deleted pdh part
- *     2015-06-02, zjc95, revised License
- *     2015-06-02, zjc95, revised format of tab and brace
- *     2015-08-11, zjc95, revised format of variable name
- *     2015-08-12, zjc95, fixed bug about TITLE
- *     2015-08-17, zjc95, added command decription
- *     2015-11-24, zjc95, revised the decription
- *
- */
-
-/*
 HELP GRAPH
                            CALL ===== net(call) ========> ENQUEUE ===== queue(server) ====> START
                             ^                               ^                                ||
@@ -76,9 +60,12 @@ namespace tools {
 typedef uint64_extension_helper<task_spec_profiler, task> task_ext_for_profiler;
 typedef uint64_extension_helper<task_spec_profiler, message_ex> message_ext_for_profiler;
 
-task_spec_profiler *s_spec_profilers = nullptr;
+std::unique_ptr<task_spec_profiler[]> s_spec_profilers;
+
 int s_task_code_max = 0;
+
 std::map<std::string, perf_counter_ptr_type> counter_info::pointer_type;
+
 counter_info *counter_info_ptr[] = {
     new counter_info({"queue.time", "qt"},
                      TASK_QUEUEING_TIME_NS,
@@ -99,6 +86,16 @@ counter_info *counter_info_ptr[] = {
                      COUNTER_TYPE_NUMBER_PERCENTILES,
                      "RPC.SERVER(ns)",
                      "ns"),
+    new counter_info({"rpc.server.size.request", "rpcssreq"},
+                     RPC_SERVER_SIZE_PER_REQUEST_IN_BYTES,
+                     COUNTER_TYPE_NUMBER_PERCENTILES,
+                     "RPC.SERVER.SIZE.REQUEST(bytes)",
+                     "bytes"),
+    new counter_info({"rpc.server.size.response", "rpcssresp"},
+                     RPC_SERVER_SIZE_PER_RESPONSE_IN_BYTES,
+                     COUNTER_TYPE_NUMBER_PERCENTILES,
+                     "RPC.SERVER.SIZE.RESPONSE(bytes)",
+                     "bytes"),
     new counter_info({"rpc.client.latency", "rpccl"},
                      RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,
                      COUNTER_TYPE_NUMBER_PERCENTILES,
@@ -264,8 +261,13 @@ static void profiler_on_rpc_request_enqueue(rpc_request_task *callee)
     message_ext_for_profiler::get(callee->get_request()) = now;
 
     auto ptr = s_spec_profilers[callee_code].ptr[TASK_IN_QUEUE].get();
-    if (ptr != nullptr)
+    if (ptr != nullptr) {
         ptr->increment();
+    }
+    ptr = s_spec_profilers[callee_code].ptr[RPC_SERVER_SIZE_PER_REQUEST_IN_BYTES].get();
+    if (ptr != nullptr) {
+        ptr->set(callee->get_request()->header->body_length);
+    }
 }
 
 static void profiler_on_rpc_create_response(message_ex *req, message_ex *resp)
@@ -294,8 +296,13 @@ static void profiler_on_rpc_reply(task *caller, message_ex *msg)
     auto code = spec->rpc_paired_code;
     dassert(code >= 0 && code <= s_task_code_max, "code = %d", code.code());
     auto ptr = s_spec_profilers[code].ptr[RPC_SERVER_LATENCY_NS].get();
-    if (ptr != nullptr)
+    if (ptr != nullptr) {
         ptr->set(now - qts);
+    }
+    ptr = s_spec_profilers[code].ptr[RPC_SERVER_SIZE_PER_RESPONSE_IN_BYTES].get();
+    if (ptr != nullptr) {
+        ptr->set(msg->header->body_length);
+    }
 }
 
 static void profiler_on_rpc_response_enqueue(rpc_response_task *resp)
@@ -371,7 +378,7 @@ void register_command_profiler()
     textarg << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999"
             << std::endl;
     textarg << "  $counter_name :" << std::endl;
-    for (int i = 0; i < PREF_COUNTER_COUNT; i++) {
+    for (int i = 0; i < PERF_COUNTER_COUNT; i++) {
         textarg << "      " << std::setw(data_width) << counter_info_ptr[i]->title << " :";
         for (size_t j = 0; j < counter_info_ptr[i]->keys.size(); j++) {
             textarg << " " << counter_info_ptr[i]->keys[j];
@@ -404,13 +411,13 @@ void register_command_profiler()
         query_data_handler);
 }
 
-void profiler::install(service_spec &spec)
+void profiler::install(service_spec &)
 {
     s_task_code_max = dsn::task_code::max();
-    s_spec_profilers = new task_spec_profiler[s_task_code_max + 1];
+    s_spec_profilers.reset(new task_spec_profiler[s_task_code_max + 1]);
     task_ext_for_profiler::register_ext();
     message_ext_for_profiler::register_ext();
-    dassert(sizeof(counter_info_ptr) / sizeof(counter_info *) == PREF_COUNTER_COUNT,
+    dassert(sizeof(counter_info_ptr) / sizeof(counter_info *) == PERF_COUNTER_COUNT,
             "PREF COUNTER ERROR");
 
     auto profile = dsn_config_get_value_bool(
@@ -506,7 +513,7 @@ void profiler::install(service_spec &spec)
             if (dsn_config_get_value_bool(section_name.c_str(),
                                           "profiler::latency.server",
                                           true,
-                                          "whether to profile the server latency of a task"))
+                                          "whether to profile the server latency of a task")) {
                 s_spec_profilers[i].ptr[RPC_SERVER_LATENCY_NS].init_global_counter(
                     "zion",
                     "profiler",
@@ -514,6 +521,29 @@ void profiler::install(service_spec &spec)
                     COUNTER_TYPE_NUMBER_PERCENTILES,
                     "latency from enqueue point to reply point on the server side for RPC "
                     "tasks");
+            }
+            if (dsn_config_get_value_bool(section_name.c_str(),
+                                          "profiler::size.request.server",
+                                          false,
+                                          "whether to profile the size per request")) {
+                s_spec_profilers[i].ptr[RPC_SERVER_SIZE_PER_REQUEST_IN_BYTES].init_global_counter(
+                    "zion",
+                    "profiler",
+                    (name + std::string(".size.request.server")).c_str(),
+                    COUNTER_TYPE_NUMBER_PERCENTILES,
+                    "");
+            }
+            if (dsn_config_get_value_bool(section_name.c_str(),
+                                          "profiler::size.response.server",
+                                          false,
+                                          "whether to profile the size per response")) {
+                s_spec_profilers[i].ptr[RPC_SERVER_SIZE_PER_RESPONSE_IN_BYTES].init_global_counter(
+                    "zion",
+                    "profiler",
+                    (name + std::string(".size.response.server")).c_str(),
+                    COUNTER_TYPE_NUMBER_PERCENTILES,
+                    "");
+            }
         } else if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_RESPONSE) {
             if (dsn_config_get_value_bool(section_name.c_str(),
                                           "profiler::latency.client",
@@ -581,5 +611,6 @@ void profiler::install(service_spec &spec)
 }
 
 profiler::profiler(const char *name) : toollet(name) {}
-}
-}
+
+} // namespace tools
+} // namespace dsn

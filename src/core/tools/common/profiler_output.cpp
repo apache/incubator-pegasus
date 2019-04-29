@@ -56,8 +56,8 @@ struct sort_node
     sort_node() : val(-1.0) {}
 };
 
-extern task_spec_profiler *s_spec_profilers;
-extern counter_info *counter_info_ptr[PREF_COUNTER_COUNT];
+extern std::unique_ptr<task_spec_profiler[]> s_spec_profilers;
+extern counter_info *counter_info_ptr[PERF_COUNTER_COUNT];
 auto profiler_output_data =
     make_unique<profiler_output_data_type>(taskname_width, data_width, call_width);
 
@@ -136,7 +136,7 @@ void profiler_output_infomation_line(std::stringstream &ss,
     }
 
     // Print the data
-    for (int i = 0; i < PREF_COUNTER_COUNT; i++) {
+    for (int i = 0; i < PERF_COUNTER_COUNT; i++) {
         // The middle line, print the data of all counter type
         if (full_data == true) {
             if (s_spec_profilers[task_id].ptr[i].get() == nullptr) {
@@ -167,7 +167,7 @@ void profiler_output_information_table(std::stringstream &ss, const int task_id)
 {
     ss << profiler_output_data->separate_line_info << std::endl;
     ss << "|PROFILE|" << profiler_output_data->view_task_type << "PERCENT|";
-    for (int i = 0; i < PREF_COUNTER_COUNT; i++) {
+    for (int i = 0; i < PERF_COUNTER_COUNT; i++) {
         ss << std::setw(data_width) << counter_info_ptr[i]->title << "|";
     }
     ss << std::endl;

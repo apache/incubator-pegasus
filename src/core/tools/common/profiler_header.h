@@ -24,18 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Header of profiler
- *
- * Revision history:
- *     2015-06-01, zjc95, first version
- *     2015-06-01, zjc95, deleted pdh part
- *     2015-08-11, zjc95, adjusted according to 'profiler_command' and 'profiler_output'
- *     2015-11-24, zjc95, revised the decription
- *
- */
-
 #pragma once
 #include <iomanip>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
@@ -58,12 +46,14 @@ enum perf_counter_ptr_type
     TASK_CANCELLED,
     AIO_LATENCY_NS,
     RPC_SERVER_LATENCY_NS,
+    RPC_SERVER_SIZE_PER_REQUEST_IN_BYTES,
+    RPC_SERVER_SIZE_PER_RESPONSE_IN_BYTES,
     RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,
     RPC_CLIENT_TIMEOUT_THROUGHPUT,
     TASK_IN_QUEUE,
 
-    PREF_COUNTER_COUNT,
-    PREF_COUNTER_INVALID
+    PERF_COUNTER_COUNT,
+    PERF_COUNTER_INVALID
 };
 
 class counter_info
@@ -142,7 +132,7 @@ public:
         tmpss.str("");
 
         tmpss << "+-------+" << namess.str() << "-------+";
-        for (int i = 0; i < PREF_COUNTER_COUNT; i++)
+        for (int i = 0; i < PERF_COUNTER_COUNT; i++)
             tmpss << datass.str();
         separate_line_info = tmpss.str();
         tmpss.clear();
@@ -215,7 +205,7 @@ public:
 
 struct task_spec_profiler
 {
-    perf_counter_wrapper ptr[PREF_COUNTER_COUNT];
+    perf_counter_wrapper ptr[PERF_COUNTER_COUNT];
     bool collect_call_count;
     bool is_profile;
     std::atomic<int64_t> *call_counts;
@@ -230,7 +220,6 @@ struct task_spec_profiler
 };
 
 std::string profiler_output_handler(const std::vector<std::string> &args);
-std::string profiler_js_handler(const std::vector<std::string> &args);
 std::string profiler_data_handler(const std::vector<std::string> &args);
 std::string query_data_handler(const std::vector<std::string> &args);
 
@@ -250,5 +239,6 @@ void profiler_data_top(std::stringstream &ss,
                        const perf_counter_ptr_type counter_type,
                        const dsn_perf_counter_percentile_type_t percentile_type,
                        const int num);
-}
-}
+
+} // namespace tools
+} // namespace dsn

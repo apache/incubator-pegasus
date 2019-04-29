@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     profiler toollet definition
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -70,5 +61,6 @@ public:
     profiler(const char *name);
     virtual void install(service_spec &spec);
 };
-}
-}
+
+} // namespace tools
+} // namespace dsn
