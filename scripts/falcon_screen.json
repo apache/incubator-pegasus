@@ -239,6 +239,26 @@
       "timespan": 86400
     },
     {
+      "title": "P99 Prepare 执行时间（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_PREPARE.latency.exec(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "P99 Prepare 排队时间（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_PREPARE.latency.queue(ns)/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "各节点Replica个数",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
@@ -704,6 +724,19 @@
           "collector*app.pegasus*app.stat.duplicated_remove_qps#${table.name}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.duplicated_multi_put_qps#${table.name}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
           "collector*app.pegasus*app.stat.duplicated_multi_remove_qps#${table.name}/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "各节点 P99 RPC 报文长度",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+        "zion*profiler*RPC_RRDB_RRDB_PUT.size.request.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.size.request.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "zion*profiler*RPC_RRDB_RRDB_GET.size.response.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.size.response.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
