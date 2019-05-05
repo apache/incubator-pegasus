@@ -325,7 +325,7 @@ static command_executor commands[] = {
         "sst_dump",
         "dump sstable dir or files",
         "[--command=check|scan|none|raw] <--file=data_dir_OR_sst_file> "
-        "[--from=user_key] [--to=user_key] [--read_num=num] [--show_properties]",
+        "[--from=user_key] [--to=user_key] [--read_num=num] [--show_properties] [--pegasus_data]",
         sst_dump,
     },
     {

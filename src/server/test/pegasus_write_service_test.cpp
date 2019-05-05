@@ -236,7 +236,7 @@ public:
         rocksdb::Status s = write_impl->_db->Get(
             write_impl->_rd_opts, utils::to_rocksdb_slice(raw_key), &raw_value);
         pegasus_extract_user_data(
-            write_impl->_value_schema_version, std::move(raw_value), user_value);
+            write_impl->_pegasus_data_version, std::move(raw_value), user_value);
         ASSERT_EQ(user_value.to_string(), "value_new");
 
         // write retry
@@ -281,7 +281,7 @@ public:
         set_app_duplicating();
         auto write_impl = _write_svc->_impl.get();
         const_cast<bool &>(write_impl->_verify_timetag) = true;
-        const_cast<uint32_t &>(write_impl->_value_schema_version) = 0;
+        const_cast<uint32_t &>(write_impl->_pegasus_data_version) = 0;
 
         std::string raw_key = "key";
         std::string value = "value";
@@ -329,7 +329,7 @@ public:
             write_impl->_rd_opts, utils::to_rocksdb_slice(raw_key), &raw_value);
 
         uint64_t local_timetag =
-            pegasus_extract_timetag(write_impl->_value_schema_version, raw_value);
+            pegasus_extract_timetag(write_impl->_pegasus_data_version, raw_value);
         return extract_timestamp_from_timetag(local_timetag);
     }
 };

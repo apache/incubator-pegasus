@@ -19,7 +19,7 @@
 
 namespace pegasus {
 
-#define PEGASUS_VALUE_SCHEMA_MAX_VERSION 1u
+#define PEGASUS_DATA_VERSION_MAX 1u
 
 /// Generates timetag in host endian.
 /// \see comment on pegasus_value_generator::generate_value_v1
@@ -45,10 +45,10 @@ inline uint64_t extract_timestamp_from_timetag(uint64_t timetag)
 /// \return expire_ts in host endian
 inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view value)
 {
-    dassert_f(version <= PEGASUS_VALUE_SCHEMA_MAX_VERSION,
-              "value schema version({}) must be <= {}",
+    dassert_f(version <= PEGASUS_DATA_VERSION_MAX,
+              "data version({}) must be <= {}",
               version,
-              PEGASUS_VALUE_SCHEMA_MAX_VERSION);
+              PEGASUS_DATA_VERSION_MAX);
 
     return dsn::data_input(value).read_u32();
 }
@@ -60,10 +60,10 @@ inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view val
 inline void
 pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob &user_data)
 {
-    dassert_f(version <= PEGASUS_VALUE_SCHEMA_MAX_VERSION,
-              "value schema version({}) must be <= {}",
+    dassert_f(version <= PEGASUS_DATA_VERSION_MAX,
+              "data version({}) must be <= {}",
               version,
-              PEGASUS_VALUE_SCHEMA_MAX_VERSION);
+              PEGASUS_DATA_VERSION_MAX);
 
     std::string *s = new std::string(std::move(raw_value));
     dsn::data_input input(*s);
@@ -81,7 +81,7 @@ pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob
 /// Extracts timetag from a v1 value.
 inline uint64_t pegasus_extract_timetag(int version, dsn::string_view value)
 {
-    dassert(version == 1, "value schema version(%d) must be v1", version);
+    dassert(version == 1, "data version(%d) must be v1", version);
 
     dsn::data_input input(value);
     input.skip(sizeof(uint32_t));
@@ -130,17 +130,17 @@ class pegasus_value_generator
 public:
     /// A higher level utility for generating value with given version.
     /// The value schema must be in v0 or v1.
-    rocksdb::SliceParts generate_value(uint32_t value_schema_version,
+    rocksdb::SliceParts generate_value(uint32_t data_version,
                                        dsn::string_view user_data,
                                        uint32_t expire_ts,
                                        uint64_t timetag)
     {
-        if (value_schema_version == 0) {
+        if (data_version == 0) {
             return generate_value_v0(expire_ts, user_data);
-        } else if (value_schema_version == 1) {
+        } else if (data_version == 1) {
             return generate_value_v1(expire_ts, timetag, user_data);
         } else {
-            dfatal_f("unsupported value schema version: {}", value_schema_version);
+            dfatal_f("unsupported value schema version: {}", data_version);
             __builtin_unreachable();
         }
     }

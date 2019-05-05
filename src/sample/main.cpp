@@ -2,8 +2,11 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
+#include <assert.h>
 #include <cstdio>
-#include <pegasus/client.h>
+
+#include "pegasus/client.h"
+
 using namespace pegasus;
 
 int main(int argc, const char *argv[])
@@ -56,6 +59,9 @@ int main(int argc, const char *argv[])
     } else {
         fprintf(stdout, "INFO: get scanner succeed\n");
     }
+
+    assert(scanner != nullptr);
+    pegasus::pegasus_client::pegasus_scanner_wrapper scanner_wrapper(scanner);
     std::string scan_hash_key;
     std::string scan_sort_key;
     std::string scan_value;
