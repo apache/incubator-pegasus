@@ -154,9 +154,9 @@ void pegasus_counter_reporter::update()
         oss << "logging perf counter(name, type, value):" << std::endl;
         oss << std::fixed << std::setprecision(2);
         perf_counters::instance().iterate_snapshot(
-            [&oss](const dsn::perf_counter_ptr &ptr, double val) {
-                oss << "[" << ptr->full_name() << ", " << dsn_counter_type_to_string(ptr->type())
-                    << ", " << val << "]" << std::endl;
+            [&oss](const dsn::perf_counters::counter_snapshot &cs) {
+                oss << "[" << cs.name << ", " << dsn_counter_type_to_string(cs.type) << ", "
+                    << cs.value << "]" << std::endl;
             });
         ddebug("%s", oss.str().c_str());
     }
@@ -168,9 +168,9 @@ void pegasus_counter_reporter::update()
         bool first_append = true;
         _falcon_metric.timestamp = timestamp;
         perf_counters::instance().iterate_snapshot(
-            [&oss, &first_append, this](const dsn::perf_counter_ptr &ptr, double val) {
-                _falcon_metric.metric = ptr->full_name();
-                _falcon_metric.value = val;
+            [&oss, &first_append, this](const dsn::perf_counters::counter_snapshot &cs) {
+                _falcon_metric.metric = cs.name;
+                _falcon_metric.value = cs.value;
                 _falcon_metric.counterType = "GAUGE";
                 if (!first_append)
                     oss << ",";

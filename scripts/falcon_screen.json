@@ -820,6 +820,19 @@
       "graph_type": "a",
       "method": "",
       "timespan": 86400
+    },
+    {
+      "title": "各节点 P99 RPC 报文长度",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+        "zion*profiler*RPC_RRDB_RRDB_PUT.size.request.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.size.request.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "zion*profiler*RPC_RRDB_RRDB_GET.size.response.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus",
+        "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.size.response.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
     }
   ]
 }

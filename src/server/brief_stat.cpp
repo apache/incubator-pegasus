@@ -47,10 +47,10 @@ std::string get_brief_stat()
     oss << std::fixed << std::setprecision(0);
     bool first_item = true;
     dsn::perf_counters::snapshot_iterator iter =
-        [&oss, &first_item](const dsn::perf_counter_ptr &counter, double value) mutable {
+        [&oss, &first_item](const dsn::perf_counters::counter_snapshot &cs) mutable {
             if (!first_item)
                 oss << ", ";
-            oss << s_brief_stat_map.find(counter->full_name())->second << "=" << value;
+            oss << s_brief_stat_map.find(cs.name)->second << "=" << cs.value;
             first_item = false;
         };
     std::vector<bool> match_result;
