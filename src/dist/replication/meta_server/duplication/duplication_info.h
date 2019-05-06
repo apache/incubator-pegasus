@@ -48,16 +48,18 @@ class duplication_info
 {
 public:
     /// \see meta_duplication_service::new_dup_from_init
+    /// \see duplication_info::decode_from_blob
     duplication_info(dupid_t dupid,
                      int32_t appid,
                      int32_t partition_count,
+                     uint64_t create_now_ms,
                      std::string remote_cluster_name,
                      std::string meta_store_path)
         : id(dupid),
           app_id(appid),
           remote(std::move(remote_cluster_name)),
           store_path(std::move(meta_store_path)),
-          create_timestamp_ms(dsn_now_ms())
+          create_timestamp_ms(create_now_ms)
     {
         for (int i = 0; i < partition_count; i++) {
             _progress[i] = {};
@@ -153,6 +155,7 @@ public:
 
 private:
     friend class duplication_info_test;
+    friend class meta_duplication_service_test;
 
     error_code do_alter_status(duplication_status::type to_status);
 

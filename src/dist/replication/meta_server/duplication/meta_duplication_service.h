@@ -47,10 +47,16 @@ public:
 
     void add_duplication(duplication_add_rpc rpc);
 
+    void change_duplication_status(duplication_status_change_rpc rpc);
+
 private:
     void do_add_duplication(std::shared_ptr<app_state> &app,
                             duplication_info_s_ptr &dup,
                             duplication_add_rpc &rpc);
+
+    void do_change_duplication_status(std::shared_ptr<app_state> &app,
+                                      duplication_info_s_ptr &dup,
+                                      duplication_status_change_rpc &rpc);
 
     // Get zk path for duplication.
     std::string get_duplication_path(const app_state &app) const
