@@ -23,7 +23,7 @@ Pegasus can be deployed in standalone mode which runs all the pegasus jobs as di
 
 Please notice that Pegasus can not be built until the following packages meet the version requirements:
 
-* Compiler: the gcc version must >= 4.8. If you use other compilers, please make sure that C++14 is supported.
+* Compiler: the gcc version must >= 4.8 && < 8. If you use other compilers, please make sure that C++14 is supported.
 * CMake: must >= 2.8.12
 * boost: must >= 1.58
 
@@ -32,12 +32,12 @@ Please notice that Pegasus can not be built until the following packages meet th
 For Ubuntu:
 
 ```
-sudo apt-get install build-essential cmake libboost-all-dev libaio-dev libsnappy-dev libbz2-dev libgflags-dev patch
+sudo apt-get install build-essential cmake libboost-all-dev libaio-dev libsnappy-dev libbz2-dev libgflags-dev patch unzip automake libssl-dev liblz4-dev libzstd-dev
 ```
 
 For CentOS:
 ```
-yum -y install cmake boost-devel libaio-devel snappy-devel bzip2-devel patch
+yum -y install cmake boost-devel libaio-devel snappy-devel bzip2-devel patch unzip automake openssl-devel lz4-devel zstd
 ```
 
 Please make sure you install the proper version of GCC, CMake and Boost.
@@ -68,6 +68,13 @@ Generally, the build process of Pegasus consists of 4 parts:
 4. build pegasus's KV-layer in "src".
 
 **Please make sure the thirdparty are successfully downloaded and built before subsequent parts**.
+
+####  Common Build Problems
+* fatal error: <some_thirdparty_header_files>.h: No such file or directory
+
+This means that Third Party Building did not complete correctly and did not generate the header files.
+
+Rerun `./run.sh build` with `--clear_thirdparty`. 
 
 ## Run in standalone mode
 
