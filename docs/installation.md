@@ -32,12 +32,23 @@ Please notice that Pegasus can not be built until the following packages meet th
 For Ubuntu:
 
 ```
-sudo apt-get install build-essential cmake libboost-all-dev libaio-dev libsnappy-dev libbz2-dev libgflags-dev patch unzip automake libssl-dev liblz4-dev libzstd-dev
+sudo apt-get install build-essential cmake libboost-all-dev libaio-dev libsnappy-dev libbz2-dev libtool libgflags-dev zlib1g zlib1g.dev patch unzip automake libssl-dev liblz4-dev libzstd-dev
 ```
-
+To start onebox:
+```
+sudo apt-get install default-jre netcat
+```
 For CentOS:
 ```
-yum -y install cmake boost-devel libaio-devel snappy-devel bzip2-devel patch unzip automake openssl-devel lz4-devel zstd
+yum -y install cmake boost-devel libaio-devel snappy-devel bzip2-devel lz4-devel automake libtool patch unzip openssl-devel python-devel libzstd-devel
+```
+Zstd may not available in the default EPEL. To install the EPEL repository on CentOS-7/6, simply type:
+```
+yum install epel-release
+```
+To start onebox:
+```
+yum install java-1.8.0-openjdk nmap-ncat.x86_64
 ```
 
 Please make sure you install the proper version of GCC, CMake and Boost.
@@ -74,7 +85,7 @@ Generally, the build process of Pegasus consists of 4 parts:
 
 This means that Third Party Building did not complete correctly and did not generate the header files.
 
-Rerun `./run.sh build` with `--clear_thirdparty`. 
+Rerun `./run.sh build` with `--clear_thirdparty`.
 
 ## Run in standalone mode
 
