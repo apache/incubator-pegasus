@@ -2231,34 +2231,34 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         }
     }
     _pfc_rdb_sst_count->set(val);
-    ddebug_replica("_pfc_rdb_sst_count: {}", val);
+    dinfo_replica("_pfc_rdb_sst_count: {}", val);
 
     if (_db->GetProperty(rocksdb::DB::Properties::kTotalSstFilesSize, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         static uint64_t bytes_per_mb = 1U << 20U;
         _pfc_rdb_sst_size->set(val / bytes_per_mb);
-        ddebug_replica("_pfc_rdb_sst_size: {} bytes", val);
+        dinfo_replica("_pfc_rdb_sst_size: {} bytes", val);
     }
 
     uint64_t block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
     _pfc_rdb_block_cache_hit_count->set(block_cache_hit);
-    ddebug_replica("_pfc_rdb_block_cache_hit_count: {}", block_cache_hit);
+    dinfo_replica("_pfc_rdb_block_cache_hit_count: {}", block_cache_hit);
 
     uint64_t block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
     uint64_t block_cache_total = block_cache_hit + block_cache_miss;
     _pfc_rdb_block_cache_total_count->set(block_cache_total);
-    ddebug_replica("_pfc_rdb_block_cache_total_count: {}", block_cache_total);
+    dinfo_replica("_pfc_rdb_block_cache_total_count: {}", block_cache_total);
 
     if (_db->GetProperty(rocksdb::DB::Properties::kEstimateTableReadersMem, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         _pfc_rdb_index_and_filter_blocks_mem_usage->set(val);
-        ddebug_replica("_pfc_rdb_index_and_filter_blocks_mem_usage: {} bytes", val);
+        dinfo_replica("_pfc_rdb_index_and_filter_blocks_mem_usage: {} bytes", val);
     }
 
     if (_db->GetProperty(rocksdb::DB::Properties::kCurSizeAllMemTables, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         _pfc_rdb_memtable_mem_usage->set(val);
-        ddebug_replica("_pfc_rdb_memtable_mem_usage: {} bytes", val);
+        dinfo_replica("_pfc_rdb_memtable_mem_usage: {} bytes", val);
     }
 }
 
@@ -2267,9 +2267,9 @@ void pegasus_server_impl::update_server_rocksdb_statistics()
     if (_block_cache) {
         uint64_t val = _block_cache->GetUsage();
         _pfc_rdb_block_cache_mem_usage->set(val);
-        ddebug_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
+        dinfo_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
     } else {
-        ddebug("_pfc_rdb_block_cache_mem_usage: 0 bytes because block cache is diabled");
+        dinfo("_pfc_rdb_block_cache_mem_usage: 0 bytes because block cache is disabled");
     }
 }
 
