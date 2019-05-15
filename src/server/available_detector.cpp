@@ -61,8 +61,13 @@ available_detector::available_detector()
                                               1000, // unit is millisecond,default is 1s = 1000ms
                                               "available detect timeout");
 
-    _result_writer = dsn::make_unique<result_writer>(_cluster_name, _app_name);
-    _client = _result_writer->get_client();
+    // initialize the _client.
+    if (!pegasus_client_factory::initialize(nullptr)) {
+        dassert(false, "Initialize the pegasus client failed");
+    }
+    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _app_name.c_str());
+    dassert(_client != nullptr, "Initialize the _client failed");
+    _result_writer = dsn::make_unique<result_writer>(_client);
     _ddl_client.reset(new replication_ddl_client(_meta_list));
     dassert(_ddl_client != nullptr, "Initialize the _ddl_client failed");
     if (!_alert_email_address.empty()) {
@@ -120,7 +125,8 @@ available_detector::available_detector()
 available_detector::~available_detector()
 {
     stop();
-    _tracker.cancel_outstanding_tasks();
+    // don't delete _client, just set _client to nullptr.
+    _client = nullptr;
 }
 
 void available_detector::start()
@@ -134,19 +140,7 @@ void available_detector::start()
     report_availability_info();
 }
 
-void available_detector::stop()
-{
-    for (auto &tptr : _detect_tasks) {
-        if (tptr != nullptr)
-            tptr->cancel(true);
-    }
-
-    if (_detect_timer != nullptr)
-        _detect_timer->cancel(true);
-
-    if (_report_task != nullptr)
-        _report_task->cancel(true);
-}
+void available_detector::stop() { _tracker.cancel_outstanding_tasks(); }
 
 void available_detector::detect_available()
 {

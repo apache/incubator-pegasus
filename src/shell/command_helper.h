@@ -771,7 +771,7 @@ struct node_capacity_unit_stat
         writer.StartObject();
         for (auto elem : cu_value_by_app) {
             auto cu_tuple = elem.second;
-            if (cu_tuple.first < 1e-6 && cu_tuple.second < 1e-6)
+            if (cu_tuple.first == 0 && cu_tuple.second == 0)
                 continue;
             char tuple_str[50];
             sprintf(tuple_str, "[%ld,%ld]", cu_tuple.first, cu_tuple.second);
@@ -829,14 +829,16 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             std::string app_name = app_name_map[app_id];
             if (counter_name == "recent.read.cu") {
                 if (nodes_stat[i].cu_value_by_app.find(app_name) ==
-                    nodes_stat[i].cu_value_by_app.end())
+                    nodes_stat[i].cu_value_by_app.end()) {
                     nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0, 0));
+                }
                 nodes_stat[i].cu_value_by_app[app_name].first += (int64_t)m.value;
             }
             if (counter_name == "recent.write.cu") {
                 if (nodes_stat[i].cu_value_by_app.find(app_name) ==
-                    nodes_stat[i].cu_value_by_app.end())
+                    nodes_stat[i].cu_value_by_app.end()) {
                     nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0, 0));
+                }
                 nodes_stat[i].cu_value_by_app[app_name].second += (int64_t)m.value;
             }
         }

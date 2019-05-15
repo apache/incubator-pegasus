@@ -21,8 +21,8 @@ public:
     void add_write(int64_t data_len);
 
 private:
-    int64_t _read_capacity_unit_size;
-    int64_t _write_capacity_unit_size;
+    uint64_t _read_capacity_unit_size;
+    uint64_t _write_capacity_unit_size;
 
     ::dsn::perf_counter_wrapper _pfc_recent_read_cu;
     ::dsn::perf_counter_wrapper _pfc_recent_write_cu;

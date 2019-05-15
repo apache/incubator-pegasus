@@ -51,7 +51,13 @@ info_collector::info_collector()
     _cu_stat_app = dsn_config_get_value_string(
         "pegasus.collector", "cu_stat_app", "", "app for recording capacity unit info");
     dassert(!_cu_stat_app.empty(), "");
-    _result_writer = dsn::make_unique<result_writer>(_cluster_name, _cu_stat_app);
+    // initialize the _client.
+    if (!pegasus_client_factory::initialize(nullptr)) {
+        dassert(false, "Initialize the pegasus client failed");
+    }
+    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _cu_stat_app.c_str());
+    dassert(_client != nullptr, "Initialize the client failed");
+    _result_writer = dsn::make_unique<result_writer>(_client);
 
     _cu_fetch_interval_seconds =
         (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
@@ -63,10 +69,11 @@ info_collector::info_collector()
 info_collector::~info_collector()
 {
     stop();
-    _tracker.cancel_outstanding_tasks();
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
+    // don't delete _client, just set _client to nullptr.
+    _client = nullptr;
 }
 
 void info_collector::start()
@@ -88,14 +95,7 @@ void info_collector::start()
                                       std::chrono::minutes(1));
 }
 
-void info_collector::stop()
-{
-    if (_app_stat_timer_task != nullptr)
-        _app_stat_timer_task->cancel(true);
-
-    if (_cu_stat_timer_task != nullptr)
-        _cu_stat_timer_task->cancel(true);
-}
+void info_collector::stop() { _tracker.cancel_outstanding_tasks(); }
 
 void info_collector::on_app_stat()
 {
@@ -236,12 +236,12 @@ void info_collector::on_capacity_unit_stat()
     ddebug("start to stat capacity unit");
     std::vector<node_capacity_unit_stat> nodes_stat;
     if (!get_capacity_unit_stat(&_shell_context, nodes_stat)) {
-        derror("call get_capacity_unit_stat() failed");
+        derror("get capacity unit stat failed");
         return;
     }
     for (auto elem : nodes_stat) {
         if (!has_capacity_unit_updated(elem.node_address, elem.timestamp)) {
-            dinfo("recent read/write capacity unit value of node %s is not updated",
+            dinfo("recent read/write capacity unit value of node %s has not updated",
                   elem.node_address.c_str());
             continue;
         }

@@ -9,16 +9,7 @@ namespace server {
 
 DEFINE_TASK_CODE(LPC_WRITE_RESULT, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
-result_writer::result_writer(const std::string &cluster_name, const std::string app_name)
-    : _cluster_name(cluster_name), _app_name(app_name), _client(nullptr)
-{
-    // initialize the _client.
-    if (!pegasus_client_factory::initialize(nullptr)) {
-        dassert(false, "Initialize the pegasus client failed");
-    }
-    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _app_name.c_str());
-    dassert(_client != nullptr, "Initialize the _client failed");
-}
+result_writer::result_writer(pegasus_client *client) : _client(client) {}
 
 result_writer::~result_writer()
 {
@@ -26,8 +17,6 @@ result_writer::~result_writer()
     // don't delete _client, just set _client to nullptr.
     _client = nullptr;
 }
-
-pegasus_client *result_writer::get_client() { return _client; }
 
 void result_writer::set_result(const std::string &hash_key,
                                const std::string &sort_key,

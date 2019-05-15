@@ -80,6 +80,8 @@ private:
 
     // app for recording read/write cu.
     std::string _cu_stat_app;
+    // client to access server.
+    pegasus_client *_client;
     // for writing cu stat result
     std::unique_ptr<result_writer> _result_writer;
     uint32_t _cu_fetch_interval_seconds;

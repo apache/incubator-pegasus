@@ -10,15 +10,15 @@ namespace server {
 capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_base(r)
 {
     _read_capacity_unit_size =
-        dsn_config_get_value_int64("pegasus.server",
-                                   "perf_counter_read_capacity_unit_size",
-                                   4 * 1024,
-                                   "capacity unit size of read requests, default 4KB");
+        dsn_config_get_value_uint64("pegasus.server",
+                                    "perf_counter_read_capacity_unit_size",
+                                    4 * 1024,
+                                    "capacity unit size of read requests, default 4KB");
     _write_capacity_unit_size =
-        dsn_config_get_value_int64("pegasus.server",
-                                   "perf_counter_write_capacity_unit_size",
-                                   4 * 1024,
-                                   "capacity unit size of write requests, default 4KB");
+        dsn_config_get_value_uint64("pegasus.server",
+                                    "perf_counter_write_capacity_unit_size",
+                                    4 * 1024,
+                                    "capacity unit size of write requests, default 4KB");
 
     std::string str_gpid = r->get_gpid().to_string();
     char name[256];
