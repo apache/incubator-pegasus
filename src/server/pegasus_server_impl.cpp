@@ -2470,7 +2470,7 @@ std::string pegasus_server_impl::compression_type_to_str(rocksdb::CompressionTyp
 bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
 {
     if (usage_scenario == _usage_scenario)
-        return true;
+        return false;
     std::unordered_map<std::string, std::string> new_options;
     if (usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_NORMAL ||
         usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE) {
