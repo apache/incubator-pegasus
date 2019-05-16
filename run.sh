@@ -414,7 +414,11 @@ function run_start_zk()
         esac
         shift
     done
+    
     INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" ./scripts/start_zk.sh
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
 }
 
 #####################
@@ -580,6 +584,7 @@ function run_start_onebox()
         exit 1
     fi
     ln -s -f ${SERVER_PATH}/pegasus_server
+
     run_start_zk
 
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
