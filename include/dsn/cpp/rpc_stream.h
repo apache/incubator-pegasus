@@ -73,20 +73,8 @@ typedef ::dsn::ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
 class rpc_write_stream : public binary_writer
 {
 public:
-    // for response
     rpc_write_stream(message_ex *msg)
         : _msg(msg), _last_write_next_committed(true), _last_write_next_total_size(0)
-    {
-    }
-
-    // for request
-    rpc_write_stream(task_code code,
-                     int timeout_ms = 0,
-                     int thread_hash = 0,
-                     uint64_t partition_hash = 0)
-        : _msg(message_ex::create_request(code, timeout_ms, thread_hash, partition_hash)),
-          _last_write_next_committed(true),
-          _last_write_next_total_size(0)
     {
     }
 

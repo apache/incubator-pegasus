@@ -144,6 +144,9 @@ char *message_reader::read_buffer_ptr(unsigned int read_next)
         unsigned int sz =
             (read_next + _buffer_occupied > _buffer_block_size ? read_next + _buffer_occupied
                                                                : _buffer_block_size);
+        // TODO(wutao1): make it a buffer queue like what sofa-pbrpc does
+        //               (https://github.com/baidu/sofa-pbrpc/blob/master/src/sofa/pbrpc/buffer.h)
+        //               to reduce memory copy.
         _buffer.assign(dsn::utils::make_shared_array<char>(sz), 0, sz);
         _buffer_occupied = 0;
 

@@ -24,16 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     message parser base prototype, to support different kinds
- *     of message headers (so as to interact among them)
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/utility/ports.h>
@@ -47,6 +37,9 @@
 #include <vector>
 
 namespace dsn {
+
+// TODO(wutao1): call it read_buffer, and make it an utility
+// Not-Thread-Safe.
 class message_reader
 {
 public:
@@ -54,7 +47,6 @@ public:
         : _buffer_occupied(0), _buffer_block_size(buffer_block_size)
     {
     }
-    ~message_reader() {}
 
     // called before read to extend read buffer
     DSN_API char *read_buffer_ptr(unsigned int read_next);
@@ -68,10 +60,20 @@ public:
     // discard read data
     void truncate_read() { _buffer_occupied = 0; }
 
+    // mark the tailing `sz` of bytes are consumed and discardable.
+    void consume_buffer(size_t sz)
+    {
+        _buffer = _buffer.range(sz);
+        _buffer_occupied -= sz;
+    }
+
+    blob buffer() const { return _buffer.range(0, _buffer_occupied); }
+
 public:
-    dsn::blob _buffer;
+    // TODO(wutao1): make them private members
+    blob _buffer;
     unsigned int _buffer_occupied;
-    unsigned int _buffer_block_size;
+    const unsigned int _buffer_block_size;
 };
 
 class message_parser;
@@ -130,4 +132,5 @@ public:
     get_header_type(const char *bytes); // buffer size >= sizeof(uint32_t)
     DSN_API static std::string get_debug_string(const char *bytes);
 };
-}
+
+} // namespace dsn
