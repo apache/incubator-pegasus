@@ -24,15 +24,6 @@
 * THE SOFTWARE.
 */
 
-/*
-* Description:
-*     message parser for thrift request
-*
-* Revision history:
-*     Jun. 2016, Zuoyan Qin, first version
-*     xxxx-xx-xx, author, fix bug about xxx
-*/
-
 #pragma once
 
 #include <dsn/tool-api/message_parser.h>
@@ -57,28 +48,31 @@ struct thrift_message_header
     //------------- sizeof(thrift_message_header) = 48 ----------//
 };
 
-// response format:
-//     <total_len(int32)> <thrift_string> <thrift_message_begin> <body_data(bytes)>
-//     <thrift_message_end>
-
 #define THRIFT_HDR_SIG (*(uint32_t *)"THFT")
 
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
 
-class thrift_message_parser : public message_parser
+// Parses request sent in rDSN thrift protocol, which is
+// mainly used by our Java/GoLang/NodeJs/Python clients,
+// and encodes response to them.
+class thrift_message_parser final : public message_parser
 {
 public:
     thrift_message_parser() : _header_parsed(false) {}
-    virtual ~thrift_message_parser() {}
 
-    virtual void reset() override;
+    ~thrift_message_parser() {}
 
-    virtual message_ex *get_message_on_receive(message_reader *reader,
-                                               /*out*/ int &read_next) override;
+    void reset() override;
 
-    virtual void prepare_on_send(message_ex *msg) override;
+    message_ex *get_message_on_receive(message_reader *reader,
+                                       /*out*/ int &read_next) override;
 
-    virtual int get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers) override;
+    // response format:
+    //     <total_len(int32)> <thrift_string> <thrift_message_begin> <body_data(bytes)>
+    //     <thrift_message_end>
+    void prepare_on_send(message_ex *msg) override;
+
+    int get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers) override;
 
 public:
     static void read_thrift_header(const char *buffer, /*out*/ thrift_message_header &header);
@@ -91,4 +85,5 @@ private:
     thrift_message_header _thrift_header;
     bool _header_parsed;
 };
-}
+
+} // namespace dsn

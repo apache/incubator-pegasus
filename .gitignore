@@ -2,6 +2,7 @@
 .kdev4/
 .zk_install/
 .idea
+.vscode/
 
 gcov_report/
 bin/Linux/thrift
