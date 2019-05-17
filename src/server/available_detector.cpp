@@ -60,7 +60,6 @@ available_detector::available_detector()
                                               "available_detect_timeout",
                                               1000, // unit is millisecond,default is 1s = 1000ms
                                               "available detect timeout");
-
     // initialize the _client.
     if (!pegasus_client_factory::initialize(nullptr)) {
         dassert(false, "Initialize the pegasus client failed");
