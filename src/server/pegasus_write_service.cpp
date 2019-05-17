@@ -9,7 +9,10 @@ namespace pegasus {
 namespace server {
 
 pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
-    : _impl(new impl(server)), _batch_start_time(0), _cu_calculator(server->_cu_calculator.get())
+    : _server(server),
+      _impl(new impl(server)),
+      _batch_start_time(0),
+      _cu_calculator(server->_cu_calculator.get())
 {
     std::string str_gpid = fmt::format("{}", server->get_gpid());
 
@@ -105,12 +108,8 @@ int pegasus_write_service::multi_put(int64_t decree,
     _pfc_multi_put_qps->increment();
     int err = _impl->multi_put(decree, update, resp);
 
-    if (resp.error == rocksdb::Status::kOk) {
-        int64_t write_size = 0;
-        for (auto &kv : update.kvs) {
-            write_size += kv.key.size() + kv.value.size();
-        }
-        _cu_calculator->add_write(write_size);
+    if (_server->is_primary()) {
+        _cu_calculator->multi_put_add_write(resp.error, update.kvs);
     }
 
     _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
@@ -125,12 +124,8 @@ int pegasus_write_service::multi_remove(int64_t decree,
     _pfc_multi_remove_qps->increment();
     int err = _impl->multi_remove(decree, update, resp);
 
-    if (resp.error == rocksdb::Status::kOk) {
-        int64_t write_size = 0;
-        for (auto &sort_key : update.sort_keys) {
-            write_size += sort_key.size();
-        }
-        _cu_calculator->add_write(write_size);
+    if (_server->is_primary()) {
+        _cu_calculator->multi_remove_add_write(resp.error, update.sort_keys);
     }
 
     _pfc_multi_remove_latency->set(dsn_now_ns() - start_time);
@@ -145,11 +140,8 @@ int pegasus_write_service::incr(int64_t decree,
     _pfc_incr_qps->increment();
     int err = _impl->incr(decree, update, resp);
 
-    if (resp.error == rocksdb::Status::kOk) {
-        _cu_calculator->add_read(0);
-        _cu_calculator->add_write(0);
-    } else if (resp.error == rocksdb::Status::kInvalidArgument) {
-        _cu_calculator->add_read(0);
+    if (_server->is_primary()) {
+        _cu_calculator->add_cu(resp.error, 1, 1);
     }
 
     _pfc_incr_latency->set(dsn_now_ns() - start_time);
@@ -164,12 +156,8 @@ int pegasus_write_service::check_and_set(int64_t decree,
     _pfc_check_and_set_qps->increment();
     int err = _impl->check_and_set(decree, update, resp);
 
-    if (resp.error == rocksdb::Status::kOk) {
-        _cu_calculator->add_read(0);
-        _cu_calculator->add_write(update.set_value.size());
-    } else if (resp.error == rocksdb::Status::kInvalidArgument ||
-               resp.error == rocksdb::Status::kTryAgain) {
-        _cu_calculator->add_read(0);
+    if (_server->is_primary()) {
+        _cu_calculator->add_cu(resp.error, 1, update.set_value.size());
     }
 
     _pfc_check_and_set_latency->set(dsn_now_ns() - start_time);
@@ -184,16 +172,8 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
     _pfc_check_and_mutate_qps->increment();
     int err = _impl->check_and_mutate(decree, update, resp);
 
-    if (resp.error == rocksdb::Status::kOk) {
-        _cu_calculator->add_read(0);
-        int64_t write_size = 0;
-        for (auto &m : update.mutate_list) {
-            write_size += m.sort_key.size() + m.value.size();
-        }
-        _cu_calculator->add_write(write_size);
-    } else if (resp.error == rocksdb::Status::kInvalidArgument ||
-               resp.error == rocksdb::Status::kTryAgain) {
-        _cu_calculator->add_read(0);
+    if (_server->is_primary()) {
+        _cu_calculator->cam_add_cu(resp.error, update.mutate_list);
     }
 
     _pfc_check_and_mutate_latency->set(dsn_now_ns() - start_time);
@@ -218,8 +198,8 @@ int pegasus_write_service::batch_put(int64_t decree,
     _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
     int err = _impl->batch_put(decree, update, resp);
 
-    if (resp.error == rocksdb::Status::kOk) {
-        _cu_calculator->add_write(update.key.size() + update.value.size());
+    if (_server->is_primary()) {
+        _cu_calculator->add_cu(resp.error, 0, update.key.size() + update.value.size());
     }
 
     return err;
@@ -235,8 +215,8 @@ int pegasus_write_service::batch_remove(int64_t decree,
     _batch_latency_perfcounters.push_back(_pfc_remove_latency.get());
     int err = _impl->batch_remove(decree, key, resp);
 
-    if (resp.error == rocksdb::Status::kOk) {
-        _cu_calculator->add_write(key.size());
+    if (_server->is_primary()) {
+        _cu_calculator->add_cu(resp.error, 0, key.size());
     }
 
     return err;

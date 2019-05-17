@@ -607,10 +607,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         pegasus_extract_user_data(_pegasus_data_version, std::move(value), resp.value);
     }
 
-    if (resp.error == rocksdb::Status::kOk || resp.error == rocksdb::Status::kNotFound) {
-        _cu_calculator->add_read(resp.value.size());
-    }
-
+    _cu_calculator->add_cu(resp.error, resp.value.size(), 0);
     _pfc_get_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);
@@ -983,14 +980,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    if (resp.error == rocksdb::Status::kOk || resp.error == rocksdb::Status::kIncomplete) {
-        int64_t data_size = 0;
-        for (auto &kv : resp.kvs) {
-            data_size += kv.key.size() + kv.value.size();
-        }
-        _cu_calculator->add_read(data_size);
-    }
-
+    _cu_calculator->batched_add_read(resp.error, resp.kvs);
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);
@@ -1055,10 +1045,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
         resp.count = 0;
     }
 
-    if (resp.error == rocksdb::Status::kOk) {
-        _cu_calculator->add_read(0);
-    }
-
+    _cu_calculator->add_cu(resp.error, 1, 0);
     reply(resp);
 }
 
@@ -1120,9 +1107,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
         }
     }
 
-    if (resp.error == rocksdb::Status::kOk || resp.error == rocksdb::Status::kNotFound) {
-        _cu_calculator->add_read(0);
-    }
+    _cu_calculator->add_cu(resp.error, 1, 0);
 
     reply(resp);
 }
@@ -1194,7 +1179,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                   request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
-        _cu_calculator->add_read(0);
+        _cu_calculator->add_cu(resp.error, 1, 0);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
@@ -1312,14 +1297,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    if (resp.error == rocksdb::Status::kOk) {
-        int64_t data_size = 0;
-        for (auto &kv : resp.kvs) {
-            data_size += kv.key.size() + kv.value.size();
-        }
-        _cu_calculator->add_read(data_size);
-    }
-
+    _cu_calculator->batched_add_read(resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);
@@ -1434,14 +1412,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         resp.error = rocksdb::Status::Code::kNotFound;
     }
 
-    if (resp.error == rocksdb::Status::kOk) {
-        int64_t data_size = 0;
-        for (auto &kv : resp.kvs) {
-            data_size += kv.key.size() + kv.value.size();
-        }
-        _cu_calculator->add_read(data_size);
-    }
-
+    _cu_calculator->batched_add_read(resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);

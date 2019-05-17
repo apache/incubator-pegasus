@@ -674,7 +674,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     } else {
         sprintf(tmp, ".*@%d\\..*", app_info->app_id);
     }
-    command.arguments.push_back(tmp);
+    command.arguments.emplace_back(tmp);
     std::vector<std::pair<bool, std::string>> results;
     call_remote_command(sc, nodes, command, results);
 
@@ -717,7 +717,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     } else {
         rows.resize(app_info->partition_count);
         for (int i = 0; i < app_info->partition_count; i++)
-            rows[i].row_name = boost::lexical_cast<std::string>(i);
+            rows[i].row_name = std::to_string(i);
         int32_t app_id = 0;
         int32_t partition_count = 0;
         std::vector<dsn::partition_configuration> partitions;
@@ -769,7 +769,7 @@ struct node_capacity_unit_stat
         rapidjson::OStreamWrapper wrapper(out);
         dsn::json::JsonWriter writer(wrapper);
         writer.StartObject();
-        for (auto elem : cu_value_by_app) {
+        for (const auto &elem : cu_value_by_app) {
             auto cu_tuple = elem.second;
             if (cu_tuple.first == 0 && cu_tuple.second == 0)
                 continue;
@@ -790,9 +790,6 @@ inline bool get_capacity_unit_stat(shell_context *sc,
     std::vector<node_desc> nodes;
     if (!get_apps_and_nodes(sc, apps, nodes))
         return false;
-    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
-    if (!get_app_partitions(sc, apps, app_partitions))
-        return false;
     std::map<int32_t, std::string> app_name_map;
     for (auto elem : apps)
         app_name_map.emplace(elem.app_id, elem.app_name);
@@ -801,7 +798,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
     command.cmd = "perf-counters";
     char tmp[256];
     sprintf(tmp, ".*\\*recent\\..*\\.cu@.*");
-    command.arguments.push_back(tmp);
+    command.arguments.emplace_back(tmp);
     std::vector<std::pair<bool, std::string>> results;
     call_remote_command(sc, nodes, command, results);
 
@@ -819,11 +816,6 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             bool parse_ret =
                 parse_app_pegasus_perf_counter_name(m.name, app_id, partition_index, counter_name);
             dassert(parse_ret, "name = %s", m.name.c_str());
-            auto find = app_partitions.find(app_id);
-            if (find == app_partitions.end())
-                continue;
-            if (find->second[partition_index].primary != node_addr)
-                continue;
             if (app_name_map.find(app_id) == app_name_map.end())
                 continue;
             std::string app_name = app_name_map[app_id];
