@@ -112,6 +112,8 @@ public:
 
     virtual ~replication_app_base() {}
 
+    bool is_primary() const;
+
     //
     // Open the app.
     //

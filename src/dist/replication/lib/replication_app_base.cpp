@@ -321,6 +321,11 @@ replication_app_base::replication_app_base(replica *replica)
     install_perf_counters();
 }
 
+bool replication_app_base::is_primary() const
+{
+    return _replica->status() == partition_status::PS_PRIMARY;
+}
+
 void replication_app_base::install_perf_counters()
 {
     // TODO: add custom perfcounters for replication_app_base
