@@ -50,24 +50,24 @@ void capacity_unit_calculator::add_write_cu(int64_t write_data_size)
     _pfc_recent_write_cu->add(write_cu);
 }
 
-void capacity_unit_calculator::add_cu(int32_t status,
-                                      int64_t read_data_size,
-                                      int64_t write_data_size)
+void capacity_unit_calculator::add_get_cu(int32_t status, const dsn::blob &value)
 {
     if (status == rocksdb::Status::kOk) {
-        add_read_cu(read_data_size);
-        add_write_cu(write_data_size);
-    } else if (status == rocksdb::Status::kNotFound ||
-               status == rocksdb::Status::kInvalidArgument ||
-               status == rocksdb::Status::kTryAgain) {
+        add_read_cu(value.size());
+    } else if (status == rocksdb::Status::kNotFound) {
         add_read_cu(1);
     }
 }
 
-void capacity_unit_calculator::batched_add_read(int32_t status,
-                                                std::vector<::dsn::apps::key_value> kvs)
+void capacity_unit_calculator::add_multi_get_cu(int32_t status,
+                                                const std::vector<::dsn::apps::key_value> kvs)
 {
-    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete) {
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
+        status != rocksdb::Status::kIncomplete && status != rocksdb::Status::kInvalidArgument) {
+        return;
+    }
+    if (kvs.empty()) {
+        add_read_cu(1);
         return;
     }
     int64_t data_size = 0;
@@ -77,10 +77,62 @@ void capacity_unit_calculator::batched_add_read(int32_t status,
     add_read_cu(data_size);
 }
 
-void capacity_unit_calculator::multi_put_add_write(int32_t status,
-                                                   std::vector<::dsn::apps::key_value> kvs)
+void capacity_unit_calculator::add_scan_cu(int32_t status,
+                                           const std::vector<::dsn::apps::key_value> kvs)
+{
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
+        status != rocksdb::Status::kInvalidArgument) {
+        return;
+    }
+    if (kvs.empty()) {
+        add_read_cu(1);
+        return;
+    }
+    int64_t data_size = 0;
+    for (const auto &kv : kvs) {
+        data_size += kv.key.size() + kv.value.size();
+    }
+    add_read_cu(data_size);
+}
+
+void capacity_unit_calculator::add_sortkey_count_cu(int32_t status)
 {
     if (status != rocksdb::Status::kOk) {
+        return;
+    }
+    add_read_cu(1);
+}
+
+void capacity_unit_calculator::add_ttl_cu(int32_t status)
+{
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
+        return;
+    }
+    add_read_cu(1);
+}
+
+void capacity_unit_calculator::add_put_cu(int32_t status,
+                                          const dsn::blob &key,
+                                          const dsn::blob &value)
+{
+    if (status != rocksdb::Status::kOk) {
+        return;
+    }
+    add_write_cu(key.size() + value.size());
+}
+
+void capacity_unit_calculator::add_remove_cu(int32_t status, const dsn::blob &key)
+{
+    if (status == rocksdb::Status::kOk) {
+        return;
+    }
+    add_write_cu(key.size());
+}
+
+void capacity_unit_calculator::add_multi_put_cu(int32_t status,
+                                                const std::vector<::dsn::apps::key_value> &kvs)
+{
+    if (status == rocksdb::Status::kOk) {
         return;
     }
     int64_t data_size = 0;
@@ -90,10 +142,10 @@ void capacity_unit_calculator::multi_put_add_write(int32_t status,
     add_write_cu(data_size);
 }
 
-void capacity_unit_calculator::multi_remove_add_write(int32_t status,
-                                                      std::vector<::dsn::blob> sort_keys)
+void capacity_unit_calculator::add_multi_remove_cu(int32_t status,
+                                                   const std::vector<::dsn::blob> &sort_keys)
 {
-    if (status != rocksdb::Status::kOk) {
+    if (status == rocksdb::Status::kOk) {
         return;
     }
     int64_t data_size = 0;
@@ -103,14 +155,43 @@ void capacity_unit_calculator::multi_remove_add_write(int32_t status,
     add_write_cu(data_size);
 }
 
-void capacity_unit_calculator::cam_add_cu(int32_t status,
-                                          std::vector<::dsn::apps::mutate> mutate_list)
+void capacity_unit_calculator::add_incr_cu(int32_t status)
 {
-    int64_t write_data_size = 0;
-    for (const auto &m : mutate_list) {
-        write_data_size += m.sort_key.size() + m.value.size();
+    if (status == rocksdb::Status::kOk) {
+        add_read_cu(1);
+        add_write_cu(1);
+    } else if (status == rocksdb::Status::kInvalidArgument) {
+        add_read_cu(1);
     }
-    add_cu(status, 1, write_data_size);
+}
+
+void capacity_unit_calculator::add_check_and_set_cu(int32_t status,
+                                                    const dsn::blob &key,
+                                                    const dsn::blob &value)
+{
+    if (status == rocksdb::Status::kOk) {
+        add_read_cu(1);
+        add_write_cu(key.size() + value.size());
+    } else if (status == rocksdb::Status::kInvalidArgument ||
+               status == rocksdb::Status::kTryAgain) {
+        add_read_cu(1);
+    }
+}
+
+void capacity_unit_calculator::add_check_and_mutate_cu(
+    int32_t status, const std::vector<::dsn::apps::mutate> &mutate_list)
+{
+    if (status == rocksdb::Status::kOk) {
+        add_read_cu(1);
+        int64_t write_data_size = 0;
+        for (const auto &m : mutate_list) {
+            write_data_size += m.sort_key.size() + m.value.size();
+        }
+        add_write_cu(write_data_size);
+    } else if (status == rocksdb::Status::kInvalidArgument ||
+               status == rocksdb::Status::kTryAgain) {
+        add_read_cu(1);
+    }
 }
 
 } // namespace server

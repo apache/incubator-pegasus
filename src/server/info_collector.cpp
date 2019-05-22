@@ -14,6 +14,7 @@
 
 #include "base/pegasus_utils.h"
 #include "base/pegasus_const.h"
+#include "result_writer.h"
 
 #define METRICSNUM 3
 
@@ -72,8 +73,6 @@ info_collector::~info_collector()
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
-    // don't delete _client, just set _client to nullptr.
-    _client = nullptr;
 }
 
 void info_collector::start()

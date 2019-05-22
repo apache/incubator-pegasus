@@ -607,7 +607,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         pegasus_extract_user_data(_pegasus_data_version, std::move(value), resp.value);
     }
 
-    _cu_calculator->add_cu(resp.error, resp.value.size(), 0);
+    _cu_calculator->add_get_cu(resp.error, resp.value);
     _pfc_get_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);
@@ -632,6 +632,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                reply.to_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
+        _cu_calculator->add_multi_get_cu(resp.error, resp.kvs);
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
@@ -709,6 +710,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                       stop_inclusive ? "inclusive" : "exclusive");
             }
             resp.error = rocksdb::Status::kOk;
+            _cu_calculator->add_multi_get_cu(resp.error, resp.kvs);
             _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
             reply(resp);
             return;
@@ -980,7 +982,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    _cu_calculator->batched_add_read(resp.error, resp.kvs);
+    _cu_calculator->add_multi_get_cu(resp.error, resp.kvs);
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);
@@ -1045,7 +1047,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
         resp.count = 0;
     }
 
-    _cu_calculator->add_cu(resp.error, 1, 0);
+    _cu_calculator->add_sortkey_count_cu(resp.error);
     reply(resp);
 }
 
@@ -1107,7 +1109,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
         }
     }
 
-    _cu_calculator->add_cu(resp.error, 1, 0);
+    _cu_calculator->add_ttl_cu(resp.error);
 
     reply(resp);
 }
@@ -1131,6 +1133,8 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                reply.to_address().to_string(),
                request.hash_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
+        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+        _pfc_scan_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
     }
@@ -1141,6 +1145,8 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                reply.to_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
+        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+        _pfc_scan_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
     }
@@ -1179,7 +1185,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                   request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
-        _cu_calculator->add_cu(resp.error, 1, 0);
+        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
@@ -1296,7 +1302,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    _cu_calculator->batched_add_read(resp.error, resp.kvs);
+    _cu_calculator->add_scan_cu(resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);
@@ -1411,7 +1417,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         resp.error = rocksdb::Status::Code::kNotFound;
     }
 
-    _cu_calculator->batched_add_read(resp.error, resp.kvs);
+    _cu_calculator->add_scan_cu(resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);

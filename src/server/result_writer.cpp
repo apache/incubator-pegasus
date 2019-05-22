@@ -11,13 +11,6 @@ DEFINE_TASK_CODE(LPC_WRITE_RESULT, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFA
 
 result_writer::result_writer(pegasus_client *client) : _client(client) {}
 
-result_writer::~result_writer()
-{
-    _tracker.cancel_outstanding_tasks();
-    // don't delete _client, just set _client to nullptr.
-    _client = nullptr;
-}
-
 void result_writer::set_result(const std::string &hash_key,
                                const std::string &sort_key,
                                const std::string &value,
@@ -59,5 +52,5 @@ void result_writer::set_result(const std::string &hash_key,
 
     _client->async_set(hash_key, sort_key, value, std::move(async_set_callback));
 }
-}
-} // namespace
+} // namespace server
+} // namespace pegasus

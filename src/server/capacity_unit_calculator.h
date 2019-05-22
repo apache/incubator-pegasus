@@ -16,11 +16,20 @@ class capacity_unit_calculator : public dsn::replication::replica_base
 public:
     explicit capacity_unit_calculator(replica_base *r);
 
-    void add_cu(int32_t status, int64_t read_data_size, int64_t write_data_size);
-    void batched_add_read(int32_t status, std::vector<::dsn::apps::key_value> kvs);
-    void multi_put_add_write(int32_t status, std::vector<::dsn::apps::key_value> kvs);
-    void multi_remove_add_write(int32_t status, std::vector<::dsn::blob> sort_keys);
-    void cam_add_cu(int32_t status, std::vector<::dsn::apps::mutate> mutate_list);
+    void add_get_cu(int32_t status, const dsn::blob &value);
+    void add_multi_get_cu(int32_t status, const std::vector<::dsn::apps::key_value> kvs);
+    void add_scan_cu(int32_t status, const std::vector<::dsn::apps::key_value> kvs);
+    void add_sortkey_count_cu(int32_t status);
+    void add_ttl_cu(int32_t status);
+
+    void add_put_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
+    void add_remove_cu(int32_t status, const dsn::blob &key);
+    void add_multi_put_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
+    void add_multi_remove_cu(int32_t status, const std::vector<::dsn::blob> &sort_keys);
+    void add_incr_cu(int32_t status);
+    void add_check_and_set_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
+    void add_check_and_mutate_cu(int32_t status,
+                                 const std::vector<::dsn::apps::mutate> &mutate_list);
 
 private:
     void add_read_cu(int64_t read_data_size);

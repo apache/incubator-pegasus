@@ -18,10 +18,9 @@ class result_writer
 public:
     explicit result_writer(pegasus_client *client);
 
-    ~result_writer();
-
-    // set try_count to 300 (keep on retrying at one minute interval) to avoid losing result
-    // if the result table is also unavailable for a long time.
+    // The default try_count is 300.
+    // If set failed, keep on retrying at one minute interval until
+    // set succeed or the number of tries has reached 'try_count'.
     void set_result(const std::string &hash_key,
                     const std::string &sort_key,
                     const std::string &value,
@@ -32,5 +31,5 @@ private:
     // client to access server.
     pegasus_client *_client;
 };
-}
-}
+} // namespace server
+} // namespace pegasus

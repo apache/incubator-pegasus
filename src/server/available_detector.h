@@ -8,18 +8,18 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 
-#include "result_writer.h"
-
 namespace pegasus {
 namespace server {
 
 using ::dsn::replication::replication_ddl_client;
 
+class result_writer;
+
 class available_detector
 {
 public:
     available_detector();
-    virtual ~available_detector();
+    ~available_detector();
 
     void start();
     void stop();
@@ -86,5 +86,5 @@ private:
     ::dsn::perf_counter_wrapper _pfc_fail_times_minute;
     ::dsn::perf_counter_wrapper _pfc_available_minute;
 };
-}
-}
+} // namespace server
+} // namespace pegasus

@@ -9,6 +9,7 @@
 #include <sstream>
 
 #include "base/pegasus_key_schema.h"
+#include "result_writer.h"
 
 namespace pegasus {
 namespace server {
@@ -121,12 +122,7 @@ available_detector::available_detector()
     _pfc_available_minute->set(1000000); // init to 100%
 }
 
-available_detector::~available_detector()
-{
-    stop();
-    // don't delete _client, just set _client to nullptr.
-    _client = nullptr;
-}
+available_detector::~available_detector() = default;
 
 void available_detector::start()
 {
@@ -467,5 +463,5 @@ void available_detector::on_minute_report()
 
     _result_writer->set_result(hash_key, sort_key, value);
 }
-}
-} // namespace
+} // namespace server
+} // namespace pegasus

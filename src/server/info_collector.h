@@ -19,10 +19,11 @@
 #include <fstream>
 
 #include "../shell/commands.h"
-#include "result_writer.h"
 
 namespace pegasus {
 namespace server {
+
+class result_writer;
 
 class info_collector
 {

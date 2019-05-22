@@ -109,7 +109,7 @@ int pegasus_write_service::multi_put(int64_t decree,
     int err = _impl->multi_put(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->multi_put_add_write(resp.error, update.kvs);
+        _cu_calculator->add_multi_put_cu(resp.error, update.kvs);
     }
 
     _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
@@ -125,7 +125,7 @@ int pegasus_write_service::multi_remove(int64_t decree,
     int err = _impl->multi_remove(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->multi_remove_add_write(resp.error, update.sort_keys);
+        _cu_calculator->add_multi_remove_cu(resp.error, update.sort_keys);
     }
 
     _pfc_multi_remove_latency->set(dsn_now_ns() - start_time);
@@ -141,7 +141,7 @@ int pegasus_write_service::incr(int64_t decree,
     int err = _impl->incr(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_cu(resp.error, 1, 1);
+        _cu_calculator->add_incr_cu(resp.error);
     }
 
     _pfc_incr_latency->set(dsn_now_ns() - start_time);
@@ -157,7 +157,7 @@ int pegasus_write_service::check_and_set(int64_t decree,
     int err = _impl->check_and_set(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_cu(resp.error, 1, update.set_value.size());
+        _cu_calculator->add_check_and_set_cu(resp.error, update.set_sort_key, update.set_value);
     }
 
     _pfc_check_and_set_latency->set(dsn_now_ns() - start_time);
@@ -173,7 +173,7 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
     int err = _impl->check_and_mutate(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->cam_add_cu(resp.error, update.mutate_list);
+        _cu_calculator->add_check_and_mutate_cu(resp.error, update.mutate_list);
     }
 
     _pfc_check_and_mutate_latency->set(dsn_now_ns() - start_time);
@@ -199,7 +199,7 @@ int pegasus_write_service::batch_put(int64_t decree,
     int err = _impl->batch_put(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_cu(resp.error, 0, update.key.size() + update.value.size());
+        _cu_calculator->add_put_cu(resp.error, update.key, update.value);
     }
 
     return err;
@@ -216,7 +216,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
     int err = _impl->batch_remove(decree, key, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_cu(resp.error, 0, key.size());
+        _cu_calculator->add_remove_cu(resp.error, key);
     }
 
     return err;
