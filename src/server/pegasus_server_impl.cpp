@@ -1048,6 +1048,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
     }
 
     _cu_calculator->add_sortkey_count_cu(resp.error);
+
     reply(resp);
 }
 
@@ -1767,18 +1768,11 @@ private:
 
     {
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
-        dassert(last_commit > last_durable_decree(),
-                "%" PRId64 " VS %" PRId64 "",
-                last_commit,
-                last_durable_decree());
+        dcheck_gt_replica(last_commit, last_durable_decree());
         int64_t last_flushed = static_cast<int64_t>(_db->GetLastFlushedDecree());
-        dassert(
-            last_commit == last_flushed, "%" PRId64 " VS %" PRId64 "", last_commit, last_flushed);
+        dcheck_eq_replica(last_commit, last_flushed);
         if (!_checkpoints.empty()) {
-            dassert(last_commit > _checkpoints.back(),
-                    "%" PRId64 " VS %" PRId64 "",
-                    last_commit,
-                    _checkpoints.back());
+            dcheck_gt_replica(last_commit, _checkpoints.back());
         }
         _checkpoints.push_back(last_commit);
         set_last_durable_decree(_checkpoints.back());
