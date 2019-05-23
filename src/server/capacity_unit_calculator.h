@@ -31,12 +31,18 @@ public:
     void add_check_and_mutate_cu(int32_t status,
                                  const std::vector<::dsn::apps::mutate> &mutate_list);
 
-private:
+protected:
     friend class capacity_unit_calculator_test;
 
+#ifdef PEGASUS_UNIT_TEST
+    virtual int64_t add_read_cu(int64_t read_data_size);
+    virtual int64_t add_write_cu(int64_t write_data_size);
+#else
     int64_t add_read_cu(int64_t read_data_size);
     int64_t add_write_cu(int64_t write_data_size);
+#endif
 
+private:
     uint64_t _read_capacity_unit_size;
     uint64_t _write_capacity_unit_size;
     uint32_t _log_read_cu_size;
