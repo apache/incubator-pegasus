@@ -38,16 +38,18 @@ capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_ba
                                           "statistic the recent write capacity units");
 }
 
-void capacity_unit_calculator::add_read_cu(int64_t read_data_size)
+int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
 {
     int64_t read_cu = (read_data_size + _read_capacity_unit_size - 1) >> _log_read_cu_size;
     _pfc_recent_read_cu->add(read_cu);
+    return read_cu;
 }
 
-void capacity_unit_calculator::add_write_cu(int64_t write_data_size)
+int64_t capacity_unit_calculator::add_write_cu(int64_t write_data_size)
 {
     int64_t write_cu = (write_data_size + _write_capacity_unit_size - 1) >> _log_write_cu_size;
     _pfc_recent_write_cu->add(write_cu);
+    return write_cu;
 }
 
 void capacity_unit_calculator::add_get_cu(int32_t status, const dsn::blob &value)

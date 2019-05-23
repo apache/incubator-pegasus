@@ -32,8 +32,10 @@ public:
                                  const std::vector<::dsn::apps::mutate> &mutate_list);
 
 private:
-    void add_read_cu(int64_t read_data_size);
-    void add_write_cu(int64_t write_data_size);
+    friend class capacity_unit_calculator_test;
+
+    int64_t add_read_cu(int64_t read_data_size);
+    int64_t add_write_cu(int64_t write_data_size);
 
     uint64_t _read_capacity_unit_size;
     uint64_t _write_capacity_unit_size;
