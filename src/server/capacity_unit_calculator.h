@@ -17,8 +17,8 @@ public:
     explicit capacity_unit_calculator(replica_base *r);
 
     void add_get_cu(int32_t status, const dsn::blob &value);
-    void add_multi_get_cu(int32_t status, const std::vector<::dsn::apps::key_value> kvs);
-    void add_scan_cu(int32_t status, const std::vector<::dsn::apps::key_value> kvs);
+    void add_multi_get_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
+    void add_scan_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
     void add_sortkey_count_cu(int32_t status);
     void add_ttl_cu(int32_t status);
 
