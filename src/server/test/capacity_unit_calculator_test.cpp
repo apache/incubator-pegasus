@@ -50,43 +50,286 @@ public:
         _cal = dsn::make_unique<mock_capacity_unit_calculator>(_server.get());
     }
 
-    void test_init() {}
+    void test_init()
+    {
+        ASSERT_EQ(_cal->read_cu, 0);
+        ASSERT_EQ(_cal->write_cu, 0);
+    }
+
+    void generate_n_kvs(int n, std::vector<::dsn::apps::key_value> &kvs)
+    {
+        std::vector<::dsn::apps::key_value> tmp_kvs;
+        for (int i = 0; i < n; i++) {
+            dsn::apps::key_value kv;
+            kv.key = dsn::blob::create_from_bytes("key_" + std::to_string(i));
+            kv.value = dsn::blob::create_from_bytes("value_" + std::to_string(i));
+            tmp_kvs.emplace_back(kv);
+        }
+        kvs = std::move(tmp_kvs);
+    }
+
+    void generate_n_keys(int n, std::vector<::dsn::blob> &keys)
+    {
+        std::vector<::dsn::blob> tmp_keys;
+        for (int i = 0; i < n; i++) {
+            tmp_keys.emplace_back(dsn::blob::create_from_bytes("key_" + std::to_string(i)));
+        }
+        keys = std::move(tmp_keys);
+    }
+
+    void generate_n_mutates(int n, std::vector<::dsn::apps::mutate> &mutates)
+    {
+        std::vector<::dsn::apps::mutate> tmp_mutates;
+        for (int i = 0; i < n; i++) {
+            dsn::apps::mutate m;
+            m.sort_key = dsn::blob::create_from_bytes("key_" + std::to_string(i));
+            m.value = dsn::blob::create_from_bytes("value_" + std::to_string(i));
+            tmp_mutates.emplace_back(m);
+        }
+        mutates = std::move(tmp_mutates);
+    }
 };
 
 TEST_F(capacity_unit_calculator_test, init) { test_init(); }
 
 TEST_F(capacity_unit_calculator_test, get)
 {
-    _cal->add_get_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes("abc"));
+    _cal->add_get_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes("value"));
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_get_cu(rocksdb::Status::kCorruption, dsn::blob::create_from_bytes("abc"));
+    dsn::blob value;
+    _cal->add_get_cu(rocksdb::Status::kNotFound, value);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
+
+    _cal->add_get_cu(rocksdb::Status::kCorruption, value);
     ASSERT_EQ(_cal->read_cu, 0);
     _cal->reset();
 }
 
-TEST_F(capacity_unit_calculator_test, multi_get) {}
+TEST_F(capacity_unit_calculator_test, multi_get)
+{
+    std::vector<::dsn::apps::key_value> kvs;
 
-TEST_F(capacity_unit_calculator_test, scan) {}
+    generate_n_kvs(100, kvs);
+    _cal->add_multi_get_cu(rocksdb::Status::kIncomplete, kvs);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
 
-TEST_F(capacity_unit_calculator_test, sortkey_count) {}
+    generate_n_kvs(500, kvs);
+    _cal->add_multi_get_cu(rocksdb::Status::kOk, kvs);
+    ASSERT_GT(_cal->read_cu, 1);
+    _cal->reset();
 
-TEST_F(capacity_unit_calculator_test, ttl) {}
+    kvs.clear();
+    _cal->add_multi_get_cu(rocksdb::Status::kNotFound, kvs);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
 
-TEST_F(capacity_unit_calculator_test, put) {}
+    _cal->add_multi_get_cu(rocksdb::Status::kInvalidArgument, kvs);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
 
-TEST_F(capacity_unit_calculator_test, remove) {}
+    _cal->add_multi_get_cu(rocksdb::Status::kCorruption, kvs);
+    ASSERT_EQ(_cal->read_cu, 0);
+    _cal->reset();
+}
 
-TEST_F(capacity_unit_calculator_test, multi_put) {}
+TEST_F(capacity_unit_calculator_test, scan)
+{
+    std::vector<::dsn::apps::key_value> kvs;
 
-TEST_F(capacity_unit_calculator_test, multi_remove) {}
+    generate_n_kvs(100, kvs);
+    _cal->add_scan_cu(rocksdb::Status::kIncomplete, kvs);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
 
-TEST_F(capacity_unit_calculator_test, incr) {}
+    generate_n_kvs(500, kvs);
+    _cal->add_scan_cu(rocksdb::Status::kOk, kvs);
+    ASSERT_GT(_cal->read_cu, 1);
+    _cal->reset();
 
-TEST_F(capacity_unit_calculator_test, check_and_set) {}
+    kvs.clear();
+    _cal->add_scan_cu(rocksdb::Status::kInvalidArgument, kvs);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
 
-TEST_F(capacity_unit_calculator_test, check_and_mutate) {}
+    _cal->add_scan_cu(rocksdb::Status::kCorruption, kvs);
+    ASSERT_EQ(_cal->read_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, sortkey_count)
+{
+    _cal->add_sortkey_count_cu(rocksdb::Status::kOk);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
+
+    _cal->add_sortkey_count_cu(rocksdb::Status::kCorruption);
+    ASSERT_EQ(_cal->read_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, ttl)
+{
+    _cal->add_ttl_cu(rocksdb::Status::kOk);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
+
+    _cal->add_ttl_cu(rocksdb::Status::kNotFound);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
+
+    _cal->add_ttl_cu(rocksdb::Status::kCorruption);
+    ASSERT_EQ(_cal->read_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, put)
+{
+    _cal->add_put_cu(rocksdb::Status::kOk,
+                     dsn::blob::create_from_bytes("key"),
+                     dsn::blob::create_from_bytes("value"));
+    ASSERT_EQ(_cal->write_cu, 1);
+    _cal->reset();
+
+    _cal->add_put_cu(rocksdb::Status::kCorruption,
+                     dsn::blob::create_from_bytes("key"),
+                     dsn::blob::create_from_bytes("value"));
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, remove)
+{
+    _cal->add_remove_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes("key"));
+    ASSERT_EQ(_cal->write_cu, 1);
+    _cal->reset();
+
+    _cal->add_remove_cu(rocksdb::Status::kCorruption, dsn::blob::create_from_bytes("key"));
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, multi_put)
+{
+    std::vector<::dsn::apps::key_value> kvs;
+
+    generate_n_kvs(100, kvs);
+    _cal->add_multi_put_cu(rocksdb::Status::kOk, kvs);
+    ASSERT_EQ(_cal->write_cu, 1);
+    _cal->reset();
+
+    generate_n_kvs(500, kvs);
+    _cal->add_multi_put_cu(rocksdb::Status::kOk, kvs);
+    ASSERT_GT(_cal->write_cu, 1);
+    _cal->reset();
+
+    _cal->add_multi_put_cu(rocksdb::Status::kCorruption, kvs);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, multi_remove)
+{
+    std::vector<::dsn::blob> keys;
+
+    generate_n_keys(100, keys);
+    _cal->add_multi_remove_cu(rocksdb::Status::kOk, keys);
+    ASSERT_EQ(_cal->write_cu, 1);
+    _cal->reset();
+
+    generate_n_keys(1000, keys);
+    _cal->add_multi_remove_cu(rocksdb::Status::kOk, keys);
+    ASSERT_GT(_cal->write_cu, 1);
+    _cal->reset();
+
+    _cal->add_multi_remove_cu(rocksdb::Status::kCorruption, keys);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, incr)
+{
+    _cal->add_incr_cu(rocksdb::Status::kOk);
+    ASSERT_EQ(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 1);
+    _cal->reset();
+
+    _cal->add_incr_cu(rocksdb::Status::kInvalidArgument);
+    ASSERT_EQ(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+
+    _cal->add_incr_cu(rocksdb::Status::kCorruption);
+    ASSERT_EQ(_cal->read_cu, 0);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, check_and_set)
+{
+    _cal->add_check_and_set_cu(rocksdb::Status::kOk,
+                               dsn::blob::create_from_bytes("key"),
+                               dsn::blob::create_from_bytes("value"));
+    ASSERT_EQ(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 1);
+    _cal->reset();
+
+    _cal->add_check_and_set_cu(rocksdb::Status::kInvalidArgument,
+                               dsn::blob::create_from_bytes("key"),
+                               dsn::blob::create_from_bytes("value"));
+    ASSERT_EQ(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+
+    _cal->add_check_and_set_cu(rocksdb::Status::kTryAgain,
+                               dsn::blob::create_from_bytes("key"),
+                               dsn::blob::create_from_bytes("value"));
+    ASSERT_EQ(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+
+    _cal->add_check_and_set_cu(rocksdb::Status::kCorruption,
+                               dsn::blob::create_from_bytes("key"),
+                               dsn::blob::create_from_bytes("value"));
+    ASSERT_EQ(_cal->read_cu, 0);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, check_and_mutate)
+{
+    std::vector<::dsn::apps::mutate> mutate_list;
+
+    generate_n_mutates(100, mutate_list);
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk, mutate_list);
+    ASSERT_EQ(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 1);
+    _cal->reset();
+
+    generate_n_mutates(1000, mutate_list);
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk, mutate_list);
+    ASSERT_EQ(_cal->read_cu, 1);
+    ASSERT_GT(_cal->write_cu, 1);
+    _cal->reset();
+
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kInvalidArgument, mutate_list);
+    ASSERT_EQ(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kTryAgain, mutate_list);
+    ASSERT_EQ(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kCorruption, mutate_list);
+    ASSERT_EQ(_cal->read_cu, 0);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+}
 
 } // namespace server
 } // namespace pegasus
