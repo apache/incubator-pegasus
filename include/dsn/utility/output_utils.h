@@ -158,7 +158,10 @@ private:
     {
         rapidjson::OStreamWrapper wrapper(out);
         Writer writer(wrapper);
+        writer.StartObject();
         json_encode(writer, *this);
+        writer.EndObject();
+        out << std::endl;
     }
 
 private:
