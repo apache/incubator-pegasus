@@ -21,6 +21,10 @@ capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_ba
                                     "perf_counter_write_capacity_unit_size",
                                     4 * 1024,
                                     "capacity unit size of write requests, default 4KB");
+    dassert(powerof2(_read_capacity_unit_size),
+            "'perf_counter_read_capacity_unit_size' must be a power of 2");
+    dassert(powerof2(_write_capacity_unit_size),
+            "'perf_counter_write_capacity_unit_size' must be a power of 2");
     _log_read_cu_size = log(_read_capacity_unit_size) / log(2);
     _log_write_cu_size = log(_write_capacity_unit_size) / log(2);
 

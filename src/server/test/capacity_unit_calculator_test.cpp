@@ -50,10 +50,22 @@ public:
         _cal = dsn::make_unique<mock_capacity_unit_calculator>(_server.get());
     }
 
+    void test_power_of_2(uint32_t log, uint64_t power)
+    {
+        ASSERT_TRUE(powerof2(power));
+        uint64_t expect_power = (uint64_t)pow(2, log);
+        ASSERT_EQ(power, expect_power);
+    }
+
     void test_init()
     {
-        ASSERT_EQ(_cal->read_cu, 0);
-        ASSERT_EQ(_cal->write_cu, 0);
+        uint64_t read_cu_size = _cal->get_read_cu_size();
+        uint64_t write_cu_size = _cal->get_write_cu_size();
+        uint32_t log_read_cu_size = _cal->get_log_read_cu_size();
+        uint32_t log_write_cu_size = _cal->get_log_write_cu_size();
+
+        test_power_of_2(log_read_cu_size, read_cu_size);
+        test_power_of_2(log_write_cu_size, write_cu_size);
     }
 
     void generate_n_kvs(int n, std::vector<::dsn::apps::key_value> &kvs)
