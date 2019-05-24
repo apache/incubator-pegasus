@@ -4,6 +4,7 @@
 
 #include "pegasus_write_service.h"
 #include "pegasus_write_service_impl.h"
+#include "capacity_unit_calculator.h"
 
 namespace pegasus {
 namespace server {

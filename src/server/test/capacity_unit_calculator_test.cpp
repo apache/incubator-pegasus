@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_server_test_base.h"
+#include "server/capacity_unit_calculator.h"
 
 #include <dsn/dist/replication/replica_base.h>
 

@@ -9,13 +9,13 @@
 
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
-#include "capacity_unit_calculator.h"
 #include "rrdb/rrdb_types.h"
 
 namespace pegasus {
 namespace server {
 
 class pegasus_server_impl;
+class capacity_unit_calculator;
 
 /// Handle the write requests.
 /// As the signatures imply, this class is not responsible for replying the rpc,
