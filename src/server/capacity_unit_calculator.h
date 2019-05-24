@@ -37,10 +37,6 @@ protected:
 #ifdef PEGASUS_UNIT_TEST
     virtual int64_t add_read_cu(int64_t read_data_size);
     virtual int64_t add_write_cu(int64_t write_data_size);
-    uint64_t get_read_cu_size() const { return _read_capacity_unit_size; }
-    uint64_t get_write_cu_size() const { return _write_capacity_unit_size; }
-    uint32_t get_log_read_cu_size() const { return _log_read_cu_size; }
-    uint32_t get_log_write_cu_size() const { return _log_write_cu_size; }
 #else
     int64_t add_read_cu(int64_t read_data_size);
     int64_t add_write_cu(int64_t write_data_size);

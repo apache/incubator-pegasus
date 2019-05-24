@@ -39,6 +39,8 @@ public:
     int64_t read_cu{0};
 };
 
+static constexpr int MAX_ROCKSDB_STATUS_CODE = 13;
+
 class capacity_unit_calculator_test : public pegasus_server_test_base
 {
 protected:
@@ -50,22 +52,13 @@ public:
         _cal = dsn::make_unique<mock_capacity_unit_calculator>(_server.get());
     }
 
-    void test_power_of_2(uint32_t log, uint64_t power)
-    {
-        ASSERT_TRUE(powerof2(power));
-        uint64_t expect_power = (uint64_t)pow(2, log);
-        ASSERT_EQ(power, expect_power);
-    }
-
     void test_init()
     {
-        uint64_t read_cu_size = _cal->get_read_cu_size();
-        uint64_t write_cu_size = _cal->get_write_cu_size();
-        uint32_t log_read_cu_size = _cal->get_log_read_cu_size();
-        uint32_t log_write_cu_size = _cal->get_log_write_cu_size();
+        ASSERT_EQ(_cal->_read_capacity_unit_size, 4096);
+        ASSERT_EQ(_cal->_write_capacity_unit_size, 4096);
 
-        test_power_of_2(log_read_cu_size, read_cu_size);
-        test_power_of_2(log_write_cu_size, write_cu_size);
+        ASSERT_EQ(_cal->_log_read_cu_size, 12);
+        ASSERT_EQ(_cal->_log_write_cu_size, 12);
     }
 
     void generate_n_kvs(int n, std::vector<::dsn::apps::key_value> &kvs)
@@ -106,16 +99,33 @@ TEST_F(capacity_unit_calculator_test, init) { test_init(); }
 
 TEST_F(capacity_unit_calculator_test, get)
 {
+    // value < 4KB
     _cal->add_get_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes("value"));
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    dsn::blob value;
-    _cal->add_get_cu(rocksdb::Status::kNotFound, value);
+    // value = 4KB
+    _cal->add_get_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes(std::string(4096, ' ')));
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_get_cu(rocksdb::Status::kCorruption, value);
+    // value > 4KB
+    _cal->add_get_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes(std::string(4097, ' ')));
+    ASSERT_EQ(_cal->read_cu, 2);
+    _cal->reset();
+
+    // value > 8KB
+    _cal->add_get_cu(rocksdb::Status::kOk,
+                     dsn::blob::create_from_bytes(std::string(4096 * 2 + 1, ' ')));
+    ASSERT_EQ(_cal->read_cu, 3);
+    ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+
+    _cal->add_get_cu(rocksdb::Status::kNotFound, dsn::blob());
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
+
+    _cal->add_get_cu(rocksdb::Status::kCorruption, dsn::blob());
     ASSERT_EQ(_cal->read_cu, 0);
     _cal->reset();
 }
@@ -132,6 +142,7 @@ TEST_F(capacity_unit_calculator_test, multi_get)
     generate_n_kvs(500, kvs);
     _cal->add_multi_get_cu(rocksdb::Status::kOk, kvs);
     ASSERT_GT(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
     kvs.clear();
@@ -158,12 +169,21 @@ TEST_F(capacity_unit_calculator_test, scan)
     _cal->reset();
 
     generate_n_kvs(500, kvs);
+    _cal->add_scan_cu(rocksdb::Status::kIncomplete, kvs);
+    ASSERT_GT(_cal->read_cu, 1);
+    _cal->reset();
+
     _cal->add_scan_cu(rocksdb::Status::kOk, kvs);
     ASSERT_GT(_cal->read_cu, 1);
+    ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
     kvs.clear();
     _cal->add_scan_cu(rocksdb::Status::kInvalidArgument, kvs);
+    ASSERT_EQ(_cal->read_cu, 1);
+    _cal->reset();
+
+    _cal->add_scan_cu(rocksdb::Status::kNotFound, kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
@@ -174,54 +194,60 @@ TEST_F(capacity_unit_calculator_test, scan)
 
 TEST_F(capacity_unit_calculator_test, sortkey_count)
 {
-    _cal->add_sortkey_count_cu(rocksdb::Status::kOk);
-    ASSERT_EQ(_cal->read_cu, 1);
-    _cal->reset();
-
-    _cal->add_sortkey_count_cu(rocksdb::Status::kCorruption);
-    ASSERT_EQ(_cal->read_cu, 0);
-    _cal->reset();
+    for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
+        _cal->add_sortkey_count_cu(i);
+        if (i == rocksdb::Status::kOk) {
+            ASSERT_EQ(_cal->read_cu, 1);
+        } else {
+            ASSERT_EQ(_cal->read_cu, 0);
+        }
+        ASSERT_EQ(_cal->write_cu, 0);
+        _cal->reset();
+    }
 }
 
 TEST_F(capacity_unit_calculator_test, ttl)
 {
-    _cal->add_ttl_cu(rocksdb::Status::kOk);
-    ASSERT_EQ(_cal->read_cu, 1);
-    _cal->reset();
-
-    _cal->add_ttl_cu(rocksdb::Status::kNotFound);
-    ASSERT_EQ(_cal->read_cu, 1);
-    _cal->reset();
-
-    _cal->add_ttl_cu(rocksdb::Status::kCorruption);
-    ASSERT_EQ(_cal->read_cu, 0);
-    _cal->reset();
+    for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
+        _cal->add_ttl_cu(i);
+        if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
+            ASSERT_EQ(_cal->read_cu, 1);
+        } else {
+            ASSERT_EQ(_cal->read_cu, 0);
+        }
+        ASSERT_EQ(_cal->write_cu, 0);
+        _cal->reset();
+    }
 }
 
 TEST_F(capacity_unit_calculator_test, put)
 {
-    _cal->add_put_cu(rocksdb::Status::kOk,
-                     dsn::blob::create_from_bytes("key"),
-                     dsn::blob::create_from_bytes("value"));
-    ASSERT_EQ(_cal->write_cu, 1);
-    _cal->reset();
-
-    _cal->add_put_cu(rocksdb::Status::kCorruption,
-                     dsn::blob::create_from_bytes("key"),
-                     dsn::blob::create_from_bytes("value"));
-    ASSERT_EQ(_cal->write_cu, 0);
-    _cal->reset();
+    for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
+        _cal->add_put_cu(i,
+                         dsn::blob::create_from_bytes("key"),
+                         dsn::blob::create_from_bytes(std::string(4097, ' ')));
+        if (i == rocksdb::Status::kOk) {
+            ASSERT_EQ(_cal->write_cu, 2);
+        } else {
+            ASSERT_EQ(_cal->write_cu, 0);
+        }
+        ASSERT_EQ(_cal->read_cu, 0);
+        _cal->reset();
+    }
 }
 
 TEST_F(capacity_unit_calculator_test, remove)
 {
-    _cal->add_remove_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes("key"));
-    ASSERT_EQ(_cal->write_cu, 1);
-    _cal->reset();
-
-    _cal->add_remove_cu(rocksdb::Status::kCorruption, dsn::blob::create_from_bytes("key"));
-    ASSERT_EQ(_cal->write_cu, 0);
-    _cal->reset();
+    for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
+        _cal->add_remove_cu(i, dsn::blob::create_from_bytes("key"));
+        if (i == rocksdb::Status::kOk) {
+            ASSERT_EQ(_cal->write_cu, 1);
+        } else {
+            ASSERT_EQ(_cal->write_cu, 0);
+        }
+        ASSERT_EQ(_cal->read_cu, 0);
+        _cal->reset();
+    }
 }
 
 TEST_F(capacity_unit_calculator_test, multi_put)
@@ -234,13 +260,16 @@ TEST_F(capacity_unit_calculator_test, multi_put)
     _cal->reset();
 
     generate_n_kvs(500, kvs);
-    _cal->add_multi_put_cu(rocksdb::Status::kOk, kvs);
-    ASSERT_GT(_cal->write_cu, 1);
-    _cal->reset();
-
-    _cal->add_multi_put_cu(rocksdb::Status::kCorruption, kvs);
-    ASSERT_EQ(_cal->write_cu, 0);
-    _cal->reset();
+    for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
+        _cal->add_multi_put_cu(i, kvs);
+        if (i == rocksdb::Status::kOk) {
+            ASSERT_GT(_cal->write_cu, 1);
+        } else {
+            ASSERT_EQ(_cal->write_cu, 0);
+        }
+        ASSERT_EQ(_cal->read_cu, 0);
+        _cal->reset();
+    }
 }
 
 TEST_F(capacity_unit_calculator_test, multi_remove)
@@ -253,31 +282,34 @@ TEST_F(capacity_unit_calculator_test, multi_remove)
     _cal->reset();
 
     generate_n_keys(1000, keys);
-    _cal->add_multi_remove_cu(rocksdb::Status::kOk, keys);
-    ASSERT_GT(_cal->write_cu, 1);
-    _cal->reset();
-
-    _cal->add_multi_remove_cu(rocksdb::Status::kCorruption, keys);
-    ASSERT_EQ(_cal->write_cu, 0);
-    _cal->reset();
+    for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
+        _cal->add_multi_remove_cu(i, keys);
+        if (i == rocksdb::Status::kOk) {
+            ASSERT_GT(_cal->write_cu, 1);
+        } else {
+            ASSERT_EQ(_cal->write_cu, 0);
+        }
+        ASSERT_EQ(_cal->read_cu, 0);
+        _cal->reset();
+    }
 }
 
 TEST_F(capacity_unit_calculator_test, incr)
 {
-    _cal->add_incr_cu(rocksdb::Status::kOk);
-    ASSERT_EQ(_cal->read_cu, 1);
-    ASSERT_EQ(_cal->write_cu, 1);
-    _cal->reset();
-
-    _cal->add_incr_cu(rocksdb::Status::kInvalidArgument);
-    ASSERT_EQ(_cal->read_cu, 1);
-    ASSERT_EQ(_cal->write_cu, 0);
-    _cal->reset();
-
-    _cal->add_incr_cu(rocksdb::Status::kCorruption);
-    ASSERT_EQ(_cal->read_cu, 0);
-    ASSERT_EQ(_cal->write_cu, 0);
-    _cal->reset();
+    for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
+        _cal->add_incr_cu(i);
+        if (i == rocksdb::Status::kOk) {
+            ASSERT_EQ(_cal->read_cu, 1);
+            ASSERT_EQ(_cal->write_cu, 1);
+        } else if (i == rocksdb::Status::kInvalidArgument) {
+            ASSERT_EQ(_cal->read_cu, 1);
+            ASSERT_EQ(_cal->write_cu, 0);
+        } else {
+            ASSERT_EQ(_cal->write_cu, 0);
+            ASSERT_EQ(_cal->read_cu, 0);
+        }
+        _cal->reset();
+    }
 }
 
 TEST_F(capacity_unit_calculator_test, check_and_set)

@@ -85,8 +85,8 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
 void capacity_unit_calculator::add_scan_cu(int32_t status,
                                            const std::vector<::dsn::apps::key_value> &kvs)
 {
-    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
-        status != rocksdb::Status::kInvalidArgument) {
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
+        status != rocksdb::Status::kIncomplete && status != rocksdb::Status::kInvalidArgument) {
         return;
     }
     int64_t data_size = 0;
