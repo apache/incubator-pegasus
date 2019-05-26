@@ -32,31 +32,34 @@ static command_executor commands[] = {
         "version", "get the shell version", "", version,
     },
     {
-        "cluster_info", "get the informations for the cluster", "", query_cluster_info,
+        "cluster_info",
+        "get the information of the cluster",
+        "[-r|--resolve_ip] [-o|--output file_name] [-j|--json]",
+        query_cluster_info,
     },
     {
         "app",
         "get the partition information for some specific app",
-        "<app_name> [-d|--detailed] [-o|--output file_name]",
+        "<app_name> [-d|--detailed] [-r|--resolve_ip] [-o|--output file_name] [-j|--json]",
         query_app,
     },
     {
         "app_disk",
         "get the disk usage information for some specific app",
-        "<app_name> [-d|--detailed] [-o|--output file_name]",
+        "<app_name> [-d|--detailed] [-j|--json] [-o|--output file_name]",
         app_disk,
     },
     {
         "ls",
         "list all apps",
-        "[-a|-all] [-d|--detailed] [-j|--json_pretty] [-o|--output file_name]"
+        "[-a|-all] [-d|--detailed] [-j|--json] [-o|--output file_name]"
         "[-s|--status all|available|creating|dropping|dropped]",
         ls_apps,
     },
     {
         "nodes",
         "get the node status for this cluster",
-        "[-d|--detailed] [-j|--json_pretty] [-r|--resolve_ip] [-u|--resource_usage]"
+        "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage]"
         "[-o|--output file_name] [-s|--status all|alive|unalive]",
         ls_nodes,
     },
@@ -309,7 +312,8 @@ static command_executor commands[] = {
     {
         "app_stat",
         "get stat of apps",
-        "[-a|--app_name str] [-q|--only_qps] [-u|--only_usage] [-o|--output file_name]",
+        "[-a|--app_name str] [-q|--only_qps] [-u|--only_usage] [-j|--json] "
+        "[-o|--output file_name]",
         app_stat,
     },
     {
@@ -392,7 +396,7 @@ static command_executor commands[] = {
         query_restore_status,
     },
     {
-        "get_app_envs", "get current app envs", "", get_app_envs,
+        "get_app_envs", "get current app envs", "[-j|--json]", get_app_envs,
     },
     {
         "set_app_envs", "set current app envs", "<key> <value> [key value...]", set_app_envs,
