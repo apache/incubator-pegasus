@@ -168,9 +168,9 @@ simple_logger::simple_logger(const char *log_dir) : logging_provider(log_dir)
     }
     sub_list.clear();
 
-    if (_start_index == 0) {
+    if (_start_index == 0)
         _start_index = _index;
-    } else
+    else
         ++_index;
 
     create_log_file();
@@ -184,7 +184,6 @@ void simple_logger::create_log_file()
     _lines = 0;
 
     std::stringstream str;
-    // so now the start index is from 0
     str << _log_dir << "/log." << _index++ << ".txt";
     _log = ::fopen(str.str().c_str(), "w+");
 
@@ -193,10 +192,11 @@ void simple_logger::create_log_file()
         std::stringstream str2;
         str2 << "log." << _start_index++ << ".txt";
         auto dp = utils::filesystem::path_combine(_log_dir, str2.str());
-        if (::remove(dp.c_str()) != 0) {
-            printf("Failed to remove garbage log file %s\n", dp.c_str());
-            _start_index--;
-            break;
+        if (utils::filesystem::file_exists(dp)) {
+            if (::remove(dp.c_str()) != 0) {
+                // if remove failed, just print log and ignore it.
+                printf("Failed to remove garbage log file %s\n", dp.c_str());
+            }
         }
     }
 }
