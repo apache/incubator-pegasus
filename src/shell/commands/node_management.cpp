@@ -6,11 +6,40 @@
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {
-    ::dsn::error_code err = sc->ddl_client->cluster_info("");
-    if (err == ::dsn::ERR_OK)
-        std::cout << "get cluster info succeed" << std::endl;
-    else
+    static struct option long_options[] = {{"resolve_ip", no_argument, 0, 'r'},
+                                           {"json", no_argument, 0, 'j'},
+                                           {"output", required_argument, 0, 'o'},
+                                           {0, 0, 0, 0}};
+
+    std::string out_file;
+    bool resolve_ip = false;
+    bool json = false;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c = getopt_long(args.argc, args.argv, "rjo:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'r':
+            resolve_ip = true;
+            break;
+        case 'j':
+            json = true;
+            break;
+        case 'o':
+            out_file = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    ::dsn::error_code err = sc->ddl_client->cluster_info(out_file, resolve_ip, json);
+    if (err != ::dsn::ERR_OK) {
         std::cout << "get cluster info failed, error=" << err.to_string() << std::endl;
+    }
     return true;
 }
 
