@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
+import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,10 +18,25 @@ public class PegasusClientFactory {
   private static String singletonClientConfigPath = null;
   private static Object singletonClientLock = new Object();
 
+  private static ClientOptions singletonClientOptions = null;
+
   // Create a client instance.
   // After used, should call client.close() to release resource.
   public static PegasusClientInterface createClient(String configPath) throws PException {
     return new PegasusClient(configPath);
+  }
+
+  public static PegasusClientInterface createClient(ClientOptions options) throws PException {
+    Properties pegasusConfig = new Properties();
+    pegasusConfig.setProperty("meta_servers", options.getMetaServers());
+    pegasusConfig.setProperty(
+        "operation_timeout", String.valueOf(options.getOperationTimeout().toMillis()));
+    pegasusConfig.setProperty("async_workers", String.valueOf(options.getAsyncWorkers()));
+    pegasusConfig.setProperty("enable_perf_counter", String.valueOf(options.isEnablePerfCounter()));
+    pegasusConfig.setProperty("perf_counter_tags", String.valueOf(options.isEnablePerfCounter()));
+    pegasusConfig.setProperty(
+        "push_counter_interval_secs", String.valueOf(options.getFalconPushInterval().getSeconds()));
+    return new PegasusClient(pegasusConfig);
   }
 
   // Get the singleton client instance with default config path of "resource:///pegasus.properties".
@@ -53,6 +69,29 @@ public class PegasusClientFactory {
                 + singletonClientConfigPath
                 + "\"");
         throw new PException("Singleton PegasusClient Config Path Conflict");
+      }
+      return singletonClient;
+    }
+  }
+
+  public static PegasusClientInterface getSingletonClient(ClientOptions options) throws PException {
+    synchronized (singletonClientLock) {
+      if (singletonClient == null) {
+        try {
+          singletonClient = (PegasusClient) createClient(options);
+          singletonClientOptions = options;
+          LOGGER.info("Create Singleton PegasusClient with options \"" + options.toString() + "\"");
+        } catch (Throwable e) {
+          throw new PException("Create Singleton PegasusClient Failed", e);
+        }
+      } else if (!singletonClientOptions.equals(options)) {
+        LOGGER.error(
+            "Singleton PegasusClient options Conflict: \""
+                + options.toString()
+                + "\" VS \""
+                + singletonClientOptions.toString()
+                + "\"");
+        throw new PException("Singleton PegasusClient options Conflict");
       }
       return singletonClient;
     }
