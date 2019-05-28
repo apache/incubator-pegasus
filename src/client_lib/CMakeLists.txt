@@ -17,6 +17,7 @@ add_custom_target(clientlib_target
     COMMAND ar -x ${DSN_ROOT}/lib/libdsn_replication_client.a
     COMMAND ar -x ${DSN_ROOT}/lib/libdsn_replication_common.a
     COMMAND ar -x ${DSN_THIRDPARTY_ROOT}/lib/libthrift.a
+    COMMAND ar -x ${DSN_THIRDPARTY_ROOT}/lib/libfmt.a
     COMMAND ar -x ${CMAKE_BINARY_DIR}/client_lib/libpegasus_client_impl.a
     COMMAND ar -x ${CMAKE_BINARY_DIR}/base/libpegasus.base.a
     COMMAND ar -qcs ${pegasus_clientlib_static_path} *.o
