@@ -129,10 +129,30 @@
       "timespan": 86400
     },
     {
+      "title": "P999 Get 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_GET.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "P99 MultiGet 服务端延迟（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "P999 MultiGet 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -149,10 +169,30 @@
       "timespan": 86400
     },
     {
+      "title": "P999 Set 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_PUT.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "P99 MultiSet 服务端延迟（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "P999 MultiSet 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -169,10 +209,30 @@
       "timespan": 86400
     },
     {
+      "title": "P999 Del 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_REMOVE.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "P99 MultiDel 服务端延迟（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_RRDB_RRDB_MULTI_REMOVE.latency.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "P999 MultiDel 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_MULTI_REMOVE.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -189,10 +249,30 @@
       "timespan": 86400
     },
     {
+      "title": "P999 Incr 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_INCR.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "P99 CheckAndSet 服务端延迟（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_RRDB_RRDB_CHECK_AND_SET.latency.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "P999 CheckAndSet 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_CHECK_AND_SET.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -209,10 +289,30 @@
       "timespan": 86400
     },
     {
+      "title": "P999 CheckAndMutate 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_CHECK_AND_MUTATE.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "P99 Scan 服务端延迟（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_RRDB_RRDB_SCAN.latency.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "P999 Scan 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_RRDB_RRDB_SCAN.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
@@ -229,10 +329,30 @@
       "timespan": 86400
     },
     {
+      "title": "P999 Prepare 发送端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_PREPARE_ACK.latency.client(ns).p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "P99 Prepare 服务端延迟（单位：纳秒）",
       "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
       "counters": [
           "zion*profiler*RPC_PREPARE.latency.server/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
+      "title": "P999 Prepare 服务端延迟（单位：纳秒）",
+      "endpoints": ["cluster=${cluster.name} job=replica service=pegasus"],
+      "counters": [
+          "zion*profiler*RPC_PREPARE.latency.server.p999/cluster=${cluster.name},job=replica,port=${replica.port},service=pegasus"
       ],
       "graph_type": "a",
       "method": "",
