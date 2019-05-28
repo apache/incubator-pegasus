@@ -261,11 +261,14 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
         failure_detector::on_ping_internal(beacon, ack);
     }
 
-    dinfo("on_ping, is_master(%s), from_node(%s), this_node(%s), primary_node(%s)",
-          ack.is_master ? "true" : "false",
-          beacon.from_addr.to_string(),
-          ack.this_node.to_string(),
-          ack.primary_node.to_string());
+    ddebug("on_ping, beacon send time[%ld], is_master(%s), from_node(%s), this_node(%s), "
+           "primary_node(%s)",
+           ack.time,
+           ack.is_master ? "true" : "false",
+           beacon.from_addr.to_string(),
+           ack.this_node.to_string(),
+           ack.primary_node.to_string());
+
     reply(ack);
 }
 

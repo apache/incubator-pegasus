@@ -244,6 +244,14 @@ void failure_detector::check_all_records()
             if (record.is_alive &&
                 now + _check_interval_milliseconds - record.last_send_time_for_beacon_with_ack >
                     _lease_milliseconds) {
+                derror("master %s disconnected, now=%" PRId64 ", last_send_time=%" PRId64
+                       ", now+check_interval-last_send_time=%" PRId64,
+                       record.node.to_string(),
+                       now,
+                       record.last_send_time_for_beacon_with_ack,
+                       now + _check_interval_milliseconds -
+                           record.last_send_time_for_beacon_with_ack);
+
                 expire.push_back(record.node);
                 record.is_alive = false;
 
@@ -276,6 +284,13 @@ void failure_detector::check_all_records()
 
             if (record.is_alive != false &&
                 now - record.last_beacon_recv_time > _grace_milliseconds) {
+                derror("worker %s disconnected, now=%" PRId64 ", last_beacon_recv_time=%" PRId64
+                       ", now-last_recv=%" PRId64,
+                       record.node.to_string(),
+                       now,
+                       record.last_beacon_recv_time,
+                       now - record.last_beacon_recv_time);
+
                 expire.push_back(record.node);
                 record.is_alive = false;
 
@@ -371,12 +386,20 @@ void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon
         // update last_beacon_recv_time
         itr->second.last_beacon_recv_time = now;
 
+        ddebug("master %s update last_beacon_recv_time=%" PRId64,
+               itr->second.node.to_string(),
+               itr->second.last_beacon_recv_time);
+
         if (itr->second.is_alive == false) {
             itr->second.is_alive = true;
 
             report(node, false, true);
             on_worker_connected(node);
         }
+    } else {
+        ddebug("now[%" PRId64 "] <= last_recv_time[%" PRId64 "]",
+               now,
+               itr->second.last_beacon_recv_time);
     }
 }
 
@@ -432,14 +455,13 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
 
     if (!is_time_greater_than(beacon_send_time, record.last_send_time_for_beacon_with_ack)) {
         // out-dated beacon acks, do nothing
-        dinfo("ignore out dated beacon acks, send_time(%lld), last_beacon(%lld)",
-              beacon_send_time,
-              record.last_send_time_for_beacon_with_ack);
+        ddebug("ignore out dated beacon acks, send_time(%lld), last_beacon(%lld)",
+               beacon_send_time,
+               record.last_send_time_for_beacon_with_ack);
         return false;
     }
 
     // now the ack is applicable
-
     if (err != ERR_OK) {
         return true;
     }
@@ -455,6 +477,10 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     // update last_send_time_for_beacon_with_ack
     record.last_send_time_for_beacon_with_ack = beacon_send_time;
     record.rejected = false;
+
+    ddebug("worker %s send beacon succeed, update last_send_time=%" PRId64,
+           record.node.to_string(),
+           record.last_send_time_for_beacon_with_ack);
 
     if (record.is_alive == false &&
         now - record.last_send_time_for_beacon_with_ack <= _lease_milliseconds) {
@@ -475,7 +501,7 @@ bool failure_detector::unregister_master(::dsn::rpc_address node)
     if (it != _masters.end()) {
         it->second.send_beacon_timer->cancel(true);
         _masters.erase(it);
-        dinfo("unregister master[%s] successfully", node.to_string());
+        ddebug("unregister master[%s] successfully", node.to_string());
         return true;
     } else {
         ddebug("unregister master[%s] failed, cannot find it in FD", node.to_string());
@@ -557,10 +583,10 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
     beacon.to_addr = target;
     beacon.__set_start_time(static_cast<int64_t>(dsn::utils::process_start_millis()));
 
-    dinfo("send ping message, from[%s], to[%s], time[%" PRId64 "]",
-          beacon.from_addr.to_string(),
-          beacon.to_addr.to_string(),
-          time);
+    ddebug("send ping message, from[%s], to[%s], time[%" PRId64 "]",
+           beacon.from_addr.to_string(),
+           beacon.to_addr.to_string(),
+           time);
 
     ::dsn::rpc::call(target,
                      RPC_FD_FAILURE_DETECTOR_PING,
