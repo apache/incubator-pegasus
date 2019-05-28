@@ -14,8 +14,12 @@ cache:
 
 addons:
     apt:
+        update: true
+        sources:
+            - ubuntu-toolchain-r-test
         packages:
             - clang-format-3.9
+            - g++-5
 
 before_install:
     - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/build-depends.tar.gz
@@ -24,9 +28,6 @@ before_install:
     - cd packages
     - ls | xargs sudo dpkg -i --force-depends
     - cd ..
-
-install:
-    # - ./run.sh format
 
 before_script:
     - cd thirdparty
@@ -37,7 +38,7 @@ before_script:
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh test --skip_thirdparty --check --disable_gperf
+    - ./run.sh test --compiler "gcc-5,g++-5" --skip_thirdparty --check --disable_gperf
 
 after_script:
     - ./run.sh stop_zk
