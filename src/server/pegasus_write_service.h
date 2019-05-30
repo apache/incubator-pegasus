@@ -15,6 +15,7 @@ namespace pegasus {
 namespace server {
 
 class pegasus_server_impl;
+class capacity_unit_calculator;
 
 /// Handle the write requests.
 /// As the signatures imply, this class is not responsible for replying the rpc,
@@ -93,10 +94,14 @@ private:
     friend class pegasus_write_service_test;
     friend class pegasus_server_write_test;
 
+    pegasus_server_impl *_server;
+
     class impl;
     std::unique_ptr<impl> _impl;
 
     uint64_t _batch_start_time;
+
+    capacity_unit_calculator *_cu_calculator;
 
     ::dsn::perf_counter_wrapper _pfc_put_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_put_qps;

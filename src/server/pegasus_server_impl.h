@@ -22,6 +22,7 @@
 namespace pegasus {
 namespace server {
 
+class capacity_unit_calculator;
 class pegasus_server_write;
 
 class pegasus_server_impl : public ::dsn::apps::rrdb_service
@@ -285,6 +286,7 @@ private:
     uint32_t _value_schema_version;
     std::atomic<int64_t> _last_durable_decree;
 
+    std::unique_ptr<capacity_unit_calculator> _cu_calculator;
     std::unique_ptr<pegasus_server_write> _server_write;
 
     uint32_t _checkpoint_reserve_min_count_in_config;
