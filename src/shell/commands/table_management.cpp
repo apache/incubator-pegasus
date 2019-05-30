@@ -460,6 +460,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.check_and_set_qps += row.check_and_set_qps;
         sum.check_and_mutate_qps += row.check_and_mutate_qps;
         sum.scan_qps += row.scan_qps;
+        sum.recent_read_cu += row.recent_read_cu;
+        sum.recent_write_cu += row.recent_write_cu;
         sum.recent_expire_count += row.recent_expire_count;
         sum.recent_filter_count += row.recent_filter_count;
         sum.recent_abnormal_count += row.recent_abnormal_count;
@@ -501,6 +503,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("CAS", tp_alignment::kRight);
         tp.add_column("CAM", tp_alignment::kRight);
         tp.add_column("SCAN", tp_alignment::kRight);
+        tp.add_column("RCU", tp_alignment::kRight);
+        tp.add_column("WCU", tp_alignment::kRight);
         tp.add_column("expire", tp_alignment::kRight);
         tp.add_column("filter", tp_alignment::kRight);
         tp.add_column("abnormal", tp_alignment::kRight);
@@ -532,6 +536,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.check_and_set_qps);
             tp.append_data(row.check_and_mutate_qps);
             tp.append_data(row.scan_qps);
+            tp.append_data(row.recent_read_cu);
+            tp.append_data(row.recent_write_cu);
             tp.append_data(row.recent_expire_count);
             tp.append_data(row.recent_filter_count);
             tp.append_data(row.recent_abnormal_count);
