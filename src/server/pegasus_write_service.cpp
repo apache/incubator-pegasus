@@ -4,12 +4,16 @@
 
 #include "pegasus_write_service.h"
 #include "pegasus_write_service_impl.h"
+#include "capacity_unit_calculator.h"
 
 namespace pegasus {
 namespace server {
 
 pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
-    : _impl(new impl(server)), _batch_start_time(0)
+    : _server(server),
+      _impl(new impl(server)),
+      _batch_start_time(0),
+      _cu_calculator(server->_cu_calculator.get())
 {
     std::string str_gpid = fmt::format("{}", server->get_gpid());
 
@@ -104,6 +108,11 @@ int pegasus_write_service::multi_put(int64_t decree,
     uint64_t start_time = dsn_now_ns();
     _pfc_multi_put_qps->increment();
     int err = _impl->multi_put(decree, update, resp);
+
+    if (_server->is_primary()) {
+        _cu_calculator->add_multi_put_cu(resp.error, update.kvs);
+    }
+
     _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
     return err;
 }
@@ -115,6 +124,11 @@ int pegasus_write_service::multi_remove(int64_t decree,
     uint64_t start_time = dsn_now_ns();
     _pfc_multi_remove_qps->increment();
     int err = _impl->multi_remove(decree, update, resp);
+
+    if (_server->is_primary()) {
+        _cu_calculator->add_multi_remove_cu(resp.error, update.sort_keys);
+    }
+
     _pfc_multi_remove_latency->set(dsn_now_ns() - start_time);
     return err;
 }
@@ -126,6 +140,11 @@ int pegasus_write_service::incr(int64_t decree,
     uint64_t start_time = dsn_now_ns();
     _pfc_incr_qps->increment();
     int err = _impl->incr(decree, update, resp);
+
+    if (_server->is_primary()) {
+        _cu_calculator->add_incr_cu(resp.error);
+    }
+
     _pfc_incr_latency->set(dsn_now_ns() - start_time);
     return err;
 }
@@ -137,6 +156,11 @@ int pegasus_write_service::check_and_set(int64_t decree,
     uint64_t start_time = dsn_now_ns();
     _pfc_check_and_set_qps->increment();
     int err = _impl->check_and_set(decree, update, resp);
+
+    if (_server->is_primary()) {
+        _cu_calculator->add_check_and_set_cu(resp.error, update.set_sort_key, update.set_value);
+    }
+
     _pfc_check_and_set_latency->set(dsn_now_ns() - start_time);
     return err;
 }
@@ -148,6 +172,11 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
     uint64_t start_time = dsn_now_ns();
     _pfc_check_and_mutate_qps->increment();
     int err = _impl->check_and_mutate(decree, update, resp);
+
+    if (_server->is_primary()) {
+        _cu_calculator->add_check_and_mutate_cu(resp.error, update.mutate_list);
+    }
+
     _pfc_check_and_mutate_latency->set(dsn_now_ns() - start_time);
     return err;
 }
@@ -168,20 +197,30 @@ int pegasus_write_service::batch_put(int64_t decree,
 
     _batch_qps_perfcounters.push_back(_pfc_put_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
+    int err = _impl->batch_put(decree, update, resp);
 
-    return _impl->batch_put(decree, update, resp);
+    if (_server->is_primary()) {
+        _cu_calculator->add_put_cu(resp.error, update.key, update.value);
+    }
+
+    return err;
 }
 
 int pegasus_write_service::batch_remove(int64_t decree,
                                         const dsn::blob &key,
                                         dsn::apps::update_response &resp)
 {
-    dassert(_batch_start_time != 0, "batch_put must be called after batch_prepare");
+    dassert(_batch_start_time != 0, "batch_remove must be called after batch_prepare");
 
     _batch_qps_perfcounters.push_back(_pfc_remove_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_remove_latency.get());
+    int err = _impl->batch_remove(decree, key, resp);
 
-    return _impl->batch_remove(decree, key, resp);
+    if (_server->is_primary()) {
+        _cu_calculator->add_remove_cu(resp.error, key);
+    }
+
+    return err;
 }
 
 int pegasus_write_service::batch_commit(int64_t decree)

@@ -13,22 +13,18 @@ namespace server {
 
 using ::dsn::replication::replication_ddl_client;
 
-DEFINE_TASK_CODE(LPC_DETECT_AVAILABLE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+class result_writer;
 
 class available_detector
 {
 public:
     available_detector();
-    virtual ~available_detector();
+    ~available_detector();
 
     void start();
     void stop();
 
 private:
-    void set_detect_result(const std::string &hash_key,
-                           const std::string &sort_key,
-                           const std::string &value,
-                           int try_count);
     // generate hash_keys that can access every partition.
     bool generate_hash_keys();
     void on_detect(int32_t idx);
@@ -41,8 +37,11 @@ private:
     void on_minute_report();
 
 private:
+    dsn::task_tracker _tracker;
     std::string _cluster_name;
     std::string _app_name;
+    // for writing detect result
+    std::unique_ptr<result_writer> _result_writer;
     // client to access server.
     pegasus_client *_client;
     std::shared_ptr<replication_ddl_client> _ddl_client;
@@ -87,5 +86,5 @@ private:
     ::dsn::perf_counter_wrapper _pfc_fail_times_minute;
     ::dsn::perf_counter_wrapper _pfc_available_minute;
 };
-}
-}
+} // namespace server
+} // namespace pegasus

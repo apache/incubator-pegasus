@@ -40,6 +40,17 @@
       "timespan": 86400
     },
     {
+      "title": "集群读写吞吐量（统计最近10s内的读写吞吐量，单位：Capacity Unit）",
+      "endpoints": ["cluster=${cluster.name} job=collector service=pegasus"],
+      "counters": [
+          "collector*app.pegasus*app.stat.recent_read_cu#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus",
+          "collector*app.pegasus*app.stat.recent_write_cu#_all_/cluster=${cluster.name},job=collector,port=${collector.port},service=pegasus"
+      ],
+      "graph_type": "a",
+      "method": "",
+      "timespan": 86400
+    },
+    {
       "title": "集群Load-Balance状态（待执行的balance操作数、已执行的balance操作数等）",
       "endpoints": ["cluster=${cluster.name} job=meta service=pegasus"],
       "counters": [
