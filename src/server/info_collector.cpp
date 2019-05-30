@@ -14,6 +14,7 @@
 
 #include "base/pegasus_utils.h"
 #include "base/pegasus_const.h"
+#include "result_writer.h"
 
 #define METRICSNUM 3
 
@@ -24,6 +25,7 @@ namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_CU_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 info_collector::info_collector()
 {
@@ -36,7 +38,7 @@ info_collector::info_collector()
     }
 
     _cluster_name = dsn_config_get_value_string("pegasus.collector", "cluster", "", "cluster name");
-    dassert(_cluster_name.size() > 0, "");
+    dassert(!_cluster_name.empty(), "");
 
     _shell_context.current_cluster_name = _cluster_name;
     _shell_context.meta_list = meta_servers;
@@ -46,11 +48,28 @@ info_collector::info_collector()
                                                                        "app_stat_interval_seconds",
                                                                        10, // default value 10s
                                                                        "app stat interval seconds");
+
+    _cu_stat_app = dsn_config_get_value_string(
+        "pegasus.collector", "cu_stat_app", "", "app for recording capacity unit info");
+    dassert(!_cu_stat_app.empty(), "");
+    // initialize the _client.
+    if (!pegasus_client_factory::initialize(nullptr)) {
+        dassert(false, "Initialize the pegasus client failed");
+    }
+    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _cu_stat_app.c_str());
+    dassert(_client != nullptr, "Initialize the client failed");
+    _result_writer = dsn::make_unique<result_writer>(_client);
+
+    _cu_fetch_interval_seconds =
+        (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
+                                              "cu_fetch_interval_seconds",
+                                              8, // default value 8s
+                                              "capacity unit fetch interval seconds");
 }
 
 info_collector::~info_collector()
 {
-    _tracker.cancel_outstanding_tasks();
+    stop();
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
@@ -65,111 +84,121 @@ void info_collector::start()
                                       std::chrono::seconds(_app_stat_interval_seconds),
                                       0,
                                       std::chrono::minutes(1));
+
+    _cu_stat_timer_task =
+        ::dsn::tasking::enqueue_timer(LPC_PEGASUS_CU_STAT_TIMER,
+                                      &_tracker,
+                                      [this] { on_capacity_unit_stat(); },
+                                      std::chrono::seconds(_cu_fetch_interval_seconds),
+                                      0,
+                                      std::chrono::minutes(1));
 }
 
-void info_collector::stop() { _app_stat_timer_task->cancel(true); }
+void info_collector::stop() { _tracker.cancel_outstanding_tasks(); }
 
 void info_collector::on_app_stat()
 {
     ddebug("start to stat apps");
     std::vector<row_data> rows;
-    if (get_app_stat(&_shell_context, "", rows)) {
-        std::vector<double> read_qps;
-        std::vector<double> write_qps;
-        rows.resize(rows.size() + 1);
-        read_qps.resize(rows.size());
-        write_qps.resize(rows.size());
-        row_data &all = rows.back();
-        all.row_name = "_all_";
-        for (int i = 0; i < rows.size() - 1; ++i) {
-            row_data &row = rows[i];
-            all.get_qps += row.get_qps;
-            all.multi_get_qps += row.multi_get_qps;
-            all.put_qps += row.put_qps;
-            all.multi_put_qps += row.multi_put_qps;
-            all.remove_qps += row.remove_qps;
-            all.multi_remove_qps += row.multi_remove_qps;
-            all.incr_qps += row.incr_qps;
-            all.check_and_set_qps += row.check_and_set_qps;
-            all.check_and_mutate_qps += row.check_and_mutate_qps;
-            all.scan_qps += row.scan_qps;
-            all.recent_expire_count += row.recent_expire_count;
-            all.recent_filter_count += row.recent_filter_count;
-            all.recent_abnormal_count += row.recent_abnormal_count;
-            all.recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
-            all.recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
-            all.storage_mb += row.storage_mb;
-            all.storage_count += row.storage_count;
-            all.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
-            all.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
-            all.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
-            all.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
-            all.duplicated_put_qps += row.duplicated_put_qps;
-            all.duplicated_multi_put_qps += row.duplicated_multi_put_qps;
-            all.duplicated_remove_qps += row.duplicated_remove_qps;
-            all.duplicated_multi_remove_qps += row.duplicated_multi_remove_qps;
-            all.dup_shipped_ops += row.dup_shipped_ops;
-            all.dup_failed_shipping_ops += row.dup_failed_shipping_ops;
-            read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
-            write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
-                           row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps +
-                           row.duplicated_put_qps + row.duplicated_multi_put_qps +
-                           row.duplicated_multi_remove_qps + row.duplicated_remove_qps;
-        }
-        read_qps[read_qps.size() - 1] = all.get_qps + all.multi_get_qps + all.scan_qps;
-        write_qps[read_qps.size() - 1] =
-            all.put_qps + all.multi_put_qps + all.remove_qps + all.multi_remove_qps + all.incr_qps +
-            all.check_and_set_qps + all.check_and_mutate_qps + all.duplicated_put_qps +
-            all.duplicated_multi_put_qps + all.duplicated_multi_remove_qps +
-            all.duplicated_remove_qps;
-        for (int i = 0; i < rows.size(); ++i) {
-            row_data &row = rows[i];
-            AppStatCounters *counters = get_app_counters(row.row_name);
-            counters->get_qps->set(row.get_qps);
-            counters->multi_get_qps->set(row.multi_get_qps);
-            counters->put_qps->set(row.put_qps);
-            counters->multi_put_qps->set(row.multi_put_qps);
-            counters->remove_qps->set(row.remove_qps);
-            counters->multi_remove_qps->set(row.multi_remove_qps);
-            counters->incr_qps->set(row.incr_qps);
-            counters->check_and_set_qps->set(row.check_and_set_qps);
-            counters->check_and_mutate_qps->set(row.check_and_mutate_qps);
-            counters->scan_qps->set(row.scan_qps);
-            counters->recent_expire_count->set(row.recent_expire_count);
-            counters->recent_filter_count->set(row.recent_filter_count);
-            counters->recent_abnormal_count->set(row.recent_abnormal_count);
-            counters->recent_write_throttling_delay_count->set(
-                row.recent_write_throttling_delay_count);
-            counters->recent_write_throttling_reject_count->set(
-                row.recent_write_throttling_reject_count);
-            counters->storage_mb->set(row.storage_mb);
-            counters->storage_count->set(row.storage_count);
-            counters->rdb_block_cache_hit_rate->set(
-                std::abs(row.rdb_block_cache_total_count) < 1e-6
-                    ? 0
-                    : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count * 1000000);
-            counters->rdb_index_and_filter_blocks_mem_usage->set(
-                row.rdb_index_and_filter_blocks_mem_usage);
-            counters->rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
-            counters->read_qps->set(read_qps[i]);
-            counters->write_qps->set(write_qps[i]);
-            counters->duplicated_put_qps->set(row.duplicated_put_qps);
-            counters->duplicated_remove_qps->set(row.duplicated_remove_qps);
-            counters->duplicated_multi_put_qps->set(row.duplicated_multi_put_qps);
-            counters->duplicated_multi_remove_qps->set(row.duplicated_multi_remove_qps);
-            counters->dup_shipped_ops->set(row.dup_shipped_ops);
-            counters->dup_failed_shipping_ops->set(row.dup_failed_shipping_ops);
-        }
-        ddebug_f("stat duplication: all.dup_shipped_ops = {}, all.dup_failed_shipping_ops = {}",
-                 all.dup_shipped_ops,
-                 all.dup_failed_shipping_ops);
-        ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
-               (int)(rows.size() - 1),
-               read_qps[read_qps.size() - 1],
-               write_qps[read_qps.size() - 1]);
-    } else {
+    if (!get_app_stat(&_shell_context, "", rows)) {
         derror("call get_app_stat() failed");
+        return;
     }
+    std::vector<double> read_qps;
+    std::vector<double> write_qps;
+    rows.resize(rows.size() + 1);
+    read_qps.resize(rows.size());
+    write_qps.resize(rows.size());
+    row_data &all = rows.back();
+    all.row_name = "_all_";
+    for (int i = 0; i < rows.size() - 1; ++i) {
+        row_data &row = rows[i];
+        all.get_qps += row.get_qps;
+        all.multi_get_qps += row.multi_get_qps;
+        all.put_qps += row.put_qps;
+        all.multi_put_qps += row.multi_put_qps;
+        all.remove_qps += row.remove_qps;
+        all.multi_remove_qps += row.multi_remove_qps;
+        all.incr_qps += row.incr_qps;
+        all.check_and_set_qps += row.check_and_set_qps;
+        all.check_and_mutate_qps += row.check_and_mutate_qps;
+        all.scan_qps += row.scan_qps;
+        all.recent_read_cu += row.recent_read_cu;
+        all.recent_write_cu += row.recent_write_cu;
+        all.recent_expire_count += row.recent_expire_count;
+        all.recent_filter_count += row.recent_filter_count;
+        all.recent_abnormal_count += row.recent_abnormal_count;
+        all.recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
+        all.recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
+        all.storage_mb += row.storage_mb;
+        all.storage_count += row.storage_count;
+        all.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
+        all.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
+        all.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
+        all.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
+        all.duplicated_put_qps += row.duplicated_put_qps;
+        all.duplicated_multi_put_qps += row.duplicated_multi_put_qps;
+        all.duplicated_remove_qps += row.duplicated_remove_qps;
+        all.duplicated_multi_remove_qps += row.duplicated_multi_remove_qps;
+        all.dup_shipped_ops += row.dup_shipped_ops;
+        all.dup_failed_shipping_ops += row.dup_failed_shipping_ops;
+        read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
+        write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
+                       row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps +
+                       row.duplicated_put_qps + row.duplicated_multi_put_qps +
+                       row.duplicated_multi_remove_qps + row.duplicated_remove_qps;
+    }
+    read_qps[read_qps.size() - 1] = all.get_qps + all.multi_get_qps + all.scan_qps;
+    write_qps[read_qps.size() - 1] =
+        all.put_qps + all.multi_put_qps + all.remove_qps + all.multi_remove_qps + all.incr_qps +
+        all.check_and_set_qps + all.check_and_mutate_qps + all.duplicated_put_qps +
+        all.duplicated_multi_put_qps + all.duplicated_multi_remove_qps + all.duplicated_remove_qps;
+    for (int i = 0; i < rows.size(); ++i) {
+        row_data &row = rows[i];
+        AppStatCounters *counters = get_app_counters(row.row_name);
+        counters->get_qps->set(row.get_qps);
+        counters->multi_get_qps->set(row.multi_get_qps);
+        counters->put_qps->set(row.put_qps);
+        counters->multi_put_qps->set(row.multi_put_qps);
+        counters->remove_qps->set(row.remove_qps);
+        counters->multi_remove_qps->set(row.multi_remove_qps);
+        counters->incr_qps->set(row.incr_qps);
+        counters->check_and_set_qps->set(row.check_and_set_qps);
+        counters->check_and_mutate_qps->set(row.check_and_mutate_qps);
+        counters->scan_qps->set(row.scan_qps);
+        counters->recent_read_cu->set(row.recent_read_cu);
+        counters->recent_write_cu->set(row.recent_write_cu);
+        counters->recent_expire_count->set(row.recent_expire_count);
+        counters->recent_filter_count->set(row.recent_filter_count);
+        counters->recent_abnormal_count->set(row.recent_abnormal_count);
+        counters->recent_write_throttling_delay_count->set(row.recent_write_throttling_delay_count);
+        counters->recent_write_throttling_reject_count->set(
+            row.recent_write_throttling_reject_count);
+        counters->storage_mb->set(row.storage_mb);
+        counters->storage_count->set(row.storage_count);
+        counters->rdb_block_cache_hit_rate->set(
+            std::abs(row.rdb_block_cache_total_count) < 1e-6
+                ? 0
+                : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count * 1000000);
+        counters->rdb_index_and_filter_blocks_mem_usage->set(
+            row.rdb_index_and_filter_blocks_mem_usage);
+        counters->rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
+        counters->read_qps->set(read_qps[i]);
+        counters->write_qps->set(write_qps[i]);
+        counters->duplicated_put_qps->set(row.duplicated_put_qps);
+        counters->duplicated_remove_qps->set(row.duplicated_remove_qps);
+        counters->duplicated_multi_put_qps->set(row.duplicated_multi_put_qps);
+        counters->duplicated_multi_remove_qps->set(row.duplicated_multi_remove_qps);
+        counters->dup_shipped_ops->set(row.dup_shipped_ops);
+        counters->dup_failed_shipping_ops->set(row.dup_failed_shipping_ops);
+    }
+    ddebug_f("stat duplication: all.dup_shipped_ops = {}, all.dup_failed_shipping_ops = {}",
+             all.dup_shipped_ops,
+             all.dup_failed_shipping_ops);
+    ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
+           (int)(rows.size() - 1),
+           read_qps[read_qps.size() - 1],
+           write_qps[read_qps.size() - 1]);
 }
 
 info_collector::AppStatCounters *info_collector::get_app_counters(const std::string &app_name)
@@ -190,6 +219,7 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
         counters->name.init_app_counter(                                                           \
             "app.pegasus", counter_name, COUNTER_TYPE_NUMBER, counter_desc);                       \
     } while (0)
+
     INIT_COUNTER(get_qps);
     INIT_COUNTER(multi_get_qps);
     INIT_COUNTER(put_qps);
@@ -200,6 +230,8 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(check_and_set_qps);
     INIT_COUNTER(check_and_mutate_qps);
     INIT_COUNTER(scan_qps);
+    INIT_COUNTER(recent_read_cu);
+    INIT_COUNTER(recent_write_cu);
     INIT_COUNTER(recent_expire_count);
     INIT_COUNTER(recent_filter_count);
     INIT_COUNTER(recent_abnormal_count);
@@ -220,6 +252,40 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(duplicated_multi_remove_qps);
     _app_stat_counters[app_name] = counters;
     return counters;
+}
+
+void info_collector::on_capacity_unit_stat()
+{
+    ddebug("start to stat capacity unit");
+    std::vector<node_capacity_unit_stat> nodes_stat;
+    if (!get_capacity_unit_stat(&_shell_context, nodes_stat)) {
+        derror("get capacity unit stat failed");
+        return;
+    }
+    for (auto elem : nodes_stat) {
+        if (!has_capacity_unit_updated(elem.node_address, elem.timestamp)) {
+            dinfo("recent read/write capacity unit value of node %s has not updated",
+                  elem.node_address.c_str());
+            continue;
+        }
+        _result_writer->set_result(elem.timestamp, elem.node_address, elem.dump_to_json());
+    }
+}
+
+bool info_collector::has_capacity_unit_updated(const std::string &node_address,
+                                               const std::string &timestamp)
+{
+    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_cu_update_info_lock);
+    auto find = _cu_update_info.find(node_address);
+    if (find == _cu_update_info.end()) {
+        _cu_update_info[node_address] = timestamp;
+        return true;
+    }
+    if (timestamp > find->second) {
+        _cu_update_info[node_address] = timestamp;
+        return true;
+    }
+    return false;
 }
 } // namespace server
 } // namespace pegasus

@@ -9,9 +9,12 @@
 #include <sstream>
 
 #include "base/pegasus_key_schema.h"
+#include "result_writer.h"
 
 namespace pegasus {
 namespace server {
+
+DEFINE_TASK_CODE(LPC_DETECT_AVAILABLE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 available_detector::available_detector()
     : _client(nullptr),
@@ -64,6 +67,7 @@ available_detector::available_detector()
     }
     _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _app_name.c_str());
     dassert(_client != nullptr, "Initialize the _client failed");
+    _result_writer = dsn::make_unique<result_writer>(_client);
     _ddl_client.reset(new replication_ddl_client(_meta_list));
     dassert(_ddl_client != nullptr, "Initialize the _ddl_client failed");
     if (!_alert_email_address.empty()) {
@@ -118,37 +122,20 @@ available_detector::available_detector()
     _pfc_available_minute->set(1000000); // init to 100%
 }
 
-available_detector::~available_detector()
-{
-    // don't delete _client, just set _client to nullptr.
-    _client = nullptr;
-    stop();
-}
+available_detector::~available_detector() = default;
 
 void available_detector::start()
 {
     // available detector delay 60s to wait the pegasus finishing the initialization.
     _detect_timer = ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
-                                            nullptr,
+                                            &_tracker,
                                             std::bind(&available_detector::detect_available, this),
                                             0,
                                             std::chrono::minutes(1));
     report_availability_info();
 }
 
-void available_detector::stop()
-{
-    for (auto &tptr : _detect_tasks) {
-        if (tptr != nullptr)
-            tptr->cancel(true);
-    }
-
-    if (_detect_timer != nullptr)
-        _detect_timer->cancel(true);
-
-    if (_report_task != nullptr)
-        _report_task->cancel(true);
-}
+void available_detector::stop() { _tracker.cancel_outstanding_tasks(); }
 
 void available_detector::detect_available()
 {
@@ -156,7 +143,7 @@ void available_detector::detect_available()
         derror("initialize hash_keys failed, do not detect available, retry after 60 seconds");
         _detect_timer =
             ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
-                                    nullptr,
+                                    &_tracker,
                                     std::bind(&available_detector::detect_available, this),
                                     0,
                                     std::chrono::minutes(1));
@@ -172,7 +159,7 @@ void available_detector::detect_available()
         auto call_func = std::bind(&available_detector::on_detect, this, i);
         _detect_tasks[i] =
             ::dsn::tasking::enqueue_timer(LPC_DETECT_AVAILABLE,
-                                          nullptr,
+                                          &_tracker,
                                           std::move(call_func),
                                           std::chrono::seconds(_detect_interval_seconds));
     }
@@ -225,7 +212,7 @@ void available_detector::report_availability_info()
     };
     _report_task = ::dsn::tasking::enqueue_timer(
         LPC_DETECT_AVAILABLE,
-        nullptr,
+        &_tracker,
         std::move(call_func),
         std::chrono::minutes(1),
         0,
@@ -426,9 +413,7 @@ void available_detector::on_day_report()
         }
     }
 
-    // set try_count to 3000 (keep on retrying for 3000 minutes) to avoid losting detect result
-    // if the result table is also unavailable for a long time.
-    set_detect_result(hash_key, sort_key, value, 3000);
+    _result_writer->set_result(hash_key, sort_key, value);
 }
 
 void available_detector::on_hour_report()
@@ -452,9 +437,7 @@ void available_detector::on_hour_report()
     _pfc_fail_times_hour->set(fail_times);
     _pfc_available_hour->set(available);
 
-    // set try_count to 3000 (keep on retrying for 3000 minutes) to avoid losting detect result
-    // if the result table is also unavailable for a long time.
-    set_detect_result(hash_key, sort_key, value, 3000);
+    _result_writer->set_result(hash_key, sort_key, value);
 }
 
 void available_detector::on_minute_report()
@@ -478,56 +461,7 @@ void available_detector::on_minute_report()
     _pfc_fail_times_minute->set(fail_times);
     _pfc_available_minute->set(available);
 
-    // set try_count to 3000 (keep on retrying for 3000 minutes) to avoid losting detect result
-    // if the result table is also unavailable for a long time.
-    set_detect_result(hash_key, sort_key, value, 3000);
+    _result_writer->set_result(hash_key, sort_key, value);
 }
-
-void available_detector::set_detect_result(const std::string &hash_key,
-                                           const std::string &sort_key,
-                                           const std::string &value,
-                                           int try_count)
-{
-    _client->async_set(
-        hash_key,
-        sort_key,
-        value,
-        [this, hash_key, sort_key, value, try_count](int err,
-                                                     pegasus_client::internal_info &&info) {
-            if (err != PERR_OK) {
-                int new_try_count = try_count - 1;
-                if (new_try_count > 0) {
-                    derror("set_detect_result fail, hash_key = %s, sort_key = %s, value = %s, "
-                           "error = %s, left_try_count = %d, try again after 1 minute",
-                           hash_key.c_str(),
-                           sort_key.c_str(),
-                           value.c_str(),
-                           _client->get_error_string(err),
-                           new_try_count);
-                    ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
-                                            nullptr,
-                                            [this, hash_key, sort_key, value, new_try_count]() {
-                                                set_detect_result(
-                                                    hash_key, sort_key, value, new_try_count);
-                                            },
-                                            0,
-                                            std::chrono::minutes(1));
-                } else {
-                    derror("set_detect_result fail, hash_key = %s, sort_key = %s, value = %s, "
-                           "error = %s, left_try_count = %d, do not try again",
-                           hash_key.c_str(),
-                           sort_key.c_str(),
-                           value.c_str(),
-                           _client->get_error_string(err),
-                           new_try_count);
-                }
-            } else {
-                ddebug("set_detect_result succeed, hash_key = %s, sort_key = %s, value = %s",
-                       hash_key.c_str(),
-                       sort_key.c_str(),
-                       value.c_str());
-            }
-        });
-}
-}
-} // namespace
+} // namespace server
+} // namespace pegasus
