@@ -1451,7 +1451,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         }
     }
     // Update all envs before opening db, ensure all envs are effective for the newly opened db.
-    update_app_envs(envs);
+    update_app_envs_before_open_db(envs);
 
     rocksdb::Options opts = _db_opts;
     opts.create_if_missing = true;
@@ -1546,9 +1546,6 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         // update LastManualCompactFinishTime
         _manual_compact_svc.init_last_finish_time_ms(_db->GetLastManualCompactFinishTime());
 
-        // set default usage scenario
-        set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
-
         parse_checkpoints();
 
         // checkpoint if necessary to make last_durable_decree() fresh.
@@ -1580,6 +1577,9 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                last_durable_decree());
 
         _is_open = true;
+
+        // set default usage scenario after db opened.
+        set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
 
         dinfo("%s: start the update rocksdb statistics timer task", replica_name());
         _update_replica_rdb_stat =
@@ -2322,6 +2322,15 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
+void pegasus_server_impl::update_app_envs_before_open_db(
+    const std::map<std::string, std::string> &envs)
+{
+    // we do not update usage scenario because it depends on opened db.
+    update_default_ttl(envs);
+    update_checkpoint_reserve(envs);
+    _manual_compact_svc.start_manual_compact_if_needed(envs);
+}
+
 void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
 {
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = _usage_scenario;
@@ -2337,12 +2346,12 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
     if (new_usage_scenario != _usage_scenario) {
         std::string old_usage_scenario = _usage_scenario;
         if (set_usage_scenario(new_usage_scenario)) {
-            ddebug_replica("update app env[{}] from {} to {} succeed",
+            ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
                            ROCKSDB_ENV_USAGE_SCENARIO_KEY,
                            old_usage_scenario,
                            new_usage_scenario);
         } else {
-            derror_replica("update app env[{}] from {} to {} failed",
+            derror_replica("update app env[{}] from \"{}\" to \"{}\" failed",
                            ROCKSDB_ENV_USAGE_SCENARIO_KEY,
                            old_usage_scenario,
                            new_usage_scenario);
@@ -2385,14 +2394,14 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
     }
 
     if (count != _checkpoint_reserve_min_count) {
-        ddebug_replica("update app env[{}] from {} to {} succeed",
+        ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
                        ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT,
                        _checkpoint_reserve_min_count,
                        count);
         _checkpoint_reserve_min_count = count;
     }
     if (time != _checkpoint_reserve_time_seconds) {
-        ddebug_replica("update app env[{}] from {} to {} succeed",
+        ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
                        ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS,
                        _checkpoint_reserve_time_seconds,
                        time);
@@ -2482,6 +2491,7 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
 {
     if (usage_scenario == _usage_scenario)
         return false;
+    std::string old_usage_scenario = _usage_scenario;
     std::unordered_map<std::string, std::string> new_options;
     if (usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_NORMAL ||
         usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE) {
@@ -2554,10 +2564,12 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
     }
     if (set_options(new_options)) {
         _usage_scenario = usage_scenario;
-        ddebug("%s: set usage scenario to %s succeed", replica_name(), usage_scenario.c_str());
+        ddebug_replica(
+            "set usage scenario from \"{}\" to \"{}\" succeed", old_usage_scenario, usage_scenario);
         return true;
     } else {
-        derror("%s: set usage scenario to %s failed", replica_name(), usage_scenario.c_str());
+        derror_replica(
+            "set usage scenario from \"{}\" to \"{}\" failed", old_usage_scenario, usage_scenario);
         return false;
     }
 }
