@@ -226,8 +226,10 @@ void pegasus_counter_reporter::http_request_done(struct evhttp_request *req, voi
         char *tmp = (char *)alloca(len + 1);
         memcpy(tmp, evbuffer_pullup(buf, -1), len);
         tmp[len] = '\0';
-        derror(
-            "http post request failed: %u %s %s", req->response_code, req->response_code_line, tmp);
+        derror("http post request failed: code = %u, code_line = %s, input_buffer = %s",
+               req->response_code,
+               req->response_code_line,
+               tmp);
     }
     event_base_loopexit(event, 0);
 }
