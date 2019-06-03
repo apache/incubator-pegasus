@@ -215,27 +215,23 @@ void pegasus_counter_reporter::http_request_done(struct evhttp_request *req, voi
 {
     struct event_base *event = (struct event_base *)arg;
     if (req == nullptr) {
-        derror("http_request_done failed, unknown reason");
-        event_base_loopexit(event, 0);
-        return;
-    }
-
-    switch (req->response_code) {
-    case HTTP_OK: {
-        dinfo("http_request_done OK");
-        event_base_loopexit(event, 0);
-    } break;
-
-    default:
+        derror("http post request failed: unknown reason");
+    } else if (req->response_code == 0) {
+        derror("http post request failed: connection refused");
+    } else if (req->response_code == HTTP_OK) {
+        dinfo("http post request succeed");
+    } else {
         struct evbuffer *buf = evhttp_request_get_input_buffer(req);
         size_t len = evbuffer_get_length(buf);
         char *tmp = (char *)alloca(len + 1);
         memcpy(tmp, evbuffer_pullup(buf, -1), len);
         tmp[len] = '\0';
-        derror("http post request receive ERROR: %u, %s", req->response_code, tmp);
-        event_base_loopexit(event, 0);
-        return;
+        derror("http post request failed: code = %u, code_line = %s, input_buffer = %s",
+               req->response_code,
+               req->response_code_line,
+               tmp);
     }
+    event_base_loopexit(event, 0);
 }
 
 void pegasus_counter_reporter::on_report_timer(std::shared_ptr<boost::asio::deadline_timer> timer,
