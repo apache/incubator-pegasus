@@ -1,28 +1,28 @@
 /*
-* The MIT License (MIT)
-*
-* Copyright (c) 2015 Microsoft Corporation
-*
-* -=- Robust Distributed System Nucleus (rDSN) -=-
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*/
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 #include "http_message_parser.h"
 
@@ -41,6 +41,30 @@ struct parser_context
     http_message_parser *parser;
     message_reader *reader;
 };
+
+/*extern*/ const char *http_parser_stage_to_string(http_parser_stage s)
+{
+    switch (s) {
+    case HTTP_ON_MESSAGE_BEGIN:
+        return "HTTP_ON_MESSAGE_BEGIN";
+    case HTTP_ON_URL:
+        return "HTTP_ON_URL";
+    case HTTP_ON_STATUS:
+        return "HTTP_ON_STATUS";
+    case HTTP_ON_HEADER_FIELD:
+        return "HTTP_ON_HEADER_FIELD";
+    case HTTP_ON_HEADER_VALUE:
+        return "HTTP_ON_HEADER_VALUE";
+    case HTTP_ON_HEADERS_COMPLETE:
+        return "HTTP_ON_HEADERS_COMPLETE";
+    case HTTP_ON_BODY:
+        return "HTTP_ON_BODY";
+    case HTTP_ON_MESSAGE_COMPLETE:
+        return "HTTP_ON_MESSAGE_COMPLETE";
+    default:
+        return "invalid";
+    }
+}
 
 http_message_parser::http_message_parser()
 {
@@ -62,22 +86,34 @@ http_message_parser::http_message_parser()
     };
 
     _parser_setting.on_url = [](http_parser *parser, const char *at, size_t length) -> int {
-        auto &msg = reinterpret_cast<parser_context *>(parser->data)->parser->_current_message;
-
-        // msg->buffers[2] = url
-        std::string url(at, length);
-        msg->buffers.emplace_back(blob::create_from_bytes(std::move(url)));
+        http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
+        msg_parser->_stage = HTTP_ON_URL;
+        msg_parser->_url.append(at, length);
         return 0;
     };
 
     _parser_setting.on_header_field =
-        [](http_parser *parser, const char *at, size_t length) -> int { return 0; };
+        [](http_parser *parser, const char *at, size_t length) -> int {
+        http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
+        msg_parser->_stage = HTTP_ON_HEADER_FIELD;
+        return 0;
+    };
 
     _parser_setting.on_header_value =
-        [](http_parser *parser, const char *at, size_t length) -> int { return 0; };
+        [](http_parser *parser, const char *at, size_t length) -> int {
+        http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
+        msg_parser->_stage = HTTP_ON_HEADER_VALUE;
+        return 0;
+    };
 
     _parser_setting.on_headers_complete = [](http_parser *parser) -> int {
-        auto &msg = reinterpret_cast<parser_context *>(parser->data)->parser->_current_message;
+        http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
+        msg_parser->_stage = HTTP_ON_HEADERS_COMPLETE;
+
+        auto &msg = msg_parser->_current_message;
+
+        // msg->buffers[2] = url
+        msg->buffers.emplace_back(blob::create_from_bytes(std::move(msg_parser->_url)));
 
         message_header *header = msg->header;
         if (parser->type == HTTP_REQUEST && parser->method == HTTP_GET) {
@@ -96,6 +132,7 @@ http_message_parser::http_message_parser()
     _parser_setting.on_message_complete = [](http_parser *parser) -> int {
         auto message_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
         message_parser->_received_messages.emplace(std::move(message_parser->_current_message));
+        message_parser->_stage = HTTP_ON_MESSAGE_COMPLETE;
         return 0;
     };
 
@@ -126,8 +163,24 @@ message_ex *http_message_parser::get_message_on_receive(message_reader *reader,
         auto nparsed = http_parser_execute(
             &_parser, &_parser_setting, reader->_buffer.data(), reader->_buffer_occupied);
 
-        reader->_buffer = reader->_buffer.range(nparsed);
-        reader->_buffer_occupied -= nparsed;
+        // error handling
+        if (_parser.http_errno != HPE_OK) {
+            auto err = HTTP_PARSER_ERRNO(&_parser);
+            derror("failed on stage %s [%s]",
+                   http_parser_stage_to_string(_stage),
+                   http_errno_description(err));
+
+            read_next = -1;
+            return nullptr;
+        }
+
+        _parsed_length += nparsed;
+        if (is_complete()) {
+            // parsing complete
+            reader->_buffer = reader->_buffer.range(_parsed_length);
+            reader->_buffer_occupied -= _parsed_length;
+            reset();
+        }
     }
 
     if (!_received_messages.empty()) {
@@ -176,6 +229,14 @@ int http_message_parser::get_buffers_on_send(message_ex *msg, send_buf *buffers)
         ++i;
     }
     return i;
+}
+
+void http_message_parser::reset()
+{
+    _current_message.reset();
+    _url.clear();
+    _stage = HTTP_INVALID;
+    _parsed_length = 0;
 }
 
 } // namespace dsn

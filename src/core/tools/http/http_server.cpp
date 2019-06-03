@@ -48,6 +48,7 @@ void http_server::serve(message_ex *msg)
     error_with<http_request> res = http_request::parse(msg);
     http_response resp;
     if (!res.is_ok()) {
+        derror("failed to parse request: %s", res.get_error().description().c_str());
         resp.status_code = http_status_code::bad_request;
         resp.body = "failed to parse request";
     } else {
@@ -73,7 +74,10 @@ void http_server::add_service(http_service *service)
 
 /*static*/ error_with<http_request> http_request::parse(message_ex *m)
 {
-    dassert(m->buffers.size() == 3, "");
+    if (m->buffers.size() != 3) {
+        return error_s::make(ERR_INVALID_DATA,
+                             std::string("buffer size is: ") + std::to_string(m->buffers.size()));
+    }
 
     http_request ret;
     ret.body = m->buffers[1];
