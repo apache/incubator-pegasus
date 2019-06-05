@@ -216,6 +216,8 @@ private:
     std::pair<std::string, bool>
     get_restore_dir_from_env(const std::map<std::string, std::string> &env_kvs);
 
+    void update_app_envs_before_open_db(const std::map<std::string, std::string> &envs);
+
     void update_usage_scenario(const std::map<std::string, std::string> &envs);
 
     void update_default_ttl(const std::map<std::string, std::string> &envs);
