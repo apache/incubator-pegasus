@@ -4,7 +4,11 @@
 
 #pragma once
 <<<<<<< HEAD
+<<<<<<< HEAD
 #define PEGASUS_VERSION "1.12.SNAPSHOT"
 =======
 #define PEGASUS_VERSION "1.11.4"
 >>>>>>> f0ca48d... Release pegasus 1.11.4
+=======
+#define PEGASUS_VERSION "1.11.4-RC2"
+>>>>>>> a195285... Release pegasus 1.11.4-RC2
