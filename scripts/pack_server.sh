@@ -42,7 +42,7 @@ else
 fi
 version=`grep "VERSION" src/include/pegasus/version.h | cut -d "\"" -f 2`
 commit_id=`grep "GIT_COMMIT" src/include/pegasus/git_commit.h | cut -d "\"" -f 2`
-glibc_ver=`ldd --version | grep ldd  | grep -Eo "[0-9]+.[0-9]+$"`
+glibc_ver=`ldd --version | grep ldd | grep -Eo "[0-9]+.[0-9]+$"`
 echo "Packaging pegasus server $version ($commit_id) glibc-$glibc_ver $build_type ..."
 
 pack_version=server-$version-${commit_id:0:7}-glibc${glibc_ver}-${build_type}

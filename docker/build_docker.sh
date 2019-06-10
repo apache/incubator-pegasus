@@ -7,10 +7,12 @@ ROOT=$(
 	cd "$(dirname "${SCRIPT_DIR}")" || exit 1
 	pwd
 )
-
-# configurable variables
 SERVER_PKG_NAME=$(cat "${ROOT}"/PACKAGE)
+
+###
+# configurable variables
 IMAGE_NAME=pegasus:latest
+###
 
 echo "Building image ${IMAGE_NAME}"
 cd "${ROOT}" || exit 1
