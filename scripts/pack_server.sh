@@ -42,10 +42,10 @@ else
 fi
 version=`grep "VERSION" src/include/pegasus/version.h | cut -d "\"" -f 2`
 commit_id=`grep "GIT_COMMIT" src/include/pegasus/git_commit.h | cut -d "\"" -f 2`
-platform=`lsb_release -a 2>/dev/null | grep "Distributor ID" | awk '{print $3}' | tr '[A-Z]' '[a-z]'`
-echo "Packaging pegasus server $version ($commit_id) $platform $build_type ..."
+glibc_ver=`ldd --version | grep ldd  | grep -Eo "[0-9]+.[0-9]+$"`
+echo "Packaging pegasus server $version ($commit_id) glibc-$glibc_ver $build_type ..."
 
-pack_version=server-$version-${commit_id:0:7}-${platform}-${build_type}
+pack_version=server-$version-${commit_id:0:7}-glibc${glibc_ver}-${build_type}
 pack=pegasus-$pack_version
 
 if [ -f ${pack}.tar.gz ]
@@ -104,6 +104,7 @@ copy_file `get_system_lib server ssl` ${pack}/bin/`get_system_libname server ssl
 copy_file `get_system_lib server aio` ${pack}/bin/`get_system_libname server aio`
 copy_file `get_system_lib server zstd` ${pack}/bin/`get_system_libname server zstd`
 copy_file `get_system_lib server lz4` ${pack}/bin/`get_system_libname server lz4`
+copy_file `get_system_lib server unwind` ${pack}/bin/`get_system_libname server unwind`
 
 chmod +x ${pack}/bin/pegasus_* ${pack}/bin/*.sh
 chmod -x ${pack}/bin/lib*
@@ -118,5 +119,7 @@ if [ -f $pack_template ]; then
     sed -i "/^build:/c build: \"\.\/run.sh pack\"" $pack_template
     sed -i "/^source:/c source: \"$PEGASUS_ROOT\"" $pack_template
 fi
+
+echo ${pack} > PACKAGE
 
 echo "Done"

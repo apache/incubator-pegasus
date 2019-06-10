@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
 ROOT=$(
 	cd "$(dirname "${SCRIPT_DIR}")" || exit 1
@@ -7,7 +9,7 @@ ROOT=$(
 )
 
 # configurable variables
-SERVER_PKG_NAME=pegasus-server-1.12.SNAPSHOT-75be7db-ubuntu-release
+SERVER_PKG_NAME=$(cat "${ROOT}"/PACKAGE)
 IMAGE_NAME=pegasus:latest
 
 echo "Building image ${IMAGE_NAME}"
@@ -27,12 +29,13 @@ fi
 
 cd "${ROOT}" || exit 1
 mkdir -p ${IMAGE_NAME}
-cp -f docker/dev/ubuntu18.04/Dockerfile ${IMAGE_NAME}/Dockerfile
+cp -f docker/dev/linux/entrypoint.sh ${IMAGE_NAME}/entrypoint.sh
+cp -f docker/dev/linux/Dockerfile ${IMAGE_NAME}/Dockerfile
 sed -i 's/@SERVER_PKG_NAME@/'"${SERVER_PKG_NAME}"'/' ${IMAGE_NAME}/Dockerfile
 cp ${SERVER_PKG_NAME}.tar.gz ${IMAGE_NAME}
 
 cd ${IMAGE_NAME} || exit 1
-docker build -t ${IMAGE_NAME} .
+docker build --build-arg SERVER_PKG_NAME="${SERVER_PKG_NAME}" -t ${IMAGE_NAME} .
 
 cd "${ROOT}" || exit 1
 docker images

@@ -136,4 +136,6 @@ if [ -f $pack_template ]; then
     sed -i "/^source:/c source: \"$PEGASUS_ROOT\"" $pack_template
 fi
 
+echo ${pack} > PACKAGE
+
 echo "Done"
