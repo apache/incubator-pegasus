@@ -16,6 +16,11 @@ FROM ubuntu:18.04
 
 ARG SERVER_PKG_NAME
 
+# Install libunwind
+RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/' /etc/apt/sources.list; \
+    rm /etc/apt/apt.conf.d/docker-clean && apt-get update -y; \
+    apt-get install -y libunwind-dev
+
 COPY ./$SERVER_PKG_NAME.tar.gz /
 RUN tar xvf /$SERVER_PKG_NAME.tar.gz; \
     mv $SERVER_PKG_NAME pegasus; \
