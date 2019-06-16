@@ -176,12 +176,13 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
 
         ::dsn::command command;
-        command.cmd = "perf-counters";
-        command.arguments.push_back(".*memused.res(MB)");
-        command.arguments.push_back(".*rdb.block_cache.memory_usage");
-        command.arguments.push_back(".*disk.available.total.ratio");
-        command.arguments.push_back(".*disk.available.min.ratio");
-        command.arguments.push_back(".*@.*");
+        command.cmd = "perf-counters-by-prefix";
+        command.arguments.push_back("replica*server*memused.res(MB)");
+        command.arguments.push_back("replica*app.pegasus*rdb.block_cache.memory_usage");
+        command.arguments.push_back("replica*eon.replica_stub*disk.available.total.ratio");
+        command.arguments.push_back("replica*eon.replica_stub*disk.available.min.ratio");
+        command.arguments.push_back("replica*app.pegasus*rdb.memtable.memory_usage");
+        command.arguments.push_back("replica*app.pegasus*rdb.index_and_filter_blocks.memory_usage");
         std::vector<std::pair<bool, std::string>> results;
         call_remote_command(sc, nodes, command, results);
 
@@ -210,25 +211,19 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             }
             list_nodes_helper &h = tmp_it->second;
             for (dsn::perf_counter_metric &m : info.counters) {
-                if (m.name == "replica*server*memused.res(MB)")
-                    h.memused_res_mb = m.value;
-                else if (m.name == "replica*app.pegasus*rdb.block_cache.memory_usage")
-                    h.block_cache_bytes = m.value;
-                else if (m.name == "replica*eon.replica_stub*disk.available.total.ratio")
-                    h.disk_available_total_ratio = m.value;
-                else if (m.name == "replica*eon.replica_stub*disk.available.min.ratio")
-                    h.disk_available_min_ratio = m.value;
-                else {
-                    int32_t app_id_x, partition_index_x;
-                    std::string counter_name;
-                    bool parse_ret = parse_app_pegasus_perf_counter_name(
-                        m.name, app_id_x, partition_index_x, counter_name);
-                    dassert(parse_ret, "name = %s", m.name.c_str());
-                    if (counter_name == "rdb.memtable.memory_usage")
-                        h.mem_tbl_bytes += m.value;
-                    else if (counter_name == "rdb.index_and_filter_blocks.memory_usage")
-                        h.mem_idx_bytes += m.value;
-                }
+                if (m.name.find("memused.res(MB)") != std::string::npos)
+                    h.memused_res_mb += m.value;
+                else if (m.name.find("rdb.block_cache.memory_usage") != std::string::npos)
+                    h.block_cache_bytes += m.value;
+                else if (m.name.find("disk.available.total.ratio") != std::string::npos)
+                    h.disk_available_total_ratio += m.value;
+                else if (m.name.find("disk.available.min.ratio") != std::string::npos)
+                    h.disk_available_min_ratio += m.value;
+                else if (m.name.find("rdb.memtable.memory_usage") != std::string::npos)
+                    h.mem_tbl_bytes += m.value;
+                else if (m.name.find("rdb.index_and_filter_blocks.memory_usage") !=
+                         std::string::npos)
+                    h.mem_idx_bytes += m.value;
             }
         }
     }

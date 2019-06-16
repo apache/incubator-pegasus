@@ -667,13 +667,12 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     }
 
     ::dsn::command command;
-    command.cmd = "perf-counters";
+    command.cmd = "perf-counters-by-substr";
     char tmp[256];
-    if (app_name.empty()) {
-        sprintf(tmp, ".*@.*");
-    } else {
-        sprintf(tmp, ".*@%d\\..*", app_info->app_id);
-    }
+    if (app_name.empty())
+        sprintf(tmp, "@");
+    else
+        sprintf(tmp, "@%d.", app_info->app_id);
     command.arguments.emplace_back(tmp);
     std::vector<std::pair<bool, std::string>> results;
     call_remote_command(sc, nodes, command, results);
@@ -760,25 +759,21 @@ struct node_capacity_unit_stat
     // timestamp when node perf_counter_info has updated.
     std::string timestamp;
     std::string node_address;
-    // mapping app_name --> (read_cu, write_cu)
-    std::map<std::string, std::pair<int64_t, int64_t>> cu_value_by_app;
+    // mapping: app_id --> (read_cu, write_cu)
+    std::map<int32_t, std::pair<int64_t, int64_t>> cu_value_by_app;
 
     std::string dump_to_json() const
     {
+        std::map<int32_t, std::vector<int64_t>> cu_values;
+        for (auto kv : cu_value_by_app) {
+            auto &cu_pair = kv.second;
+            if (cu_pair.first != 0 || cu_pair.second != 0)
+                cu_values.emplace(kv.first, std::vector<int64_t>{cu_pair.first, cu_pair.second});
+        }
         std::stringstream out;
         rapidjson::OStreamWrapper wrapper(out);
         dsn::json::JsonWriter writer(wrapper);
-        writer.StartObject();
-        for (const auto &elem : cu_value_by_app) {
-            auto cu_tuple = elem.second;
-            if (cu_tuple.first == 0 && cu_tuple.second == 0)
-                continue;
-            char tuple_str[50];
-            sprintf(tuple_str, "[%ld,%ld]", cu_tuple.first, cu_tuple.second);
-            dsn::json::json_encode(writer, elem.first);
-            dsn::json::json_encode(writer, tuple_str);
-        }
-        writer.EndObject();
+        dsn::json::json_encode(writer, cu_values);
         return out.str();
     }
 };
@@ -786,19 +781,16 @@ struct node_capacity_unit_stat
 inline bool get_capacity_unit_stat(shell_context *sc,
                                    std::vector<node_capacity_unit_stat> &nodes_stat)
 {
-    std::vector<::dsn::app_info> apps;
     std::vector<node_desc> nodes;
-    if (!get_apps_and_nodes(sc, apps, nodes))
+    // at most try two times
+    if (!fill_nodes(sc, "replica-server", nodes) && !fill_nodes(sc, "replica-server", nodes)) {
+        derror("get replica server node list failed");
         return false;
-    std::map<int32_t, std::string> app_name_map;
-    for (auto elem : apps)
-        app_name_map.emplace(elem.app_id, elem.app_name);
+    }
 
     ::dsn::command command;
-    command.cmd = "perf-counters";
-    char tmp[256];
-    sprintf(tmp, ".*\\*recent\\..*\\.cu@.*");
-    command.arguments.emplace_back(tmp);
+    command.cmd = "perf-counters-by-substr";
+    command.arguments.emplace_back(".cu@");
     std::vector<std::pair<bool, std::string>> results;
     call_remote_command(sc, nodes, command, results);
 
@@ -806,32 +798,23 @@ inline bool get_capacity_unit_stat(shell_context *sc,
     for (int i = 0; i < nodes.size(); ++i) {
         dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(node_addr, results[i], info))
-            return false;
+        if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
+            // get perf counter from this node failed, ignore it
+            dwarn("decode perf counter from node(%s) failed, just ignore it",
+                  node_addr.to_string());
+            continue;
+        }
         nodes_stat[i].timestamp = info.timestamp_str;
         nodes_stat[i].node_address = node_addr.to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
-            int32_t app_id, partition_index;
+            int32_t app_id, pidx;
             std::string counter_name;
-            bool parse_ret =
-                parse_app_pegasus_perf_counter_name(m.name, app_id, partition_index, counter_name);
-            dassert(parse_ret, "name = %s", m.name.c_str());
-            if (app_name_map.find(app_id) == app_name_map.end())
-                continue;
-            std::string app_name = app_name_map[app_id];
+            bool r = parse_app_pegasus_perf_counter_name(m.name, app_id, pidx, counter_name);
+            dassert(r, "name = %s", m.name.c_str());
             if (counter_name == "recent.read.cu") {
-                if (nodes_stat[i].cu_value_by_app.find(app_name) ==
-                    nodes_stat[i].cu_value_by_app.end()) {
-                    nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0, 0));
-                }
-                nodes_stat[i].cu_value_by_app[app_name].first += (int64_t)m.value;
-            }
-            if (counter_name == "recent.write.cu") {
-                if (nodes_stat[i].cu_value_by_app.find(app_name) ==
-                    nodes_stat[i].cu_value_by_app.end()) {
-                    nodes_stat[i].cu_value_by_app.emplace(app_name, std::make_pair(0, 0));
-                }
-                nodes_stat[i].cu_value_by_app[app_name].second += (int64_t)m.value;
+                nodes_stat[i].cu_value_by_app[app_id].first += (int64_t)m.value;
+            } else if (counter_name == "recent.write.cu") {
+                nodes_stat[i].cu_value_by_app[app_id].second += (int64_t)m.value;
             }
         }
     }
