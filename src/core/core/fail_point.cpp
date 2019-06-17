@@ -18,7 +18,7 @@
 #include "fail_point_impl.h"
 
 #include <dsn/c/api_layer1.h>
-#include <regex>
+#include <boost/regex.hpp>
 #include <dsn/utility/rand.h>
 
 namespace dsn {
@@ -57,13 +57,13 @@ bool fail_point::parse_from_string(string_view action)
     _max_cnt = -1;
     _freq = 100;
 
-    std::regex regex(R"((\d+\%)?(\d+\*)?(\w+)(\((.*)\))?)");
-    std::smatch match;
+    boost::regex regex(R"((\d+\%)?(\d+\*)?(\w+)(\((.*)\))?)");
+    boost::smatch match;
 
     std::string tmp(action.data(), action.length());
-    if (std::regex_match(tmp, match, regex)) {
+    if (boost::regex_match(tmp, match, regex)) {
         if (match.size() == 6) {
-            std::ssub_match sub_match = match[1];
+            boost::ssub_match sub_match = match[1];
             if (!sub_match.str().empty()) {
                 sscanf(sub_match.str().data(), "%d%%", &_freq);
             }

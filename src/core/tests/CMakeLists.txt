@@ -10,7 +10,7 @@ set(MY_PROJ_INC_PATH
     ../core ../tools/common ../tools/simulator ../tools/hpc ../tools/nfs 
     )
     
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_PACKAGES system filesystem regex)
 
 set(MY_PROJ_LIBS gtest
                  dsn_runtime
