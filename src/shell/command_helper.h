@@ -764,16 +764,16 @@ struct node_capacity_unit_stat
 
     std::string dump_to_json() const
     {
-        std::map<int32_t, std::vector<int64_t>> cu_values;
+        std::map<int32_t, std::vector<int64_t>> values;
         for (auto kv : cu_value_by_app) {
-            auto &cu_pair = kv.second;
-            if (cu_pair.first != 0 || cu_pair.second != 0)
-                cu_values.emplace(kv.first, std::vector<int64_t>{cu_pair.first, cu_pair.second});
+            auto &pair = kv.second;
+            if (pair.first != 0 || pair.second != 0)
+                values.emplace(kv.first, std::vector<int64_t>{pair.first, pair.second});
         }
         std::stringstream out;
         rapidjson::OStreamWrapper wrapper(out);
         dsn::json::JsonWriter writer(wrapper);
-        dsn::json::json_encode(writer, cu_values);
+        dsn::json::json_encode(writer, values);
         return out.str();
     }
 };
@@ -782,8 +782,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
                                    std::vector<node_capacity_unit_stat> &nodes_stat)
 {
     std::vector<node_desc> nodes;
-    // at most try two times
-    if (!fill_nodes(sc, "replica-server", nodes) && !fill_nodes(sc, "replica-server", nodes)) {
+    if (!fill_nodes(sc, "replica-server", nodes)) {
         derror("get replica server node list failed");
         return false;
     }
@@ -799,7 +798,6 @@ inline bool get_capacity_unit_stat(shell_context *sc,
         dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            // get perf counter from this node failed, ignore it
             dwarn("decode perf counter from node(%s) failed, just ignore it",
                   node_addr.to_string());
             continue;
@@ -818,5 +816,90 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             }
         }
     }
+    return true;
+}
+
+struct app_storage_size_stat
+{
+    // timestamp when this stat is generated.
+    std::string timestamp;
+    // mapping: app_id --> [app_partition_count, stat_partition_count, storage_size_in_mb]
+    std::map<int32_t, std::vector<int64_t>> st_value_by_app;
+
+    std::string dump_to_json() const
+    {
+        std::stringstream out;
+        rapidjson::OStreamWrapper wrapper(out);
+        dsn::json::JsonWriter writer(wrapper);
+        dsn::json::json_encode(writer, st_value_by_app);
+        return out.str();
+    }
+};
+
+inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_stat)
+{
+    std::vector<::dsn::app_info> apps;
+    std::vector<node_desc> nodes;
+    if (!get_apps_and_nodes(sc, apps, nodes)) {
+        derror("get apps and nodes failed");
+        return false;
+    }
+
+    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
+    if (!get_app_partitions(sc, apps, app_partitions)) {
+        derror("get app partitions failed");
+        return false;
+    }
+    for (auto &kv : app_partitions) {
+        auto &v = kv.second;
+        for (auto &c : v) {
+            // use partition_flags to record if this partition's storage size is calculated
+            c.partition_flags = 0;
+        }
+    }
+
+    ::dsn::command command;
+    command.cmd = "perf-counters-by-prefix";
+    command.arguments.emplace_back("replica*app.pegasus*disk.storage.sst(MB)");
+    std::vector<std::pair<bool, std::string>> results;
+    call_remote_command(sc, nodes, command, results);
+
+    for (int i = 0; i < nodes.size(); ++i) {
+        dsn::rpc_address node_addr = nodes[i].address;
+        dsn::perf_counter_info info;
+        if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
+            dwarn("decode perf counter from node(%s) failed, just ignore it",
+                  node_addr.to_string());
+            continue;
+        }
+        for (dsn::perf_counter_metric &m : info.counters) {
+            int32_t app_id_x, partition_index_x;
+            std::string counter_name;
+            bool parse_ret = parse_app_pegasus_perf_counter_name(
+                m.name, app_id_x, partition_index_x, counter_name);
+            dassert(parse_ret, "name = %s", m.name.c_str());
+            if (counter_name != "disk.storage.sst(MB)")
+                continue;
+            auto find = app_partitions.find(app_id_x);
+            if (find == app_partitions.end()) // app id not found
+                continue;
+            dsn::partition_configuration &pc = find->second[partition_index_x];
+            if (pc.primary != node_addr) // not primary replica
+                continue;
+            if (pc.partition_flags != 0) // already calculated
+                continue;
+            pc.partition_flags = 1;
+            int64_t app_partition_count = find->second.size();
+            auto st_it = st_stat.st_value_by_app
+                             .emplace(app_id_x, std::vector<int64_t>{app_partition_count, 0, 0})
+                             .first;
+            st_it->second[1]++;          // stat_partition_count
+            st_it->second[2] += m.value; // storage_size_in_mb
+        }
+    }
+
+    char buf[20];
+    dsn::utils::time_ms_to_date_time(dsn_now_ms(), buf, sizeof(buf));
+    st_stat.timestamp = buf;
     return true;
 }
