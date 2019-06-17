@@ -271,7 +271,8 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
         return;
     }
     for (node_capacity_unit_stat &elem : nodes_stat) {
-        if (!has_capacity_unit_updated(elem.node_address, elem.timestamp)) {
+        if (elem.node_address.empty() || elem.timestamp.empty() ||
+            !has_capacity_unit_updated(elem.node_address, elem.timestamp)) {
             dinfo("recent read/write capacity unit value of node %s has not updated",
                   elem.node_address.c_str());
             continue;
