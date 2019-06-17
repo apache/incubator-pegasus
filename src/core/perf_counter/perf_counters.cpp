@@ -47,10 +47,44 @@ perf_counters::perf_counters()
 {
     command_manager::instance().register_command(
         {"perf-counters"},
-        "perf-counters - query perf counters, supporting filter by POSIX basic regular expressions",
-        "perf-counters [name-filter]...",
+        "perf-counters - query perf counters, filtered by OR of POSIX basic regular expressions",
+        "perf-counters [regexp]...",
         [](const std::vector<std::string> &args) {
             return perf_counters::instance().list_snapshot_by_regexp(args);
+        });
+    command_manager::instance().register_command(
+        {"perf-counters-by-substr"},
+        "perf-counters-by-substr - query perf counters, filtered by OR of substrs",
+        "perf-counters-by-substr [substr]...",
+        [](const std::vector<std::string> &args) {
+            return perf_counters::instance().list_snapshot_by_literal(
+                args, [](const std::string &arg, const counter_snapshot &cs) {
+                    return cs.name.find(arg) != std::string::npos;
+                });
+        });
+    command_manager::instance().register_command(
+        {"perf-counters-by-prefix"},
+        "perf-counters-by-prefix - query perf counters, filtered by OR of prefix strings",
+        "perf-counters-by-prefix [prefix]...",
+        [](const std::vector<std::string> &args) {
+            return perf_counters::instance().list_snapshot_by_literal(
+                args, [](const std::string &arg, const counter_snapshot &cs) {
+                    return cs.name.size() >= arg.size() &&
+                           ::memcmp(cs.name.c_str(), arg.c_str(), arg.size()) == 0;
+                });
+        });
+    command_manager::instance().register_command(
+        {"perf-counters-by-postfix"},
+        "perf-counters-by-postfix - query perf counters, filtered by OR of postfix strings",
+        "perf-counters-by-postfix [postfix]...",
+        [](const std::vector<std::string> &args) {
+            return perf_counters::instance().list_snapshot_by_literal(
+                args, [](const std::string &arg, const counter_snapshot &cs) {
+                    return cs.name.size() >= arg.size() &&
+                           ::memcmp(cs.name.c_str() + cs.name.size() - arg.size(),
+                                    arg.c_str(),
+                                    arg.size()) == 0;
+                });
         });
 }
 
@@ -191,6 +225,42 @@ std::string perf_counters::list_snapshot_by_regexp(const std::vector<std::string
         iterate_snapshot(visitor);
         info.result = "OK";
     }
+
+    std::stringstream ss;
+    info.timestamp = _timestamp;
+    char buf[20];
+    utils::time_ms_to_date_time(info.timestamp * 1000, buf, sizeof(buf));
+    info.timestamp_str = buf;
+    info.encode_json_state(ss);
+    return ss.str();
+}
+
+// the filter should return true if the counter satisfies condition.
+std::string perf_counters::list_snapshot_by_literal(
+    const std::vector<std::string> &args,
+    std::function<bool(const std::string &arg, const counter_snapshot &cs)> filter) const
+{
+    perf_counter_info info;
+
+    snapshot_iterator visitor = [&args, &info, &filter](const counter_snapshot &cs) {
+        bool matched = false;
+        if (args.empty()) {
+            matched = true;
+        } else {
+            for (auto &arg : args) {
+                if (filter(arg, cs)) {
+                    matched = true;
+                    break;
+                }
+            }
+        }
+
+        if (matched) {
+            info.counters.emplace_back(cs.name.c_str(), cs.type, cs.value);
+        }
+    };
+    iterate_snapshot(visitor);
+    info.result = "OK";
 
     std::stringstream ss;
     info.timestamp = _timestamp;
