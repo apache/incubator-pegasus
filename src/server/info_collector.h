@@ -66,8 +66,10 @@ public:
     void on_app_stat();
     AppStatCounters *get_app_counters(const std::string &app_name);
 
-    void on_capacity_unit_stat();
+    void on_capacity_unit_stat(int remaining_retry_count);
     bool has_capacity_unit_updated(const std::string &node_address, const std::string &timestamp);
+
+    void on_storage_size_stat(int remaining_retry_count);
 
 private:
     dsn::task_tracker _tracker;
@@ -79,17 +81,23 @@ private:
     ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
     std::map<std::string, AppStatCounters *> _app_stat_counters;
 
-    // app for recording read/write cu.
-    std::string _cu_stat_app;
+    // app for recording usage statistics, including read/write capacity unit and storage size.
+    std::string _usage_stat_app;
     // client to access server.
     pegasus_client *_client;
     // for writing cu stat result
     std::unique_ptr<result_writer> _result_writer;
-    uint32_t _cu_fetch_interval_seconds;
-    ::dsn::task_ptr _cu_stat_timer_task;
-    ::dsn::utils::ex_lock_nr _cu_update_info_lock;
+    uint32_t _capacity_unit_fetch_interval_seconds;
+    uint32_t _capacity_unit_retry_wait_seconds;
+    uint32_t _capacity_unit_retry_max_count;
+    ::dsn::task_ptr _capacity_unit_stat_timer_task;
+    uint32_t _storage_size_fetch_interval_seconds;
+    uint32_t _storage_size_retry_wait_seconds;
+    uint32_t _storage_size_retry_max_count;
+    ::dsn::task_ptr _storage_size_stat_timer_task;
+    ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
-    std::map<std::string, string> _cu_update_info;
+    std::map<std::string, string> _capacity_unit_update_info;
 };
 } // namespace server
 } // namespace pegasus

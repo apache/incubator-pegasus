@@ -185,9 +185,11 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     }
 
     ::dsn::command command;
-    command.cmd = "perf-counters";
+    command.cmd = "perf-counters-by-prefix";
     char tmp[256];
-    sprintf(tmp, ".*\\*app\\.pegasus\\*disk\\.storage\\.sst.*@%d\\..*", app_id);
+    sprintf(tmp, "replica*app.pegasus*disk.storage.sst(MB)@%d.", app_id);
+    command.arguments.push_back(tmp);
+    sprintf(tmp, "replica*app.pegasus*disk.storage.sst.count@%d.", app_id);
     command.arguments.push_back(tmp);
     std::vector<std::pair<bool, std::string>> results;
     call_remote_command(sc, nodes, command, results);
