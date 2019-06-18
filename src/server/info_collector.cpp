@@ -50,20 +50,20 @@ info_collector::info_collector()
                                                                        10, // default value 10s
                                                                        "app stat interval seconds");
 
-    _cu_stat_app = dsn_config_get_value_string(
-        "pegasus.collector", "cu_stat_app", "", "app for recording capacity unit info");
-    dassert(!_cu_stat_app.empty(), "");
+    _usage_stat_app = dsn_config_get_value_string(
+        "pegasus.collector", "usage_stat_app", "", "app for recording usage statistics");
+    dassert(!_usage_stat_app.empty(), "");
     // initialize the _client.
     if (!pegasus_client_factory::initialize(nullptr)) {
         dassert(false, "Initialize the pegasus client failed");
     }
-    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _cu_stat_app.c_str());
+    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _usage_stat_app.c_str());
     dassert(_client != nullptr, "Initialize the client failed");
     _result_writer = dsn::make_unique<result_writer>(_client);
 
     _cu_fetch_interval_seconds =
         (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
-                                              "cu_fetch_interval_seconds",
+                                              "capacity_unit_fetch_interval_seconds",
                                               8, // default value 8s
                                               "capacity unit fetch interval seconds");
     _cu_fetch_retry_count = 3;
@@ -71,7 +71,7 @@ info_collector::info_collector()
 
     _st_fetch_interval_seconds =
         (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
-                                              "st_fetch_interval_seconds",
+                                              "storage_size_fetch_interval_seconds",
                                               3600, // default value 1h
                                               "storage size fetch interval seconds");
     _st_fetch_retry_count = 3;

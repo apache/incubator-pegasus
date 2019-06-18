@@ -853,7 +853,8 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
     for (auto &kv : app_partitions) {
         auto &v = kv.second;
         for (auto &c : v) {
-            // use partition_flags to record if this partition's storage size is calculated
+            // use partition_flags to record if this partition's storage size is calculated,
+            // because `app_partitions' is a temporary variable, so we can re-use partition_flags.
             c.partition_flags = 0;
         }
     }
