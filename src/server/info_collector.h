@@ -87,17 +87,15 @@ private:
     pegasus_client *_client;
     // for writing cu stat result
     std::unique_ptr<result_writer> _result_writer;
-    uint32_t _cu_fetch_interval_seconds;
-    uint32_t _cu_fetch_retry_count;
-    uint32_t _cu_fetch_retry_wait_seconds;
-    ::dsn::task_ptr _cu_stat_timer_task;
-    uint32_t _st_fetch_interval_seconds;
-    uint32_t _st_fetch_retry_count;
-    uint32_t _st_fetch_retry_wait_seconds;
-    ::dsn::task_ptr _st_stat_timer_task;
-    ::dsn::utils::ex_lock_nr _cu_update_info_lock;
+    uint32_t _capacity_unit_fetch_interval_seconds;
+    uint32_t _capacity_unit_retry_wait_seconds;
+    ::dsn::task_ptr _capacity_unit_stat_timer_task;
+    uint32_t _storage_size_fetch_interval_seconds;
+    uint32_t _storage_size_retry_wait_seconds;
+    ::dsn::task_ptr _storage_size_stat_timer_task;
+    ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
-    std::map<std::string, string> _cu_update_info;
+    std::map<std::string, string> _capacity_unit_update_info;
 };
 } // namespace server
 } // namespace pegasus
