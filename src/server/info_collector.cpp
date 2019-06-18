@@ -25,8 +25,12 @@ namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_PEGASUS_CU_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_PEGASUS_ST_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+                 TASK_PRIORITY_COMMON,
+                 ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
+                 TASK_PRIORITY_COMMON,
+                 ::dsn::THREAD_POOL_DEFAULT)
 
 info_collector::info_collector()
 {
@@ -105,7 +109,7 @@ void info_collector::start()
                                       std::chrono::minutes(1));
 
     _capacity_unit_stat_timer_task = ::dsn::tasking::enqueue_timer(
-        LPC_PEGASUS_CU_STAT_TIMER,
+        LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
         &_tracker,
         [this] { on_capacity_unit_stat(_capacity_unit_retry_max_count); },
         std::chrono::seconds(_capacity_unit_fetch_interval_seconds),
@@ -113,7 +117,7 @@ void info_collector::start()
         std::chrono::minutes(1));
 
     _storage_size_stat_timer_task = ::dsn::tasking::enqueue_timer(
-        LPC_PEGASUS_ST_STAT_TIMER,
+        LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
         &_tracker,
         [this] { on_storage_size_stat(_storage_size_retry_max_count); },
         std::chrono::seconds(_storage_size_fetch_interval_seconds),
@@ -267,7 +271,7 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
                    "wait %u seconds to retry",
                    remaining_retry_count,
                    _capacity_unit_retry_wait_seconds);
-            ::dsn::tasking::enqueue(LPC_PEGASUS_CU_STAT_TIMER,
+            ::dsn::tasking::enqueue(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
                                     &_tracker,
                                     [=] { on_capacity_unit_stat(remaining_retry_count - 1); },
                                     0,
@@ -314,7 +318,7 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
                    "wait %u seconds to retry",
                    remaining_retry_count,
                    _storage_size_retry_wait_seconds);
-            ::dsn::tasking::enqueue(LPC_PEGASUS_ST_STAT_TIMER,
+            ::dsn::tasking::enqueue(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
                                     &_tracker,
                                     [=] { on_storage_size_stat(remaining_retry_count - 1); },
                                     0,
