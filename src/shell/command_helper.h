@@ -765,7 +765,7 @@ struct node_capacity_unit_stat
     std::string dump_to_json() const
     {
         std::map<int32_t, std::vector<int64_t>> values;
-        for (auto kv : cu_value_by_app) {
+        for (auto &kv : cu_value_by_app) {
             auto &pair = kv.second;
             if (pair.first != 0 || pair.second != 0)
                 values.emplace(kv.first, std::vector<int64_t>{pair.first, pair.second});
