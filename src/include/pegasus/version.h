@@ -6,6 +6,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 #define PEGASUS_VERSION "1.12.SNAPSHOT"
 =======
 #define PEGASUS_VERSION "1.11.4"
@@ -16,3 +17,6 @@
 =======
 #define PEGASUS_VERSION "1.11.4"
 >>>>>>> 6b566c4... Release pegasus 1.11.4
+=======
+#define PEGASUS_VERSION "1.11.5-RC1"
+>>>>>>> 21ed6bb... Release pegasus 1.11.5-RC1
