@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "asio_rpc_session.h"
 
 namespace dsn {
@@ -42,6 +33,8 @@ asio_rpc_session::~asio_rpc_session() {}
 
 void asio_rpc_session::set_options()
 {
+    utils::auto_write_lock socket_guard(_socket_lock);
+
     if (_socket->is_open()) {
         boost::system::error_code ec;
         boost::asio::socket_base::send_buffer_size option, option2(16 * 1024 * 1024);
@@ -92,6 +85,8 @@ void asio_rpc_session::do_read(int read_next)
     void *ptr = _reader.read_buffer_ptr(read_next);
     int remaining = _reader.read_buffer_capacity();
 
+    utils::auto_read_lock socket_guard(_socket_lock);
+
     _socket->async_read_some(
         boost::asio::buffer(ptr, remaining),
         [this](boost::system::error_code ec, std::size_t length) {
@@ -136,20 +131,22 @@ void asio_rpc_session::do_read(int read_next)
         });
 }
 
-void asio_rpc_session::write(uint64_t signature)
+void asio_rpc_session::send(uint64_t signature)
 {
-    std::vector<boost::asio::const_buffer> buffers2;
+    std::vector<boost::asio::const_buffer> asio_wbufs;
     int bcount = (int)_sending_buffers.size();
 
     // prepare buffers
-    buffers2.resize(bcount);
+    asio_wbufs.resize(bcount);
     for (int i = 0; i < bcount; i++) {
-        buffers2[i] = boost::asio::const_buffer(_sending_buffers[i].buf, _sending_buffers[i].sz);
+        asio_wbufs[i] = boost::asio::const_buffer(_sending_buffers[i].buf, _sending_buffers[i].sz);
     }
 
     add_ref();
+
+    utils::auto_read_lock socket_guard(_socket_lock);
     boost::asio::async_write(
-        *_socket, buffers2, [this, signature](boost::system::error_code ec, std::size_t length) {
+        *_socket, asio_wbufs, [this, signature](boost::system::error_code ec, std::size_t length) {
             if (!!ec) {
                 derror(
                     "asio write to %s failed: %s", _remote_addr.to_string(), ec.message().c_str());
@@ -175,12 +172,14 @@ asio_rpc_session::asio_rpc_session(asio_network_provider &net,
 void asio_rpc_session::on_failure(bool is_write)
 {
     if (on_disconnected(is_write)) {
-        safe_close();
+        close();
     }
 }
 
-void asio_rpc_session::safe_close()
+void asio_rpc_session::close()
 {
+    utils::auto_write_lock socket_guard(_socket_lock);
+
     boost::system::error_code ec;
     _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
     if (ec)
@@ -215,5 +214,5 @@ void asio_rpc_session::connect()
         });
     }
 }
-}
-}
+} // namespace tools
+} // namespace dsn

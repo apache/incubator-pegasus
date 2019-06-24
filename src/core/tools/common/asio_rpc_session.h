@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/tool-api/rpc_message.h>
@@ -44,6 +35,7 @@
 namespace dsn {
 namespace tools {
 
+// Thread-safe
 class asio_rpc_session : public rpc_session
 {
 public:
@@ -52,16 +44,17 @@ public:
                      std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
                      message_parser_ptr &parser,
                      bool is_client);
-    virtual ~asio_rpc_session();
-    virtual void send(uint64_t signature) override { return write(signature); }
-    virtual void close() override { safe_close(); }
 
-public:
-    virtual void connect() override;
+    ~asio_rpc_session() override;
+
+    void send(uint64_t signature) override;
+
+    void close() override;
+
+    void connect() override;
 
 private:
-    virtual void do_read(int read_next) override;
-    void write(uint64_t signature);
+    void do_read(int read_next) override;
     void on_failure(bool is_write = false);
     void set_options();
     void on_message_read(message_ex *msg)
@@ -70,10 +63,13 @@ private:
             on_failure(false);
         }
     }
-    void safe_close();
 
 private:
+    // boost::asio::socket is thread-unsafe, must use lock to prevent a
+    // reading/writing socket being modified or closed concurrently.
     std::shared_ptr<boost::asio::ip::tcp::socket> _socket;
+    ::dsn::utils::rw_lock_nr _socket_lock;
 };
-}
-}
+
+} // namespace tools
+} // namespace dsn

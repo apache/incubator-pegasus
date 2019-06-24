@@ -334,7 +334,6 @@ rpc_session::rpc_session(connection_oriented_network &net,
       _message_count(0),
       _is_sending_next(false),
       _message_sent(0),
-
       _net(net),
       _remote_addr(remote_addr),
       _max_buffer_block_count_per_send(net.max_buffer_block_count_per_send()),
@@ -724,4 +723,4 @@ void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr
                scount);
     }
 }
-}
+} // namespace dsn
