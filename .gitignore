@@ -92,3 +92,5 @@ LOG
 
 .shell-history
 PACKAGE
+config-shell.ini.*
+scripts/py_utils/*.pyc

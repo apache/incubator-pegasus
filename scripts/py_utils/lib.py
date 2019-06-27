@@ -36,8 +36,10 @@ class PegasusCluster(object):
         list_detail = self._run_shell("ls -d -j").strip()
 
         list_detail_json = json.loads(list_detail)
-        read_unhealthy_app_count = int(list_detail_json["summary"]["read_unhealthy_app_count"])
-        write_unhealthy_app_count = int(list_detail_json["summary"]["write_unhealthy_app_count"])
+        read_unhealthy_app_count = int(
+            list_detail_json["summary"]["read_unhealthy_app_count"])
+        write_unhealthy_app_count = int(
+            list_detail_json["summary"]["write_unhealthy_app_count"])
         if write_unhealthy_app_count > 0:
             echo("cluster is write unhealthy, write_unhealthy_app_count = " +
                  str(write_unhealthy_app_count))
@@ -48,17 +50,16 @@ class PegasusCluster(object):
             return
 
     def print_imbalance_nodes(self):
+        cluster_info = json.loads(self._run_shell("cluster_info -j").strip())
         nodes_detail = self._run_shell("nodes -d -j").strip()
+        balance_operation_count = cluster_info["cluster_info"]["balance_operation_count"]
+        total_cnt = int(balance_operation_count.split(',')[3].split('=')[1])
 
         primaries_per_node = {}
-        min_ = 0
-        max_ = 0
         for ip_port, node_info in json.loads(nodes_detail)["details"].items():
             primary_count = int(node_info["primary_count"])
-            min_ = min(min_, primary_count)
-            max_ = max(max_, primary_count)
             primaries_per_node[ip_port] = primary_count
-        if float(min_) / float(max_) < 0.8:
+        if total_cnt != 0:
             print json.dumps(primaries_per_node, indent=4)
 
     def get_meta_port(self):
