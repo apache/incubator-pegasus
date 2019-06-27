@@ -23,7 +23,7 @@ def echo(message, color=None):
 class PegasusCluster(object):
     def __init__(self, cfg_file_name):
         self._cluster_name = os.path.basename(cfg_file_name).replace(
-            "pegasus-", "").replace(".cfg", "")
+            "pegasus-", "").replace(".cfg", "").replace(".yaml", "")
         self._shell_path = os.getenv("PEGASUS_SHELL_PATH")
         self._cfg_file_name = cfg_file_name
         if self._shell_path is None:
@@ -74,6 +74,13 @@ class PegasusCluster(object):
                 if line.strip().startswith("host.0"):
                     return line.split("=")[1].strip()
 
+    def is_valid(self):
+        try:
+            try_ls = self._run_shell("ls").strip()
+        except Exception:
+            return False
+        return not "error=ERR_NETWORK_FAILURE" in try_ls
+
     def _run_shell(self, args):
         """
         :param args: arguments passed to ./run.sh shell (type `string`)
@@ -114,7 +121,7 @@ def list_pegasus_clusters(config_path, env):
             continue
         if not fname.startswith("pegasus-" + env):
             continue
-        if not fname.endswith(".cfg"):
+        if not fname.endswith(".cfg") and not fname.endswith(".yaml"):
             continue
         if fname.endswith("proxy.cfg"):
             continue

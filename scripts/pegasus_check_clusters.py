@@ -36,6 +36,8 @@ def main(env, verbose):
     set_global_verbose(verbose)
     clusters = list_pegasus_clusters(pegasus_config_path, env)
     for cluster in clusters:
+        if not cluster.is_valid():
+            continue
         echo("=== " + cluster.name())
         try:
             cluster.print_imbalance_nodes()
