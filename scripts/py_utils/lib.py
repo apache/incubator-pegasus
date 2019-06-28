@@ -8,6 +8,7 @@ import click
 import commands
 import os
 import json
+import re
 
 _global_verbose = False
 
@@ -33,34 +34,52 @@ class PegasusCluster(object):
             exit(1)
 
     def print_unhealthy_partitions(self):
-        list_detail = self._run_shell("ls -d -j").strip()
-
-        list_detail_json = json.loads(list_detail)
+        if not self._load_cluster_info_if_needed():
+            return
         read_unhealthy_app_count = int(
-            list_detail_json["summary"]["read_unhealthy_app_count"])
+            self._list_detail["summary"]["read_unhealthy_app_count"])
         write_unhealthy_app_count = int(
-            list_detail_json["summary"]["write_unhealthy_app_count"])
+            self._list_detail["summary"]["write_unhealthy_app_count"])
         if write_unhealthy_app_count > 0:
             echo("cluster is write unhealthy, write_unhealthy_app_count = " +
-                 str(write_unhealthy_app_count))
+                 str(write_unhealthy_app_count), "red")
             return
         if read_unhealthy_app_count > 0:
             echo("cluster is read unhealthy, read_unhealthy_app_count = " +
-                 str(read_unhealthy_app_count))
+                 str(read_unhealthy_app_count), "red")
             return
 
-    def print_imbalance_nodes(self):
-        cluster_info = json.loads(self._run_shell("cluster_info -j").strip())
-        nodes_detail = self._run_shell("nodes -d -j").strip()
-        balance_operation_count = cluster_info["cluster_info"]["balance_operation_count"]
+    def print_imbalanced_nodes(self):
+        if not self._load_cluster_info_if_needed():
+            return
+        balance_operation_count = self._cluster_info["balance_operation_count"]
         total_cnt = int(balance_operation_count.split(',')[3].split('=')[1])
 
         primaries_per_node = {}
-        for ip_port, node_info in json.loads(nodes_detail)["details"].items():
+        for ip_port, node_info in self._nodes_detail.items():
             primary_count = int(node_info["primary_count"])
             primaries_per_node[ip_port] = primary_count
         if total_cnt != 0:
             print json.dumps(primaries_per_node, indent=4)
+
+    def print_unsteady_meta_level(self):
+        if not self._load_cluster_info_if_needed():
+            return
+        meta_level = self._cluster_info["meta_function_level"].strip()
+        if meta_level != "steady":
+            echo(meta_level, "red")
+
+    def print_inconsistent_server_version(self):
+        servers_info_str = self._run_shell("server_info").strip()
+        servers_info = servers_info_str.splitlines()
+        version_set = set({})
+        for server in servers_info:
+            version = re.match(r".*succeed:(.*), Started.*", server.strip())
+            if version == None:
+                continue
+            version_set.add(version.group(1))
+        if len(version_set) != 1:
+            echo(servers_info_str, "red")
 
     def get_meta_port(self):
         with open(self._cfg_file_name) as cfg:
@@ -80,6 +99,17 @@ class PegasusCluster(object):
         except Exception:
             return False
         return not "error=ERR_NETWORK_FAILURE" in try_ls
+
+    def _load_cluster_info_if_needed(self):
+        try:
+            self._list_detail = json.loads(self._run_shell("ls -d -j").strip())
+            self._cluster_info = json.loads(
+                self._run_shell("cluster_info -j").strip())["cluster_info"]
+            self._nodes_detail = json.loads(
+                self._run_shell("nodes -d -j").strip())["details"]
+            return True
+        except Exception:
+            return False
 
     def _run_shell(self, args):
         """
@@ -119,7 +149,9 @@ def list_pegasus_clusters(config_path, env):
     for fname in os.listdir(config_path):
         if not os.path.isfile(config_path + "/" + fname):
             continue
-        if not fname.startswith("pegasus-" + env):
+        if not fname.startswith("pegasus-"):
+            continue
+        if not env in fname:
             continue
         if not fname.endswith(".cfg") and not fname.endswith(".yaml"):
             continue

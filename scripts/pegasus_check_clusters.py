@@ -40,8 +40,10 @@ def main(env, verbose):
             continue
         echo("=== " + cluster.name())
         try:
-            cluster.print_imbalance_nodes()
+            cluster.print_imbalanced_nodes()
             cluster.print_unhealthy_partitions()
+            cluster.print_unsteady_meta_level()
+            cluster.print_inconsistent_server_version()
         except RuntimeError as e:
             echo(str(e), "red")
             return
