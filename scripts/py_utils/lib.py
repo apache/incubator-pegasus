@@ -97,7 +97,9 @@ class PegasusCluster(object):
 
     def set_app_envs(self, table, env_name, env_value):
         envs_result = self._run_shell(
-            "use {} \n set_app_envs {} {}".format(table, env_name, env_value)).strip()[len("OK\n"):]
+            "use {} \n set_app_envs {} {}".format(
+                table, env_name, env_value)).strip()[
+            len("OK\n"):]
         if "ERR_OBJECT_NOT_FOUND" in envs_result:
             raise ValueError("table {} does not exist".format(table))
 
@@ -151,4 +153,3 @@ def list_pegasus_clusters(config_path, env):
             continue
         clusters.append(PegasusCluster(config_path + "/" + fname))
     return clusters
-
