@@ -9,17 +9,14 @@ import com.xiaomi.infra.pegasus.client.PegasusClient
   * Author: oujinliang
   * 3/15/18 12:05 AM
   */
-
 object ScalaPegasusClientFactory {
 
+  def createClient(configPath: String): ScalaPegasusClient = {
+    new ScalaPegasusClientImpl(new PegasusClient(configPath))
+  }
 
-    def createClient(configPath: String): ScalaPegasusClient = {
-        new ScalaPegasusClientImpl(new PegasusClient(configPath))
-    }
-
-
-    def createClient(props: Properties): ScalaPegasusClient = {
-        new ScalaPegasusClientImpl(new PegasusClient(props))
-    }
+  def createClient(props: Properties): ScalaPegasusClient = {
+    new ScalaPegasusClientImpl(new PegasusClient(props))
+  }
 
 }

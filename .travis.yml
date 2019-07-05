@@ -1,0 +1,18 @@
+language: scala
+
+jdk:
+  - oraclejdk8
+
+scala:
+  - "2.11.7"
+  - "2.12.7"
+
+cache:
+  directories:
+    - $HOME/.m2/repository
+    - $HOME/.sbt
+    - $HOME/.ivy2
+
+script:
+  - ./scripts/travis.sh
+
