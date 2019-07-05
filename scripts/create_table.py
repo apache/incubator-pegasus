@@ -71,23 +71,6 @@ def create_table_if_needed(cluster, table, parts):
 
 
 def set_business_info_if_needed(cluster, table, depart, user):
-    envs = cluster.get_app_envs(table)
-    new_business_info = "depart={},user={}".format(depart, user)
-    py_utils.echo("New value of business.info=" + envs['business.info'])
-
-    if envs != None:
-        py_utils.echo("Old value of business.info=" + envs['business.info'])
-        business_info = envs['business.info'].split(',')
-        (d, u) = (business_info[0].encode('utf8')[
-            len('depart='):], business_info[1].encode('utf8')[len('user='):])
-        if d == depart and u == user:
-            py_utils.echo("Success: business info has been set already")
-            return
-    cluster.set_app_envs(table, 'business.info',
-                         new_business_info)
-
-
-def set_business_info_if_needed(cluster, table, depart, user):
     new_business_info = "depart={},user={}".format(depart, user)
     py_utils.echo("New value of business.info=" + new_business_info)
 
