@@ -82,12 +82,12 @@ def validate_param_write_throttling(ctx, param, value):
             'invalid value of throttle \'%s\'' % value)
 
 
-def create_table_if_needed(cluster, table, parts):
+def create_table_if_needed(cluster, table, partition_count):
     if not cluster.has_table(table):
         try:
             # TODO(wutao1): Outputs progress while polling.
             py_utils.echo("Creating table {}...".format(table))
-            cluster.create_table(table, parts)
+            cluster.create_table(table, partition_count)
         except Exception as err:
             py_utils.echo(err, "red")
             exit(1)
@@ -111,11 +111,11 @@ def set_app_envs_if_needed(cluster, table, env_name, new_env_value):
     py_utils.echo("New value of {}={}".format(env_name, new_env_value))
     envs = cluster.get_app_envs(table)
     if envs is not None:
-        old_env_value = envs.get(env_name)
+        old_env_value = envs.get(env_name).encode('utf-8')
         if old_env_value is not None:
             py_utils.echo("Old value of {}={}".format(env_name, old_env_value))
             if old_env_value == new_env_value:
-                py_utils.echo("Success: {} keeps unchanged", env_name)
+                py_utils.echo("Success: {} keeps unchanged".format(env_name))
                 return
     cluster.set_app_envs(table, env_name,
                          new_env_value)
