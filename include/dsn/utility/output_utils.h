@@ -86,8 +86,8 @@ private:
     enum class data_mode
     {
         kUninitialized = 0,
-        KSingleColumn = 1,
-        KMultiColumns = 2
+        kSingleColumn = 1,
+        kMultiColumns = 2
     };
 
 public:
@@ -112,28 +112,28 @@ public:
     {
     }
 
-    // KMultiColumns mode.
+    // kMultiColumns mode.
     void add_title(const std::string &title, alignment align = alignment::kLeft);
     void add_column(const std::string &col_name, alignment align = alignment::kLeft);
     template <typename T>
     void add_row(const T &row_name)
     {
-        check_mode(data_mode::KMultiColumns);
+        check_mode(data_mode::kMultiColumns);
         _matrix_data.emplace_back(std::vector<std::string>());
         append_data(row_name);
     }
     template <typename T>
     void append_data(const T &data)
     {
-        check_mode(data_mode::KMultiColumns);
+        check_mode(data_mode::kMultiColumns);
         append_string_data(to_string(data));
     }
 
-    // KSingleColumn mode.
+    // kSingleColumn mode.
     template <typename T>
     void add_row_name_and_data(const std::string &row_name, const T &data)
     {
-        check_mode(data_mode::KSingleColumn);
+        check_mode(data_mode::kSingleColumn);
         add_row_name_and_string_data(row_name, to_string(data));
     }
 
