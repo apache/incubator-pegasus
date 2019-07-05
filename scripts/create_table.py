@@ -43,6 +43,7 @@ import click
 import py_utils
 import re
 import json
+import math
 
 
 def validate_param_table(ctx, param, value):
@@ -63,10 +64,11 @@ def validate_param_cluster(ctx, param, value):
 
 
 def validate_param_partition_count(ctx, param, value):
-    # TODO(wutao1): ensure partition count is a power of 2
     if value == 0:
-        py_utils.echo("Cannot create table with 0 partition", "red")
-        return
+        raise click.BadParameter("Cannot create table with 0 partition")
+    if math.log(value, 2) != math.floor(math.log(value, 2)):
+        raise click.BadParameter(
+            "Partition count {} should be a power of 2".format(value))
     return value
 
 
