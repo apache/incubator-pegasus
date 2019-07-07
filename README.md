@@ -74,8 +74,8 @@ Data import/export tools:
 
 ## Contact
 
-Gitter: <https://gitter.im/XiaoMi/Pegasus>
-Issues: <https://github.com/XiaoMi/pegasus/issues>
+- Gitter: <https://gitter.im/XiaoMi/Pegasus>
+- Issues: <https://github.com/XiaoMi/pegasus/issues>
 
 ## License
 
