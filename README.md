@@ -72,6 +72,11 @@ Data import/export tools:
 
 - [DataX](https://github.com/xiaomi/pegasus-datax)
 
+## Contact
+
+Gitter: <https://gitter.im/XiaoMi/Pegasus>
+Issues: <https://github.com/XiaoMi/pegasus/issues>
+
 ## License
 
 Copyright 2015-now Xiaomi, Inc. Licensed under the Apache License, Version 2.0:
