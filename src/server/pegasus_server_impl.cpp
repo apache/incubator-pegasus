@@ -79,11 +79,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "rocksdb_abnormal_multi_get_time_threshold_ns",
         100000000,
         "multi-get operation duration exceed this threshold will be logged, 0 means no check");
-    _abnormal_multi_get_size_threshold = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_abnormal_multi_get_size_threshold",
-        10000000,
-        "multi-get operation total key-value size exceed this threshold will be logged, 0 means no check");
+    _abnormal_multi_get_size_threshold =
+        dsn_config_get_value_uint64("pegasus.server",
+                                    "rocksdb_abnormal_multi_get_size_threshold",
+                                    10000000,
+                                    "multi-get operation total key-value size exceed this "
+                                    "threshold will be logged, 0 means no check");
     _abnormal_multi_get_iterate_count_threshold = dsn_config_get_value_uint64(
         "pegasus.server",
         "rocksdb_abnormal_multi_get_iterate_count_threshold",
@@ -141,11 +142,11 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     10 * 64 * 1024 * 1024,
                                     "rocksdb options.max_bytes_for_level_base");
 
-    _db_opts.max_bytes_for_level_multiplier = dsn_config_get_value_double(
-        "pegasus.server",
-        "rocksdb_max_bytes_for_level_multiplier",
-        10,
-        "rocksdb options.rocksdb_max_bytes_for_level_multiplier");
+    _db_opts.max_bytes_for_level_multiplier =
+        dsn_config_get_value_double("pegasus.server",
+                                    "rocksdb_max_bytes_for_level_multiplier",
+                                    10,
+                                    "rocksdb options.rocksdb_max_bytes_for_level_multiplier");
 
     // we need set max_compaction_bytes definitely because set_usage_scenario() depends on it.
     _db_opts.max_compaction_bytes = _db_opts.target_file_size_base * 25;
