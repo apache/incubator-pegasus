@@ -21,9 +21,12 @@ def echo(message, color=None):
 
 
 class PegasusCluster(object):
-    def __init__(self, cfg_file_name):
-        self._cluster_name = os.path.basename(cfg_file_name).replace(
-            "pegasus-", "").replace(".cfg", "")
+    def __init__(self, cfg_file_name=None, cluster_name=None):
+        if cluster_name is None:
+            self._cluster_name = os.path.basename(cfg_file_name).replace(
+                "pegasus-", "").replace(".cfg", "")
+        else:
+            self._cluster_name = cluster_name
         self._shell_path = os.getenv("PEGASUS_SHELL_PATH")
         self._cfg_file_name = cfg_file_name
         if self._shell_path is None:
@@ -36,8 +39,10 @@ class PegasusCluster(object):
         list_detail = self._run_shell("ls -d -j").strip()
 
         list_detail_json = json.loads(list_detail)
-        read_unhealthy_app_count = int(list_detail_json["summary"]["read_unhealthy_app_count"])
-        write_unhealthy_app_count = int(list_detail_json["summary"]["write_unhealthy_app_count"])
+        read_unhealthy_app_count = int(
+            list_detail_json["summary"]["read_unhealthy_app_count"])
+        write_unhealthy_app_count = int(
+            list_detail_json["summary"]["write_unhealthy_app_count"])
         if write_unhealthy_app_count > 0:
             echo("cluster is write unhealthy, write_unhealthy_app_count = " +
                  str(write_unhealthy_app_count))
@@ -73,6 +78,35 @@ class PegasusCluster(object):
                 if line.strip().startswith("host.0"):
                     return line.split("=")[1].strip()
 
+    def create_table(self, table, parts):
+        create_result = self._run_shell(
+            "create {} -p {}".format(table, parts)).strip()
+        if "ERR_INVALID_PARAMETERS" in create_result:
+            raise ValueError("failed to create table \"{}\"".format(table))
+
+    def get_app_envs(self, table):
+        envs_result = self._run_shell(
+            "use {} \n get_app_envs".format(table)).strip()[len("OK\n"):]
+        if "ERR_OBJECT_NOT_FOUND" in envs_result:
+            raise ValueError("table {} does not exist".format(table))
+        if envs_result == "":
+            return None
+        envs_result = self._run_shell(
+            "use {} \n get_app_envs -j".format(table)).strip()[len("OK\n"):]
+        return json.loads(envs_result)['app_envs']
+
+    def set_app_envs(self, table, env_name, env_value):
+        envs_result = self._run_shell(
+            "use {} \n set_app_envs {} {}".format(
+                table, env_name, env_value)).strip()[
+            len("OK\n"):]
+        if "ERR_OBJECT_NOT_FOUND" in envs_result:
+            raise ValueError("table {} does not exist".format(table))
+
+    def has_table(self, table):
+        app_result = self._run_shell("app {} ".format(table)).strip()
+        return "ERR_OBJECT_NOT_FOUND" not in app_result
+
     def _run_shell(self, args):
         """
         :param args: arguments passed to ./run.sh shell (type `string`)
@@ -80,7 +114,7 @@ class PegasusCluster(object):
         """
         global _global_verbose
 
-        cmd = "cd {1}; echo {0} | ./run.sh shell -n {2}".format(
+        cmd = "cd {1}; echo -e \"{0}\" | ./run.sh shell -n {2}".format(
             args, self._shell_path, self._cluster_name)
         if _global_verbose:
             echo("executing command: \"{0}\"".format(cmd))
