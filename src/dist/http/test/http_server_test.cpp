@@ -5,7 +5,7 @@
 #include <dsn/tool-api/http_server.h>
 #include <gtest/gtest.h>
 
-#include "core/tools/http/http_message_parser.h"
+#include "dist/http/http_message_parser.h"
 
 namespace dsn {
 
