@@ -133,6 +133,8 @@ void native_linux_aio_provider::get_event()
             struct iocb *io = events[0].obj;
             complete_aio(io, static_cast<int>(events[0].res), static_cast<int>(events[0].res2));
         } else {
+            // on error it returns a negated error number (the negative of one of the values listed
+            // in ERRORS
             dwarn("io_getevents returns %d, you probably want to try on another machine:-(", ret);
         }
     }

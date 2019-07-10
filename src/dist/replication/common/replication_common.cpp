@@ -269,7 +269,7 @@ void replication_options::initialize()
     duplication_disabled = dsn_config_get_value_bool(
         "replication", "duplication_disabled", false, "is duplication disabled");
     if (allow_non_idempotent_write && !duplication_disabled) {
-        dfatal("duplication and idempotent write cannot be enabled together");
+        dassert(false, "duplication and non-idempotent write cannot be enabled together");
     }
 
     prepare_timeout_ms_for_secondaries = (int)dsn_config_get_value_uint64(

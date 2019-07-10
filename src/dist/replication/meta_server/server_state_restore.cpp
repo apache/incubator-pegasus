@@ -42,9 +42,17 @@ void server_state::sync_app_from_backup_media(
     const configuration_restore_request &request,
     std::function<void(error_code, const blob &)> &&callback)
 {
+    dsn::ref_ptr<dsn::future_task<dsn::error_code, dsn::blob>> callback_tsk(
+        new dsn::future_task<dsn::error_code, dsn::blob>(
+            LPC_RESTORE_BACKGROUND, std::move(callback), 0));
+
     block_filesystem *blk_fs =
         _meta_svc->get_block_service_manager().get_block_filesystem(request.backup_provider_name);
-    dassert(blk_fs != nullptr, "acquire block_filesyetem failed");
+    if (blk_fs == nullptr) {
+        derror("acquire block_filesystem(%s) failed", request.backup_provider_name.c_str());
+        callback_tsk->enqueue_with(ERR_INVALID_PARAMETERS, dsn::blob());
+        return;
+    }
 
     std::string app_metadata = cold_backup::get_app_metadata_file(request.cluster_name,
                                                                   request.policy_name,
@@ -64,10 +72,6 @@ void server_state::sync_app_from_backup_media(
                       })
         ->wait();
     ddebug("after create app_metadata file(%s)", app_metadata.c_str());
-
-    dsn::ref_ptr<dsn::future_task<dsn::error_code, dsn::blob>> callback_tsk(
-        new dsn::future_task<dsn::error_code, dsn::blob>(
-            LPC_RESTORE_BACKGROUND, std::move(callback), 0));
 
     if (err != ERR_OK) {
         derror("create file failed for meta entry(%s)", app_metadata.c_str());
