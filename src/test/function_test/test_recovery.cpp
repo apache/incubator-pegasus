@@ -32,16 +32,18 @@ protected:
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
 
+        system("cp src/server/config-server.ini config-server-test-recovery.ini");
         system("sed -i \"/^meta_state_service_type/c meta_state_service_type = "
-               "meta_state_service_simple\" src/server/config-server.ini");
+               "meta_state_service_simple\" config-server-test-recovery.ini");
         system("sed -i \"/^distributed_lock_service_type/c distributed_lock_service_type = "
-               "distributed_lock_service_simple\" src/server/config-server.ini");
+               "distributed_lock_service_simple\" config-server-test-recovery.ini");
         system("sed -i \"/^server_list/c server_list = @LOCAL_IP@:34601\" "
-               "src/server/config-server.ini");
+               "config-server-test-recovery.ini");
         system("sed -i \"/^perf_counter_enable_logging/c perf_counter_enable_logging = false\" "
-               "src/server/config-server.ini");
+               "config-server-test-recovery.ini");
 
-        system("./run.sh start_onebox -m 1 -r 3");
+        system(
+            "./run.sh start_onebox -m 1 -r 3 --tmpl_config_path config-server-test-recovery.ini");
         std::cout << "sleep for a while to wait the new onebox start" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -80,7 +82,6 @@ protected:
     {
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
-        system("git checkout -- src/server/config-server.ini");
         system("./run.sh start_onebox -w");
         chdir(global_env::instance()._working_dir.c_str());
     }

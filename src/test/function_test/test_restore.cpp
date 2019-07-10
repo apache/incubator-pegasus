@@ -24,14 +24,16 @@ public:
         chdir(pegasus_root_dir.c_str());
         cluster_name = dsn::utils::filesystem::path_combine(pegasus_root_dir, backup_data_dir);
         system("pwd");
+
         // modify the config to enable backup, and restart onebox
-        system("sed -i \"/^cold_backup_disabled/c cold_backup_disabled = false\" "
-               "src/server/config-server.ini");
-        std::string cmd = "sed -i \"/^cold_backup_root/c cold_backup_root = " + cluster_name;
-        cmd = cmd + std::string("\" src/server/config-server.ini");
-        system(cmd.c_str());
         system("./run.sh clear_onebox");
-        system("./run.sh start_onebox");
+        system("cp src/server/config-server.ini config-server-test-restore.ini");
+        system("sed -i \"/^cold_backup_disabled/c cold_backup_disabled = false\" "
+               "config-server-test-restore.ini");
+        std::string cmd = "sed -i \"/^cold_backup_root/c cold_backup_root = " + cluster_name;
+        cmd = cmd + std::string("\" config-server-test-restore.ini");
+        system(cmd.c_str());
+        system("./run.sh start_onebox --tmpl_config_path config-server-test-restore.ini");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
         std::vector<dsn::rpc_address> meta_list;
@@ -72,7 +74,6 @@ public:
     {
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
-        system("git checkout -- src/server/config-server.ini");
         system("./run.sh start_onebox -w");
         std::string cmd = "rm -rf " + backup_data_dir;
         system(cmd.c_str());
