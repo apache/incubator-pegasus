@@ -33,7 +33,7 @@ public:
         std::string cmd = "sed -i \"/^cold_backup_root/c cold_backup_root = " + cluster_name;
         cmd = cmd + std::string("\" config-server-test-restore.ini");
         system(cmd.c_str());
-        system("./run.sh start_onebox --tmpl_config_path config-server-test-restore.ini");
+        system("./run.sh start_onebox --config_path config-server-test-restore.ini");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
         std::vector<dsn::rpc_address> meta_list;

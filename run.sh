@@ -516,7 +516,7 @@ function usage_start_onebox()
     echo "                     wait cluster to become healthy, default not wait"
     echo "   -s|--server_path <str>"
     echo "                     server binary path, default is ${DSN_ROOT}/bin/pegasus_server"
-    echo "   --tmpl_config_path"
+    echo "   --config_path"
     echo "                     specify the config template path, default is ./src/server/config-server.ini in non-production env"
     echo "                                                                  ./src/server/config.ini in production env"
     echo "   --use_product_config"
@@ -568,7 +568,7 @@ function run_start_onebox()
                 SERVER_PATH="$2"
                 shift
                 ;;
-            --tmpl_config_path)
+            --config_path)
                 CONFIG_FILE="$2"
                 shift
                 ;;

@@ -43,7 +43,7 @@ protected:
                "config-server-test-recovery.ini");
 
         system(
-            "./run.sh start_onebox -m 1 -r 3 --tmpl_config_path config-server-test-recovery.ini");
+            "./run.sh start_onebox -m 1 -r 3 --config_path config-server-test-recovery.ini");
         std::cout << "sleep for a while to wait the new onebox start" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
