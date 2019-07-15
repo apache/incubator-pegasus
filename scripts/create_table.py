@@ -112,7 +112,7 @@ def set_write_throttling_if_needed(cluster, table, new_throttle):
 def set_app_envs_if_needed(cluster, table, env_name, new_env_value):
     py_utils.echo("New value of {}={}".format(env_name, new_env_value))
     envs = cluster.get_app_envs(table)
-    if envs is not None:
+    if envs is not None and envs.get(env_name) is not None:
         old_env_value = envs.get(env_name).encode('utf-8')
         if old_env_value is not None:
             py_utils.echo("Old value of {}={}".format(env_name, old_env_value))

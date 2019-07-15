@@ -226,7 +226,7 @@ function run_build()
     if [ "$BUILD_TYPE" == "debug" ]
     then
         echo "BUILD_TYPE=debug"
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=RelWithDebInfo"
     else
         echo "BUILD_TYPE=release"
     fi
