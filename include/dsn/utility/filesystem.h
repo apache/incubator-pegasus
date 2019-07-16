@@ -1,49 +1,43 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Microsoft Corporation
+ *
+ * -=- Robust Distributed System Nucleus (rDSN) -=-
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+// Copyright (c) 2017-present, Xiaomi, Inc.  All rights reserved.
+// This source code is licensed under the Apache License Version 2.0, which
+// can be found in the LICENSE file in the root directory of this source tree.
+
 #pragma once
 
 #include <string>
 #include <dsn/utility/error_code.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef _WIN32
-
-enum
-{
-    FTW_F, /* Regular file.  */
-#define FTW_F FTW_F
-    FTW_D, /* Directory.  */
-#define FTW_D FTW_D
-    FTW_DNR, /* Unreadable directory.  */
-#define FTW_DNR FTW_DNR
-    FTW_NS, /* Unstatable file.  */
-#define FTW_NS FTW_NS
-
-    FTW_SL, /* Symbolic link.  */
-#define FTW_SL FTW_SL
-    /* These flags are only passed from the `nftw' function.  */
-    FTW_DP, /* Directory, all subdirs have been visited. */
-#define FTW_DP FTW_DP
-    FTW_SLN /* Symbolic link naming non-existing file.  */
-#define FTW_SLN FTW_SLN
-};
-
-struct FTW
-{
-    int base;
-    int level;
-};
-
-#else
 
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 500
 #endif
 
 #include <ftw.h>
-
-#endif
 
 #ifndef FTW_CONTINUE
 #define FTW_CONTINUE 0
@@ -59,10 +53,6 @@ struct FTW
 
 #ifndef FTW_SKIP_SIBLINGS
 #define FTW_SKIP_SIBLINGS 3
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 namespace dsn {
@@ -96,6 +86,7 @@ bool get_subdirectories(const std::string &path,
 
 bool get_subpaths(const std::string &path, std::vector<std::string> &sub_list, bool recursive);
 
+// Returns true if no error.
 bool remove_path(const std::string &path);
 
 // this will always remove target path if exist
@@ -137,6 +128,7 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result);
 //          A is represent whether operation encounter some local error
 //          B is represent wheter the directory is empty, true means empty, otherwise false
 std::pair<error_code, bool> is_directory_empty(const std::string &dirname);
-}
-}
-}
+
+} // namespace filesystem
+} // namespace utils
+} // namespace dsn

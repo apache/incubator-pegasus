@@ -319,21 +319,14 @@ bool get_subpaths(const std::string &path, std::vector<std::string> &sub_list, b
 
 static bool remove_directory(const std::string &npath)
 {
-    return dsn::utils::filesystem::file_tree_walk(
-        npath,
-        [](const char *fpath, int typeflag, struct FTW *ftwbuf) {
-            bool succ;
-
-            dassert(
-                (typeflag == FTW_F) || (typeflag == FTW_DP), "Invalid typeflag = %d.", typeflag);
-            succ = (::remove(fpath) == 0);
-            if (!succ) {
-                dwarn("remove file %s failed, err = %s", fpath, safe_strerror(errno).c_str());
-            }
-
-            return (succ ? FTW_CONTINUE : FTW_STOP);
-        },
-        true);
+    boost::system::error_code ec;
+    boost::filesystem::remove_all(npath, ec);
+    // TODO(wutao1): return the specific error to caller
+    if (dsn_unlikely(bool(ec))) {
+        dwarn("remove %s failed, err = %s", npath.c_str(), ec.message().c_str());
+        return false;
+    }
+    return true;
 }
 
 bool remove_path(const std::string &path)
@@ -770,6 +763,6 @@ std::pair<error_code, bool> is_directory_empty(const std::string &dirname)
     }
     return res;
 }
-}
-}
-}
+} // namespace filesystem
+} // namespace utils
+} // namespace dsn

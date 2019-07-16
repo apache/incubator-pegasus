@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit tests for file utility.
- *
- * Revision history:
- *     2015-08-25, HX Lin(linmajia@live.com), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/utility/utils.h>
