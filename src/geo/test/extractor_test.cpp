@@ -64,5 +64,44 @@ TEST(latlng_extractor_for_lbs_test, extract_from_value)
     ASSERT_FALSE(lbs_extractor->extract_from_value(test_value, latlng));
 }
 
+static std::shared_ptr<latlng_extractor_for_aibox> aibox_extractor =
+    std::make_shared<latlng_extractor_for_aibox>();
+TEST(latlng_extractor_for_aibox_test, extract_from_value)
+{
+    ASSERT_EQ(std::string(aibox_extractor->name()), "latlng_extractor_for_aibox");
+
+    S2LatLng latlng;
+    ASSERT_TRUE(aibox_extractor->extract_from_value(aibox_extractor->value_sample(), latlng));
+
+    double lat_degrees = 12.345;
+    double lng_degrees = 67.890;
+    std::string test_value = std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees);
+    ASSERT_TRUE(aibox_extractor->extract_from_value(test_value, latlng));
+    ASSERT_LE(std::abs(latlng.lat().degrees() - lat_degrees), 0.000001);
+    ASSERT_LE(std::abs(latlng.lng().degrees() - lng_degrees), 0.000001);
+
+    test_value = std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) + "|24.043028";
+    ASSERT_TRUE(aibox_extractor->extract_from_value(test_value, latlng));
+    ASSERT_LE(std::abs(latlng.lat().degrees() - lat_degrees), 0.000001);
+    ASSERT_LE(std::abs(latlng.lng().degrees() - lng_degrees), 0.000001);
+
+    test_value = std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees) + "||";
+    ASSERT_TRUE(aibox_extractor->extract_from_value(test_value, latlng));
+    ASSERT_LE(std::abs(latlng.lat().degrees() - lat_degrees), 0.000001);
+    ASSERT_LE(std::abs(latlng.lng().degrees() - lng_degrees), 0.000001);
+
+    test_value = "|" + std::to_string(lng_degrees) + "|" + std::to_string(lat_degrees);
+    ASSERT_FALSE(aibox_extractor->extract_from_value(test_value, latlng));
+
+    test_value = "|" + std::to_string(lat_degrees);
+    ASSERT_FALSE(aibox_extractor->extract_from_value(test_value, latlng));
+
+    test_value = std::to_string(lng_degrees) + "|";
+    ASSERT_FALSE(aibox_extractor->extract_from_value(test_value, latlng));
+
+    test_value = "|";
+    ASSERT_FALSE(aibox_extractor->extract_from_value(test_value, latlng));
+}
+
 } // namespace geo
 } // namespace pegasus

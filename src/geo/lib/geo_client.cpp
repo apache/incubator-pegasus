@@ -48,9 +48,27 @@ geo_client::geo_client(const char *config_file,
 
     _extractor.reset(extractor);
 
-    // default: 16. edge length at level 16 is about 150m
+    _min_level = (int32_t)dsn_config_get_value_uint64(
+        "geo_client.lib", "min_level", 12, "min cell level for scan");
+
     _max_level = (int32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "max_level", 16, "max cell level for scan");
+
+    dassert_f(_min_level < _max_level,
+              "_min_level({}) must be less than _max_level({})",
+              _min_level,
+              _max_level);
+}
+
+bool geo_client::set_max_level(int level)
+{
+    if (level <= _min_level) {
+        dwarn_f("level({}) must be larger than _min_level({})", level, _min_level);
+        return false;
+    }
+
+    _max_level = level;
+    return true;
 }
 
 int geo_client::set(const std::string &hash_key,
@@ -602,7 +620,7 @@ bool geo_client::restore_origin_keys(const std::string &geo_sort_key,
                                      std::string &origin_sort_key)
 {
     // geo_sort_key: [0,3]{30-_min_level}:combine_keys
-    int cid_prefix_len = 30 - _min_level + 1;
+    int cid_prefix_len = 30 - _min_level + 1; // '1' is for ':' in geo_sort_key
     if (geo_sort_key.length() <= cid_prefix_len) {
         return false;
     }

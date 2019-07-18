@@ -43,12 +43,16 @@ int main(int argc, char **argv)
         std::cerr << "max_level is invalid: " << argv[6] << std::endl;
         return -1;
     }
+
     pegasus::geo::geo_client my_geo("config.ini",
                                     cluster_name.c_str(),
                                     app_name.c_str(),
                                     geo_app_name.c_str(),
                                     new pegasus::geo::latlng_extractor_for_lbs());
-    my_geo.set_max_level(max_level);
+    if (!my_geo.set_max_level(max_level)) {
+        std::cerr << "set_max_level failed" << std::endl;
+        return -1;
+    }
 
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),

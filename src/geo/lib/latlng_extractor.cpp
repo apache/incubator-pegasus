@@ -8,7 +8,7 @@
 namespace pegasus {
 namespace geo {
 
-void extract_indexs(const std::string &text,
+void extract_indexs(const std::string &line,
                     const std::vector<int> &indexs,
                     std::vector<std::string> &values,
                     char splitter)
@@ -20,7 +20,7 @@ void extract_indexs(const std::string &text,
         while (cur_index < index) {
             begin_pos = (cur_index == -1 ? 0 : end_pos + 1); // at first time, seek from 0
                                                              // then, seek from end_pos + 1
-            end_pos = text.find(splitter, begin_pos);
+            end_pos = line.find(splitter, begin_pos);
             if (end_pos == std::string::npos) {
                 break;
             }
@@ -28,12 +28,34 @@ void extract_indexs(const std::string &text,
         }
 
         if (end_pos == std::string::npos) {
-            values.emplace_back(text.substr(begin_pos));
+            values.emplace_back(line.substr(begin_pos));
             break;
         } else {
-            values.emplace_back(text.substr(begin_pos, end_pos - begin_pos));
+            values.emplace_back(line.substr(begin_pos, end_pos - begin_pos));
         }
     }
+}
+
+bool latlng_extractor::extract_from_value(const std::string &value,
+                                          std::pair<int, int> indexes,
+                                          S2LatLng &latlng)
+{
+    std::vector<std::string> data;
+    extract_indexs(value, {indexes.first, indexes.second}, data, '|');
+    if (data.size() != 2) {
+        return false;
+    }
+
+    std::string lng = data[0];
+    std::string lat = data[1];
+    double lat_degrees = 0.0;
+    double lng_degrees = 0.0;
+    if (!dsn::buf2double(lat, lat_degrees) || !dsn::buf2double(lng, lng_degrees)) {
+        return false;
+    }
+    latlng = S2LatLng::FromDegrees(lat_degrees, lng_degrees);
+
+    return latlng.is_valid();
 }
 
 const char *latlng_extractor_for_lbs::name() const { return "latlng_extractor_for_lbs"; }
@@ -45,21 +67,17 @@ const char *latlng_extractor_for_lbs::value_sample() const
 
 bool latlng_extractor_for_lbs::extract_from_value(const std::string &value, S2LatLng &latlng) const
 {
-    std::vector<std::string> data;
-    extract_indexs(value, {4, 5}, data, '|');
-    if (data.size() != 2) {
-        return false;
-    }
+    return latlng_extractor::extract_from_value(value, std::make_pair(4, 5), latlng);
+}
 
-    std::string lng = data[0];
-    std::string lat = data[1];
-    double lat_degrees, lng_degrees = 0.0;
-    if (!dsn::buf2double(lat, lat_degrees) || !dsn::buf2double(lng, lng_degrees)) {
-        return false;
-    }
-    latlng = S2LatLng::FromDegrees(lat_degrees, lng_degrees);
+const char *latlng_extractor_for_aibox::name() const { return "latlng_extractor_for_aibox"; }
 
-    return latlng.is_valid();
+const char *latlng_extractor_for_aibox::value_sample() const { return "160.356396|39.469644"; }
+
+bool latlng_extractor_for_aibox::extract_from_value(const std::string &value,
+                                                    S2LatLng &latlng) const
+{
+    return latlng_extractor::extract_from_value(value, std::make_pair(0, 1), latlng);
 }
 
 } // namespace geo

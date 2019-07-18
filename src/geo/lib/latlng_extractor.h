@@ -19,9 +19,21 @@ public:
     virtual const char *name() const = 0;
     virtual const char *value_sample() const = 0;
     virtual bool extract_from_value(const std::string &value, S2LatLng &latlng) const = 0;
+
+protected:
+    static bool
+    extract_from_value(const std::string &value, std::pair<int, int> indexes, S2LatLng &latlng);
 };
 
 class latlng_extractor_for_lbs : public latlng_extractor
+{
+public:
+    const char *name() const final;
+    const char *value_sample() const final;
+    bool extract_from_value(const std::string &value, S2LatLng &latlng) const final;
+};
+
+class latlng_extractor_for_aibox : public latlng_extractor
 {
 public:
     const char *name() const final;
