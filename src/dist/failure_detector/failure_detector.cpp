@@ -282,7 +282,9 @@ void failure_detector::check_all_records()
         for (; itq != _workers.end(); itq++) {
             worker_record &record = itq->second;
 
-            if (record.is_alive != false &&
+            // we should ensure now is greater than record.last_beacon_recv_time to aviod integer
+            // overflow
+            if (record.is_alive && is_time_greater_than(now, record.last_beacon_recv_time) &&
                 now - record.last_beacon_recv_time > _grace_milliseconds) {
                 derror("worker %s disconnected, now=%" PRId64 ", last_beacon_recv_time=%" PRId64
                        ", now-last_recv=%" PRId64,
