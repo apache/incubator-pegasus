@@ -1557,7 +1557,7 @@ int db_bench_tool(int argc, char **argv)
 
     rocksdb::Benchmark benchmark;
     benchmark.Run();
-    sleep(1);    // Sleep a while to exit gracefully.
+    sleep(1); // Sleep a while to exit gracefully.
 
     return 0;
 }
