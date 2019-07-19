@@ -32,6 +32,19 @@
 namespace dsn {
 namespace replication {
 
+/// On meta storage, duplication info are stored in the following layout:
+///
+///   <app_path>/duplication/<dup_id> -> {
+///                                         "remote": ...,
+///                                         "status": ...,
+///                                         "create_timestamp_ms": ...,
+///                                      }
+///
+///   <app_path>/duplication/<dup_id>/<partition_index> -> <confirmed_decree>
+///
+/// Each app has an attribute called "duplicating" which indicates
+/// whether this app should prevent its unconfirmed WAL from being compacted.
+///
 class meta_duplication_service
 {
 public:

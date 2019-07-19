@@ -43,6 +43,11 @@ typedef int32_t dupid_t;
 
 extern const char *duplication_status_to_string(duplication_status::type status);
 
+inline bool is_duplication_status_valid(duplication_status::type status)
+{
+    return status == duplication_status::DS_PAUSE || status == duplication_status::DS_START;
+}
+
 /// Returns the cluster name (i.e, "onebox") if it's configured under
 /// "replication" section:
 ///    [replication]

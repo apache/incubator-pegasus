@@ -44,7 +44,7 @@ public:
 
     void SetUp() override
     {
-        _ms.reset(new fake_receiver_meta_service);
+        _ms = make_unique<fake_receiver_meta_service>();
         ASSERT_EQ(_ms->remote_storage_initialize(), ERR_OK);
         _ms->initialize_duplication_service();
         ASSERT_TRUE(_ms->_dup_svc);
@@ -296,7 +296,6 @@ TEST_F(meta_duplication_service_test, change_duplication_status)
 
     create_app(test_app);
     auto app = find_app(test_app);
-
     dupid_t test_dup = create_dup(test_app).dupid;
 
     struct TestData
@@ -310,7 +309,10 @@ TEST_F(meta_duplication_service_test, change_duplication_status)
         {test_app, test_dup + 1, duplication_status::DS_INIT, ERR_OBJECT_NOT_FOUND},
 
         // ok test
-        {test_app, test_dup, duplication_status::DS_PAUSE, ERR_OK},
+        {test_app, test_dup, duplication_status::DS_PAUSE, ERR_OK}, // start->pause
+        {test_app, test_dup, duplication_status::DS_PAUSE, ERR_OK}, // pause->pause
+        {test_app, test_dup, duplication_status::DS_START, ERR_OK}, // pause->start
+        {test_app, test_dup, duplication_status::DS_START, ERR_OK}, // start->start
     };
 
     for (auto tt : tests) {
