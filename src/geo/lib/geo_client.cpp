@@ -9,6 +9,7 @@
 #include <s2/s2cap.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/errors.h>
 #include <base/pegasus_key_schema.h>
 #include <base/pegasus_utils.h>
 
@@ -34,8 +35,7 @@ struct SearchResultFarther
 geo_client::geo_client(const char *config_file,
                        const char *cluster_name,
                        const char *common_app_name,
-                       const char *geo_app_name,
-                       latlng_extractor *extractor)
+                       const char *geo_app_name)
 {
     bool ok = pegasus_client_factory::initialize(config_file);
     dassert(ok, "init pegasus client factory failed");
@@ -45,8 +45,6 @@ geo_client::geo_client(const char *config_file,
 
     _geo_data_client = pegasus_client_factory::get_client(cluster_name, geo_app_name);
     dassert(_geo_data_client != nullptr, "init pegasus _geo_data_client failed");
-
-    _extractor.reset(extractor);
 
     _min_level = (int32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "min_level", 12, "min cell level for scan");
@@ -58,17 +56,28 @@ geo_client::geo_client(const char *config_file,
               "_min_level({}) must be less than _max_level({})",
               _min_level,
               _max_level);
+
+    uint32_t latitude_index = (uint32_t)dsn_config_get_value_uint64(
+        "geo_client.lib", "latitude_index", 5, "latitude index in value");
+
+    uint32_t longitude_index = (uint32_t)dsn_config_get_value_uint64(
+        "geo_client.lib", "longitude_index", 4, "longitude index in value");
+
+    dsn::error_s s = _extractor.set_latlng_indices(std::make_pair(latitude_index, longitude_index));
+    dassert_f(s.is_ok(), "set_latlng_indices({}, {}) failed", latitude_index, longitude_index);
 }
 
-bool geo_client::set_max_level(int level)
+dsn::error_s geo_client::set_max_level(int level)
 {
     if (level <= _min_level) {
-        dwarn_f("level({}) must be larger than _min_level({})", level, _min_level);
-        return false;
+        return dsn::FMT_ERR(dsn::ERR_INVALID_PARAMETERS,
+                            "level({}) must be larger than _min_level({})",
+                            level,
+                            _min_level);
     }
 
     _max_level = level;
-    return true;
+    return dsn::error_s::ok();
 }
 
 int geo_client::set(const std::string &hash_key,
@@ -401,7 +410,7 @@ void geo_client::async_search_radial(const std::string &hash_key,
             }
 
             S2LatLng latlng;
-            if (!_extractor->extract_from_value(value_, latlng)) {
+            if (!_extractor.extract_from_value(value_, latlng)) {
                 derror_f("extract_from_value failed. hash_key={}, sort_key={}, value={}",
                          hash_key,
                          sort_key,
@@ -593,7 +602,7 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
 {
     // extract latitude and longitude from value
     S2LatLng latlng;
-    if (!_extractor->extract_from_value(value, latlng)) {
+    if (!_extractor.extract_from_value(value, latlng)) {
         derror_f("extract_from_value failed. hash_key={}, sort_key={}, value={}",
                  hash_key,
                  sort_key,
@@ -776,7 +785,7 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper
             }
 
             S2LatLng latlng;
-            if (!_extractor->extract_from_value(value, latlng)) {
+            if (!_extractor.extract_from_value(value, latlng)) {
                 derror_f("extract_from_value failed. value={}", value);
                 cb();
                 return;
@@ -863,7 +872,7 @@ void geo_client::async_distance(const std::string &hash_key1,
         }
 
         S2LatLng latlng;
-        if (!_extractor->extract_from_value(value_, latlng)) {
+        if (!_extractor.extract_from_value(value_, latlng)) {
             derror_f("extract_from_value failed. value={}", value_);
             *ret = PERR_GEO_DECODE_VALUE_ERROR;
         }

@@ -11,6 +11,7 @@
 #include <monitoring/histogram.h>
 #include <rocksdb/env.h>
 
+#include <dsn/utility/errors.h>
 #include <dsn/utility/strings.h>
 #include <dsn/utility/string_conv.h>
 
@@ -44,12 +45,9 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    pegasus::geo::geo_client my_geo("config.ini",
-                                    cluster_name.c_str(),
-                                    app_name.c_str(),
-                                    geo_app_name.c_str(),
-                                    new pegasus::geo::latlng_extractor_for_lbs());
-    if (!my_geo.set_max_level(max_level)) {
+    pegasus::geo::geo_client my_geo(
+        "config.ini", cluster_name.c_str(), app_name.c_str(), geo_app_name.c_str());
+    if (!my_geo.set_max_level(max_level).is_ok()) {
         std::cerr << "set_max_level failed" << std::endl;
         return -1;
     }

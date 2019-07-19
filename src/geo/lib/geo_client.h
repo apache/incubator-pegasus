@@ -12,6 +12,10 @@
 #include <pegasus/client.h>
 #include "latlng_extractor.h"
 
+namespace dsn {
+class error_s;
+} // namespace dsn
+
 namespace pegasus {
 namespace geo {
 
@@ -79,8 +83,7 @@ public:
     geo_client(const char *config_file,
                const char *cluster_name,
                const char *common_app_name,
-               const char *geo_app_name,
-               latlng_extractor *extractor);
+               const char *geo_app_name);
 
     ~geo_client() { _tracker.wait_outstanding_tasks(); }
 
@@ -285,7 +288,7 @@ public:
         return _common_data_client->get_error_string(error_code);
     }
 
-    bool set_max_level(int level);
+    dsn::error_s set_max_level(int level);
 
 private:
     friend class geo_client_test;
@@ -405,7 +408,7 @@ private:
 
     dsn::task_tracker _tracker;
 
-    std::shared_ptr<const latlng_extractor> _extractor = nullptr;
+    latlng_extractor _extractor;
     pegasus_client *_common_data_client = nullptr;
     pegasus_client *_geo_data_client = nullptr;
 };
