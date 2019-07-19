@@ -28,9 +28,9 @@ public:
     dsn::error_s set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index);
 
 private:
-    // <latitude index, longitude index>
+    // Latitude index and longitude index in sorted order.
     std::vector<int> _sorted_indices;
-    // Whether latitude and longitude indices are reversed in '_sorted_indices'.
+    // Whether '_sorted_indices' is in latitude-longitude order.
     bool _latlng_reversed = false;
 };
 
