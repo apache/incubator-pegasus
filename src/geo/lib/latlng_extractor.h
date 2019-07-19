@@ -25,8 +25,7 @@ public:
 
     // Set latitude and longitude indices in string type value, indices are the ones
     // when the string type value split into list by '|'.
-    // indices: <latitude index, longitude index>
-    dsn::error_s set_latlng_indices(std::pair<uint32_t, uint32_t> indices);
+    dsn::error_s set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index);
 
 private:
     // <latitude index, longitude index>

@@ -59,16 +59,16 @@ bool latlng_extractor::extract_from_value(const std::string &value, S2LatLng &la
     return latlng.is_valid();
 }
 
-dsn::error_s latlng_extractor::set_latlng_indices(std::pair<uint32_t, uint32_t> indices)
+dsn::error_s latlng_extractor::set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index)
 {
-    if (indices.first == indices.second) {
+    if (latitude_index == longitude_index) {
         return dsn::error_s::make(dsn::ERR_INVALID_PARAMETERS,
-                                  "latitude index longitude index should not be equal");
-    } else if (indices.first < indices.second) {
-        _sorted_indices = {(int)indices.first, (int)indices.second};
+                                  "latitude_index and longitude_index should not be equal");
+    } else if (latitude_index < longitude_index) {
+        _sorted_indices = {(int)latitude_index, (int)longitude_index};
         _latlng_reversed = false;
     } else {
-        _sorted_indices = {(int)indices.second, (int)indices.first};
+        _sorted_indices = {(int)longitude_index, (int)latitude_index};
         _latlng_reversed = true;
     }
     return dsn::error_s::ok();

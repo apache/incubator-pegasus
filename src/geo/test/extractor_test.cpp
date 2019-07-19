@@ -13,15 +13,15 @@ namespace geo {
 TEST(latlng_extractor_test, set_latlng_indices)
 {
     latlng_extractor extractor;
-    ASSERT_FALSE(extractor.set_latlng_indices(std::make_pair(3, 3)).is_ok());
-    ASSERT_TRUE(extractor.set_latlng_indices(std::make_pair(3, 4)).is_ok());
-    ASSERT_TRUE(extractor.set_latlng_indices(std::make_pair(4, 3)).is_ok());
+    ASSERT_FALSE(extractor.set_latlng_indices(3, 3).is_ok());
+    ASSERT_TRUE(extractor.set_latlng_indices(3, 4).is_ok());
+    ASSERT_TRUE(extractor.set_latlng_indices(4, 3).is_ok());
 }
 
 TEST(latlng_extractor_for_lbs_test, extract_from_value)
 {
     latlng_extractor extractor;
-    ASSERT_TRUE(extractor.set_latlng_indices(std::make_pair(5, 4)).is_ok());
+    ASSERT_TRUE(extractor.set_latlng_indices(5, 4).is_ok());
 
     double lat_degrees = 12.345;
     double lng_degrees = 67.890;
@@ -74,7 +74,7 @@ TEST(latlng_extractor_for_lbs_test, extract_from_value)
 TEST(latlng_extractor_for_aibox_test, extract_from_value)
 {
     latlng_extractor extractor;
-    ASSERT_TRUE(extractor.set_latlng_indices(std::make_pair(0, 1)).is_ok());
+    ASSERT_TRUE(extractor.set_latlng_indices(0, 1).is_ok());
 
     double lat_degrees = 12.345;
     double lng_degrees = 67.890;

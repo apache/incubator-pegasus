@@ -63,7 +63,7 @@ geo_client::geo_client(const char *config_file,
     uint32_t longitude_index = (uint32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "longitude_index", 4, "longitude index in value");
 
-    dsn::error_s s = _extractor.set_latlng_indices(std::make_pair(latitude_index, longitude_index));
+    dsn::error_s s = _extractor.set_latlng_indices(latitude_index, longitude_index);
     dassert_f(s.is_ok(), "set_latlng_indices({}, {}) failed", latitude_index, longitude_index);
 }
 
