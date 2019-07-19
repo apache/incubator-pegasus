@@ -20,6 +20,7 @@ class latlng_extractor
 {
 public:
     // Extract latitude and longitude from value.
+    // Return true when succeed.
     bool extract_from_value(const std::string &value, S2LatLng &latlng);
 
     // Set latitude and longitude indices in string type value, indices are the ones
