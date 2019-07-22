@@ -128,11 +128,10 @@ error_code failure_detector::stop()
 void failure_detector::register_master(::dsn::rpc_address target)
 {
     bool setup_timer = false;
-    uint64_t now = dsn_now_ms();
 
     zauto_lock l(_lock);
 
-    master_record record(target, now);
+    master_record record(target, dsn_now_ms());
 
     auto ret = _masters.insert(std::make_pair(target, record));
     if (ret.second) {
@@ -228,12 +227,13 @@ void failure_detector::check_all_records()
     }
 
     std::vector<rpc_address> expire;
-    uint64_t now = dsn_now_ms();
 
     {
         zauto_lock l(_lock);
-        master_map::iterator itr = _masters.begin();
-        for (; itr != _masters.end(); itr++) {
+
+        uint64_t now = dsn_now_ms();
+
+        for (auto itr = _masters.begin(); itr != _masters.end(); itr++) {
             master_record &record = itr->second;
 
             /*
@@ -241,7 +241,10 @@ void failure_detector::check_all_records()
              * test if "record will expire before next time we check all the records"
              * in order to guarantee the perfect fd
              */
+            // we should ensure now is greater than record.last_send_time_for_beacon_with_ack
+            // to aviod integer overflow
             if (record.is_alive &&
+                is_time_greater_than(now, record.last_send_time_for_beacon_with_ack) &&
                 now + _check_interval_milliseconds - record.last_send_time_for_beacon_with_ack >
                     _lease_milliseconds) {
                 derror("master %s disconnected, now=%" PRId64 ", last_send_time=%" PRId64
@@ -274,12 +277,13 @@ void failure_detector::check_all_records()
 
     // process recv record, for server
     expire.clear();
-    now = dsn_now_ms();
 
     {
         zauto_lock l(_lock);
-        worker_map::iterator itq = _workers.begin();
-        for (; itq != _workers.end(); itq++) {
+
+        uint64_t now = dsn_now_ms();
+
+        for (auto itq = _workers.begin(); itq != _workers.end(); itq++) {
             worker_record &record = itq->second;
 
             // we should ensure now is greater than record.last_beacon_recv_time to aviod integer
@@ -424,7 +428,6 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
      */
     uint64_t beacon_send_time = ack.time;
     auto node = ack.this_node;
-    uint64_t now = dsn_now_ms();
 
     if (err != ERR_OK) {
         dwarn("ping master(%s) failed, timeout_ms = %u, err = %s",
@@ -484,7 +487,9 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
            record.node.to_string(),
            record.last_send_time_for_beacon_with_ack);
 
-    if (record.is_alive == false &&
+    uint64_t now = dsn_now_ms();
+    // we should ensure now is greater than record.last_beacon_recv_time to aviod integer overflow
+    if (!record.is_alive && is_time_greater_than(now, record.last_send_time_for_beacon_with_ack) &&
         now - record.last_send_time_for_beacon_with_ack <= _lease_milliseconds) {
         // report master connected
         report(node, true, true);
@@ -523,12 +528,10 @@ bool failure_detector::is_master_connected(::dsn::rpc_address node) const
 
 void failure_detector::register_worker(::dsn::rpc_address target, bool is_connected)
 {
-    uint64_t now = dsn_now_ms();
-
     /*
      * callers should use the fd::_lock necessarily
      */
-    worker_record record(target, now);
+    worker_record record(target, dsn_now_ms());
     record.is_alive = is_connected ? true : false;
 
     auto ret = _workers.insert(std::make_pair(target, record));
