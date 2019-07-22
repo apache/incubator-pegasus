@@ -40,7 +40,7 @@ before_script:
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh build --skip_thirdparty --disable_gperf && ./run.sh test
+    - ./travis.sh
 
 after_script:
     - ./run.sh stop_zk
