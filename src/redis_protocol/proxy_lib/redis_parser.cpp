@@ -66,11 +66,8 @@ redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), op->get_cluster());
         r = new ::dsn::apps::rrdb_client(op->get_cluster(), meta_list, op->get_app());
         if (strlen(op->get_geo_app()) != 0) {
-            _geo_client = dsn::make_unique<geo::geo_client>("config.ini",
-                                                            op->get_cluster(),
-                                                            op->get_app(),
-                                                            op->get_geo_app(),
-                                                            new geo::latlng_extractor_for_lbs());
+            _geo_client = dsn::make_unique<geo::geo_client>(
+                "config.ini", op->get_cluster(), op->get_app(), op->get_geo_app());
         }
     } else {
         r = new ::dsn::apps::rrdb_client();
