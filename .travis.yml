@@ -40,7 +40,7 @@ before_script:
     - ulimit -c unlimited -S
 
 script:
-    - ./travis.sh
+    - ./scripts/travis.sh
 
 after_script:
     - ./run.sh stop_zk
