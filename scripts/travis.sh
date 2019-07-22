@@ -1,7 +1,7 @@
 # ensure source files are well formatted
 ./scripts/format_files.sh
 
-modified=$(git status -s --ignore-submodules=dirty)
+modified=$(git status -s --ignore-submodules)
 if [ "$modified" ]; then
     echo "$modified"
     echo "please format the above files before commit"
