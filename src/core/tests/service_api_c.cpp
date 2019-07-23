@@ -205,7 +205,6 @@ struct aio_result
 };
 TEST(core, dsn_file)
 {
-    // if in dsn_mimic_app() and disk_io_mode == IOE_PER_QUEUE
     if (task::get_current_disk() == nullptr)
         return;
 

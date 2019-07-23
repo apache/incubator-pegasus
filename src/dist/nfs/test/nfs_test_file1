@@ -58,7 +58,6 @@ cli_remote = true
 logging_start_level = LOG_LEVEL_DEBUG
 logging_factory_name = dsn::tools::simple_logger
 
-io_worker_count = 1
 
 [tools.simulator]
 random_seed = 0

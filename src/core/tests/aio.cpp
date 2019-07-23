@@ -47,7 +47,6 @@ DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER
 
 TEST(core, aio)
 {
-    // if in dsn_mimic_app() and disk_io_mode == IOE_PER_QUEUE
     if (task::get_current_disk() == nullptr)
         return;
 
@@ -143,7 +142,6 @@ TEST(core, aio)
 
 TEST(core, aio_share)
 {
-    // if in dsn_mimic_app() and disk_io_mode == IOE_PER_QUEUE
     if (task::get_current_disk() == nullptr)
         return;
 
@@ -161,7 +159,6 @@ TEST(core, aio_share)
 
 TEST(core, operation_failed)
 {
-    // if in dsn_mimic_app() and disk_io_mode == IOE_PER_QUEUE
     if (task::get_current_disk() == nullptr)
         return;
 

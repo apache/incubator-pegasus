@@ -171,8 +171,6 @@ struct service_spec
     std::list<std::string> rwlock_nr_aspects;
     std::list<std::string> semaphore_aspects;
 
-    int io_worker_count; // for disk and rpc
-
     network_client_configs network_default_client_cfs; // default network configed by tools
     network_server_configs network_default_server_cfs; // default network configed by tools
     std::vector<threadpool_spec> threadpool_specs;
@@ -220,13 +218,6 @@ CONFIG_FLD_STRING_LIST(lock_nr_aspects,
 CONFIG_FLD_STRING_LIST(rwlock_nr_aspects,
                        "non-recursive rwlock aspect providers, usually for tooling purpose")
 CONFIG_FLD_STRING_LIST(semaphore_aspects, "semaphore aspect providers, usually for tooling purpose")
-
-CONFIG_FLD(int,
-           uint64,
-           io_worker_count,
-           2,
-           "io thread count, only for IOE_PER_NODE; "
-           "for IOE_PER_QUEUE, task workers are served as io threads")
 CONFIG_END
 
 enum sys_exit_type
