@@ -1709,12 +1709,10 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
 
     std::unique_ptr<pegasus::geo::geo_client> target_geo_client;
     if (is_geo_data) {
-        target_geo_client.reset(
-            new pegasus::geo::geo_client("config.ini",
-                                         target_cluster_name.c_str(),
-                                         target_app_name.c_str(),
-                                         target_geo_app_name.c_str(),
-                                         new pegasus::geo::latlng_extractor_for_lbs()));
+        target_geo_client.reset(new pegasus::geo::geo_client("config.ini",
+                                                             target_cluster_name.c_str(),
+                                                             target_app_name.c_str(),
+                                                             target_geo_app_name.c_str()));
     }
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
