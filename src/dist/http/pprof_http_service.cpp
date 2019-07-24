@@ -28,6 +28,7 @@
 #include <dsn/utility/timer.h>
 #include <dsn/utility/string_splitter.h>
 #include <gperftools/malloc_extension.h>
+#include <gperftools/profiler.h>
 
 namespace dsn {
 
@@ -334,6 +335,7 @@ static bool get_heap_profile(std::string &result)
 void pprof_http_service::heap_handler(const http_request &req, http_response &resp)
 {
     resp.status_code = http_status_code::ok;
+
     get_heap_profile(resp.body);
 }
 

@@ -45,6 +45,9 @@
 #include <dsn/dist/replication/replication_app_base.h>
 #include <vector>
 #include <deque>
+#ifdef DSN_ENABLE_GPERF
+#include <gperftools/malloc_extension.h>
+#endif
 
 namespace dsn {
 namespace replication {
@@ -631,6 +634,22 @@ void replica_stub::initialize_start()
                                    0,
                                    std::chrono::milliseconds(_options.config_sync_interval_ms));
     }
+
+#ifdef DSN_ENABLE_GPERF
+    if (_options.mem_release_enabled) {
+        _mem_release_timer_task =
+            tasking::enqueue_timer(LPC_MEM_RELEASE,
+                                   &_tracker,
+                                   []() {
+                                       ddebug("Memory release has started...");
+                                       ::MallocExtension::instance()->ReleaseFreeMemory();
+                                       ddebug("Memory release has ended...");
+                                   },
+                                   std::chrono::milliseconds(_options.mem_release_interval_ms),
+                                   0,
+                                   std::chrono::milliseconds(_options.mem_release_interval_ms));
+    }
+#endif
 
     // init liveness monitor
     dassert(NS_Disconnected == _state, "");
@@ -2185,6 +2204,11 @@ void replica_stub::close()
         _gc_timer_task = nullptr;
     }
 
+    if (_mem_release_timer_task != nullptr) {
+        _mem_release_timer_task->cancel(true);
+        _mem_release_timer_task = nullptr;
+    }
+
     {
         zauto_write_lock l(_replicas_lock);
         while (!_closing_replicas.empty()) {
@@ -2254,5 +2278,5 @@ std::string replica_stub::get_replica_dir(const char *app_type, gpid id, bool cr
     }
     return ret_dir;
 }
-}
-} // namespace
+} // namespace replication
+} // namespace dsn

@@ -243,6 +243,7 @@ private:
     ::dsn::task_ptr _config_sync_timer_task;
     ::dsn::task_ptr _gc_timer_task;
     ::dsn::task_ptr _disk_stat_timer_task;
+    ::dsn::task_ptr _mem_release_timer_task;
 
     // command_handlers
     dsn_handle_t _kill_partition_command;
