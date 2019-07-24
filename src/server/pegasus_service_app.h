@@ -6,6 +6,8 @@
 
 #include <dsn/dist/replication/meta_service_app.h>
 #include <dsn/dist/replication/replication_service_app.h>
+#include <pegasus/version.h> // for http service
+#include <pegasus/git_commit.h> // for http service
 #include "reporter/pegasus_counter_reporter.h"
 
 namespace pegasus {
@@ -22,7 +24,11 @@ public:
 
     virtual ::dsn::error_code start(const std::vector<std::string> &args) override
     {
-        ::dsn::error_code ret = ::dsn::replication::replication_service_app::start(args);
+        // args for replication http service
+        std::vector<std::string> args_new(args);
+        args_new.emplace_back(PEGASUS_VERSION);
+        args_new.emplace_back(PEGASUS_GIT_COMMIT);
+        ::dsn::error_code ret = ::dsn::replication::replication_service_app::start(args_new);
         if (ret == ::dsn::ERR_OK) {
             pegasus_counter_reporter::instance().start();
             _updater_started = true;
