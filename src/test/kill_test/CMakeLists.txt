@@ -17,6 +17,7 @@ set(MY_PROJ_LIBS
     dsn.replication.ddlclient
     dsn_replication_common
     dsn_cli
+    dsn_runtime
     )
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 

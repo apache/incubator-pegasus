@@ -1,5 +1,4 @@
 set(MY_PROJ_NAME "pegasus.base")
-set(DSN_IN_CORE "TRUE")
 
 if(UNIX)
     add_compile_options(-fPIC)
