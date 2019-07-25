@@ -6,8 +6,8 @@
 
 #include <dsn/dist/replication/meta_service_app.h>
 #include <dsn/dist/replication/replication_service_app.h>
-#include <pegasus/version.h> // for http service
-#include <pegasus/git_commit.h> // for http service
+#include <pegasus/version.h>
+#include <pegasus/git_commit.h>
 #include "reporter/pegasus_counter_reporter.h"
 
 namespace pegasus {
