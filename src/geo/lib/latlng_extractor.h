@@ -9,24 +9,29 @@
 #include <s2/s2latlng.h>
 #include <dsn/utility/strings.h>
 
+namespace dsn {
+class error_s;
+} // namespace dsn
+
 namespace pegasus {
 namespace geo {
 
 class latlng_extractor
 {
 public:
-    virtual ~latlng_extractor() = default;
-    virtual const char *name() const = 0;
-    virtual const char *value_sample() const = 0;
-    virtual bool extract_from_value(const std::string &value, S2LatLng &latlng) const = 0;
-};
+    // Extract latitude and longitude from value.
+    // Return true when succeed.
+    bool extract_from_value(const std::string &value, S2LatLng &latlng);
 
-class latlng_extractor_for_lbs : public latlng_extractor
-{
-public:
-    const char *name() const final;
-    const char *value_sample() const final;
-    bool extract_from_value(const std::string &value, S2LatLng &latlng) const final;
+    // Set latitude and longitude indices in string type value, indices are the ones
+    // when the string type value split into list by '|'.
+    dsn::error_s set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index);
+
+private:
+    // Latitude index and longitude index in sorted order.
+    std::vector<int> _sorted_indices;
+    // Whether '_sorted_indices' is in latitude-longitude order.
+    bool _latlng_reversed = false;
 };
 
 } // namespace geo

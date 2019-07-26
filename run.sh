@@ -226,7 +226,7 @@ function run_build()
     if [ "$BUILD_TYPE" == "debug" ]
     then
         echo "BUILD_TYPE=debug"
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=RelWithDebInfo"
     else
         echo "BUILD_TYPE=release"
     fi
@@ -516,8 +516,11 @@ function usage_start_onebox()
     echo "                     wait cluster to become healthy, default not wait"
     echo "   -s|--server_path <str>"
     echo "                     server binary path, default is ${DSN_ROOT}/bin/pegasus_server"
+    echo "   --config_path"
+    echo "                     specify the config template path, default is ./src/server/config-server.ini in non-production env"
+    echo "                                                                  ./src/server/config.ini in production env"
     echo "   --use_product_config"
-    echo "                     use the product config template: ./src/server/config.ini"
+    echo "                     use the product config template"
 }
 
 function run_start_onebox()
@@ -529,7 +532,9 @@ function run_start_onebox()
     PARTITION_COUNT=8
     WAIT_HEALHY=false
     SERVER_PATH=${DSN_ROOT}/bin/pegasus_server
+    CONFIG_FILE=""
     USE_PRODUCT_CONFIG=false
+
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -563,6 +568,10 @@ function run_start_onebox()
                 SERVER_PATH="$2"
                 shift
                 ;;
+            --config_path)
+                CONFIG_FILE="$2"
+                shift
+                ;;
             --use_product_config)
                 USE_PRODUCT_CONFIG=true
                 ;;
@@ -575,6 +584,7 @@ function run_start_onebox()
         esac
         shift
     done
+
     if [ ! -f ${SERVER_PATH}/pegasus_server ]; then
         echo "ERROR: file ${SERVER_PATH}/pegasus_server not exist"
         exit 1
@@ -588,32 +598,36 @@ function run_start_onebox()
     run_start_zk
 
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
-      cp -f ${ROOT}/src/server/config.ini ${ROOT}/config-server.ini
-      sed -i 's/\<34601\>/@META_PORT@/' ${ROOT}/config-server.ini
-      sed -i 's/\<34801\>/@REPLICA_PORT@/' ${ROOT}/config-server.ini
-      sed -i 's/%{cluster.name}/onebox/g' ${ROOT}/config-server.ini
-      sed -i 's/%{network.interface}/eth0/g' ${ROOT}/config-server.ini
-      sed -i 's/%{email.address}//g' ${ROOT}/config-server.ini
-      sed -i 's/%{app.dir}/.\/data/g' ${ROOT}/config-server.ini
-      sed -i 's/%{slog.dir}//g' ${ROOT}/config-server.ini
-      sed -i 's/%{data.dirs}//g' ${ROOT}/config-server.ini
-      sed -i 's@%{home.dir}@'"$HOME"'@g' ${ROOT}/config-server.ini
-      for i in $(seq ${META_COUNT})
-      do
-          meta_port=$((34600+i))
-          if [ $i -eq 1 ]; then
-              meta_list="${LOCAL_IP}:$meta_port"
-          else
-              meta_list="$meta_list,${LOCAL_IP}:$meta_port"
-          fi
-      done
-      sed -i 's/%{meta.server.list}/'"$meta_list"'/g' ${ROOT}/config-server.ini
-      sed -i 's/%{zk.server.list}/'"${LOCAL_IP}"':22181/g' ${ROOT}/config-server.ini
-      sed -i 's/app_name = .*$/app_name = '"$APP_NAME"'/' ${ROOT}/config-server.ini
-      sed -i 's/partition_count = .*$/partition_count = '"$PARTITION_COUNT"'/' ${ROOT}/config-server.ini
+        [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
+        [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
+        cp -f ${CONFIG_FILE} ${ROOT}/config-server.ini
+        sed -i 's/\<34601\>/@META_PORT@/' ${ROOT}/config-server.ini
+        sed -i 's/\<34801\>/@REPLICA_PORT@/' ${ROOT}/config-server.ini
+        sed -i 's/%{cluster.name}/onebox/g' ${ROOT}/config-server.ini
+        sed -i 's/%{network.interface}/eth0/g' ${ROOT}/config-server.ini
+        sed -i 's/%{email.address}//g' ${ROOT}/config-server.ini
+        sed -i 's/%{app.dir}/.\/data/g' ${ROOT}/config-server.ini
+        sed -i 's/%{slog.dir}//g' ${ROOT}/config-server.ini
+        sed -i 's/%{data.dirs}//g' ${ROOT}/config-server.ini
+        sed -i 's@%{home.dir}@'"$HOME"'@g' ${ROOT}/config-server.ini
+        for i in $(seq ${META_COUNT})
+        do
+            meta_port=$((34600+i))
+            if [ $i -eq 1 ]; then
+                meta_list="${LOCAL_IP}:$meta_port"
+            else
+                meta_list="$meta_list,${LOCAL_IP}:$meta_port"
+            fi
+        done
+        sed -i 's/%{meta.server.list}/'"$meta_list"'/g' ${ROOT}/config-server.ini
+        sed -i 's/%{zk.server.list}/'"${LOCAL_IP}"':22181/g' ${ROOT}/config-server.ini
+        sed -i 's/app_name = .*$/app_name = '"$APP_NAME"'/' ${ROOT}/config-server.ini
+        sed -i 's/partition_count = .*$/partition_count = '"$PARTITION_COUNT"'/' ${ROOT}/config-server.ini
     else
-      sed "s/@LOCAL_IP@/${LOCAL_IP}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
-          ${ROOT}/src/server/config-server.ini >${ROOT}/config-server.ini
+        [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config-server.ini
+        [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
+        sed "s/@LOCAL_IP@/${LOCAL_IP}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
+            ${CONFIG_FILE} >${ROOT}/config-server.ini
     fi
 
     echo "starting server"
