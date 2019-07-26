@@ -150,6 +150,12 @@ fi
 
 cd $ROOT
 PEGASUS_GIT_COMMIT=`git log | head -n 1 | awk '{print $2}'`
+if [ $? -ne 0 ] || [ -z "$PEGASUS_GIT_COMMIT" ] 
+then
+    echo "ERROR: get PEGASUS_GIT_COMMIT failed"
+    echo "HINT: check if pegasus is a git repo"
+    exit 1
+fi
 GIT_COMMIT_FILE=include/pegasus/git_commit.h
 if [ ! -f $GIT_COMMIT_FILE ] || ! grep $PEGASUS_GIT_COMMIT $GIT_COMMIT_FILE
 then
