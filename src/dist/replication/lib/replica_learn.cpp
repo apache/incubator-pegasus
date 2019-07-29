@@ -980,7 +980,6 @@ void replica::on_copy_remote_state_completed(error_code err,
             auto start_ts = dsn_now_ns();
             err = _app->apply_checkpoint(replication_app_base::chkpt_apply_mode::learn, lstate);
             if (err == ERR_OK) {
-                _app->reset_counters_after_learning();
 
                 dassert(_app->last_committed_decree() >= _app->last_durable_decree(),
                         "invalid app state, %" PRId64 " VS %" PRId64 "",

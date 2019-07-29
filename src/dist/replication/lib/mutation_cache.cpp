@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "mutation_cache.h"
 #include "mutation.h"
 
@@ -137,18 +128,6 @@ mutation_ptr mutation_cache::get_mutation_by_decree(decree decree)
         return nullptr;
     else
         return _array[(_start_idx + (decree - _start_decree) + _max_count) % _max_count];
-}
-
-mutation_ptr mutation_cache::remove_mutation_by_decree(decree decree)
-{
-    if (decree < _start_decree || decree > _end_decree)
-        return nullptr;
-    else {
-        int idx = (_start_idx + (decree - _start_decree) + _max_count) % _max_count;
-        auto ret = _array[idx];
-        _array[idx] = nullptr;
-        return ret;
-    }
 }
 }
 } // namespace end

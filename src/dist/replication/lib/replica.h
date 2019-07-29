@@ -152,7 +152,11 @@ public:
 
     // void json_state(std::stringstream& out) const;
     void update_last_checkpoint_generate_time();
-    void update_commit_statistics(int count);
+
+    //
+    // Statistics
+    //
+    void update_commit_qps(int count);
 
     // routine for get extra envs from replica
     const std::map<std::string, std::string> &get_replica_extra_envs() const { return _extra_envs; }
@@ -232,10 +236,10 @@ private:
     bool is_same_ballot_status_change_allowed(partition_status::type olds,
                                               partition_status::type news);
 
-    // return false when update fails or replica is going to be closed
-    bool update_app_envs(const std::map<std::string, std::string> &envs);
+    void update_app_envs(const std::map<std::string, std::string> &envs);
     void update_app_envs_internal(const std::map<std::string, std::string> &envs);
-    bool query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
+    void query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
+
     bool update_configuration(const partition_configuration &config);
     bool update_local_configuration(const replica_configuration &config, bool same_ballot = false);
 

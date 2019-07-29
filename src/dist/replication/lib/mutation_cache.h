@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "../common/replication_common.h"
@@ -43,6 +34,10 @@
 namespace dsn {
 namespace replication {
 
+// mutation_cache is an in-memory array that stores a limited number
+// (SEE replication_options::max_mutation_count_in_prepare_list) of mutation log entries.
+//
+// Inherited by: prepare_list
 class mutation_cache
 {
 public:
@@ -52,7 +47,6 @@ public:
     error_code put(mutation_ptr &mu);
     mutation_ptr pop_min();
     mutation_ptr get_mutation_by_decree(decree decree);
-    mutation_ptr remove_mutation_by_decree(decree decree);
     void reset(decree init_decree, bool clear_mutations);
 
     decree min_decree() const { return _start_decree; }

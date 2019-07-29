@@ -282,7 +282,7 @@ private:
     perf_counter_wrapper _counter_replicas_count;
     perf_counter_wrapper _counter_replicas_opening_count;
     perf_counter_wrapper _counter_replicas_closing_count;
-    perf_counter_wrapper _counter_replicas_total_commit_throught;
+    perf_counter_wrapper _counter_replicas_commit_qps;
 
     perf_counter_wrapper _counter_replicas_learning_count;
     perf_counter_wrapper _counter_replicas_learning_max_duration_time_ms;

@@ -90,10 +90,11 @@ struct operation : pipeline::environment
             pipeline::repeat(std::move(*this_instance), 1_s);
             return;
         }
-        dfatal_f("request({}) on path({}) encountered an unexpected error({})",
-                 op_type::to_string(type),
-                 path,
-                 ec.to_string());
+        dassert_f(false,
+                  "request({}) on path({}) encountered an unexpected error({})",
+                  op_type::to_string(type),
+                  path,
+                  ec.to_string());
     }
 
     dist::meta_state_service *remote_storage() const { return _ms->_remote; }
