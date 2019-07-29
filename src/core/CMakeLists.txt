@@ -1,5 +1,3 @@
-add_definitions(-DDSN_IN_CORE)
-set(DSN_IN_CORE "TRUE")
 add_subdirectory(core)
 add_subdirectory(perf_counter)
 add_subdirectory(tools)

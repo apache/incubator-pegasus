@@ -99,7 +99,7 @@ endfunction(ms_add_project)
 # - MY_PROJ_LIBS
 # - MY_BINPLACES
 #     Extra files that will be installed
-# - MY_BOOST_PACKAGES
+# - MY_BOOST_LIBS
 function(dsn_add_project)
     if((NOT DEFINED MY_PROJ_TYPE) OR (MY_PROJ_TYPE STREQUAL ""))
         message(FATAL_ERROR "MY_PROJ_TYPE is empty.")
@@ -135,24 +135,14 @@ function(dsn_add_project)
     if(NOT DEFINED MY_BINPLACES)
         set(MY_BINPLACES "")
     endif()
-    if(NOT DEFINED MY_BOOST_PACKAGES)
-        set(MY_BOOST_PACKAGES "")
-    endif()
 
-    set(MY_BOOST_LIBS "")
-    if(NOT (MY_BOOST_PACKAGES STREQUAL ""))
-        ms_setup_boost(TRUE "${MY_BOOST_PACKAGES}" MY_BOOST_LIBS)
+    if(NOT DEFINED MY_BOOST_LIBS)
+        set(MY_BOOST_LIBS "")
     endif()
 
     if((MY_PROJ_TYPE STREQUAL "SHARED") OR (MY_PROJ_TYPE STREQUAL "EXECUTABLE"))
-        if(DSN_BUILD_RUNTIME AND(DEFINED DSN_IN_CORE) AND DSN_IN_CORE)
-            set(TEMP_LIBS "")
-        else()
-            set(TEMP_LIBS dsn_runtime)
-        endif()
         set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${TEMP_LIBS} ${MY_BOOST_LIBS} ${DSN_SYSTEM_LIBS})
     endif()
-
     ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_INC_PATH}" "${MY_PROJ_LIBS}" "${MY_PROJ_LIB_PATH}" "${MY_BINPLACES}")
 endfunction(dsn_add_project)
 
@@ -250,25 +240,6 @@ function(dsn_setup_compiler_flags)
         FORCE)
 endfunction(dsn_setup_compiler_flags)
 
-macro(ms_setup_boost STATIC_LINK PACKAGES BOOST_LIBS)
-    set(Boost_USE_MULTITHREADED ON)
-    set(Boost_USE_STATIC_LIBS OFF)
-    set(Boost_USE_STATIC_RUNTIME OFF)
-
-    find_package(Boost COMPONENTS ${PACKAGES} REQUIRED)
-
-    if(NOT Boost_FOUND)
-        message(FATAL_ERROR "Cannot find library boost")
-    endif()
-
-    set(TEMP_LIBS "")
-    foreach(PACKAGE ${PACKAGES})
-        string(TOUPPER ${PACKAGE} PACKAGE)
-        set(TEMP_LIBS ${TEMP_LIBS} ${Boost_${PACKAGE}_LIBRARY})
-    endforeach()
-    set(${BOOST_LIBS} ${TEMP_LIBS})
-endmacro(ms_setup_boost)
-
 # find necessary system libs
 function(dsn_setup_system_libs)
     find_package(Threads REQUIRED)
@@ -306,16 +277,18 @@ function(dsn_setup_system_libs)
     )
 endfunction(dsn_setup_system_libs)
 
-function(dsn_setup_include_path)
-    if(DEFINED BOOST_ROOT)
-        include_directories(${BOOST_ROOT}/include)
-    endif()
-    include_directories(${BOOST_INCLUDEDIR})
+function(dsn_setup_include_path)#TODO: remove this
     include_directories(${DSN_THIRDPARTY_ROOT}/include)
 endfunction(dsn_setup_include_path)
 
-function(dsn_setup_link_path)
-    link_directories(${BOOST_LIBRARYDIR})
+function(dsn_setup_link_path)#TODO: dsn_setup_thirdparty_libs()
+    set(Boost_USE_MULTITHREADED ON)
+    set(Boost_USE_STATIC_LIBS OFF)
+    set(Boost_USE_STATIC_RUNTIME OFF)
+
+    find_package(Boost COMPONENTS system filesystem regex REQUIRED)
+    include_directories(${Boost_INCLUDE_DIRS})
+    
     link_directories(${DSN_THIRDPARTY_ROOT}/lib)
 endfunction(dsn_setup_link_path)
 

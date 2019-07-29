@@ -19,6 +19,7 @@ set(MY_PROJ_LIBS dsn_meta_server
                  dsn.block_service.fds
                  dsn.failure_detector
                  dsn_http
+                 dsn_runtime
                  zookeeper_mt
                  galaxy-fds-sdk-cpp
                  PocoNet
@@ -29,7 +30,7 @@ set(MY_PROJ_LIBS dsn_meta_server
                  fmt
                  gtest)
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 #Extra files that will be installed
 set(MY_BINPLACES clear.sh run.sh config-test.ini)

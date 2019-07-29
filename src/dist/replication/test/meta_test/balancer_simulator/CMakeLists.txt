@@ -11,16 +11,18 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH)
 
-set(MY_PROJ_LIBS dsn_meta_server
-                 dsn_replication_common
-                 dsn.block_service.local
-                 dsn.block_service.fds
-                 fmt
-                 gtest)
+set(MY_PROJ_LIBS
+    dsn_meta_server
+    dsn_replication_common
+    dsn.block_service.local
+    dsn.block_service.fds
+    dsn_runtime
+    fmt
+    gtest)
+
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_PROJ_LIB_PATH "")
-
-set(MY_BOOST_PACKAGES system filesystem)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")

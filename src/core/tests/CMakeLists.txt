@@ -9,12 +9,12 @@ set(MY_PROJ_INC_PATH
     ${GTEST_INCLUDE_DIR} 
     ../core ../tools/common ../tools/simulator ../tools/hpc ../tools/nfs 
     )
-    
-set(MY_BOOST_PACKAGES system filesystem regex)
 
 set(MY_PROJ_LIBS gtest
                  dsn_runtime
                  )
+
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_PROJ_LIB_PATH "${GTEST_LIB_DIR}")
 

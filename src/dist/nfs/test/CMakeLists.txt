@@ -11,11 +11,11 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS "dsn_nfs" "gtest")
+set(MY_PROJ_LIBS dsn_nfs dsn_runtime gtest)
+
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_PROJ_LIB_PATH "")
-
-set(MY_BOOST_PACKAGES system filesystem)
 
 # Extra files that will be installed
 set(MY_BINPLACES

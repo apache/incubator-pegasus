@@ -23,6 +23,7 @@ set(MY_PROJ_LIBS
     dsn.replication.zookeeper_provider
     dsn_cli
     dsn_http
+    dsn_runtime
     zookeeper_mt
     galaxy-fds-sdk-cpp
     PocoNet
