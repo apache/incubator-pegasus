@@ -62,6 +62,7 @@ namespace replication {
 class replication_app_base;
 class replica_stub;
 class replication_checker;
+class replica_duplicator_manager;
 namespace test {
 class test_checker;
 }
@@ -150,7 +151,8 @@ public:
     bool verbose_commit_log() const;
     dsn::task_tracker *tracker() { return &_tracker; }
 
-    // void json_state(std::stringstream& out) const;
+    replica_duplicator_manager *get_duplication_manager() const { return _duplication_mgr.get(); }
+
     void update_last_checkpoint_generate_time();
 
     //
@@ -313,6 +315,9 @@ private:
     friend class ::dsn::replication::mutation_queue;
     friend class ::dsn::replication::replica_stub;
     friend class mock_replica;
+    friend class replica_learn_test;
+    friend class replica_duplicator_manager;
+    friend class load_mutation;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -382,6 +387,9 @@ private:
     bool _is_initializing;       // when initializing, switching to primary need to update ballot
     bool _deny_client_write;     // if deny all write requests
     throttling_controller _write_throttling_controller;
+
+    // duplication
+    std::unique_ptr<replica_duplicator_manager> _duplication_mgr;
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;

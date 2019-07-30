@@ -48,7 +48,7 @@ replication_options::replication_options()
     delay_for_fd_timeout_on_start = false;
     empty_write_disabled = false;
     allow_non_idempotent_write = false;
-    duplication_disabled = false;
+    duplication_disabled = true;
 
     prepare_timeout_ms_for_secondaries = 1000;
     prepare_timeout_ms_for_potential_secondaries = 3000;

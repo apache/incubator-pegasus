@@ -37,6 +37,7 @@
 #include "replica_stub.h"
 #include "mutation_log.h"
 #include "mutation.h"
+#include "duplication/duplication_sync_timer.h"
 #include <dsn/cpp/json_helper.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/rand.h>
@@ -648,6 +649,11 @@ void replica_stub::initialize_start()
                                    std::chrono::milliseconds(_options.mem_release_interval_ms));
     }
 #endif
+
+    if (!_options.duplication_disabled) {
+        _duplication_sync_timer = dsn::make_unique<duplication_sync_timer>(this);
+        _duplication_sync_timer->start();
+    }
 
     // init liveness monitor
     dassert(NS_Disconnected == _state, "");

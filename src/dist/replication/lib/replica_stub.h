@@ -62,6 +62,7 @@ typedef std::function<void(
 class replica_stub;
 typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
+class duplication_sync_timer;
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:
@@ -136,6 +137,8 @@ public:
     replica_ptr get_replica(gpid id);
     replication_options &options() { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
+    virtual rpc_address get_meta_server_address() const { return _failure_detector->get_servers(); }
+    rpc_address primary_address() const { return _primary_address; }
 
     std::string get_replica_dir(const char *app_type, gpid id, bool create_new = true);
 
@@ -211,7 +214,15 @@ private:
     friend class ::dsn::replication::replica;
     friend class ::dsn::replication::potential_secondary_context;
     friend class ::dsn::replication::cold_backup_context;
+
+    friend class load_from_private_log;
+    friend class ship_mutation;
+    friend class replica_duplicator;
+
     friend class mock_replica_stub;
+    friend class duplication_sync_timer;
+    friend class duplication_sync_timer_test;
+    friend class replica_duplicator_manager_test;
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
@@ -244,6 +255,8 @@ private:
     ::dsn::task_ptr _gc_timer_task;
     ::dsn::task_ptr _disk_stat_timer_task;
     ::dsn::task_ptr _mem_release_timer_task;
+
+    std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
 
     // command_handlers
     dsn_handle_t _kill_partition_command;
