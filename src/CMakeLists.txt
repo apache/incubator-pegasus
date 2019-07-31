@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.5.2)
 
 project(pegasus C CXX)
 
@@ -20,8 +20,6 @@ if((DSN_THIRDPARTY_ROOT STREQUAL "") OR (NOT EXISTS "${DSN_THIRDPARTY_ROOT}/"))
     message(FATAL_ERROR "Please make sure that ${DSN_THIRDPARTY_ROOT} is defined and does exists.")
 endif()
 
-
-set(DSN_BUILD_RUNTIME FALSE)
 add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
 dsn_common_setup()
 
