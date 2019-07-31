@@ -2548,19 +2548,19 @@ print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &
         fprintf(stderr,
                 "\n============================[hash_key_size]============================\n"
                 "%s=======================================================================",
-                statistics->getHistogramString(histogram_type::HASH_KEY_SIZE).c_str());
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::HASH_KEY_SIZE)).c_str());
         fprintf(stderr,
                 "\n============================[sort_key_size]============================\n"
                 "%s=======================================================================",
-                statistics->getHistogramString(histogram_type::SORT_KEY_SIZE).c_str());
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::SORT_KEY_SIZE)).c_str());
         fprintf(stderr,
                 "\n==============================[value_size]=============================\n"
                 "%s=======================================================================",
-                statistics->getHistogramString(histogram_type::VALUE_SIZE).c_str());
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::VALUE_SIZE)).c_str());
         fprintf(stderr,
                 "\n===============================[row_size]==============================\n"
-                "%s=======================================================================\n",
-                statistics->getHistogramString(histogram_type::ROW_SIZE).c_str());
+                "%s=======================================================================\n\n",
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::ROW_SIZE)).c_str());
     }
 }
 
