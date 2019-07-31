@@ -18,7 +18,7 @@ else()
     set(MY_PROJ_LIBS gtest)
 endif()
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_PROJ_LIBS pegasus.rproxylib
         pegasus.base ${MY_PROJ_LIBS}
