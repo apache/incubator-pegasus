@@ -11,7 +11,11 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "../../include" "../../base")
 
-set(MY_PROJ_LIBS "")
+set(MY_PROJ_LIBS curl
+                 prometheus-cpp-core
+                 prometheus-cpp-pull
+	             prometheus-cpp-push
+                 )
 
 set(MY_PROJ_LIB_PATH "")
 

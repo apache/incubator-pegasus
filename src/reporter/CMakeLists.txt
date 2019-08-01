@@ -21,11 +21,9 @@ set(MY_PROJ_LIBS
 	prometheus-cpp-core
 	prometheus-cpp-pull
 	prometheus-cpp-push
+	curl
 	${MY_PROJ_LIBS}
 	)
-
-#set(MY_BOOST_PACKAGES system)
-#set(MY_BOOST_PACKAGES system filesystem)
 
 set(MY_BINPLACES "config.ini")
 
