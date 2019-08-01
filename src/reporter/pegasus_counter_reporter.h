@@ -42,6 +42,7 @@ public:
 
 private:
     void falcon_initialize();
+    void prometheus_initialize();
 
     void update_counters_to_falcon(const std::string &result, int64_t timestamp);
 
@@ -69,12 +70,19 @@ private:
     // perf counter flags
     bool _enable_logging;
     bool _enable_falcon;
+    bool _enable_prometheus;
 
     // falcon related
     std::string _falcon_host;
     uint16_t _falcon_port;
     std::string _falcon_path;
     falcon_metric _falcon_metric;
+
+    //prometheus relates
+    std::string _prometheus_host;
+    uint16_t _prometheus_port;
+
 };
+
 }
 } // namespace

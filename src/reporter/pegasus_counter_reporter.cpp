@@ -18,7 +18,49 @@
 #include "base/pegasus_utils.h"
 #include "pegasus_io_service.h"
 
+#include <chrono>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <sstream>
+#include <iterator>
+#include <regex>
+
+#include <prometheus/registry.h>
+#include <prometheus/gateway.h>
+
 using namespace ::dsn;
+
+static std::string GetHostName() {
+  char hostname[1024];
+
+  if (::gethostname(hostname, sizeof(hostname))) {
+    return {};
+  }
+  return hostname;
+}
+
+
+std::vector<std::string> s_split(std::string str,std::string pattern)
+{
+    std::string::size_type pos;
+    std::vector<std::string> result;
+    str += pattern;
+    int size = str.size();
+
+    for(int i = 0; i < size; i++)
+    {
+        pos = str.find(pattern, i);
+        if(pos < size)
+        {
+            std::string s = str.substr(i,pos-i);
+            result.push_back(s);
+            i = pos + pattern.size() - 1;
+        }
+    }
+    return result;
+}
 
 namespace pegasus {
 namespace server {
@@ -43,11 +85,21 @@ pegasus_counter_reporter::pegasus_counter_reporter()
       _last_report_time_ms(0),
       _enable_logging(false),
       _enable_falcon(false),
-      _falcon_port(0)
+      _enable_prometheus(false),
+      _falcon_port(0),
+      _prometheus_port(0)
 {
 }
 
 pegasus_counter_reporter::~pegasus_counter_reporter() { stop(); }
+
+void pegasus_counter_reporter::prometheus_initialize(){
+    _prometheus_host = dsn_config_get_value_string(
+        "pegasus.server", "prometheus_host", "127.0.0.1", "prometheus gateway host");
+    _prometheus_port = (uint16_t)dsn_config_get_value_uint64(
+        "pegasus.server", "prometheus_port", 9091, "prometheus gateway port");
+    ddebug("prometheus initialize: port(%d), host(%s)", _prometheus_port, _prometheus_host.c_str());
+}
 
 void pegasus_counter_reporter::falcon_initialize()
 {
@@ -112,9 +164,15 @@ void pegasus_counter_reporter::start()
         "pegasus.server", "perf_counter_enable_logging", true, "perf_counter_enable_logging");
     _enable_falcon = dsn_config_get_value_bool(
         "pegasus.server", "perf_counter_enable_falcon", false, "perf_counter_enable_falcon");
+    _enable_prometheus = dsn_config_get_value_bool(
+        "pegasus.server", "perf_counter_enable_prometheus", false, "perf_counter_enable_prometheus");
 
     if (_enable_falcon) {
         falcon_initialize();
+    }
+
+    if(_enable_prometheus) {
+        prometheus_initialize();
     }
 
     event_set_log_callback(libevent_log);
@@ -146,7 +204,7 @@ void pegasus_counter_reporter::update()
 {
     uint64_t now = dsn_now_ms();
     int64_t timestamp = now / 1000;
-
+    
     perf_counters::instance().take_snapshot();
 
     if (_enable_logging) {
@@ -167,19 +225,69 @@ void pegasus_counter_reporter::update()
 
         bool first_append = true;
         _falcon_metric.timestamp = timestamp;
+
         perf_counters::instance().iterate_snapshot(
             [&oss, &first_append, this](const dsn::perf_counters::counter_snapshot &cs) {
                 _falcon_metric.metric = cs.name;
                 _falcon_metric.value = cs.value;
                 _falcon_metric.counterType = "GAUGE";
+
                 if (!first_append)
                     oss << ",";
                 _falcon_metric.encode_json_state(oss);
                 first_append = false;
             });
         oss << "]";
-
         update_counters_to_falcon(oss.str(), timestamp);
+    }
+
+    if(_enable_prometheus) {
+
+        using namespace prometheus;
+        const auto labels = Gateway::GetInstanceLabel(GetHostName());
+        Gateway gateway{_prometheus_host, std::to_string(_prometheus_port), "pegasus", labels};
+        auto registry = std::make_shared<Registry>();
+
+        perf_counters::instance().iterate_snapshot(
+            [&registry, this](const dsn::perf_counters::counter_snapshot &cs) {
+                std::string metrics_name = cs.name;
+                
+                replace(metrics_name.begin(),metrics_name.end(),'@',':');
+                replace(metrics_name.begin(),metrics_name.end(),'.','_');
+                replace(metrics_name.begin(),metrics_name.end(),'*','_');
+                replace(metrics_name.begin(),metrics_name.end(),'(','_');
+                replace(metrics_name.begin(),metrics_name.end(),')','_');
+                //prometheus metric_name don't support characters like .*()@, it only support ":" and "_"
+                //so change the name to make it all right
+
+                std::string app[3] = {"", "", ""};
+                std::vector<std::string> ret = s_split(metrics_name, ":");
+                if(ret.size() > 1){
+                    std::vector<std::string> ret1 = s_split(ret[1], "_");
+                    for(int i = 0; i < ret1.size(); i++){
+                        app[i] = ret1[i];
+                    }
+                }
+                //split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or "collector_app_pegasus_app_stat_multi_put_qps:1_0"
+                //app[0] = "1" which is the app_id
+                //app[1] = "0" which is the partition_cout
+                //app[2] = "p999" or "" which represent the percent
+
+                auto& gauge_family_all = BuildGauge()
+                                        .Name(metrics_name)
+                                        .Labels(
+                                            {{"service","pegasus"},{"cluster",_cluster_name},{"pegasus_job",_app_name},{"port",std::to_string(_local_port)}})
+                                        .Register(*registry);
+                auto& second_gauge_all = gauge_family_all.Add({{"app_id",app[0]},{"partition_count",app[1]},{"percent",app[2]}}
+                    );
+
+                second_gauge_all.Set(cs.value);
+                //create metrics that prometheus support to report data 
+            });
+
+        gateway.RegisterCollectable(registry);
+        gateway.Push();
+        //reporte data to pushgateway
     }
 
     ddebug("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
@@ -247,5 +355,6 @@ void pegasus_counter_reporter::on_report_timer(std::shared_ptr<boost::asio::dead
         dassert(false, "pegasus report timer error!!!");
     }
 }
+
 }
 } // namespace
