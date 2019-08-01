@@ -24,8 +24,8 @@ Pegasus can be deployed in standalone mode which runs all the pegasus jobs as di
 Please notice that Pegasus can not be built until the following packages meet the version requirements:
 
 * Compiler: the gcc version must >= 4.8 && < 8. If you use other compilers, please make sure that C++14 is supported.
-* CMake: must >= 2.8.12
-* boost: must >= 1.58
+* CMake: must >= 3.5.2
+* Boost: must >= 1.58
 
 #### Install the dependencies
 

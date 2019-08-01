@@ -12,7 +12,6 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "../../include")
 
-set(MY_BOOST_PACKAGES "system")
 set(MY_PROJ_LIBS
     dsn.replication.ddlclient
     dsn_replication_common
@@ -26,7 +25,7 @@ else()
     set(MY_PROJ_LIBS ${MY_PROJ_LIBS} gtest)
 endif()
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_PROJ_LIB_PATH "../..")
 

@@ -41,7 +41,7 @@ set(MY_PROJ_LIBS
 add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)
 
-set(MY_BOOST_PACKAGES system filesystem regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_BINPLACES config.ini run.sh)
 

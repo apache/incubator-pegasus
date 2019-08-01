@@ -22,7 +22,7 @@ set(MY_PROJ_LIBS
         ${ROCKSDB_LINK_LIBRARIES}
         z)
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES "config.ini")
 
