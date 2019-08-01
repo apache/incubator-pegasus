@@ -8,7 +8,7 @@
 
 #include <s2/s2testing.h>
 #include <s2/s2cell.h>
-#include <monitoring/histogram.h>
+#include <rocksdb/statistics.h>
 #include <rocksdb/env.h>
 
 #include <dsn/utility/errors.h>
@@ -57,21 +57,26 @@ int main(int argc, char **argv)
                       S2LatLng::FromDegrees(40.028697, 116.535087));
 
     // generate data for test
-    //    for (int i = 0; i < data_count; ++i) {
-    //        S2LatLng latlng(S2Testing::SamplePoint(rect));
-    //        std::string id = std::to_string(i);
-    //        std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
-    //                            std::to_string(latlng.lng().degrees()) + "|" +
-    //                            std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";
-    //
-    //        int ret = my_geo.set(id, "", value, 1000);
-    //        if (ret != pegasus::PERR_OK) {
-    //            std::cerr << "set data failed. error=" << ret << std::endl;
-    //        }
-    //    }
+    // for (int i = 0; i < data_count; ++i) {
+    //     S2LatLng latlng(S2Testing::SamplePoint(rect));
+    //     std::string id = std::to_string(i);
+    //     std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
+    //                         std::to_string(latlng.lng().degrees()) + "|" +
+    //                         std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";
 
-    rocksdb::HistogramImpl latency_histogram;
-    rocksdb::HistogramImpl result_count_histogram;
+    //     int ret = my_geo.set(id, "", value, 1000);
+    //     if (ret != pegasus::PERR_OK) {
+    //         std::cerr << "set data failed. error=" << ret << std::endl;
+    //     }
+    // }
+
+    enum class histogram_type : uint32_t
+    {
+        LATENCY,
+        RESULT_COUNT
+    };
+    auto statistics = rocksdb::CreateDBStatistics();
+
     rocksdb::Env *env = rocksdb::Env::Default();
     uint64_t start = env->NowNanos();
     std::atomic<uint64_t> count(test_count);
@@ -89,8 +94,10 @@ int main(int argc, char **argv)
             pegasus::geo::geo_client::SortType::random,
             500,
             [&, start_nanos](int error_code, std::list<pegasus::geo::SearchResult> &&results) {
-                latency_histogram.Add(env->NowNanos() - start_nanos);
-                result_count_histogram.Add(results.size());
+                statistics->measureTime(static_cast<uint32_t>(histogram_type::LATENCY),
+                                        env->NowNanos() - start_nanos);
+                statistics->measureTime(static_cast<uint32_t>(histogram_type::RESULT_COUNT),
+                                        results.size());
                 uint64_t left = count.fetch_sub(1);
                 if (left == 1) {
                     get_completed.notify();
@@ -104,9 +111,11 @@ int main(int argc, char **argv)
     std::cout << "start time: " << start << ", end time: " << end
               << ", QPS: " << test_count / ((end - start) / 1e9) << std::endl;
     std::cout << "latency_histogram: " << std::endl;
-    std::cout << latency_histogram.ToString() << std::endl;
+    std::cout << statistics->getHistogramString(static_cast<uint32_t>(histogram_type::LATENCY))
+              << std::endl;
     std::cout << "result_count_histogram: " << std::endl;
-    std::cout << result_count_histogram.ToString() << std::endl;
+    std::cout << statistics->getHistogramString(static_cast<uint32_t>(histogram_type::RESULT_COUNT))
+              << std::endl;
 
     return 0;
 }
