@@ -270,6 +270,16 @@ cd $TP_SRC/prometheus-cpp-0.7.0/3rdparty
 mv civetweb-1.11 civetweb
 cd $TP_SRC
 
+# curl
+# from: http://curl.haxx.se/download/curl-7.47.0.tar.gz
+CURL_NAME=curl-7.47.0
+CURL_PKG=${CURL_NAME}.tar.gz
+check_and_download "${CURL_PKG}"\
+    "${OSS_URL_PREFIX}/${CURL_PKG}"\
+    "5109d1232d208dfd712c0272b8360393"\
+    "${CURL_NAME}"
+exit_if_fail $?
+
 # s2geometry
 # from: https://github.com/google/s2geometry/archive/0239455c1e260d6d2c843649385b4fb9f5b28dba.zip
 S2GEOMETRY_NAME=s2geometry-0239455c1e260d6d2c843649385b4fb9f5b28dba

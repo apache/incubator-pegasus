@@ -266,6 +266,36 @@ else
     echo "skip build gflags"
 fi
 
+#build curl
+if [ ! -d $TP_OUTPUT/include/curl ]; then
+    cd $TP_SRC/curl-7.47.0
+    CONFIG_FLAGS="--prefix=$TP_OUTPUT \
+    --disable-dict \
+    --disable-file \
+    --disable-ftp \
+    --disable-gopher \
+    --disable-imap \
+    --disable-ipv6 \
+    --disable-ldap \
+    --disable-ldaps \
+    --disable-manual \
+    --disable-pop3 \
+    --disable-rtsp \
+    --disable-smtp \
+    --disable-telnet \
+    --disable-tftp \
+    --without-librtmp \
+    --without-libssh2"
+
+    ./configure $CONFIG_FLAGS
+    make -j8 && make install
+    res=$?
+    cd $TP_DIR
+    exit_if_fail "curl" $res
+else
+    echo "skip build curl"
+fi
+
 #build prometheus-cpp
 if [ ! -d $TP_OUTPUT/include/prometheus ]; then
     mkdir -p $TP_BUILD/prometheus
