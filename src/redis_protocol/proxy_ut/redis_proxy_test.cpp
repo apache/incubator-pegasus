@@ -140,6 +140,20 @@ public:
             ASSERT_TRUE(got_a_message);
         }
 
+        // geo GEOPOS command
+        {
+            got_a_message = false;
+            entry_index = 0;
+            rr.length = 5;
+            rr.buffers = {{6, "GEOPOS"}, {0, ""}, {7, "member1"}, {7, "member2"}, {7, "member3"}};
+
+            const char *request_data = "*5\r\n$6\r\nGEOPOS\r\n$0\r\n\r\n$"
+                                       "7\r\nmember1\r\n$7\r\nmember2\r\n$7\r\nmember3\r\n";
+            auto request = create_message(request_data);
+            ASSERT_TRUE(parse(request));
+            ASSERT_TRUE(got_a_message);
+        }
+
         // wrong message
         {
             got_a_message = false;
@@ -200,8 +214,7 @@ public:
             redis_request &ra = reserved_entry[entry_index]->request;
             ra.length = dsn::rand::next_u32(1, 20);
             ra.buffers.resize(ra.length);
-            for (unsigned int i = 0; i != ra.length; ++i) {
-                redis_bulk_string &bs = ra.buffers[i];
+            for (auto &bs : ra.buffers) {
                 bs.length = dsn::rand::next_u32(0, 8);
                 if (bs.length == 0) {
                     bs.length = -1;

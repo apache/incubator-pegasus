@@ -31,6 +31,7 @@ std::unordered_map<std::string, redis_parser::redis_call_handler> redis_parser::
     {"TTL", redis_parser::g_ttl},
     {"PTTL", redis_parser::g_ttl},
     {"GEODIST", redis_parser::g_geo_dist},
+    {"GEOPOS", redis_parser::g_geo_pos},
     {"GEORADIUS", redis_parser::g_geo_radius},
     {"GEORADIUSBYMEMBER", redis_parser::g_geo_radius_by_member},
     {"INCR", redis_parser::g_incr},
@@ -358,6 +359,14 @@ void redis_parser::reply_all_ready()
     }
 }
 
+std::shared_ptr<redis_parser::redis_bulk_string> redis_parser::construct_bulk_string(double data)
+{
+    std::string data_str(std::to_string(data));
+    std::shared_ptr<char> buf = dsn::utils::make_shared_array<char>(data_str.size());
+    memcpy(buf.get(), data_str.data(), data_str.size());
+    return std::make_shared<redis_bulk_string>(dsn::blob(std::move(buf), (int)data_str.size()));
+}
+
 void redis_parser::default_handler(redis_parser::message_entry &entry)
 {
     ::dsn::blob &cmd = entry.request.buffers[0].data;
@@ -463,6 +472,7 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
 // NOTE: only 'EX' option is supported
 void redis_parser::set_geo_internal(message_entry &entry)
 {
+    dassert_f(_geo_client, "redis proxy is not on GEO mode");
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() < 3) {
         redis_simple_string result;
@@ -733,6 +743,7 @@ void redis_parser::del_internal(message_entry &entry)
 // NOTE: only one key is supported
 void redis_parser::del_geo_internal(message_entry &entry)
 {
+    dassert_f(_geo_client, "redis proxy is not on GEO mode");
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() != 2) {
         redis_simple_string result;
@@ -858,6 +869,7 @@ void redis_parser::ttl(message_entry &entry)
 // eg: GEORADIUS "" 146.123 34.567 1000
 void redis_parser::geo_radius(message_entry &entry)
 {
+    dassert_f(_geo_client, "redis proxy is not on GEO mode");
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() < 5) {
         redis_simple_string result;
@@ -914,6 +926,7 @@ void redis_parser::geo_radius(message_entry &entry)
 // eg: GEORADIUSBYMEMBER "" some_key 1000
 void redis_parser::geo_radius_by_member(message_entry &entry)
 {
+    dassert_f(_geo_client, "redis proxy is not on GEO mode");
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() < 4) {
         redis_simple_string result;
@@ -1149,20 +1162,23 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
         reply_message(entry, result);
     } else {
         redis_array result;
-        result.count = (int)results.size();
+        result.resize(results.size());
+        size_t i = 0;
         for (const auto &elem : results) {
             std::shared_ptr<redis_base_type> key = std::make_shared<redis_bulk_string>(
                 (int)elem.hash_key.size(), elem.hash_key.data()); // hash_key => member
             if (!WITHCOORD && !WITHDIST && !WITHHASH) {
                 // only member
-                result.array.push_back(key);
+                result.array[i++] = key;
             } else {
                 // member and some WITH* parameters
                 std::shared_ptr<redis_array> sub_array = std::make_shared<redis_array>();
 
                 // member
-                sub_array->array.push_back(key);
-                sub_array->count++;
+                sub_array->resize(1 + (WITHDIST ? 1 : 0) + (WITHCOORD ? 1 : 0) +
+                                  (WITHHASH ? 1 : 0));
+                size_t index = 0;
+                sub_array->array[index++] = key;
 
                 // NOTE: the order of WITH* parameters should not be changed for the redis
                 // protocol
@@ -1178,44 +1194,23 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
                     } else {
                         // keep as meter unit
                     }
-                    std::string dist = std::to_string(distance);
-                    std::shared_ptr<char> dist_buf =
-                        dsn::utils::make_shared_array<char>(dist.size());
-                    memcpy(dist_buf.get(), dist.data(), dist.size());
-                    sub_array->array.push_back(std::make_shared<redis_bulk_string>(
-                        dsn::blob(std::move(dist_buf), (int)dist.size())));
-                    sub_array->count++;
+                    sub_array->array[index++] = construct_bulk_string(distance);
                 }
                 if (WITHCOORD) {
                     // with coordinate
                     std::shared_ptr<redis_array> coordinate = std::make_shared<redis_array>();
+                    coordinate->resize(2);
+                    coordinate->array[0] = construct_bulk_string(elem.lng_degrees);
+                    coordinate->array[1] = construct_bulk_string(elem.lat_degrees);
 
-                    // longitude
-                    std::string lng = std::to_string(elem.lng_degrees);
-                    std::shared_ptr<char> lng_buf = dsn::utils::make_shared_array<char>(lng.size());
-                    memcpy(lng_buf.get(), lng.data(), lng.size());
-                    coordinate->array.push_back(std::make_shared<redis_bulk_string>(
-                        dsn::blob(std::move(lng_buf), (int)lng.size())));
-                    coordinate->count++;
-
-                    // latitude
-                    std::string lat = std::to_string(elem.lat_degrees);
-                    std::shared_ptr<char> lat_buf = dsn::utils::make_shared_array<char>(lat.size());
-                    memcpy(lat_buf.get(), lat.data(), lat.size());
-                    coordinate->array.push_back(std::make_shared<redis_bulk_string>(
-                        dsn::blob(std::move(lat_buf), (int)lat.size())));
-                    coordinate->count++;
-
-                    sub_array->array.push_back(coordinate);
-                    sub_array->count++;
+                    sub_array->array[index++] = coordinate;
                 }
                 if (WITHHASH) {
                     // with origin value
-                    sub_array->array.push_back(std::make_shared<redis_bulk_string>(
-                        (int)elem.value.size(), elem.value.data()));
-                    sub_array->count++;
+                    sub_array->array[index++] = std::make_shared<redis_bulk_string>(
+                        (int)elem.value.size(), elem.value.data());
                 }
-                result.array.push_back(sub_array);
+                result.array[i++] = sub_array;
             }
         }
         reply_message(entry, result);
@@ -1226,11 +1221,12 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
 // GEODIST key member1 member2 [unit]
 void redis_parser::geo_dist(message_entry &entry)
 {
+    dassert_f(_geo_client, "redis proxy is not on GEO mode");
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() < 4) {
         redis_simple_string result;
         result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'GEODIST' command";
+        result.message = "ERR wrong number of arguments for 'geodist' command";
         reply_message(entry, result);
     } else {
         // TODO: set the timeout
@@ -1241,7 +1237,7 @@ void redis_parser::geo_dist(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto get_callback = [ref_this, this, &entry, unit](int error_code, double &&distance) {
             if (is_session_reset.load(std::memory_order_acquire)) {
-                ddebug("%s: setex command seqid(%" PRId64 ") got reply, but session has reset",
+                ddebug("%s: GEODIST command seqid(%" PRId64 ") got reply, but session has reset",
                        remote_address.to_string(),
                        entry.sequence_id);
                 return;
@@ -1269,6 +1265,61 @@ void redis_parser::geo_dist(message_entry &entry)
             }
         };
         _geo_client->async_distance(hash_key1, "", hash_key2, "", 2000, get_callback);
+    }
+}
+
+// command format:
+// GEOPOS key member [member ...]
+void redis_parser::geo_pos(message_entry &entry)
+{
+    dassert_f(_geo_client, "redis proxy is not on GEO mode");
+    redis_request &redis_request = entry.request;
+    if (redis_request.buffers.size() < 3) {
+        redis_simple_string result;
+        result.is_error = true;
+        result.message = "ERR wrong number of arguments for 'geopos' command";
+        reply_message(entry, result);
+        return;
+    }
+
+    int member_count = redis_request.buffers.size() - 2;
+    std::shared_ptr<proxy_session> ref_this = shared_from_this();
+    std::shared_ptr<std::atomic<int32_t>> get_count =
+        std::make_shared<std::atomic<int32_t>>(member_count);
+    std::shared_ptr<redis_array> result(new redis_array());
+    result->resize(member_count);
+    auto get_latlng_callback = [ref_this, this, &entry, result, get_count](
+        int error_code, int index, double lat_degrees, double lng_degrees) {
+        if (is_session_reset.load(std::memory_order_acquire)) {
+            ddebug("%s: GEOPOS command seqid(%" PRId64 ") got reply, but session has reset",
+                   remote_address.to_string(),
+                   entry.sequence_id);
+            return;
+        }
+
+        if (PERR_OK != error_code) {
+            // null bulk string for this member
+            result->array[index] = std::make_shared<redis_bulk_string>();
+            if (get_count->fetch_sub(1) == 1) {
+                reply_message(entry, *result);
+            }
+            return;
+        }
+
+        std::shared_ptr<redis_array> coordinate(new redis_array());
+        coordinate->resize(2);
+        coordinate->array[0] = construct_bulk_string(lng_degrees);
+        coordinate->array[1] = construct_bulk_string(lat_degrees);
+
+        result->array[index] = coordinate;
+        if (get_count->fetch_sub(1) == 1) {
+            reply_message(entry, *result);
+        }
+    };
+
+    for (int i = 0; i < member_count; ++i) {
+        _geo_client->async_get(
+            redis_request.buffers[i + 2].data.to_string(), "", i, get_latlng_callback, 2000);
     }
 }
 
@@ -1309,34 +1360,35 @@ void redis_parser::redis_simple_string::marshalling(::dsn::binary_writer &write_
 
 void redis_parser::redis_bulk_string::marshalling(::dsn::binary_writer &write_stream) const
 {
+    dassert_f((-1 == length && data.length() == 0) || data.length() == length,
+              "{} VS {}",
+              data.length(),
+              length);
     write_stream.write_pod('$');
-    std::string result = std::to_string(length);
-    write_stream.write(result.c_str(), (int)result.length());
+    std::string length_str = std::to_string(length);
+    write_stream.write(length_str.c_str(), (int)length_str.length());
     write_stream.write_pod(CR);
     write_stream.write_pod(LF);
-    if (length < 0) {
-        return;
-    }
-    if (length > 0) {
-        dassert(data.length() == length, "%u VS %d", data.length(), length);
+    if (length >= 0) {
         write_stream.write(data.data(), length);
+        write_stream.write_pod(CR);
+        write_stream.write_pod(LF);
     }
-    write_stream.write_pod(CR);
-    write_stream.write_pod(LF);
 }
 
 void redis_parser::redis_array::marshalling(::dsn::binary_writer &write_stream) const
 {
+    dassert_f((-1 == count && array.size() == 0) || array.size() == count,
+              "{} VS {}",
+              array.size(),
+              count);
     write_stream.write_pod('*');
-    std::string result = std::to_string(count);
-    write_stream.write(result.c_str(), (int)result.length());
+    std::string count_str = std::to_string(count);
+    write_stream.write(count_str.c_str(), (int)count_str.length());
     write_stream.write_pod(CR);
     write_stream.write_pod(LF);
-    if (count > 0) {
-        dassert_f(array.size() == count, "{} VS {}", array.size(), count);
-        for (const auto &elem : array) {
-            elem->marshalling(write_stream);
-        }
+    for (const auto &elem : array) {
+        elem->marshalling(write_stream);
     }
 }
 } // namespace proxy

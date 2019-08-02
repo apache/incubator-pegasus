@@ -52,24 +52,29 @@ protected:
     };
     struct redis_bulk_string : public redis_base_type
     {
-        int length = 0;
+        int length = -1;
         ::dsn::blob data;
 
+        redis_bulk_string() = default;
         redis_bulk_string(const std::string &str)
             : length((int)str.length()), data(str.data(), 0, (unsigned int)str.length())
         {
         }
-        redis_bulk_string(int len = 0, const char *str = nullptr) : length(len), data(str, 0, len)
-        {
-        }
+        redis_bulk_string(int len, const char *str) : length(len), data(str, 0, len) {}
         explicit redis_bulk_string(const ::dsn::blob &bb) : length(bb.length()), data(bb) {}
 
         void marshalling(::dsn::binary_writer &write_stream) const final;
     };
     struct redis_array : public redis_base_type
     {
-        int count = 0;
-        std::list<std::shared_ptr<redis_base_type>> array;
+        int count = -1;
+        std::vector<std::shared_ptr<redis_base_type>> array;
+
+        void resize(size_t size)
+        {
+            count = size;
+            array.resize(size);
+        }
 
         void marshalling(::dsn::binary_writer &write_stream) const final;
     };
@@ -146,6 +151,7 @@ protected:
     DECLARE_REDIS_HANDLER(setex)
     DECLARE_REDIS_HANDLER(ttl)
     DECLARE_REDIS_HANDLER(geo_dist)
+    DECLARE_REDIS_HANDLER(geo_pos)
     DECLARE_REDIS_HANDLER(geo_radius)
     DECLARE_REDIS_HANDLER(geo_radius_by_member)
     DECLARE_REDIS_HANDLER(incr)
@@ -197,6 +203,8 @@ protected:
         entry.response.store(resp, std::memory_order_release);
         reply_all_ready();
     }
+
+    std::shared_ptr<redis_bulk_string> construct_bulk_string(double data);
 
     typedef void (*redis_call_handler)(redis_parser *, message_entry &);
     static std::unordered_map<std::string, redis_call_handler> s_dispatcher;
