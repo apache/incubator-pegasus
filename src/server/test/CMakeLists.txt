@@ -33,9 +33,9 @@ set(MY_PROJ_LIBS
         PocoJSON
         crypto
         fmt
+        prometheus-cpp-push
         prometheus-cpp-core
         prometheus-cpp-pull
-        prometheus-cpp-push
         curl
         ${ROCKSDB_LINK_LIBRARIES}
         pegasus.base

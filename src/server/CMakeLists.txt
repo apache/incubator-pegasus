@@ -26,9 +26,9 @@ set(MY_PROJ_LIBS
     dsn.failure_detector.multimaster
     dsn.replication.zookeeper_provider
     pegasus_reporter
-    prometheus-cpp-core
     prometheus-cpp-pull
     prometheus-cpp-push
+    prometheus-cpp-core
     curl
     pegasus_client_static
     zookeeper_mt

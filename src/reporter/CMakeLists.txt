@@ -9,22 +9,8 @@ set(MY_PROJ_SRC "")
 # "GLOB_RECURSE" for recursive search
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
-include_directories(../../rdsn/thirdparty/output)
-link_directories(../../rdsn/thirdparty/output/lib)
-link_libraries(
-	"libprometheus-cpp-core.so"
-	"libprometheus-cpp-push.so"
-	"libprometheus-cpp-pull.so")
+# set(MY_PROJ_LIB_PATH "../../rdsn/thirdparty/output/lib")
+#set(MY_PROJ_INC_PATH "../../rdsn/thirdparty/output/include")
 
-
-set(MY_PROJ_LIBS 
-	prometheus-cpp-core
-	prometheus-cpp-pull
-	prometheus-cpp-push
-	curl
-	${MY_PROJ_LIBS}
-	)
-
-set(MY_BINPLACES "config.ini")
 
 dsn_add_static_library()
