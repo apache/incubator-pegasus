@@ -41,27 +41,6 @@ static std::string GetHostName() {
   return hostname;
 }
 
-
-std::vector<std::string> s_split(std::string str,std::string pattern)
-{
-    std::string::size_type pos;
-    std::vector<std::string> result;
-    str += pattern;
-    int size = str.size();
-
-    for(int i = 0; i < size; i++)
-    {
-        pos = str.find(pattern, i);
-        if(pos < size)
-        {
-            std::string s = str.substr(i,pos-i);
-            result.push_back(s);
-            i = pos + pattern.size() - 1;
-        }
-    }
-    return result;
-}
-
 namespace pegasus {
 namespace server {
 
@@ -251,27 +230,32 @@ void pegasus_counter_reporter::update()
             [&registry, this](const dsn::perf_counters::counter_snapshot &cs) {
                 std::string metrics_name = cs.name;
                 
+                //prometheus metric_name don't support characters like .*()@, it only support ":" and "_"
+                //so change the name to make it all right
                 replace(metrics_name.begin(),metrics_name.end(),'@',':');
                 replace(metrics_name.begin(),metrics_name.end(),'.','_');
                 replace(metrics_name.begin(),metrics_name.end(),'*','_');
                 replace(metrics_name.begin(),metrics_name.end(),'(','_');
                 replace(metrics_name.begin(),metrics_name.end(),')','_');
-                //prometheus metric_name don't support characters like .*()@, it only support ":" and "_"
-                //so change the name to make it all right
 
-                std::string app[3] = {"", "", ""};
-                std::vector<std::string> ret = s_split(metrics_name, ":");
-                if(ret.size() > 1){
-                    std::vector<std::string> ret1 = s_split(ret[1], "_");
-                    for(int i = 0; i < ret1.size(); i++){
-                        app[i] = ret1[i];
-                    }
-                }
                 //split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or "collector_app_pegasus_app_stat_multi_put_qps:1_0"
                 //app[0] = "1" which is the app_id
                 //app[1] = "0" which is the partition_cout
                 //app[2] = "p999" or "" which represent the percent
+                std::string app[3] = {"", "", ""};
+                std::list<std::string> lv;
+                ::dsn::utils::split_args(metrics_name.c_str(), lv, ':');
+                if(lv.size() > 1){
+                    std::list<std::string> lv1;
+                    ::dsn::utils::split_args(lv.back().c_str(), lv1, '_');
+                    int i = 0;
+                    for(auto &v : lv1){
+                        app[i] = v;
+                        i++;
+                    }
+                }
 
+                //create metrics that prometheus support to report data
                 auto& gauge_family_all = BuildGauge()
                                         .Name(metrics_name)
                                         .Labels(
@@ -280,8 +264,7 @@ void pegasus_counter_reporter::update()
                 auto& second_gauge_all = gauge_family_all.Add({{"app_id",app[0]},{"partition_count",app[1]},{"percent",app[2]}}
                     );
 
-                second_gauge_all.Set(cs.value);
-                //create metrics that prometheus support to report data 
+                second_gauge_all.Set(cs.value); 
             });
 
         gateway.RegisterCollectable(registry);
