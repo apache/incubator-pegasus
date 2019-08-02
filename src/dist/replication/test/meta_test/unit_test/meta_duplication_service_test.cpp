@@ -33,76 +33,15 @@
 #include "dist/replication/test/meta_test/misc/misc.h"
 
 #include "meta_service_test_app.h"
+#include "meta_test_base.h"
 
 namespace dsn {
 namespace replication {
 
-class meta_duplication_service_test : public ::testing::Test
+class meta_duplication_service_test : public meta_test_base
 {
 public:
     meta_duplication_service_test() {}
-
-    void SetUp() override
-    {
-        _ms = make_unique<fake_receiver_meta_service>();
-        ASSERT_EQ(_ms->remote_storage_initialize(), ERR_OK);
-        _ms->initialize_duplication_service();
-        ASSERT_TRUE(_ms->_dup_svc);
-
-        _ss = _ms->_state;
-        _ss->initialize(_ms.get(), _ms->_cluster_root + "/apps");
-
-        _ms->_started = true;
-
-        // recover apps from meta storage
-        ASSERT_EQ(_ss->initialize_data_structure(), ERR_OK);
-    }
-
-    void TearDown() override
-    {
-        if (_ss && _ms) {
-            delete_all_on_meta_storage();
-        }
-
-        _ss.reset();
-        _ms.reset(nullptr);
-    }
-
-    meta_duplication_service &dup_svc() { return *(_ms->_dup_svc); }
-
-    // create an app for test with specified name.
-    void create_app(const std::string &name)
-    {
-        configuration_create_app_request req;
-        configuration_create_app_response resp;
-        req.app_name = name;
-        req.options.app_type = "simple_kv";
-        req.options.partition_count = 8;
-        req.options.replica_count = 3;
-        req.options.success_if_exist = false;
-        req.options.is_stateful = true;
-        req.options.envs["value_version"] = "1";
-
-        auto result = fake_create_app(_ss.get(), req);
-        fake_wait_rpc(result, resp);
-        ASSERT_EQ(resp.err, ERR_OK) << resp.err.to_string() << " " << name;
-
-        // wait for the table to create
-        ASSERT_TRUE(_ss->spin_wait_staging(30));
-    }
-
-    std::shared_ptr<app_state> find_app(const std::string &name) { return _ss->get_app(name); }
-
-    void delete_all_on_meta_storage()
-    {
-        _ms->get_meta_storage()->get_children(
-            {"/"}, [this](bool, const std::vector<std::string> &children) {
-                for (const std::string &child : children) {
-                    _ms->get_meta_storage()->delete_node_recursively("/" + child, []() {});
-                }
-            });
-        wait_all();
-    }
 
     duplication_add_response create_dup(const std::string &app_name,
                                         const std::string &remote_cluster = "slave-cluster",
@@ -144,10 +83,6 @@ public:
 
         return rpc.response();
     }
-
-    void initialize_node_state() { _ss->initialize_node_state(); }
-
-    void wait_all() { _ms->tracker()->wait_outstanding_tasks(); }
 
     /// === Tests ===
 

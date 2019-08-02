@@ -208,7 +208,7 @@ private:
     std::shared_ptr<server_load_balancer> _balancer;
     std::shared_ptr<backup_service> _backup_handler;
 
-    friend class meta_duplication_service_test;
+    friend class meta_test_base;
     friend class meta_duplication_service;
     std::unique_ptr<meta_duplication_service> _dup_svc;
 
