@@ -85,7 +85,7 @@ private:
     uint16_t _prometheus_port;
     std::shared_ptr<prometheus::Registry> registry;
     std::shared_ptr<prometheus::Gateway> gateway;
-    std::map<std::string, prometheus::Family<prometheus::Gauge>&> gauge_family;
+    std::map<std::string, prometheus::Family<prometheus::Gauge> &> gauge_family;
 };
 }
 } // namespace

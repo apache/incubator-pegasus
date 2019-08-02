@@ -86,9 +86,10 @@ void pegasus_counter_reporter::prometheus_initialize()
     _prometheus_port = (uint16_t)dsn_config_get_value_uint64(
         "pegasus.server", "prometheus_port", 9091, "prometheus gateway port");
     ddebug("prometheus initialize: host:port(%s:%d)", _prometheus_host.c_str(), _prometheus_port);
-    
+
     const auto &labels = prometheus::Gateway::GetInstanceLabel(GetHostName());
-    gateway = std::make_shared<prometheus::Gateway>(_prometheus_host, std::to_string(_prometheus_port), "pegasus", labels);
+    gateway = std::make_shared<prometheus::Gateway>(
+        _prometheus_host, std::to_string(_prometheus_port), "pegasus", labels);
     registry = std::make_shared<prometheus::Registry>();
 }
 
@@ -235,55 +236,56 @@ void pegasus_counter_reporter::update()
     }
 
     if (_enable_prometheus) {
-        perf_counters::instance().iterate_snapshot(
-            [this](const dsn::perf_counters::counter_snapshot &cs) {
-                std::string metrics_name = cs.name;
+        perf_counters::instance().iterate_snapshot([this](
+            const dsn::perf_counters::counter_snapshot &cs) {
+            std::string metrics_name = cs.name;
 
-                // prometheus metric_name don't support characters like .*()@, it only support ":"
-                // and "_"
-                // so change the name to make it all right
-                change_metrics_name(metrics_name);
+            // prometheus metric_name don't support characters like .*()@, it only support ":"
+            // and "_"
+            // so change the name to make it all right
+            change_metrics_name(metrics_name);
 
-                // split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or
-                // "collector_app_pegasus_app_stat_multi_put_qps:1_0"
-                // app[0] = "1" which is the app_id
-                // app[1] = "0" which is the partition_cout
-                // app[2] = "p999" or "" which represent the percent
-                std::string app[3] = {"", "", ""};
-                std::list<std::string> lv;
-                ::dsn::utils::split_args(metrics_name.c_str(), lv, ':');
-                if (lv.size() > 1) {
-                    std::list<std::string> lv1;
-                    ::dsn::utils::split_args(lv.back().c_str(), lv1, '_');
-                    int i = 0;
-                    for (auto &v : lv1) {
-                        app[i] = v;
-                        i++;
-                    }
+            // split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or
+            // "collector_app_pegasus_app_stat_multi_put_qps:1_0"
+            // app[0] = "1" which is the app_id
+            // app[1] = "0" which is the partition_cout
+            // app[2] = "p999" or "" which represent the percent
+            std::string app[3] = {"", "", ""};
+            std::list<std::string> lv;
+            ::dsn::utils::split_args(metrics_name.c_str(), lv, ':');
+            if (lv.size() > 1) {
+                std::list<std::string> lv1;
+                ::dsn::utils::split_args(lv.back().c_str(), lv1, '_');
+                int i = 0;
+                for (auto &v : lv1) {
+                    app[i] = v;
+                    i++;
                 }
+            }
 
-                // create metrics that prometheus support to report data
-                std::map<std::string, prometheus::Family<prometheus::Gauge>&>::iterator it = gauge_family.find(metrics_name);
-                if(it == gauge_family.end()){
-                    auto& add_gauge_family = prometheus::BuildGauge()
-                                                .Name(metrics_name)
-                                                .Labels({{"service", "pegasus"},
-                                                        {"cluster", _cluster_name},
-                                                        {"pegasus_job", _app_name},
-                                                        {"port", std::to_string(_local_port)}})
-                                                .Register(*registry);
-                    gauge_family.insert(std::pair<std::string, prometheus::Family<prometheus::Gauge>&>(metrics_name, add_gauge_family));
+            // create metrics that prometheus support to report data
+            std::map<std::string, prometheus::Family<prometheus::Gauge> &>::iterator it =
+                gauge_family.find(metrics_name);
+            if (it == gauge_family.end()) {
+                auto &add_gauge_family = prometheus::BuildGauge()
+                                             .Name(metrics_name)
+                                             .Labels({{"service", "pegasus"},
+                                                      {"cluster", _cluster_name},
+                                                      {"pegasus_job", _app_name},
+                                                      {"port", std::to_string(_local_port)}})
+                                             .Register(*registry);
+                gauge_family.insert(std::pair<std::string, prometheus::Family<prometheus::Gauge> &>(
+                    metrics_name, add_gauge_family));
 
-                    auto& second_gauge = add_gauge_family.Add(
+                auto &second_gauge = add_gauge_family.Add(
                     {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
-                    second_gauge.Set(cs.value);
-                }
-                else{
-                    auto& second_gauge = it->second.Add(
+                second_gauge.Set(cs.value);
+            } else {
+                auto &second_gauge = it->second.Add(
                     {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
-                    second_gauge.Set(cs.value);
-                }
-            });
+                second_gauge.Set(cs.value);
+            }
+        });
 
         gateway->RegisterCollectable(registry);
         gateway->Push();
