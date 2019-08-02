@@ -204,7 +204,7 @@ void pegasus_counter_reporter::update()
 {
     uint64_t now = dsn_now_ms();
     int64_t timestamp = now / 1000;
-    
+
     perf_counters::instance().take_snapshot();
 
     if (_enable_logging) {
@@ -242,7 +242,6 @@ void pegasus_counter_reporter::update()
     }
 
     if(_enable_prometheus) {
-
         using namespace prometheus;
         const auto labels = Gateway::GetInstanceLabel(GetHostName());
         Gateway gateway{_prometheus_host, std::to_string(_prometheus_port), "pegasus", labels};
