@@ -15,6 +15,8 @@
 #include <event2/http_struct.h>
 #include <event2/keyvalq_struct.h>
 
+#include <prometheus/registry.h>
+#include <prometheus/gateway.h>
 namespace pegasus {
 namespace server {
 
@@ -81,6 +83,9 @@ private:
     // prometheus relates
     std::string _prometheus_host;
     uint16_t _prometheus_port;
+    std::shared_ptr<prometheus::Registry> registry;
+    std::shared_ptr<prometheus::Gateway> gateway;
+    std::map<std::string, prometheus::Family<prometheus::Gauge>&> gauge_family;
 };
 }
 } // namespace
