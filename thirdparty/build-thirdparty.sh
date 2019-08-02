@@ -285,7 +285,8 @@ if [ ! -d $TP_OUTPUT/include/curl ]; then
     --disable-telnet \
     --disable-tftp \
     --without-librtmp \
-    --without-libssh2"
+    --without-libssh2 \
+    --without-ssl"
 
     ./configure $CONFIG_FLAGS
     make -j8 && make install
@@ -300,7 +301,7 @@ fi
 if [ ! -d $TP_OUTPUT/include/prometheus ]; then
     mkdir -p $TP_BUILD/prometheus
     cd $TP_BUILD/prometheus
-    cmake $TP_SRC/prometheus-cpp-0.7.0 -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT -DENABLE_TESTING=OFF
+    cmake $TP_SRC/prometheus-cpp-0.7.0 -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT -DENABLE_TESTING=OFF
     make -j8 && make install
     res=$?
     exit_if_fail "prometheus-cpp" $res
