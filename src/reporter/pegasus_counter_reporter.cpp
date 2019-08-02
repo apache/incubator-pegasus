@@ -41,6 +41,14 @@ static std::string GetHostName() {
   return hostname;
 }
 
+static void change_metrics_name(std::string &metrics_name){
+    replace(metrics_name.begin(),metrics_name.end(),'@',':');
+    replace(metrics_name.begin(),metrics_name.end(),'.','_');
+    replace(metrics_name.begin(),metrics_name.end(),'*','_');
+    replace(metrics_name.begin(),metrics_name.end(),'(','_');
+    replace(metrics_name.begin(),metrics_name.end(),')','_');
+}
+
 namespace pegasus {
 namespace server {
 
@@ -232,11 +240,7 @@ void pegasus_counter_reporter::update()
                 
                 //prometheus metric_name don't support characters like .*()@, it only support ":" and "_"
                 //so change the name to make it all right
-                replace(metrics_name.begin(),metrics_name.end(),'@',':');
-                replace(metrics_name.begin(),metrics_name.end(),'.','_');
-                replace(metrics_name.begin(),metrics_name.end(),'*','_');
-                replace(metrics_name.begin(),metrics_name.end(),'(','_');
-                replace(metrics_name.begin(),metrics_name.end(),')','_');
+                change_metrics_name(metrics_name);
 
                 //split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or "collector_app_pegasus_app_stat_multi_put_qps:1_0"
                 //app[0] = "1" which is the app_id
