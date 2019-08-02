@@ -98,7 +98,7 @@ void pegasus_counter_reporter::prometheus_initialize(){
         "pegasus.server", "prometheus_host", "127.0.0.1", "prometheus gateway host");
     _prometheus_port = (uint16_t)dsn_config_get_value_uint64(
         "pegasus.server", "prometheus_port", 9091, "prometheus gateway port");
-    ddebug("prometheus initialize: port(%d), host(%s)", _prometheus_port, _prometheus_host.c_str());
+    ddebug("prometheus initialize: host:port(%s:%d)", _prometheus_host.c_str(),  _prometheus_port);
 }
 
 void pegasus_counter_reporter::falcon_initialize()

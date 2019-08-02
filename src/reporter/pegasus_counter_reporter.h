@@ -72,7 +72,7 @@ private:
     bool _enable_falcon;
     bool _enable_prometheus;
 
-    // falcon related
+    // falcon relates
     std::string _falcon_host;
     uint16_t _falcon_port;
     std::string _falcon_path;

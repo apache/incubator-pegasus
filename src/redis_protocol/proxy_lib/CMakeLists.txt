@@ -14,7 +14,7 @@ set(MY_PROJ_INC_PATH "../../include" "../../base")
 set(MY_PROJ_LIBS curl
                  prometheus-cpp-core
                  prometheus-cpp-pull
-	             prometheus-cpp-push
+                 prometheus-cpp-push
                  )
 
 set(MY_PROJ_LIB_PATH "")
