@@ -78,11 +78,9 @@ private:
     std::string _falcon_path;
     falcon_metric _falcon_metric;
 
-    //prometheus relates
+    // prometheus relates
     std::string _prometheus_host;
     uint16_t _prometheus_port;
-
 };
-
 }
 } // namespace
