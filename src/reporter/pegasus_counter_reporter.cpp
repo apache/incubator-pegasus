@@ -230,7 +230,7 @@ void pegasus_counter_reporter::update()
 
     if(_enable_prometheus) {
         using namespace prometheus;
-        const auto labels = Gateway::GetInstanceLabel(GetHostName());
+        const auto& labels = Gateway::GetInstanceLabel(GetHostName());
         Gateway gateway{_prometheus_host, std::to_string(_prometheus_port), "pegasus", labels};
         auto registry = std::make_shared<Registry>();
 
