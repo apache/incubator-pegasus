@@ -80,6 +80,8 @@ public:
 public:
     service_app(const service_app_info *info);
     virtual ~service_app() {}
+    // The back two members of args are version and git commit code, which are passed to
+    // version_http_service.
     virtual error_code start(const std::vector<std::string> &args) { return ERR_OK; }
     virtual error_code stop(bool cleanup = false) { return ERR_OK; }
     virtual void on_intercepted_request(gpid pid, bool is_write, dsn::message_ex *msg)
@@ -100,4 +102,4 @@ protected:
 };
 
 /*@}*/
-} // end namespace dsn::service
+} // namespace dsn

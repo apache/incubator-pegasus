@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <dsn/dist/replication.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/dist/replication/meta_service_app.h>
@@ -41,6 +32,7 @@
 #include "distributed_lock_service_simple.h"
 #include "meta_state_service_simple.h"
 
+#include "dist/http/server_info_http_services.h"
 #include "dist/replication/zookeeper/distributed_lock_service_zookeeper.h"
 #include "dist/replication/zookeeper/meta_state_service_zookeeper.h"
 
@@ -48,6 +40,7 @@
 #include "greedy_load_balancer.h"
 
 #include "meta_service.h"
+#include "meta_http_service.h"
 
 namespace dsn {
 namespace service {
@@ -93,6 +86,12 @@ meta_service_app::meta_service_app(const service_app_info *info)
 {
     // create in constructor because it may be used in checker before started
     _service.reset(new replication::meta_service());
+
+    // add http service
+    _version_http_service = new version_http_service();
+    _http_server->add_service(new dsn::replication::meta_http_service(_service.get()));
+    _http_server->add_service(new recent_start_time_http_service());
+    _http_server->add_service(_version_http_service);
 }
 
 meta_service_app::~meta_service_app() {}
@@ -100,6 +99,13 @@ meta_service_app::~meta_service_app() {}
 error_code meta_service_app::start(const std::vector<std::string> &args)
 {
     // TODO: handle the load & restore
+    // set args of http service
+    if (args.size() >= 2) {
+        auto it_ver = args.end() - 2;
+        auto it_git = args.end() - 1;
+        _version_http_service->set_version(*it_ver);
+        _version_http_service->set_git_commit(*it_git);
+    }
     return _service->start();
 }
 
@@ -108,5 +114,5 @@ error_code meta_service_app::stop(bool /*cleanup*/)
     _service.reset(nullptr);
     return ERR_OK;
 }
-}
-}
+} // namespace service
+} // namespace dsn

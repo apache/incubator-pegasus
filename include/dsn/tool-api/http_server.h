@@ -23,6 +23,8 @@ struct http_request
 
     // http://ip:port/<service>/<method>
     std::pair<std::string, std::string> service_method;
+    // <args_name, args_val>
+    std::map<std::string, std::string> query_args;
     blob body;
     blob full_url;
     http_method method;
@@ -31,6 +33,7 @@ struct http_request
 enum class http_status_code
 {
     ok,                    // 200
+    temporary_redirect,    // 307
     bad_request,           // 400
     not_found,             // 404
     internal_server_error, // 500
@@ -43,6 +46,7 @@ struct http_response
     std::string body;
     http_status_code status_code{http_status_code::ok};
     std::string content_type = "text/plain";
+    std::string location;
 
     message_ptr to_message(message_ex *req) const;
 };

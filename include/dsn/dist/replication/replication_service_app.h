@@ -41,6 +41,7 @@
 namespace dsn {
 
 class http_server;
+class version_http_service;
 
 namespace replication {
 
@@ -73,9 +74,10 @@ private:
     friend class ::dsn::replication::test::test_checker;
     replica_stub_ptr _stub;
     std::unique_ptr<http_server> _http_server;
+    version_http_service *_version_http_service;
 
     static const char *replica_service_app_info(int argc, char **argv);
     static void replica_service_app_info_free(const char *response);
 };
-}
-}
+} // namespace replication
+} // namespace dsn

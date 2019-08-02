@@ -17,6 +17,8 @@ namespace dsn {
     switch (code) {
     case http_status_code::ok:
         return "200 OK";
+    case http_status_code::temporary_redirect:
+        return "307 Temporary Redirect";
     case http_status_code::bad_request:
         return "400 Bad Request";
     case http_status_code::not_found:
@@ -89,11 +91,18 @@ void http_server::add_service(http_service *service)
 
     std::string unresolved_path;
     if (u.field_set & (1u << UF_PATH)) {
-        unresolved_path.resize(u.field_data[UF_PATH].len + 1);
-        strncpy(&unresolved_path[0],
-                ret.full_url.data() + u.field_data[UF_PATH].off,
-                u.field_data[UF_PATH].len);
-        unresolved_path[u.field_data[UF_PATH].len] = '\0';
+        uint16_t data_length = u.field_data[UF_PATH].len;
+        unresolved_path.resize(data_length + 1);
+        strncpy(&unresolved_path[0], ret.full_url.data() + u.field_data[UF_PATH].off, data_length);
+        unresolved_path[data_length] = '\0';
+    }
+
+    std::string unresolved_query;
+    if (u.field_set & (1u << UF_QUERY)) {
+        uint16_t data_length = u.field_data[UF_QUERY].len;
+        unresolved_query.resize(data_length);
+        strncpy(
+            &unresolved_query[0], ret.full_url.data() + u.field_data[UF_QUERY].off, data_length);
     }
 
     std::vector<std::string> args;
@@ -115,7 +124,25 @@ void http_server::add_service(http_service *service)
         ret.service_method = std::make_pair(std::string(""), std::string(""));
         return ret;
     }
+
     ret.service_method = std::make_pair(std::string(real_args[0]), std::string(real_args[1]));
+
+    // find if there are method args (<ip>:<port>/<service>/<method>?<arg>=<val>&<arg>=<val>)
+    if (!unresolved_query.empty()) {
+        std::vector<std::string> method_arg_val;
+        boost::split(method_arg_val, unresolved_query, boost::is_any_of("&"));
+        for (std::string &arg_val : method_arg_val) {
+            std::vector<std::string> arg_vals;
+            boost::split(arg_vals, arg_val, boost::is_any_of("="));
+            if (arg_vals.size() != 2)
+                return error_s::make(ERR_INVALID_PARAMETERS);
+            auto iter = ret.query_args.find(arg_vals[0]);
+            if (iter != ret.query_args.end())
+                return error_s::make(ERR_INVALID_PARAMETERS, std::string("repeat parameters"));
+            ret.query_args.emplace(arg_vals[0], arg_vals[1]);
+        }
+    }
+
     return ret;
 }
 
@@ -127,6 +154,7 @@ message_ptr http_response::to_message(message_ex *req) const
     os << "HTTP/1.1 " << http_status_code_to_string(status_code) << "\r\n";
     os << "Content-Type: " << content_type << "\r\n";
     os << "Content-Length: " << body.length() << "\r\n";
+    os << "Location: " << location << "\r\n";
     os << "\r\n";
     os << body;
 

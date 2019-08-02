@@ -24,19 +24,11 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <dsn/dist/replication/replication_service_app.h>
 #include <dsn/tool-api/http_server.h>
 
 #include "dist/replication/common/replication_common.h"
+#include "dist/http/server_info_http_services.h"
 #include "replica_stub.h"
 
 namespace dsn {
@@ -51,6 +43,11 @@ replication_service_app::replication_service_app(const service_app_info *info)
     : service_app(info), _http_server(new http_server())
 {
     _stub = new replica_stub();
+
+    // add http service
+    _version_http_service = new version_http_service();
+    _http_server->add_service(_version_http_service);
+    _http_server->add_service(new recent_start_time_http_service());
 }
 
 replication_service_app::~replication_service_app(void) {}
@@ -62,6 +59,14 @@ error_code replication_service_app::start(const std::vector<std::string> &args)
 
     _stub->initialize(opts);
     _stub->open_service();
+
+    // add http service
+    if (args.size() >= 2) {
+        auto it_ver = args.end() - 2;
+        auto it_git = args.end() - 1;
+        _version_http_service->set_version(*it_ver);
+        _version_http_service->set_git_commit(*it_git);
+    }
 
     return ERR_OK;
 }
@@ -86,5 +91,5 @@ void replication_service_app::on_intercepted_request(dsn::gpid gpid,
         _stub->on_client_read(gpid, msg);
     }
 }
-}
-}
+} // namespace replication
+} // namespace dsn
