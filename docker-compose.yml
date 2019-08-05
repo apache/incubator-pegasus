@@ -1,0 +1,48 @@
+version: "3.3"
+
+networks:
+  frontend:
+    ipam:
+      config:
+        - subnet: @NODE_IP_PREFIX@.0/24
+services:
+  zookeeper:
+    image: zookeeper:3.4
+    ports:
+      - "2181:2181"
+    networks:
+      frontend:
+        ipv4_address: @NODE_IP_PREFIX@.31
+    restart: on-failure
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zoo1:2888:3888
+  meta1:
+    image: @IMAGE_NAME@
+    ports:
+      - "34601"
+    volumes:
+      - ./config.ini:/pegasus/bin/config.ini:ro
+      - ./meta1/data:/pegasus/data
+    command:
+      - meta
+    privileged: true
+    networks:
+      frontend:
+        ipv4_address: @NODE_IP_PREFIX@.11
+    restart: on-failure
+  replica1:
+    image: @IMAGE_NAME@
+    ports:
+      - "34801"
+    volumes:
+      - ./config.ini:/pegasus/bin/config.ini:ro
+      - ./replica1/data:/pegasus/data
+      - ./replica1/slog:/pegasus/slog
+    command:
+      - replica
+    privileged: true
+    networks:
+      frontend:
+        ipv4_address: @NODE_IP_PREFIX@.21
+    restart: on-failure
