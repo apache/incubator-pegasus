@@ -24,7 +24,6 @@
 #include <gflags/gflags.h>
 
 #include <rocksdb/env.h>
-#include <util/random.h>
 #include <port/port_posix.h>
 #include <util/string_util.h>
 #include <monitoring/histogram.h>
@@ -32,6 +31,7 @@
 #include <util/mutexlock.h>
 
 #include "pegasus/client.h"
+#include "random.h"
 
 namespace google {
 }
