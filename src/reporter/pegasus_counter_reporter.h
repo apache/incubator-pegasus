@@ -15,6 +15,8 @@
 #include <event2/http_struct.h>
 #include <event2/keyvalq_struct.h>
 
+#include <prometheus/registry.h>
+#include <prometheus/gateway.h>
 namespace pegasus {
 namespace server {
 
@@ -42,6 +44,7 @@ public:
 
 private:
     void falcon_initialize();
+    void prometheus_initialize();
 
     void update_counters_to_falcon(const std::string &result, int64_t timestamp);
 
@@ -69,12 +72,20 @@ private:
     // perf counter flags
     bool _enable_logging;
     bool _enable_falcon;
+    bool _enable_prometheus;
 
-    // falcon related
+    // falcon relates
     std::string _falcon_host;
     uint16_t _falcon_port;
     std::string _falcon_path;
     falcon_metric _falcon_metric;
+
+    // prometheus relates
+    std::string _prometheus_host;
+    uint16_t _prometheus_port;
+    std::shared_ptr<prometheus::Registry> _registry;
+    std::shared_ptr<prometheus::Gateway> _gateway;
+    std::map<std::string, prometheus::Family<prometheus::Gauge> *> _gauge_family_map;
 };
 }
 } // namespace
