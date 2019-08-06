@@ -161,6 +161,62 @@ void geo_client::async_set(const std::string &hash_key,
         timeout_ms);
 }
 
+int geo_client::get(const std::string &hash_key,
+                    const std::string &sort_key,
+                    double &lat_degrees,
+                    double &lng_degrees,
+                    int timeout_ms)
+{
+    int ret = PERR_OK;
+    dsn::utils::notify_event get_completed;
+    auto get_latlng_callback = [&](int ec_, int id_, double lat_degrees_, double lng_degrees_) {
+        if (ec_ == PERR_OK) {
+            lat_degrees = lat_degrees_;
+            lng_degrees = lng_degrees_;
+        } else {
+            dwarn_f("get data failed. hash_key={}, sort_key={}, error={}",
+                    hash_key,
+                    sort_key,
+                    get_error_string(ec_));
+        }
+        ret = ec_;
+        get_completed.notify();
+    };
+    async_get(hash_key, sort_key, 0, get_latlng_callback, timeout_ms);
+    get_completed.wait();
+
+    return ret;
+}
+
+void geo_client::async_get(const std::string &hash_key,
+                           const std::string &sort_key,
+                           int id,
+                           get_latlng_callback_t &&callback,
+                           int timeout_ms)
+{
+    _common_data_client->async_get(
+        hash_key,
+        sort_key,
+        [ this, &hash_key, &sort_key, id, cb = std::move(callback) ](
+            int ec_, std::string &&value_, pegasus_client::internal_info &&info_) {
+            if (ec_ != PERR_OK) {
+                cb(ec_, id, 0, 0);
+                return;
+            }
+            S2LatLng latlng;
+            if (!_extractor.extract_from_value(value_, latlng)) {
+                derror_f("extract_from_value failed. hash_key={}, sort_key={}, value={}",
+                         hash_key,
+                         sort_key,
+                         value_);
+                cb(PERR_GEO_DECODE_VALUE_ERROR, id, 0, 0);
+                return;
+            }
+            cb(ec_, id, latlng.lat().degrees(), latlng.lng().degrees());
+        },
+        timeout_ms);
+}
+
 int geo_client::del(const std::string &hash_key,
                     const std::string &sort_key,
                     int timeout_ms,
@@ -736,7 +792,7 @@ void geo_client::start_scan(const std::string &hash_key,
                             std::shared_ptr<S2Cap> cap_ptr,
                             int count,
                             int timeout_ms,
-                            scan_one_area_callback &&callback,
+                            scan_one_area_callback_t &&callback,
                             std::list<SearchResult> &result)
 {
     pegasus_client::scan_options options;
@@ -763,7 +819,7 @@ void geo_client::start_scan(const std::string &hash_key,
 void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper,
                          std::shared_ptr<S2Cap> cap_ptr,
                          int count,
-                         scan_one_area_callback &&callback,
+                         scan_one_area_callback_t &&callback,
                          std::list<SearchResult> &result)
 {
     scanner_wrapper->async_next(
