@@ -87,7 +87,7 @@ public:
         // simple case
         {
             rr.length = 3;
-            rr.buffers = {{3, "SET"}, {3, "foo"}, {3, "bar"}};
+            rr.buffers = {{"SET"}, {"foo"}, {"bar"}};
             got_a_message = false;
             entry_index = 0;
 
@@ -116,7 +116,7 @@ public:
             entry_index = 0;
             rr.length = 6;
             rr.buffers = {
-                {9, "GEORADIUS"}, {0, ""}, {5, "123.4"}, {5, "56.78"}, {3, "100"}, {1, "m"}};
+                {"GEORADIUS"}, {""}, {"123.4"}, {"56.78"}, {"100"}, {"m"}};
 
             const char *request_data = "*6\r\n$9\r\nGEORADIUS\r\n$0\r\n\r\n$5\r\n123.4\r\n$5\r\n56."
                                        "78\r\n$3\r\n100\r\n$1\r\nm\r\n";
@@ -131,7 +131,7 @@ public:
             entry_index = 0;
             rr.length = 5;
             rr.buffers = {
-                {17, "GEORADIUSBYMEMBER"}, {0, ""}, {7, "member1"}, {6, "1000.5"}, {2, "km"}};
+                {"GEORADIUSBYMEMBER"}, {""}, {"member1"}, {"1000.5"}, {"km"}};
 
             const char *request_data = "*5\r\n$17\r\nGEORADIUSBYMEMBER\r\n$0\r\n\r\n$"
                                        "7\r\nmember1\r\n$6\r\n1000.5\r\n$2\r\nkm\r\n";
@@ -145,7 +145,7 @@ public:
             got_a_message = false;
             entry_index = 0;
             rr.length = 5;
-            rr.buffers = {{6, "GEOPOS"}, {0, ""}, {7, "member1"}, {7, "member2"}, {7, "member3"}};
+            rr.buffers = {{"GEOPOS"}, {""}, {"member1"}, {"member2"}, {"member3"}};
 
             const char *request_data = "*5\r\n$6\r\nGEOPOS\r\n$0\r\n\r\n$"
                                        "7\r\nmember1\r\n$7\r\nmember2\r\n$7\r\nmember3\r\n";
@@ -180,7 +180,7 @@ public:
             got_a_message = false;
             entry_index = 0;
             rr.length = 3;
-            rr.buffers = {{3, "set"}, {5, "hello"}, {0, ""}};
+            rr.buffers = {{"set"}, {"hello"}, {""}};
 
             const char *data = "*3\r\n$3\r\nset\r\n$5\r\nhello\r\n$0\r\n\r\n";
             auto request = create_message(data);
@@ -193,7 +193,7 @@ public:
             got_a_message = false;
             entry_index = 0;
             rr.length = 1;
-            rr.buffers = {{-1, ""}};
+            rr.buffers = {{redis_bulk_string()}};
 
             const char *data = "*1\r\n$-1\r\n";
             ASSERT_TRUE(parse(create_message(data)));

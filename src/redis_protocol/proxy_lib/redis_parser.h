@@ -40,6 +40,8 @@ protected:
     {
         int64_t value = 0;
 
+        redis_integer(int64_t v) : value(v) {}
+
         void marshalling(::dsn::binary_writer &write_stream) const final;
     };
     // represent both redis simple string and error
@@ -48,11 +50,13 @@ protected:
         bool is_error = false;
         std::string message;
 
+        redis_simple_string(bool err, std::string &&msg) : is_error(err), message(std::move(msg)) {}
+
         void marshalling(::dsn::binary_writer &write_stream) const final;
     };
     struct redis_bulk_string : public redis_base_type
     {
-        int length = -1;
+        int length = -1; // max length is 512 MB
         ::dsn::blob data;
 
         redis_bulk_string() = default;
@@ -60,7 +64,6 @@ protected:
             : length((int)str.length()), data(str.data(), 0, (unsigned int)str.length())
         {
         }
-        redis_bulk_string(int len, const char *str) : length(len), data(str, 0, len) {}
         explicit redis_bulk_string(const ::dsn::blob &bb) : length(bb.length()), data(bb) {}
 
         void marshalling(::dsn::binary_writer &write_stream) const final;
@@ -205,6 +208,10 @@ protected:
     }
 
     std::shared_ptr<redis_bulk_string> construct_bulk_string(double data);
+    void simple_ok_reply(message_entry &entry);
+    void simple_error_reply(message_entry &entry, const std::string &message);
+    void simple_string_reply(message_entry &entry, bool is_error, std::string message);
+    void simple_integer_reply(message_entry &entry, int64_t value);
 
     typedef void (*redis_call_handler)(redis_parser *, message_entry &);
     static std::unordered_map<std::string, redis_call_handler> s_dispatcher;
