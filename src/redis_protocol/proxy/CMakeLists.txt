@@ -22,6 +22,7 @@ set(MY_PROJ_LIBS pegasus.rproxylib
                  idn
                  event
                  s2
+                 z
                  pegasus_client_static
                  fmt)
 
