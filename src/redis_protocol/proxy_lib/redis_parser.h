@@ -10,6 +10,9 @@
 #include "proxy_layer.h"
 #include "geo/lib/geo_client.h"
 
+#define CR '\015'
+#define LF '\012'
+
 namespace dsn {
 namespace apps {
 class rrdb_client;
@@ -23,14 +26,6 @@ namespace proxy {
 class redis_parser : public proxy_session
 {
 protected:
-    enum parser_status
-    {
-        start_array,
-        in_array_size,
-        start_bulk_string,
-        in_bulk_string_size,
-        start_bulk_string_data,
-    };
     struct redis_base_type
     {
         virtual ~redis_base_type() = default;
@@ -40,7 +35,7 @@ protected:
     {
         int64_t value = 0;
 
-        redis_integer(int64_t v) : value(v) {}
+        explicit redis_integer(int64_t v = 0) : value(v) {}
 
         void marshalling(::dsn::binary_writer &write_stream) const final;
     };
@@ -60,9 +55,10 @@ protected:
         ::dsn::blob data;
 
         redis_bulk_string() = default;
-        redis_bulk_string(const std::string &str)
-            : length((int)str.length()), data(str.data(), 0, (unsigned int)str.length())
+        redis_bulk_string(std::string str)
         {
+            data = ::dsn::blob::create_from_bytes(std::move(str));
+            length = data.length();
         }
         explicit redis_bulk_string(const ::dsn::blob &bb) : length(bb.length()), data(bb) {}
 
@@ -84,9 +80,13 @@ protected:
 
     struct redis_request
     {
-        int length;
-        std::vector<redis_bulk_string> buffers;
-        redis_request() : length(0), buffers() {}
+        int sub_request_count = 0;
+        std::vector<redis_bulk_string> sub_requests;
+
+        redis_request(int count = 0, std::vector<redis_bulk_string> requests = {})
+            : sub_request_count(count), sub_requests(std::move(requests))
+        {
+        }
     };
     struct message_entry
     {
@@ -105,20 +105,28 @@ private:
     dsn::zlock response_lock;
     std::deque<std::unique_ptr<message_entry>> pending_response;
 
+    enum parser_status
+    {
+        kStartArray,
+        kInArraySize,
+        kStartBulkString,
+        kInBulkStringSize,
+        kStartBulkStringData,
+    };
     // recieving message and parsing status
     // [
     // content for current parser
-    redis_bulk_string current_str;
-    std::unique_ptr<message_entry> current_msg;
+    redis_bulk_string _current_str;
+    std::unique_ptr<message_entry> _current_msg;
     parser_status status;
-    std::string current_size;
+    std::string _current_size;
 
     // data stream content
-    std::queue<dsn::message_ex *> recv_buffers;
-    size_t total_length;
-    char *current_buffer;
-    size_t current_buffer_length;
-    size_t current_cursor;
+    std::queue<dsn::message_ex *> _recv_buffers;
+    size_t _total_length;
+    char *_current_buffer;
+    size_t _current_buffer_length;
+    size_t _current_cursor;
     // ]
 
     // for rrdb
@@ -130,13 +138,13 @@ protected:
     void append_message(dsn::message_ex *msg);
     void prepare_current_buffer();
     char peek();
-    bool eat(char c);
+    void eat(char c);
     void eat_all(char *dest, size_t length);
     void reset_parser();
 
     // function for parser
-    bool end_array_size();
-    bool end_bulk_string_size();
+    void end_array_size();
+    void end_bulk_string_size();
     void append_current_bulk_string();
     bool parse_stream();
 
@@ -153,6 +161,7 @@ protected:
     DECLARE_REDIS_HANDLER(del)
     DECLARE_REDIS_HANDLER(setex)
     DECLARE_REDIS_HANDLER(ttl)
+    DECLARE_REDIS_HANDLER(geo_add)
     DECLARE_REDIS_HANDLER(geo_dist)
     DECLARE_REDIS_HANDLER(geo_pos)
     DECLARE_REDIS_HANDLER(geo_radius)
@@ -168,16 +177,16 @@ protected:
     void del_internal(message_entry &entry);
     void del_geo_internal(message_entry &entry);
     void counter_internal(message_entry &entry);
-    void parse_set_parameters(const std::vector<redis_bulk_string> &opts, int &ttl_seconds);
-    void parse_geo_radius_parameters(const std::vector<redis_bulk_string> &opts,
-                                     int base_index,
-                                     double &radius_m,
-                                     std::string &unit,
-                                     geo::geo_client::SortType &sort_type,
-                                     int &count,
-                                     bool &WITHCOORD,
-                                     bool &WITHDIST,
-                                     bool &WITHHASH);
+    static void parse_set_parameters(const std::vector<redis_bulk_string> &opts, int &ttl_seconds);
+    static void parse_geo_radius_parameters(const std::vector<redis_bulk_string> &opts,
+                                            int base_index,
+                                            double &radius_m,
+                                            std::string &unit,
+                                            geo::geo_client::SortType &sort_type,
+                                            int &count,
+                                            bool &WITHCOORD,
+                                            bool &WITHDIST,
+                                            bool &WITHHASH);
     void process_geo_radius_result(message_entry &entry,
                                    const std::string &unit,
                                    bool WITHCOORD,

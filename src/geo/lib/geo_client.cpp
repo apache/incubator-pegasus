@@ -161,6 +161,23 @@ void geo_client::async_set(const std::string &hash_key,
         timeout_ms);
 }
 
+void geo_client::async_set(const std::string &hash_key,
+                           const std::string &sort_key,
+                           double lat_degrees,
+                           double lng_degrees,
+                           pegasus_client::async_set_callback_t &&callback,
+                           int timeout_ms,
+                           int ttl_seconds)
+{
+    std::string value;
+    if (!_extractor.encode_to_value(lat_degrees, lng_degrees, value)) {
+      callback(PERR_GEO_INVALID_LATLNG_ERROR, {});
+      return;
+    }
+
+    async_set(hash_key, sort_key, value, std::move(callback), timeout_ms, ttl_seconds);
+}
+
 int geo_client::get(const std::string &hash_key,
                     const std::string &sort_key,
                     double &lat_degrees,
@@ -204,8 +221,8 @@ void geo_client::async_get(const std::string &hash_key,
                 return;
             }
             S2LatLng latlng;
-            if (!_extractor.extract_from_value(value_, latlng)) {
-                derror_f("extract_from_value failed. hash_key={}, sort_key={}, value={}",
+            if (!_extractor.decode_from_value(value_, latlng)) {
+                derror_f("decode_from_value failed. hash_key={}, sort_key={}, value={}",
                          hash_key,
                          sort_key,
                          value_);
@@ -466,8 +483,8 @@ void geo_client::async_search_radial(const std::string &hash_key,
             }
 
             S2LatLng latlng;
-            if (!_extractor.extract_from_value(value_, latlng)) {
-                derror_f("extract_from_value failed. hash_key={}, sort_key={}, value={}",
+            if (!_extractor.decode_from_value(value_, latlng)) {
+                derror_f("decode_from_value failed. hash_key={}, sort_key={}, value={}",
                          hash_key,
                          sort_key,
                          value_);
@@ -658,8 +675,8 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
 {
     // extract latitude and longitude from value
     S2LatLng latlng;
-    if (!_extractor.extract_from_value(value, latlng)) {
-        derror_f("extract_from_value failed. hash_key={}, sort_key={}, value={}",
+    if (!_extractor.decode_from_value(value, latlng)) {
+        derror_f("decode_from_value failed. hash_key={}, sort_key={}, value={}",
                  hash_key,
                  sort_key,
                  value);
@@ -841,8 +858,8 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper
             }
 
             S2LatLng latlng;
-            if (!_extractor.extract_from_value(value, latlng)) {
-                derror_f("extract_from_value failed. value={}", value);
+            if (!_extractor.decode_from_value(value, latlng)) {
+                derror_f("decode_from_value failed. value={}", value);
                 cb();
                 return;
             }
@@ -928,8 +945,8 @@ void geo_client::async_distance(const std::string &hash_key1,
         }
 
         S2LatLng latlng;
-        if (!_extractor.extract_from_value(value_, latlng)) {
-            derror_f("extract_from_value failed. value={}", value_);
+        if (!_extractor.decode_from_value(value_, latlng)) {
+            derror_f("decode_from_value failed. value={}", value_);
             *ret = PERR_GEO_DECODE_VALUE_ERROR;
         }
 

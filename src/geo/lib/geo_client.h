@@ -10,7 +10,7 @@
 #include <s2/util/units/length-units.h>
 #include <dsn/tool-api/task_tracker.h>
 #include <pegasus/client.h>
-#include "latlng_extractor.h"
+#include "latlng_codec.h"
 
 namespace dsn {
 class error_s;
@@ -29,7 +29,7 @@ using get_latlng_callback_t =
 /// the search result structure used by `search_radial` APIs
 struct SearchResult
 {
-    double lat_degrees; // latitude and longitude extract by `latlng_extractor`, in degree
+    double lat_degrees; // latitude and longitude extract by `latlng_codec`, in degree
     double lng_degrees;
     double distance;      // distance from the input and the result, in meter
     std::string hash_key; // the original hash_key, sort_key, and value when data inserted
@@ -118,6 +118,14 @@ public:
     void async_set(const std::string &hash_key,
                    const std::string &sort_key,
                    const std::string &value,
+                   pegasus_client::async_set_callback_t &&callback = nullptr,
+                   int timeout_ms = 5000,
+                   int ttl_seconds = 0);
+
+    void async_set(const std::string &hash_key,
+                   const std::string &sort_key,
+                   double lat_degrees,
+                   double lng_degrees,
                    pegasus_client::async_set_callback_t &&callback = nullptr,
                    int timeout_ms = 5000,
                    int ttl_seconds = 0);
@@ -341,6 +349,9 @@ public:
 
     dsn::error_s set_max_level(int level);
 
+    // For test.
+    const latlng_codec &get_extractor() const { return _extractor; }
+
 private:
     friend class geo_client_test;
 
@@ -459,7 +470,7 @@ private:
 
     dsn::task_tracker _tracker;
 
-    latlng_extractor _extractor;
+    latlng_codec _extractor;
     pegasus_client *_common_data_client = nullptr;
     pegasus_client *_geo_data_client = nullptr;
 };
