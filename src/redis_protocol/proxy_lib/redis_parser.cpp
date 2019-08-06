@@ -31,6 +31,7 @@ std::unordered_map<std::string, redis_parser::redis_call_handler> redis_parser::
     {"TTL", redis_parser::g_ttl},
     {"PTTL", redis_parser::g_ttl},
     {"GEODIST", redis_parser::g_geo_dist},
+    {"GEOPOS", redis_parser::g_geo_pos},
     {"GEORADIUS", redis_parser::g_geo_radius},
     {"GEORADIUSBYMEMBER", redis_parser::g_geo_radius_by_member},
     {"INCR", redis_parser::g_incr},
@@ -358,17 +359,40 @@ void redis_parser::reply_all_ready()
     }
 }
 
+std::shared_ptr<redis_parser::redis_bulk_string> redis_parser::construct_bulk_string(double data)
+{
+    std::string data_str(std::to_string(data));
+    std::shared_ptr<char> buf = dsn::utils::make_shared_array<char>(data_str.size());
+    memcpy(buf.get(), data_str.data(), data_str.size());
+    return std::make_shared<redis_bulk_string>(dsn::blob(std::move(buf), (int)data_str.size()));
+}
+
+void redis_parser::simple_ok_reply(message_entry &entry)
+{
+    simple_string_reply(entry, false, std::move("OK"));
+}
+
+void redis_parser::simple_error_reply(message_entry &entry, const std::string &message)
+{
+    simple_string_reply(entry, true, std::move(std::string("ERR ").append(message)));
+}
+
+void redis_parser::simple_string_reply(message_entry &entry, bool is_error, std::string message)
+{
+    reply_message(entry, redis_simple_string(is_error, std::move(message)));
+}
+
+void redis_parser::simple_integer_reply(message_entry &entry, int64_t value)
+{
+    reply_message(entry, redis_integer(value));
+}
+
 void redis_parser::default_handler(redis_parser::message_entry &entry)
 {
     ::dsn::blob &cmd = entry.request.buffers[0].data;
-    redis_simple_string result;
-    result.is_error = true;
-    result.message = "ERR unknown command '" + std::string(cmd.data(), cmd.length()) + "'";
-    ddebug("%s: %s with seqid %" PRId64 "",
-           remote_address.to_string(),
-           result.message.c_str(),
-           entry.sequence_id);
-    reply_message(entry, result);
+    std::string message = "unknown command '" + std::string(cmd.data(), cmd.length()) + "'";
+    ddebug_f("{}: {} with seqid {}", remote_address.to_string(), message, entry.sequence_id);
+    simple_error_reply(entry, message);
 }
 
 void redis_parser::set(redis_parser::message_entry &entry)
@@ -387,10 +411,7 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
         ddebug("%s: set command with invalid arguments, seqid(%" PRId64 ")",
                remote_address.to_string(),
                entry.sequence_id);
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'set' command";
-        reply_message(entry, result);
+        simple_error_reply(entry, "wrong number of arguments for 'set' command");
     } else {
         int ttl_seconds = 0;
         parse_set_parameters(request.buffers, ttl_seconds);
@@ -422,24 +443,15 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
                        remote_address.to_string(),
                        entry.sequence_id,
                        ec.to_string());
-                redis_simple_string result;
-                result.is_error = true;
-                result.message = std::string("ERR ") + ec.to_string();
-                reply_message(entry, result);
+                simple_error_reply(entry, ec.to_string());
             } else {
                 ::dsn::apps::update_response rrdb_response;
                 ::dsn::unmarshall(response, rrdb_response);
                 if (rrdb_response.error != 0) {
-                    redis_simple_string result;
-                    result.is_error = true;
-                    result.message = "ERR internal error " +
-                                     boost::lexical_cast<std::string>(rrdb_response.error);
-                    reply_message(entry, result);
+                    simple_error_reply(entry,
+                                       "internal error " + std::to_string(rrdb_response.error));
                 } else {
-                    redis_simple_string result;
-                    result.is_error = false;
-                    result.message = "OK";
-                    reply_message(entry, result);
+                    simple_ok_reply(entry);
                 }
             }
         };
@@ -463,12 +475,12 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
 // NOTE: only 'EX' option is supported
 void redis_parser::set_geo_internal(message_entry &entry)
 {
+    if (!_geo_client) {
+        return simple_error_reply(entry, "redis proxy is not on GEO mode");
+    }
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() < 3) {
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'SET' command";
-        reply_message(entry, result);
+        simple_error_reply(entry, "wrong number of arguments for 'SET' command");
     } else {
         int ttl_seconds = 0;
         parse_set_parameters(redis_request.buffers, ttl_seconds);
@@ -484,15 +496,9 @@ void redis_parser::set_geo_internal(message_entry &entry)
             }
 
             if (PERR_OK != ec) {
-                redis_simple_string result;
-                result.is_error = true;
-                result.message = std::string("ERR ") + _geo_client->get_error_string(ec);
-                reply_message(entry, result);
+                simple_error_reply(entry, _geo_client->get_error_string(ec));
             } else {
-                redis_simple_string result;
-                result.is_error = false;
-                result.message = "OK";
-                reply_message(entry, result);
+                simple_ok_reply(entry);
             }
         };
         _geo_client->async_set(redis_request.buffers[1].data.to_string(), // key => hash_key
@@ -512,27 +518,19 @@ void redis_parser::setex(message_entry &entry)
         ddebug("%s: setex command seqid(%" PRId64 ") with invalid arguments",
                remote_address.to_string(),
                entry.sequence_id);
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'setex' command";
-        reply_message(entry, result);
+        simple_error_reply(entry, "wrong number of arguments for 'setex' command");
     } else {
         dinfo("%s: send setex command seqid(%" PRId64 ")",
               remote_address.to_string(),
               entry.sequence_id);
-        redis_simple_string result;
         ::dsn::blob &ttl_blob = redis_req.buffers[2].data;
         int ttl_seconds;
         if (!dsn::buf2int32(ttl_blob, ttl_seconds)) {
-            result.is_error = true;
-            result.message = "ERR value is not an integer or out of range";
-            reply_message(entry, result);
+            simple_error_reply(entry, "value is not an integer or out of range");
             return;
         }
         if (ttl_seconds <= 0) {
-            result.is_error = true;
-            result.message = "ERR invalid expire time in setex";
-            reply_message(entry, result);
+            simple_error_reply(entry, "invalid expire time in setex");
             return;
         }
 
@@ -546,34 +544,23 @@ void redis_parser::setex(message_entry &entry)
                 return;
             }
 
-            dinfo("%s: setex command seqid(%" PRId64 ") got reply",
-                  remote_address.to_string(),
-                  entry.sequence_id);
-            redis_simple_string result;
             if (::dsn::ERR_OK != ec) {
                 ddebug("%s: setex command seqid(%" PRId64 ") got reply with error = %s",
                        remote_address.to_string(),
                        entry.sequence_id,
                        ec.to_string());
-                result.is_error = true;
-                result.message = std::string("ERR ") + ec.to_string();
-                reply_message(entry, result);
+                simple_error_reply(entry, ec.to_string());
                 return;
             }
 
             ::dsn::apps::update_response rrdb_response;
             ::dsn::unmarshall(response, rrdb_response);
             if (rrdb_response.error != 0) {
-                result.is_error = true;
-                result.message =
-                    "ERR internal error " + boost::lexical_cast<std::string>(rrdb_response.error);
-                reply_message(entry, result);
+                simple_error_reply(entry, "internal error " + std::to_string(rrdb_response.error));
                 return;
             }
 
-            result.is_error = false;
-            result.message = "OK";
-            reply_message(entry, result);
+            simple_ok_reply(entry);
         };
 
         ::dsn::apps::update_request req;
@@ -597,10 +584,7 @@ void redis_parser::get(message_entry &entry)
         ddebug("%s: get command seqid(%" PRId64 ") with invalid arguments",
                remote_address.to_string(),
                entry.sequence_id);
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'get' command";
-        reply_message(entry, result);
+        simple_error_reply(entry, "wrong number of arguments for 'get' command");
     } else {
         dinfo("%s: send get command seqid(%" PRId64 ")",
               remote_address.to_string(),
@@ -623,28 +607,19 @@ void redis_parser::get(message_entry &entry)
                        remote_address.to_string(),
                        entry.sequence_id,
                        ec.to_string());
-                redis_simple_string result;
-                result.is_error = true;
-                result.message = std::string("ERR ") + ec.to_string();
-                reply_message(entry, result);
+                simple_error_reply(entry, ec.to_string());
             } else {
                 ::dsn::apps::read_response rrdb_response;
                 ::dsn::unmarshall(response, rrdb_response);
                 if (rrdb_response.error != 0) {
                     if (rrdb_response.error == rocksdb::Status::kNotFound) {
-                        redis_bulk_string result;
-                        result.length = -1;
-                        reply_message(entry, result);
+                        simple_integer_reply(entry, -1);
                     } else {
-                        redis_simple_string result;
-                        result.is_error = true;
-                        result.message = "ERR internal error " +
-                                         boost::lexical_cast<std::string>(rrdb_response.error);
-                        reply_message(entry, result);
+                        simple_error_reply(entry,
+                                           "internal error " + std::to_string(rrdb_response.error));
                     }
                 } else {
-                    redis_bulk_string result(rrdb_response.value);
-                    reply_message(entry, result);
+                    reply_message(entry, redis_bulk_string(rrdb_response.value));
                 }
             }
         };
@@ -673,10 +648,7 @@ void redis_parser::del_internal(message_entry &entry)
         ddebug("%s: del command seqid(%" PRId64 ") with invalid arguments",
                remote_address.to_string(),
                entry.sequence_id);
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'del' command";
-        reply_message(entry, result);
+        simple_error_reply(entry, "wrong number of arguments for 'del' command");
     } else {
         dinfo("%s: send del command seqid(%" PRId64 ")",
               remote_address.to_string(),
@@ -699,23 +671,15 @@ void redis_parser::del_internal(message_entry &entry)
                        remote_address.to_string(),
                        entry.sequence_id,
                        ec.to_string());
-                redis_simple_string result;
-                result.is_error = true;
-                result.message = std::string("ERR ") + ec.to_string();
-                reply_message(entry, result);
+                simple_error_reply(entry, ec.to_string());
             } else {
                 ::dsn::apps::read_response rrdb_response;
                 ::dsn::unmarshall(response, rrdb_response);
                 if (rrdb_response.error != 0) {
-                    redis_simple_string result;
-                    result.is_error = true;
-                    result.message = "ERR internal error " +
-                                     boost::lexical_cast<std::string>(rrdb_response.error);
-                    reply_message(entry, result);
+                    simple_error_reply(entry,
+                                       "internal error " + std::to_string(rrdb_response.error));
                 } else {
-                    redis_integer result;
-                    result.value = 1;
-                    reply_message(entry, result);
+                    simple_integer_reply(entry, -1);
                 }
             }
         };
@@ -733,12 +697,12 @@ void redis_parser::del_internal(message_entry &entry)
 // NOTE: only one key is supported
 void redis_parser::del_geo_internal(message_entry &entry)
 {
+    if (!_geo_client) {
+        return simple_error_reply(entry, "redis proxy is not on GEO mode");
+    }
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() != 2) {
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'DEL' command";
-        reply_message(entry, result);
+        simple_error_reply(entry, "wrong number of arguments for 'DEL' command");
     } else {
         // with a reference to prevent the object from being destroyed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
@@ -751,15 +715,9 @@ void redis_parser::del_geo_internal(message_entry &entry)
             }
 
             if (PERR_OK != ec) {
-                redis_simple_string result;
-                result.is_error = true;
-                result.message = std::string("ERR ") + _geo_client->get_error_string(ec);
-                reply_message(entry, result);
+                simple_error_reply(entry, _geo_client->get_error_string(ec));
             } else {
-                redis_simple_string result;
-                result.is_error = false;
-                result.message = "OK";
-                reply_message(entry, result);
+                simple_ok_reply(entry);
             }
         };
         _geo_client->async_del(redis_request.buffers[1].data.to_string(), // key => hash_key
@@ -779,13 +737,8 @@ void redis_parser::ttl(message_entry &entry)
         ddebug("%s: ttl/pttl command seqid(%" PRId64 ") with invalid arguments",
                remote_address.to_string(),
                entry.sequence_id);
-        redis_simple_string result;
-        result.is_error = true;
-        if (is_ttl)
-            result.message = "ERR wrong number of arguments for 'ttl' command";
-        else
-            result.message = "ERR wrong number of arguments for 'pttl' command";
-        reply_message(entry, result);
+        simple_error_reply(
+            entry, fmt::format("wrong number of arguments for '{}'", is_ttl ? "ttl" : "pttl"));
     } else {
         dinfo("%s: send pttl/ttl command seqid(%" PRId64 ")",
               remote_address.to_string(),
@@ -808,32 +761,21 @@ void redis_parser::ttl(message_entry &entry)
                        remote_address.to_string(),
                        entry.sequence_id,
                        ec.to_string());
-                redis_simple_string result;
-                result.is_error = true;
-                result.message = std::string("ERR ") + ec.to_string();
-                reply_message(entry, result);
+                simple_error_reply(entry, ec.to_string());
             } else {
                 ::dsn::apps::ttl_response rrdb_response;
                 ::dsn::unmarshall(response, rrdb_response);
                 if (rrdb_response.error != 0) {
                     if (rrdb_response.error == rocksdb::Status::kNotFound) {
-                        redis_integer result;
-                        result.value = -2;
-                        reply_message(entry, result);
+                        simple_integer_reply(entry, -2);
                     } else {
-                        redis_simple_string result;
-                        result.is_error = true;
-                        result.message = "ERR internal error " +
-                                         boost::lexical_cast<std::string>(rrdb_response.error);
-                        reply_message(entry, result);
+                        simple_error_reply(entry,
+                                           "internal error " + std::to_string(rrdb_response.error));
                     }
                 } else {
-                    redis_integer result;
-                    if (is_ttl)
-                        result.value = rrdb_response.ttl_seconds;
-                    else // pttl
-                        result.value = rrdb_response.ttl_seconds * 1000;
-                    reply_message(entry, result);
+                    simple_integer_reply(entry,
+                                         is_ttl ? rrdb_response.ttl_seconds
+                                                : rrdb_response.ttl_seconds * 1000);
                 }
             }
         };
@@ -858,12 +800,12 @@ void redis_parser::ttl(message_entry &entry)
 // eg: GEORADIUS "" 146.123 34.567 1000
 void redis_parser::geo_radius(message_entry &entry)
 {
+    if (!_geo_client) {
+        return simple_error_reply(entry, "redis proxy is not on GEO mode");
+    }
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() < 5) {
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'GEORADIUS' command";
-        reply_message(entry, result);
+        simple_error_reply(entry, "wrong number of arguments for 'GEORADIUS' command");
         return;
     }
 
@@ -914,12 +856,12 @@ void redis_parser::geo_radius(message_entry &entry)
 // eg: GEORADIUSBYMEMBER "" some_key 1000
 void redis_parser::geo_radius_by_member(message_entry &entry)
 {
+    if (!_geo_client) {
+        return simple_error_reply(entry, "redis proxy is not on GEO mode");
+    }
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() < 4) {
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'GEORADIUSBYMEMBER' command";
-        reply_message(entry, result);
+        simple_error_reply(entry, "wrong number of arguments for 'GEORADIUSBYMEMBER' command");
         return;
     }
 
@@ -969,10 +911,7 @@ void redis_parser::counter_internal(message_entry &entry)
                     command,
                     entry.sequence_id,
                     entry.request.buffers.size());
-            redis_simple_string result;
-            result.is_error = true;
-            result.message = fmt::format("ERR wrong number of arguments for '{}'", command);
-            reply_message(entry, result);
+            simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
     } else if (strcasecmp(command, "INCRBY") == 0 || strcasecmp(command, "DECRBY") == 0) {
@@ -982,10 +921,7 @@ void redis_parser::counter_internal(message_entry &entry)
                     command,
                     entry.sequence_id,
                     entry.request.buffers.size());
-            redis_simple_string result;
-            result.is_error = true;
-            result.message = fmt::format("ERR wrong number of arguments for '{}'", command);
-            reply_message(entry, result);
+            simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
         if (!dsn::buf2int64(entry.request.buffers[2].data, increment)) {
@@ -994,11 +930,8 @@ void redis_parser::counter_internal(message_entry &entry)
                     command,
                     entry.sequence_id,
                     entry.request.buffers[2].data.to_string());
-            redis_simple_string result;
-            result.is_error = true;
-            result.message =
-                fmt::format("ERR wrong type of argument 'increment 'for '{}'", command);
-            reply_message(entry, result);
+            simple_error_reply(entry,
+                               fmt::format("wrong type of argument 'increment 'for '{}'", command));
             return;
         }
     } else {
@@ -1025,22 +958,14 @@ void redis_parser::counter_internal(message_entry &entry)
                     command,
                     entry.sequence_id,
                     ec.to_string());
-            redis_simple_string result;
-            result.is_error = true;
-            result.message = std::string("ERR ") + ec.to_string();
-            reply_message(entry, result);
+            simple_error_reply(entry, ec.to_string());
         } else {
             ::dsn::apps::incr_response incr_resp;
             ::dsn::unmarshall(response, incr_resp);
             if (incr_resp.error != 0) {
-                redis_simple_string result;
-                result.is_error = true;
-                result.message = "ERR internal error " + std::to_string(incr_resp.error);
-                reply_message(entry, result);
+                simple_error_reply(entry, "internal error " + std::to_string(incr_resp.error));
             } else {
-                redis_integer result;
-                result.value = incr_resp.new_value;
-                reply_message(entry, result);
+                simple_integer_reply(entry, incr_resp.new_value);
             }
         }
     };
@@ -1143,26 +1068,26 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
     }
 
     if (PERR_OK != ec) {
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = std::string("ERR ") + _geo_client->get_error_string(ec);
-        reply_message(entry, result);
+        simple_error_reply(entry, _geo_client->get_error_string(ec));
     } else {
         redis_array result;
-        result.count = (int)results.size();
+        result.resize(results.size());
+        size_t i = 0;
         for (const auto &elem : results) {
-            std::shared_ptr<redis_base_type> key = std::make_shared<redis_bulk_string>(
-                (int)elem.hash_key.size(), elem.hash_key.data()); // hash_key => member
+            std::shared_ptr<redis_base_type> key =
+                std::make_shared<redis_bulk_string>(elem.hash_key); // hash_key => member
             if (!WITHCOORD && !WITHDIST && !WITHHASH) {
                 // only member
-                result.array.push_back(key);
+                result.array[i++] = key;
             } else {
                 // member and some WITH* parameters
                 std::shared_ptr<redis_array> sub_array = std::make_shared<redis_array>();
 
                 // member
-                sub_array->array.push_back(key);
-                sub_array->count++;
+                sub_array->resize(1 + (WITHDIST ? 1 : 0) + (WITHCOORD ? 1 : 0) +
+                                  (WITHHASH ? 1 : 0));
+                size_t index = 0;
+                sub_array->array[index++] = key;
 
                 // NOTE: the order of WITH* parameters should not be changed for the redis
                 // protocol
@@ -1178,44 +1103,22 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
                     } else {
                         // keep as meter unit
                     }
-                    std::string dist = std::to_string(distance);
-                    std::shared_ptr<char> dist_buf =
-                        dsn::utils::make_shared_array<char>(dist.size());
-                    memcpy(dist_buf.get(), dist.data(), dist.size());
-                    sub_array->array.push_back(std::make_shared<redis_bulk_string>(
-                        dsn::blob(std::move(dist_buf), (int)dist.size())));
-                    sub_array->count++;
+                    sub_array->array[index++] = construct_bulk_string(distance);
                 }
                 if (WITHCOORD) {
                     // with coordinate
                     std::shared_ptr<redis_array> coordinate = std::make_shared<redis_array>();
+                    coordinate->resize(2);
+                    coordinate->array[0] = construct_bulk_string(elem.lng_degrees);
+                    coordinate->array[1] = construct_bulk_string(elem.lat_degrees);
 
-                    // longitude
-                    std::string lng = std::to_string(elem.lng_degrees);
-                    std::shared_ptr<char> lng_buf = dsn::utils::make_shared_array<char>(lng.size());
-                    memcpy(lng_buf.get(), lng.data(), lng.size());
-                    coordinate->array.push_back(std::make_shared<redis_bulk_string>(
-                        dsn::blob(std::move(lng_buf), (int)lng.size())));
-                    coordinate->count++;
-
-                    // latitude
-                    std::string lat = std::to_string(elem.lat_degrees);
-                    std::shared_ptr<char> lat_buf = dsn::utils::make_shared_array<char>(lat.size());
-                    memcpy(lat_buf.get(), lat.data(), lat.size());
-                    coordinate->array.push_back(std::make_shared<redis_bulk_string>(
-                        dsn::blob(std::move(lat_buf), (int)lat.size())));
-                    coordinate->count++;
-
-                    sub_array->array.push_back(coordinate);
-                    sub_array->count++;
+                    sub_array->array[index++] = coordinate;
                 }
                 if (WITHHASH) {
                     // with origin value
-                    sub_array->array.push_back(std::make_shared<redis_bulk_string>(
-                        (int)elem.value.size(), elem.value.data()));
-                    sub_array->count++;
+                    sub_array->array[index++] = std::make_shared<redis_bulk_string>(elem.value);
                 }
-                result.array.push_back(sub_array);
+                result.array[i++] = sub_array;
             }
         }
         reply_message(entry, result);
@@ -1226,12 +1129,12 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
 // GEODIST key member1 member2 [unit]
 void redis_parser::geo_dist(message_entry &entry)
 {
+    if (!_geo_client) {
+        return simple_error_reply(entry, "redis proxy is not on GEO mode");
+    }
     redis_request &redis_request = entry.request;
     if (redis_request.buffers.size() < 4) {
-        redis_simple_string result;
-        result.is_error = true;
-        result.message = "ERR wrong number of arguments for 'GEODIST' command";
-        reply_message(entry, result);
+        simple_error_reply(entry, "wrong number of arguments for 'geodist' command");
     } else {
         // TODO: set the timeout
         std::string hash_key1 = redis_request.buffers[2].data.to_string(); // member1 => hash_key1
@@ -1241,17 +1144,14 @@ void redis_parser::geo_dist(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto get_callback = [ref_this, this, &entry, unit](int error_code, double &&distance) {
             if (is_session_reset.load(std::memory_order_acquire)) {
-                ddebug("%s: setex command seqid(%" PRId64 ") got reply, but session has reset",
+                ddebug("%s: GEODIST command seqid(%" PRId64 ") got reply, but session has reset",
                        remote_address.to_string(),
                        entry.sequence_id);
                 return;
             }
 
             if (PERR_OK != error_code) {
-                redis_simple_string result;
-                result.is_error = true;
-                result.message = std::string("ERR ") + _geo_client->get_error_string(error_code);
-                reply_message(entry, result);
+                simple_error_reply(entry, _geo_client->get_error_string(error_code));
             } else {
                 if (unit == "km") {
                     distance /= 1000;
@@ -1263,12 +1163,64 @@ void redis_parser::geo_dist(message_entry &entry)
                     // keep as meter unit
                 }
 
-                std::string str_distance = std::to_string(distance);
-                redis_bulk_string result((int)str_distance.size(), str_distance.data());
-                reply_message(entry, result);
+                reply_message(entry, redis_bulk_string(std::to_string(distance)));
             }
         };
         _geo_client->async_distance(hash_key1, "", hash_key2, "", 2000, get_callback);
+    }
+}
+
+// command format:
+// GEOPOS key member [member ...]
+void redis_parser::geo_pos(message_entry &entry)
+{
+    if (!_geo_client) {
+        return simple_error_reply(entry, "redis proxy is not on GEO mode");
+    }
+    redis_request &redis_request = entry.request;
+    if (redis_request.buffers.size() < 3) {
+        simple_error_reply(entry, "wrong number of arguments for 'geopos' command");
+        return;
+    }
+
+    int member_count = redis_request.buffers.size() - 2;
+    std::shared_ptr<proxy_session> ref_this = shared_from_this();
+    std::shared_ptr<std::atomic<int32_t>> get_count =
+        std::make_shared<std::atomic<int32_t>>(member_count);
+    std::shared_ptr<redis_array> result(new redis_array());
+    result->resize(member_count);
+    auto get_latlng_callback = [ref_this, this, &entry, result, get_count](
+        int error_code, int index, double lat_degrees, double lng_degrees) {
+        if (is_session_reset.load(std::memory_order_acquire)) {
+            ddebug("%s: GEOPOS command seqid(%" PRId64 ") got reply, but session has reset",
+                   remote_address.to_string(),
+                   entry.sequence_id);
+            return;
+        }
+
+        if (PERR_OK != error_code) {
+            // null bulk string for this member
+            result->array[index] = std::make_shared<redis_bulk_string>();
+            if (get_count->fetch_sub(1) == 1) {
+                reply_message(entry, *result);
+            }
+            return;
+        }
+
+        std::shared_ptr<redis_array> coordinate(new redis_array());
+        coordinate->resize(2);
+        coordinate->array[0] = construct_bulk_string(lng_degrees);
+        coordinate->array[1] = construct_bulk_string(lat_degrees);
+
+        result->array[index] = coordinate;
+        if (get_count->fetch_sub(1) == 1) {
+            reply_message(entry, *result);
+        }
+    };
+
+    for (int i = 0; i < member_count; ++i) {
+        _geo_client->async_get(
+            redis_request.buffers[i + 2].data.to_string(), "", i, get_latlng_callback, 2000);
     }
 }
 
@@ -1309,34 +1261,35 @@ void redis_parser::redis_simple_string::marshalling(::dsn::binary_writer &write_
 
 void redis_parser::redis_bulk_string::marshalling(::dsn::binary_writer &write_stream) const
 {
+    dassert_f((-1 == length && data.length() == 0) || data.length() == length,
+              "{} VS {}",
+              data.length(),
+              length);
     write_stream.write_pod('$');
-    std::string result = std::to_string(length);
-    write_stream.write(result.c_str(), (int)result.length());
+    std::string length_str = std::to_string(length);
+    write_stream.write(length_str.c_str(), (int)length_str.length());
     write_stream.write_pod(CR);
     write_stream.write_pod(LF);
-    if (length < 0) {
-        return;
-    }
-    if (length > 0) {
-        dassert(data.length() == length, "%u VS %d", data.length(), length);
+    if (length >= 0) {
         write_stream.write(data.data(), length);
+        write_stream.write_pod(CR);
+        write_stream.write_pod(LF);
     }
-    write_stream.write_pod(CR);
-    write_stream.write_pod(LF);
 }
 
 void redis_parser::redis_array::marshalling(::dsn::binary_writer &write_stream) const
 {
+    dassert_f((-1 == count && array.size() == 0) || array.size() == count,
+              "{} VS {}",
+              array.size(),
+              count);
     write_stream.write_pod('*');
-    std::string result = std::to_string(count);
-    write_stream.write(result.c_str(), (int)result.length());
+    std::string count_str = std::to_string(count);
+    write_stream.write(count_str.c_str(), (int)count_str.length());
     write_stream.write_pod(CR);
     write_stream.write_pod(LF);
-    if (count > 0) {
-        dassert_f(array.size() == count, "{} VS {}", array.size(), count);
-        for (const auto &elem : array) {
-            elem->marshalling(write_stream);
-        }
+    for (const auto &elem : array) {
+        elem->marshalling(write_stream);
     }
 }
 } // namespace proxy

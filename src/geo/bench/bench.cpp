@@ -19,9 +19,9 @@ static const int data_count = 10000;
 
 int main(int argc, char **argv)
 {
-    if (argc != 7) {
-        std::cerr << "USAGE: " << argv[0]
-                  << " <cluster_name> <app_name> <geo_app_name> <radius> <test_count> <max_level>"
+    if (argc < 7) {
+        std::cerr << "USAGE: " << argv[0] << " <cluster_name> <app_name> <geo_app_name> <radius> "
+                                             "<test_count> <max_level> [gen_data]"
                   << std::endl;
         return -1;
     }
@@ -44,6 +44,13 @@ int main(int argc, char **argv)
         std::cerr << "max_level is invalid: " << argv[6] << std::endl;
         return -1;
     }
+    bool gen_data = false;
+    if (argc >= 8) {
+        if (!dsn::buf2bool(argv[7], gen_data)) {
+            std::cerr << "gen_data is invalid: " << argv[7] << std::endl;
+            return -1;
+        }
+    }
 
     pegasus::geo::geo_client my_geo(
         "config.ini", cluster_name.c_str(), app_name.c_str(), geo_app_name.c_str());
@@ -57,18 +64,20 @@ int main(int argc, char **argv)
                       S2LatLng::FromDegrees(40.028697, 116.535087));
 
     // generate data for test
-    //    for (int i = 0; i < data_count; ++i) {
-    //        S2LatLng latlng(S2Testing::SamplePoint(rect));
-    //        std::string id = std::to_string(i);
-    //        std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
-    //                            std::to_string(latlng.lng().degrees()) + "|" +
-    //                            std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";
-    //
-    //        int ret = my_geo.set(id, "", value, 1000);
-    //        if (ret != pegasus::PERR_OK) {
-    //            std::cerr << "set data failed. error=" << ret << std::endl;
-    //        }
-    //    }
+    if (gen_data) {
+        for (int i = 0; i < data_count; ++i) {
+            S2LatLng latlng(S2Testing::SamplePoint(rect));
+            std::string id = std::to_string(i);
+            std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
+                                std::to_string(latlng.lng().degrees()) + "|" +
+                                std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";
+
+            int ret = my_geo.set(id, "", value, 1000);
+            if (ret != pegasus::PERR_OK) {
+                std::cerr << "set data failed. error=" << ret << std::endl;
+            }
+        }
+    }
 
     rocksdb::HistogramImpl latency_histogram;
     rocksdb::HistogramImpl result_count_histogram;
