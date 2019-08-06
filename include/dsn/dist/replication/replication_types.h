@@ -323,6 +323,10 @@ class ddd_partition_info;
 
 class ddd_diagnose_response;
 
+class app_partition_split_request;
+
+class app_partition_split_response;
+
 typedef struct _mutation_header__isset
 {
     _mutation_header__isset()
@@ -5465,6 +5469,116 @@ public:
 void swap(ddd_diagnose_response &a, ddd_diagnose_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const ddd_diagnose_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _app_partition_split_request__isset
+{
+    _app_partition_split_request__isset() : app_name(false), new_partition_count(false) {}
+    bool app_name : 1;
+    bool new_partition_count : 1;
+} _app_partition_split_request__isset;
+
+class app_partition_split_request
+{
+public:
+    app_partition_split_request(const app_partition_split_request &);
+    app_partition_split_request(app_partition_split_request &&);
+    app_partition_split_request &operator=(const app_partition_split_request &);
+    app_partition_split_request &operator=(app_partition_split_request &&);
+    app_partition_split_request() : app_name(), new_partition_count(0) {}
+
+    virtual ~app_partition_split_request() throw();
+    std::string app_name;
+    int32_t new_partition_count;
+
+    _app_partition_split_request__isset __isset;
+
+    void __set_app_name(const std::string &val);
+
+    void __set_new_partition_count(const int32_t val);
+
+    bool operator==(const app_partition_split_request &rhs) const
+    {
+        if (!(app_name == rhs.app_name))
+            return false;
+        if (!(new_partition_count == rhs.new_partition_count))
+            return false;
+        return true;
+    }
+    bool operator!=(const app_partition_split_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const app_partition_split_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(app_partition_split_request &a, app_partition_split_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const app_partition_split_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _app_partition_split_response__isset
+{
+    _app_partition_split_response__isset() : err(false), app_id(false), partition_count(false) {}
+    bool err : 1;
+    bool app_id : 1;
+    bool partition_count : 1;
+} _app_partition_split_response__isset;
+
+class app_partition_split_response
+{
+public:
+    app_partition_split_response(const app_partition_split_response &);
+    app_partition_split_response(app_partition_split_response &&);
+    app_partition_split_response &operator=(const app_partition_split_response &);
+    app_partition_split_response &operator=(app_partition_split_response &&);
+    app_partition_split_response() : app_id(0), partition_count(0) {}
+
+    virtual ~app_partition_split_response() throw();
+    ::dsn::error_code err;
+    int32_t app_id;
+    int32_t partition_count;
+
+    _app_partition_split_response__isset __isset;
+
+    void __set_err(const ::dsn::error_code &val);
+
+    void __set_app_id(const int32_t val);
+
+    void __set_partition_count(const int32_t val);
+
+    bool operator==(const app_partition_split_response &rhs) const
+    {
+        if (!(err == rhs.err))
+            return false;
+        if (!(app_id == rhs.app_id))
+            return false;
+        if (!(partition_count == rhs.partition_count))
+            return false;
+        return true;
+    }
+    bool operator!=(const app_partition_split_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const app_partition_split_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(app_partition_split_response &a, app_partition_split_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const app_partition_split_response &obj)
 {
     obj.printTo(out);
     return out;

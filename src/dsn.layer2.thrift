@@ -65,4 +65,10 @@ struct app_info
     // Whether this app is duplicating.
     // If true it should prevent its unconfirmed WAL from being compacted.
     12:optional bool duplicating;
+
+    // New fields for partition split
+    // If meta server failed during partition split,
+    // child partition is not existed on remote stroage, but partition count changed.
+    // We use init_partition_count to handle those child partitions while sync_apps_from_remote_stroage
+    13:i32          init_partition_count = -1;
 }

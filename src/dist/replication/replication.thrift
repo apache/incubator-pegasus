@@ -757,6 +757,25 @@ struct ddd_diagnose_response
     2:list<ddd_partition_info> partitions;
 }
 
+/////////////////// split-related structs ////////////////////
+
+// client to meta server to start partition split
+struct app_partition_split_request
+{
+    1:string                 app_name;
+    2:i32                    new_partition_count;
+}
+
+struct app_partition_split_response
+{
+    1:dsn.error_code         err;
+    2:i32                    app_id;
+    // app current partition count
+    // if split succeed, partition_count = new partition_count
+    // if split failed, partition_count = original partition_count
+    3:i32                    partition_count;
+}
+
 /*
 service replica_s
 {

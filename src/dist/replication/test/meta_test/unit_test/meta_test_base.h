@@ -6,6 +6,7 @@
 
 #include "dist/replication/meta_server/server_load_balancer.h"
 #include "dist/replication/meta_server/meta_server_failure_detector.h"
+#include "dist/replication/meta_server/meta_split_service.h"
 #include "dist/replication/test/meta_test/misc/misc.h"
 
 #include "meta_service_test_app.h"
@@ -25,6 +26,8 @@ public:
         ASSERT_EQ(_ms->remote_storage_initialize(), ERR_OK);
         _ms->initialize_duplication_service();
         ASSERT_TRUE(_ms->_dup_svc);
+        _ms->_split_svc = make_unique<meta_split_service>(_ms.get());
+        ASSERT_TRUE(_ms->_split_svc);
 
         _ss = _ms->_state;
         _ss->initialize(_ms.get(), _ms->_cluster_root + "/apps");
@@ -60,14 +63,14 @@ public:
 
     void wait_all() { _ms->tracker()->wait_outstanding_tasks(); }
 
-    // create an app for test with specified name.
-    void create_app(const std::string &name)
+    // create an app for test with specified name and specified partition count
+    void create_app(const std::string &name, uint32_t partition_count)
     {
         configuration_create_app_request req;
         configuration_create_app_response resp;
         req.app_name = name;
         req.options.app_type = "simple_kv";
-        req.options.partition_count = 8;
+        req.options.partition_count = partition_count;
         req.options.replica_count = 3;
         req.options.success_if_exist = false;
         req.options.is_stateful = true;
@@ -80,6 +83,8 @@ public:
         // wait for the table to create
         ASSERT_TRUE(_ss->spin_wait_staging(30));
     }
+
+    void create_app(const std::string &name) { create_app(name, 8); }
 
     // drop an app for test.
     void drop_app(const std::string &name)
@@ -99,6 +104,8 @@ public:
     std::shared_ptr<app_state> find_app(const std::string &name) { return _ss->get_app(name); }
 
     meta_duplication_service &dup_svc() { return *(_ms->_dup_svc); }
+
+    meta_split_service &split_svc() { return *(_ms->_split_svc); }
 
     std::shared_ptr<server_state> _ss;
     std::unique_ptr<meta_service> _ms;

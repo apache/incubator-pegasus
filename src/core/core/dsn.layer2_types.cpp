@@ -721,6 +721,8 @@ void app_info::__set_duplicating(const bool val)
     __isset.duplicating = true;
 }
 
+void app_info::__set_init_partition_count(const int32_t val) { this->init_partition_count = val; }
+
 uint32_t app_info::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -852,6 +854,14 @@ uint32_t app_info::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 13:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                xfer += iprot->readI32(this->init_partition_count);
+                this->__isset.init_partition_count = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -929,6 +939,10 @@ uint32_t app_info::write(::apache::thrift::protocol::TProtocol *oprot) const
         xfer += oprot->writeBool(this->duplicating);
         xfer += oprot->writeFieldEnd();
     }
+    xfer += oprot->writeFieldBegin("init_partition_count", ::apache::thrift::protocol::T_I32, 13);
+    xfer += oprot->writeI32(this->init_partition_count);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -949,6 +963,7 @@ void swap(app_info &a, app_info &b)
     swap(a.create_second, b.create_second);
     swap(a.drop_second, b.drop_second);
     swap(a.duplicating, b.duplicating);
+    swap(a.init_partition_count, b.init_partition_count);
     swap(a.__isset, b.__isset);
 }
 
@@ -966,6 +981,7 @@ app_info::app_info(const app_info &other45)
     create_second = other45.create_second;
     drop_second = other45.drop_second;
     duplicating = other45.duplicating;
+    init_partition_count = other45.init_partition_count;
     __isset = other45.__isset;
 }
 app_info::app_info(app_info &&other46)
@@ -982,6 +998,7 @@ app_info::app_info(app_info &&other46)
     create_second = std::move(other46.create_second);
     drop_second = std::move(other46.drop_second);
     duplicating = std::move(other46.duplicating);
+    init_partition_count = std::move(other46.init_partition_count);
     __isset = std::move(other46.__isset);
 }
 app_info &app_info::operator=(const app_info &other47)
@@ -998,6 +1015,7 @@ app_info &app_info::operator=(const app_info &other47)
     create_second = other47.create_second;
     drop_second = other47.drop_second;
     duplicating = other47.duplicating;
+    init_partition_count = other47.init_partition_count;
     __isset = other47.__isset;
     return *this;
 }
@@ -1015,6 +1033,7 @@ app_info &app_info::operator=(app_info &&other48)
     create_second = std::move(other48.create_second);
     drop_second = std::move(other48.drop_second);
     duplicating = std::move(other48.duplicating);
+    init_partition_count = std::move(other48.init_partition_count);
     __isset = std::move(other48.__isset);
     return *this;
 }
@@ -1046,6 +1065,8 @@ void app_info::printTo(std::ostream &out) const
     out << ", "
         << "duplicating=";
     (__isset.duplicating ? (out << to_string(duplicating)) : (out << "<null>"));
+    out << ", "
+        << "init_partition_count=" << to_string(init_partition_count);
     out << ")";
 }
 
