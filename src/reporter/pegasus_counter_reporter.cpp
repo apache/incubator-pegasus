@@ -286,8 +286,8 @@ void pegasus_counter_reporter::update()
             second_gauge.Set(cs.value);
         });
 
-        _gateway->Push();
         // report data to pushgateway
+        _gateway->Push();
     }
 
     ddebug("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
