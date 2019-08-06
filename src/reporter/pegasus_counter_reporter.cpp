@@ -265,8 +265,8 @@ void pegasus_counter_reporter::update()
 
             // create metrics that prometheus support to report data
             std::map<std::string, prometheus::Family<prometheus::Gauge> &>::iterator it =
-                _gauge_family.find(metrics_name);
-            if (it == _gauge_family.end()) {
+                _gauge_family_map.find(metrics_name);
+            if (it == _gauge_family_map.end()) {
                 auto &add_gauge_family = prometheus::BuildGauge()
                                              .Name(metrics_name)
                                              .Labels({{"service", "pegasus"},
@@ -274,14 +274,14 @@ void pegasus_counter_reporter::update()
                                                       {"pegasus_job", _app_name},
                                                       {"port", std::to_string(_local_port)}})
                                              .Register(*_registry);
-                _gauge_family.insert(std::pair<std::string, prometheus::Family<prometheus::Gauge> &>(
+                _gauge_family_map.insert(std::pair<std::string, prometheus::Family<prometheus::Gauge> &>(
                     metrics_name, add_gauge_family));
 
                 auto &second_gauge = add_gauge_family.Add(
                     {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
                 second_gauge.Set(cs.value);
             } 
-            it = _gauge_family.find(metrics_name);
+            it = _gauge_family_map.find(metrics_name);
             auto &second_gauge = it->second.Add(
                 {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
             second_gauge.Set(cs.value);
