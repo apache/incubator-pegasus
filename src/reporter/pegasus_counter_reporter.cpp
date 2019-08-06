@@ -91,6 +91,7 @@ void pegasus_counter_reporter::prometheus_initialize()
     _gateway = std::make_shared<prometheus::Gateway>(
         _prometheus_host, std::to_string(_prometheus_port), "pegasus", labels);
     _registry = std::make_shared<prometheus::Registry>();
+    _gateway->RegisterCollectable(_registry);
 }
 
 void pegasus_counter_reporter::falcon_initialize()
@@ -264,7 +265,7 @@ void pegasus_counter_reporter::update()
             }
 
             // create metrics that prometheus support to report data
-            std::map<std::string, prometheus::Family<prometheus::Gauge> &>::iterator it =
+            std::map<std::string, prometheus::Family<prometheus::Gauge> *>::iterator it =
                 _gauge_family_map.find(metrics_name);
             if (it == _gauge_family_map.end()) {
                 auto &add_gauge_family = prometheus::BuildGauge()
@@ -274,22 +275,19 @@ void pegasus_counter_reporter::update()
                                                       {"pegasus_job", _app_name},
                                                       {"port", std::to_string(_local_port)}})
                                              .Register(*_registry);
-                _gauge_family_map.insert(std::pair<std::string, prometheus::Family<prometheus::Gauge> &>(
-                    metrics_name, add_gauge_family));
+                it = _gauge_family_map
+                         .insert(std::pair<std::string, prometheus::Family<prometheus::Gauge> *>(
+                             metrics_name, &add_gauge_family))
+                         .first;
+            }
 
-                auto &second_gauge = add_gauge_family.Add(
-                    {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
-                second_gauge.Set(cs.value);
-            } 
-            it = _gauge_family_map.find(metrics_name);
-            auto &second_gauge = it->second.Add(
+            auto &second_gauge = it->second->Add(
                 {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
             second_gauge.Set(cs.value);
         });
 
-        _gateway->RegisterCollectable(_registry);
         _gateway->Push();
-        // reporte data to pushgateway
+        // report data to pushgateway
     }
 
     ddebug("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
