@@ -88,9 +88,9 @@ void pegasus_counter_reporter::prometheus_initialize()
     ddebug("prometheus initialize: host:port(%s:%d)", _prometheus_host.c_str(), _prometheus_port);
 
     const auto &labels = prometheus::Gateway::GetInstanceLabel(GetHostName());
-    gateway = std::make_shared<prometheus::Gateway>(
+    _gateway = std::make_shared<prometheus::Gateway>(
         _prometheus_host, std::to_string(_prometheus_port), "pegasus", labels);
-    registry = std::make_shared<prometheus::Registry>();
+    _registry = std::make_shared<prometheus::Registry>();
 }
 
 void pegasus_counter_reporter::falcon_initialize()
@@ -265,30 +265,30 @@ void pegasus_counter_reporter::update()
 
             // create metrics that prometheus support to report data
             std::map<std::string, prometheus::Family<prometheus::Gauge> &>::iterator it =
-                gauge_family.find(metrics_name);
-            if (it == gauge_family.end()) {
+                _gauge_family.find(metrics_name);
+            if (it == _gauge_family.end()) {
                 auto &add_gauge_family = prometheus::BuildGauge()
                                              .Name(metrics_name)
                                              .Labels({{"service", "pegasus"},
                                                       {"cluster", _cluster_name},
                                                       {"pegasus_job", _app_name},
                                                       {"port", std::to_string(_local_port)}})
-                                             .Register(*registry);
-                gauge_family.insert(std::pair<std::string, prometheus::Family<prometheus::Gauge> &>(
+                                             .Register(*_registry);
+                _gauge_family.insert(std::pair<std::string, prometheus::Family<prometheus::Gauge> &>(
                     metrics_name, add_gauge_family));
 
                 auto &second_gauge = add_gauge_family.Add(
                     {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
                 second_gauge.Set(cs.value);
-            } else {
-                auto &second_gauge = it->second.Add(
-                    {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
-                second_gauge.Set(cs.value);
-            }
+            } 
+            it = _gauge_family.find(metrics_name);
+            auto &second_gauge = it->second.Add(
+                {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
+            second_gauge.Set(cs.value);
         });
 
-        gateway->RegisterCollectable(registry);
-        gateway->Push();
+        _gateway->RegisterCollectable(_registry);
+        _gateway->Push();
         // reporte data to pushgateway
     }
 
