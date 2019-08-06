@@ -9,7 +9,7 @@ services:
   zookeeper:
     image: zookeeper:3.4
     ports:
-      - "2181:2181"
+      - "2181"
     networks:
       frontend:
         ipv4_address: @NODE_IP_PREFIX@.31
@@ -20,7 +20,7 @@ services:
   meta1:
     image: @IMAGE_NAME@
     ports:
-      - "34601"
+      - "34601:@META_PORT@"
     volumes:
       - ./config.ini:/pegasus/bin/config.ini:ro
       - ./meta1/data:/pegasus/data

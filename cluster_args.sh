@@ -8,6 +8,10 @@
 # Zookeeper's ip address is 172.21.0.31:2181
 export NODE_IP_PREFIX=172.21.0
 
+# The exported port of pegasus meta-server.
+# Please ensure this port is not occupied by other programs.
+export META_PORT=34601
+
 # Different clusters are isolated by their cluster name and the NODE_IP_PREFIX.
 export CLUSTER_NAME=onebox
 
