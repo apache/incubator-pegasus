@@ -23,6 +23,8 @@ struct SearchResult;
 using geo_search_callback_t =
     std::function<void(int error_code, std::list<SearchResult> &&results)>;
 using distance_callback_t = std::function<void(int error_code, double distance)>;
+using get_latlng_callback_t =
+    std::function<void(int error_code, int id, double lat_degrees, double lng_degrees)>;
 
 /// the search result structure used by `search_radial` APIs
 struct SearchResult
@@ -119,6 +121,55 @@ public:
                    pegasus_client::async_set_callback_t &&callback = nullptr,
                    int timeout_ms = 5000,
                    int ttl_seconds = 0);
+
+    ///
+    /// \brief get
+    ///     get latitude and longitude of key pair from the cluster
+    ///     key pair is composed of hash_key and sort_key.
+    /// \param hash_key
+    ///     used to decide which partition to get value
+    /// \param sort_key
+    ///     all the k-v under hash_key will be sorted by sort_key
+    /// \param lat_degrees
+    ///     latitude in degree of this key
+    /// \param lng_degrees
+    ///     longitude in degree of this key
+    /// \param timeout_ms
+    ///     if wait longer than this value, will return timeout error
+    /// \return
+    ///     int, the error indicates whether or not the operation is succeeded.
+    /// this error can be converted to a string using get_error_string()
+    ///
+    /// REQUIRES: value of this key can be correctly extracted to latitude and longitude by
+    /// latlng_extractor
+    int get(const std::string &hash_key,
+            const std::string &sort_key,
+            double &lat_degrees,
+            double &lng_degrees,
+            int timeout_ms = 5000);
+
+    ///
+    /// \brief async_get
+    ///     get latitude and longitude of key pair from the cluster asynchronous
+    ///     key pair is composed of hash_key and sort_key.
+    /// \param hash_key
+    ///     used to decide which partition to get value
+    /// \param sort_key
+    ///     all the k-v under hash_key will be sorted by sort_key
+    /// \param id
+    ///     to distinguish different calls
+    /// \param callback
+    ///     callback function either success or not
+    /// \param timeout_ms
+    ///     if wait longer than this value, will return timeout error
+    ///
+    /// REQUIRES: value of this key can be correctly extracted to latitude and longitude by
+    /// latlng_extractor
+    void async_get(const std::string &hash_key,
+                   const std::string &sort_key,
+                   int id,
+                   get_latlng_callback_t &&callback = nullptr,
+                   int timeout_ms = 5000);
 
     ///
     /// \brief del
@@ -303,7 +354,7 @@ private:
         int error_code, pegasus_client::internal_info &&info, DataType data_type)>;
     using scan_all_area_callback_t =
         std::function<void(std::list<std::list<SearchResult>> &&results)>;
-    using scan_one_area_callback = std::function<void()>;
+    using scan_one_area_callback_t = std::function<void()>;
 
     // generate hash_key and sort_key in geo database from hash_key and sort_key in common data
     // database
@@ -385,13 +436,13 @@ private:
                     std::shared_ptr<S2Cap> cap_ptr,
                     int count,
                     int timeout_ms,
-                    scan_one_area_callback &&callback,
+                    scan_one_area_callback_t &&callback,
                     std::list<SearchResult> &result);
 
     void do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper,
                  std::shared_ptr<S2Cap> cap_ptr,
                  int count,
-                 scan_one_area_callback &&callback,
+                 scan_one_area_callback_t &&callback,
                  std::list<SearchResult> &result);
 
 private:

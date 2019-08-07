@@ -15,6 +15,10 @@ set(MY_PROJ_LIBS pegasus.rproxylib
                  pegasus.base
                  pegasus_geo_lib
                  pegasus_reporter
+                 prometheus-cpp-pull
+                 prometheus-cpp-push
+                 prometheus-cpp-core
+                 curl
                  event
                  s2
                  pegasus_client_static
