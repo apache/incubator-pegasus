@@ -4,7 +4,7 @@ networks:
   frontend:
     ipam:
       config:
-        - subnet: @META_IP_PREFIX@.0/24
+        - subnet: @META_IP_PREFIX@.255/24
 services:
   zookeeper:
     image: zookeeper:3.4

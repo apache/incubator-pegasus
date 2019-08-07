@@ -13,6 +13,7 @@ pwd
 
 docker-compose kill
 docker-compose rm -f -v
+docker network prune -f
 
 cd "${ROOT}" || exit 1
 
