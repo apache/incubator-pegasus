@@ -14,7 +14,7 @@
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/env.h>
-#include <monitoring/histogram.h>
+#include <rocksdb/statistics.h>
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
@@ -98,6 +98,14 @@ private:
     dsn::utils::ex_lock_nr _lock;
 };
 
+enum class histogram_type
+{
+    HASH_KEY_SIZE,
+    SORT_KEY_SIZE,
+    VALUE_SIZE,
+    ROW_SIZE
+};
+
 struct scan_data_context
 {
     scan_data_operator op;
@@ -119,10 +127,7 @@ struct scan_data_context
     std::atomic_long split_request_count;
     std::atomic_bool split_completed;
     bool stat_size;
-    rocksdb::HistogramImpl hash_key_size_histogram;
-    rocksdb::HistogramImpl sort_key_size_histogram;
-    rocksdb::HistogramImpl value_size_histogram;
-    rocksdb::HistogramImpl row_size_histogram;
+    std::shared_ptr<rocksdb::Statistics> statistics;
     int top_count;
     top_container top_rows;
     bool count_hash_key;
@@ -137,6 +142,7 @@ struct scan_data_context
                       pegasus::geo::geo_client *geoclient_,
                       std::atomic_bool *error_occurred_,
                       bool stat_size_ = false,
+                      std::shared_ptr<rocksdb::Statistics> statistics_ = nullptr,
                       int top_count_ = 0,
                       bool count_hash_key_ = false)
         : op(op_),
@@ -154,6 +160,7 @@ struct scan_data_context
           split_request_count(0),
           split_completed(false),
           stat_size(stat_size_),
+          statistics(statistics_),
           top_count(top_count_),
           top_rows(top_count_),
           count_hash_key(count_hash_key_),
@@ -339,18 +346,24 @@ inline void scan_data_next(scan_data_context *context)
                         break;
                     case SCAN_COUNT:
                         context->split_rows++;
-                        if (context->stat_size) {
+                        if (context->stat_size && context->statistics) {
                             long hash_key_size = hash_key.size();
-                            context->hash_key_size_histogram.Add(hash_key_size);
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::HASH_KEY_SIZE),
+                                hash_key_size);
 
                             long sort_key_size = sort_key.size();
-                            context->sort_key_size_histogram.Add(sort_key_size);
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::SORT_KEY_SIZE),
+                                sort_key_size);
 
                             long value_size = value.size();
-                            context->value_size_histogram.Add(value_size);
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::VALUE_SIZE), value_size);
 
                             long row_size = hash_key_size + sort_key_size + value_size;
-                            context->row_size_histogram.Add(row_size);
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::ROW_SIZE), row_size);
 
                             if (context->top_count > 0) {
                                 context->top_rows.push(

@@ -24,6 +24,7 @@ public:
     }
 
     pegasus_client *common_data_client() { return _geo_client->_common_data_client; }
+    pegasus::geo::geo_client *geo_client() { return _geo_client.get(); }
 
     int min_level() { return _geo_client->_min_level; }
 
@@ -76,11 +77,11 @@ inline bool operator==(const SearchResult &l, const SearchResult &r)
 
 TEST_F(geo_client_test, set_and_del)
 {
-    double lat_degrees = 12.345;
-    double lng_degrees = 67.890;
+    double expect_lat_degrees = 12.345;
+    double expect_lng_degrees = 67.890;
     std::string test_hash_key = "test_hash_key";
     std::string test_sort_key = "test_sort_key";
-    std::string test_value = gen_value(lat_degrees, lng_degrees);
+    std::string test_value = gen_value(expect_lat_degrees, expect_lng_degrees);
 
     // geo set
     int ret = _geo_client->set(test_hash_key, test_sort_key, test_value);
@@ -91,6 +92,13 @@ TEST_F(geo_client_test, set_and_del)
     ret = common_data_client()->get(test_hash_key, test_sort_key, value);
     ASSERT_EQ(ret, pegasus::PERR_OK);
     ASSERT_EQ(value, test_value);
+
+    double got_lat_degrees;
+    double got_lng_degrees;
+    ret = geo_client()->get(test_hash_key, test_sort_key, got_lat_degrees, got_lng_degrees);
+    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_NEAR(expect_lat_degrees, got_lat_degrees, 1e-6);
+    ASSERT_NEAR(expect_lng_degrees, got_lng_degrees, 1e-6);
 
     // search the inserted data
     {
@@ -107,8 +115,13 @@ TEST_F(geo_client_test, set_and_del)
 
     {
         std::list<geo::SearchResult> result;
-        ret = _geo_client->search_radial(
-            lat_degrees, lng_degrees, 1, 1, geo::geo_client::SortType::random, 500, result);
+        ret = _geo_client->search_radial(expect_lat_degrees,
+                                         expect_lng_degrees,
+                                         1,
+                                         1,
+                                         geo::geo_client::SortType::random,
+                                         500,
+                                         result);
         ASSERT_EQ(ret, pegasus::PERR_OK);
         ASSERT_EQ(result.size(), 1);
         ASSERT_NEAR(result.front().distance, 0.0, 1e-6);
@@ -125,6 +138,9 @@ TEST_F(geo_client_test, set_and_del)
     ret = common_data_client()->get(test_hash_key, test_sort_key, value);
     ASSERT_EQ(ret, pegasus::PERR_NOT_FOUND);
 
+    ret = geo_client()->get(test_hash_key, test_sort_key, got_lat_degrees, got_lng_degrees);
+    ASSERT_NE(ret, pegasus::PERR_OK);
+
     // search the inserted data
     {
         std::list<geo::SearchResult> result;
@@ -136,8 +152,13 @@ TEST_F(geo_client_test, set_and_del)
 
     {
         std::list<geo::SearchResult> result;
-        ret = _geo_client->search_radial(
-            lat_degrees, lng_degrees, 1, 1, geo::geo_client::SortType::random, 500, result);
+        ret = _geo_client->search_radial(expect_lat_degrees,
+                                         expect_lng_degrees,
+                                         1,
+                                         1,
+                                         geo::geo_client::SortType::random,
+                                         500,
+                                         result);
         ASSERT_EQ(ret, pegasus::PERR_OK);
         ASSERT_TRUE(result.empty());
     }

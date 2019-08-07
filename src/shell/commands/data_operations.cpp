@@ -8,9 +8,8 @@ static void
 print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &contexts,
                          const std::string &stop_desc,
                          bool stat_size,
+                         std::shared_ptr<rocksdb::Statistics> statistics,
                          bool count_hash_key);
-static void print_simple_histogram(const std::string &name,
-                                   const rocksdb::HistogramImpl &histogram);
 
 void escape_sds_argv(int argc, sds *argv);
 int mutation_check(int args_count, sds *args);
@@ -2291,6 +2290,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
 
     std::atomic_bool error_occurred(false);
     std::vector<std::unique_ptr<scan_data_context>> contexts;
+    std::shared_ptr<rocksdb::Statistics> statistics = rocksdb::CreateDBStatistics();
     for (int i = 0; i < split_count; i++) {
         scan_data_context *context = new scan_data_context(SCAN_COUNT,
                                                            i,
@@ -2301,6 +2301,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            nullptr,
                                                            &error_occurred,
                                                            stat_size,
+                                                           statistics,
                                                            top_count,
                                                            diff_hash_key);
         context->set_sort_key_filter(sort_key_filter_type, sort_key_filter_pattern);
@@ -2364,7 +2365,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             break;
         last_total_rows = cur_total_rows;
         if (stat_size && sleep_seconds % 10 == 0) {
-            print_current_scan_state(contexts, "partially", stat_size, diff_hash_key);
+            print_current_scan_state(contexts, "partially", stat_size, statistics, diff_hash_key);
         }
     }
 
@@ -2387,7 +2388,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         stop_desc = "done";
     }
 
-    print_current_scan_state(contexts, stop_desc, stat_size, diff_hash_key);
+    print_current_scan_state(contexts, stop_desc, stat_size, statistics, diff_hash_key);
 
     if (stat_size) {
         if (top_count > 0) {
@@ -2515,22 +2516,11 @@ int mutation_check(int args_count, sds *args)
     return ret;
 }
 
-static void print_simple_histogram(const std::string &name, const rocksdb::HistogramImpl &histogram)
-{
-    fprintf(stderr, "[%s]\n", name.c_str());
-    fprintf(stderr, "    max = %ld\n", histogram.max());
-    fprintf(stderr, "    med = %.2f\n", histogram.Median());
-    fprintf(stderr, "    avg = %.2f\n", histogram.Average());
-    fprintf(stderr, "    min = %ld\n", histogram.min());
-    fprintf(stderr, "    P99 = %.2f\n", histogram.Percentile(99.0));
-    fprintf(stderr, "    P95 = %.2f\n", histogram.Percentile(95.0));
-    fprintf(stderr, "    P90 = %.2f\n", histogram.Percentile(90.0));
-}
-
 static void
 print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &contexts,
                          const std::string &stop_desc,
                          bool stat_size,
+                         std::shared_ptr<rocksdb::Statistics> statistics,
                          bool count_hash_key)
 {
     long total_rows = 0;
@@ -2555,20 +2545,22 @@ print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &
     }
 
     if (stat_size) {
-        rocksdb::HistogramImpl hash_key_size_histogram;
-        rocksdb::HistogramImpl sort_key_size_histogram;
-        rocksdb::HistogramImpl value_size_histogram;
-        rocksdb::HistogramImpl row_size_histogram;
-        for (const auto &context : contexts) {
-            hash_key_size_histogram.Merge(context->hash_key_size_histogram);
-            sort_key_size_histogram.Merge(context->sort_key_size_histogram);
-            value_size_histogram.Merge(context->value_size_histogram);
-            row_size_histogram.Merge(context->row_size_histogram);
-        }
-        print_simple_histogram("hash_key_size", hash_key_size_histogram);
-        print_simple_histogram("sort_key_size", sort_key_size_histogram);
-        print_simple_histogram("value_size", value_size_histogram);
-        print_simple_histogram("row_size", row_size_histogram);
+        fprintf(stderr,
+                "\n============================[hash_key_size]============================\n"
+                "%s=======================================================================",
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::HASH_KEY_SIZE)).c_str());
+        fprintf(stderr,
+                "\n============================[sort_key_size]============================\n"
+                "%s=======================================================================",
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::SORT_KEY_SIZE)).c_str());
+        fprintf(stderr,
+                "\n==============================[value_size]=============================\n"
+                "%s=======================================================================",
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::VALUE_SIZE)).c_str());
+        fprintf(stderr,
+                "\n===============================[row_size]==============================\n"
+                "%s=======================================================================\n\n",
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::ROW_SIZE)).c_str());
     }
 }
 
