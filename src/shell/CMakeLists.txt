@@ -12,8 +12,7 @@ set(MY_SRC_SEARCH_MODE "GLOB_RECURSE")
 
 set(MY_PROJ_INC_PATH
     "${PEGASUS_PROJECT_DIR}/src/include"
-    "${PEGASUS_PROJECT_DIR}/src/base"
-    "${PEGASUS_PROJECT_DIR}/rocksdb")
+    "${PEGASUS_PROJECT_DIR}/src/base")
 
 set(MY_PROJ_LIB_PATH
     "${PEGASUS_PROJECT_DIR}/rocksdb/build")
