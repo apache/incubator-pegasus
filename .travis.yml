@@ -31,7 +31,7 @@ install:
     - wget https://github.com/facebook/zstd/archive/v1.3.7.zip; unzip v1.3.7; cd zstd-1.3.7;
     - mkdir cmake-build; cd cmake-build; cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DZSTD_BUILD_PROGRAMS=OFF ../build/cmake; sudo make install -j8;
     - cd ../..
-    - rm -rf v1.3.7 zstd-1.3.7;
+    - rm -rf v1.3.7.zip zstd-1.3.7;
 
 before_script:
     - cd rdsn/thirdparty
