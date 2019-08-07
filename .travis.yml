@@ -13,6 +13,7 @@ addons:
     packages:
       - libsnappy-dev
       - liblz4-dev
+      - clang-format-3.9
 
 cache:
     - ccache
