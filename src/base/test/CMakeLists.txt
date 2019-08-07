@@ -11,9 +11,10 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+        dsn_runtime
         gtest)
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES config.ini run.sh)
 

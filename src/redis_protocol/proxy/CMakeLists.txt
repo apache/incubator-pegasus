@@ -15,6 +15,10 @@ set(MY_PROJ_LIBS pegasus.rproxylib
                  pegasus.base
                  pegasus_geo_lib
                  pegasus_reporter
+                 prometheus-cpp-pull
+                 prometheus-cpp-push
+                 prometheus-cpp-core
+                 curl
                  event
                  s2
                  pegasus_client_static
@@ -22,7 +26,7 @@ set(MY_PROJ_LIBS pegasus.rproxylib
 
 set(MY_BINPLACES "config.ini")
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 # Avoid megabytes of warnings like:
 # rdsn/thirdparty/output/include/s2/s1angle.h:288:28: error:

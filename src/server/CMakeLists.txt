@@ -26,6 +26,10 @@ set(MY_PROJ_LIBS
     dsn.failure_detector.multimaster
     dsn.replication.zookeeper_provider
     pegasus_reporter
+    prometheus-cpp-pull
+    prometheus-cpp-push
+    prometheus-cpp-core
+    curl
     pegasus_client_static
     zookeeper_mt
     event
@@ -42,7 +46,7 @@ set(MY_PROJ_LIBS
     aio
     pthread)
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 

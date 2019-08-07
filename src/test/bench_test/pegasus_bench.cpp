@@ -27,7 +27,7 @@
 #include <util/random.h>
 #include <port/port_posix.h>
 #include <util/string_util.h>
-#include <monitoring/histogram.h>
+#include <rocksdb/statistics.h>
 #include <rocksdb/rate_limiter.h>
 #include <util/mutexlock.h>
 
@@ -355,8 +355,7 @@ private:
     uint64_t bytes_;
     uint64_t last_op_finish_;
     uint64_t last_report_finish_;
-    std::unordered_map<OperationType, std::shared_ptr<HistogramImpl>, std::hash<unsigned char>>
-        hist_;
+    std::shared_ptr<rocksdb::Statistics> hist_stats;
     std::string message_;
     bool exclude_from_merge_;
     ReporterAgent *reporter_agent_; // does not own
@@ -366,13 +365,13 @@ public:
     Stats() { Start(-1); }
 
     void SetReporterAgent(ReporterAgent *reporter_agent) { reporter_agent_ = reporter_agent; }
+    void SetHistStats(std::shared_ptr<Statistics> hist_stats_) { hist_stats = hist_stats_; }
 
     void Start(int id)
     {
         id_ = id;
         next_report_ = FLAGS_stats_interval ? FLAGS_stats_interval : 100;
         last_op_finish_ = start_;
-        hist_.clear();
         done_ = 0;
         last_report_done_ = 0;
         bytes_ = 0;
@@ -389,15 +388,6 @@ public:
     {
         if (other.exclude_from_merge_)
             return;
-
-        for (auto it = other.hist_.begin(); it != other.hist_.end(); ++it) {
-            auto this_it = hist_.find(it->first);
-            if (this_it != hist_.end()) {
-                this_it->second->Merge(*(other.hist_.at(it->first)));
-            } else {
-                hist_.insert({it->first, it->second});
-            }
-        }
 
         done_ += other.done_;
         bytes_ += other.bytes_;
@@ -472,15 +462,10 @@ public:
         if (reporter_agent_) {
             reporter_agent_->ReportFinishedOps(num_ops);
         }
-        if (FLAGS_histogram) {
+        if (FLAGS_histogram && hist_stats) {
             uint64_t now = FLAGS_env->NowMicros();
             uint64_t micros = now - last_op_finish_;
-
-            if (hist_.find(op_type) == hist_.end()) {
-                auto hist_temp = std::make_shared<HistogramImpl>();
-                hist_.insert({op_type, std::move(hist_temp)});
-            }
-            hist_[op_type]->Add(micros);
+            hist_stats->measureTime(op_type, micros);
 
             if (micros > 20000 && !FLAGS_stats_interval) {
                 fprintf(stderr, "long op: %" PRIu64 " micros%30s\r", micros, "");
@@ -574,14 +559,6 @@ public:
                 (long)throughput,
                 (extra.empty() ? "" : " "),
                 extra.c_str());
-        if (FLAGS_histogram) {
-            for (auto it = hist_.begin(); it != hist_.end(); ++it) {
-                fprintf(stdout,
-                        "Microseconds per %s:\n%s\n",
-                        OperationTypeString[it->first].c_str(),
-                        it->second->ToString().c_str());
-            }
-        }
         fflush(stdout);
     }
 };
@@ -1037,12 +1014,23 @@ public:
                 }
 
                 CombinedStats combined_stats;
+                std::shared_ptr<Statistics> hist_stats =
+                    FLAGS_histogram ? CreateDBStatistics() : nullptr;
+
                 for (int i = 0; i < num_repeat; i++) {
-                    Stats stats = RunBenchmark(num_threads, name, method);
+                    Stats stats = RunBenchmark(num_threads, name, method, hist_stats);
                     combined_stats.AddStats(stats);
                 }
                 if (num_repeat > 1) {
                     combined_stats.Report(name);
+                }
+                if (FLAGS_histogram) {
+                    for (auto type : OperationTypeString) {
+                        fprintf(stdout,
+                                "Microseconds per %s:\n%s\n",
+                                OperationTypeString[type.first].c_str(),
+                                hist_stats->getHistogramString(type.first).c_str());
+                    }
                 }
             }
             if (post_process_method != nullptr) {
@@ -1089,7 +1077,10 @@ private:
         }
     }
 
-    Stats RunBenchmark(int n, Slice name, void (Benchmark::*method)(ThreadState *))
+    Stats RunBenchmark(int n,
+                       Slice name,
+                       void (Benchmark::*method)(ThreadState *),
+                       std::shared_ptr<Statistics> hist_stats = nullptr)
     {
         SharedState shared;
         shared.total = n;
@@ -1138,6 +1129,7 @@ private:
             arg[i].shared = &shared;
             arg[i].thread = new ThreadState(i);
             arg[i].thread->stats.SetReporterAgent(reporter_agent.get());
+            arg[i].thread->stats.SetHistStats(hist_stats);
             arg[i].thread->shared = &shared;
             FLAGS_env->StartThread(ThreadBody, &arg[i]);
         }

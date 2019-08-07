@@ -16,10 +16,11 @@ set(MY_PROJ_LIBS
     pegasus_client_static
     dsn.replication.ddlclient
     dsn_replication_common
+    dsn_runtime
     )
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 if (UNIX)
     SET(CMAKE_INSTALL_RPATH ".")

@@ -33,6 +33,10 @@ set(MY_PROJ_LIBS
         PocoJSON
         crypto
         fmt
+        prometheus-cpp-push
+        prometheus-cpp-core
+        prometheus-cpp-pull
+        curl
         ${ROCKSDB_LINK_LIBRARIES}
         pegasus.base
         gtest
@@ -41,7 +45,7 @@ set(MY_PROJ_LIBS
 add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)
 
-set(MY_BOOST_PACKAGES system filesystem regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_BINPLACES config.ini run.sh)
 
