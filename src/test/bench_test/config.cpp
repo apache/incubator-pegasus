@@ -37,8 +37,10 @@ config::config()
         (int32_t)dsn_config_get_value_uint64("pegasus.benchmark", "batch_size", 0, "Batch size");
     _key_size = (int32_t)dsn_config_get_value_uint64(
         "pegasus.benchmark", "key_size", 0, "size of each key");
-    _compression_ratio = dsn_config_get_value_double(
-        "pegasus.benchmark", "compression_ratio", 0, "Arrange to generate values that shrink, to "
+    _compression_ratio = dsn_config_get_value_double("pegasus.benchmark",
+                                                     "compression_ratio",
+                                                     0,
+                                                     "Arrange to generate values that shrink, to "
                                                      "this fraction of their original size after "
                                                      "compression");
     _histogram = (int32_t)dsn_config_get_value_bool(
@@ -53,24 +55,35 @@ config::config()
         "Stats are reported every N operations when this is greater than zero");
     _stats_interval_seconds = (int32_t)dsn_config_get_value_uint64(
         "pegasus.benchmark", "stats_interval_seconds", 0, "Report stats every N seconds.");
-    _report_interval_seconds = dsn_config_get_value_uint64(
-        "pegasus.benchmark", "report_interval_seconds", 0, "If greater than zero, it will write "
+    _report_interval_seconds = dsn_config_get_value_uint64("pegasus.benchmark",
+                                                           "report_interval_seconds",
+                                                           0,
+                                                           "If greater than zero, it will write "
                                                            "simple stats in CVS format to "
                                                            "--report_file every N seconds");
-    _report_file = dsn_config_get_value_string(
-        "pegasus.benchmark", "report_file", "", "Filename where some simple stats are reported to "
-                                                "(if --report_interval_seconds is bigger than 0)");
-    _thread_status_per_interval = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "thread_status_per_interval", 0, "Takes and report a snapshot of the "
-                                                              "current status of each thread when "
-                                                              "this is greater than 0");
-    _benchmark_write_rate_limit = dsn_config_get_value_uint64(
-        "pegasus.benchmark", "benchmark_write_rate_limit", 0, "If non-zero, db_bench will "
+    _report_file = dsn_config_get_value_string("pegasus.benchmark",
+                                               "report_file",
+                                               "",
+                                               "Filename where some simple stats are reported to "
+                                               "(if --report_interval_seconds is bigger than 0)");
+    _thread_status_per_interval =
+        (int32_t)dsn_config_get_value_uint64("pegasus.benchmark",
+                                             "thread_status_per_interval",
+                                             0,
+                                             "Takes and report a snapshot of the "
+                                             "current status of each thread when "
+                                             "this is greater than 0");
+    _benchmark_write_rate_limit = dsn_config_get_value_uint64("pegasus.benchmark",
+                                                              "benchmark_write_rate_limit",
+                                                              0,
+                                                              "If non-zero, db_bench will "
                                                               "rate-limit the writes going into "
                                                               "RocksDB. This is the global rate in "
                                                               "bytes/second");
-    _benchmark_read_rate_limit = dsn_config_get_value_uint64(
-        "pegasus.benchmark", "benchmark_read_rate_limit", 0, "If non-zero, db_bench will "
+    _benchmark_read_rate_limit = dsn_config_get_value_uint64("pegasus.benchmark",
+                                                             "benchmark_read_rate_limit",
+                                                             0,
+                                                             "If non-zero, db_bench will "
                                                              "rate-limit the reads from RocksDB. "
                                                              "This is the global rate in "
                                                              "ops/second");
