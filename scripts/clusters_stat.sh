@@ -51,7 +51,7 @@ elif [ "$format" == "csv" ]; then
   echo "cluster,rs_count,version,minutes,available,table_count,storage_gb"
 else
   echo "ERROR: invalid format: $format"
-  exit -1
+  exit 1
 fi
 cluster_count=0
 rs_count_sum=0
@@ -63,6 +63,10 @@ do
   rs_version=`echo server_info | ./run.sh shell -n $cluster 2>&1 | grep 'replica-server' | \
       grep -o 'Pegasus Server [^ ]*' | head -n 1 | sed 's/SNAPSHOT/SN/' | awk '{print $3}'`
   result=`./scripts/pegasus_stat_available.sh $cluster $months`
+  if echo $result | grep '^ERROR'; then
+    echo "ERROR: process cluster $cluster failed"
+    continue
+  fi
   minutes=`echo $result | awk '{print $2}'`
   available=`echo $result | awk '{print $3}' | sed 's/data/-/'`
   app_count=`echo $result | awk '{print $4}'`
@@ -80,7 +84,7 @@ do
     echo -e "$cluster,$rs_count,$rs_version,$minutes,=\"$available_str\",$app_count,$data_size"
   else
     echo "ERROR: invalid format: $format"
-    exit -1
+    exit 1
   fi
   cluster_count=$((cluster_count + 1))
   rs_count_sum=$((rs_count_sum + rs_count))
@@ -110,7 +114,7 @@ elif [ "$format" == "csv" ]; then
   echo -e "(total:$cluster_count),$rs_count_sum,,$minutes,=\"$available_str\",$app_count_sum,$data_size_sum"
 else
   echo "ERROR: invalid format: $format"
-  exit -1
+  exit 1
 fi
 
 rm $all_result &>/dev/null

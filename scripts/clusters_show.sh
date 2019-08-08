@@ -69,8 +69,8 @@ do
   app_stat_result="/tmp/$UID.$PID.pegasus.clusters_status.app_stat_result"
   tmp_file="/tmp/$UID.$PID.pegasus.clusters_status.app_stat"
   echo "app_stat -o $app_stat_result" | ./run.sh shell -n $cluster &>$tmp_file
-  app_stat_ok=`grep "succeed" $tmp_file | wc -l`
-  if [ $app_stat_ok -ne 1 ]; then
+  app_stat_fail=`grep "\<failed\>" $tmp_file | wc -l`
+  if [ $app_stat_fail -eq 1 ]; then
     echo "ERROR: app stat failed, refer error to $tmp_file"
     exit 1
   fi
