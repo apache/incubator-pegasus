@@ -517,7 +517,7 @@ function usage_start_onebox()
     echo "   -s|--server_path <str>"
     echo "                     server binary path, default is ${DSN_ROOT}/bin/pegasus_server"
     echo "   --config_path"
-    echo "                     specify the config template path, default is ./src/server/config-server.ini in non-production env"
+    echo "                     specify the config template path, default is ./src/server/config.min.ini in non-production env"
     echo "                                                                  ./src/server/config.ini in production env"
     echo "   --use_product_config"
     echo "                     use the product config template"
