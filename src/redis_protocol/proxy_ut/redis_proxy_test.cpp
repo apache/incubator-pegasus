@@ -115,8 +115,7 @@ public:
             got_a_message = false;
             entry_index = 0;
             rr.length = 6;
-            rr.buffers = {
-                {"GEORADIUS"}, {""}, {"123.4"}, {"56.78"}, {"100"}, {"m"}};
+            rr.buffers = {{"GEORADIUS"}, {""}, {"123.4"}, {"56.78"}, {"100"}, {"m"}};
 
             const char *request_data = "*6\r\n$9\r\nGEORADIUS\r\n$0\r\n\r\n$5\r\n123.4\r\n$5\r\n56."
                                        "78\r\n$3\r\n100\r\n$1\r\nm\r\n";
@@ -130,8 +129,7 @@ public:
             got_a_message = false;
             entry_index = 0;
             rr.length = 5;
-            rr.buffers = {
-                {"GEORADIUSBYMEMBER"}, {""}, {"member1"}, {"1000.5"}, {"km"}};
+            rr.buffers = {{"GEORADIUSBYMEMBER"}, {""}, {"member1"}, {"1000.5"}, {"km"}};
 
             const char *request_data = "*5\r\n$17\r\nGEORADIUSBYMEMBER\r\n$0\r\n\r\n$"
                                        "7\r\nmember1\r\n$6\r\n1000.5\r\n$2\r\nkm\r\n";

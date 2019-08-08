@@ -17,6 +17,6 @@ set(MY_PROJ_LIBS
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
-set(MY_BINPLACES "config.ini")
+set(MY_BINPLACES config.ini run.sh)
 
 dsn_add_test()

@@ -133,8 +133,7 @@ TEST_F(pegasus_compression_options_test, compression_types_convert_fail)
 TEST_F(pegasus_compression_options_test, check_rocksdb_compression_types_default)
 {
     start();
-    check_db_compression_types({none, none, lz4, lz4, lz4, lz4},
-                               "start with default");
+    check_db_compression_types({none, none, lz4, lz4, lz4, lz4}, "start with default");
 }
 
 } // namespace server
