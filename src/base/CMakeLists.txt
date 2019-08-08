@@ -11,8 +11,8 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_SRC "")
 
-set(MY_PROJ_INC_PATH "../include")
-
-set(MY_PROJ_LIB_PATH "")
+set(MY_PROJ_INC_PATH "")
 
 dsn_add_static_library()
+
+target_include_directories(${MY_PROJ_NAME} PUBLIC $<TARGET_PROPERTY:RocksDB::rocksdb,INTERFACE_INCLUDE_DIRECTORIES>)
