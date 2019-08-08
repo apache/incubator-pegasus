@@ -9,12 +9,12 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include" "../../base")
+set(MY_PROJ_INC_PATH "../../base")
 
 set(MY_PROJ_LIBS "")
-
-set(MY_PROJ_LIB_PATH "")
 
 add_definitions(-Wno-attributes)
 
 dsn_add_static_library()
+
+target_link_libraries(${MY_PROJ_NAME} PRIVATE RocksDB::rocksdb) # TODO(huangwei5): dsn_add_static_library doesnt link libs, need fix

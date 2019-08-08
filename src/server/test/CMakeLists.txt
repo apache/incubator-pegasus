@@ -10,8 +10,6 @@ set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
 
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIB_PATH "../../../rocksdb/build")
-
 set(MY_PROJ_LIBS
         dsn_replica_server
         dsn_meta_server
@@ -23,6 +21,7 @@ set(MY_PROJ_LIBS
         dsn.failure_detector.multimaster
         dsn.replication.zookeeper_provider
         pegasus_reporter
+        RocksDB::rocksdb
         pegasus_client_static
         zookeeper_mt
         event
@@ -37,7 +36,6 @@ set(MY_PROJ_LIBS
         prometheus-cpp-core
         prometheus-cpp-pull
         curl
-        ${ROCKSDB_LINK_LIBRARIES}
         pegasus.base
         gtest
         z rt aio pthread
