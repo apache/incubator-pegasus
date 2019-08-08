@@ -94,3 +94,4 @@ LOG
 PACKAGE
 scripts/py_utils/*.pyc
 cmake-build-debug
+packages

@@ -89,7 +89,7 @@ int main(int argc, char **argv)
     uint64_t start = env->NowNanos();
     std::atomic<uint64_t> count(test_count);
     dsn::utils::notify_event get_completed;
-    
+
     // test search_radial by lat & lng
     for (int i = 0; i < test_count; ++i) {
         S2LatLng latlng(S2Testing::SamplePoint(rect));
