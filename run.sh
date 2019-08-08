@@ -517,7 +517,7 @@ function usage_start_onebox()
     echo "   -s|--server_path <str>"
     echo "                     server binary path, default is ${DSN_ROOT}/bin/pegasus_server"
     echo "   --config_path"
-    echo "                     specify the config template path, default is ./src/server/config-server.ini in non-production env"
+    echo "                     specify the config template path, default is ./src/server/config.min.ini in non-production env"
     echo "                                                                  ./src/server/config.ini in production env"
     echo "   --use_product_config"
     echo "                     use the product config template"
@@ -624,7 +624,7 @@ function run_start_onebox()
         sed -i 's/app_name = .*$/app_name = '"$APP_NAME"'/' ${ROOT}/config-server.ini
         sed -i 's/partition_count = .*$/partition_count = '"$PARTITION_COUNT"'/' ${ROOT}/config-server.ini
     else
-        [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config-server.ini
+        [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.min.ini
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
         sed "s/@LOCAL_IP@/${LOCAL_IP}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
             ${CONFIG_FILE} >${ROOT}/config-server.ini
