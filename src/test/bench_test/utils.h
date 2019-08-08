@@ -4,13 +4,10 @@
 
 #pragma once
 
-#include <thread>
 #include <string>
 
 namespace pegasus {
 namespace test {
-
-using thread = std::thread;
 
 enum operation_type : unsigned char
 {
@@ -19,6 +16,13 @@ enum operation_type : unsigned char
     kDelete,
     kScan,
     kOthers
+};
+
+enum write_mode
+{
+    RANDOM,
+    SEQUENTIAL,
+    UNIQUE_RANDOM
 };
 
 #undef PLATFORM_IS_LITTLE_ENDIAN

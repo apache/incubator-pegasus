@@ -24,8 +24,6 @@ static void append_with_space(std::string *str, const std::string &msg)
     str->append(msg.data(), msg.size());
 }
 
-static std::unordered_map<operation_type, std::string, std::hash<unsigned char>> operation_type_string = {
-            {kRead, "read"}, {kWrite, "write"}, {kDelete, "delete"}, {kScan, "scan"}, {kOthers, "op"}};
 
 stats::stats()
 {
@@ -37,12 +35,16 @@ void stats::set_reporter_agent(reporter_agent *reporter_agent)
     reporter_agent_ = reporter_agent;
 }
 
+void stats::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats_)
+{
+    hist_stats = hist_stats_;
+}
+
 void stats::start(int id)
 {
     id_ = id;
     next_report_ = config::get_instance()->_stats_interval ? config::get_instance()->_stats_interval : 100;
     last_op_finish_ = start_;
-    hist_.clear();
     done_ = 0;
     last_report_done_ = 0;
     bytes_ = 0;
@@ -59,15 +61,6 @@ void stats::merge(const stats &other)
 {
     if (other.exclude_from_merge_)
         return;
-
-    for (auto it = other.hist_.begin(); it != other.hist_.end(); ++it) {
-        auto this_it = hist_.find(it->first);
-        if (this_it != hist_.end()) {
-            this_it->second->Merge(*(other.hist_.at(it->first)));
-        } else {
-            hist_.insert({it->first, it->second});
-        }
-    }
 
     done_ += other.done_;
     bytes_ += other.bytes_;
@@ -152,15 +145,10 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
     if (reporter_agent_) {
         reporter_agent_->report_finished_ops(num_ops);
     }
-    if (config::get_instance()->_histogram) {
+    if (config::get_instance()->_histogram && hist_stats) {
         uint64_t now = flags_env->NowMicros();
         uint64_t micros = now - last_op_finish_;
-
-        if (hist_.find(op_type) == hist_.end()) {
-            auto hist_temp = std::make_shared<rocksdb::HistogramImpl>();
-            hist_.insert({op_type, std::move(hist_temp)});
-        }
-        hist_[op_type]->Add(micros);
+        hist_stats->measureTime(op_type, micros);
 
         if (micros > 20000 && !config::get_instance()->_stats_interval) {
             fprintf(stderr, "long op: %" PRIu64 " micros%30s\r", micros, "");
@@ -255,14 +243,6 @@ void stats::report(const std::string &name)
             (long)throughput,
             (extra.empty() ? "" : " "),
             extra.c_str());
-    if (config::get_instance()->_histogram) {
-        for (auto it = hist_.begin(); it != hist_.end(); ++it) {
-            fprintf(stdout,
-                    "Microseconds per %s:\n%s\n",
-                    operation_type_string[it->first].c_str(),
-                    it->second->ToString().c_str());
-        }
-    }
     fflush(stdout);
 }
 

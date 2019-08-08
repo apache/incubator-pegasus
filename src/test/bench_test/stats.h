@@ -15,6 +15,7 @@ class stats
 public:
     stats();
     void set_reporter_agent(reporter_agent *reporter_agent);
+    void set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats_);
     void start(int id);
     void merge(const stats &other);
     void stop();
@@ -38,8 +39,7 @@ private:
     uint64_t bytes_;
     uint64_t last_op_finish_;
     uint64_t last_report_finish_;
-    std::unordered_map<operation_type, std::shared_ptr<rocksdb::HistogramImpl>, std::hash<unsigned char>>
-            hist_;
+    std::shared_ptr<rocksdb::Statistics> hist_stats;
     std::string message_;
     bool exclude_from_merge_;
     reporter_agent *reporter_agent_; // does not own

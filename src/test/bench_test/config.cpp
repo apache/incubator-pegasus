@@ -3,6 +3,7 @@
 //
 
 #include "config.h"
+#include "utils.h"
 
 namespace pegasus {
 namespace test {
@@ -69,6 +70,8 @@ config::config() {
             "control the prefix size for HashSkipList and plain table");
     _keys_per_prefix = (int32_t)dsn_config_get_value_uint64(
             "pegasus.benchmark", "keys_per_prefix", 0,"");
+    _env = rocksdb::Env::Default();
+    _little_endian = PLATFORM_IS_LITTLE_ENDIAN;
 }
 }
 }

@@ -23,7 +23,7 @@ reporter_agent::reporter_agent(rocksdb::Env *env, const std::string &fname, uint
         abort();
     }
 
-    reporting_thread_ = thread([&]() { sleep_and_report(); });
+    reporting_thread_ = std::thread([&]() { sleep_and_report(); });
 }
 
 reporter_agent::~reporter_agent()

@@ -2,11 +2,11 @@
 // Created by mi on 2019/8/7.
 //
 
-#ifndef PEGASUS_CONFIG_H
-#define PEGASUS_CONFIG_H
+#pragma once
 
 #include <string>
 #include <dsn/utility/config_api.h>
+#include <rocksdb/env.h>
 
 namespace pegasus {
 namespace test {
@@ -40,11 +40,11 @@ struct config {
     uint64_t _benchmark_read_rate_limit;
     uint32_t _prefix_size;
     uint32_t _keys_per_prefix;
+    rocksdb::Env *_env;
+    bool _little_endian;
 
 private:
     config();
 };
 }
 }
-
-#endif //PEGASUS_CONFIG_H

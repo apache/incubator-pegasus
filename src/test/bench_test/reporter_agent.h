@@ -10,6 +10,7 @@
 #include <condition_variable>
 
 #include <rocksdb/env.h>
+#include <port/port_posix.h>
 
 #include "utils.h"
 
@@ -30,7 +31,7 @@ private:
     std::atomic<int64_t> total_ops_done_;
     int64_t last_report_;
     const uint64_t report_interval_secs_;
-    pegasus::test::thread reporting_thread_;
+    std::thread reporting_thread_;
     std::mutex mutex_;
     // will notify on stop
     std::condition_variable stop_cv_;
