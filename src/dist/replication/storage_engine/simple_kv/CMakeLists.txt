@@ -15,8 +15,6 @@ set(MY_PROJ_LIBS dsn_replica_server dsn_meta_server dsn_replication_client dsn_r
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
-set(MY_PROJ_LIB_PATH "")
-
 set(INI_FILES "")
 file(GLOB
     RES_FILES

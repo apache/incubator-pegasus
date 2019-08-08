@@ -9,8 +9,6 @@ set(MY_PROJ_INC_PATH "")
 
 set(MY_PROJ_LIBS "")
 
-set(MY_PROJ_LIB_PATH "")
-
 # Extra files that will be installed
 set(MY_BINPLACES "")
 

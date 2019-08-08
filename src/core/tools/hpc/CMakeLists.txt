@@ -14,8 +14,6 @@ ${CONQUEUE_INCLUDE_DIRS})
 
 set(MY_PROJ_LIBS "")
 
-set(MY_PROJ_LIB_PATH "")
-
 # Extra files that will be installed
 set(MY_BINPLACES "")
 

@@ -21,8 +21,6 @@ list(APPEND MY_PROJ_LIBS dsn_runtime)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
-set(MY_PROJ_LIB_PATH "")
-
 # Extra files that will be installed
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 

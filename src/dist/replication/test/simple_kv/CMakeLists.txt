@@ -30,13 +30,6 @@ set(MY_PROJ_LIBS dsn_replica_server
                  )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
-                
-set(MY_PROJ_LIB_PATH 
-        ${GTEST_LIB_DIR}
-        ${ZOOKEEPER_LIB_DIR}
-        ${LIBFDS_LIB_DIR}
-        ${POCO_LIB_DIR}
-        )
 
 # Extra files that will be installed
 FILE(GLOB CASE_FILES "case-*")

@@ -33,11 +33,6 @@ set(MY_PROJ_LIBS
     crypto
     )
 
-set(MY_PROJ_LIB_PATH
-    ${LIBFDS_LIB_DIR}
-    ${POCO_LIB_DIR}
-)
-
 # Extra files that will be installed
 set(MY_BINPLACES "")
 

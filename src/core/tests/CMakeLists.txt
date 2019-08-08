@@ -16,8 +16,6 @@ set(MY_PROJ_LIBS gtest
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
-set(MY_PROJ_LIB_PATH "${GTEST_LIB_DIR}")
-
 # Extra files that will be installed
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
                  "${CMAKE_CURRENT_SOURCE_DIR}/config-dup-key.ini"

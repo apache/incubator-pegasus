@@ -50,7 +50,7 @@ function(dsn_install_executable)
     endif()
 endfunction()
 
-function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PROJ_LIB_PATH PROJ_BINPLACES)
+function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PROJ_BINPLACES)
     if(NOT((PROJ_TYPE STREQUAL "STATIC") OR (PROJ_TYPE STREQUAL "SHARED") OR
            (PROJ_TYPE STREQUAL "EXECUTABLE") OR (PROJ_TYPE STREQUAL "OBJECT")))
         message(FATAL_ERROR "Invalid project type.")
@@ -62,9 +62,6 @@ function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PRO
 
     if(NOT (PROJ_INC_PATH STREQUAL ""))
         include_directories(${PROJ_INC_PATH})
-    endif()
-    if(NOT (PROJ_LIB_PATH STREQUAL ""))
-        link_directories(${PROJ_LIB_PATH})
     endif()
 
     if((PROJ_TYPE STREQUAL "STATIC") OR (PROJ_TYPE STREQUAL "OBJECT"))
@@ -95,7 +92,6 @@ endfunction(ms_add_project)
 #     "GLOB" for non-recursive search
 # - MY_PROJ_SRC
 # - MY_PROJ_INC_PATH TODO(wutao1): remove this
-# - MY_PROJ_LIB_PATH TODO(wutao1): remove this
 # - MY_PROJ_LIBS
 # - MY_BINPLACES
 #     Extra files that will be installed
@@ -129,9 +125,6 @@ function(dsn_add_project)
     if(NOT DEFINED MY_PROJ_LIBS)
         set(MY_PROJ_LIBS "")
     endif()
-    if(NOT DEFINED MY_PROJ_LIB_PATH)
-        set(MY_PROJ_LIB_PATH "")
-    endif()
     if(NOT DEFINED MY_BINPLACES)
         set(MY_BINPLACES "")
     endif()
@@ -143,7 +136,7 @@ function(dsn_add_project)
     if((MY_PROJ_TYPE STREQUAL "SHARED") OR (MY_PROJ_TYPE STREQUAL "EXECUTABLE"))
         set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${TEMP_LIBS} ${MY_BOOST_LIBS} ${DSN_SYSTEM_LIBS})
     endif()
-    ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_INC_PATH}" "${MY_PROJ_LIBS}" "${MY_PROJ_LIB_PATH}" "${MY_BINPLACES}")
+    ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_INC_PATH}" "${MY_PROJ_LIBS}" "${MY_BINPLACES}")
 endfunction(dsn_add_project)
 
 function(dsn_add_static_library)
@@ -277,11 +270,11 @@ function(dsn_setup_system_libs)
     )
 endfunction(dsn_setup_system_libs)
 
-function(dsn_setup_include_path)#TODO: remove this
+function(dsn_setup_include_path)#TODO(huangwei5): remove this
     include_directories(${DSN_THIRDPARTY_ROOT}/include)
 endfunction(dsn_setup_include_path)
 
-function(dsn_setup_link_path)#TODO: dsn_setup_thirdparty_libs()
+function(dsn_setup_link_path)#TODO(huangwei5): dsn_setup_thirdparty_libs()
     set(Boost_USE_MULTITHREADED ON)
     set(Boost_USE_STATIC_LIBS OFF)
     set(Boost_USE_STATIC_RUNTIME OFF)

@@ -13,8 +13,6 @@ set(MY_PROJ_INC_PATH ${CMAKE_SOURCE_DIR}/thirdparty/output/include/fds )
 
 set(MY_PROJ_LIBS "")
 
-set(MY_PROJ_LIB_PATH "")
-
 #Extra files that will be installed
 set(MY_BINPLACES "")
 

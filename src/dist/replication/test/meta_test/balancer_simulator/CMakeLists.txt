@@ -22,8 +22,6 @@ set(MY_PROJ_LIBS
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
-set(MY_PROJ_LIB_PATH "")
-
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
