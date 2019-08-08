@@ -14,8 +14,8 @@ import copy
 #
 
 # account info
-serviceAccount = ""
-serviceSeedMd5 = ""
+serviceAccount = "service-pegasus-falcon"
+serviceSeedMd5 = "bc3b3804d9171fec9f92ec0e32f2d6f8"
 
 ###############################################################################
 
