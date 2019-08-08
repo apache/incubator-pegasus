@@ -84,6 +84,12 @@ public:
         return rpc.response();
     }
 
+    void recover_from_meta_state()
+    {
+        dup_svc().recover_from_meta_state();
+        wait_all();
+    }
+
     /// === Tests ===
 
     void test_new_dup_from_init()
@@ -158,6 +164,31 @@ public:
                 ASSERT_EQ(app->duplicating, true);
             }
         }
+    }
+
+    void test_add_duplication_freezed()
+    {
+        std::string test_app = "test-app";
+
+        create_app(test_app);
+        auto app = find_app(test_app);
+
+        auto test_dup = create_dup(test_app, "slave-cluster", true);
+        ASSERT_EQ(test_dup.err, ERR_OK);
+        ASSERT_TRUE(app->duplications[test_dup.dupid] != nullptr);
+        auto dup = app->duplications[test_dup.dupid];
+        ASSERT_EQ(dup->_status, duplication_status::DS_PAUSE);
+
+        // reset meta server states
+        _ss.reset();
+        _ms.reset(nullptr);
+        SetUp();
+
+        // ensure dup is still paused after meta fail-over.
+        recover_from_meta_state();
+        app = find_app(test_app);
+        dup = app->duplications[test_dup.dupid];
+        ASSERT_EQ(dup->_status, duplication_status::DS_PAUSE);
     }
 
     std::shared_ptr<server_state> _ss;
@@ -259,6 +290,32 @@ TEST_F(meta_duplication_service_test, change_duplication_status)
 // this test ensures that dupid is always increment and larger than zero.
 TEST_F(meta_duplication_service_test, new_dup_from_init) { test_new_dup_from_init(); }
 
+TEST_F(meta_duplication_service_test, remove_dup)
+{
+    std::string test_app = "test-app";
+    create_app(test_app);
+    auto app = find_app(test_app);
+
+    auto resp = create_dup(test_app);
+    ASSERT_EQ(ERR_OK, resp.err);
+    dupid_t dupid1 = resp.dupid;
+
+    ASSERT_EQ(app->duplicating, true);
+
+    auto resp2 = change_dup_status(test_app, dupid1, duplication_status::DS_REMOVED);
+    ASSERT_EQ(ERR_OK, resp2.err);
+
+    ASSERT_EQ(app->duplicating, false);
+
+    // reset meta server states
+    _ss.reset();
+    _ms.reset(nullptr);
+    SetUp();
+    recover_from_meta_state();
+
+    ASSERT_EQ(app->duplicating, false);
+}
+
 TEST_F(meta_duplication_service_test, query_duplication_info)
 {
     std::string test_app = "test-app";
@@ -281,6 +338,48 @@ TEST_F(meta_duplication_service_test, query_duplication_info)
     ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(resp.entry_list.size(), 0);
 }
+
+TEST_F(meta_duplication_service_test, re_add_duplication)
+{
+    std::string test_app = "test-app";
+
+    create_app(test_app);
+    auto app = find_app(test_app);
+
+    auto test_dup = create_dup(test_app);
+    ASSERT_EQ(test_dup.err, ERR_OK);
+    ASSERT_TRUE(app->duplications[test_dup.dupid] != nullptr);
+    auto resp = change_dup_status(test_app, test_dup.dupid, duplication_status::DS_REMOVED);
+    ASSERT_EQ(resp.err, ERR_OK);
+    ASSERT_TRUE(app->duplications.find(test_dup.dupid) == app->duplications.end());
+
+    sleep(1);
+
+    auto test_dup_2 = create_dup(test_app);
+    ASSERT_EQ(test_dup_2.appid, app->app_id);
+    ASSERT_EQ(test_dup_2.err, ERR_OK);
+
+    // once duplication is removed, all its state is not valid anymore.
+    ASSERT_EQ(app->duplications.size(), 1);
+    ASSERT_NE(test_dup.dupid, test_dup_2.dupid);
+
+    auto dup_list = query_dup_info(test_app).entry_list;
+    ASSERT_EQ(dup_list.size(), 1);
+    ASSERT_EQ(dup_list.begin()->status, duplication_status::DS_START);
+    ASSERT_EQ(dup_list.begin()->dupid, test_dup_2.dupid);
+
+    // reset meta server states
+    _ss.reset();
+    _ms.reset(nullptr);
+    SetUp();
+
+    recover_from_meta_state();
+    app = find_app(test_app);
+    ASSERT_TRUE(app->duplications.find(test_dup.dupid) == app->duplications.end());
+    ASSERT_EQ(app->duplications.size(), 1);
+}
+
+TEST_F(meta_duplication_service_test, add_duplication_freezed) { test_add_duplication_freezed(); }
 
 } // namespace replication
 } // namespace dsn

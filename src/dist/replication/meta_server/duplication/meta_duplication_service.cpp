@@ -231,5 +231,109 @@ meta_duplication_service::new_dup_from_init(const std::string &remote_cluster_na
     return dup;
 }
 
+// ThreadPool(WRITE): THREAD_POOL_META_STATE
+void meta_duplication_service::recover_from_meta_state()
+{
+    ddebug_f("recovering duplication states from meta storage");
+
+    // /<app>/duplication/<dupid>/<partition_idx>
+    //                       |         |-> confirmed_decree
+    //                       |
+    //                       |-> json of dup info
+
+    for (const auto &kv : _state->_exist_apps) {
+        std::shared_ptr<app_state> app = kv.second;
+        if (app->status != app_status::AS_AVAILABLE) {
+            continue;
+        }
+
+        _meta_svc->get_meta_storage()->get_children(
+            get_duplication_path(*app),
+            [this, app](bool node_exists, const std::vector<std::string> &dup_id_list) {
+                if (!node_exists) {
+                    // if there's no duplication
+                    return;
+                }
+                for (const std::string &raw_dup_id : dup_id_list) {
+                    dupid_t dup_id;
+                    if (!buf2int32(raw_dup_id, dup_id)) {
+                        // unlikely
+                        derror_f("invalid duplication path: {}",
+                                 get_duplication_path(*app, raw_dup_id));
+                        return;
+                    }
+                    do_restore_duplication(dup_id, app);
+                }
+            });
+    }
+}
+
+// ThreadPool(WRITE): THREAD_POOL_META_STATE
+void meta_duplication_service::do_restore_duplication_progress(
+    const duplication_info_s_ptr &dup, const std::shared_ptr<app_state> &app)
+{
+    for (int partition_idx = 0; partition_idx < app->partition_count; partition_idx++) {
+        std::string str_pidx = std::to_string(partition_idx);
+
+        // <app_path>/duplication/<dup_id>/<partition_index>
+        std::string partition_path = get_partition_path(dup, str_pidx);
+
+        _meta_svc->get_meta_storage()->get_data(
+            std::move(partition_path), [dup, partition_idx](const blob &value) {
+                // value is confirmed_decree encoded in string.
+
+                if (value.size() == 0) {
+                    // not found
+                    dup->init_progress(partition_idx, invalid_decree);
+                    return;
+                }
+
+                int64_t confirmed_decree = invalid_decree;
+                if (!buf2int64(value, confirmed_decree)) {
+                    derror_dup(dup,
+                               "invalid confirmed_decree {} on partition_idx {}",
+                               value.to_string(),
+                               partition_idx);
+                    return; // fail fast
+                }
+
+                dup->init_progress(partition_idx, confirmed_decree);
+
+                ddebug_dup(dup,
+                           "initialize progress from metastore [partition_idx: {}, confirmed: {}]",
+                           partition_idx,
+                           confirmed_decree);
+            });
+    }
+}
+
+// ThreadPool(WRITE): THREAD_POOL_META_STATE
+void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
+                                                      std::shared_ptr<app_state> app)
+{
+    std::string store_path = get_duplication_path(*app, std::to_string(dup_id));
+
+    // restore duplication info from json
+    _meta_svc->get_meta_storage()->get_data(
+        std::string(store_path),
+        [ dup_id, this, app = std::move(app), store_path ](const blob &json) {
+            zauto_write_lock l(app_lock());
+
+            auto dup = duplication_info::decode_from_blob(
+                dup_id, app->app_id, app->partition_count, store_path, json);
+            if (nullptr == dup) {
+                derror_f("failed to decode json \"{}\" on path {}", json.to_string(), store_path);
+                return; // fail fast
+            }
+            if (dup->is_valid()) {
+                app->duplications[dup->id] = dup;
+                refresh_duplicating_no_lock(app);
+
+                // restore progress
+                do_restore_duplication_progress(dup, app);
+            }
+        });
+}
+
 } // namespace replication
 } // namespace dsn

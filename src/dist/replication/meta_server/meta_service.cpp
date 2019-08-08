@@ -315,6 +315,7 @@ error_code meta_service::start()
     }
 
     initialize_duplication_service();
+    recover_duplication_from_meta_state();
 
     _split_svc = dsn::make_unique<meta_split_service>(this);
 
@@ -826,6 +827,13 @@ void meta_service::on_query_duplication_info(duplication_query_rpc rpc)
         _dup_svc->query_duplication_info(rpc.request(), rpc.response());
     } else {
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+    }
+}
+
+void meta_service::recover_duplication_from_meta_state()
+{
+    if (_dup_svc) {
+        _dup_svc->recover_from_meta_state();
     }
 }
 

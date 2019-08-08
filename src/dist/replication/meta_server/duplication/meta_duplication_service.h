@@ -62,6 +62,9 @@ public:
 
     void change_duplication_status(duplication_status_change_rpc rpc);
 
+    // Recover from meta state storage.
+    void recover_from_meta_state();
+
 private:
     void do_add_duplication(std::shared_ptr<app_state> &app,
                             duplication_info_s_ptr &dup,
@@ -71,6 +74,11 @@ private:
                                       duplication_info_s_ptr &dup,
                                       duplication_status_change_rpc &rpc);
 
+    void do_restore_duplication(dupid_t dup_id, std::shared_ptr<app_state> app);
+
+    void do_restore_duplication_progress(const duplication_info_s_ptr &dup,
+                                         const std::shared_ptr<app_state> &app);
+
     // Get zk path for duplication.
     std::string get_duplication_path(const app_state &app) const
     {
@@ -79,6 +87,11 @@ private:
     std::string get_duplication_path(const app_state &app, const std::string &dupid) const
     {
         return get_duplication_path(app) + "/" + dupid;
+    }
+    static std::string get_partition_path(const duplication_info_s_ptr &dup,
+                                          const std::string &partition_idx)
+    {
+        return dup->store_path + "/" + partition_idx;
     }
 
     // Create a new duplication from INIT state.
