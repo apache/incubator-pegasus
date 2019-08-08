@@ -14,17 +14,18 @@
 namespace pegasus {
 namespace test {
 
-static std::unordered_map<operation_type, std::string, std::hash<unsigned char>> operation_type_string = {
+static std::unordered_map<operation_type, std::string, std::hash<unsigned char>>
+    operation_type_string = {
         {kRead, "read"}, {kWrite, "write"}, {kDelete, "delete"}, {kScan, "scan"}, {kOthers, "op"}};
 
 benchmark::benchmark()
-: num_(config::get_instance()->_num_pairs),
-  value_size_(config::get_instance()->_value_size),
-  key_size_(config::get_instance()->_key_size),
-  prefix_size_(config::get_instance()->_prefix_size),
-  keys_per_prefix_(config::get_instance()->_keys_per_prefix),
-  entries_per_batch_(1),
-  read_random_exp_range_(0.0)
+    : num_(config::get_instance()->_num_pairs),
+      value_size_(config::get_instance()->_value_size),
+      key_size_(config::get_instance()->_key_size),
+      prefix_size_(config::get_instance()->_prefix_size),
+      keys_per_prefix_(config::get_instance()->_keys_per_prefix),
+      entries_per_batch_(1),
+      read_random_exp_range_(0.0)
 {
     if (config::get_instance()->_prefix_size > config::get_instance()->_key_size) {
         fprintf(stderr, "prefix size is larger than key size");
@@ -156,7 +157,7 @@ void benchmark::run()
 
             combined_stats combined_stats_;
             std::shared_ptr<rocksdb::Statistics> hist_stats =
-                    config::get_instance()->_histogram ? rocksdb::CreateDBStatistics() : nullptr;
+                config::get_instance()->_histogram ? rocksdb::CreateDBStatistics() : nullptr;
 
             for (int i = 0; i < num_repeat; i++) {
                 stats stats_ = run_benchmark(num_threads, name, method, hist_stats);
@@ -209,11 +210,10 @@ void benchmark::thread_body(void *v)
     }
 }
 
-stats benchmark::run_benchmark(
-        int n,
-        const std::string &name,
-        void (benchmark::*method)(thread_state *),
-        std::shared_ptr<rocksdb::Statistics> hist_stats)
+stats benchmark::run_benchmark(int n,
+                               const std::string &name,
+                               void (benchmark::*method)(thread_state *),
+                               std::shared_ptr<rocksdb::Statistics> hist_stats)
 {
     shared_state shared;
     shared.total = n;
@@ -222,21 +222,21 @@ stats benchmark::run_benchmark(
     shared.start = false;
     if (config::get_instance()->_benchmark_write_rate_limit > 0) {
         shared.write_rate_limiter.reset(
-                rocksdb::NewGenericRateLimiter(config::get_instance()->_benchmark_write_rate_limit));
+            rocksdb::NewGenericRateLimiter(config::get_instance()->_benchmark_write_rate_limit));
     }
     if (config::get_instance()->_benchmark_read_rate_limit > 0) {
-        shared.read_rate_limiter.reset(NewGenericRateLimiter(config::get_instance()->_benchmark_read_rate_limit,
-                                                             100000 /* refill_period_us */,
-                                                             10 /* fairness */,
-                                                             rocksdb::RateLimiter::Mode::kReadsOnly));
+        shared.read_rate_limiter.reset(
+            NewGenericRateLimiter(config::get_instance()->_benchmark_read_rate_limit,
+                                  100000 /* refill_period_us */,
+                                  10 /* fairness */,
+                                  rocksdb::RateLimiter::Mode::kReadsOnly));
     }
 
     std::unique_ptr<reporter_agent> reporter_agent_;
     if (config::get_instance()->_report_interval_seconds > 0) {
-        reporter_agent_.reset(new reporter_agent(
-                config::get_instance()->_env,
-                config::get_instance()->_report_file,
-                config::get_instance()->_report_interval_seconds));
+        reporter_agent_.reset(new reporter_agent(config::get_instance()->_env,
+                                                 config::get_instance()->_report_file,
+                                                 config::get_instance()->_report_interval_seconds));
     }
 
     thread_arg *arg = new thread_arg[n];
@@ -244,20 +244,20 @@ stats benchmark::run_benchmark(
     for (int i = 0; i < n; i++) {
 #ifdef NUMA
         if (FLAGS_enable_numa) {
-                // Performs a local allocation of memory to threads in numa node.
-                int n_nodes = numa_num_task_nodes(); // Number of nodes in NUMA.
-                numa_exit_on_error = 1;
-                int numa_node = i % n_nodes;
-                bitmask *nodes = numa_allocate_nodemask();
-                numa_bitmask_clearall(nodes);
-                numa_bitmask_setbit(nodes, numa_node);
-                // numa_bind() call binds the process to the node and these
-                // properties are passed on to the thread that is created in
-                // StartThread method called later in the loop.
-                numa_bind(nodes);
-                numa_set_strict(1);
-                numa_free_nodemask(nodes);
-            }
+            // Performs a local allocation of memory to threads in numa node.
+            int n_nodes = numa_num_task_nodes(); // Number of nodes in NUMA.
+            numa_exit_on_error = 1;
+            int numa_node = i % n_nodes;
+            bitmask *nodes = numa_allocate_nodemask();
+            numa_bitmask_clearall(nodes);
+            numa_bitmask_setbit(nodes, numa_node);
+            // numa_bind() call binds the process to the node and these
+            // properties are passed on to the thread that is created in
+            // StartThread method called later in the loop.
+            numa_bind(nodes);
+            numa_set_strict(1);
+            numa_free_nodemask(nodes);
+        }
 #endif
         arg[i].bm = this;
         arg[i].method = method;
@@ -296,10 +296,7 @@ stats benchmark::run_benchmark(
     return merge_stats;
 }
 
-void benchmark::write_random_rrdb(thread_state *thread)
-{
-    do_write_rrdb(thread, RANDOM);
-}
+void benchmark::write_random_rrdb(thread_state *thread) { do_write_rrdb(thread, RANDOM); }
 
 void benchmark::do_write_rrdb(thread_state *thread, write_mode write_mode)
 {
@@ -319,13 +316,12 @@ void benchmark::do_write_rrdb(thread_state *thread, write_mode write_mode)
         thread->_stats.add_message(msg);
     }
 
-    random_generator gen = random_generator(
-            config::get_instance()->_compression_ratio,
-            config::get_instance()->_value_size);
+    random_generator gen = random_generator(config::get_instance()->_compression_ratio,
+                                            config::get_instance()->_value_size);
     int64_t bytes = 0;
-    pegasus_client *client = pegasus_client_factory::get_client(
-            config::get_instance()->_pegasus_cluster_name.c_str(),
-            config::get_instance()->_pegasus_app_name.c_str());
+    pegasus_client *client =
+        pegasus_client_factory::get_client(config::get_instance()->_pegasus_cluster_name.c_str(),
+                                           config::get_instance()->_pegasus_app_name.c_str());
     if (client == nullptr) {
         fprintf(stderr, "create client error\n");
         exit(1);
@@ -335,17 +331,16 @@ void benchmark::do_write_rrdb(thread_state *thread, write_mode write_mode)
     std::string key = allocate_key(&key_guard);
     while (!duration.done(1)) {
         if (thread->_shared->write_rate_limiter.get() != nullptr) {
-            thread->_shared->write_rate_limiter->Request(value_size_ + key_size_, rocksdb::Env::IO_HIGH);
+            thread->_shared->write_rate_limiter->Request(value_size_ + key_size_,
+                                                         rocksdb::Env::IO_HIGH);
         }
         int64_t rand_num = key_gen->next();
         generate_key_from_int(rand_num, config::get_instance()->_num_pairs, &key);
         int try_count = 0;
         while (true) {
             try_count++;
-            int ret = client->set(key,
-                                  "",
-                                  gen.generate(value_size_),
-                                  config::get_instance()->_pegasus_timeout_ms);
+            int ret = client->set(
+                key, "", gen.generate(value_size_), config::get_instance()->_pegasus_timeout_ms);
             if (ret == ::pegasus::PERR_OK) {
                 bytes += value_size_ + key_size_;
                 break;
@@ -373,11 +368,12 @@ int64_t benchmark::get_random_key()
                             static_cast<long double>(kBigInt) * read_random_exp_range_;
         long double exp_ran = std::exp(order);
         uint64_t rand_num = static_cast<int64_t>(
-                exp_ran * static_cast<long double>(config::get_instance()->_num_pairs));
+            exp_ran * static_cast<long double>(config::get_instance()->_num_pairs));
         // Map to a different number to avoid locality.
         const uint64_t kBigPrime = 0x5bd1e995;
         // Overflow is like %(2^64). Will have little impact of results.
-        key_rand = static_cast<int64_t>((rand_num * kBigPrime) % config::get_instance()->_num_pairs);
+        key_rand =
+            static_cast<int64_t>((rand_num * kBigPrime) % config::get_instance()->_num_pairs);
     }
     return key_rand;
 }
@@ -389,15 +385,16 @@ void benchmark::read_random_rrdb(thread_state *thread)
     int64_t bytes = 0;
     std::unique_ptr<const char[]> key_guard;
     std::string key = allocate_key(&key_guard);
-    pegasus_client *client = pegasus_client_factory::get_client(
-            config::get_instance()->_pegasus_cluster_name.c_str(),
-            config::get_instance()->_pegasus_app_name.c_str());
+    pegasus_client *client =
+        pegasus_client_factory::get_client(config::get_instance()->_pegasus_cluster_name.c_str(),
+                                           config::get_instance()->_pegasus_app_name.c_str());
     if (client == nullptr) {
         fprintf(stderr, "Create client error\n");
         exit(1);
     }
 
-    duration duration(config::get_instance()->_duration_seconds, config::get_instance()->_num_pairs);
+    duration duration(config::get_instance()->_duration_seconds,
+                      config::get_instance()->_num_pairs);
     while (!duration.done(1)) {
         // We use same key_rand as seed for key and column family so that we can
         // deterministically find the cfh corresponding to a particular key, as it
@@ -448,9 +445,9 @@ void benchmark::do_delete_rrdb(thread_state *thread, bool seq)
     std::unique_ptr<const char[]> key_guard;
     std::string key = allocate_key(&key_guard);
 
-    pegasus_client *client = pegasus_client_factory::get_client(
-            config::get_instance()->_pegasus_cluster_name.c_str(),
-            config::get_instance()->_pegasus_app_name.c_str());
+    pegasus_client *client =
+        pegasus_client_factory::get_client(config::get_instance()->_pegasus_cluster_name.c_str(),
+                                           config::get_instance()->_pegasus_app_name.c_str());
     if (client == nullptr) {
         fprintf(stderr, "create client error\n");
         exit(1);
@@ -477,10 +474,7 @@ void benchmark::do_delete_rrdb(thread_state *thread, bool seq)
     }
 }
 
-void benchmark::delete_random_rrdb(thread_state *thread)
-{
-    do_delete_rrdb(thread, false);
-}
+void benchmark::delete_random_rrdb(thread_state *thread) { do_delete_rrdb(thread, false); }
 
 void benchmark::print_header()
 {
@@ -489,19 +483,30 @@ void benchmark::print_header()
     fprintf(stdout,
             "Values:     %d bytes each (%d bytes after compression)\n",
             config::get_instance()->_value_size,
-            static_cast<int>(config::get_instance()->_value_size * config::get_instance()->_compression_ratio + 0.5));
+            static_cast<int>(config::get_instance()->_value_size *
+                                 config::get_instance()->_compression_ratio +
+                             0.5));
     fprintf(stdout, "Entries:    %" PRIu64 "\n", num_);
     fprintf(stdout, "Prefix:    %d bytes\n", config::get_instance()->_prefix_size);
     fprintf(stdout, "Keys per prefix:    %" PRIu64 "\n", keys_per_prefix_);
     fprintf(stdout,
             "RawSize:    %.1f MB (estimated)\n",
-            ((static_cast<int64_t>(config::get_instance()->_key_size + config::get_instance()->_value_size) * num_) / 1048576.0));
+            ((static_cast<int64_t>(config::get_instance()->_key_size +
+                                   config::get_instance()->_value_size) *
+              num_) /
+             1048576.0));
     fprintf(stdout,
             "FileSize:   %.1f MB (estimated)\n",
-            (((config::get_instance()->_key_size
-               + config::get_instance()->_value_size * config::get_instance()->_compression_ratio) * num_) / 1048576.0));
-    fprintf(stdout, "Write rate: %" PRIu64 " bytes/second\n", config::get_instance()->_benchmark_write_rate_limit);
-    fprintf(stdout, "Read rate: %" PRIu64 " ops/second\n", config::get_instance()->_benchmark_read_rate_limit);
+            (((config::get_instance()->_key_size +
+               config::get_instance()->_value_size * config::get_instance()->_compression_ratio) *
+              num_) /
+             1048576.0));
+    fprintf(stdout,
+            "Write rate: %" PRIu64 " bytes/second\n",
+            config::get_instance()->_benchmark_write_rate_limit);
+    fprintf(stdout,
+            "Read rate: %" PRIu64 " ops/second\n",
+            config::get_instance()->_benchmark_read_rate_limit);
     if (config::get_instance()->_enable_numa) {
         fprintf(stderr, "Running in NUMA enabled mode.\n");
 #ifndef NUMA
@@ -509,9 +514,9 @@ void benchmark::print_header()
         exit(1);
 #else
         if (numa_available() == -1) {
-                fprintf(stderr, "NUMA is not supported by the system.\n");
-                exit(1);
-            }
+            fprintf(stderr, "NUMA is not supported by the system.\n");
+            exit(1);
+        }
 #endif
     }
 

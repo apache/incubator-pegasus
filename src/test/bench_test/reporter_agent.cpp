@@ -8,8 +8,14 @@
 namespace pegasus {
 namespace test {
 
-reporter_agent::reporter_agent(rocksdb::Env *env, const std::string &fname, uint64_t report_interval_secs)
-: env_(env), total_ops_done_(0), last_report_(0), report_interval_secs_(report_interval_secs), stop_(false)
+reporter_agent::reporter_agent(rocksdb::Env *env,
+                               const std::string &fname,
+                               uint64_t report_interval_secs)
+    : env_(env),
+      total_ops_done_(0),
+      last_report_(0),
+      report_interval_secs_(report_interval_secs),
+      stop_(false)
 {
     auto s = env_->NewWritableFile(fname, &report_file_, rocksdb::EnvOptions());
     if (s.ok()) {
@@ -37,15 +43,9 @@ reporter_agent::~reporter_agent()
 }
 
 // thread safe
-void reporter_agent::report_finished_ops(int64_t num_ops)
-{
-    total_ops_done_.fetch_add(num_ops);
-}
+void reporter_agent::report_finished_ops(int64_t num_ops) { total_ops_done_.fetch_add(num_ops); }
 
-std::string reporter_agent::header() const
-{
-    return "secs_elapsed,interval_qps";
-}
+std::string reporter_agent::header() const { return "secs_elapsed,interval_qps"; }
 
 void reporter_agent::sleep_and_report()
 {
@@ -54,9 +54,9 @@ void reporter_agent::sleep_and_report()
     while (true) {
         {
             std::unique_lock<std::mutex> lk(mutex_);
-            if (stop_ ||
-                stop_cv_.wait_for(
-                        lk, std::chrono::seconds(report_interval_secs_), [&]() { return stop_; })) {
+            if (stop_ || stop_cv_.wait_for(lk, std::chrono::seconds(report_interval_secs_), [&]() {
+                    return stop_;
+                })) {
                 // stopping
                 break;
             }
@@ -65,7 +65,7 @@ void reporter_agent::sleep_and_report()
         auto total_ops_done_snapshot = total_ops_done_.load();
         // round the seconds elapsed
         auto secs_elapsed =
-                (env_->NowMicros() - time_started + kMicrosInSecond / 2) / kMicrosInSecond;
+            (env_->NowMicros() - time_started + kMicrosInSecond / 2) / kMicrosInSecond;
         std::string report = rocksdb::ToString(secs_elapsed) + "," +
                              rocksdb::ToString(total_ops_done_snapshot - last_report_) + "\n";
         auto s = report_file_->Append(report);

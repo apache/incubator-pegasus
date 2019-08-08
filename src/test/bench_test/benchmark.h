@@ -43,7 +43,7 @@ struct shared_state
 // Per-thread state for concurrent executions of the same benchmark.
 struct thread_state
 {
-    int _tid;       // 0..n-1 when running in n threads
+    int _tid; // 0..n-1 when running in n threads
     pegasus::test::stats _stats;
     shared_state *_shared;
 
@@ -60,7 +60,8 @@ struct thread_arg
     void (benchmark::*method)(thread_state *);
 };
 
-class benchmark {
+class benchmark
+{
 public:
     benchmark();
     void run();
@@ -70,11 +71,10 @@ private:
     static void thread_body(void *v);
 
     /** benchmark operations **/
-    stats run_benchmark(
-            int n,
-            const std::string &name,
-            void (benchmark::*method)(thread_state *),
-            std::shared_ptr<rocksdb::Statistics> hist_stats = nullptr);
+    stats run_benchmark(int n,
+                        const std::string &name,
+                        void (benchmark::*method)(thread_state *),
+                        std::shared_ptr<rocksdb::Statistics> hist_stats = nullptr);
     void write_random_rrdb(thread_state *thread);
     void do_write_rrdb(thread_state *thread, write_mode write_mode);
     int64_t get_random_key();

@@ -9,7 +9,8 @@
 
 namespace pegasus {
 namespace test {
-class duration {
+class duration
+{
 public:
     duration(uint64_t max_seconds, int64_t max_ops, int64_t ops_per_stage = 0);
     int64_t get_stage();

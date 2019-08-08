@@ -10,7 +10,8 @@
 namespace pegasus {
 namespace test {
 
-class key_generator {
+class key_generator
+{
 public:
     key_generator(write_mode mode, uint64_t num, uint64_t num_per_set = 64 * 1024);
     uint64_t next();
@@ -21,7 +22,5 @@ private:
     uint64_t _next;
     std::vector<uint64_t> _values;
 };
-
 }
 }
-

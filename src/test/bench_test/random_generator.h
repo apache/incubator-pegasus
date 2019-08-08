@@ -10,7 +10,8 @@
 namespace pegasus {
 namespace test {
 // Helper for quickly generating random data.
-class random_generator {
+class random_generator
+{
 public:
     random_generator(double compression_ratio, uint32_t value_size);
     std::string random_string(int len, std::string *dst);

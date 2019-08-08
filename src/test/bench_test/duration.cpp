@@ -19,10 +19,7 @@ duration::duration(uint64_t max_seconds, int64_t max_ops, int64_t ops_per_stage)
     _start_at = config::get_instance()->_env->NowMicros();
 }
 
-int64_t duration::get_stage()
-{
-    return std::min(_ops, _max_ops - 1) / _ops_per_stage;
-}
+int64_t duration::get_stage() { return std::min(_ops, _max_ops - 1) / _ops_per_stage; }
 
 bool duration::done(int64_t increment)
 {

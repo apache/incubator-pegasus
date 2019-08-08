@@ -16,7 +16,8 @@
 
 namespace pegasus {
 namespace test {
-class reporter_agent {
+class reporter_agent
+{
 public:
     reporter_agent(rocksdb::Env *env, const std::string &fname, uint64_t report_interval_secs);
     ~reporter_agent();

@@ -45,7 +45,4 @@ int db_bench_tool(int argc, char **argv)
     return 0;
 }
 
-int main(int argc, char **argv)
-{
-    return db_bench_tool(argc, argv);
-}
+int main(int argc, char **argv) { return db_bench_tool(argc, argv); }

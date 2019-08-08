@@ -33,7 +33,8 @@ std::string random_generator::random_string(int len, std::string *dst)
     return *dst;
 }
 
-std::string random_generator::compressible_string(double compressed_fraction, int len, std::string *dst)
+std::string
+random_generator::compressible_string(double compressed_fraction, int len, std::string *dst)
 {
     int raw = static_cast<int>(len * compressed_fraction);
     if (raw < 1)
@@ -60,9 +61,6 @@ std::string random_generator::generate(unsigned int len)
     return _data.substr(_pos - len, len);
 }
 
-uint32_t random_generator::uniform(int n) {
-    return dsn::rand::next_u32() % n;
-}
-
+uint32_t random_generator::uniform(int n) { return dsn::rand::next_u32() % n; }
 }
 }

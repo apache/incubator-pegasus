@@ -12,7 +12,8 @@ namespace pegasus {
 namespace test {
 
 /** Thread safety singleton */
-struct config {
+struct config
+{
     static config *get_instance();
 
     /** config parameters */

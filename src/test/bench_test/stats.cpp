@@ -24,16 +24,9 @@ static void append_with_space(std::string *str, const std::string &msg)
     str->append(msg.data(), msg.size());
 }
 
+stats::stats() { start(-1); }
 
-stats::stats()
-{
-    start(-1);
-}
-
-void stats::set_reporter_agent(reporter_agent *reporter_agent)
-{
-    reporter_agent_ = reporter_agent;
-}
+void stats::set_reporter_agent(reporter_agent *reporter_agent) { reporter_agent_ = reporter_agent; }
 
 void stats::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats_)
 {
@@ -43,7 +36,8 @@ void stats::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats_)
 void stats::start(int id)
 {
     id_ = id;
-    next_report_ = config::get_instance()->_stats_interval ? config::get_instance()->_stats_interval : 100;
+    next_report_ =
+        config::get_instance()->_stats_interval ? config::get_instance()->_stats_interval : 100;
     last_op_finish_ = start_;
     done_ = 0;
     last_report_done_ = 0;
@@ -81,20 +75,11 @@ void stats::stop()
     seconds_ = (finish_ - start_) * 1e-6;
 }
 
-void stats::add_message(const std::string &msg)
-{
-    append_with_space(&message_, msg);
-}
+void stats::add_message(const std::string &msg) { append_with_space(&message_, msg); }
 
-void stats::set_id(int id)
-{
-    id_ = id;
-}
+void stats::set_id(int id) { id_ = id; }
 
-void stats::set_exclude_from_merge()
-{
-    exclude_from_merge_ = true;
-}
+void stats::set_exclude_from_merge() { exclude_from_merge_ = true; }
 
 void stats::print_thread_status()
 {
@@ -125,8 +110,8 @@ void stats::print_thread_status()
                 rocksdb::ThreadStatus::GetOperationStageName(ts.operation_stage).c_str(),
                 rocksdb::ThreadStatus::GetStateName(ts.state_type).c_str());
 
-        auto op_properties =
-                rocksdb::ThreadStatus::InterpretOperationProperties(ts.operation_type, ts.op_properties);
+        auto op_properties = rocksdb::ThreadStatus::InterpretOperationProperties(ts.operation_type,
+                                                                                 ts.op_properties);
         for (const auto &op_prop : op_properties) {
             fprintf(stderr, " %s %" PRIu64 " |", op_prop.first.c_str(), op_prop.second);
         }
@@ -189,7 +174,7 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
             } else {
                 fprintf(stderr,
                         "%s ... thread %d: (%" PRIu64 ",%" PRIu64 ") ops and "
-                                                                  "(%.1f,%.1f) ops/second in (%.6f,%.6f) seconds\n",
+                        "(%.1f,%.1f) ops/second in (%.6f,%.6f) seconds\n",
                         flags_env->TimeToString(now / 1000000).c_str(),
                         id_,
                         done_ - last_report_done_,
@@ -211,10 +196,7 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
     }
 }
 
-void stats::add_bytes(int64_t n)
-{
-    bytes_ += n;
-}
+void stats::add_bytes(int64_t n) { bytes_ += n; }
 
 void stats::report(const std::string &name)
 {
