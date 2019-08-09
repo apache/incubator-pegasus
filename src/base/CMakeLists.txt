@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME "pegasus.base")
+set(MY_PROJ_NAME "pegasus_base")
 
 if(UNIX)
     add_compile_options(-fPIC)
@@ -15,4 +15,4 @@ set(MY_PROJ_INC_PATH "")
 
 dsn_add_static_library()
 
-target_include_directories(${MY_PROJ_NAME} PUBLIC $<TARGET_PROPERTY:RocksDB::rocksdb,INTERFACE_INCLUDE_DIRECTORIES>)
+target_link_libraries(pegasus_base PUBLIC RocksDB::rocksdb)

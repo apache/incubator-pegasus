@@ -36,7 +36,7 @@ set(MY_PROJ_LIBS
         prometheus-cpp-core
         prometheus-cpp-pull
         curl
-        pegasus.base
+        pegasus_base
         gtest
         z rt aio pthread
         )

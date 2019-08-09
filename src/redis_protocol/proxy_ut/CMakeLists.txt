@@ -21,7 +21,7 @@ endif()
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_PROJ_LIBS pegasus.rproxylib
-                pegasus.base
+                pegasus_base
                 ${MY_PROJ_LIBS}
                 pegasus_geo_lib
                 s2

@@ -14,4 +14,4 @@ set(MY_PROJ_INC_PATH "")
 
 dsn_add_static_library()
 
-target_link_libraries(${MY_PROJ_NAME} PUBLIC pegasus.base) # TODO(huangwei5): dsn_add_static_library doesnt link libs, need fix
+target_link_libraries(${MY_PROJ_NAME} PUBLIC pegasus_base) # TODO(huangwei5): dsn_add_static_library doesnt link libs, need fix
