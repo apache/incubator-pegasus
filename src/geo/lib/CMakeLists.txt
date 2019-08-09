@@ -10,13 +10,16 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include")
+set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS
-        s2
-        pegasus_client_static
-        fmt)
+set(MY_PROJ_LIBS ""
+        # s2
+        # pegasus_client_static
+        # fmt
+        )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 dsn_add_static_library()
+
+target_link_libraries(${MY_PROJ_NAME} PRIVATE pegasus_base) # TODO(huangwei5): dsn_add_static_library doesnt link libs, need fix

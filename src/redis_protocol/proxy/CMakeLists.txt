@@ -9,10 +9,10 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include" "../../base" "../proxy_lib")
+set(MY_PROJ_INC_PATH "../../base" "../proxy_lib")
 
 set(MY_PROJ_LIBS pegasus.rproxylib
-                 pegasus.base
+                 pegasus_base
                  pegasus_geo_lib
                  pegasus_reporter
                  prometheus-cpp-pull

@@ -10,7 +10,7 @@ set(MY_PROJ_SRC ../function_test/global_env.cpp)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include" "../function_test")
+set(MY_PROJ_INC_PATH "../function_test")
 
 set(MY_PROJ_LIBS
     pegasus_client_static
