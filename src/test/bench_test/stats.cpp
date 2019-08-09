@@ -130,7 +130,7 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
     if (reporter_agent_) {
         reporter_agent_->report_finished_ops(num_ops);
     }
-    if (config::get_instance()->_histogram && hist_stats) {
+    if (hist_stats) {
         uint64_t now = flags_env->NowMicros();
         uint64_t micros = now - last_op_finish_;
         hist_stats->measureTime(op_type, micros);
@@ -242,7 +242,7 @@ void combined_stats::add_stats(const stats &stat)
     throughput_ops_.emplace_back(total_ops / elapsed);
 
     if (total_bytes_ > 0) {
-        double mbs = (total_bytes_ / 1048576.0);
+        double mbs = total_bytes_ << 20;
         throughput_mbs_.emplace_back(mbs / elapsed);
     }
 }
@@ -301,5 +301,5 @@ double combined_stats::calc_median(std::vector<double> data)
         return (data[mid] + data[mid - 1]) / 2;
     }
 }
-}
-}
+} // namespace test
+} // namespace pegasus

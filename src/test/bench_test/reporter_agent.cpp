@@ -2,7 +2,6 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include <util/string_util.h>
 #include "reporter_agent.h"
 
 namespace pegasus {
@@ -66,8 +65,8 @@ void reporter_agent::sleep_and_report()
         // round the seconds elapsed
         auto secs_elapsed =
             (env_->NowMicros() - time_started + kMicrosInSecond / 2) / kMicrosInSecond;
-        std::string report = rocksdb::ToString(secs_elapsed) + "," +
-                             rocksdb::ToString(total_ops_done_snapshot - last_report_) + "\n";
+        std::string report = std::to_string(secs_elapsed) + "," +
+                             std::to_string(total_ops_done_snapshot - last_report_) + "\n";
         auto s = report_file_->Append(report);
         if (s.ok()) {
             s = report_file_->Flush();
@@ -81,5 +80,5 @@ void reporter_agent::sleep_and_report()
         last_report_ = total_ops_done_snapshot;
     }
 }
-}
-}
+} // namespace test
+} // namespace pegasus

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <monitoring/histogram.h>
+#include <rocksdb/statistics.h>
 #include "reporter_agent.h"
 
 namespace pegasus {
@@ -59,5 +59,5 @@ private:
     std::vector<double> throughput_ops_;
     std::vector<double> throughput_mbs_;
 };
-}
-}
+} // namespace test
+} // namespace pegasus

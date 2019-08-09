@@ -18,7 +18,7 @@ random_generator::random_generator(double compression_ratio, uint32_t value_size
         // Add a short fragment that is as compressible as specified
         // by compression_ratio.
         /*test::*/
-        compressible_string(compression_ratio, 100, &piece);
+        random_string(100, &piece);
         _data.append(piece);
     }
     _pos = 0;
@@ -33,24 +33,6 @@ std::string random_generator::random_string(int len, std::string *dst)
     return *dst;
 }
 
-std::string
-random_generator::compressible_string(double compressed_fraction, int len, std::string *dst)
-{
-    int raw = static_cast<int>(len * compressed_fraction);
-    if (raw < 1)
-        raw = 1;
-    std::string raw_data;
-    random_string(raw, &raw_data);
-
-    // Duplicate the random data until we have filled "len" bytes
-    dst->clear();
-    while (dst->size() < (unsigned int)len) {
-        dst->append(raw_data);
-    }
-    dst->resize(len);
-    return *dst;
-}
-
 std::string random_generator::generate(unsigned int len)
 {
     assert(len <= _data.size());
@@ -62,5 +44,5 @@ std::string random_generator::generate(unsigned int len)
 }
 
 uint32_t random_generator::uniform(int n) { return dsn::rand::next_u32() % n; }
-}
-}
+} // namespace test
+} // namespace pegasus

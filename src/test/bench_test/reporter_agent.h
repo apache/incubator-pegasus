@@ -8,9 +8,8 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
-
+#include <thread>
 #include <rocksdb/env.h>
-#include <port/port_posix.h>
 
 #include "utils.h"
 
@@ -38,5 +37,5 @@ private:
     std::condition_variable stop_cv_;
     bool stop_;
 };
-}
-}
+} // namespace test
+} // namespace pegasus

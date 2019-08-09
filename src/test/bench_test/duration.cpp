@@ -1,4 +1,3 @@
-//
 // Created by mi on 2019/8/7.
 // Copyright (c) 2018, Xiaomi, Inc.  All rights reserved.
 // This source code is licensed under the Apache License Version 2.0, which
@@ -40,5 +39,5 @@ bool duration::done(int64_t increment)
         return _ops > _max_ops;
     }
 }
-}
-}
+} // namespace test
+} // namespace pegasus

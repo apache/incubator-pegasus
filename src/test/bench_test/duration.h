@@ -23,5 +23,5 @@ private:
     int64_t _ops;
     uint64_t _start_at;
 };
-}
-}
+} // namespace test
+} // namespace pegasus

@@ -15,7 +15,6 @@ class random_generator
 public:
     random_generator(double compression_ratio, uint32_t value_size);
     std::string random_string(int len, std::string *dst);
-    std::string compressible_string(double compressed_fraction, int len, std::string *dst);
     std::string generate(unsigned int len);
     uint32_t uniform(int n);
 
@@ -23,5 +22,5 @@ private:
     std::string _data;
     unsigned int _pos;
 };
-}
-}
+} // namespace test
+} // namespace pegasus

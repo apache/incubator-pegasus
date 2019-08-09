@@ -17,8 +17,7 @@ set(MY_PROJ_LIB_PATH "../../../rocksdb/build")
 set(MY_PROJ_LIBS
         pegasus_client_static
         ${ROCKSDB_LINK_LIBRARIES}
-        z
-        gflags)
+        z)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
