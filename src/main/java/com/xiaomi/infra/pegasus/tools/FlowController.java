@@ -10,8 +10,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>Usage:
  *
- * <p>FlowController cntl = new FlowController(qps); while (true) { // call getToken before
- * operation cntl.getToken(); client.set(...); } cntl.stop();
+ * <pre>{@code
+ * FlowController cntl = new FlowController(qps);
+ * while (true) {
+ *   cntl.getToken(); // call getToken before operation
+ *   client.set(...);
+ * }
+ * cntl.stop();
+ * }</pre>
  */
 public class FlowController {
 

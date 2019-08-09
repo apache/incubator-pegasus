@@ -4,7 +4,7 @@ set -e
 
 SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
 PROJECT_DIR=$(dirname "${SCRIPT_DIR}")
-cd "${PROJECT_DIR}" || exit -1
+cd "${PROJECT_DIR}" || exit 1
 
 # lint all scripts, abort if there's any warning.
 function shellcheck_must_pass()
