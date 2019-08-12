@@ -15,7 +15,7 @@ duration::duration(uint64_t max_seconds, int64_t max_ops, int64_t ops_per_stage)
     _max_ops = max_ops;
     _ops_per_stage = (ops_per_stage > 0) ? ops_per_stage : max_ops;
     _ops = 0;
-    _start_at = config::get_instance()->_env->NowMicros();
+    _start_at = config::get_instance()->env->NowMicros();
 }
 
 int64_t duration::get_stage() { return std::min(_ops, _max_ops - 1) / _ops_per_stage; }
@@ -28,9 +28,9 @@ bool duration::done(int64_t increment)
 
     if (_max_seconds) {
         // Recheck every appx 1000 ops (exact iff increment is factor of 1000)
-        auto granularity = config::get_instance()->_ops_between_duration_checks;
+        auto granularity = config::get_instance()->ops_between_duration_checks;
         if ((_ops / granularity) != ((_ops - increment) / granularity)) {
-            uint64_t now = config::get_instance()->_env->NowMicros();
+            uint64_t now = config::get_instance()->env->NowMicros();
             return ((now - _start_at) / 1000000) >= _max_seconds;
         } else {
             return false;

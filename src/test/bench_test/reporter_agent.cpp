@@ -19,11 +19,8 @@ reporter_agent::reporter_agent(rocksdb::Env *env,
     auto s = env_->NewWritableFile(fname, &report_file_, rocksdb::EnvOptions());
     if (s.ok()) {
         s = report_file_->Append(header() + "\n");
-    }
-    if (s.ok()) {
         s = report_file_->Flush();
-    }
-    if (!s.ok()) {
+    } else {
         fprintf(stderr, "Can't open %s: %s\n", fname.c_str(), s.ToString().c_str());
         abort();
     }

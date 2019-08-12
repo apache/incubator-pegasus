@@ -37,7 +37,7 @@ void stats::start(int id)
 {
     id_ = id;
     next_report_ =
-        config::get_instance()->_stats_interval ? config::get_instance()->_stats_interval : 100;
+        config::get_instance()->stats_interval ? config::get_instance()->stats_interval : 100;
     last_op_finish_ = start_;
     done_ = 0;
     last_report_done_ = 0;
@@ -135,7 +135,7 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
         uint64_t micros = now - last_op_finish_;
         hist_stats->measureTime(op_type, micros);
 
-        if (micros > 20000 && !config::get_instance()->_stats_interval) {
+        if (micros > 20000 && !config::get_instance()->stats_interval) {
             fprintf(stderr, "long op: %" PRIu64 " micros%30s\r", micros, "");
             fflush(stderr);
         }
@@ -144,7 +144,7 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
 
     done_ += num_ops;
     if (done_ >= next_report_) {
-        if (!config::get_instance()->_stats_interval) {
+        if (!config::get_instance()->stats_interval) {
             if (next_report_ < 1000)
                 next_report_ += 100;
             else if (next_report_ < 5000)
@@ -167,10 +167,10 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
             // Determine whether to print status where interval is either
             // each N operations or each N seconds.
 
-            if (config::get_instance()->_stats_interval_seconds &&
-                usecs_since_last < (config::get_instance()->_stats_interval_seconds * 1000000)) {
+            if (config::get_instance()->stats_interval_seconds &&
+                usecs_since_last < (config::get_instance()->stats_interval_seconds * 1000000)) {
                 // Don't check again for this many operations
-                next_report_ += config::get_instance()->_stats_interval;
+                next_report_ += config::get_instance()->stats_interval;
             } else {
                 fprintf(stderr,
                         "%s ... thread %d: (%" PRIu64 ",%" PRIu64 ") ops and "
@@ -184,12 +184,12 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
                         (now - last_report_finish_) / 1000000.0,
                         (now - start_) / 1000000.0);
 
-                next_report_ += config::get_instance()->_stats_interval;
+                next_report_ += config::get_instance()->stats_interval;
                 last_report_finish_ = now;
                 last_report_done_ = done_;
             }
         }
-        if (id_ == 0 && config::get_instance()->_thread_status_per_interval) {
+        if (id_ == 0 && config::get_instance()->thread_status_per_interval) {
             print_thread_status();
         }
         fflush(stderr);

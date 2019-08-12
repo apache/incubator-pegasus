@@ -21,9 +21,9 @@ static std::unordered_map<operation_type, std::string, std::hash<unsigned char>>
 benchmark::benchmark()
     : num_(config::get_instance()->num),
       value_size_(config::get_instance()->value_size),
-      key_size_(config::get_instance()->_key_size),
-      prefix_size_(config::get_instance()->_prefix_size),
-      keys_per_prefix_(config::get_instance()->_keys_per_prefix),
+      key_size_(config::get_instance()->key_size),
+      prefix_size_(config::get_instance()->prefix_size),
+      keys_per_prefix_(config::get_instance()->keys_per_prefix),
       entries_per_batch_(1)
 {
     client =
@@ -80,8 +80,8 @@ void benchmark::run()
         // Sanitize parameters
         num_ = config::get_instance()->num;
         value_size_ = config::get_instance()->value_size;
-        key_size_ = config::get_instance()->_key_size;
-        entries_per_batch_ = config::get_instance()->_batch_size;
+        key_size_ = config::get_instance()->key_size;
+        entries_per_batch_ = config::get_instance()->batch_size;
 
         void (benchmark::*method)(thread_state *) = nullptr;
         // Both fillseqdeterministic and filluniquerandomdeterministic
@@ -158,10 +158,10 @@ stats benchmark::run_benchmark(int n,
     shared.start = false;
 
     std::unique_ptr<reporter_agent> reporter_agent_;
-    if (config::get_instance()->_report_interval_seconds > 0) {
-        reporter_agent_.reset(new reporter_agent(config::get_instance()->_env,
-                                                 config::get_instance()->_report_file,
-                                                 config::get_instance()->_report_interval_seconds));
+    if (config::get_instance()->report_interval_seconds > 0) {
+        reporter_agent_.reset(new reporter_agent(config::get_instance()->env,
+                                                 config::get_instance()->report_file,
+                                                 config::get_instance()->report_interval_seconds));
     }
 
     thread_arg *arg = new thread_arg[n];
@@ -172,7 +172,7 @@ stats benchmark::run_benchmark(int n,
         arg[i].thread = new thread_state(i);
         arg[i].thread->stats.set_reporter_agent(reporter_agent_.get());
         arg[i].thread->stats.set_hist_stats(hist_stats);
-        config::get_instance()->_env->StartThread(thread_body, &arg[i]);
+        config::get_instance()->env->StartThread(thread_body, &arg[i]);
     }
 
     pthread_mutex_lock(&shared.mu);
@@ -215,7 +215,7 @@ void benchmark::do_write(thread_state *thread, write_mode write_mode)
         thread->stats.add_message(msg);
     }
 
-    random_generator gen = random_generator(config::get_instance()->_compression_ratio,
+    random_generator gen = random_generator(config::get_instance()->compression_ratio,
                                             config::get_instance()->value_size);
     int64_t bytes = 0;
     std::unique_ptr<const char[]> key_guard;
@@ -329,26 +329,26 @@ void benchmark::delete_random(thread_state *thread) { do_delete(thread, false); 
 
 void benchmark::print_header()
 {
-    fprintf(stdout, "Keys:       %d bytes each\n", config::get_instance()->_key_size);
+    fprintf(stdout, "Keys:       %d bytes each\n", config::get_instance()->key_size);
     fprintf(
         stdout,
         "Values:     %d bytes each (%d bytes after compression)\n",
         config::get_instance()->value_size,
         static_cast<int>(
-            config::get_instance()->value_size * config::get_instance()->_compression_ratio + 0.5));
+            config::get_instance()->value_size * config::get_instance()->compression_ratio + 0.5));
     fprintf(stdout, "Entries:    %" PRIu64 "\n", num_);
-    fprintf(stdout, "Prefix:    %d bytes\n", config::get_instance()->_prefix_size);
+    fprintf(stdout, "Prefix:    %d bytes\n", config::get_instance()->prefix_size);
     fprintf(stdout, "Keys per prefix:    %" PRIu64 "\n", keys_per_prefix_);
     fprintf(stdout,
             "RawSize:    %.1f MB (estimated)\n",
-            ((static_cast<int64_t>(config::get_instance()->_key_size +
+            ((static_cast<int64_t>(config::get_instance()->key_size +
                                    config::get_instance()->value_size) *
               num_) /
              1048576.0));
     fprintf(stdout,
             "FileSize:   %.1f MB (estimated)\n",
-            (((config::get_instance()->_key_size +
-               config::get_instance()->value_size * config::get_instance()->_compression_ratio) *
+            (((config::get_instance()->key_size +
+               config::get_instance()->value_size * config::get_instance()->compression_ratio) *
               num_) /
              1048576.0));
 
