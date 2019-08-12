@@ -1,4 +1,3 @@
-// Created by mi on 2019/8/7.
 // Copyright (c) 2018, Xiaomi, Inc.  All rights reserved.
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
@@ -32,7 +31,7 @@ struct shared_state
     long num_done;
     bool start;
 
-    shared_state()
+    shared_state(int total) : total(total), num_initialized(0), num_done(0), start(false)
     {
         pthread_mutex_init(&mu, NULL);
         pthread_cond_init(&cv, NULL);
@@ -85,6 +84,9 @@ private:
     void generate_key_from_int(uint64_t v, int64_t num_keys, std::string *key);
     void print_header();
     void print_warnings(const char *compression);
+    void generate_random_keys(uint32_t num,
+                              std::vector<std::string> &hashkeys,
+                              std::vector<std::string> &sortkeys);
 
 private:
     int64_t num_;
@@ -92,7 +94,6 @@ private:
     int key_size_;
     int prefix_size_;
     int64_t keys_per_prefix_;
-    int64_t entries_per_batch_; // TODO for multi set
     pegasus_client *client;
 };
 } // namespace test

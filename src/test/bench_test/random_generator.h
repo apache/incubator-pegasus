@@ -13,7 +13,7 @@ namespace test {
 class random_generator
 {
 public:
-    random_generator(double compression_ratio, uint32_t value_size);
+    random_generator(uint32_t value_size);
     std::string random_string(int len, std::string *dst);
     std::string generate(unsigned int len);
     uint32_t uniform(int n);

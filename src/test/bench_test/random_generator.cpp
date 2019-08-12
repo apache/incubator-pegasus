@@ -8,7 +8,7 @@
 namespace pegasus {
 namespace test {
 
-random_generator::random_generator(double compression_ratio, uint32_t value_size)
+random_generator::random_generator(uint32_t value_size)
 {
     // We use a limited amount of data over and over again and ensure
     // that it is larger than the compression window (32KB), and also

@@ -7,7 +7,7 @@
 namespace pegasus {
 namespace test {
 
-enum operation_type : unsigned char
+enum operation_type
 {
     kRead = 0,
     kWrite,
@@ -22,6 +22,5 @@ enum write_mode
     SEQUENTIAL,
     UNIQUE_RANDOM
 };
-
 } // namespace test
 } // namespace pegasus

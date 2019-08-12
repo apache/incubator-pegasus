@@ -23,12 +23,9 @@ struct config
     std::string benchmarks;
     uint32_t num;
     uint32_t threads;
-    uint32_t duration_seconds;
     uint32_t value_size;
     uint32_t batch_size;
     uint32_t key_size;
-    double compression_ratio;
-    uint32_t ops_between_duration_checks;
     uint64_t stats_interval;
     uint32_t stats_interval_seconds;
     uint64_t report_interval_seconds;

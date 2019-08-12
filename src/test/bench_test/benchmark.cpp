@@ -1,4 +1,3 @@
-// Created by mi on 2019/8/7.
 // Copyright (c) 2018, Xiaomi, Inc.  All rights reserved.
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
@@ -8,7 +7,6 @@
 #include <tgmath.h>
 #include <pegasus/client.h>
 #include "benchmark.h"
-#include "duration.h"
 #include "random_generator.h"
 
 namespace pegasus {
@@ -23,8 +21,7 @@ benchmark::benchmark()
       value_size_(config::get_instance()->value_size),
       key_size_(config::get_instance()->key_size),
       prefix_size_(config::get_instance()->prefix_size),
-      keys_per_prefix_(config::get_instance()->keys_per_prefix),
-      entries_per_batch_(1)
+      keys_per_prefix_(config::get_instance()->keys_per_prefix)
 {
     client =
         pegasus_client_factory::get_client(config::get_instance()->pegasus_cluster_name.c_str(),
@@ -77,12 +74,6 @@ void benchmark::run()
     std::stringstream benchmark_stream(config::get_instance()->benchmarks);
     std::string name;
     while (std::getline(benchmark_stream, name, ',')) {
-        // Sanitize parameters
-        num_ = config::get_instance()->num;
-        value_size_ = config::get_instance()->value_size;
-        key_size_ = config::get_instance()->key_size;
-        entries_per_batch_ = config::get_instance()->batch_size;
-
         void (benchmark::*method)(thread_state *) = nullptr;
         // Both fillseqdeterministic and filluniquerandomdeterministic
         // fill the levels except the max level with UNIQUE_RANDOM
@@ -120,30 +111,31 @@ void benchmark::thread_body(void *v)
     thread_arg *arg = reinterpret_cast<thread_arg *>(v);
     shared_state *shared = arg->shared;
     thread_state *thread = arg->thread;
-    {
-        pthread_mutex_lock(&shared->mu);
-        shared->num_initialized++;
-        if (shared->num_initialized >= shared->total) {
-            pthread_cond_broadcast(&shared->cv);
-        }
-        while (!shared->start) {
-            pthread_cond_wait(&shared->cv, &shared->mu);
-        }
-        pthread_mutex_unlock(&shared->mu);
-    }
 
+    // add num_initialized safety, and signal the main process when num_initialized > total.
+    // then wait the shared->start is set to true
+    pthread_mutex_lock(&shared->mu);
+    shared->num_initialized++;
+    if (shared->num_initialized >= shared->total) {
+        pthread_cond_broadcast(&shared->cv);
+    }
+    while (!shared->start) {
+        pthread_cond_wait(&shared->cv, &shared->mu);
+    }
+    pthread_mutex_unlock(&shared->mu);
+
+    // progress the method
     thread->stats.start(thread->tid);
     (arg->bm->*(arg->method))(thread);
     thread->stats.stop();
 
-    {
-        pthread_mutex_lock(&shared->mu);
-        shared->num_done++;
-        if (shared->num_done >= shared->total) {
-            pthread_cond_broadcast(&shared->cv);
-        }
-        pthread_mutex_unlock(&shared->mu);
+    // add num_done satety, and notify the main process
+    pthread_mutex_lock(&shared->mu);
+    shared->num_done++;
+    if (shared->num_done >= shared->total) {
+        pthread_cond_broadcast(&shared->cv);
     }
+    pthread_mutex_unlock(&shared->mu);
 }
 
 stats benchmark::run_benchmark(int n,
@@ -151,12 +143,6 @@ stats benchmark::run_benchmark(int n,
                                void (benchmark::*method)(thread_state *),
                                std::shared_ptr<rocksdb::Statistics> hist_stats)
 {
-    shared_state shared;
-    shared.total = n;
-    shared.num_initialized = 0;
-    shared.num_done = 0;
-    shared.start = false;
-
     std::unique_ptr<reporter_agent> reporter_agent_;
     if (config::get_instance()->report_interval_seconds > 0) {
         reporter_agent_.reset(new reporter_agent(config::get_instance()->env,
@@ -164,6 +150,8 @@ stats benchmark::run_benchmark(int n,
                                                  config::get_instance()->report_interval_seconds));
     }
 
+    // init thead args
+    shared_state shared(n);
     thread_arg *arg = new thread_arg[n];
     for (int i = 0; i < n; i++) {
         arg[i].bm = this;
@@ -175,11 +163,13 @@ stats benchmark::run_benchmark(int n,
         config::get_instance()->env->StartThread(thread_body, &arg[i]);
     }
 
+    // wait all of the theads' initialized
     pthread_mutex_lock(&shared.mu);
     while (shared.num_initialized < n) {
         pthread_cond_wait(&shared.cv, &shared.mu);
     }
 
+    // wait all of the theads' done
     shared.start = true;
     pthread_cond_broadcast(&shared.cv);
     while (shared.num_done < n) {
@@ -194,6 +184,7 @@ stats benchmark::run_benchmark(int n,
     }
     merge_stats.report(name);
 
+    // delete thread args
     for (int i = 0; i < n; i++) {
         delete arg[i].thread;
     }
@@ -206,28 +197,21 @@ void benchmark::write_random(thread_state *thread) { do_write(thread, RANDOM); }
 
 void benchmark::do_write(thread_state *thread, write_mode write_mode)
 {
-    const int test_duration = write_mode == RANDOM ? config::get_instance()->duration_seconds : 0;
-    duration dur(test_duration, num_, num_);
+    // generate random hash keys and sort keys
+    std::vector<std::string> hashkeys, sortkeys;
+    generate_random_keys(config::get_instance()->num, hashkeys, sortkeys);
 
-    if (num_ != config::get_instance()->num) {
-        char msg[100];
-        snprintf(msg, sizeof(msg), "(%" PRIu64 " ops)", num_);
-        thread->stats.add_message(msg);
-    }
-
-    random_generator gen = random_generator(config::get_instance()->compression_ratio,
-                                            config::get_instance()->value_size);
+    // do write for all the hash keys and sort keys
     int64_t bytes = 0;
-    std::unique_ptr<const char[]> key_guard;
-    std::string key = allocate_key(&key_guard);
-    while (!dur.done(1)) {
-        int64_t rand_num = get_random_key();
-        generate_key_from_int(rand_num, config::get_instance()->num, &key);
+    random_generator gen = random_generator(config::get_instance()->value_size);
+    for (int i = 0; i < config::get_instance()->num; i++) {
         int try_count = 0;
         while (true) {
             try_count++;
-            int ret = client->set(
-                key, "", gen.generate(value_size_), config::get_instance()->pegasus_timeout_ms);
+            int ret = client->set(hashkeys[i],
+                                  sortkeys[i],
+                                  gen.generate(value_size_),
+                                  config::get_instance()->pegasus_timeout_ms);
             if (ret == ::pegasus::PERR_OK) {
                 bytes += value_size_ + key_size_;
                 break;
@@ -240,6 +224,7 @@ void benchmark::do_write(thread_state *thread, write_mode write_mode)
         }
         thread->stats.finished_ops(nullptr, nullptr, 1, kWrite);
     }
+
     thread->stats.add_bytes(bytes);
 }
 
@@ -247,28 +232,23 @@ int64_t benchmark::get_random_key() { return dsn::rand::next_u64() % config::get
 
 void benchmark::read_random(thread_state *thread)
 {
-    int64_t read = 0;
+    // generate random hash keys and sort keys
+    std::vector<std::string> hashkeys, sortkeys;
+    generate_random_keys(config::get_instance()->num, hashkeys, sortkeys);
+
+    // do read for all the hash keys and sort keys
     int64_t found = 0;
     int64_t bytes = 0;
-    std::unique_ptr<const char[]> key_guard;
-    std::string key = allocate_key(&key_guard);
-
-    duration dur(config::get_instance()->duration_seconds, config::get_instance()->num);
-    while (!dur.done(1)) {
-        // We use same key_rand as seed for key and column family so that we can
-        // deterministically find the cfh corresponding to a particular key, as it
-        // is done in DoWrite method.
-        int64_t key_rand = get_random_key();
-        generate_key_from_int(key_rand, config::get_instance()->num, &key);
-        read++;
+    for (int i = 0; i < config::get_instance()->num; i++) {
         int try_count = 0;
         while (true) {
             try_count++;
             std::string value;
-            int ret = client->get(key, "", value, config::get_instance()->pegasus_timeout_ms);
+            int ret = client->get(
+                hashkeys[i], sortkeys[i], value, config::get_instance()->pegasus_timeout_ms);
             if (ret == ::pegasus::PERR_OK) {
                 found++;
-                bytes += key.size() + value.size();
+                bytes += hashkeys[i].size() + sortkeys[i].size() + value.size();
                 break;
             } else if (ret == ::pegasus::PERR_NOT_FOUND) {
                 break;
@@ -283,8 +263,8 @@ void benchmark::read_random(thread_state *thread)
     }
 
     char msg[100];
-    snprintf(msg, sizeof(msg), "(%" PRIu64 " of %" PRIu64 " found)", found, read);
-
+    snprintf(
+        msg, sizeof(msg), "(%" PRIu64 " of %" PRIu32 " found)", found, config::get_instance()->num);
     thread->stats.add_bytes(bytes);
     thread->stats.add_message(msg);
 }
@@ -299,18 +279,17 @@ std::string benchmark::allocate_key(std::unique_ptr<const char[]> *key_guard)
 
 void benchmark::do_delete(thread_state *thread, bool seq)
 {
-    duration dur(seq ? 0 : config::get_instance()->duration_seconds, num_);
-    int64_t i = 0;
-    std::unique_ptr<const char[]> key_guard;
-    std::string key = allocate_key(&key_guard);
+    // generate random hash keys and sort keys
+    std::vector<std::string> hashkeys, sortkeys;
+    generate_random_keys(config::get_instance()->num, hashkeys, sortkeys);
 
-    while (!dur.done(1)) {
-        const int64_t k = seq ? i : (dsn::rand::next_u64() % config::get_instance()->num);
-        generate_key_from_int(k, config::get_instance()->num, &key);
+    // do delete for all the hash keys and sort keys
+    for (int i = 0; i < config::get_instance()->num; i++) {
         int try_count = 0;
         while (true) {
             try_count++;
-            int ret = client->del(key, "", config::get_instance()->pegasus_timeout_ms);
+            int ret =
+                client->del(hashkeys[i], sortkeys[i], config::get_instance()->pegasus_timeout_ms);
             if (ret == ::pegasus::PERR_OK) {
                 break;
             } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
@@ -321,7 +300,6 @@ void benchmark::do_delete(thread_state *thread, bool seq)
             }
         }
         thread->stats.finished_ops(nullptr, nullptr, 1, kDelete);
-        i++;
     }
 }
 
@@ -330,12 +308,7 @@ void benchmark::delete_random(thread_state *thread) { do_delete(thread, false); 
 void benchmark::print_header()
 {
     fprintf(stdout, "Keys:       %d bytes each\n", config::get_instance()->key_size);
-    fprintf(
-        stdout,
-        "Values:     %d bytes each (%d bytes after compression)\n",
-        config::get_instance()->value_size,
-        static_cast<int>(
-            config::get_instance()->value_size * config::get_instance()->compression_ratio + 0.5));
+    fprintf(stdout, "Values:     %d bytes each\n", config::get_instance()->value_size);
     fprintf(stdout, "Entries:    %" PRIu64 "\n", num_);
     fprintf(stdout, "Prefix:    %d bytes\n", config::get_instance()->prefix_size);
     fprintf(stdout, "Keys per prefix:    %" PRIu64 "\n", keys_per_prefix_);
@@ -347,9 +320,7 @@ void benchmark::print_header()
              1048576.0));
     fprintf(stdout,
             "FileSize:   %.1f MB (estimated)\n",
-            (((config::get_instance()->key_size +
-               config::get_instance()->value_size * config::get_instance()->compression_ratio) *
-              num_) /
+            (((config::get_instance()->key_size + config::get_instance()->value_size) * num_) /
              1048576.0));
 
     print_warnings("");
@@ -364,6 +335,24 @@ void benchmark::print_warnings(const char *compression)
 #ifndef NDEBUG
     fprintf(stdout, "WARNING: Assertions are enabled; benchmarks unnecessarily slow\n");
 #endif
+}
+
+void benchmark::generate_random_keys(uint32_t num,
+                                     std::vector<std::string> &hashkeys,
+                                     std::vector<std::string> &sortkeys)
+{
+    // generate random hash keys and sort keys
+    int ops = 0;
+    std::unique_ptr<const char[]> hashkey_guard;
+    std::unique_ptr<const char[]> sortkey_guard;
+    std::string hashkey = allocate_key(&hashkey_guard);
+    std::string sortkey = allocate_key(&sortkey_guard);
+    while (ops++ < config::get_instance()->num) {
+        generate_key_from_int(get_random_key(), num, &hashkey);
+        generate_key_from_int(get_random_key(), num, &sortkey);
+        hashkeys.push_back(hashkey);
+        sortkeys.push_back(sortkey);
+    }
 }
 } // namespace test
 } // namespace pegasus

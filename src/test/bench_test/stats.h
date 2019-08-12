@@ -20,10 +20,7 @@ public:
     void merge(const stats &other);
     void stop();
     void add_message(const std::string &msg);
-    void set_id(int id);
-    void set_exclude_from_merge();
     void print_thread_status();
-    void reset_last_op_time();
     void finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum operation_type op_type);
     void add_bytes(int64_t n);
     void report(const std::string &name);
@@ -53,8 +50,8 @@ public:
     void report(const std::string &bench_name);
 
 private:
-    double calc_avg(std::vector<double> data);
-    double calc_median(std::vector<double> data);
+    double calc_avg(std::vector<double> &data);
+    double calc_median(std::vector<double> &data);
 
     std::vector<double> throughput_ops_;
     std::vector<double> throughput_mbs_;

@@ -12,8 +12,6 @@
 namespace pegasus {
 namespace test {
 
-rocksdb::Env *flags_env;
-
 static void append_with_space(std::string *str, const std::string &msg)
 {
     if (msg.empty())
@@ -43,7 +41,7 @@ void stats::start(int id)
     last_report_done_ = 0;
     bytes_ = 0;
     seconds_ = 0;
-    start_ = flags_env->NowMicros();
+    start_ = config::get_instance()->env->NowMicros();
     finish_ = start_;
     last_report_finish_ = start_;
     message_.clear();
@@ -71,20 +69,16 @@ void stats::merge(const stats &other)
 
 void stats::stop()
 {
-    finish_ = flags_env->NowMicros();
+    finish_ = config::get_instance()->env->NowMicros();
     seconds_ = (finish_ - start_) * 1e-6;
 }
 
 void stats::add_message(const std::string &msg) { append_with_space(&message_, msg); }
 
-void stats::set_id(int id) { id_ = id; }
-
-void stats::set_exclude_from_merge() { exclude_from_merge_ = true; }
-
 void stats::print_thread_status()
 {
     std::vector<rocksdb::ThreadStatus> thread_list;
-    flags_env->GetThreadList(&thread_list);
+    config::get_instance()->env->GetThreadList(&thread_list);
 
     fprintf(stderr,
             "\n%18s %10s %12s %20s %13s %45s %12s %s\n",
@@ -119,19 +113,13 @@ void stats::print_thread_status()
     }
 }
 
-void stats::reset_last_op_time()
-{
-    // Set to now to avoid latency from calls to SleepForMicroseconds
-    last_op_finish_ = flags_env->NowMicros();
-}
-
 void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum operation_type op_type)
 {
     if (reporter_agent_) {
         reporter_agent_->report_finished_ops(num_ops);
     }
     if (hist_stats) {
-        uint64_t now = flags_env->NowMicros();
+        uint64_t now = config::get_instance()->env->NowMicros();
         uint64_t micros = now - last_op_finish_;
         hist_stats->measureTime(op_type, micros);
 
@@ -161,7 +149,7 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
                 next_report_ += 100000;
             fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", done_, "");
         } else {
-            uint64_t now = flags_env->NowMicros();
+            uint64_t now = config::get_instance()->env->NowMicros();
             int64_t usecs_since_last = now - last_report_finish_;
 
             // Determine whether to print status where interval is either
@@ -175,7 +163,7 @@ void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum oper
                 fprintf(stderr,
                         "%s ... thread %d: (%" PRIu64 ",%" PRIu64 ") ops and "
                         "(%.1f,%.1f) ops/second in (%.6f,%.6f) seconds\n",
-                        flags_env->TimeToString(now / 1000000).c_str(),
+                        config::get_instance()->env->TimeToString(now / 1000000).c_str(),
                         id_,
                         done_ - last_report_done_,
                         done_,
@@ -277,7 +265,7 @@ void combined_stats::report(const std::string &bench_name)
     }
 }
 
-double combined_stats::calc_avg(std::vector<double> data)
+double combined_stats::calc_avg(std::vector<double> &data)
 {
     double avg = 0;
     for (double x : data) {
@@ -287,7 +275,7 @@ double combined_stats::calc_avg(std::vector<double> data)
     return avg;
 }
 
-double combined_stats::calc_median(std::vector<double> data)
+double combined_stats::calc_median(std::vector<double> &data)
 {
     assert(data.size() > 0);
     std::sort(data.begin(), data.end());

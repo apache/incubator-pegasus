@@ -13,10 +13,10 @@ namespace google {
 using namespace google;
 using namespace pegasus;
 
-static const std::string pegasus_config = "config.ini";
 int db_bench_tool(int argc, char **argv)
 {
-    bool init = pegasus::pegasus_client_factory::initialize(pegasus_config.c_str());
+    const char *config_file = argv[1];
+    bool init = pegasus::pegasus_client_factory::initialize(config_file);
     if (!init) {
         fprintf(stderr, "Init pegasus error\n");
         return -1;

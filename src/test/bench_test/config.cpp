@@ -2,6 +2,7 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
+#include <dsn/c/app_model.h>
 #include "config.h"
 
 namespace pegasus {
@@ -22,7 +23,7 @@ config::config()
         "prefix_size",
         0,
         "control the prefix size for HashSkipList and plain table");
-    if (config::get_instance()->prefix_size > config::get_instance()->key_size) {
+    if (prefix_size > key_size) {
         fprintf(stderr, "prefix size is larger than key size");
         exit(1);
     }
@@ -37,20 +38,10 @@ config::config()
         "pegasus.benchmark", "num", 0, "Number of key/values to place in database");
     threads = (int32_t)dsn_config_get_value_uint64(
         "pegasus.benchmark", "threads", 0, "Number of concurrent threads to run");
-    duration_seconds = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "duration", 0, "Time in seconds for the random-ops tests to run");
     value_size = (int32_t)dsn_config_get_value_uint64(
         "pegasus.benchmark", "value_size", 0, "Size of each value");
     batch_size =
         (int32_t)dsn_config_get_value_uint64("pegasus.benchmark", "batch_size", 0, "Batch size");
-    compression_ratio = dsn_config_get_value_double("pegasus.benchmark",
-                                                    "compression_ratio",
-                                                    0,
-                                                    "Arrange to generate values that shrink, to "
-                                                    "this fraction of their original size after "
-                                                    "compression");
-    ops_between_duration_checks = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "ops_between_duration_checks", 0, "Check duration limit every x ops");
     stats_interval = dsn_config_get_value_uint64(
         "pegasus.benchmark",
         "stats_interval",
