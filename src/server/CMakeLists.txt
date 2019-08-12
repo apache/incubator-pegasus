@@ -23,6 +23,7 @@ set(MY_PROJ_LIBS
     dsn.replication.zookeeper_provider
     RocksDB::rocksdb
     pegasus_reporter
+    pegasus_base
     prometheus-cpp-pull
     prometheus-cpp-push
     prometheus-cpp-core
@@ -40,7 +41,8 @@ set(MY_PROJ_LIBS
     fmt
     rt
     aio
-    pthread)
+    pthread
+    )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
