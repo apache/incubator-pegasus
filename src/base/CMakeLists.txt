@@ -16,4 +16,4 @@ set(MY_PROJ_INC_PATH "")
 dsn_add_static_library()
 
 target_link_libraries(pegasus_base PUBLIC RocksDB::rocksdb)
-target_include_directories(pegasus_base PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_include_directories(pegasus_base PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
