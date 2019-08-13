@@ -284,6 +284,7 @@ if [ ! -d $TP_OUTPUT/include/curl ]; then
     --disable-smtp \
     --disable-telnet \
     --disable-tftp \
+    --disable-shared \
     --without-librtmp \
     --without-libssh2 \
     --without-ssl"

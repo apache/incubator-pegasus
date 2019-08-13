@@ -40,14 +40,16 @@ struct fail_point
 
     const std::string *eval();
 
-    fail_point() = default;
+    explicit fail_point(string_view name) : _name(name) {}
 
-    /// Only for test:
-
+    /// for test only
     fail_point(task_type t, std::string arg, int freq, int max_cnt)
         : _task(t), _arg(std::move(arg)), _freq(freq), _max_cnt(max_cnt)
     {
     }
+
+    /// for test only
+    fail_point() = default;
 
     bool parse_from_string(string_view action);
 
@@ -57,7 +59,16 @@ struct fail_point
                p1._max_cnt == p2._max_cnt;
     }
 
+    task_type get_task() const { return _task; }
+
+    std::string get_arg() const { return _arg; }
+
+    int get_frequency() const { return _freq; }
+
+    int get_max_count() const { return _max_cnt; }
+
 private:
+    std::string _name;
     task_type _task{Off};
     std::string _arg;
     int _freq{100};
@@ -70,7 +81,8 @@ struct fail_point_registry
     {
         std::lock_guard<std::mutex> guard(_mu);
 
-        return _registry[std::string(name.data(), name.length())];
+        auto it = _registry.emplace(std::string(name), fail_point(name)).first;
+        return it->second;
     }
 
     fail_point *try_get(string_view name)

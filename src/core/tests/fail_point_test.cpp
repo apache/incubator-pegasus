@@ -130,5 +130,26 @@ TEST(fail_point, macro_use)
     teardown();
 }
 
+void test_func_return_void(int &a)
+{
+    FAIL_POINT_INJECT_F("test_1", [](string_view str) {});
+    a++;
+}
+TEST(fail_point, return_void)
+{
+    setup();
+
+    int a = 0;
+    cfg("test_1", "1*return()");
+    test_func_return_void(a);
+    ASSERT_EQ(a, 0);
+
+    cfg("test_1", "off");
+    test_func_return_void(a);
+    ASSERT_EQ(a, 1);
+
+    teardown();
+}
+
 } // namespace fail
 } // namespace dsn

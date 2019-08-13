@@ -18,6 +18,8 @@
 #include "fail_point_impl.h"
 
 #include <dsn/c/api_layer1.h>
+// TOOD(wutao1): use <regex> instead when our lowest compiler support
+//               advances to gcc-4.9.
 #include <boost/regex.hpp>
 #include <dsn/utility/rand.h>
 
@@ -35,15 +37,42 @@ static fail_point_registry REGISTRY;
     return p->eval();
 }
 
+inline const char *task_type_to_string(fail_point::task_type t)
+{
+    switch (t) {
+    case fail_point::Off:
+        return "Off";
+    case fail_point::Return:
+        return "Return";
+    case fail_point::Print:
+        return "Print";
+    default:
+        dfatal("unexpected type: %d", t);
+        __builtin_unreachable();
+    }
+}
+
 /*extern*/ void cfg(string_view name, string_view action)
 {
     fail_point &p = REGISTRY.create_if_not_exists(name);
     p.set_action(action);
+    ddebug("add fail_point [name: %s, task: %s(%s), frequency: %d%, max_count: %d]",
+           name.data(),
+           task_type_to_string(p.get_task()),
+           p.get_arg().data(),
+           p.get_frequency(),
+           p.get_max_count());
 }
 
-/*extern*/ void setup() {}
+/*static*/ bool _S_FAIL_POINT_ENABLED = false;
 
-/*extern*/ void teardown() { REGISTRY.clear(); }
+/*extern*/ void setup() { _S_FAIL_POINT_ENABLED = true; }
+
+/*extern*/ void teardown()
+{
+    REGISTRY.clear();
+    _S_FAIL_POINT_ENABLED = false;
+}
 
 void fail_point::set_action(string_view action)
 {
@@ -106,6 +135,7 @@ const std::string *fail_point::eval()
         return nullptr;
     }
     _max_cnt--;
+    ddebug("fail on %s", _name.data());
 
     switch (_task) {
     case Off:
