@@ -8,6 +8,7 @@
 #include <pegasus/client.h>
 #include "benchmark.h"
 #include "random_generator.h"
+#include "utils.h"
 
 namespace pegasus {
 namespace test {
@@ -138,13 +139,6 @@ stats benchmark::run_benchmark(int n,
                                bench_method method,
                                std::shared_ptr<rocksdb::Statistics> hist_stats)
 {
-    std::unique_ptr<reporter_agent> reporter_agent_;
-    if (config::get_instance()->report_interval_seconds > 0) {
-        reporter_agent_.reset(new reporter_agent(config::get_instance()->env,
-                                                 config::get_instance()->report_file,
-                                                 config::get_instance()->report_interval_seconds));
-    }
-
     // init thead args
     shared_state shared(n);
     thread_arg *arg = new thread_arg[n];
@@ -153,7 +147,6 @@ stats benchmark::run_benchmark(int n,
         arg[i].method = method;
         arg[i].shared = &shared;
         arg[i].thread = new thread_state(i);
-        arg[i].thread->stats.set_reporter_agent(reporter_agent_.get());
         arg[i].thread->stats.set_hist_stats(hist_stats);
         config::get_instance()->env->StartThread(thread_body, &arg[i]);
     }

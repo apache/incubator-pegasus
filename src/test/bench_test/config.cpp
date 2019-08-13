@@ -48,17 +48,6 @@ config::config()
         "Stats are reported every N operations when this is greater than zero");
     stats_interval_seconds = (int32_t)dsn_config_get_value_uint64(
         "pegasus.benchmark", "stats_interval_seconds", 0, "Report stats every N seconds.");
-    report_interval_seconds = dsn_config_get_value_uint64("pegasus.benchmark",
-                                                          "report_interval_seconds",
-                                                          0,
-                                                          "If greater than zero, it will write "
-                                                          "simple stats in CVS format to "
-                                                          "--report_file every N seconds");
-    report_file = dsn_config_get_value_string("pegasus.benchmark",
-                                              "report_file",
-                                              "",
-                                              "Filename where some simple stats are reported to "
-                                              "(if --report_interval_seconds is bigger than 0)");
     thread_status_per_interval =
         (int32_t)dsn_config_get_value_uint64("pegasus.benchmark",
                                              "thread_status_per_interval",

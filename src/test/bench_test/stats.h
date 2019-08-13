@@ -5,7 +5,8 @@
 #pragma once
 
 #include <rocksdb/statistics.h>
-#include "reporter_agent.h"
+
+#include "utils.h"
 
 namespace pegasus {
 namespace test {
@@ -14,7 +15,6 @@ class stats
 {
 public:
     stats();
-    void set_reporter_agent(reporter_agent *reporter_agent);
     void set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats_);
     void start(int id);
     void merge(const stats &other);
@@ -39,7 +39,6 @@ private:
     std::shared_ptr<rocksdb::Statistics> hist_stats;
     std::string message_;
     bool exclude_from_merge_;
-    reporter_agent *reporter_agent_; // does not own
     friend class combined_stats;
 };
 

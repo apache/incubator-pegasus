@@ -27,8 +27,6 @@ struct config
     uint32_t key_size;
     uint64_t stats_interval;
     uint32_t stats_interval_seconds;
-    uint64_t report_interval_seconds;
-    std::string report_file;
     uint32_t thread_status_per_interval;
     uint32_t prefix_size;
     uint32_t keys_per_prefix;

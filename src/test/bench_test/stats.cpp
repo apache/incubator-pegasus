@@ -24,8 +24,6 @@ static void append_with_space(std::string *str, const std::string &msg)
 
 stats::stats() { start(-1); }
 
-void stats::set_reporter_agent(reporter_agent *reporter_agent) { reporter_agent_ = reporter_agent; }
-
 void stats::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats_)
 {
     hist_stats = hist_stats_;
@@ -115,9 +113,6 @@ void stats::print_thread_status()
 
 void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
 {
-    if (reporter_agent_) {
-        reporter_agent_->report_finished_ops(num_ops);
-    }
     if (hist_stats) {
         uint64_t now = config::get_instance()->env->NowMicros();
         uint64_t micros = now - last_op_finish_;
