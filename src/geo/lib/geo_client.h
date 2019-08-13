@@ -107,7 +107,7 @@ public:
     ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
-    /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_extractor
+    /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_codec
     int set(const std::string &hash_key,
             const std::string &sort_key,
             const std::string &value,
@@ -149,7 +149,7 @@ public:
     /// this error can be converted to a string using get_error_string()
     ///
     /// REQUIRES: value of this key can be correctly extracted to latitude and longitude by
-    /// latlng_extractor
+    /// latlng_codec
     int get(const std::string &hash_key,
             const std::string &sort_key,
             double &lat_degrees,
@@ -172,7 +172,7 @@ public:
     ///     if wait longer than this value, will return timeout error
     ///
     /// REQUIRES: value of this key can be correctly extracted to latitude and longitude by
-    /// latlng_extractor
+    /// latlng_codec
     void async_get(const std::string &hash_key,
                    const std::string &sort_key,
                    int id,
@@ -224,7 +224,7 @@ public:
     ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
-    /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_extractor
+    /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_codec
     int set_geo_data(const std::string &hash_key,
                      const std::string &sort_key,
                      const std::string &value,
@@ -298,7 +298,7 @@ public:
     ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
-    /// REQUIRES: latitude and longitude can be correctly extracted by latlng_extractor from the
+    /// REQUIRES: latitude and longitude can be correctly extracted by latlng_codec from the
     /// value corresponding to `hash_key` and `sort_key`
     int search_radial(const std::string &hash_key,
                       const std::string &sort_key,
@@ -350,7 +350,7 @@ public:
     dsn::error_s set_max_level(int level);
 
     // For test.
-    const latlng_codec &get_extractor() const { return _extractor; }
+    const latlng_codec &get_codec() const { return _codec; }
 
 private:
     friend class geo_client_test;
@@ -369,7 +369,7 @@ private:
 
     // generate hash_key and sort_key in geo database from hash_key and sort_key in common data
     // database
-    // geo hash_key is the prefix of cell id which is calculated from value by `_extractor`, its
+    // geo hash_key is the prefix of cell id which is calculated from value by `_codec`, its
     // length is associated with `_min_level`
     // geo sort_key is composed with the postfix of the same cell id and origin hash_key and
     // sort_key
@@ -470,7 +470,7 @@ private:
 
     dsn::task_tracker _tracker;
 
-    latlng_codec _extractor;
+    latlng_codec _codec;
     pegasus_client *_common_data_client = nullptr;
     pegasus_client *_geo_data_client = nullptr;
 };
