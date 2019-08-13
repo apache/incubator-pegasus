@@ -5,7 +5,7 @@ file("GLOB"
 add_definitions(-fPIC)
 
 add_library(pegasus_client_impl_objects OBJECT ${source_files})
-target_link_libraries(pegasus_client_impl_objects pegasus_base)
+target_include_directories(pegasus_client_impl_objects PUBLIC $<TARGET_PROPERTY:RocksDB::rocksdb,INTERFACE_INCLUDE_DIRECTORIES>)
 
 # both shared & static version of pegasus client depends on boost_system,boost_filesystem,aio,dl
 #
