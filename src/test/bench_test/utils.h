@@ -6,7 +6,6 @@
 
 namespace pegasus {
 namespace test {
-
 enum operation_type
 {
     kRead = 0,
@@ -14,6 +13,5 @@ enum operation_type
     kDelete,
     kOthers
 };
-
 } // namespace test
 } // namespace pegasus

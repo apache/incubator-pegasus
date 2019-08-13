@@ -10,7 +10,6 @@
 
 namespace pegasus {
 namespace test {
-
 /** Thread safety singleton */
 struct config
 {

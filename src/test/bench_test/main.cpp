@@ -13,9 +13,8 @@ namespace google {
 using namespace google;
 using namespace pegasus;
 
-int db_bench_tool(int argc, char **argv)
+int db_bench_tool(const char *config_file)
 {
-    const char *config_file = argv[1];
     bool init = pegasus::pegasus_client_factory::initialize(config_file);
     if (!init) {
         fprintf(stderr, "Init pegasus error\n");
@@ -31,4 +30,12 @@ int db_bench_tool(int argc, char **argv)
     return 0;
 }
 
-int main(int argc, char **argv) { return db_bench_tool(argc, argv); }
+int main(int argc, char **argv)
+{
+    if (argc < 2) {
+        fprintf(stderr, "USAGE: %s <config-file>", argv[0]);
+        return -1;
+    }
+
+    return db_bench_tool(argv[1]);
+}

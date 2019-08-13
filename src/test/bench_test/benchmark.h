@@ -13,7 +13,6 @@
 
 namespace pegasus {
 namespace test {
-
 // State shared by all concurrent executions of the same benchmark.
 struct shared_state
 {
@@ -49,12 +48,14 @@ struct thread_state
 };
 
 class benchmark;
+typedef void (benchmark::*bench_method)(thread_state *);
+
 struct thread_arg
 {
     benchmark *bm;
     shared_state *shared;
     thread_state *thread;
-    void (benchmark::*method)(thread_state *);
+    bench_method method;
 };
 
 class benchmark
@@ -70,7 +71,7 @@ private:
     /** benchmark operations **/
     stats run_benchmark(int n,
                         const std::string &name,
-                        void (benchmark::*method)(thread_state *),
+                        bench_method method,
                         std::shared_ptr<rocksdb::Statistics> hist_stats = nullptr);
     void write_random(thread_state *thread);
     void read_random(thread_state *thread);
@@ -85,7 +86,7 @@ private:
     void generate_random_keys(uint32_t num,
                               std::vector<std::string> &hashkeys,
                               std::vector<std::string> &sortkeys);
-    operation_type get_operation_type(std::string name);
+    operation_type get_operation_type(const std::string &name);
 
 private:
     int64_t num_;
@@ -94,9 +95,7 @@ private:
     int prefix_size_;
     int64_t keys_per_prefix_;
     pegasus_client *client;
-    std::
-        unordered_map<operation_type, void (benchmark::*)(thread_state *), std::hash<unsigned char>>
-            operation_method;
+    std::unordered_map<operation_type, bench_method, std::hash<unsigned char>> operation_method;
 };
 } // namespace test
 } // namespace pegasus

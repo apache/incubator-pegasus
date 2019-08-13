@@ -7,7 +7,6 @@
 
 namespace pegasus {
 namespace test {
-
 random_generator::random_generator(uint32_t value_size)
 {
     // We use a limited amount of data over and over again and ensure

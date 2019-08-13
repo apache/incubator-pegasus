@@ -6,7 +6,6 @@
 
 namespace pegasus {
 namespace test {
-
 reporter_agent::reporter_agent(rocksdb::Env *env,
                                const std::string &fname,
                                uint64_t report_interval_secs)
@@ -34,6 +33,7 @@ reporter_agent::reporter_agent(rocksdb::Env *env,
 reporter_agent::~reporter_agent()
 {
     {
+        // notify reporting thread
         std::unique_lock<std::mutex> lk(mutex_);
         stop_ = true;
         stop_cv_.notify_all();
@@ -52,6 +52,7 @@ void reporter_agent::sleep_and_report()
     auto time_started = env_->NowMicros();
     while (true) {
         {
+            // wait the main process to stop
             std::unique_lock<std::mutex> lk(mutex_);
             if (stop_ || stop_cv_.wait_for(lk, std::chrono::seconds(report_interval_secs_), [&]() {
                     return stop_;
@@ -61,12 +62,15 @@ void reporter_agent::sleep_and_report()
             }
             // else -> timeout, which means time for a report!
         }
-        auto total_ops_done_snapshot = total_ops_done_.load();
+
         // round the seconds elapsed
         auto secs_elapsed =
             (env_->NowMicros() - time_started + kmicros_in_second / 2) / kmicros_in_second;
+        auto total_ops_done_snapshot = total_ops_done_.load();
         std::string report = std::to_string(secs_elapsed) + "," +
                              std::to_string(total_ops_done_snapshot - last_report_) + "\n";
+
+        // write to report file
         auto s = report_file_->Append(report);
         if (s.ok()) {
             s = report_file_->Flush();

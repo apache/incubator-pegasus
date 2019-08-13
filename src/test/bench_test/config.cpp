@@ -7,7 +7,6 @@
 
 namespace pegasus {
 namespace test {
-
 config *config::get_instance()
 {
     static config instance;

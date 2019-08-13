@@ -154,7 +154,6 @@ void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
 
             // Determine whether to print status where interval is either
             // each N operations or each N seconds.
-
             if (config::get_instance()->stats_interval_seconds &&
                 usecs_since_last < (config::get_instance()->stats_interval_seconds * 1000000)) {
                 // Don't check again for this many operations
@@ -193,16 +192,21 @@ void stats::report(const std::string &name)
     if (done_ < 1)
         done_ = 1;
 
+    // append rate(MBytes) message to extra
     std::string extra;
     if (bytes_ > 0) {
         // Rate is computed on actual elapsed time, not the sum of per-thread
         // elapsed times.
         double elapsed = (finish_ - start_) * 1e-6;
         char rate[100];
-        snprintf(rate, sizeof(rate), "%6.1f MB/s", (bytes_ / 1048576.0) / elapsed);
+        snprintf(rate, sizeof(rate), "%6.1f MB/s", (bytes_ << 20) / elapsed);
         extra = rate;
     }
+
+    // append message_ to extra
     append_with_space(&extra, message_);
+
+    // calculate ops throughtput and elapsed seconds
     double elapsed = (finish_ - start_) * 1e-6;
     double throughput = (double)done_ / elapsed;
 
@@ -218,17 +222,16 @@ void stats::report(const std::string &name)
 
 void combined_stats::add_stats(const stats &stat)
 {
+    // calculate and save ops throughtput
     uint64_t total_ops = stat.done_;
-    uint64_t total_bytes_ = stat.bytes_;
-    double elapsed;
-
     if (total_ops < 1) {
         total_ops = 1;
     }
-
-    elapsed = (stat.finish_ - stat.start_) * 1e-6;
+    double elapsed = (stat.finish_ - stat.start_) * 1e-6;
     throughput_ops_.emplace_back(total_ops / elapsed);
 
+    // calculate and save MBytes throughtput
+    uint64_t total_bytes_ = stat.bytes_;
     if (total_bytes_ > 0) {
         double mbs = total_bytes_ << 20;
         throughput_mbs_.emplace_back(mbs / elapsed);
@@ -267,12 +270,12 @@ void combined_stats::report(const std::string &bench_name)
 
 double combined_stats::calc_avg(std::vector<double> &data)
 {
-    double avg = 0;
+    double total = 0;
     for (double x : data) {
-        avg += x;
+        total += x;
     }
-    avg = avg / data.size();
-    return avg;
+
+    return total / data.size();
 }
 
 double combined_stats::calc_median(std::vector<double> &data)

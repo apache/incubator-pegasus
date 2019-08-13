@@ -11,7 +11,6 @@
 
 namespace pegasus {
 namespace test {
-
 static std::unordered_map<operation_type, std::string, std::hash<unsigned char>>
     operation_type_string = {
         {kRead, "read"}, {kWrite, "write"}, {kDelete, "delete"}, {kOthers, "op"}};
@@ -83,7 +82,7 @@ void benchmark::run()
         operation_type op_type = get_operation_type(name);
 
         // get method by operation type
-        void (benchmark::*method)(thread_state *) = nullptr;
+        bench_method method = nullptr;
         method = operation_method[op_type];
         if (method != nullptr) {
             // run the specified benchmark
@@ -136,7 +135,7 @@ void benchmark::thread_body(void *v)
 
 stats benchmark::run_benchmark(int n,
                                const std::string &name,
-                               void (benchmark::*method)(thread_state *),
+                               bench_method method,
                                std::shared_ptr<rocksdb::Statistics> hist_stats)
 {
     std::unique_ptr<reporter_agent> reporter_agent_;
@@ -347,7 +346,7 @@ void benchmark::generate_random_keys(uint32_t num,
     }
 }
 
-operation_type benchmark::get_operation_type(std::string name)
+operation_type benchmark::get_operation_type(const std::string &name)
 {
     operation_type op_type = kOthers;
     // Both fillseqdeterministic and filluniquerandomdeterministic
@@ -366,6 +365,5 @@ operation_type benchmark::get_operation_type(std::string name)
 
     return op_type;
 }
-
 } // namespace test
 } // namespace pegasus
