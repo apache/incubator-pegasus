@@ -342,9 +342,6 @@ void benchmark::generate_random_keys(uint32_t num,
 operation_type benchmark::get_operation_type(const std::string &name)
 {
     operation_type op_type = kOthers;
-    // Both fillseqdeterministic and filluniquerandomdeterministic
-    // fill the levels except the max level with UNIQUE_RANDOM
-    // and fill the max level with fillseq and filluniquerandom, respectively
     if (name == "fillrandom_pegasus") {
         op_type = kWrite;
     } else if (name == "readrandom_pegasus") {

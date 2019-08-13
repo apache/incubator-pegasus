@@ -26,6 +26,8 @@ public:
     void report(const std::string &name);
 
 private:
+    uint32_t report_default_step(uint64_t current_report);
+
     int id_;
     uint64_t start_;
     uint64_t finish_;

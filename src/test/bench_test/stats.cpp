@@ -128,20 +128,7 @@ void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
     done_ += num_ops;
     if (done_ >= next_report_) {
         if (!config::get_instance()->stats_interval) {
-            if (next_report_ < 1000)
-                next_report_ += 100;
-            else if (next_report_ < 5000)
-                next_report_ += 500;
-            else if (next_report_ < 10000)
-                next_report_ += 1000;
-            else if (next_report_ < 50000)
-                next_report_ += 5000;
-            else if (next_report_ < 100000)
-                next_report_ += 10000;
-            else if (next_report_ < 500000)
-                next_report_ += 50000;
-            else
-                next_report_ += 100000;
+            next_report_ += report_default_step(next_report_);
             fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", done_, "");
         } else {
             uint64_t now = config::get_instance()->env->NowMicros();
@@ -151,8 +138,6 @@ void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
             // each N operations or each N seconds.
             if (config::get_instance()->stats_interval_seconds &&
                 usecs_since_last < (config::get_instance()->stats_interval_seconds * 1000000)) {
-                // Don't check again for this many operations
-                next_report_ += config::get_instance()->stats_interval;
             } else {
                 fprintf(stderr,
                         "%s ... thread %d: (%" PRIu64 ",%" PRIu64 ") ops and "
@@ -166,10 +151,10 @@ void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
                         (now - last_report_finish_) / 1000000.0,
                         (now - start_) / 1000000.0);
 
-                next_report_ += config::get_instance()->stats_interval;
                 last_report_finish_ = now;
                 last_report_done_ = done_;
             }
+            next_report_ += config::get_instance()->stats_interval;
         }
         if (id_ == 0 && config::get_instance()->thread_status_per_interval) {
             print_thread_status();
@@ -213,6 +198,27 @@ void stats::report(const std::string &name)
             (extra.empty() ? "" : " "),
             extra.c_str());
     fflush(stdout);
+}
+
+uint32_t stats::report_default_step(uint64_t current_report)
+{
+    uint32_t step = 0;
+    if (current_report < 1000)
+        step = 100;
+    else if (current_report < 5000)
+        step = 500;
+    else if (current_report < 10000)
+        step = 1000;
+    else if (current_report < 50000)
+        step = 5000;
+    else if (current_report < 100000)
+        step = 10000;
+    else if (current_report < 500000)
+        step = 50000;
+    else
+        step = 100000;
+
+    return step;
 }
 
 void combined_stats::add_stats(const stats &stat)
