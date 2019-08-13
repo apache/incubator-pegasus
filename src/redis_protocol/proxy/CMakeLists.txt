@@ -22,6 +22,7 @@ set(MY_PROJ_LIBS pegasus.rproxylib
                  event
                  s2
                  pegasus_client_static
+                 z
                  fmt)
 
 set(MY_BINPLACES "config.ini")

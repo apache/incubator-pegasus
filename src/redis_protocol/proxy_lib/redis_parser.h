@@ -118,7 +118,7 @@ private:
     // content for current parser
     redis_bulk_string _current_str;
     std::unique_ptr<message_entry> _current_msg;
-    parser_status status;
+    parser_status _status;
     std::string _current_size;
 
     // data stream content

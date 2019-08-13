@@ -51,7 +51,7 @@ redis_parser::redis_call_handler redis_parser::get_handler(const char *command, 
 redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
     : proxy_session(op, first_msg),
       _current_msg(new message_entry()),
-      status(kStartArray),
+      _status(kStartArray),
       _current_size(),
       _total_length(0),
       _current_buffer(nullptr),
@@ -116,7 +116,7 @@ void redis_parser::reset_parser()
     // clear the parser status
     _current_msg->request.sub_request_count = 0;
     _current_msg->request.sub_requests.clear();
-    status = kStartArray;
+    _status = kStartArray;
     _current_size.clear();
 
     // clear the data stream
@@ -144,10 +144,10 @@ bool redis_parser::eat(char c)
     if (dsn_likely(peek() == c)) {
         ++_current_cursor;
         --_total_length;
-      return true;
+        return true;
     } else {
         derror_f("{}: expect token: {}, got {}", _remote_address.to_string(), c, peek());
-      return false;
+        return false;
     }
 }
 
@@ -170,13 +170,12 @@ void redis_parser::eat_all(char *dest, size_t length)
 
 bool redis_parser::end_array_size()
 {
-    int32_t count;
-    bool result =
-        dsn::buf2int32(dsn::string_view(_current_size.c_str(), _current_size.length()), count);
-    if (dsn_unlikely(!result)) {
+    int32_t count = 0;
+    if (dsn_unlikely(!dsn::buf2int32(
+            dsn::string_view(_current_size.c_str(), _current_size.length()), count))) {
         derror_f(
             "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
-      return false;
+        return false;
     }
     if (dsn_unlikely(count <= 0)) {
         derror_f("{}: array size should be positive in redis request, but got {}",
@@ -190,7 +189,7 @@ bool redis_parser::end_array_size()
     current_request.sub_requests.reserve(count);
 
     _current_size.clear();
-    status = kStartBulkString;
+    _status = kStartBulkString;
     return true;
 }
 
@@ -202,22 +201,22 @@ void redis_parser::append_current_bulk_string()
         // we get a full request command
         handle_command(std::move(_current_msg));
         _current_msg.reset(new message_entry());
-        status = kStartArray;
+        _status = kStartArray;
     } else {
-        status = kStartBulkString;
+        _status = kStartBulkString;
     }
 }
 
 bool redis_parser::end_bulk_string_size()
 {
-    int32_t length;
-    bool result =
-        dsn::buf2int32(dsn::string_view(_current_size.c_str(), _current_size.length()), length);
-    if (dsn_unlikely(!result)) {
+    int32_t length = 0;
+    if (dsn_unlikely(!dsn::buf2int32(
+            dsn::string_view(_current_size.c_str(), _current_size.length()), length))) {
         derror_f(
             "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
         return false;
     }
+
     _current_str.length = length;
     _current_str.data.assign(nullptr, 0, 0);
     _current_size.clear();
@@ -228,7 +227,7 @@ bool redis_parser::end_bulk_string_size()
     }
 
     if (_current_str.length >= 0) {
-        status = kStartBulkStringData;
+        _status = kStartBulkStringData;
         return true;
     }
 
@@ -251,23 +250,23 @@ bool redis_parser::parse_stream()
 {
     char t;
     while (_total_length > 0) {
-        switch (status) {
+        switch (_status) {
         case kStartArray:
             dverify(eat('*'));
-            status = kInArraySize;
+            _status = kInArraySize;
             break;
         case kStartBulkString:
-            eat('$');
-            status = kInBulkStringSize;
+            dverify(eat('$'));
+            _status = kInBulkStringSize;
             break;
         case kInArraySize:
         case kInBulkStringSize:
             t = peek();
             if (t == CR) {
                 if (_total_length > 1) {
-                    eat(CR);
-                    eat(LF);
-                    if (kInArraySize == status) {
+                    dverify(eat(CR));
+                    dverify(eat(LF));
+                    if (kInArraySize == _status) {
                         dverify(end_array_size());
                     } else {
                         dverify(end_bulk_string_size());
