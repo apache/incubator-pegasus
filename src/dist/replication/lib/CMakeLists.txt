@@ -1,7 +1,9 @@
 set(MY_PROJ_NAME dsn_replica_server)
 
 set(DUPLICATION_SRC
+        duplication/replica_duplicator_manager.cpp
         duplication/duplication_sync_timer.cpp
+        duplication/replica_duplicator.cpp
 )
 
 # Source files under CURRENT project directory will be automatically included.
@@ -15,7 +17,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS 
+set(MY_PROJ_LIBS
     dsn_replication_common
     dsn.failure_detector
     dsn.failure_detector.multimaster
@@ -28,3 +30,5 @@ set(MY_PROJ_LIBS
 set(MY_BINPLACES "")
 
 dsn_add_shared_library()
+
+add_subdirectory(duplication/test)

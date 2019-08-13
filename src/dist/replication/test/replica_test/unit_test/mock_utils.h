@@ -36,15 +36,60 @@
 namespace dsn {
 namespace replication {
 
+class mock_replication_app_base : public replication_app_base
+{
+public:
+    explicit mock_replication_app_base(replica *replica) : replication_app_base(replica) {}
+
+    error_code start(int, char **) override { return ERR_NOT_IMPLEMENTED; }
+    error_code stop(bool) override { return ERR_NOT_IMPLEMENTED; }
+    error_code sync_checkpoint() override { return ERR_NOT_IMPLEMENTED; }
+    error_code async_checkpoint(bool) override { return ERR_NOT_IMPLEMENTED; }
+    error_code prepare_get_checkpoint(blob &) override { return ERR_NOT_IMPLEMENTED; }
+    error_code get_checkpoint(int64_t, const blob &, learn_state &) override
+    {
+        return ERR_NOT_IMPLEMENTED;
+    }
+    error_code storage_apply_checkpoint(chkpt_apply_mode, const learn_state &) override
+    {
+        return ERR_NOT_IMPLEMENTED;
+    }
+    error_code copy_checkpoint_to_dir(const char *, int64_t *) override
+    {
+        return ERR_NOT_IMPLEMENTED;
+    }
+    int on_request(message_ex *request) override { return 0; }
+    std::string query_compact_state() const { return ""; };
+
+    // we mock the followings
+    void update_app_envs(const std::map<std::string, std::string> &envs) override { _envs = envs; }
+    void query_app_envs(std::map<std::string, std::string> &out) override { out = _envs; }
+    decree last_durable_decree() const override { return 0; }
+
+private:
+    std::map<std::string, std::string> _envs;
+};
+
 class mock_replica : public replica
 {
 public:
     mock_replica(replica_stub *stub, gpid gpid, const app_info &app, const char *dir)
         : replica(stub, gpid, app, dir, false)
     {
+        _app = make_unique<replication::mock_replication_app_base>(this);
     }
 
-    ~mock_replica() override {}
+    ~mock_replica() override
+    {
+        _config.status = partition_status::PS_INACTIVE;
+        _app.reset(nullptr);
+    }
+
+    replica_duplicator_manager &get_replica_duplicator_manager() { return *_duplication_mgr; }
+
+    void as_primary() { _config.status = partition_status::PS_PRIMARY; }
+
+    void as_secondary() { _config.status = partition_status::PS_SECONDARY; }
 };
 
 inline std::unique_ptr<mock_replica> create_mock_replica(replica_stub *stub,
@@ -66,6 +111,34 @@ public:
     mock_replica_stub() = default;
 
     ~mock_replica_stub() override = default;
+
+    void add_replica(replica *r) { _replicas[r->get_gpid()] = replica_ptr(r); }
+
+    mock_replica *add_primary_replica(int appid, int part_index = 1)
+    {
+        auto r = add_non_primary_replica(appid, part_index);
+        r->as_primary();
+        return r;
+    }
+
+    mock_replica *add_non_primary_replica(int appid, int part_index = 1)
+    {
+        auto r = create_mock_replica(this, appid, part_index).release();
+        add_replica(r);
+        mock_replicas[gpid(appid, part_index)] = r;
+        return r;
+    }
+
+    mock_replica *find_replica(int appid, int part_index = 1)
+    {
+        return mock_replicas[gpid(appid, part_index)];
+    }
+
+    void set_state_connected() { _state = replica_node_state::NS_Connected; }
+
+    rpc_address get_meta_server_address() const override { return rpc_address("127.0.0.2", 12321); }
+
+    std::map<gpid, mock_replica *> mock_replicas;
 };
 
 } // namespace replication

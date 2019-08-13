@@ -29,6 +29,7 @@
 #include <dsn/utility/error_code.h>
 #include <dsn/utility/smart_pointers.h>
 #include <dsn/utility/string_view.h>
+#include <dsn/c/api_utilities.h>
 
 #include <sstream>
 
@@ -69,12 +70,9 @@ public:
     error_s(error_s &&rhs) noexcept = default;
     error_s &operator=(error_s &&) noexcept = default;
 
-    static inline error_s make(error_code code, dsn::string_view reason)
-    {
-        return error_s(code, reason);
-    }
+    static error_s make(error_code code, dsn::string_view reason) { return error_s(code, reason); }
 
-    static inline error_s make(error_code code)
+    static error_s make(error_code code)
     {
         // fast path
         if (code == ERR_OK) {
@@ -86,9 +84,9 @@ public:
     // Return a success status.
     // This function is almost zero-cost since the returned object contains
     // merely a null pointer.
-    static inline error_s ok() { return error_s(); }
+    static error_s ok() { return error_s(); }
 
-    inline bool is_ok() const
+    bool is_ok() const
     {
         if (_info) {
             return _info->code == ERR_OK;
@@ -110,6 +108,7 @@ public:
     error_s &operator<<(const char str[])
     {
         if (_info) {
+            _info->msg.append(" << ");
             _info->msg.append(str);
             // It's fine for operator<< being applied to an OK Status.
         }
@@ -133,6 +132,14 @@ public:
         return os << s.description();
     }
 
+    friend bool operator==(const error_s lhs, const error_s &rhs)
+    {
+        if (lhs._info && rhs._info) {
+            return lhs._info->code == rhs._info->code && lhs._info->msg == rhs._info->msg;
+        }
+        return lhs._info == rhs._info;
+    }
+
 private:
     error_s(error_code code, dsn::string_view msg) noexcept : _info(new error_info(code, msg)) {}
 
@@ -144,7 +151,7 @@ private:
         error_info(error_code c, dsn::string_view s) : code(c), msg(s) {}
     };
 
-    inline void copy(const error_s &rhs)
+    void copy(const error_s &rhs)
     {
         if (rhs._info == _info) {
             return;
@@ -187,13 +194,13 @@ public:
 
     const T &get_value() const
     {
-        assert(_err.is_ok());
+        dassert(_err.is_ok(), "%s", get_error().description().data());
         return *_value;
     }
 
     T &get_value()
     {
-        assert(_err.is_ok());
+        dassert(_err.is_ok(), "%s", get_error().description().data());
         return *_value;
     }
 

@@ -41,10 +41,7 @@ namespace replication {
 
 struct replica_stub_test_base : ::testing::Test
 {
-    replica_stub_test_base()
-    {
-        stub = make_unique<mock_replica_stub>(); // mock mutation_duplicator
-    }
+    replica_stub_test_base() { stub = make_unique<mock_replica_stub>(); }
 
     ~replica_stub_test_base() { stub.reset(); }
 

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "replica_duplicator.h"
+
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/duplication_common.h>
 
@@ -38,15 +40,22 @@ public:
         }
     }
 
-    /// collect updated duplication confirm points from this node.
-    std::vector<duplication_confirm_entry> get_duplication_confirms_to_update() const { return {}; }
+    /// collect updated duplication confirm points from this replica.
+    std::vector<duplication_confirm_entry> get_duplication_confirms_to_update() const;
 
 private:
-    void sync_duplication(const duplication_entry &ent) {}
+    void sync_duplication(const duplication_entry &ent);
 
-    void remove_non_existed_duplications(const std::map<dupid_t, duplication_entry> &) {}
+    void remove_non_existed_duplications(const std::map<dupid_t, duplication_entry> &);
 
-    void remove_all_duplications() {}
+    void remove_all_duplications()
+    {
+        // fast path
+        if (_duplications.empty())
+            return;
+
+        _duplications.clear();
+    }
 
 private:
     friend class duplication_sync_timer_test;
@@ -54,6 +63,12 @@ private:
     friend class replica_duplicator_manager_test;
 
     replica *_replica;
+
+    std::map<dupid_t, replica_duplicator_u_ptr> _duplications;
+
+    // avoid thread conflict between replica::on_checkpoint_timer and
+    // duplication_sync_timer.
+    mutable zlock _lock;
 };
 
 } // namespace replication

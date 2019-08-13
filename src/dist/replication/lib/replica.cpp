@@ -54,7 +54,8 @@ replica::replica(
       _chkpt_total_size(0),
       _cur_download_size(0),
       _restore_progress(0),
-      _restore_status(ERR_OK)
+      _restore_status(ERR_OK),
+      _duplication_mgr(new replica_duplicator_manager(this))
 {
     dassert(_app_info.app_type != "", "");
     dassert(stub != nullptr, "");
@@ -436,5 +437,5 @@ std::string replica::query_compact_state() const
     dassert_replica(_app != nullptr, "");
     return _app->query_compact_state();
 }
-}
-} // namespace
+} // namespace replication
+} // namespace dsn
