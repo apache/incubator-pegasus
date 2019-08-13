@@ -102,7 +102,7 @@ extern DSN_API void dsn_coredump();
 
 #define dreturn_not_ok_logged(err, ...)                                                            \
     do {                                                                                           \
-        if ((err) != dsn::ERR_OK) {                                                                \
+        if (dsn_unlikely((err) != dsn::ERR_OK)) {                                                  \
             derror(__VA_ARGS__);                                                                   \
             return err;                                                                            \
         }                                                                                          \
@@ -125,7 +125,7 @@ extern DSN_API void dsn_coredump();
 /*@}*/
 
 #define dverify(exp)                                                                               \
-    if (!(exp))                                                                                    \
+    if (dsn_unlikely(!(exp)))                                                                      \
     return false
 
 #define dverify_exception(exp)                                                                     \
@@ -139,18 +139,18 @@ extern DSN_API void dsn_coredump();
 
 #define dverify_logged(exp, level, ...)                                                            \
     do {                                                                                           \
-        if (!(exp)) {                                                                              \
+        if (dsn_unlikely(!(exp))) {                                                                \
             dlog(level, __VA_ARGS__);                                                              \
             return false;                                                                          \
         }                                                                                          \
     } while (0)
 
 #define dstop_on_false(exp)                                                                        \
-    if (!(exp))                                                                                    \
+    if (dsn_unlikely(!(exp)))                                                                      \
     return
 #define dstop_on_false_logged(exp, level, ...)                                                     \
     do {                                                                                           \
-        if (!(exp)) {                                                                              \
+        if (dsn_unlikely(!(exp))) {                                                                \
             dlog(level, __VA_ARGS__);                                                              \
             return;                                                                                \
         }                                                                                          \
