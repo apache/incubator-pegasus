@@ -14,7 +14,7 @@ namespace test {
 
 static std::unordered_map<operation_type, std::string, std::hash<unsigned char>>
     operation_type_string = {
-        {kRead, "read"}, {kWrite, "write"}, {kDelete, "delete"}, {kScan, "scan"}, {kOthers, "op"}};
+        {kRead, "read"}, {kWrite, "write"}, {kDelete, "delete"}, {kOthers, "op"}};
 
 benchmark::benchmark()
     : num_(config::get_instance()->num),
@@ -30,6 +30,11 @@ benchmark::benchmark()
         fprintf(stderr, "create client error\n");
         exit(1);
     }
+
+    operation_method = {{kRead, &benchmark::read_random},
+                        {kWrite, &benchmark::write_random},
+                        {kDelete, &benchmark::delete_random},
+                        {kOthers, nullptr}};
 }
 
 // Generate key according to the given specification and random number.
@@ -74,34 +79,25 @@ void benchmark::run()
     std::stringstream benchmark_stream(config::get_instance()->benchmarks);
     std::string name;
     while (std::getline(benchmark_stream, name, ',')) {
+        // get operation type
+        operation_type op_type = get_operation_type(name);
+
+        // get method by operation type
         void (benchmark::*method)(thread_state *) = nullptr;
-        // Both fillseqdeterministic and filluniquerandomdeterministic
-        // fill the levels except the max level with UNIQUE_RANDOM
-        // and fill the max level with fillseq and filluniquerandom, respectively
-        if (name == "fillrandom_pegasus") {
-            method = &benchmark::write_random;
-        } else if (name == "readrandom_pegasus") {
-            method = &benchmark::read_random;
-        } else if (name == "deleterandom_pegasus") {
-            method = &benchmark::delete_random;
-        } else if (!name.empty()) { // No error message for empty name
-            fprintf(stderr, "unknown benchmark '%s'\n", name.c_str());
-            exit(1);
-        }
-
+        method = operation_method[op_type];
         if (method != nullptr) {
-            combined_stats combined_stats_;
+            // run the specified benchmark
             std::shared_ptr<rocksdb::Statistics> hist_stats = rocksdb::CreateDBStatistics();
-
             stats stats_ = run_benchmark(config::get_instance()->threads, name, method, hist_stats);
+
+            // print report
+            combined_stats combined_stats_;
             combined_stats_.add_stats(stats_);
             combined_stats_.report(name);
-            for (auto type : operation_type_string) {
-                fprintf(stdout,
-                        "Microseconds per %s:\n%s\n",
-                        operation_type_string[type.first].c_str(),
-                        hist_stats->getHistogramString(type.first).c_str());
-            }
+            fprintf(stdout,
+                    "Microseconds per %s:\n%s\n",
+                    operation_type_string[op_type].c_str(),
+                    hist_stats->getHistogramString(op_type).c_str());
         }
     }
 }
@@ -177,7 +173,7 @@ stats benchmark::run_benchmark(int n,
     }
     pthread_mutex_unlock(&shared.mu);
 
-    // Stats for some threads can be excluded.
+    // merge stats
     stats merge_stats;
     for (int i = 0; i < n; i++) {
         merge_stats.merge(arg[i].thread->stats);
@@ -193,9 +189,7 @@ stats benchmark::run_benchmark(int n,
     return merge_stats;
 }
 
-void benchmark::write_random(thread_state *thread) { do_write(thread, RANDOM); }
-
-void benchmark::do_write(thread_state *thread, write_mode write_mode)
+void benchmark::write_random(thread_state *thread)
 {
     // generate random hash keys and sort keys
     std::vector<std::string> hashkeys, sortkeys;
@@ -222,13 +216,11 @@ void benchmark::do_write(thread_state *thread, write_mode write_mode)
                 fprintf(stderr, "Set timeout, retry(%d)\n", try_count);
             }
         }
-        thread->stats.finished_ops(nullptr, nullptr, 1, kWrite);
+        thread->stats.finished_ops(1, kWrite);
     }
 
     thread->stats.add_bytes(bytes);
 }
-
-int64_t benchmark::get_random_key() { return dsn::rand::next_u64() % config::get_instance()->num; }
 
 void benchmark::read_random(thread_state *thread)
 {
@@ -259,7 +251,7 @@ void benchmark::read_random(thread_state *thread)
                 fprintf(stderr, "Get timeout, retry(%d)\n", try_count);
             }
         }
-        thread->stats.finished_ops(nullptr, nullptr, 1, kRead);
+        thread->stats.finished_ops(1, kRead);
     }
 
     char msg[100];
@@ -269,15 +261,7 @@ void benchmark::read_random(thread_state *thread)
     thread->stats.add_message(msg);
 }
 
-std::string benchmark::allocate_key(std::unique_ptr<const char[]> *key_guard)
-{
-    char *data = new char[key_size_];
-    const char *const_data = data;
-    key_guard->reset(const_data);
-    return std::string(key_guard->get(), key_size_);
-}
-
-void benchmark::do_delete(thread_state *thread, bool seq)
+void benchmark::delete_random(thread_state *thread)
 {
     // generate random hash keys and sort keys
     std::vector<std::string> hashkeys, sortkeys;
@@ -299,11 +283,19 @@ void benchmark::do_delete(thread_state *thread, bool seq)
                 fprintf(stderr, "Get timeout, retry(%d)\n", try_count);
             }
         }
-        thread->stats.finished_ops(nullptr, nullptr, 1, kDelete);
+        thread->stats.finished_ops(1, kDelete);
     }
 }
 
-void benchmark::delete_random(thread_state *thread) { do_delete(thread, false); }
+int64_t benchmark::get_random_key() { return dsn::rand::next_u64() % config::get_instance()->num; }
+
+std::string benchmark::allocate_key(std::unique_ptr<const char[]> *key_guard)
+{
+    char *data = new char[key_size_];
+    const char *const_data = data;
+    key_guard->reset(const_data);
+    return std::string(key_guard->get(), key_size_);
+}
 
 void benchmark::print_header()
 {
@@ -354,5 +346,26 @@ void benchmark::generate_random_keys(uint32_t num,
         sortkeys.push_back(sortkey);
     }
 }
+
+operation_type benchmark::get_operation_type(std::string name)
+{
+    operation_type op_type = kOthers;
+    // Both fillseqdeterministic and filluniquerandomdeterministic
+    // fill the levels except the max level with UNIQUE_RANDOM
+    // and fill the max level with fillseq and filluniquerandom, respectively
+    if (name == "fillrandom_pegasus") {
+        op_type = kWrite;
+    } else if (name == "readrandom_pegasus") {
+        op_type = kRead;
+    } else if (name == "deleterandom_pegasus") {
+        op_type = kDelete;
+    } else if (!name.empty()) { // No error message for empty name
+        fprintf(stderr, "unknown benchmark '%s'\n", name.c_str());
+        exit(1);
+    }
+
+    return op_type;
+}
+
 } // namespace test
 } // namespace pegasus

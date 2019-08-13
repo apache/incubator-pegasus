@@ -19,8 +19,11 @@ reporter_agent::reporter_agent(rocksdb::Env *env,
     auto s = env_->NewWritableFile(fname, &report_file_, rocksdb::EnvOptions());
     if (s.ok()) {
         s = report_file_->Append(header() + "\n");
+    }
+    if (s.ok()) {
         s = report_file_->Flush();
-    } else {
+    }
+    if (!s.ok()) {
         fprintf(stderr, "Can't open %s: %s\n", fname.c_str(), s.ToString().c_str());
         abort();
     }
@@ -45,7 +48,7 @@ std::string reporter_agent::header() const { return "secs_elapsed,interval_qps";
 
 void reporter_agent::sleep_and_report()
 {
-    uint64_t kMicrosInSecond = 1000 * 1000;
+    uint64_t kmicros_in_second = 1000 * 1000;
     auto time_started = env_->NowMicros();
     while (true) {
         {
@@ -61,7 +64,7 @@ void reporter_agent::sleep_and_report()
         auto total_ops_done_snapshot = total_ops_done_.load();
         // round the seconds elapsed
         auto secs_elapsed =
-            (env_->NowMicros() - time_started + kMicrosInSecond / 2) / kMicrosInSecond;
+            (env_->NowMicros() - time_started + kmicros_in_second / 2) / kmicros_in_second;
         std::string report = std::to_string(secs_elapsed) + "," +
                              std::to_string(total_ops_done_snapshot - last_report_) + "\n";
         auto s = report_file_->Append(report);

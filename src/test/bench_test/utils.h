@@ -12,15 +12,8 @@ enum operation_type
     kRead = 0,
     kWrite,
     kDelete,
-    kScan,
     kOthers
 };
 
-enum write_mode
-{
-    RANDOM,
-    SEQUENTIAL,
-    UNIQUE_RANDOM
-};
 } // namespace test
 } // namespace pegasus

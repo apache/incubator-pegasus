@@ -21,7 +21,7 @@ public:
     void stop();
     void add_message(const std::string &msg);
     void print_thread_status();
-    void finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum operation_type op_type);
+    void finished_ops(int64_t num_ops, enum operation_type op_type);
     void add_bytes(int64_t n);
     void report(const std::string &name);
 

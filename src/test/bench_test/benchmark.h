@@ -73,13 +73,11 @@ private:
                         void (benchmark::*method)(thread_state *),
                         std::shared_ptr<rocksdb::Statistics> hist_stats = nullptr);
     void write_random(thread_state *thread);
-    void do_write(thread_state *thread, write_mode write_mode);
-    int64_t get_random_key();
     void read_random(thread_state *thread);
     void delete_random(thread_state *thread);
-    void do_delete(thread_state *thread, bool seq);
 
     /** some auxiliary functions */
+    int64_t get_random_key();
     std::string allocate_key(std::unique_ptr<const char[]> *key_guard);
     void generate_key_from_int(uint64_t v, int64_t num_keys, std::string *key);
     void print_header();
@@ -87,6 +85,7 @@ private:
     void generate_random_keys(uint32_t num,
                               std::vector<std::string> &hashkeys,
                               std::vector<std::string> &sortkeys);
+    operation_type get_operation_type(std::string name);
 
 private:
     int64_t num_;
@@ -95,6 +94,9 @@ private:
     int prefix_size_;
     int64_t keys_per_prefix_;
     pegasus_client *client;
+    std::
+        unordered_map<operation_type, void (benchmark::*)(thread_state *), std::hash<unsigned char>>
+            operation_method;
 };
 } // namespace test
 } // namespace pegasus

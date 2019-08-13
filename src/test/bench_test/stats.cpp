@@ -113,7 +113,7 @@ void stats::print_thread_status()
     }
 }
 
-void stats::finished_ops(void *db_with_cfh, void *db, int64_t num_ops, enum operation_type op_type)
+void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
 {
     if (reporter_agent_) {
         reporter_agent_->report_finished_ops(num_ops);
