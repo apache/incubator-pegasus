@@ -139,11 +139,16 @@ char redis_parser::peek()
     return _current_buffer[_current_cursor];
 }
 
-void redis_parser::eat(char c)
+bool redis_parser::eat(char c)
 {
-    dassert_f(peek() == c, "{}: expect token: {}, got {}", _remote_address.to_string(), c, peek());
-    ++_current_cursor;
-    --_total_length;
+    if (dsn_likely(peek() == c)) {
+        ++_current_cursor;
+        --_total_length;
+      return true;
+    } else {
+        derror_f("{}: expect token: {}, got {}", _remote_address.to_string(), c, peek());
+      return false;
+    }
 }
 
 void redis_parser::eat_all(char *dest, size_t length)
@@ -153,8 +158,9 @@ void redis_parser::eat_all(char *dest, size_t length)
         prepare_current_buffer();
 
         size_t eat_size = _current_buffer_length - _current_cursor;
-        if (eat_size > length)
+        if (eat_size > length) {
             eat_size = length;
+        }
         memcpy(dest, _current_buffer + _current_cursor, eat_size);
         dest += eat_size;
         _current_cursor += eat_size;
@@ -162,25 +168,30 @@ void redis_parser::eat_all(char *dest, size_t length)
     }
 }
 
-void redis_parser::end_array_size()
+bool redis_parser::end_array_size()
 {
     int32_t count;
     bool result =
         dsn::buf2int32(dsn::string_view(_current_size.c_str(), _current_size.length()), count);
-    dassert_f(result,
-              "{}: invalid size string \"{}\"",
-              _remote_address.to_string(),
-              _current_size.c_str());
-    dassert_f(count > 0,
-              "{}: array size should be positive in redis request, but got {}",
-              _remote_address.to_string(),
-              count);
+    if (dsn_unlikely(!result)) {
+        derror_f(
+            "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
+      return false;
+    }
+    if (dsn_unlikely(count <= 0)) {
+        derror_f("{}: array size should be positive in redis request, but got {}",
+                 _remote_address.to_string(),
+                 count);
+        return false;
+    }
 
     redis_request &current_request = _current_msg->request;
     current_request.sub_request_count = count;
     current_request.sub_requests.reserve(count);
 
     _current_size.clear();
+    status = kStartBulkString;
+    return true;
 }
 
 void redis_parser::append_current_bulk_string()
@@ -197,29 +208,33 @@ void redis_parser::append_current_bulk_string()
     }
 }
 
-void redis_parser::end_bulk_string_size()
+bool redis_parser::end_bulk_string_size()
 {
     int32_t length;
     bool result =
         dsn::buf2int32(dsn::string_view(_current_size.c_str(), _current_size.length()), length);
-    dassert_f(result, "invalid size string \"{}\"", _current_size.c_str());
-
+    if (dsn_unlikely(!result)) {
+        derror_f(
+            "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
+        return false;
+    }
     _current_str.length = length;
     _current_str.data.assign(nullptr, 0, 0);
     _current_size.clear();
 
     if (-1 == _current_str.length) {
         append_current_bulk_string();
-        return;
+        return true;
     }
 
     if (_current_str.length >= 0) {
         status = kStartBulkStringData;
-        return;
+        return true;
     }
 
-    dassert_f(
+    derror_f(
         "{}: invalid bulk string length: {}", _remote_address.to_string(), _current_str.length);
+    return false;
 }
 
 void redis_parser::append_message(dsn::message_ex *msg)
@@ -227,8 +242,8 @@ void redis_parser::append_message(dsn::message_ex *msg)
     msg->add_ref();
     _recv_buffers.push(msg);
     _total_length += msg->body_size();
-    dinfo(
-        "%s: recv message, currently total length: %d", _remote_address.to_string(), _total_length);
+    dinfo_f(
+        "{}: recv message, currently total length: {}", _remote_address.to_string(), _total_length);
 }
 
 // refererence: http://redis.io/topics/protocol
@@ -238,7 +253,7 @@ bool redis_parser::parse_stream()
     while (_total_length > 0) {
         switch (status) {
         case kStartArray:
-            eat('*');
+            dverify(eat('*'));
             status = kInArraySize;
             break;
         case kStartBulkString:
@@ -253,17 +268,16 @@ bool redis_parser::parse_stream()
                     eat(CR);
                     eat(LF);
                     if (kInArraySize == status) {
-                        end_array_size();
-                        status = kStartBulkString;
+                        dverify(end_array_size());
                     } else {
-                        end_bulk_string_size();
+                        dverify(end_bulk_string_size());
                     }
                 } else {
                     return true;
                 }
             } else {
                 _current_size.push_back(t);
-                eat(t);
+                dverify(eat(t));
             }
             break;
         case kStartBulkStringData:
@@ -277,8 +291,8 @@ bool redis_parser::parse_stream()
                     eat_all(str_data.get(), _current_str.length);
                     _current_str.data.assign(std::move(str_data), 0, _current_str.length);
                 }
-                eat(CR);
-                eat(LF);
+                dverify(eat(CR));
+                dverify(eat(LF));
                 append_current_bulk_string();
             } else
                 return true;

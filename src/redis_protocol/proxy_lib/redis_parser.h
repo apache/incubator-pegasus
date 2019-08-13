@@ -138,13 +138,13 @@ protected:
     void append_message(dsn::message_ex *msg);
     void prepare_current_buffer();
     char peek();
-    void eat(char c);
+    bool eat(char c);
     void eat_all(char *dest, size_t length);
     void reset_parser();
 
     // function for parser
-    void end_array_size();
-    void end_bulk_string_size();
+    bool end_array_size();
+    bool end_bulk_string_size();
     void append_current_bulk_string();
     bool parse_stream();
 
