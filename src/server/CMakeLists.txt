@@ -9,11 +9,7 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH
-    "${PEGASUS_PROJECT_DIR}/rocksdb")
-
-set(MY_PROJ_LIB_PATH
-    "${PEGASUS_PROJECT_DIR}/rocksdb/build")
+set(MY_PROJ_INC_PATH "")
 
 set(MY_PROJ_LIBS
     dsn_replica_server
@@ -25,6 +21,7 @@ set(MY_PROJ_LIBS
     dsn.failure_detector
     dsn.failure_detector.multimaster
     dsn.replication.zookeeper_provider
+    RocksDB::rocksdb
     pegasus_reporter
     prometheus-cpp-pull
     prometheus-cpp-push
@@ -40,8 +37,6 @@ set(MY_PROJ_LIBS
     PocoJSON
     crypto
     fmt
-    ${ROCKSDB_LINK_LIBRARIES}
-    z
     rt
     aio
     pthread)

@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME "pegasus.base")
+set(MY_PROJ_NAME "pegasus_base")
 
 if(UNIX)
     add_compile_options(-fPIC)
@@ -11,8 +11,8 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_SRC "")
 
-set(MY_PROJ_INC_PATH "../include")
-
-set(MY_PROJ_LIB_PATH "")
+set(MY_PROJ_INC_PATH "")
 
 dsn_add_static_library()
+
+target_link_libraries(pegasus_base PUBLIC RocksDB::rocksdb)

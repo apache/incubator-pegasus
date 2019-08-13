@@ -17,6 +17,7 @@
 
 #include <prometheus/registry.h>
 #include <prometheus/gateway.h>
+
 namespace pegasus {
 namespace server {
 

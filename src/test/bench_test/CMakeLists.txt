@@ -10,14 +10,12 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include" "../../../rocksdb")
-
-set(MY_PROJ_LIB_PATH "../../../rocksdb/build")
+set(MY_PROJ_INC_PATH "../../../rocksdb")
 
 set(MY_PROJ_LIBS
         pegasus_client_static
-        ${ROCKSDB_LINK_LIBRARIES}
-        z)
+        RocksDB::rocksdb
+        gflags)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

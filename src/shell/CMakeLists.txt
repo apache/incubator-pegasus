@@ -10,12 +10,7 @@ set(MY_PROJ_SRC "linenoise/linenoise.c" "sds/sds.c")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB_RECURSE")
 
-set(MY_PROJ_INC_PATH
-    "${PEGASUS_PROJECT_DIR}/src/include"
-    "${PEGASUS_PROJECT_DIR}/src/base")
-
-set(MY_PROJ_LIB_PATH
-    "${PEGASUS_PROJECT_DIR}/rocksdb/build")
+set(MY_PROJ_INC_PATH "${PEGASUS_PROJECT_DIR}/src/base")
 
 set(MY_PROJ_LIBS
     dsn.replication.tool
@@ -35,9 +30,8 @@ set(MY_PROJ_LIBS
     crypto
     fmt
     pegasus_geo_lib
+    RocksDB::rocksdb
     s2
-    ${ROCKSDB_LINK_LIBRARIES}
-    z
     rt
     aio
     pthread)
