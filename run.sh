@@ -1507,63 +1507,6 @@ function usage_bench()
 
 function run_bench()
 {
-    TYPE=fillseq_pegasus,readrandom_pegasus
-    NUM=100000
-    CLUSTER=127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603
-    APP=temp
-    THREAD=1
-    KEY_SIZE=16
-    VALUE_SIZE=100
-    TIMEOUT_MS=1000
-    while [[ $# > 0 ]]; do
-        key="$1"
-        case $key in
-            -h|--help)
-                usage_bench
-                exit 0
-                ;;
-            -t|--type)
-                TYPE="$2"
-                shift
-                ;;
-            -n)
-                NUM="$2"
-                shift
-                ;;
-            --cluster)
-                CLUSTER="$2"
-                shift
-                ;;
-            --app_name)
-                APP="$2"
-                shift
-                ;;
-            --thread_num)
-                THREAD="$2"
-                shift
-                ;;
-            --key_size)
-                KEY_SIZE="$2"
-                shift
-                ;;
-            --value_size)
-                VALUE_SIZE="$2"
-                shift
-                ;;
-            --timeout)
-                TIMEOUT_MS="$2"
-                shift
-                ;;
-            *)
-                echo "ERROR: unknown option \"$key\""
-                echo
-                usage_bench
-                exit 1
-                ;;
-        esac
-        shift
-    done
-
     cd ${ROOT}
     sed -i "s/@CLUSTER@/$CLUSTER/g" ${DSN_ROOT}/bin/pegasus_bench/config.ini
     ln -s -f ${DSN_ROOT}/bin/pegasus_bench/pegasus_bench

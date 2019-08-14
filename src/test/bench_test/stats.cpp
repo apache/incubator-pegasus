@@ -11,15 +11,16 @@
 
 namespace pegasus {
 namespace test {
-
 static void append_with_space(std::string *str, const std::string &msg)
 {
     if (msg.empty())
         return;
+
+    assert(NULL != str);
     if (!str->empty()) {
         str->push_back(' ');
     }
-    str->append(msg.data(), msg.size());
+    str->append(msg);
 }
 
 stats::stats() { start(-1); }
@@ -32,16 +33,13 @@ void stats::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats_)
 void stats::start(int id)
 {
     id_ = id;
-    next_report_ =
-        config::get_instance()->stats_interval ? config::get_instance()->stats_interval : 100;
+    next_report_ = 100;
     last_op_finish_ = start_;
     done_ = 0;
-    last_report_done_ = 0;
     bytes_ = 0;
     seconds_ = 0;
     start_ = config::get_instance()->env->NowMicros();
     finish_ = start_;
-    last_report_finish_ = start_;
     message_.clear();
     // When set, stats from this thread won't be merged with others.
     exclude_from_merge_ = false;
@@ -55,11 +53,8 @@ void stats::merge(const stats &other)
     done_ += other.done_;
     bytes_ += other.bytes_;
     seconds_ += other.seconds_;
-    if (other.start_ < start_)
-        start_ = other.start_;
-    if (other.finish_ > finish_)
-        finish_ = other.finish_;
-
+    start_ = std::min(other.start_, start_);
+    finish_ = std::max(other.finish_, finish_);
     // Just keep the messages from one thread
     if (message_.empty())
         message_ = other.message_;
@@ -114,53 +109,31 @@ void stats::print_thread_status()
 void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
 {
     if (hist_stats) {
+        // add excution time of this operation to hist_stats
         uint64_t now = config::get_instance()->env->NowMicros();
         uint64_t micros = now - last_op_finish_;
         hist_stats->measureTime(op_type, micros);
 
-        if (micros > 20000 && !config::get_instance()->stats_interval) {
+        // if there is a long operation, print warning message
+        if (micros > 20000) {
             fprintf(stderr, "long op: %" PRIu64 " micros%30s\r", micros, "");
             fflush(stderr);
         }
         last_op_finish_ = now;
     }
 
+    // print the benchmark running status
     done_ += num_ops;
     if (done_ >= next_report_) {
-        if (!config::get_instance()->stats_interval) {
-            next_report_ += report_default_step(next_report_);
-            fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", done_, "");
-        } else {
-            uint64_t now = config::get_instance()->env->NowMicros();
-            int64_t usecs_since_last = now - last_report_finish_;
-
-            // Determine whether to print status where interval is either
-            // each N operations or each N seconds.
-            if (config::get_instance()->stats_interval_seconds &&
-                usecs_since_last < (config::get_instance()->stats_interval_seconds * 1000000)) {
-            } else {
-                fprintf(stderr,
-                        "%s ... thread %d: (%" PRIu64 ",%" PRIu64 ") ops and "
-                        "(%.1f,%.1f) ops/second in (%.6f,%.6f) seconds\n",
-                        config::get_instance()->env->TimeToString(now / 1000000).c_str(),
-                        id_,
-                        done_ - last_report_done_,
-                        done_,
-                        (done_ - last_report_done_) / (usecs_since_last / 1000000.0),
-                        done_ / ((now - start_) / 1000000.0),
-                        (now - last_report_finish_) / 1000000.0,
-                        (now - start_) / 1000000.0);
-
-                last_report_finish_ = now;
-                last_report_done_ = done_;
-            }
-            next_report_ += config::get_instance()->stats_interval;
-        }
-        if (id_ == 0 && config::get_instance()->thread_status_per_interval) {
-            print_thread_status();
-        }
-        fflush(stderr);
+        next_report_ += report_default_step(next_report_);
+        fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", done_, "");
     }
+
+    // print thread status
+    if (id_ == 0 && config::get_instance()->thread_status_per_interval) {
+        print_thread_status();
+    }
+    fflush(stderr);
 }
 
 void stats::add_bytes(int64_t n) { bytes_ += n; }
@@ -219,79 +192,6 @@ uint32_t stats::report_default_step(uint64_t current_report)
         step = 100000;
 
     return step;
-}
-
-void combined_stats::add_stats(const stats &stat)
-{
-    // calculate and save ops throughtput
-    uint64_t total_ops = stat.done_;
-    if (total_ops < 1) {
-        total_ops = 1;
-    }
-    double elapsed = (stat.finish_ - stat.start_) * 1e-6;
-    throughput_ops_.emplace_back(total_ops / elapsed);
-
-    // calculate and save MBytes throughtput
-    uint64_t total_bytes_ = stat.bytes_;
-    if (total_bytes_ > 0) {
-        double mbs = total_bytes_ << 20;
-        throughput_mbs_.emplace_back(mbs / elapsed);
-    }
-}
-
-void combined_stats::report(const std::string &bench_name)
-{
-    const char *name = bench_name.c_str();
-    int num_runs = static_cast<int>(throughput_ops_.size());
-
-    if (throughput_mbs_.size() == throughput_ops_.size()) {
-        fprintf(stdout,
-                "%s [AVG    %d runs] : %d ops/sec; %6.1f MB/sec\n"
-                "%s [MEDIAN %d runs] : %d ops/sec; %6.1f MB/sec\n",
-                name,
-                num_runs,
-                static_cast<int>(calc_avg(throughput_ops_)),
-                calc_avg(throughput_mbs_),
-                name,
-                num_runs,
-                static_cast<int>(calc_median(throughput_ops_)),
-                calc_median(throughput_mbs_));
-    } else {
-        fprintf(stdout,
-                "%s [AVG    %d runs] : %d ops/sec\n"
-                "%s [MEDIAN %d runs] : %d ops/sec\n",
-                name,
-                num_runs,
-                static_cast<int>(calc_avg(throughput_ops_)),
-                name,
-                num_runs,
-                static_cast<int>(calc_median(throughput_ops_)));
-    }
-}
-
-double combined_stats::calc_avg(std::vector<double> &data)
-{
-    double total = 0;
-    for (double x : data) {
-        total += x;
-    }
-
-    return total / data.size();
-}
-
-double combined_stats::calc_median(std::vector<double> &data)
-{
-    assert(data.size() > 0);
-    std::sort(data.begin(), data.end());
-
-    size_t mid = data.size() / 2;
-    if (data.size() % 2 == 1) {
-        // Odd number of entries
-        return data[mid];
-    } else {
-        // Even number of entries
-        return (data[mid] + data[mid - 1]) / 2;
-    }
 }
 } // namespace test
 } // namespace pegasus

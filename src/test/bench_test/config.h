@@ -15,21 +15,22 @@ struct config
 {
     static config *get_instance();
 
-    /** config parameters */
     std::string pegasus_cluster_name;
     std::string pegasus_app_name;
+    // Pegasus read/write/delete timeout in milliseconds
     uint32_t pegasus_timeout_ms;
+    // Comma-separated list of operations to run
     std::string benchmarks;
-    uint32_t num;
+    // Number of key/values to place in database
+    uint64_t num;
+    // Number of concurrent threads to run
     uint32_t threads;
     uint32_t value_size;
-    uint32_t batch_size;
-    uint32_t key_size;
-    uint64_t stats_interval;
-    uint32_t stats_interval_seconds;
+    uint32_t hashkey_size;
+    uint32_t sortkey_size;
+    // Takes and report a snapshot of the current status of each thread when this is greater than 0
     uint32_t thread_status_per_interval;
-    uint32_t prefix_size;
-    uint32_t keys_per_prefix;
+    // Default environment suitable for the current operating system
     rocksdb::Env *env;
 
 private:

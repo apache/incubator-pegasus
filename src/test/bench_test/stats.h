@@ -10,7 +10,6 @@
 
 namespace pegasus {
 namespace test {
-class combined_stats;
 class stats
 {
 public:
@@ -33,29 +32,12 @@ private:
     uint64_t finish_;
     double seconds_;
     uint64_t done_;
-    uint64_t last_report_done_;
     uint64_t next_report_;
     uint64_t bytes_;
     uint64_t last_op_finish_;
-    uint64_t last_report_finish_;
     std::shared_ptr<rocksdb::Statistics> hist_stats;
     std::string message_;
     bool exclude_from_merge_;
-    friend class combined_stats;
-};
-
-class combined_stats
-{
-public:
-    void add_stats(const stats &stat);
-    void report(const std::string &bench_name);
-
-private:
-    double calc_avg(std::vector<double> &data);
-    double calc_median(std::vector<double> &data);
-
-    std::vector<double> throughput_ops_;
-    std::vector<double> throughput_mbs_;
 };
 } // namespace test
 } // namespace pegasus

@@ -76,26 +76,33 @@ private:
     void write_random(thread_state *thread);
     void read_random(thread_state *thread);
     void delete_random(thread_state *thread);
+    void do_write(thread_state *thread,
+                  const std::vector<std::string> &hashkeys,
+                  const std::vector<std::string> &sortkeys,
+                  const std::vector<std::string> &values);
+
+    /**  generate hash/sort key and value */
+    void generate_random_keys(std::vector<std::string> &hashkeys,
+                              std::vector<std::string> &sortkeys);
+    void generate_random_values(std::vector<std::string> &hashkeys);
+    std::string allocate_hashkey();
+    std::string allocate_sortkey();
+    std::string allocate_key(int key_size);
+    void generate_hashkey_from_int(uint64_t v, std::string *key);
+    void generate_sortkey_from_int(uint64_t v, std::string *key);
+    void generate_key_from_int(uint64_t v, std::string *key, int key_size);
+    int64_t get_random_num();
 
     /** some auxiliary functions */
-    int64_t get_random_key();
-    std::string allocate_key(std::unique_ptr<const char[]> *key_guard);
-    void generate_key_from_int(uint64_t v, int64_t num_keys, std::string *key);
+    operation_type get_operation_type(const std::string &name);
     void print_header();
     void print_warnings(const char *compression);
-    void generate_random_keys(uint32_t num,
-                              std::vector<std::string> &hashkeys,
-                              std::vector<std::string> &sortkeys);
-    operation_type get_operation_type(const std::string &name);
 
 private:
-    int64_t num_;
-    int value_size_;
-    int key_size_;
-    int prefix_size_;
-    int64_t keys_per_prefix_;
-    pegasus_client *client;
-    std::unordered_map<operation_type, bench_method, std::hash<unsigned char>> operation_method;
+    // the pegasus client to do read/write/delete operations
+    pegasus_client *_client;
+    // the map of operation type and the process method
+    std::unordered_map<operation_type, bench_method, std::hash<unsigned char>> _operation_method;
 };
 } // namespace test
 } // namespace pegasus

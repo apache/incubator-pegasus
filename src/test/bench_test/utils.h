@@ -8,10 +8,10 @@ namespace pegasus {
 namespace test {
 enum operation_type
 {
-    kRead = 0,
+    kUnknown = 0,
+    kRead,
     kWrite,
-    kDelete,
-    kOthers
+    kDelete
 };
 } // namespace test
 } // namespace pegasus
