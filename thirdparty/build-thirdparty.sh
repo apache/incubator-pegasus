@@ -286,6 +286,7 @@ if [ ! -d $TP_OUTPUT/include/curl ]; then
     --disable-tftp \
     --disable-shared \
     --without-librtmp \
+    --without-zlib \
     --without-libssh2 \
     --without-ssl"
 

@@ -283,6 +283,7 @@ function(dsn_setup_link_path)#TODO(huangwei5): dsn_setup_thirdparty_libs()
     include_directories(${Boost_INCLUDE_DIRS})
     
     link_directories(${DSN_THIRDPARTY_ROOT}/lib)
+    link_directories(${DSN_THIRDPARTY_ROOT}/lib64)
 endfunction(dsn_setup_link_path)
 
 function(dsn_common_setup)
