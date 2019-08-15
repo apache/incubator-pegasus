@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <string>
 #include <dsn/utility/rand.h>
 
 namespace pegasus {
@@ -12,10 +11,9 @@ namespace test {
 class random_generator
 {
 public:
-    static random_generator *get_instance();
-    static std::string random_string(int len);
+    static random_generator &get_instance();
     static uint32_t uniform(int n);
-    static char random_char();
+    static void reseed(uint64_t seed);
 
 private:
     random_generator();

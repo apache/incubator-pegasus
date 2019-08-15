@@ -43,7 +43,7 @@ struct thread_state
     pegasus::test::stats stats;
 
     /* implicit */
-    thread_state(int index) : tid(index) {}
+    thread_state(int tid) : tid(tid) {}
 };
 
 class benchmark;
@@ -69,25 +69,16 @@ private:
     static void thread_body(void *v);
 
     /** benchmark operations **/
-    stats run_benchmark(int n,
-                        const std::string &name,
-                        bench_method method,
-                        std::shared_ptr<rocksdb::Statistics> hist_stats = nullptr);
+    stats run_benchmark(int n, operation_type op_type);
     void write_random(thread_state *thread);
     void read_random(thread_state *thread);
     void delete_random(thread_state *thread);
-    void do_write(thread_state *thread,
-                  const std::vector<std::string> &hashkeys,
-                  const std::vector<std::string> &sortkeys,
-                  const std::vector<std::string> &values);
 
     /**  generate hash/sort key and value */
-    void generate_random_keys(std::vector<std::string> &hashkeys,
-                              std::vector<std::string> &sortkeys);
-    void generate_random_values(std::vector<std::string> &hashkeys);
     std::string generate_hashkey();
     std::string generate_sortkey();
     std::string generate_value();
+    std::string generate_string(int len);
 
     /** some auxiliary functions */
     operation_type get_operation_type(const std::string &name);
@@ -100,7 +91,7 @@ private:
     // the map of operation type and the process method
     std::unordered_map<operation_type, bench_method, std::hash<unsigned char>> _operation_method;
     // random generator
-    random_generator *_random_generator;
+    random_generator &_random_generator;
 };
 } // namespace test
 } // namespace pegasus

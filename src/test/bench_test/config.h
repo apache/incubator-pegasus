@@ -13,7 +13,7 @@ namespace test {
 /** Thread safety singleton */
 struct config
 {
-    static config *get_instance();
+    static const config &get_instance();
 
     std::string pegasus_cluster_name;
     std::string pegasus_app_name;
@@ -30,6 +30,8 @@ struct config
     uint32_t sortkey_size;
     // Takes and report a snapshot of the current status of each thread when this is greater than 0
     uint32_t thread_status_per_interval;
+    // seed for random generator
+    uint64_t seed;
     // Default environment suitable for the current operating system
     rocksdb::Env *env;
 

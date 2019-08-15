@@ -7,8 +7,6 @@
 
 #include "benchmark.h"
 
-using namespace pegasus;
-
 int db_bench_tool(const char *config_file)
 {
     bool init = pegasus::pegasus_client_factory::initialize(config_file);
