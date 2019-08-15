@@ -3,9 +3,9 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include <sstream>
-#include <dsn/utility/rand.h>
-#include <tgmath.h>
 #include <pegasus/client.h>
+#include <cinttypes>
+
 #include "benchmark.h"
 #include "random_generator.h"
 #include "utils.h"
@@ -26,48 +26,21 @@ benchmark::benchmark()
         exit(1);
     }
 
+    // init operation method map
     _operation_method = {{kUnknown, nullptr},
                          {kRead, &benchmark::read_random},
                          {kWrite, &benchmark::write_random},
                          {kDelete, &benchmark::delete_random}};
+
+    // get random generator
+    _random_generator = random_generator::get_instance();
 }
 
-// Generate key according to the given specification and random number.
-// The resulting key will have the following format (if _keys_per_prefix
-// is positive), extra trailing bytes are either cut off or padded with '0'.
-// The prefix value is derived from key value.
-//   ----------------------------
-//   | prefix 00000 | key 00000 |
-//   ----------------------------
-// If _keys_per_prefix is 0, the key is simply a binary representation of
-// random number followed by trailing '0's
-//   ----------------------------
-//   |        key 00000         |
-//   ----------------------------
-void benchmark::generate_key_from_int(uint64_t v, std::string *key, int key_size)
+benchmark::~benchmark()
 {
-    char *start = const_cast<char *>(key->data());
-    char *pos = start;
-
-    // copy v to the address of pos
-    int bytes_to_fill = std::min(key_size, 8);
-    memcpy(pos, static_cast<void *>(&v), bytes_to_fill);
-
-    // fill '0' with the remain space
-    pos += bytes_to_fill;
-    if (key_size > pos - start) {
-        memset(pos, '0', key_size - (pos - start));
-    }
-}
-
-void benchmark::generate_hashkey_from_int(uint64_t v, std::string *key)
-{
-    generate_key_from_int(v, key, config::get_instance()->hashkey_size);
-}
-
-void benchmark::generate_sortkey_from_int(uint64_t v, std::string *key)
-{
-    generate_key_from_int(v, key, config::get_instance()->sortkey_size);
+    _client = nullptr;
+    _operation_method.clear();
+    _random_generator = nullptr;
 }
 
 void benchmark::run()
@@ -289,28 +262,10 @@ void benchmark::delete_random(thread_state *thread)
     }
 }
 
-int64_t benchmark::get_random_num() { return dsn::rand::next_u64() % config::get_instance()->num; }
-
-std::string benchmark::allocate_key(int key_size)
-{
-    return std::string(new char[key_size], key_size);
-}
-
-std::string benchmark::allocate_hashkey()
-{
-    return allocate_key(config::get_instance()->hashkey_size);
-}
-
-std::string benchmark::allocate_sortkey()
-{
-    return allocate_key(config::get_instance()->hashkey_size);
-}
-
 void benchmark::generate_random_values(std::vector<std::string> &values)
 {
-    random_generator gen = random_generator(config::get_instance()->value_size);
     for (int i = 0; i < config::get_instance()->num; i++) {
-        values.push_back(gen.generate(config::get_instance()->value_size));
+        values.push_back(generate_value());
     }
 }
 
@@ -318,14 +273,25 @@ void benchmark::generate_random_keys(std::vector<std::string> &hashkeys,
                                      std::vector<std::string> &sortkeys)
 {
     // generate random hash keys and sort keys
-    std::string hashkey = allocate_hashkey();
-    std::string sortkey = allocate_sortkey();
     for (int i = 0; i < config::get_instance()->num; i++) {
-        generate_hashkey_from_int(get_random_num(), &hashkey);
-        generate_sortkey_from_int(get_random_num(), &sortkey);
-        hashkeys.push_back(hashkey);
-        sortkeys.push_back(sortkey);
+        hashkeys.push_back(generate_hashkey());
+        sortkeys.push_back(generate_sortkey());
     }
+}
+
+std::string benchmark::generate_hashkey()
+{
+    return _random_generator->random_string(config::get_instance()->hashkey_size);
+}
+
+std::string benchmark::generate_sortkey()
+{
+    return _random_generator->random_string(config::get_instance()->sortkey_size);
+}
+
+std::string benchmark::generate_value()
+{
+    return _random_generator->random_string(config::get_instance()->value_size);
 }
 
 operation_type benchmark::get_operation_type(const std::string &name)

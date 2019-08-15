@@ -4,12 +4,11 @@
 
 #pragma once
 
-#include <memory>
-#include <cinttypes>
 #include <unordered_map>
 
 #include "stats.h"
 #include "config.h"
+#include "random_generator.h"
 
 namespace pegasus {
 namespace test {
@@ -62,6 +61,7 @@ class benchmark
 {
 public:
     benchmark();
+    ~benchmark();
     void run();
 
 private:
@@ -85,13 +85,9 @@ private:
     void generate_random_keys(std::vector<std::string> &hashkeys,
                               std::vector<std::string> &sortkeys);
     void generate_random_values(std::vector<std::string> &hashkeys);
-    std::string allocate_hashkey();
-    std::string allocate_sortkey();
-    std::string allocate_key(int key_size);
-    void generate_hashkey_from_int(uint64_t v, std::string *key);
-    void generate_sortkey_from_int(uint64_t v, std::string *key);
-    void generate_key_from_int(uint64_t v, std::string *key, int key_size);
-    int64_t get_random_num();
+    std::string generate_hashkey();
+    std::string generate_sortkey();
+    std::string generate_value();
 
     /** some auxiliary functions */
     operation_type get_operation_type(const std::string &name);
@@ -103,6 +99,8 @@ private:
     pegasus_client *_client;
     // the map of operation type and the process method
     std::unordered_map<operation_type, bench_method, std::hash<unsigned char>> _operation_method;
+    // random generator
+    random_generator *_random_generator;
 };
 } // namespace test
 } // namespace pegasus

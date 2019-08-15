@@ -23,38 +23,43 @@ static void append_with_space(std::string *str, const std::string &msg)
     str->append(msg);
 }
 
-stats::stats() { start(-1); }
-
-void stats::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats_)
+stats::stats()
 {
-    hist_stats = hist_stats_;
+    _tid = -1;
+    _next_report = 100;
+    _done = 0;
+    _bytes = 0;
+    _seconds = 0;
+    _start = config::get_instance()->env->NowMicros();
+    _last_op_finish = _start;
+    _finish = _start;
+}
+
+void stats::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats)
+{
+    _hist_stats = hist_stats;
 }
 
 void stats::start(int id)
 {
-    id_ = id;
-    next_report_ = 100;
-    last_op_finish_ = start_;
-    done_ = 0;
-    bytes_ = 0;
-    seconds_ = 0;
-    start_ = config::get_instance()->env->NowMicros();
-    finish_ = start_;
+    _tid = id;
+    _next_report = 100;
+    _done = 0;
+    _bytes = 0;
+    _seconds = 0;
+    _start = config::get_instance()->env->NowMicros();
+    _last_op_finish = _start;
+    _finish = _start;
     message_.clear();
-    // When set, stats from this thread won't be merged with others.
-    exclude_from_merge_ = false;
 }
 
 void stats::merge(const stats &other)
 {
-    if (other.exclude_from_merge_)
-        return;
-
-    done_ += other.done_;
-    bytes_ += other.bytes_;
-    seconds_ += other.seconds_;
-    start_ = std::min(other.start_, start_);
-    finish_ = std::max(other.finish_, finish_);
+    _done += other._done;
+    _bytes += other._bytes;
+    _seconds += other._seconds;
+    _start = std::min(other._start, _start);
+    _finish = std::max(other._finish, _finish);
     // Just keep the messages from one thread
     if (message_.empty())
         message_ = other.message_;
@@ -62,8 +67,8 @@ void stats::merge(const stats &other)
 
 void stats::stop()
 {
-    finish_ = config::get_instance()->env->NowMicros();
-    seconds_ = (finish_ - start_) * 1e-6;
+    _finish = config::get_instance()->env->NowMicros();
+    _seconds = (_finish - _start) * 1e-6;
 }
 
 void stats::add_message(const std::string &msg) { append_with_space(&message_, msg); }
@@ -108,51 +113,50 @@ void stats::print_thread_status()
 
 void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
 {
-    if (hist_stats) {
-        // add excution time of this operation to hist_stats
+    if (_hist_stats) {
+        // add excution time of this operation to _hist_stats
         uint64_t now = config::get_instance()->env->NowMicros();
-        uint64_t micros = now - last_op_finish_;
-        hist_stats->measureTime(op_type, micros);
+        uint64_t micros = now - _last_op_finish;
+        _hist_stats->measureTime(op_type, micros);
 
         // if there is a long operation, print warning message
         if (micros > 20000) {
             fprintf(stderr, "long op: %" PRIu64 " micros%30s\r", micros, "");
             fflush(stderr);
         }
-        last_op_finish_ = now;
+        _last_op_finish = now;
     }
 
     // print the benchmark running status
-    done_ += num_ops;
-    if (done_ >= next_report_) {
-        next_report_ += report_default_step(next_report_);
-        fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", done_, "");
+    _done += num_ops;
+    if (_done >= _next_report) {
+        _next_report += report_default_step(_next_report);
+        fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", _done, "");
     }
 
     // print thread status
-    if (id_ == 0 && config::get_instance()->thread_status_per_interval) {
+    if (_tid == 0 && config::get_instance()->thread_status_per_interval) {
         print_thread_status();
     }
     fflush(stderr);
 }
 
-void stats::add_bytes(int64_t n) { bytes_ += n; }
+void stats::add_bytes(int64_t n) { _bytes += n; }
 
 void stats::report(const std::string &name)
 {
     // Pretend at least one op was done in case we are running a benchmark
     // that does not call finished_ops().
-    if (done_ < 1)
-        done_ = 1;
+    if (_done < 1)
+        _done = 1;
 
     // append rate(MBytes) message to extra
     std::string extra;
-    if (bytes_ > 0) {
+    if (_bytes > 0) {
         // Rate is computed on actual elapsed time, not the sum of per-thread
         // elapsed times.
-        double elapsed = (finish_ - start_) * 1e-6;
         char rate[100];
-        snprintf(rate, sizeof(rate), "%6.1f MB/s", (bytes_ << 20) / elapsed);
+        snprintf(rate, sizeof(rate), "%6.1f MB/s", (_bytes << 20) / _seconds);
         extra = rate;
     }
 
@@ -160,13 +164,12 @@ void stats::report(const std::string &name)
     append_with_space(&extra, message_);
 
     // calculate ops throughtput and elapsed seconds
-    double elapsed = (finish_ - start_) * 1e-6;
-    double throughput = (double)done_ / elapsed;
+    double throughput = (double)_done / _seconds;
 
     fprintf(stdout,
             "%-12s : %11.3f micros/op %ld ops/sec;%s%s\n",
             name.c_str(),
-            elapsed * 1e6 / done_,
+            _seconds * 1e6 / _done,
             (long)throughput,
             (extra.empty() ? "" : " "),
             extra.c_str());
@@ -176,20 +179,29 @@ void stats::report(const std::string &name)
 uint32_t stats::report_default_step(uint64_t current_report)
 {
     uint32_t step = 0;
-    if (current_report < 1000)
+    switch (current_report) {
+    case 0 ... 999:
         step = 100;
-    else if (current_report < 5000)
+        break;
+    case 1000 ... 4999:
         step = 500;
-    else if (current_report < 10000)
+        break;
+    case 5000 ... 9999:
         step = 1000;
-    else if (current_report < 50000)
+        break;
+    case 10000 ... 49999:
         step = 5000;
-    else if (current_report < 100000)
+        break;
+    case 50000 ... 99999:
         step = 10000;
-    else if (current_report < 500000)
+        break;
+    case 100000 ... 499999:
         step = 50000;
-    else
+        break;
+    default:
         step = 100000;
+        break;
+    }
 
     return step;
 }

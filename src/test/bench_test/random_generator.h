@@ -9,18 +9,16 @@
 
 namespace pegasus {
 namespace test {
-// Helper for quickly generating random data.
 class random_generator
 {
 public:
-    random_generator(uint32_t value_size);
-    std::string random_string(int len, std::string *dst);
-    std::string generate(unsigned int len);
-    uint32_t uniform(int n);
+    static random_generator *get_instance();
+    static std::string random_string(int len);
+    static uint32_t uniform(int n);
+    static char random_char();
 
 private:
-    std::string _data;
-    unsigned int _pos;
+    random_generator();
 };
 } // namespace test
 } // namespace pegasus

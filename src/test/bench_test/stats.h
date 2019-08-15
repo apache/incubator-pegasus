@@ -14,7 +14,7 @@ class stats
 {
 public:
     stats();
-    void set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats_);
+    void set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats);
     void start(int id);
     void merge(const stats &other);
     void stop();
@@ -27,17 +27,26 @@ public:
 private:
     uint32_t report_default_step(uint64_t current_report);
 
-    int id_;
-    uint64_t start_;
-    uint64_t finish_;
-    double seconds_;
-    uint64_t done_;
-    uint64_t next_report_;
-    uint64_t bytes_;
-    uint64_t last_op_finish_;
-    std::shared_ptr<rocksdb::Statistics> hist_stats;
+    // thread id which controls this stats
+    int _tid;
+    // the start time of benchmark
+    uint64_t _start;
+    // the end time of benchmark
+    uint64_t _finish;
+    // senconds that benchmark costs
+    double _seconds;
+    // how many operations are done
+    uint64_t _done;
+    // the point(operation count) at which the next report
+    uint64_t _next_report;
+    // how many bytes the benchmark read/write
+    uint64_t _bytes;
+    // the last operation's finish time
+    uint64_t _last_op_finish;
+    // performance analyzer
+    std::shared_ptr<rocksdb::Statistics> _hist_stats;
+    // the information of benchmark operation
     std::string message_;
-    bool exclude_from_merge_;
 };
 } // namespace test
 } // namespace pegasus
