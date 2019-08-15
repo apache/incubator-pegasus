@@ -293,8 +293,9 @@ bool redis_parser::parse_stream()
                 dverify(eat(CR));
                 dverify(eat(LF));
                 append_current_bulk_string();
-            } else
+            } else {
                 return true;
+            }
             break;
         default:
             break;

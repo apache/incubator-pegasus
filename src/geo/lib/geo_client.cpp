@@ -171,8 +171,8 @@ void geo_client::async_set(const std::string &hash_key,
 {
     std::string value;
     if (!_codec.encode_to_value(lat_degrees, lng_degrees, value)) {
-      callback(PERR_GEO_INVALID_LATLNG_ERROR, {});
-      return;
+        callback(PERR_GEO_INVALID_LATLNG_ERROR, {});
+        return;
     }
 
     async_set(hash_key, sort_key, value, std::move(callback), timeout_ms, ttl_seconds);

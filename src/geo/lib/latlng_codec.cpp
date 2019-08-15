@@ -62,9 +62,7 @@ bool latlng_codec::decode_from_value(const std::string &value, S2LatLng &latlng)
     return latlng.is_valid();
 }
 
-bool latlng_codec::encode_to_value(double lat_degrees,
-                                       double lng_degrees,
-                                       std::string &value) const
+bool latlng_codec::encode_to_value(double lat_degrees, double lng_degrees, std::string &value) const
 {
     assert(_sorted_indices.size() == 2);
     S2LatLng latlng = S2LatLng::FromDegrees(lat_degrees, lng_degrees);
