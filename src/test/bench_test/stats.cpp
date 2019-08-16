@@ -25,7 +25,7 @@ static void append_with_space(std::string *str, const std::string &msg)
     str->append(msg);
 }
 
-stats::stats()
+stats::stats(std::shared_ptr<rocksdb::Statistics> hist_stats)
 {
     _tid = -1;
     _next_report = 100;
@@ -33,12 +33,6 @@ stats::stats()
     _bytes = 0;
     _start = config::get_instance().env->NowMicros();
     _last_op_finish = _start;
-    _hist_stats = nullptr;
-}
-
-stats::stats(std::shared_ptr<rocksdb::Statistics> hist_stats)
-{
-    stats();
     _hist_stats = hist_stats;
 }
 

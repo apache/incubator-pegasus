@@ -13,8 +13,7 @@ namespace test {
 class stats
 {
 public:
-    stats();
-    stats(std::shared_ptr<rocksdb::Statistics> hist_stats);
+    stats(std::shared_ptr<rocksdb::Statistics> hist_stats = nullptr);
     void start(int id);
     void finished_ops(int64_t num_ops, enum operation_type op_type);
     void stop();
