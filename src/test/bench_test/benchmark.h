@@ -69,7 +69,7 @@ private:
     static void thread_body(void *v);
 
     /** benchmark operations **/
-    stats run_benchmark(int n, operation_type op_type);
+    void run_benchmark(int n, operation_type op_type);
     void write_random(thread_state *thread);
     void read_random(thread_state *thread);
     void delete_random(thread_state *thread);

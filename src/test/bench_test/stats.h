@@ -43,7 +43,7 @@ private:
     // the last operation's finish time
     uint64_t _last_op_finish;
     // the information of benchmark operation
-    std::string message_;
+    std::string _message;
     // histogram performance analyzer
     std::shared_ptr<rocksdb::Statistics> _hist_stats;
 };

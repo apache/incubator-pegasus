@@ -46,9 +46,6 @@ config::config()
                                              "Takes and report a snapshot of the "
                                              "current status of each thread when "
                                              "this is greater than 0");
-    seed = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "seed", 0, "Seed base for random generators");
-
     env = rocksdb::Env::Default();
 }
 } // namespace test

@@ -13,6 +13,7 @@ class random_generator
 public:
     static random_generator &get_instance();
     static uint32_t uniform(int n);
+    static uint32_t next();
     static void reseed(uint64_t seed);
 
 private:

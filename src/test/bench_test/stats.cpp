@@ -50,7 +50,7 @@ void stats::start(int id)
     _bytes = 0;
     _start = config::get_instance().env->NowMicros();
     _last_op_finish = _start;
-    message_.clear();
+    _message.clear();
 }
 
 void stats::merge(const stats &other)
@@ -59,7 +59,7 @@ void stats::merge(const stats &other)
     _bytes += other._bytes;
     _start = std::min(other._start, _start);
     _finish = std::max(other._finish, _finish);
-    append_with_space(&message_, other.message_);
+    append_with_space(&_message, other._message);
 }
 
 void stats::stop() { _finish = config::get_instance().env->NowMicros(); }
@@ -116,8 +116,8 @@ void stats::report(operation_type op_type)
         extra = rate;
     }
 
-    // append message_ to extra
-    append_with_space(&extra, message_);
+    // append _message to extra
+    append_with_space(&extra, _message);
 
     // print report
     fprintf(stdout,
@@ -138,7 +138,7 @@ void stats::report(operation_type op_type)
     }
 }
 
-void stats::add_message(const std::string &msg) { append_with_space(&message_, msg); }
+void stats::add_message(const std::string &msg) { append_with_space(&_message, msg); }
 
 void stats::add_bytes(int64_t n) { _bytes += n; }
 

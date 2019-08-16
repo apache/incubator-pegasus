@@ -48,7 +48,7 @@ void benchmark::run()
     }
 }
 
-stats benchmark::run_benchmark(int n, operation_type op_type)
+void benchmark::run_benchmark(int n, operation_type op_type)
 {
     // get method by operation type
     bench_method method = _operation_method[op_type];
@@ -95,8 +95,6 @@ stats benchmark::run_benchmark(int n, operation_type op_type)
         delete arg[i].thread;
     }
     delete[] arg;
-
-    return merge_stats;
 }
 
 void benchmark::thread_body(void *v)
@@ -171,19 +169,26 @@ void benchmark::write_random(thread_state *thread)
 void benchmark::read_random(thread_state *thread)
 {
     // to improve hit rate, write first. By using same random seed
-    _random_generator.reseed(config::get_instance().seed);
+    uint32_t seed = _random_generator.next();
+    _random_generator.reseed(seed);
     write_random(thread);
 
-    // reseed, to ensure same seed with write above
-    _random_generator.reseed(config::get_instance().seed);
+    // reseed, to ensure same seed with random write above
+    _random_generator.reseed(seed);
 
-    // do read operation num times
+    // reset start time
+    thread->stats.start(thread->tid);
+
     uint64_t bytes = 0;
     uint64_t found = 0;
     for (int i = 0; i < config::get_instance().num; i++) {
         // generate random hash key and sort key
         std::string hashkey = generate_hashkey();
         std::string sortkey = generate_sortkey();
+
+        // to keep pace with write random,
+        // in order to generate same random sequence with random write
+        generate_value();
 
         // read from pegasus
         int try_count = 0;
