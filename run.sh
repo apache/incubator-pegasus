@@ -1505,12 +1505,89 @@ function usage_bench()
     echo "   --timeout <num>      timeout in milliseconds, default 1000"
 }
 
+function fill_bench_config() {
+    sed -i "s/@CLUSTER@/$CLUSTER/g" ./config-bench.ini
+    sed -i "s/@APP@/$APP/g" ./config-bench.ini
+    sed -i "s/@TIMEOUT_MS@/$TIMEOUT_MS/g" ./config-bench.ini
+    sed -i "s/@TYPE@/$TYPE/g" ./config-bench.ini
+    sed -i "s/@NUM@/$NUM/g" ./config-bench.ini
+    sed -i "s/@THREAD@/$THREAD/g" ./config-bench.ini
+    sed -i "s/@VALUE_SIZE@/$VALUE_SIZE/g" ./config-bench.ini
+    sed -i "s/@HASHKEY_SIZE@/$HASHKEY_SIZE/g" ./config-bench.ini
+    sed -i "s/@SORTKEY_SIZE@/$SORTKEY_SIZE/g" ./config-bench.ini
+    sed -i "s/@STATUS_INTERVAL@/$STATUS_INTERVAL/g" ./config-bench.ini
+}
+
 function run_bench()
 {
+    TYPE=fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus
+    NUM=10000
+    CLUSTER=onebox
+    APP=temp
+    THREAD=1
+    HASHKEY_SIZE=16
+    SORTKEY_SIZE=16
+    VALUE_SIZE=100
+    TIMEOUT_MS=1000
+    STATUS_INTERVAL=0
+    while [[ $# > 0 ]]; do
+        key="$1"
+        case $key in
+            -h|--help)
+                usage_bench
+                exit 0
+                ;;
+            -t|--type)
+                TYPE="$2"
+                shift
+                ;;
+            -n)
+                NUM="$2"
+                shift
+                ;;
+            --cluster)
+                CLUSTER="$2"
+                shift
+                ;;
+            --app_name)
+                APP="$2"
+                shift
+                ;;
+            --thread_num)
+                THREAD="$2"
+                shift
+                ;;
+            --hashkey_size)
+                HASHKEY_SIZE="$2"
+                shift
+                ;;
+            --sortkey_size)
+                SORTKEY_SIZE="$2"
+                shift
+                ;;
+            --value_size)
+                VALUE_SIZE="$2"
+                shift
+                ;;
+            --timeout)
+                TIMEOUT_MS="$2"
+                shift
+                ;;
+            *)
+                echo "ERROR: unknown option \"$key\""
+                echo
+                usage_bench
+                exit 1
+                ;;
+        esac
+        shift
+    done
     cd ${ROOT}
-    sed -i "s/@CLUSTER@/$CLUSTER/g" ${DSN_ROOT}/bin/pegasus_bench/config.ini
+    cp ${DSN_ROOT}/bin/pegasus_bench/config.ini ./config-bench.ini
+    fill_bench_config
     ln -s -f ${DSN_ROOT}/bin/pegasus_bench/pegasus_bench
-    ./pegasus_bench ${DSN_ROOT}/bin/pegasus_bench/config.ini
+    ./pegasus_bench ./config-bench.ini
+    rm -f ./config-bench.ini
 }
 
 #####################
