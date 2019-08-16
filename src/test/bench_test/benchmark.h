@@ -39,22 +39,27 @@ struct shared_state
 // Per-thread state for concurrent executions of the same benchmark.
 struct thread_state
 {
-    int tid; // 0..n-1 when running in n threads
+    int id; // 0..n-1 when running in n threads
     statistics stats;
 
     /* implicit */
-    thread_state(int tid) : tid(tid) {}
+    thread_state(int id) : id(id) {}
 };
 
 class benchmark;
-typedef void (benchmark::*bench_method)(thread_state *);
+typedef void (benchmark::*bench_method)(thread_state &);
 
 struct thread_arg
 {
     benchmark *bm;
-    shared_state *shared;
-    thread_state *thread;
+    std::shared_ptr<shared_state> shared;
+    thread_state thread;
     bench_method method;
+
+    thread_arg(benchmark *bm, std::shared_ptr<shared_state> shared, int id, bench_method method)
+        : bm(bm), shared(shared), thread(thread_state(id)), method(method)
+    {
+    }
 };
 
 class benchmark
@@ -70,9 +75,9 @@ private:
 
     /** benchmark operations **/
     void run_benchmark(int n, operation_type op_type);
-    void write_random(thread_state *thread);
-    void read_random(thread_state *thread);
-    void delete_random(thread_state *thread);
+    void write_random(thread_state &thread);
+    void read_random(thread_state &thread);
+    void delete_random(thread_state &thread);
 
     /**  generate hash/sort key and value */
     std::string generate_hashkey();

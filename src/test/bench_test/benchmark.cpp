@@ -55,51 +55,45 @@ void benchmark::run_benchmark(int n, operation_type op_type)
     // create histogram statistic
     std::shared_ptr<rocksdb::Statistics> hist_stats = rocksdb::CreateDBStatistics();
 
-    // init thead args
-    shared_state shared(n);
-    thread_arg *arg = new thread_arg[n];
+    // create thread args for each thread, and run thread
+    std::shared_ptr<shared_state> shared = std::make_shared<shared_state>(n);
+    std::vector<thread_arg> args;
     for (int i = 0; i < n; i++) {
-        arg[i].bm = this;
-        arg[i].method = method;
-        arg[i].shared = &shared;
-        arg[i].thread = new thread_state(i);
-        arg[i].thread->stats.set_hist_stats(hist_stats);
-        config::get_instance().env->StartThread(thread_body, &arg[i]);
+        thread_arg arg(this, shared, i, method);
+        args.push_back(arg);
+
+        // set histogram statistic and start thread
+        arg.thread.stats.set_hist_stats(hist_stats);
+        config::get_instance().env->StartThread(thread_body, &arg);
     }
 
     // wait all of the theads initialized
-    pthread_mutex_lock(&shared.mu);
-    while (shared.num_initialized < n) {
-        pthread_cond_wait(&shared.cv, &shared.mu);
+    pthread_mutex_lock(&shared->mu);
+    while (shared->num_initialized < n) {
+        pthread_cond_wait(&shared->cv, &shared->mu);
     }
 
     // wait all of the theads done
-    shared.start = true;
-    pthread_cond_broadcast(&shared.cv);
-    while (shared.num_done < n) {
-        pthread_cond_wait(&shared.cv, &shared.mu);
+    shared->start = true;
+    pthread_cond_broadcast(&shared->cv);
+    while (shared->num_done < n) {
+        pthread_cond_wait(&shared->cv, &shared->mu);
     }
-    pthread_mutex_unlock(&shared.mu);
+    pthread_mutex_unlock(&shared->mu);
 
     // merge statistics
     statistics merge_stats(hist_stats);
     for (int i = 0; i < n; i++) {
-        merge_stats.merge(arg[i].thread->stats);
+        merge_stats.merge(args[i].thread.stats);
     }
     merge_stats.report(op_type);
-
-    // delete thread args
-    for (int i = 0; i < n; i++) {
-        delete arg[i].thread;
-    }
-    delete[] arg;
 }
 
 void benchmark::thread_body(void *v)
 {
     thread_arg *arg = reinterpret_cast<thread_arg *>(v);
-    shared_state *shared = arg->shared;
-    thread_state *thread = arg->thread;
+    std::shared_ptr<shared_state> shared = arg->shared;
+    thread_state &thread = arg->thread;
 
     // add num_initialized safety, and signal the main process when num_initialized > total.
     // then wait the shared->start is set to true
@@ -114,9 +108,9 @@ void benchmark::thread_body(void *v)
     pthread_mutex_unlock(&shared->mu);
 
     // progress the method
-    thread->stats.start(thread->tid);
+    thread.stats.start(thread.id);
     (arg->bm->*(arg->method))(thread);
-    thread->stats.stop();
+    thread.stats.stop();
 
     // add num_done satety, and notify the main process
     pthread_mutex_lock(&shared->mu);
@@ -127,7 +121,7 @@ void benchmark::thread_body(void *v)
     pthread_mutex_unlock(&shared->mu);
 }
 
-void benchmark::write_random(thread_state *thread)
+void benchmark::write_random(thread_state &thread)
 {
     uint64_t bytes = 0;
 
@@ -157,14 +151,14 @@ void benchmark::write_random(thread_state *thread)
         }
 
         // mark finished this operations
-        thread->stats.finished_ops(1, kWrite);
+        thread.stats.finished_ops(1, kWrite);
     }
 
     // statistical total bytes
-    thread->stats.add_bytes(bytes);
+    thread.stats.add_bytes(bytes);
 }
 
-void benchmark::read_random(thread_state *thread)
+void benchmark::read_random(thread_state &thread)
 {
     // to improve hit rate, write first. By using same random seed
     uint32_t seed = random_generator::next();
@@ -175,7 +169,7 @@ void benchmark::read_random(thread_state *thread)
     random_generator::reseed(seed);
 
     // reset start time
-    thread->stats.start(thread->tid);
+    thread.stats.start(thread.id);
 
     uint64_t bytes = 0;
     uint64_t found = 0;
@@ -210,18 +204,18 @@ void benchmark::read_random(thread_state *thread)
         }
 
         // mark finished this operations
-        thread->stats.finished_ops(1, kRead);
+        thread.stats.finished_ops(1, kRead);
     }
 
     // statistical bytes and message
     char msg[100];
     snprintf(
         msg, sizeof(msg), "(%" PRIu64 " of %" PRIu64 " found)", found, config::get_instance().num);
-    thread->stats.add_bytes(bytes);
-    thread->stats.add_message(msg);
+    thread.stats.add_bytes(bytes);
+    thread.stats.add_message(msg);
 }
 
-void benchmark::delete_random(thread_state *thread)
+void benchmark::delete_random(thread_state &thread)
 {
     // do delete operation num times
     for (int i = 0; i < config::get_instance().num; i++) {
@@ -245,7 +239,7 @@ void benchmark::delete_random(thread_state *thread)
         }
 
         // statistics this operation
-        thread->stats.finished_ops(1, kDelete);
+        thread.stats.finished_ops(1, kDelete);
     }
 }
 
