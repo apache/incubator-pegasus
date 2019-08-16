@@ -11,7 +11,8 @@ import com.xiaomi.infra.pegasus.operator.*;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.Table;
 import com.xiaomi.infra.pegasus.tools.Tools;
-import io.netty.util.concurrent.*;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Future;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -26,12 +27,10 @@ import org.apache.commons.lang3.tuple.Pair;
  *     <p>Implementation of {@link PegasusTableInterface}.
  */
 public class PegasusTable implements PegasusTableInterface {
-  private PegasusClient client;
   private Table table;
   private int defaultTimeout;
 
   public PegasusTable(PegasusClient client, Table table) {
-    this.client = client;
     this.table = table;
     this.defaultTimeout = table.getDefaultTimeout();
   }
@@ -92,7 +91,7 @@ public class PegasusTable implements PegasusTableInterface {
   }
 
   @Override
-  public Future<byte[]> asyncGet(byte[] hashKey, byte[] sortKey, int timeout /*ms*/) {
+  public Future<byte[]> asyncGet(byte[] hashKey, byte[] sortKey, int timeout /* ms */) {
     final DefaultPromise<byte[]> promise = table.newPromise();
     blob request = new blob(PegasusClient.generateKey(hashKey, sortKey));
     long partitionHash = table.getHash(request.data);
@@ -122,7 +121,7 @@ public class PegasusTable implements PegasusTableInterface {
 
   @Override
   public Future<Void> asyncSet(
-      byte[] hashKey, byte[] sortKey, byte[] value, int ttlSeconds, int timeout /*ms*/) {
+      byte[] hashKey, byte[] sortKey, byte[] value, int ttlSeconds, int timeout /* ms */) {
     final DefaultPromise<Void> promise = table.newPromise();
     if (value == null) {
       promise.setFailure(new PException("Invalid parameter: value should not be null"));
@@ -273,7 +272,7 @@ public class PegasusTable implements PegasusTableInterface {
       MultiGetOptions options,
       int maxFetchCount,
       int maxFetchSize,
-      int timeout /*ms*/) {
+      int timeout /* ms */) {
     final DefaultPromise<MultiGetResult> promise = table.newPromise();
     if (hashKey == null || hashKey.length == 0) {
       promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
@@ -342,7 +341,7 @@ public class PegasusTable implements PegasusTableInterface {
       byte[] startSortKey,
       byte[] stopSortKey,
       MultiGetOptions options,
-      int timeout /*ms*/) {
+      int timeout /* ms */) {
     return asyncMultiGet(hashKey, startSortKey, stopSortKey, options, 100, 1000000, timeout);
   }
 
@@ -1166,18 +1165,12 @@ public class PegasusTable implements PegasusTableInterface {
     if (items == null) {
       throw new PException("Invalid parameter: items should not be null");
     }
-    List<Future<Void>> futures = new ArrayList<Future<Void>>();
+    if (timeout <= 0) timeout = defaultTimeout;
+    FutureGroup<Void> group = new FutureGroup<>(items.size());
     for (SetItem i : items) {
-      futures.add(asyncSet(i.hashKey, i.sortKey, i.value, i.ttlSeconds, timeout));
+      group.add(asyncSet(i.hashKey, i.sortKey, i.value, i.ttlSeconds, timeout));
     }
-    for (int i = 0; i < items.size(); i++) {
-      Future<Void> fu = futures.get(i);
-      fu.awaitUninterruptibly();
-      if (!fu.isSuccess()) {
-        Throwable cause = fu.cause();
-        throw new PException("Set value of items[" + i + "] failed: " + cause.getMessage(), cause);
-      }
-    }
+    group.waitAllCompleteOrOneFail(timeout);
   }
 
   @Override
