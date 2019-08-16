@@ -41,7 +41,7 @@ set(MY_PROJ_LIBS
     aio
     pthread)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
