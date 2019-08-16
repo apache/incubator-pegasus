@@ -24,7 +24,7 @@ public:
     void set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats);
 
 private:
-    uint32_t report_default_step(uint64_t current_report) const;
+    uint32_t report_step(uint64_t current_report) const;
     void print_thread_status() const;
 
     // thread id which controls this stats

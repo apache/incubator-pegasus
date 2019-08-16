@@ -5,7 +5,6 @@
 #pragma once
 
 #include <string>
-#include <dsn/utility/config_api.h>
 #include <rocksdb/env.h>
 
 namespace pegasus {

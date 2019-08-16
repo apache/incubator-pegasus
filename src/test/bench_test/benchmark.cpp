@@ -7,8 +7,6 @@
 #include <cinttypes>
 
 #include "benchmark.h"
-#include "random_generator.h"
-#include "utils.h"
 
 namespace pegasus {
 namespace test {

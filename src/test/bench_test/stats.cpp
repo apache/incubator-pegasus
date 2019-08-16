@@ -60,21 +60,20 @@ void stats::stop() { _finish = config::get_instance().env->NowMicros(); }
 
 void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
 {
-    // get excution time of this operation
     uint64_t now = config::get_instance().env->NowMicros();
     uint64_t micros = now - _last_op_finish;
+    _last_op_finish = now;
 
     // if there is a long operation, print warning message
     if (micros > 20000) {
         fprintf(stderr, "long op: %" PRIu64 " micros%30s\r", micros, "");
         fflush(stderr);
     }
-    _last_op_finish = now;
 
     // print the benchmark running status
     _done += num_ops;
     if (_done >= _next_report) {
-        _next_report += report_default_step(_next_report);
+        _next_report += report_step(_next_report);
         fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", _done, "");
     }
 
@@ -179,7 +178,7 @@ void stats::print_thread_status() const
     }
 }
 
-uint32_t stats::report_default_step(uint64_t current_report) const
+uint32_t stats::report_step(uint64_t current_report) const
 {
     uint32_t step = 0;
     switch (current_report) {

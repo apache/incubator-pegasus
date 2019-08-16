@@ -13,6 +13,7 @@ random_generator &random_generator::get_instance()
 }
 
 uint32_t random_generator::uniform(int n) { return dsn::rand::next_u32() % n; }
+
 uint32_t random_generator::next() { return dsn::rand::next_u32(); }
 
 void random_generator::reseed(uint64_t seed) { dsn::rand::reseed_thread_local_rng(seed); }
