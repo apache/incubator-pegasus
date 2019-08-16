@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include "stats.h"
+#include "statistics.h"
 #include "config.h"
 #include "random_generator.h"
 
@@ -40,7 +40,7 @@ struct shared_state
 struct thread_state
 {
     int tid; // 0..n-1 when running in n threads
-    pegasus::test::stats stats;
+    statistics stats;
 
     /* implicit */
     thread_state(int tid) : tid(tid) {}

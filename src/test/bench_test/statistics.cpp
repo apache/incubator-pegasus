@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <cinttypes>
 
-#include "stats.h"
+#include "statistics.h"
 #include "config.h"
 
 namespace pegasus {
@@ -25,7 +25,7 @@ static void append_with_space(std::string *str, const std::string &msg)
     str->append(msg);
 }
 
-stats::stats(std::shared_ptr<rocksdb::Statistics> hist_stats)
+statistics::statistics(std::shared_ptr<rocksdb::Statistics> hist_stats)
 {
     _tid = -1;
     _next_report = 100;
@@ -33,10 +33,11 @@ stats::stats(std::shared_ptr<rocksdb::Statistics> hist_stats)
     _bytes = 0;
     _start = config::get_instance().env->NowMicros();
     _last_op_finish = _start;
+    _finish = _start;
     _hist_stats = hist_stats;
 }
 
-void stats::start(int id)
+void statistics::start(int id)
 {
     _tid = id;
     _next_report = 100;
@@ -44,10 +45,11 @@ void stats::start(int id)
     _bytes = 0;
     _start = config::get_instance().env->NowMicros();
     _last_op_finish = _start;
+    _finish = _start;
     _message.clear();
 }
 
-void stats::merge(const stats &other)
+void statistics::merge(const statistics &other)
 {
     _done += other._done;
     _bytes += other._bytes;
@@ -56,9 +58,9 @@ void stats::merge(const stats &other)
     append_with_space(&_message, other._message);
 }
 
-void stats::stop() { _finish = config::get_instance().env->NowMicros(); }
+void statistics::stop() { _finish = config::get_instance().env->NowMicros(); }
 
-void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
+void statistics::finished_ops(int64_t num_ops, enum operation_type op_type)
 {
     uint64_t now = config::get_instance().env->NowMicros();
     uint64_t micros = now - _last_op_finish;
@@ -89,7 +91,7 @@ void stats::finished_ops(int64_t num_ops, enum operation_type op_type)
     fflush(stderr);
 }
 
-void stats::report(operation_type op_type)
+void statistics::report(operation_type op_type)
 {
     // Pretend at least one op was done in case we are running a benchmark
     // that does not call finished_ops().
@@ -131,16 +133,16 @@ void stats::report(operation_type op_type)
     }
 }
 
-void stats::add_message(const std::string &msg) { append_with_space(&_message, msg); }
+void statistics::add_message(const std::string &msg) { append_with_space(&_message, msg); }
 
-void stats::add_bytes(int64_t n) { _bytes += n; }
+void statistics::add_bytes(int64_t n) { _bytes += n; }
 
-void stats::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats)
+void statistics::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats)
 {
     _hist_stats = hist_stats;
 }
 
-void stats::print_thread_status() const
+void statistics::print_thread_status() const
 {
     std::vector<rocksdb::ThreadStatus> thread_list;
     config::get_instance().env->GetThreadList(&thread_list);
@@ -178,7 +180,7 @@ void stats::print_thread_status() const
     }
 }
 
-uint32_t stats::report_step(uint64_t current_report) const
+uint32_t statistics::report_step(uint64_t current_report) const
 {
     uint32_t step = 0;
     switch (current_report) {

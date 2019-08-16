@@ -10,14 +10,14 @@
 
 namespace pegasus {
 namespace test {
-class stats
+class statistics
 {
 public:
-    stats(std::shared_ptr<rocksdb::Statistics> hist_stats = nullptr);
+    statistics(std::shared_ptr<rocksdb::Statistics> hist_stats = nullptr);
     void start(int id);
     void finished_ops(int64_t num_ops, enum operation_type op_type);
     void stop();
-    void merge(const stats &other);
+    void merge(const statistics &other);
     void report(operation_type op_type);
     void add_bytes(int64_t n);
     void add_message(const std::string &msg);
@@ -27,7 +27,7 @@ private:
     uint32_t report_step(uint64_t current_report) const;
     void print_thread_status() const;
 
-    // thread id which controls this stats
+    // thread id which controls this statistics
     int _tid;
     // the start time of benchmark
     uint64_t _start;

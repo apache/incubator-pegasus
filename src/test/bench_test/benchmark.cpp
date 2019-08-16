@@ -67,7 +67,7 @@ void benchmark::run_benchmark(int n, operation_type op_type)
         config::get_instance().env->StartThread(thread_body, &arg[i]);
     }
 
-    // wait all of the theads' initialized
+    // wait all of the theads initialized
     pthread_mutex_lock(&shared.mu);
     while (shared.num_initialized < n) {
         pthread_cond_wait(&shared.cv, &shared.mu);
@@ -81,8 +81,8 @@ void benchmark::run_benchmark(int n, operation_type op_type)
     }
     pthread_mutex_unlock(&shared.mu);
 
-    // merge stats
-    stats merge_stats(hist_stats);
+    // merge statistics
+    statistics merge_stats(hist_stats);
     for (int i = 0; i < n; i++) {
         merge_stats.merge(arg[i].thread->stats);
     }
