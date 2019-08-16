@@ -105,7 +105,7 @@ void stats::report(operation_type op_type)
         // Rate is computed on actual elapsed time, not the sum of per-thread
         // elapsed times.
         char rate[100];
-        snprintf(rate, sizeof(rate), "%6.1f MB/s", (_bytes << 20) / elapsed);
+        snprintf(rate, sizeof(rate), "%6.1f MB/s", (_bytes >> 20) / elapsed);
         extra = rate;
     }
 

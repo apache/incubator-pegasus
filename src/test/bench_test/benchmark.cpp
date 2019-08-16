@@ -303,9 +303,9 @@ void benchmark::print_header()
     fprintf(stdout, "Values:     %d bytes each\n", config_.value_size);
     fprintf(stdout, "Entries:    %" PRIu64 "\n", config_.num);
     fprintf(stdout,
-            "FileSize:   %.1f MB (estimated)\n",
-            (((config_.hashkey_size + config_.sortkey_size + config_.value_size) * config_.num) /
-             1048576.0));
+            "FileSize:   %ld MB (estimated)\n",
+            ((config_.hashkey_size + config_.sortkey_size + config_.value_size) * config_.num) >>
+                20);
 
     print_warnings();
     fprintf(stdout, "------------------------------------------------\n");
