@@ -83,15 +83,13 @@ private:
     /** some auxiliary functions */
     operation_type get_operation_type(const std::string &name);
     void print_header();
-    void print_warnings(const char *compression);
+    void print_warnings();
 
 private:
     // the pegasus client to do read/write/delete operations
     pegasus_client *_client;
     // the map of operation type and the process method
     std::unordered_map<operation_type, bench_method, std::hash<unsigned char>> _operation_method;
-    // random generator
-    random_generator &_random_generator;
 };
 } // namespace test
 } // namespace pegasus

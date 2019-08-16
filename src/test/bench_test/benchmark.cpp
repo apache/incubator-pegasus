@@ -10,7 +10,7 @@
 
 namespace pegasus {
 namespace test {
-benchmark::benchmark() : _random_generator(random_generator::get_instance())
+benchmark::benchmark()
 {
     _client =
         pegasus_client_factory::get_client(config::get_instance().pegasus_cluster_name.c_str(),
@@ -167,12 +167,12 @@ void benchmark::write_random(thread_state *thread)
 void benchmark::read_random(thread_state *thread)
 {
     // to improve hit rate, write first. By using same random seed
-    uint32_t seed = _random_generator.next();
-    _random_generator.reseed(seed);
+    uint32_t seed = random_generator::next();
+    random_generator::reseed(seed);
     write_random(thread);
 
     // reseed, to ensure same seed with random write above
-    _random_generator.reseed(seed);
+    random_generator::reseed(seed);
 
     // reset start time
     thread->stats.start(thread->tid);
@@ -269,7 +269,7 @@ std::string benchmark::generate_string(int len)
     std::string key;
 
     // fill with random int
-    int random_int = _random_generator.uniform(config::get_instance().num);
+    int random_int = random_generator::uniform(config::get_instance().num);
     key.append(reinterpret_cast<char *>(&random_int), std::min(len, 8));
 
     // append with '0'
@@ -302,22 +302,16 @@ void benchmark::print_header()
     fprintf(stdout, "Sortkeys:       %d bytes each\n", config_.sortkey_size);
     fprintf(stdout, "Values:     %d bytes each\n", config_.value_size);
     fprintf(stdout, "Entries:    %" PRIu64 "\n", config_.num);
-    fprintf(
-        stdout,
-        "RawSize:    %.1f MB (estimated)\n",
-        ((static_cast<int64_t>(config_.hashkey_size + config_.sortkey_size + config_.value_size) *
-          config_.num) /
-         1048576.0));
     fprintf(stdout,
             "FileSize:   %.1f MB (estimated)\n",
             (((config_.hashkey_size + config_.sortkey_size + config_.value_size) * config_.num) /
              1048576.0));
 
-    print_warnings("");
+    print_warnings();
     fprintf(stdout, "------------------------------------------------\n");
 }
 
-void benchmark::print_warnings(const char *compression)
+void benchmark::print_warnings()
 {
 #if defined(__GNUC__) && !defined(__OPTIMIZE__)
     fprintf(stdout, "WARNING: Optimization is disabled: benchmarks unnecessarily slow\n");
