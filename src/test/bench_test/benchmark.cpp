@@ -59,12 +59,11 @@ void benchmark::run_benchmark(int n, operation_type op_type)
     std::shared_ptr<shared_state> shared = std::make_shared<shared_state>(n);
     std::vector<thread_arg> args;
     for (int i = 0; i < n; i++) {
-        thread_arg arg(this, shared, i, method);
-        args.push_back(arg);
+        args.emplace_back(this, shared, i, method);
 
         // set histogram statistic and start thread
-        arg.thread.stats.set_hist_stats(hist_stats);
-        config::get_instance().env->StartThread(thread_body, &arg);
+        args[i].thread.stats.set_hist_stats(hist_stats);
+        config::get_instance().env->StartThread(thread_body, &args[i]);
     }
 
     // wait all of the theads initialized

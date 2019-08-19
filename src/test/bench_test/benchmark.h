@@ -56,8 +56,11 @@ struct thread_arg
     thread_state thread;
     bench_method method;
 
-    thread_arg(benchmark *bm, std::shared_ptr<shared_state> shared, int id, bench_method method)
-        : bm(bm), shared(shared), thread(thread_state(id)), method(method)
+    thread_arg(benchmark *benchmark_,
+               std::shared_ptr<shared_state> shared_state_,
+               int id,
+               bench_method bench_method_)
+        : bm(benchmark_), shared(shared_state_), thread(thread_state(id)), method(bench_method_)
     {
     }
 };
