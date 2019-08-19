@@ -19,6 +19,7 @@ set(MY_PROJ_LIBS pegasus.rproxylib
                  prometheus-cpp-push
                  prometheus-cpp-core
                  curl
+                 idn
                  event
                  s2
                  pegasus_client_static
