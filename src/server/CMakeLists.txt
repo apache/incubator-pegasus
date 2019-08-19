@@ -27,6 +27,7 @@ set(MY_PROJ_LIBS
     prometheus-cpp-push
     prometheus-cpp-core
     curl
+    idn
     pegasus_client_static
     zookeeper_mt
     event
