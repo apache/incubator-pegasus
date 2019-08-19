@@ -19,6 +19,8 @@ namespace pegasus {
 namespace proxy {
 
 std::atomic_llong redis_parser::s_next_seqid(0);
+const char redis_parser::CR = '\015';
+const char redis_parser::LF = '\012';
 
 std::unordered_map<std::string, redis_parser::redis_call_handler> redis_parser::s_dispatcher = {
     {"SET", redis_parser::g_set},
@@ -170,8 +172,7 @@ void redis_parser::eat_all(char *dest, size_t length)
 bool redis_parser::end_array_size()
 {
     int32_t count = 0;
-    if (dsn_unlikely(!dsn::buf2int32(
-            dsn::string_view(_current_size.c_str(), _current_size.length()), count))) {
+    if (dsn_unlikely(!dsn::buf2int32(dsn::string_view(_current_size), count))) {
         derror_f(
             "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
         return false;

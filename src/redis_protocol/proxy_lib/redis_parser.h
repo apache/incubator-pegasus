@@ -10,9 +10,6 @@
 #include "proxy_layer.h"
 #include "geo/lib/geo_client.h"
 
-#define CR '\015'
-#define LF '\012'
-
 namespace dsn {
 namespace apps {
 class rrdb_client;
@@ -225,6 +222,9 @@ protected:
     static std::unordered_map<std::string, redis_call_handler> s_dispatcher;
     static redis_call_handler get_handler(const char *command, unsigned int length);
     static std::atomic_llong s_next_seqid;
+
+    static const char CR;
+    static const char LF;
 
 public:
     redis_parser(proxy_stub *op, dsn::message_ex *first_msg);
