@@ -13,18 +13,6 @@ namespace test {
 std::unordered_map<operation_type, std::string, std::hash<unsigned char>> operation_type_string = {
     {kUnknown, "unKnown"}, {kRead, "read"}, {kWrite, "write"}, {kDelete, "delete"}};
 
-static void append_with_space(std::string *str, const std::string &msg)
-{
-    if (msg.empty())
-        return;
-
-    assert(NULL != str);
-    if (!str->empty()) {
-        str->push_back(' ');
-    }
-    str->append(msg);
-}
-
 statistics::statistics(std::shared_ptr<rocksdb::Statistics> hist_stats)
 {
     _next_report = 100;
@@ -92,16 +80,14 @@ void statistics::report(operation_type op_type)
     // elasped time(s)
     double elapsed = (_finish - _start) * 1e-6;
 
-    // append rate(MBytes) message to extra
+    // append rate(MBytes) and _message to extra
     std::string extra;
     if (_bytes > 0) {
         // Rate is computed on actual elapsed time, not the sum of per-thread
         // elapsed times.
-        extra = fmt::format("{} MB/s", (_bytes >> 20) / elapsed);
+        extra = fmt::format("{} MB/s ", (_bytes >> 20) / elapsed);
     }
-
-    // append _message to extra
-    append_with_space(&extra, _message);
+    extra.append(_message);
 
     // print report
     fmt::print(stdout,
@@ -121,7 +107,15 @@ void statistics::report(operation_type op_type)
     }
 }
 
-void statistics::add_message(const std::string &msg) { append_with_space(&_message, msg); }
+void statistics::add_message(const std::string &msg) {
+    if (msg.empty())
+        return;
+
+    if (!_message.empty()) {
+        _message.push_back(' ');
+    }
+    _message.append(msg);
+}
 
 void statistics::add_bytes(int64_t n) { _bytes += n; }
 
