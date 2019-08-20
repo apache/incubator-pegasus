@@ -50,7 +50,8 @@ void benchmark::run_benchmark(int thread_count, operation_type op_type)
     // create thread args for each thread, and run them
     std::vector<std::shared_ptr<thread_arg>> args;
     for (int i = 0; i < thread_count; i++) {
-        args.push_back(std::make_shared<thread_arg>(i, hist_stats, method, this));
+        args.push_back(
+            std::make_shared<thread_arg>(i + config::instance().seed, hist_stats, method, this));
         config::instance().env->StartThread(thread_body, args[i].get());
     }
 
@@ -73,7 +74,7 @@ void benchmark::thread_body(void *v)
     reseed_thread_local_rng(arg->seed);
 
     // progress the method
-    arg->stats.start(arg->id);
+    arg->stats.start();
     (arg->bm->*(arg->method))(arg);
     arg->stats.stop();
 }

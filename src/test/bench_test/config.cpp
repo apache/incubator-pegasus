@@ -34,13 +34,6 @@ config::config()
         "pegasus.benchmark", "threads", 0, "Number of concurrent threads to run");
     value_size = (int32_t)dsn_config_get_value_uint64(
         "pegasus.benchmark", "value_size", 0, "Size of each value");
-    thread_status_per_interval =
-        (int32_t)dsn_config_get_value_uint64("pegasus.benchmark",
-                                             "thread_status_per_interval",
-                                             0,
-                                             "Takes and report a snapshot of the "
-                                             "current status of each thread when "
-                                             "this is greater than 0");
     seed = dsn_config_get_value_uint64(
         "pegasus.benchmark",
         "seed",

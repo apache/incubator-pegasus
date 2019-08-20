@@ -1503,7 +1503,6 @@ function usage_bench()
     echo "   --sortkey_size <num>         sortkey size, default 16"
     echo "   --value_size <num>           value size, default 100"
     echo "   --timeout <num>              timeout in milliseconds, default 1000"
-    echo "   --status_interval <num>      print thread status interval, default 0"
     echo "   --seed <num>                 seed base for random number generator, default 1000"
 }
 
@@ -1517,7 +1516,6 @@ function fill_bench_config() {
     sed -i "s/@SORTKEY_SIZE@/$SORTKEY_SIZE/g" ./config-bench.ini
     sed -i "s/@TIMEOUT_MS@/$TIMEOUT_MS/g" ./config-bench.ini
     sed -i "s/@VALUE_SIZE@/$VALUE_SIZE/g" ./config-bench.ini
-    sed -i "s/@STATUS_INTERVAL@/$STATUS_INTERVAL/g" ./config-bench.ini
     sed -i "s/@SEED@/$SEED/g" ./config-bench.ini
 }
 
@@ -1532,7 +1530,6 @@ function run_bench()
     SORTKEY_SIZE=16
     VALUE_SIZE=100
     TIMEOUT_MS=1000
-    STATUS_INTERVAL=0
     SEED=1000
     while [[ $# > 0 ]]; do
         key="$1"
@@ -1575,10 +1572,6 @@ function run_bench()
                 ;;
             --timeout)
                 TIMEOUT_MS="$2"
-                shift
-                ;;
-            --status_interval)
-                STATUS_INTERVAL="$2"
                 shift
                 ;;
             --seed)

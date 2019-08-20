@@ -27,7 +27,6 @@ static void append_with_space(std::string *str, const std::string &msg)
 
 statistics::statistics(std::shared_ptr<rocksdb::Statistics> hist_stats)
 {
-    _tid = -1;
     _next_report = 100;
     _done = 0;
     _bytes = 0;
@@ -37,9 +36,8 @@ statistics::statistics(std::shared_ptr<rocksdb::Statistics> hist_stats)
     _hist_stats = hist_stats;
 }
 
-void statistics::start(int id)
+void statistics::start()
 {
-    _tid = id;
     _next_report = 100;
     _done = 0;
     _bytes = 0;
@@ -81,11 +79,6 @@ void statistics::finished_ops(int64_t num_ops, enum operation_type op_type)
     // add excution time of this operation to _hist_stats
     if (_hist_stats) {
         _hist_stats->measureTime(op_type, micros);
-    }
-
-    // print thread status(only pthread 0 work)
-    if (_tid == 0 && config::instance().thread_status_per_interval) {
-        print_thread_status();
     }
 }
 
@@ -131,44 +124,6 @@ void statistics::report(operation_type op_type)
 void statistics::add_message(const std::string &msg) { append_with_space(&_message, msg); }
 
 void statistics::add_bytes(int64_t n) { _bytes += n; }
-
-void statistics::print_thread_status() const
-{
-    std::vector<rocksdb::ThreadStatus> thread_list;
-    config::instance().env->GetThreadList(&thread_list);
-
-    fmt::print(stderr,
-               "\n{} {} {} {} {} {} {} {}\n",
-               "ThreadID",
-               "ThreadType",
-               "cfName",
-               "Operation",
-               "ElapsedTime",
-               "Stage",
-               "State",
-               "OperationProperties");
-
-    int64_t current_time = 0;
-    config::instance().env->GetCurrentTime(&current_time);
-    for (auto ts : thread_list) {
-        fmt::print(stderr,
-                   "{} {} {} {} {} {} {}",
-                   ts.thread_id,
-                   rocksdb::ThreadStatus::GetThreadTypeName(ts.thread_type),
-                   ts.cf_name,
-                   rocksdb::ThreadStatus::GetOperationName(ts.operation_type),
-                   rocksdb::ThreadStatus::MicrosToString(ts.op_elapsed_micros),
-                   rocksdb::ThreadStatus::GetOperationStageName(ts.operation_stage),
-                   rocksdb::ThreadStatus::GetStateName(ts.state_type));
-
-        auto op_properties = rocksdb::ThreadStatus::InterpretOperationProperties(ts.operation_type,
-                                                                                 ts.op_properties);
-        for (const auto &op_prop : op_properties) {
-            fmt::print(stderr, " {} {} |", op_prop.first, op_prop.second);
-        }
-        fmt::print(stderr, "\n");
-    }
-}
 
 uint32_t statistics::report_step(uint64_t current_report) const
 {

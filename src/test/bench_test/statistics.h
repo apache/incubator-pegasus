@@ -14,7 +14,7 @@ class statistics
 {
 public:
     statistics(std::shared_ptr<rocksdb::Statistics> hist_stats);
-    void start(int id);
+    void start();
     void finished_ops(int64_t num_ops, enum operation_type op_type);
     void stop();
     void merge(const statistics &other);
@@ -24,7 +24,6 @@ public:
 
 private:
     uint32_t report_step(uint64_t current_report) const;
-    void print_thread_status() const;
 
     // thread id which controls this statistics
     int _tid;

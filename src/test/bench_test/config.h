@@ -28,8 +28,6 @@ struct config : public ::dsn::utils::singleton<config>
     uint32_t value_size;
     uint32_t hashkey_size;
     uint32_t sortkey_size;
-    // Takes and report a snapshot of the current status of each thread when this is greater than 0
-    uint32_t thread_status_per_interval;
     // Seed base for random number generators
     uint64_t seed;
     // Default environment suitable for the current operating system

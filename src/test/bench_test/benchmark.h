@@ -18,21 +18,16 @@ typedef void (benchmark::*bench_method)(thread_arg *);
 
 struct thread_arg
 {
-    int id; // 0..n-1 when running in n threads
-    statistics stats;
     int64_t seed;
+    statistics stats;
     bench_method method;
     benchmark *bm;
 
-    thread_arg(int id,
-               std::shared_ptr<rocksdb::Statistics> hist_stats,
+    thread_arg(uint64_t seed_,
+               std::shared_ptr<rocksdb::Statistics> hist_stats_,
                bench_method bench_method_,
                benchmark *benchmark_)
-        : id(id),
-          stats(hist_stats),
-          seed(id + config::instance().seed),
-          method(bench_method_),
-          bm(benchmark_)
+        : seed(seed_), stats(hist_stats_), method(bench_method_), bm(benchmark_)
     {
     }
 };
