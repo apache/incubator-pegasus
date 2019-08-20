@@ -7,11 +7,6 @@
 
 namespace pegasus {
 namespace test {
-const config &config::get_instance()
-{
-    static config instance;
-    return instance;
-}
 
 config::config()
 {
@@ -46,6 +41,12 @@ config::config()
                                              "Takes and report a snapshot of the "
                                              "current status of each thread when "
                                              "this is greater than 0");
+    seed = dsn_config_get_value_uint64(
+        "pegasus.benchmark",
+        "seed",
+        0,
+        "Seed base for random number generators. When 0 it is deterministic");
+    seed = seed ? seed : 1000;
     env = rocksdb::Env::Default();
 }
 } // namespace test

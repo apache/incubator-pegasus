@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include <unordered_map>
-#include <cinttypes>
+#include <dsn/dist/fmt_logging.h>
 
 #include "statistics.h"
 #include "config.h"
@@ -31,7 +31,7 @@ statistics::statistics(std::shared_ptr<rocksdb::Statistics> hist_stats)
     _next_report = 100;
     _done = 0;
     _bytes = 0;
-    _start = config::get_instance().env->NowMicros();
+    _start = config::instance().env->NowMicros();
     _last_op_finish = _start;
     _finish = _start;
     _hist_stats = hist_stats;
@@ -43,7 +43,7 @@ void statistics::start(int id)
     _next_report = 100;
     _done = 0;
     _bytes = 0;
-    _start = config::get_instance().env->NowMicros();
+    _start = config::instance().env->NowMicros();
     _last_op_finish = _start;
     _finish = _start;
     _message.clear();
@@ -55,28 +55,27 @@ void statistics::merge(const statistics &other)
     _bytes += other._bytes;
     _start = std::min(other._start, _start);
     _finish = std::max(other._finish, _finish);
-    append_with_space(&_message, other._message);
+    this->add_message(other._message);
 }
 
-void statistics::stop() { _finish = config::get_instance().env->NowMicros(); }
+void statistics::stop() { _finish = config::instance().env->NowMicros(); }
 
 void statistics::finished_ops(int64_t num_ops, enum operation_type op_type)
 {
-    uint64_t now = config::get_instance().env->NowMicros();
+    uint64_t now = config::instance().env->NowMicros();
     uint64_t micros = now - _last_op_finish;
     _last_op_finish = now;
 
     // if there is a long operation, print warning message
     if (micros > 20000) {
-        fprintf(stderr, "long op: %" PRIu64 " micros%30s\r", micros, "");
-        fflush(stderr);
+        fmt::print(stderr, "long op: {} micros\r", micros);
     }
 
     // print the benchmark running status
     _done += num_ops;
     if (_done >= _next_report) {
         _next_report += report_step(_next_report);
-        fprintf(stderr, "... finished %" PRIu64 " ops%30s\r", _done, "");
+        fmt::print(stderr, "... finished {} ops\r", _done);
     }
 
     // add excution time of this operation to _hist_stats
@@ -85,10 +84,9 @@ void statistics::finished_ops(int64_t num_ops, enum operation_type op_type)
     }
 
     // print thread status(only pthread 0 work)
-    if (_tid == 0 && config::get_instance().thread_status_per_interval) {
+    if (_tid == 0 && config::instance().thread_status_per_interval) {
         print_thread_status();
     }
-    fflush(stderr);
 }
 
 void statistics::report(operation_type op_type)
@@ -106,30 +104,27 @@ void statistics::report(operation_type op_type)
     if (_bytes > 0) {
         // Rate is computed on actual elapsed time, not the sum of per-thread
         // elapsed times.
-        char rate[100];
-        snprintf(rate, sizeof(rate), "%6.1f MB/s", (_bytes >> 20) / elapsed);
-        extra = rate;
+        extra = fmt::format("{} MB/s", (_bytes >> 20) / elapsed);
     }
 
     // append _message to extra
     append_with_space(&extra, _message);
 
     // print report
-    fprintf(stdout,
-            "%-6s : %11.3f micros/op %ld ops/sec;%s%s\n",
-            operation_type_string[op_type].c_str(),
-            elapsed * 1e6 / _done,
-            static_cast<long>(_done / elapsed),
-            (extra.empty() ? "" : " "),
-            extra.c_str());
-    fflush(stdout);
+    fmt::print(stdout,
+               "{}: {} micros/op {} ops/sec;{}{}\n",
+               operation_type_string[op_type],
+               elapsed * 1e6 / _done,
+               static_cast<long>(_done / elapsed),
+               (extra.empty() ? "" : " "),
+               extra);
 
     // print histogram if _hist_stats is not NULL
     if (_hist_stats) {
-        fprintf(stdout,
-                "Microseconds per %s:\n%s\n",
-                operation_type_string[op_type].c_str(),
-                _hist_stats->getHistogramString(op_type).c_str());
+        fmt::print(stdout,
+                   "Microseconds per {}:\n{}\n",
+                   operation_type_string[op_type],
+                   _hist_stats->getHistogramString(op_type));
     }
 }
 
@@ -137,46 +132,41 @@ void statistics::add_message(const std::string &msg) { append_with_space(&_messa
 
 void statistics::add_bytes(int64_t n) { _bytes += n; }
 
-void statistics::set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats)
-{
-    _hist_stats = hist_stats;
-}
-
 void statistics::print_thread_status() const
 {
     std::vector<rocksdb::ThreadStatus> thread_list;
-    config::get_instance().env->GetThreadList(&thread_list);
+    config::instance().env->GetThreadList(&thread_list);
 
-    fprintf(stderr,
-            "\n%18s %10s %12s %20s %13s %45s %12s %s\n",
-            "ThreadID",
-            "ThreadType",
-            "cfName",
-            "Operation",
-            "ElapsedTime",
-            "Stage",
-            "State",
-            "OperationProperties");
+    fmt::print(stderr,
+               "\n{} {} {} {} {} {} {} {}\n",
+               "ThreadID",
+               "ThreadType",
+               "cfName",
+               "Operation",
+               "ElapsedTime",
+               "Stage",
+               "State",
+               "OperationProperties");
 
     int64_t current_time = 0;
-    config::get_instance().env->GetCurrentTime(&current_time);
+    config::instance().env->GetCurrentTime(&current_time);
     for (auto ts : thread_list) {
-        fprintf(stderr,
-                "%18" PRIu64 " %10s %12s %20s %13s %45s %12s",
-                ts.thread_id,
-                rocksdb::ThreadStatus::GetThreadTypeName(ts.thread_type).c_str(),
-                ts.cf_name.c_str(),
-                rocksdb::ThreadStatus::GetOperationName(ts.operation_type).c_str(),
-                rocksdb::ThreadStatus::MicrosToString(ts.op_elapsed_micros).c_str(),
-                rocksdb::ThreadStatus::GetOperationStageName(ts.operation_stage).c_str(),
-                rocksdb::ThreadStatus::GetStateName(ts.state_type).c_str());
+        fmt::print(stderr,
+                   "{} {} {} {} {} {} {}",
+                   ts.thread_id,
+                   rocksdb::ThreadStatus::GetThreadTypeName(ts.thread_type),
+                   ts.cf_name,
+                   rocksdb::ThreadStatus::GetOperationName(ts.operation_type),
+                   rocksdb::ThreadStatus::MicrosToString(ts.op_elapsed_micros),
+                   rocksdb::ThreadStatus::GetOperationStageName(ts.operation_stage),
+                   rocksdb::ThreadStatus::GetStateName(ts.state_type));
 
         auto op_properties = rocksdb::ThreadStatus::InterpretOperationProperties(ts.operation_type,
                                                                                  ts.op_properties);
         for (const auto &op_prop : op_properties) {
-            fprintf(stderr, " %s %" PRIu64 " |", op_prop.first.c_str(), op_prop.second);
+            fmt::print(stderr, " {} {} |", op_prop.first, op_prop.second);
         }
-        fprintf(stderr, "\n");
+        fmt::print(stderr, "\n");
     }
 }
 

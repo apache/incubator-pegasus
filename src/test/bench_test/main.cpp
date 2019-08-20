@@ -4,6 +4,7 @@
 
 #include <unistd.h>
 #include <pegasus/client.h>
+#include <dsn/dist/fmt_logging.h>
 
 #include "benchmark.h"
 
@@ -11,11 +12,11 @@ int db_bench_tool(const char *config_file)
 {
     bool init = pegasus::pegasus_client_factory::initialize(config_file);
     if (!init) {
-        fprintf(stderr, "Init pegasus error\n");
+        fmt::print(stderr, "Init pegasus error\n");
         return -1;
     }
     sleep(1);
-    fprintf(stdout, "Init pegasus succeed\n");
+    fmt::print(stdout, "Init pegasus succeed\n");
 
     pegasus::test::benchmark bm;
     bm.run();
@@ -27,7 +28,7 @@ int db_bench_tool(const char *config_file)
 int main(int argc, char **argv)
 {
     if (argc < 2) {
-        fprintf(stderr, "USAGE: %s <config-file>", argv[0]);
+        fmt::print(stderr, "USAGE: {} <config-file>", argv[0]);
         return -1;
     }
 

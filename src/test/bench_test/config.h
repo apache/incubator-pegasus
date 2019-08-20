@@ -6,13 +6,14 @@
 
 #include <string>
 #include <rocksdb/env.h>
+#include <dsn/utility/singleton.h>
 
 namespace pegasus {
 namespace test {
 /** Thread safety singleton */
-struct config
+struct config : public ::dsn::utils::singleton<config>
 {
-    static const config &get_instance();
+    config();
 
     std::string pegasus_cluster_name;
     std::string pegasus_app_name;
@@ -29,11 +30,10 @@ struct config
     uint32_t sortkey_size;
     // Takes and report a snapshot of the current status of each thread when this is greater than 0
     uint32_t thread_status_per_interval;
+    // Seed base for random number generators
+    uint64_t seed;
     // Default environment suitable for the current operating system
     rocksdb::Env *env;
-
-private:
-    config();
 };
 } // namespace test
 } // namespace pegasus

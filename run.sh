@@ -1491,18 +1491,20 @@ function run_clear_upgrade_test()
 function usage_bench()
 {
     echo "Options for subcommand 'bench':"
-    echo "   -h|--help            print the help info"
-    echo "   -t|--type            benchmark type, supporting:"
-    echo "                          fillseq_pegasus, fillrandom_pegasus, readrandom_pegasus, filluniquerandom_pegasus,"
-    echo "                          deleteseq_pegasus,deleterandom_pegasus,multi_set_pegasus,scan_pegasus"
-    echo "                        default is fillseq_pegasus,readrandom_pegasus"
-    echo "   -n <num>             number of key/value pairs, default 100000"
-    echo "   --cluster <str>      cluster meta lists, default '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
-    echo "   --app_name <str>     app name, default 'temp'"
-    echo "   --thread_num <num>   number of threads, default 1"
-    echo "   --key_size <num>     key size, default 16"
-    echo "   --value_size <num>   value size, default 100"
-    echo "   --timeout <num>      timeout in milliseconds, default 1000"
+    echo "   -h|--help                    print the help info"
+    echo "   --type                       benchmark type, supporting:"
+    echo "                                fillrandom_pegasus, readrandom_pegasus, deleterandom_pegasus"
+    echo "                                default is fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus"
+    echo "   -n <num>                     number of key/value pairs, default 100000"
+    echo "   --cluster_name <str>         cluster name, default is onebox"
+    echo "   --app_name <str>             app name, default 'temp'"
+    echo "   --thread_num <num>           number of threads, default 1"
+    echo "   --hashkey_size <num>         hashkey size, default 16"
+    echo "   --sortkey_size <num>         sortkey size, default 16"
+    echo "   --value_size <num>           value size, default 100"
+    echo "   --timeout <num>              timeout in milliseconds, default 1000"
+    echo "   --status_interval <num>      print thread status interval, default 0"
+    echo "   --seed <num>                 seed base for random number generator, default 1000"
 }
 
 function fill_bench_config() {
@@ -1516,6 +1518,7 @@ function fill_bench_config() {
     sed -i "s/@HASHKEY_SIZE@/$HASHKEY_SIZE/g" ./config-bench.ini
     sed -i "s/@SORTKEY_SIZE@/$SORTKEY_SIZE/g" ./config-bench.ini
     sed -i "s/@STATUS_INTERVAL@/$STATUS_INTERVAL/g" ./config-bench.ini
+    sed -i "s/@SEED@/$SEED/g" ./config-bench.ini
 }
 
 function run_bench()
@@ -1530,6 +1533,7 @@ function run_bench()
     VALUE_SIZE=100
     TIMEOUT_MS=1000
     STATUS_INTERVAL=0
+    SEED=1000
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -1537,15 +1541,15 @@ function run_bench()
                 usage_bench
                 exit 0
                 ;;
-            -t|--type)
+            --type)
                 TYPE="$2"
                 shift
                 ;;
-            -n)
+            --num)
                 NUM="$2"
                 shift
                 ;;
-            --cluster)
+            --cluster_name)
                 CLUSTER="$2"
                 shift
                 ;;
@@ -1571,6 +1575,14 @@ function run_bench()
                 ;;
             --timeout)
                 TIMEOUT_MS="$2"
+                shift
+                ;;
+            --status_interval)
+                STATUS_INTERVAL="$2"
+                shift
+                ;;
+            --seed)
+                SEED="$2"
                 shift
                 ;;
             *)

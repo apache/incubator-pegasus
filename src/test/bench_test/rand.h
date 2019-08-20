@@ -4,16 +4,11 @@
 
 #pragma once
 
-#include <dsn/utility/rand.h>
-
 namespace pegasus {
 namespace test {
-class random_generator
-{
-public:
-    static uint32_t uniform(int n);
-    static uint32_t next();
-    static void reseed(uint64_t seed);
-};
-} // namespace test
-} // namespace pegasus
+// Reseeds the RNG of current thread.
+extern void reseed_thread_local_rng(uint64_t seed);
+extern uint64_t next_u64();
+extern std::string generate_string(uint64_t len);
+}
+}

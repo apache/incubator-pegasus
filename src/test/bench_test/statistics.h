@@ -13,7 +13,7 @@ namespace test {
 class statistics
 {
 public:
-    statistics(std::shared_ptr<rocksdb::Statistics> hist_stats = nullptr);
+    statistics(std::shared_ptr<rocksdb::Statistics> hist_stats);
     void start(int id);
     void finished_ops(int64_t num_ops, enum operation_type op_type);
     void stop();
@@ -21,7 +21,6 @@ public:
     void report(operation_type op_type);
     void add_bytes(int64_t n);
     void add_message(const std::string &msg);
-    void set_hist_stats(std::shared_ptr<rocksdb::Statistics> hist_stats);
 
 private:
     uint32_t report_step(uint64_t current_report) const;

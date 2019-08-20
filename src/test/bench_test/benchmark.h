@@ -8,59 +8,31 @@
 
 #include "statistics.h"
 #include "config.h"
-#include "random_generator.h"
 
 namespace pegasus {
 namespace test {
-// State shared by all concurrent executions of the same benchmark.
-struct shared_state
-{
-    pthread_mutex_t mu;
-    pthread_cond_t cv;
-    int total;
-
-    // Each thread goes through the following states:
-    //    (1) initializing
-    //    (2) waiting for others to be initialized
-    //    (3) running
-    //    (4) done
-
-    long num_initialized;
-    long num_done;
-    bool start;
-
-    shared_state(int total) : total(total), num_initialized(0), num_done(0), start(false)
-    {
-        pthread_mutex_init(&mu, NULL);
-        pthread_cond_init(&cv, NULL);
-    }
-};
-
-// Per-thread state for concurrent executions of the same benchmark.
-struct thread_state
-{
-    int id; // 0..n-1 when running in n threads
-    statistics stats;
-
-    /* implicit */
-    thread_state(int id) : id(id) {}
-};
 
 class benchmark;
-typedef void (benchmark::*bench_method)(thread_state &);
+struct thread_arg;
+typedef void (benchmark::*bench_method)(thread_arg *);
 
 struct thread_arg
 {
-    benchmark *bm;
-    std::shared_ptr<shared_state> shared;
-    thread_state thread;
+    int id; // 0..n-1 when running in n threads
+    statistics stats;
+    int64_t seed;
     bench_method method;
+    benchmark *bm;
 
-    thread_arg(benchmark *benchmark_,
-               std::shared_ptr<shared_state> shared_state_,
-               int id,
-               bench_method bench_method_)
-        : bm(benchmark_), shared(shared_state_), thread(thread_state(id)), method(bench_method_)
+    thread_arg(int id,
+               std::shared_ptr<rocksdb::Statistics> hist_stats,
+               bench_method bench_method_,
+               benchmark *benchmark_)
+        : id(id),
+          stats(hist_stats),
+          seed(id + config::instance().seed),
+          method(bench_method_),
+          bm(benchmark_)
     {
     }
 };
@@ -69,7 +41,7 @@ class benchmark
 {
 public:
     benchmark();
-    ~benchmark();
+    ~benchmark() = default;
     void run();
 
 private:
@@ -77,16 +49,13 @@ private:
     static void thread_body(void *v);
 
     /** benchmark operations **/
-    void run_benchmark(int n, operation_type op_type);
-    void write_random(thread_state &thread);
-    void read_random(thread_state &thread);
-    void delete_random(thread_state &thread);
+    void run_benchmark(int thread_count, operation_type op_type);
+    void write_random(thread_arg *thread);
+    void read_random(thread_arg *thread);
+    void delete_random(thread_arg *thread);
 
     /**  generate hash/sort key and value */
-    std::string generate_hashkey();
-    std::string generate_sortkey();
-    std::string generate_value();
-    std::string generate_string(int len);
+    void generate_kv_pair(std::string &hashkey, std::string &sortkey, std::string &value);
 
     /** some auxiliary functions */
     operation_type get_operation_type(const std::string &name);
