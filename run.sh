@@ -1494,9 +1494,9 @@ function usage_bench()
     echo "   -h|--help                    print the help info"
     echo "   --type                       benchmark type, supporting:"
     echo "                                fillrandom_pegasus, readrandom_pegasus, deleterandom_pegasus"
-    echo "                                default is fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus"
-    echo "   -n <num>                     number of key/value pairs, default 100000"
-    echo "   --cluster_name <str>         cluster name, default is onebox"
+    echo "                                default is 'fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus'"
+    echo "   -n <num>                     number of key/value pairs, default 10000"
+    echo "   --cluster_name <str>         cluster name, default is 'onebox'"
     echo "   --app_name <str>             app name, default 'temp'"
     echo "   --thread_num <num>           number of threads, default 1"
     echo "   --hashkey_size <num>         hashkey size, default 16"
@@ -1508,15 +1508,15 @@ function usage_bench()
 }
 
 function fill_bench_config() {
-    sed -i "s/@CLUSTER@/$CLUSTER/g" ./config-bench.ini
-    sed -i "s/@APP@/$APP/g" ./config-bench.ini
-    sed -i "s/@TIMEOUT_MS@/$TIMEOUT_MS/g" ./config-bench.ini
     sed -i "s/@TYPE@/$TYPE/g" ./config-bench.ini
     sed -i "s/@NUM@/$NUM/g" ./config-bench.ini
+    sed -i "s/@CLUSTER@/$CLUSTER/g" ./config-bench.ini
+    sed -i "s/@APP@/$APP/g" ./config-bench.ini
     sed -i "s/@THREAD@/$THREAD/g" ./config-bench.ini
-    sed -i "s/@VALUE_SIZE@/$VALUE_SIZE/g" ./config-bench.ini
     sed -i "s/@HASHKEY_SIZE@/$HASHKEY_SIZE/g" ./config-bench.ini
     sed -i "s/@SORTKEY_SIZE@/$SORTKEY_SIZE/g" ./config-bench.ini
+    sed -i "s/@TIMEOUT_MS@/$TIMEOUT_MS/g" ./config-bench.ini
+    sed -i "s/@VALUE_SIZE@/$VALUE_SIZE/g" ./config-bench.ini
     sed -i "s/@STATUS_INTERVAL@/$STATUS_INTERVAL/g" ./config-bench.ini
     sed -i "s/@SEED@/$SEED/g" ./config-bench.ini
 }
