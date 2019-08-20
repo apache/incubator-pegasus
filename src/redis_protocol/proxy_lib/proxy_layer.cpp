@@ -42,67 +42,67 @@ proxy_stub::proxy_stub(const proxy_session::factory &f,
 void proxy_stub::on_rpc_request(dsn::message_ex *request)
 {
     ::dsn::rpc_address source = request->header->from_address;
-    std::shared_ptr<proxy_session> ps;
+    std::shared_ptr<proxy_session> session;
     {
         ::dsn::zauto_read_lock l(_lock);
         auto it = _sessions.find(source);
         if (it != _sessions.end()) {
-            ps = it->second;
+            session = it->second;
         }
     }
-    if (nullptr == ps) {
+    if (nullptr == session) {
         ::dsn::zauto_write_lock l(_lock);
         auto it = _sessions.find(source);
         if (it != _sessions.end()) {
-            ps = it->second;
+            session = it->second;
         } else {
-            ps = _factory(this, request);
-            _sessions.emplace(source, ps);
+            session = _factory(this, request);
+            _sessions.emplace(source, session);
         }
     }
 
-    ps->on_recv_request(request);
+    session->on_recv_request(request);
 }
 
 void proxy_stub::on_recv_remove_session_request(dsn::message_ex *request)
 {
     ::dsn::rpc_address source = request->header->from_address;
-    std::shared_ptr<proxy_session> ps = remove_session(source);
-    if (ps != nullptr) {
-        ps->on_remove_session();
-    }
+    remove_session(source);
 }
 
-std::shared_ptr<proxy_session> proxy_stub::remove_session(dsn::rpc_address remote_address)
+void proxy_stub::remove_session(dsn::rpc_address remote_address)
 {
-    ::dsn::zauto_write_lock l(_lock);
-    auto iter = _sessions.find(remote_address);
-    if (iter == _sessions.end()) {
-        dwarn("%s has been removed from proxy stub", remote_address.to_string());
-        return nullptr;
+    std::shared_ptr<proxy_session> session;
+    {
+        ::dsn::zauto_write_lock l(_lock);
+        auto iter = _sessions.find(remote_address);
+        if (iter == _sessions.end()) {
+            dwarn("%s has been removed from proxy stub", remote_address.to_string());
+            return;
+        }
+        ddebug("remove %s from proxy stub", remote_address.to_string());
+        session = std::move(iter->second);
+        _sessions.erase(iter);
     }
-    ddebug("remove %s from proxy stub", remote_address.to_string());
-    std::shared_ptr<proxy_session> result = std::move(iter->second);
-    _sessions.erase(iter);
-    return result;
+    session->on_remove_session();
 }
 
 proxy_session::proxy_session(proxy_stub *op, dsn::message_ex *first_msg)
-    : stub(op), is_session_reset(false), backup_one_request(first_msg)
+    : _stub(op), _is_session_reset(false), _backup_one_request(first_msg)
 {
     dassert(first_msg != nullptr, "null msg when create session");
-    backup_one_request->add_ref();
+    _backup_one_request->add_ref();
 
-    remote_address = backup_one_request->header->from_address;
-    dassert(remote_address.type() == HOST_TYPE_IPV4,
+    _remote_address = _backup_one_request->header->from_address;
+    dassert(_remote_address.type() == HOST_TYPE_IPV4,
             "invalid rpc_address type, type = %d",
-            (int)remote_address.type());
+            (int)_remote_address.type());
 }
 
 proxy_session::~proxy_session()
 {
-    backup_one_request->release_ref();
-    ddebug("proxy session %s destroyed", remote_address.to_string());
+    _backup_one_request->release_ref();
+    ddebug("proxy session %s destroyed", _remote_address.to_string());
 }
 
 void proxy_session::on_recv_request(dsn::message_ex *msg)
@@ -117,16 +117,16 @@ void proxy_session::on_recv_request(dsn::message_ex *msg)
     //    "parse" with a lock. a subclass may implement a lock inside parse if necessary
     if (!parse(msg)) {
         derror("%s: got invalid message, try to remove proxy session from proxy stub",
-               remote_address.to_string());
-        stub->remove_session(remote_address);
+               _remote_address.to_string());
+        _stub->remove_session(_remote_address);
 
-        derror("close the rpc session %s", remote_address.to_string());
-        ((dsn::message_ex *)backup_one_request)->io_session->close();
+        derror("close the rpc session %s", _remote_address.to_string());
+        ((dsn::message_ex *)_backup_one_request)->io_session->close();
     }
 }
 
-void proxy_session::on_remove_session() { is_session_reset.store(true); }
+void proxy_session::on_remove_session() { _is_session_reset.store(true); }
 
-dsn::message_ex *proxy_session::create_response() { return backup_one_request->create_response(); }
+dsn::message_ex *proxy_session::create_response() { return _backup_one_request->create_response(); }
 } // namespace proxy
 } // namespace pegasus
