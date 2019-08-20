@@ -22,17 +22,14 @@ statistics::statistics(std::shared_ptr<rocksdb::Statistics> hist_stats)
     _last_op_finish = _start;
     _finish = _start;
     _hist_stats = hist_stats;
+    _message.clear();
 }
 
 void statistics::start()
 {
-    _next_report = 100;
-    _done = 0;
-    _bytes = 0;
     _start = config::instance().env->NowMicros();
     _last_op_finish = _start;
     _finish = _start;
-    _message.clear();
 }
 
 void statistics::merge(const statistics &other)
