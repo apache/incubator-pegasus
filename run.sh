@@ -1491,19 +1491,19 @@ function run_clear_upgrade_test()
 function usage_bench()
 {
     echo "Options for subcommand 'bench':"
-    echo "   -h|--help                    print the help info"
-    echo "   --type                       benchmark type, supporting:"
-    echo "                                fillrandom_pegasus, readrandom_pegasus, deleterandom_pegasus"
-    echo "                                default is 'fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus'"
-    echo "   -n <num>                     number of key/value pairs, default 10000"
-    echo "   --cluster_name <str>         cluster name, default is 'onebox'"
-    echo "   --app_name <str>             app name, default 'temp'"
-    echo "   --thread_num <num>           number of threads, default 1"
-    echo "   --hashkey_size <num>         hashkey size, default 16"
-    echo "   --sortkey_size <num>         sortkey size, default 16"
-    echo "   --value_size <num>           value size, default 100"
-    echo "   --timeout <num>              timeout in milliseconds, default 1000"
-    echo "   --seed <num>                 seed base for random number generator, default 1000"
+    echo "   -h|--help                 print the help info"
+    echo "   --type                    benchmark type, supporting:"
+    echo "                             fillrandom_pegasus, readrandom_pegasus, deleterandom_pegasus"
+    echo "                             default 'fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus'"
+    echo "   --num <num>               number of key/value pairs, default 10000"
+    echo "   --cluster <str>           cluster meta lists, default '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
+    echo "   --app_name <str>          app name, default 'temp'"
+    echo "   --thread_num <num>        number of threads, default 1"
+    echo "   --hashkey_size <num>      hashkey size, default 16"
+    echo "   --sortkey_size <num>      sortkey size, default 16"
+    echo "   --value_size <num>        value size, default 100"
+    echo "   --timeout <num>           timeout in milliseconds, default 1000"
+    echo "   --seed <num>              seed base for random number generator, default 1000"
 }
 
 function fill_bench_config() {
@@ -1523,7 +1523,7 @@ function run_bench()
 {
     TYPE=fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus
     NUM=10000
-    CLUSTER=onebox
+    CLUSTER=127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603
     APP=temp
     THREAD=1
     HASHKEY_SIZE=16
@@ -1546,7 +1546,7 @@ function run_bench()
                 NUM="$2"
                 shift
                 ;;
-            --cluster_name)
+            --cluster)
                 CLUSTER="$2"
                 shift
                 ;;

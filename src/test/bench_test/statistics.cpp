@@ -88,19 +88,15 @@ void statistics::report(operation_type op_type)
 
     // print report
     fmt::print(stdout,
-               "{}: {} micros/op {} ops/sec;{}{}\n",
+               "Statistics for {}:  \n{} micros/op; {} ops/sec; {}\n",
                operation_type_string[op_type],
                elapsed * 1e6 / _done,
                static_cast<long>(_done / elapsed),
-               (extra.empty() ? "" : " "),
                extra);
 
     // print histogram if _hist_stats is not NULL
     if (_hist_stats) {
-        fmt::print(stdout,
-                   "Microseconds per {}:\n{}\n",
-                   operation_type_string[op_type],
-                   _hist_stats->getHistogramString(op_type));
+        fmt::print(stdout, "{}\n", _hist_stats->getHistogramString(op_type));
     }
 }
 
