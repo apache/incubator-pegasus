@@ -39,19 +39,19 @@ public:
     void on_remove_session();
 
 protected:
-    // return if parse ok
+    // return true if parse ok
     virtual bool parse(dsn::message_ex *msg) = 0;
     dsn::message_ex *create_response();
 
 protected:
-    proxy_stub *stub;
-    std::atomic_bool is_session_reset;
+    proxy_stub *_stub;
+    std::atomic_bool _is_session_reset;
 
     // when get message from raw parser, request & response of "dsn::message_ex*" are not in couple.
     // we need to backup one request to create a response struct.
-    dsn::message_ex *backup_one_request;
+    dsn::message_ex *_backup_one_request;
     // the client address for which this session served
-    dsn::rpc_address remote_address;
+    dsn::rpc_address _remote_address;
 };
 
 class proxy_stub : public ::dsn::serverlet<proxy_stub>
@@ -77,7 +77,7 @@ public:
         this->unregister_rpc_handler(RPC_CALL_RAW_MESSAGE);
         this->unregister_rpc_handler(RPC_CALL_RAW_SESSION_DISCONNECT);
     }
-    std::shared_ptr<proxy_session> remove_session(dsn::rpc_address remote_address);
+    void remove_session(dsn::rpc_address remote_address);
 
 private:
     void on_rpc_request(dsn::message_ex *request);

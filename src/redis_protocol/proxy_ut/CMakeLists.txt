@@ -12,11 +12,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "../../include" "../../base" "../proxy_lib")
 
-if (UNIX)
-    set(MY_PROJ_LIBS gtest pthread)
-else()
-    set(MY_PROJ_LIBS gtest)
-endif()
+set(MY_PROJ_LIBS gtest pthread)
 
 set(MY_BOOST_PACKAGES system filesystem)
 
@@ -29,7 +25,6 @@ set(MY_PROJ_LIBS pegasus.rproxylib
 
 set(MY_BINPLACES "config.ini" "run.sh")
 
-add_compile_options("-Wno-dangling-else")
 add_definitions(-Wno-attributes)
 
 dsn_add_test()
