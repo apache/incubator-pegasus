@@ -52,7 +52,7 @@ public:
 
 private:
     // set redirect location if current server is not primary
-    bool is_primary(const http_request &req, http_response &resp);
+    bool redirect_if_not_primary(const http_request &req, http_response &resp);
 
     meta_service *_service;
 };

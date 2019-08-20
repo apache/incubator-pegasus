@@ -145,6 +145,19 @@ TEST(table_printer_test, empty_content_test)
     ASSERT_NO_FATAL_FAILURE(check_output(tp, {"", "{}\n", "{}\n"}));
 }
 
+TEST(table_printer_test, empty_name_test)
+{
+    utils::table_printer tp;
+    tp.add_row_name_and_data("row1", 1.234);
+    ASSERT_NO_FATAL_FAILURE(check_output(tp,
+                                         {"row1  : 1.23\n",
+                                          R"*({"row1":"1.23"})*"
+                                          "\n",
+                                          "{\n"
+                                          R"*(    "row1": "1.23")*"
+                                          "\n}\n"}));
+}
+
 TEST(table_printer_test, single_column_test)
 {
     utils::table_printer tp(generate_single_column_tp());

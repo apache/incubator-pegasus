@@ -37,10 +37,11 @@ void json_encode(Writer &writer, const table_printer &tp)
     if (tp._matrix_data.empty()) {
         return;
     }
-
-    dsn::json::json_encode(writer, tp._name); // table_printer name
-    if (tp._mode == table_printer::data_mode::kMultiColumns) {
+    if (!tp._name.empty()) {
+        json::json_encode(writer, tp._name); // table_printer name
         writer.StartObject();
+    }
+    if (tp._mode == table_printer::data_mode::kMultiColumns) {
         // The 1st row elements are column names, skip it.
         for (size_t row = 1; row < tp._matrix_data.size(); ++row) {
             dsn::json::json_encode(writer, tp._matrix_data[row][0]); // row name
@@ -51,16 +52,16 @@ void json_encode(Writer &writer, const table_printer &tp)
             }
             writer.EndObject();
         }
-        writer.EndObject();
     } else if (tp._mode == table_printer::data_mode::kSingleColumn) {
-        writer.StartObject();
         for (size_t row = 0; row < tp._matrix_data.size(); ++row) {
             dsn::json::json_encode(writer, tp._matrix_data[row][0]); // row name
             dsn::json::json_encode(writer, tp._matrix_data[row][1]); // row data
         }
-        writer.EndObject();
     } else {
         dassert(false, "Unknown mode");
+    }
+    if (!tp._name.empty()) {
+        writer.EndObject();
     }
 }
 

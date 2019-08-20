@@ -62,7 +62,7 @@ void json_encode(Writer &out, const table_printer &tp);
 ///    tp.output(out, output_format::kTabular);
 ///
 /// Output looks like:
-///    sample_data
+///    [sample_data]
 ///    table_title  column_name1  column_name2
 ///    row_name_1   123           45.67
 ///    row_name_2   456           45.68
@@ -76,7 +76,7 @@ void json_encode(Writer &out, const table_printer &tp);
 ///    tp.output(out);
 ///
 /// Output looks like:
-///    sample_data_2
+///    [sample_data_2]
 ///    row_name_1 :  4567
 ///    row_name_2 :  hello
 ///

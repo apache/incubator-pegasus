@@ -24,7 +24,7 @@ struct http_request
     // http://ip:port/<service>/<method>
     std::pair<std::string, std::string> service_method;
     // <args_name, args_val>
-    std::map<std::string, std::string> query_args;
+    std::unordered_map<std::string, std::string> query_args;
     blob body;
     blob full_url;
     http_method method;
@@ -71,7 +71,7 @@ public:
         if (it != _cb_map.end()) {
             it->second(req, resp);
         } else {
-            resp.status_code = http_status_code::bad_request;
+            resp.status_code = http_status_code::not_found;
             resp.body = std::string("method not found for \"") + req.service_method.second + "\"";
         }
     }

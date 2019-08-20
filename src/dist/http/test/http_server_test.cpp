@@ -228,4 +228,42 @@ TEST_F(http_message_parser_test, parse_long_url)
     ASSERT_EQ(msg->buffers[2].size(), 4097); // url
 }
 
+TEST_F(http_message_parser_test, parse_query_params)
+{
+    struct test_case
+    {
+        std::string url;
+
+        error_code err;
+        std::unordered_map<std::string, std::string> result;
+    } tests[] = {
+        {"http://127.0.0.1:34601?query1", ERR_OK, {{"query1", ""}}},
+        {"http://127.0.0.1:34601?query1=", ERR_OK, {{"query1", ""}}},
+        {"http://127.0.0.1:34601?query1=value1", ERR_OK, {{"query1", "value1"}}},
+        {"http://127.0.0.1:34601?=", ERR_OK, {{"", ""}}},
+        {"http://127.0.0.1:34601?", ERR_OK, {}},
+
+        {"http://127.0.0.1:34601?query1=value1&query2=value2",
+         ERR_OK,
+         {{"query1", "value1"}, {"query2", "value2"}}},
+
+        {"http://127.0.0.1:34601?query1=value1&query2",
+         ERR_OK,
+         {{"query1", "value1"}, {"query2", ""}}},
+    };
+
+    for (auto tt : tests) {
+        ref_ptr<message_ex> m = message_ex::create_receive_message_with_standalone_header(
+            blob::create_from_bytes(std::string("POST")));
+        m->buffers.emplace_back(blob::create_from_bytes(std::string(tt.url)));
+
+        auto res = http_request::parse(m.get());
+        if (res.is_ok()) {
+            ASSERT_EQ(res.get_value().query_args, tt.result) << tt.url;
+        } else {
+            ASSERT_EQ(res.get_error().code(), tt.err);
+        }
+    }
+}
+
 } // namespace dsn

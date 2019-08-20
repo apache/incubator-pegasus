@@ -11,7 +11,7 @@ namespace dsn {
 void version_http_service::get_version_handler(const http_request &req, http_response &resp)
 {
     std::ostringstream out;
-    dsn::utils::table_printer tp("Version");
+    dsn::utils::table_printer tp;
     tp.add_row_name_and_data("Version", _version);
     tp.add_row_name_and_data("GitCommit", _git_commit);
     tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
@@ -26,7 +26,7 @@ void recent_start_time_http_service::get_recent_start_time_handler(const http_re
     char start_time[100];
     dsn::utils::time_ms_to_date_time(dsn::utils::process_start_millis(), start_time, 100);
     std::ostringstream out;
-    dsn::utils::table_printer tp("RecentStartTime");
+    dsn::utils::table_printer tp;
     tp.add_row_name_and_data("RecentStartTime", start_time);
     tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
 

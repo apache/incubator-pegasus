@@ -38,7 +38,8 @@ public:
         fake_req.query_args.emplace("name", "test_app");
         _mhs->get_app_handler(fake_req, fake_resp);
 
-        ASSERT_EQ(fake_resp.status_code, http_status_code::ok);
+        ASSERT_EQ(fake_resp.status_code, http_status_code::ok)
+            << http_status_code_to_string(fake_resp.status_code);
         std::string fake_json = R"({"general":{"app_name":")" + test_app + R"(","app_id":"2)" +
                                 R"(","partition_count":"8","max_replica_count":"3"}})" + "\n";
         ASSERT_EQ(fake_resp.body, fake_json);

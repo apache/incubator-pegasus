@@ -156,7 +156,7 @@ fi
 if [ ! -d $TP_OUTPUT/include/fmt ]; then
     mkdir -p $TP_BUILD/fmt-4.0.0
     cd $TP_BUILD/fmt-4.0.0
-    cmake $TP_SRC/fmt-4.0.0 -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT -DFMT_TEST=false
+    cmake $TP_SRC/fmt-4.0.0 -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT -DFMT_TEST=false -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     make -j8 && make install
     cd $TP_DIR
     exit_if_fail "fmtlib" $?
