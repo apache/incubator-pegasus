@@ -107,11 +107,11 @@ void benchmark::write_random(thread_arg *thread)
             }
         }
 
-        // mark finished this operations
+        // count this operation
         thread->stats.finished_ops(1, kWrite);
     }
 
-    // statistical total bytes
+    // count total write bytes
     thread->stats.add_bytes(bytes);
 }
 
@@ -144,11 +144,11 @@ void benchmark::read_random(thread_arg *thread)
             }
         }
 
-        // mark finished this operations
+        // count this operation
         thread->stats.finished_ops(1, kRead);
     }
 
-    // statistical bytes and message
+    // count total read bytes and hit rate
     std::string msg = fmt::format("({} of {} found)", found, config::instance().num);
     thread->stats.add_bytes(bytes);
     thread->stats.add_message(msg);
@@ -177,7 +177,7 @@ void benchmark::delete_random(thread_arg *thread)
             }
         }
 
-        // statistics this operation
+        // count this operation
         thread->stats.finished_ops(1, kDelete);
     }
 }
