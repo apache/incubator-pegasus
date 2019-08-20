@@ -107,7 +107,8 @@ void statistics::report(operation_type op_type)
     }
 }
 
-void statistics::add_message(const std::string &msg) {
+void statistics::add_message(const std::string &msg)
+{
     if (msg.empty())
         return;
 
