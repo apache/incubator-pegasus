@@ -11,8 +11,6 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_SRC "")
 
-set(MY_PROJ_INC_PATH "")
-
 dsn_add_static_library()
 
 target_link_libraries(pegasus_base PUBLIC RocksDB::rocksdb)
