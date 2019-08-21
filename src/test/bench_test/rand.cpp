@@ -29,5 +29,5 @@ std::string generate_string(uint64_t len)
 
     return key;
 }
-}
-}
+} // namespace test
+} // namespace pegasus

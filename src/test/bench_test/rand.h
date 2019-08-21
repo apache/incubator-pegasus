@@ -10,5 +10,5 @@ namespace test {
 extern void reseed_thread_local_rng(uint64_t seed);
 extern uint64_t next_u64();
 extern std::string generate_string(uint64_t len);
-}
-}
+} // namespace test
+} // namespace pegasus

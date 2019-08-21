@@ -11,15 +11,18 @@ namespace test {
 config::config()
 {
     hashkey_size = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "hashkey_size", 0, "size of each hashkey");
+        "pegasus.benchmark", "hashkey_size", 16, "size of each hashkey");
     sortkey_size = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "sortkey_size", 0, "size of each sortkey");
+        "pegasus.benchmark", "sortkey_size", 16, "size of each sortkey");
     pegasus_cluster_name = dsn_config_get_value_string(
-        "pegasus.benchmark", "pegasus_cluster_name", "", "pegasus cluster name");
+        "pegasus.benchmark", "pegasus_cluster_name", "onebox", "pegasus cluster name");
     pegasus_app_name = dsn_config_get_value_string(
-        "pegasus.benchmark", "pegasus_app_name", "", "pegasus app name");
-    pegasus_timeout_ms = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "pegasus_timeout_ms", 0, "pegasus read/write timeout in milliseconds");
+        "pegasus.benchmark", "pegasus_app_name", "temp", "pegasus app name");
+    pegasus_timeout_ms =
+        (int32_t)dsn_config_get_value_uint64("pegasus.benchmark",
+                                             "pegasus_timeout_ms",
+                                             1000,
+                                             "pegasus read/write timeout in milliseconds");
     benchmarks = dsn_config_get_value_string(
         "pegasus.benchmark",
         "benchmarks",
@@ -29,15 +32,15 @@ config::config()
         "\treadrandom_pegasus       -- pegasus read N times in random order\n"
         "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n");
     num = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "num", 0, "Number of key/values to place in database");
+        "pegasus.benchmark", "num", 10000, "Number of key/values to place in database");
     threads = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "threads", 0, "Number of concurrent threads to run");
+        "pegasus.benchmark", "threads", 1, "Number of concurrent threads to run");
     value_size = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "value_size", 0, "Size of each value");
+        "pegasus.benchmark", "value_size", 100, "Size of each value");
     seed = dsn_config_get_value_uint64(
         "pegasus.benchmark",
         "seed",
-        0,
+        1000,
         "Seed base for random number generators. When 0 it is deterministic");
     seed = seed ? seed : 1000;
     env = rocksdb::Env::Default();

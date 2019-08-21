@@ -25,8 +25,11 @@ struct config : public ::dsn::utils::singleton<config>
     uint64_t num;
     // Number of concurrent threads to run
     uint32_t threads;
+    // size of each value
     uint32_t value_size;
+    // size of each hashkey
     uint32_t hashkey_size;
+    // size of each sortkey
     uint32_t sortkey_size;
     // Seed base for random number generators
     uint64_t seed;

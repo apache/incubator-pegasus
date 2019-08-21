@@ -1493,17 +1493,20 @@ function usage_bench()
     echo "Options for subcommand 'bench':"
     echo "   -h|--help                 print the help info"
     echo "   --type                    benchmark type, supporting:"
-    echo "                             fillrandom_pegasus, readrandom_pegasus, deleterandom_pegasus"
-    echo "                             default 'fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus'"
-    echo "   --num <num>               number of key/value pairs, default 10000"
-    echo "   --cluster <str>           cluster meta lists, default '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
-    echo "   --app_name <str>          app name, default 'temp'"
-    echo "   --thread_num <num>        number of threads, default 1"
-    echo "   --hashkey_size <num>      hashkey size, default 16"
-    echo "   --sortkey_size <num>      sortkey size, default 16"
-    echo "   --value_size <num>        value size, default 100"
-    echo "   --timeout <num>           timeout in milliseconds, default 1000"
-    echo "   --seed <num>              seed base for random number generator, default 1000"
+    echo "                             fillrandom_pegasus       --pegasus write N random values with random keys list"
+    echo "                             readrandom_pegasus       --pegasus read N times with random keys list"
+    echo "                             deleterandom_pegasus     --pegasus delete N entries with random keys list"
+    echo "                             Comma-separated list of operations is going to run in the specified order."
+    echo "                             default is 'fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus'"
+    echo "   --num <num>               number of key/value pairs, default is 10000"
+    echo "   --cluster <str>           cluster meta lists, default is '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
+    echo "   --app_name <str>          app name, default is 'temp'"
+    echo "   --thread_num <num>        number of threads, default is 1"
+    echo "   --hashkey_size <num>      hashkey size in bytes, default is 16"
+    echo "   --sortkey_size <num>      sortkey size in bytes, default is 16"
+    echo "   --value_size <num>        value size in bytes, default is 100"
+    echo "   --timeout <num>           timeout in milliseconds, default is 1000"
+    echo "   --seed <num>              seed base for random number generator, When 0 it is specified as 1000. default is 1000"
 }
 
 function fill_bench_config() {
@@ -1514,8 +1517,8 @@ function fill_bench_config() {
     sed -i "s/@THREAD@/$THREAD/g" ./config-bench.ini
     sed -i "s/@HASHKEY_SIZE@/$HASHKEY_SIZE/g" ./config-bench.ini
     sed -i "s/@SORTKEY_SIZE@/$SORTKEY_SIZE/g" ./config-bench.ini
-    sed -i "s/@TIMEOUT_MS@/$TIMEOUT_MS/g" ./config-bench.ini
     sed -i "s/@VALUE_SIZE@/$VALUE_SIZE/g" ./config-bench.ini
+    sed -i "s/@TIMEOUT_MS@/$TIMEOUT_MS/g" ./config-bench.ini
     sed -i "s/@SEED@/$SEED/g" ./config-bench.ini
 }
 
