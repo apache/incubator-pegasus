@@ -10,10 +10,6 @@ namespace test {
 
 config::config()
 {
-    hashkey_size = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "hashkey_size", 16, "size of each hashkey");
-    sortkey_size = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "sortkey_size", 16, "size of each sortkey");
     pegasus_cluster_name = dsn_config_get_value_string(
         "pegasus.benchmark", "pegasus_cluster_name", "onebox", "pegasus cluster name");
     pegasus_app_name = dsn_config_get_value_string(
@@ -31,10 +27,14 @@ config::config()
         "\tfillrandom_pegasus       -- pegasus write N values in random key order\n"
         "\treadrandom_pegasus       -- pegasus read N times in random order\n"
         "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n");
-    num = (int32_t)dsn_config_get_value_uint64(
+    num = dsn_config_get_value_uint64(
         "pegasus.benchmark", "num", 10000, "Number of key/values to place in database");
     threads = (int32_t)dsn_config_get_value_uint64(
         "pegasus.benchmark", "threads", 1, "Number of concurrent threads to run");
+    hashkey_size = (int32_t)dsn_config_get_value_uint64(
+        "pegasus.benchmark", "hashkey_size", 16, "size of each hashkey");
+    sortkey_size = (int32_t)dsn_config_get_value_uint64(
+        "pegasus.benchmark", "sortkey_size", 16, "size of each sortkey");
     value_size = (int32_t)dsn_config_get_value_uint64(
         "pegasus.benchmark", "value_size", 100, "Size of each value");
     seed = dsn_config_get_value_uint64(
