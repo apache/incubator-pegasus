@@ -10,8 +10,6 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-# set(MY_PROJ_INC_PATH "../../../rocksdb") #TODO(huangwei5) rm it
-
 set(MY_PROJ_LIBS
         pegasus_client_static
         RocksDB::rocksdb
@@ -22,7 +20,5 @@ set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 set(MY_BINPLACES "config.ini")
 
 dsn_add_executable()
-
-target_include_directories(${MY_PROJ_NAME} PUBLIC $<TARGET_PROPERTY:RocksDB::rocksdb,INTERFACE_INCLUDE_DIRECTORIES>)
 
 dsn_install_executable()
