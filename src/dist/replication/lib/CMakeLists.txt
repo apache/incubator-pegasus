@@ -24,6 +24,7 @@ set(MY_PROJ_LIBS
     dsn_nfs
     dsn_cli
     dsn_http
+    dsn_runtime
     )
 
 # Extra files that will be installed

@@ -19,15 +19,17 @@ int _kpartition_statusValues[] = {partition_status::PS_INVALID,
                                   partition_status::PS_ERROR,
                                   partition_status::PS_PRIMARY,
                                   partition_status::PS_SECONDARY,
-                                  partition_status::PS_POTENTIAL_SECONDARY};
+                                  partition_status::PS_POTENTIAL_SECONDARY,
+                                  partition_status::PS_PARTITION_SPLIT};
 const char *_kpartition_statusNames[] = {"PS_INVALID",
                                          "PS_INACTIVE",
                                          "PS_ERROR",
                                          "PS_PRIMARY",
                                          "PS_SECONDARY",
-                                         "PS_POTENTIAL_SECONDARY"};
+                                         "PS_POTENTIAL_SECONDARY",
+                                         "PS_PARTITION_SPLIT"};
 const std::map<int, const char *> _partition_status_VALUES_TO_NAMES(
-    ::apache::thrift::TEnumIterator(6, _kpartition_statusValues, _kpartition_statusNames),
+    ::apache::thrift::TEnumIterator(7, _kpartition_statusValues, _kpartition_statusNames),
     ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
 int _kread_semanticValues[] = {read_semantic::ReadInvalid,
@@ -2350,6 +2352,12 @@ void group_check_request::__set_confirmed_decree(const int64_t val)
     __isset.confirmed_decree = true;
 }
 
+void group_check_request::__set_child_gpid(const ::dsn::gpid &val)
+{
+    this->child_gpid = val;
+    __isset.child_gpid = true;
+}
+
 uint32_t group_check_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -2409,6 +2417,14 @@ uint32_t group_check_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 6:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->child_gpid.read(iprot);
+                this->__isset.child_gpid = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -2448,6 +2464,11 @@ uint32_t group_check_request::write(::apache::thrift::protocol::TProtocol *oprot
         xfer += oprot->writeI64(this->confirmed_decree);
         xfer += oprot->writeFieldEnd();
     }
+    if (this->__isset.child_gpid) {
+        xfer += oprot->writeFieldBegin("child_gpid", ::apache::thrift::protocol::T_STRUCT, 6);
+        xfer += this->child_gpid.write(oprot);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -2461,6 +2482,7 @@ void swap(group_check_request &a, group_check_request &b)
     swap(a.config, b.config);
     swap(a.last_committed_decree, b.last_committed_decree);
     swap(a.confirmed_decree, b.confirmed_decree);
+    swap(a.child_gpid, b.child_gpid);
     swap(a.__isset, b.__isset);
 }
 
@@ -2471,6 +2493,7 @@ group_check_request::group_check_request(const group_check_request &other67)
     config = other67.config;
     last_committed_decree = other67.last_committed_decree;
     confirmed_decree = other67.confirmed_decree;
+    child_gpid = other67.child_gpid;
     __isset = other67.__isset;
 }
 group_check_request::group_check_request(group_check_request &&other68)
@@ -2480,6 +2503,7 @@ group_check_request::group_check_request(group_check_request &&other68)
     config = std::move(other68.config);
     last_committed_decree = std::move(other68.last_committed_decree);
     confirmed_decree = std::move(other68.confirmed_decree);
+    child_gpid = std::move(other68.child_gpid);
     __isset = std::move(other68.__isset);
 }
 group_check_request &group_check_request::operator=(const group_check_request &other69)
@@ -2489,6 +2513,7 @@ group_check_request &group_check_request::operator=(const group_check_request &o
     config = other69.config;
     last_committed_decree = other69.last_committed_decree;
     confirmed_decree = other69.confirmed_decree;
+    child_gpid = other69.child_gpid;
     __isset = other69.__isset;
     return *this;
 }
@@ -2499,6 +2524,7 @@ group_check_request &group_check_request::operator=(group_check_request &&other7
     config = std::move(other70.config);
     last_committed_decree = std::move(other70.last_committed_decree);
     confirmed_decree = std::move(other70.confirmed_decree);
+    child_gpid = std::move(other70.child_gpid);
     __isset = std::move(other70.__isset);
     return *this;
 }
@@ -2516,6 +2542,9 @@ void group_check_request::printTo(std::ostream &out) const
     out << ", "
         << "confirmed_decree=";
     (__isset.confirmed_decree ? (out << to_string(confirmed_decree)) : (out << "<null>"));
+    out << ", "
+        << "child_gpid=";
+    (__isset.child_gpid ? (out << to_string(child_gpid)) : (out << "<null>"));
     out << ")";
 }
 

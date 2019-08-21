@@ -90,6 +90,11 @@ public:
     void as_primary() { _config.status = partition_status::PS_PRIMARY; }
 
     void as_secondary() { _config.status = partition_status::PS_SECONDARY; }
+
+    /// helper functions
+    void set_replica_config(replica_configuration &config) { _config = config; }
+    void set_partition_status(partition_status::type status) { _config.status = status; }
+    void set_child_gpid(gpid pid) { _child_gpid = pid; }
 };
 
 inline std::unique_ptr<mock_replica> create_mock_replica(replica_stub *stub,
@@ -108,7 +113,7 @@ inline std::unique_ptr<mock_replica> create_mock_replica(replica_stub *stub,
 class mock_replica_stub : public replica_stub
 {
 public:
-    mock_replica_stub() = default;
+    mock_replica_stub() : replica_stub() {}
 
     ~mock_replica_stub() override = default;
 
@@ -139,6 +144,24 @@ public:
     rpc_address get_meta_server_address() const override { return rpc_address("127.0.0.2", 12321); }
 
     std::map<gpid, mock_replica *> mock_replicas;
+
+    /// helper functions
+    std::unique_ptr<mock_replica>
+    generate_replica(app_info info,
+                     gpid pid,
+                     partition_status::type status = partition_status::PS_INACTIVE,
+                     ballot b = 5)
+    {
+        replica_configuration config;
+        config.ballot = b;
+        config.pid = pid;
+        config.status = status;
+
+        std::unique_ptr<mock_replica> rep =
+            make_unique<mock_replica>(this, pid, std::move(info), "./");
+        rep->set_replica_config(config);
+        return rep;
+    }
 };
 
 } // namespace replication

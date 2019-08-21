@@ -523,6 +523,17 @@ private:
 
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
+class partition_split_context
+{
+public:
+    partition_split_context() {}
+    // TODO(heyuchen): force will be used in further pull request
+    bool cleanup(bool force);
+
+public:
+    gpid parent_gpid;
+};
+
 //---------------inline impl----------------------------------------------------------------
 
 inline partition_status::type primary_context::get_node_status(::dsn::rpc_address addr) const

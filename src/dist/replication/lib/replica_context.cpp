@@ -1287,5 +1287,12 @@ void cold_backup_context::file_upload_complete(const std::string &filename)
     _cur_upload_file_cnt -= 1;
     _file_status[filename] = file_status::FileUploadComplete;
 }
+
+bool partition_split_context::cleanup(bool force)
+{
+    parent_gpid.set_app_id(0);
+    return true;
 }
-} // end namespace
+
+} // namespace replication
+} // namespace dsn

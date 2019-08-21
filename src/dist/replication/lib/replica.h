@@ -76,8 +76,12 @@ public:
     //    routines for replica stub
     //
     static replica *load(replica_stub *stub, const char *dir);
-    static replica *
-    newr(replica_stub *stub, gpid gpid, const app_info &app, bool restore_if_necessary);
+    // {parent_dir} is used in partition split for get_child_dir in replica_stub
+    static replica *newr(replica_stub *stub,
+                         gpid gpid,
+                         const app_info &app,
+                         bool restore_if_necessary,
+                         const std::string &parent_dir = "");
 
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
@@ -309,6 +313,17 @@ private:
 
     std::string query_compact_state() const;
 
+    /////////////////////////////////////////////////////////////////
+    // partition split
+    // parent partition create child
+    void on_add_child(const group_check_request &request);
+
+    // child replica initialize config and state info
+    void init_child_replica(gpid parent_gpid, dsn::rpc_address primary_address, ballot init_ballot);
+
+    // parent reset child information when partition split failed
+    void clean_up_parent_split_context();
+
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -318,6 +333,7 @@ private:
     friend class replica_learn_test;
     friend class replica_duplicator_manager;
     friend class load_mutation;
+    friend class replica_split_test;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -364,6 +380,7 @@ private:
     potential_secondary_context _potential_secondary_states;
     // policy_name --> cold_backup_context
     std::map<std::string, cold_backup_context_ptr> _cold_backup_contexts;
+    partition_split_context _split_states;
 
     // timer task that running in replication-thread
     dsn::task_ptr _collect_info_timer;
@@ -390,6 +407,14 @@ private:
 
     // duplication
     std::unique_ptr<replica_duplicator_manager> _duplication_mgr;
+
+    // partition split
+    // _child_gpid = gpid({app_id},{pidx}+{old_partition_count}) for parent partition
+    // _child_gpid.app_id = 0 for parent partition not during partition split and child partition
+    dsn::gpid _child_gpid{0, 0};
+    // ballot when starting partition split coz split will stop if ballot changed
+    // _child_init_ballot = 0 if partition not during partition split
+    ballot _child_init_ballot{0};
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;

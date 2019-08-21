@@ -35,7 +35,8 @@ enum partition_status
     PS_ERROR,
     PS_PRIMARY,
     PS_SECONDARY,
-    PS_POTENTIAL_SECONDARY
+    PS_POTENTIAL_SECONDARY,
+    PS_PARTITION_SPLIT
 }
 
 struct replica_configuration
@@ -164,6 +165,9 @@ struct group_check_request
     // and secondaries, so that secondaries can be allowed to GC
     // their WALs after this decree.
     5:optional i64          confirmed_decree;
+
+    // Used to deliver child gpid during partition split
+    6:optional dsn.gpid     child_gpid;
 }
 
 struct group_check_response

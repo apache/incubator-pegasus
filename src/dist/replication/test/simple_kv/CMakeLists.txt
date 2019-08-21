@@ -29,7 +29,7 @@ set(MY_PROJ_LIBS dsn_replica_server
                  gtest
                  )
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 # Extra files that will be installed
 FILE(GLOB CASE_FILES "case-*")

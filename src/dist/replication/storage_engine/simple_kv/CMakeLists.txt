@@ -13,7 +13,7 @@ set(MY_PROJ_INC_PATH "")
 
 set(MY_PROJ_LIBS dsn_replica_server dsn_meta_server dsn_replication_client dsn_runtime fmt)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(INI_FILES "")
 file(GLOB

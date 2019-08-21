@@ -142,6 +142,10 @@ public:
 
     std::string get_replica_dir(const char *app_type, gpid id, bool create_new = true);
 
+    // during partition split, we should gurantee child replica and parent replica share the
+    // same data dir
+    std::string get_child_dir(const char *app_type, gpid child_pid, const std::string &parent_dir);
+
     //
     // helper methods
     //
@@ -154,6 +158,40 @@ public:
     std::string exec_command_on_replica(const std::vector<std::string> &args,
                                         bool allow_empty_args,
                                         std::function<std::string(const replica_ptr &rep)> func);
+
+    //
+    // partition split
+    //
+
+    // called by parent partition, executed by child partition
+    void create_child_replica(dsn::rpc_address primary_address,
+                              app_info app,
+                              ballot init_ballot,
+                              gpid child_gpid,
+                              gpid parent_gpid,
+                              const std::string &parent_dir);
+
+    // create a new replica instance if not found
+    // return nullptr when failed to create new replica
+    replica_ptr
+    create_child_replica_if_not_found(gpid child_pid, app_info *app, const std::string &parent_dir);
+
+    typedef std::function<void(::dsn::replication::replica *rep)> local_execution;
+
+    // This function is used for partition split, caller(replica)
+    // - case1. parent want child execute <handler>, child will execute <handler> if child is
+    // valid(<pid>.app_id>0) and existed, otherwise parent will execute <error_handler>
+    // - case2. child want parent execute <handler>, parent will execute <handler> if parent
+    // exist, otherwise child will execute <error_handler>
+    void split_replica_exec(gpid pid,
+                            local_execution handler,
+                            local_execution error_handler,
+                            gpid error_handler_gpid);
+
+    // This function is used for partition split error handler, caller(replica)
+    // if partition split meet error, parent/child may want child/parent execute error handler
+    // if replica <pid> valid and exist, execute <handler>, otherwise return
+    void split_replica_error_handler(gpid pid, local_execution handler);
 
 private:
     enum replica_node_state

@@ -29,7 +29,8 @@ struct partition_status
         PS_ERROR = 2,
         PS_PRIMARY = 3,
         PS_SECONDARY = 4,
-        PS_POTENTIAL_SECONDARY = 5
+        PS_POTENTIAL_SECONDARY = 5,
+        PS_PARTITION_SPLIT = 6
     };
 };
 
@@ -1254,7 +1255,8 @@ typedef struct _group_check_request__isset
           node(false),
           config(false),
           last_committed_decree(false),
-          confirmed_decree(false)
+          confirmed_decree(false),
+          child_gpid(false)
     {
     }
     bool app : 1;
@@ -1262,6 +1264,7 @@ typedef struct _group_check_request__isset
     bool config : 1;
     bool last_committed_decree : 1;
     bool confirmed_decree : 1;
+    bool child_gpid : 1;
 } _group_check_request__isset;
 
 class group_check_request
@@ -1279,6 +1282,7 @@ public:
     replica_configuration config;
     int64_t last_committed_decree;
     int64_t confirmed_decree;
+    ::dsn::gpid child_gpid;
 
     _group_check_request__isset __isset;
 
@@ -1291,6 +1295,8 @@ public:
     void __set_last_committed_decree(const int64_t val);
 
     void __set_confirmed_decree(const int64_t val);
+
+    void __set_child_gpid(const ::dsn::gpid &val);
 
     bool operator==(const group_check_request &rhs) const
     {
@@ -1305,6 +1311,10 @@ public:
         if (__isset.confirmed_decree != rhs.__isset.confirmed_decree)
             return false;
         else if (__isset.confirmed_decree && !(confirmed_decree == rhs.confirmed_decree))
+            return false;
+        if (__isset.child_gpid != rhs.__isset.child_gpid)
+            return false;
+        else if (__isset.child_gpid && !(child_gpid == rhs.child_gpid))
             return false;
         return true;
     }

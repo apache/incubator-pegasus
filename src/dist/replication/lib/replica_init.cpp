@@ -74,10 +74,18 @@ error_code replica::initialize_on_new()
     return init_app_and_prepare_list(true);
 }
 
-/*static*/ replica *
-replica::newr(replica_stub *stub, gpid gpid, const app_info &app, bool restore_if_necessary)
+/*static*/ replica *replica::newr(replica_stub *stub,
+                                  gpid gpid,
+                                  const app_info &app,
+                                  bool restore_if_necessary,
+                                  const std::string &parent_dir)
 {
-    std::string dir = stub->get_replica_dir(app.app_type.c_str(), gpid);
+    std::string dir;
+    if (parent_dir.empty()) {
+        dir = stub->get_replica_dir(app.app_type.c_str(), gpid);
+    } else {
+        dir = stub->get_child_dir(app.app_type.c_str(), gpid, parent_dir);
+    }
     replica *rep = new replica(stub, gpid, app, dir.c_str(), restore_if_necessary);
     error_code err;
     if (restore_if_necessary && (err = rep->restore_checkpoint()) != dsn::ERR_OK) {

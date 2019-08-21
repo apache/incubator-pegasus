@@ -22,7 +22,7 @@ set(MY_PROJ_LIBS dsn_meta_server
         fmt
 )
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_BINPLACES
         config-test.ini
