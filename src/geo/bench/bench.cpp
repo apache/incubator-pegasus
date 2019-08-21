@@ -69,7 +69,8 @@ int main(int argc, char **argv)
         for (int i = 0; i < data_count; ++i) {
             std::string value;
             S2LatLng latlng(S2Testing::SamplePoint(rect));
-            assert(codec.encode_to_value(latlng.lat().degrees(), latlng.lng().degrees(), value));
+            bool ok = codec.encode_to_value(latlng.lat().degrees(), latlng.lng().degrees(), value);
+            assert(ok);
             int ret = my_geo.set(std::to_string(i), "", value, 1000);
             if (ret != pegasus::PERR_OK) {
                 std::cerr << "set data failed. error=" << ret << std::endl;
