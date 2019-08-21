@@ -1491,30 +1491,49 @@ function run_clear_upgrade_test()
 function usage_bench()
 {
     echo "Options for subcommand 'bench':"
-    echo "   -h|--help            print the help info"
-    echo "   -t|--type            benchmark type, supporting:"
-    echo "                          fillseq_pegasus, fillrandom_pegasus, readrandom_pegasus, filluniquerandom_pegasus,"
-    echo "                          deleteseq_pegasus,deleterandom_pegasus,multi_set_pegasus,scan_pegasus"
-    echo "                        default is fillseq_pegasus,readrandom_pegasus"
-    echo "   -n <num>             number of key/value pairs, default 100000"
-    echo "   --cluster <str>      cluster meta lists, default '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
-    echo "   --app_name <str>     app name, default 'temp'"
-    echo "   --thread_num <num>   number of threads, default 1"
-    echo "   --key_size <num>     key size, default 16"
-    echo "   --value_size <num>   value size, default 100"
-    echo "   --timeout <num>      timeout in milliseconds, default 1000"
+    echo "   -h|--help                 print the help info"
+    echo "   --type                    benchmark type, supporting:"
+    echo "                             fillrandom_pegasus       --pegasus write N random values with random keys list"
+    echo "                             readrandom_pegasus       --pegasus read N times with random keys list"
+    echo "                             deleterandom_pegasus     --pegasus delete N entries with random keys list"
+    echo "                             Comma-separated list of operations is going to run in the specified order."
+    echo "                             default is 'fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus'"
+    echo "   --num <num>               number of key/value pairs, default is 10000"
+    echo "   --cluster <str>           cluster meta lists, default is '127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603'"
+    echo "   --app_name <str>          app name, default is 'temp'"
+    echo "   --thread_num <num>        number of threads, default is 1"
+    echo "   --hashkey_size <num>      hashkey size in bytes, default is 16"
+    echo "   --sortkey_size <num>      sortkey size in bytes, default is 16"
+    echo "   --value_size <num>        value size in bytes, default is 100"
+    echo "   --timeout <num>           timeout in milliseconds, default is 1000"
+    echo "   --seed <num>              seed base for random number generator, When 0 it is specified as 1000. default is 1000"
+}
+
+function fill_bench_config() {
+    sed -i "s/@TYPE@/$TYPE/g" ./config-bench.ini
+    sed -i "s/@NUM@/$NUM/g" ./config-bench.ini
+    sed -i "s/@CLUSTER@/$CLUSTER/g" ./config-bench.ini
+    sed -i "s/@APP@/$APP/g" ./config-bench.ini
+    sed -i "s/@THREAD@/$THREAD/g" ./config-bench.ini
+    sed -i "s/@HASHKEY_SIZE@/$HASHKEY_SIZE/g" ./config-bench.ini
+    sed -i "s/@SORTKEY_SIZE@/$SORTKEY_SIZE/g" ./config-bench.ini
+    sed -i "s/@VALUE_SIZE@/$VALUE_SIZE/g" ./config-bench.ini
+    sed -i "s/@TIMEOUT_MS@/$TIMEOUT_MS/g" ./config-bench.ini
+    sed -i "s/@SEED@/$SEED/g" ./config-bench.ini
 }
 
 function run_bench()
 {
-    TYPE=fillseq_pegasus,readrandom_pegasus
-    NUM=100000
+    TYPE=fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus
+    NUM=10000
     CLUSTER=127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603
     APP=temp
     THREAD=1
-    KEY_SIZE=16
+    HASHKEY_SIZE=16
+    SORTKEY_SIZE=16
     VALUE_SIZE=100
     TIMEOUT_MS=1000
+    SEED=1000
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -1522,11 +1541,11 @@ function run_bench()
                 usage_bench
                 exit 0
                 ;;
-            -t|--type)
+            --type)
                 TYPE="$2"
                 shift
                 ;;
-            -n)
+            --num)
                 NUM="$2"
                 shift
                 ;;
@@ -1542,8 +1561,12 @@ function run_bench()
                 THREAD="$2"
                 shift
                 ;;
-            --key_size)
-                KEY_SIZE="$2"
+            --hashkey_size)
+                HASHKEY_SIZE="$2"
+                shift
+                ;;
+            --sortkey_size)
+                SORTKEY_SIZE="$2"
                 shift
                 ;;
             --value_size)
@@ -1552,6 +1575,10 @@ function run_bench()
                 ;;
             --timeout)
                 TIMEOUT_MS="$2"
+                shift
+                ;;
+            --seed)
+                SEED="$2"
                 shift
                 ;;
             *)
@@ -1563,14 +1590,12 @@ function run_bench()
         esac
         shift
     done
-
     cd ${ROOT}
-    sed -i "s/@CLUSTER@/$CLUSTER/g" ${DSN_ROOT}/bin/pegasus_bench/config.ini
+    cp ${DSN_ROOT}/bin/pegasus_bench/config.ini ./config-bench.ini
+    fill_bench_config
     ln -s -f ${DSN_ROOT}/bin/pegasus_bench/pegasus_bench
-    ./pegasus_bench --pegasus_config=${DSN_ROOT}/bin/pegasus_bench/config.ini --benchmarks=${TYPE} --pegasus_timeout_ms=${TIMEOUT_MS} \
-        --key_size=${KEY_SIZE} --value_size=${VALUE_SIZE} --threads=${THREAD} --num=${NUM} \
-        --pegasus_cluster_name=mycluster --pegasus_app_name=${APP} --stats_interval=1000 --histogram=1 \
-        --compression_ratio=1.0
+    ./pegasus_bench ./config-bench.ini
+    rm -f ./config-bench.ini
 }
 
 #####################

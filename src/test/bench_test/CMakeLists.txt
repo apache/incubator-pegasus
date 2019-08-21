@@ -15,7 +15,7 @@ set(MY_PROJ_INC_PATH "../../../rocksdb")
 set(MY_PROJ_LIBS
         pegasus_client_static
         RocksDB::rocksdb
-        gflags)
+        fmt)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
