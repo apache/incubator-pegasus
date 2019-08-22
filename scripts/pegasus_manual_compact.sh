@@ -58,8 +58,8 @@ function get_env()
 
     log_file="/tmp/$UID.$PID.pegasus.get_app_envs.${app_name}"
     echo -e "use ${app_name}\n get_app_envs" | ./run.sh shell --cluster ${cluster} &>${log_file}
-    get_ok=`grep 'get app envs succeed' ${log_file} | wc -l`
-    if [ ${get_ok} -ne 1 ]; then
+    get_fail=`grep 'get app env failed' ${log_file} | wc -l`
+    if [ ${get_fail} -eq 1 ]; then
         echo "ERROR: get app envs failed, refer to ${log_file}"
         exit 1
     fi
@@ -77,8 +77,8 @@ function set_env()
     echo "set_app_envs ${key}=${value}"
     log_file="/tmp/$UID.$PID.pegasus.set_app_envs.${app_name}"
     echo -e "use ${app_name}\n set_app_envs ${key} ${value}" | ./run.sh shell --cluster ${cluster} &>${log_file}
-    set_ok=`grep 'set app envs succeed' ${log_file} | wc -l`
-    if [ ${set_ok} -ne 1 ]; then
+    set_fail=`grep 'set app env failed' ${log_file} | wc -l`
+    if [ ${set_fail} -eq 1 ]; then
         echo "ERROR: set app envs failed, refer to ${log_file}"
         exit 1
     fi

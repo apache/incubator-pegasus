@@ -27,8 +27,8 @@ all_start_time=$((`date +%s`))
 echo
 
 echo "app $app_name -d" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.app.$app_name
-list_ok=`grep "list app $app_name succeed" /tmp/$UID.$PID.pegasus.app.$app_name | wc -l`
-if [ $list_ok -ne 1 ]; then
+list_fail=`grep "\<failed\>" /tmp/$UID.$PID.pegasus.app.$app_name | wc -l`
+if [ $list_fail -eq 1 ]; then
   grep ERR /tmp/$UID.$PID.pegasus.app.$app_name
   echo "ERROR: list app failed, refer to /tmp/$UID.$PID.pegasus.app.$app_name"
   exit 1
