@@ -4,7 +4,7 @@
   <groupId>com.xiaomi.infra</groupId>
   <artifactId>pegasus-client</artifactId>
   <packaging>jar</packaging>
-  <version>1.12.SNAPSHOT-thrift-0.11.0-inlined</version>
+  <version>1.12-thrift-0.11.0-inlined-SNAPSHOT</version>
   <name>Pegasus Java Client</name>
   <dependencies>
     <dependency>

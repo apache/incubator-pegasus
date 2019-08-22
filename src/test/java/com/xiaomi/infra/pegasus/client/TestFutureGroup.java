@@ -8,9 +8,13 @@ import io.netty.util.concurrent.SingleThreadEventExecutor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 
 public class TestFutureGroup {
+
+  @Rule public TestName name = new TestName();
 
   private static final class TestEventExecutor extends SingleThreadEventExecutor {
     TestEventExecutor() {
@@ -46,7 +50,7 @@ public class TestFutureGroup {
             group.waitAllCompleteOrOneFail(10000);
           } catch (PException e) {
             success.set(false);
-            System.err.println("TestFutureGroup.testInterrupt: " + e.toString());
+            System.err.println(name.getMethodName() + ": " + e.toString());
           }
           executed.set(true);
         });
@@ -63,5 +67,23 @@ public class TestFutureGroup {
     }
 
     Assert.assertFalse(success.get());
+  }
+
+  @Test
+  public void testFutureWaitTimeout() throws Exception {
+    TestEventExecutor executor = new TestEventExecutor();
+    Promise<Void> promise = executor.newPromise();
+
+    FutureGroup<Void> group = new FutureGroup<>(1);
+    group.add(promise);
+    try {
+      // never wake up promise.
+      group.waitAllCompleteOrOneFail(10);
+    } catch (PException e) {
+      // must throw exception
+      System.err.println(name.getMethodName() + ": " + e.toString());
+      return;
+    }
+    Assert.fail();
   }
 }

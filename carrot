@@ -72,7 +72,7 @@ function java_client_get_next_version()
     esac
 
     if [ ${versions[2]} == "SNAPSHOT" ]; then
-        echo ${versions[0]}.${versions[1]}.SNAPSHOT-$staging_branch
+        echo ${versions[0]}.${versions[1]}-$staging_branch-SNAPSHOT
     else
         echo ${versions[0]}.${versions[1]}.${versions[2]}-$staging_branch
     fi
@@ -282,7 +282,6 @@ function release_minor
     carrot_execute "mvn versions:set -DnewVersion=$new_version"
     carrot_execute "mvn versions:commit"
     carrot_execute "git commit -am \"Bump version to $new_version\""
-    carrot_execute "git push -u origin $this_branch"
 }
 
 function usage_carrot
