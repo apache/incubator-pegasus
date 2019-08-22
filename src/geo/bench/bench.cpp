@@ -65,14 +65,13 @@ int main(int argc, char **argv)
 
     // generate data for test
     if (gen_data) {
+        const pegasus::geo::latlng_codec &codec = my_geo.get_codec();
         for (int i = 0; i < data_count; ++i) {
+            std::string value;
             S2LatLng latlng(S2Testing::SamplePoint(rect));
-            std::string id = std::to_string(i);
-            std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
-                                std::to_string(latlng.lng().degrees()) + "|" +
-                                std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";
-
-            int ret = my_geo.set(id, "", value, 1000);
+            bool ok = codec.encode_to_value(latlng.lat().degrees(), latlng.lng().degrees(), value);
+            assert(ok);
+            int ret = my_geo.set(std::to_string(i), "", value, 1000);
             if (ret != pegasus::PERR_OK) {
                 std::cerr << "set data failed. error=" << ret << std::endl;
             }

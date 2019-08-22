@@ -16,12 +16,16 @@ class error_s;
 namespace pegasus {
 namespace geo {
 
-class latlng_extractor
+class latlng_codec
 {
 public:
-    // Extract latitude and longitude from value.
+    // Decode latitude and longitude from string type value.
     // Return true when succeed.
-    bool extract_from_value(const std::string &value, S2LatLng &latlng);
+    bool decode_from_value(const std::string &value, S2LatLng &latlng) const;
+
+    // Encode latitude and longitude into string type value.
+    // Return true when succeed.
+    bool encode_to_value(double lat_degrees, double lng_degrees, std::string &value) const;
 
     // Set latitude and longitude indices in string type value, indices are the ones
     // when the string type value split into list by '|'.
@@ -31,7 +35,7 @@ private:
     // Latitude index and longitude index in sorted order.
     std::vector<int> _sorted_indices;
     // Whether '_sorted_indices' is in latitude-longitude order.
-    bool _latlng_reversed = false;
+    bool _latlng_order = true;
 };
 
 } // namespace geo

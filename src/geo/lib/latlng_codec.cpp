@@ -2,8 +2,10 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "latlng_extractor.h"
+#include "latlng_codec.h"
 
+#include <dsn/service_api_cpp.h>
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/error_code.h>
 #include <dsn/utility/errors.h>
 #include <dsn/utility/string_conv.h>
@@ -39,16 +41,17 @@ void extract_indices(const std::string &line,
     }
 }
 
-bool latlng_extractor::extract_from_value(const std::string &value, S2LatLng &latlng)
+bool latlng_codec::decode_from_value(const std::string &value, S2LatLng &latlng) const
 {
+    assert(_sorted_indices.size() == 2);
     std::vector<std::string> data;
     extract_indices(value, _sorted_indices, data, '|');
     if (data.size() != 2) {
         return false;
     }
 
-    std::string &lat = data[_latlng_reversed ? 1 : 0];
-    std::string &lng = data[_latlng_reversed ? 0 : 1];
+    std::string &lat = data[_latlng_order ? 0 : 1];
+    std::string &lng = data[_latlng_order ? 1 : 0];
     double lat_degrees = 0.0;
     double lng_degrees = 0.0;
     if (!dsn::buf2double(lat, lat_degrees) || !dsn::buf2double(lng, lng_degrees)) {
@@ -59,17 +62,44 @@ bool latlng_extractor::extract_from_value(const std::string &value, S2LatLng &la
     return latlng.is_valid();
 }
 
-dsn::error_s latlng_extractor::set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index)
+bool latlng_codec::encode_to_value(double lat_degrees, double lng_degrees, std::string &value) const
+{
+    assert(_sorted_indices.size() == 2);
+    S2LatLng latlng = S2LatLng::FromDegrees(lat_degrees, lng_degrees);
+    if (!latlng.is_valid()) {
+        derror_f("latlng is invalid. lat_degrees={}, lng_degrees={}", lat_degrees, lng_degrees);
+        return false;
+    }
+
+    value.clear();
+    int index = 0;
+    for (int i = 0; i <= _sorted_indices[1]; ++i) {
+        if (i == _sorted_indices[index]) {
+            if ((index == 0 && _latlng_order) || (index == 1 && !_latlng_order)) {
+                value += std::to_string(latlng.lat().degrees());
+            } else {
+                value += std::to_string(latlng.lng().degrees());
+            }
+            ++index;
+        }
+        if (i != _sorted_indices[1]) {
+            value += '|';
+        }
+    }
+    return true;
+}
+
+dsn::error_s latlng_codec::set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index)
 {
     if (latitude_index == longitude_index) {
         return dsn::error_s::make(dsn::ERR_INVALID_PARAMETERS,
                                   "latitude_index and longitude_index should not be equal");
     } else if (latitude_index < longitude_index) {
         _sorted_indices = {(int)latitude_index, (int)longitude_index};
-        _latlng_reversed = false;
+        _latlng_order = true;
     } else {
         _sorted_indices = {(int)longitude_index, (int)latitude_index};
-        _latlng_reversed = true;
+        _latlng_order = false;
     }
     return dsn::error_s::ok();
 }
