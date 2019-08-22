@@ -29,6 +29,7 @@ std::unordered_map<std::string, redis_parser::redis_call_handler> redis_parser::
     {"SETEX", redis_parser::g_setex},
     {"TTL", redis_parser::g_ttl},
     {"PTTL", redis_parser::g_ttl},
+    {"GEOADD", redis_parser::g_geo_add},
     {"GEODIST", redis_parser::g_geo_dist},
     {"GEOPOS", redis_parser::g_geo_pos},
     {"GEORADIUS", redis_parser::g_geo_radius},
@@ -1137,6 +1138,62 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
             }
         }
         reply_message(entry, result);
+    }
+}
+
+// command format:
+// GEOADD key longitude latitude member [longitude latitude member ...]
+void redis_parser::geo_add(message_entry &entry)
+{
+    if (!_geo_client) {
+        return simple_error_reply(entry, "redis proxy is not on GEO mode");
+    }
+
+    redis_request &redis_request = entry.request;
+    if (redis_request.sub_requests.size() < 5 || (redis_request.sub_requests.size() - 2) % 3 != 0) {
+        simple_error_reply(entry, "wrong number of arguments for 'geoadd' command");
+        return;
+    }
+
+    int member_count = (redis_request.sub_requests.size() - 2) / 3;
+    std::shared_ptr<proxy_session> ref_this = shared_from_this();
+    std::shared_ptr<std::atomic<int32_t>> set_count =
+        std::make_shared<std::atomic<int32_t>>(member_count);
+    std::shared_ptr<redis_integer> result(new redis_integer());
+    auto set_latlng_callback = [ref_this, this, &entry, result, set_count](
+        int error_code, pegasus_client::internal_info &&info) {
+        if (_is_session_reset.load(std::memory_order_acquire)) {
+            ddebug("%s: GEOADD command seqid(%" PRId64 ") got reply, but session has reset",
+                   _remote_address.to_string(),
+                   entry.sequence_id);
+            return;
+        }
+
+        if (PERR_OK != error_code) {
+            if (set_count->fetch_sub(1) == 1) {
+                reply_message(entry, *result);
+            }
+            return;
+        }
+
+        ++(result->value);
+        if (set_count->fetch_sub(1) == 1) {
+            reply_message(entry, *result);
+        }
+    };
+
+    for (int i = 0; i < member_count; ++i) {
+        dsn::string_view lng_degree_str(redis_request.sub_requests[2 + i * 3].data);
+        dsn::string_view lat_degree_str(redis_request.sub_requests[2 + i * 3 + 1].data);
+        double lng_degree;
+        double lat_degree;
+        if (dsn::buf2double(lng_degree_str, lng_degree) &&
+            dsn::buf2double(lat_degree_str, lat_degree)) {
+            const std::string &hashkey = redis_request.sub_requests[2 + i * 3 + 2].data.to_string();
+            _geo_client->async_set(hashkey, "", lat_degree, lng_degree, set_latlng_callback, 2000);
+        } else if (set_count->fetch_sub(1) == 1) {
+            reply_message(entry, *result);
+        }
     }
 }
 
