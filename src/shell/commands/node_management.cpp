@@ -171,7 +171,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     if (resource_usage) {
         std::vector<node_desc> nodes;
         if (!fill_nodes(sc, "replica-server", nodes)) {
-            derror("get replica server node list failed");
+            std::cout << "get replica server node list failed" << std::endl;
             return true;
         }
 
@@ -192,21 +192,20 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             if (tmp_it == tmp_map.end())
                 continue;
             if (!results[i].first) {
-                derror("query perf counter info from node %s failed", node_addr.to_string());
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " failed" << std::endl;
                 return true;
             }
             dsn::perf_counter_info info;
             dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
             if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                derror("decode perf counter info from node %s failed, result = %s",
-                       node_addr.to_string(),
-                       results[i].second.c_str());
+                std::cout << "decode perf counter info from node " << node_addr.to_string()
+                          << " failed, result = " << results[i].second << std::endl;
                 return true;
             }
             if (info.result != "OK") {
-                derror("query perf counter info from node %s returns error, error = %s",
-                       node_addr.to_string(),
-                       info.result.c_str());
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " returns error, error = " << info.result << std::endl;
                 return true;
             }
             list_nodes_helper &h = tmp_it->second;
