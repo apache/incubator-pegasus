@@ -11,6 +11,7 @@ if [ $# -lt 2 ]; then
   exit 1
 fi
 
+PID=$$
 clusters_file=$1
 format=$2
 if [ "$format" != "table" -a "$format" != "csv" ]; then
@@ -49,8 +50,8 @@ while read cluster
 do
   tmp_file="/tmp/$UID.$PID.pegasus.clusters_status.cluster_info"
   echo "cluster_info" | ./run.sh shell -n $cluster &>$tmp_file
-  cluster_info_ok=`grep "succeed" $tmp_file | wc -l`
-  if [ $cluster_info_ok -ne 1 ]; then
+  cluster_info_fail=`grep "\<failed\>" $tmp_file | wc -l`
+  if [ $cluster_info_fail -eq 1 ]; then
     echo "ERROR: get cluster info failed, refer error to $tmp_file"
     exit 1
   fi
@@ -71,8 +72,13 @@ do
   echo "app_stat -o $app_stat_result" | ./run.sh shell -n $cluster &>$tmp_file
   app_stat_fail=`grep "\<failed\>" $tmp_file | wc -l`
   if [ $app_stat_fail -eq 1 ]; then
-    echo "ERROR: app stat failed, refer error to $tmp_file"
-    exit 1
+    sleep 1
+    echo "app_stat -o $app_stat_result" | ./run.sh shell -n $cluster &>$tmp_file
+    app_stat_fail=`grep "\<failed\>" $tmp_file | wc -l`
+    if [ $app_stat_fail -eq 1 ]; then
+      echo "ERROR: app stat failed, refer error to $tmp_file"
+      exit 1
+    fi
   fi
   app_count=`cat $app_stat_result | wc -l`
   app_count=$((app_count-2))
