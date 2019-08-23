@@ -33,8 +33,8 @@ all_start_time=$((`date +%s`))
 echo
 
 echo -e "use $app_name\nset_app_envs $scenario_key $scenario" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.set_app_envs
-set_ok=`grep 'set app envs succeed' /tmp/$UID.$PID.pegasus.set_app_envs | wc -l`
-if [ $set_ok -ne 1 ]; then
+set_fail=`grep 'set app env failed' /tmp/$UID.$PID.pegasus.set_app_envs | wc -l`
+if [ $set_fail -eq 1 ]; then
   grep ERR /tmp/$UID.$PID.pegasus.set_app_envs
   echo "ERROR: set app envs failed, refer to /tmp/$UID.$PID.pegasus.set_app_envs"
   exit 1
