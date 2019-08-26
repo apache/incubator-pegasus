@@ -84,6 +84,21 @@ public:
         return rpc.response();
     }
 
+    duplication_sync_response
+    duplication_sync(const rpc_address &node,
+                     std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list)
+    {
+        auto req = make_unique<duplication_sync_request>();
+        req->node = node;
+        req->confirm_list = confirm_list;
+
+        duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC);
+        dup_svc().duplication_sync(rpc);
+        wait_all();
+
+        return rpc.response();
+    }
+
     void recover_from_meta_state()
     {
         dup_svc().recover_from_meta_state();
@@ -117,6 +132,155 @@ public:
                 ASSERT_GT(dup->id, last_dup);
             }
             last_dup = dup->id;
+        }
+    }
+
+    void test_recover_from_meta_state()
+    {
+        size_t total_apps_num = 2;
+        std::vector<std::string> test_apps(total_apps_num);
+
+        // app -> <dupid -> dup>
+        std::map<std::string, std::map<dupid_t, duplication_info_s_ptr>> app_to_duplications;
+
+        for (int i = 0; i < total_apps_num; i++) {
+            test_apps[i] = "test_app_" + std::to_string(i);
+            create_app(test_apps[i]);
+
+            auto resp = create_dup(test_apps[i]);
+            ASSERT_EQ(ERR_OK, resp.err);
+
+            auto app = find_app(test_apps[i]);
+            app_to_duplications[test_apps[i]] = app->duplications;
+
+            // update progress
+            auto dup = app->duplications[resp.dupid];
+            duplication_sync_rpc rpc(make_unique<duplication_sync_request>(),
+                                     RPC_CM_DUPLICATION_SYNC);
+            dup_svc().do_update_partition_confirmed(dup, rpc, 1, 1000);
+            wait_all();
+
+            dup_svc().do_update_partition_confirmed(dup, rpc, 2, 2000);
+            wait_all();
+
+            dup_svc().do_update_partition_confirmed(dup, rpc, 4, 4000);
+            wait_all();
+        }
+
+        // reset meta server states
+        SetUp();
+
+        recover_from_meta_state();
+
+        for (int i = 0; i < test_apps.size(); i++) {
+            auto app = find_app(test_apps[i]);
+            ASSERT_EQ(app->duplicating, true);
+
+            auto &before = app_to_duplications[test_apps[i]];
+            auto &after = app->duplications;
+            ASSERT_EQ(before.size(), after.size());
+
+            for (auto &kv : before) {
+                dupid_t dupid = kv.first;
+                auto &dup = kv.second;
+
+                ASSERT_TRUE(after.find(dupid) != after.end());
+                ASSERT_TRUE(dup->equals_to(*after[dupid])) << dup->to_string() << std::endl
+                                                           << after[dupid]->to_string();
+            }
+        }
+    }
+
+    std::shared_ptr<app_state> mock_test_case_and_recover(std::vector<std::string> nodes,
+                                                          std::string value)
+    {
+        TearDown();
+        SetUp();
+
+        std::string test_app = "test-app";
+        create_app(test_app);
+        auto app = find_app(test_app);
+        std::string remote_cluster_address = "dsn://slave-cluster/temp";
+
+        std::queue<std::string> q_nodes;
+        for (auto n : nodes) {
+            q_nodes.push(std::move(n));
+        }
+        _ms->get_meta_storage()->create_node_recursively(
+            std::move(q_nodes), blob::create_from_bytes(std::move(value)), []() mutable {});
+        wait_all();
+
+        SetUp();
+        recover_from_meta_state();
+
+        return find_app(test_app);
+    }
+
+    // Corrupted meta data may result from bad write to meta-store.
+    // This test ensures meta-server is still able to recover when
+    // meta data is corrupted.
+    void test_recover_from_corrupted_meta_data()
+    {
+        std::string test_app = "test-app";
+        create_app(test_app);
+        auto app = find_app(test_app);
+
+        // recover from /<app>/dup
+        app = mock_test_case_and_recover({_ss->get_app_path(*app), std::string("dup")}, "");
+        ASSERT_FALSE(app->duplicating);
+        ASSERT_TRUE(app->duplications.empty());
+
+        // recover from /<app>/duplication/xxx/
+        app = mock_test_case_and_recover({dup_svc().get_duplication_path(*app), std::string("xxx")},
+                                         "");
+        ASSERT_FALSE(app->duplicating);
+        ASSERT_TRUE(app->duplications.empty());
+
+        // recover from /<app>/duplication/123/, but its value is empty
+        app = mock_test_case_and_recover({dup_svc().get_duplication_path(*app), std::string("123")},
+                                         "");
+        ASSERT_FALSE(app->duplicating);
+        ASSERT_TRUE(app->duplications.empty());
+
+        // recover from /<app>/duplication/<dup_id>/0, but its confirmed_decree is not valid integer
+        TearDown();
+        SetUp();
+        create_app(test_app);
+        app = find_app(test_app);
+        auto test_dup = create_dup(test_app, "slave-cluster", true);
+        ASSERT_EQ(test_dup.err, ERR_OK);
+        duplication_info_s_ptr dup = app->duplications[test_dup.dupid];
+        _ms->get_meta_storage()->create_node(meta_duplication_service::get_partition_path(dup, "0"),
+                                             blob::create_from_bytes("xxx"),
+                                             []() mutable {});
+        wait_all();
+        SetUp();
+        recover_from_meta_state();
+        app = find_app(test_app);
+        ASSERT_TRUE(app->duplicating);
+        ASSERT_EQ(app->duplications.size(), 1);
+        for (int i = 0; i < app->partition_count; i++) {
+            ASSERT_EQ(app->duplications[test_dup.dupid]->_progress[i].is_inited, i != 0);
+        }
+
+        // recover from /<app>/duplication/<dup_id>/x, its pid is not valid integer
+        TearDown();
+        SetUp();
+        create_app(test_app);
+        app = find_app(test_app);
+        test_dup = create_dup(test_app, "slave-cluster", true);
+        ASSERT_EQ(test_dup.err, ERR_OK);
+        dup = app->duplications[test_dup.dupid];
+        _ms->get_meta_storage()->create_node(meta_duplication_service::get_partition_path(dup, "x"),
+                                             blob::create_from_bytes("xxx"),
+                                             []() mutable {});
+        wait_all();
+        SetUp();
+        recover_from_meta_state();
+        ASSERT_TRUE(app->duplicating);
+        ASSERT_EQ(app->duplications.size(), 1);
+        for (int i = 0; i < app->partition_count; i++) {
+            ASSERT_EQ(app->duplications[test_dup.dupid]->_progress[i].is_inited, true);
         }
     }
 
@@ -180,8 +344,6 @@ public:
         ASSERT_EQ(dup->_status, duplication_status::DS_PAUSE);
 
         // reset meta server states
-        _ss.reset();
-        _ms.reset(nullptr);
         SetUp();
 
         // ensure dup is still paused after meta fail-over.
@@ -190,9 +352,6 @@ public:
         dup = app->duplications[test_dup.dupid];
         ASSERT_EQ(dup->_status, duplication_status::DS_PAUSE);
     }
-
-    std::shared_ptr<server_state> _ss;
-    std::unique_ptr<meta_service> _ms;
 };
 
 // This test ensures that duplication upon an unavailable app will
@@ -308,13 +467,120 @@ TEST_F(meta_duplication_service_test, remove_dup)
     ASSERT_EQ(app->duplicating, false);
 
     // reset meta server states
-    _ss.reset();
-    _ms.reset(nullptr);
     SetUp();
     recover_from_meta_state();
 
     ASSERT_EQ(app->duplicating, false);
 }
+
+TEST_F(meta_duplication_service_test, duplication_sync)
+{
+    std::vector<rpc_address> server_nodes = generate_node_list(3);
+    rpc_address node = server_nodes[0];
+
+    std::string test_app = "test_app_0";
+    create_app(test_app);
+    auto app = find_app(test_app);
+
+    // generate all primaries on node[0]
+    for (partition_configuration &pc : app->partitions) {
+        pc.ballot = random32(1, 10000);
+        pc.primary = server_nodes[0];
+        pc.secondaries.push_back(server_nodes[1]);
+        pc.secondaries.push_back(server_nodes[2]);
+    }
+
+    initialize_node_state();
+
+    dupid_t dupid = create_dup(test_app).dupid;
+    auto dup = app->duplications[dupid];
+    for (int i = 0; i < app->partition_count; i++) {
+        dup->init_progress(i, invalid_decree);
+    }
+    {
+        std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list;
+
+        duplication_confirm_entry ce;
+        ce.dupid = dupid;
+
+        ce.confirmed_decree = 5;
+        confirm_list[gpid(app->app_id, 1)].push_back(ce);
+
+        ce.confirmed_decree = 6;
+        confirm_list[gpid(app->app_id, 2)].push_back(ce);
+
+        ce.confirmed_decree = 7;
+        confirm_list[gpid(app->app_id, 3)].push_back(ce);
+
+        duplication_sync_response resp = duplication_sync(node, confirm_list);
+        ASSERT_EQ(resp.err, ERR_OK);
+        ASSERT_EQ(resp.dup_map.size(), 1);
+        ASSERT_EQ(resp.dup_map[app->app_id].size(), 1);
+        ASSERT_EQ(resp.dup_map[app->app_id][dupid].dupid, dupid);
+        ASSERT_EQ(resp.dup_map[app->app_id][dupid].status, duplication_status::DS_START);
+        ASSERT_EQ(resp.dup_map[app->app_id][dupid].create_ts, dup->create_timestamp_ms);
+        ASSERT_EQ(resp.dup_map[app->app_id][dupid].remote, dup->remote);
+
+        auto progress_map = resp.dup_map[app->app_id][dupid].progress;
+        ASSERT_EQ(progress_map.size(), 8);
+        ASSERT_EQ(progress_map[1], 5);
+        ASSERT_EQ(progress_map[2], 6);
+        ASSERT_EQ(progress_map[3], 7);
+
+        // ensure no updated progresses will also be included in response
+        for (int p = 4; p < 8; p++) {
+            ASSERT_EQ(progress_map[p], invalid_decree);
+        }
+        ASSERT_EQ(progress_map[0], invalid_decree);
+    }
+
+    { // duplication not existed will be ignored
+        std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list;
+
+        duplication_confirm_entry ce;
+        ce.dupid = dupid + 1; // not created
+        ce.confirmed_decree = 5;
+        confirm_list[gpid(app->app_id, 1)].push_back(ce);
+
+        duplication_sync_response resp = duplication_sync(node, confirm_list);
+        ASSERT_EQ(resp.err, ERR_OK);
+        ASSERT_EQ(resp.dup_map.size(), 1);
+        ASSERT_TRUE(resp.dup_map[app->app_id].find(dupid + 1) == resp.dup_map[app->app_id].end());
+    }
+
+    { // app not existed will be ignored
+        std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list;
+
+        duplication_confirm_entry ce;
+        ce.dupid = dupid;
+        ce.confirmed_decree = 5;
+        confirm_list[gpid(app->app_id + 1, 1)].push_back(ce);
+
+        duplication_sync_response resp = duplication_sync(node, confirm_list);
+        ASSERT_EQ(resp.err, ERR_OK);
+        ASSERT_EQ(resp.dup_map.size(), 1);
+        ASSERT_TRUE(resp.dup_map.find(app->app_id + 1) == resp.dup_map.end());
+    }
+
+    { // duplication removed will be ignored
+        change_dup_status(test_app, dupid, duplication_status::DS_REMOVED);
+
+        std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list;
+
+        duplication_confirm_entry ce;
+        ce.dupid = dupid;
+        ce.confirmed_decree = 5;
+        confirm_list[gpid(app->app_id, 1)].push_back(ce);
+
+        duplication_sync_response resp = duplication_sync(node, confirm_list);
+        ASSERT_EQ(resp.err, ERR_OK);
+        ASSERT_EQ(resp.dup_map.size(), 0);
+    }
+}
+
+// This test ensures that duplications persisted on meta storage can be
+// correctly restored.
+TEST_F(meta_duplication_service_test, recover_from_meta_state) { test_recover_from_meta_state(); }
 
 TEST_F(meta_duplication_service_test, query_duplication_info)
 {
@@ -369,8 +635,6 @@ TEST_F(meta_duplication_service_test, re_add_duplication)
     ASSERT_EQ(dup_list.begin()->dupid, test_dup_2.dupid);
 
     // reset meta server states
-    _ss.reset();
-    _ms.reset(nullptr);
     SetUp();
 
     recover_from_meta_state();
@@ -380,6 +644,11 @@ TEST_F(meta_duplication_service_test, re_add_duplication)
 }
 
 TEST_F(meta_duplication_service_test, add_duplication_freezed) { test_add_duplication_freezed(); }
+
+TEST_F(meta_duplication_service_test, recover_from_corrupted_meta_data)
+{
+    test_recover_from_corrupted_meta_data();
+}
 
 } // namespace replication
 } // namespace dsn

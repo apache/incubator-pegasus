@@ -830,6 +830,22 @@ void meta_service::on_query_duplication_info(duplication_query_rpc rpc)
     }
 }
 
+void meta_service::on_duplication_sync(duplication_sync_rpc rpc)
+{
+    RPC_CHECK_STATUS(rpc.dsn_request(), rpc.response());
+
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     tracker(),
+                     [this, rpc]() {
+                         if (_dup_svc) {
+                             _dup_svc->duplication_sync(std::move(rpc));
+                         } else {
+                             rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+                         }
+                     },
+                     server_state::sStateHash);
+}
+
 void meta_service::recover_duplication_from_meta_state()
 {
     if (_dup_svc) {
@@ -847,6 +863,8 @@ void meta_service::register_duplication_rpc_handlers()
     register_rpc_handler_with_rpc_holder(RPC_CM_QUERY_DUPLICATION,
                                          "query duplication info",
                                          &meta_service::on_query_duplication_info);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_DUPLICATION_SYNC, "sync duplication", &meta_service::on_duplication_sync);
 }
 
 void meta_service::initialize_duplication_service()

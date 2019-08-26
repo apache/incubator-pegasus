@@ -62,6 +62,8 @@ public:
 
     void change_duplication_status(duplication_status_change_rpc rpc);
 
+    void duplication_sync(duplication_sync_rpc rpc);
+
     // Recover from meta state storage.
     void recover_from_meta_state();
 
@@ -78,6 +80,14 @@ private:
 
     void do_restore_duplication_progress(const duplication_info_s_ptr &dup,
                                          const std::shared_ptr<app_state> &app);
+
+    void get_all_available_app(const node_state &ns,
+                               std::map<int32_t, std::shared_ptr<app_state>> &app_map) const;
+
+    void do_update_partition_confirmed(duplication_info_s_ptr &dup,
+                                       duplication_sync_rpc &rpc,
+                                       int32_t partition_idx,
+                                       int64_t confirmed_decree);
 
     // Get zk path for duplication.
     std::string get_duplication_path(const app_state &app) const

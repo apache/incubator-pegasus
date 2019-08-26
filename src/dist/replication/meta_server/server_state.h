@@ -302,6 +302,7 @@ private:
     friend class test::test_checker;
     friend class ::meta_service_test_app;
     friend class meta_test_base;
+    friend class meta_duplication_service_test;
     friend class meta_duplication_service;
     friend class meta_split_service;
 

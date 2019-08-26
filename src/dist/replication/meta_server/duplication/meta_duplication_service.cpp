@@ -199,6 +199,128 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
         });
 }
 
+/// get all available apps on node `ns`
+void meta_duplication_service::get_all_available_app(
+    const node_state &ns, std::map<int32_t, std::shared_ptr<app_state>> &app_map) const
+{
+    ns.for_each_partition([this, &ns, &app_map](const gpid &pid) -> bool {
+        if (ns.served_as(pid) != partition_status::PS_PRIMARY) {
+            return true;
+        }
+
+        std::shared_ptr<app_state> app = _state->get_app(pid.get_app_id());
+        if (!app || app->status != app_status::AS_AVAILABLE) {
+            return true;
+        }
+
+        // must have duplication
+        if (app->duplications.empty()) {
+            return true;
+        }
+
+        if (app_map.find(app->app_id) == app_map.end()) {
+            app_map.emplace(std::make_pair(pid.get_app_id(), std::move(app)));
+        }
+        return true;
+    });
+}
+
+// ThreadPool(WRITE): THREAD_POOL_META_STATE
+void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
+{
+    auto &request = rpc.request();
+    auto &response = rpc.response();
+    response.err = ERR_OK;
+
+    node_state *ns = get_node_state(_state->_nodes, request.node, false);
+    if (ns == nullptr) {
+        dwarn_f("node({}) is not found in meta server", request.node.to_string());
+        response.err = ERR_OBJECT_NOT_FOUND;
+        return;
+    }
+
+    std::map<int32_t, std::shared_ptr<app_state>> app_map;
+    get_all_available_app(*ns, app_map);
+    for (const auto &kv : app_map) {
+        int32_t app_id = kv.first;
+        const auto &app = kv.second;
+
+        for (const auto &kv2 : app->duplications) {
+            dupid_t dup_id = kv2.first;
+            const auto &dup = kv2.second;
+            if (!dup->is_valid()) {
+                continue;
+            }
+
+            response.dup_map[app_id][dup_id] = dup->to_duplication_entry();
+
+            // report progress periodically for each duplications
+            dup->report_progress_if_time_up();
+        }
+    }
+
+    /// update progress
+    for (const auto &kv : request.confirm_list) {
+        gpid gpid = kv.first;
+
+        auto it = app_map.find(gpid.get_app_id());
+        if (it == app_map.end()) {
+            // app is unsynced
+            // Since duplication-sync separates with config-sync, it's not guaranteed to have the
+            // latest state. duplication-sync has a loose consistency requirement.
+            continue;
+        }
+        std::shared_ptr<app_state> &app = it->second;
+
+        for (const duplication_confirm_entry &confirm : kv.second) {
+            auto it2 = app->duplications.find(confirm.dupid);
+            if (it2 == app->duplications.end()) {
+                // dup is unsynced
+                continue;
+            }
+
+            duplication_info_s_ptr &dup = it2->second;
+            if (!dup->is_valid()) {
+                continue;
+            }
+            do_update_partition_confirmed(
+                dup, rpc, gpid.get_partition_index(), confirm.confirmed_decree);
+        }
+    }
+}
+
+void meta_duplication_service::do_update_partition_confirmed(duplication_info_s_ptr &dup,
+                                                             duplication_sync_rpc &rpc,
+                                                             int32_t partition_idx,
+                                                             int64_t confirmed_decree)
+{
+    if (dup->alter_progress(partition_idx, confirmed_decree)) {
+        std::string path = get_partition_path(dup, std::to_string(partition_idx));
+        blob value = blob::create_from_bytes(std::to_string(confirmed_decree));
+
+        _meta_svc->get_meta_storage()->get_data(std::string(path), [=](const blob &data) mutable {
+            if (data.length() == 0) {
+                _meta_svc->get_meta_storage()->create_node(
+                    std::string(path), std::move(value), [=]() mutable {
+                        dup->persist_progress(partition_idx);
+                        rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
+                            confirmed_decree;
+                    });
+            } else {
+                _meta_svc->get_meta_storage()->set_data(
+                    std::string(path), std::move(value), [=]() mutable {
+                        dup->persist_progress(partition_idx);
+                        rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
+                            confirmed_decree;
+                    });
+            }
+
+            // duplication_sync_rpc will finally be replied when confirmed points
+            // of all partitions are stored.
+        });
+    }
+}
+
 std::shared_ptr<duplication_info>
 meta_duplication_service::new_dup_from_init(const std::string &remote_cluster_name,
                                             std::shared_ptr<app_state> &app) const

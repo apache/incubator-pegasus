@@ -89,7 +89,7 @@ meta_service_app::meta_service_app(const service_app_info *info)
 
     // add http service
     _version_http_service = new version_http_service();
-    _http_server->add_service(new dsn::replication::meta_http_service(_service.get()));
+    _http_server->add_service(new replication::meta_http_service(_service.get()));
     _http_server->add_service(new recent_start_time_http_service());
     _http_server->add_service(_version_http_service);
 }
