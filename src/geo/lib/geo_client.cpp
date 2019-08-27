@@ -10,8 +10,9 @@
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/errors.h>
-#include <base/pegasus_key_schema.h>
-#include <base/pegasus_utils.h>
+
+#include "base/pegasus_key_schema.h"
+#include "base/pegasus_utils.h"
 
 namespace pegasus {
 namespace geo {

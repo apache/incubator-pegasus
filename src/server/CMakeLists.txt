@@ -9,8 +9,6 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "")
-
 set(MY_PROJ_LIBS
     dsn_replica_server
     dsn_meta_server
@@ -23,6 +21,7 @@ set(MY_PROJ_LIBS
     dsn.replication.zookeeper_provider
     RocksDB::rocksdb
     pegasus_reporter
+    pegasus_base
     prometheus-cpp-pull
     prometheus-cpp-push
     prometheus-cpp-core
@@ -40,7 +39,8 @@ set(MY_PROJ_LIBS
     fmt
     rt
     aio
-    pthread)
+    pthread
+    )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 

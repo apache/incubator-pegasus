@@ -10,9 +10,8 @@ set(MY_PROJ_SRC "linenoise/linenoise.c" "sds/sds.c")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB_RECURSE")
 
-set(MY_PROJ_INC_PATH "${PEGASUS_PROJECT_DIR}/src/base")
-
 set(MY_PROJ_LIBS
+    pegasus_base
     dsn.replication.tool
     dsn_replica_server
     dsn_replication_common
@@ -38,7 +37,11 @@ set(MY_PROJ_LIBS
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS
+    Boost::system
+    Boost::filesystem 
+    Boost::regex # dsn_replica_server.so needs
+    )
 
 SET(CMAKE_INSTALL_RPATH ".")
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
