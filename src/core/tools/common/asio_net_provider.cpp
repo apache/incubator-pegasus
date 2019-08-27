@@ -336,15 +336,15 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
             _socket.reset(new ::boost::asio::ip::udp::socket(_io_service));
             _socket->open(endpoint.protocol(), ec);
             if (ec) {
-                dwarn("asio udp socket open failed, error = %s", ec.message().c_str());
+                derror("asio udp socket open failed, error = %s", ec.message().c_str());
                 _socket.reset();
                 continue;
             }
             _socket->bind(endpoint, ec);
             if (ec) {
-                dwarn("asio udp socket bind failed, port = %u, error = %s",
-                      _address.port(),
-                      ec.message().c_str());
+                derror("asio udp socket bind failed, port = %u, error = %s",
+                       _address.port(),
+                       ec.message().c_str());
                 _socket.reset();
                 continue;
             }
@@ -358,15 +358,15 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
         _socket.reset(new ::boost::asio::ip::udp::socket(_io_service));
         _socket->open(endpoint.protocol(), ec);
         if (ec) {
-            dwarn("asio udp socket open failed, error = %s", ec.message().c_str());
+            derror("asio udp socket open failed, error = %s", ec.message().c_str());
             _socket.reset();
             return ERR_NETWORK_INIT_FAILED;
         }
         _socket->bind(endpoint, ec);
         if (ec) {
-            dwarn("asio udp socket bind failed, port = %u, error = %s",
-                  _address.port(),
-                  ec.message().c_str());
+            derror("asio udp socket bind failed, port = %u, error = %s",
+                   _address.port(),
+                   ec.message().c_str());
             _socket.reset();
             return ERR_NETWORK_INIT_FAILED;
         }

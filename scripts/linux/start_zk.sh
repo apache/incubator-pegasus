@@ -30,7 +30,7 @@ if [ ! -f zookeeper-3.4.6.tar.gz ]; then
     download_url="http://git.n.xiaomi.com/pegasus/packages/raw/master/zookeeper-3.4.6.tar.gz"
     wget -T 5 -t 1 $download_url
     if [ $? -ne 0 ]; then
-        download_url="https://github.com/xiaomi/pegasus-common/raw/master/zookeeper-3.4.6.tar.gz"
+        download_url="https://github.com/XiaoMi/pegasus-common/releases/download/deps/zookeeper-3.4.6.tar.gz"
         wget -T 5 -t 1 $download_url
         if [ $? -ne 0 ]; then
             echo "ERROR: download zookeeper failed"
@@ -41,7 +41,7 @@ fi
 
 if [ ! -d zookeeper-3.4.6 ]; then
     echo "Decompressing zookeeper..."
-    tar xfz zookeeper-3.4.6.tar.gz
+    tar xf zookeeper-3.4.6.tar.gz
     if [ $? -ne 0 ]; then
         echo "ERROR: decompress zookeeper failed"
         exit 1

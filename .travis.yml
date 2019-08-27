@@ -5,7 +5,7 @@ language: cpp
 
 os: linux
 
-compiler: 
+compiler:
     - gcc
 
 cache:
@@ -18,7 +18,7 @@ addons:
             - clang-format-3.9
 
 before_install:
-    - wget https://media.githubusercontent.com/media/XiaoMi/pegasus-common/master/build-depends.tar.gz
+    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/build-depends.tar.gz
     - tar xfz build-depends.tar.gz
     - rm -f build-depends.tar.gz
     - cd packages
@@ -27,8 +27,8 @@ before_install:
 
 before_script:
     - cd thirdparty
-    - wget https://media.githubusercontent.com/media/XiaoMi/pegasus-common/master/pegasus-thirdparty-prebuild.tar.gz
-    - tar xfz pegasus-thirdparty-prebuild.tar.gz
+    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-thirdparty-prebuild.tar.gz
+    - tar xf pegasus-thirdparty-prebuild.tar.gz
     - rm -f pegasus-thirdparty-prebuild.tar.gz
     - cd ..
     - ulimit -c unlimited -S
