@@ -16,7 +16,7 @@ if [ "$modified" ]; then
     exit 1
 fi
 
-"${root}"/run.sh build -c --skip_thirdparty --disable_gperf && ./run.sh test
+"${root}"/run.sh build -c --skip_thirdparty --disable_gperf && ./run.sh test --on_travis
 
 if [ $? ]; then
     echo "travis failed with exit code $?"

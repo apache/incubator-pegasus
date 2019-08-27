@@ -80,6 +80,8 @@ public:
 
     void test_multi_remove()
     {
+        dsn::fail::setup();
+
         dsn::apps::multi_remove_request request;
         dsn::apps::multi_remove_response response;
 
@@ -123,6 +125,8 @@ public:
             ASSERT_EQ(err, 0);
             verify_response(response, 0, decree);
         }
+
+        dsn::fail::teardown();
     }
 
     void test_batched_writes()

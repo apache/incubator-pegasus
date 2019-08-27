@@ -308,11 +308,13 @@ function usage_test()
     echo "   -h|--help         print the help info"
     echo "   -m|--modules      set the test modules: pegasus_unit_test pegasus_function_test"
     echo "   -k|--keep_onebox  whether keep the onebox after the test[default false]"
+    echo "   --on_travis       run tests on travis without some time-cosuming function tests"
 }
 function run_test()
 {
     local test_modules=""
     local clear_flags="1"
+    local on_traivs=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -326,6 +328,9 @@ function run_test()
                 ;;
             -k|--keep_onebox)
                 clear_flags=""
+                ;;
+            --on_travis)
+                on_travis="--on_travis"
                 ;;
             *)
                 echo "Error: unknow option \"$key\""
@@ -349,7 +354,7 @@ function run_test()
 
     for module in `echo $test_modules`; do
         pushd $ROOT/src/builder/bin/$module
-        REPORT_DIR=$REPORT_DIR ./run.sh
+        REPORT_DIR=$REPORT_DIR ./run.sh $on_travis
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
             exit 1
