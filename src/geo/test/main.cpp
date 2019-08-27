@@ -8,6 +8,6 @@
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
-    int ans = RUN_ALL_TESTS();
-    dsn_exit(ans);
+    int ret = RUN_ALL_TESTS();
+    dsn_exit(ret);
 }

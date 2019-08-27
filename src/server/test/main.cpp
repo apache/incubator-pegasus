@@ -8,6 +8,7 @@
 #include "server/pegasus_server_impl.h"
 
 std::atomic_bool gtest_done{false};
+std::atomic_int gtest_ret{false};
 
 class gtest_app : public dsn::service_app
 {
@@ -17,7 +18,7 @@ public:
     dsn::error_code start(const std::vector<std::string> &args) override
     {
         dsn::service_app::start(args);
-        RUN_ALL_TESTS();
+        gtest_ret = RUN_ALL_TESTS();
         gtest_done = true;
         return dsn::ERR_OK;
     }
@@ -37,6 +38,5 @@ GTEST_API_ int main(int argc, char **argv)
     while (!gtest_done) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-
-    dsn_exit(0);
+    dsn_exit(gtest_ret);
 }

@@ -16,8 +16,10 @@ if [ "$modified" ]; then
     exit 1
 fi
 
-"${root}"/run.sh build -c --skip_thirdparty --disable_gperf && ./run.sh test
-
-if [ $? ]; then
-    echo "travis failed with exit code $?"
+"${root}"/run.sh build -c --skip_thirdparty --disable_gperf && ./run.sh test --on_travis
+ret=$?
+if [ $ret ]; then
+    echo "travis failed with exit code $ret"
 fi
+
+exit $ret
