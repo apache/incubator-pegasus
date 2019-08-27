@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 exit_if_fail() {
     if [ $1 != 0 ]; then
@@ -10,6 +10,23 @@ exit_if_fail() {
 if [ -z $REPORT_DIR ]; then
     REPORT_DIR="./"
 fi
+
+# If run function tests on traivs, we exclude some time-consuming tests
+# incluing restore test, recovery test
+on_travis="NO"
+while [ $# -gt 0 ]; do
+    key="$1"
+    case $key in
+        --on_travis)
+            on_travis="YES"
+            ;;
+        *)
+            echo "Error: unknow option \"$key\""
+            exit 1
+            ;;
+    esac
+    shift
+done
 
 test_case=pegasus_function_test
 config_file=config.ini
@@ -31,7 +48,9 @@ GTEST_OUTPUT="xml:$REPORT_DIR/slog_log.xml" GTEST_FILTER="lost_log.*" ./$test_ca
 exit_if_fail $? "run test slog_lost failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/recall.xml" GTEST_FILTER="drop_and_recall.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test recall failed: $test_case $config_file $table_name"
-GTEST_OUTPUT="xml:$REPORT_DIR/restore.xml" GTEST_FILTER="restore_test.*" ./$test_case $config_file $table_name
-exit_if_fail $? "run test restore_test failed: $test_case $config_file $table_name"
-GTEST_OUTPUT="xml:$REPORT_DIR/recovery.xml" GTEST_FILTER="recovery_test.*" ./$test_case $config_file $table_name
-exit_if_fail $? "run test recovery failed: $test_case $config_file $table_name"
+if [ $on_travis == "NO" ]; then
+    GTEST_OUTPUT="xml:$REPORT_DIR/restore.xml" GTEST_FILTER="restore_test.*" ./$test_case $config_file $table_name
+    exit_if_fail $? "run test restore_test failed: $test_case $config_file $table_name"
+    GTEST_OUTPUT="xml:$REPORT_DIR/recovery.xml" GTEST_FILTER="recovery_test.*" ./$test_case $config_file $table_name
+    exit_if_fail $? "run test recovery failed: $test_case $config_file $table_name"
+fi
