@@ -9,8 +9,6 @@ set(MY_PROJ_SRC ../misc/misc.cpp)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH)
-
 set(MY_PROJ_LIBS
     dsn_meta_server
     dsn_replication_common

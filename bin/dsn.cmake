@@ -50,7 +50,7 @@ function(dsn_install_executable)
     endif()
 endfunction()
 
-function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PROJ_BINPLACES)
+function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_LIBS PROJ_BINPLACES)
     if(NOT((PROJ_TYPE STREQUAL "STATIC") OR (PROJ_TYPE STREQUAL "SHARED") OR
            (PROJ_TYPE STREQUAL "EXECUTABLE") OR (PROJ_TYPE STREQUAL "OBJECT")))
         message(FATAL_ERROR "Invalid project type.")
@@ -58,10 +58,6 @@ function(ms_add_project PROJ_TYPE PROJ_NAME PROJ_SRC PROJ_INC_PATH PROJ_LIBS PRO
 
     if(PROJ_SRC STREQUAL "")
         message(FATAL_ERROR "No source files.")
-    endif()
-
-    if(NOT (PROJ_INC_PATH STREQUAL ""))
-        include_directories(${PROJ_INC_PATH})
     endif()
 
     if((PROJ_TYPE STREQUAL "STATIC") OR (PROJ_TYPE STREQUAL "OBJECT"))
@@ -91,7 +87,6 @@ endfunction(ms_add_project)
 #     "GLOB_RECURSE" for recursive search
 #     "GLOB" for non-recursive search
 # - MY_PROJ_SRC
-# - MY_PROJ_INC_PATH TODO(wutao1): remove this
 # - MY_PROJ_LIBS
 # - MY_BINPLACES
 #     Extra files that will be installed
@@ -119,9 +114,6 @@ function(dsn_add_project)
          )
     set(MY_PROJ_SRC ${TEMP_SRC} ${MY_PROJ_SRC})
 
-    if(NOT DEFINED MY_PROJ_INC_PATH)
-        set(MY_PROJ_INC_PATH "")
-    endif()
     if(NOT DEFINED MY_PROJ_LIBS)
         set(MY_PROJ_LIBS "")
     endif()
@@ -136,7 +128,7 @@ function(dsn_add_project)
     if((MY_PROJ_TYPE STREQUAL "SHARED") OR (MY_PROJ_TYPE STREQUAL "EXECUTABLE"))
         set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${TEMP_LIBS} ${MY_BOOST_LIBS} ${DSN_SYSTEM_LIBS})
     endif()
-    ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_INC_PATH}" "${MY_PROJ_LIBS}" "${MY_BINPLACES}")
+    ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_LIBS}" "${MY_BINPLACES}")
 endfunction(dsn_add_project)
 
 function(dsn_add_static_library)

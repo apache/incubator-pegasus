@@ -44,10 +44,10 @@
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/task_spec.h>
 
-#include "../tools/common/asio_net_provider.h"
-#include "../tools/common/network.sim.h"
-#include "../core/service_engine.h"
-#include "../core/rpc_engine.h"
+#include "core/tools/common/asio_net_provider.h"
+#include "core/tools/common/network.sim.h"
+#include "core/core/service_engine.h"
+#include "core/core/rpc_engine.h"
 #include "test_utils.h"
 
 using namespace dsn;

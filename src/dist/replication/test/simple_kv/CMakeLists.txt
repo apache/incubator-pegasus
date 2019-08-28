@@ -6,8 +6,6 @@ set(MY_PROJ_NAME dsn.rep_tests.simple_kv)
 set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_SRC ${MY_PROJ_SRC} ../../storage_engine/simple_kv/simple_kv_types.cpp)
 
-set(MY_PROJ_INC_PATH)
-
 set(MY_PROJ_LIBS dsn_replica_server
                  dsn_meta_server
                  dsn_replication_common

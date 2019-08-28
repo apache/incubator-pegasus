@@ -9,8 +9,6 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "")
-
 dsn_add_static_library()
 
 add_subdirectory(shell)

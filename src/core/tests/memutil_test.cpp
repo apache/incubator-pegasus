@@ -14,7 +14,7 @@
 
 // Unit test for memutil.cc
 
-#include "memutil.h"
+#include "core/core/memutil.h"
 
 #include <gtest/gtest.h>
 
