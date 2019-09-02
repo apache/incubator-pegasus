@@ -224,6 +224,8 @@ private:
 
     void update_checkpoint_reserve(const std::map<std::string, std::string> &envs);
 
+    void update_table_latency(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -273,6 +275,8 @@ private:
     uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
+    std::atomic<uint64_t> _abnormal_table_level_get_time_threshold_ns;
+    std::atomic<bool> _enable_table_level_latency_log;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
@@ -321,6 +325,7 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
     ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
+    ::dsn::perf_counter_wrapper _pfc_recent_table_level_abnormal_count;
 
     // rocksdb internal statistics
     // server level

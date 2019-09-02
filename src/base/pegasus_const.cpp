@@ -66,4 +66,7 @@ const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS("rocksdb.checkpoint.res
 
 /// read cluster meta address from this section
 const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
+
+/// table get latency
+const std::string ROCKSDB_ENV_TABLE_GET_LATENCY("table_get_latency");
 } // namespace pegasus

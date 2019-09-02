@@ -43,4 +43,7 @@ extern const std::string ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT;
 extern const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS;
 
 extern const std::string PEGASUS_CLUSTER_SECTION_NAME;
+
+extern const std::string ROCKSDB_ENV_TABLE_GET_LATENCY;
+extern const std::string ROCKSDB_ENV_ENABLE_TABLE_LATENCY_LOG;
 } // namespace pegasus
