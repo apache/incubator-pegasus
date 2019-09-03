@@ -275,7 +275,13 @@ private:
     uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
+    // min value for table level get operation duration threshold
+    // less than this value will be refused
+    uint64_t _abnormal_table_level_min_get_time_threshold_ns;
+    // table level get operation duration threshold. exceed this threshold will be logged.
+    // 0 means no check
     std::atomic<uint64_t> _abnormal_table_level_get_time_threshold_ns;
+    // table level latency log switch
     std::atomic<bool> _enable_table_level_latency_log;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;

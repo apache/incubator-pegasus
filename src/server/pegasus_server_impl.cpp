@@ -47,7 +47,6 @@ std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
-const uint64_t MIN_TABLE_LATENCY = 20000000;
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
@@ -91,14 +90,19 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "rocksdb_abnormal_multi_get_iterate_count_threshold",
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
-    uint64_t table_level_get_time_threshold_ns =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_abnormal_table_get_default_time_threshold_ns",
-                                    100000000,
-                                    "default value of get operation duration for each table. "
-                                    "exceed this threshold will be logged, 0 means no check");
-    _abnormal_table_level_get_time_threshold_ns.store(table_level_get_time_threshold_ns,
-                                                      std::memory_order_relaxed);
+
+    _abnormal_table_level_min_get_time_threshold_ns = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_abnormal_table_min_get_time_threshold_ns",
+        20000000,
+        "min value of get operation duration threshold for each table.");
+    _abnormal_table_level_get_time_threshold_ns.store(
+        dsn_config_get_value_uint64(
+            "pegasus.server",
+            "rocksdb_abnormal_table_default_get_time_threshold_ns",
+            100000000,
+            "default value of get operation duration threshold for each table."),
+        std::memory_order_relaxed);
     _enable_table_level_latency_log.store(false, std::memory_order_relaxed);
 
     // init db options
@@ -2447,7 +2451,7 @@ void pegasus_server_impl::update_table_latency(const std::map<std::string, std::
     if (find != envs.end()) {
         uint64_t latency = 0;
         if (!dsn::buf2uint64(find->second, latency) ||
-            (latency <= MIN_TABLE_LATENCY && latency != 0)) {
+            (latency <= _abnormal_table_level_min_get_time_threshold_ns && latency != 0)) {
             derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }
