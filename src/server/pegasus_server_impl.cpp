@@ -2454,7 +2454,16 @@ void pegasus_server_impl::update_table_latency(const std::map<std::string, std::
             return;
         }
 
-        _abnormal_table_level_get_time_threshold_ns.store(latency, std::memory_order_relaxed);
+        // check if it is modified
+        uint64_t old_threshold_ns =
+            _abnormal_table_level_get_time_threshold_ns.load(std::memory_order_relaxed);
+        if (old_threshold_ns != latency) {
+            ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
+                           ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY,
+                           old_threshold_ns,
+                           latency);
+            _abnormal_table_level_get_time_threshold_ns.store(latency, std::memory_order_relaxed);
+        }
     }
 
     /** get table latency log switch from env */
@@ -2466,7 +2475,15 @@ void pegasus_server_impl::update_table_latency(const std::map<std::string, std::
             return;
         }
 
-        _enable_table_level_latency_log.store(enable, std::memory_order_relaxed);
+        // check if it is modified
+        bool old_enable = _enable_table_level_latency_log.load(std::memory_order_relaxed);
+        if (old_enable != enable) {
+            ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
+                           ROCKSDB_ENV_ENABLE_TABLE_LEVEL_LATENCY_LOG,
+                           old_enable,
+                           enable);
+            _enable_table_level_latency_log.store(enable, std::memory_order_relaxed);
+        }
     }
 }
 
