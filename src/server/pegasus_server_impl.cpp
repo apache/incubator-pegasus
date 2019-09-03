@@ -15,7 +15,6 @@
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication.codes.h>
-#include <stdatomic.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
@@ -612,8 +611,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     if (table_level_get_time_threshold_ns > 0) {
         uint64_t time_used = dsn_now_ns() - start_time;
         if (time_used >= table_level_get_time_threshold_ns) {
-            if (_enable_table_level_latency_log) {
-                // todo: log at another new log file
+            if (_enable_table_level_latency_log.load(std::memory_order_relaxed)) {
                 ::dsn::blob hash_key, sort_key;
                 pegasus_restore_key(key, hash_key, sort_key);
                 dwarn("%s: rocksdb table level get latency exceed threshold. from %s: "
@@ -628,7 +626,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                       time_used);
             }
 
-            /** add abnormal count */
+            // add abnormal count
             _pfc_recent_table_level_abnormal_count->increment();
         }
     }
