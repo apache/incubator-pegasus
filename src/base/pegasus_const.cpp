@@ -68,5 +68,7 @@ const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS("rocksdb.checkpoint.res
 const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
 
 /// table get latency
-const std::string ROCKSDB_ENV_TABLE_GET_LATENCY("table_get_latency");
+const std::string ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY("table_level_get_latency");
+const std::string ROCKSDB_ENV_ENABLE_TABLE_LEVEL_LATENCY_LOG("enable_table_level_latency_log");
+
 } // namespace pegasus

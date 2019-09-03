@@ -2445,7 +2445,7 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
 void pegasus_server_impl::update_table_latency(const std::map<std::string, std::string> &envs)
 {
     /** get table latency from env */
-    auto find = envs.find(ROCKSDB_ENV_TABLE_GET_LATENCY);
+    auto find = envs.find(ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY);
     if (find != envs.end()) {
         uint64_t latency = 0;
         if (!dsn::buf2uint64(find->second, latency) ||
@@ -2458,13 +2458,14 @@ void pegasus_server_impl::update_table_latency(const std::map<std::string, std::
     }
 
     /** get table latency log switch from env */
-    find = envs.find(ROCKSDB_ENV_ENABLE_TABLE_LATENCY_LOG);
+    find = envs.find(ROCKSDB_ENV_ENABLE_TABLE_LEVEL_LATENCY_LOG);
     if (find != envs.end()) {
         bool enable = false;
         if (!dsn::buf2bool(find->second, enable)) {
             derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }
+
         _enable_table_level_latency_log.store(enable, std::memory_order_relaxed);
     }
 }
