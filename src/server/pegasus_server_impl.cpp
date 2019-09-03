@@ -91,15 +91,15 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
-    _abnormal_table_level_min_get_time_threshold_ns = dsn_config_get_value_uint64(
+    _min_table_level_abnormal_get_time_threshold_ns = dsn_config_get_value_uint64(
         "pegasus.server",
-        "rocksdb_abnormal_table_min_get_time_threshold_ns",
+        "rocksdb_min_table_level_abnormal_get_time_threshold_ns",
         20000000,
         "min value of get operation duration threshold for each table.");
-    _abnormal_table_level_get_time_threshold_ns.store(
+    _table_level_abnormal_get_time_threshold_ns.store(
         dsn_config_get_value_uint64(
             "pegasus.server",
-            "rocksdb_abnormal_table_default_get_time_threshold_ns",
+            "rocksdb_default_table_level_abnormal_get_time_threshold_ns",
             100000000,
             "default value of get operation duration threshold for each table."),
         std::memory_order_relaxed);
@@ -611,7 +611,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
 
     /** check if it is exceed table level get time threshold */
     uint64_t table_level_get_time_threshold_ns =
-        _abnormal_table_level_get_time_threshold_ns.load(std::memory_order_relaxed);
+        _table_level_abnormal_get_time_threshold_ns.load(std::memory_order_relaxed);
     if (table_level_get_time_threshold_ns > 0) {
         uint64_t time_used = dsn_now_ns() - start_time;
         if (time_used >= table_level_get_time_threshold_ns) {
@@ -2451,20 +2451,20 @@ void pegasus_server_impl::update_table_latency(const std::map<std::string, std::
     if (find != envs.end()) {
         uint64_t latency = 0;
         if (!dsn::buf2uint64(find->second, latency) ||
-            (latency <= _abnormal_table_level_min_get_time_threshold_ns && latency != 0)) {
+            (latency <= _min_table_level_abnormal_get_time_threshold_ns && latency != 0)) {
             derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }
 
         // check if it is modified
         uint64_t old_threshold_ns =
-            _abnormal_table_level_get_time_threshold_ns.load(std::memory_order_relaxed);
+            _table_level_abnormal_get_time_threshold_ns.load(std::memory_order_relaxed);
         if (old_threshold_ns != latency) {
             ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
                            ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY,
                            old_threshold_ns,
                            latency);
-            _abnormal_table_level_get_time_threshold_ns.store(latency, std::memory_order_relaxed);
+            _table_level_abnormal_get_time_threshold_ns.store(latency, std::memory_order_relaxed);
         }
     }
 
