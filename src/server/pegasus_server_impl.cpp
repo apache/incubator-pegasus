@@ -611,7 +611,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             if (_enable_table_level_latency_log.load(std::memory_order_relaxed)) {
                 ::dsn::blob hash_key, sort_key;
                 pegasus_restore_key(key, hash_key, sort_key);
-                dwarn("%s: rocksdb table level get latency exceed threshold. from %s: "
+                dwarn("%s: rocksdb exceed table level get latency threshold. from %s: "
                       "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
                       "value_size = %d, time_used = %" PRIu64 " ns",
                       replica_name(),
