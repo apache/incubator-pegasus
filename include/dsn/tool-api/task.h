@@ -296,6 +296,8 @@ protected:
     error_code _error;
 
 private:
+    friend class task_test;
+
     task(const task &);
     bool wait_on_cancel();
 
