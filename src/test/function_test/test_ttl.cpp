@@ -37,8 +37,11 @@ void set_default_ttl(int ttl)
 
     std::string env = envs[TABLE_LEVEL_DEFAULT_TTL];
     if ((env.empty() && ttl != 0) || env != std::to_string(ttl)) {
-        dsn::error_code ec = ddl_client->set_app_envs(
-            client->get_app_name(), {TABLE_LEVEL_DEFAULT_TTL}, {std::to_string(ttl)});
+        dsn::error_code ec = ddl_client
+                                 ->set_app_envs(client->get_app_name(),
+                                                {TABLE_LEVEL_DEFAULT_TTL},
+                                                {std::to_string(ttl)})
+                                 .err;
         ASSERT_EQ(ERR_OK, ec);
 
         // wait envs to be synced.
@@ -99,9 +102,11 @@ TEST(ttl, set_without_default_ttl)
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    dsn::error_code ec = ddl_client->set_app_envs(client->get_app_name(),
-                                                  {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
-                                                  {std::to_string(time(nullptr))});
+    dsn::error_code ec = ddl_client
+                             ->set_app_envs(client->get_app_name(),
+                                            {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
+                                            {std::to_string(time(nullptr))})
+                             .err;
     ASSERT_EQ(ERR_OK, ec);
 
     // wait envs to be synced, and manual lcompaction has been finished.
@@ -191,9 +196,11 @@ TEST(ttl, set_with_default_ttl)
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    dsn::error_code ec = ddl_client->set_app_envs(client->get_app_name(),
-                                                  {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
-                                                  {std::to_string(time(nullptr))});
+    dsn::error_code ec = ddl_client
+                             ->set_app_envs(client->get_app_name(),
+                                            {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
+                                            {std::to_string(time(nullptr))})
+                             .err;
     ASSERT_EQ(ERR_OK, ec);
 
     // wait envs to be synced, and manual compaction has been finished.

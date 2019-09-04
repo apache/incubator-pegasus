@@ -28,6 +28,8 @@ using namespace dsn::literals::chrono_literals;
 namespace pegasus {
 namespace server {
 
+static const uint64_t DEFAULT_TABLE_LEVEL_GET_TIME_THRESHOLD_NS = 100 * 1000 * 1000;
+
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 static std::string chkpt_get_dir_name(int64_t decree)
@@ -91,18 +93,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
-    _min_table_level_abnormal_get_time_threshold_ns = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_min_table_level_abnormal_get_time_threshold_ns",
-        20000000,
-        "min value of get operation duration threshold for each table.");
-    _table_level_abnormal_get_time_threshold_ns.store(
-        dsn_config_get_value_uint64(
-            "pegasus.server",
-            "rocksdb_default_table_level_abnormal_get_time_threshold_ns",
-            100000000,
-            "default value of get operation duration threshold for each table."),
-        std::memory_order_relaxed);
+    // table level abnormal get time threshold(ns)
+    _table_level_abnormal_get_time_threshold_ns.store(DEFAULT_TABLE_LEVEL_GET_TIME_THRESHOLD_NS,
+                                                      std::memory_order_relaxed);
     _enable_table_level_latency_log.store(false, std::memory_order_relaxed);
 
     // init db options
@@ -2450,8 +2443,7 @@ void pegasus_server_impl::update_table_latency(const std::map<std::string, std::
     auto find = envs.find(ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY);
     if (find != envs.end()) {
         uint64_t latency = 0;
-        if (!dsn::buf2uint64(find->second, latency) ||
-            (latency <= _min_table_level_abnormal_get_time_threshold_ns && latency != 0)) {
+        if (!dsn::buf2uint64(find->second, latency)) {
             derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }

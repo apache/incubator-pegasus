@@ -275,9 +275,6 @@ private:
     uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
-    // min value for table level get operation duration threshold
-    // less than this value will be refused
-    uint64_t _min_table_level_abnormal_get_time_threshold_ns;
     // table level get operation duration threshold. exceed this threshold will be logged.
     // 0 means no check
     std::atomic<uint64_t> _table_level_abnormal_get_time_threshold_ns;

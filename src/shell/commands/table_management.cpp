@@ -744,11 +744,17 @@ bool set_app_envs(command_executor *e, shell_context *sc, arguments args)
         values.emplace_back(args.argv[idx++]);
     }
 
-    ::dsn::error_code ret = sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
-
-    if (ret != ::dsn::ERR_OK) {
-        fprintf(stderr, "set app env failed with err = %s\n", ret.to_string());
+    configuration_update_app_env_response ret =
+        sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
+    if (ret.err != ::dsn::ERR_OK) {
+        fmt::print(stdout, "set app envs failed with err = {}\n", ret.err.to_string());
+    } else {
+        fmt::print(stdout, "set app envs succeed\n");
     }
+    if (!ret.hint_message.empty()) {
+        fmt::print(stdout, "{}\n", ret.hint_message);
+    }
+
     return true;
 }
 
