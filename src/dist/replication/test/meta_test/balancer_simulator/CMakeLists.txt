@@ -15,7 +15,6 @@ set(MY_PROJ_LIBS
     dsn.block_service.local
     dsn.block_service.fds
     dsn_runtime
-    fmt
     gtest)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)

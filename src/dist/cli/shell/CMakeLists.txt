@@ -9,11 +9,7 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-if (UNIX)
-    set(MY_PROJ_LIBS pthread dsn_cli)
-else()
-    set(MY_PROJ_LIBS dsn_cli)
-endif()
+set(MY_PROJ_LIBS dsn_cli)
 
 list(APPEND MY_PROJ_LIBS dsn_runtime)
 

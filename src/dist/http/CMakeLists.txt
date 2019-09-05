@@ -4,7 +4,7 @@ set(MY_PROJ_SRC "")
 
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS fmt)
+set(MY_PROJ_LIBS "")
 
 dsn_add_static_library()
 

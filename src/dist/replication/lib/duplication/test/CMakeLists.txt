@@ -19,7 +19,6 @@ set(MY_PROJ_LIBS dsn_meta_server
         PocoJSON
         crypto
         gtest
-        fmt
 )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)

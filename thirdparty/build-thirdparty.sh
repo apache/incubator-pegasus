@@ -105,7 +105,7 @@ if [ ! -d $TP_OUTPUT/include/thrift ]; then
         -DWITH_QT5=OFF\
         -DWITH_QT4=OFF\
         -DWITH_OPENSSL=OFF\
-        -DBUILD_COMPILER=OFF\
+        -DBUILD_COMPILER=ON\
         -DBUILD_TUTORIALS=OFF\
         -DWITH_LIBEVENT=OFF\
         -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT\
@@ -168,7 +168,7 @@ fi
 if [ ! -d $TP_OUTPUT/include/Poco ]; then
     mkdir -p $TP_BUILD/poco-1.7.8-release
     cd $TP_BUILD/poco-1.7.8-release
-    CMAKE_FLAGS="-DENABLE_XML=OFF\
+    CMAKE_FLAGS="
     -DENABLE_MONGODB=OFF\
     -DENABLE_PDF=OFF\
     -DENABLE_DATA=OFF\
@@ -288,7 +288,8 @@ if [ ! -d $TP_OUTPUT/include/curl ]; then
     --without-librtmp \
     --without-zlib \
     --without-libssh2 \
-    --without-ssl"
+    --without-ssl \
+    --without-libidn"
 
     ./configure $CONFIG_FLAGS
     make -j8 && make install

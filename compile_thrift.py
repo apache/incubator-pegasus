@@ -95,17 +95,6 @@ thrift_description = [
     }
 ]
 
-thrift_exe = os.getcwd() + "/bin/Linux/thrift"
-root_dir = os.getcwd()
-print "thrift_exe = " + thrift_exe
-print "root_dir = " + root_dir
-
-if not os.path.isfile(thrift_exe):
-    os.system("wget --no-check-certificate "
-              "https://github.com/xiaomi/pegasus-common/raw/master/pre-built/ubuntu14.04/thrift "
-              "&& chmod u+x thrift "
-              "&& mv thrift "+thrift_exe)
-
 class CompileError(Exception):
     """ Raised when dealing with thrift idl have errors"""
 
@@ -270,6 +259,15 @@ def add_hook(name, path, func, args):
 
 
 if __name__ == "__main__":
+    thrift_exe = os.getcwd() + "/thirdparty/output/bin/thrift"
+    root_dir = os.getcwd()
+    print "thrift_exe = " + thrift_exe
+    print "root_dir = " + root_dir
+
+    if not os.path.isfile(thrift_exe):
+        print "Error: can't find compiler %s\nPlease build thrift in thirdparty/" % thrift_exe
+        sys.exit()
+
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
     ctor_configuration_proposal_action = "  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}"
     add_hook("simple_kv", "src/apps/skv", constructor_hook,

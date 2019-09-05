@@ -23,7 +23,6 @@ set(MY_PROJ_LIBS dsn_replica_server
                  PocoNetSSL
                  PocoJSON
                  crypto
-                 fmt
                  gtest
                  )
 
