@@ -13,7 +13,6 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS ""
         # s2
         # pegasus_client_static
-        # fmt
         )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
