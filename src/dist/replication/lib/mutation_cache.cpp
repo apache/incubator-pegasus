@@ -38,6 +38,22 @@ mutation_cache::mutation_cache(decree init_decree, int max_count)
     reset(init_decree, false);
 }
 
+mutation_cache::mutation_cache(const mutation_cache &cache)
+{
+    _array.clear();
+    _array.reserve(cache._array.size());
+    for (const mutation_ptr &old_mu : cache._array) {
+        _array.emplace_back(old_mu == nullptr ? nullptr : mutation::copy_no_reply(old_mu));
+    }
+
+    _max_count = cache._max_count;
+    _interval = cache._interval;
+    _start_idx = cache._start_idx;
+    _end_idx = cache._end_idx;
+    _start_decree = cache._start_decree;
+    _end_decree.store(cache._end_decree.load());
+}
+
 mutation_cache::~mutation_cache() { _array.clear(); }
 
 error_code mutation_cache::put(mutation_ptr &mu)

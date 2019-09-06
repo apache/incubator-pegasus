@@ -59,6 +59,10 @@ public:
     mutation();
     virtual ~mutation();
 
+    // copy mutation from an existing mutation, typically used in partition split
+    // mutation should not reply to client, because parent has already replied
+    static mutation_ptr copy_no_reply(const mutation_ptr &old_mu);
+
     // state inquery
     const char *name() const { return _name; }
     const uint64_t tid() const { return _tid; }
@@ -138,6 +142,9 @@ public:
     // used by pending mutation queue only
     mutation *next;
 
+    void set_is_sync_to_child(bool sync_to_child) { _is_sync_to_child = sync_to_child; }
+    bool is_sync_to_child() { return _is_sync_to_child; }
+
 private:
     union
     {
@@ -159,6 +166,7 @@ private:
     uint64_t _create_ts_ns; // for profiling
     uint64_t _tid;          // trace id, unique in process
     static std::atomic<uint64_t> s_tid;
+    bool _is_sync_to_child; // for partition split
 };
 
 class replica;

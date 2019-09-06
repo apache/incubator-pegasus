@@ -319,10 +319,23 @@ private:
     void on_add_child(const group_check_request &request);
 
     // child replica initialize config and state info
-    void init_child_replica(gpid parent_gpid, dsn::rpc_address primary_address, ballot init_ballot);
+    void child_init_replica(gpid parent_gpid, dsn::rpc_address primary_address, ballot init_ballot);
+
+    void parent_prepare_states(const std::string &dir);
+
+    void child_copy_states(learn_state lstate,
+                           std::vector<mutation_ptr> mutation_list,
+                           std::vector<std::string> files,
+                           uint64_t total_file_size,
+                           std::shared_ptr<prepare_list> plist);
+
+    // return true if parent status is valid
+    bool parent_check_states();
 
     // parent reset child information when partition split failed
-    void clean_up_parent_split_context();
+    void parent_cleanup_split_context();
+    // child suicide when partition split failed
+    void child_handle_split_error(const std::string &error_msg);
 
 private:
     friend class ::dsn::replication::replication_checker;
@@ -410,10 +423,10 @@ private:
 
     // partition split
     // _child_gpid = gpid({app_id},{pidx}+{old_partition_count}) for parent partition
-    // _child_gpid.app_id = 0 for parent partition not during partition split and child partition
+    // _child_gpid.app_id = 0 for parent partition not in partition split and child partition
     dsn::gpid _child_gpid{0, 0};
-    // ballot when starting partition split coz split will stop if ballot changed
-    // _child_init_ballot = 0 if partition not during partition split
+    // ballot when starting partition split and split will stop if ballot changed
+    // _child_init_ballot = 0 if partition not in partition split
     ballot _child_init_ballot{0};
 
     // perf counters

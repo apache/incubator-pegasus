@@ -53,6 +53,7 @@ public:
 
 public:
     prepare_list(replica_base *r, decree init_decree, int max_count, mutation_committer committer);
+    prepare_list(replica_base *r, const prepare_list &parent_plist);
 
     decree last_committed_decree() const { return _last_committed_decree; }
     void reset(decree init_decree);

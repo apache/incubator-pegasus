@@ -151,6 +151,14 @@ public:
         return false;
     }
 
+    // only for private log
+    // get in-memory mutations, including pending and writing mutations
+    virtual void get_in_memory_mutations(decree start_decree,
+                                         ballot current_ballot,
+                                         /*out*/ std::vector<mutation_ptr> &mutations_list) const
+    {
+    }
+
     // flush the pending buffer until all data is on disk
     // thread safe
     virtual void flush() = 0;
@@ -257,6 +265,16 @@ public:
     //
     bool get_learn_state(gpid gpid, decree start, /*out*/ learn_state &state) const;
 
+    // only valid for private log
+    // get parent mutations in memory and private log files during partition split
+    // total_file_size is used for split perf-counter
+    void get_parent_mutations_and_logs(gpid pid,
+                                       decree start_decree,
+                                       ballot start_ballot,
+                                       /*out*/ std::vector<mutation_ptr> &mutation_list,
+                                       /*out*/ std::vector<std::string> &files,
+                                       /*out*/ uint64_t &total_file_size) const;
+
     //
     //  other inquiry routines
     //
@@ -280,6 +298,9 @@ public:
     // maximum decree that is garbage collected
     // thread safe
     decree max_gced_decree(gpid gpid, int64_t valid_start_offset) const;
+
+    // thread-safe
+    std::map<int, log_file_ptr> get_log_file_map() const;
 
     // check the consistence of valid_start_offset
     // thread safe
@@ -352,6 +373,8 @@ protected:
 
 private:
     friend class mutation_log_test;
+    friend class mock_mutation_log_private;
+    friend class mock_mutation_log_shared;
 
     ///////////////////////////////////////////////
     //// memory states
@@ -475,6 +498,12 @@ public:
 
     virtual bool get_learn_state_in_memory(decree start_decree,
                                            binary_writer &writer) const override;
+
+    // get in-memory mutations, including pending and writing mutations
+    virtual void
+    get_in_memory_mutations(decree start_decree,
+                            ballot start_ballot,
+                            /*out*/ std::vector<mutation_ptr> &mutation_list) const override;
 
     virtual void flush() override;
     virtual void flush_once() override;
@@ -633,6 +662,8 @@ private:
     log_file(const char *path, disk_file *handle, int index, int64_t start_offset, bool is_read);
 
 private:
+    friend class mock_log_file;
+
     uint32_t _crc32;
     int64_t _start_offset; // start offset in the global space
     std::atomic<int64_t>

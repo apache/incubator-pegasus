@@ -174,6 +174,33 @@ message_ex *message_ex::create_receive_message_with_standalone_header(const blob
     return msg;
 }
 
+message_ex *message_ex::copy_message_no_reply(const message_ex &old_msg)
+{
+    message_ex *msg = new message_ex();
+    std::shared_ptr<char> header_holder(
+        static_cast<char *>(dsn::tls_trans_malloc(sizeof(message_header))),
+        [](char *c) { dsn::tls_trans_free(c); });
+    msg->header = reinterpret_cast<message_header *>(header_holder.get());
+    memset(msg->header, 0, sizeof(message_header));
+    msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
+
+    if (old_msg.buffers.size() == 1) {
+        // if old_msg only has header, consider its header as data
+        msg->buffers.emplace_back(old_msg.buffers[0]);
+    } else {
+        msg->buffers.emplace_back(old_msg.buffers[1]);
+    }
+
+    msg->header->body_length = msg->buffers[1].length();
+    msg->_is_read = true;
+    msg->_rw_index = 1;
+    msg->local_rpc_code = old_msg.local_rpc_code;
+    msg->header->context.u.serialize_format = old_msg.header->context.u.serialize_format;
+    msg->add_ref();
+
+    return msg;
+}
+
 message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
 {
     dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
