@@ -50,7 +50,7 @@ class replica_stub;
 // TODO(wutao1): Optimization for multi-duplication
 //               Currently we create duplicator for each duplication.
 //               They're isolated even if they share the same private log.
-class replica_duplicator : public replica_base
+class replica_duplicator : public replica_base, public pipeline::base
 {
 public:
     replica_duplicator(const duplication_entry &ent, replica *r);
@@ -77,13 +77,13 @@ public:
     // Thread-safe
     error_s update_progress(const duplication_progress &p);
 
-    void start_dup() { /*TBD*/}
+    void start_dup();
 
     // Pausing duplication will clear all the internal volatile states, thus
     // when next time it restarts, the states will be reinitialized like the
     // server being restarted.
     // It is useful when something went wrong internally.
-    void pause_dup() { /*TBD*/}
+    void pause_dup();
 
     // Holds its own tracker, so that other tasks
     // won't be effected when this duplication is removed.
@@ -111,6 +111,11 @@ private:
     // protect the access of _progress.
     mutable zrwlock_nr _lock;
     duplication_progress _progress;
+
+    /// === pipeline === ///
+    std::unique_ptr<load_mutation> _load;
+    std::unique_ptr<ship_mutation> _ship;
+    std::unique_ptr<load_from_private_log> _load_private;
 };
 
 typedef std::unique_ptr<replica_duplicator> replica_duplicator_u_ptr;

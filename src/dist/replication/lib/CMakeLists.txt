@@ -4,6 +4,8 @@ set(DUPLICATION_SRC
         duplication/replica_duplicator_manager.cpp
         duplication/duplication_sync_timer.cpp
         duplication/replica_duplicator.cpp
+        duplication/duplication_pipeline.cpp
+        duplication/load_from_private_log.cpp
 )
 
 # Source files under CURRENT project directory will be automatically included.

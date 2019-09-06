@@ -3,6 +3,8 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "replica_duplicator.h"
+#include "load_from_private_log.h"
+#include "duplication_pipeline.h"
 #include "dist/replication/lib/replica_stub.h"
 
 #include <dsn/dist/replication/replication_app_base.h>
@@ -30,10 +32,43 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     }
     ddebug_replica(
         "initialize replica_duplicator [dupid:{}, meta_confirmed_decree:{}]", id(), it->second);
+    thread_pool(LPC_REPLICATION_LOW).task_tracker(tracker()).thread_hash(get_gpid().thread_hash());
 
     if (_status == duplication_status::DS_START) {
         start_dup();
     }
+}
+
+void replica_duplicator::start_dup()
+{
+    ddebug_replica("starting duplication {} [last_decree: {}, confirmed_decree: {}]",
+                   to_string(),
+                   _progress.last_decree,
+                   _progress.confirmed_decree);
+
+    /// ===== pipeline declaration ===== ///
+
+    // load -> ship -> load
+    _ship = make_unique<ship_mutation>(this);
+    _load_private = make_unique<load_from_private_log>(_replica, this);
+    _load = make_unique<load_mutation>(this, _replica, _load_private.get());
+
+    from(*_load).link(*_ship).link(*_load);
+    fork(*_load_private, LPC_REPLICATION_LONG_LOW, 0).link(*_ship);
+
+    run_pipeline();
+}
+
+void replica_duplicator::pause_dup()
+{
+    ddebug_replica("pausing duplication: {}", to_string());
+
+    pause();
+    wait_all();
+
+    _load.reset();
+    _ship.reset();
+    _load_private.reset();
 }
 
 std::string replica_duplicator::to_string() const
@@ -76,7 +111,12 @@ void replica_duplicator::update_status_if_needed(duplication_status::type next_s
     }
 }
 
-replica_duplicator::~replica_duplicator() { ddebug_replica("closing duplication {}", to_string()); }
+replica_duplicator::~replica_duplicator()
+{
+    pause();
+    cancel_all();
+    ddebug_replica("closing duplication {}", to_string());
+}
 
 error_s replica_duplicator::update_progress(const duplication_progress &p)
 {

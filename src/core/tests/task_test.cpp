@@ -51,8 +51,6 @@ public:
         // in simulator environment this task will be executed immediately,
         // so we excluded config-test-sim.ini for this test.
         auto t = file::read(fp, buffer, 128, 0, LPC_TASK_TEST, nullptr, nullptr);
-        ASSERT_EQ(t->_state, task_state::TASK_STATE_READY);
-        ASSERT_TRUE(t->_is_null);
 
         t->wait(10000);
         ASSERT_TRUE(t->_wait_event.load() != nullptr);
