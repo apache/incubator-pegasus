@@ -28,6 +28,7 @@ using namespace dsn::literals::chrono_literals;
 namespace pegasus {
 namespace server {
 
+// 100ms
 static const uint64_t DEFAULT_TABLE_LEVEL_GET_TIME_THRESHOLD_NS = 100 * 1000 * 1000;
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
@@ -2439,7 +2440,7 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
 
 void pegasus_server_impl::update_table_latency(const std::map<std::string, std::string> &envs)
 {
-    /** get table latency from env */
+    // get table latency from env
     auto find = envs.find(ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY);
     if (find != envs.end()) {
         uint64_t latency = 0;

@@ -278,7 +278,7 @@ private:
     // table level get operation duration threshold. exceed this threshold will be logged.
     // 0 means no check
     std::atomic<uint64_t> _table_level_abnormal_get_time_threshold_ns;
-    // table level latency log switch
+    // table level latency log on-off switch
     std::atomic<bool> _enable_table_level_latency_log;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
