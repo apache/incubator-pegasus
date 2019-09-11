@@ -603,7 +603,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         }
     }
 
-    /** check if it is exceed table level get time threshold */
+    /** check if it exceed table level get time threshold */
     uint64_t table_level_get_time_threshold_ns =
         _table_level_abnormal_get_time_threshold_ns.load(std::memory_order_relaxed);
     if (table_level_get_time_threshold_ns > 0) {
