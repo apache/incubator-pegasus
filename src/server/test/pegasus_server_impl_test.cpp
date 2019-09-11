@@ -12,7 +12,8 @@ class pegasus_server_impl_test : public pegasus_server_test_base
 public:
     pegasus_server_impl_test() : pegasus_server_test_base() { start(); }
 
-    void test_table_level_latency() {
+    void test_table_level_latency()
+    {
         // set table level latency threshold to a very small num,
         // in order to ensure the get operation will exceed the threshold
         std::map<std::string, std::string> envs;
