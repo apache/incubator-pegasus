@@ -603,7 +603,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         }
     }
 
-    /** check if it exceed table level get time threshold */
+    // check if it exceed table level get time threshold
     uint64_t table_level_get_time_threshold_ns =
         _table_level_abnormal_get_time_threshold_ns.load(std::memory_order_relaxed);
     if (table_level_get_time_threshold_ns > 0) {
@@ -2461,7 +2461,7 @@ void pegasus_server_impl::update_table_latency(const std::map<std::string, std::
         }
     }
 
-    /** get table latency log switch from env */
+    // get table latency log switch from env
     find = envs.find(ROCKSDB_ENV_ENABLE_TABLE_LEVEL_LATENCY_LOG);
     if (find != envs.end()) {
         bool enable = false;
