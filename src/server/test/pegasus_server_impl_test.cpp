@@ -15,7 +15,7 @@ public:
     void test_table_level_latency()
     {
         // set table level latency threshold to a very small num,
-        // in order to ensure the get operation will exceed the threshold
+        // in order to ensure the get operation will exceed it
         std::map<std::string, std::string> envs;
         _server->query_app_envs(envs);
         envs[ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY] = std::to_string(20);
@@ -31,7 +31,7 @@ public:
         ASSERT_EQ(before_count + 1, after_count);
 
         // set table level latency threshold to 0,
-        // which means don't check whether it exceed table level latency threshold or not
+        // which means don't check whether the operation time exceed it or not
         envs[ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY] = std::to_string(0);
         _server->update_app_envs(envs);
 
