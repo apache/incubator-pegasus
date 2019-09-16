@@ -46,19 +46,18 @@ public:
     {
         disk_file *fp = file::open("config-test.ini", O_RDONLY | O_BINARY, 0);
 
-        // this aio task is enqueued into read_queue of disk_engine
+        // this aio task is enqueued into read-queue of disk_engine
         char buffer[128];
         // in simulator environment this task will be executed immediately,
         // so we excluded config-test-sim.ini for this test.
         auto t = file::read(fp, buffer, 128, 0, LPC_TASK_TEST, nullptr, nullptr);
 
         t->wait(10000);
-        ASSERT_TRUE(t->_wait_event.load() != nullptr);
         ASSERT_EQ(t->_state, task_state::TASK_STATE_FINISHED);
 
         // signal a finished task won't cause failure
-        ASSERT_TRUE(t->signal_waiters());
-        ASSERT_TRUE(t->signal_waiters());
+        t->signal_waiters(); // signal_waiters may return false
+        t->signal_waiters();
     }
 };
 

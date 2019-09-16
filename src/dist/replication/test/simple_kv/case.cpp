@@ -627,11 +627,11 @@ bool event_on_aio::check_satisfied(const event *ev) const
 void event_on_aio::init(aio_task *tsk)
 {
     event_on_task::init(tsk);
-    if (tsk->aio()->type == dsn::AIO_Invalid)
+    if (tsk->get_aio_context()->type == dsn::AIO_Invalid)
         return; // for flush task, the type is AIO_Invalid
-    _type = (tsk->aio()->type == dsn::AIO_Read ? "READ" : "WRITE");
-    _file_offset = boost::lexical_cast<std::string>(tsk->aio()->file_offset);
-    _buffer_size = boost::lexical_cast<std::string>(tsk->aio()->buffer_size);
+    _type = (tsk->get_aio_context()->type == dsn::AIO_Read ? "READ" : "WRITE");
+    _file_offset = boost::lexical_cast<std::string>(tsk->get_aio_context()->file_offset);
+    _buffer_size = boost::lexical_cast<std::string>(tsk->get_aio_context()->buffer_size);
 }
 
 void event_on_aio_enqueue::internal_to_string(std::ostream &oss) const

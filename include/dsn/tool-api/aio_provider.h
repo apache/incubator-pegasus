@@ -80,8 +80,14 @@ public:
 
     virtual error_code close(dsn_handle_t fh) = 0;
     virtual error_code flush(dsn_handle_t fh) = 0;
+
+    // Submits the aio_task to the underlying disk-io executor.
+    // This task may not be executed immediately, call `aio_task::wait`
+    // to wait until it completes.
+    // TODO(wutao1): Call it aio_submit().
     virtual void aio(aio_task *aio) = 0;
-    virtual disk_aio *prepare_aio_context(aio_task *) = 0;
+
+    virtual aio_context *prepare_aio_context(aio_task *) = 0;
 
     virtual void start() = 0;
 
@@ -94,4 +100,4 @@ private:
 };
 
 /*@}*/
-} // end namespace
+} // namespace dsn

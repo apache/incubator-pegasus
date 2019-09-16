@@ -1816,11 +1816,12 @@ public:
     // possible error_code:
     //  ERR_OK                      result would always size as expected
     //  ERR_HANDLE_EOF              if there are not enough data in file. result would still be
-    //  filled with possible data
+    //                              filled with possible data
     //  ERR_FILE_OPERATION_FAILED   filesystem failure
     error_code read_next(size_t size, /*out*/ blob &result)
     {
         binary_writer writer(size);
+
 #define TRY(x)                                                                                     \
     do {                                                                                           \
         auto _x = (x);                                                                             \
@@ -1829,6 +1830,7 @@ public:
             return _x;                                                                             \
         }                                                                                          \
     } while (0)
+
         TRY(_current_buffer->wait_ongoing_task());
         if (size < _current_buffer->length()) {
             result.assign(_current_buffer->_buffer.get(), _current_buffer->_begin, size);
@@ -1884,7 +1886,8 @@ private:
     }
 
     // buffer size, in bytes
-    static const size_t block_size_bytes = 1024 * 1024;
+    // TODO(wutao1): call it BLOCK_BYTES_SIZE
+    static constexpr size_t block_size_bytes = 1024 * 1024; // 1MB
     struct buffer_t
     {
         std::unique_ptr<char[]> _buffer; // with block_size

@@ -133,8 +133,8 @@ static void tracer_on_aio_call(task *caller, aio_task *callee)
     ddebug("%s AIO.CALL, task_id = %016" PRIx64 ", offset = %" PRIu64 ", size = %d",
            callee->spec().name.c_str(),
            callee->id(),
-           callee->aio()->file_offset,
-           callee->aio()->buffer_size);
+           callee->get_aio_context()->file_offset,
+           callee->get_aio_context()->buffer_size);
 }
 
 static void tracer_on_aio_enqueue(aio_task *this_)
