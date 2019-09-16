@@ -2346,7 +2346,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_usage_scenario(envs);
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
-    update_table_latency(envs);
+    update_table_level_latency(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2356,7 +2356,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     // we do not update usage scenario because it depends on opened db.
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
-    update_table_latency(envs);
+    update_table_level_latency(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2438,7 +2438,7 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
     }
 }
 
-void pegasus_server_impl::update_table_latency(const std::map<std::string, std::string> &envs)
+void pegasus_server_impl::update_table_level_latency(const std::map<std::string, std::string> &envs)
 {
     // get table latency from env
     auto find = envs.find(ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY);

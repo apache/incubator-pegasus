@@ -225,7 +225,7 @@ private:
 
     void update_checkpoint_reserve(const std::map<std::string, std::string> &envs);
 
-    void update_table_latency(const std::map<std::string, std::string> &envs);
+    void update_table_level_latency(const std::map<std::string, std::string> &envs);
 
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
