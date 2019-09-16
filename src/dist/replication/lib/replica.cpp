@@ -177,46 +177,6 @@ void replica::response_client_write(dsn::message_ex *request, error_code error)
     _stub->response_client(get_gpid(), false, request, status(), error);
 }
 
-// error_code replica::check_and_fix_private_log_completeness()
-//{
-//    error_code err = ERR_OK;
-//
-//    auto mind = _private_log->max_gced_decree(get_gpid());
-//    if (_prepare_list->max_decree())
-//
-//    if (!(mind <= last_durable_decree()))
-//    {
-//        err = ERR_INCOMPLETE_DATA;
-//        derror("%s: private log is incomplete (gced/durable): %" PRId64 " vs %" PRId64,
-//            name(),
-//            mind,
-//            last_durable_decree()
-//            );
-//    }
-//    else
-//    {
-//        mind = _private_log->max_decree(get_gpid());
-//        if (!(mind >= _app->last_committed_decree()))
-//        {
-//            err = ERR_INCOMPLETE_DATA;
-//            derror("%s: private log is incomplete (max/commit): %" PRId64 " vs %" PRId64,
-//                name(),
-//                mind,
-//                _app->last_committed_decree()
-//                );
-//        }
-//    }
-//
-//    if (ERR_INCOMPLETE_DATA == err)
-//    {
-//        _private_log->close(true);
-//        _private_log->open(nullptr);
-//        _private_log->set_private(get_gpid(), _app->last_durable_decree());
-//    }
-//
-//    return err;
-//}
-
 void replica::check_state_completeness()
 {
     /* prepare commit durable */
@@ -228,20 +188,6 @@ void replica::check_state_completeness()
             "%" PRId64 " VS %" PRId64 "",
             last_committed_decree(),
             last_durable_decree());
-
-    /*
-    auto mind = _stub->_log->max_gced_decree(get_gpid(),
-    _app->init_info().init_offset_in_shared_log);
-    dassert(mind <= last_durable_decree(), "%" PRId64 " VS %" PRId64, mind, last_durable_decree());
-
-    if (_private_log != nullptr)
-    {
-        auto mind = _private_log->max_gced_decree(get_gpid(),
-    _app->init_info().init_offset_in_private_log);
-        dassert(mind <= last_durable_decree(), "%" PRId64 " VS %" PRId64, mind,
-    last_durable_decree());
-    }
-    */
 }
 
 void replica::execute_mutation(mutation_ptr &mu)
