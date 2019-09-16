@@ -36,21 +36,12 @@
 #pragma once
 
 #include <dsn/tool_api.h>
-#if defined(_WIN32)
-#define NATIVE_AIO_PROVIDER native_win_aio_provider
-#include "../common/native_aio_provider.win.h"
-#elif defined(__linux__)
-#define NATIVE_AIO_PROVIDER native_linux_aio_provider
-#include "../common/native_aio_provider.linux.h"
-#else
-#define NATIVE_AIO_PROVIDER native_posix_aio_provider
-#include "../common/native_aio_provider.posix.h"
-#endif
+#include "core/tools/common/native_aio_provider.linux.h"
 
 namespace dsn {
 namespace tools {
 
-class sim_aio_provider : public NATIVE_AIO_PROVIDER
+class sim_aio_provider : public native_linux_aio_provider
 {
 public:
     sim_aio_provider(disk_engine *disk, aio_provider *inner_provider);
@@ -58,5 +49,5 @@ public:
 
     virtual void aio(aio_task *aio) override;
 };
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

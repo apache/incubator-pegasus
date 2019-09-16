@@ -41,7 +41,7 @@ namespace tools {
 DEFINE_TASK_CODE(LPC_NATIVE_AIO_REDIRECT, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
 
 sim_aio_provider::sim_aio_provider(disk_engine *disk, aio_provider *inner_provider)
-    : NATIVE_AIO_PROVIDER(disk, inner_provider)
+    : native_linux_aio_provider(disk, inner_provider)
 {
 }
 

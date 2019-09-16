@@ -24,16 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-#ifdef __linux__
-
 #include "native_aio_provider.linux.h"
 
 #include <fcntl.h>
@@ -245,4 +235,3 @@ error_code native_linux_aio_provider::aio_internal(aio_task *aio_tsk,
 
 } // namespace tools
 } // namespace dsn
-#endif
