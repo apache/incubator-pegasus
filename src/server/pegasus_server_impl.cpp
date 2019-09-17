@@ -29,7 +29,7 @@ namespace pegasus {
 namespace server {
 
 // 100ms
-static const uint64_t DEFAULT_TABLE_LEVEL_GET_TIME_THRESHOLD_NS = 100 * 1000 * 1000;
+static const uint64_t DEFAULT_TABLE_LEVEL_SLOW_QUERY_THRESHOLD_NS = 100 * 1000 * 1000;
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
@@ -95,9 +95,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
     // table level abnormal get time threshold(ns)
-    _table_level_abnormal_get_time_threshold_ns.store(DEFAULT_TABLE_LEVEL_GET_TIME_THRESHOLD_NS,
-                                                      std::memory_order_relaxed);
-    _enable_table_level_latency_log.store(false, std::memory_order_relaxed);
+    _table_level_slow_query_threshold_ns.store(DEFAULT_TABLE_LEVEL_SLOW_QUERY_THRESHOLD_NS,
+                                               std::memory_order_relaxed);
+    _enable_table_level_slow_query_log.store(false, std::memory_order_relaxed);
 
     // init db options
     _db_opts.pegasus_data = true;
@@ -350,12 +350,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _pfc_rdb_memtable_mem_usage.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
 
-    snprintf(name, 255, "recent.table.level.abnormal.count@%s", str_gpid.c_str());
-    _pfc_recent_table_level_abnormal_count.init_app_counter(
+    snprintf(name, 255, "recent.table.level.slow.query.count@%s", str_gpid.c_str());
+    _pfc_recent_table_level_slow_query_count.init_app_counter(
         "app.pegasus",
         name,
         COUNTER_TYPE_NUMBER,
-        "the count of operations that exceed it`s threshold");
+        "the count of operations that exceed slow query threshold");
 }
 
 void pegasus_server_impl::parse_checkpoints()
@@ -604,15 +604,15 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     }
 
     // check if it exceed table level get time threshold
-    uint64_t table_level_get_time_threshold_ns =
-        _table_level_abnormal_get_time_threshold_ns.load(std::memory_order_relaxed);
-    if (table_level_get_time_threshold_ns > 0) {
+    uint64_t table_level_slow_query_threshold_ns =
+        _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
+    if (table_level_slow_query_threshold_ns > 0) {
         uint64_t time_used = dsn_now_ns() - start_time;
-        if (time_used >= table_level_get_time_threshold_ns) {
-            if (_enable_table_level_latency_log.load(std::memory_order_relaxed)) {
+        if (time_used >= table_level_slow_query_threshold_ns) {
+            if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
                 ::dsn::blob hash_key, sort_key;
                 pegasus_restore_key(key, hash_key, sort_key);
-                dwarn("%s: rocksdb exceed table level get latency threshold. from %s: "
+                dwarn("%s: rocksdb exceed table level slow query threshold. from %s: "
                       "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
                       "value_size = %d, time_used = %" PRIu64 " ns",
                       replica_name(),
@@ -625,7 +625,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             }
 
             // add abnormal count
-            _pfc_recent_table_level_abnormal_count->increment();
+            _pfc_recent_table_level_slow_query_count->increment();
         }
     }
 
@@ -2346,7 +2346,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_usage_scenario(envs);
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
-    update_table_level_latency(envs);
+    update_table_level_slow_query(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2356,7 +2356,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     // we do not update usage scenario because it depends on opened db.
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
-    update_table_level_latency(envs);
+    update_table_level_slow_query(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2438,10 +2438,11 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
     }
 }
 
-void pegasus_server_impl::update_table_level_latency(const std::map<std::string, std::string> &envs)
+void pegasus_server_impl::update_table_level_slow_query(
+    const std::map<std::string, std::string> &envs)
 {
     // get table level latency from env
-    auto find = envs.find(ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY);
+    auto find = envs.find(ROCKSDB_ENV_TABLE_LEVEL_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
         uint64_t latency = 0;
         if (!dsn::buf2uint64(find->second, latency)) {
@@ -2451,18 +2452,18 @@ void pegasus_server_impl::update_table_level_latency(const std::map<std::string,
 
         // check if it is modified
         uint64_t old_threshold_ns =
-            _table_level_abnormal_get_time_threshold_ns.load(std::memory_order_relaxed);
+            _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
         if (old_threshold_ns != latency) {
             ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
-                           ROCKSDB_ENV_TABLE_LEVEL_GET_LATENCY,
+                           ROCKSDB_ENV_TABLE_LEVEL_SLOW_QUERY_THRESHOLD,
                            old_threshold_ns,
                            latency);
-            _table_level_abnormal_get_time_threshold_ns.store(latency, std::memory_order_relaxed);
+            _table_level_slow_query_threshold_ns.store(latency, std::memory_order_relaxed);
         }
     }
 
     // get table level latency log switch from env
-    find = envs.find(ROCKSDB_ENV_ENABLE_TABLE_LEVEL_LATENCY_LOG);
+    find = envs.find(ROCKSDB_ENV_ENABLE_TABLE_LEVEL_SLOW_QUERY_LOG);
     if (find != envs.end()) {
         bool enable = false;
         if (!dsn::buf2bool(find->second, enable)) {
@@ -2471,13 +2472,13 @@ void pegasus_server_impl::update_table_level_latency(const std::map<std::string,
         }
 
         // check if it is modified
-        bool old_enable = _enable_table_level_latency_log.load(std::memory_order_relaxed);
+        bool old_enable = _enable_table_level_slow_query_log.load(std::memory_order_relaxed);
         if (old_enable != enable) {
             ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
-                           ROCKSDB_ENV_ENABLE_TABLE_LEVEL_LATENCY_LOG,
+                           ROCKSDB_ENV_ENABLE_TABLE_LEVEL_SLOW_QUERY_LOG,
                            old_enable,
                            enable);
-            _enable_table_level_latency_log.store(enable, std::memory_order_relaxed);
+            _enable_table_level_slow_query_log.store(enable, std::memory_order_relaxed);
         }
     }
 }

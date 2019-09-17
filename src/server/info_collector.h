@@ -55,7 +55,7 @@ public:
         ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
-        ::dsn::perf_counter_wrapper recent_table_level_abnormal_count;
+        ::dsn::perf_counter_wrapper recent_table_level_slow_query_count;
     };
 
     info_collector();
