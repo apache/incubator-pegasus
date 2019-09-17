@@ -68,8 +68,10 @@ const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS("rocksdb.checkpoint.res
 const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
 
 /// table level slow query
-const std::string ROCKSDB_ENV_TABLE_LEVEL_SLOW_QUERY_THRESHOLD("table_level_slow_query_threshold");
-const std::string
-    ROCKSDB_ENV_ENABLE_TABLE_LEVEL_SLOW_QUERY_LOG("enable_table_level_slow_query_log");
+const std::string SLOW_QUERY_KEY_PREFIX("slow_query.");
+const std::string ROCKSDB_ENV_TABLE_LEVEL_SLOW_QUERY_THRESHOLD(SLOW_QUERY_KEY_PREFIX +
+                                                               "table_level_threshold");
+const std::string ROCKSDB_ENV_ENABLE_TABLE_LEVEL_SLOW_QUERY_LOG(SLOW_QUERY_KEY_PREFIX +
+                                                                "enable_table_level_log");
 
 } // namespace pegasus
