@@ -136,7 +136,7 @@ replica::~replica(void)
     dinfo("%s: replica destroyed", name());
 }
 
-void replica::on_client_read(task_code code, dsn::message_ex *request)
+void replica::on_client_read(dsn::message_ex *request)
 {
     if (status() == partition_status::PS_INACTIVE ||
         status() == partition_status::PS_POTENTIAL_SECONDARY) {

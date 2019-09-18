@@ -37,12 +37,12 @@ namespace replication {
 throttling_controller::throttling_controller()
     : _enabled(false),
       _partition_count(0),
-      _delay_qps(0),
+      _delay_units(0),
       _delay_ms(0),
-      _reject_qps(0),
+      _reject_units(0),
       _reject_delay_ms(0),
       _last_request_time(0),
-      _cur_request_count(0)
+      _cur_units(0)
 {
 }
 
@@ -62,10 +62,10 @@ bool throttling_controller::parse_from_env(const std::string &env_value,
         return false;
     }
     bool delay_parsed = false;
-    int32_t delay_qps = 0;
+    int64_t delay_units = 0;
     int64_t delay_ms = 0;
     bool reject_parsed = false;
-    int32_t reject_qps = 0;
+    int64_t reject_units = 0;
     int64_t reject_delay_ms = 0;
     for (std::string &s : sargs) {
         std::vector<std::string> sargs1;
@@ -74,11 +74,25 @@ bool throttling_controller::parse_from_env(const std::string &env_value,
             parse_error = "invalid field count, should be 3";
             return false;
         }
-        int32_t qps = 0;
-        if (!buf2int32(sargs1[0], qps) || qps < 0) {
-            parse_error = "invalid qps, should be non-negative int";
+
+        int64_t unit_multiplier = 1;
+        if (!sargs1[0].empty()) {
+            if (*sargs1[0].rbegin() == 'M') {
+                unit_multiplier = 1000 * 1000;
+            } else if (*sargs1[0].rbegin() == 'K') {
+                unit_multiplier = 1000;
+            }
+            if (unit_multiplier != 1) {
+                sargs1[0].pop_back();
+            }
+        }
+        int64_t units = 0;
+        if (!buf2int64(sargs1[0], units) || units < 0) {
+            parse_error = "invalid units, should be non-negative int";
             return false;
         }
+        units *= unit_multiplier;
+
         int64_t ms = 0;
         if (!buf2int64(sargs1[2], ms) || ms < 0) {
             parse_error = "invalid delay ms, should be non-negative int";
@@ -90,7 +104,7 @@ bool throttling_controller::parse_from_env(const std::string &env_value,
                 return false;
             }
             delay_parsed = true;
-            delay_qps = qps / partition_count + 1;
+            delay_units = units / partition_count + 1;
             delay_ms = ms;
         } else if (sargs1[1] == "reject") {
             if (reject_parsed) {
@@ -98,7 +112,7 @@ bool throttling_controller::parse_from_env(const std::string &env_value,
                 return false;
             }
             reject_parsed = true;
-            reject_qps = qps / partition_count + 1;
+            reject_units = units / partition_count + 1;
             reject_delay_ms = ms;
         } else {
             parse_error = "invalid throttling type";
@@ -110,9 +124,9 @@ bool throttling_controller::parse_from_env(const std::string &env_value,
     _enabled = true;
     _env_value = env_value;
     _partition_count = partition_count;
-    _delay_qps = delay_qps;
+    _delay_units = delay_units;
     _delay_ms = delay_ms;
-    _reject_qps = reject_qps;
+    _reject_units = reject_units;
     _reject_delay_ms = reject_delay_ms;
     return true;
 }
@@ -125,28 +139,28 @@ void throttling_controller::reset(bool &changed, std::string &old_env_value)
         _enabled = false;
         _env_value.clear();
         _partition_count = 0;
-        _delay_qps = 0;
+        _delay_units = 0;
         _delay_ms = 0;
-        _reject_qps = 0;
+        _reject_units = 0;
         _reject_delay_ms = 0;
         _last_request_time = 0;
-        _cur_request_count = 0;
+        _cur_units = 0;
     } else {
         changed = false;
     }
 }
 
-throttling_controller::throttling_type throttling_controller::control(const message_ex *request,
-                                                                      int64_t &delay_ms)
+throttling_controller::throttling_type
+throttling_controller::control(const message_ex *request, int32_t request_units, int64_t &delay_ms)
 {
     int64_t now_s = dsn_now_s();
     if (now_s != _last_request_time) {
-        _cur_request_count = 0;
+        _cur_units = 0;
         _last_request_time = now_s;
     }
-    _cur_request_count++;
-    if (_reject_qps > 0 && _cur_request_count > _reject_qps) {
-        _cur_request_count--;
+    _cur_units += request_units;
+    if (_reject_units > 0 && _cur_units > _reject_units) {
+        _cur_units -= request_units;
         int64_t client_timeout = request->header->client.timeout_ms;
         if (client_timeout > 0) {
             delay_ms = std::min(_reject_delay_ms, client_timeout / 2);
@@ -155,7 +169,7 @@ throttling_controller::throttling_type throttling_controller::control(const mess
         }
         return REJECT;
     }
-    if (_delay_qps > 0 && _cur_request_count > _delay_qps) {
+    if (_delay_units > 0 && _cur_units > _delay_units) {
         int64_t client_timeout = request->header->client.timeout_ms;
         if (client_timeout > 0) {
             delay_ms = std::min(_delay_ms, client_timeout / 2);

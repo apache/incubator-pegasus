@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     two-phase commit in replication
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "replica.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -42,7 +33,7 @@
 namespace dsn {
 namespace replication {
 
-void replica::on_client_write(task_code code, dsn::message_ex *request, bool ignore_throttling)
+void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 {
     _checker.only_one_thread_access();
 
@@ -53,7 +44,7 @@ void replica::on_client_write(task_code code, dsn::message_ex *request, bool ign
         return;
     }
 
-    task_spec *spec = task_spec::get(code);
+    task_spec *spec = task_spec::get(request->rpc_code());
     if (!_options->allow_non_idempotent_write && !spec->rpc_request_is_write_idempotent) {
         response_client_write(request, ERR_OPERATION_DISABLED);
         return;
@@ -70,39 +61,17 @@ void replica::on_client_write(task_code code, dsn::message_ex *request, bool ign
         return;
     }
 
-    if (_write_throttling_controller.enabled() && !ignore_throttling) {
-        int64_t delay_ms = 0;
-        auto type = _write_throttling_controller.control(request, delay_ms);
-        if (type != throttling_controller::PASS) {
-            if (type == throttling_controller::DELAY) {
-                tasking::enqueue(LPC_WRITE_THROTTLING_DELAY,
-                                 &_tracker,
-                                 [ this, code, req = message_ptr(request) ]() {
-                                     on_client_write(code, req, true);
-                                 },
-                                 get_gpid().thread_hash(),
-                                 std::chrono::milliseconds(delay_ms));
-                _counter_recent_write_throttling_delay_count->increment();
-            } else { // type == throttling_controller::REJECT
-                if (delay_ms > 0) {
-                    tasking::enqueue(LPC_WRITE_THROTTLING_DELAY,
-                                     &_tracker,
-                                     [ this, req = message_ptr(request) ]() {
-                                         response_client_write(req, ERR_BUSY);
-                                     },
-                                     get_gpid().thread_hash(),
-                                     std::chrono::milliseconds(delay_ms));
-                } else {
-                    response_client_write(request, ERR_BUSY);
-                }
-                _counter_recent_write_throttling_reject_count->increment();
-            }
+    if (!ignore_throttling) {
+        if (throttle_request(_write_qps_throttling_controller, request, 1)) {
+            return;
+        }
+        if (throttle_request(_write_size_throttling_controller, request, request->body_size())) {
             return;
         }
     }
 
     dinfo("%s: got write request from %s", name(), request->header->from_address.to_string());
-    auto mu = _primary_states.write_queue.add_work(code, request, this);
+    auto mu = _primary_states.write_queue.add_work(request->rpc_code(), request, this);
     if (mu) {
         init_prepare(mu, false);
     }
@@ -696,5 +665,5 @@ void replica::cleanup_preparing_mutations(bool wait)
         }
     }
 }
-}
-} // namespace
+} // namespace replication
+} // namespace dsn

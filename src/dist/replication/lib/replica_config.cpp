@@ -557,33 +557,7 @@ void replica::update_app_envs_internal(const std::map<std::string, std::string> 
         _deny_client_write = deny_client_write;
     }
 
-    // WRITE_THROTTLING
-    bool throttling_changed = false;
-    std::string old_throttling;
-    std::string parse_error;
-    find = envs.find(replica_envs::WRITE_THROTTLING);
-    if (find != envs.end()) {
-        if (!_write_throttling_controller.parse_from_env(find->second,
-                                                         _app_info.partition_count,
-                                                         parse_error,
-                                                         throttling_changed,
-                                                         old_throttling)) {
-            dwarn_replica("parse env failed, key = \"{}\", value = \"{}\", error = \"{}\"",
-                          replica_envs::WRITE_THROTTLING,
-                          find->second,
-                          parse_error);
-            // reset if parse failed
-            _write_throttling_controller.reset(throttling_changed, old_throttling);
-        }
-    } else {
-        // reset if env not found
-        _write_throttling_controller.reset(throttling_changed, old_throttling);
-    }
-    if (throttling_changed) {
-        ddebug_replica("switch _write_throttling_controller from \"{}\" to \"{}\"",
-                       old_throttling,
-                       _write_throttling_controller.env_value());
-    }
+    update_throttle_envs(envs);
 }
 
 void replica::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
@@ -1070,5 +1044,6 @@ void replica::replay_prepare_list()
         init_prepare(mu, true);
     }
 }
-}
-} // namespace
+
+} // namespace replication
+} // namespace dsn

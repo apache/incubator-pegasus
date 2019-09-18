@@ -745,7 +745,7 @@ void replica_stub::on_client_write(gpid id, dsn::message_ex *request)
     }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
-        rep->on_client_write(request->rpc_code(), request);
+        rep->on_client_write(request);
     } else {
         response_client(id, false, request, partition_status::PS_INVALID, ERR_OBJECT_NOT_FOUND);
     }
@@ -767,7 +767,7 @@ void replica_stub::on_client_read(gpid id, dsn::message_ex *request)
     }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
-        rep->on_client_read(request->rpc_code(), request);
+        rep->on_client_read(request);
     } else {
         response_client(id, true, request, partition_status::PS_INVALID, ERR_OBJECT_NOT_FOUND);
     }
