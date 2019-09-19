@@ -14,11 +14,11 @@ public:
 
     void test_table_level_slow_query()
     {
-        // set table level slow query threshold to a very small num,
-        // in order to ensure the get operation will exceed it
+        // set table level slow query threshold to a very 0,
+        // so that each get operation will exceed it
         std::map<std::string, std::string> envs;
         _server->query_app_envs(envs);
-        envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(20);
+        envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(0);
         _server->update_app_envs(envs);
 
         // do get operation, and assert that the perf counter is incremented by 1
@@ -30,9 +30,9 @@ public:
         long after_count = _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
         ASSERT_EQ(before_count + 1, after_count);
 
-        // set table level slow query threshold to 0,
+        // set table level slow query threshold to a very large num,
         // which means don't check whether the operation time exceed it or not
-        envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(0);
+        envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(LONG_MAX);
         _server->update_app_envs(envs);
 
         // do get operation, and assert that the perf counter doesn't change
