@@ -277,7 +277,6 @@ private:
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
     // table level slow query threshold. exceed this threshold will be logged.
-    // 0 means no check
     std::atomic<uint64_t> _table_level_slow_query_threshold_ns;
     // table level slow query log on-off switch
     std::atomic<bool> _enable_table_level_slow_query_log;
