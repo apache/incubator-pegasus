@@ -67,6 +67,8 @@ public:
 
     dupid_t id() const { return _id; }
 
+    const std::string &remote_cluster_name() const { return _remote_cluster_name; }
+
     // Thread-safe
     duplication_progress progress() const
     {

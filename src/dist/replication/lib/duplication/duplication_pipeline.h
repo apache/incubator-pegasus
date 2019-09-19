@@ -47,6 +47,22 @@ public:
     /// ==== Implementation ==== ///
 
     explicit ship_mutation(replica_duplicator *duplicator);
+
+    void ship(mutation_tuple_set &&in);
+
+private:
+    void update_progress();
+
+    friend struct ship_mutation_test;
+    friend class replica_duplicator_test;
+
+    std::unique_ptr<mutation_duplicator> _mutation_duplicator;
+
+    replica_duplicator *_duplicator;
+    replica *_replica;
+    replica_stub *_stub;
+
+    decree _last_decree{invalid_decree};
 };
 
 } // namespace replication
