@@ -603,29 +603,25 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         }
     }
 
-    // check if it exceed table level get time threshold
-    uint64_t table_level_slow_query_threshold_ns =
-        _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
-    if (table_level_slow_query_threshold_ns > 0) {
-        uint64_t time_used = dsn_now_ns() - start_time;
-        if (time_used >= table_level_slow_query_threshold_ns) {
-            if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
-                ::dsn::blob hash_key, sort_key;
-                pegasus_restore_key(key, hash_key, sort_key);
-                dwarn("%s: rocksdb exceed table level slow query threshold. from %s: "
-                      "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
-                      "value_size = %d, time_used = %" PRIu64 " ns",
-                      replica_name(),
-                      reply.to_address().to_string(),
-                      ::pegasus::utils::c_escape_string(hash_key).c_str(),
-                      ::pegasus::utils::c_escape_string(sort_key).c_str(),
-                      status.ToString().c_str(),
-                      (int)value.size(),
-                      time_used);
-            }
+    // check if it exceed table level slow query threshold
+    uint64_t time_used = dsn_now_ns() - start_time;
+    if (time_used >= _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed)) {
+        // add abnormal count
+        _pfc_recent_table_level_slow_query_count->increment();
 
-            // add abnormal count
-            _pfc_recent_table_level_slow_query_count->increment();
+        if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
+            ::dsn::blob hash_key, sort_key;
+            pegasus_restore_key(key, hash_key, sort_key);
+            dwarn("%s: rocksdb exceed table level slow query threshold. from %s: "
+                  "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
+                  "value_size = %d, time_used = %" PRIu64 " ns",
+                  replica_name(),
+                  reply.to_address().to_string(),
+                  ::pegasus::utils::c_escape_string(hash_key).c_str(),
+                  ::pegasus::utils::c_escape_string(sort_key).c_str(),
+                  status.ToString().c_str(),
+                  (int)value.size(),
+                  time_used);
         }
     }
 
