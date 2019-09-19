@@ -324,6 +324,19 @@ public:
     // thread safe
     decree max_commit_on_disk() const;
 
+    // Decree of the maximum garbage-collected mutation.
+    // For example, given mutations [20, 100], if [20, 50] is garbage-collected,
+    // the max_gced_decree=50.
+    // In production the mutations may not be ordered with the file-id. Given 3 log files:
+    //   #1:[20, 30], #2:[30, 50], #3:[10, 50]
+    // The third file is learned from primary of new epoch. Since it contains mutations smaller
+    // than the others, the max_gced_decree = 9.
+    // Returns `invalid_decree` when plog directory is empty.
+    //
+    // thread-safe & private log only
+    decree max_gced_decree(gpid gpid) const;
+    decree max_gced_decree_no_lock(gpid gpid) const;
+
     // thread-safe
     std::map<int, log_file_ptr> get_log_file_map() const;
 
