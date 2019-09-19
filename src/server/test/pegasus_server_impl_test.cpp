@@ -18,7 +18,7 @@ public:
         // in order to ensure the get operation will exceed it
         std::map<std::string, std::string> envs;
         _server->query_app_envs(envs);
-        envs[ROCKSDB_ENV_TABLE_LEVEL_SLOW_QUERY_THRESHOLD] = std::to_string(20);
+        envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(20);
         _server->update_app_envs(envs);
 
         // do get operation, and assert that the perf counter is incremented by 1
@@ -32,7 +32,7 @@ public:
 
         // set table level slow query threshold to 0,
         // which means don't check whether the operation time exceed it or not
-        envs[ROCKSDB_ENV_TABLE_LEVEL_SLOW_QUERY_THRESHOLD] = std::to_string(0);
+        envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(0);
         _server->update_app_envs(envs);
 
         // do get operation, and assert that the perf counter doesn't change

@@ -2437,8 +2437,8 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
 void pegasus_server_impl::update_table_level_slow_query(
     const std::map<std::string, std::string> &envs)
 {
-    // get table level latency from env
-    auto find = envs.find(ROCKSDB_ENV_TABLE_LEVEL_SLOW_QUERY_THRESHOLD);
+    // get table level slow query from env
+    auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
         uint64_t latency = 0;
         if (!dsn::buf2uint64(find->second, latency)) {
@@ -2451,15 +2451,15 @@ void pegasus_server_impl::update_table_level_slow_query(
             _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
         if (old_threshold_ns != latency) {
             ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
-                           ROCKSDB_ENV_TABLE_LEVEL_SLOW_QUERY_THRESHOLD,
+                           ROCKSDB_ENV_SLOW_QUERY_THRESHOLD,
                            old_threshold_ns,
                            latency);
             _table_level_slow_query_threshold_ns.store(latency, std::memory_order_relaxed);
         }
     }
 
-    // get table level latency log switch from env
-    find = envs.find(ROCKSDB_ENV_ENABLE_TABLE_LEVEL_SLOW_QUERY_LOG);
+    // get table level slow query log switch from env
+    find = envs.find(ROCKSDB_ENV_ENABLE_SLOW_QUERY_LOG);
     if (find != envs.end()) {
         bool enable = false;
         if (!dsn::buf2bool(find->second, enable)) {
@@ -2471,7 +2471,7 @@ void pegasus_server_impl::update_table_level_slow_query(
         bool old_enable = _enable_table_level_slow_query_log.load(std::memory_order_relaxed);
         if (old_enable != enable) {
             ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
-                           ROCKSDB_ENV_ENABLE_TABLE_LEVEL_SLOW_QUERY_LOG,
+                           ROCKSDB_ENV_ENABLE_SLOW_QUERY_LOG,
                            old_enable,
                            enable);
             _enable_table_level_slow_query_log.store(enable, std::memory_order_relaxed);
