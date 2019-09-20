@@ -10,17 +10,15 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS gtest pthread)
-
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_PROJ_LIBS pegasus.rproxylib
                 pegasus_base
-                ${MY_PROJ_LIBS}
                 pegasus_geo_lib
                 s2
                 pegasus_client_static
-                fmt)
+                gtest
+                )
 
 set(MY_BINPLACES "config.ini" "run.sh")
 

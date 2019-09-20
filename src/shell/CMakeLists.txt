@@ -26,14 +26,10 @@ set(MY_PROJ_LIBS
     PocoFoundation
     PocoNetSSL
     PocoJSON
-    crypto
-    fmt
     pegasus_geo_lib
     RocksDB::rocksdb
     s2
-    rt
-    aio
-    pthread)
+    )
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
