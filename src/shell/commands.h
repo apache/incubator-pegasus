@@ -11,7 +11,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
-#include <rocksdb/sst_dump_tool.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/output_utils.h>
 #include <dsn/utility/string_conv.h>
@@ -206,3 +205,9 @@ bool sst_dump(command_executor *e, shell_context *sc, arguments args);
 bool mlog_dump(command_executor *e, shell_context *sc, arguments args);
 
 bool local_get(command_executor *e, shell_context *sc, arguments args);
+
+bool rdb_key_hex2str(command_executor *e, shell_context *sc, arguments args);
+
+bool rdb_key_str2hex(command_executor *e, shell_context *sc, arguments args);
+
+bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args);
