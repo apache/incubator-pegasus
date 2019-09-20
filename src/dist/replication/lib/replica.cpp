@@ -349,6 +349,7 @@ void replica::close()
         dassert(_secondary_states.is_cleaned(), "secondary context is not cleared");
         dassert(_potential_secondary_states.is_cleaned(),
                 "potential secondary context is not cleared");
+        dassert(_split_states.is_cleaned(), "partition split context is not cleared");
     }
 
     // for partition_status::PS_ERROR, context cleanup is done here as they may block

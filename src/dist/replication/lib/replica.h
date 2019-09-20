@@ -338,11 +338,29 @@ private:
 
     void parent_prepare_states(const std::string &dir);
 
-    void child_copy_states(learn_state lstate,
-                           std::vector<mutation_ptr> mutation_list,
-                           std::vector<std::string> files,
-                           uint64_t total_file_size,
-                           std::shared_ptr<prepare_list> plist);
+    // child copy parent prepare list and call child_learn_states
+    void child_copy_prepare_list(learn_state lstate,
+                                 std::vector<mutation_ptr> mutation_list,
+                                 std::vector<std::string> plog_files,
+                                 uint64_t total_file_size,
+                                 std::shared_ptr<prepare_list> plist);
+
+    // child learn states(including checkpoint, private logs, in-memory mutations)
+    void child_learn_states(learn_state lstate,
+                            std::vector<mutation_ptr> mutation_list,
+                            std::vector<std::string> plog_files,
+                            uint64_t total_file_size,
+                            decree last_committed_decree);
+
+    error_code child_replay_private_log(std::vector<std::string> plog_files,
+                                        uint64_t total_file_size,
+                                        decree last_committed_decree);
+
+    error_code child_learn_mutations(std::vector<mutation_ptr> mutation_list,
+                                     decree last_committed_decree);
+
+    // child catch up parent states while executing async learn task
+    void child_catch_up_states();
 
     // return true if parent status is valid
     bool parent_check_states();
@@ -351,6 +369,8 @@ private:
     void parent_cleanup_split_context();
     // child suicide when partition split failed
     void child_handle_split_error(const std::string &error_msg);
+    // child handle error while async learn parent states
+    void child_handle_async_learn_error();
 
 private:
     friend class ::dsn::replication::replication_checker;

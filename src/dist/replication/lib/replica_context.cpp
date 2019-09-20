@@ -1290,9 +1290,14 @@ void cold_backup_context::file_upload_complete(const std::string &filename)
 
 bool partition_split_context::cleanup(bool force)
 {
+    CLEANUP_TASK(async_learn_task, force)
+
     parent_gpid.set_app_id(0);
+    is_prepare_list_copied = false;
     return true;
 }
+
+bool partition_split_context::is_cleaned() const { return async_learn_task == nullptr; }
 
 } // namespace replication
 } // namespace dsn

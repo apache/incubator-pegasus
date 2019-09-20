@@ -58,6 +58,7 @@ public:
     decree last_committed_decree() const { return _last_committed_decree; }
     void reset(decree init_decree);
     void truncate(decree init_decree);
+    void set_committer(mutation_committer committer) { _committer = committer; }
 
     //
     // for two-phase commit
