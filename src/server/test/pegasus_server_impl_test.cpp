@@ -14,32 +14,31 @@ public:
 
     void test_table_level_slow_query()
     {
-        // set table level slow query threshold to a very 0,
-        // so that each get operation will exceed it
-        std::map<std::string, std::string> envs;
-        _server->query_app_envs(envs);
-        envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(0);
-        _server->update_app_envs(envs);
+        struct test_case
+        {
+            uint64_t threshold;
+            uint8_t perf_counter_incr;
 
-        // do get operation, and assert that the perf counter is incremented by 1
-        std::string hash_key = "hash_key";
-        dsn::blob key(hash_key.data(), 0, hash_key.size());
-        ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
-        long before_count = _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
-        _server->on_get(key, reply);
-        long after_count = _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
-        ASSERT_EQ(before_count + 1, after_count);
+        } tests[] = {{0, 1}, {LONG_MAX, 0}};
 
-        // set table level slow query threshold to a very large num,
-        // which means don't check whether the operation time exceed it or not
-        envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(LONG_MAX);
-        _server->update_app_envs(envs);
+        for (auto test : tests) {
+            // set table level slow query threshold
+            std::map<std::string, std::string> envs;
+            _server->query_app_envs(envs);
+            envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(test.threshold);
+            _server->update_app_envs(envs);
 
-        // do get operation, and assert that the perf counter doesn't change
-        before_count = _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
-        _server->on_get(key, reply);
-        after_count = _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
-        ASSERT_EQ(before_count, after_count);
+            // do get operation, and assert whether the perf counter is incremented or not
+            std::string hash_key = "hash_key";
+            ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
+            long before_count =
+                _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
+            _server->on_get(dsn::blob(hash_key.data(), 0, hash_key.size()), reply);
+            long after_count =
+                _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
+
+            ASSERT_EQ(before_count + test.perf_counter_incr, after_count);
+        }
     }
 };
 
