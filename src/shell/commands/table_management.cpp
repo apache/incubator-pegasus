@@ -744,15 +744,15 @@ bool set_app_envs(command_executor *e, shell_context *sc, arguments args)
         values.emplace_back(args.argv[idx++]);
     }
 
-    configuration_update_app_env_response ret =
-        sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
-    if (ret.err != ::dsn::ERR_OK) {
-        fmt::print(stdout, "set app envs failed with err = {}\n", ret.err.to_string());
+    auto response = sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
+    if (!response.is_ok()) {
+        fprintf(stderr, "set app envs failed with rpc error!\n");
     } else {
-        fmt::print(stdout, "set app envs succeed\n");
-    }
-    if (!ret.hint_message.empty()) {
-        fmt::print(stdout, "{}\n", ret.hint_message);
+        ::dsn::error_code ec = response.get_value().err;
+        if (::dsn::ERR_OK == ec)
+            fprintf(stderr, "set app env failed with err = %s\n", ec.to_string());
+        else
+            fmt::print(stdout, "set app envs succeed\n");
     }
 
     return true;
