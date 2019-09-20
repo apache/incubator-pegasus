@@ -22,11 +22,6 @@ set(MY_PROJ_LIBS
     RocksDB::rocksdb
     pegasus_reporter
     pegasus_base
-    prometheus-cpp-pull
-    prometheus-cpp-push
-    prometheus-cpp-core
-    curl
-    idn
     pegasus_client_static
     zookeeper_mt
     event
@@ -35,11 +30,6 @@ set(MY_PROJ_LIBS
     PocoFoundation
     PocoNetSSL
     PocoJSON
-    crypto
-    fmt
-    rt
-    aio
-    pthread
     )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
