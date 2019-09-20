@@ -1496,36 +1496,17 @@ dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name
     return dsn::ERR_OBJECT_NOT_FOUND;
 }
 
-::dsn::error_code replication_ddl_client::set_app_envs(const std::string &app_name,
-                                                       const std::vector<std::string> &keys,
-                                                       const std::vector<std::string> &values)
+error_with<configuration_update_app_env_response>
+replication_ddl_client::set_app_envs(const std::string &app_name,
+                                     const std::vector<std::string> &keys,
+                                     const std::vector<std::string> &values)
 {
-    std::shared_ptr<configuration_update_app_env_request> req =
-        std::make_shared<configuration_update_app_env_request>();
+    auto req = make_unique<configuration_update_app_env_request>();
     req->__set_app_name(app_name);
-    req->__set_op(app_env_operation::type::APP_ENV_OP_SET);
     req->__set_keys(keys);
     req->__set_values(values);
-
-    auto resp_task = request_meta<configuration_update_app_env_request>(RPC_CM_UPDATE_APP_ENV, req);
-    resp_task->wait();
-
-    if (resp_task->error() != ERR_OK) {
-        return resp_task->error();
-    }
-    configuration_update_app_env_response response;
-    dsn::unmarshall(resp_task->get_response(), response);
-    if (response.err != ERR_OK) {
-        return response.err;
-    } else {
-        std::cout << "set app envs succeed" << std::endl;
-        if (!response.hint_message.empty()) {
-            std::cout << "=============================" << std::endl;
-            std::cout << response.hint_message << std::endl;
-            std::cout << "=============================" << std::endl;
-        }
-    }
-    return ERR_OK;
+    req->__set_op(app_env_operation::type::APP_ENV_OP_SET);
+    return call_rpc_sync(update_app_env_rpc(std::move(req), RPC_CM_UPDATE_APP_ENV));
 }
 
 ::dsn::error_code replication_ddl_client::del_app_envs(const std::string &app_name,

@@ -38,6 +38,8 @@ typedef rpc_holder<duplication_status_change_request, duplication_status_change_
 typedef rpc_holder<duplication_add_request, duplication_add_response> duplication_add_rpc;
 typedef rpc_holder<duplication_query_request, duplication_query_response> duplication_query_rpc;
 typedef rpc_holder<duplication_sync_request, duplication_sync_response> duplication_sync_rpc;
+typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
+    update_app_env_rpc;
 
 typedef int32_t dupid_t;
 

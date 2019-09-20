@@ -172,9 +172,10 @@ public:
 
     dsn::error_code get_app_envs(const std::string &app_name,
                                  std::map<std::string, std::string> &envs);
-    dsn::error_code set_app_envs(const std::string &app_name,
-                                 const std::vector<std::string> &keys,
-                                 const std::vector<std::string> &values);
+    error_with<configuration_update_app_env_response>
+    set_app_envs(const std::string &app_name,
+                 const std::vector<std::string> &keys,
+                 const std::vector<std::string> &values);
     dsn::error_code del_app_envs(const std::string &app_name, const std::vector<std::string> &keys);
     // precondition:
     //  -- if clear_all = true, just ignore prefix
