@@ -70,10 +70,8 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex * *requests, int count)>
         callback;
     if (detailed) {
-        callback = [&os, sc](int64_t decree,
-                             int64_t timestamp,
-                             dsn::message_ex **requests,
-                             int count) mutable {
+        callback = [&os, sc](
+            int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count) mutable {
             for (int i = 0; i < count; ++i) {
                 dsn::message_ex *request = requests[i];
                 dassert(request != nullptr, "");
