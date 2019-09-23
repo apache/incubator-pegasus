@@ -30,15 +30,8 @@ set(MY_PROJ_LIBS
         PocoFoundation
         PocoNetSSL
         PocoJSON
-        crypto
-        fmt
-        prometheus-cpp-push
-        prometheus-cpp-core
-        prometheus-cpp-pull
-        curl
         pegasus_base
         gtest
-        z rt aio pthread
         )
 add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)
