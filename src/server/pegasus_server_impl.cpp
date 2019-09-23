@@ -606,9 +606,6 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     // check if it exceed table level slow query threshold
     uint64_t time_used = dsn_now_ns() - start_time;
     if (time_used >= _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed) * 1e6) {
-        // add abnormal count
-        _pfc_recent_table_level_slow_query_count->increment();
-
         if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
@@ -623,6 +620,9 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                   (int)value.size(),
                   time_used);
         }
+
+        // add abnormal count
+        _pfc_recent_table_level_slow_query_count->increment();
     }
 
     resp.error = status.code();
@@ -996,6 +996,42 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                   time_used);
             _pfc_recent_abnormal_count->increment();
         }
+    }
+
+    // check if it exceed table level slow query threshold
+    uint64_t time_used = dsn_now_ns() - start_time;
+    if (time_used >= _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed) * 1e6) {
+        if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
+            dwarn("%s: rocksdb multi_get exceed table level slow query threshold. from %s: "
+                  "hash_key = \"%s\", "
+                  "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
+                  "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
+                  "max_kv_count = %d, max_kv_size = %d, reverse = %s, "
+                  "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
+                  "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns",
+                  replica_name(),
+                  reply.to_address().to_string(),
+                  ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
+                  ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
+                  request.start_inclusive ? "inclusive" : "exclusive",
+                  ::pegasus::utils::c_escape_string(request.stop_sortkey).c_str(),
+                  request.stop_inclusive ? "inclusive" : "exclusive",
+                  ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
+                      ->second,
+                  ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
+                  request.max_kv_count,
+                  request.max_kv_size,
+                  request.reverse ? "true" : "false",
+                  count,
+                  size,
+                  iterate_count,
+                  expire_count,
+                  filter_count,
+                  time_used);
+        }
+
+        // add abnormal count
+        _pfc_recent_table_level_slow_query_count->increment();
     }
 
     if (expire_count > 0) {
