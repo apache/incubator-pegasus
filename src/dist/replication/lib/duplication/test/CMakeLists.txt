@@ -25,6 +25,9 @@ set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_BINPLACES
         config-test.ini
+        log.1.0.handle_real_private_log
+        log.1.0.all_loaded_are_write_empties
+        log.1.0.handle_real_private_log2
         run.sh
 )
 

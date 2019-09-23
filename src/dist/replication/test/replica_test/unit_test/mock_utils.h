@@ -107,6 +107,8 @@ public:
         dcheck_eq_replica(err, ERR_OK);
     }
 
+    void init_private_log(mutation_log_ptr log) { _private_log = std::move(log); }
+
     replica_duplicator_manager &get_replica_duplicator_manager() { return *_duplication_mgr; }
 
     void as_primary() { _config.status = partition_status::PS_PRIMARY; }
@@ -269,6 +271,7 @@ public:
 
     void flush() {}
     void flush_once() {}
+
 private:
     std::vector<dsn::replication::mutation_ptr> _mu_list;
 };
