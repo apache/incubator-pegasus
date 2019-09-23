@@ -32,6 +32,41 @@ sed -i "s/%{meta.server.list}/$meta_list/g" "${DOCKER_DIR}/config.ini"
 sed -i "s/%{zk.server.list}/${zookeeper_addr}/g" "${DOCKER_DIR}/config.ini"
 
 cp -f "${ROOT}"/docker-compose.yml "${DOCKER_DIR}"
+for i in $(seq "${META_COUNT}"); do
+    meta_port=$((META_PORT+i-1))
+    echo "  meta$((i)):
+    image: @IMAGE_NAME@
+    ports:
+      - $meta_port:34601
+    volumes:
+      - ./config.ini:/pegasus/bin/config.ini:ro
+      - ./meta$((i))/data:/pegasus/data
+    command:
+      - meta
+    privileged: true
+    networks:
+      frontend:
+        ipv4_address: @META_IP_PREFIX@.1$((i))
+    restart: on-failure" >> "${DOCKER_DIR}"/docker-compose.yml
+    meta_ip=$(hostname -I | cut -d' ' -f1)
+    echo "META$((i))_ADDRESS=$meta_ip:$meta_port"
+done
+for i in $(seq "${REPLICA_COUNT}"); do
+    echo "  replica$((i)):
+    image: @IMAGE_NAME@
+    ports:
+      - 34801
+    volumes:
+      - ./config.ini:/pegasus/bin/config.ini:ro
+      - ./replica$((i))/data:/pegasus/data
+      - ./replica$((i))/slog:/pegasus/slog
+    command:
+      - replica
+    privileged: true
+    restart: on-failure
+    networks:
+      frontend:" >> "${DOCKER_DIR}"/docker-compose.yml
+done
 sed -i "s/@META_IP_PREFIX@/${META_IP_PREFIX}/g" "${DOCKER_DIR}"/docker-compose.yml
 sed -i "s/@IMAGE_NAME@/${IMAGE_NAME}/g" "${DOCKER_DIR}"/docker-compose.yml
 sed -i "s/@META_PORT@/${META_PORT}/g" "${DOCKER_DIR}"/docker-compose.yml

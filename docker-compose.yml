@@ -17,31 +17,3 @@ services:
       ZOO_SERVERS: server.1=zookeeper:2888:3888
     networks:
       frontend:
-  meta1:
-    image: @IMAGE_NAME@
-    ports:
-      - "@META_PORT@:34601"
-    volumes:
-      - ./config.ini:/pegasus/bin/config.ini:ro
-      - ./meta1/data:/pegasus/data
-    command:
-      - meta
-    privileged: true
-    networks:
-      frontend:
-        ipv4_address: @META_IP_PREFIX@.11
-    restart: on-failure
-  replica1:
-    image: @IMAGE_NAME@
-    ports:
-      - "34801"
-    volumes:
-      - ./config.ini:/pegasus/bin/config.ini:ro
-      - ./replica1/data:/pegasus/data
-      - ./replica1/slog:/pegasus/slog
-    command:
-      - replica
-    privileged: true
-    restart: on-failure
-    networks:
-      frontend:

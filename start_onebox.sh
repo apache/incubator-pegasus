@@ -17,11 +17,6 @@ pwd
 docker-compose up -d
 
 function print_nodes() {
-  echo ""
-  for i in $(seq "${META_COUNT}"); do
-    echo "META${i}: ${META_IP_PREFIX}.1$((i)):34601"
-  done
-
   cd "${DOCKER_DIR}" || exit 1
   echo ""
   docker-compose ps

@@ -18,6 +18,8 @@ export IMAGE_NAME='registry.cn-beijing.aliyuncs.com\/pegasus-kv\/pegasus:1.11.5'
 # allow_non_idempotent_write = true
 # for jepsen test this option must be enabled.
 export IDEMPOTENT=true
+export META_COUNT=1                              # Number of meta instances.
+export REPLICA_COUNT=1                           # Number of replica instances.
 
 # Config End #
 ##############
@@ -26,7 +28,4 @@ export IDEMPOTENT=true
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 export ROOT
-
 export DOCKER_DIR=${ROOT}/${CLUSTER_NAME}-docker # Where docker onebox resides.
-export META_COUNT=1                              # Number of meta instances.
-export REPLICA_COUNT=1                           # Number of replica instances.
