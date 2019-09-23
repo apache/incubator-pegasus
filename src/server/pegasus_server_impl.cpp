@@ -605,7 +605,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
 
     // check if it exceed table level slow query threshold
     uint64_t time_used = dsn_now_ns() - start_time;
-    if (time_used >= _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed) * 1e-6) {
+    if (time_used >= _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed) * 1e6) {
         // add abnormal count
         _pfc_recent_table_level_slow_query_count->increment();
 
