@@ -21,6 +21,25 @@ namespace pegasus {
 
 #define PEGASUS_DATA_VERSION_MAX 0u
 
+/// Generates timetag in host endian.
+/// \see comment on pegasus_value_generator::generate_value_v1
+inline uint64_t generate_timetag(uint64_t timestamp, uint8_t cluster_id, bool delete_tag)
+{
+    return timestamp << 8 | cluster_id << 1 | delete_tag;
+}
+
+inline uint8_t extract_cluster_id_from_timetag(uint64_t timetag)
+{
+    // 7bit: 0x7F
+    return static_cast<uint8_t>((timetag >> 1) & 0x7F);
+}
+
+inline uint64_t extract_timestamp_from_timetag(uint64_t timetag)
+{
+    // 56bit: 0xFFFFFFFFFFFFFFL
+    return static_cast<uint64_t>((timetag >> 8) & 0xFFFFFFFFFFFFFFL);
+}
+
 /// Extracts expire_ts from rocksdb value with given version.
 /// The value schema must be in v0.
 /// \return expire_ts in host endian

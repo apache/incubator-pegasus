@@ -113,6 +113,10 @@ class scan_request;
 
 class scan_response;
 
+class duplicate_request;
+
+class duplicate_response;
+
 typedef struct _update_request__isset
 {
     _update_request__isset() : key(false), value(false), expire_ts_seconds(false) {}
@@ -1787,6 +1791,118 @@ public:
 void swap(scan_response &a, scan_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const scan_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _duplicate_request__isset
+{
+    _duplicate_request__isset() : timetag(false), task_code(false), raw_message(false), hash(false)
+    {
+    }
+    bool timetag : 1;
+    bool task_code : 1;
+    bool raw_message : 1;
+    bool hash : 1;
+} _duplicate_request__isset;
+
+class duplicate_request
+{
+public:
+    duplicate_request(const duplicate_request &);
+    duplicate_request(duplicate_request &&);
+    duplicate_request &operator=(const duplicate_request &);
+    duplicate_request &operator=(duplicate_request &&);
+    duplicate_request() : timetag(0), hash(0) {}
+
+    virtual ~duplicate_request() throw();
+    int64_t timetag;
+    ::dsn::task_code task_code;
+    ::dsn::blob raw_message;
+    int64_t hash;
+
+    _duplicate_request__isset __isset;
+
+    void __set_timetag(const int64_t val);
+
+    void __set_task_code(const ::dsn::task_code &val);
+
+    void __set_raw_message(const ::dsn::blob &val);
+
+    void __set_hash(const int64_t val);
+
+    bool operator==(const duplicate_request &rhs) const
+    {
+        if (!(timetag == rhs.timetag))
+            return false;
+        if (!(task_code == rhs.task_code))
+            return false;
+        if (!(raw_message == rhs.raw_message))
+            return false;
+        if (!(hash == rhs.hash))
+            return false;
+        return true;
+    }
+    bool operator!=(const duplicate_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const duplicate_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(duplicate_request &a, duplicate_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const duplicate_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _duplicate_response__isset
+{
+    _duplicate_response__isset() : error(false) {}
+    bool error : 1;
+} _duplicate_response__isset;
+
+class duplicate_response
+{
+public:
+    duplicate_response(const duplicate_response &);
+    duplicate_response(duplicate_response &&);
+    duplicate_response &operator=(const duplicate_response &);
+    duplicate_response &operator=(duplicate_response &&);
+    duplicate_response() : error(0) {}
+
+    virtual ~duplicate_response() throw();
+    int32_t error;
+
+    _duplicate_response__isset __isset;
+
+    void __set_error(const int32_t val);
+
+    bool operator==(const duplicate_response &rhs) const
+    {
+        if (!(error == rhs.error))
+            return false;
+        return true;
+    }
+    bool operator!=(const duplicate_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const duplicate_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(duplicate_response &a, duplicate_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const duplicate_response &obj)
 {
     obj.printTo(out);
     return out;
