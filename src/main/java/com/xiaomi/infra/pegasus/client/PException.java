@@ -4,8 +4,10 @@
 package com.xiaomi.infra.pegasus.client;
 
 /**
- * @author qinzuoyan
- *     <p>Pegasus exception.
+ * The generic type of exception thrown by all of the Pegasus APIs.
+ *
+ * <p>Common strategies of handling PException include retrying, or ignoring. We recommend you to
+ * log the exception for future debugging.
  */
 public class PException extends Exception {
   private static final long serialVersionUID = 4436491238550521203L;

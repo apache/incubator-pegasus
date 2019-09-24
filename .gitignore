@@ -10,3 +10,4 @@ log.txt
 rolling_log/
 .vscode/
 google-java-format-*
+pegasus-*

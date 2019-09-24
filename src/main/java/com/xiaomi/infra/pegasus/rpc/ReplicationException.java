@@ -20,7 +20,7 @@ public class ReplicationException extends Exception {
   }
 
   public ReplicationException(error_code.error_types t, String message) {
-    super(t.name() + ": " + message);
+    super(t.name() + (message.isEmpty() ? "" : (": " + message)));
     err_type = t;
   }
 

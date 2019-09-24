@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 
-/** Created by weijiesun on 17-9-13. */
 public class ReplicaSession {
   public static class RequestEntry {
     public int sequenceId;
@@ -87,7 +86,7 @@ public class ReplicaSession {
     entry.callback = callbackFunc;
     // NOTICE: must make sure the msg is put into the pendingResponse map BEFORE
     // the timer task is scheduled.
-    pendingResponse.put(new Integer(entry.sequenceId), entry);
+    pendingResponse.put(entry.sequenceId, entry);
     entry.timeoutTask = addTimer(entry.sequenceId, timeoutInMilliseconds);
     entry.timeoutMs = timeoutInMilliseconds;
 
@@ -136,7 +135,7 @@ public class ReplicaSession {
   }
 
   public RequestEntry getAndRemoveEntry(int seqID) {
-    return pendingResponse.remove(new Integer(seqID));
+    return pendingResponse.remove(seqID);
   }
 
   public final String name() {
@@ -179,7 +178,7 @@ public class ReplicaSession {
     synchronized (pendingSend) {
       while (!pendingSend.isEmpty()) {
         RequestEntry e = pendingSend.poll();
-        if (pendingResponse.get(new Integer(e.sequenceId)) != null) {
+        if (pendingResponse.get(e.sequenceId) != null) {
           write(e, newCache);
         } else {
           logger.info("{}: {} is removed from pending, perhaps timeout", name(), e.sequenceId);
@@ -221,6 +220,7 @@ public class ReplicaSession {
     }
   }
 
+  // Notify the RPC sender if failure occurred.
   private void tryNotifyWithSequenceID(int seqID, error_types errno, boolean isTimeoutTask) {
     logger.debug(
         "{}: {} is notified with error {}, isTimeoutTask {}",
@@ -228,12 +228,9 @@ public class ReplicaSession {
         seqID,
         errno.toString(),
         isTimeoutTask);
-    RequestEntry entry = pendingResponse.remove(new Integer(seqID));
+    RequestEntry entry = pendingResponse.remove(seqID);
     if (entry != null) {
       if (!isTimeoutTask) entry.timeoutTask.cancel(true);
-      entry.op.rpc_error.errno = errno;
-      entry.callback.run();
-
       if (errno == error_types.ERR_TIMEOUT) {
         long firstTs = firstRecentTimedOutMs.get();
         if (firstTs == 0) {
@@ -246,12 +243,15 @@ public class ReplicaSession {
                 "{}: actively close the session because it's not responding for {} seconds",
                 name(),
                 sessionResetTimeWindowMs / 1000);
-            closeSession();
+            closeSession(); // maybe fail when the session is already disconnected.
+            errno = error_types.ERR_SESSION_RESET;
           }
         }
       } else {
         firstRecentTimedOutMs.set(0);
       }
+      entry.op.rpc_error.errno = errno;
+      entry.callback.run();
     } else {
       logger.warn(
           "{}: {} is removed by others, current error {}, isTimeoutTask {}",
@@ -284,6 +284,9 @@ public class ReplicaSession {
             });
   }
 
+  // Notify the RPC caller when times out. If the RPC finishes in time,
+  // this task will be cancelled.
+  // TODO(wutao1): call it addTimeoutTicker
   private ScheduledFuture addTimer(final int seqID, long timeoutInMillseconds) {
     return rpcGroup.schedule(
         new Runnable() {
@@ -337,7 +340,7 @@ public class ReplicaSession {
   }
 
   interface MessageResponseFilter {
-    public boolean abandonIt(error_types err, TMessage header);
+    boolean abandonIt(error_types err, TMessage header);
   }
 
   MessageResponseFilter filter = null;

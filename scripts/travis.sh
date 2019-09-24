@@ -26,17 +26,23 @@ if [[ $(git status -s) ]]; then
     exit 1
 fi
 
-# start pegasus onebox environment
-wget https://github.com/XiaoMi/pegasus/releases/download/v1.11.3/pegasus-1.11.3-b45cb06-linux-x86_64-release.zip
-unzip pegasus-1.11.3-b45cb06-linux-x86_64-release.zip
-cd pegasus-1.11.3-b45cb06-linux-x86_64-release
+PEGASUS_PKG="pegasus-tools-1.11.6-9f4e5ae-glibc2.12-release"
+PEGASUS_PKG_URL="https://github.com/XiaoMi/pegasus/releases/download/v1.11.6/pegasus-tools-1.11.6-9f4e5ae-glibc2.12-release.tar.gz"
 
+# start pegasus onebox environment
+if [ ! -f $PEGASUS_PKG.tar.gz ]; then
+    wget $PEGASUS_PKG_URL
+    tar xvf $PEGASUS_PKG.tar.gz
+fi
+cd $PEGASUS_PKG
+
+sed -i "s#https://github.com/xiaomi/pegasus-common/raw/master/zookeeper-3.4.6.tar.gz#https://github.com/XiaoMi/pegasus-common/releases/download/deps/zookeeper-3.4.6.tar.gz#" scripts/start_zk.sh
 ./run.sh start_onebox -w
 cd ../
 
 if ! mvn clean test
 then
-    cd pegasus-1.11.3-b45cb06-linux-x86_64-release
+    cd $PEGASUS_PKG
     ./run.sh list_onebox
     exit 1
 fi
