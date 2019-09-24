@@ -42,10 +42,6 @@ message (STATUS "pegasus Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAK
 set(CMAKE_PREFIX_PATH ${PEGASUS_PROJECT_DIR}/rocksdb/build/output;${CMAKE_PREFIX_PATH})
 find_package(RocksDB REQUIRED) # RocksDB::rocksdb means librocksdb.a
 
-#prometheus
-set(CMAKE_PREFIX_PATH ${DSN_THIRDPARTY_ROOT};${CMAKE_PREFIX_PATH})
-find_package(prometheus-cpp)#TODO(huangwei5) make it optional
-
 add_subdirectory(base)
 add_subdirectory(reporter)
 add_subdirectory(base/test)
