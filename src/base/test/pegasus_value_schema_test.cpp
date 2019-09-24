@@ -44,4 +44,3 @@ TEST(value_schema, generate_and_extract_timetag)
         }
     }
 }
-
