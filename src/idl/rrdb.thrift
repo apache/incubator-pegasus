@@ -251,6 +251,19 @@ struct scan_response
     6:string        server;
 }
 
+struct duplicate_request
+{
+    1:i64                     timetag;
+    2:dsn.task_code           task_code;
+    3:dsn.blob                raw_message;
+    4:i64                     hash;
+}
+
+struct duplicate_response
+{
+    1:i32           error;
+}
+
 service rrdb
 {
     update_response put(1:update_request update);
