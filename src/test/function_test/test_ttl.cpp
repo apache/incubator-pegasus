@@ -37,9 +37,8 @@ void set_default_ttl(int ttl)
 
     std::string env = envs[TABLE_LEVEL_DEFAULT_TTL];
     if ((env.empty() && ttl != 0) || env != std::to_string(ttl)) {
-        auto response = ddl_client->set_app_envs(client->get_app_name(),
-                                                 {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
-                                                 {std::to_string(time(nullptr))});
+        auto response = ddl_client->set_app_envs(
+            client->get_app_name(), {TABLE_LEVEL_DEFAULT_TTL}, {std::to_string(ttl)});
         ASSERT_EQ(true, response.is_ok());
         ASSERT_EQ(ERR_OK, response.get_value().err);
 
