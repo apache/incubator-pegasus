@@ -28,9 +28,6 @@ using namespace dsn::literals::chrono_literals;
 namespace pegasus {
 namespace server {
 
-// 100ms
-static const uint64_t DEFAULT_TABLE_LEVEL_SLOW_QUERY_THRESHOLD_MS = 100;
-
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 static std::string chkpt_get_dir_name(int64_t decree)
@@ -50,6 +47,9 @@ std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
+
+// 100ms
+static const uint64_t default_table_level_slow_query_threshold_ms = 100;
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
@@ -95,7 +95,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
     // table level abnormal get time threshold(ms)
-    _table_level_slow_query_threshold_ms.store(DEFAULT_TABLE_LEVEL_SLOW_QUERY_THRESHOLD_MS,
+    _table_level_slow_query_threshold_ms.store(default_table_level_slow_query_threshold_ms,
                                                std::memory_order_relaxed);
     _enable_table_level_slow_query_log.store(false, std::memory_order_relaxed);
 
