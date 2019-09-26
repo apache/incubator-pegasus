@@ -16,24 +16,36 @@ public:
     {
         struct test_case
         {
-            uint64_t threshold;
+            uint8_t op_type; // 0-on_get, 1-on_multi_get
+            uint64_t slow_query_threshold;
             uint8_t perf_counter_incr;
-
-        } tests[] = {{0, 1}, {LONG_MAX, 0}};
+        } tests[] = {{0, 0, 1}, {0, LONG_MAX, 0}, {1, 0, 1}, {1, LONG_MAX, 0}};
 
         for (auto test : tests) {
             // set table level slow query threshold
             std::map<std::string, std::string> envs;
             _server->query_app_envs(envs);
-            envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(test.threshold);
+            envs[ROCKSDB_ENV_SLOW_QUERY_THRESHOLD] = std::to_string(test.slow_query_threshold);
             _server->update_app_envs(envs);
 
-            // do get operation, and assert whether the perf counter is incremented or not
-            std::string hash_key = "hash_key";
-            ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
+            // do on_get/on_multi_get operation,
+            // and assert whether the perf counter is incremented or not
             long before_count =
                 _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
-            _server->on_get(dsn::blob(hash_key.data(), 0, hash_key.size()), reply);
+            if (test.op_type == 0) {
+                std::string test_key = "test_key";
+                ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
+                _server->on_get(dsn::blob(test_key.data(), 0, test_key.size()), reply);
+            } else {
+                std::string hash_key = "test_hash_key";
+                std::string sort_key = "test_sort_key";
+
+                ::dsn::apps::multi_get_request request;
+                request.__set_hash_key(dsn::blob(hash_key.data(), 0, hash_key.size()));
+                request.__set_sort_keys({dsn::blob(sort_key.data(), 0, sort_key.size())});
+                ::dsn::rpc_replier<::dsn::apps::multi_get_response> reply(nullptr);
+                _server->on_multi_get(request, reply);
+            }
             long after_count =
                 _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
 
