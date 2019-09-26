@@ -43,13 +43,12 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
            std::string(name) == chkpt_get_dir_name(decree);
 }
 
+// 100ms
+static const uint64_t default_table_level_slow_query_threshold_ms = 100;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
-
-// 100ms
-static const uint64_t default_table_level_slow_query_threshold_ms = 100;
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
