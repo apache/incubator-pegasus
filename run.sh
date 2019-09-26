@@ -536,7 +536,7 @@ function run_start_onebox()
     COLLECTOR_COUNT=0
     APP_NAME=temp
     PARTITION_COUNT=8
-    WAIT_HEALHY=false
+    WAIT_HEALTHY=false
     SERVER_PATH=${DSN_ROOT}/bin/pegasus_server
     CONFIG_FILE=""
     USE_PRODUCT_CONFIG=false
@@ -568,7 +568,7 @@ function run_start_onebox()
                 shift
                 ;;
             -w|--wait_healthy)
-                WAIT_HEALHY=true
+                WAIT_HEALTHY=true
                 ;;
             -s|--server_path)
                 SERVER_PATH="$2"
@@ -680,7 +680,7 @@ function run_start_onebox()
         cd ..
     fi
 
-    if [ $WAIT_HEALHY == "true" ]; then
+    if [ $WAIT_HEALTHY == "true" ]; then
         cd $ROOT
         echo "Wait cluster to become healthy..."
         sleeped=0

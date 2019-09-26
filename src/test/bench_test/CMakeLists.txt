@@ -13,7 +13,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
         pegasus_client_static
         RocksDB::rocksdb
-        fmt)
+        )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

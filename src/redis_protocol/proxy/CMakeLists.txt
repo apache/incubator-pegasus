@@ -12,15 +12,10 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS pegasus.rproxylib
                  pegasus_geo_lib
                  pegasus_reporter
-                 prometheus-cpp-pull
-                 prometheus-cpp-push
-                 prometheus-cpp-core
-                 curl
-                 idn
                  event
                  s2
                  pegasus_client_static
-                 fmt)
+                 )
 
 set(MY_BINPLACES "config.ini")
 
