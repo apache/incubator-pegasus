@@ -2473,44 +2473,43 @@ void pegasus_server_impl::update_table_level_slow_query(
     const std::map<std::string, std::string> &envs)
 {
     // get table level slow query from env
+    uint64_t threshold_ms = default_table_level_slow_query_threshold_ms;
     auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
-        uint64_t threshold_ms = 0;
         if (!dsn::buf2uint64(find->second, threshold_ms)) {
             derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }
-
-        // check if it is changed
-        uint64_t old_threshold_ms =
-            _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed);
-        if (old_threshold_ms != threshold_ms) {
-            ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
-                           ROCKSDB_ENV_SLOW_QUERY_THRESHOLD,
-                           old_threshold_ms,
-                           threshold_ms);
-            _table_level_slow_query_threshold_ms.store(threshold_ms, std::memory_order_relaxed);
-        }
     }
 
-    // get table level slow query log switch from env
+    // get table level slow query log on-off switch from env
+    bool enable = false;
     find = envs.find(ROCKSDB_ENV_ENABLE_SLOW_QUERY_LOG);
     if (find != envs.end()) {
-        bool enable = false;
         if (!dsn::buf2bool(find->second, enable)) {
             derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }
+    }
 
-        // check if it is changed
-        bool old_enable = _enable_table_level_slow_query_log.load(std::memory_order_relaxed);
-        if (old_enable != enable) {
-            ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
-                           ROCKSDB_ENV_ENABLE_SLOW_QUERY_LOG,
-                           old_enable,
-                           enable);
-            _enable_table_level_slow_query_log.store(enable, std::memory_order_relaxed);
-        }
+    // check if they are changed
+    uint64_t old_threshold_ms =
+        _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed);
+    if (old_threshold_ms != threshold_ms) {
+        ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
+                       ROCKSDB_ENV_SLOW_QUERY_THRESHOLD,
+                       old_threshold_ms,
+                       threshold_ms);
+        _table_level_slow_query_threshold_ms.store(threshold_ms, std::memory_order_relaxed);
+    }
+
+    bool old_enable = _enable_table_level_slow_query_log.load(std::memory_order_relaxed);
+    if (old_enable != enable) {
+        ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
+                       ROCKSDB_ENV_ENABLE_SLOW_QUERY_LOG,
+                       old_enable,
+                       enable);
+        _enable_table_level_slow_query_log.store(enable, std::memory_order_relaxed);
     }
 }
 
