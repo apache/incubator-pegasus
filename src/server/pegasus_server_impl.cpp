@@ -608,8 +608,8 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
-            dwarn("%s: rocksdb time of get exceed table level slow query threshold. from %s: "
-                  "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
+            dwarn("%s: rocksdb get operation time exceed table level slow query threshold. "
+                  "from %s: hash_key = \"%s\", sort_key = \"%s\", return = %s, "
                   "value_size = %d, time_used = %" PRIu64 " ns",
                   replica_name(),
                   reply.to_address().to_string(),
@@ -1001,8 +1001,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     uint64_t time_used = dsn_now_ns() - start_time;
     if (time_used >= _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed) * 1e6) {
         if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
-            dwarn("%s: rocksdb time of multi_get exceed table level slow query threshold. from %s: "
-                  "hash_key = \"%s\", "
+            dwarn("%s: rocksdb multi_get operation time exceed table level slow query threshold. "
+                  "from %s: hash_key = \"%s\", "
                   "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
                   "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
                   "max_kv_count = %d, max_kv_size = %d, reverse = %s, "
