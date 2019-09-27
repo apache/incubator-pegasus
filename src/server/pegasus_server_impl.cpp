@@ -602,7 +602,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         }
     }
 
-    // check if it exceed table level slow query threshold
+    // check if operation time exceed table level slow query threshold
     uint64_t time_used = dsn_now_ns() - start_time;
     if (time_used >= _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed) * 1e6) {
         if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
@@ -616,11 +616,11 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                   ::pegasus::utils::c_escape_string(hash_key).c_str(),
                   ::pegasus::utils::c_escape_string(sort_key).c_str(),
                   status.ToString().c_str(),
-                  (int)value.size(),
+                  value.size(),
                   time_used);
         }
 
-        // add abnormal count
+        // add slow query count
         _pfc_recent_table_level_slow_query_count->increment();
     }
 
@@ -997,7 +997,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         }
     }
 
-    // check if it exceed table level slow query threshold
+    // check if operation time exceed table level slow query threshold
     uint64_t time_used = dsn_now_ns() - start_time;
     if (time_used >= _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed) * 1e6) {
         if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
@@ -1029,7 +1029,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                   time_used);
         }
 
-        // add abnormal count
+        // add slow query count
         _pfc_recent_table_level_slow_query_count->increment();
     }
 
