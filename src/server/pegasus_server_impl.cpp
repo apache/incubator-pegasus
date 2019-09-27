@@ -2481,7 +2481,7 @@ void pegasus_server_impl::update_table_level_slow_query(
             return;
         }
 
-        // check if it is modified
+        // check if it is changed
         uint64_t old_threshold_ms =
             _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed);
         if (old_threshold_ms != threshold_ms) {
@@ -2502,7 +2502,7 @@ void pegasus_server_impl::update_table_level_slow_query(
             return;
         }
 
-        // check if it is modified
+        // check if it is changed
         bool old_enable = _enable_table_level_slow_query_log.load(std::memory_order_relaxed);
         if (old_enable != enable) {
             ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
