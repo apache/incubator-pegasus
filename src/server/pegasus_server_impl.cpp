@@ -93,7 +93,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
-    // table level abnormal get time threshold(ms)
+    // table level slow query time threshold(ms)
     _table_level_slow_query_threshold_ms.store(default_table_level_slow_query_threshold_ms,
                                                std::memory_order_relaxed);
     _enable_table_level_slow_query_log.store(false, std::memory_order_relaxed);
