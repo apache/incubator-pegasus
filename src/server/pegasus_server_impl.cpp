@@ -620,7 +620,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                   time_used);
         }
 
-        // add slow query count
+        // add table level slow query count
         _pfc_recent_table_level_slow_query_count->increment();
     }
 
@@ -1029,7 +1029,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                   time_used);
         }
 
-        // add slow query count
+        // add table level slow query count
         _pfc_recent_table_level_slow_query_count->increment();
     }
 
