@@ -16,10 +16,10 @@ public:
     {
         struct test_case
         {
-            uint8_t op_type; // 0-on_get, 1-on_multi_get
+            bool is_multi_get; // false-on_get, true-on_multi_get
             uint64_t slow_query_threshold;
             uint8_t perf_counter_incr;
-        } tests[] = {{0, 0, 1}, {0, LONG_MAX, 0}, {1, 0, 1}, {1, LONG_MAX, 0}};
+        } tests[] = {{false, 0, 1}, {false, LONG_MAX, 0}, {true, 0, 1}, {true, LONG_MAX, 0}};
 
         for (auto test : tests) {
             // set table level slow query threshold
@@ -32,7 +32,7 @@ public:
             // and assert whether the perf counter is incremented or not
             long before_count =
                 _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
-            if (test.op_type == 0) {
+            if (!test.is_multi_get) {
                 std::string test_key = "test_key";
                 ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
                 _server->on_get(dsn::blob(test_key.data(), 0, test_key.size()), reply);
