@@ -43,8 +43,8 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
            std::string(name) == chkpt_get_dir_name(decree);
 }
 
-// 100ms
 static const uint64_t default_table_level_slow_query_threshold_ms = 100;
+static const bool default_enable_table_level_slow_query_log = false;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
@@ -96,7 +96,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     // table level slow query time threshold(ms)
     _table_level_slow_query_threshold_ms.store(default_table_level_slow_query_threshold_ms,
                                                std::memory_order_relaxed);
-    _enable_table_level_slow_query_log.store(false, std::memory_order_relaxed);
+    _enable_table_level_slow_query_log.store(default_enable_table_level_slow_query_log,
+                                             std::memory_order_relaxed);
 
     // init db options
     _db_opts.pegasus_data = true;
@@ -2483,7 +2484,7 @@ void pegasus_server_impl::update_table_level_slow_query(
     }
 
     // get table level slow query log on-off switch from env
-    bool enable = false;
+    bool enable = default_enable_table_level_slow_query_log;
     find = envs.find(ROCKSDB_ENV_ENABLE_SLOW_QUERY_LOG);
     if (find != envs.end()) {
         if (!dsn::buf2bool(find->second, enable)) {
