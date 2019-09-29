@@ -43,7 +43,6 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
            std::string(name) == chkpt_get_dir_name(decree);
 }
 
-static const bool default_enable_table_level_slow_query_log = false;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
@@ -92,11 +91,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
-    // table level slow query time threshold(ms)
-    _table_level_slow_query_threshold_ms.store(_abnormal_get_time_threshold_ns,
+    // table level slow query time threshold
+    _table_level_slow_query_threshold_ns.store(_abnormal_get_time_threshold_ns,
                                                std::memory_order_relaxed);
-    _enable_table_level_slow_query_log.store(default_enable_table_level_slow_query_log,
-                                             std::memory_order_relaxed);
 
     // init db options
     _db_opts.pegasus_data = true;
@@ -575,45 +572,30 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         }
     }
 
-    if (_abnormal_get_time_threshold_ns || _abnormal_get_size_threshold) {
-        uint64_t time_used = dsn_now_ns() - start_time;
-        if ((_abnormal_get_time_threshold_ns && time_used >= _abnormal_get_time_threshold_ns) ||
-            (_abnormal_get_size_threshold && value.size() >= _abnormal_get_size_threshold)) {
-            ::dsn::blob hash_key, sort_key;
-            pegasus_restore_key(key, hash_key, sort_key);
-            dwarn("%s: rocksdb abnormal get from %s: "
-                  "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
-                  "value_size = %d, time_used = %" PRIu64 " ns",
-                  replica_name(),
-                  reply.to_address().to_string(),
-                  ::pegasus::utils::c_escape_string(hash_key).c_str(),
-                  ::pegasus::utils::c_escape_string(sort_key).c_str(),
-                  status.ToString().c_str(),
-                  (int)value.size(),
-                  time_used);
-            _pfc_recent_abnormal_count->increment();
-        }
-    }
-
-    // check if operation time exceed table level slow query threshold
     uint64_t time_used = dsn_now_ns() - start_time;
-    if (time_used >= _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed) * 1e6) {
-        if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
-            ::dsn::blob hash_key, sort_key;
-            pegasus_restore_key(key, hash_key, sort_key);
-            dwarn("%s: rocksdb get operation time exceed table level slow query threshold. "
-                  "from %s: hash_key = \"%s\", sort_key = \"%s\", return = %s, "
-                  "value_size = %d, time_used = %" PRIu64 " ns",
-                  replica_name(),
-                  reply.to_address().to_string(),
-                  ::pegasus::utils::c_escape_string(hash_key).c_str(),
-                  ::pegasus::utils::c_escape_string(sort_key).c_str(),
-                  status.ToString().c_str(),
-                  value.size(),
-                  time_used);
-        }
-
-        // increment slow query count by 1
+    uint64_t table_level_slow_query_threshold_ns =
+        _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
+    if ((_abnormal_get_time_threshold_ns && time_used >= _abnormal_get_time_threshold_ns) ||
+        (_abnormal_get_size_threshold && value.size() >= _abnormal_get_size_threshold) ||
+        time_used >= table_level_slow_query_threshold_ns) {
+        ::dsn::blob hash_key, sort_key;
+        pegasus_restore_key(key, hash_key, sort_key);
+        dwarn("%s: rocksdb abnormal get from %s: "
+              "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
+              "value_size = %d, time_used = %" PRIu64 " ns, "
+              "abnormal_get_time_threshold_ns = %" PRIu64 " ns, ",
+              "abnormal_get_size_threshold = %" PRIu64 ", ",
+              "table_level_slow_query_threshold_ns = %" PRIu64 " ns",
+              replica_name(),
+              reply.to_address().to_string(),
+              ::pegasus::utils::c_escape_string(hash_key).c_str(),
+              ::pegasus::utils::c_escape_string(sort_key).c_str(),
+              status.ToString().c_str(),
+              (int)value.size(),
+              time_used,
+              _abnormal_get_time_threshold_ns,
+              _abnormal_get_size_threshold,
+              table_level_slow_query_threshold_ns);
         _pfc_recent_abnormal_count->increment();
     }
 
@@ -952,77 +934,48 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         }
     }
 
-    if (_abnormal_multi_get_time_threshold_ns || _abnormal_multi_get_size_threshold ||
-        _abnormal_multi_get_iterate_count_threshold) {
-        uint64_t time_used = dsn_now_ns() - start_time;
-        if ((_abnormal_multi_get_time_threshold_ns &&
-             time_used >= _abnormal_multi_get_time_threshold_ns) ||
-            (_abnormal_multi_get_size_threshold &&
-             (uint64_t)size >= _abnormal_multi_get_size_threshold) ||
-            (_abnormal_multi_get_iterate_count_threshold &&
-             (uint64_t)iterate_count >= _abnormal_multi_get_iterate_count_threshold)) {
-            dwarn("%s: rocksdb abnormal multi_get from %s: hash_key = \"%s\", "
-                  "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
-                  "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
-                  "max_kv_count = %d, max_kv_size = %d, reverse = %s, "
-                  "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
-                  "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns",
-                  replica_name(),
-                  reply.to_address().to_string(),
-                  ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
-                  ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
-                  request.start_inclusive ? "inclusive" : "exclusive",
-                  ::pegasus::utils::c_escape_string(request.stop_sortkey).c_str(),
-                  request.stop_inclusive ? "inclusive" : "exclusive",
-                  ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
-                      ->second,
-                  ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
-                  request.max_kv_count,
-                  request.max_kv_size,
-                  request.reverse ? "true" : "false",
-                  count,
-                  size,
-                  iterate_count,
-                  expire_count,
-                  filter_count,
-                  time_used);
-            _pfc_recent_abnormal_count->increment();
-        }
-    }
-
-    // check if operation time exceed table level slow query threshold
     uint64_t time_used = dsn_now_ns() - start_time;
-    if (time_used >= _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed) * 1e6) {
-        if (_enable_table_level_slow_query_log.load(std::memory_order_relaxed)) {
-            dwarn("%s: rocksdb multi_get operation time exceed table level slow query threshold. "
-                  "from %s: hash_key = \"%s\", "
-                  "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
-                  "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
-                  "max_kv_count = %d, max_kv_size = %d, reverse = %s, "
-                  "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
-                  "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns",
-                  replica_name(),
-                  reply.to_address().to_string(),
-                  ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
-                  ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
-                  request.start_inclusive ? "inclusive" : "exclusive",
-                  ::pegasus::utils::c_escape_string(request.stop_sortkey).c_str(),
-                  request.stop_inclusive ? "inclusive" : "exclusive",
-                  ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
-                      ->second,
-                  ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
-                  request.max_kv_count,
-                  request.max_kv_size,
-                  request.reverse ? "true" : "false",
-                  count,
-                  size,
-                  iterate_count,
-                  expire_count,
-                  filter_count,
-                  time_used);
-        }
-
-        // increment slow query count by 1
+    uint64_t table_level_slow_query_threshold_ns =
+        _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
+    if ((_abnormal_multi_get_time_threshold_ns &&
+         time_used >= _abnormal_multi_get_time_threshold_ns) ||
+        (_abnormal_multi_get_size_threshold &&
+         (uint64_t)size >= _abnormal_multi_get_size_threshold) ||
+        (_abnormal_multi_get_iterate_count_threshold &&
+         (uint64_t)iterate_count >= _abnormal_multi_get_iterate_count_threshold) ||
+        time_used >= table_level_slow_query_threshold_ns) {
+        dwarn("%s: rocksdb abnormal multi_get from %s: hash_key = \"%s\", "
+              "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
+              "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
+              "max_kv_count = %d, max_kv_size = %d, reverse = %s, "
+              "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
+              "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns, ",
+              "abnormal_multi_get_time_threshold_ns = %" PRIu64 " ns, ",
+              "abnormal_multi_get_size_threshold = %" PRIu64 ", ",
+              "abnormal_multi_get_iterate_count_threshold = %d, ",
+              "table_level_slow_query_threshold_ns = %" PRIu64 " ns",
+              replica_name(),
+              reply.to_address().to_string(),
+              ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
+              ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
+              request.start_inclusive ? "inclusive" : "exclusive",
+              ::pegasus::utils::c_escape_string(request.stop_sortkey).c_str(),
+              request.stop_inclusive ? "inclusive" : "exclusive",
+              ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)->second,
+              ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
+              request.max_kv_count,
+              request.max_kv_size,
+              request.reverse ? "true" : "false",
+              count,
+              size,
+              iterate_count,
+              expire_count,
+              filter_count,
+              time_used,
+              _abnormal_multi_get_time_threshold_ns,
+              _abnormal_multi_get_size_threshold,
+              _abnormal_multi_get_iterate_count_threshold,
+              table_level_slow_query_threshold_ns);
         _pfc_recent_abnormal_count->increment();
     }
 
@@ -2465,8 +2418,8 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
 void pegasus_server_impl::update_table_level_slow_query(
     const std::map<std::string, std::string> &envs)
 {
-    // get table level slow query from env
-    uint64_t threshold_ms = _abnormal_get_time_threshold_ns;
+    // get table level slow query from env(the unit of slow query from env is ms)
+    uint64_t threshold_ms = _abnormal_get_time_threshold_ns * 1e-6;
     auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
         if (!dsn::buf2uint64(find->second, threshold_ms)) {
@@ -2474,35 +2427,17 @@ void pegasus_server_impl::update_table_level_slow_query(
             return;
         }
     }
-
-    // get table level slow query log on-off switch from env
-    bool enable = default_enable_table_level_slow_query_log;
-    find = envs.find(ROCKSDB_ENV_ENABLE_SLOW_QUERY_LOG);
-    if (find != envs.end()) {
-        if (!dsn::buf2bool(find->second, enable)) {
-            derror_replica("{}={} is invalid.", find->first, find->second);
-            return;
-        }
-    }
+    uint64_t threshold_ns = threshold_ms * 1e6;
 
     // check if they are changed
-    uint64_t old_threshold_ms =
-        _table_level_slow_query_threshold_ms.load(std::memory_order_relaxed);
-    if (old_threshold_ms != threshold_ms) {
+    uint64_t old_threshold_ns =
+        _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
+    if (old_threshold_ns != threshold_ns) {
         ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
                        ROCKSDB_ENV_SLOW_QUERY_THRESHOLD,
-                       old_threshold_ms,
-                       threshold_ms);
-        _table_level_slow_query_threshold_ms.store(threshold_ms, std::memory_order_relaxed);
-    }
-
-    bool old_enable = _enable_table_level_slow_query_log.load(std::memory_order_relaxed);
-    if (old_enable != enable) {
-        ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
-                       ROCKSDB_ENV_ENABLE_SLOW_QUERY_LOG,
-                       old_enable,
-                       enable);
-        _enable_table_level_slow_query_log.store(enable, std::memory_order_relaxed);
+                       old_threshold_ns,
+                       threshold_ns);
+        _table_level_slow_query_threshold_ns.store(threshold_ns, std::memory_order_relaxed);
     }
 }
 

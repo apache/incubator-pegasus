@@ -277,9 +277,7 @@ private:
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
     // table level slow query time threshold. exceed this threshold will be logged.
-    std::atomic<uint64_t> _table_level_slow_query_threshold_ms;
-    // table level slow query log on-off switch
-    std::atomic<bool> _enable_table_level_slow_query_log;
+    std::atomic<uint64_t> _table_level_slow_query_threshold_ns;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
