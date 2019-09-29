@@ -170,7 +170,6 @@ void info_collector::on_app_stat()
         read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
         write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
                        row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps;
-        all.recent_table_level_slow_query_count += row.recent_table_level_slow_query_count;
     }
     read_qps[read_qps.size() - 1] = all.get_qps + all.multi_get_qps + all.scan_qps;
     write_qps[read_qps.size() - 1] = all.put_qps + all.multi_put_qps + all.remove_qps +
@@ -208,7 +207,6 @@ void info_collector::on_app_stat()
         counters->rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
         counters->read_qps->set(read_qps[i]);
         counters->write_qps->set(write_qps[i]);
-        counters->recent_table_level_slow_query_count->set(row.recent_table_level_slow_query_count);
     }
     ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
            (int)(rows.size() - 1),
@@ -259,7 +257,6 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(rdb_memtable_mem_usage);
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
-    INIT_COUNTER(recent_table_level_slow_query_count);
     _app_stat_counters[app_name] = counters;
     return counters;
 }

@@ -328,7 +328,6 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
     ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
-    ::dsn::perf_counter_wrapper _pfc_recent_table_level_slow_query_count;
 
     // rocksdb internal statistics
     // server level

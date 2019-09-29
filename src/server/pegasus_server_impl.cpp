@@ -43,7 +43,6 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
            std::string(name) == chkpt_get_dir_name(decree);
 }
 
-static const uint64_t default_table_level_slow_query_threshold_ms = 100;
 static const bool default_enable_table_level_slow_query_log = false;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
@@ -94,7 +93,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
     // table level slow query time threshold(ms)
-    _table_level_slow_query_threshold_ms.store(default_table_level_slow_query_threshold_ms,
+    _table_level_slow_query_threshold_ms.store(_abnormal_get_time_threshold_ns,
                                                std::memory_order_relaxed);
     _enable_table_level_slow_query_log.store(default_enable_table_level_slow_query_log,
                                              std::memory_order_relaxed);
@@ -349,13 +348,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     snprintf(name, 255, "rdb.memtable.memory_usage@%s", str_gpid.c_str());
     _pfc_rdb_memtable_mem_usage.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
-
-    snprintf(name, 255, "recent.table.level.slow.query.count@%s", str_gpid.c_str());
-    _pfc_recent_table_level_slow_query_count.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "the count of operations that exceed slow query threshold");
 }
 
 void pegasus_server_impl::parse_checkpoints()
@@ -621,8 +613,8 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                   time_used);
         }
 
-        // add table level slow query count
-        _pfc_recent_table_level_slow_query_count->increment();
+        // increment slow query count by 1
+        _pfc_recent_abnormal_count->increment();
     }
 
     resp.error = status.code();
@@ -1030,8 +1022,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                   time_used);
         }
 
-        // add table level slow query count
-        _pfc_recent_table_level_slow_query_count->increment();
+        // increment slow query count by 1
+        _pfc_recent_abnormal_count->increment();
     }
 
     if (expire_count > 0) {
@@ -2474,7 +2466,7 @@ void pegasus_server_impl::update_table_level_slow_query(
     const std::map<std::string, std::string> &envs)
 {
     // get table level slow query from env
-    uint64_t threshold_ms = default_table_level_slow_query_threshold_ms;
+    uint64_t threshold_ms = _abnormal_get_time_threshold_ns;
     auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
         if (!dsn::buf2uint64(find->second, threshold_ms)) {

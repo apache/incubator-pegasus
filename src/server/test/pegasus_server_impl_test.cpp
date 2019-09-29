@@ -30,8 +30,7 @@ public:
 
             // do on_get/on_multi_get operation,
             // and assert whether the perf counter is incremented or not
-            long before_count =
-                _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
+            long before_count = _server->_pfc_recent_abnormal_count->get_integer_value();
             if (!test.is_multi_get) {
                 std::string test_key = "test_key";
                 ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
@@ -46,8 +45,7 @@ public:
                 ::dsn::rpc_replier<::dsn::apps::multi_get_response> reply(nullptr);
                 _server->on_multi_get(request, reply);
             }
-            long after_count =
-                _server->_pfc_recent_table_level_slow_query_count->get_integer_value();
+            long after_count = _server->_pfc_recent_abnormal_count->get_integer_value();
 
             ASSERT_EQ(before_count + test.perf_counter_incr, after_count);
         }
