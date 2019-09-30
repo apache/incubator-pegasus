@@ -22,7 +22,6 @@ namespace pegasus {
 #define PEGASUS_DATA_VERSION_MAX 0u
 
 /// Generates timetag in host endian.
-/// \see comment on pegasus_value_generator::generate_value_v1
 inline uint64_t generate_timetag(uint64_t timestamp, uint8_t cluster_id, bool delete_tag)
 {
     return timestamp << 8 | cluster_id << 1 | delete_tag;

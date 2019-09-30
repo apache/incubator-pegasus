@@ -195,13 +195,6 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
                 // ignore this mutation to prevent infinite duplication loop.
                 continue;
             }
-            if (!dsn::replication::is_cluster_id_configured(from_cluster_id)) {
-                derror_replica(
-                    "illegal duplicate request [from_cluster_id: {}, remote_cluster_id:{}]",
-                    from_cluster_id,
-                    _remote_cluster_id);
-                continue;
-            }
 
             hash = static_cast<uint64_t>(dreq.hash);
             data = std::move(dreq.raw_message);
