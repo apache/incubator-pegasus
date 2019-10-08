@@ -575,7 +575,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     uint64_t time_used = dsn_now_ns() - start_time;
     uint64_t table_level_slow_query_threshold_ns =
         _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
-    if (is_get_slow_query(time_used, value.size(), table_level_slow_query_threshold_ns)) {
+    if (is_abnormal_get(time_used, value.size(), table_level_slow_query_threshold_ns)) {
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
         dwarn_replica("rocksdb abnormal get from {}: "
@@ -934,7 +934,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     uint64_t time_used = dsn_now_ns() - start_time;
     uint64_t table_level_slow_query_threshold_ns =
         _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
-    if (is_multi_get_slow_query(
+    if (is_abnormal_multi_get(
             time_used, size, iterate_count, table_level_slow_query_threshold_ns)) {
         dwarn_replica(
             "rocksdb abnormal multi_get from {}: hash_key = {}, "
