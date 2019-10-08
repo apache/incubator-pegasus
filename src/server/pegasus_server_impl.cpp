@@ -580,18 +580,17 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         time_used >= table_level_slow_query_threshold_ns) {
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
-        dwarn_replica("%s: rocksdb abnormal get from %s: "
-                      "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
-                      "value_size = %d, time_used = %" PRIu64 " ns, "
-                      "abnormal_get_time_threshold_ns = %" PRIu64 " ns, ",
-                      "abnormal_get_size_threshold = %" PRIu64 ", ",
-                      "table_level_slow_query_threshold_ns = %" PRIu64 " ns",
-                      replica_name(),
+        dwarn_replica("rocksdb abnormal get from {}: "
+                      "hash_key = {}, sort_key = {}, return = {}, "
+                      "value_size = {}, time_used = {} ns, "
+                      "abnormal_get_time_threshold_ns = {} ns, "
+                      "abnormal_get_size_threshold = {}, "
+                      "table_level_slow_query_threshold_ns = {} ns",
                       reply.to_address().to_string(),
-                      ::pegasus::utils::c_escape_string(hash_key).c_str(),
-                      ::pegasus::utils::c_escape_string(sort_key).c_str(),
-                      status.ToString().c_str(),
-                      (int)value.size(),
+                      ::pegasus::utils::c_escape_string(hash_key),
+                      ::pegasus::utils::c_escape_string(sort_key),
+                      status.ToString(),
+                      value.size(),
                       time_used,
                       _abnormal_get_time_threshold_ns,
                       _abnormal_get_size_threshold,
@@ -944,38 +943,38 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         (_abnormal_multi_get_iterate_count_threshold &&
          (uint64_t)iterate_count >= _abnormal_multi_get_iterate_count_threshold) ||
         time_used >= table_level_slow_query_threshold_ns) {
-        dwarn("%s: rocksdb abnormal multi_get from %s: hash_key = \"%s\", "
-              "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
-              "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
-              "max_kv_count = %d, max_kv_size = %d, reverse = %s, "
-              "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
-              "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns, ",
-              "abnormal_multi_get_time_threshold_ns = %" PRIu64 " ns, ",
-              "abnormal_multi_get_size_threshold = %" PRIu64 ", ",
-              "abnormal_multi_get_iterate_count_threshold = %d, ",
-              "table_level_slow_query_threshold_ns = %" PRIu64 " ns",
-              replica_name(),
-              reply.to_address().to_string(),
-              ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
-              ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
-              request.start_inclusive ? "inclusive" : "exclusive",
-              ::pegasus::utils::c_escape_string(request.stop_sortkey).c_str(),
-              request.stop_inclusive ? "inclusive" : "exclusive",
-              ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)->second,
-              ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
-              request.max_kv_count,
-              request.max_kv_size,
-              request.reverse ? "true" : "false",
-              count,
-              size,
-              iterate_count,
-              expire_count,
-              filter_count,
-              time_used,
-              _abnormal_multi_get_time_threshold_ns,
-              _abnormal_multi_get_size_threshold,
-              _abnormal_multi_get_iterate_count_threshold,
-              table_level_slow_query_threshold_ns);
+        dwarn_replica(
+            "rocksdb abnormal multi_get from {}: hash_key = {}, "
+            "start_sort_key = {} ({}), stop_sort_key = {} ({}), "
+            "sort_key_filter_type = {}, sort_key_filter_pattern = {}, "
+            "max_kv_count = {}, max_kv_size = {}, reverse = {}, "
+            "result_count = {}, result_size = {}, iterate_count = {}, "
+            "expire_count = {}, filter_count = {}, time_used = {} ns, "
+            "abnormal_multi_get_time_threshold_ns = {} ns, "
+            "abnormal_multi_get_size_threshold = {}, "
+            "abnormal_multi_get_iterate_count_threshold = {}, "
+            "table_level_slow_query_threshold_ns = {} ns",
+            reply.to_address().to_string(),
+            ::pegasus::utils::c_escape_string(request.hash_key),
+            ::pegasus::utils::c_escape_string(request.start_sortkey),
+            request.start_inclusive ? "inclusive" : "exclusive",
+            ::pegasus::utils::c_escape_string(request.stop_sortkey),
+            request.stop_inclusive ? "inclusive" : "exclusive",
+            ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)->second,
+            ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern),
+            request.max_kv_count,
+            request.max_kv_size,
+            request.reverse ? "true" : "false",
+            count,
+            size,
+            iterate_count,
+            expire_count,
+            filter_count,
+            time_used,
+            _abnormal_multi_get_time_threshold_ns,
+            _abnormal_multi_get_size_threshold,
+            _abnormal_multi_get_iterate_count_threshold,
+            table_level_slow_query_threshold_ns);
         _pfc_recent_abnormal_count->increment();
     }
 
