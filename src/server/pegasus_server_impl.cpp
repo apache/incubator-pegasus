@@ -580,22 +580,22 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         time_used >= table_level_slow_query_threshold_ns) {
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
-        dwarn("%s: rocksdb abnormal get from %s: "
-              "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
-              "value_size = %d, time_used = %" PRIu64 " ns, "
-              "abnormal_get_time_threshold_ns = %" PRIu64 " ns, ",
-              "abnormal_get_size_threshold = %" PRIu64 ", ",
-              "table_level_slow_query_threshold_ns = %" PRIu64 " ns",
-              replica_name(),
-              reply.to_address().to_string(),
-              ::pegasus::utils::c_escape_string(hash_key).c_str(),
-              ::pegasus::utils::c_escape_string(sort_key).c_str(),
-              status.ToString().c_str(),
-              (int)value.size(),
-              time_used,
-              _abnormal_get_time_threshold_ns,
-              _abnormal_get_size_threshold,
-              table_level_slow_query_threshold_ns);
+        dwarn_replica("%s: rocksdb abnormal get from %s: "
+                      "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
+                      "value_size = %d, time_used = %" PRIu64 " ns, "
+                      "abnormal_get_time_threshold_ns = %" PRIu64 " ns, ",
+                      "abnormal_get_size_threshold = %" PRIu64 ", ",
+                      "table_level_slow_query_threshold_ns = %" PRIu64 " ns",
+                      replica_name(),
+                      reply.to_address().to_string(),
+                      ::pegasus::utils::c_escape_string(hash_key).c_str(),
+                      ::pegasus::utils::c_escape_string(sort_key).c_str(),
+                      status.ToString().c_str(),
+                      (int)value.size(),
+                      time_used,
+                      _abnormal_get_time_threshold_ns,
+                      _abnormal_get_size_threshold,
+                      table_level_slow_query_threshold_ns);
         _pfc_recent_abnormal_count->increment();
     }
 

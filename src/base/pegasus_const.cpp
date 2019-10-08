@@ -69,6 +69,4 @@ const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
 
 /// table level slow query
 const std::string ROCKSDB_ENV_SLOW_QUERY_THRESHOLD("replica.slow_query_threshold");
-const std::string ROCKSDB_ENV_ENABLE_SLOW_QUERY_LOG("replica.enable_slow_query_log");
-
 } // namespace pegasus
