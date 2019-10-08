@@ -265,6 +265,30 @@ private:
             _pegasus_data_version, epoch_now, utils::to_string_view(raw_value));
     }
 
+    // table_level_slow_query_threshold_ns is passed as a parameter, because it is mutable.
+    // so we should stay the same with caller
+    bool is_multi_get_slow_query(uint64_t time_used,
+                                 uint64_t size,
+                                 uint64_t iterate_count,
+                                 uint64_t table_level_slow_query_threshold_ns)
+    {
+        return (_abnormal_multi_get_time_threshold_ns &&
+                time_used >= _abnormal_multi_get_time_threshold_ns) ||
+               (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) ||
+               (_abnormal_multi_get_iterate_count_threshold &&
+                iterate_count >= _abnormal_multi_get_iterate_count_threshold) ||
+               time_used >= table_level_slow_query_threshold_ns;
+    }
+
+    bool is_get_slow_query(uint64_t time_used,
+                           uint64_t value_size,
+                           uint64_t table_level_slow_query_threshold_ns)
+    {
+        return (_abnormal_get_time_threshold_ns && time_used >= _abnormal_get_time_threshold_ns) ||
+               (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) ||
+               time_used >= table_level_slow_query_threshold_ns;
+    }
+
 private:
     static const std::string COMPRESSION_HEADER;
 
