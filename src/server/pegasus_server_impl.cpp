@@ -931,9 +931,9 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         }
     }
 
+    uint64_t time_used = dsn_now_ns() - start_time;
     uint64_t table_level_slow_query_threshold_ns =
         _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
-    uint64_t time_used = dsn_now_ns() - start_time;
     if (is_multi_get_slow_query(
             time_used, size, iterate_count, table_level_slow_query_threshold_ns)) {
         dwarn_replica(
