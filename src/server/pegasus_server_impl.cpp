@@ -47,6 +47,8 @@ std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
+// min value for slow query threshold, less than this value will be refused
+static const uint64_t MIN_SLOW_QUERY_THRESHOLD_NS = 20 * 1000 * 1000;
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
@@ -92,9 +94,11 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
     // slow query time threshold
-    _slow_query_threshold_ns.store(
-        0 == _abnormal_get_time_threshold_ns ? 0 : _abnormal_get_time_threshold_ns,
-        std::memory_order_relaxed);
+    uint64_t slow_query_threshold_ns = _abnormal_get_time_threshold_ns;
+    if (slow_query_threshold_ns < MIN_SLOW_QUERY_THRESHOLD_NS) {
+        slow_query_threshold_ns = MIN_SLOW_QUERY_THRESHOLD_NS;
+    }
+    _slow_query_threshold_ns.store(slow_query_threshold_ns, std::memory_order_relaxed);
 
     // init db options
     _db_opts.pegasus_data = true;
