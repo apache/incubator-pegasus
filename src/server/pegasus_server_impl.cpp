@@ -577,24 +577,18 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     }
 
     uint64_t time_used = dsn_now_ns() - start_time;
-    if (is_abnormal_get(time_used, value.size())) {
+    if (is_get_abnormal(time_used, value.size())) {
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
         dwarn_replica("rocksdb abnormal get from {}: "
                       "hash_key = {}, sort_key = {}, return = {}, "
-                      "value_size = {}, time_used = {} ns, "
-                      "abnormal_get_time_threshold_ns = {} ns, "
-                      "abnormal_get_size_threshold = {}, "
-                      "slow_query_threshold_ns = {} ns",
+                      "value_size = {}, time_used = {} ns",
                       reply.to_address().to_string(),
                       ::pegasus::utils::c_escape_string(hash_key),
                       ::pegasus::utils::c_escape_string(sort_key),
                       status.ToString(),
                       value.size(),
-                      time_used,
-                      _abnormal_get_time_threshold_ns,
-                      _abnormal_get_size_threshold,
-                      _slow_query_threshold_ns);
+                      time_used);
         _pfc_recent_abnormal_count->increment();
     }
 
@@ -934,18 +928,14 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     }
 
     uint64_t time_used = dsn_now_ns() - start_time;
-    if (is_abnormal_multi_get(time_used, size, iterate_count)) {
+    if (is_multi_get_abnormal(time_used, size, iterate_count)) {
         dwarn_replica(
             "rocksdb abnormal multi_get from {}: hash_key = {}, "
             "start_sort_key = {} ({}), stop_sort_key = {} ({}), "
             "sort_key_filter_type = {}, sort_key_filter_pattern = {}, "
             "max_kv_count = {}, max_kv_size = {}, reverse = {}, "
             "result_count = {}, result_size = {}, iterate_count = {}, "
-            "expire_count = {}, filter_count = {}, time_used = {} ns, "
-            "abnormal_multi_get_time_threshold_ns = {} ns, "
-            "abnormal_multi_get_size_threshold = {}, "
-            "abnormal_multi_get_iterate_count_threshold = {}, "
-            "slow_query_threshold_ns = {} ns",
+            "expire_count = {}, filter_count = {}, time_used = {} ns",
             reply.to_address().to_string(),
             ::pegasus::utils::c_escape_string(request.hash_key),
             ::pegasus::utils::c_escape_string(request.start_sortkey),
@@ -962,11 +952,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             iterate_count,
             expire_count,
             filter_count,
-            time_used,
-            _abnormal_multi_get_time_threshold_ns,
-            _abnormal_multi_get_size_threshold,
-            _abnormal_multi_get_iterate_count_threshold,
-            _slow_query_threshold_ns);
+            time_used);
         _pfc_recent_abnormal_count->increment();
     }
 
