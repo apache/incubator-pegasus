@@ -20,7 +20,7 @@ public:
             bool is_multi_get; // false-on_get, true-on_multi_get
             uint64_t slow_query_threshold_ms;
             uint8_t perf_counter_incr;
-        } tests[] = {{false, 10, 1}, {false, INT_MAX, 0}, {true, 10, 1}, {true, INT_MAX, 0}};
+        } tests[] = {{false, 10, 1}, {false, 300, 0}, {true, 10, 1}, {true, 300, 0}};
 
         // test key
         std::string test_hash_key = "test_hash_key";

@@ -272,14 +272,14 @@ private:
                (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) ||
                (_abnormal_multi_get_iterate_count_threshold &&
                 iterate_count >= _abnormal_multi_get_iterate_count_threshold) ||
-               time_used >= _slow_query_threshold_ns;
+               (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns);
     }
 
     bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
     {
         return (_abnormal_get_time_threshold_ns && time_used >= _abnormal_get_time_threshold_ns) ||
                (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) ||
-               time_used >= _slow_query_threshold_ns;
+               (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns);
     }
 
 private:

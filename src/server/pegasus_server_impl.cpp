@@ -47,8 +47,6 @@ std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
-// min value for slow query threshold, less than this value will be refused
-static const uint64_t MIN_SLOW_QUERY_THRESHOLD_NS = 20 * 1000 * 1000;
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
@@ -95,9 +93,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     // slow query time threshold
     _slow_query_threshold_ns = _abnormal_get_time_threshold_ns;
-    if (_slow_query_threshold_ns < MIN_SLOW_QUERY_THRESHOLD_NS) {
-        _slow_query_threshold_ns = MIN_SLOW_QUERY_THRESHOLD_NS;
-    }
 
     // init db options
     _db_opts.pegasus_data = true;
@@ -2409,7 +2404,7 @@ void pegasus_server_impl::update_slow_query_threshold(
     uint64_t threshold_ms = _abnormal_get_time_threshold_ns * 1e-6;
     auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
-        if (!dsn::buf2uint64(find->second, threshold_ms)) {
+        if (!dsn::buf2uint64(find->second, threshold_ms) || threshold_ms < 0) {
             derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }
