@@ -576,6 +576,11 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         }
     }
 
+#ifdef PEGASUS_UNIT_TEST
+    // sleep 10ms
+    usleep(10 * 1000);
+#endif
+
     uint64_t time_used = dsn_now_ns() - start_time;
     if (is_get_abnormal(time_used, value.size())) {
         ::dsn::blob hash_key, sort_key;
@@ -926,6 +931,11 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             resp.error = rocksdb::Status::kOk;
         }
     }
+
+#ifdef PEGASUS_UNIT_TEST
+    // sleep 10ms
+    usleep(10 * 1000);
+#endif
 
     uint64_t time_used = dsn_now_ns() - start_time;
     if (is_multi_get_abnormal(time_used, size, iterate_count)) {
