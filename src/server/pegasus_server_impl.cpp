@@ -94,11 +94,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
     // slow query time threshold
-    uint64_t slow_query_threshold_ns = _abnormal_get_time_threshold_ns;
-    if (slow_query_threshold_ns < MIN_SLOW_QUERY_THRESHOLD_NS) {
-        slow_query_threshold_ns = MIN_SLOW_QUERY_THRESHOLD_NS;
+    _slow_query_threshold_ns = _abnormal_get_time_threshold_ns;
+    if (_slow_query_threshold_ns < MIN_SLOW_QUERY_THRESHOLD_NS) {
+        _slow_query_threshold_ns = MIN_SLOW_QUERY_THRESHOLD_NS;
     }
-    _slow_query_threshold_ns.store(slow_query_threshold_ns, std::memory_order_relaxed);
 
     // init db options
     _db_opts.pegasus_data = true;
@@ -578,8 +577,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     }
 
     uint64_t time_used = dsn_now_ns() - start_time;
-    uint64_t slow_query_threshold_ns = _slow_query_threshold_ns.load(std::memory_order_relaxed);
-    if (is_abnormal_get(time_used, value.size(), slow_query_threshold_ns)) {
+    if (is_abnormal_get(time_used, value.size())) {
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
         dwarn_replica("rocksdb abnormal get from {}: "
@@ -596,7 +594,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                       time_used,
                       _abnormal_get_time_threshold_ns,
                       _abnormal_get_size_threshold,
-                      slow_query_threshold_ns);
+                      _slow_query_threshold_ns);
         _pfc_recent_abnormal_count->increment();
     }
 
@@ -936,8 +934,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     }
 
     uint64_t time_used = dsn_now_ns() - start_time;
-    uint64_t slow_query_threshold_ns = _slow_query_threshold_ns.load(std::memory_order_relaxed);
-    if (is_abnormal_multi_get(time_used, size, iterate_count, slow_query_threshold_ns)) {
+    if (is_abnormal_multi_get(time_used, size, iterate_count)) {
         dwarn_replica(
             "rocksdb abnormal multi_get from {}: hash_key = {}, "
             "start_sort_key = {} ({}), stop_sort_key = {} ({}), "
@@ -969,7 +966,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             _abnormal_multi_get_time_threshold_ns,
             _abnormal_multi_get_size_threshold,
             _abnormal_multi_get_iterate_count_threshold,
-            slow_query_threshold_ns);
+            _slow_query_threshold_ns);
         _pfc_recent_abnormal_count->increment();
     }
 
@@ -2424,13 +2421,12 @@ void pegasus_server_impl::update_slow_query_threshold(
     uint64_t threshold_ns = threshold_ms * 1e6;
 
     // check if they are changed
-    uint64_t old_threshold_ns = _slow_query_threshold_ns.load(std::memory_order_relaxed);
-    if (old_threshold_ns != threshold_ns) {
+    if (_slow_query_threshold_ns != threshold_ns) {
         ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
                        ROCKSDB_ENV_SLOW_QUERY_THRESHOLD,
-                       old_threshold_ns,
+                       _slow_query_threshold_ns,
                        threshold_ns);
-        _slow_query_threshold_ns.store(threshold_ns, std::memory_order_relaxed);
+        _slow_query_threshold_ns = threshold_ns;
     }
 }
 
