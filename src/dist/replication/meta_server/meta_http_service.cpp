@@ -467,6 +467,54 @@ void meta_http_service::get_cluster_info_handler(const http_request &req, http_r
     resp.status_code = http_status_code::ok;
 }
 
+void meta_http_service::get_app_envs_handler(const http_request &req, http_response &resp)
+{
+    // only primary process the request
+    if (!redirect_if_not_primary(req, resp))
+        return;
+
+    std::string app_name;
+    for (const auto &p : req.query_args) {
+        if ("name" == p.first) {
+            app_name = p.second;
+            break;
+        }
+    }
+    if (app_name.empty()) {
+        resp.status_code = http_status_code::bad_request;
+        resp.body = "app name shouldn't be empty";
+        return;
+    }
+
+    // get all of the apps
+    configuration_list_apps_response response;
+    configuration_list_apps_request request;
+    request.status = dsn::app_status::AS_AVAILABLE;
+    _service->_state->list_apps(request, response);
+    if (response.err != dsn::ERR_OK) {
+        resp.body = response.err.to_string();
+        resp.status_code = http_status_code::internal_server_error;
+        return;
+    }
+
+    // using app envs to generate a table_printer
+    dsn::utils::table_printer tp;
+    for (auto &app : response.infos) {
+        if (app.app_name == app_name) {
+            for (auto env : app.envs) {
+                tp.add_row_name_and_data(env.first, env.second);
+            }
+            break;
+        }
+    }
+
+    // output as json format
+    std::ostringstream out;
+    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    resp.body = out.str();
+    resp.status_code = http_status_code::ok;
+}
+
 bool meta_http_service::redirect_if_not_primary(const http_request &req, http_response &resp)
 {
 #ifdef DSN_MOCK_TEST

@@ -39,21 +39,6 @@ public:
         create_app(app_name);
     }
 
-    error_code update_app_envs(const std::vector<std::string> &env_keys,
-                               const std::vector<std::string> &env_vals)
-    {
-        auto req = make_unique<configuration_update_app_env_request>();
-        req->__set_app_name(std::move(app_name));
-        req->__set_op(std::move(app_env_operation::type::APP_ENV_OP_SET));
-        req->__set_keys(env_keys);
-        req->__set_values(env_vals);
-
-        app_env_rpc rpc(std::move(req), RPC_CM_UPDATE_APP_ENV); // don't need reply
-        _ss->set_app_envs(rpc);
-        _ss->wait_all_task();
-        return rpc.response().err;
-    }
-
     const std::string app_name = "test_app_env";
     const std::string env_slow_query_threshold = "replica.slow_query_threshold";
 };
@@ -75,7 +60,7 @@ TEST_F(meta_app_envs_test, set_slow_query_threshold)
                  {ERR_INVALID_PARAMETERS, "0", "20"}};
 
     for (auto test : tests) {
-        error_code err = update_app_envs({env_slow_query_threshold}, {test.env_value});
+        error_code err = update_app_envs(app_name, {env_slow_query_threshold}, {test.env_value});
 
         ASSERT_EQ(err, test.err);
         ASSERT_EQ(app->envs.at(env_slow_query_threshold), test.expect_env_value);

@@ -41,6 +41,12 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2));
+        // GET ip:port/meta/app_envs?name=temp
+        register_handler("app_envs",
+                         std::bind(&meta_http_service::get_app_envs_handler,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2));
     }
 
     std::string path() const override { return "meta"; }
@@ -49,6 +55,7 @@ public:
     void list_app_handler(const http_request &req, http_response &resp);
     void list_node_handler(const http_request &req, http_response &resp);
     void get_cluster_info_handler(const http_request &req, http_response &resp);
+    void get_app_envs_handler(const http_request &req, http_response &resp);
 
 private:
     // set redirect location if current server is not primary
