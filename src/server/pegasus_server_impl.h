@@ -225,7 +225,7 @@ private:
 
     void update_checkpoint_reserve(const std::map<std::string, std::string> &envs);
 
-    void update_table_level_slow_query(const std::map<std::string, std::string> &envs);
+    void update_slow_query_threshold(const std::map<std::string, std::string> &envs);
 
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
@@ -265,28 +265,26 @@ private:
             _pegasus_data_version, epoch_now, utils::to_string_view(raw_value));
     }
 
-    // table_level_slow_query_threshold_ns is passed as a parameter, because it is mutable.
+    // slow_query_threshold_ns is passed as a parameter, because it is mutable.
     // so we should stay the same with caller
     bool is_abnormal_multi_get(uint64_t time_used,
                                uint64_t size,
                                uint64_t iterate_count,
-                               uint64_t table_level_slow_query_threshold_ns)
+                               uint64_t slow_query_threshold_ns)
     {
         return (_abnormal_multi_get_time_threshold_ns &&
                 time_used >= _abnormal_multi_get_time_threshold_ns) ||
                (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) ||
                (_abnormal_multi_get_iterate_count_threshold &&
                 iterate_count >= _abnormal_multi_get_iterate_count_threshold) ||
-               time_used >= table_level_slow_query_threshold_ns;
+               time_used >= slow_query_threshold_ns;
     }
 
-    bool is_abnormal_get(uint64_t time_used,
-                         uint64_t value_size,
-                         uint64_t table_level_slow_query_threshold_ns)
+    bool is_abnormal_get(uint64_t time_used, uint64_t value_size, uint64_t slow_query_threshold_ns)
     {
         return (_abnormal_get_time_threshold_ns && time_used >= _abnormal_get_time_threshold_ns) ||
                (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) ||
-               time_used >= table_level_slow_query_threshold_ns;
+               time_used >= slow_query_threshold_ns;
     }
 
 private:
@@ -300,8 +298,8 @@ private:
     uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
-    // table level slow query time threshold. exceed this threshold will be logged.
-    std::atomic<uint64_t> _table_level_slow_query_threshold_ns;
+    // slow query time threshold. exceed this threshold will be logged.
+    std::atomic<uint64_t> _slow_query_threshold_ns;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;

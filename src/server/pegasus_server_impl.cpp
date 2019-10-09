@@ -91,9 +91,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
-    // table level slow query time threshold
-    _table_level_slow_query_threshold_ns.store(_abnormal_get_time_threshold_ns,
-                                               std::memory_order_relaxed);
+    // slow query time threshold
+    _slow_query_threshold_ns.store(
+        0 == _abnormal_get_time_threshold_ns ? 0 : _abnormal_get_time_threshold_ns,
+        std::memory_order_relaxed);
 
     // init db options
     _db_opts.pegasus_data = true;
@@ -573,9 +574,8 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     }
 
     uint64_t time_used = dsn_now_ns() - start_time;
-    uint64_t table_level_slow_query_threshold_ns =
-        _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
-    if (is_abnormal_get(time_used, value.size(), table_level_slow_query_threshold_ns)) {
+    uint64_t slow_query_threshold_ns = _slow_query_threshold_ns.load(std::memory_order_relaxed);
+    if (is_abnormal_get(time_used, value.size(), slow_query_threshold_ns)) {
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
         dwarn_replica("rocksdb abnormal get from {}: "
@@ -583,7 +583,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                       "value_size = {}, time_used = {} ns, "
                       "abnormal_get_time_threshold_ns = {} ns, "
                       "abnormal_get_size_threshold = {}, "
-                      "table_level_slow_query_threshold_ns = {} ns",
+                      "slow_query_threshold_ns = {} ns",
                       reply.to_address().to_string(),
                       ::pegasus::utils::c_escape_string(hash_key),
                       ::pegasus::utils::c_escape_string(sort_key),
@@ -592,7 +592,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
                       time_used,
                       _abnormal_get_time_threshold_ns,
                       _abnormal_get_size_threshold,
-                      table_level_slow_query_threshold_ns);
+                      slow_query_threshold_ns);
         _pfc_recent_abnormal_count->increment();
     }
 
@@ -932,10 +932,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     }
 
     uint64_t time_used = dsn_now_ns() - start_time;
-    uint64_t table_level_slow_query_threshold_ns =
-        _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
-    if (is_abnormal_multi_get(
-            time_used, size, iterate_count, table_level_slow_query_threshold_ns)) {
+    uint64_t slow_query_threshold_ns = _slow_query_threshold_ns.load(std::memory_order_relaxed);
+    if (is_abnormal_multi_get(time_used, size, iterate_count, slow_query_threshold_ns)) {
         dwarn_replica(
             "rocksdb abnormal multi_get from {}: hash_key = {}, "
             "start_sort_key = {} ({}), stop_sort_key = {} ({}), "
@@ -946,7 +944,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             "abnormal_multi_get_time_threshold_ns = {} ns, "
             "abnormal_multi_get_size_threshold = {}, "
             "abnormal_multi_get_iterate_count_threshold = {}, "
-            "table_level_slow_query_threshold_ns = {} ns",
+            "slow_query_threshold_ns = {} ns",
             reply.to_address().to_string(),
             ::pegasus::utils::c_escape_string(request.hash_key),
             ::pegasus::utils::c_escape_string(request.start_sortkey),
@@ -967,7 +965,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             _abnormal_multi_get_time_threshold_ns,
             _abnormal_multi_get_size_threshold,
             _abnormal_multi_get_iterate_count_threshold,
-            table_level_slow_query_threshold_ns);
+            slow_query_threshold_ns);
         _pfc_recent_abnormal_count->increment();
     }
 
@@ -2315,7 +2313,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_usage_scenario(envs);
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
-    update_table_level_slow_query(envs);
+    update_slow_query_threshold(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2325,7 +2323,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     // we do not update usage scenario because it depends on opened db.
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
-    update_table_level_slow_query(envs);
+    update_slow_query_threshold(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2407,10 +2405,10 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
     }
 }
 
-void pegasus_server_impl::update_table_level_slow_query(
+void pegasus_server_impl::update_slow_query_threshold(
     const std::map<std::string, std::string> &envs)
 {
-    // get table level slow query from env(the unit of slow query from env is ms)
+    // get slow query from env(the unit of slow query from env is ms)
     uint64_t threshold_ms = _abnormal_get_time_threshold_ns * 1e-6;
     auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
@@ -2422,14 +2420,13 @@ void pegasus_server_impl::update_table_level_slow_query(
     uint64_t threshold_ns = threshold_ms * 1e6;
 
     // check if they are changed
-    uint64_t old_threshold_ns =
-        _table_level_slow_query_threshold_ns.load(std::memory_order_relaxed);
+    uint64_t old_threshold_ns = _slow_query_threshold_ns.load(std::memory_order_relaxed);
     if (old_threshold_ns != threshold_ns) {
         ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
                        ROCKSDB_ENV_SLOW_QUERY_THRESHOLD,
                        old_threshold_ns,
                        threshold_ns);
-        _table_level_slow_query_threshold_ns.store(threshold_ns, std::memory_order_relaxed);
+        _slow_query_threshold_ns.store(threshold_ns, std::memory_order_relaxed);
     }
 }
 
