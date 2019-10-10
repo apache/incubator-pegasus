@@ -572,7 +572,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     }
 
 #ifdef PEGASUS_UNIT_TEST
-    // sleep 10ms
+    // sleep 10ms for unit test
     usleep(10 * 1000);
 #endif
 
@@ -928,7 +928,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     }
 
 #ifdef PEGASUS_UNIT_TEST
-    // sleep 10ms
+    // sleep 10ms for unit test
     usleep(10 * 1000);
 #endif
 
