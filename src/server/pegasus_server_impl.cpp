@@ -64,21 +64,16 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                              "rocksdb_verbose_log",
                                              false,
                                              "whether to print verbose log for debugging");
-    _abnormal_get_time_threshold_ns = dsn_config_get_value_uint64(
+    _slow_query_threshold_ns = dsn_config_get_value_uint64(
         "pegasus.server",
-        "rocksdb_abnormal_get_time_threshold_ns",
+        "rocksdb_slow_query_threshold_ns",
         100000000,
-        "get operation duration exceed this threshold will be logged, 0 means no check");
+        "get/multi-get operation duration exceed this threshold will be logged");
     _abnormal_get_size_threshold = dsn_config_get_value_uint64(
         "pegasus.server",
         "rocksdb_abnormal_get_size_threshold",
         1000000,
         "get operation value size exceed this threshold will be logged, 0 means no check");
-    _abnormal_multi_get_time_threshold_ns = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_abnormal_multi_get_time_threshold_ns",
-        100000000,
-        "multi-get operation duration exceed this threshold will be logged, 0 means no check");
     _abnormal_multi_get_size_threshold =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_abnormal_multi_get_size_threshold",
@@ -90,9 +85,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "rocksdb_abnormal_multi_get_iterate_count_threshold",
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
-
-    // slow query time threshold
-    _slow_query_threshold_ns = _abnormal_get_time_threshold_ns;
 
     // init db options
     _db_opts.pegasus_data = true;
@@ -2401,15 +2393,16 @@ void pegasus_server_impl::update_slow_query_threshold(
     const std::map<std::string, std::string> &envs)
 {
     // get slow query from env(the unit of slow query from env is ms)
-    uint64_t threshold_ms = _abnormal_get_time_threshold_ns * 1e-6;
+    uint64_t threshold_ns = _slow_query_threshold_ns;
     auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
+        uint64_t threshold_ms;
         if (!dsn::buf2uint64(find->second, threshold_ms) || threshold_ms < 0) {
             derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }
+        threshold_ns = threshold_ms * 1e6;
     }
-    uint64_t threshold_ns = threshold_ms * 1e6;
 
     // check if they are changed
     if (_slow_query_threshold_ns != threshold_ns) {

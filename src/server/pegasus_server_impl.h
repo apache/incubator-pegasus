@@ -267,9 +267,7 @@ private:
 
     bool is_multi_get_abnormal(uint64_t time_used, uint64_t size, uint64_t iterate_count)
     {
-        return (_abnormal_multi_get_time_threshold_ns &&
-                time_used >= _abnormal_multi_get_time_threshold_ns) ||
-               (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) ||
+        return (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) ||
                (_abnormal_multi_get_iterate_count_threshold &&
                 iterate_count >= _abnormal_multi_get_iterate_count_threshold) ||
                (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns);
@@ -277,8 +275,7 @@ private:
 
     bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
     {
-        return (_abnormal_get_time_threshold_ns && time_used >= _abnormal_get_time_threshold_ns) ||
-               (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) ||
+        return (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) ||
                (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns);
     }
 
@@ -288,9 +285,7 @@ private:
     dsn::gpid _gpid;
     std::string _primary_address;
     bool _verbose_log;
-    uint64_t _abnormal_get_time_threshold_ns;
     uint64_t _abnormal_get_size_threshold;
-    uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
     // slow query time threshold. exceed this threshold will be logged.
