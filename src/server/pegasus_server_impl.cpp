@@ -2392,10 +2392,10 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
 void pegasus_server_impl::update_slow_query_threshold(
     const std::map<std::string, std::string> &envs)
 {
-    // get slow query from env(the unit of slow query from env is ms)
     uint64_t threshold_ns = _slow_query_threshold_ns;
     auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
+        // get slow query from env(the unit of slow query from env is ms)
         uint64_t threshold_ms;
         if (!dsn::buf2uint64(find->second, threshold_ms) || threshold_ms < 0) {
             derror_replica("{}={} is invalid.", find->first, find->second);
