@@ -15,11 +15,13 @@ public:
 
     void test_table_level_slow_query()
     {
+        // the on_get function will sleep 10ms for unit test,
+        // so when we set slow_query_threshold <= 10ms, the perf counter will be incr by 1
         struct test_case
         {
             bool is_multi_get; // false-on_get, true-on_multi_get
             uint64_t slow_query_threshold_ms;
-            uint8_t perf_counter_incr;
+            uint8_t expect_perf_counter_incr;
         } tests[] = {{false, 10, 1}, {false, 300, 0}, {true, 10, 1}, {true, 300, 0}};
 
         // test key
@@ -50,7 +52,7 @@ public:
             }
             long after_count = _server->_pfc_recent_abnormal_count->get_integer_value();
 
-            ASSERT_EQ(before_count + test.perf_counter_incr, after_count);
+            ASSERT_EQ(before_count + test.expect_perf_counter_incr, after_count);
         }
     }
 };

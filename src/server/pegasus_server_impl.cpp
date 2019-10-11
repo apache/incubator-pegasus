@@ -564,7 +564,8 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
     }
 
 #ifdef PEGASUS_UNIT_TEST
-    // sleep 10ms for unit test
+    // sleep 10ms for unit test,
+    // so when we set slow_query_threshold <= 10ms, it will be a slow query
     usleep(10 * 1000);
 #endif
 
