@@ -76,26 +76,40 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
 
         if (backup_id == 0 || backup_context->request.backup_id < backup_id ||
             backup_status == ColdBackupCanceled) {
-            // clear obsoleted backup context firstly
-            ddebug("%s: clear obsoleted cold backup context, old_backup_id = %" PRId64
-                   ", old_backup_status = %s",
-                   new_context->name,
-                   backup_context->request.backup_id,
-                   cold_backup_status_to_string(backup_status));
-            backup_context->cancel();
-            _cold_backup_contexts.erase(policy_name);
-            if (backup_id != 0) {
-                // go to another round
-                on_cold_backup(request, response);
-            } else { // backup_id == 0
-                if (status() == partition_status::type::PS_PRIMARY) {
-                    // send clear request to secondaries
-                    send_backup_request_to_secondary(request);
+            if (backup_status == ColdBackupCheckpointing) {
+                ddebug("%s: delay clearing obsoleted cold backup context, cause backup_status == "
+                       "ColdBackupCheckpointing",
+                       new_context->name);
+                tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
+                                 &_tracker,
+                                 [this, request]() {
+                                     backup_response response;
+                                     on_cold_backup(request, response);
+                                 },
+                                 get_gpid().thread_hash(),
+                                 std::chrono::seconds(100));
+            } else {
+                // clear obsoleted backup context firstly
+                ddebug("%s: clear obsoleted cold backup context, old_backup_id = %" PRId64
+                       ", old_backup_status = %s",
+                       new_context->name,
+                       backup_context->request.backup_id,
+                       cold_backup_status_to_string(backup_status));
+                backup_context->cancel();
+                _cold_backup_contexts.erase(policy_name);
+                if (backup_id != 0) {
+                    // go to another round
+                    on_cold_backup(request, response);
+                } else { // backup_id == 0
+                    if (status() == partition_status::type::PS_PRIMARY) {
+                        // send clear request to secondaries
+                        send_backup_request_to_secondary(request);
+                    }
+                    // clear local checkpoint dirs in background thread
+                    tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, policy_name]() {
+                        clear_backup_checkpoint(policy_name);
+                    });
                 }
-                // clear local checkpoint dirs in background thread
-                tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, policy_name]() {
-                    clear_backup_checkpoint(policy_name);
-                });
             }
             return;
         }
