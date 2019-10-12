@@ -20,12 +20,30 @@ public class PegasusClientFactory {
 
   private static ClientOptions singletonClientOptions = null;
 
-  // Create a client instance.
-  // After used, should call client.close() to release resource.
+  /**
+   * Create a client instance. After used, should call client.close() to release resource.
+   *
+   * @param configPath client config path,could be:
+   *     <pre>
+   * - zookeeper path  : zk://host1:port1,host2:port2,host3:port3/path/to/config
+   * - local file path : file:///path/to/config
+   * - java resource   : resource:///path/to/config</pre>
+   *
+   * @return PegasusClientInterface {@link PegasusClientInterface}
+   * @throws PException throws exception if any error occurs.
+   */
   public static PegasusClientInterface createClient(String configPath) throws PException {
     return new PegasusClient(configPath);
   }
 
+  /**
+   * Create a client instance instance with {@link ClientOptions}. After used, should call
+   * client.close() to release resource.
+   *
+   * @param options The client option
+   * @return PegasusClientInterface {@link PegasusClientInterface}
+   * @throws PException throws exception if any error occurs.
+   */
   public static PegasusClientInterface createClient(ClientOptions options) throws PException {
     Properties pegasusConfig = new Properties();
     pegasusConfig.setProperty("meta_servers", options.getMetaServers());
@@ -39,18 +57,30 @@ public class PegasusClientFactory {
     return new PegasusClient(pegasusConfig);
   }
 
-  // Get the singleton client instance with default config path of "resource:///pegasus.properties".
+  /**
+   * Get the singleton client instance with default config path of "resource:///pegasus.properties".
+   * After used, should call PegasusClientFactory.closeSingletonClient() to release resource.
+   *
+   * @return PegasusClientInterface {@link PegasusClientInterface}
+   * @throws PException throws exception if any error occurs.
+   */
   public static PegasusClientInterface getSingletonClient() throws PException {
     return getSingletonClient("resource:///pegasus.properties");
   }
 
-  // Get the singleton client instance.
-  // After used, should call PegasusClientFactory.closeSingletonClient() to release resource.
-  //
-  // configPath could be:
-  // - zookeeper path  : zk://host1:port1,host2:port2,host3:port3/path/to/config
-  // - local file path : file:///path/to/config
-  // - java resource   : resource:///path/to/config
+  /**
+   * Get the singleton client instance with customized config path. After used, should call
+   * PegasusClientFactory.closeSingletonClient() to release resource.
+   *
+   * @param configPath configPath could be:
+   *     <pre>
+   * - zookeeper path  : zk://host1:port1,host2:port2,host3:port3/path/to/config
+   * - local file path : file:///path/to/config
+   * - java resource   : resource:///path/to/config</pre>
+   *
+   * @return PegasusClientInterface {@link PegasusClientInterface}
+   * @throws PException throws exception if any error occurs.
+   */
   public static PegasusClientInterface getSingletonClient(String configPath) throws PException {
     synchronized (singletonClientLock) {
       if (singletonClient == null) {
@@ -74,6 +104,14 @@ public class PegasusClientFactory {
     }
   }
 
+  /**
+   * Get the singleton client instance instance with {@link ClientOptions}. After used, should call
+   * PegasusClientFactory.closeSingletonClient() to release resource.
+   *
+   * @param options The client option
+   * @return PegasusClientInterface {@link PegasusClientInterface}
+   * @throws PException throws exception if any error occurs.
+   */
   public static PegasusClientInterface getSingletonClient(ClientOptions options) throws PException {
     synchronized (singletonClientLock) {
       if (singletonClient == null) {
@@ -97,7 +135,11 @@ public class PegasusClientFactory {
     }
   }
 
-  // Close the singleton client instance.
+  /**
+   * Close the singleton client instance.
+   *
+   * @throws PException throws exception if any error occurs.
+   */
   public static void closeSingletonClient() throws PException {
     synchronized (singletonClientLock) {
       if (singletonClient != null) {
