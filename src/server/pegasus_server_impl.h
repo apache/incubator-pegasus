@@ -267,16 +267,30 @@ private:
 
     bool is_multi_get_abnormal(uint64_t time_used, uint64_t size, uint64_t iterate_count)
     {
-        return (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) ||
-               (_abnormal_multi_get_iterate_count_threshold &&
-                iterate_count >= _abnormal_multi_get_iterate_count_threshold) ||
-               (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns);
+        if (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) {
+            return true;
+        }
+        if (_abnormal_multi_get_iterate_count_threshold &&
+            iterate_count >= _abnormal_multi_get_iterate_count_threshold) {
+            return true;
+        }
+        if (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns) {
+            return true;
+        }
+
+        return false;
     }
 
     bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
     {
-        return (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) ||
-               (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns);
+        if (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) {
+            return true;
+        }
+        if (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns) {
+            return true;
+        }
+
+        return false;
     }
 
 private:
