@@ -2399,7 +2399,7 @@ void pegasus_server_impl::update_slow_query_threshold(
     if (find != envs.end()) {
         // get slow query from env(the unit of slow query from env is ms)
         uint64_t threshold_ms;
-        if (!dsn::buf2uint64(find->second, threshold_ms) || threshold_ms < 0) {
+        if (!dsn::buf2uint64(find->second, threshold_ms) || threshold_ms <= 0) {
             derror_replica("{}={} is invalid.", find->first, find->second);
             return;
         }
