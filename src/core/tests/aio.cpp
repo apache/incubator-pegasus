@@ -203,3 +203,94 @@ TEST(core, operation_failed)
 
     EXPECT_TRUE(utils::filesystem::remove_path("tmp_test_file"));
 }
+
+DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+struct aio_result
+{
+    dsn::error_code err;
+    size_t sz;
+};
+TEST(core, dsn_file)
+{
+    if (task::get_current_disk() == nullptr)
+        return;
+
+    int64_t fin_size, fout_size;
+    ASSERT_TRUE(utils::filesystem::file_size("command.txt", fin_size));
+    ASSERT_LT(0, fin_size);
+
+    dsn::disk_file *fin = file::open("command.txt", O_RDONLY, 0);
+    ASSERT_NE(nullptr, fin);
+    dsn::disk_file *fout = file::open("command.copy.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
+    ASSERT_NE(nullptr, fout);
+    char buffer[1024];
+    uint64_t offset = 0;
+    while (true) {
+        aio_result rin;
+        aio_task_ptr tin = file::read(fin,
+                                      buffer,
+                                      1024,
+                                      offset,
+                                      LPC_AIO_TEST_READ,
+                                      nullptr,
+                                      [&rin](dsn::error_code err, size_t sz) {
+                                          rin.err = err;
+                                          rin.sz = sz;
+                                      },
+                                      0);
+        ASSERT_NE(nullptr, tin);
+
+        if (dsn::tools::get_current_tool()->name() != "simulator") {
+            // at least 1 for tin, but if already read completed, then only 1
+            ASSERT_LE(1, tin->get_count());
+        }
+
+        tin->wait();
+        ASSERT_EQ(rin.err, tin->error());
+        if (rin.err != ERR_OK) {
+            ASSERT_EQ(ERR_HANDLE_EOF, rin.err);
+            break;
+        }
+        ASSERT_LT(0u, rin.sz);
+        ASSERT_EQ(rin.sz, tin->get_transferred_size());
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator") {
+            ASSERT_EQ(1, tin->get_count());
+        }
+
+        aio_result rout;
+        aio_task_ptr tout = file::write(fout,
+                                        buffer,
+                                        rin.sz,
+                                        offset,
+                                        LPC_AIO_TEST_WRITE,
+                                        nullptr,
+                                        [&rout](dsn::error_code err, size_t sz) {
+                                            rout.err = err;
+                                            rout.sz = sz;
+                                        },
+                                        0);
+        ASSERT_NE(nullptr, tout);
+        tout->wait();
+        ASSERT_EQ(ERR_OK, rout.err);
+        ASSERT_EQ(ERR_OK, tout->error());
+        ASSERT_EQ(rin.sz, rout.sz);
+        ASSERT_EQ(rin.sz, tout->get_transferred_size());
+        // this is only true for simulator
+        if (dsn::tools::get_current_tool()->name() == "simulator") {
+            ASSERT_EQ(1, tout->get_count());
+        }
+
+        ASSERT_EQ(ERR_OK, file::flush(fout));
+
+        offset += rin.sz;
+    }
+
+    ASSERT_EQ((uint64_t)fin_size, offset);
+    ASSERT_EQ(ERR_OK, file::close(fout));
+    ASSERT_EQ(ERR_OK, file::close(fin));
+
+    ASSERT_TRUE(utils::filesystem::file_size("command.copy.txt", fout_size));
+    ASSERT_EQ(fin_size, fout_size);
+}
