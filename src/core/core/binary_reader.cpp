@@ -82,38 +82,4 @@ int binary_reader::read(char *buffer, int sz)
     }
 }
 
-bool binary_reader::next(const void **data, int *size)
-{
-    if (get_remaining_size() > 0) {
-        *data = (const void *)_ptr;
-        *size = _remaining_size;
-
-        _ptr += _remaining_size;
-        _remaining_size = 0;
-        return true;
-    } else
-        return false;
-}
-
-bool binary_reader::backup(int count)
-{
-    if (count <= static_cast<int>(_ptr - _blob.data())) {
-        _ptr -= count;
-        _remaining_size += count;
-        return true;
-    } else
-        return false;
-}
-
-bool binary_reader::skip(int count)
-{
-    if (count <= get_remaining_size()) {
-        _ptr += count;
-        _remaining_size -= count;
-        return true;
-    } else {
-        assert(false);
-        return false;
-    }
-}
-}
+} // namespace dsn

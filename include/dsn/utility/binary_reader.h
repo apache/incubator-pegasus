@@ -43,10 +43,6 @@ public:
     int read(blob &blob);
     int read(blob &blob, int len);
 
-    bool next(const void **data, int *size);
-    bool skip(int count);
-    bool backup(int count);
-
     blob get_buffer() const { return _blob; }
     blob get_remaining_buffer() const { return _blob.range(static_cast<int>(_ptr - _blob.data())); }
     bool is_eof() const { return _ptr >= _blob.data() + _size; }
