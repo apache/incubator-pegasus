@@ -274,7 +274,7 @@ private:
             iterate_count >= _abnormal_multi_get_iterate_count_threshold) {
             return true;
         }
-        if (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns) {
+        if (time_used >= _slow_query_threshold_ns) {
             return true;
         }
 
@@ -286,7 +286,7 @@ private:
         if (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) {
             return true;
         }
-        if (_slow_query_threshold_ns && time_used >= _slow_query_threshold_ns) {
+        if (time_used >= _slow_query_threshold_ns) {
             return true;
         }
 
