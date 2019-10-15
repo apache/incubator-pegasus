@@ -42,6 +42,13 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2));
+
+        // ip:port/pprof/profile
+        register_handler("profile",
+                         std::bind(&pprof_http_service::profile_handler,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2));
     }
 
     std::string path() const override { return "pprof"; }
@@ -53,6 +60,8 @@ public:
     void cmdline_handler(const http_request &req, http_response &resp);
 
     void growth_handler(const http_request &req, http_response &resp);
+
+    void profile_handler(const http_request &req, http_response &resp);
 };
 
 } // namespace dsn
