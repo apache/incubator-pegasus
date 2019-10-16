@@ -11,8 +11,6 @@
 namespace pegasus {
 namespace server {
 
-DEFINE_TASK_CODE(LPC_PEGASUS_COLLECTOR_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-
 class info_collector_app : public ::dsn::service_app
 {
 public:
