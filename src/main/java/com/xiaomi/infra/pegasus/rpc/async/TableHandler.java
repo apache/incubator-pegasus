@@ -16,6 +16,7 @@ import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.Table;
 import io.netty.util.concurrent.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -24,7 +25,7 @@ import org.slf4j.Logger;
 
 /** Created by sunweijie@xiaomi.com on 16-11-11. */
 public class TableHandler extends Table {
-  static final class ReplicaConfiguration {
+  public static final class ReplicaConfiguration {
     public gpid pid = new gpid();
     public long ballot = 0;
     public rpc_address primary = new rpc_address();
@@ -72,7 +73,8 @@ public class TableHandler extends Table {
 
     error_types err = MetaSession.getMetaServiceError(op);
     if (err != error_types.ERR_OK) {
-      throw new ReplicationException(err);
+      handleMetaException(err, mgr, name);
+      return;
     }
 
     query_cfg_response resp = op.get_response();
@@ -98,7 +100,7 @@ public class TableHandler extends Table {
     lastQueryTime_ = 0;
   }
 
-  ReplicaConfiguration getReplicaConfig(int index) {
+  public ReplicaConfiguration getReplicaConfig(int index) {
     return tableConfig_.get().replicas.get(index);
   }
 
@@ -422,5 +424,25 @@ public class TableHandler extends Table {
     ClientRequestRound round =
         new ClientRequestRound(op, callback, manager_.counterEnabled(), (long) timeoutMs);
     call(round, 1);
+  }
+
+  private void handleMetaException(error_types err_type, ClusterManager mgr, String name)
+      throws ReplicationException {
+    String metaServer = Arrays.toString(mgr.getMetaList());
+    String message = "";
+    String header = "[metaServer=" + metaServer + ",tableName=" + name + "]";
+    switch (err_type) {
+      case ERR_OBJECT_NOT_FOUND:
+        message =
+            " No such table. Please make sure your meta addresses and table name are correct!";
+        break;
+      case ERR_BUSY_CREATING:
+        message = " The table is creating, please wait a moment and retry it!";
+        break;
+      case ERR_BUSY_DROPPING:
+        message = " The table is dropping, please confirm the table name!";
+        break;
+    }
+    throw new ReplicationException(err_type, header + message);
   }
 }
