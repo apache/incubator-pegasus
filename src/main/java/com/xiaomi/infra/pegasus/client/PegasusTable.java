@@ -1371,6 +1371,92 @@ public class PegasusTable implements PegasusTableInterface {
   }
 
   @Override
+  public void delRange(
+      byte[] hashKey, byte[] startSortKey, byte[] stopSortKey, DelRangeOptions options, int timeout)
+      throws PException {
+    if (timeout <= 0) timeout = defaultTimeout;
+    long startTime = System.currentTimeMillis();
+    long lastCheckTime = startTime;
+    long deadlineTime = startTime + timeout;
+    int count = 0;
+    final int maxBatchDelCount = 100;
+
+    ScanOptions scanOptions = new ScanOptions();
+    scanOptions.noValue = true;
+    scanOptions.startInclusive = options.startInclusive;
+    scanOptions.stopInclusive = options.stopInclusive;
+    scanOptions.sortKeyFilterType = options.sortKeyFilterType;
+    scanOptions.sortKeyFilterPattern = options.sortKeyFilterPattern;
+
+    options.nextSortKey = new String(startSortKey);
+    PegasusScannerInterface pegasusScanner =
+        getScanner(hashKey, startSortKey, stopSortKey, scanOptions);
+    lastCheckTime = System.currentTimeMillis();
+    if (lastCheckTime >= deadlineTime) {
+      throw new PException(
+          "Getting pegasusScanner takes too long time when delete hashKey:"
+              + new String(hashKey)
+              + ",startSortKey:"
+              + new String(startSortKey)
+              + ",stopSortKey:"
+              + new String(stopSortKey)
+              + ",timeUsed:"
+              + (lastCheckTime - startTime)
+              + ":",
+          new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+    }
+
+    int remainingTime = (int) (deadlineTime - lastCheckTime);
+    List<byte[]> sortKeys = new ArrayList<byte[]>();
+    try {
+      Pair<Pair<byte[], byte[]>, byte[]> pairs;
+      while ((pairs = pegasusScanner.next()) != null) {
+        sortKeys.add(pairs.getKey().getValue());
+        if (sortKeys.size() == maxBatchDelCount) {
+          options.nextSortKey = new String(sortKeys.get(0));
+          asyncMultiDel(hashKey, sortKeys, remainingTime).get(remainingTime, TimeUnit.MILLISECONDS);
+          lastCheckTime = System.currentTimeMillis();
+          remainingTime = (int) (deadlineTime - lastCheckTime);
+          if (remainingTime <= 0) {
+            throw new TimeoutException();
+          }
+          count++;
+          sortKeys.clear();
+        }
+      }
+      if (!sortKeys.isEmpty()) {
+        asyncMultiDel(hashKey, sortKeys, remainingTime).get(remainingTime, TimeUnit.MILLISECONDS);
+        options.nextSortKey = null;
+      }
+    } catch (InterruptedException | ExecutionException e) {
+      throw new PException(
+          "delRange of hashKey:"
+              + new String(hashKey)
+              + " from sortKey:"
+              + options.nextSortKey
+              + "[index:"
+              + count * maxBatchDelCount
+              + "]"
+              + " failed:",
+          e);
+    } catch (TimeoutException e) {
+      String sortKey = sortKeys.isEmpty() ? null : new String(sortKeys.get(0));
+      int timeUsed = (int) (System.currentTimeMillis() - startTime);
+      throw new PException(
+          "delRange of hashKey:"
+              + new String(hashKey)
+              + " from sortKey:"
+              + sortKey
+              + "[index:"
+              + count * maxBatchDelCount
+              + "]"
+              + " failed, timeUsed:"
+              + timeUsed,
+          new ReplicationException(error_code.error_types.ERR_TIMEOUT));
+    }
+  }
+
+  @Override
   public void batchMultiDel(List<Pair<byte[], List<byte[]>>> keys, int timeout) throws PException {
     if (keys == null || keys.size() == 0) {
       throw new PException("Invalid parameter: keys should not be null or empty");

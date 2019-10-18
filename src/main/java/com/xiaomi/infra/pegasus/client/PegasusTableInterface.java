@@ -979,6 +979,27 @@ public interface PegasusTableInterface {
   public void multiDel(byte[] hashKey, List<byte[]> sortKeys, int timeout /*ms*/) throws PException;
 
   /**
+   * Delete key-values within range of startSortKey and stopSortKey under hashKey. Will terminate
+   * immediately if any error occurs.
+   *
+   * @param hashKey used to decide which partition the key may exist should not be null or empty.
+   * @param startSortKey the start sort key. null means "".
+   * @param stopSortKey the stop sort key. null or "" means fetch to the last sort key.
+   * @param options del range options.
+   * @param timeout how long will the operation timeout in milliseconds. if timeout > 0, it is a
+   *     timeout value for current op, else the timeout value in the configuration file will be
+   *     used.
+   * @throws PException throws exception if any error occurs.
+   */
+  public void delRange(
+      byte[] hashKey,
+      byte[] startSortKey,
+      byte[] stopSortKey,
+      DelRangeOptions options,
+      int timeout /*ms*/)
+      throws PException;
+
+  /**
    * Batch delete specified sort keys under the same hash key. Will terminate immediately if any
    * error occurs.
    *

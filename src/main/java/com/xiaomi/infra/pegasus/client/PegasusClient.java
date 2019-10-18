@@ -427,6 +427,18 @@ public class PegasusClient implements PegasusClientInterface {
   }
 
   @Override
+  public void delRange(
+      String tableName,
+      byte[] hashKey,
+      byte[] startSortKey,
+      byte[] stopSortKey,
+      DelRangeOptions options)
+      throws PException {
+    PegasusTable tb = getTable(tableName);
+    tb.delRange(hashKey, startSortKey, stopSortKey, options, 0);
+  }
+
+  @Override
   public void batchMultiDel(String tableName, List<Pair<byte[], List<byte[]>>> keys)
       throws PException {
     PegasusTable tb = getTable(tableName);
