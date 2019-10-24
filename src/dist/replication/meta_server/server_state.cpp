@@ -949,8 +949,10 @@ void server_state::query_configuration_by_index(
 
     std::shared_ptr<app_state> &app = iter->second;
     if (app->status != app_status::AS_AVAILABLE) {
-        dassert(app->status == app_status::AS_CREATING || app->status == app_status::AS_DROPPING,
-                "invalid status in exist app");
+        derror("invalid status(%s) in exist app(%s), app_id(%d)",
+               enum_to_string(app->status),
+               (app->app_name).c_str(),
+               app->app_id);
         response.err =
             (app->status == app_status::AS_CREATING ? ERR_BUSY_CREATING : ERR_BUSY_DROPPING);
         return;
