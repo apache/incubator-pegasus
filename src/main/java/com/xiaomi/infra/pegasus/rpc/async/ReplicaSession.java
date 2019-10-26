@@ -124,6 +124,9 @@ public class ReplicaSession {
     VolatileFields f = fields;
     if (f.state == ConnState.CONNECTED && f.nettyChannel != null) {
       try {
+        // close().sync() means calling system API `close()` synchronously,
+        // but the connection may not be completely closed then, that is,
+        // the state may not be marked as DISCONNECTED immediately.
         f.nettyChannel.close().sync();
         logger.info("channel to {} closed", address.toString());
       } catch (Exception ex) {
@@ -146,7 +149,7 @@ public class ReplicaSession {
     return address;
   }
 
-  private void doConnect() {
+  void doConnect() {
     try {
       // we will receive the channel connect event in DefaultHandler.ChannelActive
       boot.connect(address.get_ip(), address.get_port())
