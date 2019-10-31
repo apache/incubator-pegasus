@@ -22,8 +22,10 @@ public interface PegasusClientInterface {
   public void close();
 
   /**
-   * Open a table. Please notice that pegasus support two kinds of API: 1. the client-interface way,
-   * which is provided in this class. 2. the table-interface way, which is provided by {@link
+   * Open a table, and prepare the sessions and route-table to the replica-servers.
+   *
+   * <p>Please notice that pegasus support two kinds of API: 1. the client-interface way, which is
+   * provided in this class. 2. the table-interface way, which is provided by {@link
    * PegasusTableInterface}. With the client-interface, you don't need to create
    * PegasusTableInterface by openTable, so you can access the pegasus cluster conveniently.
    * However, the client-interface's api also has some restrictions: 1. we don't provide async

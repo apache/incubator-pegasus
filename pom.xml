@@ -186,6 +186,8 @@
               <suppressionsLocation>dev-support/checkstyle-suppressions.xml</suppressionsLocation>
               <encoding>UTF-8</encoding>
               <consoleOutput>true</consoleOutput>
+              <failOnViolation>true</failOnViolation>
+              <violationSeverity>warning</violationSeverity>
               <failsOnError>true</failsOnError>
               <excludes>
                 com/xiaomi/infra/pegasus/apps/*,

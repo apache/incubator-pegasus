@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 
 public class ThriftHeader {
   public static final int HEADER_LENGTH = 48;
-  public static final byte[] HEADER_TYPE = {'T', 'H', 'F', 'T'};
+  static final byte[] HEADER_TYPE = {'T', 'H', 'F', 'T'};
   public int hdr_version = 0;
   public int header_length;
   public int header_crc32 = 0;

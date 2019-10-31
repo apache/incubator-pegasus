@@ -13,15 +13,19 @@ public class ZstdWrapper {
   private ZstdWrapper() {}
 
   /**
-   * compress the `src` and return the compressed. throws: RuntimeException if compression failed.
+   * Compresses the `src` and returns the compressed.
+   *
+   * @throws RuntimeException if compression failed.
    */
   public static byte[] compress(byte[] src) {
     return Zstd.compress(src);
   }
 
   /**
-   * decompress the `src` and return the original. throws: - IllegalArgumentException if given `src`
-   * is null or empty - PException if decompression failed, maybe your `src` is corrupted.
+   * Decompresses the `src` and returns the original.
+   *
+   * @param src not null nor empty, or IllegalArgumentException will be thrown.
+   * @throws PException if decompression failed, maybe your `src` is corrupted.
    */
   public static byte[] decompress(byte[] src) throws PException {
     if (src == null || src.length == 0) {

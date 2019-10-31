@@ -9,43 +9,51 @@ import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
- * @author sunweijie
- *     <p>This class provides sync and async interfaces to access data of a specified table.
- *     <p>All the async interfaces use Future mode. Notice that it's {@link
- *     io.netty.util.concurrent.Future}, but not {@link java.util.concurrent.Future}. You can wait
- *     the future to complete in a synchronous manner, or add completion callback in an asynchronous
- *     way.
- *     <p>A synchronous example: <code>
- *     PegasusTableInterface table;
- *     ....
- *     Future{@literal <Boolean>} future = table.asyncExist(hashKey, sortKey, 0);
- *     future.await();
- *     if (future.isSuccess()) {
- *         Boolean result = future.getNow();
- *     }
- *     else {
- *         future.cause().printStackTrace();
- *     }
- * </code> An asynchronous example: <code>
- *     PegasusTableInterface table;
- *     ....
- *     table.asyncExist(hashKey, sortKey, 0).addListener(
- *         new ExistListener() {
- *             public void operationComplete(Future{@literal <Boolean>} future) throws Exception {
- *                 if (future.isSuccess()) {
- *                     Boolean result = future.getNow();
- *                 }
- *                 else {
- *                     future.cause().printStackTrace();
- *                 }
+ * This class provides sync and async interfaces to access data of a specified table. All the async
+ * interfaces use Future mode. Notice that it's {@link io.netty.util.concurrent.Future}, but not
+ * {@link java.util.concurrent.Future}. You can wait the future to complete in a synchronous manner,
+ * or add completion callback in an asynchronous way.
+ *
+ * <p>A synchronous example:
+ *
+ * <pre>{@code
+ * PegasusTableInterface table;
+ * ....
+ * Future<Boolean> future = table.asyncExist(hashKey, sortKey, 0);
+ * future.await();
+ * if (future.isSuccess()) {
+ *     Boolean result = future.getNow();
+ * }
+ * else {
+ *     future.cause().printStackTrace();
+ * }
+ * }</pre>
+ *
+ * <p>An asynchronous example:
+ *
+ * <pre>{@code
+ * PegasusTableInterface table;
+ * ....
+ * table.asyncExist(hashKey, sortKey, 0).addListener(
+ *     new ExistListener() {
+ *         public void operationComplete(Future<Boolean> future) throws Exception {
+ *             if (future.isSuccess()) {
+ *                 Boolean result = future.getNow();
+ *             }
+ *             else {
+ *                 future.cause().printStackTrace();
  *             }
  *         }
- *     ).await();
- * </code> Attention: when the future await() returns, it is guaranteed that the result data is
- *     ready and you can fetch it by getNow(), but it is not guaranteed that the operationComplete()
- *     of listener is already executed, because the callback is dispatched to an internal thread, so
- *     it depends on thread scheduling.
- *     <p>Please refer to the netty document for the usage of Future.
+ *     }
+ * ).await();
+ * }</pre>
+ *
+ * <p>Attention: when the future await() returns, it is guaranteed that the result data is ready and
+ * you can fetch it by getNow(), but it is not guaranteed that the operationComplete() of listener
+ * is already executed, because the callback is dispatched to an internal thread, so it depends on
+ * thread scheduling.
+ *
+ * <p>Please refer to the netty document for the usage of Future.
  */
 public interface PegasusTableInterface {
 

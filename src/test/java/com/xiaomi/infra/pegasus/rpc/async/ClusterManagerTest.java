@@ -49,7 +49,7 @@ public class ClusterManagerTest {
     try {
       result = testManager.openTable("testName", KeyHasher.DEFAULT);
     } catch (ReplicationException e) {
-      Assert.assertEquals(error_code.error_types.ERR_SESSION_RESET, e.err_type);
+      Assert.assertEquals(error_code.error_types.ERR_SESSION_RESET, e.getErrorType());
     } finally {
       Assert.assertNull(result);
     }
@@ -63,7 +63,7 @@ public class ClusterManagerTest {
     try {
       result = testManager.openTable("hehe", KeyHasher.DEFAULT);
     } catch (ReplicationException e) {
-      Assert.assertEquals(error_code.error_types.ERR_OBJECT_NOT_FOUND, e.err_type);
+      Assert.assertEquals(error_code.error_types.ERR_OBJECT_NOT_FOUND, e.getErrorType());
     } finally {
       Assert.assertNull(result);
     }

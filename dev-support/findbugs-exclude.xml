@@ -19,7 +19,6 @@
              TODO(wutao1): The following packages should be removed from
              the exclusion list after their bugs are fixed.
             -->
-            <Package name="com.xiaomi.infra.pegasus.rpc"/>
             <Package name="com.xiaomi.infra.pegasus.rpc.async"/>
             <Package name="com.xiaomi.infra.pegasus.client"/>
             <Package name="com.xiaomi.infra.pegasus.metrics"/>

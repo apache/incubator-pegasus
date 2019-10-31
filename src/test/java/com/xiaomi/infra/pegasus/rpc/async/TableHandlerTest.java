@@ -6,7 +6,7 @@ package com.xiaomi.infra.pegasus.rpc.async;
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.rpc_address;
-import com.xiaomi.infra.pegasus.operator.*;
+import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.async.TableHandler.ReplicaConfiguration;
@@ -57,7 +57,7 @@ public class TableHandlerTest {
   /** Method: operate(client_operator op) */
   @Test
   public void testOperateOp() throws Exception {
-    System.out.println("test synchronized opearate");
+    System.out.println("TableHandlerTest#testOperateOp");
     TableHandler table = null;
     try {
       table = testManager.openTable("temp", KeyHasher.DEFAULT);
@@ -92,10 +92,11 @@ public class TableHandlerTest {
       table.operate(op, 0);
       Assert.fail();
     } catch (ReplicationException ex) {
-      Assert.assertEquals(error_types.ERR_TIMEOUT, ex.err_type);
+      logger.info("timeout is set 0, no enough time to process");
+      Assert.assertEquals(error_types.ERR_TIMEOUT, ex.getErrorType());
     }
 
-    // we should try to query meta accordingly
+    // we should try to query meta since the session to replica-server is unreachable.
     final TableHandler finalTableRef = table;
     boolean ans =
         Toollet.waitCondition(
@@ -116,7 +117,7 @@ public class TableHandlerTest {
       table.operate(op, 0);
       Assert.fail();
     } catch (ReplicationException ex) {
-      Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, ex.err_type);
+      Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, ex.getErrorType());
     }
 
     // 3. we should open a onebox cluster with three replica servers. thus every
@@ -134,7 +135,7 @@ public class TableHandlerTest {
       table.operate(op, 0);
       Assert.fail();
     } catch (ReplicationException ex) {
-      Assert.assertEquals(error_types.ERR_TIMEOUT, ex.err_type);
+      Assert.assertEquals(error_types.ERR_TIMEOUT, ex.getErrorType());
     }
   }
 
@@ -181,5 +182,23 @@ public class TableHandlerTest {
 
     handle = table.getReplicaConfig(0);
     Assert.assertEquals(oldBallot + 1, handle.ballot);
+  }
+
+  @Test
+  public void testConnectAfterQueryMeta() throws Exception {
+    System.out.println("TableHandlerTest#testConnectAfterQueryMeta");
+    TableHandler table = null;
+
+    try {
+      table = testManager.openTable("temp", KeyHasher.DEFAULT);
+    } catch (ReplicationException e) {
+      Assert.fail();
+    }
+    Assert.assertNotNull(table);
+
+    ArrayList<ReplicaConfiguration> replicas = table.tableConfig_.get().replicas;
+    for (ReplicaConfiguration r : replicas) {
+      Assert.assertEquals(r.session.getState(), ReplicaSession.ConnState.CONNECTED);
+    }
   }
 }

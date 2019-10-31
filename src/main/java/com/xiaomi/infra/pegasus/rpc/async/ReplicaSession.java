@@ -149,10 +149,10 @@ public class ReplicaSession {
     return address;
   }
 
-  void doConnect() {
+  ChannelFuture doConnect() {
     try {
       // we will receive the channel connect event in DefaultHandler.ChannelActive
-      boot.connect(address.get_ip(), address.get_port())
+      return boot.connect(address.get_ip(), address.get_port())
           .addListener(
               new ChannelFutureListener() {
                 @Override
@@ -170,6 +170,7 @@ public class ReplicaSession {
     } catch (UnknownHostException ex) {
       logger.error("invalid address: {}", address.toString());
       assert false;
+      return null; // unreachable
     }
   }
 

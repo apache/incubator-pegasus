@@ -42,7 +42,7 @@ public class TimeoutBenchmark {
         long t = System.currentTimeMillis();
         result[i] = t - current;
         current = t;
-        Assert.assertEquals(e.err_type, error_code.error_types.ERR_TIMEOUT);
+        Assert.assertEquals(e.getErrorType(), error_code.error_types.ERR_TIMEOUT);
       }
     }
     System.out.println("finished");

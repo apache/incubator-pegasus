@@ -34,7 +34,6 @@ public class ClusterManager extends Cluster {
   private MetaSession metaSession;
 
   private static final String osName;
-  private static final String Linux = "Linux";
 
   static {
     Properties p = System.getProperties();

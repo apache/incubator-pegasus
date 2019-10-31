@@ -6,6 +6,8 @@ package com.xiaomi.infra.pegasus.rpc.async;
 import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.gpid;
 import com.xiaomi.infra.pegasus.base.rpc_address;
+import com.xiaomi.infra.pegasus.client.FutureGroup;
+import com.xiaomi.infra.pegasus.client.PException;
 import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.operator.query_cfg_operator;
 import com.xiaomi.infra.pegasus.replication.partition_configuration;
@@ -14,7 +16,8 @@ import com.xiaomi.infra.pegasus.replication.query_cfg_response;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.Table;
-import io.netty.util.concurrent.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.util.concurrent.EventExecutor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.*;
@@ -138,6 +141,7 @@ public class TableHandler extends Table {
       newConfig.replicas.add(newReplicaConfig);
     }
 
+    FutureGroup futureGroup = new FutureGroup(resp.getPartition_count());
     for (partition_configuration pc : resp.getPartitions()) {
       ReplicaConfiguration s = newConfig.replicas.get(pc.getPid().get_pidx());
       if (s.ballot != pc.ballot) {
@@ -176,6 +180,10 @@ public class TableHandler extends Table {
         if (s.session == null || !s.session.getAddress().equals(pc.primary)) {
           // reset to new primary
           s.session = manager_.getReplicaSession(pc.primary);
+          ChannelFuture fut = s.session.doConnect();
+          if (fut != null) {
+            futureGroup.add(fut);
+          }
         }
       }
     }
@@ -183,6 +191,14 @@ public class TableHandler extends Table {
     // there should only be one thread to do the table config update
     appID_ = resp.getApp_id();
     tableConfig_.set(newConfig);
+
+    // Warm up the connections during client.openTable, so RPCs thereafter can
+    // skip the connect process.
+    try {
+      futureGroup.waitAllCompleteOrOneFail(manager_.getTimeout());
+    } catch (PException e) {
+      logger.warn("failed to connect with some replica servers!");
+    }
   }
 
   void onUpdateConfiguration(final query_cfg_operator op) {

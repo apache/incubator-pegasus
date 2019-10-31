@@ -7,9 +7,9 @@ import io.netty.util.concurrent.Future;
 import java.util.ArrayList;
 import java.util.List;
 
-final class FutureGroup<Result> {
+public class FutureGroup<Result> {
 
-  FutureGroup(int initialCapacity) {
+  public FutureGroup(int initialCapacity) {
     asyncTasks = new ArrayList<>(initialCapacity);
   }
 
@@ -17,21 +17,28 @@ final class FutureGroup<Result> {
     asyncTasks.add(task);
   }
 
-  void waitAllCompleteOrOneFail(int timeoutMillis) throws PException {
+  public void waitAllCompleteOrOneFail(int timeoutMillis) throws PException {
     waitAllCompleteOrOneFail(null, timeoutMillis);
   }
 
   // Waits until all future tasks complete but terminate if one fails.
   // `results` is nullable
-  void waitAllCompleteOrOneFail(List<Result> results, int timeoutMillis) throws PException {
+  public void waitAllCompleteOrOneFail(List<Result> results, int timeoutMillis) throws PException {
+    int timeLimit = timeoutMillis;
+    long duration = 0;
     for (int i = 0; i < asyncTasks.size(); i++) {
       Future<Result> fu = asyncTasks.get(i);
       try {
-        fu.await(timeoutMillis);
+        long startTs = System.currentTimeMillis();
+        fu.await(timeLimit);
+        duration = System.currentTimeMillis() - startTs;
+        assert duration >= 0;
+        timeLimit -= duration;
       } catch (Exception e) {
         throw new PException("async task #[" + i + "] await failed: " + e.toString());
       }
-      if (fu.isSuccess()) {
+
+      if (fu.isSuccess() && timeLimit >= 0) {
         if (results != null) {
           results.set(i, fu.getNow());
         }
