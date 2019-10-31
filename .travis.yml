@@ -1,0 +1,13 @@
+dist: trusty
+
+language: java
+
+jdk:
+  - openjdk8
+
+cache:
+  directories:
+    - $HOME/.m2
+
+script:
+  - ./scripts/travis.sh
