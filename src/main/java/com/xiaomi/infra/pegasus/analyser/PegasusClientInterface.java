@@ -1,6 +1,5 @@
-package com.xiaomi.infra;
+package com.xiaomi.infra.pegasus.analyser;
 
-import com.xiaomi.infra.service.db.PegasusScanner;
 import java.io.Serializable;
 import org.rocksdb.RocksDBException;
 

@@ -1,4 +1,4 @@
-package com.xiaomi.infra.common;
+package com.xiaomi.infra.pegasus.analyser;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;

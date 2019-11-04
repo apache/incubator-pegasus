@@ -1,6 +1,5 @@
-package com.xiaomi.infra.service;
+package com.xiaomi.infra.pegasus.analyser;
 
-import com.xiaomi.infra.config.Config;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;

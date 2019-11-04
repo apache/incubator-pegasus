@@ -1,4 +1,4 @@
-package com.xiaomi.infra.config;
+package com.xiaomi.infra.pegasus.analyser;
 
 import java.io.Serializable;
 import java.util.Objects;

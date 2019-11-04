@@ -1,11 +1,11 @@
-package com.xiaomi.infra.sample.local;
+package com.xiaomi.infra.pegasus.analyser.sample.local;
 
-import com.xiaomi.infra.PegasusClient;
-import com.xiaomi.infra.config.Config;
-import com.xiaomi.infra.service.FdsService;
-import com.xiaomi.infra.service.db.PegasusKey;
-import com.xiaomi.infra.service.db.PegasusOptions;
-import com.xiaomi.infra.service.db.PegasusScanner;
+import com.xiaomi.infra.pegasus.analyser.PegasusClient;
+import com.xiaomi.infra.pegasus.analyser.Config;
+import com.xiaomi.infra.pegasus.analyser.FdsService;
+import com.xiaomi.infra.pegasus.analyser.PegasusKey;
+import com.xiaomi.infra.pegasus.analyser.PegasusOptions;
+import com.xiaomi.infra.pegasus.analyser.PegasusScanner;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

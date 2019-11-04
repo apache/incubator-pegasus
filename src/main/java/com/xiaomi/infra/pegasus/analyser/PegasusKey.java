@@ -1,4 +1,4 @@
-package com.xiaomi.infra.service.db;
+package com.xiaomi.infra.pegasus.analyser;
 
 public class PegasusKey {
 

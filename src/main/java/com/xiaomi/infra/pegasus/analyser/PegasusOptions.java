@@ -1,6 +1,5 @@
-package com.xiaomi.infra.service.db;
+package com.xiaomi.infra.pegasus.analyser;
 
-import com.xiaomi.infra.config.Config;
 import org.rocksdb.Env;
 import org.rocksdb.HdfsEnv;
 import org.rocksdb.InfoLogLevel;

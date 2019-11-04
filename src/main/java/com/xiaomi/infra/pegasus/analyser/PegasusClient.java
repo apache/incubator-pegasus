@@ -1,8 +1,5 @@
-package com.xiaomi.infra;
+package com.xiaomi.infra.pegasus.analyser;
 
-import com.xiaomi.infra.service.FdsService;
-import com.xiaomi.infra.service.db.PegasusOptions;
-import com.xiaomi.infra.service.db.PegasusScanner;
 import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -20,8 +17,6 @@ public class PegasusClient implements AutoCloseable, PegasusClientInterface {
   private int partitionCounter;
   private Map<Integer, String> checkPointUrls;
   private PegasusScanner pegasusScanner;
-
-  public PegasusClient() {}
 
   public PegasusClient(PegasusOptions options, FdsService fdsService) {
     this.partitionCounter = fdsService.getPartitionCounter();
