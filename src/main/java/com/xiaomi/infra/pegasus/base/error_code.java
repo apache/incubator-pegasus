@@ -102,6 +102,7 @@ public class error_code
 
     // ERROR_CODE defined by client
     ERR_SESSION_RESET,
+    ERR_THREAD_INTERRUPTED,
   };
 
   public error_types errno;

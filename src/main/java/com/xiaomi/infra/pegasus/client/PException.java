@@ -3,6 +3,10 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
+import com.xiaomi.infra.pegasus.base.error_code;
+import com.xiaomi.infra.pegasus.rpc.ReplicationException;
+import java.util.concurrent.TimeoutException;
+
 /**
  * The generic type of exception thrown by all of the Pegasus APIs.
  *
@@ -26,5 +30,21 @@ public class PException extends Exception {
 
   public PException(Throwable cause) {
     super(cause);
+  }
+
+  static PException threadInterrupted(String tableName, InterruptedException e) {
+    return new PException(
+        new ReplicationException(
+            error_code.error_types.ERR_THREAD_INTERRUPTED,
+            String.format("[table=%s] Thread was interrupted: %s", tableName, e.getMessage())));
+  }
+
+  static PException timeout(String tableName, int timeout, TimeoutException e) {
+    return new PException(
+        new ReplicationException(
+            error_code.error_types.ERR_TIMEOUT,
+            String.format(
+                "[table=%s, timeout=%dms] Timeout on Future await: %s",
+                tableName, timeout, e.getMessage())));
   }
 }
