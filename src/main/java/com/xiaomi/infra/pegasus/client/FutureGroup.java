@@ -21,8 +21,11 @@ public class FutureGroup<Result> {
     waitAllCompleteOrOneFail(null, timeoutMillis);
   }
 
-  // Waits until all future tasks complete but terminate if one fails.
-  // `results` is nullable
+  /**
+   * Waits until all future tasks complete but terminate if one fails.
+   *
+   * @param results is nullable, each element is the result of the Future.
+   */
   public void waitAllCompleteOrOneFail(List<Result> results, int timeoutMillis) throws PException {
     int timeLimit = timeoutMillis;
     long duration = 0;
@@ -32,7 +35,6 @@ public class FutureGroup<Result> {
         long startTs = System.currentTimeMillis();
         fu.await(timeLimit);
         duration = System.currentTimeMillis() - startTs;
-        assert duration >= 0;
         timeLimit -= duration;
       } catch (Exception e) {
         throw new PException("async task #[" + i + "] await failed: " + e.toString());

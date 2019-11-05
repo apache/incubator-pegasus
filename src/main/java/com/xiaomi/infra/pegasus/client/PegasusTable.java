@@ -1730,7 +1730,7 @@ public class PegasusTable implements PegasusTableInterface {
     return ret;
   }
 
-  private void handleReplicaException(
+  static void handleReplicaException(
       DefaultPromise promise, client_operator op, Table table, int timeout) {
     gpid gPid = op.get_gpid();
     ReplicaConfiguration replicaConfiguration =

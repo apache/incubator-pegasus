@@ -15,21 +15,22 @@ import java.util.concurrent.TimeoutException;
  */
 public class PException extends Exception {
   private static final long serialVersionUID = 4436491238550521203L;
+  private static final String versionPrefix = loadVersion() + ": ";
 
   public PException() {
     super();
   }
 
   public PException(String message, Throwable cause) {
-    super(message, cause);
+    super(versionPrefix + message, cause);
   }
 
   public PException(String message) {
-    super(message);
+    super(versionPrefix + message);
   }
 
   public PException(Throwable cause) {
-    super(cause);
+    super(versionPrefix + cause.toString(), cause);
   }
 
   static PException threadInterrupted(String tableName, InterruptedException e) {
@@ -46,5 +47,13 @@ public class PException extends Exception {
             String.format(
                 "[table=%s, timeout=%dms] Timeout on Future await: %s",
                 tableName, timeout, e.getMessage())));
+  }
+
+  private static String loadVersion() {
+    String ver = PException.class.getPackage().getImplementationVersion();
+    if (ver == null) {
+      return "{version}";
+    }
+    return ver;
   }
 }
