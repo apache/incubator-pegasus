@@ -25,7 +25,7 @@ public class FdsService implements Serializable {
   private Config globalConfig;
   private transient Configuration conf = new Configuration();
   private Map<Integer, String> checkpointUrls = new HashMap<>();
-  private int partitionCounter;
+  private int partitionCount;
 
   private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -56,9 +56,9 @@ public class FdsService implements Serializable {
     String tableNameAndId = getTableNameAndId(tablePrefix, table);
 
     String metaPrefix = tablePrefix + "/" + tableNameAndId + "/";
-    partitionCounter = getCounter(metaPrefix);
+    partitionCount = getCounter(metaPrefix);
 
-    initCheckpointUrls(metaPrefix, partitionCounter);
+    initCheckpointUrls(metaPrefix, partitionCount);
 
     LOG.info("Init fds default config and get the latest data urls");
   }
@@ -75,15 +75,15 @@ public class FdsService implements Serializable {
     String tableNameAndId = getTableNameAndId(tablePrefix, table);
 
     String metaPrefix = tablePrefix + "/" + tableNameAndId + "/";
-    partitionCounter = getCounter(metaPrefix);
+    partitionCount = getCounter(metaPrefix);
 
-    initCheckpointUrls(metaPrefix, partitionCounter);
+    initCheckpointUrls(metaPrefix, partitionCount);
 
     LOG.info("Init fds default config and get the " + dataTime + " data urls");
   }
 
-  public int getPartitionCounter() {
-    return partitionCounter;
+  public int getPartitionCount() {
+    return partitionCount;
   }
 
   public Map<Integer, String> getCheckpointUrls() {
@@ -173,8 +173,8 @@ public class FdsService implements Serializable {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
       while ((appMetaData = bufferedReader.readLine()) != null) {
         JSONObject jsonObject = new JSONObject(appMetaData);
-        String partitionCounter = jsonObject.getString("partition_count");
-        return Integer.valueOf(partitionCounter);
+        String partitionCount = jsonObject.getString("partition_count");
+        return Integer.valueOf(partitionCount);
       }
     } catch (Exception e) {
       e.printStackTrace();

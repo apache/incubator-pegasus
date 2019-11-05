@@ -14,7 +14,7 @@ object scanAllData {
   def main(args: Array[String]): Unit = {
     val config = new Config("core-site.xml")
     val fdsService = new FdsService(config, "c3srv-browser", "alchemy_feed_exchange_record")
-    val partitionCount = fdsService.getPartitionCounter
+    val partitionCount = fdsService.getPartitionCount
 
     val conf = new SparkConf()
       .setAppName("pegasus data analyse")

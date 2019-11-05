@@ -5,7 +5,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.rocksdb.*;
 
-public class PegasusClient implements AutoCloseable, PegasusClientInterface {
+public class PegasusClient implements AutoCloseable {
 
   static {
     RocksDB.loadLibrary();
@@ -14,18 +14,18 @@ public class PegasusClient implements AutoCloseable, PegasusClientInterface {
   private static final Log LOG = LogFactory.getLog(PegasusClient.class);
 
   private PegasusOptions pegasusOptions;
-  private int partitionCounter;
+  private int partitionCount;
   private Map<Integer, String> checkPointUrls;
   private PegasusScanner pegasusScanner;
 
   public PegasusClient(PegasusOptions options, FdsService fdsService) {
-    this.partitionCounter = fdsService.getPartitionCounter();
+    this.partitionCount = fdsService.getPartitionCount();
     this.checkPointUrls = fdsService.getCheckpointUrls();
     this.pegasusOptions = options;
   }
 
   public int getPartitionCount() {
-    return partitionCounter;
+    return partitionCount;
   }
 
   public PegasusScanner getScanner(int pid) throws RocksDBException {

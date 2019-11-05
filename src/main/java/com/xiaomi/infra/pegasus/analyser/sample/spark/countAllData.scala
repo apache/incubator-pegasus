@@ -15,7 +15,7 @@ object countAllData {
 
     val config = new Config("core-site.xml")
     val fdsService = new FdsService(config, "c3srv-browser", "browser_feed_user_channel")
-    val partitionCount = fdsService.getPartitionCounter
+    val partitionCount = fdsService.getPartitionCount
 
     val conf = new SparkConf()
       .setAppName("pegasus data analyse")
