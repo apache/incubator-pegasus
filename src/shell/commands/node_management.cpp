@@ -127,8 +127,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         std::string node_name = kv.first.to_std_string();
         if (resolve_ip) {
             // TODO: put hostname_from_ip_port into common utils
-            if (!sc->ddl_client->hostname_from_ip_port(node_name.c_str(),&node_name))
-				node_name = kv.first.to_std_string();
+            sc->ddl_client->hostname_from_ip_port(node_name.c_str(),&node_name);
         }
         tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
     }
