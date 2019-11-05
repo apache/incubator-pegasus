@@ -1,19 +1,19 @@
 package com.xiaomi.infra.pegasus.analyser;
 
-import org.rocksdb.Env;
-import org.rocksdb.HdfsEnv;
-import org.rocksdb.InfoLogLevel;
-import org.rocksdb.Logger;
-import org.rocksdb.Options;
-import org.rocksdb.ReadOptions;
+import org.rocksdb.*;
 
-public class PegasusOptions {
+/**
+ * The wrapper of RocksDB Options in JNI.
+ *
+ * <p>NOTE: Must be closed manually to release the underlying memory.
+ */
+class RocksDBOptions {
 
-  public Options options;
-  public ReadOptions readOptions;
+  Options options;
+  ReadOptions readOptions;
   private Env env;
 
-  public PegasusOptions(Config config) {
+  RocksDBOptions(Config config) {
     if (config.DATA_URL.contains("fds")) {
       env = new HdfsEnv(config.DATA_URL + "#" + config.DATA_PORT);
     } else {
@@ -39,7 +39,7 @@ public class PegasusOptions {
     options.setLogger(rocksdbLog);
   }
 
-  public void close() {
+  void close() {
     options.close();
     readOptions.close();
     env.close();

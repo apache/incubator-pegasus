@@ -1,6 +1,6 @@
 package com.xiaomi.infra.pegasus.analyser.sample.spark
 
-import com.xiaomi.infra.pegasus.analyser.{Config, FdsService, PegasusClient, PegasusOptions}
+import com.xiaomi.infra.pegasus.analyser.{Config, FdsService, PegasusClient}
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.{SparkConf, SparkContext, TaskContext}
 import org.rocksdb.RocksDB
@@ -29,8 +29,7 @@ object scanAllData {
       //RocksDB.loadLibrary() must at here
       RocksDB.loadLibrary()
       var result = List[Int]()
-      val pegasusOptions = new PegasusOptions(config)
-      val pegasusClient = new PegasusClient(pegasusOptions, fdsService)
+      val pegasusClient = new PegasusClient(config, fdsService)
       val pid = TaskContext.getPartitionId()
       val rocksdbScanner = pegasusClient.getScanner(pid)
       rocksdbScanner.seekToFirst()

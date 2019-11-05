@@ -4,7 +4,6 @@ import com.xiaomi.infra.pegasus.analyser.PegasusClient;
 import com.xiaomi.infra.pegasus.analyser.Config;
 import com.xiaomi.infra.pegasus.analyser.FdsService;
 import com.xiaomi.infra.pegasus.analyser.PegasusKey;
-import com.xiaomi.infra.pegasus.analyser.PegasusOptions;
 import com.xiaomi.infra.pegasus.analyser.PegasusScanner;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -35,8 +34,7 @@ public class ScanTool {
     LOG.info("Workers will count the total data.");
     AtomicInteger totalDataCount = new AtomicInteger();
     AtomicInteger taskCounter = new AtomicInteger();
-    PegasusOptions pegasusOptions = new PegasusOptions(config);
-    PegasusClient pegasusClient = new PegasusClient(pegasusOptions, fdsService);
+    PegasusClient pegasusClient = new PegasusClient(config, fdsService);
     int partitionCount = pegasusClient.getPartitionCount();
     ExecutorService counterTaskExecutor = Executors.newFixedThreadPool(partitionCount);
     int pid = partitionCount - 1;
@@ -61,13 +59,12 @@ public class ScanTool {
     }
 
     while (!isComplete) {}
-    pegasusOptions.close();
+    pegasusClient.close();
   }
 
   private static void scan(FdsService fdsService, Config config) {
     AtomicInteger taskCounter = new AtomicInteger();
-    PegasusOptions pegasusOptions = new PegasusOptions(config);
-    PegasusClient pegasusClient = new PegasusClient(pegasusOptions, fdsService);
+    PegasusClient pegasusClient = new PegasusClient(config, fdsService);
     int partitionCount = pegasusClient.getPartitionCount();
     ExecutorService counterTaskExecutor = Executors.newFixedThreadPool(partitionCount);
     int pid = partitionCount - 1;

@@ -13,15 +13,15 @@ public class PegasusClient implements AutoCloseable {
 
   private static final Log LOG = LogFactory.getLog(PegasusClient.class);
 
-  private PegasusOptions pegasusOptions;
+  private RocksDBOptions rocksdbOptions;
   private int partitionCount;
   private Map<Integer, String> checkPointUrls;
   private PegasusScanner pegasusScanner;
 
-  public PegasusClient(PegasusOptions options, FdsService fdsService) {
+  public PegasusClient(Config cfg, FdsService fdsService) {
     this.partitionCount = fdsService.getPartitionCount();
     this.checkPointUrls = fdsService.getCheckpointUrls();
-    this.pegasusOptions = options;
+    this.rocksdbOptions = new RocksDBOptions(cfg);
   }
 
   public int getPartitionCount() {
@@ -29,14 +29,14 @@ public class PegasusClient implements AutoCloseable {
   }
 
   public PegasusScanner getScanner(int pid) throws RocksDBException {
-    pegasusScanner = getScanner(pegasusOptions, pid);
+    pegasusScanner = getScanner(rocksdbOptions, pid);
     return pegasusScanner;
   }
 
   public int getDataCount(int pid) throws RocksDBException {
     int count = 0;
     LOG.info("start count data:" + count);
-    PegasusScanner pegasusScanner = getScanner(pegasusOptions, pid);
+    PegasusScanner pegasusScanner = getScanner(pid);
     for (pegasusScanner.seekToFirst(); pegasusScanner.isValid(); pegasusScanner.next()) {
       count++;
       if (count % 1000000 == 0) {
@@ -47,7 +47,7 @@ public class PegasusClient implements AutoCloseable {
     return count;
   }
 
-  private PegasusScanner getScanner(PegasusOptions pegasusOptions, int pid)
+  private PegasusScanner getScanner(RocksDBOptions pegasusOptions, int pid)
       throws RocksDBException {
     LOG.info("open read only the " + pid + " partition count");
     RocksDB rocksDB = RocksDB.openReadOnly(pegasusOptions.options, checkPointUrls.get(pid));
@@ -58,6 +58,6 @@ public class PegasusClient implements AutoCloseable {
   @Override
   public void close() {
     pegasusScanner.close();
-    pegasusOptions.close();
+    rocksdbOptions.close();
   }
 }
