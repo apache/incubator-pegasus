@@ -1,6 +1,6 @@
 [submodule "rdsn"]
   path = rdsn
-  url = https://github.com/XiaoMi/rdsn.git
+  url = https://github.com/Smityz/rdsn
 [submodule "rocksdb"]
   path = rocksdb
-  url = https://github.com/XiaoMi/pegasus-rocksdb.git
+  url = https://github.com/Smityz/pegasus-rocksdb
