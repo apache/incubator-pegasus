@@ -1,5 +1,7 @@
 package com.xiaomi.infra.pegasus.analyser;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.rocksdb.*;
 
 /**
@@ -8,6 +10,8 @@ import org.rocksdb.*;
  * <p>NOTE: Must be closed manually to release the underlying memory.
  */
 class RocksDBOptions {
+
+  private static final Log LOG = LogFactory.getLog(RocksDBOptions.class);
 
   Options options;
   ReadOptions readOptions;
@@ -30,13 +34,15 @@ class RocksDBOptions {
 
     readOptions = new ReadOptions().setReadaheadSize(config.READ_AHEAD_SIZE);
 
-    Logger rocksdbLog =
+    Logger rocksDBLog =
         new Logger(options) {
           @Override
-          public void log(InfoLogLevel infoLogLevel, String s) {}
+          public void log(InfoLogLevel infoLogLevel, String s) {
+            LOG.info("[rocksDB native log info]" + s);
+          }
         };
 
-    options.setLogger(rocksdbLog);
+    options.setLogger(rocksDBLog);
   }
 
   void close() {
