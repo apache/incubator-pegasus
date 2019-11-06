@@ -1,11 +1,11 @@
 package com.xiaomi.infra.pegasus.analyser.sample.local;
 
+import com.xiaomi.infra.pegasus.analyser.FDSException;
 import com.xiaomi.infra.pegasus.analyser.PegasusClient;
 import com.xiaomi.infra.pegasus.analyser.Config;
-import com.xiaomi.infra.pegasus.analyser.FdsService;
+import com.xiaomi.infra.pegasus.analyser.FDSService;
 import com.xiaomi.infra.pegasus.analyser.PegasusKey;
 import com.xiaomi.infra.pegasus.analyser.PegasusScanner;
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,7 +30,7 @@ public class ScanTool {
   private static final Log LOG = LogFactory.getLog(ScanTool.class);
   private static volatile Boolean isComplete = false;
 
-  private static void count(FdsService fdsService, Config config) {
+  private static void count(FDSService fdsService, Config config) {
     LOG.info("Workers will count the total data.");
     AtomicInteger totalDataCount = new AtomicInteger();
     AtomicInteger taskCounter = new AtomicInteger();
@@ -62,7 +62,7 @@ public class ScanTool {
     pegasusClient.close();
   }
 
-  private static void scan(FdsService fdsService, Config config) {
+  private static void scan(FDSService fdsService, Config config) {
     AtomicInteger taskCounter = new AtomicInteger();
     PegasusClient pegasusClient = new PegasusClient(config, fdsService);
     int partitionCount = pegasusClient.getPartitionCount();
@@ -95,11 +95,11 @@ public class ScanTool {
   }
 
   public static void main(String[] arg)
-      throws ParseException, IOException, java.text.ParseException, ConfigurationException {
+      throws ParseException, ConfigurationException, FDSException {
 
     String args[] = {"-s", "-c", "c4tst-perfomance", "-t", "coldbackuptest"};
     Config serviceConfig;
-    FdsService fdsService;
+    FDSService fdsService;
 
     String cluster = "";
     String table = "";
@@ -139,9 +139,9 @@ public class ScanTool {
         table = cmd.getOptionValue("t");
         if (cmd.hasOption("d")) {
           date = cmd.getOptionValue("d");
-          fdsService = new FdsService(serviceConfig, cluster, table, date);
+          fdsService = new FDSService(serviceConfig, cluster, table, date);
         } else {
-          fdsService = new FdsService(serviceConfig, cluster, table);
+          fdsService = new FDSService(serviceConfig, cluster, table);
         }
         if (cmd.hasOption("a")) {
           count(fdsService, serviceConfig);

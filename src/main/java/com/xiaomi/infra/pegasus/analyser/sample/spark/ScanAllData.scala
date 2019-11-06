@@ -1,11 +1,11 @@
 package com.xiaomi.infra.pegasus.analyser.sample.spark
 
-import com.xiaomi.infra.pegasus.analyser.{Config, FdsService, PegasusClient}
+import com.xiaomi.infra.pegasus.analyser.{Config, FDSService, PegasusClient}
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.{SparkConf, SparkContext, TaskContext}
 import org.rocksdb.RocksDB
 
-object scanAllData {
+object ScanAllData {
 
   class scanAllData
 
@@ -13,7 +13,7 @@ object scanAllData {
 
   def main(args: Array[String]): Unit = {
     val config = new Config("core-site.xml")
-    val fdsService = new FdsService(config, "c3srv-browser", "alchemy_feed_exchange_record")
+    val fdsService = new FDSService(config, "c3srv-browser", "alchemy_feed_exchange_record")
     val partitionCount = fdsService.getPartitionCount
 
     val conf = new SparkConf()
@@ -42,7 +42,7 @@ object scanAllData {
         rocksdbScanner.next()
       }
       rocksdbScanner.close()
-      LOG.info("partitionID: " + TaskContext.getPartitionId() + "has completed")
+      LOG.info("partitionId: " + TaskContext.getPartitionId() + " has completed")
     })
   }
 

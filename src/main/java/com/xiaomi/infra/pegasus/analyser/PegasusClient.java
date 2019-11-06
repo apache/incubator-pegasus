@@ -18,7 +18,7 @@ public class PegasusClient implements AutoCloseable {
   private Map<Integer, String> checkPointUrls;
   private PegasusScanner pegasusScanner;
 
-  public PegasusClient(Config cfg, FdsService fdsService) {
+  public PegasusClient(Config cfg, FDSService fdsService) {
     this.partitionCount = fdsService.getPartitionCount();
     this.checkPointUrls = fdsService.getCheckpointUrls();
     this.rocksDBOptions = new RocksDBOptions(cfg);
