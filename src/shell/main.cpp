@@ -300,7 +300,7 @@ static command_executor commands[] = {
     {
         "server_info",
         "get info of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...]",
+        "[-r|--resolve_ip] [-t all|meta-server|replica-server] [-l ip:port,ip:port...] ",
         server_info,
     },
     {

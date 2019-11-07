@@ -311,24 +311,29 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"node_type", required_argument, 0, 't'},
                                            {"node_list", required_argument, 0, 'l'},
+                                           {"resolve_ip", no_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
 
     std::string type;
     std::string nodes;
     optind = 0;
+    bool if_resolve = false;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "t:l:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "t:l:r", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
-        case 't':
-            type = optarg;
-            break;
-        case 'l':
-            nodes = optarg;
-            break;
+           case 't':
+                type = optarg;
+                break;
+            case 'l':
+                nodes = optarg;
+                break;
+            case 'r':
+                if_resolve = true;
+                break;
         default:
             return false;
         }
@@ -348,7 +353,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    if (optind == args.argc) {
+    if (optind == args.argc ) {
         fprintf(stderr, "command not specified\n");
         return false;
     }
@@ -399,6 +404,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         node_desc &n = node_list[i];
         std::string hostname;
         sc->ddl_client->hostname_from_ip_port(n.address.to_string(),&hostname);
+        if (!if_resolve) hostname = n.address.to_string();
         fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
         if (results[i].first) {
             fprintf(stderr, "succeed: %s\n", results[i].second.c_str());
