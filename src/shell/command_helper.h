@@ -538,46 +538,40 @@ struct row_data
         rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
 
-        // get max_qps、min_qps and the partition id of max_qps
+        // get max_qps、min_qps and the id of this partition which has max_qps
         double row_total_qps = row.get_total_qps();
         if (max_qps < row_total_qps) {
             max_qps = row_total_qps;
-            max_qps_partition_id = row.partition_id;
+            max_qps_partition_id = row.row_name;
         } else if (min_qps > row_total_qps) {
             min_qps = row_total_qps;
         }
 
-        // get max_cu、min_cu and the partition id of max_cu
+        // get max_cu、min_cu and the id of this partition which has max_cu
         double row_total_cu = row.get_total_cu();
         if (max_cu < row_total_cu) {
             max_cu = row_total_cu;
-            max_cu_partition_id = row.partition_id;
+            max_cu_partition_id = row.row_name;
         } else if (min_cu > row_total_cu) {
             min_cu = row_total_cu;
         }
     }
 
-    double get_read_qps() const {
-        return get_qps + multi_get_qps + scan_qps;
-    }
+    double get_read_qps() const { return get_qps + multi_get_qps + scan_qps; }
 
-    double get_write_qps() const {
+    double get_write_qps() const
+    {
         return put_qps + multi_put_qps + remove_qps + multi_remove_qps + incr_qps +
-        check_and_set_qps + check_and_mutate_qps;
+               check_and_set_qps + check_and_mutate_qps;
     }
 
-    double get_total_qps() const {
-        return this->get_read_qps() + this->get_write_qps();
-    }
+    double get_total_qps() const { return this->get_read_qps() + this->get_write_qps(); }
 
-    double get_total_cu() const {
-        return recent_read_cu + recent_write_cu;
-    }
+    double get_total_cu() const { return recent_read_cu + recent_write_cu; }
 
     std::string row_name;
     int32_t app_id = 0;
     int32_t partition_count = 0;
-    int32_t partition_id = 0;
     double get_qps = 0;
     double multi_get_qps = 0;
     double put_qps = 0;
@@ -607,8 +601,8 @@ struct row_data
     double min_qps = 1; // set min_qps to 1, in order to avoid the divisor to be zero
     double max_cu = 0;
     double min_cu = 1;
-    int max_qps_partition_id = 0;
-    int max_cu_partition_id = 0;
+    std::string max_qps_partition_id = 0;
+    std::string max_cu_partition_id = 0;
 };
 
 inline bool
@@ -781,8 +775,11 @@ inline bool get_app_partition_stat(shell_context *sc,
             auto find = app_partitions.find(app_id_x);
             if (find != app_partitions.end() &&
                 find->second[partition_index_x].primary == nodes[i].address) {
-                update_app_pegasus_perf_counter(
-                    rows[app_id_name[app_id_x]][partition_index_x], counter_name, m.value);
+                const std::string app_name = app_id_name[app_id_x];
+                row_data &row = rows[app_name][partition_index_x];
+                row.row_name = std::to_string(partition_index_x);
+                row.app_id = app_id_x;
+                update_app_pegasus_perf_counter(row, counter_name, m.value);
             }
         }
     }

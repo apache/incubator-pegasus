@@ -11,7 +11,6 @@ namespace pegasus {
 const int SCAN_CONTEXT_ID_VALID_MIN = 0;
 const int SCAN_CONTEXT_ID_COMPLETED = -1;
 const int SCAN_CONTEXT_ID_NOT_EXIST = -2;
-const int HOTSPOT_MAX_MIN_RATIO_THRESHOLD = 10;
 
 extern const std::string ROCKSDB_ENV_RESTORE_FORCE_RESTORE;
 extern const std::string ROCKSDB_ENV_RESTORE_POLICY_NAME;

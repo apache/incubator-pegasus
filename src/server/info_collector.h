@@ -17,7 +17,6 @@
 #include <event2/http.h>
 #include <event2/bufferevent.h>
 #include <fstream>
-#include <base/pegasus_const.h>
 
 #include "../shell/commands.h"
 
@@ -25,6 +24,7 @@ namespace pegasus {
 namespace server {
 
 class result_writer;
+static const int HOTSPOT_MAX_MIN_RATIO_THRESHOLD = 10;
 
 class info_collector
 {
@@ -65,8 +65,13 @@ public:
             double cu_ratio = row.max_cu / row.min_cu;
             qps_max_min_ratio->set(qps_ratio);
             cu_max_min_ratio->set(cu_ratio);
-            if (qps_ratio >= HOTSPOT_MAX_MIN_RATIO_THRESHOLD || cu_ratio >= HOTSPOT_MAX_MIN_RATIO_THRESHOLD) {
-                ddebug("the ratio of max/min is larger than 10 for qps or cu.");
+            if (qps_ratio >= HOTSPOT_MAX_MIN_RATIO_THRESHOLD) {
+                ddebug("the ratio of max/min is larger than 10 for qps(partition id: %s)",
+                       row.max_qps_partition_id.c_str());
+            }
+            if (cu_ratio >= HOTSPOT_MAX_MIN_RATIO_THRESHOLD) {
+                ddebug("the ratio of max/min is larger than 10 for cu(partition id: %s)",
+                       row.max_cu_partition_id.c_str());
             }
         }
 
