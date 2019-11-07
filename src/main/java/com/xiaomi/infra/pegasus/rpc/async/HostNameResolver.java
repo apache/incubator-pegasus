@@ -15,6 +15,9 @@ import java.nio.ByteOrder;
  */
 public class HostNameResolver {
 
+  private static final org.slf4j.Logger logger =
+      org.slf4j.LoggerFactory.getLogger(HostNameResolver.class);
+
   public rpc_address[] resolve(String hostPort) throws IllegalArgumentException {
     String[] pairs = hostPort.split(":");
     if (pairs.length != 2) {
@@ -23,6 +26,7 @@ public class HostNameResolver {
 
     try {
       Integer port = Integer.valueOf(pairs[1]);
+      logger.info("start to resolve hostname {} into ip addresses", pairs[0]);
       InetAddress[] resolvedAddresses = InetAddress.getAllByName(pairs[0]);
       rpc_address[] results = new rpc_address[resolvedAddresses.length];
       int size = 0;
@@ -30,6 +34,7 @@ public class HostNameResolver {
         rpc_address rpcAddr = new rpc_address();
         int ip = ByteBuffer.wrap(addr.getAddress()).order(ByteOrder.BIG_ENDIAN).getInt();
         rpcAddr.address = ((long) ip << 32) + ((long) port << 16) + 1;
+        logger.info("resolved ip address {} from host {}", rpcAddr, pairs[0]);
         results[size++] = rpcAddr;
       }
       return results;

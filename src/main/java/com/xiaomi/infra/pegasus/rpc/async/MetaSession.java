@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.rpc.async;
 
+import com.google.common.net.InetAddresses;
 import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.operator.client_operator;
@@ -14,7 +15,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.validator.routines.InetAddressValidator;
 
 public class MetaSession extends HostNameResolver {
   public MetaSession(
@@ -27,7 +27,7 @@ public class MetaSession extends HostNameResolver {
     clusterManager = manager;
     metaList = new ArrayList<ReplicaSession>();
 
-    if (addrList.length == 1 && !InetAddressValidator.getInstance().isValid(addrList[0])) {
+    if (addrList.length == 1 && !InetAddresses.isInetAddress(addrList[0])) {
       // if the given string is not a valid ip address,
       // then take it as a hostname for a try.
       resolveHost(addrList[0]);
