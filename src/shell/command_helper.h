@@ -657,6 +657,67 @@ inline bool decode_node_perf_counter_info(const dsn::rpc_address &node_addr,
     return true;
 }
 
+// rows: key-app name, value-perf counters for each partition
+inline bool get_app_partition_stat(shell_context *sc,
+                                   std::map<std::string, std::vector<row_data>> &rows)
+{
+    // get apps and nodes
+    std::vector<::dsn::app_info> apps;
+    std::vector<node_desc> nodes;
+    if (!get_apps_and_nodes(sc, apps, nodes)) {
+        return false;
+    }
+
+    // get app_id --> app_name
+    std::map<int32_t, std::string> app_id_name;
+    for (::dsn::app_info &app : apps) {
+        app_id_name[app.app_id] = app.app_name;
+        rows[app.app_name].resize(app.partition_count);
+    }
+
+    // get app_id --> partitions
+    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
+    if (!get_app_partitions(sc, apps, app_partitions)) {
+        return false;
+    }
+
+    // get all of the perf counters with format ".*@.*"
+    ::dsn::command command;
+    command.cmd = "perf-counters";
+    char tmp[256];
+    sprintf(tmp, ".*@.*");
+    command.arguments.emplace_back(tmp);
+    std::vector<std::pair<bool, std::string>> results;
+    call_remote_command(sc, nodes, command, results);
+
+    for (int i = 0; i < nodes.size(); ++i) {
+        // decode info of perf-counters on node i
+        dsn::perf_counter_info info;
+        if (!decode_node_perf_counter_info(nodes[i].address, results[i], info)) {
+            return false;
+        }
+
+        for (dsn::perf_counter_metric &m : info.counters) {
+            // get app_id/partition_id/counter_name from the name of perf-counter
+            int32_t app_id_x, partition_index_x;
+            std::string counter_name;
+            if (!parse_app_pegasus_perf_counter_name(
+                    m.name, app_id_x, partition_index_x, counter_name)) {
+                continue;
+            }
+
+            // only on primary partition will be counted
+            auto find = app_partitions.find(app_id_x);
+            if (find != app_partitions.end() &&
+                find->second[partition_index_x].primary == nodes[i].address) {
+                update_app_pegasus_perf_counter(
+                    rows[app_id_name[app_id_x]][partition_index_x], counter_name, m.value);
+            }
+        }
+    }
+    return true;
+}
+
 inline bool
 get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_data> &rows)
 {
