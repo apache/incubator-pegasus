@@ -397,7 +397,9 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     // TODO (yingchun) output is hard to read, need do some refactor
     for (int i = 0; i < node_list.size(); ++i) {
         node_desc &n = node_list[i];
-        fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), n.address.to_string());
+        std::string hostname;
+        sc->ddl_client->hostname_from_ip_port(n.address.to_string(),&hostname);
+        fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
         if (results[i].first) {
             fprintf(stderr, "succeed: %s\n", results[i].second.c_str());
             succeed++;
