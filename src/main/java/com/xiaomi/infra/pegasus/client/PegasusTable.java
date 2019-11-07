@@ -1730,8 +1730,9 @@ public class PegasusTable implements PegasusTableInterface {
     return ret;
   }
 
-  static void handleReplicaException(
+  public void handleReplicaException(
       DefaultPromise promise, client_operator op, Table table, int timeout) {
+    if (timeout <= 0) timeout = defaultTimeout;
     gpid gPid = op.get_gpid();
     ReplicaConfiguration replicaConfiguration =
         ((TableHandler) table).getReplicaConfig(gPid.get_pidx());
@@ -1761,7 +1762,7 @@ public class PegasusTable implements PegasusTableInterface {
         message = " Disconnected from the replica-server due to internal error!";
         break;
       case ERR_TIMEOUT:
-        message = " The operationTimeout is " + timeout + "ms!";
+        message = " The operation timeout is " + timeout + "ms!";
         break;
       case ERR_OBJECT_NOT_FOUND:
         message = " The replica server doesn't serve this partition!";
