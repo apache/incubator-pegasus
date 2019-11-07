@@ -46,7 +46,7 @@ static command_executor commands[] = {
     {
         "app_disk",
         "get the disk usage information for some specific app",
-        "<app_name> [-d|--detailed] [-j|--json] [-o|--output file_name]",
+        "<app_name> [-d|--detailed] [-j|--json] [-o|--output file_name] [-r|--resolve_ip]",
         app_disk,
     },
     {
