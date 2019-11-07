@@ -715,9 +715,8 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             for (dsn::perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
                 std::string counter_name;
-                bool parse_ret = parse_app_pegasus_perf_counter_name(
-                    m.name, app_id_x, partition_index_x, counter_name);
-                if (!parse_ret) {
+                if (!parse_app_pegasus_perf_counter_name(
+                        m.name, app_id_x, partition_index_x, counter_name)) {
                     continue;
                 }
                 auto find = app_partitions.find(app_id_x);
