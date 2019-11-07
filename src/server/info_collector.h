@@ -17,6 +17,7 @@
 #include <event2/http.h>
 #include <event2/bufferevent.h>
 #include <fstream>
+#include <base/pegasus_const.h>
 
 #include "../shell/commands.h"
 
@@ -30,6 +31,45 @@ class info_collector
 public:
     struct AppStatCounters
     {
+        void set(const row_data &row)
+        {
+            get_qps->set(row.get_qps);
+            multi_get_qps->set(row.multi_get_qps);
+            put_qps->set(row.put_qps);
+            multi_put_qps->set(row.multi_put_qps);
+            remove_qps->set(row.remove_qps);
+            multi_remove_qps->set(row.multi_remove_qps);
+            incr_qps->set(row.incr_qps);
+            check_and_set_qps->set(row.check_and_set_qps);
+            check_and_mutate_qps->set(row.check_and_mutate_qps);
+            scan_qps->set(row.scan_qps);
+            recent_read_cu->set(row.recent_read_cu);
+            recent_write_cu->set(row.recent_write_cu);
+            recent_expire_count->set(row.recent_expire_count);
+            recent_filter_count->set(row.recent_filter_count);
+            recent_abnormal_count->set(row.recent_abnormal_count);
+            recent_write_throttling_delay_count->set(row.recent_write_throttling_delay_count);
+            recent_write_throttling_reject_count->set(row.recent_write_throttling_reject_count);
+            storage_mb->set(row.storage_mb);
+            storage_count->set(row.storage_count);
+            rdb_block_cache_hit_rate->set(std::abs(row.rdb_block_cache_total_count) < 1e-6
+                                              ? 0
+                                              : row.rdb_block_cache_hit_count /
+                                                    row.rdb_block_cache_total_count * 1000000);
+            rdb_index_and_filter_blocks_mem_usage->set(row.rdb_index_and_filter_blocks_mem_usage);
+            rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
+            read_qps->set(row.get_read_qps());
+            write_qps->set(row.get_write_qps());
+
+            double qps_ratio = row.max_qps / row.min_qps;
+            double cu_ratio = row.max_cu / row.min_cu;
+            qps_max_min_ratio->set(qps_ratio);
+            cu_max_min_ratio->set(cu_ratio);
+            if (qps_ratio >= HOTSPOT_MAX_MIN_RATIO_THRESHOLD || cu_ratio >= HOTSPOT_MAX_MIN_RATIO_THRESHOLD) {
+                ddebug("the ratio of max/min is larger than 10 for qps or cu.");
+            }
+        }
+
         ::dsn::perf_counter_wrapper get_qps;
         ::dsn::perf_counter_wrapper multi_get_qps;
         ::dsn::perf_counter_wrapper put_qps;
@@ -50,11 +90,12 @@ public:
         ::dsn::perf_counter_wrapper storage_mb;
         ::dsn::perf_counter_wrapper storage_count;
         ::dsn::perf_counter_wrapper rdb_block_cache_hit_rate;
-        ::dsn::perf_counter_wrapper rdb_block_cache_mem_usage;
         ::dsn::perf_counter_wrapper rdb_index_and_filter_blocks_mem_usage;
         ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
+        ::dsn::perf_counter_wrapper qps_max_min_ratio;
+        ::dsn::perf_counter_wrapper cu_max_min_ratio;
     };
 
     info_collector();
