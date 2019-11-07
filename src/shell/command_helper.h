@@ -717,7 +717,9 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 std::string counter_name;
                 bool parse_ret = parse_app_pegasus_perf_counter_name(
                     m.name, app_id_x, partition_index_x, counter_name);
-                dassert(parse_ret, "name = %s", m.name.c_str());
+                if (!parse_ret) {
+                    continue;
+                }
                 auto find = app_partitions.find(app_id_x);
                 if (find == app_partitions.end())
                     continue;
