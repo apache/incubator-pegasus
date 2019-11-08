@@ -143,7 +143,7 @@ void info_collector::on_app_stat()
         for (auto partition_row : app_rows.second) {
             app_stat.calc(partition_row);
         }
-        get_app_counters(app_rows.first)->set(app_stat);
+        get_app_counters(app_stat.app_name)->set(app_stat);
 
         // get row data statistics for all of the apps
         all_stat.merge(app_stat);
