@@ -135,8 +135,9 @@ void info_collector::on_app_stat()
         derror("call get_app_stat() failed");
         return;
     }
+    ddebug("after stat app partitions");
 
-    row_statistics all_stat("_all_");
+    row_statistics all_stats("_all_");
     for (auto app_rows : all_rows) {
         // get statistics data for app
         row_statistics app_stats(app_rows.first);
@@ -146,14 +147,14 @@ void info_collector::on_app_stat()
         get_app_counters(app_stats.app_name)->set(app_stats);
 
         // get row data statistics for all of the apps
-        all_stat.merge(app_stats);
+        all_stats.merge(app_stats);
     }
-    get_app_counters(all_stat.app_name)->set(all_stat);
+    get_app_counters(all_stats.app_name)->set(all_stats);
 
     ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
            (int)(all_rows.size() - 1),
-           all_stat.get_read_qps(),
-           all_stat.get_write_qps());
+           all_stats.get_read_qps(),
+           all_stats.get_write_qps());
 }
 
 info_collector::AppStatCounters *info_collector::get_app_counters(const std::string &app_name)
