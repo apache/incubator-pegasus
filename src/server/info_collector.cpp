@@ -139,14 +139,14 @@ void info_collector::on_app_stat()
     row_statistics all_stat("_all_");
     for (auto app_rows : all_rows) {
         // get statistics data for app
-        row_statistics app_stat(app_rows.first);
+        row_statistics app_stats(app_rows.first);
         for (auto partition_row : app_rows.second) {
-            app_stat.calc(partition_row);
+            app_stats.calc(partition_row);
         }
-        get_app_counters(app_stat.app_name)->set(app_stat);
+        get_app_counters(app_stats.app_name)->set(app_stats);
 
         // get row data statistics for all of the apps
-        all_stat.merge(app_stat);
+        all_stat.merge(app_stats);
     }
     get_app_counters(all_stat.app_name)->set(all_stat);
 
