@@ -33,39 +33,43 @@ public:
     {
         row_statistics(const std::string &app_name) { this->app_name = app_name; }
 
-        double get_read_qps() const { return get_qps + multi_get_qps + scan_qps; }
-
-        double get_write_qps() const
+        double get_total_read_qps() const
         {
-            return put_qps + multi_put_qps + remove_qps + multi_remove_qps + incr_qps +
-                   check_and_set_qps + check_and_mutate_qps;
+            return total_get_qps + total_multi_get_qps + total_scan_qps;
+        }
+
+        double get_total_write_qps() const
+        {
+            return total_put_qps + total_multi_put_qps + total_remove_qps + total_multi_remove_qps +
+                   total_incr_qps + total_check_and_set_qps + total_check_and_mutate_qps;
         }
 
         void calc(const row_data &row)
         {
-            get_qps += row.get_qps;
-            multi_get_qps += row.multi_get_qps;
-            put_qps += row.put_qps;
-            multi_put_qps += row.multi_put_qps;
-            remove_qps += row.remove_qps;
-            multi_remove_qps += row.multi_remove_qps;
-            incr_qps += row.incr_qps;
-            check_and_set_qps += row.check_and_set_qps;
-            check_and_mutate_qps += row.check_and_mutate_qps;
-            scan_qps += row.scan_qps;
-            recent_read_cu += row.recent_read_cu;
-            recent_write_cu += row.recent_write_cu;
-            recent_expire_count += row.recent_expire_count;
-            recent_filter_count += row.recent_filter_count;
-            recent_abnormal_count += row.recent_abnormal_count;
-            recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
-            recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
-            storage_mb += row.storage_mb;
-            storage_count += row.storage_count;
-            rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
-            rdb_block_cache_total_count += row.rdb_block_cache_total_count;
-            rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
-            rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
+            total_get_qps += row.get_qps;
+            total_multi_get_qps += row.multi_get_qps;
+            total_put_qps += row.put_qps;
+            total_multi_put_qps += row.multi_put_qps;
+            total_remove_qps += row.remove_qps;
+            total_multi_remove_qps += row.multi_remove_qps;
+            total_incr_qps += row.incr_qps;
+            total_check_and_set_qps += row.check_and_set_qps;
+            total_check_and_mutate_qps += row.check_and_mutate_qps;
+            total_scan_qps += row.scan_qps;
+            total_recent_read_cu += row.recent_read_cu;
+            total_recent_write_cu += row.recent_write_cu;
+            total_recent_expire_count += row.recent_expire_count;
+            total_recent_filter_count += row.recent_filter_count;
+            total_recent_abnormal_count += row.recent_abnormal_count;
+            total_recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
+            total_recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
+            total_storage_mb += row.storage_mb;
+            total_storage_count += row.storage_count;
+            total_rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
+            total_rdb_block_cache_total_count += row.rdb_block_cache_total_count;
+            total_rdb_index_and_filter_blocks_mem_usage +=
+                row.rdb_index_and_filter_blocks_mem_usage;
+            total_rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
 
             // get max_total_qps、min_total_qps and the id of this partition which has max_total_qps
             double row_total_qps = row.get_total_qps();
@@ -86,30 +90,32 @@ public:
 
         void merge(const row_statistics &row_stats)
         {
-            get_qps += row_stats.get_qps;
-            multi_get_qps += row_stats.multi_get_qps;
-            put_qps += row_stats.put_qps;
-            multi_put_qps += row_stats.multi_put_qps;
-            remove_qps += row_stats.remove_qps;
-            multi_remove_qps += row_stats.multi_remove_qps;
-            incr_qps += row_stats.incr_qps;
-            check_and_set_qps += row_stats.check_and_set_qps;
-            check_and_mutate_qps += row_stats.check_and_mutate_qps;
-            scan_qps += row_stats.scan_qps;
-            recent_read_cu += row_stats.recent_read_cu;
-            recent_write_cu += row_stats.recent_write_cu;
-            recent_expire_count += row_stats.recent_expire_count;
-            recent_filter_count += row_stats.recent_filter_count;
-            recent_abnormal_count += row_stats.recent_abnormal_count;
-            recent_write_throttling_delay_count += row_stats.recent_write_throttling_delay_count;
-            recent_write_throttling_reject_count += row_stats.recent_write_throttling_reject_count;
-            storage_mb += row_stats.storage_mb;
-            storage_count += row_stats.storage_count;
-            rdb_block_cache_hit_count += row_stats.rdb_block_cache_hit_count;
-            rdb_block_cache_total_count += row_stats.rdb_block_cache_total_count;
-            rdb_index_and_filter_blocks_mem_usage +=
-                row_stats.rdb_index_and_filter_blocks_mem_usage;
-            rdb_memtable_mem_usage += row_stats.rdb_memtable_mem_usage;
+            total_get_qps += row_stats.total_get_qps;
+            total_multi_get_qps += row_stats.total_multi_get_qps;
+            total_put_qps += row_stats.total_put_qps;
+            total_multi_put_qps += row_stats.total_multi_put_qps;
+            total_remove_qps += row_stats.total_remove_qps;
+            total_multi_remove_qps += row_stats.total_multi_remove_qps;
+            total_incr_qps += row_stats.total_incr_qps;
+            total_check_and_set_qps += row_stats.total_check_and_set_qps;
+            total_check_and_mutate_qps += row_stats.total_check_and_mutate_qps;
+            total_scan_qps += row_stats.total_scan_qps;
+            total_recent_read_cu += row_stats.total_recent_read_cu;
+            total_recent_write_cu += row_stats.total_recent_write_cu;
+            total_recent_expire_count += row_stats.total_recent_expire_count;
+            total_recent_filter_count += row_stats.total_recent_filter_count;
+            total_recent_abnormal_count += row_stats.total_recent_abnormal_count;
+            total_recent_write_throttling_delay_count +=
+                row_stats.total_recent_write_throttling_delay_count;
+            total_recent_write_throttling_reject_count +=
+                row_stats.total_recent_write_throttling_reject_count;
+            total_storage_mb += row_stats.total_storage_mb;
+            total_storage_count += row_stats.total_storage_count;
+            total_rdb_block_cache_hit_count += row_stats.total_rdb_block_cache_hit_count;
+            total_rdb_block_cache_total_count += row_stats.total_rdb_block_cache_total_count;
+            total_rdb_index_and_filter_blocks_mem_usage +=
+                row_stats.total_rdb_index_and_filter_blocks_mem_usage;
+            total_rdb_memtable_mem_usage += row_stats.total_rdb_memtable_mem_usage;
 
             // We only need max_total_qps/min_total_qps/max_total_cu/min_total_cu in the same app
             if (this->app_name == row_stats.app_name) {
@@ -130,29 +136,29 @@ public:
         }
 
         std::string app_name;
-        double get_qps = 0;
-        double multi_get_qps = 0;
-        double put_qps = 0;
-        double multi_put_qps = 0;
-        double remove_qps = 0;
-        double multi_remove_qps = 0;
-        double incr_qps = 0;
-        double check_and_set_qps = 0;
-        double check_and_mutate_qps = 0;
-        double scan_qps = 0;
-        double recent_read_cu = 0;
-        double recent_write_cu = 0;
-        double recent_expire_count = 0;
-        double recent_filter_count = 0;
-        double recent_abnormal_count = 0;
-        double recent_write_throttling_delay_count = 0;
-        double recent_write_throttling_reject_count = 0;
-        double storage_mb = 0;
-        double storage_count = 0;
-        double rdb_block_cache_hit_count = 0;
-        double rdb_block_cache_total_count = 0;
-        double rdb_index_and_filter_blocks_mem_usage = 0;
-        double rdb_memtable_mem_usage = 0;
+        double total_get_qps = 0;
+        double total_multi_get_qps = 0;
+        double total_put_qps = 0;
+        double total_multi_put_qps = 0;
+        double total_remove_qps = 0;
+        double total_multi_remove_qps = 0;
+        double total_incr_qps = 0;
+        double total_check_and_set_qps = 0;
+        double total_check_and_mutate_qps = 0;
+        double total_scan_qps = 0;
+        double total_recent_read_cu = 0;
+        double total_recent_write_cu = 0;
+        double total_recent_expire_count = 0;
+        double total_recent_filter_count = 0;
+        double total_recent_abnormal_count = 0;
+        double total_recent_write_throttling_delay_count = 0;
+        double total_recent_write_throttling_reject_count = 0;
+        double total_storage_mb = 0;
+        double total_storage_count = 0;
+        double total_rdb_block_cache_hit_count = 0;
+        double total_rdb_block_cache_total_count = 0;
+        double total_rdb_index_and_filter_blocks_mem_usage = 0;
+        double total_rdb_memtable_mem_usage = 0;
 
         // used when merging
         double max_total_qps = 0;
@@ -167,36 +173,37 @@ public:
     {
         void set(const row_statistics &row_stats)
         {
-            get_qps->set(row_stats.get_qps);
-            multi_get_qps->set(row_stats.multi_get_qps);
-            put_qps->set(row_stats.put_qps);
-            multi_put_qps->set(row_stats.multi_put_qps);
-            remove_qps->set(row_stats.remove_qps);
-            multi_remove_qps->set(row_stats.multi_remove_qps);
-            incr_qps->set(row_stats.incr_qps);
-            check_and_set_qps->set(row_stats.check_and_set_qps);
-            check_and_mutate_qps->set(row_stats.check_and_mutate_qps);
-            scan_qps->set(row_stats.scan_qps);
-            recent_read_cu->set(row_stats.recent_read_cu);
-            recent_write_cu->set(row_stats.recent_write_cu);
-            recent_expire_count->set(row_stats.recent_expire_count);
-            recent_filter_count->set(row_stats.recent_filter_count);
-            recent_abnormal_count->set(row_stats.recent_abnormal_count);
-            recent_write_throttling_delay_count->set(row_stats.recent_write_throttling_delay_count);
+            get_qps->set(row_stats.total_get_qps);
+            multi_get_qps->set(row_stats.total_multi_get_qps);
+            put_qps->set(row_stats.total_put_qps);
+            multi_put_qps->set(row_stats.total_multi_put_qps);
+            remove_qps->set(row_stats.total_remove_qps);
+            multi_remove_qps->set(row_stats.total_multi_remove_qps);
+            incr_qps->set(row_stats.total_incr_qps);
+            check_and_set_qps->set(row_stats.total_check_and_set_qps);
+            check_and_mutate_qps->set(row_stats.total_check_and_mutate_qps);
+            scan_qps->set(row_stats.total_scan_qps);
+            recent_read_cu->set(row_stats.total_recent_read_cu);
+            recent_write_cu->set(row_stats.total_recent_write_cu);
+            recent_expire_count->set(row_stats.total_recent_expire_count);
+            recent_filter_count->set(row_stats.total_recent_filter_count);
+            recent_abnormal_count->set(row_stats.total_recent_abnormal_count);
+            recent_write_throttling_delay_count->set(
+                row_stats.total_recent_write_throttling_delay_count);
             recent_write_throttling_reject_count->set(
-                row_stats.recent_write_throttling_reject_count);
-            storage_mb->set(row_stats.storage_mb);
-            storage_count->set(row_stats.storage_count);
-            rdb_block_cache_hit_rate->set(std::abs(row_stats.rdb_block_cache_total_count) < 1e-6
-                                              ? 0
-                                              : row_stats.rdb_block_cache_hit_count /
-                                                    row_stats.rdb_block_cache_total_count *
-                                                    1000000);
+                row_stats.total_recent_write_throttling_reject_count);
+            storage_mb->set(row_stats.total_storage_mb);
+            storage_count->set(row_stats.total_storage_count);
+            rdb_block_cache_hit_rate->set(
+                std::abs(row_stats.total_rdb_block_cache_total_count) < 1e-6
+                    ? 0
+                    : row_stats.total_rdb_block_cache_hit_count /
+                          row_stats.total_rdb_block_cache_total_count * 1000000);
             rdb_index_and_filter_blocks_mem_usage->set(
-                row_stats.rdb_index_and_filter_blocks_mem_usage);
-            rdb_memtable_mem_usage->set(row_stats.rdb_memtable_mem_usage);
-            read_qps->set(row_stats.get_read_qps());
-            write_qps->set(row_stats.get_write_qps());
+                row_stats.total_rdb_index_and_filter_blocks_mem_usage);
+            rdb_memtable_mem_usage->set(row_stats.total_rdb_memtable_mem_usage);
+            read_qps->set(row_stats.get_total_read_qps());
+            write_qps->set(row_stats.get_total_write_qps());
 
             double qps_scale = row_stats.max_total_qps / std::max(row_stats.min_total_qps, 1.0);
             double cu_scale = row_stats.max_total_cu / std::max(row_stats.min_total_cu, 1.0);

@@ -153,8 +153,8 @@ void info_collector::on_app_stat()
 
     ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
            (int)(all_rows.size() - 1),
-           all_stats.get_read_qps(),
-           all_stats.get_write_qps());
+           all_stats.get_total_read_qps(),
+           all_stats.get_total_write_qps());
 }
 
 info_collector::AppStatCounters *info_collector::get_app_counters(const std::string &app_name)
