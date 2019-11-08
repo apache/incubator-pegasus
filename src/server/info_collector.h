@@ -159,8 +159,8 @@ public:
         double min_total_qps = INT_MAX;
         double max_total_cu = 0;
         double min_total_cu = INT_MAX;
-        std::string max_qps_partition_id = 0;
-        std::string max_cu_partition_id = 0;
+        std::string max_qps_partition_id;
+        std::string max_cu_partition_id;
     };
 
     struct AppStatCounters
