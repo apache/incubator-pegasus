@@ -136,27 +136,24 @@ void info_collector::on_app_stat()
         return;
     }
 
-    row_data all_data;
-    all_data.row_name = "_all_";
+    row_statistics all_stat("_all_");
     for (auto app_rows : all_rows) {
-        // get data for app
-        row_data app_data;
+        // get statistics data for app
+        row_statistics app_stat(app_rows.first);
         for (auto partition_row : app_rows.second) {
-            app_data.merge(partition_row);
+            app_stat.calc(partition_row);
         }
-        get_app_counters(app_rows.first)->set(app_data);
+        get_app_counters(app_rows.first)->set(app_stat);
 
-        // get data for all of these rows
-        all_data.merge(app_data);
+        // get row data statistics for all of the apps
+        all_stat.merge(app_stat);
     }
+    get_app_counters(all_stat.app_name)->set(all_stat);
 
-    // get perf-counters for all of the apps
-    AppStatCounters *all_counters = get_app_counters(all_data.row_name);
-    all_counters->set(all_data);
     ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
            (int)(all_rows.size() - 1),
-           all_counters->read_qps.get(),
-           all_counters->write_qps.get());
+           all_stat.get_read_qps(),
+           all_stat.get_write_qps());
 }
 
 info_collector::AppStatCounters *info_collector::get_app_counters(const std::string &app_name)
@@ -202,8 +199,8 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(rdb_memtable_mem_usage);
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
-    INIT_COUNTER(qps_max_min_ratio);
-    INIT_COUNTER(cu_max_min_ratio);
+    INIT_COUNTER(qps_max_min_scale);
+    INIT_COUNTER(cu_max_min_scale);
     _app_stat_counters[app_name] = counters;
     return counters;
 }

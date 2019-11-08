@@ -512,60 +512,11 @@ inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
 
 struct row_data
 {
-    void merge(const row_data &row)
+    double get_total_qps() const
     {
-        get_qps += row.get_qps;
-        multi_get_qps += row.multi_get_qps;
-        put_qps += row.put_qps;
-        multi_put_qps += row.multi_put_qps;
-        remove_qps += row.remove_qps;
-        multi_remove_qps += row.multi_remove_qps;
-        incr_qps += row.incr_qps;
-        check_and_set_qps += row.check_and_set_qps;
-        check_and_mutate_qps += row.check_and_mutate_qps;
-        scan_qps += row.scan_qps;
-        recent_read_cu += row.recent_read_cu;
-        recent_write_cu += row.recent_write_cu;
-        recent_expire_count += row.recent_expire_count;
-        recent_filter_count += row.recent_filter_count;
-        recent_abnormal_count += row.recent_abnormal_count;
-        recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
-        recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
-        storage_mb += row.storage_mb;
-        storage_count += row.storage_count;
-        rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
-        rdb_block_cache_total_count += row.rdb_block_cache_total_count;
-        rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
-        rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
-
-        // get max_qps、min_qps and the id of this partition which has max_qps
-        double row_total_qps = row.get_total_qps();
-        if (max_qps < row_total_qps) {
-            max_qps = row_total_qps;
-            max_qps_partition_id = row.row_name;
-        } else if (min_qps > row_total_qps) {
-            min_qps = row_total_qps;
-        }
-
-        // get max_cu、min_cu and the id of this partition which has max_cu
-        double row_total_cu = row.get_total_cu();
-        if (max_cu < row_total_cu) {
-            max_cu = row_total_cu;
-            max_cu_partition_id = row.row_name;
-        } else if (min_cu > row_total_cu) {
-            min_cu = row_total_cu;
-        }
+        return get_qps + multi_get_qps + scan_qps + put_qps + multi_put_qps + remove_qps +
+               multi_remove_qps + incr_qps + check_and_set_qps + check_and_mutate_qps;
     }
-
-    double get_read_qps() const { return get_qps + multi_get_qps + scan_qps; }
-
-    double get_write_qps() const
-    {
-        return put_qps + multi_put_qps + remove_qps + multi_remove_qps + incr_qps +
-               check_and_set_qps + check_and_mutate_qps;
-    }
-
-    double get_total_qps() const { return this->get_read_qps() + this->get_write_qps(); }
 
     double get_total_cu() const { return recent_read_cu + recent_write_cu; }
 
@@ -595,14 +546,6 @@ struct row_data
     double rdb_block_cache_total_count = 0;
     double rdb_index_and_filter_blocks_mem_usage = 0;
     double rdb_memtable_mem_usage = 0;
-
-    // used when merging
-    double max_qps = 0;
-    double min_qps = 1; // set min_qps to 1, in order to avoid the divisor to be zero
-    double max_cu = 0;
-    double min_cu = 1;
-    std::string max_qps_partition_id = 0;
-    std::string max_cu_partition_id = 0;
 };
 
 inline bool

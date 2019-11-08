@@ -24,54 +24,195 @@ namespace pegasus {
 namespace server {
 
 class result_writer;
-static const int HOTSPOT_MAX_MIN_RATIO_THRESHOLD = 10;
+static const int HOTSPOT_MAX_MIN_SCALE_THRESHOLD = 10;
 
 class info_collector
 {
 public:
+    struct row_statistics
+    {
+        row_statistics(const std::string &app_name) : app_name(app_name) {}
+
+        double get_read_qps() const { return get_qps + multi_get_qps + scan_qps; }
+
+        double get_write_qps() const
+        {
+            return put_qps + multi_put_qps + remove_qps + multi_remove_qps + incr_qps +
+                   check_and_set_qps + check_and_mutate_qps;
+        }
+
+        void calc(const row_data &row)
+        {
+            get_qps += row.get_qps;
+            multi_get_qps += row.multi_get_qps;
+            put_qps += row.put_qps;
+            multi_put_qps += row.multi_put_qps;
+            remove_qps += row.remove_qps;
+            multi_remove_qps += row.multi_remove_qps;
+            incr_qps += row.incr_qps;
+            check_and_set_qps += row.check_and_set_qps;
+            check_and_mutate_qps += row.check_and_mutate_qps;
+            scan_qps += row.scan_qps;
+            recent_read_cu += row.recent_read_cu;
+            recent_write_cu += row.recent_write_cu;
+            recent_expire_count += row.recent_expire_count;
+            recent_filter_count += row.recent_filter_count;
+            recent_abnormal_count += row.recent_abnormal_count;
+            recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
+            recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
+            storage_mb += row.storage_mb;
+            storage_count += row.storage_count;
+            rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
+            rdb_block_cache_total_count += row.rdb_block_cache_total_count;
+            rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
+            rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
+
+            // get max_total_qps、min_total_qps and the id of this partition which has max_total_qps
+            double row_total_qps = row.get_total_qps();
+            if (max_total_qps < row_total_qps) {
+                max_total_qps = row_total_qps;
+                max_qps_partition_id = row.row_name;
+            } else if (min_total_qps > row_total_qps) {
+                min_total_qps = row_total_qps;
+            }
+
+            // get max_total_cu、min_total_cu and the id of this partition which has max_total_cu
+            double row_total_cu = row.get_total_cu();
+            if (max_total_cu < row_total_cu) {
+                max_total_cu = row_total_cu;
+                max_cu_partition_id = row.row_name;
+            } else if (min_total_cu > row_total_cu) {
+                min_total_cu = row_total_cu;
+            }
+        }
+
+        void merge(const row_statistics &row_stat)
+        {
+            get_qps += row_stat.get_qps;
+            multi_get_qps += row_stat.multi_get_qps;
+            put_qps += row_stat.put_qps;
+            multi_put_qps += row_stat.multi_put_qps;
+            remove_qps += row_stat.remove_qps;
+            multi_remove_qps += row_stat.multi_remove_qps;
+            incr_qps += row_stat.incr_qps;
+            check_and_set_qps += row_stat.check_and_set_qps;
+            check_and_mutate_qps += row_stat.check_and_mutate_qps;
+            scan_qps += row_stat.scan_qps;
+            recent_read_cu += row_stat.recent_read_cu;
+            recent_write_cu += row_stat.recent_write_cu;
+            recent_expire_count += row_stat.recent_expire_count;
+            recent_filter_count += row_stat.recent_filter_count;
+            recent_abnormal_count += row_stat.recent_abnormal_count;
+            recent_write_throttling_delay_count += row_stat.recent_write_throttling_delay_count;
+            recent_write_throttling_reject_count += row_stat.recent_write_throttling_reject_count;
+            storage_mb += row_stat.storage_mb;
+            storage_count += row_stat.storage_count;
+            rdb_block_cache_hit_count += row_stat.rdb_block_cache_hit_count;
+            rdb_block_cache_total_count += row_stat.rdb_block_cache_total_count;
+            rdb_index_and_filter_blocks_mem_usage += row_stat.rdb_index_and_filter_blocks_mem_usage;
+            rdb_memtable_mem_usage += row_stat.rdb_memtable_mem_usage;
+
+            // We only need max_total_qps/min_total_qps/max_total_cu/min_total_cu in the same app
+            if (this->app_name == row_stat.app_name) {
+                // get max_total_qps、min_total_qps and the id of this partition which has
+                // max_total_qps
+                if (max_total_qps < row_stat.max_total_qps) {
+                    max_total_qps = row_stat.max_total_qps;
+                    max_qps_partition_id = row_stat.max_qps_partition_id;
+                }
+                min_total_qps = std::min(min_total_qps, row_stat.min_total_qps);
+
+                // get max_total_cu、min_total_cu and the id of this partition which has
+                // max_total_cu
+                if (max_total_cu < row_stat.max_total_cu) {
+                    max_total_cu = row_stat.max_total_cu;
+                    max_cu_partition_id = row_stat.max_cu_partition_id;
+                }
+                min_total_cu = std::min(min_total_cu, row_stat.min_total_cu);
+            }
+        }
+
+        std::string app_name;
+        double get_qps = 0;
+        double multi_get_qps = 0;
+        double put_qps = 0;
+        double multi_put_qps = 0;
+        double remove_qps = 0;
+        double multi_remove_qps = 0;
+        double incr_qps = 0;
+        double check_and_set_qps = 0;
+        double check_and_mutate_qps = 0;
+        double scan_qps = 0;
+        double recent_read_cu = 0;
+        double recent_write_cu = 0;
+        double recent_expire_count = 0;
+        double recent_filter_count = 0;
+        double recent_abnormal_count = 0;
+        double recent_write_throttling_delay_count = 0;
+        double recent_write_throttling_reject_count = 0;
+        double storage_mb = 0;
+        double storage_count = 0;
+        double rdb_block_cache_hit_count = 0;
+        double rdb_block_cache_total_count = 0;
+        double rdb_index_and_filter_blocks_mem_usage = 0;
+        double rdb_memtable_mem_usage = 0;
+
+        // used when merging
+        double max_total_qps = 0;
+        double min_total_qps = INT_MAX;
+        double max_total_cu = 0;
+        double min_total_cu = INT_MAX;
+        std::string max_qps_partition_id = 0;
+        std::string max_cu_partition_id = 0;
+    };
+
     struct AppStatCounters
     {
-        void set(const row_data &row)
+        void set(const row_statistics &row_stat)
         {
-            get_qps->set(row.get_qps);
-            multi_get_qps->set(row.multi_get_qps);
-            put_qps->set(row.put_qps);
-            multi_put_qps->set(row.multi_put_qps);
-            remove_qps->set(row.remove_qps);
-            multi_remove_qps->set(row.multi_remove_qps);
-            incr_qps->set(row.incr_qps);
-            check_and_set_qps->set(row.check_and_set_qps);
-            check_and_mutate_qps->set(row.check_and_mutate_qps);
-            scan_qps->set(row.scan_qps);
-            recent_read_cu->set(row.recent_read_cu);
-            recent_write_cu->set(row.recent_write_cu);
-            recent_expire_count->set(row.recent_expire_count);
-            recent_filter_count->set(row.recent_filter_count);
-            recent_abnormal_count->set(row.recent_abnormal_count);
-            recent_write_throttling_delay_count->set(row.recent_write_throttling_delay_count);
-            recent_write_throttling_reject_count->set(row.recent_write_throttling_reject_count);
-            storage_mb->set(row.storage_mb);
-            storage_count->set(row.storage_count);
-            rdb_block_cache_hit_rate->set(std::abs(row.rdb_block_cache_total_count) < 1e-6
+            get_qps->set(row_stat.get_qps);
+            multi_get_qps->set(row_stat.multi_get_qps);
+            put_qps->set(row_stat.put_qps);
+            multi_put_qps->set(row_stat.multi_put_qps);
+            remove_qps->set(row_stat.remove_qps);
+            multi_remove_qps->set(row_stat.multi_remove_qps);
+            incr_qps->set(row_stat.incr_qps);
+            check_and_set_qps->set(row_stat.check_and_set_qps);
+            check_and_mutate_qps->set(row_stat.check_and_mutate_qps);
+            scan_qps->set(row_stat.scan_qps);
+            recent_read_cu->set(row_stat.recent_read_cu);
+            recent_write_cu->set(row_stat.recent_write_cu);
+            recent_expire_count->set(row_stat.recent_expire_count);
+            recent_filter_count->set(row_stat.recent_filter_count);
+            recent_abnormal_count->set(row_stat.recent_abnormal_count);
+            recent_write_throttling_delay_count->set(row_stat.recent_write_throttling_delay_count);
+            recent_write_throttling_reject_count->set(
+                row_stat.recent_write_throttling_reject_count);
+            storage_mb->set(row_stat.storage_mb);
+            storage_count->set(row_stat.storage_count);
+            rdb_block_cache_hit_rate->set(std::abs(row_stat.rdb_block_cache_total_count) < 1e-6
                                               ? 0
-                                              : row.rdb_block_cache_hit_count /
-                                                    row.rdb_block_cache_total_count * 1000000);
-            rdb_index_and_filter_blocks_mem_usage->set(row.rdb_index_and_filter_blocks_mem_usage);
-            rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
-            read_qps->set(row.get_read_qps());
-            write_qps->set(row.get_write_qps());
+                                              : row_stat.rdb_block_cache_hit_count /
+                                                    row_stat.rdb_block_cache_total_count * 1000000);
+            rdb_index_and_filter_blocks_mem_usage->set(
+                row_stat.rdb_index_and_filter_blocks_mem_usage);
+            rdb_memtable_mem_usage->set(row_stat.rdb_memtable_mem_usage);
+            read_qps->set(row_stat.get_read_qps());
+            write_qps->set(row_stat.get_write_qps());
 
-            double qps_ratio = row.max_qps / row.min_qps;
-            double cu_ratio = row.max_cu / row.min_cu;
-            qps_max_min_ratio->set(qps_ratio);
-            cu_max_min_ratio->set(cu_ratio);
-            if (qps_ratio >= HOTSPOT_MAX_MIN_RATIO_THRESHOLD) {
-                ddebug("the ratio of max/min is larger than 10 for qps(partition id: %s)",
-                       row.max_qps_partition_id.c_str());
+            double qps_scale = row_stat.max_total_qps / std::max(row_stat.min_total_qps, 1.0);
+            double cu_scale = row_stat.max_total_cu / std::max(row_stat.min_total_cu, 1.0);
+            qps_max_min_scale->set(qps_scale);
+            cu_max_min_scale->set(cu_scale);
+            if (qps_scale >= HOTSPOT_MAX_MIN_SCALE_THRESHOLD) {
+                ddebug("There is a hotspot about qps in %s(%s))",
+                       row_stat.app_name.c_str(),
+                       row_stat.max_qps_partition_id.c_str());
             }
-            if (cu_ratio >= HOTSPOT_MAX_MIN_RATIO_THRESHOLD) {
-                ddebug("the ratio of max/min is larger than 10 for cu(partition id: %s)",
-                       row.max_cu_partition_id.c_str());
+            if (cu_scale >= HOTSPOT_MAX_MIN_SCALE_THRESHOLD) {
+                ddebug("There is a hotspot about cu in %s(%s))",
+                       row_stat.app_name.c_str(),
+                       row_stat.max_cu_partition_id.c_str());
             }
         }
 
@@ -99,8 +240,8 @@ public:
         ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
-        ::dsn::perf_counter_wrapper qps_max_min_ratio;
-        ::dsn::perf_counter_wrapper cu_max_min_ratio;
+        ::dsn::perf_counter_wrapper qps_max_min_scale;
+        ::dsn::perf_counter_wrapper cu_max_min_scale;
     };
 
     info_collector();
