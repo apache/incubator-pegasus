@@ -135,7 +135,6 @@ void info_collector::on_app_stat()
         derror("call get_app_stat() failed");
         return;
     }
-    ddebug("after stat app partitions");
 
     row_statistics all_stats("_all_");
     for (auto app_rows : all_rows) {

@@ -159,8 +159,6 @@ public:
         double total_rdb_block_cache_total_count = 0;
         double total_rdb_index_and_filter_blocks_mem_usage = 0;
         double total_rdb_memtable_mem_usage = 0;
-
-        // used when merging
         double max_total_qps = 0;
         double min_total_qps = INT_MAX;
         double max_total_cu = 0;
