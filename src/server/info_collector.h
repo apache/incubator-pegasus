@@ -120,18 +120,18 @@ public:
             // We only need max_total_qps/min_total_qps/max_total_cu/min_total_cu in the same app
             if (this->app_name == row_stats.app_name) {
                 // get max_total_qps、min_total_qps and id of the partition which has max_total_qps
+                min_total_qps = std::min(min_total_qps, row_stats.min_total_qps);
                 if (max_total_qps < row_stats.max_total_qps) {
                     max_total_qps = row_stats.max_total_qps;
                     max_qps_partition_id = row_stats.max_qps_partition_id;
                 }
-                min_total_qps = std::min(min_total_qps, row_stats.min_total_qps);
 
                 // get max_total_cu、min_total_cu and id of the partition which has max_total_cu
+                min_total_cu = std::min(min_total_cu, row_stats.min_total_cu);
                 if (max_total_cu < row_stats.max_total_cu) {
                     max_total_cu = row_stats.max_total_cu;
                     max_cu_partition_id = row_stats.max_cu_partition_id;
                 }
-                min_total_cu = std::min(min_total_cu, row_stats.min_total_cu);
             }
         }
 
