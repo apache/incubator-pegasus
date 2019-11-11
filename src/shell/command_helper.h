@@ -710,7 +710,7 @@ inline bool get_app_partition_stat(shell_context *sc,
             auto find = app_partitions.find(app_id_x);
             if (find != app_partitions.end() &&
                 find->second[partition_index_x].primary == nodes[i].address) {
-                const std::string app_name = app_id_name[app_id_x];
+                const std::string &app_name = app_id_name[app_id_x];
                 row_data &row = rows[app_name][partition_index_x];
                 row.row_name = std::to_string(partition_index_x);
                 row.app_id = app_id_x;
