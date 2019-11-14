@@ -130,6 +130,10 @@ public class PegasusTable implements PegasusTableInterface {
       promise.setFailure(new PException("Invalid parameter: value should not be null"));
       return promise;
     }
+    if (ttlSeconds < 0) {
+      promise.setFailure(new PException("Invalid parameter: ttlSeconds should be no less than 0"));
+      return promise;
+    }
 
     blob k = new blob(PegasusClient.generateKey(hashKey, sortKey));
     blob v = new blob(value);
@@ -396,6 +400,10 @@ public class PegasusTable implements PegasusTableInterface {
     }
     if (values == null || values.size() == 0) {
       promise.setFailure(new PException("Invalid parameter: values should not be null or empty"));
+      return promise;
+    }
+    if (ttlSeconds < 0) {
+      promise.setFailure(new PException("Invalid parameter: ttlSeconds should be no less than 0"));
       return promise;
     }
 
@@ -767,6 +775,10 @@ public class PegasusTable implements PegasusTableInterface {
     if (hashKey.length >= 0xFFFF) {
       promise.setFailure(
           new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
+      return promise;
+    }
+    if (ttlSeconds < 0) {
+      promise.setFailure(new PException("Invalid parameter: ttlSeconds should be no less than 0"));
       return promise;
     }
 
@@ -1244,6 +1256,9 @@ public class PegasusTable implements PegasusTableInterface {
     if (items == null || items.size() == 0) {
       throw new PException("Invalid parameter: items should not be null or empty");
     }
+    if (ttlSeconds < 0) {
+      throw new PException("Invalid parameter: ttlSeconds should be no less than 0");
+    }
     List<Future<Void>> futures = new ArrayList<Future<Void>>();
     for (HashKeyData item : items) {
       futures.add(asyncMultiSet(item.hashKey, item.values, ttlSeconds, timeout));
@@ -1268,6 +1283,9 @@ public class PegasusTable implements PegasusTableInterface {
     }
     if (results == null) {
       throw new PException("Invalid parameter: results should not be null");
+    }
+    if (ttlSeconds < 0) {
+      throw new PException("Invalid parameter: ttlSeconds should be no less than 0");
     }
     results.clear();
     List<Future<Void>> futures = new ArrayList<Future<Void>>();
