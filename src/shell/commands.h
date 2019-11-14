@@ -47,6 +47,14 @@ struct list_nodes_helper
     int64_t mem_idx_bytes;
     int64_t disk_available_total_ratio;
     int64_t disk_available_min_ratio;
+    double get_qps = 0;
+    double put_qps = 0;
+    double multi_get_qps = 0;
+    double multi_put_qps = 0;
+    int64_t get_p99 = 0;
+    int64_t put_p99 = 0;
+    int64_t multi_get_p99 = 0;
+    int64_t multi_put_p99 = 0;
     list_nodes_helper(const std::string &n, const std::string &s)
         : node_name(n),
           node_status(s),
@@ -57,7 +65,15 @@ struct list_nodes_helper
           mem_tbl_bytes(0),
           mem_idx_bytes(0),
           disk_available_total_ratio(0),
-          disk_available_min_ratio(0)
+          disk_available_min_ratio(0),
+          get_qps(0),
+          put_qps(0),
+          multi_get_qps(0),
+          multi_put_qps(0),
+          get_p99(0),
+          put_p99(0),
+          multi_get_p99(0),
+          multi_put_p99(0)
     {
     }
 };
