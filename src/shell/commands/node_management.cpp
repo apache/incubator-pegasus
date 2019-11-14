@@ -240,7 +240,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
 
         ::dsn::command command;
-        command.cmd = "perf-counters";
+        command.cmd = "perf-counters-by-postfix";
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_GET.qps");
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_PUT.qps");
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_MULTI_GET.qps");
@@ -355,10 +355,10 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(kv.second.put_qps);
             tp.append_data(kv.second.multi_get_qps);
             tp.append_data(kv.second.multi_put_qps);
-            tp.append_data(kv.second.get_p99 / 1000);
-            tp.append_data(kv.second.put_p99 / 1000);
-            tp.append_data(kv.second.multi_get_p99 / 1000);
-            tp.append_data(kv.second.multi_put_p99 / 1000);
+            tp.append_data(kv.second.get_p99 / 1000000);
+            tp.append_data(kv.second.put_p99 / 1000000);
+            tp.append_data(kv.second.multi_get_p99 / 1000000);
+            tp.append_data(kv.second.multi_put_p99 / 1000000);
         }
     }
     mtp.add(std::move(tp));

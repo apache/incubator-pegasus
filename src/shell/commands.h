@@ -51,10 +51,10 @@ struct list_nodes_helper
     double put_qps = 0;
     double multi_get_qps = 0;
     double multi_put_qps = 0;
-    int64_t get_p99 = 0;
-    int64_t put_p99 = 0;
-    int64_t multi_get_p99 = 0;
-    int64_t multi_put_p99 = 0;
+    double get_p99 = 0;
+    double put_p99 = 0;
+    double multi_get_p99 = 0;
+    double multi_put_p99 = 0;
     list_nodes_helper(const std::string &n, const std::string &s)
         : node_name(n),
           node_status(s),
