@@ -139,6 +139,8 @@ class message_ex;
 class admission_controller;
 typedef void (*task_rejection_handler)(task *, admission_controller *);
 
+extern std::set<dsn::task_code> s_storage_rpc_req_codes;
+
 class task_spec : public extensible_object<task_spec, 4>
 {
 public:

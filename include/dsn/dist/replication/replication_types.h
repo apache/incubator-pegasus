@@ -429,12 +429,14 @@ public:
     mutation_update(mutation_update &&);
     mutation_update &operator=(const mutation_update &);
     mutation_update &operator=(mutation_update &&);
-    mutation_update() : serialization_type(0) {}
+    mutation_update() : serialization_type(0), start_time_ns(dsn_now_ns()) {}
 
     virtual ~mutation_update() throw();
     ::dsn::task_code code;
     int32_t serialization_type;
     ::dsn::blob data;
+    // start_time_ns doesn't need to serialization, because we only use it on local node
+    uint64_t start_time_ns;
 
     _mutation_update__isset __isset;
 
@@ -451,6 +453,8 @@ public:
         if (!(serialization_type == rhs.serialization_type))
             return false;
         if (!(data == rhs.data))
+            return false;
+        if (!(start_time_ns == rhs.start_time_ns))
             return false;
         return true;
     }

@@ -435,6 +435,7 @@ void swap(mutation_update &a, mutation_update &b)
     swap(a.code, b.code);
     swap(a.serialization_type, b.serialization_type);
     swap(a.data, b.data);
+    swap(a.start_time_ns, b.start_time_ns);
     swap(a.__isset, b.__isset);
 }
 
@@ -443,6 +444,7 @@ mutation_update::mutation_update(const mutation_update &other4)
     code = other4.code;
     serialization_type = other4.serialization_type;
     data = other4.data;
+    start_time_ns = other4.start_time_ns;
     __isset = other4.__isset;
 }
 mutation_update::mutation_update(mutation_update &&other5)
@@ -450,6 +452,7 @@ mutation_update::mutation_update(mutation_update &&other5)
     code = std::move(other5.code);
     serialization_type = std::move(other5.serialization_type);
     data = std::move(other5.data);
+    start_time_ns = std::move(other5.start_time_ns);
     __isset = std::move(other5.__isset);
 }
 mutation_update &mutation_update::operator=(const mutation_update &other6)
@@ -457,6 +460,7 @@ mutation_update &mutation_update::operator=(const mutation_update &other6)
     code = other6.code;
     serialization_type = other6.serialization_type;
     data = other6.data;
+    start_time_ns = other6.start_time_ns;
     __isset = other6.__isset;
     return *this;
 }
@@ -465,6 +469,7 @@ mutation_update &mutation_update::operator=(mutation_update &&other7)
     code = std::move(other7.code);
     serialization_type = std::move(other7.serialization_type);
     data = std::move(other7.data);
+    start_time_ns = std::move(other7.start_time_ns);
     __isset = std::move(other7.__isset);
     return *this;
 }
@@ -477,6 +482,8 @@ void mutation_update::printTo(std::ostream &out) const
         << "serialization_type=" << to_string(serialization_type);
     out << ", "
         << "data=" << to_string(data);
+    out << ", "
+        << "start_time_ns=" << to_string(start_time_ns);
     out << ")";
 }
 

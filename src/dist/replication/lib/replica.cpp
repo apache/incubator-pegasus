@@ -77,6 +77,9 @@ replica::replica(
     _counter_recent_write_throttling_reject_count.init_app_counter(
         "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 
+    // init table level latency perf counters
+    init_table_level_latency_counters();
+
     if (need_restore) {
         // add an extra env for restore
         _extra_envs.insert(
@@ -163,8 +166,15 @@ void replica::on_client_read(dsn::message_ex *request)
         }
     }
 
+    uint64_t start_time_ns = dsn_now_ns();
     dassert(_app != nullptr, "");
     _app->on_request(request);
+
+    // If the corresponding perf counter exist, count the duration of this operation.
+    // rpc code of request is already checked in message_ex::rpc_code, so it will always be legal
+    if (_counters_table_level_latency[request->rpc_code()] != nullptr) {
+        _counters_table_level_latency[request->rpc_code()]->set(dsn_now_ns() - start_time_ns);
+    }
 }
 
 void replica::response_client_read(dsn::message_ex *request, error_code error)
@@ -284,6 +294,18 @@ void replica::execute_mutation(mutation_ptr &mu)
             init_prepare(next, false);
         }
     }
+
+    // update table level latency perf-counters for primary partition
+    if (partition_status::PS_PRIMARY == status()) {
+        uint64_t now_ns = dsn_now_ns();
+        for (auto update : mu->data.updates) {
+            // If the corresponding perf counter exist, count the duration of this operation.
+            // code in update will always be legal
+            if (_counters_table_level_latency[update.code] != nullptr) {
+                _counters_table_level_latency[update.code]->set(now_ns - update.start_time_ns);
+            }
+        }
+    }
 }
 
 mutation_ptr replica::new_mutation(decree decree)
@@ -383,6 +405,31 @@ std::string replica::query_compact_state() const
 {
     dassert_replica(_app != nullptr, "");
     return _app->query_compact_state();
+}
+
+// Replicas on the server which serves for the same table will share the same perf-counter.
+// For example counter `table.level.RPC_RRDB_RRDB_MULTI_PUT.latency(ns)@test_table` is shared by
+// all the replicas for `test_table`.
+void replica::init_table_level_latency_counters()
+{
+    int max_task_code = task_code::max();
+    _counters_table_level_latency.resize(max_task_code + 1);
+
+    for (int code = 0; code <= max_task_code; code++) {
+        _counters_table_level_latency[code] = nullptr;
+        if (s_storage_rpc_req_codes.find(task_code(code)) != s_storage_rpc_req_codes.end()) {
+            std::string counter_str =
+                fmt::format("table.level.{}.latency(ns)@{}", task_code(code), _app_info.app_name);
+            _counters_table_level_latency[code] =
+                dsn::perf_counters::instance()
+                    .get_app_counter("eon.replica",
+                                     counter_str.c_str(),
+                                     COUNTER_TYPE_NUMBER_PERCENTILES,
+                                     counter_str.c_str(),
+                                     true)
+                    .get();
+        }
+    }
 }
 } // namespace replication
 } // namespace dsn
