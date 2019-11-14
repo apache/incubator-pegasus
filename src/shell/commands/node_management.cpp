@@ -240,7 +240,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
 
         ::dsn::command command;
-        command.cmd = "perf-counters-by-prefix";
+        command.cmd = "perf-counters";
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_GET.qps");
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_PUT.qps");
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_MULTI_GET.qps");
