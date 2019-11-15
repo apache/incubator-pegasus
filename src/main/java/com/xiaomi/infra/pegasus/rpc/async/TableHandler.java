@@ -71,15 +71,12 @@ public class TableHandler extends Table {
 
     query_cfg_request req = new query_cfg_request(name, new ArrayList<Integer>());
     query_cfg_operator op = new query_cfg_operator(new gpid(-1, -1), req);
-
     mgr.getMetaSession().query(op, 5);
-
     error_types err = MetaSession.getMetaServiceError(op);
     if (err != error_types.ERR_OK) {
       handleMetaException(err, mgr, name);
       return;
     }
-
     query_cfg_response resp = op.get_response();
     logger.info(
         "query meta configuration succeed, table_name({}), app_id({}), partition_count({})",
@@ -458,6 +455,8 @@ public class TableHandler extends Table {
       case ERR_BUSY_DROPPING:
         message = " The table is dropping, please confirm the table name!";
         break;
+      case ERR_SESSION_RESET:
+        message = " Unable to connect to the meta servers!";
     }
     throw new ReplicationException(err_type, header + message);
   }
