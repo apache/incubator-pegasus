@@ -317,7 +317,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             std::stringstream oss;
             std::string hostname;
             std::string ip = p.primary.to_string();
-            if (sc->ddl_client->hostname_from_ip_port(ip.c_str(), &hostname)) {
+            if (dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
                 oss << hostname << "(";
             } else {
                 oss << p.primary.to_string() << "(";
@@ -368,7 +368,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
                 std::string hostname;
                 std::string ip = p.secondaries[j].to_string();
-                if (sc->ddl_client->hostname_from_ip_port(ip.c_str(), &hostname)) {
+                if (dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
                     oss << hostname << "(";
                 } else {
                     oss << p.secondaries[j].to_string() << "(";

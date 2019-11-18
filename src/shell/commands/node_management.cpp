@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "shell/commands.h"
+#include <dsn/utility/utils.h>
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {
@@ -127,7 +128,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         std::string node_name = kv.first.to_std_string();
         if (resolve_ip) {
             // TODO: put hostname_from_ip_port into common utils
-            sc->ddl_client->hostname_from_ip_port(node_name.c_str(),&node_name);
+            dsn::utils::hostname_from_ip_port(node_name.c_str(), &node_name);
         }
         tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
     }
@@ -325,15 +326,15 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         if (c == -1)
             break;
         switch (c) {
-           case 't':
-                type = optarg;
-                break;
-            case 'l':
-                nodes = optarg;
-                break;
-            case 'r':
-                if_resolve = true;
-                break;
+        case 't':
+            type = optarg;
+            break;
+        case 'l':
+            nodes = optarg;
+            break;
+        case 'r':
+            if_resolve = true;
+            break;
         default:
             return false;
         }
@@ -353,7 +354,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    if (optind == args.argc ) {
+    if (optind == args.argc) {
         fprintf(stderr, "command not specified\n");
         return false;
     }
@@ -403,8 +404,9 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     for (int i = 0; i < node_list.size(); ++i) {
         node_desc &n = node_list[i];
         std::string hostname;
-        sc->ddl_client->hostname_from_ip_port(n.address.to_string(),&hostname);
-        if (!if_resolve) hostname = n.address.to_string();
+        dsn::utils::hostname_from_ip_port(n.address.to_string(), &hostname);
+        if (!if_resolve)
+            hostname = n.address.to_string();
         fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
         if (results[i].first) {
             fprintf(stderr, "succeed: %s\n", results[i].second.c_str());
