@@ -110,7 +110,7 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
     }
 
     ::dsn::error_code err =
-        sc->ddl_client->list_app(app_name, detailed, json, out_file, resolve_ip);   //resolve_ip always be true
+        sc->ddl_client->list_app(app_name, detailed, json, out_file, resolve_ip);
     if (err != ::dsn::ERR_OK) {
         std::cout << "query app " << app_name << " failed, error=" << err.to_string() << std::endl;
     }
