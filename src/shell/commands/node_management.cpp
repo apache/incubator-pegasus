@@ -239,6 +239,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
+        // TODO(heyuchen): add cu statistics
         ::dsn::command command;
         command.cmd = "perf-counters-by-postfix";
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_GET.qps");
@@ -277,21 +278,21 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             list_nodes_helper &h = tmp_it->second;
             for (dsn::perf_counter_metric &m : info.counters) {
                 if (m.name.find("RPC_RRDB_RRDB_GET.qps") != std::string::npos)
-                    h.get_qps += m.value;
+                    h.get_qps = m.value;
                 else if (m.name.find("RPC_RRDB_RRDB_PUT.qps") != std::string::npos)
-                    h.put_qps += m.value;
+                    h.put_qps = m.value;
                 else if (m.name.find("RPC_RRDB_RRDB_MULTI_GET.qps") != std::string::npos)
-                    h.multi_get_qps += m.value;
+                    h.multi_get_qps = m.value;
                 else if (m.name.find("RPC_RRDB_RRDB_MULTI_PUT.qps") != std::string::npos)
-                    h.put_qps += m.value;
+                    h.put_qps = m.value;
                 else if (m.name.find("RPC_RRDB_RRDB_GET.latency.server") != std::string::npos)
-                    h.get_p99 += m.value;
+                    h.get_p99 = m.value;
                 else if (m.name.find("RPC_RRDB_RRDB_PUT.latency.server") != std::string::npos)
-                    h.put_p99 += m.value;
+                    h.put_p99 = m.value;
                 else if (m.name.find("RPC_RRDB_RRDB_MULTI_GET.latency.server") != std::string::npos)
-                    h.multi_get_p99 += m.value;
+                    h.multi_get_p99 = m.value;
                 else if (m.name.find("RPC_RRDB_RRDB_MULTI_PUT.latency.server") != std::string::npos)
-                    h.multi_put_p99 += m.value;
+                    h.multi_put_p99 = m.value;
             }
         }
     }
@@ -326,12 +327,12 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     }
     if (show_qps) {
         tp.add_column("get_qps", tp_alignment::kRight);
-        tp.add_column("put_qps", tp_alignment::kRight);
-        tp.add_column("mget_qps", tp_alignment::kRight);
-        tp.add_column("mput_qps", tp_alignment::kRight);
         tp.add_column("get_p99(ms)", tp_alignment::kRight);
-        tp.add_column("put_p99(ms)", tp_alignment::kRight);
+        tp.add_column("mget_qps", tp_alignment::kRight);
         tp.add_column("mget_p99(ms)", tp_alignment::kRight);
+        tp.add_column("put_qps", tp_alignment::kRight);
+        tp.add_column("put_p99(ms)", tp_alignment::kRight);
+        tp.add_column("mput_qps", tp_alignment::kRight);
         tp.add_column("mput_p99(ms)", tp_alignment::kRight);
     }
     for (auto &kv : tmp_map) {
@@ -352,12 +353,12 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
         if (show_qps) {
             tp.append_data(kv.second.get_qps);
-            tp.append_data(kv.second.put_qps);
-            tp.append_data(kv.second.multi_get_qps);
-            tp.append_data(kv.second.multi_put_qps);
             tp.append_data(kv.second.get_p99 / 1000000);
-            tp.append_data(kv.second.put_p99 / 1000000);
+            tp.append_data(kv.second.multi_get_qps);
             tp.append_data(kv.second.multi_get_p99 / 1000000);
+            tp.append_data(kv.second.put_qps);
+            tp.append_data(kv.second.put_p99 / 1000000);
+            tp.append_data(kv.second.multi_put_qps);
             tp.append_data(kv.second.multi_put_p99 / 1000000);
         }
     }
