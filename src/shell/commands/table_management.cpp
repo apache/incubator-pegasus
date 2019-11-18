@@ -75,8 +75,8 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
     std::string app_name = args.argv[1];
     std::string out_file;
     bool detailed = false;
-    bool resolve_ip = false;
     bool json = false;
+    bool resolve_ip = false;
 
     optind = 0;
     while (true) {
@@ -86,11 +86,12 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
         if (c == -1)
             break;
         switch (c) {
-        case 'd':
-            detailed = true;
-            break;
         case 'r':
             resolve_ip = true;
+            detailed = true;
+            break ;
+        case 'd':
+            detailed = true;
             break;
         case 'j':
             json = true;
@@ -109,7 +110,7 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
     }
 
     ::dsn::error_code err =
-        sc->ddl_client->list_app(app_name, detailed, json, out_file, resolve_ip);
+        sc->ddl_client->list_app(app_name, detailed, json, out_file, resolve_ip);   //resolve_ip always be true
     if (err != ::dsn::ERR_OK) {
         std::cout << "query app " << app_name << " failed, error=" << err.to_string() << std::endl;
     }
@@ -137,7 +138,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "djo:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "drjo:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -145,6 +146,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             detailed = true;
             break;
         case 'r':
+            detailed = true;
             resolve_ip = true;
             break;
         case 'j':
@@ -157,11 +159,6 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             return false;
         }
     }
-
-    if (resolve_ip) {
-        std::cout << resolve_ip << std::endl;
-    }
-
     if (app_name.empty()) {
         std::cout << "ERROR: null app name" << std::endl;
         return false;
@@ -267,7 +264,6 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         tp_details.add_column("replica_count");
         tp_details.add_column("primary");
         tp_details.add_column("secondaries");
-        //    tp_details.add_column("hostname");
     }
     double disk_used_for_primary_replicas = 0;
     int primary_replicas_count = 0;
@@ -317,7 +313,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             std::stringstream oss;
             std::string hostname;
             std::string ip = p.primary.to_string();
-            if (dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
+            if (dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname) && resolve_ip) {
                 oss << hostname << "(";
             } else {
                 oss << p.primary.to_string() << "(";
@@ -368,7 +364,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
                 std::string hostname;
                 std::string ip = p.secondaries[j].to_string();
-                if (dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
+                if (dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname) && resolve_ip) {
                     oss << hostname << "(";
                 } else {
                     oss << p.secondaries[j].to_string() << "(";
