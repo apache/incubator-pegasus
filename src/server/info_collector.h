@@ -208,10 +208,11 @@ public:
             qps_max_min_scale->set(qps_scale);
             cu_max_min_scale->set(cu_scale);
             if (qps_scale >= HOTSPOT_MAX_MIN_SCALE_THRESHOLD) {
-                ddebug("There is a hot spot about qps in app %s(partition id: %s), max/min scale=%d",
-                       row_stats.app_name.c_str(),
-                       row_stats.max_qps_partition_id.c_str(),
-                       qps_scale);
+                ddebug(
+                    "There is a hot spot about qps in app %s(partition id: %s), max/min scale=%d",
+                    row_stats.app_name.c_str(),
+                    row_stats.max_qps_partition_id.c_str(),
+                    qps_scale);
             }
             if (cu_scale >= HOTSPOT_MAX_MIN_SCALE_THRESHOLD) {
                 ddebug("There is a hot spot about cu in app %s(partition id: %s), max/min scale=%d",
