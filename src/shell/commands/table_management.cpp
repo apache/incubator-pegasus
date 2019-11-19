@@ -89,7 +89,7 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
         case 'r':
             resolve_ip = true;
             detailed = true;
-            break ;
+            break;
         case 'd':
             detailed = true;
             break;
