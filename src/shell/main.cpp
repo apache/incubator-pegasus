@@ -293,20 +293,20 @@ static command_executor commands[] = {
     {
         "remote_command",
         "send remote command to servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] "
+        "[-r|--resolve_ip] [-l ip:port,ip:port...] "
         "<command> [arguments...]",
         remote_command,
     },
     {
         "server_info",
         "get info of servers",
-        "[-r|--resolve_ip] [-t all|meta-server|replica-server] [-l ip:port,ip:port...] ",
+        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] [-r|--resolve_ip]",
         server_info,
     },
     {
         "server_stat",
         "get stat of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...]",
+        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] [-r|--resolve_ip]",
         server_stat,
     },
     {
@@ -319,7 +319,7 @@ static command_executor commands[] = {
     {
         "flush_log",
         "flush log of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...]",
+        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...][-r|--resolve_ip]",
         flush_log,
     },
     {

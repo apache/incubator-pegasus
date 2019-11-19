@@ -408,7 +408,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     std::string type;
     std::string nodes;
     optind = 0;
-    bool if_resolve = false;
+    bool resolve_ip = false;
     while (true) {
         int option_index = 0;
         int c;
@@ -423,7 +423,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
             nodes = optarg;
             break;
         case 'r':
-            if_resolve = true;
+            resolve_ip = true;
             break;
         default:
             return false;
@@ -494,7 +494,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     for (int i = 0; i < node_list.size(); ++i) {
         node_desc &n = node_list[i];
         std::string hostname;
-        if (if_resolve)
+        if (resolve_ip)
             dsn::utils::hostname_from_ip_port(n.address.to_string(), &hostname);
         else
             hostname = n.address.to_string();
