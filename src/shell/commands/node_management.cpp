@@ -494,10 +494,11 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     for (int i = 0; i < node_list.size(); ++i) {
         node_desc &n = node_list[i];
         std::string hostname;
-        if (resolve_ip)
+        if (resolve_ip) {
             dsn::utils::hostname_from_ip_port(n.address.to_string(), &hostname);
-        else
+        } else {
             hostname = n.address.to_string();
+        }
         fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
         if (results[i].first) {
             fprintf(stderr, "succeed: %s\n", results[i].second.c_str());
