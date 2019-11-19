@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "shell/commands.h"
+#include <dsn/utility/utils.h>
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {
@@ -132,7 +133,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         std::string node_name = kv.first.to_std_string();
         if (resolve_ip) {
             // TODO: put hostname_from_ip_port into common utils
-            node_name = sc->ddl_client->hostname_from_ip_port(node_name.c_str());
+            dsn::utils::hostname_from_ip_port(node_name.c_str(), &node_name);
         }
         tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
     }
@@ -401,15 +402,17 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"node_type", required_argument, 0, 't'},
                                            {"node_list", required_argument, 0, 'l'},
+                                           {"resolve_ip", no_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
 
     std::string type;
     std::string nodes;
     optind = 0;
+    bool resolve_ip = false;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "t:l:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "t:l:r", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -418,6 +421,9 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'l':
             nodes = optarg;
+            break;
+        case 'r':
+            resolve_ip = true;
             break;
         default:
             return false;
@@ -487,7 +493,13 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     // TODO (yingchun) output is hard to read, need do some refactor
     for (int i = 0; i < node_list.size(); ++i) {
         node_desc &n = node_list[i];
-        fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), n.address.to_string());
+        std::string hostname;
+        if (resolve_ip) {
+            dsn::utils::hostname_from_ip_port(n.address.to_string(), &hostname);
+        } else {
+            hostname = n.address.to_string();
+        }
+        fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
         if (results[i].first) {
             fprintf(stderr, "succeed: %s\n", results[i].second.c_str());
             succeed++;
