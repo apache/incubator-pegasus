@@ -83,7 +83,7 @@ public class ClusterManager extends Cluster {
     synchronized (this) {
       ss = replicaSessions.get(address);
       if (ss != null) return ss;
-      ss = new ReplicaSession(address, replicaGroup, Cluster.SOCK_TIMEOUT);
+      ss = new ReplicaSession(address, replicaGroup, operationTimeout);
       replicaSessions.put(address, ss);
       return ss;
     }
