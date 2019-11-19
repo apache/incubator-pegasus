@@ -718,7 +718,7 @@ inline bool get_app_partition_stat(shell_context *sc,
             auto find = app_partitions.find(app_id_x);
             if (find != app_partitions.end() &&
                 find->second[partition_index_x].primary == nodes[i].address) {
-                const std::string app_name = app_id_name[app_id_x];
+                const std::string &app_name = app_id_name[app_id_x];
                 row_data &row = rows[app_name][partition_index_x];
                 row.row_name = std::to_string(partition_index_x);
                 row.app_id = app_id_x;
@@ -787,9 +787,14 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             for (dsn::perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
                 std::string counter_name;
+<<<<<<< HEAD
                 bool parse_ret = parse_app_pegasus_perf_counter_name(
                     m.name, app_id_x, partition_index_x, counter_name);
                 if (!parse_ret) {
+=======
+                if (!parse_app_pegasus_perf_counter_name(
+                        m.name, app_id_x, partition_index_x, counter_name)) {
+>>>>>>> upstream/master
                     continue;
                 }
                 auto find = app_partitions.find(app_id_x);
