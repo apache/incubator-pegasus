@@ -293,7 +293,7 @@ static command_executor commands[] = {
     {
         "remote_command",
         "send remote command to servers",
-        "[-r|--resolve_ip] [-l ip:port,ip:port...] "
+        "[-t all|meta-server|replica-server] [-r|--resolve_ip] [-l ip:port,ip:port...]"
         "<command> [arguments...]",
         remote_command,
     },

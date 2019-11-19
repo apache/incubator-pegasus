@@ -75,8 +75,8 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
     std::string app_name = args.argv[1];
     std::string out_file;
     bool detailed = false;
-    bool json = false;
     bool resolve_ip = false;
+    bool json = false;
 
     optind = 0;
     while (true) {
@@ -86,11 +86,11 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
         if (c == -1)
             break;
         switch (c) {
-        case 'r':
-            resolve_ip = true;
-            break;
         case 'd':
             detailed = true;
+            break;
+        case 'r':
+            resolve_ip = true;
             break;
         case 'j':
             json = true;
