@@ -59,8 +59,9 @@ public class TestPException {
     op.rpc_error.errno = error_code.error_types.ERR_OBJECT_NOT_FOUND;
 
     // set failure in promise, the exception is thrown as ExecutionException.
+    int timeout = 1000;
     PegasusTable pegasusTable = new PegasusTable(null, table);
-    pegasusTable.handleReplicaException(promise, op, table, 1000);
+    pegasusTable.handleReplicaException(promise, op, table, timeout);
     try {
       promise.get();
     } catch (ExecutionException e) {
@@ -69,8 +70,8 @@ public class TestPException {
 
       String msg =
           String.format(
-              "com.xiaomi.infra.pegasus.client.PException: {version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_OBJECT_NOT_FOUND: [table=temp,operation=put,replicaServer=%s,gpid=(%s)] The replica server doesn't serve this partition!",
-              server, gpid.toString());
+              "com.xiaomi.infra.pegasus.client.PException: {version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_OBJECT_NOT_FOUND: [table=temp,operation=put,replicaServer=%s,gpid=(%s),timeout=%dms] The replica server doesn't serve this partition!",
+              server, gpid.toString(), timeout);
       Assert.assertEquals(e.getMessage(), msg);
       return;
     } catch (InterruptedException e) {
@@ -102,7 +103,7 @@ public class TestPException {
 
       String msg =
           String.format(
-              "com.xiaomi.infra.pegasus.client.PException: {version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_TIMEOUT: [table=temp,operation=put,replicaServer=%s,gpid=(%s)] The operation timeout is 1000ms!",
+              "com.xiaomi.infra.pegasus.client.PException: {version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_TIMEOUT: [table=temp,operation=put,replicaServer=%s,gpid=(%s),timeout=1000ms] The operation is timed out!",
               server, gpid.toString());
       Assert.assertEquals(e.getMessage(), msg);
     }

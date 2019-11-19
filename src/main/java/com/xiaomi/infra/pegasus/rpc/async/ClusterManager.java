@@ -3,6 +3,8 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.rpc.async;
 
+import static java.lang.Math.max;
+
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.metrics.MetricsManager;
 import com.xiaomi.infra.pegasus.rpc.Cluster;
@@ -83,7 +85,9 @@ public class ClusterManager extends Cluster {
     synchronized (this) {
       ss = replicaSessions.get(address);
       if (ss != null) return ss;
-      ss = new ReplicaSession(address, replicaGroup, operationTimeout);
+      ss =
+          new ReplicaSession(
+              address, replicaGroup, max(operationTimeout, Cluster.MIN_SOCK_CONNECT_TIMEOUT));
       replicaSessions.put(address, ss);
       return ss;
     }

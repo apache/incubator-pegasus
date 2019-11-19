@@ -1774,13 +1774,16 @@ public class PegasusTable implements PegasusTableInterface {
             + ",gpid=("
             + gPid.toString()
             + ")"
+            + ",timeout="
+            + timeout
+            + "ms"
             + "]";
     switch (op.rpc_error.errno) {
       case ERR_SESSION_RESET:
         message = " Disconnected from the replica-server due to internal error!";
         break;
       case ERR_TIMEOUT:
-        message = " The operation timeout is " + timeout + "ms!";
+        message = " The operation is timed out!";
         break;
       case ERR_OBJECT_NOT_FOUND:
         message = " The replica server doesn't serve this partition!";

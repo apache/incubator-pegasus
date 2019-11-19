@@ -8,6 +8,8 @@ import com.xiaomi.infra.pegasus.thrift.TException;
 import java.util.Properties;
 
 public abstract class Cluster {
+  public static final int MIN_SOCK_CONNECT_TIMEOUT = 1000;
+
   public static final String PEGASUS_META_SERVERS_KEY = "meta_servers";
 
   public static final String PEGASUS_OPERATION_TIMEOUT_KEY = "operation_timeout";
