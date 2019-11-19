@@ -34,14 +34,16 @@
 
 #pragma once
 
+#include <dsn/dist/replication.h>
+
 #include <cctype>
 #include <string>
 #include <map>
-#include <dsn/dist/replication.h>
+#include <vector>
+
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/tool-api/async_calls.h>
 #include <dsn/utility/errors.h>
-#include <vector>
 
 namespace dsn {
 namespace replication {
@@ -116,24 +118,6 @@ public:
     error_with<duplication_status_change_response>
     change_dup_status(std::string app_name, int dupid, duplication_status::type status);
     error_with<duplication_query_response> query_dup(std::string app_name);
-
-    // get host name from ip series
-    // if can't get a hostname from ip(maybe no hostname or other errors), return UNRESOLVABLE
-    // if multiple hostname got, return <host1,host2> ...
-    // we only support ipv4 currently
-
-    // ip_network_order -> hostname
-    static std::string hostname_from_ip(uint32_t ip);
-    // a.b.c.d -> hostname
-    static std::string hostname_from_ip(const char *ip);
-    // a.b.c.d:port1 -> hostname:port1
-    static std::string hostname_from_ip_port(const char *ip_port);
-    // ipv4_rpc_address -> hostname:port | non_ipv4 -> "invalid"
-    static std::string hostname(const dsn::rpc_address &address);
-    // a.b.c.d,e.f.g.h -> hostname1,hostname2
-    static std::string list_hostname_from_ip(const char *ip_list);
-    // a.b.c.d:port1,e.f.g.h:port2 -> hostname1:port2,hostname2:port2
-    static std::string list_hostname_from_ip_port(const char *ip_port_list);
 
     dsn::error_code do_restore(const std::string &backup_provider_name,
                                const std::string &cluster_name,
