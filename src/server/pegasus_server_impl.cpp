@@ -214,7 +214,17 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                    "rocksdb_disable_bloom_filter",
                                    false,
                                    "rocksdb tbl_opts.filter_policy")) {
-        _tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+        std::string filter_type =
+            dsn_config_get_value_string("pegasus.server", "rocksdb_filter_type", "common", "");
+        dassert(filter_type == "common" || filter_type == "prefix",
+                "pegasus.server.rocksdb_filter_type must be 'common' or 'prefix'.");
+        if (filter_type == "common") {
+            _tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+        } else if (filter_type == "prefix") {
+            _tbl_opts.prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(3));
+            _tbl_opts.memtable_prefix_bloom_size_ratio = 0.1;
+            _tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+        }
     }
 
     _db_opts.table_factory.reset(NewBlockBasedTableFactory(_tbl_opts));
