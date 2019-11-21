@@ -18,7 +18,6 @@ class HashkeyTransform : public rocksdb::SliceTransform {
   const char* Name() const override { return "pegasus.HashkeyTransform"; }
 
   rocksdb::Slice Transform(const rocksdb::Slice& src) const override {
-      // TODO(yingchun): hash_key and sort_key are local temp variable, need to be fixed !!!
       ::dsn::blob hash_key, sort_key;
       pegasus_restore_key(dsn::blob(src.data(), 0, src.size()), hash_key, sort_key);
       return rocksdb::Slice(hash_key.data(), hash_key.length());
