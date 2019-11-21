@@ -151,6 +151,17 @@ func (rs *ReplicaSession) SortKeyCount(ctx context.Context, gpid *base.Gpid, has
 	return ret.GetSuccess(), nil
 }
 
+func (rs *ReplicaSession) Incr(ctx context.Context, gpid *base.Gpid, request *rrdb.IncrRequest) (*rrdb.IncrResponse, error) {
+	args := &rrdb.RrdbIncrArgs{Request: request}
+	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_INCR")
+	if err != nil {
+		return nil, err
+	}
+
+	ret, _ := result.(*rrdb.RrdbIncrResult)
+	return ret.GetSuccess(), nil
+}
+
 // ReplicaManager manages the pool of sessions to replica servers, so that
 // different tables that locate on the same replica server can share one
 // ReplicaSession, without the effort of creating a new connection.

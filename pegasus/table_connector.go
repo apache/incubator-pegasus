@@ -149,6 +149,11 @@ type TableConnector interface {
 	// `hashKey`: CAN'T be nil or empty.
 	SortKeyCount(ctx context.Context, hashKey []byte) (int64, error)
 
+	// Atomically increment value by key from the cluster.
+	// Returns the new value.
+	// `hashKey` / `sortKeys` : CAN'T be nil or empty
+	Incr(ctx context.Context, hashKey []byte, sortKey []byte, increment int64) (int64, error)
+
 	Close() error
 }
 
@@ -773,6 +778,33 @@ func (p *pegasusTableConnector) SortKeyCount(ctx context.Context, hashKey []byte
 		return resp.Count, nil
 	}()
 	return count, WrapError(err, OpSortKeyCount)
+}
+
+func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKey []byte, increment int64) (int64, error) {
+	newValue, err := func() (int64, error) {
+		if err := validateHashKey(hashKey); err != nil {
+			return 0, err
+		}
+		if err := validateSortKey(sortKey); err != nil {
+			return 0, err
+		}
+
+		gpid, part := p.getPartition(hashKey)
+
+		request := rrdb.NewIncrRequest()
+		request.Key = encodeHashKeySortKey(hashKey, sortKey)
+		request.Increment = increment
+
+		resp, err := part.Incr(ctx, gpid, request)
+		if err == nil {
+			err = base.NewRocksDBErrFromInt(resp.Error)
+		}
+		if err = p.handleReplicaError(err, gpid, part); err != nil {
+			return 0, err
+		}
+		return resp.NewValue_, nil
+	}()
+	return newValue, WrapError(err, OpIncr)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {

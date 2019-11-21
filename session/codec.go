@@ -172,6 +172,11 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: rrdb.NewCountResponse(),
 		}
 	},
+	"RPC_RRDB_RRDB_INCR_ACK": func() RpcResponseResult {
+		return &rrdb.RrdbIncrResult{
+			Success: rrdb.NewIncrResponse(),
+		}
+	},
 }
 
 // MockCodec is only used for testing.
