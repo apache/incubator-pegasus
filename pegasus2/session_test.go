@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"encoding/binary"
+
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/pegasus"
@@ -46,7 +47,6 @@ func TestNodeSession_ReadStaleResponse(t *testing.T) {
 	defer n.Close()
 
 	var expected []byte
-	var actual []byte
 
 	mockCodec := &session.MockCodec{}
 	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
@@ -61,7 +61,6 @@ func TestNodeSession_ReadStaleResponse(t *testing.T) {
 	})
 
 	mockCodec.MockUnMarshal(func(data []byte, v interface{}) error {
-		actual = data
 		r, _ := v.(*session.PegasusRpcCall)
 		r.SeqId = 1
 		r.Name = "RPC_RRDB_RRDB_GET_ACK"

@@ -121,14 +121,6 @@ func (writer *IOErrWriter) Write(p []byte) (n int, err error) {
 	return 0, writer.err
 }
 
-type IOErrReader struct {
-	err error
-}
-
-func (reader *IOErrReader) Read(p []byte) (n int, err error) {
-	return 0, reader.err
-}
-
 // Ensure if write failed eventually, the session will be stopped,
 // and the rpc caller will be notified immediately with the write
 // error.

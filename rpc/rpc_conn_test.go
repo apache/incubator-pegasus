@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"context"
+
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 )
@@ -113,7 +114,7 @@ func TestRpcConn_WriteAndRead(t *testing.T) {
 	assert.Equal(t, data, actual)
 
 	// Ensure that read will timeout after 1 second.
-	actual, err = conn.Read(1)
+	_, err = conn.Read(1)
 	opErr, ok := err.(*net.OpError)
 	assert.True(t, ok)
 	assert.True(t, opErr.Timeout())

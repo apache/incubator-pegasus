@@ -1,0 +1,9 @@
+linters:
+  disable:
+    - errcheck
+    - ineffassign
+    - gosimple
+    - govet
+  enable:
+    - gofmt
+    - goimports

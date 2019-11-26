@@ -22,7 +22,7 @@ type NodeType string
 
 const (
 	NodeTypeMeta    NodeType = "meta"
-	NodeTypeReplica          = "replica"
+	NodeTypeReplica NodeType = "replica"
 
 	kDialInterval = time.Second * 60
 )
@@ -264,13 +264,14 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		n.tryDial()
 
 		var ready bool
+		ticker := time.NewTicker(100 * time.Millisecond)
 		for {
 
 			breakLoop := false
 			select {
 			case <-ctx.Done():
 				breakLoop = true
-			case <-time.Tick(100 * time.Millisecond):
+			case <-ticker.C:
 				if n.ConnState() == rpc.ConnStateReady {
 					ready = true
 					breakLoop = true
