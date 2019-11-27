@@ -223,7 +223,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                         "common",
                                         "Bloom filter type, should be either 'common' or 'prefix'");
         dassert(filter_type == "common" || filter_type == "prefix",
-                "pegasus.server.rocksdb_filter_type should be either 'common' or 'prefix'.");
+                "[pegasus.server]rocksdb_filter_type should be either 'common' or 'prefix'.");
         if (filter_type == "prefix") {
             _db_opts.prefix_extractor.reset(new HashkeyTransform());
             _db_opts.memtable_prefix_bloom_size_ratio = 0.1;
@@ -716,9 +716,10 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             return;
         }
 
-        std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(_rd_opts));
+        std::unique_ptr<rocksdb::Iterator> it = nullptr;
         bool complete = false;
         if (!request.reverse) {
+            it.reset(_db->NewIterator(_rd_opts));
             it->Seek(start);
             bool first_exclusive = !start_inclusive;
             while (count < max_kv_count && size < max_kv_size && it->Valid()) {
@@ -771,6 +772,10 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         } else { // reverse
             // TODO(yingchun): Seems prefix bloom filter not supported yet,
             // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation
+            rocksdb::ReadOptions rd_opts;
+            rd_opts.total_order_seek = true;
+            rd_opts.prefix_same_as_start = false;
+            it.reset(_db->NewIterator(rd_opts));
             it->SeekForPrev(stop);
             bool first_exclusive = !stop_inclusive;
             std::vector<::dsn::apps::key_value> reverse_kvs;
@@ -1165,6 +1170,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         request.hash_key_filter_pattern.length() > 0) {
         pegasus_generate_key(prefix_start_key, request.hash_key_filter_pattern, ::dsn::blob());
         rocksdb::Slice prefix_start(prefix_start_key.data(), prefix_start_key.length());
+        dwarn("%s %d", prefix_start.data(), prefix_start.size());
         if (prefix_start.compare(start) > 0) {
             start = prefix_start;
             start_inclusive = true;
