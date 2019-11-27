@@ -211,21 +211,24 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         _tbl_opts.block_cache = _block_cache;
     }
 
-    bool enable_bloom_filter = !dsn_config_get_value_bool(
-        "pegasus.server", "rocksdb_disable_bloom_filter", false, "Disable bloom filter or not");
-    if (enable_bloom_filter) {
+    // Bloom filter configurations.
+    bool disable_bloom_filter = dsn_config_get_value_bool(
+        "pegasus.server", "rocksdb_disable_bloom_filter", false, "Whether to disable bloom filter");
+    if (!disable_bloom_filter) {
         _tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
 
         std::string filter_type =
             dsn_config_get_value_string("pegasus.server",
                                         "rocksdb_filter_type",
                                         "common",
-                                        "Bloom filter type, should be 'common' or 'prefix'");
+                                        "Bloom filter type, should be either 'common' or 'prefix'");
         dassert(filter_type == "common" || filter_type == "prefix",
-                "pegasus.server.rocksdb_filter_type must be 'common' or 'prefix'.");
+                "pegasus.server.rocksdb_filter_type should be either 'common' or 'prefix'.");
         if (filter_type == "prefix") {
             _db_opts.prefix_extractor.reset(new HashkeyTransform());
             _db_opts.memtable_prefix_bloom_size_ratio = 0.1;
+
+            _rd_opts.prefix_same_as_start = true;
         }
     }
 
@@ -766,6 +769,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 it->Next();
             }
         } else { // reverse
+            // TODO(yingchun): Seems prefix bloom filter not supported yet,
+            // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation
             it->SeekForPrev(stop);
             bool first_exclusive = !stop_inclusive;
             std::vector<::dsn::apps::key_value> reverse_kvs;
@@ -1150,6 +1155,8 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     rocksdb::Slice start(request.start_key.data(), request.start_key.length());
     rocksdb::Slice stop(request.stop_key.data(), request.stop_key.length());
 
+    rocksdb::ReadOptions rd_opts(_rd_opts);
+
     // limit key range by prefix filter
     // because data is not ordered by hash key (hash key "aa" is greater than "b"),
     // so we can only limit the start range by hash key filter.
@@ -1162,6 +1169,10 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
             start = prefix_start;
             start_inclusive = true;
         }
+        // 'start' maybe a prefix sub string of any hashkey, disable hashkey based prefix bloom
+        // filter when do Seek.
+        rd_opts.total_order_seek = true;
+        rd_opts.prefix_same_as_start = false;
     }
 
     // check if range is empty
@@ -1185,7 +1196,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         return;
     }
 
-    std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(_rd_opts));
+    std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(rd_opts));
     it->Seek(start);
     bool complete = false;
     bool first_exclusive = !start_inclusive;
