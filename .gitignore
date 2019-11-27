@@ -34,3 +34,7 @@ target
 *.iml
 dependency-reduced-pom.xml
 /core-site.xml
+.classpath
+.factorypath
+.project
+.settings/
