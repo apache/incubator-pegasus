@@ -136,12 +136,12 @@ void info_collector::on_app_stat()
         return;
     }
 
-    row_statistics all_stats("_all_");
+    table_stats all_stats("_all_");
     for (auto app_rows : all_rows) {
         // get statistics data for app
-        row_statistics app_stats(app_rows.first);
+        table_stats app_stats(app_rows.first);
         for (auto partition_row : app_rows.second) {
-            app_stats.calc(partition_row);
+            app_stats.aggregate(partition_row);
         }
         get_app_counters(app_stats.app_name)->set(app_stats);
 
