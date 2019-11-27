@@ -1040,3 +1040,45 @@ func TestPegasusTableConnector_Incr(t *testing.T) {
 		assert.Equal(t, int64(i+1), sortedIDs[i])
 	}
 }
+
+func TestPegasusTableConnector_BatchGet(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+
+	err = tb.Del(context.Background(), []byte("h1"), []byte("s1"))
+	assert.Nil(t, err)
+	err = tb.Del(context.Background(), []byte("h2"), []byte("s2"))
+	assert.Nil(t, err)
+	err = tb.Del(context.Background(), []byte("h3"), []byte("s3"))
+	assert.Nil(t, err)
+
+	err = tb.Set(context.Background(), []byte("h1"), []byte("s1"), []byte("v1"))
+	assert.Nil(t, err)
+	err = tb.Set(context.Background(), []byte("h2"), []byte("s2"), []byte("v2"))
+	assert.Nil(t, err)
+	err = tb.Set(context.Background(), []byte("h3"), []byte("s3"), []byte("v3"))
+	assert.Nil(t, err)
+
+	keys := []CompositeKey{{HashKey: []byte("h1"), SortKey: []byte("s1")},
+		{HashKey: []byte("h2"), SortKey: []byte("s2")},
+		{HashKey: []byte("h3"), SortKey: []byte("s3")}}
+	values, err := tb.BatchGet(context.Background(), keys)
+	assert.Nil(t, err)
+	assert.Equal(t, values, [][]byte{[]byte("v1"), []byte("v2"), []byte("v3")})
+
+	values, err = tb.BatchGet(context.Background(), nil)
+	assert.Nil(t, values)
+	assert.Equal(t, err.Error(),
+		"pegasus BATCH_GET failed: InvalidParameter: CompositeKeys must not be nil")
+
+	values, err = tb.BatchGet(context.Background(), []CompositeKey{{HashKey: []byte{}, SortKey: nil}, {HashKey: nil, SortKey: nil}})
+	assert.Equal(t, values, [][]byte{nil, nil})
+	assert.Equal(t, err.Error(),
+		"pegasus BATCH_GET failed: [pegasus GET failed: InvalidParameter: hashkey must not be nil, pegasus GET failed: InvalidParameter: hashkey must not be empty]")
+}

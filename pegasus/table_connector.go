@@ -21,11 +21,17 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"gopkg.in/tomb.v2"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // KeyValue is the returned type of MultiGet and MultiGetRange.
 type KeyValue struct {
 	SortKey, Value []byte
+}
+
+// CompositeKey is a composition of HashKey and SortKey.
+type CompositeKey struct {
+	HashKey, SortKey []byte
 }
 
 // MultiGetOptions is the options for MultiGet and MultiGetRange, defaults to DefaultMultiGetOptions.
@@ -153,6 +159,18 @@ type TableConnector interface {
 	// Returns the new value.
 	// `hashKey` / `sortKeys` : CAN'T be nil or empty
 	Incr(ctx context.Context, hashKey []byte, sortKey []byte, increment int64) (int64, error)
+
+	// Gets values from a batch of CompositeKeys. Internally it distributes each key
+	// into a Get call and wait until all returned.
+	//
+	// `keys`: CAN'T be nil or empty, `hashkey` in `keys` can't be nil or empty either.
+	// The returned values are in sequence order of each key, aka `keys[i] => values[i]`.
+	// If keys[i] is not found, or the Get failed, values[i] is set nil.
+	//
+	// Returns a non-nil `err` once there's a failed Get call. It doesn't mean all calls failed.
+	//
+	// NOTE: this operation is not guaranteed to be atomic
+	BatchGet(ctx context.Context, keys []CompositeKey) (values [][]byte, err error)
 
 	Close() error
 }
@@ -296,6 +314,16 @@ func validateSortKeys(sortKeys [][]byte) error {
 		if sortKey == nil {
 			return fmt.Errorf("InvalidParameter: sortkeys[%d] must not be nil", i)
 		}
+	}
+	return nil
+}
+
+func validateCompositeKeys(keys []CompositeKey) error {
+	if keys == nil {
+		return fmt.Errorf("InvalidParameter: CompositeKeys must not be nil")
+	}
+	if len(keys) == 0 {
+		return fmt.Errorf("InvalidParameter: CompositeKeys must not be empty")
 	}
 	return nil
 }
@@ -805,6 +833,31 @@ func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKe
 		return resp.NewValue_, nil
 	}()
 	return newValue, WrapError(err, OpIncr)
+}
+
+func (p *pegasusTableConnector) BatchGet(ctx context.Context, keys []CompositeKey) (values [][]byte, err error) {
+	v, err := func() ([][]byte, error) {
+		if err := validateCompositeKeys(keys); err != nil {
+			return nil, err
+		}
+
+		values = make([][]byte, len(keys))
+		funcs := make([]func() error, 0, len(keys))
+		for i := 0; i < len(keys); i++ {
+			idx := i
+			funcs = append(funcs, func() error {
+				key := keys[idx]
+				values[idx], err = p.Get(ctx, key.HashKey, key.SortKey)
+				if err != nil {
+					values[idx] = nil
+					return err
+				}
+				return nil
+			})
+		}
+		return values, kerrors.AggregateGoroutines(funcs...)
+	}()
+	return v, WrapError(err, OpBatchGet)
 }
 
 func getPartitionIndex(hashKey []byte, partitionCount int) int32 {
