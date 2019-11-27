@@ -52,14 +52,11 @@ public class FDSService implements Serializable {
     globalConfig = config;
     String idPrefix =
         globalConfig.DATA_URL + "/" + cluster + "/" + globalConfig.COLDBK_POLICY + "/";
-    String latestId = getLatestPolicyId(idPrefix);
+    String latestIdPath = getLatestPolicyId(idPrefix);
+    String tableNameAndId = getTableNameAndId(latestIdPath, table);
+    String metaPrefix = latestIdPath + "/" + tableNameAndId;
 
-    String tablePrefix = latestId + "/";
-    String tableNameAndId = getTableNameAndId(tablePrefix, table);
-
-    String metaPrefix = tablePrefix + "/" + tableNameAndId + "/";
     partitionCount = getCount(metaPrefix);
-
     initCheckpointUrls(metaPrefix, partitionCount);
 
     LOG.info("init fds default config and get the latest data urls");
@@ -70,14 +67,11 @@ public class FDSService implements Serializable {
     globalConfig = config;
     String idPrefix =
         globalConfig.DATA_URL + "/" + cluster + "/" + globalConfig.COLDBK_POLICY + "/";
-    String id = getPolicyId(idPrefix, dataTime);
+    String idPath = getPolicyId(idPrefix, dataTime);
+    String tableNameAndId = getTableNameAndId(idPath, table);
+    String metaPrefix = idPath + "/" + tableNameAndId;
 
-    String tablePrefix = id + "/";
-    String tableNameAndId = getTableNameAndId(tablePrefix, table);
-
-    String metaPrefix = tablePrefix + "/" + tableNameAndId + "/";
     partitionCount = getCount(metaPrefix);
-
     initCheckpointUrls(metaPrefix, partitionCount);
 
     LOG.info("init fds default config and get the " + dataTime + " data urls");
@@ -101,7 +95,7 @@ public class FDSService implements Serializable {
                   .open(new Path(currentCheckpointUrl));
           BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
         while ((chkpt = bufferedReader.readLine()) != null) {
-          String url = prefix.split(globalConfig.DATA_URL)[1] + "/" + counter + "/" + chkpt + "/";
+          String url = prefix.split(globalConfig.DATA_URL)[1] + "/" + counter + "/" + chkpt;
           checkpointUrls.put(counter, url);
         }
         counter--;
@@ -205,6 +199,6 @@ public class FDSService implements Serializable {
   private String parseId(String dateStr) throws ParseException {
     Date date = simpleDateFormat.parse(dateStr);
     long dateTime = date.getTime();
-    return String.valueOf(dateTime).substring(0, 6);
+    return String.valueOf(dateTime).substring(0, 5);
   }
 }
