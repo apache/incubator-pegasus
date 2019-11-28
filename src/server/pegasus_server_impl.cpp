@@ -1160,8 +1160,6 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     rocksdb::Slice start(request.start_key.data(), request.start_key.length());
     rocksdb::Slice stop(request.stop_key.data(), request.stop_key.length());
 
-    rocksdb::ReadOptions rd_opts(_rd_opts);
-
     // limit key range by prefix filter
     // because data is not ordered by hash key (hash key "aa" is greater than "b"),
     // so we can only limit the start range by hash key filter.
@@ -1170,15 +1168,10 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         request.hash_key_filter_pattern.length() > 0) {
         pegasus_generate_key(prefix_start_key, request.hash_key_filter_pattern, ::dsn::blob());
         rocksdb::Slice prefix_start(prefix_start_key.data(), prefix_start_key.length());
-        dwarn("%s %d", prefix_start.data(), prefix_start.size());
         if (prefix_start.compare(start) > 0) {
             start = prefix_start;
             start_inclusive = true;
         }
-        // 'start' maybe a prefix sub string of any hashkey, disable hashkey based prefix bloom
-        // filter when do Seek.
-        rd_opts.total_order_seek = true;
-        rd_opts.prefix_same_as_start = false;
     }
 
     // check if range is empty
@@ -1202,6 +1195,15 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         return;
     }
 
+    rocksdb::ReadOptions rd_opts(_rd_opts);
+    ::dsn::blob start_hash_key, tmp;
+    pegasus_restore_key(request.start_key, start_hash_key, tmp);
+    if (start_hash_key.size() == 0) {
+        // hash_key is not passed, only happened when do full scan on a partition, we have to do
+        // total order seek.
+        rd_opts.total_order_seek = true;
+        rd_opts.prefix_same_as_start = false;
+    }
     std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(rd_opts));
     it->Seek(start);
     bool complete = false;
