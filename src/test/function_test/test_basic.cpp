@@ -1704,19 +1704,10 @@ TEST(basic, scan_with_filter)
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
             ASSERT_EQ("xyz", hash_key);
-            ASSERT_TRUE("a" == value || "b" == value) << value;
             data[sort_key] = value;
         }
         delete scanner;
-        ASSERT_EQ(8, data.size());
-        ASSERT_NE(data.end(), data.find("m_1"));
-        ASSERT_NE(data.end(), data.find("m_2"));
-        ASSERT_NE(data.end(), data.find("m_3"));
-        ASSERT_NE(data.end(), data.find("m_4"));
-        ASSERT_NE(data.end(), data.find("m_5"));
-        ASSERT_NE(data.end(), data.find("n_1"));
-        ASSERT_NE(data.end(), data.find("n_2"));
-        ASSERT_NE(data.end(), data.find("n_3"));
+        ASSERT_EQ(kvs, data);
     }
 
     // multi_del
@@ -1820,19 +1811,10 @@ TEST(basic, full_scan_with_filter)
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
             ASSERT_EQ("xyz", hash_key);
-            ASSERT_TRUE("a" == value || "b" == value) << value;
             data[sort_key] = value;
         }
         delete scanner;
-        ASSERT_EQ(8, data.size());
-        ASSERT_NE(data.end(), data.find("m_1"));
-        ASSERT_NE(data.end(), data.find("m_2"));
-        ASSERT_NE(data.end(), data.find("m_3"));
-        ASSERT_NE(data.end(), data.find("m_4"));
-        ASSERT_NE(data.end(), data.find("m_5"));
-        ASSERT_NE(data.end(), data.find("n_1"));
-        ASSERT_NE(data.end(), data.find("n_2"));
-        ASSERT_NE(data.end(), data.find("n_3"));
+        ASSERT_EQ(kvs, data);
     }
 
     // multi_del

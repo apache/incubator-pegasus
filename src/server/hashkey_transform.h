@@ -11,28 +11,28 @@
 namespace pegasus {
 namespace server {
 
-class HashkeyTransform : public rocksdb::SliceTransform {
- public:
-  HashkeyTransform() = default;
+class HashkeyTransform : public rocksdb::SliceTransform
+{
+public:
+    HashkeyTransform() = default;
 
-  const char* Name() const override { return "pegasus.HashkeyTransform"; }
+    const char *Name() const override { return "pegasus.HashkeyTransform"; }
 
-  rocksdb::Slice Transform(const rocksdb::Slice& src) const override {
-      if (src.size() < 2) {    // For empty puts.
-        return src;
-      }
-      ::dsn::blob hash_key, sort_key;
-      pegasus_restore_key(dsn::blob(src.data(), 0, src.size()), hash_key, sort_key);
-      return rocksdb::Slice(hash_key.data(), hash_key.length());
-  }
+    rocksdb::Slice Transform(const rocksdb::Slice &src) const override
+    {
+        if (src.size() < 2) { // For empty puts.
+            return src;
+        }
+        ::dsn::blob hash_key, sort_key;
+        pegasus_restore_key(dsn::blob(src.data(), 0, src.size()), hash_key, sort_key);
+        return rocksdb::Slice(hash_key.data(), hash_key.length());
+    }
 
-  bool InDomain(const rocksdb::Slice& src) const override { return true; }
+    bool InDomain(const rocksdb::Slice &src) const override { return true; }
 
-  bool InRange(const rocksdb::Slice& dst) const override { return true; }
+    bool InRange(const rocksdb::Slice &dst) const override { return true; }
 
-  bool SameResultWhenAppended(const rocksdb::Slice& prefix) const override {
-    return false;
-  }
+    bool SameResultWhenAppended(const rocksdb::Slice &prefix) const override { return false; }
 };
 } // namespace server
 } // namespace pegasus
