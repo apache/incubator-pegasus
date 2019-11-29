@@ -773,11 +773,11 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             rocksdb::ReadOptions rd_opts(_rd_opts);
             if (_db_opts.prefix_extractor) {
                 // TODO(yingchun): Prefix bloom filter is not supported in reverse seek mode (see
-                // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation for more
-                // details), and we have to do total order seek on rocksdb which might be worse
-                // performance. However we consider that reverse scan is a rare use case, and if your
-                // workload has many reverse scans, you'd better use 'common' bloom filter (by set
-                // [pegasus.server]rocksdb_filter_type to 'common').
+                // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation for
+                // more details), and we have to do total order seek on rocksdb which might be worse
+                // performance. However we consider that reverse scan is a rare use case, and if
+                // your workload has many reverse scans, you'd better use 'common' bloom filter (by
+                // set [pegasus.server]rocksdb_filter_type to 'common').
                 rd_opts.total_order_seek = true;
                 rd_opts.prefix_same_as_start = false;
             }
@@ -1166,10 +1166,10 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         ::dsn::blob start_hash_key, tmp;
         pegasus_restore_key(request.start_key, start_hash_key, tmp);
         if (start_hash_key.size() == 0) {
-          // hash_key is not passed, only happened when do full scan (scanners got by
-          // get_unordered_scanners) on a partition, we have to do total order seek on rocksDB.
-          rd_opts.total_order_seek = true;
-          rd_opts.prefix_same_as_start = false;
+            // hash_key is not passed, only happened when do full scan (scanners got by
+            // get_unordered_scanners) on a partition, we have to do total order seek on rocksDB.
+            rd_opts.total_order_seek = true;
+            rd_opts.prefix_same_as_start = false;
         }
     }
     bool start_inclusive = request.start_inclusive;

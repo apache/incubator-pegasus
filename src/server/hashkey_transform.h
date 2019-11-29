@@ -25,9 +25,10 @@ public:
         return rocksdb::Slice(hash_key.data(), hash_key.length());
     }
 
-    bool InDomain(const rocksdb::Slice &src) const override {
-      // Empty put keys are not in domain.
-      return src.size() >= 2;
+    bool InDomain(const rocksdb::Slice &src) const override
+    {
+        // Empty put keys are not in domain.
+        return src.size() >= 2;
     }
 
     bool InRange(const rocksdb::Slice &dst) const override { return true; }
