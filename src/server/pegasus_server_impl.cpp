@@ -770,15 +770,17 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 it->Next();
             }
         } else { // reverse
-            // TODO(yingchun): Prefix bloom filter is not supported in reverse seek mode (see
-            // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation for more
-            // details), and we have to do total order seek on rocksdb which might be worse
-            // performance. However we consider that reverse scan is a rare use case, and if your
-            // workload has many reverse scans, you'd better use 'common' bloom filter (by set
-            // [pegasus.server]rocksdb_filter_type to 'common').
             rocksdb::ReadOptions rd_opts(_rd_opts);
-            rd_opts.total_order_seek = true;
-            rd_opts.prefix_same_as_start = false;
+            if (_db_opts.prefix_extractor) {
+                // TODO(yingchun): Prefix bloom filter is not supported in reverse seek mode (see
+                // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation for more
+                // details), and we have to do total order seek on rocksdb which might be worse
+                // performance. However we consider that reverse scan is a rare use case, and if your
+                // workload has many reverse scans, you'd better use 'common' bloom filter (by set
+                // [pegasus.server]rocksdb_filter_type to 'common').
+                rd_opts.total_order_seek = true;
+                rd_opts.prefix_same_as_start = false;
+            }
             it.reset(_db->NewIterator(rd_opts));
             it->SeekForPrev(stop);
             bool first_exclusive = !stop_inclusive;
@@ -1160,13 +1162,15 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     }
 
     rocksdb::ReadOptions rd_opts(_rd_opts);
-    ::dsn::blob start_hash_key, tmp;
-    pegasus_restore_key(request.start_key, start_hash_key, tmp);
-    if (start_hash_key.size() == 0) {
-        // hash_key is not passed, only happened when do full scan (scanners got by
-        // get_unordered_scanners) on a partition, we have to do total order seek on rocksDB.
-        rd_opts.total_order_seek = true;
-        rd_opts.prefix_same_as_start = false;
+    if (_db_opts.prefix_extractor) {
+        ::dsn::blob start_hash_key, tmp;
+        pegasus_restore_key(request.start_key, start_hash_key, tmp);
+        if (start_hash_key.size() == 0) {
+          // hash_key is not passed, only happened when do full scan (scanners got by
+          // get_unordered_scanners) on a partition, we have to do total order seek on rocksDB.
+          rd_opts.total_order_seek = true;
+          rd_opts.prefix_same_as_start = false;
+        }
     }
     bool start_inclusive = request.start_inclusive;
     bool stop_inclusive = request.stop_inclusive;
@@ -1188,8 +1192,8 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
             // hashkey, we should not seek this prefix by prefix bloom filter. However, it only
             // happend when do full scan (scanners got by get_unordered_scanners), in which case the
             // following flags has been updated.
-            assert(rd_opts.total_order_seek);
-            assert(!rd_opts.prefix_same_as_start);
+            assert(!_db_opts.prefix_extractor || rd_opts.total_order_seek);
+            assert(!_db_opts.prefix_extractor || !rd_opts.prefix_same_as_start);
         }
     }
 
