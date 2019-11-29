@@ -770,9 +770,13 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 it->Next();
             }
         } else { // reverse
-            // TODO(yingchun): Seems prefix bloom filter not supported yet,
-            // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation
-            rocksdb::ReadOptions rd_opts;
+            // TODO(yingchun): Prefix bloom filter is not supported in reverse seek mode (see
+            // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation for more
+            // details), and we have to do total order seek on rocksdb which might be worse
+            // performance. However we consider that reverse scan is a rare use case, and if your
+            // workload has many reverse scans, you'd better use 'common' bloom filter (by set
+            // [pegasus.server]rocksdb_filter_type to 'common').
+            rocksdb::ReadOptions rd_opts(_rd_opts);
             rd_opts.total_order_seek = true;
             rd_opts.prefix_same_as_start = false;
             it.reset(_db->NewIterator(rd_opts));

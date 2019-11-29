@@ -20,15 +20,15 @@ public:
 
     rocksdb::Slice Transform(const rocksdb::Slice &src) const override
     {
-        if (src.size() < 2) { // For empty puts.
-            return src;
-        }
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(dsn::blob(src.data(), 0, src.size()), hash_key, sort_key);
         return rocksdb::Slice(hash_key.data(), hash_key.length());
     }
 
-    bool InDomain(const rocksdb::Slice &src) const override { return true; }
+    bool InDomain(const rocksdb::Slice &src) const override {
+      // Empty put keys are not in domain.
+      return src.size() >= 2;
+    }
 
     bool InRange(const rocksdb::Slice &dst) const override { return true; }
 
