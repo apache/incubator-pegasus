@@ -246,6 +246,11 @@ private:
                          partition_status::type status,
                          error_code error);
 
+#ifdef DSN_ENABLE_GPERF
+    // Try to release tcmalloc memory back to operating system
+    void gc_tcmalloc_memory();
+#endif
+
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -305,12 +310,14 @@ private:
     dsn_handle_t _query_compact_command;
     dsn_handle_t _query_app_envs_command;
     dsn_handle_t _useless_dir_reserve_seconds_command;
+    dsn_handle_t _max_reserved_memory_percentage_command;
 
     bool _deny_client;
     bool _verbose_client_log;
     bool _verbose_commit_log;
     int32_t _gc_disk_error_replica_interval_seconds;
     int32_t _gc_disk_garbage_replica_interval_seconds;
+    int32_t _mem_release_max_reserved_mem_percentage;
 
     // we limit LT_APP max concurrent count, because nfs service implementation is
     // too simple, it do not support priority.

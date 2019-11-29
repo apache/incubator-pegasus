@@ -100,7 +100,8 @@ replication_options::replication_options()
     config_sync_interval_ms = 30000;
 
     mem_release_enabled = true;
-    mem_release_interval_ms = 86400000;
+    mem_release_check_interval_ms = 3600000;
+    mem_release_max_reserved_mem_percentage = 10;
 
     lb_interval_ms = 10000;
 
@@ -479,11 +480,18 @@ void replication_options::initialize()
                                                     mem_release_enabled,
                                                     "whether to enable periodic memory release");
 
-    mem_release_interval_ms = (int)dsn_config_get_value_uint64(
+    mem_release_check_interval_ms = (int)dsn_config_get_value_uint64(
         "replication",
-        "mem_release_interval_ms",
-        mem_release_interval_ms,
-        "the replica releases its idle memory to the system every this period of time(ms)");
+        "mem_release_check_interval_ms",
+        mem_release_check_interval_ms,
+        "the replica check if should release memory to the system every this period of time(ms)");
+
+    mem_release_max_reserved_mem_percentage = (int)dsn_config_get_value_uint64(
+        "replication",
+        "mem_release_max_reserved_mem_percentage",
+        mem_release_max_reserved_mem_percentage,
+        "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
+        "memory, replica server will release the exceeding memory back to operating system");
 
     lb_interval_ms = (int)dsn_config_get_value_uint64(
         "replication",
