@@ -11,3 +11,4 @@ rolling_log/
 .vscode/
 google-java-format-*
 pegasus-*
+dependency-reduced-pom.xml

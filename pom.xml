@@ -86,6 +86,7 @@
     </plugins>
   </reporting>
   <properties>
+    <pegasus.shade.name>com.xiaomi.infra.pegasus.thirdparty</pegasus.shade.name>
   </properties>
   <build>
     <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
@@ -94,6 +95,36 @@
     <outputDirectory>${project.basedir}/target/classes</outputDirectory>
     <testOutputDirectory>${project.basedir}/target/test-classes</testOutputDirectory>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>com.101tec</include>
+                  <include>com.google.guava</include>
+                </includes>
+              </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>com.google</pattern>
+                  <shadedPattern>${pegasus.shade.name}.com.google</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.I0Itec</pattern>
+                  <shadedPattern>${pegasus.shade.name}.org.I0Itec</shadedPattern>
+                </relocation>
+              </relocations>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
