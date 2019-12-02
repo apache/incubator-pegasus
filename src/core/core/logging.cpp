@@ -142,8 +142,16 @@ DSN_API void dsn_logf(const char *file,
     va_end(ap);
 }
 
-DSN_API void
-dsn_log(const char *file, const char *function, const int line, dsn_log_level_t log_level)
+DSN_API void dsn_log(const char *file,
+                     const char *function,
+                     const int line,
+                     dsn_log_level_t log_level,
+                     const char *str)
 {
-    dsn_logf(file, function, line, log_level, "");
+    ::dsn::logging_provider *logger = ::dsn::service_engine::instance().logging();
+    if (logger != nullptr) {
+        logger->dsn_log(file, function, line, log_level, str);
+    } else {
+        printf("%s:%d:%s():%s\n", file, line, function, str);
+    }
 }

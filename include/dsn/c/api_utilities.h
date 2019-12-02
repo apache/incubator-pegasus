@@ -76,8 +76,11 @@ extern DSN_API void dsn_logf(const char *file,
                              dsn_log_level_t log_level,
                              const char *fmt,
                              ...);
-extern DSN_API void
-dsn_log(const char *file, const char *function, const int line, dsn_log_level_t log_level);
+extern DSN_API void dsn_log(const char *file,
+                            const char *function,
+                            const int line,
+                            dsn_log_level_t log_level,
+                            const char *str);
 extern DSN_API void dsn_coredump();
 
 // __FILENAME__ macro comes from the cmake, in which we calculate a filename without path.

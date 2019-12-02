@@ -36,6 +36,7 @@
 #include <dsn/service_api_c.h>
 #include <gtest/gtest.h>
 #include <iostream>
+#include <dsn/dist/fmt_logging.h>
 
 TEST(core, logging)
 {
@@ -46,7 +47,7 @@ TEST(core, logging)
              __LINE__,
              dsn_log_level_t::LOG_LEVEL_DEBUG,
              "in TEST(core, logging)");
-    dsn_log(__FILENAME__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG);
+    dsn_log(__FILENAME__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG, "");
 }
 
 TEST(core, logging_big_log)
@@ -58,4 +59,22 @@ TEST(core, logging_big_log)
              dsn_log_level_t::LOG_LEVEL_DEBUG,
              "write big str %s",
              big_str.c_str());
+}
+
+TEST(core, dlog_f)
+{
+    struct test_case
+    {
+        enum dsn_log_level_t level;
+        std::string str;
+    } tests[] = {{dsn_log_level_t::LOG_LEVEL_DEBUG, "This is a test"},
+                 {dsn_log_level_t::LOG_LEVEL_DEBUG, "\\x00%d\\x00\\x01%n/nm"},
+                 {dsn_log_level_t::LOG_LEVEL_INFORMATION, "\\x00%d\\x00\\x01%n/nm"},
+                 {dsn_log_level_t::LOG_LEVEL_WARNING, "\\x00%d\\x00\\x01%n/nm"},
+                 {dsn_log_level_t::LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
+                 {dsn_log_level_t::LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
+
+    for (auto test : tests) {
+        dlog_f(test.level, "sortkey = {}", test.str);
+    }
 }

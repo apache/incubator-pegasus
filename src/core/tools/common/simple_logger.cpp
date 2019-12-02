@@ -251,5 +251,35 @@ void simple_logger::dsn_logv(const char *file,
         create_log_file();
     }
 }
+
+void simple_logger::dsn_log(const char *file,
+                            const char *function,
+                            const int line,
+                            dsn_log_level_t log_level,
+                            const char *str)
+{
+    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+
+    print_header(_log, log_level);
+    if (!_short_header) {
+        fprintf(_log, "%s:%d:%s(): ", file, line, function);
+    }
+    fprintf(_log, "%s\n", str);
+    if (_fast_flush || log_level >= LOG_LEVEL_ERROR) {
+        ::fflush(_log);
+    }
+
+    if (log_level >= _stderr_start_level) {
+        print_header(stdout, log_level);
+        if (!_short_header) {
+            printf("%s:%d:%s(): ", file, line, function);
+        }
+        printf("%s\n", str);
+    }
+
+    if (++_lines >= 200000) {
+        create_log_file();
+    }
+}
 }
 }

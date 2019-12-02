@@ -55,6 +55,12 @@ public:
                           const char *fmt,
                           va_list args);
 
+    virtual void dsn_log(const char *file,
+                         const char *function,
+                         const int line,
+                         dsn_log_level_t log_level,
+                         const char *str){};
+
     virtual void flush();
 
 private:
@@ -74,6 +80,12 @@ public:
                           dsn_log_level_t log_level,
                           const char *fmt,
                           va_list args);
+
+    virtual void dsn_log(const char *file,
+                         const char *function,
+                         const int line,
+                         dsn_log_level_t log_level,
+                         const char *str);
 
     virtual void flush();
 
