@@ -16,7 +16,8 @@ public abstract class Cluster {
   public static final String PEGASUS_OPERATION_TIMEOUT_DEF = "1000";
 
   public static final String PEGASUS_ASYNC_WORKERS_KEY = "async_workers";
-  public static final String PEGASUS_ASYNC_WORKERS_DEF = "4";
+  public static final String PEGASUS_ASYNC_WORKERS_DEF =
+      String.valueOf(Runtime.getRuntime().availableProcessors());
 
   public static final String PEGASUS_ENABLE_PERF_COUNTER_KEY = "enable_perf_counter";
   public static final String PEGASUS_ENABLE_PERF_COUNTER_VALUE = "false";
