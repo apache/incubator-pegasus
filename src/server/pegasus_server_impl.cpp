@@ -344,7 +344,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "app.pegasus",
         name,
         COUNTER_TYPE_NUMBER,
-        "statistic the estimate number keys of rocksdb all data");
+        "statistics the estimated number of keys inside the rocksdb");
 }
 
 void pegasus_server_impl::parse_checkpoints()
