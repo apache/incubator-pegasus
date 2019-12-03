@@ -18,8 +18,11 @@ class pegasus_server_impl_test : public pegasus_server_test_base
     std::unique_ptr<pegasus_server_write> _server_write;
 
 public:
-    pegasus_server_impl_test() : pegasus_server_test_base() { start();
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);}
+    pegasus_server_impl_test() : pegasus_server_test_base()
+    {
+        start();
+        _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
+    }
 
     void test_table_level_slow_query()
     {
@@ -89,7 +92,7 @@ public:
 
 TEST_F(pegasus_server_impl_test, test_table_level_slow_query) { test_table_level_slow_query(); }
 
-TEST_F(pegasus_server_impl_test, test_table_property){test_table_property();}
+TEST_F(pegasus_server_impl_test, test_table_property) { test_table_property(); }
 
 } // namespace server
 } // namespace pegasus

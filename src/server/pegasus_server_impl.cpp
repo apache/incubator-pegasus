@@ -341,7 +341,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     snprintf(name, 255, "rdb.estimate.key_number@%s", str_gpid.c_str());
     _pfc_rdb_estimate_key_number.init_app_counter(
-            "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the key number of rocksdb all data");
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the key number of rocksdb all data");
 }
 
 void pegasus_server_impl::parse_checkpoints()
