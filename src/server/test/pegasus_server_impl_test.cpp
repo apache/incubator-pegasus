@@ -15,14 +15,10 @@ namespace server {
 class pegasus_server_impl_test : public pegasus_server_test_base
 {
 
-    std::unique_ptr<pegasus_server_write> _server_write;
-
 public:
-    pegasus_server_impl_test() : pegasus_server_test_base()
-    {
-        start();
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
-    }
+    pegasus_server_impl_test() : pegasus_server_test_base() { start(); }
+
+    rocksdb::DB *get_server_db() { return _server->_db; }
 
     void test_table_level_slow_query()
     {
@@ -66,33 +62,32 @@ public:
             ASSERT_EQ(before_count + test.expect_perf_counter_incr, after_count);
         }
     }
-
-    void test_table_property()
-    {
-        std::unique_ptr<pegasus_server_write> _server_write;
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
-        dsn::blob key;
-        pegasus_generate_key(key, std::string("hash"), std::string("sort"));
-        dsn::apps::update_request req;
-        req.key = key;
-        req.value.assign("value", 0, 5);
-
-        int put_rpc_cnt = 5;
-        auto writes = new dsn::message_ex *[put_rpc_cnt];
-        for (int i = 0; i < put_rpc_cnt; i++) {
-            writes[i] = pegasus::create_put_request(req);
-        }
-        _server_write->on_batched_write_requests(writes, put_rpc_cnt, 0, 0);
-
-        std::string str_val;
-        _server->_db->GetProperty(rocksdb::DB::Properties::kEstimateNumKeys, &str_val);
-        ASSERT_EQ(str_val, std::to_string(put_rpc_cnt));
-    }
 };
 
 TEST_F(pegasus_server_impl_test, test_table_level_slow_query) { test_table_level_slow_query(); }
 
-TEST_F(pegasus_server_impl_test, test_table_property) { test_table_property(); }
+TEST_F(pegasus_server_impl_test, test_rdb_estimate_num_keys)
+{
+
+    std::unique_ptr<pegasus_server_write> server_write =
+        dsn::make_unique<pegasus_server_write>(_server.get(), true);
+
+    dsn::apps::update_request req;
+    pegasus_generate_key(req.key, std::string("hash"), std::string("sort"));
+    req.value.assign("value", 0, 5);
+
+    const int put_cnt = 5;
+    auto writes = new dsn::message_ex *[put_cnt];
+    for (int i = 0; i < put_cnt; i++) {
+        writes[i] = pegasus::create_put_request(req);
+    }
+    server_write->on_batched_write_requests(writes, put_cnt, 0, 0);
+    auto cleanup = dsn::defer([=]() { delete[] writes; });
+
+    std::string str_val;
+    get_server_db()->GetProperty(rocksdb::DB::Properties::kEstimateNumKeys, &str_val);
+    ASSERT_EQ(atoi(str_val.c_str()), put_cnt);
+}
 
 } // namespace server
 } // namespace pegasus
