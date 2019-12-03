@@ -14,7 +14,6 @@ namespace server {
 
 class pegasus_server_impl_test : public pegasus_server_test_base
 {
-
 public:
     pegasus_server_impl_test() : pegasus_server_test_base() { start(); }
 
