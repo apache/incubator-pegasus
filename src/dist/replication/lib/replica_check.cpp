@@ -37,6 +37,10 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+
+#include "dist/replication/lib/duplication/replica_duplicator_manager.h"
+
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
 
 namespace dsn {
@@ -91,6 +95,7 @@ void replica::broadcast_group_check()
         request->node = addr;
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
+        request->__set_confirmed_decree(_duplication_mgr->min_confirmed_decree());
 
         if (request->config.status == partition_status::PS_POTENTIAL_SECONDARY) {
             auto it = _primary_states.learners.find(addr);
@@ -133,13 +138,13 @@ void replica::on_group_check(const group_check_request &request,
 {
     _checker.only_one_thread_access();
 
-    ddebug("%s: process group check, primary = %s, ballot = %" PRId64
-           ", status = %s, last_committed_decree = %" PRId64,
-           name(),
-           request.config.primary.to_string(),
-           request.config.ballot,
-           enum_to_string(request.config.status),
-           request.last_committed_decree);
+    ddebug_replica("process group check, primary = {}, ballot = {}, status = {}, "
+                   "last_committed_decree = {}, confirmed_decree = {}",
+                   request.config.primary.to_string(),
+                   request.config.ballot,
+                   enum_to_string(request.config.status),
+                   request.last_committed_decree,
+                   request.__isset.confirmed_decree ? request.confirmed_decree : invalid_decree);
 
     if (request.config.ballot < get_ballot()) {
         response.err = ERR_VERSION_OUTDATED;
@@ -153,6 +158,9 @@ void replica::on_group_check(const group_check_request &request,
         }
     } else if (is_same_ballot_status_change_allowed(status(), request.config.status)) {
         update_local_configuration(request.config, true);
+    }
+    if (request.__isset.confirmed_decree) {
+        _duplication_mgr->update_confirmed_decree_if_secondary(request.confirmed_decree);
     }
 
     switch (status()) {

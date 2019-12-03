@@ -37,14 +37,16 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include "duplication/replica_duplicator_manager.h"
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/chrono_literals.h>
 #include <dsn/dist/replication/replication_app_base.h>
+#include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
 namespace replication {
 
-// run in replica thread
+// ThreadPool: THREAD_POOL_REPLICATION
 void replica::on_checkpoint_timer()
 {
     _checker.only_one_thread_access();
@@ -67,11 +69,41 @@ void replica::on_checkpoint_timer()
 
     if (_private_log) {
         mutation_log_ptr plog = _private_log;
-        decree durable_decree = _app->last_durable_decree();
+
+        decree last_durable_decree = _app->last_durable_decree();
+        decree min_confirmed_decree = _duplication_mgr->min_confirmed_decree();
+        decree cleanable_decree = last_durable_decree;
+        if (min_confirmed_decree >= 0) {
+            if (min_confirmed_decree < last_durable_decree) {
+                ddebug_replica("gc_private {}: delay gc for duplication: min_confirmed_decree({}) "
+                               "last_durable_decree({})",
+                               enum_to_string(status()),
+                               min_confirmed_decree,
+                               last_durable_decree);
+                cleanable_decree = min_confirmed_decree;
+            } else {
+                ddebug_replica("gc_private {}: min_confirmed_decree({}) last_durable_decree({})",
+                               enum_to_string(status()),
+                               min_confirmed_decree,
+                               last_durable_decree);
+            }
+        } else {
+            // protect the logs from being truncated
+            // if this app is in duplication
+            if (is_duplicating()) {
+                // unsure if the logs can be dropped, because min_confirmed_decree
+                // is currently unavailable
+                ddebug_replica(
+                    "gc_private {}: skip gc because confirmed duplication progress is unknown",
+                    enum_to_string(status()));
+                return;
+            }
+        }
+
         int64_t valid_start_offset = _app->init_info().init_offset_in_private_log;
         tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
                          &_tracker,
-                         [this, plog, durable_decree, valid_start_offset] {
+                         [this, plog, cleanable_decree, valid_start_offset] {
                              // run in background thread to avoid file deletion operation blocking
                              // replication thread.
                              if (status() == partition_status::PS_ERROR ||
@@ -79,7 +111,7 @@ void replica::on_checkpoint_timer()
                                  return;
                              plog->garbage_collection(
                                  get_gpid(),
-                                 durable_decree,
+                                 cleanable_decree,
                                  valid_start_offset,
                                  (int64_t)_options->log_private_reserve_max_size_mb * 1024 * 1024,
                                  (int64_t)_options->log_private_reserve_max_time_seconds);
@@ -90,7 +122,7 @@ void replica::on_checkpoint_timer()
     }
 }
 
-// run in replica thread
+// ThreadPool: THREAD_POOL_REPLICATION
 void replica::init_checkpoint(bool is_emergency)
 {
     // only applicable to primary and secondary replicas
@@ -408,5 +440,5 @@ void replica::on_checkpoint_completed(error_code err)
         update_last_checkpoint_generate_time();
     }
 }
-}
-} // namespace
+} // namespace replication
+} // namespace dsn

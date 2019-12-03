@@ -60,6 +60,28 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
     }
 }
 
+decree replica_duplicator_manager::min_confirmed_decree() const
+{
+    zauto_lock l(_lock);
+
+    decree min_decree = invalid_decree;
+    if (_replica->status() == partition_status::PS_PRIMARY) {
+        for (auto &kv : _duplications) {
+            const duplication_progress &p = kv.second->progress();
+            if (min_decree == invalid_decree) {
+                min_decree = p.confirmed_decree;
+            } else {
+                min_decree = std::min(min_decree, p.confirmed_decree);
+            }
+        }
+    } else if (_primary_confirmed_decree > 0) {
+        // if the replica is not primary, use the latest known (from primary)
+        // confirmed_decree instead.
+        min_decree = _primary_confirmed_decree;
+    }
+    return min_decree;
+}
+
 // Remove the duplications that are not in the `new_dup_map`.
 // NOTE: this function may be blocked when destroying replica_duplicator.
 void replica_duplicator_manager::remove_non_existed_duplications(
@@ -78,6 +100,24 @@ void replica_duplicator_manager::remove_non_existed_duplications(
     for (dupid_t dupid : removal_set) {
         _duplications.erase(dupid);
     }
+}
+
+void replica_duplicator_manager::update_confirmed_decree_if_secondary(decree confirmed)
+{
+    // this function always runs in the same single thread with config-sync
+    if (_replica->status() != partition_status::PS_SECONDARY) {
+        return;
+    }
+
+    zauto_lock l(_lock);
+    remove_all_duplications();
+    if (confirmed >= 0) {
+        // confirmed decree never decreases
+        if (_primary_confirmed_decree < confirmed) {
+            _primary_confirmed_decree = confirmed;
+        }
+    }
+    _replica->update_init_info_duplicating(confirmed >= 0);
 }
 
 } // namespace replication

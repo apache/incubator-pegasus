@@ -36,6 +36,39 @@ public:
         ASSERT_EQ(d._duplications.size(), 1);
     }
 
+    void test_set_confirmed_decree_non_primary()
+    {
+        auto r = stub->add_primary_replica(2, 1);
+        auto &d = r->get_replica_duplicator_manager();
+
+        duplication_entry ent;
+        ent.dupid = 1;
+        ent.status = duplication_status::DS_PAUSE;
+        ent.remote = "dsn://slave-cluster";
+        ent.progress[r->get_gpid().get_partition_index()] = 100;
+        d.sync_duplication(ent);
+        ASSERT_EQ(d._duplications.size(), 1);
+        ASSERT_EQ(d._primary_confirmed_decree, invalid_decree);
+
+        // replica failover
+        r->as_secondary();
+
+        d.update_confirmed_decree_if_secondary(99);
+        ASSERT_EQ(d._duplications.size(), 0);
+        ASSERT_EQ(d._primary_confirmed_decree, 99);
+
+        // receives group check
+        d.update_confirmed_decree_if_secondary(101);
+        ASSERT_EQ(d._duplications.size(), 0);
+        ASSERT_EQ(d._primary_confirmed_decree, 101);
+
+        // confirmed decree never decreases
+        d.update_confirmed_decree_if_secondary(0);
+        ASSERT_EQ(d._primary_confirmed_decree, 101);
+        d.update_confirmed_decree_if_secondary(1);
+        ASSERT_EQ(d._primary_confirmed_decree, 101);
+    }
+
     void test_get_duplication_confirms()
     {
         auto r = stub->add_primary_replica(2, 1);
@@ -68,6 +101,53 @@ public:
         auto result = r->get_replica_duplicator_manager().get_duplication_confirms_to_update();
         ASSERT_EQ(result.size(), update_dup_num);
     }
+
+    void test_min_confirmed_decree()
+    {
+        struct test_case
+        {
+            std::vector<int64_t> confirmed_decree;
+            int64_t min_confirmed_decree;
+        };
+
+        auto r = stub->add_non_primary_replica(2, 1);
+        auto assert_test = [r, this](test_case tt) {
+            for (int id = 1; id <= tt.confirmed_decree.size(); id++) {
+                duplication_entry ent;
+                ent.dupid = id;
+                ent.status = duplication_status::DS_PAUSE;
+                ent.progress[r->get_gpid().get_partition_index()] = 0;
+
+                auto dup = make_unique<replica_duplicator>(ent, r);
+                dup->update_progress(dup->progress()
+                                         .set_last_decree(tt.confirmed_decree[id - 1])
+                                         .set_confirmed_decree(tt.confirmed_decree[id - 1]));
+                add_dup(r, std::move(dup));
+            }
+
+            ASSERT_EQ(r->get_replica_duplicator_manager().min_confirmed_decree(),
+                      tt.min_confirmed_decree);
+            r->get_replica_duplicator_manager()._duplications.clear();
+        };
+
+        {
+            // non-primary
+            test_case tt{{1, 2, 3}, invalid_decree};
+            assert_test(tt);
+        }
+
+        { // primary
+            r->as_primary();
+            test_case tt{{1, 2, 3}, 1};
+            assert_test(tt);
+
+            tt = {{1000}, 1000};
+            assert_test(tt);
+
+            tt = {{}, invalid_decree};
+            assert_test(tt);
+        }
+    }
 };
 
 TEST_F(replica_duplicator_manager_test, get_duplication_confirms)
@@ -75,10 +155,17 @@ TEST_F(replica_duplicator_manager_test, get_duplication_confirms)
     test_get_duplication_confirms();
 }
 
+TEST_F(replica_duplicator_manager_test, set_confirmed_decree_non_primary)
+{
+    test_set_confirmed_decree_non_primary();
+}
+
 TEST_F(replica_duplicator_manager_test, remove_non_existed_duplications)
 {
     test_remove_non_existed_duplications();
 }
+
+TEST_F(replica_duplicator_manager_test, min_confirmed_decree) { test_min_confirmed_decree(); }
 
 } // namespace replication
 } // namespace dsn
