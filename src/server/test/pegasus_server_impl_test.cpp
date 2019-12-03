@@ -76,12 +76,12 @@ TEST_F(pegasus_server_impl_test, test_rdb_estimate_num_keys)
 
     const int put_cnt = 5;
     auto writes = new dsn::message_ex *[put_cnt];
-    // generate same five kv, and the kEstimateNumKeys will be count five time
+    auto cleanup = dsn::defer([=]() { delete[] writes; });
+    // generate same put_cnt kv paris, and the kEstimateNumKeys will be counted put_cnt times
     for (int i = 0; i < put_cnt; i++) {
         writes[i] = pegasus::create_put_request(req);
     }
     server_write->on_batched_write_requests(writes, put_cnt, 0, 0);
-    auto cleanup = dsn::defer([=]() { delete[] writes; });
 
     std::string str_val;
     get_server_db()->GetProperty(rocksdb::DB::Properties::kEstimateNumKeys, &str_val);
