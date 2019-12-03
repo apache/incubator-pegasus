@@ -3,11 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include <base/pegasus_key_schema.h>
-#include <dsn/utility/defer.h>
-#include "server/pegasus_server_write.h"
-#include "server/pegasus_write_service_impl.h"
 #include "pegasus_server_test_base.h"
-#include "message_utils.h"
 
 namespace pegasus {
 namespace server {
@@ -16,8 +12,6 @@ class pegasus_server_impl_test : public pegasus_server_test_base
 {
 public:
     pegasus_server_impl_test() : pegasus_server_test_base() { start(); }
-
-    rocksdb::DB *get_server_db() { return _server->_db; }
 
     void test_table_level_slow_query()
     {
@@ -64,29 +58,6 @@ public:
 };
 
 TEST_F(pegasus_server_impl_test, test_table_level_slow_query) { test_table_level_slow_query(); }
-
-TEST_F(pegasus_server_impl_test, test_rdb_estimate_num_keys)
-{
-    std::unique_ptr<pegasus_server_write> server_write =
-        dsn::make_unique<pegasus_server_write>(_server.get(), true);
-
-    dsn::apps::update_request req;
-    pegasus_generate_key(req.key, std::string("hash"), std::string("sort"));
-    req.value.assign("value", 0, 5);
-
-    const int put_cnt = 5;
-    auto writes = new dsn::message_ex *[put_cnt];
-    auto cleanup = dsn::defer([=]() { delete[] writes; });
-    // generate same put_cnt kv paris, and the kEstimateNumKeys will be counted put_cnt times
-    for (int i = 0; i < put_cnt; i++) {
-        writes[i] = pegasus::create_put_request(req);
-    }
-    server_write->on_batched_write_requests(writes, put_cnt, 0, 0);
-
-    std::string str_val;
-    get_server_db()->GetProperty(rocksdb::DB::Properties::kEstimateNumKeys, &str_val);
-    ASSERT_EQ(atoi(str_val.c_str()), put_cnt);
-}
 
 } // namespace server
 } // namespace pegasus
