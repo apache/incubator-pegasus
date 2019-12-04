@@ -1,5 +1,6 @@
-package com.xiaomi.infra.pegasus.analyser
+package com.xiaomi.infra.pegasus.spark.analyser
 
+import com.xiaomi.infra.pegasus.spark.Config
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, SparkContext, TaskContext}
@@ -35,8 +36,8 @@ class PegasusSnapshotRDD private[analyser] (pegasusContext: PegasusContext,
 
   private val LOG = LogFactory.getLog(classOf[PegasusSnapshotRDD])
 
-  private val fdsService: FDSService =
-    new FDSService(config, clusterName, tableName)
+  private val coldDataLoader: ColdDataLoader =
+    new ColdDataLoader(config, clusterName, tableName)
 
   override def compute(split: Partition,
                        context: TaskContext): Iterator[PegasusRecord] = {
@@ -47,18 +48,18 @@ class PegasusSnapshotRDD private[analyser] (pegasusContext: PegasusContext,
       "Create iterator for \"%s\" \"%s\" [pid: %d]"
         .format(clusterName, tableName, split.index)
     )
-    new PartitionIterator(context, config, fdsService, split.index)
+    new PartitionIterator(context, config, coldDataLoader, split.index)
   }
 
   override protected def getPartitions: Array[Partition] = {
-    val indexes = Array.range(0, fdsService.getPartitionCount)
+    val indexes = Array.range(0, coldDataLoader.getPartitionCount)
     indexes.map(i => {
       new PegasusPartition(i)
     })
   }
 
   def getPartitionCount: Int = {
-    fdsService.getPartitionCount
+    coldDataLoader.getPartitionCount
   }
 
   /**

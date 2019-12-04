@@ -1,7 +1,7 @@
-package com.xiaomi.infra.pegasus.analyser.recipes.verify
+package com.xiaomi.infra.pegasus.spark.analyser.recipes.verify
 
 import com.typesafe.config.{ConfigException, ConfigFactory}
-import com.xiaomi.infra.pegasus.analyser._
+import com.xiaomi.infra.pegasus.spark.analyser.PegasusContext
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.{SparkConf, SparkContext}
 

@@ -1,4 +1,4 @@
-package com.xiaomi.infra.pegasus.analyser;
+package com.xiaomi.infra.pegasus.spark;
 
 import java.io.Serializable;
 import java.util.Objects;

@@ -1,4 +1,4 @@
-package com.xiaomi.infra.pegasus.analyser;
+package com.xiaomi.infra.pegasus.spark;
 
 public class FDSException extends Exception {
   private static final String VERSION_PREFIX = loadVersion() + ": ";

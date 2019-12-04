@@ -1,5 +1,6 @@
-package com.xiaomi.infra.pegasus.analyser
+package com.xiaomi.infra.pegasus.spark.analyser
 
+import com.xiaomi.infra.pegasus.spark.{Config, RocksDBOptions}
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.TaskContext
 import org.rocksdb.{RocksDB, RocksIterator}
@@ -27,12 +28,12 @@ private[analyser] class PartitionIterator private (context: TaskContext,
 
   def this(context: TaskContext,
            config: Config,
-           fdsService: FDSService,
+           coldDataLoader: ColdDataLoader,
            pid: Int) {
     this(context, pid)
 
     rocksDBOptions = new RocksDBOptions(config)
-    val checkPointUrls = fdsService.getCheckpointUrls
+    val checkPointUrls = coldDataLoader.getCheckpointUrls
     val dbPath = checkPointUrls.get(pid)
     rocksDB = RocksDB.openReadOnly(rocksDBOptions.options, dbPath)
     rocksIterator = rocksDB.newIterator(rocksDBOptions.readOptions)

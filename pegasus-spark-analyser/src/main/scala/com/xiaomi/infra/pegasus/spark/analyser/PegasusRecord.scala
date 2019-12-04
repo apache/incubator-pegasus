@@ -1,4 +1,4 @@
-package com.xiaomi.infra.pegasus.analyser
+package com.xiaomi.infra.pegasus.spark.analyser
 
 import java.nio.ByteBuffer
 import java.util

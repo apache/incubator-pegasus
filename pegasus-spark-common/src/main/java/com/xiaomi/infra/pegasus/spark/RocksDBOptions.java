@@ -1,4 +1,4 @@
-package com.xiaomi.infra.pegasus.analyser;
+package com.xiaomi.infra.pegasus.spark;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -9,15 +9,15 @@ import org.rocksdb.*;
  *
  * <p>NOTE: Must be closed manually to release the underlying memory.
  */
-class RocksDBOptions {
+public class RocksDBOptions {
 
   private static final Log LOG = LogFactory.getLog(RocksDBOptions.class);
 
-  Options options;
-  ReadOptions readOptions;
+  public Options options;
+  public ReadOptions readOptions;
   private Env env;
 
-  RocksDBOptions(Config config) {
+  public RocksDBOptions(Config config) {
     if (config.DATA_URL.contains("fds")) {
       env = new HdfsEnv(config.DATA_URL + "#" + config.DATA_PORT);
     } else {
@@ -45,7 +45,7 @@ class RocksDBOptions {
     options.setLogger(rocksDBLog);
   }
 
-  void close() {
+  public void close() {
     options.close();
     readOptions.close();
     env.close();
