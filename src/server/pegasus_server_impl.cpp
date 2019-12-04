@@ -338,6 +338,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     snprintf(name, 255, "rdb.memtable.memory_usage@%s", str_gpid.c_str());
     _pfc_rdb_memtable_mem_usage.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
+
+    snprintf(name, 255, "rdb.estimate_num_keys@%s", str_gpid.c_str());
+    _pfc_rdb_estimate_num_keys.init_app_counter(
+        "app.pegasus",
+        name,
+        COUNTER_TYPE_NUMBER,
+        "statistics the estimated number of keys inside the rocksdb");
 }
 
 void pegasus_server_impl::parse_checkpoints()
@@ -2241,6 +2248,14 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         dsn::buf2uint64(str_val, val)) {
         _pfc_rdb_memtable_mem_usage->set(val);
         dinfo_replica("_pfc_rdb_memtable_mem_usage: {} bytes", val);
+    }
+
+    // for the same n kv pairs, kEstimateNumKeys will be counted n times, you need compaction to
+    // remove duplicate
+    if (_db->GetProperty(rocksdb::DB::Properties::kEstimateNumKeys, &str_val) &&
+        dsn::buf2uint64(str_val, val)) {
+        _pfc_rdb_estimate_num_keys->set(val);
+        dinfo_replica("_pfc_rdb_estimate_num_keys: {}", val);
     }
 }
 
