@@ -121,7 +121,8 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     if (args.argc <= 1)
         return false;
 
-    static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
+    static struct option long_options[] = {{"resolve_ip", no_argument, 0, 'r'},
+                                           {"detailed", no_argument, 0, 'd'},
                                            {"json", no_argument, 0, 'j'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
@@ -130,17 +131,21 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     std::string out_file;
     bool detailed = false;
     bool json = false;
+    bool resolve_ip = false;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "djo:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "drjo:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
         case 'd':
             detailed = true;
+            break;
+        case 'r':
+            resolve_ip = true;
             break;
         case 'j':
             json = true;
@@ -152,7 +157,6 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             return false;
         }
     }
-
     if (app_name.empty()) {
         std::cout << "ERROR: null app name" << std::endl;
         return false;
@@ -184,6 +188,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     int32_t partition_count = 0;
     int32_t max_replica_count = 0;
     std::vector<dsn::partition_configuration> partitions;
+
     dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
     if (err != ::dsn::ERR_OK) {
         std::cout << "ERROR: list app " << app_name << " failed, error=" << err.to_string()
@@ -304,7 +309,13 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
             }
             std::stringstream oss;
-            oss << p.primary.to_string() << "(";
+            std::string hostname;
+            std::string ip = p.primary.to_string();
+            if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
+                oss << hostname << "(";
+            } else {
+                oss << p.primary.to_string() << "(";
+            };
             if (disk_found)
                 oss << disk_value;
             else
@@ -348,7 +359,14 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                         count_value = f3->second;
                     }
                 }
-                oss << p.secondaries[j].to_string() << "(";
+
+                std::string hostname;
+                std::string ip = p.secondaries[j].to_string();
+                if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
+                    oss << hostname << "(";
+                } else {
+                    oss << p.secondaries[j].to_string() << "(";
+                };
                 if (found)
                     oss << value;
                 else

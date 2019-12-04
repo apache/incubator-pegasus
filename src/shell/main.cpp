@@ -46,7 +46,7 @@ static command_executor commands[] = {
     {
         "app_disk",
         "get the disk usage information for some specific app",
-        "<app_name> [-d|--detailed] [-j|--json] [-o|--output file_name]",
+        "<app_name> [-d|--detailed] [-r|--resolve_ip] [-j|--json] [-o|--output file_name]",
         app_disk,
     },
     {
@@ -60,7 +60,7 @@ static command_executor commands[] = {
         "nodes",
         "get the node status for this cluster",
         "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage]"
-        "[-o|--output file_name] [-s|--status all|alive|unalive]",
+        "[-o|--output file_name] [-s|--status all|alive|unalive] [-q|--qps]",
         ls_nodes,
     },
     {
@@ -293,20 +293,20 @@ static command_executor commands[] = {
     {
         "remote_command",
         "send remote command to servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] "
+        "[-t all|meta-server|replica-server] [-r|--resolve_ip] [-l ip:port,ip:port...]"
         "<command> [arguments...]",
         remote_command,
     },
     {
         "server_info",
         "get info of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...]",
+        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] [-r|--resolve_ip]",
         server_info,
     },
     {
         "server_stat",
         "get stat of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...]",
+        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] [-r|--resolve_ip]",
         server_stat,
     },
     {
@@ -319,7 +319,7 @@ static command_executor commands[] = {
     {
         "flush_log",
         "flush log of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...]",
+        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...][-r|--resolve_ip]",
         flush_log,
     },
     {
