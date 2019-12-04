@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
@@ -237,6 +238,18 @@ type PegasusRpcCall struct {
 	Gpid   *base.Gpid
 	RawReq []byte // the marshalled request in bytes
 	Err    error
+
+	// hooks on each stage during rpc processing
+	OnRpcCall time.Time
+	OnRpcSend time.Time
+	OnRpcRecv time.Time
+}
+
+func (call *PegasusRpcCall) Trace() string {
+	return fmt.Sprintf("call->%dus->send->%dus->recv->%dus->now",
+		call.OnRpcSend.Sub(call.OnRpcCall).Microseconds(),
+		call.OnRpcRecv.Sub(call.OnRpcSend).Microseconds(),
+		time.Since(call.OnRpcRecv).Microseconds())
 }
 
 func MarshallPegasusRpc(codec rpc.Codec, seqId int32, gpid *base.Gpid, args RpcRequestArgs, name string) (*PegasusRpcCall, error) {
