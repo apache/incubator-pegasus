@@ -538,6 +538,7 @@ struct row_data
     double rdb_block_cache_total_count = 0;
     double rdb_index_and_filter_blocks_mem_usage = 0;
     double rdb_memtable_mem_usage = 0;
+    double rdb_estimate_num_keys = 0;
 };
 
 inline bool
