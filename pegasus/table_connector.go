@@ -18,7 +18,6 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
-	"github.com/XiaoMi/pegasus-go-client/metrics"
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"gopkg.in/tomb.v2"
@@ -346,11 +345,6 @@ func WrapError(err error, op OpType) error {
 }
 
 func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error) {
-	start := time.Now()
-	defer func() {
-		metrics.GetLatencyHistogram.Observe(float64(time.Since(start).Nanoseconds()))
-	}()
-
 	b, err := func() ([]byte, error) {
 		if err := validateHashKey(hashKey); err != nil {
 			return nil, err
@@ -379,11 +373,6 @@ func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey
 }
 
 func (p *pegasusTableConnector) SetTTL(ctx context.Context, hashKey []byte, sortKey []byte, value []byte, ttl time.Duration) error {
-	start := time.Now()
-	defer func() {
-		metrics.SetLatencyHistogram.Observe(float64(time.Since(start).Nanoseconds()))
-	}()
-
 	err := func() error {
 		if err := validateHashKey(hashKey); err != nil {
 			return err
@@ -500,11 +489,6 @@ func (p *pegasusTableConnector) MultiGetRange(ctx context.Context, hashKey []byt
 }
 
 func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, request *rrdb.MultiGetRequest) ([]*KeyValue, bool, error) {
-	start := time.Now()
-	defer func() {
-		metrics.MultiGetLatencyHistogram.Observe(float64(time.Since(start).Nanoseconds()))
-	}()
-
 	gpid, part := p.getPartition(hashKey)
 	resp, err := part.MultiGet(ctx, gpid, request)
 
@@ -579,11 +563,6 @@ func (p *pegasusTableConnector) MultiSetOpt(ctx context.Context, hashKey []byte,
 }
 
 func (p *pegasusTableConnector) doMultiSet(ctx context.Context, hashKey []byte, request *rrdb.MultiPutRequest) error {
-	start := time.Now()
-	defer func() {
-		metrics.MultiSetLatencyHistogram.Observe(float64(time.Since(start).Nanoseconds()))
-	}()
-
 	gpid, part := p.getPartition(hashKey)
 	resp, err := part.MultiSet(ctx, gpid, request)
 
