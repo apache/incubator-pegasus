@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// ensure context.cancel is able to interrupt the RPC.
 func TestNodeSession_ContextCancel(t *testing.T) {
 	defer leaktest.Check(t)()
 

@@ -77,18 +77,19 @@ func TestPegasusClient_ConcurrentOpenSameTable(t *testing.T) {
 	client := NewClient(cfg)
 	defer client.Close()
 
-	var tblist []TableConnector
 	openTableQueries := 100
+	tblist := make([]TableConnector, openTableQueries)
 
 	var wg sync.WaitGroup
+	wg.Add(openTableQueries)
 	for i := 0; i < openTableQueries; i++ {
-		wg.Add(1)
+		idx := i
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
 			tb, err := client.OpenTable(ctx, "temp")
 			assert.Nil(t, err)
-			tblist = append(tblist, tb)
+			tblist[idx] = tb
 			wg.Done()
 		}()
 	}

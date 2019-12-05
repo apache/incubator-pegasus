@@ -93,7 +93,7 @@ func TestRpcConn_CancelConnecting(t *testing.T) {
 	}()
 
 	time.Sleep(time.Second)
-	assert.Equal(t, ConnStateConnecting, conn.cstate)
+	assert.Equal(t, ConnStateConnecting, conn.GetState())
 	conn.Close()
 }
 

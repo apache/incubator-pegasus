@@ -105,9 +105,10 @@ func (rc *RpcConn) TryConnect() (err error) {
 				KeepAlive: RpcConnKeepAliveInterval,
 				Timeout:   RpcConnDialTimeout,
 			}
-			rc.conn, err = d.Dial("tcp", rc.Endpoint)
+			conn, err := d.Dial("tcp", rc.Endpoint)
 
 			rc.mu.Lock()
+			rc.conn = conn
 			if err != nil {
 				return err
 			}

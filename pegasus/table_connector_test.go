@@ -17,6 +17,7 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/rpc"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
@@ -213,18 +214,19 @@ func TestPegasusTableConnector_EmptyInput(t *testing.T) {
 func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	client := NewClient(testingCfg)
-	defer client.Close()
+	ptb := &pegasusTableConnector{
+		tableName:    "temp",
+		meta:         nil,
+		replica:      nil,
+		confUpdateCh: make(chan bool, 1),
+		logger:       pegalog.GetLogger(),
+	}
 
-	tb, err := client.OpenTable(context.Background(), "temp")
+	err := ptb.handleReplicaError(nil, nil, nil) // no error
 	assert.Nil(t, err)
-	ptb, _ := tb.(*pegasusTableConnector)
 
-	err = ptb.handleReplicaError(nil, nil, nil)
-	assert.Nil(t, err)
-
-	ptb.handleReplicaError(errors.New("not nil"), nil, nil)
-	<-ptb.confUpdateCh
+	ptb.handleReplicaError(errors.New("not nil"), nil, nil) // unknown error
+	<-ptb.confUpdateCh                                      // must trigger confUpdate
 
 	ptb.handleReplicaError(base.ERR_OBJECT_NOT_FOUND, nil, nil)
 	<-ptb.confUpdateCh
@@ -233,7 +235,7 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	<-ptb.confUpdateCh
 
 	{ // Ensure: The following errors should not trigger configuration update
-		errorTypes := []error{base.ERR_TIMEOUT, context.DeadlineExceeded, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER}
+		errorTypes := []error{base.ERR_TIMEOUT, context.DeadlineExceeded, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER, base.ERR_BUSY}
 
 		for _, err := range errorTypes {
 			channelEmpty := false
@@ -1079,6 +1081,8 @@ func TestPegasusTableConnector_BatchGet(t *testing.T) {
 
 	values, err = tb.BatchGet(context.Background(), []CompositeKey{{HashKey: []byte{}, SortKey: nil}, {HashKey: nil, SortKey: nil}})
 	assert.Equal(t, values, [][]byte{nil, nil})
-	assert.Equal(t, err.Error(),
-		"pegasus BATCH_GET failed: [pegasus GET failed: InvalidParameter: hashkey must not be nil, pegasus GET failed: InvalidParameter: hashkey must not be empty]")
+	if err.Error() != "pegasus BATCH_GET failed: [pegasus GET failed: InvalidParameter: hashkey must not be empty, pegasus GET failed: InvalidParameter: hashkey must not be nil]" &&
+		err.Error() != "pegasus BATCH_GET failed: [pegasus GET failed: InvalidParameter: hashkey must not be nil, pegasus GET failed: InvalidParameter: hashkey must not be empty]" {
+		assert.NotNil(t, nil) // ordering of the errors is indefinite
+	}
 }
