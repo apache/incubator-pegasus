@@ -32,11 +32,8 @@ namespace server {
             const std::string _disc;
             double _ans;
         public:
-            Collection() {}
-            void set_policy(Table_hotspot_policy *s) {
+            Collection(Table_hotspot_policy *s,const table_stats *stats) {
                 _policy = s;
-            }
-            void load_stat(const table_stats *stats){
                 _stats = stats;
             }
             void cal_policy(){

@@ -84,10 +84,8 @@ public:
                        row_stats.max_cu_partition_id.c_str(),
                        cu_scale);
             }
-            Collection col;
             Algo1 algo1;
-            col.set_policy(&algo1);
-            col.load_stat(&row_stats);
+            Collection col(&algo1,&row_stats);
             col.cal_policy();
             double hotpots_point = col.get_ans();
             hotpots_max_point->set(hotpots_point);
