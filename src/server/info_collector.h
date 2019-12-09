@@ -20,6 +20,7 @@
 
 #include "../shell/commands.h"
 #include "table_stats.h"
+#include "TableHotspotPolicy.h"
 
 namespace pegasus {
 namespace server {
@@ -83,6 +84,13 @@ public:
                        row_stats.max_cu_partition_id.c_str(),
                        cu_scale);
             }
+            Collection col;
+            Algo1 algo1;
+            col.set_policy(&algo1);
+            col.load_stat(&row_stats);
+            col.cal_policy();
+            double hotpots_point = col.get_ans();
+            hotpots_max_point->set(hotpots_point);
         }
 
         ::dsn::perf_counter_wrapper get_qps;
@@ -111,6 +119,7 @@ public:
         ::dsn::perf_counter_wrapper write_qps;
         ::dsn::perf_counter_wrapper qps_max_min_scale;
         ::dsn::perf_counter_wrapper cu_max_min_scale;
+        ::dsn::perf_counter_wrapper hotpots_max_point;
     };
 
     info_collector();

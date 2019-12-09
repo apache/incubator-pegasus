@@ -201,6 +201,7 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(write_qps);
     INIT_COUNTER(qps_max_min_scale);
     INIT_COUNTER(cu_max_min_scale);
+    INIT_COUNTER(hotpots_max_point);
     _app_stat_counters[app_name] = counters;
     return counters;
 }
