@@ -85,7 +85,7 @@ public:
                        cu_scale);
             }
             Algo1 algo1;
-            Collection col(&algo1,&row_stats);
+            Hotpot_caculator col(&algo1, &row_stats);
             col.cal_policy();
             double hotpots_point = col.get_ans();
             hotpots_max_point->set(hotpots_point);
