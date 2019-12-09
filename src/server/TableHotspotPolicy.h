@@ -13,8 +13,15 @@ namespace server {
     class Algo1 : public Table_hotspot_policy {
         public:
             virtual double detect_hotspot_policy(const table_stats *stats) {
-                //// need to implement finding max_qps
+                return (stats->max_total_qps / std::max(stats->min_total_qps, 1.0));
             }
+    };
+
+    class Algo2 : public Table_hotspot_policy {
+    public:
+        virtual double detect_hotspot_policy(const table_stats *stats) {
+            return (stats->max_total_cu / std::max(stats->min_total_cu, 1.0));
+        }
     };
 
     class Collection {
@@ -39,7 +46,6 @@ namespace server {
                 return _ans;
             }
     };
-
 
 }
 }
