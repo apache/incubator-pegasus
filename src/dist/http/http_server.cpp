@@ -10,6 +10,7 @@
 #include "http_message_parser.h"
 #include "root_http_service.h"
 #include "pprof_http_service.h"
+#include "perf_counter_http_service.h"
 
 namespace dsn {
 
@@ -44,6 +45,8 @@ http_server::http_server() : serverlet<http_server>("http_server")
 #ifdef DSN_ENABLE_GPERF
     add_service(new pprof_http_service());
 #endif // DSN_ENABLE_GPERF
+
+    add_service(new perf_counter_http_service());
 }
 
 void http_server::serve(message_ex *msg)

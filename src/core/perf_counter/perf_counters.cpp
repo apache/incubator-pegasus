@@ -159,6 +159,16 @@ bool perf_counters::remove_counter(const char *full_name)
     return true;
 }
 
+perf_counter_ptr perf_counters::get_counter(const std::string &full_name)
+{
+    utils::auto_read_lock l(_lock);
+    auto it = _counters.find(full_name);
+    if (it != _counters.end())
+        return it->second.counter;
+
+    return nullptr;
+}
+
 perf_counter *perf_counters::new_counter(const char *app,
                                          const char *section,
                                          const char *name,
