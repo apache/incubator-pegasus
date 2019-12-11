@@ -13,6 +13,7 @@ import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.operator.rrdb_get_operator;
 import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
+import com.xiaomi.infra.pegasus.rpc.async.ReplicaSession.ConnState;
 import com.xiaomi.infra.pegasus.thrift.TException;
 import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
 import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
@@ -22,10 +23,12 @@ import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 
 /**
@@ -210,5 +213,46 @@ public class ReplicaSessionTest {
       rs.asyncSend(op, cb, 2000);
       Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
     }
+  }
+
+  @Test
+  public void testTryNotifyWithSequenceID() throws Exception {
+    rpc_address addr = new rpc_address();
+    addr.fromString("127.0.0.1:34801");
+    ReplicaSession rs = manager.getReplicaSession(addr);
+
+    // no pending RequestEntry, ensure no NPE thrown
+    Assert.assertTrue(rs.pendingResponse.isEmpty());
+    try {
+      rs.tryNotifyWithSequenceID(100, error_code.error_types.ERR_TIMEOUT, false);
+    } catch (Exception e) {
+      Assert.assertNull(e);
+    }
+
+    // Edge case (this is not yet confirmed to happen)
+    // seqId=100 in wait-queue, but entry.timeoutTask is set null because some sort of bug in netty.
+    AtomicBoolean passed = new AtomicBoolean(false);
+    ReplicaSession.RequestEntry entry = new ReplicaSession.RequestEntry();
+    entry.sequenceId = 100;
+    entry.callback = () -> passed.set(true);
+    entry.timeoutTask = null; // simulate the timeoutTask has been null
+    entry.op = new rrdb_put_operator(new gpid(1, 1), null, null, 0);
+    rs.pendingResponse.put(100, entry);
+    rs.tryNotifyWithSequenceID(100, error_code.error_types.ERR_TIMEOUT, false);
+    Assert.assertTrue(passed.get());
+
+    // simulate the entry has been removed, ensure no NPE thrown
+    rs.getAndRemoveEntry(entry.sequenceId);
+    rs.tryNotifyWithSequenceID(entry.sequenceId, entry.op.rpc_error.errno, true);
+
+    // ensure mark session state to disconnect when TryNotifyWithSequenceID incur any exception
+    ReplicaSession mockRs = Mockito.spy(rs);
+    mockRs.pendingSend.offer(entry);
+    mockRs.fields.state = ConnState.CONNECTED;
+    Mockito.doThrow(new Exception())
+        .when(mockRs)
+        .tryNotifyWithSequenceID(entry.sequenceId, entry.op.rpc_error.errno, false);
+    mockRs.markSessionDisconnect();
+    Assert.assertEquals(mockRs.getState(), ConnState.DISCONNECTED);
   }
 }

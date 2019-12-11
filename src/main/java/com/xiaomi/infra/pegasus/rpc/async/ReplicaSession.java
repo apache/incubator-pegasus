@@ -27,7 +27,7 @@ public class ReplicaSession {
     public int sequenceId;
     public com.xiaomi.infra.pegasus.operator.client_operator op;
     public Runnable callback;
-    public ScheduledFuture timeoutTask;
+    public ScheduledFuture<?> timeoutTask;
     public long timeoutMs;
   }
 
@@ -192,7 +192,7 @@ public class ReplicaSession {
     }
   }
 
-  private void markSessionDisconnect() {
+  void markSessionDisconnect() {
     VolatileFields cache = fields;
     synchronized (pendingSend) {
       if (cache.state != ConnState.DISCONNECTED) {
@@ -202,22 +202,30 @@ public class ReplicaSession {
         // 2. It's likely that when the session is disconnecting
         // but the caller of the api query/asyncQuery didn't notice
         // this. In this case, we are relying on the timeout task.
-        while (!pendingSend.isEmpty()) {
-          RequestEntry e = pendingSend.poll();
-          tryNotifyWithSequenceID(e.sequenceId, error_types.ERR_SESSION_RESET, false);
+        try {
+          while (!pendingSend.isEmpty()) {
+            RequestEntry e = pendingSend.poll();
+            tryNotifyWithSequenceID(e.sequenceId, error_types.ERR_SESSION_RESET, false);
+          }
+          List<RequestEntry> l = new LinkedList<RequestEntry>();
+          for (Map.Entry<Integer, RequestEntry> entry : pendingResponse.entrySet()) {
+            l.add(entry.getValue());
+          }
+          for (RequestEntry e : l) {
+            tryNotifyWithSequenceID(e.sequenceId, error_types.ERR_SESSION_RESET, false);
+          }
+        } catch (Exception e) {
+          logger.error(
+              "failed to notify callers due to unexpected exception [state={}]: ",
+              cache.state.toString(),
+              e);
+        } finally {
+          // ensure the state must be set DISCONNECTED
+          cache = new VolatileFields();
+          cache.state = ConnState.DISCONNECTED;
+          cache.nettyChannel = null;
+          fields = cache;
         }
-        List<RequestEntry> l = new LinkedList<RequestEntry>();
-        for (Map.Entry<Integer, RequestEntry> entry : pendingResponse.entrySet()) {
-          l.add(entry.getValue());
-        }
-        for (RequestEntry e : l) {
-          tryNotifyWithSequenceID(e.sequenceId, error_types.ERR_SESSION_RESET, false);
-        }
-
-        cache = new VolatileFields();
-        cache.state = ConnState.DISCONNECTED;
-        cache.nettyChannel = null;
-        fields = cache;
       } else {
         logger.warn("{}: session is closed already", name());
       }
@@ -225,7 +233,8 @@ public class ReplicaSession {
   }
 
   // Notify the RPC sender if failure occurred.
-  private void tryNotifyWithSequenceID(int seqID, error_types errno, boolean isTimeoutTask) {
+  void tryNotifyWithSequenceID(int seqID, error_types errno, boolean isTimeoutTask)
+      throws Exception {
     logger.debug(
         "{}: {} is notified with error {}, isTimeoutTask {}",
         name(),
@@ -234,7 +243,9 @@ public class ReplicaSession {
         isTimeoutTask);
     RequestEntry entry = pendingResponse.remove(seqID);
     if (entry != null) {
-      if (!isTimeoutTask) entry.timeoutTask.cancel(true);
+      if (!isTimeoutTask && entry.timeoutTask != null) {
+        entry.timeoutTask.cancel(true);
+      }
       if (errno == error_types.ERR_TIMEOUT) {
         long firstTs = firstRecentTimedOutMs.get();
         if (firstTs == 0) {
@@ -291,12 +302,16 @@ public class ReplicaSession {
   // Notify the RPC caller when times out. If the RPC finishes in time,
   // this task will be cancelled.
   // TODO(wutao1): call it addTimeoutTicker
-  private ScheduledFuture addTimer(final int seqID, long timeoutInMillseconds) {
+  private ScheduledFuture<?> addTimer(final int seqID, long timeoutInMillseconds) {
     return rpcGroup.schedule(
         new Runnable() {
           @Override
           public void run() {
-            tryNotifyWithSequenceID(seqID, error_types.ERR_TIMEOUT, true);
+            try {
+              tryNotifyWithSequenceID(seqID, error_types.ERR_TIMEOUT, true);
+            } catch (Exception e) {
+              logger.warn("try notify with sequenceID {} exception!", seqID, e);
+            }
           }
         },
         timeoutInMillseconds,
@@ -349,18 +364,18 @@ public class ReplicaSession {
 
   MessageResponseFilter filter = null;
 
-  private final ConcurrentHashMap<Integer, RequestEntry> pendingResponse =
+  final ConcurrentHashMap<Integer, RequestEntry> pendingResponse =
       new ConcurrentHashMap<Integer, RequestEntry>();
   private final AtomicInteger seqId = new AtomicInteger(0);
 
-  private final Queue<RequestEntry> pendingSend = new LinkedList<RequestEntry>();
+  final Queue<RequestEntry> pendingSend = new LinkedList<RequestEntry>();
 
-  private static final class VolatileFields {
+  static final class VolatileFields {
     public ConnState state = ConnState.DISCONNECTED;
     public Channel nettyChannel = null;
   }
 
-  private volatile VolatileFields fields = new VolatileFields();
+  volatile VolatileFields fields = new VolatileFields();
 
   private final rpc_address address;
   private Bootstrap boot;
