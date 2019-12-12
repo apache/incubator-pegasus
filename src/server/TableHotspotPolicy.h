@@ -1,49 +1,56 @@
-#include <dsn/perf_counter/perf_counter.h>
-#include "info_collector.h"
-#include "table_stats.h"
+#include "data_store.h"
 
 namespace pegasus {
-namespace server {
+    namespace server {
+        class Hotspot_policy
+        {
+        public:
+            Hotspot_policy(Data_store *data_store){
+                _data_store = data_store;
+            }
+            virtual double detect_hotspot_policy() = 0;
+        private:
+            Data_store *_data_store;
+        };
 
-class Table_hotspot_policy
-{
-public:
-    virtual double detect_hotspot_policy(const table_stats *stats) = 0;
-};
+        class Algo1 : public Hotspot_policy
+        {
+        public:
+            explicit Algo1(Data_store *data_store):Hotspot_policy(data_store){};
+            double detect_hotspot_policy()
+            {
+                return 0;
+            }
+        };
 
-class Algo1 : public Table_hotspot_policy
-{
-public:
-    virtual double detect_hotspot_policy(const table_stats *stats)
-    {
-        return (stats->max_total_qps / std::max(stats->min_total_qps, 1.0));
+        class Algo2 : public Hotspot_policy
+        {
+        public:
+            explicit Algo2(Data_store *data_store):Hotspot_policy(data_store){};
+            double detect_hotspot_policy()
+            {
+                return 0;
+            }
+        };
+
+
+        class Hotpot_calculator
+        {
+        private:
+            std::string _name;
+
+
+        public:
+            std::vector< std::vector<Data_store> > data_stores;
+
+            Hotpot_calculator(const std::string &name,int app_size) : _name(name), data_stores(app_size){}
+
+            void aggregate(const std::vector<row_data> *partitions) {
+                for (int i=0;i<partitions->size();i++){
+                    data_stores[i].push_back(partitions[i]);
+                }
+            }
+
+        };
     }
-};
-
-class Algo2 : public Table_hotspot_policy
-{
-public:
-    virtual double detect_hotspot_policy(const table_stats *stats)
-    {
-        return (stats->max_total_cu / std::max(stats->min_total_cu, 1.0));
-    }
-};
-
-class Hotpot_caculator
-{
-private:
-    Table_hotspot_policy *_policy;
-    const table_stats *_stats;
-    double _ans;
-
-public:
-    Hotpot_caculator(Table_hotspot_policy *s, const table_stats *stats)
-    {
-        _policy = s;
-        _stats = stats;
-    }
-    void cal_policy() { _ans = _policy->detect_hotspot_policy(_stats); }
-    const double get_ans() { return _ans; }
-};
-}
 }

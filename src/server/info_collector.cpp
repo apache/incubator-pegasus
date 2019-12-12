@@ -96,6 +96,9 @@ info_collector::~info_collector()
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
+    for (auto store: _calculator_store) {
+        delete store.second;
+    }
 }
 
 void info_collector::start()
@@ -135,25 +138,11 @@ void info_collector::on_app_stat()
         derror("call get_app_stat() failed");
         return;
     }
-
-    table_stats all_stats("_all_");
     for (auto app_rows : all_rows) {
-        // get statistics data for app
-        table_stats app_stats(app_rows.first);
-        for (auto partition_row : app_rows.second) {
-            app_stats.aggregate(partition_row);
-        }
-        get_app_counters(app_stats.app_name)->set(app_stats);
-
-        // get row data statistics for all of the apps
-        all_stats.merge(app_stats);
+        Hotpot_calculator *app_store = nullptr;
+        get_store_handler(app_rows.first,app_rows.second.size(),app_store);
+        app_store->aggregate(&app_rows.second);
     }
-    get_app_counters(all_stats.app_name)->set(all_stats);
-
-    ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
-           (int)(all_rows.size() - 1),
-           all_stats.get_total_read_qps(),
-           all_stats.get_total_write_qps());
 }
 
 info_collector::AppStatCounters *info_collector::get_app_counters(const std::string &app_name)
@@ -201,7 +190,6 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(write_qps);
     INIT_COUNTER(qps_max_min_scale);
     INIT_COUNTER(cu_max_min_scale);
-    INIT_COUNTER(hotpots_max_point);
     _app_stat_counters[app_name] = counters;
     return counters;
 }
