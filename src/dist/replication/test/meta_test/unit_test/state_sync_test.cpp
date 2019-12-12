@@ -288,6 +288,30 @@ void meta_service_test_app::state_sync_test()
         req.app_name = "make_no_sense";
         ss2->query_configuration_by_index(req, resp);
         ASSERT_EQ(dsn::ERR_OBJECT_NOT_FOUND, resp.err);
+
+        // 3.3 app is dropping/creating/recalling
+        std::shared_ptr<app_state> app = ss2->get_app(15);
+        req.app_name = app->app_name;
+
+        ss2->query_configuration_by_index(req, resp);
+        ASSERT_EQ(dsn::ERR_OK, resp.err);
+
+        app->status = dsn::app_status::AS_DROPPING;
+        ss2->query_configuration_by_index(req, resp);
+        ASSERT_EQ(dsn::ERR_BUSY_DROPPING, resp.err);
+
+        app->status = dsn::app_status::AS_RECALLING;
+        ss2->query_configuration_by_index(req, resp);
+        ASSERT_EQ(dsn::ERR_BUSY_CREATING, resp.err);
+
+        app->status = dsn::app_status::AS_CREATING;
+        ss2->query_configuration_by_index(req, resp);
+        ASSERT_EQ(dsn::ERR_BUSY_CREATING, resp.err);
+
+        // client unknown state
+        app->status = dsn::app_status::AS_DROP_FAILED;
+        ss2->query_configuration_by_index(req, resp);
+        ASSERT_EQ(dsn::ERR_UNKNOWN, resp.err);
     }
 
     // simulate the half creating

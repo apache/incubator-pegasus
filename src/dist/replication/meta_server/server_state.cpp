@@ -953,8 +953,18 @@ void server_state::query_configuration_by_index(
                enum_to_string(app->status),
                (app->app_name).c_str(),
                app->app_id);
-        response.err =
-            (app->status == app_status::AS_CREATING ? ERR_BUSY_CREATING : ERR_BUSY_DROPPING);
+
+        switch (app->status) {
+        case app_status::AS_CREATING:
+        case app_status::AS_RECALLING:
+            response.err = ERR_BUSY_CREATING;
+            break;
+        case app_status::AS_DROPPING:
+            response.err = ERR_BUSY_DROPPING;
+            break;
+        default:
+            response.err = ERR_UNKNOWN;
+        }
         return;
     }
 
