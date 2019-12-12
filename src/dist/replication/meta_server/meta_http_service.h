@@ -47,6 +47,12 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2));
+        // GET ip:port/meta/backup_policy
+        register_handler("backup_policy",
+                         std::bind(&meta_http_service::query_backup_policy_handler,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2));
     }
 
     std::string path() const override { return "meta"; }
@@ -56,6 +62,7 @@ public:
     void list_node_handler(const http_request &req, http_response &resp);
     void get_cluster_info_handler(const http_request &req, http_response &resp);
     void get_app_envs_handler(const http_request &req, http_response &resp);
+    void query_backup_policy_handler(const http_request &req, http_response &resp);
 
 private:
     // set redirect location if current server is not primary

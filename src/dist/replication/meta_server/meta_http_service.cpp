@@ -5,15 +5,16 @@
 #include <string>
 
 #include <dsn/c/api_layer1.h>
+#include <dsn/cpp/json_helper.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/utility/config_api.h>
 #include <dsn/utility/output_utils.h>
 
-#include "server_load_balancer.h"
-#include "server_state.h"
 #include "meta_http_service.h"
 #include "meta_server_failure_detector.h"
+#include "server_load_balancer.h"
+#include "server_state.h"
 
 namespace dsn {
 namespace replication {
@@ -513,6 +514,66 @@ void meta_http_service::get_app_envs_handler(const http_request &req, http_respo
     tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
+}
+
+std::string set_to_string(const std::set<int32_t> &s)
+{
+    std::stringstream out;
+    rapidjson::OStreamWrapper wrapper(out);
+    dsn::json::JsonWriter writer(wrapper);
+    dsn::json::json_encode(writer, s);
+    return out.str();
+}
+
+void meta_http_service::query_backup_policy_handler(const http_request &req, http_response &resp)
+{
+    if (!redirect_if_not_primary(req, resp))
+        return;
+
+    if (_service->_backup_handler == nullptr) {
+        resp.body = "cold_backup_disabled";
+        resp.status_code = http_status_code::not_found;
+        return;
+    }
+    auto request = dsn::make_unique<configuration_query_backup_policy_request>();
+    std::vector<std::string> policy_names;
+    for (const auto &p : req.query_args) {
+        if (p.first == "name") {
+            policy_names.push_back(p.second);
+        } else {
+            resp.body = "Invalid parameter";
+            resp.status_code = http_status_code::bad_request;
+            return;
+        }
+    }
+    request->policy_names = std::move(policy_names);
+    query_backup_policy_rpc http_to_rpc(std::move(request), LPC_DEFAULT_CALLBACK);
+    _service->_backup_handler->query_backup_policy(http_to_rpc);
+    auto rpc_return = http_to_rpc.response();
+
+    dsn::utils::table_printer tp_query_backup_policy;
+    tp_query_backup_policy.add_title("name");
+    tp_query_backup_policy.add_column("backup_provider_type");
+    tp_query_backup_policy.add_column("backup_interval");
+    tp_query_backup_policy.add_column("app_ids");
+    tp_query_backup_policy.add_column("start_time");
+    tp_query_backup_policy.add_column("status");
+    tp_query_backup_policy.add_column("backup_history_count");
+    for (const auto &cur_policy : rpc_return.policys) {
+        tp_query_backup_policy.add_row(cur_policy.policy_name);
+        tp_query_backup_policy.append_data(cur_policy.backup_provider_type);
+        tp_query_backup_policy.append_data(cur_policy.backup_interval_seconds);
+        tp_query_backup_policy.append_data(set_to_string(cur_policy.app_ids));
+        tp_query_backup_policy.append_data(cur_policy.start_time);
+        tp_query_backup_policy.append_data(cur_policy.is_disable ? "disabled" : "enabled");
+        tp_query_backup_policy.append_data(cur_policy.backup_history_count_to_keep);
+    }
+    std::ostringstream out;
+    tp_query_backup_policy.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    resp.body = out.str();
+    resp.status_code = http_status_code::ok;
+
+    return;
 }
 
 bool meta_http_service::redirect_if_not_primary(const http_request &req, http_response &resp)

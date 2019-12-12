@@ -4,7 +4,9 @@
 #include <sstream>
 #include <iomanip> // std::setfill, std::setw
 #include <functional>
+
 #include <dsn/dist/block_service.h>
+#include <dsn/tool-api/http_server.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 
 #include "meta_data.h"
@@ -17,6 +19,10 @@ namespace replication {
 class meta_service;
 class server_state;
 class backup_service;
+
+typedef rpc_holder<configuration_query_backup_policy_request,
+                   configuration_query_backup_policy_response>
+    query_backup_policy_rpc;
 
 struct backup_info_status
 {
@@ -314,9 +320,9 @@ public:
 
     const std::string &backup_root() const { return _backup_root; }
     const std::string &policy_root() const { return _policy_meta_root; }
-    void add_new_policy(dsn::message_ex* msg);
-    void query_policy(dsn::message_ex* msg);
-    void modify_policy(dsn::message_ex* msg);
+    void add_backup_policy(dsn::message_ex* msg);
+    void query_backup_policy(query_backup_policy_rpc rpc);
+    void modify_backup_policy(dsn::message_ex* msg);
 
     // compose the absolute path(AP) for policy
     // input:

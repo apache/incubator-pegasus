@@ -2388,7 +2388,7 @@ void replica_stub::create_child_replica(rpc_address primary_address,
     if (child_replica != nullptr) {
         ddebug_f("create child replica ({}) succeed", child_gpid);
         tasking::enqueue(LPC_PARTITION_SPLIT,
-                         &_tracker,
+                         child_replica->tracker(),
                          std::bind(&replica::child_init_replica,
                                    child_replica,
                                    parent_gpid,

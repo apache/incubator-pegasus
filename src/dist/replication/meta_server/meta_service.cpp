@@ -354,7 +354,7 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler(RPC_CM_START_RESTORE, "start_restore", &meta_service::on_start_restore);
     register_rpc_handler(
         RPC_CM_ADD_BACKUP_POLICY, "add_backup_policy", &meta_service::on_add_backup_policy);
-    register_rpc_handler(
+    register_rpc_handler_with_rpc_holder(
         RPC_CM_QUERY_BACKUP_POLICY, "query_backup_policy", &meta_service::on_query_backup_policy);
     register_rpc_handler(RPC_CM_MODIFY_BACKUP_POLICY,
                          "modify_backup_policy",
@@ -731,24 +731,23 @@ void meta_service::on_add_backup_policy(dsn::message_ex *req)
         req->add_ref();
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          nullptr,
-                         std::bind(&backup_service::add_new_policy, _backup_handler.get(), req));
+                         std::bind(&backup_service::add_backup_policy, _backup_handler.get(), req));
     }
 }
 
-void meta_service::on_query_backup_policy(dsn::message_ex *req)
+void meta_service::on_query_backup_policy(query_backup_policy_rpc policy_rpc)
 {
-    configuration_query_backup_policy_response response;
-    RPC_CHECK_STATUS(req, response);
+    auto &response = policy_rpc.response();
+    RPC_CHECK_STATUS(policy_rpc.dsn_request(), response);
 
     if (_backup_handler == nullptr) {
         derror("meta doesn't enable backup service");
         response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(req, response);
     } else {
-        req->add_ref();
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         nullptr,
-                         std::bind(&backup_service::query_policy, _backup_handler.get(), req));
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            nullptr,
+            std::bind(&backup_service::query_backup_policy, _backup_handler.get(), policy_rpc));
     }
 }
 
@@ -763,9 +762,10 @@ void meta_service::on_modify_backup_policy(dsn::message_ex *req)
         reply(req, response);
     } else {
         req->add_ref();
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         nullptr,
-                         std::bind(&backup_service::modify_policy, _backup_handler.get(), req));
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            nullptr,
+            std::bind(&backup_service::modify_backup_policy, _backup_handler.get(), req));
     }
 }
 

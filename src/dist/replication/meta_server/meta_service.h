@@ -168,7 +168,7 @@ private:
     void on_start_recovery(dsn::message_ex *req);
     void on_start_restore(dsn::message_ex *req);
     void on_add_backup_policy(dsn::message_ex *req);
-    void on_query_backup_policy(dsn::message_ex *req);
+    void on_query_backup_policy(query_backup_policy_rpc policy_rpc);
     void on_modify_backup_policy(dsn::message_ex *req);
     void on_report_restore_status(dsn::message_ex *req);
     void on_query_restore_status(dsn::message_ex *req);
@@ -217,6 +217,7 @@ private:
     friend class meta_test_base;
     friend class meta_duplication_service;
     friend class meta_http_service_test;
+    friend class meta_backup_test_base;
     friend class meta_http_service;
     std::unique_ptr<meta_duplication_service> _dup_svc;
 
