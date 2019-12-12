@@ -117,7 +117,6 @@ void replica_duplicator_manager::update_confirmed_decree_if_secondary(decree con
             _primary_confirmed_decree = confirmed;
         }
     }
-    _replica->update_init_info_duplicating(confirmed >= 0);
 }
 
 } // namespace replication

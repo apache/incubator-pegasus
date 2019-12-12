@@ -170,10 +170,11 @@ public:
     bool verbose_commit_log() const;
     dsn::task_tracker *tracker() { return &_tracker; }
 
-    /// \see replica_duplicate.cpp
+    //
+    // Duplication
+    //
     replica_duplicator_manager *get_duplication_manager() const { return _duplication_mgr.get(); }
-    bool is_duplicating() const;
-    void update_init_info_duplicating(bool duplicating);
+    bool is_duplicating() const { return _app_info.duplicating; }
 
     void update_last_checkpoint_generate_time();
 
