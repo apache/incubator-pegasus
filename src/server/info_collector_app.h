@@ -5,6 +5,7 @@
 #pragma once
 
 #include <dsn/cpp/service_app.h>
+#include <dsn/tool-api/http_server.h>
 #include "info_collector.h"
 #include "available_detector.h"
 
@@ -24,6 +25,7 @@ private:
     info_collector _collector;
     available_detector _detector;
     bool _updater_started;
+    std::unique_ptr<::dsn::http_server> _http_server;
 };
 }
 } // namespace

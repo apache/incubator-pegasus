@@ -16,7 +16,7 @@ namespace pegasus {
 namespace server {
 
 info_collector_app::info_collector_app(const dsn::service_app_info *info)
-    : service_app(info), _updater_started(false)
+    : service_app(info), _updater_started(false), _http_server(new ::dsn::http_server())
 {
 }
 

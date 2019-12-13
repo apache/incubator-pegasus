@@ -53,6 +53,7 @@ public:
         ::dsn::perf_counter_wrapper rdb_block_cache_mem_usage;
         ::dsn::perf_counter_wrapper rdb_index_and_filter_blocks_mem_usage;
         ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
+        ::dsn::perf_counter_wrapper rdb_estimate_num_keys;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
     };
