@@ -167,6 +167,7 @@ void info_collector::on_app_stat()
         all.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
         all.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         all.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
+        all.rdb_estimate_num_keys += row.rdb_estimate_num_keys;
         read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
         write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
                        row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps;
@@ -205,6 +206,7 @@ void info_collector::on_app_stat()
         counters->rdb_index_and_filter_blocks_mem_usage->set(
             row.rdb_index_and_filter_blocks_mem_usage);
         counters->rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
+        counters->rdb_estimate_num_keys->set(row.rdb_estimate_num_keys);
         counters->read_qps->set(read_qps[i]);
         counters->write_qps->set(write_qps[i]);
     }
@@ -255,6 +257,7 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(rdb_block_cache_hit_rate);
     INIT_COUNTER(rdb_index_and_filter_blocks_mem_usage);
     INIT_COUNTER(rdb_memtable_mem_usage);
+    INIT_COUNTER(rdb_estimate_num_keys);
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
     _app_stat_counters[app_name] = counters;
