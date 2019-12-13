@@ -11,6 +11,7 @@
 #include "root_http_service.h"
 #include "pprof_http_service.h"
 #include "perf_counter_http_service.h"
+#include "uri_decoder.h"
 
 namespace dsn {
 
@@ -98,6 +99,13 @@ void http_server::add_service(http_service *service)
         unresolved_path.resize(data_length + 1);
         strncpy(&unresolved_path[0], ret.full_url.data() + u.field_data[UF_PATH].off, data_length);
         unresolved_path[data_length] = '\0';
+
+        // decode resolved path
+        auto decoded_unresolved_path = uri::decode(unresolved_path);
+        if (!decoded_unresolved_path.is_ok()) {
+            return decoded_unresolved_path.get_error();
+        }
+        unresolved_path = decoded_unresolved_path.get_value();
     }
 
     std::string unresolved_query;
@@ -106,6 +114,13 @@ void http_server::add_service(http_service *service)
         unresolved_query.resize(data_length);
         strncpy(
             &unresolved_query[0], ret.full_url.data() + u.field_data[UF_QUERY].off, data_length);
+
+        // decode resolved query
+        auto decoded_unresolved_query = uri::decode(unresolved_query);
+        if (!decoded_unresolved_query.is_ok()) {
+            return decoded_unresolved_query.get_error();
+        }
+        unresolved_query = decoded_unresolved_query.get_value();
     }
 
     std::vector<std::string> args;
