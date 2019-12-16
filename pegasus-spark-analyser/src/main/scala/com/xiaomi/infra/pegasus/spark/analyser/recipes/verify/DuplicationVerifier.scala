@@ -1,10 +1,11 @@
 package com.xiaomi.infra.pegasus.spark.analyser.recipes.verify
 
 import com.typesafe.config.{ConfigException, ConfigFactory}
-import com.xiaomi.infra.pegasus.spark.analyser.PegasusContext
+import com.xiaomi.infra.pegasus.spark.analyser.{ColdBackupConfig, PegasusContext}
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.{SparkConf, SparkContext}
 
+//TODO(wutao1): refactor "verify" based new "ColdBackupConfig.class"
 class DuplicationVerifierOptions {
   var tableName: String = ""
   var cluster1: String = ""

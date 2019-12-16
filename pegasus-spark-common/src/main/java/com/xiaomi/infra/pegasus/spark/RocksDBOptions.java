@@ -18,10 +18,10 @@ public class RocksDBOptions {
   private Env env;
 
   public RocksDBOptions(Config config) {
-    if (config.DATA_URL.contains("fds")) {
-      env = new HdfsEnv(config.DATA_URL + "#" + config.DATA_PORT);
+    if (config.remoteFsUrl.contains("fds")) {
+      env = new HdfsEnv(config.remoteFsUrl + "#" + config.remoteFsPort);
     } else {
-      env = new HdfsEnv(config.DATA_URL + ":" + config.DATA_URL);
+      env = new HdfsEnv(config.remoteFsUrl + ":" + config.remoteFsPort);
     }
 
     options =
@@ -30,9 +30,9 @@ public class RocksDBOptions {
             .setCreateIfMissing(true)
             .setEnv(env)
             .setLevel0FileNumCompactionTrigger(-1)
-            .setMaxOpenFiles(config.MAX_FILE_OPEN_COUNTER);
+            .setMaxOpenFiles(config.dbMaxFileOpenCount);
 
-    readOptions = new ReadOptions().setReadaheadSize(config.READ_AHEAD_SIZE);
+    readOptions = new ReadOptions().setReadaheadSize(config.dbReadAheadSize);
 
     Logger rocksDBLog =
         new Logger(options) {

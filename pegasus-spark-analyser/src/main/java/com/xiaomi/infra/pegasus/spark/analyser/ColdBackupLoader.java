@@ -1,11 +1,9 @@
 package com.xiaomi.infra.pegasus.spark.analyser;
 
-import com.xiaomi.infra.pegasus.spark.Config;
 import com.xiaomi.infra.pegasus.spark.FDSException;
 import com.xiaomi.infra.pegasus.spark.FDSService;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.Serializable;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -15,50 +13,49 @@ import org.apache.hadoop.fs.FileStatus;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class ColdDataLoader implements Serializable {
+public class ColdBackupLoader implements PegasusLoader {
 
-  private static final Log LOG = LogFactory.getLog(ColdDataLoader.class);
+  private static final Log LOG = LogFactory.getLog(ColdBackupLoader.class);
 
-  private Config globalConfig;
+  private ColdBackupConfig globalConfig;
   private FDSService fdsService = new FDSService();
   private Map<Integer, String> checkpointUrls = new HashMap<>();
   private int partitionCount;
 
   private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
-  public ColdDataLoader(Config config, String cluster, String table) throws FDSException {
+  public ColdBackupLoader(ColdBackupConfig config) throws FDSException {
     globalConfig = config;
     String idPrefix =
-        globalConfig.DATA_URL + "/" + cluster + "/" + globalConfig.COLDBK_POLICY + "/";
-    String latestIdPath = getLatestPolicyId(idPrefix);
-    String tableNameAndId = getTableNameAndId(latestIdPath, table);
-    String metaPrefix = latestIdPath + "/" + tableNameAndId;
+        globalConfig.remoteFsUrl
+            + "/"
+            + globalConfig.clusterName
+            + "/"
+            + globalConfig.policyName
+            + "/";
 
-    partitionCount = getCount(metaPrefix);
-    initCheckpointUrls(metaPrefix, partitionCount);
+    String idPath;
+    if (!config.coldBackupTime.equals("")) {
+      idPath = getPolicyId(idPrefix, config.coldBackupTime);
+    } else {
+      idPath = getLatestPolicyId(idPrefix);
+    }
 
-    LOG.info("init fds default config and get the latest data urls");
-  }
-
-  public ColdDataLoader(Config config, String cluster, String table, String dataTime)
-      throws FDSException {
-    globalConfig = config;
-    String idPrefix =
-        globalConfig.DATA_URL + "/" + cluster + "/" + globalConfig.COLDBK_POLICY + "/";
-    String idPath = getPolicyId(idPrefix, dataTime);
-    String tableNameAndId = getTableNameAndId(idPath, table);
+    String tableNameAndId = getTableNameAndId(idPath, globalConfig.tableName);
     String metaPrefix = idPath + "/" + tableNameAndId;
 
     partitionCount = getCount(metaPrefix);
     initCheckpointUrls(metaPrefix, partitionCount);
 
-    LOG.info("init fds default config and get the " + dataTime + " data urls");
+    LOG.info("init fds default config and get the data urls");
   }
 
+  @Override
   public int getPartitionCount() {
     return partitionCount;
   }
 
+  @Override
   public Map<Integer, String> getCheckpointUrls() {
     return checkpointUrls;
   }
@@ -70,7 +67,7 @@ public class ColdDataLoader implements Serializable {
       String currentCheckpointUrl = prefix + "/" + counter + "/" + "current_checkpoint";
       try (BufferedReader bufferedReader = fdsService.getReader(currentCheckpointUrl)) {
         while ((chkpt = bufferedReader.readLine()) != null) {
-          String url = prefix.split(globalConfig.DATA_URL)[1] + "/" + counter + "/" + chkpt;
+          String url = prefix.split(globalConfig.remoteFsUrl)[1] + "/" + counter + "/" + chkpt;
           checkpointUrls.put(counter, url);
         }
         counter--;
@@ -150,7 +147,7 @@ public class ColdDataLoader implements Serializable {
     String appMetaData;
     String appMetaDataUrl = prefix + "/" + "meta" + "/" + "app_metadata";
     try (BufferedReader bufferedReader = fdsService.getReader(appMetaDataUrl)) {
-      while ((appMetaData = bufferedReader.readLine()) != null) {
+      if ((appMetaData = bufferedReader.readLine()) != null) {
         JSONObject jsonObject = new JSONObject(appMetaData);
         String partitionCount = jsonObject.getString("partition_count");
         return Integer.valueOf(partitionCount);
