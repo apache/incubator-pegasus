@@ -96,7 +96,7 @@ info_collector::~info_collector()
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
-    for (auto store: _calculator_store) {
+    for (auto store : _calculator_store) {
         delete store.second;
     }
 }
@@ -140,8 +140,9 @@ void info_collector::on_app_stat()
     }
     for (auto app_rows : all_rows) {
         Hotpot_calculator *app_store = nullptr;
-        get_store_handler(app_rows.first,app_rows.second.size(),app_store);
-        app_store->aggregate(&app_rows.second);
+        get_store_handler(app_rows.first, app_rows.second.size(), app_store);
+        app_store->aggregate(app_rows.second);
+        app_store->start_alg();
     }
 }
 

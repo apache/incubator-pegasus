@@ -114,7 +114,6 @@ public:
         ::dsn::perf_counter_wrapper cu_max_min_scale;
     };
 
-
     info_collector();
     ~info_collector();
 
@@ -157,16 +156,17 @@ private:
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
     std::map<std::string, Hotpot_calculator *> _calculator_store;
-    void get_store_handler(const std::string app_name,const int app_size,Hotpot_calculator * store){
-        auto iter=_calculator_store.find(app_name);
-        if (iter!=_calculator_store.end()){
+    void get_store_handler(const std::string app_name, const int app_size, Hotpot_calculator *store)
+    {
+        auto iter = _calculator_store.find(app_name);
+        if (iter != _calculator_store.end()) {
             store = iter->second;
-            return ;
+            return;
         }
-        Hotpot_calculator *handler = new Hotpot_calculator(app_name,app_size);
+        Hotpot_calculator *handler = new Hotpot_calculator(app_name, app_size);
         _calculator_store[app_name] = handler;
         store = handler;
-        return ;
+        return;
     }
 };
 } // namespace server
