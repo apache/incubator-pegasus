@@ -138,6 +138,24 @@ void info_collector::on_app_stat()
         derror("call get_app_stat() failed");
         return;
     }
+    table_stats all_stats("_all_");
+    for (auto app_rows : all_rows) {
+        // get statistics data for app
+        table_stats app_stats(app_rows.first);
+        for (auto partition_row : app_rows.second) {
+            app_stats.aggregate(partition_row);
+        }
+        get_app_counters(app_stats.app_name)->set(app_stats);
+
+        // get row data statistics for all of the apps
+        all_stats.merge(app_stats);
+    }
+    get_app_counters(all_stats.app_name)->set(all_stats);
+    ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
+           (int)(all_rows.size() - 1),
+           all_stats.get_total_read_qps(),
+           all_stats.get_total_write_qps());
+
     for (auto app_rows : all_rows) {
         Hotpot_calculator *app_store = nullptr;
         get_store_handler(app_rows.first, app_rows.second.size(), app_store);
