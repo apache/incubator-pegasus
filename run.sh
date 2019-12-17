@@ -71,8 +71,8 @@ function usage_build()
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
-    echo "   --sanitizer <type>    build with sanitizer to check potential problem:
-                                   address, leak, thread, undefined etc."
+    echo "   --sanitizer <type>    build with sanitizer to check potential problem,
+                                   type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
 }
 function run_build()
