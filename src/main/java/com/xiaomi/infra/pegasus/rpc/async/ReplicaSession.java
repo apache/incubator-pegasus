@@ -98,24 +98,15 @@ public class ReplicaSession {
     if (cache.state == ConnState.CONNECTED) {
       write(entry, cache);
     } else {
-      boolean needConnect = false;
       synchronized (pendingSend) {
         cache = fields;
         if (cache.state == ConnState.CONNECTED) {
           write(entry, cache);
         } else {
           pendingSend.offer(entry);
-          if (cache.state == ConnState.DISCONNECTED) {
-            cache = new VolatileFields();
-            cache.state = ConnState.CONNECTING;
-            fields = cache;
-            needConnect = true;
-          }
         }
       }
-      if (needConnect) {
-        doConnect();
-      }
+      tryConnect();
     }
     return entry.sequenceId;
   }
@@ -132,8 +123,17 @@ public class ReplicaSession {
       } catch (Exception ex) {
         logger.warn("close channel {} failed: ", address.toString(), ex);
       }
+    } else if (f.state == ConnState.CONNECTING) { // f.nettyChannel == null
+      // If our actively-close strategy fails to reconnect the session due to
+      // some sort of deadlock, close this session and retry.
+      logger.info("{}: close a connecting session", name());
+      markSessionDisconnect();
     } else {
-      logger.info("channel {} not connected, skip the close", address.toString());
+      logger.info(
+          "{}: session is not connected [state={}, nettyChannel{}=null], skip the close",
+          name(),
+          f.state,
+          f.nettyChannel == null ? "=" : "!");
     }
   }
 
@@ -149,7 +149,34 @@ public class ReplicaSession {
     return address;
   }
 
-  ChannelFuture doConnect() {
+  @Override
+  public String toString() {
+    return address.toString();
+  }
+
+  /**
+   * Connects to remote host if it is currently disconnected.
+   *
+   * @return a nullable ChannelFuture.
+   */
+  public ChannelFuture tryConnect() {
+    boolean needConnect = false;
+    synchronized (pendingSend) {
+      if (fields.state == ConnState.DISCONNECTED) {
+        VolatileFields cache = new VolatileFields();
+        cache.state = ConnState.CONNECTING;
+        fields = cache;
+        needConnect = true;
+      }
+    }
+    if (needConnect) {
+      logger.info("{}: the session is disconnected, needs to reconnect", name());
+      return doConnect();
+    }
+    return null;
+  }
+
+  private ChannelFuture doConnect() {
     try {
       // we will receive the channel connect event in DefaultHandler.ChannelActive
       return boot.connect(address.get_ip(), address.get_port())
@@ -180,6 +207,12 @@ public class ReplicaSession {
     newCache.nettyChannel = activeChannel;
 
     synchronized (pendingSend) {
+      if (fields.state != ConnState.CONNECTING) {
+        // this session may have been closed or connected already
+        logger.info("{}: session is {}, skip to mark it connected", name(), fields.state);
+        return;
+      }
+
       while (!pendingSend.isEmpty()) {
         RequestEntry e = pendingSend.poll();
         if (pendingResponse.get(e.sequenceId) != null) {
@@ -220,6 +253,7 @@ public class ReplicaSession {
               cache.state.toString(),
               e);
         } finally {
+          logger.info("{}: mark the session to be disconnected from state={}", name(), cache.state);
           // ensure the state must be set DISCONNECTED
           cache = new VolatileFields();
           cache.state = ConnState.DISCONNECTED;

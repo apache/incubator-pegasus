@@ -138,7 +138,7 @@ public class TableHandler extends Table {
       newConfig.replicas.add(newReplicaConfig);
     }
 
-    FutureGroup futureGroup = new FutureGroup(resp.getPartition_count());
+    FutureGroup<Void> futureGroup = new FutureGroup<>(resp.getPartition_count());
     for (partition_configuration pc : resp.getPartitions()) {
       ReplicaConfiguration s = newConfig.replicas.get(pc.getPid().get_pidx());
       if (s.ballot != pc.ballot) {
@@ -177,7 +177,7 @@ public class TableHandler extends Table {
         if (s.session == null || !s.session.getAddress().equals(pc.primary)) {
           // reset to new primary
           s.session = manager_.getReplicaSession(pc.primary);
-          ChannelFuture fut = s.session.doConnect();
+          ChannelFuture fut = s.session.tryConnect();
           if (fut != null) {
             futureGroup.add(fut);
           }

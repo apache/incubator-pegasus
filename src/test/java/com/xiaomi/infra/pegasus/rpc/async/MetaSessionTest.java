@@ -123,7 +123,7 @@ public class MetaSessionTest {
     MetaSession session = manager.getMetaSession();
     MetaSession meta = Mockito.spy(session);
     ReplicaSession meta2 = meta.getMetaList().get(0); // 127.0.0.1:34602
-    meta2.doConnect();
+    meta2.tryConnect();
     while (meta2.getState() != ReplicaSession.ConnState.CONNECTED) {
       Thread.sleep(1);
     }

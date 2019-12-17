@@ -19,6 +19,8 @@ import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
 import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import com.xiaomi.infra.pegasus.tools.Tools;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -31,12 +33,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 
-/**
- * ReplicaSession Tester.
- *
- * @author sunweijie@xiaomi.com
- * @version 1.0
- */
 public class ReplicaSessionTest {
   private String[] metaList = {"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"};
   private final Logger logger = org.slf4j.LoggerFactory.getLogger(ReplicaSessionTest.class);
@@ -254,5 +250,51 @@ public class ReplicaSessionTest {
         .tryNotifyWithSequenceID(entry.sequenceId, entry.op.rpc_error.errno, false);
     mockRs.markSessionDisconnect();
     Assert.assertEquals(mockRs.getState(), ConnState.DISCONNECTED);
+  }
+
+  @Test
+  public void testCloseSession() throws InterruptedException {
+    rpc_address addr = new rpc_address();
+    addr.fromString("127.0.0.1:34801");
+    ReplicaSession rs = manager.getReplicaSession(addr);
+    rs.tryConnect().awaitUninterruptibly();
+    Thread.sleep(200);
+    Assert.assertEquals(rs.getState(), ConnState.CONNECTED);
+
+    rs.closeSession();
+    Thread.sleep(100);
+    Assert.assertEquals(rs.getState(), ConnState.DISCONNECTED);
+
+    rs.fields.state = ConnState.CONNECTING;
+    rs.closeSession();
+    Thread.sleep(100);
+    Assert.assertEquals(rs.getState(), ConnState.DISCONNECTED);
+  }
+
+  @Test
+  public void testSessionConnectTimeout() throws InterruptedException {
+    rpc_address addr = new rpc_address();
+    addr.fromString(
+        "www.baidu.com:34801"); // this website normally ignores incorrect request without replying
+
+    long start = System.currentTimeMillis();
+    EventLoopGroup rpcGroup = new NioEventLoopGroup(4);
+    ReplicaSession rs = new ReplicaSession(addr, rpcGroup, 1000);
+    rs.tryConnect().awaitUninterruptibly();
+    long end = System.currentTimeMillis();
+    Assert.assertEquals((end - start) / 1000, 1); // ensure connect failed within 1sec
+    Thread.sleep(100);
+    Assert.assertEquals(rs.getState(), ConnState.DISCONNECTED);
+  }
+
+  @Test
+  public void testSessionTryConnectWhenConnected() throws InterruptedException {
+    rpc_address addr = new rpc_address();
+    addr.fromString("127.0.0.1:34801");
+    ReplicaSession rs = manager.getReplicaSession(addr);
+    rs.tryConnect().awaitUninterruptibly();
+    Thread.sleep(100);
+    Assert.assertEquals(rs.getState(), ConnState.CONNECTED);
+    Assert.assertNull(rs.tryConnect()); // do not connect again
   }
 }

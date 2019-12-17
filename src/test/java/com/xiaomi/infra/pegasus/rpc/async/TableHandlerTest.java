@@ -196,6 +196,7 @@ public class TableHandlerTest {
     }
     Assert.assertNotNull(table);
 
+    Thread.sleep(100);
     ArrayList<ReplicaConfiguration> replicas = table.tableConfig_.get().replicas;
     for (ReplicaConfiguration r : replicas) {
       Assert.assertEquals(r.session.getState(), ReplicaSession.ConnState.CONNECTED);
