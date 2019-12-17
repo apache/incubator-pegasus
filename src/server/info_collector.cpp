@@ -138,6 +138,7 @@ void info_collector::on_app_stat()
         derror("call get_app_stat() failed");
         return;
     }
+
     table_stats all_stats("_all_");
     for (auto app_rows : all_rows) {
         // get statistics data for app
@@ -151,6 +152,7 @@ void info_collector::on_app_stat()
         all_stats.merge(app_stats);
     }
     get_app_counters(all_stats.app_name)->set(all_stats);
+
     ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
            (int)(all_rows.size() - 1),
            all_stats.get_total_read_qps(),
@@ -205,6 +207,7 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(rdb_block_cache_hit_rate);
     INIT_COUNTER(rdb_index_and_filter_blocks_mem_usage);
     INIT_COUNTER(rdb_memtable_mem_usage);
+    INIT_COUNTER(rdb_estimate_num_keys);
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
     INIT_COUNTER(qps_max_min_scale);
