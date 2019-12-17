@@ -17,13 +17,6 @@ void Hotpot_calculator::aggregate(std::vector<row_data> partitions)
         temp.aggregate(partitions[i]);
         data_stores[i].emplace(temp);
     }
-    while (data_stores[partitions.size()].size() > MAX_STORE_SIZE)
-        data_stores[partitions.size()].pop();
-    Data_store temp_all;
-    for (int i = 0; i < partitions.size(); i++) {
-        temp_all.merge(data_stores[i].back());
-    }
-    data_stores[partitions.size()].emplace(temp_all);
 }
 
 void Hotpot_calculator::start_alg()
