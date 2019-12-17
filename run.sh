@@ -71,10 +71,15 @@ function usage_build()
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
+    echo "   --sanitizer <type>    build with sanitizer to check potential problem:
+                                   address, leak, thread, undefined etc."
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
 }
 function run_build()
 {
+    #Note: No memory mode, because MemorySanitizer is only available in Clang for Linux x86_64 targets
+    SANITIZERS=("address" "leak" "thread" "undefined")
+
     C_COMPILER="gcc"
     CXX_COMPILER="g++"
     BUILD_TYPE="release"
@@ -88,6 +93,7 @@ function run_build()
     RUN_VERBOSE=NO
     DISABLE_GPERF=NO
     SKIP_THIRDPARTY=NO
+    SANITIZER=""
     TEST_MODULE=""
     while [[ $# > 0 ]]; do
         key="$1"
@@ -133,6 +139,16 @@ function run_build()
                 ;;
             --enable_gcov)
                 ENABLE_GCOV=YES
+                ;;
+            --sanitizer)
+                IS_SANITIZERS=`echo ${SANITIZERS[@]} | grep -w $2`
+                if [[ -z ${IS_SANITIZERS} ]]; then
+                    echo "ERROR: unknown sanitizer type \"$2\""
+                    usage_build
+                    exit 1
+                fi
+                SANITIZER="$2"
+                shift
                 ;;
             -v|--verbose)
                 RUN_VERBOSE=YES
@@ -283,7 +299,7 @@ function run_build()
     cd $ROOT/src
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
-        BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
+        BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER"\
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" DISABLE_GPERF="$DISABLE_GPERF" ./build.sh
     if [ $? -ne 0 ]; then
         echo "ERROR: build pegasus failed"
