@@ -55,6 +55,8 @@ function usage_build()
     echo "                         to enable valgrind memcheck, default no"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --check               whether to perform code check before building"
+    echo "   --sanitizer <type>    build with sanitizer to check potential problems,
+                                   type: address|leak|thread|undefined"
     if [ "$ONLY_BUILD" == "NO" ]; then
         echo "   -m|--test_module      specify modules to test, split by ',',"
         echo "                         e.g., \"dsn.core.tests,dsn.tests\","
@@ -63,6 +65,9 @@ function usage_build()
 }
 function run_build()
 {
+    #NOTE(jiashuo1): No memory check mode, because MemorySanitizer is only available in Clang for Linux x86_64 targets
+    SANITIZERS=("address" "leak" "thread" "undefined")
+
     C_COMPILER="gcc"
     CXX_COMPILER="g++"
     BUILD_TYPE="release"
@@ -76,6 +81,7 @@ function run_build()
     DISABLE_GPERF=NO
     SKIP_THIRDPARTY=NO
     CHECK=NO
+    SANITIZER=""
     TEST_MODULE=""
     while [[ $# > 0 ]]; do
         key="$1"
@@ -131,6 +137,16 @@ function run_build()
                 ;;
             --check)
                 CHECK=YES
+                ;;
+            --sanitizer)
+                IS_SANITIZERS=`echo ${SANITIZERS[@]} | grep -w $2`
+                if [[ -z ${IS_SANITIZERS} ]]; then
+                    echo "ERROR: unknown sanitizer type \"$2\""
+                    usage_build
+                    exit 1
+                fi
+                SANITIZER="$2"
+                shift
                 ;;
             -m|--test_module)
                 if [ "$ONLY_BUILD" == "YES" ]; then
@@ -195,7 +211,7 @@ function run_build()
     fi
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
-        BOOST_DIR="$BOOST_DIR" ENABLE_GCOV="$ENABLE_GCOV" \
+        BOOST_DIR="$BOOST_DIR" ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" \
         DISABLE_GPERF="$DISABLE_GPERF" $scripts_dir/build.sh
 }
