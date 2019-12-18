@@ -220,7 +220,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         std::string filter_type =
             dsn_config_get_value_string("pegasus.server",
                                         "rocksdb_filter_type",
-                                        "common",
+                                        "prefix",
                                         "Bloom filter type, should be either 'common' or 'prefix'");
         dassert(filter_type == "common" || filter_type == "prefix",
                 "[pegasus.server]rocksdb_filter_type should be either 'common' or 'prefix'.");
@@ -723,7 +723,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             return;
         }
 
-        std::unique_ptr<rocksdb::Iterator> it = nullptr;
+        std::unique_ptr<rocksdb::Iterator> it;
         bool complete = false;
         if (!request.reverse) {
             it.reset(_db->NewIterator(_rd_opts));
@@ -779,7 +779,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         } else { // reverse
             rocksdb::ReadOptions rd_opts(_rd_opts);
             if (_db_opts.prefix_extractor) {
-                // TODO(yingchun): Prefix bloom filter is not supported in reverse seek mode (see
+                // NOTE: Prefix bloom filter is not supported in reverse seek mode (see
                 // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation for
                 // more details), and we have to do total order seek on rocksdb which might be worse
                 // performance. However we consider that reverse scan is a rare use case, and if
