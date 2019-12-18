@@ -8,7 +8,7 @@ namespace server {
 class Hotspot_policy
 {
 public:
-    Hotspot_policy(std::vector<std::queue<Data_store>> *data_stores,
+    Hotspot_policy(std::vector<std::queue<data_store>> *data_stores,
                    std::vector<dsn::perf_counter> *hot_points)
         : _data_stores(data_stores), _hot_points(hot_points)
     {
@@ -16,14 +16,14 @@ public:
     virtual void detect_hotspot_policy() = 0;
 
 protected:
-    std::vector<std::queue<Data_store>> *_data_stores;
+    std::vector<std::queue<data_store>> *_data_stores;
     std::vector<dsn::perf_counter> *_hot_points;
 };
 
 class Algo1 : public Hotspot_policy
 {
 public:
-    explicit Algo1(std::vector<std::queue<Data_store>> *data_stores,
+    explicit Algo1(std::vector<std::queue<data_store>> *data_stores,
                    std::vector<dsn::perf_counter> *hot_points)
         : Hotspot_policy(data_stores, hot_points){};
     void detect_hotspot_policy()
@@ -37,7 +37,7 @@ public:
 class Algo2 : public Hotspot_policy
 {
 public:
-    explicit Algo2(std::vector<std::queue<Data_store>> *data_stores,
+    explicit Algo2(std::vector<std::queue<data_store>> *data_stores,
                    std::vector<dsn::perf_counter> *hot_points)
         : Hotspot_policy(data_stores, hot_points){};
     void detect_hotspot_policy() { return; }
@@ -46,13 +46,13 @@ public:
 class Hotpot_calculator
 {
 public:
-    std::vector<std::queue<Data_store>> data_stores;
+    std::vector<std::queue<data_store>> data_stores;
     Hotpot_calculator(const std::string &name, const int &app_size);
     void aggregate(std::vector<row_data> partitions);
     void start_alg();
 
 private:
-    std::string _name;
+    std::string _app_name;
     Hotspot_policy *_policy;
     std::vector<dsn::perf_counter> _hotpot_points;
 };

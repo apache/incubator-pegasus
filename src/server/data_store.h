@@ -3,10 +3,10 @@
 namespace pegasus {
 namespace server {
 
-class Data_store
+class data_store
 {
 public:
-    Data_store(){};
+    data_store(){};
     std::string store_name;
     double total_get_qps = 0;
     double total_multi_get_qps = 0;
@@ -39,7 +39,7 @@ public:
         name = row.row_name;
     }
 
-    void merge(const Data_store &sub_data_store)
+    void merge(const data_store &sub_data_store)
     {
         total_get_qps += sub_data_store.total_get_qps;
         total_multi_get_qps += sub_data_store.total_multi_get_qps;
