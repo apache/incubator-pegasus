@@ -9,7 +9,11 @@
 
 #include "base/pegasus_key_schema.h"
 
-// User define SliceTransform must obey the 4 rules of ColumnFamilyOptions.prefix_extractor
+// User define SliceTransform must obey the 4 rules of ColumnFamilyOptions.prefix_extractor:
+// 1) key.starts_with(prefix(key))
+// 2) Compare(prefix(key), key) <= 0.
+// 3) If Compare(k1, k2) <= 0, then Compare(prefix(k1), prefix(k2)) <= 0
+// 4) prefix(prefix(key)) == prefix(key)
 TEST(HashkeyTransformTest, Basic)
 {
     pegasus::server::HashkeyTransform prefix_extractor;
