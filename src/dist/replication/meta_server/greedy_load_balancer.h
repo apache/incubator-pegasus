@@ -43,8 +43,8 @@ namespace replication {
 class greedy_load_balancer : public simple_load_balancer
 {
 public:
-    greedy_load_balancer(meta_service *svc);
-    virtual ~greedy_load_balancer();
+    explicit greedy_load_balancer(meta_service *svc);
+    ~greedy_load_balancer() override;
     bool balance(meta_view view, migration_list &list) override;
     bool check(meta_view view, migration_list &list) override;
     void report(const migration_list &list, bool balance_checker) override;
@@ -125,12 +125,10 @@ private:
                               bool still_have_less_than_average,
                               int replicas_low);
     bool primary_balancer_per_app(const std::shared_ptr<app_state> &app);
-    bool primary_balancer_globally();
 
     bool copy_secondary_per_app(const std::shared_ptr<app_state> &app);
-    bool secondary_balancer_globally();
 
-    void greedy_balancer(const bool balance_checker);
+    void greedy_balancer(bool balance_checker);
 
     bool all_replica_infos_collected(const node_state &ns);
     // using t_global_view to get disk_tag of node's pid
@@ -150,5 +148,5 @@ private:
                               const rpc_address &from,
                               const rpc_address &to);
 };
-}
-}
+} // namespace replication
+} // namespace dsn

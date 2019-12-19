@@ -24,16 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a greedy load balancer implementation
- *
- * Revision history:
- *     2016-02-3, Weijie Sun(sunweijie@xiaomi.com), first version
- *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor, now the balancer only have
- * strategy
- */
-
 #include <algorithm>
 #include <iostream>
 #include <queue>
@@ -797,127 +787,6 @@ bool greedy_load_balancer::primary_balancer_per_app(const std::shared_ptr<app_st
     return move_primary_based_on_flow_per_app(app, prev, flow);
 }
 
-bool greedy_load_balancer::primary_balancer_globally()
-{
-    ddebug("greedy primary balancer globally");
-    std::vector<int> primary_count(address_vec.size(), 0);
-    dsn::replication::for_each_available_app(
-        *t_global_view->apps, [&, this](const std::shared_ptr<app_state> &app) {
-            int max_value = -1;
-            int min_value = std::numeric_limits<int>::max();
-            for (const auto &np : *(t_global_view->nodes)) {
-                int id = address_id[np.first];
-                primary_count[id] += np.second.primary_count(app->app_id);
-                max_value = std::max(max_value, primary_count[id]);
-                min_value = std::min(min_value, primary_count[id]);
-            }
-            dassert(max_value - min_value <= 2,
-                    "invalid max(%d), min(%d), current_app(%d)",
-                    max_value,
-                    min_value,
-                    app->app_id);
-            if (max_value - min_value <= 1)
-                return true;
-
-            // BFS to find a path from the max_value set to the min_value_set
-            std::vector<std::set<dsn::gpid>> used_primaries(address_vec.size());
-            for (int i = 1; i <= t_alive_nodes; ++i) {
-                if (primary_count[i] != max_value)
-                    continue;
-
-                std::vector<dsn::gpid> bfs_prev(address_vec.size(), dsn::gpid(-1, -1));
-                std::queue<int> bfs_q;
-                bfs_q.push(i);
-                bfs_prev[i] = {0, 0};
-
-                while (!bfs_q.empty()) {
-                    int id = bfs_q.front();
-                    if (primary_count[id] == min_value)
-                        break;
-
-                    bfs_q.pop();
-                    const node_state &ns = (*t_global_view->nodes)[address_vec[id]];
-                    const partition_set *pri_set = ns.partitions(app->app_id, true);
-                    if (pri_set == nullptr)
-                        continue;
-                    for (const gpid &pid : *pri_set) {
-                        if (used_primaries[id].find(pid) != used_primaries[id].end())
-                            continue;
-                        const partition_configuration &pc =
-                            app->partitions[pid.get_partition_index()];
-                        dassert(pc.primary == address_vec[id],
-                                "invalid primary address, %s VS %s",
-                                pc.primary.to_string(),
-                                address_vec[id].to_string());
-                        for (const dsn::rpc_address &addr : pc.secondaries) {
-                            int id2 = address_id[addr];
-                            if (bfs_prev[id2].get_app_id() == -1) {
-                                bfs_prev[id2] = pid;
-                                bfs_q.push(id2);
-                            }
-                        }
-                    }
-                }
-
-                if (!bfs_q.empty()) {
-                    int id = bfs_q.front();
-                    primary_count[id]++;
-                    primary_count[i]--;
-
-                    while (bfs_prev[id].get_app_id() != 0) {
-                        dsn::gpid pid = bfs_prev[id];
-                        const partition_configuration &pc =
-                            app->partitions[pid.get_partition_index()];
-                        t_migration_result->emplace(
-                            pid,
-                            generate_balancer_request(
-                                pc, balance_type::move_primary, pc.primary, address_vec[id]));
-                        // jump to prev node
-                        id = address_id[pc.primary];
-                        used_primaries[id].emplace(pid);
-                    }
-
-                    dassert(id == i, "expect first node(%d), actual (%d)", i, id);
-                }
-            }
-
-            if (t_migration_result->empty()) {
-                std::vector<int> node_id(t_alive_nodes);
-                for (int i = 0; i < t_alive_nodes; ++i)
-                    node_id[i] = i + 1;
-                std::sort(node_id.begin(), node_id.end(), [&primary_count](int id1, int id2) {
-                    return primary_count[id1] != primary_count[id2]
-                               ? primary_count[id1] < primary_count[id2]
-                               : id1 < id2;
-                });
-                int i = 0, j = t_alive_nodes - 1;
-                while (i < j && primary_count[node_id[j]] - primary_count[node_id[i]] == 2) {
-                    const node_state &ns_max = (*t_global_view->nodes)[address_vec[node_id[j]]];
-                    const node_state &ns_min = (*t_global_view->nodes)[address_vec[node_id[i]]];
-                    ns_max.for_each_primary(app->app_id, [&](const dsn::gpid &pid) {
-                        const partition_configuration &pc =
-                            app->partitions[pid.get_partition_index()];
-                        dassert(!is_member(pc, ns_min.addr()),
-                                "should be moved from(%s) to(%s) gpid(%d.%d)",
-                                ns_max.addr().to_string(),
-                                ns_min.addr().to_string(),
-                                pid.get_app_id(),
-                                pid.get_partition_index());
-                        t_migration_result->emplace(
-                            pid,
-                            generate_balancer_request(
-                                pc, balance_type::copy_primary, ns_max.addr(), ns_min.addr()));
-                        return false;
-                    });
-                    ++i;
-                    --j;
-                }
-            }
-            return false;
-        });
-    return true;
-}
-
 bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
 {
     dsn::rpc_address n = ns.addr();
@@ -1076,5 +945,5 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
         _recent_balance_copy_secondary_count->add(counters[COPY_SEC_COUNT]);
     }
 }
-}
-}
+} // namespace replication
+} // namespace dsn
