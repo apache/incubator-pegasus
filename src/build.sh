@@ -81,7 +81,7 @@ fi
 
 if [ ! -z "$SANITIZER" ]
 then
-    echo "Build with sanitizer: sanitizer=$SANITIZER"
+    echo "SANITIZER=$SANITIZER"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DSANITIZER=$SANITIZER"
 else
     echo "Build without sanitizer"

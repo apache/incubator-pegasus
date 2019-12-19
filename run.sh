@@ -71,13 +71,13 @@ function usage_build()
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
-    echo "   --sanitizer <type>    build with sanitizer to check potential problem,
+    echo "   --sanitizer <type>    build with sanitizer to check potential problems,
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
 }
 function run_build()
 {
-    #Note: No memory check mode, because MemorySanitizer is only available in Clang for Linux x86_64 targets
+    # Note(jiashuo1): No "memory" check mode, because MemorySanitizer is only available in Clang for Linux x86_64 targets
     SANITIZERS=("address" "leak" "thread" "undefined")
 
     C_COMPILER="gcc"
