@@ -78,6 +78,7 @@ function usage_build()
 function run_build()
 {
     # Note(jiashuo1): No "memory" check mode, because MemorySanitizer is only available in Clang for Linux x86_64 targets
+    # # https://www.jetbrains.com/help/clion/google-sanitizers.html
     SANITIZERS=("address" "leak" "thread" "undefined")
 
     C_COMPILER="gcc"
