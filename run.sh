@@ -217,6 +217,9 @@ function run_build()
     if [ "$SKIP_THIRDPARTY" == "YES" ]; then
         OPT="$OPT --skip_thirdparty"
     fi
+    if [ ! -z $SANITIZER ]; then
+        OPT="$OPT --sanitizer $SANITIZER"
+    fi
     ./run.sh build $OPT --notest
     if [ $? -ne 0 ]; then
         echo "ERROR: build rdsn failed"
