@@ -87,7 +87,9 @@ TEST(string_conv, buf2int32)
     ASSERT_FALSE(dsn::buf2int32(std::to_string(std::numeric_limits<int64_t>::min()), result));
     ASSERT_FALSE(dsn::buf2int32(std::to_string(std::numeric_limits<uint64_t>::max()), result));
 
-    std::string str("123\0456", 7);
+    // "\045" is "%", so the string length=5, otherwise(2th argument > 5) it will be reported
+    // "global-buffer-overflow" error under AddressSanitizer check
+    std::string str("123\0456", 5);
     ASSERT_TRUE(dsn::buf2int32(dsn::string_view(str.data(), 2), result));
     ASSERT_EQ(result, 12);
     ASSERT_TRUE(dsn::buf2int32(dsn::string_view(str.data(), 3), result));
@@ -132,7 +134,9 @@ TEST(string_conv, buf2int64)
 
     ASSERT_FALSE(dsn::buf2int64(std::to_string(std::numeric_limits<uint64_t>::max()), result));
 
-    std::string str("123\0456", 7);
+    // "\045" is "%", so the string length=5, otherwise(2th argument > 5) it will be reported
+    // "global-buffer-overflow" error under AddressSanitizer check
+    std::string str("123\0456", 5);
     ASSERT_TRUE(dsn::buf2int64(dsn::string_view(str.data(), 2), result));
     ASSERT_EQ(result, 12);
     ASSERT_TRUE(dsn::buf2int64(dsn::string_view(str.data(), 3), result));
@@ -174,7 +178,9 @@ TEST(string_conv, buf2uint64)
     ASSERT_TRUE(dsn::buf2uint64(std::to_string(std::numeric_limits<uint64_t>::min()), result));
     ASSERT_EQ(result, std::numeric_limits<uint64_t>::min());
 
-    std::string str("123\0456", 7);
+    // "\045" is "%", so the string length=5, otherwise(2th argument > 5) it will be reported
+    // "global-buffer-overflow" error under AddressSanitizer check
+    std::string str("123\0456", 5);
     ASSERT_TRUE(dsn::buf2uint64(dsn::string_view(str.data(), 2), result));
     ASSERT_EQ(result, 12);
     ASSERT_TRUE(dsn::buf2uint64(dsn::string_view(str.data(), 3), result));
