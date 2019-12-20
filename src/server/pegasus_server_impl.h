@@ -364,6 +364,7 @@ private:
     ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
     ::dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
     ::dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
+    ::dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
 };
 
 } // namespace server
