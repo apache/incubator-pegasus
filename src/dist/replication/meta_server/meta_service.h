@@ -48,7 +48,6 @@
 #include "dist/replication/meta_server/meta_state_service_utils.h"
 #include "dist/replication/common/block_service_manager.h"
 
-class meta_service_test_app;
 namespace dsn {
 namespace replication {
 
@@ -198,7 +197,7 @@ private:
 private:
     friend class replication_checker;
     friend class test::test_checker;
-    friend class ::meta_service_test_app;
+    friend class meta_service_test_app;
 
     replication_options _opts;
     meta_options _meta_opts;
@@ -217,6 +216,7 @@ private:
     friend class meta_test_base;
     friend class meta_duplication_service;
     friend class meta_http_service_test;
+    friend class meta_load_balance_test;
     friend class meta_backup_test_base;
     friend class meta_http_service;
     std::unique_ptr<meta_duplication_service> _dup_svc;

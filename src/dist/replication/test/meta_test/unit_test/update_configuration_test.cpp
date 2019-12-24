@@ -12,7 +12,8 @@
 
 #include "meta_service_test_app.h"
 
-using namespace dsn::replication;
+namespace dsn {
+namespace replication {
 
 class fake_sender_meta_service : public dsn::replication::meta_service
 {
@@ -479,3 +480,5 @@ void meta_service_test_app::cannot_run_balancer_test()
     the_app->status = dsn::app_status::AS_AVAILABLE;
     ASSERT_TRUE(svc->_state->can_run_balancer());
 }
+} // namespace replication
+} // namespace dsn

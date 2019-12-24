@@ -6,8 +6,8 @@
 #include "meta_service_test_app.h"
 #include "../misc/misc.h"
 
-using namespace ::dsn::replication;
-using namespace dsn;
+namespace dsn {
+namespace replication {
 
 struct method_record
 {
@@ -24,6 +24,7 @@ class mock_base
 {
 public:
     void reset_records() { _records.clear(); }
+
 protected:
     std::map<std::string, method_record> _records;
 };
@@ -722,3 +723,5 @@ void meta_service_test_app::backup_service_test()
         ASSERT_TRUE(p.policy_name == test_policy_name);
     }
 }
+} // namespace replication
+} // namespace dsn

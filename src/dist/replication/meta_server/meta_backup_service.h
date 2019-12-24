@@ -11,8 +11,6 @@
 
 #include "meta_data.h"
 
-class meta_service_test_app;
-
 namespace dsn {
 namespace replication {
 
@@ -352,7 +350,7 @@ private:
     bool is_valid_policy_name_unlocked(const std::string &policy_name);
 
 private:
-    friend class ::meta_service_test_app;
+    friend class meta_service_test_app;
 
     policy_factory _factory;
     meta_service *_meta_svc;
@@ -372,5 +370,5 @@ private:
     std::atomic_bool _in_initialize;
     dsn::task_tracker _tracker;
 };
-}
-} // namespace
+} // namespace replication
+} // namespace dsn

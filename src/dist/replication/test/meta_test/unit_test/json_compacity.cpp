@@ -8,6 +8,9 @@
 #include "dist/replication/meta_server/meta_backup_service.h"
 #include "meta_service_test_app.h"
 
+namespace dsn {
+namespace replication {
+
 void meta_service_test_app::json_compacity()
 {
     dsn::app_info info;
@@ -131,3 +134,6 @@ void meta_service_test_app::json_compacity()
     ASSERT_EQ(app_names, binfo.app_names);
     ASSERT_EQ(1, binfo.info_status);
 }
+
+} // namespace replication
+} // namespace dsn

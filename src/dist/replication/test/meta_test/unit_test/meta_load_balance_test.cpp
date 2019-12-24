@@ -11,9 +11,11 @@
 #include "dist/replication/meta_server/meta_server_failure_detector.h"
 #include "dist/replication/meta_server/greedy_load_balancer.h"
 #include "dist/replication/test/meta_test/misc/misc.h"
+#include "dist/replication/test/meta_test/unit_test/meta_test_base.h"
 #include "meta_service_test_app.h"
 
-using namespace dsn::replication;
+namespace dsn {
+namespace replication {
 
 typedef std::shared_ptr<configuration_update_request> cur_ptr;
 
@@ -62,11 +64,37 @@ static auto default_filter = [](const dsn::rpc_address &target, dsn::message_ex 
     return update_req;
 };
 
+class meta_load_balance_test : public meta_test_base
+{
+public:
+    void simple_lb_cure_test();
+    void simple_lb_balanced_cure();
+    void simple_lb_from_proposal_test();
+    void simple_lb_collect_replica();
+    void simple_lb_construct_replica();
+
+    void call_update_configuration(
+        meta_service *svc, std::shared_ptr<dsn::replication::configuration_update_request> &request)
+    {
+        dsn::message_ex *fake_request =
+            dsn::message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
+        ::dsn::marshall(fake_request, *request);
+        fake_request->add_ref();
+
+        dsn::tasking::enqueue(
+            LPC_META_STATE_HIGH,
+            nullptr,
+            std::bind(
+                &server_state::on_update_configuration, svc->_state.get(), request, fake_request),
+            server_state::sStateHash);
+    }
+};
+
 class message_filter : public dsn::replication::meta_service
 {
 public:
     typedef std::function<cur_ptr(const dsn::rpc_address &target, dsn::message_ex *request)> filter;
-    message_filter(meta_service_test_app *app) : meta_service(), _app(app) {}
+    message_filter(meta_load_balance_test *app) : meta_service(), _app(app) {}
     void set_filter(const filter &f) { _filter = f; }
     virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override {}
     virtual void send_message(const dsn::rpc_address &target, dsn::message_ex *request) override
@@ -81,11 +109,11 @@ public:
     }
 
 private:
-    meta_service_test_app *_app;
+    meta_load_balance_test *_app;
     filter _filter;
 };
 
-void meta_service_test_app::simple_lb_cure_test()
+void meta_load_balance_test::simple_lb_cure_test()
 {
     dsn::error_code ec;
     dsn::task_ptr t;
@@ -687,7 +715,7 @@ static void check_nodes_loads(node_mapper &nodes)
     ASSERT_TRUE(max_partitions - min_partitions <= 1);
 }
 
-void meta_service_test_app::simple_lb_balanced_cure()
+void meta_load_balance_test::simple_lb_balanced_cure()
 {
     std::vector<dsn::rpc_address> node_list;
     generate_node_list(node_list, 20, 100);
@@ -739,7 +767,7 @@ void meta_service_test_app::simple_lb_balanced_cure()
     }
 }
 
-void meta_service_test_app::simple_lb_from_proposal_test()
+void meta_load_balance_test::simple_lb_from_proposal_test()
 {
     class simple_balancer_for_test : public simple_load_balancer
     {
@@ -889,7 +917,7 @@ static bool vec_equal(const std::vector<dropped_replica> &vec1,
     return true;
 }
 
-void meta_service_test_app::simple_lb_collect_replica()
+void meta_load_balance_test::simple_lb_collect_replica()
 {
     app_mapper app;
     node_mapper nodes;
@@ -1135,7 +1163,7 @@ void meta_service_test_app::simple_lb_collect_replica()
 #undef CLEAR_DROP_LIST
 }
 
-void meta_service_test_app::simple_lb_construct_replica()
+void meta_load_balance_test::simple_lb_construct_replica()
 {
     app_mapper app;
     node_mapper nodes;
@@ -1252,3 +1280,16 @@ void meta_service_test_app::simple_lb_construct_replica()
         ASSERT_EQ(2, cc.prefered_dropped);
     }
 }
+
+TEST_F(meta_load_balance_test, simple_lb_balanced_cure) { simple_lb_balanced_cure(); }
+
+TEST_F(meta_load_balance_test, simple_lb_cure_test) { simple_lb_cure_test(); }
+
+TEST_F(meta_load_balance_test, simple_lb_from_proposal_test) { simple_lb_from_proposal_test(); }
+
+TEST_F(meta_load_balance_test, simple_lb_collect_replica) { simple_lb_collect_replica(); }
+
+TEST_F(meta_load_balance_test, simple_lb_construct_replica) { simple_lb_construct_replica(); }
+
+} // namespace replication
+} // namespace dsn

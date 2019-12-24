@@ -6,7 +6,8 @@
 
 #include "meta_service_test_app.h"
 
-using namespace ::dsn::replication;
+namespace dsn {
+namespace replication {
 
 static const std::vector<std::string> keys = {
     "p1.k1", "p1.k2", "p1.k3", "p2.k1", "p2.k2", "p2.k3", "p3.k1", "p3.k2", "p3.k3"};
@@ -164,3 +165,5 @@ void meta_service_test_app::app_envs_basic_test()
         }
     }
 }
+} // namespace replication
+} // namespace dsn

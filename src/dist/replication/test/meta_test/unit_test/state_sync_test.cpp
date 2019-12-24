@@ -13,7 +13,8 @@
 
 #include "meta_service_test_app.h"
 
-using namespace dsn::replication;
+namespace dsn {
+namespace replication {
 
 static void random_assign_partition_config(std::shared_ptr<app_state> &app,
                                            const std::vector<dsn::rpc_address> &server_list,
@@ -397,3 +398,5 @@ void meta_service_test_app::construct_apps_test()
         i++;
     }
 }
+} // namespace replication
+} // namespace dsn

@@ -15,8 +15,8 @@
 
 #include "meta_service_test_app.h"
 
-using namespace dsn;
-using namespace dsn::replication;
+namespace dsn {
+namespace replication {
 
 #ifdef ASSERT_EQ
 #undef ASSERT_EQ
@@ -335,3 +335,5 @@ void meta_service_test_app::balance_config_file()
         }
     }
 }
+} // namespace replication
+} // namespace dsn

@@ -13,8 +13,8 @@
 
 #include "meta_service_test_app.h"
 
-using namespace dsn;
-using namespace dsn::replication;
+namespace dsn {
+namespace replication {
 
 inline void test_logger(const char *str)
 {
@@ -358,3 +358,5 @@ void meta_service_test_app::data_definition_op_test()
         ASSERT_EQ(recall_response.err, dsn::ERR_APP_NOT_EXIST);
     }
 }
+} // namespace replication
+} // namespace dsn

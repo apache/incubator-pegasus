@@ -1593,5 +1593,5 @@ std::string backup_service::get_backup_path(const std::string &policy_name, int6
     ss << _policy_meta_root << "/" << policy_name << "/" << backup_id;
     return ss.str();
 }
-}
-}
+} // namespace replication
+} // namespace dsn

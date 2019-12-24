@@ -9,11 +9,15 @@
 
 #include "meta_service_test_app.h"
 
+int gtest_flags = 0;
+int gtest_ret = 0;
+
+namespace dsn {
+namespace replication {
+
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_META_TEST)
 DEFINE_TASK_CODE(TASK_META_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_META_TEST)
 
-int gtest_flags = 0;
-int gtest_ret = 0;
 meta_service_test_app *g_app;
 
 // as it is not easy to clean test environment in some cases, we simply run these tests in several
@@ -42,16 +46,6 @@ TEST(meta, cannot_run_balancer_test) { g_app->cannot_run_balancer_test(); }
 TEST(meta, construct_apps_test) { g_app->construct_apps_test(); }
 
 TEST(meta, balance_config_file) { g_app->balance_config_file(); }
-
-TEST(meta, simple_lb_balanced_cure) { g_app->simple_lb_balanced_cure(); }
-
-TEST(meta, simple_lb_cure_test) { g_app->simple_lb_cure_test(); }
-
-TEST(meta, simple_lb_from_proposal_test) { g_app->simple_lb_from_proposal_test(); }
-
-TEST(meta, simple_lb_collect_replica) { g_app->simple_lb_collect_replica(); }
-
-TEST(meta, simple_lb_construct_replica) { g_app->simple_lb_construct_replica(); }
 
 TEST(meta, json_compacity) { g_app->json_compacity(); }
 
@@ -85,9 +79,12 @@ dsn::error_code meta_service_test_app::start(const std::vector<std::string> &arg
     return dsn::ERR_OK;
 }
 
+} // namespace replication
+} // namespace dsn
+
 GTEST_API_ int main(int argc, char **argv)
 {
-    dsn::service_app::register_factory<meta_service_test_app>("test_meta");
+    dsn::service_app::register_factory<dsn::replication::meta_service_test_app>("test_meta");
     dsn::service::meta_service_app::register_all();
     if (argc < 2)
         dassert(dsn_run_config("config-test.ini", false), "");
