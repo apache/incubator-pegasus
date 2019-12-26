@@ -6,6 +6,8 @@
 #include <gtest/gtest.h>
 
 #include "dist/http/http_message_parser.h"
+#include "dist/http/root_http_service.h"
+#include "dist/http/server_info_http_services.h"
 
 namespace dsn {
 
@@ -40,6 +42,26 @@ TEST(http_server, parse_url)
             ASSERT_EQ(res.get_error().code(), tt.err);
         }
     }
+}
+
+TEST(root_http_service_test, get_help)
+{
+    http_server server(false);
+    auto root = new root_http_service(&server);
+    server.add_service(root);
+    ASSERT_EQ(server.get_help().size(), 1);
+
+    http_request req;
+    http_response resp;
+    root->default_handler(req, resp);
+    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\"}\n");
+
+    auto ver = new version_http_service();
+    server.add_service(ver);
+    ASSERT_EQ(server.get_help().size(), 2);
+    root->default_handler(req, resp);
+    ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\",\"/version\":\"ip:port/version\"}\n");
 }
 
 class http_message_parser_test : public testing::Test

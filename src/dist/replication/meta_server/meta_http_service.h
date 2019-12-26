@@ -17,42 +17,42 @@ class meta_http_service : public http_service
 public:
     explicit meta_http_service(meta_service *s) : _service(s)
     {
-        // GET ip:port/meta/app?app_name=temp
         register_handler("app",
                          std::bind(&meta_http_service::get_app_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
-        // GET ip:port/meta/apps
+                                   std::placeholders::_2),
+                         "ip:port/meta/app?app_name=temp");
         register_handler("apps",
                          std::bind(&meta_http_service::list_app_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
-        // GET ip:port/meta/nodes
+                                   std::placeholders::_2),
+                         "ip:port/meta/apps");
         register_handler("nodes",
                          std::bind(&meta_http_service::list_node_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
-        // GET ip:port/meta/cluster
+                                   std::placeholders::_2),
+                         "ip:port/meta/nodes");
         register_handler("cluster",
                          std::bind(&meta_http_service::get_cluster_info_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
-        // GET ip:port/meta/app_envs?name=temp
+                                   std::placeholders::_2),
+                         "ip:port/meta/cluster");
         register_handler("app_envs",
                          std::bind(&meta_http_service::get_app_envs_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
-        // GET ip:port/meta/backup_policy
+                                   std::placeholders::_2),
+                         "ip:port/meta/app_envs?name=temp");
         register_handler("backup_policy",
                          std::bind(&meta_http_service::query_backup_policy_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
+                                   std::placeholders::_2),
+                         "ip:port/meta/backup_policy");
     }
 
     std::string path() const override { return "meta"; }

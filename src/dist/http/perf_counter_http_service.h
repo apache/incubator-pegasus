@@ -13,12 +13,12 @@ class perf_counter_http_service : public http_service
 public:
     perf_counter_http_service()
     {
-        // GET ip:port/perfCounter?name={perf_counter_name}
         register_handler("",
                          std::bind(&perf_counter_http_service::get_perf_counter_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
+                                   std::placeholders::_2),
+                         "ip:port/perfCounter?name={perf_counter_name}");
     }
 
     std::string path() const override { return "perfCounter"; }

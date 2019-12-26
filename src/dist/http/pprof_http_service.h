@@ -15,40 +15,36 @@ class pprof_http_service : public http_service
 public:
     pprof_http_service()
     {
-        // ip:port/pprof/heap
         register_handler("heap",
                          std::bind(&pprof_http_service::heap_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
-
-        // ip:port/pprof/symbol
+                                   std::placeholders::_2),
+                         "ip:port/pprof/heap");
         register_handler("symbol",
                          std::bind(&pprof_http_service::symbol_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
-
-        // ip:port/pprof/cmdline
+                                   std::placeholders::_2),
+                         "ip:port/pprof/symbol");
         register_handler("cmdline",
                          std::bind(&pprof_http_service::cmdline_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
-
-        // ip:port/pprof/growth
+                                   std::placeholders::_2),
+                         "ip:port/pprof/cmdline");
         register_handler("growth",
                          std::bind(&pprof_http_service::growth_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
-
-        // ip:port/pprof/profile
+                                   std::placeholders::_2),
+                         "ip:port/pprof/growth");
         register_handler("profile",
                          std::bind(&pprof_http_service::profile_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
+                                   std::placeholders::_2),
+                         "ip:port/pprof/profile");
     }
 
     std::string path() const override { return "pprof"; }

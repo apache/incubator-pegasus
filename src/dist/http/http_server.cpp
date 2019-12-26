@@ -34,14 +34,18 @@ namespace dsn {
     }
 }
 
-http_server::http_server() : serverlet<http_server>("http_server")
+http_server::http_server(bool start /*default=true*/) : serverlet<http_server>("http_server")
 {
+    if (!start) {
+        return;
+    }
+
     register_rpc_handler(RPC_HTTP_SERVICE, "http_service", &http_server::serve);
 
     tools::register_message_header_parser<http_message_parser>(NET_HDR_HTTP, {"GET ", "POST"});
 
     // add builtin services
-    add_service(new root_http_service());
+    add_service(new root_http_service(this));
 
 #ifdef DSN_ENABLE_GPERF
     add_service(new pprof_http_service());

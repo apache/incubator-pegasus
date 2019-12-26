@@ -13,12 +13,12 @@ class version_http_service : public http_service
 public:
     version_http_service()
     {
-        // GET ip:port/version
         register_handler("",
                          std::bind(&version_http_service::get_version_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
+                                   std::placeholders::_2),
+                         "ip:port/version");
     }
 
     std::string path() const override { return "version"; }
@@ -39,12 +39,12 @@ class recent_start_time_http_service : public http_service
 public:
     recent_start_time_http_service()
     {
-        // GET ip:port/recentStartTime
         register_handler("",
                          std::bind(&recent_start_time_http_service::get_recent_start_time_handler,
                                    this,
                                    std::placeholders::_1,
-                                   std::placeholders::_2));
+                                   std::placeholders::_2),
+                         "ip:port/recentStartTime");
     }
 
     std::string path() const override { return "recentStartTime"; }
