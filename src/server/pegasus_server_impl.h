@@ -155,6 +155,7 @@ public:
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
+    friend class pegasus_server_impl_test;
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
@@ -224,6 +225,8 @@ private:
 
     void update_checkpoint_reserve(const std::map<std::string, std::string> &envs);
 
+    void update_slow_query_threshold(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -262,17 +265,46 @@ private:
             _pegasus_data_version, epoch_now, utils::to_string_view(raw_value));
     }
 
+    bool is_multi_get_abnormal(uint64_t time_used, uint64_t size, uint64_t iterate_count)
+    {
+        if (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) {
+            return true;
+        }
+        if (_abnormal_multi_get_iterate_count_threshold &&
+            iterate_count >= _abnormal_multi_get_iterate_count_threshold) {
+            return true;
+        }
+        if (time_used >= _slow_query_threshold_ns) {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
+    {
+        if (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) {
+            return true;
+        }
+        if (time_used >= _slow_query_threshold_ns) {
+            return true;
+        }
+
+        return false;
+    }
+
 private:
     static const std::string COMPRESSION_HEADER;
 
     dsn::gpid _gpid;
     std::string _primary_address;
     bool _verbose_log;
-    uint64_t _abnormal_get_time_threshold_ns;
     uint64_t _abnormal_get_size_threshold;
-    uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
+    // slow query time threshold. exceed this threshold will be logged.
+    uint64_t _slow_query_threshold_ns;
+    uint64_t _slow_query_threshold_ns_in_config;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
@@ -332,6 +364,7 @@ private:
     ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
     ::dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
     ::dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
+    ::dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
 };
 
 } // namespace server

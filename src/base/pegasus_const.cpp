@@ -66,4 +66,7 @@ const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS("rocksdb.checkpoint.res
 
 /// read cluster meta address from this section
 const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
+
+/// table level slow query
+const std::string ROCKSDB_ENV_SLOW_QUERY_THRESHOLD("replica.slow_query_threshold");
 } // namespace pegasus

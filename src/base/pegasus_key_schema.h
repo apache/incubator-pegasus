@@ -81,7 +81,7 @@ void pegasus_generate_next_blob(::dsn::blob &next, const T &hash_key, const T &s
     next = buf.range(0, p - (unsigned char *)(buf.data()) + 1);
 }
 
-// restore hash_key and sort_key from rocksdb value.
+// restore hash_key and sort_key from rocksdb key.
 // no data copied.
 inline void
 pegasus_restore_key(const ::dsn::blob &key, ::dsn::blob &hash_key, ::dsn::blob &sort_key)
@@ -106,7 +106,7 @@ pegasus_restore_key(const ::dsn::blob &key, ::dsn::blob &hash_key, ::dsn::blob &
     }
 }
 
-// restore hash_key and sort_key from rocksdb value.
+// restore hash_key and sort_key from rocksdb key.
 // data is copied into output 'hash_key' and 'sort_key'.
 inline void
 pegasus_restore_key(const ::dsn::blob &key, std::string &hash_key, std::string &sort_key)

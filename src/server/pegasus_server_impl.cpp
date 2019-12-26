@@ -20,6 +20,7 @@
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
 #include "capacity_unit_calculator.h"
+#include "hashkey_transform.h"
 #include "pegasus_event_listener.h"
 #include "pegasus_server_write.h"
 
@@ -64,21 +65,18 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                              "rocksdb_verbose_log",
                                              false,
                                              "whether to print verbose log for debugging");
-    _abnormal_get_time_threshold_ns = dsn_config_get_value_uint64(
+    _slow_query_threshold_ns_in_config = dsn_config_get_value_uint64(
         "pegasus.server",
-        "rocksdb_abnormal_get_time_threshold_ns",
+        "rocksdb_slow_query_threshold_ns",
         100000000,
-        "get operation duration exceed this threshold will be logged, 0 means no check");
+        "get/multi-get operation duration exceed this threshold will be logged");
+    _slow_query_threshold_ns = _slow_query_threshold_ns_in_config;
+    dassert(_slow_query_threshold_ns > 0, "slow query threshold must be greater than 0");
     _abnormal_get_size_threshold = dsn_config_get_value_uint64(
         "pegasus.server",
         "rocksdb_abnormal_get_size_threshold",
         1000000,
         "get operation value size exceed this threshold will be logged, 0 means no check");
-    _abnormal_multi_get_time_threshold_ns = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_abnormal_multi_get_time_threshold_ns",
-        100000000,
-        "multi-get operation duration exceed this threshold will be logged, 0 means no check");
     _abnormal_multi_get_size_threshold =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_abnormal_multi_get_size_threshold",
@@ -213,11 +211,25 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         _tbl_opts.block_cache = _block_cache;
     }
 
-    if (!dsn_config_get_value_bool("pegasus.server",
-                                   "rocksdb_disable_bloom_filter",
-                                   false,
-                                   "rocksdb tbl_opts.filter_policy")) {
+    // Bloom filter configurations.
+    bool disable_bloom_filter = dsn_config_get_value_bool(
+        "pegasus.server", "rocksdb_disable_bloom_filter", false, "Whether to disable bloom filter");
+    if (!disable_bloom_filter) {
         _tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+
+        std::string filter_type =
+            dsn_config_get_value_string("pegasus.server",
+                                        "rocksdb_filter_type",
+                                        "prefix",
+                                        "Bloom filter type, should be either 'common' or 'prefix'");
+        dassert(filter_type == "common" || filter_type == "prefix",
+                "[pegasus.server]rocksdb_filter_type should be either 'common' or 'prefix'.");
+        if (filter_type == "prefix") {
+            _db_opts.prefix_extractor.reset(new HashkeyTransform());
+            _db_opts.memtable_prefix_bloom_size_ratio = 0.1;
+
+            _rd_opts.prefix_same_as_start = true;
+        }
     }
 
     _db_opts.table_factory.reset(NewBlockBasedTableFactory(_tbl_opts));
@@ -341,6 +353,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     snprintf(name, 255, "rdb.memtable.memory_usage@%s", str_gpid.c_str());
     _pfc_rdb_memtable_mem_usage.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
+
+    snprintf(name, 255, "rdb.estimate_num_keys@%s", str_gpid.c_str());
+    _pfc_rdb_estimate_num_keys.init_app_counter(
+        "app.pegasus",
+        name,
+        COUNTER_TYPE_NUMBER,
+        "statistics the estimated number of keys inside the rocksdb");
 }
 
 void pegasus_server_impl::parse_checkpoints()
@@ -568,24 +587,26 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         }
     }
 
-    if (_abnormal_get_time_threshold_ns || _abnormal_get_size_threshold) {
-        uint64_t time_used = dsn_now_ns() - start_time;
-        if ((_abnormal_get_time_threshold_ns && time_used >= _abnormal_get_time_threshold_ns) ||
-            (_abnormal_get_size_threshold && value.size() >= _abnormal_get_size_threshold)) {
-            ::dsn::blob hash_key, sort_key;
-            pegasus_restore_key(key, hash_key, sort_key);
-            dwarn("%s: rocksdb abnormal get from %s: "
-                  "hash_key = \"%s\", sort_key = \"%s\", return = %s, "
-                  "value_size = %d, time_used = %" PRIu64 " ns",
-                  replica_name(),
-                  reply.to_address().to_string(),
-                  ::pegasus::utils::c_escape_string(hash_key).c_str(),
-                  ::pegasus::utils::c_escape_string(sort_key).c_str(),
-                  status.ToString().c_str(),
-                  (int)value.size(),
-                  time_used);
-            _pfc_recent_abnormal_count->increment();
-        }
+#ifdef PEGASUS_UNIT_TEST
+    // sleep 10ms for unit test,
+    // so when we set slow_query_threshold <= 10ms, it will be a slow query
+    usleep(10 * 1000);
+#endif
+
+    uint64_t time_used = dsn_now_ns() - start_time;
+    if (is_get_abnormal(time_used, value.size())) {
+        ::dsn::blob hash_key, sort_key;
+        pegasus_restore_key(key, hash_key, sort_key);
+        dwarn_replica("rocksdb abnormal get from {}: "
+                      "hash_key = {}, sort_key = {}, return = {}, "
+                      "value_size = {}, time_used = {} ns",
+                      reply.to_address().to_string(),
+                      ::pegasus::utils::c_escape_string(hash_key),
+                      ::pegasus::utils::c_escape_string(sort_key),
+                      status.ToString(),
+                      value.size(),
+                      time_used);
+        _pfc_recent_abnormal_count->increment();
     }
 
     resp.error = status.code();
@@ -702,9 +723,10 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             return;
         }
 
-        std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(_rd_opts));
+        std::unique_ptr<rocksdb::Iterator> it;
         bool complete = false;
         if (!request.reverse) {
+            it.reset(_db->NewIterator(_rd_opts));
             it->Seek(start);
             bool first_exclusive = !start_inclusive;
             while (count < max_kv_count && size < max_kv_size && it->Valid()) {
@@ -755,6 +777,18 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 it->Next();
             }
         } else { // reverse
+            rocksdb::ReadOptions rd_opts(_rd_opts);
+            if (_db_opts.prefix_extractor) {
+                // NOTE: Prefix bloom filter is not supported in reverse seek mode (see
+                // https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#limitation for
+                // more details), and we have to do total order seek on rocksdb which might be worse
+                // performance. However we consider that reverse scan is a rare use case, and if
+                // your workload has many reverse scans, you'd better use 'common' bloom filter (by
+                // set [pegasus.server]rocksdb_filter_type to 'common').
+                rd_opts.total_order_seek = true;
+                rd_opts.prefix_same_as_start = false;
+            }
+            it.reset(_db->NewIterator(rd_opts));
             it->SeekForPrev(stop);
             bool first_exclusive = !stop_inclusive;
             std::vector<::dsn::apps::key_value> reverse_kvs;
@@ -923,42 +957,38 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         }
     }
 
-    if (_abnormal_multi_get_time_threshold_ns || _abnormal_multi_get_size_threshold ||
-        _abnormal_multi_get_iterate_count_threshold) {
-        uint64_t time_used = dsn_now_ns() - start_time;
-        if ((_abnormal_multi_get_time_threshold_ns &&
-             time_used >= _abnormal_multi_get_time_threshold_ns) ||
-            (_abnormal_multi_get_size_threshold &&
-             (uint64_t)size >= _abnormal_multi_get_size_threshold) ||
-            (_abnormal_multi_get_iterate_count_threshold &&
-             (uint64_t)iterate_count >= _abnormal_multi_get_iterate_count_threshold)) {
-            dwarn("%s: rocksdb abnormal multi_get from %s: hash_key = \"%s\", "
-                  "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
-                  "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
-                  "max_kv_count = %d, max_kv_size = %d, reverse = %s, "
-                  "result_count = %d, result_size = %" PRId64 ", iterate_count = %d, "
-                  "expire_count = %d, filter_count = %d, time_used = %" PRIu64 " ns",
-                  replica_name(),
-                  reply.to_address().to_string(),
-                  ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
-                  ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
-                  request.start_inclusive ? "inclusive" : "exclusive",
-                  ::pegasus::utils::c_escape_string(request.stop_sortkey).c_str(),
-                  request.stop_inclusive ? "inclusive" : "exclusive",
-                  ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
-                      ->second,
-                  ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
-                  request.max_kv_count,
-                  request.max_kv_size,
-                  request.reverse ? "true" : "false",
-                  count,
-                  size,
-                  iterate_count,
-                  expire_count,
-                  filter_count,
-                  time_used);
-            _pfc_recent_abnormal_count->increment();
-        }
+#ifdef PEGASUS_UNIT_TEST
+    // sleep 10ms for unit test
+    usleep(10 * 1000);
+#endif
+
+    uint64_t time_used = dsn_now_ns() - start_time;
+    if (is_multi_get_abnormal(time_used, size, iterate_count)) {
+        dwarn_replica(
+            "rocksdb abnormal multi_get from {}: hash_key = {}, "
+            "start_sort_key = {} ({}), stop_sort_key = {} ({}), "
+            "sort_key_filter_type = {}, sort_key_filter_pattern = {}, "
+            "max_kv_count = {}, max_kv_size = {}, reverse = {}, "
+            "result_count = {}, result_size = {}, iterate_count = {}, "
+            "expire_count = {}, filter_count = {}, time_used = {} ns",
+            reply.to_address().to_string(),
+            ::pegasus::utils::c_escape_string(request.hash_key),
+            ::pegasus::utils::c_escape_string(request.start_sortkey),
+            request.start_inclusive ? "inclusive" : "exclusive",
+            ::pegasus::utils::c_escape_string(request.stop_sortkey),
+            request.stop_inclusive ? "inclusive" : "exclusive",
+            ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)->second,
+            ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern),
+            request.max_kv_count,
+            request.max_kv_size,
+            request.reverse ? "true" : "false",
+            count,
+            size,
+            iterate_count,
+            expire_count,
+            filter_count,
+            time_used);
+        _pfc_recent_abnormal_count->increment();
     }
 
     if (expire_count > 0) {
@@ -1138,6 +1168,17 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         return;
     }
 
+    rocksdb::ReadOptions rd_opts(_rd_opts);
+    if (_db_opts.prefix_extractor) {
+        ::dsn::blob start_hash_key, tmp;
+        pegasus_restore_key(request.start_key, start_hash_key, tmp);
+        if (start_hash_key.size() == 0) {
+            // hash_key is not passed, only happened when do full scan (scanners got by
+            // get_unordered_scanners) on a partition, we have to do total order seek on rocksDB.
+            rd_opts.total_order_seek = true;
+            rd_opts.prefix_same_as_start = false;
+        }
+    }
     bool start_inclusive = request.start_inclusive;
     bool stop_inclusive = request.stop_inclusive;
     rocksdb::Slice start(request.start_key.data(), request.start_key.length());
@@ -1154,6 +1195,12 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         if (prefix_start.compare(start) > 0) {
             start = prefix_start;
             start_inclusive = true;
+            // Now 'start' is generated by 'request.hash_key_filter_pattern', it may be not a real
+            // hashkey, we should not seek this prefix by prefix bloom filter. However, it only
+            // happen when do full scan (scanners got by get_unordered_scanners), in which case the
+            // following flags has been updated.
+            dassert(!_db_opts.prefix_extractor || rd_opts.total_order_seek, "Invalid option");
+            dassert(!_db_opts.prefix_extractor || !rd_opts.prefix_same_as_start, "Invalid option");
         }
     }
 
@@ -1178,7 +1225,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         return;
     }
 
-    std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(_rd_opts));
+    std::unique_ptr<rocksdb::Iterator> it(_db->NewIterator(rd_opts));
     it->Seek(start);
     bool complete = false;
     bool first_exclusive = !start_inclusive;
@@ -2247,6 +2294,14 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         _pfc_rdb_memtable_mem_usage->set(val);
         dinfo_replica("_pfc_rdb_memtable_mem_usage: {} bytes", val);
     }
+
+    // for the same n kv pairs, kEstimateNumKeys will be counted n times, you need compaction to
+    // remove duplicate
+    if (_db->GetProperty(rocksdb::DB::Properties::kEstimateNumKeys, &str_val) &&
+        dsn::buf2uint64(str_val, val)) {
+        _pfc_rdb_estimate_num_keys->set(val);
+        dinfo_replica("_pfc_rdb_estimate_num_keys: {}", val);
+    }
 }
 
 void pegasus_server_impl::update_server_rocksdb_statistics()
@@ -2305,6 +2360,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_usage_scenario(envs);
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
+    update_slow_query_threshold(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2314,6 +2370,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     // we do not update usage scenario because it depends on opened db.
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
+    update_slow_query_threshold(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2392,6 +2449,31 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
                        _checkpoint_reserve_time_seconds,
                        time);
         _checkpoint_reserve_time_seconds = time;
+    }
+}
+
+void pegasus_server_impl::update_slow_query_threshold(
+    const std::map<std::string, std::string> &envs)
+{
+    uint64_t threshold_ns = _slow_query_threshold_ns_in_config;
+    auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
+    if (find != envs.end()) {
+        // get slow query from env(the unit of slow query from env is ms)
+        uint64_t threshold_ms;
+        if (!dsn::buf2uint64(find->second, threshold_ms) || threshold_ms <= 0) {
+            derror_replica("{}={} is invalid.", find->first, find->second);
+            return;
+        }
+        threshold_ns = threshold_ms * 1e6;
+    }
+
+    // check if they are changed
+    if (_slow_query_threshold_ns != threshold_ns) {
+        ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
+                       ROCKSDB_ENV_SLOW_QUERY_THRESHOLD,
+                       _slow_query_threshold_ns,
+                       threshold_ns);
+        _slow_query_threshold_ns = threshold_ns;
     }
 }
 

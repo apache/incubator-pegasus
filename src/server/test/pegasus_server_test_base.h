@@ -34,7 +34,7 @@ public:
 
     dsn::error_code start(const std::map<std::string, std::string> &envs = {})
     {
-        std::unique_ptr<char *[]> argvs = dsn::make_unique<char *[]>(envs.size() * 2);
+        std::unique_ptr<char *[]> argvs = dsn::make_unique<char *[]>(1 + envs.size() * 2);
         char **argv = argvs.get();
         int idx = 0;
         argv[idx++] = const_cast<char *>("unit_test_app");
