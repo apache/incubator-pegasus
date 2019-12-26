@@ -115,6 +115,16 @@ public:
 
     void as_secondary() { _config.status = partition_status::PS_SECONDARY; }
 
+    void mock_max_gced_decree(decree d) { _max_gced_decree = d; }
+
+    decree max_gced_decree_no_lock() const override
+    {
+        if (_max_gced_decree == (invalid_decree - 1)) {
+            // if the value is not fake, return the real value from replica.
+            return replica::max_gced_decree_no_lock();
+        }
+        return _max_gced_decree;
+    }
     /// helper functions
     void set_replica_config(replica_configuration &config) { _config = config; }
     void set_partition_status(partition_status::type status) { _config.status = status; }
@@ -122,6 +132,9 @@ public:
     void set_init_child_ballot(ballot b) { _child_init_ballot = b; }
     void set_last_committed_decree(decree d) { _prepare_list->reset(d); }
     prepare_list *get_plist() { return _prepare_list; }
+
+private:
+    decree _max_gced_decree{invalid_decree - 1};
 };
 typedef dsn::ref_ptr<mock_replica> mock_replica_ptr;
 
@@ -141,7 +154,7 @@ inline std::unique_ptr<mock_replica> create_mock_replica(replica_stub *stub,
 class mock_replica_stub : public replica_stub
 {
 public:
-    mock_replica_stub() : replica_stub() {}
+    mock_replica_stub() = default;
 
     ~mock_replica_stub() override = default;
 

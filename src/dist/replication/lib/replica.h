@@ -186,6 +186,10 @@ public:
     // routine for get extra envs from replica
     const std::map<std::string, std::string> &get_replica_extra_envs() const { return _extra_envs; }
 
+protected:
+    // this method is marked protected to enable us to mock it in unit tests.
+    virtual decree max_gced_decree_no_lock() const;
+
 private:
     // common helpers
     void init_state();
@@ -233,6 +237,17 @@ private:
                                                     uint64_t learn_signature);
     void notify_learn_completion();
     error_code apply_learned_state_from_private_log(learn_state &state);
+
+    // Gets the position where this round of the learning process should begin.
+    // This method is called on primary-side.
+    // TODO(wutao1): mark it const
+    decree get_learn_start_decree(const learn_request &req);
+
+    // This method differs with `_private_log->max_gced_decree()` in that
+    // it also takes `learn/` dir into account, since the learned logs are
+    // a part of plog as well.
+    // This method is called on learner-side.
+    decree get_max_gced_decree_for_learn() const;
 
     /////////////////////////////////////////////////////////////////
     // failure handling

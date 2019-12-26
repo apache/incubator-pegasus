@@ -217,6 +217,7 @@ bool potential_secondary_context::cleanup(bool force)
         learn_app_concurrent_count_increased = false;
     }
     learning_start_prepare_decree = invalid_decree;
+    first_learn_start_decree = invalid_decree;
     learning_status = learner_status::LearningInvalid;
     return true;
 }

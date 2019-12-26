@@ -77,6 +77,8 @@ struct replica_test_base : replica_stub_test_base
 
         return mu;
     }
+
+    gpid get_gpid() const { return _replica->get_gpid(); }
 };
 
 } // namespace replication

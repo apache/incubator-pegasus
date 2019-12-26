@@ -268,7 +268,7 @@ namespace replication {
 class mutation_log_test : public replica_test_base
 {
 public:
-    mutation_log_test() : gpid(_replica->get_gpid()) {}
+    mutation_log_test() = default;
 
     void SetUp() override
     {
@@ -285,7 +285,7 @@ public:
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
         mu->data.header.decree = d;
-        mu->data.header.pid = gpid;
+        mu->data.header.pid = get_gpid();
         mu->data.header.last_committed_decree = d - 1;
         mu->data.header.log_offset = 0;
 
@@ -312,8 +312,8 @@ public:
         std::vector<mutation_ptr> mutations;
 
         { // writing logs
-            mutation_log_ptr mlog =
-                new mutation_log_private(_log_dir, 1024, gpid, _replica.get(), 1024, 512, 10000);
+            mutation_log_ptr mlog = new mutation_log_private(
+                _log_dir, 1024, get_gpid(), _replica.get(), 1024, 512, 10000);
 
             EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
 
@@ -355,7 +355,7 @@ public:
 
         { // writing logs
             mutation_log_ptr mlog = new mutation_log_private(
-                _log_dir, private_log_file_size_mb, gpid, _replica.get(), 1024, 512, 10000);
+                _log_dir, private_log_file_size_mb, get_gpid(), _replica.get(), 1024, 512, 10000);
             EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
 
             for (int i = 0; i < num_entries; i++) {
@@ -367,7 +367,7 @@ public:
 
         { // reading logs
             mutation_log_ptr mlog =
-                new mutation_log_private(_log_dir, 4, gpid, _replica.get(), 1024, 512, 10000);
+                new mutation_log_private(_log_dir, 4, get_gpid(), _replica.get(), 1024, 512, 10000);
 
             std::vector<std::string> log_files;
             ASSERT_TRUE(utils::filesystem::get_subfiles(mlog->dir(), log_files, false));
@@ -391,8 +391,6 @@ public:
             ASSERT_GE(log_files.size(), 1);
         }
     }
-
-    const dsn::gpid gpid;
 };
 
 TEST_F(mutation_log_test, replay_single_file_1000) { test_replay_single_file(1000); }
@@ -414,7 +412,7 @@ TEST_F(mutation_log_test, open)
 
     { // writing logs
         mutation_log_ptr mlog =
-            new mutation_log_private(_log_dir, 4, gpid, _replica.get(), 1024, 512, 10000);
+            new mutation_log_private(_log_dir, 4, get_gpid(), _replica.get(), 1024, 512, 10000);
 
         EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
 
@@ -427,7 +425,7 @@ TEST_F(mutation_log_test, open)
 
     { // reading logs
         mutation_log_ptr mlog =
-            new mutation_log_private(_log_dir, 4, gpid, _replica.get(), 1024, 512, 10000);
+            new mutation_log_private(_log_dir, 4, get_gpid(), _replica.get(), 1024, 512, 10000);
 
         int mutation_index = -1;
         mlog->open(
