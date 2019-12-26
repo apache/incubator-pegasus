@@ -2604,14 +2604,6 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
                 boost::lexical_cast<std::string>(_db_opts.write_buffer_size);
             new_options["max_write_buffer_number"] =
                 boost::lexical_cast<std::string>(_db_opts.max_write_buffer_number);
-            new_options["use_direct_reads"] =
-                boost::lexical_cast<std::string>(_db_opts.use_direct_reads);
-            new_options["use_direct_io_for_flush_and_compaction"] =
-                boost::lexical_cast<std::string>(_db_opts.use_direct_io_for_flush_and_compaction);
-            new_options["compaction_readahead_size"] =
-                boost::lexical_cast<std::string>(_db_opts.compaction_readahead_size);
-            new_options["writable_file_max_buffer_size"] =
-                boost::lexical_cast<std::string>(_db_opts.writable_file_max_buffer_size);
         }
 
         if (usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_NORMAL) {
