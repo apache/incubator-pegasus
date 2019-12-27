@@ -252,6 +252,10 @@ func (call *PegasusRpcCall) Trace() string {
 		time.Since(call.OnRpcRecv)/time.Microsecond)
 }
 
+func (call *PegasusRpcCall) TilNow() time.Duration {
+	return time.Since(call.OnRpcCall)
+}
+
 func MarshallPegasusRpc(codec rpc.Codec, seqId int32, gpid *base.Gpid, args RpcRequestArgs, name string) (*PegasusRpcCall, error) {
 	rcall := &PegasusRpcCall{}
 	rcall.Args = args

@@ -25,6 +25,9 @@ const (
 	NodeTypeReplica NodeType = "replica"
 
 	kDialInterval = time.Second * 60
+
+	// RPC's latency higher than the threshold will be traced
+	kLatencyTracingThreshold = time.Second * 200
 )
 
 // NodeSession represents the network session to a node
@@ -317,7 +320,9 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 		case <-req.ch:
 			err = rcall.Err
 			result = rcall.Result
-			// TODO(wutao1): log.trace(rcall.Trace())
+			if rcall.TilNow() > kLatencyTracingThreshold {
+				n.logger.Println(rcall.Trace())
+			}
 			return
 		case <-ctxWithTomb.Done():
 			err = ctxWithTomb.Err()
