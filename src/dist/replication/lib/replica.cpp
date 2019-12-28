@@ -398,6 +398,10 @@ void replica::close()
 
     _counter_private_log_size.clear();
 
+    // duplication_impl may have ongoing tasks.
+    // release it before release replica.
+    _duplication_mgr.reset();
+
     ddebug("%s: replica closed, time_used = %" PRIu64 "ms", name(), dsn_now_ms() - start_time);
 }
 

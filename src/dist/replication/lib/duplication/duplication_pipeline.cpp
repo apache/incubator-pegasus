@@ -26,7 +26,16 @@ namespace replication {
 
 void load_mutation::run()
 {
-    // TBD
+    decree last_decree = _duplicator->progress().last_decree;
+    _start_decree = last_decree + 1;
+    if (_replica->private_log()->max_commit_on_disk() < _start_decree) {
+        // wait 10 seconds for next try if no mutation was added.
+        repeat(10_s);
+        return;
+    }
+
+    _log_on_disk->set_start_decree(_start_decree);
+    _log_on_disk->async();
 }
 
 load_mutation::~load_mutation() = default;
@@ -34,9 +43,8 @@ load_mutation::~load_mutation() = default;
 load_mutation::load_mutation(replica_duplicator *duplicator,
                              replica *r,
                              load_from_private_log *load_private)
-    : replica_base(r)
+    : replica_base(r), _log_on_disk(load_private), _replica(r), _duplicator(duplicator)
 {
-    // TBD
 }
 
 //               //

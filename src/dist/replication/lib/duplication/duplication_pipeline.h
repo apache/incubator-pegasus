@@ -31,6 +31,13 @@ public:
     load_mutation(replica_duplicator *duplicator, replica *r, load_from_private_log *load_private);
 
     ~load_mutation();
+
+private:
+    load_from_private_log *_log_on_disk;
+    decree _start_decree{0};
+
+    replica *_replica{nullptr};
+    replica_duplicator *_duplicator{nullptr};
 };
 
 // ship_mutation is a pipeline stage receiving a set of mutations,

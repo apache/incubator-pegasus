@@ -2225,6 +2225,11 @@ void replica_stub::close()
         _config_sync_timer_task = nullptr;
     }
 
+    if (_duplication_sync_timer != nullptr) {
+        _duplication_sync_timer->close();
+        _duplication_sync_timer = nullptr;
+    }
+
     if (_config_query_task != nullptr) {
         _config_query_task->cancel(true);
         _config_query_task = nullptr;
