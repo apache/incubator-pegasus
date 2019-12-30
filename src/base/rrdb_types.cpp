@@ -4257,13 +4257,29 @@ void scan_response::printTo(std::ostream &out) const
 
 duplicate_request::~duplicate_request() throw() {}
 
-void duplicate_request::__set_timetag(const int64_t val) { this->timetag = val; }
+void duplicate_request::__set_timetag(const int64_t val)
+{
+    this->timetag = val;
+    __isset.timetag = true;
+}
 
-void duplicate_request::__set_task_code(const ::dsn::task_code &val) { this->task_code = val; }
+void duplicate_request::__set_task_code(const ::dsn::task_code &val)
+{
+    this->task_code = val;
+    __isset.task_code = true;
+}
 
-void duplicate_request::__set_raw_message(const ::dsn::blob &val) { this->raw_message = val; }
+void duplicate_request::__set_raw_message(const ::dsn::blob &val)
+{
+    this->raw_message = val;
+    __isset.raw_message = true;
+}
 
-void duplicate_request::__set_hash(const int64_t val) { this->hash = val; }
+void duplicate_request::__set_hash(const int64_t val)
+{
+    this->hash = val;
+    __isset.hash = true;
+}
 
 uint32_t duplicate_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
@@ -4334,22 +4350,26 @@ uint32_t duplicate_request::write(::apache::thrift::protocol::TProtocol *oprot) 
     apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
     xfer += oprot->writeStructBegin("duplicate_request");
 
-    xfer += oprot->writeFieldBegin("timetag", ::apache::thrift::protocol::T_I64, 1);
-    xfer += oprot->writeI64(this->timetag);
-    xfer += oprot->writeFieldEnd();
-
-    xfer += oprot->writeFieldBegin("task_code", ::apache::thrift::protocol::T_STRUCT, 2);
-    xfer += this->task_code.write(oprot);
-    xfer += oprot->writeFieldEnd();
-
-    xfer += oprot->writeFieldBegin("raw_message", ::apache::thrift::protocol::T_STRUCT, 3);
-    xfer += this->raw_message.write(oprot);
-    xfer += oprot->writeFieldEnd();
-
-    xfer += oprot->writeFieldBegin("hash", ::apache::thrift::protocol::T_I64, 4);
-    xfer += oprot->writeI64(this->hash);
-    xfer += oprot->writeFieldEnd();
-
+    if (this->__isset.timetag) {
+        xfer += oprot->writeFieldBegin("timetag", ::apache::thrift::protocol::T_I64, 1);
+        xfer += oprot->writeI64(this->timetag);
+        xfer += oprot->writeFieldEnd();
+    }
+    if (this->__isset.task_code) {
+        xfer += oprot->writeFieldBegin("task_code", ::apache::thrift::protocol::T_STRUCT, 2);
+        xfer += this->task_code.write(oprot);
+        xfer += oprot->writeFieldEnd();
+    }
+    if (this->__isset.raw_message) {
+        xfer += oprot->writeFieldBegin("raw_message", ::apache::thrift::protocol::T_STRUCT, 3);
+        xfer += this->raw_message.write(oprot);
+        xfer += oprot->writeFieldEnd();
+    }
+    if (this->__isset.hash) {
+        xfer += oprot->writeFieldBegin("hash", ::apache::thrift::protocol::T_I64, 4);
+        xfer += oprot->writeI64(this->hash);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -4403,13 +4423,17 @@ void duplicate_request::printTo(std::ostream &out) const
 {
     using ::apache::thrift::to_string;
     out << "duplicate_request(";
-    out << "timetag=" << to_string(timetag);
+    out << "timetag=";
+    (__isset.timetag ? (out << to_string(timetag)) : (out << "<null>"));
     out << ", "
-        << "task_code=" << to_string(task_code);
+        << "task_code=";
+    (__isset.task_code ? (out << to_string(task_code)) : (out << "<null>"));
     out << ", "
-        << "raw_message=" << to_string(raw_message);
+        << "raw_message=";
+    (__isset.raw_message ? (out << to_string(raw_message)) : (out << "<null>"));
     out << ", "
-        << "hash=" << to_string(hash);
+        << "hash=";
+    (__isset.hash ? (out << to_string(hash)) : (out << "<null>"));
     out << ")";
 }
 

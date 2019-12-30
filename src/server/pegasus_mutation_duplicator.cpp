@@ -60,7 +60,8 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
                                                          dsn::string_view app)
     : mutation_duplicator(r), _remote_cluster(remote_cluster)
 {
-    static bool _dummy = pegasus_client_factory::initialize(nullptr);
+    // initialize pegasus-client when this class is first time used.
+    static __attribute__((unused)) bool _dummy = pegasus_client_factory::initialize(nullptr);
 
     pegasus_client *client = pegasus_client_factory::get_client(remote_cluster.data(), app.data());
     _client = static_cast<client::pegasus_client_impl *>(client);
@@ -69,7 +70,7 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
     dassert_replica(ret.is_ok(), // never possible, meta server disallows such remote_cluster.
                     "invalid remote cluster: {}, err_ret: {}",
                     remote_cluster,
-                    ret.get_error().description());
+                    ret.get_error());
     _remote_cluster_id = static_cast<uint8_t>(ret.get_value());
 
     ddebug_replica("initialize mutation duplicator for local cluster [id:{}], "
@@ -77,6 +78,8 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
                    get_current_cluster_id(),
                    _remote_cluster_id,
                    remote_cluster);
+
+    // never possible to duplicate data to itself
     dassert_replica(get_current_cluster_id() != _remote_cluster_id,
                     "invalid remote cluster: {} {}",
                     remote_cluster,
@@ -177,12 +180,6 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         dsn::task_code rpc_code = std::get<1>(mut);
         dsn::blob data = std::get<2>(mut);
         uint64_t hash;
-
-        // a mutation must be a write
-        dsn::task_spec *task = dsn::task_spec::get(rpc_code);
-        dassert_replica(task != nullptr && task->rpc_request_is_write_operation,
-                        "invalid rpc type({})",
-                        rpc_code);
 
         // extract the rpc wrapped inside if this is a DUPLICATE rpc
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {

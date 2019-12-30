@@ -1834,13 +1834,21 @@ public:
 
     bool operator==(const duplicate_request &rhs) const
     {
-        if (!(timetag == rhs.timetag))
+        if (__isset.timetag != rhs.__isset.timetag)
             return false;
-        if (!(task_code == rhs.task_code))
+        else if (__isset.timetag && !(timetag == rhs.timetag))
             return false;
-        if (!(raw_message == rhs.raw_message))
+        if (__isset.task_code != rhs.__isset.task_code)
             return false;
-        if (!(hash == rhs.hash))
+        else if (__isset.task_code && !(task_code == rhs.task_code))
+            return false;
+        if (__isset.raw_message != rhs.__isset.raw_message)
+            return false;
+        else if (__isset.raw_message && !(raw_message == rhs.raw_message))
+            return false;
+        if (__isset.hash != rhs.__isset.hash)
+            return false;
+        else if (__isset.hash && !(hash == rhs.hash))
             return false;
         return true;
     }

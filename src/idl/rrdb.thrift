@@ -253,10 +253,10 @@ struct scan_response
 
 struct duplicate_request
 {
-    1:i64                     timetag;
-    2:dsn.task_code           task_code;
-    3:dsn.blob                raw_message;
-    4:i64                     hash;
+    1: optional i64 timetag
+    2: optional dsn.task_code task_code
+    3: optional dsn.blob raw_message
+    4: optional i64 hash
 }
 
 struct duplicate_response

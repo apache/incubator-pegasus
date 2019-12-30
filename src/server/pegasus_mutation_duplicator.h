@@ -15,7 +15,7 @@ namespace server {
 
 using namespace dsn::literals::chrono_literals;
 
-// Duplicates the loaded mutations to the remote pegasus cluster.
+// Duplicates the loaded mutations to the remote pegasus cluster using pegasus client.
 class pegasus_mutation_duplicator : public dsn::replication::mutation_duplicator
 {
     using mutation_tuple_set = dsn::replication::mutation_tuple_set;
@@ -39,13 +39,15 @@ private:
 private:
     friend class pegasus_mutation_duplicator_test;
 
-    client::pegasus_client_impl *_client;
+    client::pegasus_client_impl *_client{nullptr};
 
     uint8_t _remote_cluster_id{0};
     std::string _remote_cluster;
 
-    // hash -> duplicate_rpc
-    std::map<uint64_t, std::deque<duplicate_rpc>> _inflights;
+    // The duplicate_rpc are isolated by their hash value from hash key.
+    // Writes with the same hash are duplicated in mutation order to preserve data consistency,
+    // otherwise they are duplicated concurrently to improve performance.
+    std::map<uint64_t, std::deque<duplicate_rpc>> _inflights; // hash -> duplicate_rpc
     dsn::zlock _lock;
 
     size_t _total_shipped_size{0};
@@ -54,6 +56,8 @@ private:
     dsn::perf_counter_wrapper _failed_shipping_ops;
 };
 
+// Decodes the binary `request_data` into write request in thrift struct, and
+// calculates the hash value from the write's hash key.
 extern uint64_t get_hash_from_request(dsn::task_code rpc_code, const dsn::blob &request_data);
 
 } // namespace server
