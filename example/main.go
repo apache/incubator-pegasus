@@ -1,3 +1,7 @@
+// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
+// This source code is licensed under the Apache License Version 2.0, which
+// can be found in the LICENSE file in the root directory of this source tree.
+
 package main
 
 import (
@@ -5,21 +9,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"path/filepath"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/pegasus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
-	go func() {
-		// http://localhost:2112/metrics
-		http.Handle("/metrics", promhttp.Handler())
-		http.ListenAndServe(":2112", nil)
-	}()
-
 	cfgPath, _ := filepath.Abs("./example/pegasus-client-config.json")
 	rawCfg, err := ioutil.ReadFile(cfgPath)
 	if err != nil {

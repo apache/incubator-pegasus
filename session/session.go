@@ -266,7 +266,6 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		var ready bool
 		ticker := time.NewTicker(100 * time.Millisecond)
 		for {
-
 			breakLoop := false
 			select {
 			case <-ctx.Done():
@@ -277,7 +276,6 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 					breakLoop = true
 				}
 			}
-
 			if breakLoop {
 				break
 			}
@@ -321,7 +319,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 			err = rcall.Err
 			result = rcall.Result
 			if rcall.TilNow() > kLatencyTracingThreshold {
-				n.logger.Println(rcall.Trace())
+				n.logger.Printf("[%s(%s)] trace to %s: %s", rcall.Name, rcall.Gpid, n, rcall.Trace())
 			}
 			return
 		case <-ctxWithTomb.Done():

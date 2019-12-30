@@ -83,7 +83,7 @@ func (p *PegasusCodec) Unmarshal(data []byte, v interface{}) error {
 		// convert string to base.DsnErrCode
 		err, parseErr := base.DsnErrCodeString(ec.Errno)
 		if parseErr != nil {
-			p.logger.Println("failed to unmarshal the heading error code of rpc response: ", parseErr)
+			p.logger.Print("failed to unmarshal the heading error code of rpc response: ", parseErr)
 			return parseErr
 		}
 

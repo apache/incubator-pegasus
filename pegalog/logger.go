@@ -26,10 +26,8 @@ import (
 type Logger interface {
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
-	Fatalln(args ...interface{})
 	Print(args ...interface{})
 	Printf(format string, args ...interface{})
-	Println(args ...interface{})
 }
 
 var (
@@ -41,9 +39,12 @@ type settableLogger struct {
 	mu sync.RWMutex
 }
 
+// StderrLogger is an implementation of Logger that outputs logs to stderr.
+var StderrLogger = log.New(os.Stderr, "", log.LstdFlags)
+
 func init() {
 	// by default we use stderr for logging
-	_logger.set(log.New(os.Stderr, "", log.LstdFlags))
+	_logger.set(DefaultLogrusLogger)
 }
 
 // SetLogger sets client-side Logger. By default, logs are disabled.
@@ -69,11 +70,7 @@ func (s *settableLogger) get() Logger {
 	return l
 }
 
-// implement the Logger interface
-
 func (s *settableLogger) Fatal(args ...interface{})                 { s.get().Fatal(args...) }
 func (s *settableLogger) Fatalf(format string, args ...interface{}) { s.get().Fatalf(format, args...) }
-func (s *settableLogger) Fatalln(args ...interface{})               { s.get().Fatalln(args...) }
 func (s *settableLogger) Print(args ...interface{})                 { s.get().Print(args...) }
 func (s *settableLogger) Printf(format string, args ...interface{}) { s.get().Printf(format, args...) }
-func (s *settableLogger) Println(args ...interface{})               { s.get().Println(args...) }

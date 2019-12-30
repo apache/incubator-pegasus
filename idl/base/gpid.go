@@ -34,5 +34,5 @@ func (id *Gpid) String() string {
 	if id == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("Gpid(%+v)", *id)
+	return fmt.Sprintf("%+v", *id)
 }

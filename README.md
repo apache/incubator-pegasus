@@ -4,7 +4,7 @@ This is the official go client for [xiaomi/pegasus](https://github.com/XiaoMi/pe
 
 ## Requirement
 
-Go1.8+
+Go1.12+.
 
 ## Example
 
@@ -25,3 +25,5 @@ Go1.8+
     tb, err := client.OpenTable(context.Background(), "temp")
     err = tb.Set(context.Background(), []byte("h1"), []byte("s1"), []byte("v1"))
 ```
+
+For more examples please refer to [example/](example/main.go).
