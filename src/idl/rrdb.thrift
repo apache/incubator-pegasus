@@ -253,10 +253,24 @@ struct scan_response
 
 struct duplicate_request
 {
-    1: optional i64 timetag
+    // The timestamp of this write.
+    1: optional i64 timestamp
+
+    // The code to identify this write.
     2: optional dsn.task_code task_code
+
+    // The binary form of the write.
     3: optional dsn.blob raw_message
+
+    // The hash value calculated from the hash key, which is retrieved from `raw_message`.
+    // This field is to optimize when duplicating a DUPLICATE, the hash calculation can be skipped.
     4: optional i64 hash
+
+    // Where the write is from. If the topology is A<->B<->C, a write to A will be then
+    // duplicated to B and C. For C, because. A and B is in the `from_clusters_set`, the write
+    // will not be duplicated to them, so that prevents infinite loop.
+    // The receiver of the write will
+    5: optional set<byte> from_clusters_set
 }
 
 struct duplicate_response

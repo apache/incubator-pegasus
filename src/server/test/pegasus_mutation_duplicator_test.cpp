@@ -72,7 +72,6 @@ public:
                         ASSERT_EQ(total_shipped_size, final_size);
                     },
                     rpc,
-                    dsn_now_ns(),
                     dsn::ERR_OK);
 
                 // schedule next round
@@ -115,7 +114,7 @@ public:
             ASSERT_EQ(duplicator_impl->_inflights.begin()->second.size(), 9);
 
             // failed
-            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn_now_ns(), dsn::ERR_TIMEOUT);
+            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn::ERR_TIMEOUT);
 
             // schedule next round
             _tracker.wait_outstanding_tasks();
@@ -128,7 +127,7 @@ public:
 
             // with other error
             rpc.response().error = PERR_INVALID_ARGUMENT;
-            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn_now_ns(), dsn::ERR_OK);
+            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn::ERR_OK);
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
@@ -137,8 +136,7 @@ public:
 
             // with other error
             rpc.response().error = PERR_OK;
-            duplicator_impl->on_duplicate_reply(
-                [](size_t) {}, rpc, dsn_now_ns(), dsn::ERR_IO_PENDING);
+            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn::ERR_IO_PENDING);
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
@@ -185,7 +183,7 @@ public:
             auto rpc_list = std::move(duplicate_rpc::mail_box());
             for (const auto &rpc : rpc_list) {
                 rpc.response().error = dsn::ERR_OK;
-                duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn_now_ns(), dsn::ERR_OK);
+                duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn::ERR_OK);
             }
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
@@ -209,13 +207,14 @@ public:
             pegasus::pegasus_generate_key(duplicated_request.key,
                                           std::string("hash") + std::to_string(i),
                                           std::string("sort"));
-            request.timetag = generate_timetag(100, 2, false); // master(onebox2)'s cluster_id = 2
-            request.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
-            request.hash = pegasus_key_hash(duplicated_request.key);
+            request.__set_timestamp(100);
+            request.__set_from_clusters_set({2}); // master(onebox2)'s cluster_id = 2
+            request.__set_task_code(dsn::apps::RPC_RRDB_RRDB_PUT);
+            request.__set_hash(pegasus_key_hash(duplicated_request.key));
 
             dsn::message_ptr msg =
                 dsn::from_thrift_request_to_received_message(duplicated_request, request.task_code);
-            request.raw_message = dsn::move_message_to_blob(msg.get());
+            request.__set_raw_message(dsn::move_message_to_blob(msg.get()));
 
             msg = dsn::from_thrift_request_to_received_message(request, code);
             auto data = dsn::move_message_to_blob(msg.get());
@@ -251,13 +250,14 @@ public:
             pegasus::pegasus_generate_key(duplicated_request.key,
                                           std::string("hash") + std::to_string(i),
                                           std::string("sort"));
-            request.timetag = generate_timetag(100, 130, false); // cluster_id=130(nowhere)
-            request.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
-            request.hash = pegasus_key_hash(duplicated_request.key);
+            request.__set_timestamp(100);
+            request.__set_from_clusters_set({int8_t(130)}); // cluster_id=130(nowhere)
+            request.__set_task_code(dsn::apps::RPC_RRDB_RRDB_PUT);
+            request.__set_hash(pegasus_key_hash(duplicated_request.key));
 
             dsn::message_ptr msg =
                 dsn::from_thrift_request_to_received_message(duplicated_request, request.task_code);
-            request.raw_message = dsn::move_message_to_blob(msg.get());
+            request.__set_raw_message(dsn::move_message_to_blob(msg.get()));
 
             msg = dsn::from_thrift_request_to_received_message(request, code);
             auto data = dsn::move_message_to_blob(msg.get());
