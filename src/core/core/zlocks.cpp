@@ -63,7 +63,7 @@ void check_dangling_lock()
               zlock_shared_count);
     }
 }
-}
+} // namespace lock_checker
 
 zlock::zlock(bool recursive)
 {
@@ -72,26 +72,12 @@ zlock::zlock(bool recursive)
             dsn::service_engine::instance().spec().lock_factory_name.c_str(),
             dsn::PROVIDER_TYPE_MAIN,
             nullptr);
-
-        // TODO: perf opt by saving the func ptrs somewhere
-        for (auto &s : dsn::service_engine::instance().spec().lock_aspects) {
-            last = utils::factory_store<::dsn::lock_provider>::create(
-                s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
-        }
-
         _h = last;
     } else {
         lock_nr_provider *last = utils::factory_store<lock_nr_provider>::create(
             dsn::service_engine::instance().spec().lock_nr_factory_name.c_str(),
             dsn::PROVIDER_TYPE_MAIN,
             nullptr);
-
-        // TODO: perf opt by saving the func ptrs somewhere
-        for (auto &s : dsn::service_engine::instance().spec().lock_nr_aspects) {
-            last = utils::factory_store<::dsn::lock_nr_provider>::create(
-                s.c_str(), ::dsn::PROVIDER_TYPE_ASPECT, last);
-        }
-
         _h = last;
     }
 }
@@ -125,13 +111,6 @@ zrwlock_nr::zrwlock_nr()
         service_engine::instance().spec().rwlock_nr_factory_name.c_str(),
         dsn::PROVIDER_TYPE_MAIN,
         nullptr);
-
-    // TODO: perf opt by saving the func ptrs somewhere
-    for (auto &s : service_engine::instance().spec().rwlock_nr_aspects) {
-        last = utils::factory_store<rwlock_nr_provider>::create(
-            s.c_str(), dsn::PROVIDER_TYPE_ASPECT, last);
-    }
-
     _h = last;
 }
 
@@ -184,12 +163,6 @@ zsemaphore::zsemaphore(int initial_count)
         PROVIDER_TYPE_MAIN,
         initial_count,
         nullptr);
-
-    // TODO: perf opt by saving the func ptrs somewhere
-    for (auto &s : service_engine::instance().spec().semaphore_aspects) {
-        last = utils::factory_store<::dsn::semaphore_provider>::create(
-            s.c_str(), dsn::PROVIDER_TYPE_ASPECT, initial_count, last);
-    }
     _h = last;
 }
 
@@ -255,4 +228,4 @@ bool zevent::wait(int timeout_milliseconds)
         return std::atomic_compare_exchange_strong(&_signaled, &signaled, false);
     }
 }
-}
+} // namespace dsn

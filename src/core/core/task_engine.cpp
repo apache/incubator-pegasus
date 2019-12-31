@@ -73,10 +73,6 @@ void task_worker_pool::create()
             PROVIDER_TYPE_MAIN,
             _node,
             nullptr);
-        for (auto &s : service_engine::instance().spec().timer_aspects) {
-            tsvc =
-                factory_store<timer_service>::create(s.c_str(), PROVIDER_TYPE_ASPECT, _node, tsvc);
-        }
         _per_queue_timer_svcs.push_back(tsvc);
     }
 

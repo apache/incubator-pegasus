@@ -161,16 +161,6 @@ struct service_spec
     std::string nfs_factory_name;
     std::string logging_factory_name;
 
-    std::list<std::string> network_aspects; // toollets compatible to the above network main
-                                            // providers in network configs
-    std::list<std::string> aio_aspects;     // toollets compatible to main aio provider
-    std::list<std::string> env_aspects;
-    std::list<std::string> timer_aspects;
-    std::list<std::string> lock_aspects;
-    std::list<std::string> lock_nr_aspects;
-    std::list<std::string> rwlock_nr_aspects;
-    std::list<std::string> semaphore_aspects;
-
     network_client_configs network_default_client_cfs; // default network configed by tools
     network_server_configs network_default_server_cfs; // default network configed by tools
     std::vector<threadpool_spec> threadpool_specs;
@@ -207,17 +197,6 @@ CONFIG_FLD_STRING(rwlock_nr_factory_name, "", "non-recurisve rwlock provider")
 CONFIG_FLD_STRING(semaphore_factory_name, "", "semaphore provider")
 CONFIG_FLD_STRING(nfs_factory_name, "", "nfs provider")
 CONFIG_FLD_STRING(logging_factory_name, "", "logging provider")
-
-CONFIG_FLD_STRING_LIST(network_aspects, "network aspect providers, usually for tooling purpose")
-CONFIG_FLD_STRING_LIST(aio_aspects, "aio aspect providers, usually for tooling purpose")
-CONFIG_FLD_STRING_LIST(timer_aspects, "timer service aspect providers, usually for tooling purpose")
-CONFIG_FLD_STRING_LIST(env_aspects, "environment aspect providers, usually for tooling purpose")
-CONFIG_FLD_STRING_LIST(lock_aspects, "recursive lock aspect providers, usually for tooling purpose")
-CONFIG_FLD_STRING_LIST(lock_nr_aspects,
-                       "non-recurisve lock aspect providers, usually for tooling purpose")
-CONFIG_FLD_STRING_LIST(rwlock_nr_aspects,
-                       "non-recursive rwlock aspect providers, usually for tooling purpose")
-CONFIG_FLD_STRING_LIST(semaphore_aspects, "semaphore aspect providers, usually for tooling purpose")
 CONFIG_END
 
 enum sys_exit_type
@@ -234,4 +213,4 @@ ENUM_REG(SYS_EXIT_NORMAL)
 ENUM_REG(SYS_EXIT_BREAK)
 ENUM_REG(SYS_EXIT_EXCEPTION)
 ENUM_END(sys_exit_type)
-}
+} // namespace dsn

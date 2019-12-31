@@ -419,15 +419,9 @@ network *rpc_engine::create_network(const network_server_config &netcs,
                                     bool client_only,
                                     network_header_format client_hdr_format)
 {
-    const service_spec &spec = service_engine::instance().spec();
     network *net = utils::factory_store<network>::create(
         netcs.factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this, nullptr);
     net->reset_parser_attr(client_hdr_format, netcs.message_buffer_block_size);
-
-    for (auto it = spec.network_aspects.begin(); it != spec.network_aspects.end(); it++) {
-        net = utils::factory_store<network>::create(
-            it->c_str(), ::dsn::PROVIDER_TYPE_ASPECT, this, net);
-    }
 
     // start the net
     error_code ret = net->start(netcs.channel, netcs.port, client_only);
