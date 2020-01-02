@@ -16,6 +16,10 @@
 package pegalog
 
 import (
+	"fmt"
+	"runtime"
+	"strings"
+
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -28,16 +32,28 @@ type LogrusConfig struct {
 	MaxBackups int
 }
 
+// callerPrettifier simplifies the caller info
+func callerPrettifier(f *runtime.Frame) (function string, file string) {
+	function = f.Function[strings.LastIndex(f.Function, "/")+1:]
+	file = fmt.Sprint(f.File[strings.LastIndex(f.File, "/")+1:], ":", f.Line)
+	return function, file
+}
+
 // NewLogrusLogger creates a new LogrusLogger.
 func NewLogrusLogger(cfg *LogrusConfig) Logger {
 	l := logrus.New()
-	l.Formatter = &logrus.TextFormatter{DisableColors: true, FullTimestamp: true}
+	l.Formatter = &logrus.TextFormatter{
+		DisableColors:    true,
+		FullTimestamp:    true,
+		CallerPrettyfier: callerPrettifier,
+	}
 	l.Out = &lumberjack.Logger{
 		Filename:  cfg.Filename,
 		MaxSize:   cfg.MaxSize,
 		MaxAge:    cfg.MaxAge,
 		LocalTime: true,
 	}
+	l.ReportCaller = true
 	return l
 }
 

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/pegasus"
 )
 
@@ -22,6 +23,14 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	// customize where the pegasus-go-client's logs reside.
+	pegalog.SetLogger(pegalog.NewLogrusLogger(&pegalog.LogrusConfig{
+		MaxSize:    500, // megabytes
+		MaxAge:     5,   // days
+		MaxBackups: 100,
+		Filename:   "./bin/pegasus.log",
+	}))
 
 	cfg := &pegasus.Config{}
 	json.Unmarshal(rawCfg, cfg)
