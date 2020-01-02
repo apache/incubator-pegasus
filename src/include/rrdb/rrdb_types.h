@@ -1798,19 +1798,10 @@ inline std::ostream &operator<<(std::ostream &out, const scan_response &obj)
 
 typedef struct _duplicate_request__isset
 {
-    _duplicate_request__isset()
-        : timestamp(false),
-          task_code(false),
-          raw_message(false),
-          hash(false),
-          from_clusters_set(false)
-    {
-    }
+    _duplicate_request__isset() : timestamp(false), task_code(false), raw_message(false) {}
     bool timestamp : 1;
     bool task_code : 1;
     bool raw_message : 1;
-    bool hash : 1;
-    bool from_clusters_set : 1;
 } _duplicate_request__isset;
 
 class duplicate_request
@@ -1820,14 +1811,12 @@ public:
     duplicate_request(duplicate_request &&);
     duplicate_request &operator=(const duplicate_request &);
     duplicate_request &operator=(duplicate_request &&);
-    duplicate_request() : timestamp(0), hash(0) {}
+    duplicate_request() : timestamp(0) {}
 
     virtual ~duplicate_request() throw();
     int64_t timestamp;
     ::dsn::task_code task_code;
     ::dsn::blob raw_message;
-    int64_t hash;
-    std::set<int8_t> from_clusters_set;
 
     _duplicate_request__isset __isset;
 
@@ -1836,10 +1825,6 @@ public:
     void __set_task_code(const ::dsn::task_code &val);
 
     void __set_raw_message(const ::dsn::blob &val);
-
-    void __set_hash(const int64_t val);
-
-    void __set_from_clusters_set(const std::set<int8_t> &val);
 
     bool operator==(const duplicate_request &rhs) const
     {
@@ -1854,14 +1839,6 @@ public:
         if (__isset.raw_message != rhs.__isset.raw_message)
             return false;
         else if (__isset.raw_message && !(raw_message == rhs.raw_message))
-            return false;
-        if (__isset.hash != rhs.__isset.hash)
-            return false;
-        else if (__isset.hash && !(hash == rhs.hash))
-            return false;
-        if (__isset.from_clusters_set != rhs.__isset.from_clusters_set)
-            return false;
-        else if (__isset.from_clusters_set && !(from_clusters_set == rhs.from_clusters_set))
             return false;
         return true;
     }
@@ -1907,7 +1884,9 @@ public:
 
     bool operator==(const duplicate_response &rhs) const
     {
-        if (!(error == rhs.error))
+        if (__isset.error != rhs.__isset.error)
+            return false;
+        else if (__isset.error && !(error == rhs.error))
             return false;
         return true;
     }

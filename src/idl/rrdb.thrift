@@ -261,20 +261,11 @@ struct duplicate_request
 
     // The binary form of the write.
     3: optional dsn.blob raw_message
-
-    // The hash value calculated from the hash key, which is retrieved from `raw_message`.
-    // This field is to optimize when duplicating a DUPLICATE, the hash calculation can be skipped.
-    4: optional i64 hash
-
-    // Where the write is from. If the topology is A<->B<->C, a write to A will be then
-    // duplicated to B and C. For C, because A and B is in the `from_clusters_set`, the write
-    // will not be duplicated to them, so that prevents infinite loop.
-    5: optional set<byte> from_clusters_set
 }
 
 struct duplicate_response
 {
-    1:i32           error;
+    1: optional i32 error;
 }
 
 service rrdb

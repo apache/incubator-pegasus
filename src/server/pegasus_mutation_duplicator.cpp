@@ -107,13 +107,14 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
     }
 
     _client->async_duplicate(rpc,
-                             [cb, rpc, this](dsn::error_code err) mutable {
-                                 on_duplicate_reply(std::move(cb), std::move(rpc), err);
+                             [hash, cb, rpc, this](dsn::error_code err) mutable {
+                                 on_duplicate_reply(hash, std::move(cb), std::move(rpc), err);
                              },
                              _env.__conf.tracker);
 }
 
-void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callback cb,
+void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
+                                                     mutation_duplicator::callback cb,
                                                      duplicate_rpc rpc,
                                                      dsn::error_code err)
 {
@@ -140,7 +141,6 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
             rpc.dsn_request()->header->body_length + rpc.dsn_request()->header->hdr_length;
     }
 
-    auto hash = static_cast<uint64_t>(rpc.request().hash);
     {
         dsn::zauto_lock _(_lock);
         if (perr != PERR_OK || err != dsn::ERR_OK) {
@@ -163,16 +163,6 @@ void pegasus_mutation_duplicator::on_duplicate_reply(mutation_duplicator::callba
     }
 }
 
-static bool has_unknown_cluster_id(const std::set<int8_t> &clusters_set)
-{
-    for (int8_t cid : clusters_set) {
-        if (!dsn::replication::is_cluster_id_configured(cid)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb)
 {
     _total_shipped_size = 0;
@@ -183,28 +173,16 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         dsn::task_code rpc_code = std::get<1>(mut);
         dsn::blob raw_message = std::get<2>(mut);
         auto dreq = dsn::make_unique<dsn::apps::duplicate_request>();
+        uint64_t hash = get_hash_from_request(rpc_code, raw_message);
 
-        // extract the rpc wrapped inside if this is a DUPLICATE rpc
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
-            dsn::from_blob_to_thrift(raw_message, *dreq);
-            if (dreq->from_clusters_set.find(_remote_cluster_id) != dreq->from_clusters_set.end()) {
-                // ignore this mutation to prevent infinite duplication loop.
-                continue;
-            }
-            if (has_unknown_cluster_id(dreq->from_clusters_set)) {
-                // if this write is duplicated from nowhere
-                continue;
-            }
+            // ignore if it is a DUPLICATE
         } else {
-            dreq->__set_hash(get_hash_from_request(rpc_code, raw_message));
             dreq->__set_raw_message(raw_message);
             dreq->__set_task_code(rpc_code);
             dreq->__set_timestamp(std::get<0>(mut));
-            dreq->__isset.from_clusters_set = true;
         }
-        dreq->from_clusters_set.insert(get_current_cluster_id());
 
-        uint64_t hash = dreq->hash;
         duplicate_rpc rpc(std::move(dreq),
                           dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
                           10_s, // TODO(wutao1): configurable timeout.

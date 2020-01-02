@@ -67,12 +67,12 @@ public:
 
                 total_shipped_size +=
                     rpc.dsn_request()->body_size() + rpc.dsn_request()->header->hdr_length;
-                duplicator_impl->on_duplicate_reply(
-                    [total_shipped_size](size_t final_size) {
-                        ASSERT_EQ(total_shipped_size, final_size);
-                    },
-                    rpc,
-                    dsn::ERR_OK);
+                duplicator_impl->on_duplicate_reply(get_hash(rpc),
+                                                    [total_shipped_size](size_t final_size) {
+                                                        ASSERT_EQ(total_shipped_size, final_size);
+                                                    },
+                                                    rpc,
+                                                    dsn::ERR_OK);
 
                 // schedule next round
                 _tracker.wait_outstanding_tasks();
@@ -114,7 +114,8 @@ public:
             ASSERT_EQ(duplicator_impl->_inflights.begin()->second.size(), 9);
 
             // failed
-            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn::ERR_TIMEOUT);
+            duplicator_impl->on_duplicate_reply(
+                get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_TIMEOUT);
 
             // schedule next round
             _tracker.wait_outstanding_tasks();
@@ -127,7 +128,7 @@ public:
 
             // with other error
             rpc.response().error = PERR_INVALID_ARGUMENT;
-            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn::ERR_OK);
+            duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_OK);
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
@@ -136,7 +137,8 @@ public:
 
             // with other error
             rpc.response().error = PERR_OK;
-            duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn::ERR_IO_PENDING);
+            duplicator_impl->on_duplicate_reply(
+                get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_IO_PENDING);
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
@@ -183,96 +185,11 @@ public:
             auto rpc_list = std::move(duplicate_rpc::mail_box());
             for (const auto &rpc : rpc_list) {
                 rpc.response().error = dsn::ERR_OK;
-                duplicator_impl->on_duplicate_reply([](size_t) {}, rpc, dsn::ERR_OK);
+                duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_OK);
             }
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
             ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
-        }
-    }
-
-    void test_all_mutations_are_duplicated_from_master()
-    {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica");
-        auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
-        duplicator->set_task_environment(&_env);
-
-        mutation_tuple_set muts;
-        for (uint64_t i = 0; i < 3000; i++) {
-            uint64_t ts = 200 + i;
-            dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_DUPLICATE;
-            dsn::apps::duplicate_request request;
-
-            dsn::apps::update_request duplicated_request;
-            pegasus::pegasus_generate_key(duplicated_request.key,
-                                          std::string("hash") + std::to_string(i),
-                                          std::string("sort"));
-            request.__set_timestamp(100);
-            request.__set_from_clusters_set({2}); // master(onebox2)'s cluster_id = 2
-            request.__set_task_code(dsn::apps::RPC_RRDB_RRDB_PUT);
-            request.__set_hash(pegasus_key_hash(duplicated_request.key));
-
-            dsn::message_ptr msg =
-                dsn::from_thrift_request_to_received_message(duplicated_request, request.task_code);
-            request.__set_raw_message(dsn::move_message_to_blob(msg.get()));
-
-            msg = dsn::from_thrift_request_to_received_message(request, code);
-            auto data = dsn::move_message_to_blob(msg.get());
-            muts.insert(std::make_tuple(ts, code, data));
-        }
-
-        auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
-        RPC_MOCKING(duplicate_rpc)
-        {
-            duplicator->duplicate(muts, [](size_t total) { ASSERT_EQ(total, 0); });
-
-            // all mutation duplicated from master will not be duplicated
-            // again to prevent infinite loop.
-            ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
-            ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
-            ASSERT_EQ(duplicator_impl->_total_shipped_size, 0);
-        }
-    }
-
-    void test_mutation_is_duplicated_from_nowhere()
-    {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica");
-        auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
-        duplicator->set_task_environment(&_env);
-
-        mutation_tuple_set muts;
-        for (uint64_t i = 0; i < 3000; i++) {
-            uint64_t ts = 200 + i;
-            dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_DUPLICATE;
-            dsn::apps::duplicate_request request;
-
-            dsn::apps::update_request duplicated_request;
-            pegasus::pegasus_generate_key(duplicated_request.key,
-                                          std::string("hash") + std::to_string(i),
-                                          std::string("sort"));
-            request.__set_timestamp(100);
-            request.__set_from_clusters_set({int8_t(130)}); // cluster_id=130(nowhere)
-            request.__set_task_code(dsn::apps::RPC_RRDB_RRDB_PUT);
-            request.__set_hash(pegasus_key_hash(duplicated_request.key));
-
-            dsn::message_ptr msg =
-                dsn::from_thrift_request_to_received_message(duplicated_request, request.task_code);
-            request.__set_raw_message(dsn::move_message_to_blob(msg.get()));
-
-            msg = dsn::from_thrift_request_to_received_message(request, code);
-            auto data = dsn::move_message_to_blob(msg.get());
-            muts.insert(std::make_tuple(ts, code, data));
-        }
-
-        auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
-        RPC_MOCKING(duplicate_rpc)
-        {
-            duplicator->duplicate(muts, [](size_t total) { ASSERT_EQ(total, 0); });
-
-            // ignore those mutations that are duplicated from nowhere
-            ASSERT_EQ(duplicator_impl->_inflights.size(), 0);
-            ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
-            ASSERT_EQ(duplicator_impl->_total_shipped_size, 0);
         }
     }
 
@@ -285,6 +202,12 @@ public:
         ASSERT_EQ(duplicator_impl->_remote_cluster_id, 2);
         ASSERT_EQ(duplicator_impl->_remote_cluster, "onebox2");
         ASSERT_EQ(get_current_cluster_id(), 1);
+    }
+
+private:
+    static uint64_t get_hash(const duplicate_rpc &rpc)
+    {
+        return get_hash_from_request(rpc.request().task_code, rpc.request().raw_message);
     }
 };
 
@@ -367,17 +290,7 @@ TEST_F(pegasus_mutation_duplicator_test, duplicate_isolated_hashkeys)
     test_duplicate_isolated_hashkeys();
 }
 
-TEST_F(pegasus_mutation_duplicator_test, all_mutations_are_duplicated_from_master)
-{
-    test_all_mutations_are_duplicated_from_master();
-}
-
 TEST_F(pegasus_mutation_duplicator_test, create_duplicator) { test_create_duplicator(); }
-
-TEST_F(pegasus_mutation_duplicator_test, mutation_is_duplicated_from_nowhere)
-{
-    test_mutation_is_duplicated_from_nowhere();
-}
 
 } // namespace server
 } // namespace pegasus
