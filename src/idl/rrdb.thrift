@@ -267,9 +267,8 @@ struct duplicate_request
     4: optional i64 hash
 
     // Where the write is from. If the topology is A<->B<->C, a write to A will be then
-    // duplicated to B and C. For C, because. A and B is in the `from_clusters_set`, the write
+    // duplicated to B and C. For C, because A and B is in the `from_clusters_set`, the write
     // will not be duplicated to them, so that prevents infinite loop.
-    // The receiver of the write will
     5: optional set<byte> from_clusters_set
 }
 
