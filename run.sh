@@ -334,7 +334,7 @@ function run_test()
 {
     local test_modules=""
     local clear_flags="1"
-    local on_traivs=""
+    local on_travis=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -370,7 +370,10 @@ function run_test()
     start_time=`date +%s`
 
     ./run.sh clear_onebox #clear the onebox before test
-    ./run.sh start_onebox -w
+    if ! ./run.sh start_onebox -w; then
+        echo "ERROR: unable to continue on testing because starting onebox failed"
+        exit 1
+    fi
 
     for module in `echo $test_modules`; do
         pushd $ROOT/src/builder/bin/$module
@@ -619,9 +622,12 @@ function run_start_onebox()
         echo "ERROR: some onebox processes are running, start failed"
         exit 1
     fi
-    ln -s -f ${SERVER_PATH}/pegasus_server
+    ln -s -f "${SERVER_PATH}/pegasus_server" "${ROOT}"
 
-    run_start_zk
+    if ! run_start_zk; then
+        echo "ERROR: unable to setup onebox because zookeeper can not be started"
+        exit 1
+    fi
 
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
