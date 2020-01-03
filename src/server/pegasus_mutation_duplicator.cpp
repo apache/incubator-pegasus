@@ -106,12 +106,11 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
         _inflights[hash].pop_front();
     }
 
-    _client->async_duplicate(
-        rpc,
-        [hash, cb, rpc, this](dsn::error_code err) mutable {
-            on_duplicate_reply(hash, std::move(cb), std::move(rpc), err);
-        },
-        _env.__conf.tracker);
+    _client->async_duplicate(rpc,
+                             [hash, cb, rpc, this](dsn::error_code err) mutable {
+                                 on_duplicate_reply(hash, std::move(cb), std::move(rpc), err);
+                             },
+                             _env.__conf.tracker);
 }
 
 void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
