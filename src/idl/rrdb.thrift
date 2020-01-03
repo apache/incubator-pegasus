@@ -261,6 +261,9 @@ struct duplicate_request
 
     // The binary form of the write.
     3: optional dsn.blob raw_message
+
+    // ID of the cluster where this write comes from.
+    4: optional byte cluster_id
 }
 
 struct duplicate_response

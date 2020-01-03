@@ -4275,6 +4275,12 @@ void duplicate_request::__set_raw_message(const ::dsn::blob &val)
     __isset.raw_message = true;
 }
 
+void duplicate_request::__set_cluster_id(const int8_t val)
+{
+    this->cluster_id = val;
+    __isset.cluster_id = true;
+}
+
 uint32_t duplicate_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -4318,6 +4324,14 @@ uint32_t duplicate_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 4:
+            if (ftype == ::apache::thrift::protocol::T_BYTE) {
+                xfer += iprot->readByte(this->cluster_id);
+                this->__isset.cluster_id = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -4351,6 +4365,11 @@ uint32_t duplicate_request::write(::apache::thrift::protocol::TProtocol *oprot) 
         xfer += this->raw_message.write(oprot);
         xfer += oprot->writeFieldEnd();
     }
+    if (this->__isset.cluster_id) {
+        xfer += oprot->writeFieldBegin("cluster_id", ::apache::thrift::protocol::T_BYTE, 4);
+        xfer += oprot->writeByte(this->cluster_id);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -4362,6 +4381,7 @@ void swap(duplicate_request &a, duplicate_request &b)
     swap(a.timestamp, b.timestamp);
     swap(a.task_code, b.task_code);
     swap(a.raw_message, b.raw_message);
+    swap(a.cluster_id, b.cluster_id);
     swap(a.__isset, b.__isset);
 }
 
@@ -4370,6 +4390,7 @@ duplicate_request::duplicate_request(const duplicate_request &other126)
     timestamp = other126.timestamp;
     task_code = other126.task_code;
     raw_message = other126.raw_message;
+    cluster_id = other126.cluster_id;
     __isset = other126.__isset;
 }
 duplicate_request::duplicate_request(duplicate_request &&other127)
@@ -4377,6 +4398,7 @@ duplicate_request::duplicate_request(duplicate_request &&other127)
     timestamp = std::move(other127.timestamp);
     task_code = std::move(other127.task_code);
     raw_message = std::move(other127.raw_message);
+    cluster_id = std::move(other127.cluster_id);
     __isset = std::move(other127.__isset);
 }
 duplicate_request &duplicate_request::operator=(const duplicate_request &other128)
@@ -4384,6 +4406,7 @@ duplicate_request &duplicate_request::operator=(const duplicate_request &other12
     timestamp = other128.timestamp;
     task_code = other128.task_code;
     raw_message = other128.raw_message;
+    cluster_id = other128.cluster_id;
     __isset = other128.__isset;
     return *this;
 }
@@ -4392,6 +4415,7 @@ duplicate_request &duplicate_request::operator=(duplicate_request &&other129)
     timestamp = std::move(other129.timestamp);
     task_code = std::move(other129.task_code);
     raw_message = std::move(other129.raw_message);
+    cluster_id = std::move(other129.cluster_id);
     __isset = std::move(other129.__isset);
     return *this;
 }
@@ -4407,6 +4431,9 @@ void duplicate_request::printTo(std::ostream &out) const
     out << ", "
         << "raw_message=";
     (__isset.raw_message ? (out << to_string(raw_message)) : (out << "<null>"));
+    out << ", "
+        << "cluster_id=";
+    (__isset.cluster_id ? (out << to_string(cluster_id)) : (out << "<null>"));
     out << ")";
 }
 

@@ -106,11 +106,12 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
         _inflights[hash].pop_front();
     }
 
-    _client->async_duplicate(rpc,
-                             [hash, cb, rpc, this](dsn::error_code err) mutable {
-                                 on_duplicate_reply(hash, std::move(cb), std::move(rpc), err);
-                             },
-                             _env.__conf.tracker);
+    _client->async_duplicate(
+        rpc,
+        [hash, cb, rpc, this](dsn::error_code err) mutable {
+            on_duplicate_reply(hash, std::move(cb), std::move(rpc), err);
+        },
+        _env.__conf.tracker);
 }
 
 void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
@@ -181,6 +182,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             dreq->__set_raw_message(raw_message);
             dreq->__set_task_code(rpc_code);
             dreq->__set_timestamp(std::get<0>(mut));
+            dreq->__set_cluster_id(get_current_cluster_id());
         }
 
         duplicate_rpc rpc(std::move(dreq),

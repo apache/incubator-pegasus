@@ -1798,10 +1798,14 @@ inline std::ostream &operator<<(std::ostream &out, const scan_response &obj)
 
 typedef struct _duplicate_request__isset
 {
-    _duplicate_request__isset() : timestamp(false), task_code(false), raw_message(false) {}
+    _duplicate_request__isset()
+        : timestamp(false), task_code(false), raw_message(false), cluster_id(false)
+    {
+    }
     bool timestamp : 1;
     bool task_code : 1;
     bool raw_message : 1;
+    bool cluster_id : 1;
 } _duplicate_request__isset;
 
 class duplicate_request
@@ -1811,12 +1815,13 @@ public:
     duplicate_request(duplicate_request &&);
     duplicate_request &operator=(const duplicate_request &);
     duplicate_request &operator=(duplicate_request &&);
-    duplicate_request() : timestamp(0) {}
+    duplicate_request() : timestamp(0), cluster_id(0) {}
 
     virtual ~duplicate_request() throw();
     int64_t timestamp;
     ::dsn::task_code task_code;
     ::dsn::blob raw_message;
+    int8_t cluster_id;
 
     _duplicate_request__isset __isset;
 
@@ -1825,6 +1830,8 @@ public:
     void __set_task_code(const ::dsn::task_code &val);
 
     void __set_raw_message(const ::dsn::blob &val);
+
+    void __set_cluster_id(const int8_t val);
 
     bool operator==(const duplicate_request &rhs) const
     {
@@ -1839,6 +1846,10 @@ public:
         if (__isset.raw_message != rhs.__isset.raw_message)
             return false;
         else if (__isset.raw_message && !(raw_message == rhs.raw_message))
+            return false;
+        if (__isset.cluster_id != rhs.__isset.cluster_id)
+            return false;
+        else if (__isset.cluster_id && !(cluster_id == rhs.cluster_id))
             return false;
         return true;
     }
