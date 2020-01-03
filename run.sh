@@ -619,9 +619,12 @@ function run_start_onebox()
         echo "ERROR: some onebox processes are running, start failed"
         exit 1
     fi
-    ln -s -f ${SERVER_PATH}/pegasus_server
+    ln -s -f "${SERVER_PATH}/pegasus_server" "${ROOT}"
 
-    run_start_zk
+    if ! run_start_zk; then
+        echo "ERROR: unable to setup onebox because zookeeper can not be started"
+        exit 1
+    fi
 
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
