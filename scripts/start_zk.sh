@@ -60,8 +60,8 @@ while true; do
     fi
     zk_check_count=$((zk_check_count+1))
     echo "ERROR: starting zookeeper has failed ${zk_check_count} times"
-    if [ $zk_check_count -gt 10 ]; then
-        echo "ERROR: failed to start zookeeper in 10 seconds"
+    if [ $zk_check_count -gt 30 ]; then
+        echo "ERROR: failed to start zookeeper in 30 seconds"
         exit 1
     fi
 done
