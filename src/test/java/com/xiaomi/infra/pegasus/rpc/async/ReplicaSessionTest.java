@@ -220,7 +220,7 @@ public class ReplicaSessionTest {
     // no pending RequestEntry, ensure no NPE thrown
     Assert.assertTrue(rs.pendingResponse.isEmpty());
     try {
-      rs.tryNotifyWithSequenceID(100, error_code.error_types.ERR_TIMEOUT, false);
+      rs.tryNotifyFailureWithSeqID(100, error_code.error_types.ERR_TIMEOUT, false);
     } catch (Exception e) {
       Assert.assertNull(e);
     }
@@ -234,12 +234,12 @@ public class ReplicaSessionTest {
     entry.timeoutTask = null; // simulate the timeoutTask has been null
     entry.op = new rrdb_put_operator(new gpid(1, 1), null, null, 0);
     rs.pendingResponse.put(100, entry);
-    rs.tryNotifyWithSequenceID(100, error_code.error_types.ERR_TIMEOUT, false);
+    rs.tryNotifyFailureWithSeqID(100, error_code.error_types.ERR_TIMEOUT, false);
     Assert.assertTrue(passed.get());
 
     // simulate the entry has been removed, ensure no NPE thrown
     rs.getAndRemoveEntry(entry.sequenceId);
-    rs.tryNotifyWithSequenceID(entry.sequenceId, entry.op.rpc_error.errno, true);
+    rs.tryNotifyFailureWithSeqID(entry.sequenceId, entry.op.rpc_error.errno, true);
 
     // ensure mark session state to disconnect when TryNotifyWithSequenceID incur any exception
     ReplicaSession mockRs = Mockito.spy(rs);
@@ -247,7 +247,7 @@ public class ReplicaSessionTest {
     mockRs.fields.state = ConnState.CONNECTED;
     Mockito.doThrow(new Exception())
         .when(mockRs)
-        .tryNotifyWithSequenceID(entry.sequenceId, entry.op.rpc_error.errno, false);
+        .tryNotifyFailureWithSeqID(entry.sequenceId, entry.op.rpc_error.errno, false);
     mockRs.markSessionDisconnect();
     Assert.assertEquals(mockRs.getState(), ConnState.DISCONNECTED);
   }

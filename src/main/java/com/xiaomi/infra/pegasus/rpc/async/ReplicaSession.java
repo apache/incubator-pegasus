@@ -238,14 +238,14 @@ public class ReplicaSession {
         try {
           while (!pendingSend.isEmpty()) {
             RequestEntry e = pendingSend.poll();
-            tryNotifyWithSequenceID(e.sequenceId, error_types.ERR_SESSION_RESET, false);
+            tryNotifyFailureWithSeqID(e.sequenceId, error_types.ERR_SESSION_RESET, false);
           }
           List<RequestEntry> l = new LinkedList<RequestEntry>();
           for (Map.Entry<Integer, RequestEntry> entry : pendingResponse.entrySet()) {
             l.add(entry.getValue());
           }
           for (RequestEntry e : l) {
-            tryNotifyWithSequenceID(e.sequenceId, error_types.ERR_SESSION_RESET, false);
+            tryNotifyFailureWithSeqID(e.sequenceId, error_types.ERR_SESSION_RESET, false);
           }
         } catch (Exception e) {
           logger.error(
@@ -267,7 +267,7 @@ public class ReplicaSession {
   }
 
   // Notify the RPC sender if failure occurred.
-  void tryNotifyWithSequenceID(int seqID, error_types errno, boolean isTimeoutTask)
+  void tryNotifyFailureWithSeqID(int seqID, error_types errno, boolean isTimeoutTask)
       throws Exception {
     logger.debug(
         "{}: {} is notified with error {}, isTimeoutTask {}",
@@ -327,7 +327,7 @@ public class ReplicaSession {
                       name(),
                       entry.sequenceId,
                       channelFuture.cause());
-                  tryNotifyWithSequenceID(entry.sequenceId, error_types.ERR_TIMEOUT, false);
+                  tryNotifyFailureWithSeqID(entry.sequenceId, error_types.ERR_TIMEOUT, false);
                 }
               }
             });
@@ -342,7 +342,7 @@ public class ReplicaSession {
           @Override
           public void run() {
             try {
-              tryNotifyWithSequenceID(seqID, error_types.ERR_TIMEOUT, true);
+              tryNotifyFailureWithSeqID(seqID, error_types.ERR_TIMEOUT, true);
             } catch (Exception e) {
               logger.warn("try notify with sequenceID {} exception!", seqID, e);
             }
@@ -368,6 +368,7 @@ public class ReplicaSession {
     @Override
     public void channelRead0(ChannelHandlerContext ctx, final RequestEntry msg) {
       logger.debug("{}: handle response with seqid({})", name(), msg.sequenceId);
+      firstRecentTimedOutMs.set(0); // This session is currently healthy.
       if (msg.callback != null) {
         msg.callback.run();
       } else {
