@@ -4,3 +4,7 @@ namespace cpp dsn
 struct blob
 {
 }
+
+struct task_code
+{
+}

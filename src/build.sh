@@ -79,6 +79,14 @@ else
     echo "ENABLE_GCOV=NO"
 fi
 
+if [ ! -z "$SANITIZER" ]
+then
+    echo "SANITIZER=$SANITIZER"
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DSANITIZER=$SANITIZER"
+else
+    echo "Build without sanitizer"
+fi
+
 # valgrind can not work together with gpertools
 # you may want to use this option when you want to run valgrind
 if [ "$DISABLE_GPERF" == "YES" ]

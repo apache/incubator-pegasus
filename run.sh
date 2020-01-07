@@ -71,10 +71,16 @@ function usage_build()
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
+    echo "   --sanitizer <type>    build with sanitizer to check potential problems,
+                                   type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
 }
 function run_build()
 {
+    # Note(jiashuo1): No "memory" check mode, because MemorySanitizer is only available in Clang for Linux x86_64 targets
+    # # https://www.jetbrains.com/help/clion/google-sanitizers.html
+    SANITIZERS=("address" "leak" "thread" "undefined")
+
     C_COMPILER="gcc"
     CXX_COMPILER="g++"
     BUILD_TYPE="release"
@@ -88,6 +94,7 @@ function run_build()
     RUN_VERBOSE=NO
     DISABLE_GPERF=NO
     SKIP_THIRDPARTY=NO
+    SANITIZER=""
     TEST_MODULE=""
     while [[ $# > 0 ]]; do
         key="$1"
@@ -133,6 +140,16 @@ function run_build()
                 ;;
             --enable_gcov)
                 ENABLE_GCOV=YES
+                ;;
+            --sanitizer)
+                IS_SANITIZERS=`echo ${SANITIZERS[@]} | grep -w $2`
+                if [[ -z ${IS_SANITIZERS} ]]; then
+                    echo "ERROR: unknown sanitizer type \"$2\""
+                    usage_build
+                    exit 1
+                fi
+                SANITIZER="$2"
+                shift
                 ;;
             -v|--verbose)
                 RUN_VERBOSE=YES
@@ -200,6 +217,9 @@ function run_build()
     if [ "$SKIP_THIRDPARTY" == "YES" ]; then
         OPT="$OPT --skip_thirdparty"
     fi
+    if [ ! -z $SANITIZER ]; then
+        OPT="$OPT --sanitizer $SANITIZER"
+    fi
     ./run.sh build $OPT --notest
     if [ $? -ne 0 ]; then
         echo "ERROR: build rdsn failed"
@@ -209,7 +229,7 @@ function run_build()
     echo "INFO: start build rocksdb..."
     ROCKSDB_BUILD_DIR="$ROOT/rocksdb/build"
     ROCKSDB_BUILD_OUTPUT="$ROCKSDB_BUILD_DIR/output"
-    CMAKE_OPTIONS="-DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DWITH_LZ4=ON -DWITH_ZSTD=ON -DWITH_SNAPPY=ON -DWITH_BZ2=OFF -DWITH_TESTS=OFF"
+    CMAKE_OPTIONS="-DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DWITH_LZ4=ON -DWITH_ZSTD=ON -DWITH_SNAPPY=ON -DWITH_BZ2=OFF -DWITH_TESTS=OFF -DCMAKE_CXX_FLAGS=-g"
     if [ "$WARNING_ALL" == "YES" ]
     then
         echo "WARNING_ALL=YES"
@@ -283,7 +303,7 @@ function run_build()
     cd $ROOT/src
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
-        BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" \
+        BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER"\
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" DISABLE_GPERF="$DISABLE_GPERF" ./build.sh
     if [ $? -ne 0 ]; then
         echo "ERROR: build pegasus failed"
@@ -314,7 +334,7 @@ function run_test()
 {
     local test_modules=""
     local clear_flags="1"
-    local on_traivs=""
+    local on_travis=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -350,7 +370,10 @@ function run_test()
     start_time=`date +%s`
 
     ./run.sh clear_onebox #clear the onebox before test
-    ./run.sh start_onebox -w
+    if ! ./run.sh start_onebox -w; then
+        echo "ERROR: unable to continue on testing because starting onebox failed"
+        exit 1
+    fi
 
     for module in `echo $test_modules`; do
         pushd $ROOT/src/builder/bin/$module
@@ -599,9 +622,12 @@ function run_start_onebox()
         echo "ERROR: some onebox processes are running, start failed"
         exit 1
     fi
-    ln -s -f ${SERVER_PATH}/pegasus_server
+    ln -s -f "${SERVER_PATH}/pegasus_server" "${ROOT}"
 
-    run_start_zk
+    if ! run_start_zk; then
+        echo "ERROR: unable to setup onebox because zookeeper can not be started"
+        exit 1
+    fi
 
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
