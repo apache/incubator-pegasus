@@ -31,6 +31,7 @@ func main() {
 		MaxBackups: 100,
 		Filename:   "./bin/pegasus.log",
 	}))
+	logger := pegalog.GetLogger()
 
 	cfg := &pegasus.Config{}
 	json.Unmarshal(rawCfg, cfg)
@@ -47,13 +48,26 @@ func main() {
 	}
 
 	for t := 0; t < 10; t++ {
+		var sortKeys [][]byte
 		for i := 0; i < 10; i++ {
-			tb.Set(context.Background(), []byte("hash"), []byte("sort"), value)
+			sortKeys = append(sortKeys, []byte("sort"+string(i)))
 		}
 		for i := 0; i < 10; i++ {
-			tb.Get(context.Background(), []byte("hash"), []byte("sort"))
+			err = tb.Set(context.Background(), []byte("hash"), sortKeys[i], value)
+			if err != nil {
+				logger.Fatal(err)
+			}
 		}
-
+		for i := 0; i < 10; i++ {
+			_, err = tb.Get(context.Background(), []byte("hash"), sortKeys[i])
+			if err != nil {
+				logger.Fatal(err)
+			}
+		}
+		_, _, err = tb.MultiGet(context.Background(), []byte("hash"), sortKeys)
+		if err != nil {
+			logger.Fatal(err)
+		}
 		time.Sleep(time.Second)
 	}
 }

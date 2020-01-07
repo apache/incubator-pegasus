@@ -913,7 +913,7 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 
 		if confUpdate {
 			// we need to check if there's newer configuration.
-			p.tryConfUpdate()
+			p.tryConfUpdate(err, replica)
 		}
 
 		// add gpid and remote address to error
@@ -928,10 +928,11 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 	return nil
 }
 
-/// Don't bother if there's ongoing attempt.
-func (p *pegasusTableConnector) tryConfUpdate() {
+// tryConfUpdate makes an attempt to update table configuration by querying meta server.
+func (p *pegasusTableConnector) tryConfUpdate(err error, replica *session.ReplicaSession) {
 	select {
 	case p.confUpdateCh <- true:
+		p.logger.Print("trigger configuration update of table [%s] due to RPC failure [%s] to %s", p.tableName, err, replica)
 	default:
 	}
 }

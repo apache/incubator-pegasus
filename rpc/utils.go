@@ -5,10 +5,11 @@
 package rpc
 
 import (
+	"io"
 	"net"
 )
 
-// err requires to be non-nil
+// IsNetworkTimeoutErr returns whether the given error is a timeout error.
 func IsNetworkTimeoutErr(err error) bool {
 	// if it's a network timeout error
 	opErr, ok := err.(*net.OpError)
@@ -17,4 +18,14 @@ func IsNetworkTimeoutErr(err error) bool {
 	}
 
 	return false
+}
+
+// IsNetworkClosed returns whether the session is shutdown by the peer.
+func IsNetworkClosed(err error) bool {
+	opErr, ok := err.(*net.OpError)
+	if ok {
+		return opErr.Err == io.EOF
+	}
+
+	return err == io.EOF
 }

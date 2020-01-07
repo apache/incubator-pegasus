@@ -372,3 +372,15 @@ func TestNodeSession_Redial(t *testing.T) {
 	assert.Equal(t, n.ConnState(), rpc.ConnStateReady)
 	assert.Equal(t, err, base.ERR_INVALID_STATE)
 }
+
+func TestNodeSession_ReadEOF(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	reader := bytes.NewBuffer(make([]byte, 0))
+	writer := bytes.NewBuffer(make([]byte, 0))
+	n := newFakeNodeSession(reader, writer)
+	n.tom.Go(n.loopForResponse)
+
+	time.Sleep(100 * time.Millisecond)
+	assert.Equal(t, n.ConnState(), rpc.ConnStateTransientFailure)
+}

@@ -32,7 +32,6 @@ func (ms *metaSession) queryConfig(ctx context.Context, tableName string) (*repl
 	arg.Query.AppName = tableName
 	arg.Query.PartitionIndices = []int32{}
 
-	ms.logger.Printf("querying configuration of table(%s) from %s", tableName, ms)
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX")
 	if err != nil {
 		ms.logger.Printf("failed to query configuration from %s: %s", ms, err)
@@ -48,6 +47,7 @@ func (ms *metaSession) queryConfig(ctx context.Context, tableName string) (*repl
 type MetaManager struct {
 	logger pegalog.Logger
 
+	metaIPAddrs   []string
 	metas         []*metaSession
 	currentLeader int // current leader of meta servers
 
@@ -58,25 +58,32 @@ type MetaManager struct {
 //
 func NewMetaManager(addrs []string, creator NodeSessionCreator) *MetaManager {
 	metas := make([]*metaSession, len(addrs))
+	metaIPAddrs := make([]string, len(addrs))
 	for i, addr := range addrs {
 		metas[i] = &metaSession{
 			NodeSession: creator(addr, NodeTypeMeta),
 			logger:      pegalog.GetLogger(),
 		}
+		metaIPAddrs[i] = addr
 	}
 
 	mm := &MetaManager{
 		currentLeader: 0,
 		metas:         metas,
+		metaIPAddrs:   metaIPAddrs,
 		logger:        pegalog.GetLogger(),
 	}
 	return mm
 }
 
+// QueryConfig queries table configuration from the leader of meta servers. If the leader was changed,
+// it retries for other servers until it finds the true leader, unless no leader exists.
 // Thread-Safe
 func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*replication.QueryCfgResponse, error) {
 	lead := m.getCurrentLeader()
 	meta := m.metas[lead]
+
+	m.logger.Printf("querying configuration of table(%s) from %s [metaList=%s]", tableName, meta, m.metaIPAddrs)
 	resp, err := meta.queryConfig(ctx, tableName)
 
 	if ctx.Err() != nil {
