@@ -103,6 +103,9 @@ public:
 
     bool is_primary() const;
 
+    // Whether this replica is duplicating.
+    bool is_duplicating() const;
+
     //
     // Open the app.
     //

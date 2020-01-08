@@ -323,6 +323,8 @@ bool replication_app_base::is_primary() const
     return _replica->status() == partition_status::PS_PRIMARY;
 }
 
+bool replication_app_base::is_duplicating() const { return _replica->is_duplicating(); }
+
 error_code replication_app_base::open_internal(replica *r)
 {
     if (!dsn::utils::filesystem::directory_exists(_dir_data)) {
