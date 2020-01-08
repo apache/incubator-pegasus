@@ -29,7 +29,8 @@ struct db_write_context
     // the mutation decree
     int64_t decree{0};
 
-    // the timestamp of this write
+    // The time when this mutation is generated.
+    // This is used to calculate the new timetag.
     uint64_t timestamp{0};
 
     // timetag of the remote write, 0 if it's not from remote.
@@ -45,6 +46,7 @@ struct db_write_context
 
     static inline db_write_context empty(int64_t d) { return create(d, 0); }
 
+    // Creates a context for normal write.
     static inline db_write_context create(int64_t decree, uint64_t timestamp)
     {
         db_write_context ctx;
@@ -53,6 +55,7 @@ struct db_write_context
         return ctx;
     }
 
+    // Creates a context for duplicated write.
     static inline db_write_context
     create_duplicate(int64_t decree, uint64_t remote_timetag, bool verify_timetag)
     {
