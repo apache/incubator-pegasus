@@ -135,6 +135,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
                            err == dsn::ERR_OK ? _client->get_error_string(perr) : err.to_string(),
                            rpc.request().timestamp);
         }
+        dassert_replica(perr != PERR_INVALID_ARGUMENT, rpc.response().error_hint);
     } else {
         _shipped_ops->increment();
         _total_shipped_size +=
