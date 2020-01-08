@@ -266,7 +266,7 @@ struct duplicate_request
     4: optional byte cluster_id
 
     // Whether to compare the timetag of old value with the new write's.
-    5: optional bool verify_timetag;
+    5: optional bool verify_timetag
 }
 
 struct duplicate_response
