@@ -221,6 +221,13 @@ public:
                                  const scan_options &options,
                                  async_get_unordered_scanners_callback_t &&callback) override;
 
+    /// \internal
+    /// This is an internal function for duplication.
+    /// \see pegasus::server::pegasus_mutation_duplicator
+    void async_duplicate(dsn::apps::duplicate_rpc rpc,
+                         std::function<void(dsn::error_code)> &&callback,
+                         dsn::task_tracker *tracker);
+
     virtual const char *get_error_string(int error_code) const override;
 
     static void init_error();
@@ -279,6 +286,9 @@ public:
         static const ::dsn::blob _max;
     };
 
+    static int get_client_error(int server_error);
+    static int get_rocksdb_server_error(int rocskdb_error);
+
 private:
     class pegasus_scanner_impl_wrapper : public abstract_pegasus_scanner
     {
@@ -297,9 +307,6 @@ private:
             return _p->next(hashkey, sortkey, value, info);
         }
     };
-
-    static int get_client_error(int server_error);
-    static int get_rocksdb_server_error(int rocskdb_error);
 
 private:
     std::string _cluster_name;
