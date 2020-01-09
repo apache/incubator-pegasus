@@ -104,16 +104,16 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                   "rocksdb options.use_direct_io_for_flush_and_compaction");
 
     _db_opts.compaction_readahead_size =
-        (size_t)dsn_config_get_value_uint64("pegasus.server",
-                                            "rocksdb_compaction_readahead_size",
-                                            2 * 1024 * 1024,
-                                            "rocksdb options.compaction_readahead_size");
+        dsn_config_get_value_uint64("pegasus.server",
+                                    "rocksdb_compaction_readahead_size",
+                                    2 * 1024 * 1024,
+                                    "rocksdb options.compaction_readahead_size");
 
     _db_opts.writable_file_max_buffer_size =
-        (size_t)dsn_config_get_value_uint64("pegasus.server",
-                                            "rocksdb_writable_file_max_buffer_size",
-                                            1024 * 1024,
-                                            "rocksdb options.writable_file_max_buffer_size");
+        dsn_config_get_value_uint64("pegasus.server",
+                                    "rocksdb_writable_file_max_buffer_size",
+                                    1024 * 1024,
+                                    "rocksdb options.writable_file_max_buffer_size");
 
     _db_opts.write_buffer_size =
         (size_t)dsn_config_get_value_uint64("pegasus.server",
