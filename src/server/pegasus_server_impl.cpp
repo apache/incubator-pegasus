@@ -94,14 +94,14 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     // read rocksdb::Options configurations
 
-    _db_opts.use_direct_reads = (bool)dsn_config_get_value_bool(
-        "pegasus.server", "rocksdb_use_direct_reads", true, "rocksdb options.use_direct_reads");
+    _db_opts.use_direct_reads = dsn_config_get_value_bool(
+        "pegasus.server", "rocksdb_use_direct_reads", false, "rocksdb options.use_direct_reads");
 
     _db_opts.use_direct_io_for_flush_and_compaction =
-        (bool)dsn_config_get_value_bool("pegasus.server",
-                                        "rocksdb_use_direct_io_for_flush_and_compaction",
-                                        true,
-                                        "rocksdb options.use_direct_io_for_flush_and_compaction");
+        dsn_config_get_value_bool("pegasus.server",
+                                  "rocksdb_use_direct_io_for_flush_and_compaction",
+                                  false,
+                                  "rocksdb options.use_direct_io_for_flush_and_compaction");
 
     _db_opts.compaction_readahead_size =
         (size_t)dsn_config_get_value_uint64("pegasus.server",
