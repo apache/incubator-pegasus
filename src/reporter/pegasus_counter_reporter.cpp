@@ -8,11 +8,7 @@
 #include <ios>
 #include <iomanip>
 #include <iostream>
-#include <fstream>
-
 #include <unistd.h>
-
-#include <dsn/utility/smart_pointers.h>
 #include <dsn/cpp/service_app.h>
 
 #include "base/pegasus_utils.h"
@@ -22,26 +18,14 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
-#include <sstream>
-#include <iterator>
-#include <regex>
+#include <fmt/format.h>
 
 using namespace ::dsn;
 
-static std::string GetHostName()
-{
-    char hostname[1024];
-
-    if (::gethostname(hostname, sizeof(hostname))) {
-        return {};
-    }
-    return hostname;
-}
-
-static void change_metrics_name(std::string &metrics_name)
+static void format_metrics_name(std::string &metrics_name)
 {
     replace(metrics_name.begin(), metrics_name.end(), '@', ':');
+    replace(metrics_name.begin(), metrics_name.end(), '#', ':');
     replace(metrics_name.begin(), metrics_name.end(), '.', '_');
     replace(metrics_name.begin(), metrics_name.end(), '*', '_');
     replace(metrics_name.begin(), metrics_name.end(), '(', '_');
@@ -87,11 +71,10 @@ void pegasus_counter_reporter::prometheus_initialize()
         "pegasus.server", "prometheus_port", 9091, "prometheus gateway port");
     ddebug("prometheus initialize: host:port(%s:%d)", _prometheus_host.c_str(), _prometheus_port);
 
-    const auto &labels = prometheus::Gateway::GetInstanceLabel(GetHostName());
-    _gateway = std::make_shared<prometheus::Gateway>(
-        _prometheus_host, std::to_string(_prometheus_port), "pegasus", labels);
     _registry = std::make_shared<prometheus::Registry>();
-    _gateway->RegisterCollectable(_registry);
+    _exposer = std::make_unique<prometheus::Exposer>(
+        fmt::format("{}:{}", _prometheus_host, _prometheus_port));
+    _exposer->RegisterCollectable(_registry);
 }
 
 void pegasus_counter_reporter::falcon_initialize()
@@ -244,12 +227,12 @@ void pegasus_counter_reporter::update()
             // prometheus metric_name don't support characters like .*()@, it only support ":"
             // and "_"
             // so change the name to make it all right
-            change_metrics_name(metrics_name);
+            format_metrics_name(metrics_name);
 
             // split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or
             // "collector_app_pegasus_app_stat_multi_put_qps:1_0"
             // app[0] = "1" which is the app_id
-            // app[1] = "0" which is the partition_cout
+            // app[1] = "0" which is the partition_index
             // app[2] = "p999" or "" which represent the percent
             std::string app[3] = {"", "", ""};
             std::list<std::string> lv;
@@ -282,12 +265,9 @@ void pegasus_counter_reporter::update()
             }
 
             auto &second_gauge = it->second->Add(
-                {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
+                {{"app", app[0]}, {"partition", app[1]}, {"percent", app[2]}});
             second_gauge.Set(cs.value);
         });
-
-        // report data to pushgateway
-        _gateway->Push();
     }
 
     ddebug("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);

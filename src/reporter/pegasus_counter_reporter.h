@@ -16,7 +16,7 @@
 #include <event2/keyvalq_struct.h>
 
 #include <prometheus/registry.h>
-#include <prometheus/gateway.h>
+#include <prometheus/exposer.h>
 
 namespace pegasus {
 namespace server {
@@ -85,7 +85,7 @@ private:
     std::string _prometheus_host;
     uint16_t _prometheus_port;
     std::shared_ptr<prometheus::Registry> _registry;
-    std::shared_ptr<prometheus::Gateway> _gateway;
+    std::unique_ptr<prometheus::Exposer> _exposer;
     std::map<std::string, prometheus::Family<prometheus::Gauge> *> _gauge_family_map;
 };
 }
