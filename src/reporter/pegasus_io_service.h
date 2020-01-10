@@ -30,6 +30,14 @@ public:
         }
     }
 
+    ~pegasus_io_service()
+    {
+        ios.stop();
+        for (auto worker : _workers) {
+            worker->join();
+        }
+    }
+
     boost::asio::io_service ios;
 
 private:
