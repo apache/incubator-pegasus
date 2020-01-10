@@ -458,9 +458,9 @@ void meta_load_balance_test::simple_lb_cure_test()
         EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, pc.primary);
 
+        proposal_sent = true;
         svc->set_node_state({pc.primary}, false);
         svc->set_filter(default_filter);
-        proposal_sent = true;
         return nullptr;
     });
 
@@ -491,9 +491,9 @@ void meta_load_balance_test::simple_lb_cure_test()
         EXPECT_EQ(update_req->node, nodes[2]);
         EXPECT_EQ(target, nodes[2]);
 
+        proposal_sent = true;
         svc->set_filter(default_filter);
         apply_update_request(*update_req);
-        proposal_sent = true;
         return update_req;
     });
 
@@ -556,9 +556,9 @@ void meta_load_balance_test::simple_lb_cure_test()
         EXPECT_EQ(update_req->node, nodes[1]);
         EXPECT_EQ(target, nodes[1]);
 
+        proposal_sent = true;
         svc->set_filter(default_filter);
         apply_update_request(*update_req);
-        proposal_sent = true;
         return update_req;
     });
 
@@ -650,9 +650,9 @@ void meta_load_balance_test::simple_lb_cure_test()
         EXPECT_EQ(update_req->node, nodes[1]);
         EXPECT_EQ(target, nodes[1]);
 
+        proposal_sent = true;
         svc->set_filter(default_filter);
         apply_update_request(*update_req);
-        proposal_sent = true;
         return update_req;
     });
 
@@ -676,9 +676,9 @@ void meta_load_balance_test::simple_lb_cure_test()
         EXPECT_EQ(update_req->node, nodes[0]);
         EXPECT_EQ(target, nodes[0]);
 
+        proposal_sent = true;
         svc->set_filter(default_filter);
         apply_update_request(*update_req);
-        proposal_sent = true;
         return update_req;
     });
 
