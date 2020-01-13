@@ -38,3 +38,4 @@ dependency-reduced-pom.xml
 .factorypath
 .project
 .settings/
+scalafmt

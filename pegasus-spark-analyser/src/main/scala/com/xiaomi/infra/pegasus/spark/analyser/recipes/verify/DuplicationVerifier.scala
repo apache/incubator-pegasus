@@ -1,7 +1,10 @@
 package com.xiaomi.infra.pegasus.spark.analyser.recipes.verify
 
 import com.typesafe.config.{ConfigException, ConfigFactory}
-import com.xiaomi.infra.pegasus.spark.analyser.{ColdBackupConfig, PegasusContext}
+import com.xiaomi.infra.pegasus.spark.analyser.{
+  ColdBackupConfig,
+  PegasusContext
+}
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.{SparkConf, SparkContext}
 

@@ -10,7 +10,7 @@ import org.rocksdb.RocksIterator
 
 object PegasusRecord {
   private def restoreKey(
-    key: Array[Byte]
+      key: Array[Byte]
   ): ImmutablePair[Array[Byte], Array[Byte]] = {
     Validate.isTrue(key != null && key.length >= 2)
     val buf = ByteBuffer.wrap(key)
@@ -35,9 +35,11 @@ object PegasusRecord {
   }
 }
 
-case class PegasusRecord private (hashKey: Array[Byte],
-                                  sortKey: Array[Byte],
-                                  value: Array[Byte]) {
+case class PegasusRecord private (
+    hashKey: Array[Byte],
+    sortKey: Array[Byte],
+    value: Array[Byte]
+) {
   override def toString: String =
     String.format(
       "[HashKey=%s, SortKey=%s, Value=%s]",

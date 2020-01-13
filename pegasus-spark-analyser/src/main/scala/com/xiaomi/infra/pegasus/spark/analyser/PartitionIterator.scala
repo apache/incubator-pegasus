@@ -10,9 +10,10 @@ import org.rocksdb.{RocksDB, RocksIterator}
   * Iterator of a pegasus partition. It's used to load the entire partition sequentially
   * and sorted by bytes-order.
   */
-private[analyser] class PartitionIterator private (context: TaskContext,
-                                                   val pid: Int)
-    extends Iterator[PegasusRecord] {
+private[analyser] class PartitionIterator private (
+    context: TaskContext,
+    val pid: Int
+) extends Iterator[PegasusRecord] {
 
   private val LOG = LogFactory.getLog(classOf[PartitionIterator])
 

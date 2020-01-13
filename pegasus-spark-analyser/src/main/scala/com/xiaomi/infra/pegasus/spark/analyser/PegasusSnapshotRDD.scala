@@ -25,23 +25,28 @@ class PegasusContext(private val sc: SparkContext) extends Serializable {
   *
   * To construct a PegasusSnapshotRDD, use [[PegasusContext#pegasusSnapshotRDD]].
   */
-class PegasusSnapshotRDD private[analyser] (pegasusContext: PegasusContext,
-                                            snapshotLoader: PegasusLoader,
-                                            @transient sc: SparkContext)
-    extends RDD[PegasusRecord](sc, Nil) {
+class PegasusSnapshotRDD private[analyser] (
+    pegasusContext: PegasusContext,
+    snapshotLoader: PegasusLoader,
+    @transient sc: SparkContext
+) extends RDD[PegasusRecord](sc, Nil) {
 
   private val LOG = LogFactory.getLog(classOf[PegasusSnapshotRDD])
 
-  override def compute(split: Partition,
-                       context: TaskContext): Iterator[PegasusRecord] = {
+  override def compute(
+      split: Partition,
+      context: TaskContext
+  ): Iterator[PegasusRecord] = {
     // Loads the librocksdb library into jvm.
     RocksDB.loadLibrary()
 
     LOG.info(
       "Create iterator for \"%s\" \"%s\" [pid: %d]"
-        .format(snapshotLoader.getConfig.clusterName,
-                snapshotLoader.getConfig.tableName,
-                split.index)
+        .format(
+          snapshotLoader.getConfig.clusterName,
+          snapshotLoader.getConfig.tableName,
+          split.index
+        )
     )
     new PartitionIterator(context, snapshotLoader, split.index)
   }
