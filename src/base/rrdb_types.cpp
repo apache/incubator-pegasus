@@ -4281,6 +4281,12 @@ void duplicate_request::__set_cluster_id(const int8_t val)
     __isset.cluster_id = true;
 }
 
+void duplicate_request::__set_verify_timetag(const bool val)
+{
+    this->verify_timetag = val;
+    __isset.verify_timetag = true;
+}
+
 uint32_t duplicate_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -4332,6 +4338,14 @@ uint32_t duplicate_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 5:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->verify_timetag);
+                this->__isset.verify_timetag = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -4370,6 +4384,11 @@ uint32_t duplicate_request::write(::apache::thrift::protocol::TProtocol *oprot) 
         xfer += oprot->writeByte(this->cluster_id);
         xfer += oprot->writeFieldEnd();
     }
+    if (this->__isset.verify_timetag) {
+        xfer += oprot->writeFieldBegin("verify_timetag", ::apache::thrift::protocol::T_BOOL, 5);
+        xfer += oprot->writeBool(this->verify_timetag);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -4382,6 +4401,7 @@ void swap(duplicate_request &a, duplicate_request &b)
     swap(a.task_code, b.task_code);
     swap(a.raw_message, b.raw_message);
     swap(a.cluster_id, b.cluster_id);
+    swap(a.verify_timetag, b.verify_timetag);
     swap(a.__isset, b.__isset);
 }
 
@@ -4391,6 +4411,7 @@ duplicate_request::duplicate_request(const duplicate_request &other126)
     task_code = other126.task_code;
     raw_message = other126.raw_message;
     cluster_id = other126.cluster_id;
+    verify_timetag = other126.verify_timetag;
     __isset = other126.__isset;
 }
 duplicate_request::duplicate_request(duplicate_request &&other127)
@@ -4399,6 +4420,7 @@ duplicate_request::duplicate_request(duplicate_request &&other127)
     task_code = std::move(other127.task_code);
     raw_message = std::move(other127.raw_message);
     cluster_id = std::move(other127.cluster_id);
+    verify_timetag = std::move(other127.verify_timetag);
     __isset = std::move(other127.__isset);
 }
 duplicate_request &duplicate_request::operator=(const duplicate_request &other128)
@@ -4407,6 +4429,7 @@ duplicate_request &duplicate_request::operator=(const duplicate_request &other12
     task_code = other128.task_code;
     raw_message = other128.raw_message;
     cluster_id = other128.cluster_id;
+    verify_timetag = other128.verify_timetag;
     __isset = other128.__isset;
     return *this;
 }
@@ -4416,6 +4439,7 @@ duplicate_request &duplicate_request::operator=(duplicate_request &&other129)
     task_code = std::move(other129.task_code);
     raw_message = std::move(other129.raw_message);
     cluster_id = std::move(other129.cluster_id);
+    verify_timetag = std::move(other129.verify_timetag);
     __isset = std::move(other129.__isset);
     return *this;
 }
@@ -4434,6 +4458,9 @@ void duplicate_request::printTo(std::ostream &out) const
     out << ", "
         << "cluster_id=";
     (__isset.cluster_id ? (out << to_string(cluster_id)) : (out << "<null>"));
+    out << ", "
+        << "verify_timetag=";
+    (__isset.verify_timetag ? (out << to_string(verify_timetag)) : (out << "<null>"));
     out << ")";
 }
 
@@ -4443,6 +4470,12 @@ void duplicate_response::__set_error(const int32_t val)
 {
     this->error = val;
     __isset.error = true;
+}
+
+void duplicate_response::__set_error_hint(const std::string &val)
+{
+    this->error_hint = val;
+    __isset.error_hint = true;
 }
 
 uint32_t duplicate_response::read(::apache::thrift::protocol::TProtocol *iprot)
@@ -4472,6 +4505,14 @@ uint32_t duplicate_response::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->error_hint);
+                this->__isset.error_hint = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -4495,6 +4536,11 @@ uint32_t duplicate_response::write(::apache::thrift::protocol::TProtocol *oprot)
         xfer += oprot->writeI32(this->error);
         xfer += oprot->writeFieldEnd();
     }
+    if (this->__isset.error_hint) {
+        xfer += oprot->writeFieldBegin("error_hint", ::apache::thrift::protocol::T_STRING, 2);
+        xfer += oprot->writeString(this->error_hint);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -4504,28 +4550,33 @@ void swap(duplicate_response &a, duplicate_response &b)
 {
     using ::std::swap;
     swap(a.error, b.error);
+    swap(a.error_hint, b.error_hint);
     swap(a.__isset, b.__isset);
 }
 
 duplicate_response::duplicate_response(const duplicate_response &other130)
 {
     error = other130.error;
+    error_hint = other130.error_hint;
     __isset = other130.__isset;
 }
 duplicate_response::duplicate_response(duplicate_response &&other131)
 {
     error = std::move(other131.error);
+    error_hint = std::move(other131.error_hint);
     __isset = std::move(other131.__isset);
 }
 duplicate_response &duplicate_response::operator=(const duplicate_response &other132)
 {
     error = other132.error;
+    error_hint = other132.error_hint;
     __isset = other132.__isset;
     return *this;
 }
 duplicate_response &duplicate_response::operator=(duplicate_response &&other133)
 {
     error = std::move(other133.error);
+    error_hint = std::move(other133.error_hint);
     __isset = std::move(other133.__isset);
     return *this;
 }
@@ -4535,6 +4586,9 @@ void duplicate_response::printTo(std::ostream &out) const
     out << "duplicate_response(";
     out << "error=";
     (__isset.error ? (out << to_string(error)) : (out << "<null>"));
+    out << ", "
+        << "error_hint=";
+    (__isset.error_hint ? (out << to_string(error_hint)) : (out << "<null>"));
     out << ")";
 }
 }

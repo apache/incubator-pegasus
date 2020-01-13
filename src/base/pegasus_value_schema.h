@@ -21,6 +21,12 @@ namespace pegasus {
 
 #define PEGASUS_DATA_VERSION_MAX 0u
 
+/// Generates timetag in host endian.
+inline uint64_t generate_timetag(uint64_t timestamp, uint8_t cluster_id, bool delete_tag)
+{
+    return timestamp << 8u | cluster_id << 1u | delete_tag;
+}
+
 /// Extracts expire_ts from rocksdb value with given version.
 /// The value schema must be in v0.
 /// \return expire_ts in host endian
@@ -46,7 +52,7 @@ pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob
               version,
               PEGASUS_DATA_VERSION_MAX);
 
-    std::string *s = new std::string(std::move(raw_value));
+    auto *s = new std::string(std::move(raw_value));
     dsn::data_input input(*s);
     input.skip(sizeof(uint32_t));
     dsn::string_view view = input.read_str();
@@ -127,7 +133,7 @@ public:
             _write_slices.emplace_back(user_data.data(), user_data.length());
         }
 
-        return rocksdb::SliceParts(&_write_slices[0], static_cast<int>(_write_slices.size()));
+        return {&_write_slices[0], static_cast<int>(_write_slices.size())};
     }
 
 private:
