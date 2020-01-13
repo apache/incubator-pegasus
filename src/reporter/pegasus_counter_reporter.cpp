@@ -248,6 +248,7 @@ void pegasus_counter_reporter::update()
             }
 
             // create metrics that prometheus support to report data
+            metrics_name = lv.front();
             std::map<std::string, prometheus::Family<prometheus::Gauge> *>::iterator it =
                 _gauge_family_map.find(metrics_name);
             if (it == _gauge_family_map.end()) {
