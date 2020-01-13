@@ -113,6 +113,10 @@ class scan_request;
 
 class scan_response;
 
+class duplicate_request;
+
+class duplicate_response;
+
 typedef struct _update_request__isset
 {
     _update_request__isset() : key(false), value(false), expire_ts_seconds(false) {}
@@ -1787,6 +1791,149 @@ public:
 void swap(scan_response &a, scan_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const scan_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _duplicate_request__isset
+{
+    _duplicate_request__isset()
+        : timestamp(false),
+          task_code(false),
+          raw_message(false),
+          cluster_id(false),
+          verify_timetag(false)
+    {
+    }
+    bool timestamp : 1;
+    bool task_code : 1;
+    bool raw_message : 1;
+    bool cluster_id : 1;
+    bool verify_timetag : 1;
+} _duplicate_request__isset;
+
+class duplicate_request
+{
+public:
+    duplicate_request(const duplicate_request &);
+    duplicate_request(duplicate_request &&);
+    duplicate_request &operator=(const duplicate_request &);
+    duplicate_request &operator=(duplicate_request &&);
+    duplicate_request() : timestamp(0), cluster_id(0), verify_timetag(0) {}
+
+    virtual ~duplicate_request() throw();
+    int64_t timestamp;
+    ::dsn::task_code task_code;
+    ::dsn::blob raw_message;
+    int8_t cluster_id;
+    bool verify_timetag;
+
+    _duplicate_request__isset __isset;
+
+    void __set_timestamp(const int64_t val);
+
+    void __set_task_code(const ::dsn::task_code &val);
+
+    void __set_raw_message(const ::dsn::blob &val);
+
+    void __set_cluster_id(const int8_t val);
+
+    void __set_verify_timetag(const bool val);
+
+    bool operator==(const duplicate_request &rhs) const
+    {
+        if (__isset.timestamp != rhs.__isset.timestamp)
+            return false;
+        else if (__isset.timestamp && !(timestamp == rhs.timestamp))
+            return false;
+        if (__isset.task_code != rhs.__isset.task_code)
+            return false;
+        else if (__isset.task_code && !(task_code == rhs.task_code))
+            return false;
+        if (__isset.raw_message != rhs.__isset.raw_message)
+            return false;
+        else if (__isset.raw_message && !(raw_message == rhs.raw_message))
+            return false;
+        if (__isset.cluster_id != rhs.__isset.cluster_id)
+            return false;
+        else if (__isset.cluster_id && !(cluster_id == rhs.cluster_id))
+            return false;
+        if (__isset.verify_timetag != rhs.__isset.verify_timetag)
+            return false;
+        else if (__isset.verify_timetag && !(verify_timetag == rhs.verify_timetag))
+            return false;
+        return true;
+    }
+    bool operator!=(const duplicate_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const duplicate_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(duplicate_request &a, duplicate_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const duplicate_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _duplicate_response__isset
+{
+    _duplicate_response__isset() : error(false), error_hint(false) {}
+    bool error : 1;
+    bool error_hint : 1;
+} _duplicate_response__isset;
+
+class duplicate_response
+{
+public:
+    duplicate_response(const duplicate_response &);
+    duplicate_response(duplicate_response &&);
+    duplicate_response &operator=(const duplicate_response &);
+    duplicate_response &operator=(duplicate_response &&);
+    duplicate_response() : error(0), error_hint() {}
+
+    virtual ~duplicate_response() throw();
+    int32_t error;
+    std::string error_hint;
+
+    _duplicate_response__isset __isset;
+
+    void __set_error(const int32_t val);
+
+    void __set_error_hint(const std::string &val);
+
+    bool operator==(const duplicate_response &rhs) const
+    {
+        if (__isset.error != rhs.__isset.error)
+            return false;
+        else if (__isset.error && !(error == rhs.error))
+            return false;
+        if (__isset.error_hint != rhs.__isset.error_hint)
+            return false;
+        else if (__isset.error_hint && !(error_hint == rhs.error_hint))
+            return false;
+        return true;
+    }
+    bool operator!=(const duplicate_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const duplicate_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(duplicate_response &a, duplicate_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const duplicate_response &obj)
 {
     obj.printTo(out);
     return out;
