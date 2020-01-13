@@ -32,11 +32,12 @@ public:
         dsn::apps::update_response response;
 
         int64_t decree = 10;
+        auto ctx = db_write_context::empty(decree);
         std::string hash_key = "hash_key";
 
         // alarm for empty request
         request.hash_key = dsn::blob(hash_key.data(), 0, hash_key.size());
-        int err = _write_svc->multi_put(decree, request, response);
+        int err = _write_svc->multi_put(ctx, request, response);
         ASSERT_EQ(err, 0);
         verify_response(response, rocksdb::Status::kInvalidArgument, decree);
 
@@ -57,20 +58,20 @@ public:
 
         {
             dsn::fail::cfg("db_write_batch_put", "100%1*return()");
-            err = _write_svc->multi_put(decree, request, response);
+            err = _write_svc->multi_put(ctx, request, response);
             ASSERT_EQ(err, FAIL_DB_WRITE_BATCH_PUT);
             verify_response(response, err, decree);
         }
 
         {
             dsn::fail::cfg("db_write", "100%1*return()");
-            err = _write_svc->multi_put(decree, request, response);
+            err = _write_svc->multi_put(ctx, request, response);
             ASSERT_EQ(err, FAIL_DB_WRITE);
             verify_response(response, err, decree);
         }
 
         { // success
-            err = _write_svc->multi_put(decree, request, response);
+            err = _write_svc->multi_put(ctx, request, response);
             ASSERT_EQ(err, 0);
             verify_response(response, 0, decree);
         }
@@ -153,7 +154,7 @@ public:
             for (int i = 0; i < kv_num; i++) {
                 dsn::apps::update_request req;
                 req.key = key[i];
-                _write_svc->batch_put(decree, req, responses[i]);
+                _write_svc->batch_put(db_write_context::empty(decree), req, responses[i]);
             }
             for (int i = 0; i < kv_num; i++) {
                 _write_svc->batch_remove(decree, key[i], responses[i]);

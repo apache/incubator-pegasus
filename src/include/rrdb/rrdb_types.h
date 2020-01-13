@@ -1799,13 +1799,18 @@ inline std::ostream &operator<<(std::ostream &out, const scan_response &obj)
 typedef struct _duplicate_request__isset
 {
     _duplicate_request__isset()
-        : timestamp(false), task_code(false), raw_message(false), cluster_id(false)
+        : timestamp(false),
+          task_code(false),
+          raw_message(false),
+          cluster_id(false),
+          verify_timetag(false)
     {
     }
     bool timestamp : 1;
     bool task_code : 1;
     bool raw_message : 1;
     bool cluster_id : 1;
+    bool verify_timetag : 1;
 } _duplicate_request__isset;
 
 class duplicate_request
@@ -1815,13 +1820,14 @@ public:
     duplicate_request(duplicate_request &&);
     duplicate_request &operator=(const duplicate_request &);
     duplicate_request &operator=(duplicate_request &&);
-    duplicate_request() : timestamp(0), cluster_id(0) {}
+    duplicate_request() : timestamp(0), cluster_id(0), verify_timetag(0) {}
 
     virtual ~duplicate_request() throw();
     int64_t timestamp;
     ::dsn::task_code task_code;
     ::dsn::blob raw_message;
     int8_t cluster_id;
+    bool verify_timetag;
 
     _duplicate_request__isset __isset;
 
@@ -1832,6 +1838,8 @@ public:
     void __set_raw_message(const ::dsn::blob &val);
 
     void __set_cluster_id(const int8_t val);
+
+    void __set_verify_timetag(const bool val);
 
     bool operator==(const duplicate_request &rhs) const
     {
@@ -1850,6 +1858,10 @@ public:
         if (__isset.cluster_id != rhs.__isset.cluster_id)
             return false;
         else if (__isset.cluster_id && !(cluster_id == rhs.cluster_id))
+            return false;
+        if (__isset.verify_timetag != rhs.__isset.verify_timetag)
+            return false;
+        else if (__isset.verify_timetag && !(verify_timetag == rhs.verify_timetag))
             return false;
         return true;
     }
@@ -1873,8 +1885,9 @@ inline std::ostream &operator<<(std::ostream &out, const duplicate_request &obj)
 
 typedef struct _duplicate_response__isset
 {
-    _duplicate_response__isset() : error(false) {}
+    _duplicate_response__isset() : error(false), error_hint(false) {}
     bool error : 1;
+    bool error_hint : 1;
 } _duplicate_response__isset;
 
 class duplicate_response
@@ -1884,20 +1897,27 @@ public:
     duplicate_response(duplicate_response &&);
     duplicate_response &operator=(const duplicate_response &);
     duplicate_response &operator=(duplicate_response &&);
-    duplicate_response() : error(0) {}
+    duplicate_response() : error(0), error_hint() {}
 
     virtual ~duplicate_response() throw();
     int32_t error;
+    std::string error_hint;
 
     _duplicate_response__isset __isset;
 
     void __set_error(const int32_t val);
+
+    void __set_error_hint(const std::string &val);
 
     bool operator==(const duplicate_response &rhs) const
     {
         if (__isset.error != rhs.__isset.error)
             return false;
         else if (__isset.error && !(error == rhs.error))
+            return false;
+        if (__isset.error_hint != rhs.__isset.error_hint)
+            return false;
+        else if (__isset.error_hint && !(error_hint == rhs.error_hint))
             return false;
         return true;
     }
