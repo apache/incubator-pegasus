@@ -1326,16 +1326,16 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
     ddebug("%s: start to open rocksDB's rdb(%s)", replica_name(), path.c_str());
 
-    bool need_create_meta_cf = true;
-    // Check meta CF only when db exist.
-    if (db_exist && check_meta_cf(path, &need_create_meta_cf) != ::dsn::ERR_OK) {
-        derror_replica("check meta column family failed");
-        return ::dsn::ERR_LOCAL_APP_FAILURE;
-    }
-    if (need_create_meta_cf) {
-        // If upgrade from an old Pegasus version which has just one column family (the default
-        // column family), or create new db, we have to create a new column family to store meta
-        // data (meta column family).
+    if (db_exist) {
+        // When DB exist, meta CF must be present.
+        bool missing_meta_cf = true;
+        if (check_meta_cf(path, &missing_meta_cf) != ::dsn::ERR_OK) {
+            derror_replica("check meta column family failed");
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
+        dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
+    } else {
+        // When create new DB, we have to create a new column family to store meta data (meta column family).
         _db_opts.create_missing_column_families = true;
     }
 
@@ -1356,28 +1356,29 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     // Create _meta_store which provide Pegasus meta data read and write.
     _meta_store = dsn::make_unique<meta_store>(this, _db, _meta_cf);
 
-    _last_committed_decree = _meta_store->get_last_flushed_decree();
-    _pegasus_data_version = _meta_store->get_data_version();
-    uint64_t last_manual_compact_finish_time = _meta_store->get_last_manual_compact_finish_time();
-    if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
-        derror_replica("open app failed, unsupported data version {}", _pegasus_data_version);
-        release_db();
-        return ::dsn::ERR_LOCAL_APP_FAILURE;
-    }
+    if (db_exist) {
+        _last_committed_decree = _meta_store->get_last_flushed_decree();
+        _pegasus_data_version = _meta_store->get_data_version();
+        uint64_t last_manual_compact_finish_time = _meta_store->get_last_manual_compact_finish_time();
+        if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
+            derror_replica("open app failed, unsupported data version {}", _pegasus_data_version);
+            release_db();
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
 
-    if (need_create_meta_cf) {
-        // Write meta data to meta CF according to manifest.
-        _meta_store->set_data_version(_pegasus_data_version);
-        _meta_store->set_last_flushed_decree(_last_committed_decree);
-        _meta_store->set_last_manual_compact_finish_time(last_manual_compact_finish_time);
+        // update last manual compact finish timestamp
+        _manual_compact_svc.init_last_finish_time_ms(last_manual_compact_finish_time);
+    } else {
+        // Write initial meta data to meta CF and flush when create new DB.
+        _meta_store->set_data_version(PEGASUS_DATA_VERSION_MAX);
+        _meta_store->set_last_flushed_decree(0);
+        _meta_store->set_last_manual_compact_finish_time(0);
+        flush_all_family_columns(true);
     }
 
     // only enable filter after correct pegasus_data_version set
     _key_ttl_compaction_filter_factory->SetPegasusDataVersion(_pegasus_data_version);
     _key_ttl_compaction_filter_factory->EnableFilter();
-
-    // update LastManualCompactFinishTime
-    _manual_compact_svc.init_last_finish_time_ms(last_manual_compact_finish_time);
 
     parse_checkpoints();
 
@@ -1739,8 +1740,8 @@ private:
         }
     }
 
-    uint64_t ci = 0;
-    status = chkpt->CreateCheckpointQuick(checkpoint_dir, &ci);
+    // CreateCheckpoint() will not flush memtable when log_size_for_flush = max
+    status = chkpt->CreateCheckpoint(checkpoint_dir, std::numeric_limits<uint64_t>::max());
     if (!status.ok()) {
         derror_replica("CreateCheckpoint failed, error = {}", status.ToString());
         if (!::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
@@ -1748,10 +1749,37 @@ private:
         }
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
-    ddebug_replica("copy checkpoint to dir({}) succeed, last_decree = {}", checkpoint_dir, ci);
+    ddebug_replica("copy checkpoint to dir({}) succeed", checkpoint_dir);
 
     if (checkpoint_decree != nullptr) {
-        *checkpoint_decree = static_cast<int64_t>(ci);
+        rocksdb::DB *snapshot_db = nullptr;
+        std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
+        auto cleanup = [&](bool remove_checkpoint) {
+            if (remove_checkpoint && !::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
+                derror_replica("remove checkpoint directory {} failed", checkpoint_dir);
+            }
+            release_db(snapshot_db, handles_opened);
+        };
+
+        // always need to open default column family even though not use it
+        std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
+            {{DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
+             {META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
+        status = rocksdb::DB::OpenForReadOnly(
+            rocksdb::DBOptions(), checkpoint_dir, column_families, &handles_opened, &snapshot_db);
+        if (!status.ok()) {
+            derror_replica(
+                "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
+            snapshot_db = nullptr;
+            cleanup(true);
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
+        dcheck_eq_replica(handles_opened.size(), 2);
+        dcheck_eq_replica(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
+        uint64_t last_flushed_decree = _meta_store->get_last_flushed_decree_from_checkpoint(snapshot_db, handles_opened[1]);
+        *checkpoint_decree = last_flushed_decree;
+
+        cleanup(false);
     }
 
     return ::dsn::ERR_OK;
@@ -2576,9 +2604,9 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
 }
 
 ::dsn::error_code pegasus_server_impl::check_meta_cf(const std::string &path,
-                                                     bool *need_create_meta_cf)
+                                                     bool *missing_meta_cf)
 {
-    *need_create_meta_cf = true;
+    *missing_meta_cf = true;
     std::vector<std::string> column_families;
     auto s = rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), path, &column_families);
     if (!s.ok()) {
@@ -2588,7 +2616,7 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
 
     for (const auto &column_family : column_families) {
         if (column_family == META_COLUMN_FAMILY_NAME) {
-            *need_create_meta_cf = false;
+            *missing_meta_cf = false;
             break;
         }
     }
@@ -2609,12 +2637,20 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
 
 void pegasus_server_impl::release_db()
 {
-    _db->DestroyColumnFamilyHandle(_data_cf);
-    _data_cf = nullptr;
-    _db->DestroyColumnFamilyHandle(_meta_cf);
-    _meta_cf = nullptr;
-    delete _db;
-    _db = nullptr;
+    release_db(_db, {_data_cf, _meta_cf});
+}
+
+void pegasus_server_impl::release_db(rocksdb::DB *db, const std::vector<rocksdb::ColumnFamilyHandle *>& handles)
+{
+    if (db) {
+        for (auto handle : handles) {
+            dassert_replica(handle != nullptr, "");
+            db->DestroyColumnFamilyHandle(handle);
+            handle = nullptr;
+        }
+        delete db;
+        db = nullptr;
+    }
 }
 
 std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)

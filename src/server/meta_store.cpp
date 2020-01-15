@@ -12,7 +12,7 @@ namespace server {
 
 DSN_DEFINE_string("pegasus.server",
                   get_meta_store_type,
-                  "manifest",
+                  "metacf",
                   "Where to get meta data, now support 'manifest' and 'metacf'");
 DSN_DEFINE_validator(get_meta_store_type, [](const char *type) {
     return strcmp(type, "manifest") == 0 || strcmp(type, "metacf") == 0;
@@ -84,9 +84,22 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
     }
 }
 
+uint64_t meta_store::get_last_flushed_decree_from_checkpoint(rocksdb::DB *db, rocksdb::ColumnFamilyHandle* meta_cf) const
+{
+    uint64_t last_flushed_decree = 0;
+    auto ec = get_value_from_meta_cf(db, meta_cf, true, LAST_FLUSHED_DECREE, &last_flushed_decree);
+    dcheck_eq_replica(::dsn::ERR_OK, ec);
+    return last_flushed_decree;
+}
+
 ::dsn::error_code meta_store::get_value_from_meta_cf(bool read_flushed_data,
                                                      const std::string &key,
                                                      uint64_t *value) const
+{
+    return get_value_from_meta_cf(_db, _meta_cf, read_flushed_data, key, value);
+}
+
+::dsn::error_code meta_store::get_value_from_meta_cf(rocksdb::DB *db, rocksdb::ColumnFamilyHandle *cf, bool read_flushed_data, const std::string &key, uint64_t *value)
 {
     std::string data;
     rocksdb::ReadOptions rd_opts;
@@ -94,14 +107,14 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
         // only read 'flushed' data, mainly to read 'last_flushed_decree'
         rd_opts.read_tier = rocksdb::kPersistedTier;
     }
-    auto status = _db->Get(rd_opts, _meta_cf, key, &data);
+    auto status = db->Get(rd_opts, cf, key, &data);
     if (status.ok()) {
         bool ok = dsn::buf2uint64(data, *value);
-        dassert_replica(ok,
-                        "rocksdb {} get {} from meta column family got error value {}",
-                        _db->GetName(),
-                        key,
-                        data);
+        dassert(ok,
+                "rocksdb {} get {} from meta column family got error value {}",
+                db->GetName(),
+                key,
+                data);
         return ::dsn::ERR_OK;
     }
 

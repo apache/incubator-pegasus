@@ -33,6 +33,7 @@ public:
     meta_store(pegasus_server_impl *server, rocksdb::DB *db, rocksdb::ColumnFamilyHandle *meta_cf);
 
     uint64_t get_last_flushed_decree() const;
+    uint64_t get_last_flushed_decree_from_checkpoint(rocksdb::DB *db, rocksdb::ColumnFamilyHandle *meta_cf) const;
     uint32_t get_data_version() const;
     uint64_t get_last_manual_compact_finish_time() const;
 
@@ -44,6 +45,8 @@ private:
     ::dsn::error_code
     get_value_from_meta_cf(bool read_flushed_data, const std::string &key, uint64_t *value) const;
     ::dsn::error_code set_value_to_meta_cf(const std::string &key, uint64_t value) const;
+
+    static ::dsn::error_code get_value_from_meta_cf(rocksdb::DB *db, rocksdb::ColumnFamilyHandle *cf, bool read_flushed_data, const std::string &key, uint64_t *value);
 
     friend class pegasus_write_service;
 
