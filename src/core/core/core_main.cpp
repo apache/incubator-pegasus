@@ -63,12 +63,11 @@ void dsn_core_init()
 }
 
 #if defined(__linux__)
-#include <dsn/version.h>
 #include <dsn/git_commit.h>
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
 static char const rcsid[] =
-    "$Version: rDSN " DSN_CORE_VERSION " (" DSN_GIT_COMMIT ")"
+    "$Version: rDSN (" DSN_GIT_COMMIT ")"
 #if defined(DSN_BUILD_TYPE)
     " " STR(DSN_BUILD_TYPE)
 #endif
