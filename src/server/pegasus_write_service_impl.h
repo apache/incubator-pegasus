@@ -20,6 +20,22 @@ namespace server {
 static constexpr int FAIL_DB_WRITE_BATCH_PUT = -101;
 static constexpr int FAIL_DB_WRITE_BATCH_DELETE = -102;
 static constexpr int FAIL_DB_WRITE = -103;
+static constexpr int FAIL_DB_GET = -104;
+
+struct db_get_context
+{
+    // value read from DB.
+    std::string raw_value;
+
+    // is the record found in DB.
+    bool found{false};
+
+    // the expiration time encoded in raw_value.
+    uint32_t expire_ts{0};
+
+    // is the record expired.
+    bool expired{false};
+};
 
 class pegasus_write_service::impl : public dsn::replication::replica_base
 {
@@ -32,7 +48,8 @@ public:
           _wt_opts(server->_wt_opts),
           _rd_opts(server->_rd_opts),
           _default_ttl(0),
-          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
+          _pfc_recent_expire_count(server->_pfc_recent_expire_count),
+          _server(server)
     {
     }
 
@@ -512,14 +529,35 @@ private:
         FAIL_POINT_INJECT_F("db_write_batch_put",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
-        if (ctx.verfiy_timetag) {
-            // TBD(wutao1)
+        uint64_t new_timetag = generate_timetag(ctx.timestamp, get_current_cluster_id(), false);
+
+        if (ctx.verify_timetag &&
+            _pegasus_data_version >= 1 && // data version 0 doesn't support timetag.
+            _server->is_duplicating() &&  // fast path
+            !raw_key.empty()) {           // this is an empty write
+
+            db_get_context get_ctx;
+            int err = db_get(raw_key, &get_ctx);
+            if (dsn_unlikely(err != 0)) {
+                return err;
+            }
+            // if record exists and is not expired.
+            if (get_ctx.found && !get_ctx.expired) {
+                uint64_t local_timetag =
+                    pegasus_extract_timetag(_pegasus_data_version, get_ctx.raw_value);
+
+                if (local_timetag >= new_timetag) {
+                    // ignore this stale update with lower timetag,
+                    // and write an empty record instead
+                    raw_key = value = dsn::string_view();
+                }
+            }
         }
 
         rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
         rocksdb::SliceParts skey_parts(&skey, 1);
-        rocksdb::SliceParts svalue =
-            _value_generator.generate_value(_pegasus_data_version, value, db_expire_ts(expire_sec));
+        rocksdb::SliceParts svalue = _value_generator.generate_value(
+            _pegasus_data_version, value, db_expire_ts(expire_sec), new_timetag);
         rocksdb::Status s = _batch.Put(skey_parts, svalue);
         if (dsn_unlikely(!s.ok())) {
             ::dsn::blob hash_key, sort_key;
@@ -567,6 +605,39 @@ private:
             derror_rocksdb("Write", status.ToString(), "decree: {}", decree);
         }
         return status.code();
+    }
+
+    // The resulted `expire_ts` is -1 if record is expired.
+    int db_get(dsn::string_view raw_key,
+               /*out*/ db_get_context *ctx)
+    {
+        FAIL_POINT_INJECT_F("db_get", [](dsn::string_view) -> int { return FAIL_DB_GET; });
+
+        rocksdb::Status s = _db->Get(_rd_opts, utils::to_rocksdb_slice(raw_key), &(ctx->raw_value));
+        if (dsn_likely(s.ok())) {
+            // success
+            ctx->found = true;
+            ctx->expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, ctx->raw_value);
+            if (check_if_ts_expired(utils::epoch_now(), ctx->expire_ts)) {
+                ctx->expired = true;
+            }
+            return 0;
+        } else {
+            if (s.code() != rocksdb::Status::kNotFound) {
+                ::dsn::blob hash_key, sort_key;
+                pegasus_restore_key(
+                    ::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
+                derror_rocksdb("Get",
+                               s.ToString(),
+                               "hash_key: {}, sort_key: {}",
+                               utils::c_escape_string(hash_key),
+                               utils::c_escape_string(sort_key));
+                return s.code();
+            } else {
+                // NotFound is an acceptable error
+                return 0;
+            }
+        }
     }
 
     void clear_up_batch_states(int64_t decree, int err)
@@ -724,7 +795,7 @@ private:
     rocksdb::ReadOptions &_rd_opts;
     volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
-
+    pegasus_server_impl *_server;
     pegasus_value_generator _value_generator;
 
     // for setting update_response.error after committed.
