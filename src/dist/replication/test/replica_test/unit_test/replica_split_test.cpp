@@ -202,6 +202,7 @@ TEST_F(replica_split_test, add_child_succeed)
 
     test_on_add_child();
     ASSERT_NE(_stub->get_replica(_child_pid), nullptr);
+    _stub->get_replica(_child_pid)->tracker()->wait_outstanding_tasks();
 
     fail::teardown();
 }
