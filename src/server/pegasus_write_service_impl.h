@@ -529,7 +529,12 @@ private:
         FAIL_POINT_INJECT_F("db_write_batch_put",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
-        uint64_t new_timetag = generate_timetag(ctx.timestamp, get_current_cluster_id(), false);
+        uint64_t new_timetag;
+        if (ctx.is_duplicated_write()) {
+            new_timetag = ctx.remote_timetag;
+        } else {
+            new_timetag = generate_timetag(ctx.timestamp, get_current_cluster_id(), false);
+        }
 
         if (ctx.verify_timetag &&
             _pegasus_data_version >= 1 && // data version 0 doesn't support timetag.
