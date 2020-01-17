@@ -68,7 +68,6 @@ pegasus_client *pegasus_client_factory_impl::get_client(const char *cluster_name
 #if defined(__linux__)
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
-#include <dsn/version.h>
 #include <dsn/git_commit.h>
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
@@ -77,7 +76,7 @@ static char const rcsid[] =
 #if defined(DSN_BUILD_TYPE)
     " " STR(DSN_BUILD_TYPE)
 #endif
-        ", built with rDSN " DSN_CORE_VERSION " (" DSN_GIT_COMMIT ")"
+        ", built with rDSN (" DSN_GIT_COMMIT ")"
         ", built by gcc " STR(__GNUC__) "." STR(__GNUC_MINOR__) "." STR(__GNUC_PATCHLEVEL__)
 #if defined(DSN_BUILD_HOSTNAME)
             ", built on " STR(DSN_BUILD_HOSTNAME)
