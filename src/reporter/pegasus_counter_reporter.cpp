@@ -8,11 +8,9 @@
 #include <ios>
 #include <iomanip>
 #include <iostream>
-#include <fstream>
 
 #include <unistd.h>
 
-#include <dsn/utility/smart_pointers.h>
 #include <dsn/cpp/service_app.h>
 #include <dsn/dist/replication/duplication_common.h>
 
@@ -23,10 +21,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
-#include <sstream>
-#include <iterator>
-#include <regex>
 
 using namespace ::dsn;
 
