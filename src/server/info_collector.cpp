@@ -147,7 +147,6 @@ void info_collector::on_app_stat()
             app_stats.aggregate(partition_row);
         }
         get_app_counters(app_stats.app_name)->set(app_stats);
-
         // get row data statistics for all of the apps
         all_stats.merge(app_stats);
     }
@@ -159,8 +158,7 @@ void info_collector::on_app_stat()
            all_stats.get_total_write_qps());
 
     for (auto app_rows : all_rows) {
-        Hotpot_calculator *app_store = nullptr;
-        get_store_handler(app_rows.first, app_rows.second.size(), app_store);
+        Hotpot_calculator *app_store = get_store_handler(app_rows.first, app_rows.second.size());
         app_store->aggregate(app_rows.second);
         app_store->start_alg();
     }
