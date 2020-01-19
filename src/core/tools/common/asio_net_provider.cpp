@@ -25,6 +25,7 @@
  */
 
 #include <dsn/utility/rand.h>
+#include <memory>
 
 #include "asio_net_provider.h"
 #include "asio_rpc_session.h"
@@ -63,7 +64,6 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
     // get connection threshold from config, default value 0 means no threshold
     _cfg_conn_threshold_per_ip = (uint32_t)dsn_config_get_value_uint64(
         "network", "conn_threshold_per_ip", 0, "max connection count to each server per ip");
-    ddebug("_cfg_conn_threshold_per_ip = %u", _cfg_conn_threshold_per_ip);
 
     for (int i = 0; i < io_service_worker_count; i++) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
@@ -126,16 +126,14 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
 
 rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
 {
-    auto sock = std::shared_ptr<boost::asio::ip::tcp::socket>(
-        new boost::asio::ip::tcp::socket(_io_service));
+    auto sock = std::make_shared<boost::asio::ip::tcp::socket>(_io_service);
     message_parser_ptr parser(new_message_parser(_client_hdr_format));
     return rpc_session_ptr(new asio_rpc_session(*this, server_addr, sock, parser, true));
 }
 
 void asio_network_provider::do_accept()
 {
-    auto socket = std::shared_ptr<boost::asio::ip::tcp::socket>(
-        new boost::asio::ip::tcp::socket(_io_service));
+    auto socket = std::make_shared<boost::asio::ip::tcp::socket>(_io_service);
 
     _acceptor->async_accept(*socket, [this, socket](boost::system::error_code ec) {
         if (!ec) {
@@ -156,7 +154,7 @@ void asio_network_provider::do_accept()
                                          false);
 
                 // when server connection threshold is hit, close the session, otherwise accept it
-                if (is_conn_threshold_exceeded(s->remote_address())) {
+                if (check_if_conn_threshold_exceeded(s->remote_address())) {
                     dwarn("close rpc connection from %s to %s due to hitting server "
                           "connection threshold per ip",
                           s->remote_address().to_string(),

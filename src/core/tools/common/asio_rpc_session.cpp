@@ -29,8 +29,6 @@
 namespace dsn {
 namespace tools {
 
-asio_rpc_session::~asio_rpc_session() {}
-
 void asio_rpc_session::set_options()
 {
     utils::auto_write_lock socket_guard(_socket_lock);
@@ -68,9 +66,9 @@ void asio_rpc_session::set_options()
         // withheld, waiting for the ACK for the previous packet. For more, please
         // refer to <https://en.wikipedia.org/wiki/Nagle's_algorithm>.
         //
-        // Disabling the Nagle algorithm would cause these affacts:
-        //   * decrease delay time (positive affact)
-        //   * decrease the qps (negative affact)
+        // Disabling the Nagle algorithm would cause these effects:
+        //   * decrease delay time (positive)
+        //   * decrease the qps (negative)
         _socket->set_option(boost::asio::ip::tcp::no_delay(true), ec);
         if (ec)
             dwarn("asio socket set option failed, error = %s", ec.message().c_str());
@@ -147,7 +145,7 @@ void asio_rpc_session::send(uint64_t signature)
     utils::auto_read_lock socket_guard(_socket_lock);
     boost::asio::async_write(
         *_socket, asio_wbufs, [this, signature](boost::system::error_code ec, std::size_t length) {
-            if (!!ec) {
+            if (ec) {
                 derror(
                     "asio write to %s failed: %s", _remote_addr.to_string(), ec.message().c_str());
                 on_failure(true);

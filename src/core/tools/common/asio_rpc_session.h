@@ -35,6 +35,7 @@
 namespace dsn {
 namespace tools {
 
+// A TCP session implementation based on Boost.Asio.
 // Thread-safe
 class asio_rpc_session : public rpc_session
 {
@@ -45,7 +46,7 @@ public:
                      message_parser_ptr &parser,
                      bool is_client);
 
-    ~asio_rpc_session() override;
+    ~asio_rpc_session() override = default;
 
     void send(uint64_t signature) override;
 

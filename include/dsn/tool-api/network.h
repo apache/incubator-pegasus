@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     base interface for a network provider
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/tool-api/task.h>
@@ -166,11 +157,11 @@ public:
     DSN_API void on_server_session_accepted(rpc_session_ptr &s);
     DSN_API void on_server_session_disconnected(rpc_session_ptr &s);
 
-    // server connection count threshold
-    DSN_API bool is_conn_threshold_exceeded(::dsn::rpc_address ep);
+    // Checks if IP of the incoming session has too much connections.
+    // Related config: [network] conn_threshold_per_ip. No limit if the value is 0.
+    DSN_API bool check_if_conn_threshold_exceeded(::dsn::rpc_address ep);
 
     // client session management
-    DSN_API rpc_session_ptr get_client_session(::dsn::rpc_address ep);
     DSN_API void on_client_session_connected(rpc_session_ptr &s);
     DSN_API void on_client_session_disconnected(rpc_session_ptr &s);
 
@@ -221,7 +212,9 @@ public:
     virtual void connect() = 0;
     virtual void close() = 0;
 
+    // Whether this session is launched on client side.
     bool is_client() const { return _is_client; }
+
     dsn::rpc_address remote_address() const { return _remote_addr; }
     connection_oriented_network &net() const { return _net; }
     message_parser_ptr parser() const { return _parser; }
@@ -295,10 +288,6 @@ protected:
     bool set_disconnected();
     void set_connected();
 
-    bool is_disconnected() const { return _connect_state == SS_DISCONNECTED; }
-    bool is_connecting() const { return _connect_state == SS_CONNECTING; }
-    bool is_connected() const { return _connect_state == SS_CONNECTED; }
-
     void clear_send_queue(bool resend_msgs);
     bool on_disconnected(bool is_write);
 
@@ -330,4 +319,4 @@ inline bool rpc_session::delay_recv(int delay_ms)
 }
 
 /*@}*/
-}
+} // namespace dsn

@@ -609,43 +609,46 @@ void connection_oriented_network::on_server_session_accepted(rpc_session_ptr &s)
 
 void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr &s)
 {
-    int scount = 0;
-    int ecount = 0;
-    bool r = false;
+    int ip_count = 0;      // how many unique client IPs
+    int ip_conn_count = 0; // how many connections bound to the IP of `s`
+    bool session_removed = false;
     {
         utils::auto_write_lock l(_servers_lock);
         auto it = _servers.find(s->remote_address());
         if (it != _servers.end() && it->second.get() == s.get()) {
             _servers.erase(it);
-            r = true;
+            session_removed = true;
         }
-        scount = (int)_servers.size();
+        ip_count = (int)_servers.size();
 
         auto it2 = _ip_conn_count.find(s->remote_address().ip());
         if (it2 != _ip_conn_count.end()) {
             if (it2->second > 1) {
-                ecount = --it2->second;
+                it2->second -= 1;
+                ip_conn_count = it2->second;
             } else {
                 _ip_conn_count.erase(it2);
             }
         }
     }
 
-    if (r) {
-        ddebug("server session disconnected, remote_client = %s, current_count = %d",
+    if (session_removed) {
+        ddebug("session %s disconnected, the total client sessions count remains %d",
                s->remote_address().to_string(),
-               scount);
+               ip_count);
     }
 
-    if (ecount == 0)
-        ddebug("ip session erased, remote_client = %s", s->remote_address().to_string());
-    else
-        ddebug("ip session decreased, remote_client = %s, current_count = %d",
+    if (ip_conn_count == 0) {
+        // TODO(wutao1): print ip only
+        ddebug("client ip %s has no more session to this server", s->remote_address().to_string());
+    } else {
+        ddebug("client ip %s has still %d of sessions to this server",
                s->remote_address().to_string(),
-               ecount);
+               ip_conn_count);
+    }
 }
 
-bool connection_oriented_network::is_conn_threshold_exceeded(::dsn::rpc_address ep)
+bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_address ep)
 {
     if (_cfg_conn_threshold_per_ip <= 0) {
         dinfo("new client from %s is connecting to server %s, no connection threshold",
@@ -655,32 +658,26 @@ bool connection_oriented_network::is_conn_threshold_exceeded(::dsn::rpc_address 
     }
 
     bool exceeded = false;
-    int scount = 0;
+    int ip_conn_count = 0; // the amount of connections from this ip address.
     {
         utils::auto_read_lock l(_servers_lock);
         auto it = _ip_conn_count.find(ep.ip());
         if (it != _ip_conn_count.end()) {
-            scount = it->second;
+            ip_conn_count = it->second;
         }
     }
-    if (scount >= _cfg_conn_threshold_per_ip)
+    if (ip_conn_count >= _cfg_conn_threshold_per_ip) {
         exceeded = true;
+    }
 
     dinfo("new client from %s is connecting to server %s, existing connection count "
           "= %d, threshold = %u",
           ep.ipv4_str(),
           address().to_string(),
-          scount,
+          ip_conn_count,
           _cfg_conn_threshold_per_ip);
 
     return exceeded;
-}
-
-rpc_session_ptr connection_oriented_network::get_client_session(::dsn::rpc_address ep)
-{
-    utils::auto_read_lock l(_clients_lock);
-    auto it = _clients.find(ep);
-    return it != _clients.end() ? it->second : nullptr;
 }
 
 void connection_oriented_network::on_client_session_connected(rpc_session_ptr &s)
