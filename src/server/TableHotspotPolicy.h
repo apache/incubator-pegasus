@@ -29,8 +29,11 @@ public:
     void detect_hotspot_policy()
     {
         std::vector<std::queue<data_store>> anly_data = *_data_stores;
-        for (int i = 0; i < (_data_stores->size()); i++){
-            ddebug("partition_name %s total_get_qps %lf total_recent_read_cu %lf ",anly_data[i].back().app_name.c_str(),anly_data[i].back().total_qps, anly_data[i].back().total_cu);
+        for (int i = 0; i < (_data_stores->size()); i++) {
+            ddebug("partition_name %s total_get_qps %lf total_recent_read_cu %lf ",
+                   anly_data[i].back().app_name.c_str(),
+                   anly_data[i].back().total_qps,
+                   anly_data[i].back().total_cu);
         }
         return;
     }
@@ -52,7 +55,8 @@ public:
     Hotpot_calculator(const std::string &name, const int &app_size);
     void aggregate(std::vector<row_data> partitions);
     void start_alg();
-    const std::string app_name;   
+    const std::string app_name;
+
 private:
     Hotspot_policy *_policy;
     std::vector<dsn::perf_counter> _hotpot_points;

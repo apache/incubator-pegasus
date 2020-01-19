@@ -11,10 +11,10 @@ Hotpot_calculator::Hotpot_calculator(const std::string &name, const int &app_siz
 void Hotpot_calculator::aggregate(std::vector<row_data> partitions)
 {
     for (int i = 0; i < partitions.size(); i++) {
-        while (this->data_stores[i].size() > MAX_STORE_SIZE){
+        while (this->data_stores[i].size() > MAX_STORE_SIZE) {
             this->data_stores[i].pop();
         }
-        data_store temp(partitions[i],this->app_name);
+        data_store temp(partitions[i], this->app_name);
         this->data_stores[i].emplace(temp);
     }
 }
