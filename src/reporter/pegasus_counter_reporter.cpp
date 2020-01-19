@@ -231,7 +231,7 @@ void pegasus_counter_reporter::update()
 
             // split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or
             // "collector_app_pegasus_app_stat_multi_put_qps:1_0"
-            // app[0] = "1" which is the app_id
+            // app[0] = "1" which is the app
             // app[1] = "0" which is the partition_index
             // app[2] = "p999" or "" which represent the percent
             std::string app[3] = {"", "", ""};
@@ -246,9 +246,17 @@ void pegasus_counter_reporter::update()
                     i++;
                 }
             }
+            /**
+             * deal with corner case, for example:
+             *  replica*eon.replica*table.level.RPC_RRDB_RRDB_GET.latency(ns)@${table_name}.p999
+             **/
+            if ("p999" == app[1]) {
+                app[2] = app[1];
+                app[1].clear();
+            }
 
             // create metrics that prometheus support to report data
-            metrics_name = lv.front();
+            metrics_name = lv.front() + app[2];
             std::map<std::string, prometheus::Family<prometheus::Gauge> *>::iterator it =
                 _gauge_family_map.find(metrics_name);
             if (it == _gauge_family_map.end()) {
@@ -265,8 +273,7 @@ void pegasus_counter_reporter::update()
                          .first;
             }
 
-            auto &second_gauge = it->second->Add(
-                {{"app", app[0]}, {"partition", app[1]}, {"percent", app[2]}});
+            auto &second_gauge = it->second->Add({{"app", app[0]}, {"partition", app[1]}});
             second_gauge.Set(cs.value);
         });
     }
