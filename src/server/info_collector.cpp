@@ -6,17 +6,13 @@
 
 #include <cstdlib>
 #include <iomanip>
-#include <iostream>
 #include <vector>
 #include <chrono>
-#include <functional>
 #include <dsn/tool-api/group_address.h>
+#include <dsn/dist/replication/duplication_common.h>
 
-#include "base/pegasus_utils.h"
 #include "base/pegasus_const.h"
 #include "result_writer.h"
-
-#define METRICSNUM 3
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -42,8 +38,7 @@ info_collector::info_collector()
         _meta_servers.group_address()->add(ms);
     }
 
-    _cluster_name = dsn_config_get_value_string("pegasus.collector", "cluster", "", "cluster name");
-    dassert(!_cluster_name.empty(), "");
+    _cluster_name = dsn::replication::get_current_cluster_name();
 
     _shell_context.current_cluster_name = _cluster_name;
     _shell_context.meta_list = meta_servers;

@@ -14,6 +14,7 @@
 
 #include <dsn/utility/smart_pointers.h>
 #include <dsn/cpp/service_app.h>
+#include <dsn/dist/replication/duplication_common.h>
 
 #include "base/pegasus_utils.h"
 #include "pegasus_io_service.h"
@@ -140,9 +141,7 @@ void pegasus_counter_reporter::start()
 
     _app_name = dsn::service_app::current_service_app_info().full_name;
 
-    _cluster_name = dsn_config_get_value_string(
-        "pegasus.server", "perf_counter_cluster_name", "", "perf_counter_cluster_name");
-    dassert(_cluster_name.size() > 0, "");
+    _cluster_name = dsn::replication::get_current_cluster_name();
 
     _update_interval_seconds = dsn_config_get_value_uint64("pegasus.server",
                                                            "perf_counter_update_interval_seconds",
@@ -355,5 +354,5 @@ void pegasus_counter_reporter::on_report_timer(std::shared_ptr<boost::asio::dead
         dassert(false, "pegasus report timer error!!!");
     }
 }
-}
-} // namespace
+} // namespace server
+} // namespace pegasus
