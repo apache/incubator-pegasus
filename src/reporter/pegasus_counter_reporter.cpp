@@ -178,6 +178,7 @@ void pegasus_counter_reporter::stop()
     if (_report_timer != nullptr) {
         _report_timer->cancel();
     }
+    _exposer = nullptr;
 }
 
 void pegasus_counter_reporter::update_counters_to_falcon(const std::string &result,
@@ -260,6 +261,7 @@ void pegasus_counter_reporter::update()
             /**
              * deal with corner case, for example:
              *  replica*eon.replica*table.level.RPC_RRDB_RRDB_GET.latency(ns)@${table_name}.p999
+             * in this case, app[0] = app name, app[1] = p999, app[2] = ""
              **/
             if ("p999" == app[1]) {
                 app[2] = app[1];
