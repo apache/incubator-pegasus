@@ -688,7 +688,7 @@ function run_start_onebox()
         mkdir -p replica$j
         cd replica$j
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
-        sed "s/@META_PORT@/34600/;s/@PROMETHEUS_PORT@/$prometheus_port/;s/@REPLICA_PORT@/$replica_port/" ${ROOT}/config-server.ini >config.ini
+        sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/$replica_port/;s/@PROMETHEUS_PORT@/$prometheus_port/" ${ROOT}/config-server.ini >config.ini
         echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list replica &>result &"
         $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
