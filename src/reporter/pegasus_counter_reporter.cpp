@@ -22,6 +22,16 @@
 
 using namespace ::dsn;
 
+static std::string get_hostname()
+{
+    char hostname[1024];
+
+    if (::gethostname(hostname, sizeof(hostname))) {
+        return {};
+    }
+    return hostname;
+}
+
 static void format_metrics_name(std::string &metrics_name)
 {
     replace(metrics_name.begin(), metrics_name.end(), '@', ':');
@@ -220,7 +230,8 @@ void pegasus_counter_reporter::update()
     }
 
     if (_enable_prometheus) {
-        perf_counters::instance().iterate_snapshot([this](
+        const std::string hostname = get_hostname();
+        perf_counters::instance().iterate_snapshot([&hostname, this](
             const dsn::perf_counters::counter_snapshot &cs) {
             std::string metrics_name = cs.name;
 
@@ -263,6 +274,7 @@ void pegasus_counter_reporter::update()
                 auto &add_gauge_family = prometheus::BuildGauge()
                                              .Name(metrics_name)
                                              .Labels({{"service", "pegasus"},
+                                                      {"host_name", hostname},
                                                       {"cluster", _cluster_name},
                                                       {"pegasus_job", _app_name},
                                                       {"port", std::to_string(_local_port)}})
