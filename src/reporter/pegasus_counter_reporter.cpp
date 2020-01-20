@@ -82,8 +82,8 @@ void pegasus_counter_reporter::prometheus_initialize()
     ddebug("prometheus initialize: host:port(%s:%d)", _prometheus_host.c_str(), _prometheus_port);
 
     _registry = std::make_shared<prometheus::Registry>();
-    _exposer = std::make_unique<prometheus::Exposer>(
-        fmt::format("{}:{}", _prometheus_host, _prometheus_port));
+    _exposer = std::unique_ptr<prometheus::Exposer>(
+        new prometheus::Exposer(fmt::format("{}:{}", _prometheus_host, _prometheus_port)));
     _exposer->RegisterCollectable(_registry);
 }
 
@@ -179,6 +179,7 @@ void pegasus_counter_reporter::stop()
         _report_timer->cancel();
     }
     _exposer = nullptr;
+    _registry = nullptr;
 }
 
 void pegasus_counter_reporter::update_counters_to_falcon(const std::string &result,
