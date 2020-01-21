@@ -35,7 +35,7 @@ struct falcon_metric
     DEFINE_JSON_SERIALIZATION(endpoint, metric, timestamp, step, value, counterType, tags)
 };
 
-enum perf_counter_sink
+enum perf_counter_sink_t
 {
     FALCON,
     PROMETHEUS,
@@ -79,16 +79,14 @@ private:
 
     // perf counter flags
     bool _enable_logging;
-    perf_counter_sink _perf_counter_sink;
+    perf_counter_sink_t _perf_counter_sink;
 
     // falcon relates
-    std::string _falcon_host;
     uint16_t _falcon_port;
     std::string _falcon_path;
     falcon_metric _falcon_metric;
 
     // prometheus relates
-    std::string _prometheus_host;
     uint16_t _prometheus_port;
     std::shared_ptr<prometheus::Registry> _registry;
     std::unique_ptr<prometheus::Exposer> _exposer;

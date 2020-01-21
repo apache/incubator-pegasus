@@ -66,7 +66,7 @@ pegasus_counter_reporter::pegasus_counter_reporter()
       _update_interval_seconds(0),
       _last_report_time_ms(0),
       _enable_logging(false),
-      _perf_counter_sink(perf_counter_sink::INVALID),
+      _perf_counter_sink(perf_counter_sink_t::INVALID),
       _falcon_port(0),
       _prometheus_port(0)
 {
@@ -76,22 +76,18 @@ pegasus_counter_reporter::~pegasus_counter_reporter() { stop(); }
 
 void pegasus_counter_reporter::prometheus_initialize()
 {
-    _prometheus_host = dsn_config_get_value_string(
-        "pegasus.server", "prometheus_host", "127.0.0.1", "prometheus gateway host");
     _prometheus_port = (uint16_t)dsn_config_get_value_uint64(
         "pegasus.server", "prometheus_port", 9091, "prometheus gateway port");
-    ddebug("prometheus initialize: host:port(%s:%d)", _prometheus_host.c_str(), _prometheus_port);
+    ddebug("prometheus initialize: port(%d)", _prometheus_port);
 
     _registry = std::make_shared<prometheus::Registry>();
-    _exposer = std::unique_ptr<prometheus::Exposer>(
-        new prometheus::Exposer(fmt::format("{}:{}", _prometheus_host, _prometheus_port)));
+    _exposer =
+        dsn::make_unique<prometheus::Exposer>(fmt::format("{}:{}", "127.0.0.1", _prometheus_port));
     _exposer->RegisterCollectable(_registry);
 }
 
 void pegasus_counter_reporter::falcon_initialize()
 {
-    _falcon_host = dsn_config_get_value_string(
-        "pegasus.server", "falcon_host", "127.0.0.1", "falcon agent host");
     _falcon_port = (uint16_t)dsn_config_get_value_uint64(
         "pegasus.server", "falcon_port", 1988, "falcon agent port");
     _falcon_path = dsn_config_get_value_string(
@@ -148,20 +144,20 @@ void pegasus_counter_reporter::start()
     _enable_logging = dsn_config_get_value_bool(
         "pegasus.server", "perf_counter_enable_logging", true, "perf_counter_enable_logging");
 
-    _perf_counter_sink = perf_counter_sink::INVALID;
-    std::string perf_counter_sink =
-        dsn_config_get_value_string("pegasus.server", "perf_counter_sink", "", "perf_counter_sink");
+    _perf_counter_sink = perf_counter_sink_t::INVALID;
+    std::string perf_counter_sink = dsn_config_get_value_string(
+        "pegasus.server", "perf_counter_sink_t", "", "perf_counter_sink_t");
     if ("prometheus" == perf_counter_sink) {
-        _perf_counter_sink = perf_counter_sink::PROMETHEUS;
+        _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
     } else if ("falcon" == perf_counter_sink) {
-        _perf_counter_sink = perf_counter_sink::FALCON;
+        _perf_counter_sink = perf_counter_sink_t::FALCON;
     }
 
-    if (perf_counter_sink::FALCON == _perf_counter_sink) {
+    if (perf_counter_sink_t::FALCON == _perf_counter_sink) {
         falcon_initialize();
     }
 
-    if (perf_counter_sink::PROMETHEUS == _perf_counter_sink) {
+    if (perf_counter_sink_t::PROMETHEUS == _perf_counter_sink) {
         prometheus_initialize();
     }
 
@@ -189,7 +185,7 @@ void pegasus_counter_reporter::update_counters_to_falcon(const std::string &resu
 {
     ddebug("update counters to falcon with timestamp = %" PRId64, timestamp);
     http_post_request(
-        _falcon_host, _falcon_port, _falcon_path, "application/x-www-form-urlencoded", result);
+        "127.0.0.1", _falcon_port, _falcon_path, "application/x-www-form-urlencoded", result);
 }
 
 void pegasus_counter_reporter::update()
@@ -211,7 +207,7 @@ void pegasus_counter_reporter::update()
         ddebug("%s", oss.str().c_str());
     }
 
-    if (perf_counter_sink::FALCON == _perf_counter_sink) {
+    if (perf_counter_sink_t::FALCON == _perf_counter_sink) {
         std::stringstream oss;
         oss << "[";
 
@@ -233,7 +229,7 @@ void pegasus_counter_reporter::update()
         update_counters_to_falcon(oss.str(), timestamp);
     }
 
-    if (perf_counter_sink::PROMETHEUS == _perf_counter_sink) {
+    if (perf_counter_sink_t::PROMETHEUS == _perf_counter_sink) {
         const std::string hostname = get_hostname();
         perf_counters::instance().iterate_snapshot([&hostname, this](
             const dsn::perf_counters::counter_snapshot &cs) {
