@@ -150,8 +150,8 @@ void pegasus_counter_reporter::start()
         "pegasus.server", "perf_counter_enable_logging", true, "perf_counter_enable_logging");
     _enable_falcon = false;
     _enable_prometheus = false;
-    std::string perf_counter_sink = dsn_config_get_value_string(
-        "pegasus.server", "perf_counter_sink", "", "perf_counter_sink");
+    std::string perf_counter_sink =
+        dsn_config_get_value_string("pegasus.server", "perf_counter_sink", "", "perf_counter_sink");
     if ("prometheus" == perf_counter_sink) {
         _enable_prometheus = true;
     } else if ("falcon" == perf_counter_sink) {
