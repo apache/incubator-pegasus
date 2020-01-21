@@ -66,8 +66,7 @@ pegasus_counter_reporter::pegasus_counter_reporter()
       _update_interval_seconds(0),
       _last_report_time_ms(0),
       _enable_logging(false),
-      _enable_falcon(false),
-      _enable_prometheus(false),
+      _perf_counter_sink(perf_counter_sink::INVALID),
       _falcon_port(0),
       _prometheus_port(0)
 {
@@ -148,21 +147,21 @@ void pegasus_counter_reporter::start()
 
     _enable_logging = dsn_config_get_value_bool(
         "pegasus.server", "perf_counter_enable_logging", true, "perf_counter_enable_logging");
-    _enable_falcon = false;
-    _enable_prometheus = false;
+
+    _perf_counter_sink = perf_counter_sink::INVALID;
     std::string perf_counter_sink =
         dsn_config_get_value_string("pegasus.server", "perf_counter_sink", "", "perf_counter_sink");
     if ("prometheus" == perf_counter_sink) {
-        _enable_prometheus = true;
+        _perf_counter_sink = perf_counter_sink::PROMETHEUS;
     } else if ("falcon" == perf_counter_sink) {
-        _enable_falcon = true;
+        _perf_counter_sink = perf_counter_sink::FALCON;
     }
 
-    if (_enable_falcon) {
+    if (perf_counter_sink::FALCON == _perf_counter_sink) {
         falcon_initialize();
     }
 
-    if (_enable_prometheus) {
+    if (perf_counter_sink::PROMETHEUS == _perf_counter_sink) {
         prometheus_initialize();
     }
 
@@ -212,7 +211,7 @@ void pegasus_counter_reporter::update()
         ddebug("%s", oss.str().c_str());
     }
 
-    if (_enable_falcon) {
+    if (perf_counter_sink::FALCON == _perf_counter_sink) {
         std::stringstream oss;
         oss << "[";
 
@@ -234,7 +233,7 @@ void pegasus_counter_reporter::update()
         update_counters_to_falcon(oss.str(), timestamp);
     }
 
-    if (_enable_prometheus) {
+    if (perf_counter_sink::PROMETHEUS == _perf_counter_sink) {
         const std::string hostname = get_hostname();
         perf_counters::instance().iterate_snapshot([&hostname, this](
             const dsn::perf_counters::counter_snapshot &cs) {

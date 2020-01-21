@@ -35,6 +35,13 @@ struct falcon_metric
     DEFINE_JSON_SERIALIZATION(endpoint, metric, timestamp, step, value, counterType, tags)
 };
 
+enum perf_counter_sink
+{
+    FALCON,
+    PROMETHEUS,
+    INVALID
+};
+
 class pegasus_counter_reporter : public ::dsn::utils::singleton<pegasus_counter_reporter>
 {
 public:
@@ -72,8 +79,7 @@ private:
 
     // perf counter flags
     bool _enable_logging;
-    bool _enable_falcon;
-    bool _enable_prometheus;
+    perf_counter_sink _perf_counter_sink;
 
     // falcon relates
     std::string _falcon_host;
