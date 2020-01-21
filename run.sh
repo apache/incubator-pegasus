@@ -683,7 +683,7 @@ function run_start_onebox()
     done
     for j in $(seq ${REPLICA_COUNT})
     do
-        prometheus_port=$((9094+j))
+        prometheus_port=$((9091+${META_COUNT}+j))
         replica_port=$((34800+j))
         mkdir -p replica$j
         cd replica$j
