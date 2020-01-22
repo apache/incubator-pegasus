@@ -157,7 +157,7 @@ void pegasus_counter_reporter::start()
 
     _perf_counter_sink = perf_counter_sink_t::INVALID;
     std::string perf_counter_sink = dsn_config_get_value_string(
-        "pegasus.server", "perf_counter_sink", "", "perf_counter_sink_t");
+        "pegasus.server", "perf_counter_sink", "", "perf_counter_sink");
     if ("prometheus" == perf_counter_sink) {
         _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
     } else if ("falcon" == perf_counter_sink) {
