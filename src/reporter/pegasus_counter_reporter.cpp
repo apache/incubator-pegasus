@@ -254,7 +254,7 @@ void pegasus_counter_reporter::update()
 
             // split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or
             // "collector_app_pegasus_app_stat_multi_put_qps:1_0"
-            // app[0] = "1" which is the app
+            // app[0] = "1" which is the app(app name or app id)
             // app[1] = "0" which is the partition_index
             // app[2] = "p999" or "" which represent the percent
             std::string app[3] = {"", "", ""};
