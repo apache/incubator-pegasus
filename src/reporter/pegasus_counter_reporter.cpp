@@ -34,6 +34,16 @@ static std::string get_hostname()
     return hostname;
 }
 
+static std::string get_hostip()
+{
+    uint32_t ip = dsn::rpc_address::ipv4_from_network_interface("");
+    uint32_t ipnet = htonl(ip);
+    char buffer[512];
+    memset(buffer, 0, sizeof(buffer));
+    assert(inet_ntop(AF_INET, &ipnet, buffer, sizeof(buffer)));
+    return buffer;
+}
+
 static void format_metrics_name(std::string &metrics_name)
 {
     replace(metrics_name.begin(), metrics_name.end(), '@', ':');
@@ -81,15 +91,15 @@ void pegasus_counter_reporter::prometheus_initialize()
     ddebug("prometheus initialize: port(%d)", _prometheus_port);
 
     _registry = std::make_shared<prometheus::Registry>();
-    _exposer =
-        dsn::make_unique<prometheus::Exposer>(fmt::format("{}:{}", "127.0.0.1", _prometheus_port));
+    _exposer = dsn::make_unique<prometheus::Exposer>(
+        fmt::format("{}:{}", "10.232.55.210", _prometheus_port));
     _exposer->RegisterCollectable(_registry);
 }
 
 void pegasus_counter_reporter::falcon_initialize()
 {
     _falcon_host = dsn_config_get_value_string(
-        "pegasus.server", "falcon_host", "127.0.0.1", "falcon agent host");
+        "pegasus.server", "falcon_host", get_hostip().c_str(), "falcon agent host");
     _falcon_port = (uint16_t)dsn_config_get_value_uint64(
         "pegasus.server", "falcon_port", 1988, "falcon agent port");
     _falcon_path = dsn_config_get_value_string(
