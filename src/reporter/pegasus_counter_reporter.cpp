@@ -88,18 +88,17 @@ void pegasus_counter_reporter::prometheus_initialize()
 {
     _prometheus_port = (uint16_t)dsn_config_get_value_uint64(
         "pegasus.server", "prometheus_port", 9091, "prometheus gateway port");
-    ddebug("prometheus initialize: port(%d)", _prometheus_port);
 
     _registry = std::make_shared<prometheus::Registry>();
     _exposer = dsn::make_unique<prometheus::Exposer>(
-        fmt::format("{}:{}", "10.232.55.210", _prometheus_port));
+        fmt::format("{}:{}", get_hostip().c_str(), _prometheus_port));
     _exposer->RegisterCollectable(_registry);
 }
 
 void pegasus_counter_reporter::falcon_initialize()
 {
     _falcon_host = dsn_config_get_value_string(
-        "pegasus.server", "falcon_host", get_hostip().c_str(), "falcon agent host");
+        "pegasus.server", "falcon_host", "127.0.0.1", "falcon agent host");
     _falcon_port = (uint16_t)dsn_config_get_value_uint64(
         "pegasus.server", "falcon_port", 1988, "falcon agent port");
     _falcon_path = dsn_config_get_value_string(
@@ -158,7 +157,7 @@ void pegasus_counter_reporter::start()
 
     _perf_counter_sink = perf_counter_sink_t::INVALID;
     std::string perf_counter_sink = dsn_config_get_value_string(
-        "pegasus.server", "perf_counter_sink_t", "", "perf_counter_sink_t");
+        "pegasus.server", "perf_counter_sink", "", "perf_counter_sink_t");
     if ("prometheus" == perf_counter_sink) {
         _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
     } else if ("falcon" == perf_counter_sink) {
