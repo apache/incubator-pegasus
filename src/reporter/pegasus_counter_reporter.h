@@ -82,6 +82,7 @@ private:
     perf_counter_sink_t _perf_counter_sink;
 
     // falcon relates
+    std::string _falcon_host;
     uint16_t _falcon_port;
     std::string _falcon_path;
     falcon_metric _falcon_metric;

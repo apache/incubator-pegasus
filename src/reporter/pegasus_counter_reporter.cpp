@@ -88,6 +88,8 @@ void pegasus_counter_reporter::prometheus_initialize()
 
 void pegasus_counter_reporter::falcon_initialize()
 {
+    _falcon_host = dsn_config_get_value_string(
+        "pegasus.server", "falcon_host", "127.0.0.1", "falcon agent host");
     _falcon_port = (uint16_t)dsn_config_get_value_uint64(
         "pegasus.server", "falcon_port", 1988, "falcon agent port");
     _falcon_path = dsn_config_get_value_string(
@@ -185,7 +187,7 @@ void pegasus_counter_reporter::update_counters_to_falcon(const std::string &resu
 {
     ddebug("update counters to falcon with timestamp = %" PRId64, timestamp);
     http_post_request(
-        "127.0.0.1", _falcon_port, _falcon_path, "application/x-www-form-urlencoded", result);
+        _falcon_host, _falcon_port, _falcon_path, "application/x-www-form-urlencoded", result);
 }
 
 void pegasus_counter_reporter::update()
