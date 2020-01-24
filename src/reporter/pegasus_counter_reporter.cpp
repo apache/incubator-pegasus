@@ -155,13 +155,14 @@ void pegasus_counter_reporter::start()
     _enable_logging = dsn_config_get_value_bool(
         "pegasus.server", "perf_counter_enable_logging", true, "perf_counter_enable_logging");
 
-    _perf_counter_sink = perf_counter_sink_t::INVALID;
     std::string perf_counter_sink =
         dsn_config_get_value_string("pegasus.server", "perf_counter_sink", "", "perf_counter_sink");
     if ("prometheus" == perf_counter_sink) {
         _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
     } else if ("falcon" == perf_counter_sink) {
         _perf_counter_sink = perf_counter_sink_t::FALCON;
+    } else {
+        _perf_counter_sink = perf_counter_sink_t::INVALID;
     }
 
     if (perf_counter_sink_t::FALCON == _perf_counter_sink) {

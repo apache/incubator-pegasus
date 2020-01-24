@@ -35,7 +35,7 @@ struct falcon_metric
     DEFINE_JSON_SERIALIZATION(endpoint, metric, timestamp, step, value, counterType, tags)
 };
 
-enum perf_counter_sink_t
+enum class perf_counter_sink_t
 {
     FALCON,
     PROMETHEUS,
