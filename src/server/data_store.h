@@ -11,10 +11,11 @@ public:
           total_qps(row.get_total_qps()),
           total_cu(row.get_total_cu()),
           partition_name(row.row_name){};
-    const std::string app_name;
-    const double total_qps;
-    const double total_cu;
-    const std::string partition_name;
+    data_store() {}
+    std::string app_name;
+    double total_qps;
+    double total_cu;
+    std::string partition_name;
 };
 }
 }

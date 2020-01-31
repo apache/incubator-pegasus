@@ -1,4 +1,5 @@
 #include "data_store.h"
+#include <algorithm>
 #include <dsn/perf_counter/perf_counter.h>
 
 #define MAX_STORE_SIZE 100
@@ -28,12 +29,22 @@ public:
         : Hotspot_policy(data_stores, hot_points){};
     void detect_hotspot_policy()
     {
-        std::vector<std::queue<data_store>> anly_data = *_data_stores;
-        for (int i = 0; i < (_data_stores->size()); i++) {
-            ddebug("partition_name %s total_get_qps %lf total_recent_read_cu %lf ",
-                   anly_data[i].back().app_name.c_str(),
-                   anly_data[i].back().total_qps,
-                   anly_data[i].back().total_cu);
+        ::dsn::perf_counter_wrapper hotspot_points_couter;
+        std::vector<std::queue<data_store>> temp = *_data_stores;
+        std::vector<double> hotspot_points;
+        std::vector<data_store> anly_data;
+        double min_total_qps = 1.0, min_total_cu = 1.0;
+        int index = 0;
+        while (index != temp.size()) {
+            anly_data.push_back(temp[index].back());
+            min_total_qps = std::min(min_total_qps, std::max(anly_data[index].total_qps, 1.0));
+            min_total_cu = std::min(min_total_cu, std::max(anly_data[index].total_cu, 1.0));
+            index++;
+        }
+        for (int i = 0; i < anly_data.size(); i++) {
+            hotspot_points.push_back(anly_data[i].total_qps / min_total_qps);
+            // hotspot_points[i] = anly_data[i].total_cu / min_total_cu;
+            ddebug("hotspot_points %lf ", hotspot_points[hotspot_points.size() - 1]);
         }
         return;
     }
