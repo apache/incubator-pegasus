@@ -103,9 +103,9 @@ public:
         ASSERT_TRUE(_ss->spin_wait_staging(30));
     }
 
-    error_code update_app_envs(const std::string &app_name,
-                               const std::vector<std::string> &env_keys,
-                               const std::vector<std::string> &env_vals)
+    configuration_update_app_env_response update_app_envs(const std::string &app_name,
+                                                          const std::vector<std::string> &env_keys,
+                                                          const std::vector<std::string> &env_vals)
     {
         auto req = make_unique<configuration_update_app_env_request>();
         req->__set_app_name(std::move(app_name));
@@ -116,7 +116,7 @@ public:
         app_env_rpc rpc(std::move(req), RPC_CM_UPDATE_APP_ENV); // don't need reply
         _ss->set_app_envs(rpc);
         _ss->wait_all_task();
-        return rpc.response().err;
+        return rpc.response();
     }
 
     std::shared_ptr<app_state> find_app(const std::string &name) { return _ss->get_app(name); }

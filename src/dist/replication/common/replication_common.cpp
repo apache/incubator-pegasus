@@ -27,6 +27,7 @@
 #include "replication_common.h"
 #include <dsn/utility/filesystem.h>
 #include <fstream>
+#include <dsn/dist/replication/replica_envs.h>
 
 namespace dsn {
 namespace replication {
@@ -600,6 +601,33 @@ const std::string backup_restore_constant::SKIP_BAD_PARTITION("restore.skip_bad_
 const std::string replica_envs::DENY_CLIENT_WRITE("replica.deny_client_write");
 const std::string replica_envs::WRITE_QPS_THROTTLING("replica.write_throttling");
 const std::string replica_envs::WRITE_SIZE_THROTTLING("replica.write_throttling_by_size");
+const uint64_t replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS = 20;
+const std::string replica_envs::SLOW_QUERY_THRESHOLD("replica.slow_query_threshold");
+const std::string replica_envs::ROCKSDB_USAGE_SCENARIO("rocksdb.usage_scenario");
+const std::string replica_envs::TABLE_LEVEL_DEFAULT_TTL("default_ttl");
+const std::string MANUAL_COMPACT_PREFIX("manual_compact.");
+const std::string replica_envs::MANUAL_COMPACT_DISABLED(MANUAL_COMPACT_PREFIX + "disabled");
+const std::string replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT(
+    MANUAL_COMPACT_PREFIX + "max_concurrent_running_count");
+const std::string MANUAL_COMPACT_ONCE_PREFIX(MANUAL_COMPACT_PREFIX + "once.");
+const std::string replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME(MANUAL_COMPACT_ONCE_PREFIX +
+                                                                 "trigger_time");
+const std::string replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL(MANUAL_COMPACT_ONCE_PREFIX +
+                                                                 "target_level");
+const std::string replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION(
+    MANUAL_COMPACT_ONCE_PREFIX + "bottommost_level_compaction");
+const std::string MANUAL_COMPACT_PERIODIC_PREFIX(MANUAL_COMPACT_PREFIX + "periodic.");
+const std::string replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME(
+    MANUAL_COMPACT_PERIODIC_PREFIX + "trigger_time");
+const std::string replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL(
+    MANUAL_COMPACT_PERIODIC_PREFIX + "target_level");
+const std::string replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION(
+    MANUAL_COMPACT_PERIODIC_PREFIX + "bottommost_level_compaction");
+const std::string
+    replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT("rocksdb.checkpoint.reserve_min_count");
+const std::string replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS(
+    "rocksdb.checkpoint.reserve_time_seconds");
+const std::string replica_envs::BUSINESS_INFO("business.info");
 
 namespace cold_backup {
 std::string get_policy_path(const std::string &root, const std::string &policy_name)

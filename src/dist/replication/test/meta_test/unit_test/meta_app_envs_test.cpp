@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <dsn/dist/replication/replica_envs.h>
 #include "meta_test_base.h"
 
 namespace dsn {
@@ -39,32 +40,123 @@ public:
         create_app(app_name);
     }
 
+    void TearDown() override { drop_app(app_name); }
+
     const std::string app_name = "test_app_env";
-    const std::string env_slow_query_threshold = "replica.slow_query_threshold";
 };
 
-TEST_F(meta_app_envs_test, set_slow_query_threshold)
+TEST_F(meta_app_envs_test, update_app_envs_test)
 {
-    auto app = find_app(app_name);
-
     struct test_case
     {
-        error_code err;
+        std::string env_key;
         std::string env_value;
-        std::string expect_env_value;
-    } tests[] = {{ERR_OK, "30", "30"},
-                 {ERR_OK, "21", "21"},
-                 {ERR_OK, "20", "20"},
-                 {ERR_INVALID_PARAMETERS, "19", "20"},
-                 {ERR_INVALID_PARAMETERS, "10", "20"},
-                 {ERR_INVALID_PARAMETERS, "0", "20"}};
+        error_code err;
+        std::string hint;
+        std::string expect_value;
+    } tests[] = {
+        {replica_envs::WRITE_QPS_THROTTLING, "100*delay*100", ERR_OK, "", "100*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING, "20K*delay*100", ERR_OK, "", "20K*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING, "20M*delay*100", ERR_OK, "", "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "20A*delay*100",
+         ERR_INVALID_PARAMETERS,
+         "20A should be non-negative int",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "-20*delay*100",
+         ERR_INVALID_PARAMETERS,
+         "-20 should be non-negative int",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "",
+         ERR_INVALID_PARAMETERS,
+         "The value shouldn't be empty",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "20A*delay",
+         ERR_INVALID_PARAMETERS,
+         "The field count of 20A*delay should be 3",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "20K*pass*100",
+         ERR_INVALID_PARAMETERS,
+         "pass should be \"delay\" or \"reject\"",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "20K*delay*-100",
+         ERR_INVALID_PARAMETERS,
+         "-100 should be non-negative int",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "2K**delay*100",
+         ERR_INVALID_PARAMETERS,
+         "The field count of 2K**delay*100 should be 3",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "2K*delay**100",
+         ERR_INVALID_PARAMETERS,
+         "The field count of 2K*delay**100 should be 3",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "2K*delay*100,3K*delay*100",
+         ERR_INVALID_PARAMETERS,
+         "duplicate delay config",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING,
+         "2K*reject*100,3K*reject*100",
+         ERR_INVALID_PARAMETERS,
+         "duplicate reject config",
+         "20M*delay*100"},
+        {replica_envs::WRITE_QPS_THROTTLING, "20M*reject*100", ERR_OK, "", "20M*reject*100"},
+        {replica_envs::WRITE_SIZE_THROTTLING, "300*delay*100", ERR_OK, "", "300*delay*100"},
+        {replica_envs::SLOW_QUERY_THRESHOLD, "30", ERR_OK, "", "30"},
+        {replica_envs::SLOW_QUERY_THRESHOLD, "20", ERR_OK, "", "20"},
+        {replica_envs::SLOW_QUERY_THRESHOLD,
+         "19",
+         ERR_INVALID_PARAMETERS,
+         "Slow query threshold must be >= 20ms",
+         "20"},
+        {replica_envs::SLOW_QUERY_THRESHOLD,
+         "0",
+         ERR_INVALID_PARAMETERS,
+         "Slow query threshold must be >= 20ms",
+         "20"},
+        {replica_envs::TABLE_LEVEL_DEFAULT_TTL, "10", ERR_OK, "", "10"},
+        {replica_envs::ROCKSDB_USAGE_SCENARIO, "20", ERR_OK, "", "20"},
+        {replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT, "30", ERR_OK, "", "30"},
+        {replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS, "40", ERR_OK, "", "40"},
+        {replica_envs::MANUAL_COMPACT_DISABLED, "50", ERR_OK, "", "50"},
+        {replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT, "60", ERR_OK, "", "60"},
+        {replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME, "70", ERR_OK, "", "70"},
+        {replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL, "80", ERR_OK, "", "80"},
+        {replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME, "90", ERR_OK, "", "90"},
+        {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL, "100", ERR_OK, "", "100"},
+        {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION,
+         "200",
+         ERR_OK,
+         "",
+         "200"},
+        {replica_envs::BUSINESS_INFO, "300", ERR_OK, "", "300"},
+        {replica_envs::DENY_CLIENT_WRITE, "400", ERR_OK, "", "400"},
+        {"not_exist_env",
+         "500",
+         ERR_INVALID_PARAMETERS,
+         "app_env \"not_exist_env\" is not supported",
+         ""}};
 
+    auto app = find_app(app_name);
     for (auto test : tests) {
-        error_code err = update_app_envs(app_name, {env_slow_query_threshold}, {test.env_value});
+        configuration_update_app_env_response response =
+            update_app_envs(app_name, {test.env_key}, {test.env_value});
 
-        ASSERT_EQ(err, test.err);
-        ASSERT_EQ(app->envs.at(env_slow_query_threshold), test.expect_env_value);
+        ASSERT_EQ(response.err, test.err);
+        ASSERT_EQ(response.hint_message, test.hint);
+        if (app->envs.find(test.env_key) != app->envs.end()) {
+            ASSERT_EQ(app->envs.at(test.env_key), test.expect_value);
+        }
     }
 }
+
 } // namespace replication
 } // namespace dsn

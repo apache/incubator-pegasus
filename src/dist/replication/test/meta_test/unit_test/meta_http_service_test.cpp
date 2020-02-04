@@ -41,8 +41,8 @@ public:
     void test_get_app_envs()
     {
         // set app env
-        std::string env_key = "test_env";
-        std::string env_value = "test_value";
+        std::string env_key = "replica.slow_query_threshold";
+        std::string env_value = "100";
         update_app_envs(test_app, {env_key}, {env_value});
 
         // http get app envs

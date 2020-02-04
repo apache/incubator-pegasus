@@ -9,15 +9,26 @@
 namespace dsn {
 namespace replication {
 
-static const std::vector<std::string> keys = {
-    "p1.k1", "p1.k2", "p1.k3", "p2.k1", "p2.k2", "p2.k3", "p3.k1", "p3.k2", "p3.k3"};
+static const std::vector<std::string> keys = {"manual_compact.once.trigger_time",
+                                              "manual_compact.once.target_level",
+                                              "manual_compact.once.bottommost_level_compaction",
+                                              "manual_compact.periodic.trigger_time",
+                                              "manual_compact.periodic.target_level",
+                                              "manual_compact.periodic.bottommost_level_compaction",
+                                              "rocksdb.usage_scenario",
+                                              "rocksdb.checkpoint.reserve_min_count",
+                                              "rocksdb.checkpoint.reserve_time_seconds"};
 static const std::vector<std::string> values = {
     "p1v1", "p1v2", "p1v3", "p2v1", "p2v2", "p2v3", "p3v1", "p3v2", "p3v3"};
 
-static const std::vector<std::string> del_keys = {"p1.k1", "p2.k1", "p3.k1"};
-static const std::set<std::string> del_keys_set = {"p1.k1", "p2.k1", "p3.k1"};
+static const std::vector<std::string> del_keys = {"manual_compact.once.trigger_time",
+                                                  "manual_compact.periodic.trigger_time",
+                                                  "rocksdb.usage_scenario"};
+static const std::set<std::string> del_keys_set = {"manual_compact.once.trigger_time",
+                                                   "manual_compact.periodic.trigger_time",
+                                                   "rocksdb.usage_scenario"};
 
-static const std::string clear_prefix = "p1";
+static const std::string clear_prefix = "rocksdb";
 
 // if str = "prefix.xxx" then return prefix
 // else return ""
