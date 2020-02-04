@@ -529,16 +529,19 @@ private:
         FAIL_POINT_INJECT_F("db_write_batch_put",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
-        uint64_t new_timetag;
-        if (ctx.is_duplicated_write()) {
-            new_timetag = ctx.remote_timetag;
-        } else {
-            new_timetag = generate_timetag(ctx.timestamp, get_current_cluster_id(), false);
+        // cluster_id is 0 if not configured, which means it will accept writes
+        // from any cluster as long as the timestamp is larger.
+        static auto cluster_id_res = dsn::replication::get_duplication_cluster_id(
+            dsn::replication::get_current_cluster_name());
+        uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
+
+        uint64_t new_timetag = ctx.remote_timetag;
+        if (!ctx.is_duplicated_write()) { // local write
+            new_timetag = generate_timetag(ctx.timestamp, cluster_id, false);
         }
 
-        if (ctx.verify_timetag &&
+        if (ctx.verify_timetag &&         // needs read-before-write
             _pegasus_data_version >= 1 && // data version 0 doesn't support timetag.
-            _server->is_duplicating() &&  // fast path
             !raw_key.empty()) {           // this is an empty write
 
             db_get_context get_ctx;
