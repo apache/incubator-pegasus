@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include <atomic>
+#include <boost/make_shared.hpp>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/config_api.h>
 #include <dsn/c/api_utilities.h>
@@ -213,7 +214,6 @@ public:
         _timer.reset(new boost::asio::deadline_timer(tools::shared_io_service::instance().ios));
         _timer->expires_from_now(
             boost::posix_time::seconds(rand() % _counter_computation_interval_seconds + 1));
-        this->add_ref();
         _timer->async_wait(std::bind(
             &perf_counter_number_percentile_atomic::on_timer, this, _timer, std::placeholders::_1));
     }
@@ -284,7 +284,7 @@ private:
         int calc_queue[MAX_QUEUE_LENGTH][4];
     };
 
-    void insert_calc_queue(boost::shared_ptr<compute_context> &ctx,
+    void insert_calc_queue(const boost::shared_ptr<compute_context> &ctx,
                            int left,
                            int right,
                            int qleft,
@@ -299,7 +299,7 @@ private:
         return;
     }
 
-    int64_t find_mid(boost::shared_ptr<compute_context> &ctx, int left, int right)
+    int64_t find_mid(const boost::shared_ptr<compute_context> &ctx, int left, int right)
     {
         if (left == right)
             return ctx->mid_tmp[left];
@@ -319,7 +319,7 @@ private:
         return find_mid(ctx, 0, (right - left - 1) / 5);
     }
 
-    void select(boost::shared_ptr<compute_context> &ctx,
+    void select(const boost::shared_ptr<compute_context> &ctx,
                 int left,
                 int right,
                 int qleft,
@@ -376,7 +376,7 @@ private:
         return;
     }
 
-    void calc(boost::shared_ptr<compute_context> &ctx)
+    void calc(const boost::shared_ptr<compute_context> &ctx)
     {
         uint64_t _num = _tail.load();
         if (_num > MAX_QUEUE_LENGTH)
@@ -415,23 +415,17 @@ private:
         // as the callback is not in tls context, so the log system calls like ddebug, dassert will
         // cause a lock
         if (!ec) {
-            // only when others also hold the reference
-            if (this->get_count() > 1) {
-                boost::shared_ptr<compute_context> ctx(new compute_context());
-                calc(ctx);
+            calc(boost::make_shared<compute_context>());
 
-                timer->expires_from_now(
-                    boost::posix_time::seconds(_counter_computation_interval_seconds));
-                this->add_ref();
-                timer->async_wait(std::bind(&perf_counter_number_percentile_atomic::on_timer,
-                                            this,
-                                            timer,
-                                            std::placeholders::_1));
-            }
+            timer->expires_from_now(
+                boost::posix_time::seconds(_counter_computation_interval_seconds));
+            timer->async_wait(std::bind(&perf_counter_number_percentile_atomic::on_timer,
+                                        this,
+                                        timer,
+                                        std::placeholders::_1));
         } else if (boost::system::errc::operation_canceled != ec) {
             dassert(false, "on_timer error!!!");
         }
-        this->release_ref();
     }
 
     std::shared_ptr<boost::asio::deadline_timer> _timer;
