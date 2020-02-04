@@ -264,9 +264,13 @@ public:
         write_impl->clear_up_batch_states(decree, 0);
     }
 
-    void test_verify_timetag_compatible_with_old_schema()
+    // verify timetag on data version v0
+    void test_verify_timetag_compatible_with_version_0()
     {
-        set_app_duplicating();
+        dsn::fail::setup();
+        dsn::fail::cfg("db_get", "100%1*return()");
+        // if db_write_batch_put_ctx invokes db_get, this test must fail.
+
         auto write_impl = _write_svc->_impl.get();
         const_cast<uint32_t &>(write_impl->_pegasus_data_version) = 0; // old version
 
@@ -276,35 +280,11 @@ public:
         std::string value = "value";
         int64_t decree = 10;
         uint64_t timestamp = 10;
-        auto ctx = db_write_context::create(decree, timestamp);
+
+        auto ctx = db_write_context::create_duplicate(decree, timestamp, true);
         ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
         ASSERT_EQ(0, write_impl->db_write(ctx.decree));
         write_impl->clear_up_batch_states(decree, 0);
-
-        ctx = db_write_context::create(decree, timestamp);
-        ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
-        ASSERT_EQ(0, write_impl->db_write(ctx.decree));
-        write_impl->clear_up_batch_states(decree, 0);
-    }
-
-    void test_verify_timetag_on_duplicating_table_only()
-    {
-        dsn::fail::setup();
-        auto write_impl = _write_svc->_impl.get();
-
-        { // if db_write_batch_put_ctx causes a db_get, it will definitely fail here.
-            dsn::fail::cfg("db_get", "100%1*return()");
-
-            dsn::blob raw_key;
-            pegasus::pegasus_generate_key(
-                raw_key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
-            std::string value = "value";
-            int64_t decree = 10;
-            auto ctx = db_write_context::create_duplicate(decree, 10, true);
-            ASSERT_EQ(0, write_impl->db_write_batch_put_ctx(ctx, raw_key, value, 0));
-            ASSERT_EQ(0, write_impl->db_write(ctx.decree));
-            write_impl->clear_up_batch_states(decree, 0);
-        }
 
         dsn::fail::teardown();
     }
@@ -435,14 +415,9 @@ TEST_F(pegasus_write_service_test, batched_writes) { test_batched_writes(); }
 
 TEST_F(pegasus_write_service_test, put_verify_timetag) { test_put_verify_timetag(); }
 
-TEST_F(pegasus_write_service_test, verify_timetag_compatible_with_old_schema)
+TEST_F(pegasus_write_service_test, verify_timetag_compatible_with_version_0)
 {
-    test_verify_timetag_compatible_with_old_schema();
-}
-
-TEST_F(pegasus_write_service_test, verify_timetag_on_duplicating_table_only)
-{
-    test_verify_timetag_on_duplicating_table_only();
+    test_verify_timetag_compatible_with_version_0();
 }
 
 TEST_F(pegasus_write_service_test, duplicate_not_batched) { test_duplicate_not_batched(); }
