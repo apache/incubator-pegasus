@@ -16,12 +16,12 @@ find_package(prometheus-cpp)#TODO(huangwei5): make it optional
 # the INTERFACE_LINK_LIBRARIES of prometheus contains the absolute path of libcurl
 # when we use the compiled prometheus-cpp libs, the path of libcurl should be our own path
 find_package(CURL)
-get_target_property(_libs prometheus-cpp::push INTERFACE_LINK_LIBRARIES)
+get_target_property(_libs prometheus-cpp::pull INTERFACE_LINK_LIBRARIES)
 string(REGEX REPLACE ";/.*libcurl\.a" ";${CURL_LIBRARIES}" _libs "${_libs}")
-set_target_properties(prometheus-cpp::push PROPERTIES INTERFACE_LINK_LIBRARIES "${_libs}")
+set_target_properties(prometheus-cpp::pull PROPERTIES INTERFACE_LINK_LIBRARIES "${_libs}")
 
 dsn_add_static_library()
 
 target_link_libraries(${MY_PROJ_NAME} PUBLIC pegasus_base
-                                            prometheus-cpp::push
+                                            prometheus-cpp::pull
                                             ) # TODO(huangwei5): dsn_add_static_library doesnt link libs, need fix
