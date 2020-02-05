@@ -8,7 +8,6 @@
 #include <ios>
 #include <iomanip>
 #include <iostream>
-
 #include <unistd.h>
 
 #include <dsn/cpp/service_app.h>
@@ -21,10 +20,11 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <fmt/format.h>
 
 using namespace ::dsn;
 
-static std::string GetHostName()
+static std::string get_hostname()
 {
     char hostname[1024];
 
@@ -34,9 +34,20 @@ static std::string GetHostName()
     return hostname;
 }
 
-static void change_metrics_name(std::string &metrics_name)
+static std::string get_hostip()
+{
+    uint32_t ip = dsn::rpc_address::ipv4_from_network_interface("");
+    uint32_t ipnet = htonl(ip);
+    char buffer[512];
+    memset(buffer, 0, sizeof(buffer));
+    assert(inet_ntop(AF_INET, &ipnet, buffer, sizeof(buffer)));
+    return buffer;
+}
+
+static void format_metrics_name(std::string &metrics_name)
 {
     replace(metrics_name.begin(), metrics_name.end(), '@', ':');
+    replace(metrics_name.begin(), metrics_name.end(), '#', ':');
     replace(metrics_name.begin(), metrics_name.end(), '.', '_');
     replace(metrics_name.begin(), metrics_name.end(), '*', '_');
     replace(metrics_name.begin(), metrics_name.end(), '(', '_');
@@ -65,8 +76,7 @@ pegasus_counter_reporter::pegasus_counter_reporter()
       _update_interval_seconds(0),
       _last_report_time_ms(0),
       _enable_logging(false),
-      _enable_falcon(false),
-      _enable_prometheus(false),
+      _perf_counter_sink(perf_counter_sink_t::INVALID),
       _falcon_port(0),
       _prometheus_port(0)
 {
@@ -76,17 +86,13 @@ pegasus_counter_reporter::~pegasus_counter_reporter() { stop(); }
 
 void pegasus_counter_reporter::prometheus_initialize()
 {
-    _prometheus_host = dsn_config_get_value_string(
-        "pegasus.server", "prometheus_host", "127.0.0.1", "prometheus gateway host");
     _prometheus_port = (uint16_t)dsn_config_get_value_uint64(
         "pegasus.server", "prometheus_port", 9091, "prometheus gateway port");
-    ddebug("prometheus initialize: host:port(%s:%d)", _prometheus_host.c_str(), _prometheus_port);
 
-    const auto &labels = prometheus::Gateway::GetInstanceLabel(GetHostName());
-    _gateway = std::make_shared<prometheus::Gateway>(
-        _prometheus_host, std::to_string(_prometheus_port), "pegasus", labels);
     _registry = std::make_shared<prometheus::Registry>();
-    _gateway->RegisterCollectable(_registry);
+    _exposer = dsn::make_unique<prometheus::Exposer>(
+        fmt::format("{}:{}", get_hostip().c_str(), _prometheus_port));
+    _exposer->RegisterCollectable(_registry);
 }
 
 void pegasus_counter_reporter::falcon_initialize()
@@ -148,18 +154,22 @@ void pegasus_counter_reporter::start()
 
     _enable_logging = dsn_config_get_value_bool(
         "pegasus.server", "perf_counter_enable_logging", true, "perf_counter_enable_logging");
-    _enable_falcon = dsn_config_get_value_bool(
-        "pegasus.server", "perf_counter_enable_falcon", false, "perf_counter_enable_falcon");
-    _enable_prometheus = dsn_config_get_value_bool("pegasus.server",
-                                                   "perf_counter_enable_prometheus",
-                                                   false,
-                                                   "perf_counter_enable_prometheus");
 
-    if (_enable_falcon) {
+    std::string perf_counter_sink =
+        dsn_config_get_value_string("pegasus.server", "perf_counter_sink", "", "perf_counter_sink");
+    if ("prometheus" == perf_counter_sink) {
+        _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
+    } else if ("falcon" == perf_counter_sink) {
+        _perf_counter_sink = perf_counter_sink_t::FALCON;
+    } else {
+        _perf_counter_sink = perf_counter_sink_t::INVALID;
+    }
+
+    if (perf_counter_sink_t::FALCON == _perf_counter_sink) {
         falcon_initialize();
     }
 
-    if (_enable_prometheus) {
+    if (perf_counter_sink_t::PROMETHEUS == _perf_counter_sink) {
         prometheus_initialize();
     }
 
@@ -178,6 +188,8 @@ void pegasus_counter_reporter::stop()
     if (_report_timer != nullptr) {
         _report_timer->cancel();
     }
+    _exposer = nullptr;
+    _registry = nullptr;
 }
 
 void pegasus_counter_reporter::update_counters_to_falcon(const std::string &result,
@@ -207,7 +219,7 @@ void pegasus_counter_reporter::update()
         ddebug("%s", oss.str().c_str());
     }
 
-    if (_enable_falcon) {
+    if (perf_counter_sink_t::FALCON == _perf_counter_sink) {
         std::stringstream oss;
         oss << "[";
 
@@ -229,20 +241,21 @@ void pegasus_counter_reporter::update()
         update_counters_to_falcon(oss.str(), timestamp);
     }
 
-    if (_enable_prometheus) {
-        perf_counters::instance().iterate_snapshot([this](
+    if (perf_counter_sink_t::PROMETHEUS == _perf_counter_sink) {
+        const std::string hostname = get_hostname();
+        perf_counters::instance().iterate_snapshot([&hostname, this](
             const dsn::perf_counters::counter_snapshot &cs) {
             std::string metrics_name = cs.name;
 
             // prometheus metric_name don't support characters like .*()@, it only support ":"
             // and "_"
             // so change the name to make it all right
-            change_metrics_name(metrics_name);
+            format_metrics_name(metrics_name);
 
             // split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or
             // "collector_app_pegasus_app_stat_multi_put_qps:1_0"
-            // app[0] = "1" which is the app_id
-            // app[1] = "0" which is the partition_cout
+            // app[0] = "1" which is the app(app name or app id)
+            // app[1] = "0" which is the partition_index
             // app[2] = "p999" or "" which represent the percent
             std::string app[3] = {"", "", ""};
             std::list<std::string> lv;
@@ -256,14 +269,25 @@ void pegasus_counter_reporter::update()
                     i++;
                 }
             }
+            /**
+             * deal with corner case, for example:
+             *  replica*eon.replica*table.level.RPC_RRDB_RRDB_GET.latency(ns)@${table_name}.p999
+             * in this case, app[0] = app name, app[1] = p999, app[2] = ""
+             **/
+            if ("p999" == app[1]) {
+                app[2] = app[1];
+                app[1].clear();
+            }
 
             // create metrics that prometheus support to report data
+            metrics_name = lv.front() + app[2];
             std::map<std::string, prometheus::Family<prometheus::Gauge> *>::iterator it =
                 _gauge_family_map.find(metrics_name);
             if (it == _gauge_family_map.end()) {
                 auto &add_gauge_family = prometheus::BuildGauge()
                                              .Name(metrics_name)
                                              .Labels({{"service", "pegasus"},
+                                                      {"host_name", hostname},
                                                       {"cluster", _cluster_name},
                                                       {"pegasus_job", _app_name},
                                                       {"port", std::to_string(_local_port)}})
@@ -274,13 +298,9 @@ void pegasus_counter_reporter::update()
                          .first;
             }
 
-            auto &second_gauge = it->second->Add(
-                {{"app_id", app[0]}, {"partition_count", app[1]}, {"percent", app[2]}});
+            auto &second_gauge = it->second->Add({{"app", app[0]}, {"partition", app[1]}});
             second_gauge.Set(cs.value);
         });
-
-        // report data to pushgateway
-        _gateway->Push();
     }
 
     ddebug("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
