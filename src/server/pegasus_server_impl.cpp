@@ -206,13 +206,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     dassert(parse_compression_types(compression_str, _data_cf_opts.compression_per_level),
             "parse rocksdb_compression_type failed.");
 
-    rocksdb::BlockBasedTableOptions bbt_opts;
+    rocksdb::BlockBasedTableOptions tbl_opts;
     if (dsn_config_get_value_bool("pegasus.server",
                                   "rocksdb_disable_table_block_cache",
                                   false,
                                   "rocksdb tbl_opts.no_block_cache")) {
-        bbt_opts.no_block_cache = true;
-        bbt_opts.block_restart_interval = 4;
+        tbl_opts.no_block_cache = true;
+        tbl_opts.block_restart_interval = 4;
     } else {
         // If block cache is enabled, all replicas on this server will share the same block cache
         // object. It's convenient to control the total memory used by this server, and the LRU
@@ -237,14 +237,14 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         });
 
         // every replica has the same block cache
-        bbt_opts.block_cache = _s_block_cache;
+        tbl_opts.block_cache = _s_block_cache;
     }
 
     // Bloom filter configurations.
     bool disable_bloom_filter = dsn_config_get_value_bool(
         "pegasus.server", "rocksdb_disable_bloom_filter", false, "Whether to disable bloom filter");
     if (!disable_bloom_filter) {
-        bbt_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+        tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
 
         std::string filter_type =
             dsn_config_get_value_string("pegasus.server",
@@ -261,7 +261,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         }
     }
 
-    _data_cf_opts.table_factory.reset(NewBlockBasedTableFactory(bbt_opts));
+    _data_cf_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
 
     _key_ttl_compaction_filter_factory = std::make_shared<KeyWithTTLCompactionFilterFactory>();
     _data_cf_opts.compaction_filter_factory = _key_ttl_compaction_filter_factory;
