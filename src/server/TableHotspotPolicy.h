@@ -9,29 +9,17 @@ namespace server {
 class Hotspot_policy
 {
 public:
-    Hotspot_policy(std::vector<std::queue<data_store>> *data_stores,
-                   std::vector<dsn::perf_counter> *hot_points)
-        : _data_stores(data_stores), _hot_points(hot_points)
-    {
-    }
-    virtual void detect_hotspot_policy() = 0;
-
-protected:
-    std::vector<std::queue<data_store>> *_data_stores;
-    std::vector<dsn::perf_counter> *_hot_points;
+    virtual void detect_hotspot_policy(std::vector<std::queue<data_store>> *data_stores,
+                                       std::vector<dsn::perf_counter_wrapper> *hot_points) = 0;
 };
 
 class Algo1 : public Hotspot_policy
 {
 public:
-    explicit Algo1(std::vector<std::queue<data_store>> *data_stores,
-                   std::vector<dsn::perf_counter> *hot_points)
-        : Hotspot_policy(data_stores, hot_points){};
-    void detect_hotspot_policy()
+    void detect_hotspot_policy(std::vector<std::queue<data_store>> *data_stores,
+                               std::vector<dsn::perf_counter_wrapper> *hot_points)
     {
-        ::dsn::perf_counter_wrapper hotspot_points_couter;
-        std::vector<std::queue<data_store>> temp = *_data_stores;
-        std::vector<double> hotspot_points;
+        std::vector<std::queue<data_store>> temp = *data_stores;
         std::vector<data_store> anly_data;
         double min_total_qps = 1.0, min_total_cu = 1.0;
         int index = 0;
@@ -42,21 +30,10 @@ public:
             index++;
         }
         for (int i = 0; i < anly_data.size(); i++) {
-            hotspot_points.push_back(anly_data[i].total_qps / min_total_qps);
-            // hotspot_points[i] = anly_data[i].total_cu / min_total_cu;
-            ddebug("hotspot_points %lf ", hotspot_points[hotspot_points.size() - 1]);
+            hot_points->at(i)->set(anly_data[i].total_qps / min_total_qps);
         }
         return;
     }
-};
-
-class Algo2 : public Hotspot_policy
-{
-public:
-    explicit Algo2(std::vector<std::queue<data_store>> *data_stores,
-                   std::vector<dsn::perf_counter> *hot_points)
-        : Hotspot_policy(data_stores, hot_points){};
-    void detect_hotspot_policy() { return; }
 };
 
 class Hotpot_calculator
@@ -66,11 +43,12 @@ public:
     Hotpot_calculator(const std::string &name, const int &app_size);
     void aggregate(std::vector<row_data> partitions);
     void start_alg();
+    void init_perf_counter();
     const std::string app_name;
 
 private:
     Hotspot_policy *_policy;
-    std::vector<dsn::perf_counter> _hotpot_points;
+    std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
 };
 }
 }

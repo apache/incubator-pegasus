@@ -158,9 +158,11 @@ void info_collector::on_app_stat()
            all_stats.get_total_write_qps());
 
     for (auto app_rows : all_rows) {
-        Hotpot_calculator *app_store = get_store_handler(app_rows.first, app_rows.second.size());
-        app_store->aggregate(app_rows.second);
-        app_store->start_alg();
+        Hotpot_calculator *app_hotpot_calculator =
+            get_store_handler(app_rows.first, app_rows.second.size());
+        app_hotpot_calculator->init_perf_counter();
+        app_hotpot_calculator->aggregate(app_rows.second);
+        app_hotpot_calculator->start_alg();
     }
 }
 

@@ -3,8 +3,8 @@
 namespace pegasus {
 namespace server {
 
-Hotpot_calculator::Hotpot_calculator(const std::string &name, const int &app_size)
-    : data_stores(app_size), app_name(name)
+Hotpot_calculator::Hotpot_calculator(const std::string &name, const int &partition_num)
+    : data_stores(partition_num), app_name(name), _hotpot_points(partition_num)
 {
 }
 
@@ -19,10 +19,23 @@ void Hotpot_calculator::aggregate(std::vector<row_data> partitions)
     }
 }
 
+void Hotpot_calculator::init_perf_counter()
+{
+    char counter_name[1024];
+    char counter_desc[1024];
+    for (int i = 0; i < this->_hotpot_points.size(); i++) {
+        string paritition_desc = this->app_name + std::to_string(i);
+        sprintf(counter_name, "app.stat.hotspots.%s", paritition_desc.c_str());
+        sprintf(counter_desc, "statistic the hotspots of app %s", paritition_desc.c_str());
+        _hotpot_points[i].init_app_counter(
+            "app.pegasus", counter_name, COUNTER_TYPE_NUMBER, counter_desc);
+    }
+}
+
 void Hotpot_calculator::start_alg()
 {
-    _policy = new Algo1(&(this->data_stores), &(this->_hotpot_points));
-    _policy->detect_hotspot_policy();
+    _policy = new Algo1();
+    _policy->detect_hotspot_policy(&(this->data_stores), &(this->_hotpot_points));
 }
 }
 }
