@@ -534,7 +534,7 @@ private:
         // from any cluster as long as the timestamp is larger.
         static auto cluster_id_res = dsn::replication::get_duplication_cluster_id(
             dsn::replication::get_current_cluster_name());
-        uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
+        static uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
 
         uint64_t new_timetag = ctx.remote_timetag;
         if (!ctx.is_duplicated_write()) { // local write
@@ -631,22 +631,19 @@ private:
                 ctx->expired = true;
             }
             return 0;
-        } else {
-            if (s.code() != rocksdb::Status::kNotFound) {
-                ::dsn::blob hash_key, sort_key;
-                pegasus_restore_key(
-                    ::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-                derror_rocksdb("Get",
-                               s.ToString(),
-                               "hash_key: {}, sort_key: {}",
-                               utils::c_escape_string(hash_key),
-                               utils::c_escape_string(sort_key));
-                return s.code();
-            } else {
-                // NotFound is an acceptable error
-                return 0;
-            }
         }
+        if (s.IsNotFound()) {
+            // NotFound is an acceptable error
+            return 0;
+        }
+        ::dsn::blob hash_key, sort_key;
+        pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
+        derror_rocksdb("Get",
+                       s.ToString(),
+                       "hash_key: {}, sort_key: {}",
+                       utils::c_escape_string(hash_key),
+                       utils::c_escape_string(sort_key));
+        return s.code();
     }
 
     void clear_up_batch_states(int64_t decree, int err)
