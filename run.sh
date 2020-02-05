@@ -670,10 +670,11 @@ function run_start_onebox()
     for i in $(seq ${META_COUNT})
     do
         meta_port=$((34600+i))
+        prometheus_port=$((9091+i))
         mkdir -p meta$i;
         cd meta$i
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
-        sed "s/@META_PORT@/$meta_port/;s/@REPLICA_PORT@/34800/" ${ROOT}/config-server.ini >config.ini
+        sed "s/@META_PORT@/$meta_port/;s/@REPLICA_PORT@/34800/;s/@PROMETHEUS_PORT@/$prometheus_port/" ${ROOT}/config-server.ini >config.ini
         echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list meta &>result &"
         $PWD/pegasus_server config.ini -app_list meta &>result &
         PID=$!
@@ -682,11 +683,12 @@ function run_start_onebox()
     done
     for j in $(seq ${REPLICA_COUNT})
     do
+        prometheus_port=$((9091+${META_COUNT}+j))
         replica_port=$((34800+j))
         mkdir -p replica$j
         cd replica$j
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
-        sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/$replica_port/" ${ROOT}/config-server.ini >config.ini
+        sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/$replica_port/;s/@PROMETHEUS_PORT@/$prometheus_port/" ${ROOT}/config-server.ini >config.ini
         echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list replica &>result &"
         $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
@@ -698,7 +700,7 @@ function run_start_onebox()
         mkdir -p collector
         cd collector
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
-        sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/34800/" ${ROOT}/config-server.ini >config.ini
+        sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/34800/;s/@PROMETHEUS_PORT@/9091/" ${ROOT}/config-server.ini >config.ini
         echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list collector &>result &"
         $PWD/pegasus_server config.ini -app_list collector &>result &
         PID=$!
