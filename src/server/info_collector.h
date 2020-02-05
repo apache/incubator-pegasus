@@ -20,7 +20,7 @@
 
 #include "../shell/commands.h"
 #include "table_stats.h"
-#include "TableHotspotPolicy.h"
+#include "tableHotspotPolicy.h"
 
 namespace pegasus {
 namespace server {
