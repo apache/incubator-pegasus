@@ -134,6 +134,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                         12,
                                         "rocksdb options.max_background_compactions");
 
+    // init rocksdb::ColumnFamilyOptions for data column family
     _data_cf_opts.write_buffer_size =
         (size_t)dsn_config_get_value_uint64("pegasus.server",
                                             "rocksdb_write_buffer_size",
@@ -146,7 +147,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                         3,
                                         "rocksdb options.max_write_buffer_number");
 
-    // init rocksdb::ColumnFamilyOptions for data column family
     _data_cf_opts.num_levels = (int)dsn_config_get_value_int64(
         "pegasus.server", "rocksdb_num_levels", 6, "rocksdb options.num_levels");
 
