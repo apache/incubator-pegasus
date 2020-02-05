@@ -12,6 +12,7 @@
 
 #include <dsn/utility/fail_point.h>
 #include <dsn/utility/string_conv.h>
+#include <gtest/gtest_prod.h>
 
 namespace pegasus {
 namespace server {
@@ -793,6 +794,9 @@ private:
 private:
     friend class pegasus_write_service_test;
     friend class pegasus_server_write_test;
+    friend class pegasus_write_service_impl_test;
+    FRIEND_TEST(pegasus_write_service_impl_test, put_verify_timetag);
+    FRIEND_TEST(pegasus_write_service_impl_test, verify_timetag_compatible_with_version_0);
 
     const std::string _primary_address;
     const uint32_t _pegasus_data_version;
