@@ -143,6 +143,7 @@ void mutation::add_client_request(task_code code, dsn::message_ex *request)
         update.code = code;
         update.serialization_type =
             (dsn_msg_serialize_format)request->header->context.u.serialize_format;
+        update.__set_start_time_ns(dsn_now_ns());
         request->add_ref(); // released on dctor
 
         void *ptr;

@@ -351,6 +351,12 @@ void mutation_update::__set_serialization_type(const int32_t val)
 
 void mutation_update::__set_data(const ::dsn::blob &val) { this->data = val; }
 
+void mutation_update::__set_start_time_ns(const int64_t val)
+{
+    this->start_time_ns = val;
+    __isset.start_time_ns = true;
+}
+
 uint32_t mutation_update::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -394,6 +400,14 @@ uint32_t mutation_update::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 4:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->start_time_ns);
+                this->__isset.start_time_ns = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -424,6 +438,11 @@ uint32_t mutation_update::write(::apache::thrift::protocol::TProtocol *oprot) co
     xfer += this->data.write(oprot);
     xfer += oprot->writeFieldEnd();
 
+    if (this->__isset.start_time_ns) {
+        xfer += oprot->writeFieldBegin("start_time_ns", ::apache::thrift::protocol::T_I64, 4);
+        xfer += oprot->writeI64(this->start_time_ns);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -483,7 +502,8 @@ void mutation_update::printTo(std::ostream &out) const
     out << ", "
         << "data=" << to_string(data);
     out << ", "
-        << "start_time_ns=" << to_string(start_time_ns);
+        << "start_time_ns=";
+    (__isset.start_time_ns ? (out << to_string(start_time_ns)) : (out << "<null>"));
     out << ")";
 }
 

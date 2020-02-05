@@ -20,6 +20,7 @@ struct mutation_update
     //the serialization type of data, this need to store in log and replicate to secondaries by primary
     2:i32            serialization_type;
     3:dsn.blob       data;
+    4:optional i64   start_time_ns;
 }
 
 struct mutation_data

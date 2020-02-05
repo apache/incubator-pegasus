@@ -416,10 +416,14 @@ inline std::ostream &operator<<(std::ostream &out, const mutation_header &obj)
 
 typedef struct _mutation_update__isset
 {
-    _mutation_update__isset() : code(false), serialization_type(false), data(false) {}
+    _mutation_update__isset()
+        : code(false), serialization_type(false), data(false), start_time_ns(false)
+    {
+    }
     bool code : 1;
     bool serialization_type : 1;
     bool data : 1;
+    bool start_time_ns : 1;
 } _mutation_update__isset;
 
 class mutation_update
@@ -429,14 +433,13 @@ public:
     mutation_update(mutation_update &&);
     mutation_update &operator=(const mutation_update &);
     mutation_update &operator=(mutation_update &&);
-    mutation_update() : serialization_type(0), start_time_ns(dsn_now_ns()) {}
+    mutation_update() : serialization_type(0), start_time_ns(0) {}
 
     virtual ~mutation_update() throw();
     ::dsn::task_code code;
     int32_t serialization_type;
     ::dsn::blob data;
-    // start_time_ns doesn't need to serialization, because we only use it on local node
-    uint64_t start_time_ns;
+    int64_t start_time_ns;
 
     _mutation_update__isset __isset;
 
@@ -446,6 +449,8 @@ public:
 
     void __set_data(const ::dsn::blob &val);
 
+    void __set_start_time_ns(const int64_t val);
+
     bool operator==(const mutation_update &rhs) const
     {
         if (!(code == rhs.code))
@@ -454,7 +459,9 @@ public:
             return false;
         if (!(data == rhs.data))
             return false;
-        if (!(start_time_ns == rhs.start_time_ns))
+        if (__isset.start_time_ns != rhs.__isset.start_time_ns)
+            return false;
+        else if (__isset.start_time_ns && !(start_time_ns == rhs.start_time_ns))
             return false;
         return true;
     }
