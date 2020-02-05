@@ -10,14 +10,14 @@ class Hotspot_policy
 {
 public:
     virtual void detect_hotspot_policy(std::vector<std::queue<data_store>> *data_stores,
-                                       std::vector<dsn::perf_counter_wrapper> *hot_points) = 0;
+                                       std::vector<double> *hot_points) = 0;
 };
 
 class Algo1 : public Hotspot_policy
 {
 public:
     void detect_hotspot_policy(std::vector<std::queue<data_store>> *data_stores,
-                               std::vector<dsn::perf_counter_wrapper> *hot_points)
+                               std::vector<double> *hot_points)
     {
         std::vector<std::queue<data_store>> temp = *data_stores;
         std::vector<data_store> anly_data;
@@ -30,7 +30,7 @@ public:
             index++;
         }
         for (int i = 0; i < anly_data.size(); i++) {
-            hot_points->at(i)->set(anly_data[i].total_qps / min_total_qps);
+            hot_points->at(i)=anly_data[i].total_qps / min_total_qps;
         }
         return;
     }
@@ -44,10 +44,13 @@ public:
     void aggregate(std::vector<row_data> partitions);
     void start_alg();
     void init_perf_counter();
+    void get_hotpot_point_value(std::vector<double> &result);
+    void set_result_to_falcon();
     const std::string app_name;
 
 private:
     Hotspot_policy *_policy;
+    std::vector<double> _hotpot_point_value;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
 };
 }
