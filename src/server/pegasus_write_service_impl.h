@@ -29,7 +29,7 @@ public:
           _primary_address(server->_primary_address),
           _pegasus_data_version(server->_pegasus_data_version),
           _db(server->_db),
-          _rd_opts(server->_rd_opts),
+          _rd_opts(server->_data_cf_rd_opts),
           _default_ttl(0),
           _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
