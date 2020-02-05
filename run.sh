@@ -6,7 +6,7 @@ LOCAL_IP=`scripts/get_local_ip`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export DSN_THIRDPARTY_ROOT=$ROOT/rdsn/thirdparty/output
-export LD_LIBRARY_PATH=$DSN_ROOT/lib:$DSN_THIRDPARTY_ROOT/lib:$BOOST_DIR/lib:$TOOLCHAIN_DIR/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$DSN_ROOT/lib:$DSN_THIRDPARTY_ROOT/lib:$BOOST_DIR/lib:$LD_LIBRARY_PATH
 
 function usage()
 {
