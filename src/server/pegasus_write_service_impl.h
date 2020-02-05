@@ -29,11 +29,12 @@ public:
           _primary_address(server->_primary_address),
           _pegasus_data_version(server->_pegasus_data_version),
           _db(server->_db),
-          _wt_opts(server->_wt_opts),
           _rd_opts(server->_rd_opts),
           _default_ttl(0),
           _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
+        // disable write ahead logging as replication handles logging instead now
+        _wt_opts.disableWAL = true;
     }
 
     int empty_put(int64_t decree)
@@ -720,7 +721,7 @@ private:
 
     rocksdb::WriteBatch _batch;
     rocksdb::DB *_db;
-    rocksdb::WriteOptions &_wt_opts;
+    rocksdb::WriteOptions _wt_opts;
     rocksdb::ReadOptions &_rd_opts;
     volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
