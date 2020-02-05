@@ -543,7 +543,7 @@ private:
 
         if (ctx.verify_timetag &&         // needs read-before-write
             _pegasus_data_version >= 1 && // data version 0 doesn't support timetag.
-            !raw_key.empty()) {           // this is an empty write
+            !raw_key.empty()) {           // not an empty write
 
             db_get_context get_ctx;
             int err = db_get(raw_key, &get_ctx);
