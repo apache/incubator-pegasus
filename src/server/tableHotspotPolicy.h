@@ -1,3 +1,5 @@
+#pragma once
+
 #include "data_store.h"
 #include <algorithm>
 #include <dsn/perf_counter/perf_counter.h>

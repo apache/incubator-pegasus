@@ -1,3 +1,5 @@
+#pragma once
+
 #include "tableHotspotPolicy.h"
 
 namespace pegasus {

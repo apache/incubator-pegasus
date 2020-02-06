@@ -1,3 +1,5 @@
+#pragma once
+
 #include "shell/commands.h"
 
 namespace pegasus {
