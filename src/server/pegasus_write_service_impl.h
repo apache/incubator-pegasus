@@ -638,6 +638,7 @@ private:
         }
         if (s.IsNotFound()) {
             // NotFound is an acceptable error
+            ctx->found = false;
             return 0;
         }
         ::dsn::blob hash_key, sort_key;
