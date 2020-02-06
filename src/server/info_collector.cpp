@@ -162,10 +162,6 @@ void info_collector::on_app_stat()
            (int)(all_rows.size() - 1),
            all_stats.get_total_read_qps(),
            all_stats.get_total_write_qps());
-
-    for (auto app_rows : all_rows) {
-
-    }
 }
 
 info_collector::AppStatCounters *info_collector::get_app_counters(const std::string &app_name)
