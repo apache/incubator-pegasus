@@ -57,7 +57,7 @@ public:
         manual_compact_svc->extract_manual_compact_opts(envs, key_prefix, options);
     }
 
-    void set_num_level(int level) { _server->_db_opts.num_levels = level; }
+    void set_num_level(int level) { _server->_data_cf_opts.num_levels = level; }
 
     void check_manual_compact_state(bool ok, const std::string &msg = "")
     {
