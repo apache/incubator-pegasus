@@ -4,7 +4,10 @@ namespace pegasus {
 namespace server {
 
 hotspot_calculator::hotspot_calculator(const std::string &app_name, const int &partition_num)
-    : data_stores(partition_num), app_name(app_name), _hotpot_point_value(partition_num),_hotpot_points(partition_num)
+    : data_stores(partition_num),
+      app_name(app_name),
+      _hotpot_point_value(partition_num),
+      _hotpot_points(partition_num)
 {
 }
 
@@ -31,23 +34,25 @@ void hotspot_calculator::init_perf_counter()
     }
 }
 
-void hotspot_calculator::get_hotpot_point_value(std::vector<double> &result){
-    result.assign(this->_hotpot_point_value.begin(),this->_hotpot_point_value.end());
+void hotspot_calculator::get_hotpot_point_value(std::vector<double> &result)
+{
+    result.assign(this->_hotpot_point_value.begin(), this->_hotpot_point_value.end());
 }
 
-void hotspot_calculator::set_result_to_falcon(){
-    if (_hotpot_points.size()!=_hotpot_point_value.size()){
+void hotspot_calculator::set_result_to_falcon()
+{
+    if (_hotpot_points.size() != _hotpot_point_value.size()) {
         ddebug("partittion counts error, please check");
-        return ;
+        return;
     }
-    for (int i=0;i<_hotpot_points.size();i++)
+    for (int i = 0; i < _hotpot_points.size(); i++)
         _hotpot_points.at(i)->set(_hotpot_point_value[i]);
 }
 
 void hotspot_calculator::start_alg()
 {
     _policy = new Algo1();
-    std::cout<<"Start Algo1 0"<<std::endl;
+    std::cout << "Start Algo1 0" << std::endl;
     _policy->detect_hotspot_policy(&(this->data_stores), &(this->_hotpot_point_value));
 }
 }
