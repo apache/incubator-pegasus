@@ -66,24 +66,6 @@ public:
             rdb_memtable_mem_usage->set(row_stats.total_rdb_memtable_mem_usage);
             read_qps->set(row_stats.get_total_read_qps());
             write_qps->set(row_stats.get_total_write_qps());
-
-            double qps_scale = row_stats.max_total_qps / std::max(row_stats.min_total_qps, 1.0);
-            double cu_scale = row_stats.max_total_cu / std::max(row_stats.min_total_cu, 1.0);
-            qps_max_min_scale->set(qps_scale);
-            cu_max_min_scale->set(cu_scale);
-            if (qps_scale >= HOTSPOT_MAX_MIN_SCALE_THRESHOLD) {
-                ddebug(
-                    "There is a hot spot about qps in app %s(partition id: %s), max/min scale=%d",
-                    row_stats.app_name.c_str(),
-                    row_stats.max_qps_partition_id.c_str(),
-                    qps_scale);
-            }
-            if (cu_scale >= HOTSPOT_MAX_MIN_SCALE_THRESHOLD) {
-                ddebug("There is a hot spot about cu in app %s(partition id: %s), max/min scale=%d",
-                       row_stats.app_name.c_str(),
-                       row_stats.max_cu_partition_id.c_str(),
-                       cu_scale);
-            }
         }
 
         ::dsn::perf_counter_wrapper get_qps;
@@ -156,14 +138,14 @@ private:
     ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
-    std::map<std::string, Hotpot_calculator *> _calculator_store;
+    std::map<std::string, hotspot_calculator *> _calculator_store;
     auto get_store_handler(const std::string app_name, const int partition_num)
     {
         auto iter = _calculator_store.find(app_name);
         if (iter != _calculator_store.end()) {
             return iter->second;
         }
-        Hotpot_calculator *handler = new Hotpot_calculator(app_name, partition_num);
+        hotspot_calculator *handler = new hotspot_calculator(app_name, partition_num);
         _calculator_store[app_name] = handler;
         return handler;
     }

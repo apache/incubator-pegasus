@@ -22,12 +22,9 @@ public:
         std::vector<std::queue<data_store>> temp = *data_stores;
         std::vector<data_store> anly_data;
         double min_total_qps = 1.0, min_total_cu = 1.0;
-        int index = 0;
-        while (index != temp.size()) {
+        for (int index=0;index<temp.size();index++) {
             anly_data.push_back(temp[index].back());
             min_total_qps = std::min(min_total_qps, std::max(anly_data[index].total_qps, 1.0));
-            min_total_cu = std::min(min_total_cu, std::max(anly_data[index].total_cu, 1.0));
-            index++;
         }
         for (int i = 0; i < anly_data.size(); i++) {
             hot_points->at(i)=anly_data[i].total_qps / min_total_qps;
@@ -36,12 +33,12 @@ public:
     }
 };
 
-class Hotpot_calculator
+class hotspot_calculator
 {
 public:
     std::vector<std::queue<data_store>> data_stores;
-    Hotpot_calculator(const std::string &name, const int &app_size);
-    void aggregate(std::vector<row_data> partitions);
+    hotspot_calculator(const std::string &app_name, const int &app_size);
+    void aggregate(std::vector<row_data> &partitions);
     void start_alg();
     void init_perf_counter();
     void get_hotpot_point_value(std::vector<double> &result);
