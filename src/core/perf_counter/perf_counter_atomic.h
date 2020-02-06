@@ -8,6 +8,7 @@
 #include <dsn/utility/config_api.h>
 #include <dsn/c/api_utilities.h>
 #include <dsn/perf_counter/perf_counter.h>
+#include <dsn/utility/time_utils.h>
 #include "core/tools/common/shared_io_service.h"
 
 namespace dsn {

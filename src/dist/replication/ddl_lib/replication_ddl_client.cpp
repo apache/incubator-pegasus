@@ -41,6 +41,7 @@
 #include <dsn/utility/error_code.h>
 #include <dsn/utility/output_utils.h>
 #include <fmt/format.h>
+#include <dsn/utility/time_utils.h>
 
 namespace dsn {
 namespace replication {

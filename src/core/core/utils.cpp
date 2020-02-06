@@ -42,7 +42,6 @@
 #include <sys/socket.h>
 
 #include <array>
-#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -65,89 +64,6 @@
 namespace dsn {
 namespace utils {
 
-uint64_t get_current_physical_time_ns()
-{
-    auto now = std::chrono::high_resolution_clock::now();
-    auto nanos =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-    return nanos;
-}
-
-// len >= 24
-void time_ms_to_string(uint64_t ts_ms, char *str)
-{
-    auto t = (time_t)(ts_ms / 1000);
-    struct tm tmp;
-    auto ret = localtime_r(&t, &tmp);
-    sprintf(str,
-            "%04d-%02d-%02d %02d:%02d:%02d.%03u",
-            ret->tm_year + 1900,
-            ret->tm_mon + 1,
-            ret->tm_mday,
-            ret->tm_hour,
-            ret->tm_min,
-            ret->tm_sec,
-            static_cast<uint32_t>(ts_ms % 1000));
-}
-
-// len >= 11
-void time_ms_to_date(uint64_t ts_ms, char *str, int len)
-{
-    auto t = (time_t)(ts_ms / 1000);
-    struct tm tmp;
-    auto ret = localtime_r(&t, &tmp);
-    strftime(str, len, "%Y-%m-%d", ret);
-}
-
-// len >= 20
-void time_ms_to_date_time(uint64_t ts_ms, char *str, int len)
-{
-    auto t = (time_t)(ts_ms / 1000);
-    struct tm tmp;
-    auto ret = localtime_r(&t, &tmp);
-    strftime(str, len, "%Y-%m-%d %H:%M:%S", ret);
-}
-
-void time_ms_to_date_time(uint64_t ts_ms, int32_t &hour, int32_t &min, int32_t &sec)
-{
-    auto t = (time_t)(ts_ms / 1000);
-    struct tm tmp;
-    auto ret = localtime_r(&t, &tmp);
-    hour = ret->tm_hour;
-    min = ret->tm_min;
-    sec = ret->tm_sec;
-}
-
-int64_t get_unix_sec_today_midnight()
-{
-    time_t t = time(nullptr);
-    struct tm tmp;
-    auto ret = localtime_r(&t, &tmp);
-    ret->tm_hour = 0;
-    ret->tm_min = 0;
-    ret->tm_sec = 0;
-    return static_cast<int64_t>(mktime(ret));
-}
-
-int hh_mm_to_seconds(dsn::string_view hhmm)
-{
-    int hour = 0, min = 0, sec = -1;
-    if (::sscanf(hhmm.data(), "%d:%d", &hour, &min) == 2 && (0 <= hour && hour <= 23) &&
-        (0 <= min && min <= 59)) {
-        sec = 3600 * hour + 60 * min;
-    }
-    return sec;
-}
-
-int64_t hh_mm_today_to_unix_sec(string_view hhmm_of_day)
-{
-    int sec_of_day = hh_mm_to_seconds(hhmm_of_day);
-    if (sec_of_day == -1) {
-        return -1;
-    }
-
-    return get_unix_sec_today_midnight() + sec_of_day;
-}
 bool hostname_from_ip(uint32_t ip, std::string *hostname_result)
 {
     struct sockaddr_in addr_in;

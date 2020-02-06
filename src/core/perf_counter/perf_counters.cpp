@@ -36,6 +36,7 @@
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/task.h>
 #include <dsn/utility/string_view.h>
+#include <dsn/utility/time_utils.h>
 
 #include "perf_counter_atomic.h"
 #include "builtin_counters.h"

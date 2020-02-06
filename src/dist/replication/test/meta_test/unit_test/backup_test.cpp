@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
+#include <dsn/utility/time_utils.h>
 
 #include "dist/replication/meta_server/meta_backup_service.h"
 #include "dist/replication/meta_server/meta_service.h"

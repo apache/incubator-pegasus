@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include <dsn/utility/output_utils.h>
+#include <dsn/utility/time_utils.h>
 
 #include "server_info_http_services.h"
 

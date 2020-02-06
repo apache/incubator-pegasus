@@ -42,6 +42,7 @@
 #include <dsn/toollet/profiler.h>
 #include "profiler_header.h"
 #include <dsn/cpp/json_helper.h>
+#include <dsn/utility/time_utils.h>
 
 namespace dsn {
 namespace tools {
