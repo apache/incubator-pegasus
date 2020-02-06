@@ -140,7 +140,7 @@ private:
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
     std::map<std::string, hotspot_calculator *> _calculator_store;
-    hotspot_calculator* get_store_handler(const std::string app_name, const int partition_num)
+    hotspot_calculator *get_store_handler(const std::string app_name, const int partition_num)
     {
         auto iter = _calculator_store.find(app_name);
         if (iter != _calculator_store.end()) {
