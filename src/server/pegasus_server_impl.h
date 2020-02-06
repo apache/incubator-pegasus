@@ -308,14 +308,13 @@ private:
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
-    rocksdb::BlockBasedTableOptions _tbl_opts;
-    rocksdb::Options _db_opts;
-    rocksdb::WriteOptions _wt_opts;
-    rocksdb::ReadOptions _rd_opts;
+    rocksdb::DBOptions _db_opts;
+    rocksdb::ColumnFamilyOptions _data_cf_opts;
+    rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
 
     rocksdb::DB *_db;
-    static std::shared_ptr<rocksdb::Cache> _block_cache;
+    static std::shared_ptr<rocksdb::Cache> _s_block_cache;
     volatile bool _is_open;
     uint32_t _pegasus_data_version;
     std::atomic<int64_t> _last_durable_decree;

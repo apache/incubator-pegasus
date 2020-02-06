@@ -19,7 +19,7 @@ public:
 
     pegasus_compression_options_test()
     {
-        _server->_db_opts.num_levels = 7;
+        _server->_data_cf_opts.num_levels = 7;
         compression_header = _server->COMPRESSION_HEADER;
     }
 
