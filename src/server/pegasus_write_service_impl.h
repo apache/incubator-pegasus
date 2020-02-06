@@ -38,6 +38,16 @@ struct db_get_context
     bool expired{false};
 };
 
+inline int get_cluster_id_if_exists()
+{
+    // cluster_id is 0 if not configured, which means it will accept writes
+    // from any cluster as long as the timestamp is larger.
+    static auto cluster_id_res =
+        dsn::replication::get_duplication_cluster_id(dsn::replication::get_current_cluster_name());
+    static uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
+    return cluster_id;
+}
+
 class pegasus_write_service::impl : public dsn::replication::replica_base
 {
 public:
@@ -530,15 +540,9 @@ private:
         FAIL_POINT_INJECT_F("db_write_batch_put",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
-        // cluster_id is 0 if not configured, which means it will accept writes
-        // from any cluster as long as the timestamp is larger.
-        static auto cluster_id_res = dsn::replication::get_duplication_cluster_id(
-            dsn::replication::get_current_cluster_name());
-        static uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
-
         uint64_t new_timetag = ctx.remote_timetag;
         if (!ctx.is_duplicated_write()) { // local write
-            new_timetag = generate_timetag(ctx.timestamp, cluster_id, false);
+            new_timetag = generate_timetag(ctx.timestamp, get_cluster_id_if_exists(), false);
         }
 
         if (ctx.verify_timetag &&         // needs read-before-write

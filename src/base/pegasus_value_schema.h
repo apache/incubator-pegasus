@@ -19,7 +19,7 @@
 
 namespace pegasus {
 
-#define PEGASUS_DATA_VERSION_MAX 1u
+constexpr int PEGASUS_DATA_VERSION_MAX = 1u;
 
 /// Generates timetag in host endian.
 /// \see comment on pegasus_value_generator::generate_value_v1
