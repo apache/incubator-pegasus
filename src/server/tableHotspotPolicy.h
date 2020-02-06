@@ -24,10 +24,10 @@ public:
         double min_total_qps = 1.0, min_total_cu = 1.0;
         for (int index=0;index<temp.size();index++) {
             anly_data.push_back(temp[index].back());
-            min_total_qps = std::min(min_total_qps, std::max(anly_data[index].total_qps, 1.0));
+            min_total_qps = std::min(min_total_qps, std::max(anly_data[index]._total_qps, 1.0));
         }
         for (int i = 0; i < anly_data.size(); i++) {
-            hot_points->at(i)=anly_data[i].total_qps / min_total_qps;
+            hot_points->at(i)=anly_data[i]._total_qps / min_total_qps;
         }
         return;
     }
