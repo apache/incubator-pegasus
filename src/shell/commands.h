@@ -227,3 +227,15 @@ bool rdb_key_hex2str(command_executor *e, shell_context *sc, arguments args);
 bool rdb_key_str2hex(command_executor *e, shell_context *sc, arguments args);
 
 bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args);
+
+// == duplication (see 'commands/duplication.cpp') == //
+
+bool add_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool query_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool remove_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool start_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool pause_dup(command_executor *e, shell_context *sc, arguments args);
