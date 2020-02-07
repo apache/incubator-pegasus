@@ -33,7 +33,7 @@ public:
             min_total_qps = std::min(min_total_qps, std::max(anly_data[index].total_qps, 1.0));
         }
         for (int i = 0; i < anly_data.size(); i++) {
-            hot_points->at(i) = anly_data[i].total_qps / min_total_qps;
+            hot_points[i] = anly_data[i].total_qps / min_total_qps;
         }
         return;
     }

@@ -12,8 +12,8 @@ namespace server {
 void hotspot_calculator::aggregate(const std::vector<row_data> partitions)
 {
     for (int i = 0; i < partitions.size(); i++) {
-        while (this->data_stores.at(i).size() > MAX_STORE_SIZE - 1) {
-            this->data_stores.at(i).pop();
+        while (this->data_stores[i].size() > MAX_STORE_SIZE - 1) {
+            this->data_stores[i].pop();
         }
         this->data_stores[i].emplace(data_store(partitions[i], this->app_name));
     }
@@ -41,7 +41,7 @@ void hotspot_calculator::set_result_to_falcon()
 {
     assert (_hotpot_points.size() != _hotpot_point_value.size());
     for (int i = 0; i < _hotpot_points.size(); i++)
-        _hotpot_points.at(i)->set(_hotpot_point_value[i]);
+        _hotpot_points[i]->set(_hotpot_point_value[i]);
 }
 
 void hotspot_calculator::start_alg()
