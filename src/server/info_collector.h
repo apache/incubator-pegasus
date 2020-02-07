@@ -148,6 +148,7 @@ private:
         }
         hotspot_calculator *handler = new hotspot_calculator(app_name, partition_num);
         _calculator_store[app_name] = handler;
+        handler->init_perf_counter();
         return handler;
     }
 };
