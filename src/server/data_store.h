@@ -9,6 +9,9 @@
 namespace pegasus {
 namespace server {
 
+//data_store is the minimum storage cell of hotspot_calculator, 
+//which stores the data of single partition at single time of collection
+
 struct data_store
 {
     data_store(const row_data &row, const std::string name)
