@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <dsn/perf_counter/perf_counter.h>
 
-#define MAX_STORE_SIZE 100
+static const int MAX_STORE_SIZE=100;
 
 namespace pegasus {
 namespace server {
