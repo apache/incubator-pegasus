@@ -4,6 +4,8 @@
 
 #include "table_hotspot_policy.h"
 
+#include <assert.h>
+
 namespace pegasus {
 namespace server {
 
@@ -37,10 +39,7 @@ void hotspot_calculator::get_hotpot_point_value(std::vector<double> &result)
 
 void hotspot_calculator::set_result_to_falcon()
 {
-    if (_hotpot_points.size() != _hotpot_point_value.size()) {
-        ddebug("partittion counts error, please check");
-        return;
-    }
+    assert (_hotpot_points.size() != _hotpot_point_value.size());
     for (int i = 0; i < _hotpot_points.size(); i++)
         _hotpot_points.at(i)->set(_hotpot_point_value[i]);
 }
