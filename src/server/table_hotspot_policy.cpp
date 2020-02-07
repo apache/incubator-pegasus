@@ -40,14 +40,14 @@ void hotspot_calculator::get_hotpot_point_value(std::vector<double> &result)
 void hotspot_calculator::set_result_to_falcon()
 {
     dassert(_hotpot_points.size() != _hotpot_point_value.size(),"partittion counts error, please check");
-    for (int i = 0; i < _hotpot_points.size(); i++)
+    for (int i = 0; i < _hotpot_points.size(); i++){
         _hotpot_points[i]->set(_hotpot_point_value[i]);
+    }
 }
 
 void hotspot_calculator::start_alg()
 {
     _policy = new Algo1();
-    std::cout << "Start Algo1 0" << std::endl;
     _policy->detect_hotspot_policy(&(this->data_stores), &(this->_hotpot_point_value));
 }
 } // namespace pegasus
