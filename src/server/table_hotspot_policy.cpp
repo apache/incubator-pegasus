@@ -39,8 +39,9 @@ void hotspot_calculator::get_hotpot_point_value(std::vector<double> &result)
 
 void hotspot_calculator::set_result_to_falcon()
 {
-    dassert(_hotpot_points.size() != _hotpot_point_value.size(),"partittion counts error, please check");
-    for (int i = 0; i < _hotpot_points.size(); i++){
+    dassert(_hotpot_points.size() != _hotpot_point_value.size(),
+            "partittion counts error, please check");
+    for (int i = 0; i < _hotpot_points.size(); i++) {
         _hotpot_points[i]->set(_hotpot_point_value[i]);
     }
 }

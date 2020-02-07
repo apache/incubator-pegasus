@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <dsn/perf_counter/perf_counter.h>
 
-static const int MAX_STORE_SIZE=100;
+static const int MAX_STORE_SIZE = 100;
 
 namespace pegasus {
 namespace server {
@@ -30,7 +30,7 @@ public:
         double min_total_qps = 1.0, min_total_cu = 1.0;
         for (int i = 0; i < temp.size(); i++) {
             anly_data.push_back(temp[i].back());
-            min_total_qps = std::min(min_total_qps, std::max(anly_data[i].total_qps , 1.0));
+            min_total_qps = std::min(min_total_qps, std::max(anly_data[i].total_qps, 1.0));
         }
         for (int i = 0; i < anly_data.size(); i++) {
             (*hot_points)[i] = anly_data[i].total_qps / min_total_qps;
@@ -43,10 +43,12 @@ class hotspot_calculator
 {
 public:
     hotspot_calculator(const std::string &app_name, const int &partition_num)
-    : data_stores(partition_num),
-      app_name(app_name),
-      _hotpot_point_value(partition_num),
-      _hotpot_points(partition_num) {}
+        : data_stores(partition_num),
+          app_name(app_name),
+          _hotpot_point_value(partition_num),
+          _hotpot_points(partition_num)
+    {
+    }
     // queue stores historical data of single partition's data_store(hotspots key value)
     // vector stores all partition's data of this app
     std::vector<std::queue<data_store>> data_stores;

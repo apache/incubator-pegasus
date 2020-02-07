@@ -279,7 +279,8 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
     _result_writer->set_result(st_stat.timestamp, "ss", st_stat.dump_to_json());
 }
 
-hotspot_calculator* info_collector::get_store_handler(const std::string app_name, const int partition_num)
+hotspot_calculator *info_collector::get_store_handler(const std::string app_name,
+                                                      const int partition_num)
 {
     auto iter = _calculator_store.find(app_name);
     if (iter != _calculator_store.end()) {
