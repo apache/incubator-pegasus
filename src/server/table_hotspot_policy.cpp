@@ -1,4 +1,4 @@
-#include "tableHotspotPolicy.h"
+#include "table_hotspot_policy.h"
 
 namespace pegasus {
 namespace server {
