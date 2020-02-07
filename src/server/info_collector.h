@@ -141,7 +141,7 @@ private:
     std::map<std::string, string> _capacity_unit_update_info;
     std::map<std::string, hotspot_calculator *> _calculator_store;
 
-    hotspot_calculator *get_store_handler(const std::string app_name, const int partition_num){}
+    hotspot_calculator *get_store_handler(const std::string app_name, const int partition_num);
 };
 } // namespace server
 } // namespace pegasus
