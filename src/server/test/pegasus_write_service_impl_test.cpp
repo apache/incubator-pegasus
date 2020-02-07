@@ -7,6 +7,8 @@
 #include "server/pegasus_write_service_impl.h"
 #include "message_utils.h"
 
+#include <dsn/utility/defer.h>
+
 namespace pegasus {
 namespace server {
 
@@ -122,6 +124,9 @@ TEST_F(pegasus_write_service_impl_test, verify_timetag_compatible_with_version_0
     // if db_write_batch_put_ctx invokes db_get, this test must fail.
 
     const_cast<uint32_t &>(_write_impl->_pegasus_data_version) = 0; // old version
+    auto tear_down = dsn::defer([this]() {
+        const_cast<uint32_t &>(_write_impl->_pegasus_data_version) = 0; // reset version
+    });
 
     dsn::blob raw_key;
     pegasus::pegasus_generate_key(

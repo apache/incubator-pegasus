@@ -58,8 +58,7 @@ public:
           _db(server->_db),
           _rd_opts(server->_data_cf_rd_opts),
           _default_ttl(0),
-          _pfc_recent_expire_count(server->_pfc_recent_expire_count),
-          _server(server)
+          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
         // disable write ahead logging as replication handles logging instead now
         _wt_opts.disableWAL = true;
@@ -810,7 +809,6 @@ private:
     rocksdb::ReadOptions &_rd_opts;
     volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
-    pegasus_server_impl *_server;
     pegasus_value_generator _value_generator;
 
     // for setting update_response.error after committed.
