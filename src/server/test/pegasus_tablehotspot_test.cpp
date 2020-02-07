@@ -9,7 +9,7 @@
 namespace pegasus {
 namespace server {
 
-TEST(table_hotspot_policy, Algo1)
+TEST(table_hotspot_policy, hotspot_algo_qps_skew)
 {
     std::vector<row_data> test_rows(2);
     row_data test_row1, test_row2;

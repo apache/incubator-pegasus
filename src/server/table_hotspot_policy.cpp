@@ -47,8 +47,8 @@ void hotspot_calculator::set_result_to_falcon()
 
 void hotspot_calculator::start_alg()
 {
-    _policy = new Algo1();
-    _policy->detect_hotspot_policy(&(this->data_stores), &(this->_hotpot_point_value));
+    _policy = new hotspot_algo_qps_skew();
+    _policy->analysis_hotspot_data(&(this->data_stores), &(this->_hotpot_point_value));
 }
 } // namespace pegasus
 } // namespace server

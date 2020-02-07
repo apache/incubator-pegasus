@@ -12,24 +12,24 @@ static const int MAX_STORE_SIZE=100;
 
 namespace pegasus {
 namespace server {
-class Hotspot_policy
+class hotspot_policy
 {
 public:
-    virtual void detect_hotspot_policy(std::vector<std::queue<data_store>> *data_stores,
+    virtual void analysis_hotspot_data(std::vector<std::queue<data_store>> *data_stores,
                                        std::vector<double> *hot_points) = 0;
 };
 
-class Algo1 : public Hotspot_policy
+class hotspot_algo_qps_skew : public hotspot_policy
 {
 public:
-    void detect_hotspot_policy(std::vector<std::queue<data_store>> *data_stores,
+    void analysis_hotspot_data(std::vector<std::queue<data_store>> *data_stores,
                                std::vector<double> *hot_points)
     {
         std::vector<std::queue<data_store>> temp = *data_stores;
         std::vector<data_store> anly_data;
         double min_total_qps = 1.0, min_total_cu = 1.0;
-        for (int index = 0; index < temp.size(); index++) {
-            anly_data.push_back(temp[index].back());
+        for (int i = 0; i < temp.size(); i++) {
+            anly_data.push_back(temp[i].back());
             min_total_qps = std::min(min_total_qps, std::max(anly_data[index].total_qps, 1.0));
         }
         for (int i = 0; i < anly_data.size(); i++) {
@@ -47,6 +47,8 @@ public:
       app_name(app_name),
       _hotpot_point_value(partition_num),
       _hotpot_points(partition_num) {}
+    // queue stores historical data of single partition's data_store(hotspots key value)
+    // vector stores all partition's data of this app
     std::vector<std::queue<data_store>> data_stores;
     void aggregate(const std::vector<row_data> partitions);
     void start_alg();
@@ -57,7 +59,7 @@ public:
     const std::string app_name;
 
 private:
-    Hotspot_policy *_policy;
+    hotspot_policy *_policy;
     std::vector<double> _hotpot_point_value;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
 };
