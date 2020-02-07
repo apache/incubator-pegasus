@@ -94,8 +94,8 @@ public:
         ::dsn::perf_counter_wrapper rdb_estimate_num_keys;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
-        ::dsn::perf_counter_wrapper qps_max_min_scale;
-        ::dsn::perf_counter_wrapper cu_max_min_scale;
+        ::dsn::perf_counter_wrapper qps_skew;
+        ::dsn::perf_counter_wrapper cu_skew;
     };
 
     info_collector();
