@@ -159,14 +159,14 @@ void info_collector::on_app_stat()
            all_stats.get_total_write_qps());
 }
 
-info_collector::AppStatCounters *info_collector::get_app_counters(const std::string &app_name)
+info_collector::app_stat_counters *info_collector::get_app_counters(const std::string &app_name)
 {
     ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_app_stat_counter_lock);
     auto find = _app_stat_counters.find(app_name);
     if (find != _app_stat_counters.end()) {
         return find->second;
     }
-    AppStatCounters *counters = new AppStatCounters();
+    app_stat_counters *counters = new app_stat_counters();
 
     char counter_name[1024];
     char counter_desc[1024];

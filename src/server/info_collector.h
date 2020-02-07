@@ -31,7 +31,7 @@ static const int HOTSPOT_MAX_MIN_SCALE_THRESHOLD = 10;
 class info_collector
 {
 public:
-    struct AppStatCounters
+    struct app_stat_counters
     {
         void set(const table_stats &row_stats)
         {
@@ -105,7 +105,7 @@ public:
     void stop();
 
     void on_app_stat();
-    AppStatCounters *get_app_counters(const std::string &app_name);
+    app_stat_counters *get_app_counters(const std::string &app_name);
 
     void on_capacity_unit_stat(int remaining_retry_count);
     bool has_capacity_unit_updated(const std::string &node_address, const std::string &timestamp);
@@ -120,7 +120,7 @@ private:
     uint32_t _app_stat_interval_seconds;
     ::dsn::task_ptr _app_stat_timer_task;
     ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
-    std::map<std::string, AppStatCounters *> _app_stat_counters;
+    std::map<std::string, app_stat_counters *> _app_stat_counters;
 
     // app for recording usage statistics, including read/write capacity unit and storage size.
     std::string _usage_stat_app;
