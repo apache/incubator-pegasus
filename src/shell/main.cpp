@@ -432,6 +432,11 @@ static command_executor commands[] = {
         "[-s|--skip_prompt] [-o|--output file_name]",
         ddd_diagnose,
     },
+    {"add_dup", "add duplication", "<app_name> <remote_cluster_name> [-f|--freezed]", add_dup},
+    {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
+    {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
+    {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
+    {"pause_dup", "pause duplication", "<app_name> <dup_id>", pause_dup},
     {
         "exit", "exit shell", "", exit_shell,
     },
