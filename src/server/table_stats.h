@@ -6,7 +6,7 @@
 
 struct table_stats
 {
-    table_stats(const std::string &app_name) : app_name(app_name) { }
+    table_stats(const std::string &app_name) : app_name(app_name) {}
 
     double get_total_read_qps() const
     {
