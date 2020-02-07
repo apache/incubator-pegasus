@@ -42,13 +42,18 @@ public:
 class hotspot_calculator
 {
 public:
+    hotspot_calculator(const std::string &app_name, const int &partition_num)
+    : data_stores(partition_num),
+      app_name(app_name),
+      _hotpot_point_value(partition_num),
+      _hotpot_points(partition_num) {}
     std::vector<std::queue<data_store>> data_stores;
-    hotspot_calculator(const std::string &app_name, const int &app_size);
     void aggregate(const std::vector<row_data> partitions);
     void start_alg();
     void init_perf_counter();
     void get_hotpot_point_value(std::vector<double> &result);
     void set_result_to_falcon();
+
     const std::string app_name;
 
 private:

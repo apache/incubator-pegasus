@@ -7,14 +7,6 @@
 namespace pegasus {
 namespace server {
 
-hotspot_calculator::hotspot_calculator(const std::string &app_name, const int &partition_num)
-    : data_stores(partition_num),
-      app_name(app_name),
-      _hotpot_point_value(partition_num),
-      _hotpot_points(partition_num)
-{
-}
-
 void hotspot_calculator::aggregate(const std::vector<row_data> partitions)
 {
     for (int i = 0; i < partitions.size(); i++) {
