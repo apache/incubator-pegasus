@@ -40,7 +40,7 @@ class hotspot_calculator
 public:
     std::vector<std::queue<data_store>> data_stores;
     hotspot_calculator(const std::string &app_name, const int &app_size);
-    void aggregate(std::vector<row_data> &partitions);
+    void aggregate(const std::vector<row_data> partitions);
     void start_alg();
     void init_perf_counter();
     void get_hotpot_point_value(std::vector<double> &result);

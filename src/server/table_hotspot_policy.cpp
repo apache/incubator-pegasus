@@ -11,7 +11,7 @@ hotspot_calculator::hotspot_calculator(const std::string &app_name, const int &p
 {
 }
 
-void hotspot_calculator::aggregate(std::vector<row_data> &partitions)
+void hotspot_calculator::aggregate(const std::vector<row_data> partitions)
 {
     for (int i = 0; i < partitions.size(); i++) {
         while (this->data_stores.at(i).size() > MAX_STORE_SIZE - 1) {
