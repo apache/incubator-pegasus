@@ -18,12 +18,12 @@ struct data_store
         : app_name(name),
           total_qps(row.get_total_qps()),
           total_cu(row.get_total_cu()),
-          partition_name(row.row_name){};
+          partition_name(row.row_name) {};
     data_store() {}
     std::string app_name;
     double total_qps;
     double total_cu;
     std::string partition_name;
 };
-}
-}
+} // namespace pegasus
+} // namespace server

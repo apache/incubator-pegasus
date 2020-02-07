@@ -55,5 +55,5 @@ void hotspot_calculator::start_alg()
     std::cout << "Start Algo1 0" << std::endl;
     _policy->detect_hotspot_policy(&(this->data_stores), &(this->_hotpot_point_value));
 }
-}
-}
+} // namespace pegasus
+} // namespace server

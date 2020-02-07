@@ -52,5 +52,5 @@ private:
     std::vector<double> _hotpot_point_value;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
 };
-}
-}
+} // namespace pegasus
+} // namespace server

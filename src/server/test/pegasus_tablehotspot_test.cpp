@@ -21,5 +21,5 @@ TEST(table_hotspot_policy, Algo1)
     std::vector<double> expect_vector{1234.0, 4321.0};
     ASSERT_EQ((expect_vector == result), 1);
 }
-}
-}
+} // namespace pegasus
+} // namespace server
