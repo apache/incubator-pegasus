@@ -140,17 +140,8 @@ private:
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
     std::map<std::string, hotspot_calculator *> _calculator_store;
-    hotspot_calculator *get_store_handler(const std::string app_name, const int partition_num)
-    {
-        auto iter = _calculator_store.find(app_name);
-        if (iter != _calculator_store.end()) {
-            return iter->second;
-        }
-        hotspot_calculator *handler = new hotspot_calculator(app_name, partition_num);
-        _calculator_store[app_name] = handler;
-        handler->init_perf_counter();
-        return handler;
-    }
+
+    hotspot_calculator *get_store_handler(const std::string app_name, const int partition_num){}
 };
 } // namespace server
 } // namespace pegasus
