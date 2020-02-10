@@ -12,10 +12,10 @@ namespace server {
 void hotspot_calculator::aggregate(const std::vector<row_data> partitions)
 {
     for (int i = 0; i < partitions.size(); i++) {
-        while (this->data_stores[i].size() > MAX_STORE_SIZE - 1) {
-            this->data_stores[i].pop();
+        while (this->hotspot_app_data[i].size() > MAX_STORE_SIZE - 1) {
+            this->hotspot_app_data[i].pop();
         }
-        this->data_stores[i].emplace(data_store(partitions[i], this->app_name));
+        this->hotspot_app_data[i].emplace(hotspot_partition_data(partitions[i], this->app_name));
     }
 }
 
@@ -49,7 +49,7 @@ void hotspot_calculator::set_result_to_falcon()
 void hotspot_calculator::start_alg()
 {
     _policy = new hotspot_algo_qps_skew();
-    _policy->analysis_hotspot_data(&(this->data_stores), &(this->_hotpot_point_value));
+    _policy->analysis_hotspot_data(&(this->hotspot_app_data), &(this->_hotpot_point_value));
 }
 } // namespace pegasus
 } // namespace server
