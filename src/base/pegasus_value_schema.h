@@ -23,9 +23,9 @@ constexpr int PEGASUS_DATA_VERSION_MAX = 1u;
 
 /// Generates timetag in host endian.
 /// \see comment on pegasus_value_generator::generate_value_v1
-inline uint64_t generate_timetag(uint64_t timestamp, uint8_t cluster_id, bool delete_tag)
+inline uint64_t generate_timetag(uint64_t timestamp, uint8_t cluster_id, bool deleted_tag)
 {
-    return timestamp << 8u | cluster_id << 1u | delete_tag;
+    return timestamp << 8u | cluster_id << 1u | deleted_tag;
 }
 
 inline uint64_t extract_timestamp_from_timetag(uint64_t timetag)
@@ -194,7 +194,7 @@ public:
     /// rocksdb value (ver 1)
     ///  = [expire_ts(uint32_t)] [timetag(uint64_t)] [user_data(bytes)]
     ///  = [expire_ts(unit32_t)]
-    ///    [timestamp in μs (56 bit)] [cluster_id (7 bit)] [delete_tag (1 bit)]
+    ///    [timestamp in μs (56 bit)] [cluster_id (7 bit)] [deleted_tag (1 bit)]
     ///    [user_data(bytes)]
     ///
     /// \internal
