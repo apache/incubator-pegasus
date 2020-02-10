@@ -9,18 +9,13 @@
 namespace pegasus {
 namespace server {
 
-// hotspot_partition_data is the minimum storage cell of hotspot_calculator,
-// which stores the data of single partition at single time of collection
-
 struct hotspot_partition_data
 {
-    hotspot_partition_data(const row_data &row, const std::string name)
-        : app_name(name),
-          total_qps(row.get_total_qps()),
+    hotspot_partition_data(const row_data &row)
+        : total_qps(row.get_total_qps()),
           total_cu(row.get_total_cu()),
-          partition_name(row.row_name){};
+          partition_name(row.row_name) {};
     hotspot_partition_data() {}
-    std::string app_name;
     double total_qps;
     double total_cu;
     std::string partition_name;
