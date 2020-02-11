@@ -5,6 +5,7 @@
 #include "pegasus_manual_compact_service.h"
 
 #include <dsn/utility/string_conv.h>
+#include <dsn/utility/time_utils.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <dsn/tool-api/async_calls.h>

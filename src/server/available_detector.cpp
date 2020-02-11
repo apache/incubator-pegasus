@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <sstream>
 #include <dsn/dist/replication/duplication_common.h>
+#include <dsn/utility/time_utils.h>
 
 #include "base/pegasus_key_schema.h"
 #include "result_writer.h"
