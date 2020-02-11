@@ -13,6 +13,7 @@
 #include <dsn/dist/replication/replication.codes.h>
 #include <rrdb/rrdb_types.h>
 #include <rrdb/rrdb.server.h>
+#include <gtest/gtest_prod.h>
 
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
@@ -159,6 +160,7 @@ private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
     friend class pegasus_server_impl_test;
+    FRIEND_TEST(pegasus_server_impl_test, default_data_version);
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
