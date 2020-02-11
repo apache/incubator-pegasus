@@ -21,16 +21,18 @@ void hotspot_calculator::aggregate(const std::vector<row_data> &partitions)
     this->hotspot_app_data.emplace(temp);
 }
 
-void hotspot_calculator::init_perf_counter()
+void hotspot_calculator::init_perf_counter(const int &perf_counter_count)
 {
     char counter_name[1024];
     char counter_desc[1024];
-    for (int i = 0; i < this->_hotpot_points.size(); i++) {
+    for (int i = 0; i < perf_counter_count; i++) {
         string paritition_desc = this->app_name + std::to_string(i);
         sprintf(counter_name, "app.stat.hotspots.%s", paritition_desc.c_str());
         sprintf(counter_desc, "statistic the hotspots of app %s", paritition_desc.c_str());
         _hotpot_points[i].init_app_counter(
             "app.pegasus", counter_name, COUNTER_TYPE_NUMBER, counter_desc);
+        ddebug("hotspot_perf_counter %d init success",i);
+        std::cout<<"hotspot_perf_counter %d init success"<<std::endl;
     }
 }
 
