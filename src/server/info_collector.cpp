@@ -286,10 +286,9 @@ hotspot_calculator *info_collector::get_hotspot_calculator_address(const std::st
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
-    hotspot_calculator *handler = new hotspot_calculator(app_name, partition_num);
-    _hotspot_calculator_store[app_name] = handler;
-    handler->init_perf_counter();
-    return handler;
+    hotspot_calculator *calculator_address = new hotspot_calculator(app_name, partition_num);
+    _hotspot_calculator_store[app_name] = calculator_address;
+    return calculator_address;
 }
 
 } // namespace server

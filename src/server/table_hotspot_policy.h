@@ -32,13 +32,17 @@ public:
         std::queue<std::vector<hotspot_partition_data>> temp = hotspot_app_data;
         std::vector<hotspot_partition_data> anly_data;
         double min_total_qps = 1.0, min_total_cu = 1.0;
-        for (int i = 0; i < temp.size(); i++) {
+        for (int i = 0; i < temp.front().size(); i++) {
             anly_data.push_back(temp.front()[i]);
-            temp.pop();
+            std::cout<<"data_anly :"<<temp.front()[i].total_qps<<std::endl;
             min_total_qps = std::min(min_total_qps, std::max(anly_data[i].total_qps, 1.0));
         }
-        dassert(anly_data.size() != hot_points.size(), "partittion counts error, please check");
+        temp.pop();
+        std::cout<<anly_data.size()<<" "<<hot_points.size()<<std::endl;
+
+        dassert(anly_data.size() == hot_points.size(), "partittion counts error, please check");
         for (int i = 0; i < hot_points.size(); i++) {
+            std::cout<<"data :"<<anly_data[i].total_qps<<std::endl;
             hot_points[i]->set(anly_data[i].total_qps / min_total_qps);
         }
         return;
@@ -51,6 +55,7 @@ public:
     hotspot_calculator(const std::string &app_name, const int &partition_num)
         : app_name(app_name), _hotpot_points(partition_num)
     {
+        this->init_perf_counter();
     }
     void aggregate(const std::vector<row_data> &partitions);
     void start_alg();

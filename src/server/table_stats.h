@@ -92,7 +92,7 @@ struct table_stats
         total_rdb_memtable_mem_usage += row_stats.total_rdb_memtable_mem_usage;
 
         // We only need max_total_qps/min_total_qps/max_total_cu/min_total_cu in the same app
-        dassert(this->app_name != row_stats.app_name, "this->app_name != row_stats.app_name");
+        dassert(this->app_name == row_stats.app_name, "this->app_name != row_stats.app_name");
         // get max_total_qps、min_total_qps and id of the partition which has max_total_qps
         min_total_qps = std::min(min_total_qps, row_stats.min_total_qps);
         if (max_total_qps < row_stats.max_total_qps) {
