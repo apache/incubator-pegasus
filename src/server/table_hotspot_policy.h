@@ -43,6 +43,14 @@ public:
     }
 };
 
+// hotspot_calculator is used to find the hotspot in Pegasus
+
+// hotspot_app_data store the historical data which related to hotspot
+// it uses rolling queue to save one app's data
+// vector is used saving the partitions' data of this app
+
+// hotspot_partition_data is used to save data of one partition
+
 class hotspot_calculator
 {
 public:
