@@ -26,7 +26,6 @@ namespace pegasus {
 namespace server {
 
 class result_writer;
-static const int HOTSPOT_MAX_MIN_SCALE_THRESHOLD = 10;
 
 class info_collector
 {
