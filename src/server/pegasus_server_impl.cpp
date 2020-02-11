@@ -53,7 +53,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : dsn::apps::rrdb_service(r),
       _db(nullptr),
       _is_open(false),
-      _pegasus_data_version(0),
+      _pegasus_data_version(PEGASUS_DATA_VERSION_MAX),
       _last_durable_decree(0),
       _is_checkpointing(false),
       _manual_compact_svc(this),
@@ -124,6 +124,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     // init rocksdb::DBOptions
     _db_opts.pegasus_data = true;
+    _db_opts.pegasus_data_version = _pegasus_data_version;
     _db_opts.create_if_missing = true;
     _db_opts.error_if_exists = false;
     _db_opts.use_direct_reads = dsn_config_get_value_bool(
