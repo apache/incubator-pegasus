@@ -59,5 +59,10 @@ public:
 
 TEST_F(pegasus_server_impl_test, test_table_level_slow_query) { test_table_level_slow_query(); }
 
+TEST_F(pegasus_server_impl_test, default_data_version)
+{
+    ASSERT_EQ(_server->_pegasus_data_version, 1);
+}
+
 } // namespace server
 } // namespace pegasus
