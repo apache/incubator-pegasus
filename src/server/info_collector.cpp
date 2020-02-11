@@ -91,7 +91,7 @@ info_collector::~info_collector()
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
-    for (auto store : _calculator_store) {
+    for (auto store : _hotspot_calculator_store) {
         delete store.second;
     }
 }
@@ -147,7 +147,7 @@ void info_collector::on_app_stat()
 
         // hotspot_calculator is to detect hotspots
         hotspot_calculator *app_hotspot_calculator =
-            get_store_handler(app_rows.first, app_rows.second.size());
+            get_hotspot_calculator_address(app_rows.first, app_rows.second.size());
         app_hotspot_calculator->aggregate(app_rows.second);
         app_hotspot_calculator->start_alg();
     }
@@ -279,15 +279,15 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
     _result_writer->set_result(st_stat.timestamp, "ss", st_stat.dump_to_json());
 }
 
-hotspot_calculator *info_collector::get_store_handler(const std::string app_name,
-                                                      const int partition_num)
+hotspot_calculator *info_collector::get_hotspot_calculator_address(const std::string &app_name,
+                                                                   const int &partition_num)
 {
-    auto iter = _calculator_store.find(app_name);
-    if (iter != _calculator_store.end()) {
+    auto iter = _hotspot_calculator_store.find(app_name);
+    if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
     hotspot_calculator *handler = new hotspot_calculator(app_name, partition_num);
-    _calculator_store[app_name] = handler;
+    _hotspot_calculator_store[app_name] = handler;
     handler->init_perf_counter();
     return handler;
 }

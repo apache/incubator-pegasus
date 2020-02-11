@@ -139,9 +139,10 @@ private:
     ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
-    std::map<std::string, hotspot_calculator *> _calculator_store;
+    std::map<std::string, hotspot_calculator *> _hotspot_calculator_store;
 
-    hotspot_calculator *get_store_handler(const std::string app_name, const int partition_num);
+    hotspot_calculator *get_hotspot_calculator_address(const std::string &app_name,
+                                                       const int &partition_num);
 };
 } // namespace server
 } // namespace pegasus
