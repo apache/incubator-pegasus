@@ -15,7 +15,7 @@ void hotspot_calculator::aggregate(const std::vector<row_data> &partitions)
         this->hotspot_app_data.pop();
     }
     std::vector<hotspot_partition_data> temp;
-    for (int i=0;i<partitions.size();i++){
+    for (int i = 0; i < partitions.size(); i++) {
         temp.emplace_back(hotspot_partition_data(partitions[i]));
     }
     this->hotspot_app_data.emplace(temp);
