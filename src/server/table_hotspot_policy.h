@@ -29,14 +29,12 @@ public:
     analysis_hotspot_data(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
                           std::vector<::dsn::perf_counter_wrapper> &hot_points)
     {
-        std::queue<std::vector<hotspot_partition_data>> temp = hotspot_app_data;
         std::vector<hotspot_partition_data> anly_data;
         double min_total_qps = 1.0, min_total_cu = 1.0;
-        for (int i = 0; i < temp.front().size(); i++) {
-            anly_data.push_back(temp.front()[i]);
+        for (int i = 0; i < hotspot_app_data.back().size(); i++) {
+            anly_data.push_back(hotspot_app_data.back()[i]);
             min_total_qps = std::min(min_total_qps, std::max(anly_data[i].total_qps, 1.0));
         }
-        temp.pop();
         dassert(anly_data.size() == hot_points.size(), "partittion counts error, please check");
         for (int i = 0; i < hot_points.size(); i++) {
             hot_points[i]->set(anly_data[i].total_qps / min_total_qps);
