@@ -31,8 +31,6 @@ void hotspot_calculator::init_perf_counter(const int &perf_counter_count)
         sprintf(counter_desc, "statistic the hotspots of app %s", paritition_desc.c_str());
         _hotpot_points[i].init_app_counter(
             "app.pegasus", counter_name, COUNTER_TYPE_NUMBER, counter_desc);
-        ddebug("hotspot_perf_counter %d init success",i);
-        std::cout<<"hotspot_perf_counter %d init success"<<std::endl;
     }
 }
 
