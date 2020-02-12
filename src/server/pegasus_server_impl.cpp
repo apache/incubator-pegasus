@@ -56,7 +56,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _pegasus_data_version(PEGASUS_DATA_VERSION_MAX),
       _last_durable_decree(0),
       _is_checkpointing(false),
-      _manual_compact_svc(this)
+      _manual_compact_svc(this),
+      _partition_version(0)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -2763,6 +2764,14 @@ bool pegasus_server_impl::release_storage_after_manual_compact()
 std::string pegasus_server_impl::query_compact_state() const
 {
     return _manual_compact_svc.query_compact_state();
+}
+
+void pegasus_server_impl::set_partition_version(uint32_t partition_version)
+{
+    ddebug_replica("update partition version from {} to {}", _partition_version.load(), partition_version);
+    _partition_version.store(partition_version);
+
+    // TODO(heyuchen): set filter _partition_version in further pr
 }
 
 } // namespace server

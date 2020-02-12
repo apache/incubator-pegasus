@@ -153,6 +153,8 @@ public:
 
     virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs) override;
 
+    virtual void set_partition_version(uint32_t partition_version) override;
+
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
@@ -339,6 +341,8 @@ private:
     static ::dsn::task_ptr _update_server_rdb_stat;
 
     pegasus_manual_compact_service _manual_compact_svc;
+
+    std::atomic<uint32_t> _partition_version;
 
     dsn::task_tracker _tracker;
 
