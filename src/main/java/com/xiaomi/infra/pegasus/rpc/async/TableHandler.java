@@ -107,68 +107,21 @@ public class TableHandler extends Table {
   // update the table configuration & appID_ according to to queried response
   void initTableConfiguration(query_cfg_response resp) {
     TableConfiguration oldConfig = tableConfig_.get();
+
     TableConfiguration newConfig = new TableConfiguration();
-
     newConfig.updateVersion = (oldConfig == null) ? 1 : (oldConfig.updateVersion + 1);
-    newConfig.replicas = new ArrayList<ReplicaConfiguration>(resp.getPartition_count());
-
-    boolean noticeOld = false;
-    if (appID_ == resp.getApp_id()
-        && oldConfig != null
-        && oldConfig.replicas.size() == resp.getPartition_count()) {
-      noticeOld = true;
-      logger.info(
-          "{}: take care and compare the old configuration from the new one when update config",
-          tableName_);
-    } else {
-      logger.info("{}: skip the old config in current table", tableName_);
-    }
-
+    newConfig.replicas = new ArrayList<>(resp.getPartition_count());
     for (int i = 0; i != resp.getPartition_count(); ++i) {
       ReplicaConfiguration newReplicaConfig = new ReplicaConfiguration();
       newReplicaConfig.pid.set_app_id(resp.getApp_id());
       newReplicaConfig.pid.set_pidx(i);
-
-      if (noticeOld) {
-        ReplicaConfiguration oldReplicaConfig = oldConfig.replicas.get(i);
-        newReplicaConfig.ballot = oldReplicaConfig.ballot;
-        newReplicaConfig.primary = oldReplicaConfig.primary;
-        newReplicaConfig.session = oldReplicaConfig.session;
-      }
       newConfig.replicas.add(newReplicaConfig);
     }
 
+    // set partition configuration by resp, and create sessions
     FutureGroup<Void> futureGroup = new FutureGroup<>(resp.getPartition_count());
     for (partition_configuration pc : resp.getPartitions()) {
       ReplicaConfiguration s = newConfig.replicas.get(pc.getPid().get_pidx());
-      if (s.ballot != pc.ballot) {
-        if (!s.primary.equals(pc.primary)) {
-          logger.info(
-              "{}: gpid({}) ballot: {} -> {}, primary: {} -> {}",
-              tableName_,
-              pc.getPid().toString(),
-              s.ballot,
-              pc.ballot,
-              s.primary,
-              pc.primary);
-        } else {
-          logger.info(
-              "{}: gpid({}) ballot: {} -> {}, primary: {}",
-              tableName_,
-              pc.getPid().toString(),
-              s.ballot,
-              pc.ballot,
-              pc.primary);
-        }
-      } else {
-        logger.info(
-            "{}: gpid({}) ballot: {}, primary: {}",
-            tableName_,
-            pc.getPid().toString(),
-            pc.ballot,
-            pc.primary);
-      }
-
       s.ballot = pc.ballot;
       s.primary = pc.primary;
       if (pc.primary.isInvalid()) {
@@ -185,17 +138,17 @@ public class TableHandler extends Table {
       }
     }
 
-    // there should only be one thread to do the table config update
-    appID_ = resp.getApp_id();
-    tableConfig_.set(newConfig);
-
     // Warm up the connections during client.openTable, so RPCs thereafter can
     // skip the connect process.
     try {
       futureGroup.waitAllCompleteOrOneFail(manager_.getTimeout());
     } catch (PException e) {
-      logger.warn("failed to connect with some replica servers!");
+      logger.warn("failed to connect with some replica servers: ", e);
     }
+
+    // there should only be one thread to do the table config update
+    appID_ = resp.getApp_id();
+    tableConfig_.set(newConfig);
   }
 
   void onUpdateConfiguration(final query_cfg_operator op) {
