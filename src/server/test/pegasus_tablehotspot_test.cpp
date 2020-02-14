@@ -16,7 +16,7 @@ TEST(table_hotspot_policy, hotspot_algo_qps_skew)
     test_rows[1].get_qps = 4321.0;
     hotspot_calculator test_hotspot_calculator("TEST", 2);
     test_hotspot_calculator.aggregate(test_rows);
-    std::unique_ptr<auto> hotspot_algo(new hotspot_algo_qps_skew());
+    std::unique_ptr<hotspot_policy> hotspot_algo(new hotspot_algo_qps_skew());
     app_hotspot_calculator->start_alg(hotspot_algo);
     std::vector<double> result;
     for (int i = 0; i < test_hotspot_calculator._hotpot_points.size(); i++)
