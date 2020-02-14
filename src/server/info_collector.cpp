@@ -146,12 +146,12 @@ void info_collector::on_app_stat()
         all_stats.merge(app_stats);
 
         // hotspot_calculator is to detect hotspots
-        hotspot_calculator *app_hotspot_calculator =
+        hotspot_calculator *hotspot_calculator =
             get_hotspot_calculator_address(app_rows.first, app_rows.second.size());
-        app_hotspot_calculator->aggregate(app_rows.second);
+        hotspot_calculator->aggregate(app_rows.second);
         // new policy can be designed by strategy pattern in hotspot_partition_data.h
         std::shared_ptr<hotspot_policy> hotspot_algo(new hotspot_algo_qps_skew());
-        app_hotspot_calculator->start_alg(hotspot_algo);
+        hotspot_calculator->start_alg(hotspot_algo);
     }
     get_app_counters(all_stats.app_name)->set(all_stats);
 
