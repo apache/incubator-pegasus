@@ -55,7 +55,7 @@ public:
         init_perf_counter(partition_num);
     }
     void aggregate(const std::vector<row_data> &partitions);
-    void start_alg(std::unique_ptr<hotspot_policy> hotspot_algo);
+    void start_alg(std::shared_ptr<hotspot_policy> hotspot_algo);
     void init_perf_counter(const int &perf_counter_count);
 
     const std::string app_name;
