@@ -27,8 +27,8 @@ void hotspot_calculator::init_perf_counter(const int &perf_counter_count)
     std::string counter_desc;
     for (int i = 0; i < perf_counter_count; i++) {
         string paritition_desc = app_name + '#' + std::to_string(i);
-        counter_name = fmt::format("app.stat.hotspots.{}",paritition_desc.c_str());
-        counter_desc = fmt::format("statistic the hotspots of app {}",paritition_desc.c_str());
+        counter_name = fmt::format("app.stat.hotspots.{}", paritition_desc.c_str());
+        counter_desc = fmt::format("statistic the hotspots of app {}", paritition_desc.c_str());
         _hotpot_points[i].init_app_counter(
             "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
     }
@@ -42,4 +42,3 @@ void hotspot_calculator::start_alg(const std::shared_ptr<hotspot_policy> hotspot
 
 } // namespace server
 } // namespace pegasus
-

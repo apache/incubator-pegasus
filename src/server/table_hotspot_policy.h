@@ -18,12 +18,13 @@ class hotspot_policy
 {
 public:
     virtual void
-    // hotspot_app_data store the historical data which related to hotspot
-    // it uses rolling queue to save one app's data
-    // vector is used saving the partitions' data of this app
-    // hotspot_partition_data is used to save data of one partition
-    analysis_hotspot_data(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
-                          std::vector<::dsn::perf_counter_wrapper> &hot_points) = 0;
+        // hotspot_app_data store the historical data which related to hotspot
+        // it uses rolling queue to save one app's data
+        // vector is used saving the partitions' data of this app
+        // hotspot_partition_data is used to save data of one partition
+        analysis_hotspot_data(
+            const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
+            std::vector<::dsn::perf_counter_wrapper> &hot_points) = 0;
 };
 
 class hotspot_algo_qps_skew : public hotspot_policy
@@ -33,7 +34,7 @@ public:
     analysis_hotspot_data(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
                           std::vector<::dsn::perf_counter_wrapper> &hot_points)
     {
-        const auto& anly_data = hotspot_app_data.back();
+        const auto &anly_data = hotspot_app_data.back();
         double min_total_qps = 1.0, min_total_cu = 1.0;
         for (int i = 0; i < hotspot_app_data.back().size(); i++) {
             min_total_qps = std::min(min_total_qps, std::max(anly_data[i].total_qps, 1.0));
@@ -64,7 +65,7 @@ private:
     std::shared_ptr<hotspot_policy> _policy;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
     std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
-    
+
     FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_skew);
 };
 } // namespace server
