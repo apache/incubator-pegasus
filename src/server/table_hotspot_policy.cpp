@@ -39,6 +39,7 @@ void hotspot_calculator::start_alg()
     _policy = new hotspot_algo_qps_skew();
     _policy->analysis_hotspot_data(hotspot_app_data, _hotpot_points);
 }
+
 } // namespace server
 } // namespace pegasus
 
