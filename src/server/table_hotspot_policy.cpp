@@ -23,8 +23,8 @@ void hotspot_calculator::aggregate(const std::vector<row_data> &partitions)
 
 void hotspot_calculator::init_perf_counter(const int &perf_counter_count)
 {
-    char counter_name[1024];
-    char counter_desc[1024];
+    std::string counter_name;
+    std::string counter_desc;
     for (int i = 0; i < perf_counter_count; i++) {
         string paritition_desc = app_name + '#' + std::to_string(i);
         counter_name = fmt::format("app.stat.hotspots.{}",paritition_desc.c_str());
