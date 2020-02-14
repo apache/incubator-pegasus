@@ -30,7 +30,7 @@ void hotspot_calculator::init_perf_counter(const int &perf_counter_count)
         counter_name = fmt::format("app.stat.hotspots.{}",paritition_desc.c_str());
         counter_desc = fmt::format("statistic the hotspots of app {}",paritition_desc.c_str());
         _hotpot_points[i].init_app_counter(
-            "app.pegasus", counter_name, COUNTER_TYPE_NUMBER, counter_desc);
+            "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
     }
 }
 
