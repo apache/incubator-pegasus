@@ -141,5 +141,6 @@ private:
     hotspot_calculator *get_hotspot_calculator_address(const std::string &app_name,
                                                        const int &partition_num);
 };
+
 } // namespace server
 } // namespace pegasus

@@ -44,7 +44,8 @@ struct table_stats
         total_rdb_block_cache_total_count += row.rdb_block_cache_total_count;
         total_rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         total_rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
-
+    }
+    
     void merge(const table_stats &row_stats)
     {
         total_get_qps += row_stats.total_get_qps;

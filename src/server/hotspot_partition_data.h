@@ -20,6 +20,7 @@ struct hotspot_partition_data
     double total_cu;
     std::string partition_name;
 };
+
 } // namespace server
 } // namespace pegasus
 
