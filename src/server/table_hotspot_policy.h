@@ -58,12 +58,13 @@ public:
     void start_alg();
     void init_perf_counter(const int &perf_counter_count);
 
-    std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
     const std::string app_name;
 
 private:
     hotspot_policy *_policy;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
+    std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
+    
     FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_skew);
 };
 } // namespace server
