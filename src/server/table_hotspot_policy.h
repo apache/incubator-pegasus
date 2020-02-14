@@ -55,13 +55,13 @@ public:
         init_perf_counter(partition_num);
     }
     void aggregate(const std::vector<row_data> &partitions);
-    void start_alg();
+    void start_alg(std::unique_ptr<auto> hotspot_algo);
     void init_perf_counter(const int &perf_counter_count);
 
     const std::string app_name;
 
 private:
-    hotspot_policy *_policy;
+    std::unique_ptr<hotspot_policy> *_policy;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
     std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
     
