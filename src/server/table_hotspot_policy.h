@@ -61,7 +61,7 @@ public:
     const std::string app_name;
 
 private:
-    std::unique_ptr<hotspot_policy> *_policy;
+    std::unique_ptr<hotspot_policy> _policy;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
     std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
     
