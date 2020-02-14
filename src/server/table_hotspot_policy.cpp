@@ -37,7 +37,7 @@ void hotspot_calculator::init_perf_counter(const int &perf_counter_count)
 void hotspot_calculator::start_alg(const std::shared_ptr<hotspot_policy> hotspot_algo)
 {
     _policy(hotspot_algo);
-    _policy.analysis_hotspot_data(hotspot_app_data, _hotpot_points);
+    _policy->analysis_hotspot_data(hotspot_app_data, _hotpot_points);
 }
 
 } // namespace server
