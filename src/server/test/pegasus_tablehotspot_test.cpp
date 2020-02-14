@@ -5,7 +5,6 @@
 #include "server/table_hotspot_policy.h"
 
 #include <gtest/gtest.h>
-#include <gtest/gtest_prod.h>
 
 namespace pegasus {
 namespace server {
@@ -13,11 +12,8 @@ namespace server {
 TEST(table_hotspot_policy, hotspot_algo_qps_skew)
 {
     std::vector<row_data> test_rows(2);
-    row_data test_row1, test_row2;
-    test_row1.get_qps = 1234.0;
-    test_rows[0] = (test_row1);
-    test_row2.get_qps = 4321.0;
-    test_rows[1] = (test_row2);
+    test_rows[0].get_qps = 1234.0;
+    test_rows[1].get_qps = 4321.0;
     hotspot_calculator test_hotspot_calculator("TEST", 2);
     test_hotspot_calculator.aggregate(test_rows);
     test_hotspot_calculator.start_alg();
@@ -27,5 +23,5 @@ TEST(table_hotspot_policy, hotspot_algo_qps_skew)
     std::vector<double> expect_vector{1234.0, 4321.0};
     ASSERT_EQ(1, (expect_vector == result));
 }
-} // namespace pegasus
 } // namespace server
+} // namespace pegasus

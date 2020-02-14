@@ -45,23 +45,6 @@ struct table_stats
         total_rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         total_rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
 
-        // get max_total_qps、min_total_qps and the id of this partition which has max_total_qps
-        double row_total_qps = row.get_total_qps();
-        min_total_qps = std::min(min_total_qps, row_total_qps);
-        if (max_total_qps < row_total_qps) {
-            max_total_qps = row_total_qps;
-            max_qps_partition_id = row.row_name;
-        }
-
-        // get max_total_cu、min_total_cu and the id of this partition which has max_total_cu
-        double row_total_cu = row.get_total_cu();
-        min_total_cu = std::min(min_total_cu, row_total_cu);
-        if (max_total_cu < row_total_cu) {
-            max_total_cu = row_total_cu;
-            max_cu_partition_id = row.row_name;
-        }
-    }
-
     void merge(const table_stats &row_stats)
     {
         total_get_qps += row_stats.total_get_qps;

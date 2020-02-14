@@ -14,11 +14,12 @@ struct hotspot_partition_data
     hotspot_partition_data(const row_data &row)
         : total_qps(row.get_total_qps()),
           total_cu(row.get_total_cu()),
-          partition_name(row.row_name){};
+          partition_name(row.row_name) {};
     hotspot_partition_data() {}
     double total_qps;
     double total_cu;
     std::string partition_name;
 };
-} // namespace pegasus
 } // namespace server
+} // namespace pegasus
+
