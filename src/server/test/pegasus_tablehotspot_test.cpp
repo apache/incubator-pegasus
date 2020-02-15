@@ -18,10 +18,13 @@ TEST(table_hotspot_policy, hotspot_algo_qps_skew)
     test_hotspot_calculator.aggregate(test_rows);
     std::shared_ptr<hotspot_policy> hotspot_algo(new hotspot_algo_qps_skew());
     test_hotspot_calculator.start_alg(hotspot_algo);
-    std::vector<double> result;
+    std::vector<double> result(2);
     for (int i = 0; i < test_hotspot_calculator._hotpot_points.size(); i++)
         result.push_back(test_hotspot_calculator._hotpot_points[i]->get_value());
     std::vector<double> expect_vector{1234.0, 4321.0};
+    for (auto iter : result) {
+        std::cout << iter << std::endl;
+    }
     ASSERT_EQ(1, (expect_vector == result));
 }
 
