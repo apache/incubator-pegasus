@@ -42,6 +42,7 @@ public:
         dassert(anly_data.size() == hot_points.size(), "partittion counts error, please check");
         for (int i = 0; i < hot_points.size(); i++) {
             hot_points[i]->set(anly_data[i].total_qps / min_total_qps);
+            std::cout << anly_data[i].total_qps / min_total_qps << std::endl;
         }
     }
 };
