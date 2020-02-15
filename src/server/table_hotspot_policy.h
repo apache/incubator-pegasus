@@ -39,6 +39,7 @@ public:
             min_total_qps = std::min(min_total_qps, partition_anly_data.total_qps);
         }
         min_total_qps = std::max(1.0, min_total_qps);
+	std::cout<<"anly_data.size()"<<anly_data.size()<<" hot_points.size()"<<hot_points.size()<<std::endl;
         dassert(anly_data.size() == hot_points.size(), "partittion counts error, please check");
         for (int i = 0; i < hot_points.size(); i++) {
             hot_points[i]->set(anly_data[i].total_qps / min_total_qps);

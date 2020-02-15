@@ -14,6 +14,7 @@ TEST(table_hotspot_policy, hotspot_algo_qps_skew)
     std::vector<row_data> test_rows(2);
     test_rows[0].get_qps = 1234.0;
     test_rows[1].get_qps = 4321.0;
+    std::cout << "yes" << std::endl;
     hotspot_calculator test_hotspot_calculator("TEST", 2);
     test_hotspot_calculator.aggregate(test_rows);
     std::shared_ptr<hotspot_policy> hotspot_algo(new hotspot_algo_qps_skew());
