@@ -21,7 +21,7 @@ void hotspot_calculator::aggregate(const std::vector<row_data> &partitions)
     hotspot_app_data.emplace(temp);
 }
 
-void hotspot_calculator::init_perf_counter(const int &perf_counter_count)
+void hotspot_calculator::init_perf_counter(const int perf_counter_count)
 {
     std::string counter_name;
     std::string counter_desc;

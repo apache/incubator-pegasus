@@ -280,7 +280,7 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
 }
 
 hotspot_calculator *info_collector::get_hotspot_calculator_address(const std::string &app_name,
-                                                                   const int &partition_num)
+                                                                   const int partition_num)
 {
     auto iter = _hotspot_calculator_store.find(app_name);
     if (iter != _hotspot_calculator_store.end()) {
