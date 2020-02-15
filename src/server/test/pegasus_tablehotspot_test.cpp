@@ -14,7 +14,6 @@ TEST(table_hotspot_policy, hotspot_algo_qps_skew)
     std::vector<row_data> test_rows(2);
     test_rows[0].get_qps = 1234.0;
     test_rows[1].get_qps = 4321.0;
-    std::cout << "yes" << std::endl;
     hotspot_calculator test_hotspot_calculator("TEST", 2);
     test_hotspot_calculator.aggregate(test_rows);
     std::shared_ptr<hotspot_policy> hotspot_algo(new hotspot_algo_qps_skew());
@@ -22,10 +21,7 @@ TEST(table_hotspot_policy, hotspot_algo_qps_skew)
     std::vector<double> result(2);
     for (int i = 0; i < test_hotspot_calculator._hotpot_points.size(); i++)
         result[i] = test_hotspot_calculator._hotpot_points[i]->get_value();
-    std::vector<double> expect_vector{1234.0, 4321.0};
-    for (auto iter : result) {
-    	printf("%.5lf\n",iter);
-    }
+    std::vector<double> expect_vector{1, 3};
     ASSERT_EQ(1, (expect_vector == result));
 }
 
