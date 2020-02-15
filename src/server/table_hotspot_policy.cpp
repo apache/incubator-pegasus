@@ -36,8 +36,6 @@ void hotspot_calculator::init_perf_counter(const int perf_counter_count)
 
 void hotspot_calculator::start_alg(const std::shared_ptr<hotspot_policy> hotspot_algo)
 {
-    std:: << cout << "hotspot_app_data.back().size():" << hotspot_app_data.back().size()
-          << std::endl;
     hotspot_algo->analysis_hotspot_data(hotspot_app_data, _hotpot_points);
 }
 
