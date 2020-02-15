@@ -16,7 +16,6 @@
 #include <event2/event.h>
 #include <event2/http.h>
 #include <event2/bufferevent.h>
-#include <fstream>
 
 #include "../shell/commands.h"
 #include "table_stats.h"
