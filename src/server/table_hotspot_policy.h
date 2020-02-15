@@ -34,10 +34,11 @@ public:
                           std::vector<::dsn::perf_counter_wrapper> &hot_points)
     {
         const auto &anly_data = hotspot_app_data.back();
-        double min_total_qps = 1.0, min_total_cu = 1.0;
-        for (int i = 0; i < hotspot_app_data.back().size(); i++) {
-            min_total_qps = std::min(min_total_qps, std::max(anly_data[i].total_qps, 1.0));
+        double min_total_qps = INT_MAX;
+        for (auto partition_anly_data : anly_data) {
+            min_total_qps = std::min(min_total_qps, partition_anly_data.total_qps);
         }
+        min_total_qps = std::max(1.0, min_total_qps);
         dassert(anly_data.size() == hot_points.size(), "partittion counts error, please check");
         for (int i = 0; i < hot_points.size(); i++) {
             hot_points[i]->set(anly_data[i].total_qps / min_total_qps);
@@ -61,7 +62,6 @@ public:
     const std::string app_name;
 
 private:
-    std::shared_ptr<hotspot_policy> _policy;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
     std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
 
