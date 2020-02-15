@@ -39,10 +39,9 @@ public:
             min_total_qps = std::min(min_total_qps, partition_anly_data.total_qps);
         }
         min_total_qps = std::max(1.0, min_total_qps);
-        dassert(anly_data.size() == hot_points.size(), "partittion counts error, please check");
+        dassert(anly_data.size() == hot_points.size(), "partition counts error, please check");
         for (int i = 0; i < hot_points.size(); i++) {
             hot_points[i]->set(anly_data[i].total_qps / min_total_qps);
-            std::cout << anly_data[i].total_qps / min_total_qps << std::endl;
         }
     }
 };
@@ -60,9 +59,8 @@ public:
     void start_alg(const std::shared_ptr<hotspot_policy> hotspot_algo);
     void init_perf_counter(const int perf_counter_count);
 
-    const std::string app_name;
-
 private:
+    const std::string app_name;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
     std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
 
