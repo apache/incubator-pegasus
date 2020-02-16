@@ -63,7 +63,7 @@ private:
     const std::string app_name;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
     std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
-    hotspot_policy _hotspot_policy;
+    const std::unique_ptr<hotspot_policy> _hotspot_policy;
 
     FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_skew);
 };
