@@ -10,8 +10,6 @@
 #include <gtest/gtest_prod.h>
 #include <dsn/perf_counter/perf_counter.h>
 
-static const int MAX_STORE_SIZE = 100;
-
 namespace pegasus {
 namespace server {
 class hotspot_policy
@@ -65,6 +63,7 @@ private:
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
     std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
     std::unique_ptr<hotspot_policy> _hotspot_policy;
+    static const int MAX_STORE_SIZE = 100;
 
     FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_skew);
 };

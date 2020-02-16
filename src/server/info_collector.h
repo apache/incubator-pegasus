@@ -138,7 +138,7 @@ private:
     std::map<std::string, hotspot_calculator *> _hotspot_calculator_store;
 
     hotspot_calculator *get_hotspot_calculator(const std::string &app_name,
-                                                       const int partition_num);
+                                               const int partition_num);
 };
 
 } // namespace server
