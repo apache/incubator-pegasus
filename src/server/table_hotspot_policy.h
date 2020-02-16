@@ -53,7 +53,7 @@ public:
         : app_name(app_name), _hotpot_points(partition_num)
     {
         init_perf_counter(partition_num);
-        _hotspot_policy = new hotspot_algo_qps_skew();
+        _hotspot_policy(new hotspot_algo_qps_skew());
     }
     void aggregate(const std::vector<row_data> &partitions);
     void start_alg();
@@ -63,7 +63,7 @@ private:
     const std::string app_name;
     std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
     std::queue<std::vector<hotspot_partition_data>> hotspot_app_data;
-    const std::unique_ptr<hotspot_policy> _hotspot_policy;
+    std::unique_ptr<hotspot_policy> _hotspot_policy;
 
     FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_skew);
 };
