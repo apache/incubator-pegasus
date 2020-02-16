@@ -150,8 +150,7 @@ void info_collector::on_app_stat()
             get_hotspot_calculator(app_rows.first, app_rows.second.size());
         hotspot_calculator->aggregate(app_rows.second);
         // new policy can be designed by strategy pattern in hotspot_partition_data.h
-        const std::shared_ptr<hotspot_policy> hotspot_algo(new hotspot_algo_qps_skew());
-        hotspot_calculator->start_alg(hotspot_algo);
+        hotspot_calculator->start_alg();
     }
     get_app_counters(all_stats.app_name)->set(all_stats);
 
