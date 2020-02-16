@@ -50,10 +50,11 @@ class hotspot_calculator
 {
 public:
     hotspot_calculator(const std::string &app_name, const int partition_num)
-        : app_name(app_name), _hotpot_points(partition_num)
+        : app_name(app_name),
+          _hotpot_points(partition_num),
+          _hotspot_policy(new hotspot_algo_qps_skew())
     {
         init_perf_counter(partition_num);
-        _hotspot_policy(new hotspot_algo_qps_skew());
     }
     void aggregate(const std::vector<row_data> &partitions);
     void start_alg();
