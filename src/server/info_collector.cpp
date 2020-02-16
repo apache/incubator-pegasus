@@ -147,7 +147,7 @@ void info_collector::on_app_stat()
 
         // hotspot_calculator is to detect hotspots
         hotspot_calculator *hotspot_calculator =
-            get_hotspot_calculator_address(app_rows.first, app_rows.second.size());
+            get_hotspot_calculator(app_rows.first, app_rows.second.size());
         hotspot_calculator->aggregate(app_rows.second);
         // new policy can be designed by strategy pattern in hotspot_partition_data.h
         const std::shared_ptr<hotspot_policy> hotspot_algo(new hotspot_algo_qps_skew());
@@ -279,8 +279,8 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
     _result_writer->set_result(st_stat.timestamp, "ss", st_stat.dump_to_json());
 }
 
-hotspot_calculator *info_collector::get_hotspot_calculator_address(const std::string &app_name,
-                                                                   const int partition_num)
+hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &app_name,
+                                                           const int partition_num)
 {
     auto iter = _hotspot_calculator_store.find(app_name);
     if (iter != _hotspot_calculator_store.end()) {

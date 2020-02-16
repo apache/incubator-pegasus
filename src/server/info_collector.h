@@ -137,7 +137,7 @@ private:
     std::map<std::string, string> _capacity_unit_update_info;
     std::map<std::string, hotspot_calculator *> _hotspot_calculator_store;
 
-    hotspot_calculator *get_hotspot_calculator_address(const std::string &app_name,
+    hotspot_calculator *get_hotspot_calculator(const std::string &app_name,
                                                        const int partition_num);
 };
 
