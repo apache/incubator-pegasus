@@ -11,14 +11,14 @@ namespace server {
 
 void hotspot_calculator::aggregate(const std::vector<row_data> &partitions)
 {
-    while (_hotspot_app_data.size() > kMaxQueueSize - 1) {
-        _hotspot_app_data.pop();
+    while (_app_data.size() > kMaxQueueSize - 1) {
+        _app_data.pop();
     }
     std::vector<hotspot_partition_data> temp(partitions.size());
     for (int i = 0; i < partitions.size(); i++) {
         temp[i] = std::move(hotspot_partition_data(partitions[i]));
     }
-    _hotspot_app_data.emplace(temp);
+    _app_data.emplace(temp);
 }
 
 void hotspot_calculator::init_perf_counter(const int perf_counter_count)
@@ -29,15 +29,12 @@ void hotspot_calculator::init_perf_counter(const int perf_counter_count)
         string paritition_desc = _app_name + '@' + std::to_string(i);
         counter_name = fmt::format("app.stat.hotspots.{}", paritition_desc);
         counter_desc = fmt::format("statistic the hotspots of app {}", paritition_desc);
-        _hotpot_points[i].init_app_counter(
+        _points[i].init_app_counter(
             "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
     }
 }
 
-void hotspot_calculator::start_alg()
-{
-    _hotspot_policy->analysis(_hotspot_app_data, _hotpot_points);
-}
+void hotspot_calculator::start_alg() { _hotspot_policy->analysis(_app_data, _points); }
 
 } // namespace server
 } // namespace pegasus

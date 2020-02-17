@@ -17,7 +17,7 @@ class hotspot_policy
 public:
     // hotspot_app_data store the historical data which related to hotspot
     // it uses rolling queue to save one app's data
-    // vector is used saving the partitions' data of this app
+    // vector is used to save the partitions' data of this app
     // hotspot_partition_data is used to save data of one partition
     virtual void analysis(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
                           std::vector<::dsn::perf_counter_wrapper> &hot_points) = 0;
@@ -47,9 +47,7 @@ class hotspot_calculator
 {
 public:
     hotspot_calculator(const std::string &app_name, const int partition_num)
-        : _app_name(app_name),
-          _hotpot_points(partition_num),
-          _hotspot_policy(new hotspot_algo_qps_skew())
+        : _app_name(app_name), _points(partition_num), _hotspot_policy(new hotspot_algo_qps_skew())
     {
         init_perf_counter(partition_num);
     }
@@ -59,8 +57,8 @@ public:
 
 private:
     const std::string _app_name;
-    std::vector<::dsn::perf_counter_wrapper> _hotpot_points;
-    std::queue<std::vector<hotspot_partition_data>> _hotspot_app_data;
+    std::vector<::dsn::perf_counter_wrapper> _points;
+    std::queue<std::vector<hotspot_partition_data>> _app_data;
     std::unique_ptr<hotspot_policy> _hotspot_policy;
     static const int kMaxQueueSize = 100;
 
