@@ -34,7 +34,7 @@ void hotspot_calculator::init_perf_counter(const int perf_counter_count)
     }
 }
 
-void hotspot_calculator::start_alg() { _hotspot_policy->analysis(_app_data, _points); }
+void hotspot_calculator::start_alg() { _policy->analysis(_app_data, _points); }
 
 } // namespace server
 } // namespace pegasus
