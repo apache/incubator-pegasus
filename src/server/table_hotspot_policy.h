@@ -17,7 +17,7 @@ class hotspot_policy
 public:
     // hotspot_app_data store the historical data which related to hotspot
     // it uses rolling queue to save one app's data
-    // vector is used saving the partitions' data of this app
+    // vector is used to save the partitions' data of this app
     // hotspot_partition_data is used to save data of one partition
     virtual void analysis(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
                           std::vector<::dsn::perf_counter_wrapper> &hot_points) = 0;
