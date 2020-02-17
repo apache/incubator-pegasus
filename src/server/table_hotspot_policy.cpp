@@ -26,7 +26,7 @@ void hotspot_calculator::init_perf_counter(const int perf_counter_count)
     std::string counter_name;
     std::string counter_desc;
     for (int i = 0; i < perf_counter_count; i++) {
-        string paritition_desc = app_name + '@' + std::to_string(i);
+        string paritition_desc = _app_name + '@' + std::to_string(i);
         counter_name = fmt::format("app.stat.hotspots.{}", paritition_desc);
         counter_desc = fmt::format("statistic the hotspots of app {}", paritition_desc);
         _hotpot_points[i].init_app_counter(
