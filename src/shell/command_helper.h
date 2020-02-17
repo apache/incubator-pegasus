@@ -512,6 +512,14 @@ inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
 
 struct row_data
 {
+    double get_total_qps() const
+    {
+        return get_qps + multi_get_qps + scan_qps + put_qps + multi_put_qps + remove_qps +
+               multi_remove_qps + incr_qps + check_and_set_qps + check_and_mutate_qps;
+    }
+
+    double get_total_cu() const { return recent_read_cu + recent_write_cu; }
+
     std::string row_name;
     int32_t app_id = 0;
     int32_t partition_count = 0;
