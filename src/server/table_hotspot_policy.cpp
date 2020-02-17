@@ -11,14 +11,14 @@ namespace server {
 
 void hotspot_calculator::aggregate(const std::vector<row_data> &partitions)
 {
-    while (hotspot_app_data.size() > MAX_STORE_SIZE - 1) {
-        hotspot_app_data.pop();
+    while (_hotspot_app_data.size() > kMaxQueueSize - 1) {
+        _hotspot_app_data.pop();
     }
     std::vector<hotspot_partition_data> temp(partitions.size());
     for (int i = 0; i < partitions.size(); i++) {
         temp[i] = std::move(hotspot_partition_data(partitions[i]));
     }
-    hotspot_app_data.emplace(temp);
+    _hotspot_app_data.emplace(temp);
 }
 
 void hotspot_calculator::init_perf_counter(const int perf_counter_count)
@@ -36,7 +36,7 @@ void hotspot_calculator::init_perf_counter(const int perf_counter_count)
 
 void hotspot_calculator::start_alg()
 {
-    _hotspot_policy->analysis(hotspot_app_data, _hotpot_points);
+    _hotspot_policy->analysis(_hotspot_app_data, _hotpot_points);
 }
 
 } // namespace server
