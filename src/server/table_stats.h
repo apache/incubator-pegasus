@@ -75,6 +75,7 @@ struct table_stats
         total_rdb_index_and_filter_blocks_mem_usage +=
             row_stats.total_rdb_index_and_filter_blocks_mem_usage;
         total_rdb_memtable_mem_usage += row_stats.total_rdb_memtable_mem_usage;
+        total_rdb_estimate_num_keys += row_stats.total_rdb_estimate_num_keys;
     }
 
     std::string app_name;
