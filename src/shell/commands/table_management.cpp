@@ -493,7 +493,6 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
         sum.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         sum.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
-        sum.rdb_estimate_num_keys += row.rdb_estimate_num_keys;
     }
 
     std::streambuf *buf;
