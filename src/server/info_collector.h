@@ -62,6 +62,7 @@ public:
             rdb_index_and_filter_blocks_mem_usage->set(
                 row_stats.total_rdb_index_and_filter_blocks_mem_usage);
             rdb_memtable_mem_usage->set(row_stats.total_rdb_memtable_mem_usage);
+            rdb_estimate_num_keys->set(row_stats.total_rdb_estimate_num_keys);
             read_qps->set(row_stats.get_total_read_qps());
             write_qps->set(row_stats.get_total_write_qps());
         }

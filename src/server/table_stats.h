@@ -44,6 +44,7 @@ struct table_stats
         total_rdb_block_cache_total_count += row.rdb_block_cache_total_count;
         total_rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         total_rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
+        total_rdb_estimate_num_keys += row.rdb_estimate_num_keys;
     }
 
     void merge(const table_stats &row_stats)
@@ -100,6 +101,7 @@ struct table_stats
     double total_rdb_block_cache_total_count = 0;
     double total_rdb_index_and_filter_blocks_mem_usage = 0;
     double total_rdb_memtable_mem_usage = 0;
+    double total_rdb_estimate_num_keys = 0;
     double max_total_qps = 0;
     double min_total_qps = INT_MAX;
     double max_total_cu = 0;
