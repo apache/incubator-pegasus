@@ -1295,6 +1295,7 @@ bool partition_split_context::cleanup(bool force)
 
     parent_gpid.set_app_id(0);
     is_prepare_list_copied = false;
+    is_caught_up = false;
     return true;
 }
 

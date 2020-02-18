@@ -132,6 +132,10 @@ public:
     void set_init_child_ballot(ballot b) { _child_init_ballot = b; }
     void set_last_committed_decree(decree d) { _prepare_list->reset(d); }
     prepare_list *get_plist() { return _prepare_list; }
+    void prepare_list_truncate(decree d) { _prepare_list->truncate(d); }
+    void prepare_list_commit_hard(decree d) { _prepare_list->commit(d, COMMIT_TO_DECREE_HARD); }
+    decree get_app_last_committed_decree() { return _app->last_committed_decree(); }
+    void set_app_last_committed_decree(decree d) { _app->_last_committed_decree = d; }
 
 private:
     decree _max_gced_decree{invalid_decree - 1};

@@ -244,6 +244,7 @@ private:
     // routines for replica internal usage
     friend class replica;
     friend class replica_stub;
+    friend class mock_replica;
 
     ::dsn::error_code open_internal(replica *r);
     ::dsn::error_code

@@ -33,7 +33,6 @@
 #include <dsn/utility/fail_point.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/tool-api/async_calls.h>
-#include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
 namespace replication {

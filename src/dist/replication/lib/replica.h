@@ -372,15 +372,22 @@ private:
                             uint64_t total_file_size,
                             decree last_committed_decree);
 
-    error_code child_replay_private_log(std::vector<std::string> plog_files,
+    // TODO(heyuchen): total_file_size is used for split perf-counter in further pull request
+    // Applies mutation logs that were learned from the parent of this child.
+    // This stage follows after that child applies the checkpoint of parent, and begins to apply the
+    // mutations.
+    // \param last_committed_decree: parent's last_committed_decree when the checkpoint was
+    // generated.
+    error_code child_apply_private_logs(std::vector<std::string> plog_files,
+                                        std::vector<mutation_ptr> mutation_list,
                                         uint64_t total_file_size,
                                         decree last_committed_decree);
 
-    error_code child_learn_mutations(std::vector<mutation_ptr> mutation_list,
-                                     decree last_committed_decree);
-
     // child catch up parent states while executing async learn task
     void child_catch_up_states();
+
+    // child send notification to primary parent when it finish async learn
+    void child_notify_catch_up();
 
     // return true if parent status is valid
     bool parent_check_states();
