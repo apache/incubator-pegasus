@@ -109,7 +109,7 @@ private:
     std::unique_ptr<hotspot_policy> _policy;
     static const int kMaxQueueSize = 100;
 
-    FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_skew);
+    FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_variance);
 };
 } // namespace server
 } // namespace pegasus
