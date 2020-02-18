@@ -303,10 +303,12 @@ int pegasus_write_service::duplicate(int64_t decree,
         if (request.task_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
             put_rpc rpc(write);
             err = _impl->batch_put(ctx, rpc.request(), rpc.response());
+            _put_rpc_batch.emplace_back(std::move(rpc));
         }
         if (request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
             remove_rpc rpc(write);
             err = _impl->batch_remove(ctx.decree, rpc.request(), rpc.response());
+            _remove_rpc_batch.emplace_back(std::move(rpc));
         }
         if (!err) {
             err = _impl->batch_commit(ctx.decree);
@@ -316,6 +318,8 @@ int pegasus_write_service::duplicate(int64_t decree,
         resp.__set_error(err);
         return resp.error;
     }
+    _put_rpc_batch.clear();
+    _remove_rpc_batch.clear();
     resp.__set_error(rocksdb::Status::kInvalidArgument);
     resp.__set_error_hint(fmt::format("unrecognized task code {}", request.task_code));
     return empty_put(ctx.decree);

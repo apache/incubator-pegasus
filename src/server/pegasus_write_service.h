@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "base/pegasus_rpc_types.h"
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>
 #include <dsn/dist/replication/duplication_common.h>
@@ -189,6 +190,9 @@ private:
     // Records all requests.
     std::vector<::dsn::perf_counter *> _batch_qps_perfcounters;
     std::vector<::dsn::perf_counter *> _batch_latency_perfcounters;
+
+    std::vector<put_rpc> _put_rpc_batch;
+    std::vector<remove_rpc> _remove_rpc_batch;
 
     // TODO(wutao1): add perf counters for failed rpc.
 };
