@@ -8,6 +8,8 @@
 
 #include <algorithm>
 #include <gtest/gtest_prod.h>
+#include <math.h>
+
 #include <dsn/perf_counter/perf_counter.h>
 
 namespace pegasus {
@@ -78,7 +80,11 @@ public:
         }
         sd = sqrt(sd / n);
         for (int i = 0; i < hot_points.size(); i++) {
-            hot_points[i]->set((anly_data[i].total_qps - avg) / sd);
+            double hot_point = (anly_data[i].total_qps - avg) / sd;
+            // perf_counter->set can only be unsigned __int64
+            // use ceil to guarantee conversion results
+            hot_point = ceil(std::max(hot_point, double(0)));
+            hot_points[i]->set(hot_point);
         }
     }
 };
