@@ -53,8 +53,8 @@ public:
     {
         dassert(hotspot_app_data.back().size() == hot_points.size(),
                 "partition counts error, please check");
-        std::vector<double> data_samples(hotspot_app_data.size() * hot_points.size());
-        std::cout << "count" << hotspot_app_data.size() * hot_points.size() << std::endl;
+        std::vector<double> data_samples;
+        data_samples.reserve(hotspot_app_data.size() * hot_points.size());
         const auto &anly_data = hotspot_app_data.back();
         auto temp_data = hotspot_app_data;
         double avg = 0, sd = 0;
