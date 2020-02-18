@@ -79,6 +79,7 @@ public:
             sd += pow((data_sample - avg), 2);
         }
         sd = sqrt(sd / n);
+	std::cout<<"avg:"<<avg<<"sd:"<<sd<<"n:"<<n<<std::endl;
         for (int i = 0; i < hot_points.size(); i++) {
             double hot_point = (anly_data[i].total_qps - avg) / sd;
             // perf_counter->set can only be unsigned __int64
