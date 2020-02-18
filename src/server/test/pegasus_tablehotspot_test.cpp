@@ -44,7 +44,7 @@ TEST(table_hotspot_policy, hotspot_algo_qps_variance)
     for (int i = 0; i < test_hotspot_calculator._points.size(); i++) {
         result[i] = test_hotspot_calculator._points[i]->get_value();
     }
-    std::vector<double> expect_vector{0, 0, 0, 0, 0, 0, 0, 6};
+    std::vector<double> expect_vector{0, 0, 0, 0, 0, 0, 0, 3};
     ASSERT_EQ(expect_vector, result);
 }
 
