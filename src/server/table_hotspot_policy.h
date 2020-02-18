@@ -49,20 +49,38 @@ public:
     void analysis(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
                   std::vector<::dsn::perf_counter_wrapper> &hot_points)
     {
+        dassert(hotspot_app_data.back().size() == hot_points.size(),
+                "partition counts error, please check");
+        std::vector<double> data_samples(hotspot_app_data.size() * hot_points.size());
         const auto &anly_data = hotspot_app_data.back();
-        double avg = 0, var = 0, n = hotspot_app_data.size();
-        for (auto partition_anly_data : anly_data) {
-            avg += partition_anly_data.total_qps;
+        auto temp_data = hotspot_app_data;
+        double avg = 0, sd = 0, n = 0;
+        // avg: Average number
+        // sd: Standard deviation
+        // n: Number of samples
+        while (!temp_data.empty()) {
+            for (auto partition_data : temp_data.front()) {
+                if (partition_data.total_qps > 1.00) {
+                    data_samples.push_back(partition_data.total_qps);
+                    avg += partition_data.total_qps;
+                    n++;
+                }
+            }
+            temp_data.pop();
+        }
+        if (n == 0) {
+            ddebug("hotspot_app_data size == 0");
+            return;
         }
         avg /= n;
-        for (auto partition_anly_data : anly_data) {
-            var += pow(partition_anly_data.total_qps - avg, 2);
+        for (auto data_sample : data_samples) {
+            sd += pow((data_sample - avg), 2);
         }
-        var /= n;
-        var = sqrt(var);
-        dassert(anly_data.size() == hot_points.size(), "partition counts error, please check");
+        sd = sqrt(sd / n);
         for (int i = 0; i < hot_points.size(); i++) {
-            hot_points[i]->set(abs(anly_data[i].total_qps - var));
+            double hot_point = (anly_data[i].total_qps - avg) / sd;
+            hot_point = max(hot_point, 0);
+            hot_points[i]->set(hot_point);
         }
     }
 };
@@ -72,7 +90,7 @@ class hotspot_calculator
 {
 public:
     hotspot_calculator(const std::string &app_name, const int partition_num)
-        : _app_name(app_name), _points(partition_num), _policy(new hotspot_algo_qps_skew())
+        : _app_name(app_name), _points(partition_num), _policy(new hotspot_algo_qps_variance())
     {
         init_perf_counter(partition_num);
     }
