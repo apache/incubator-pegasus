@@ -53,7 +53,8 @@ public:
     {
         dassert(hotspot_app_data.back().size() == hot_points.size(),
                 "partition counts error, please check");
-        std::vector<double> data_samples;
+        std::vector<double> data_samples(hotspot_app_data.size() * hot_points.size());
+        std::cout << "count" << hotspot_app_data.size() * hot_points.size() << std::endl;
         const auto &anly_data = hotspot_app_data.back();
         auto temp_data = hotspot_app_data;
         double avg = 0, sd = 0;
@@ -71,6 +72,7 @@ public:
             }
             temp_data.pop();
         }
+        std::cout << "vec_size" << data_samples.size() << std::endl;
         if (n == 0) {
             ddebug("hotspot_app_data size == 0");
             return;
