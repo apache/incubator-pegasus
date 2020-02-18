@@ -16,9 +16,10 @@
 #include <event2/event.h>
 #include <event2/http.h>
 #include <event2/bufferevent.h>
-#include <fstream>
 
 #include "../shell/commands.h"
+#include "table_stats.h"
+#include "table_hotspot_policy.h"
 
 namespace pegasus {
 namespace server {
@@ -28,8 +29,44 @@ class result_writer;
 class info_collector
 {
 public:
-    struct AppStatCounters
+    struct app_stat_counters
     {
+        void set(const table_stats &row_stats)
+        {
+            get_qps->set(row_stats.total_get_qps);
+            multi_get_qps->set(row_stats.total_multi_get_qps);
+            put_qps->set(row_stats.total_put_qps);
+            multi_put_qps->set(row_stats.total_multi_put_qps);
+            remove_qps->set(row_stats.total_remove_qps);
+            multi_remove_qps->set(row_stats.total_multi_remove_qps);
+            incr_qps->set(row_stats.total_incr_qps);
+            check_and_set_qps->set(row_stats.total_check_and_set_qps);
+            check_and_mutate_qps->set(row_stats.total_check_and_mutate_qps);
+            scan_qps->set(row_stats.total_scan_qps);
+            recent_read_cu->set(row_stats.total_recent_read_cu);
+            recent_write_cu->set(row_stats.total_recent_write_cu);
+            recent_expire_count->set(row_stats.total_recent_expire_count);
+            recent_filter_count->set(row_stats.total_recent_filter_count);
+            recent_abnormal_count->set(row_stats.total_recent_abnormal_count);
+            recent_write_throttling_delay_count->set(
+                row_stats.total_recent_write_throttling_delay_count);
+            recent_write_throttling_reject_count->set(
+                row_stats.total_recent_write_throttling_reject_count);
+            storage_mb->set(row_stats.total_storage_mb);
+            storage_count->set(row_stats.total_storage_count);
+            rdb_block_cache_hit_rate->set(
+                std::abs(row_stats.total_rdb_block_cache_total_count) < 1e-6
+                    ? 0
+                    : row_stats.total_rdb_block_cache_hit_count /
+                          row_stats.total_rdb_block_cache_total_count * 1000000);
+            rdb_index_and_filter_blocks_mem_usage->set(
+                row_stats.total_rdb_index_and_filter_blocks_mem_usage);
+            rdb_memtable_mem_usage->set(row_stats.total_rdb_memtable_mem_usage);
+            rdb_estimate_num_keys->set(row_stats.total_rdb_estimate_num_keys);
+            read_qps->set(row_stats.get_total_read_qps());
+            write_qps->set(row_stats.get_total_write_qps());
+        }
+
         ::dsn::perf_counter_wrapper get_qps;
         ::dsn::perf_counter_wrapper multi_get_qps;
         ::dsn::perf_counter_wrapper put_qps;
@@ -65,7 +102,7 @@ public:
     void stop();
 
     void on_app_stat();
-    AppStatCounters *get_app_counters(const std::string &app_name);
+    app_stat_counters *get_app_counters(const std::string &app_name);
 
     void on_capacity_unit_stat(int remaining_retry_count);
     bool has_capacity_unit_updated(const std::string &node_address, const std::string &timestamp);
@@ -80,7 +117,7 @@ private:
     uint32_t _app_stat_interval_seconds;
     ::dsn::task_ptr _app_stat_timer_task;
     ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
-    std::map<std::string, AppStatCounters *> _app_stat_counters;
+    std::map<std::string, app_stat_counters *> _app_stat_counters;
 
     // app for recording usage statistics, including read/write capacity unit and storage size.
     std::string _usage_stat_app;
@@ -99,6 +136,11 @@ private:
     ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
+    std::map<std::string, hotspot_calculator *> _hotspot_calculator_store;
+
+    hotspot_calculator *get_hotspot_calculator(const std::string &app_name,
+                                               const int partition_num);
 };
+
 } // namespace server
 } // namespace pegasus
