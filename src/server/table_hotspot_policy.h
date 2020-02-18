@@ -56,7 +56,8 @@ public:
         std::vector<double> data_samples(hotspot_app_data.size() * hot_points.size());
         const auto &anly_data = hotspot_app_data.back();
         auto temp_data = hotspot_app_data;
-        double avg = 0, sd = 0, n = 0;
+        double avg = 0, sd = 0;
+        int n = 0;
         // avg: Average number
         // sd: Standard deviation
         // n: Number of samples
@@ -79,6 +80,7 @@ public:
             sd += pow((data_sample - avg), 2);
         }
         sd = sqrt(sd / n);
+        std::cout << "avg:" << avg << "sd:" << sd << "n:" << n << std::endl;
         for (int i = 0; i < hot_points.size(); i++) {
             double hot_point = (anly_data[i].total_qps - avg) / sd;
             // perf_counter->set can only be unsigned __int64
