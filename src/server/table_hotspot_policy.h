@@ -78,6 +78,7 @@ public:
         avg /= n;
         for (auto data_sample : data_samples) {
             sd += pow((data_sample - avg), 2);
+	    std::cout<<"pow"<<pow((data_sample - avg), 2)<<std::endl;
         }
         sd = sqrt(sd / n);
         std::cout << "avg:" << avg << "sd:" << sd << "n:" << n << std::endl;
