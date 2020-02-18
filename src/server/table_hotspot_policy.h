@@ -78,9 +78,7 @@ public:
         }
         sd = sqrt(sd / n);
         for (int i = 0; i < hot_points.size(); i++) {
-            double hot_point = (anly_data[i].total_qps - avg) / sd;
-            hot_point = max(hot_point, 0);
-            hot_points[i]->set(hot_point);
+            hot_points[i]->set((anly_data[i].total_qps - avg) / sd);
         }
     }
 };
