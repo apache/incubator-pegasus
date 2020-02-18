@@ -39,6 +39,7 @@
 #include "diske.sim.h"
 #include "env.sim.h"
 #include "task_engine.sim.h"
+#include "sim_clock.h"
 
 namespace dsn {
 namespace tools {
@@ -118,6 +119,9 @@ void simulator::install(service_spec &spec)
     }
 
     sys_exit.put_front(simulator::on_system_exit, "simulator");
+
+    // the new sim_clock is taken over by unique_ptr in clock instance
+    utils::clock::instance()->mock(new sim_clock());
 }
 
 void simulator::on_system_exit(sys_exit_type st)
@@ -131,5 +135,5 @@ void simulator::run()
     scheduler::instance().start();
     tool_app::run();
 }
-}
-} // end namespace dsn::tools
+} // namespace tools
+} // namespace dsn

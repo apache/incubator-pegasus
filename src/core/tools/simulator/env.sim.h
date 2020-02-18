@@ -44,9 +44,6 @@ class sim_env_provider : public env_provider
 {
 public:
     sim_env_provider(env_provider *inner_provider);
-
-    // service local time (can be logical or physical)
-    virtual uint64_t now_ns() const override;
     static int seed() { return _seed; }
 
 private:

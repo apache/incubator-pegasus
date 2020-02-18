@@ -43,8 +43,6 @@ namespace tools {
 
 /*static*/ int sim_env_provider::_seed;
 
-uint64_t sim_env_provider::now_ns() const { return scheduler::instance().now_ns(); }
-
 void sim_env_provider::on_worker_start(task_worker *worker)
 {
     rand::reseed_thread_local_rng(

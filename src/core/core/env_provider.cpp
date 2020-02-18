@@ -45,6 +45,4 @@ namespace dsn {
 
 env_provider::env_provider(env_provider *inner_provider) {}
 
-uint64_t env_provider::now_ns() const { return utils::get_current_physical_time_ns(); }
-
 } // end namespace
