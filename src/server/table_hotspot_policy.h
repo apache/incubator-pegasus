@@ -66,6 +66,7 @@ public:
                 if (partition_data.total_qps > 1.00) {
                     data_samples.push_back(partition_data.total_qps);
                     avg += partition_data.total_qps;
+                    std::cout << "data_samples" << data_samples << std::endl;
                     n++;
                 }
             }
@@ -78,7 +79,7 @@ public:
         avg /= n;
         for (auto data_sample : data_samples) {
             sd += pow((data_sample - avg), 2);
-	    std::cout<<"pow"<<pow((data_sample - avg), 2)<<std::endl;
+            std::cout << "pow" << pow((data_sample - avg), 2) << std::endl;
         }
         sd = sqrt(sd / n);
         std::cout << "avg:" << avg << "sd:" << sd << "n:" << n << std::endl;
