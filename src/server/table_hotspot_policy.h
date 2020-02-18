@@ -42,6 +42,31 @@ public:
     }
 };
 
+// PauTa Criterion
+class hotspot_algo_qps_variance : public hotspot_policy
+{
+public:
+    void analysis(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
+                  std::vector<::dsn::perf_counter_wrapper> &hot_points)
+    {
+        const auto &anly_data = hotspot_app_data.back();
+        double avg = 0, var = 0, n = hotspot_app_data.size();
+        for (auto partition_anly_data : anly_data) {
+            avg += partition_anly_data.total_qps;
+        }
+        avg /= n;
+        for (auto partition_anly_data : anly_data) {
+            var += pow(partition_anly_data.total_qps - avg, 2);
+        }
+        var /= n;
+        var = sqrt(var);
+        dassert(anly_data.size() == hot_points.size(), "partition counts error, please check");
+        for (int i = 0; i < hot_points.size(); i++) {
+            hot_points[i]->set(abs(anly_data[i].total_qps - var));
+        }
+    }
+};
+
 // hotspot_calculator is used to find the hotspot in Pegasus
 class hotspot_calculator
 {
