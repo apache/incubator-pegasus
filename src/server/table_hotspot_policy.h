@@ -66,7 +66,7 @@ public:
                 if (partition_data.total_qps > 1.00) {
                     data_samples.push_back(partition_data.total_qps);
                     avg += partition_data.total_qps;
-                    std::cout << "data_samples" << data_samples << std::endl;
+                    std::cout << "data_samples" << partition_data.total_qps << std::endl;
                     n++;
                 }
             }
