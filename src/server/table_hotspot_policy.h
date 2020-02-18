@@ -72,7 +72,6 @@ public:
             }
             temp_data.pop();
         }
-        std::cout << "vec_size" << data_samples.size() << std::endl;
         if (n == 0) {
             ddebug("hotspot_app_data size == 0");
             return;
@@ -80,10 +79,8 @@ public:
         avg /= n;
         for (auto data_sample : data_samples) {
             sd += pow((data_sample - avg), 2);
-            std::cout << "pow" << data_sample - avg << std::endl;
         }
         sd = sqrt(sd / n);
-        std::cout << "avg:" << avg << "sd:" << sd << "n:" << n << std::endl;
         for (int i = 0; i < hot_points.size(); i++) {
             double hot_point = (anly_data[i].total_qps - avg) / sd;
             // perf_counter->set can only be unsigned __int64
