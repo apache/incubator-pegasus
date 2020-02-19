@@ -7,6 +7,8 @@
 #include <iomanip>
 #include <algorithm>
 #include <sstream>
+#include <dsn/dist/replication/duplication_common.h>
+#include <dsn/utility/time_utils.h>
 
 #include "base/pegasus_key_schema.h"
 #include "result_writer.h"
@@ -29,8 +31,7 @@ available_detector::available_detector()
       _recent_minute_fail_times(0)
 {
     // initialize information for available_detector.
-    _cluster_name = dsn_config_get_value_string("pegasus.collector", "cluster", "", "cluster name");
-    dassert(_cluster_name.size() > 0, "");
+    _cluster_name = dsn::replication::get_current_cluster_name();
     _app_name = dsn_config_get_value_string(
         "pegasus.collector", "available_detect_app", "", "available detector app name");
     dassert(_app_name.size() > 0, "");

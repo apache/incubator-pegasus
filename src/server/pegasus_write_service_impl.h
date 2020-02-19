@@ -12,6 +12,7 @@
 
 #include <dsn/utility/fail_point.h>
 #include <dsn/utility/string_conv.h>
+#include <gtest/gtest_prod.h>
 
 namespace pegasus {
 namespace server {
@@ -20,20 +21,47 @@ namespace server {
 static constexpr int FAIL_DB_WRITE_BATCH_PUT = -101;
 static constexpr int FAIL_DB_WRITE_BATCH_DELETE = -102;
 static constexpr int FAIL_DB_WRITE = -103;
+static constexpr int FAIL_DB_GET = -104;
+
+struct db_get_context
+{
+    // value read from DB.
+    std::string raw_value;
+
+    // is the record found in DB.
+    bool found{false};
+
+    // the expiration time encoded in raw_value.
+    uint32_t expire_ts{0};
+
+    // is the record expired.
+    bool expired{false};
+};
+
+inline int get_cluster_id_if_exists()
+{
+    // cluster_id is 0 if not configured, which means it will accept writes
+    // from any cluster as long as the timestamp is larger.
+    static auto cluster_id_res =
+        dsn::replication::get_duplication_cluster_id(dsn::replication::get_current_cluster_name());
+    static uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
+    return cluster_id;
+}
 
 class pegasus_write_service::impl : public dsn::replication::replica_base
 {
 public:
     explicit impl(pegasus_server_impl *server)
-        : replica_base(*server),
+        : replica_base(server),
           _primary_address(server->_primary_address),
           _pegasus_data_version(server->_pegasus_data_version),
           _db(server->_db),
-          _wt_opts(server->_wt_opts),
-          _rd_opts(server->_rd_opts),
+          _rd_opts(server->_data_cf_rd_opts),
           _default_ttl(0),
           _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
+        // disable write ahead logging as replication handles logging instead now
+        _wt_opts.disableWAL = true;
     }
 
     int empty_put(int64_t decree)
@@ -50,10 +78,11 @@ public:
         return err;
     }
 
-    int multi_put(int64_t decree,
+    int multi_put(const db_write_context &ctx,
                   const dsn::apps::multi_put_request &update,
                   dsn::apps::update_response &resp)
     {
+        int64_t decree = ctx.decree;
         resp.app_id = get_gpid().get_app_id();
         resp.partition_index = get_gpid().get_partition_index();
         resp.decree = decree;
@@ -69,10 +98,10 @@ public:
         }
 
         for (auto &kv : update.kvs) {
-            resp.error = db_write_batch_put(decree,
-                                            composite_raw_key(update.hash_key, kv.key),
-                                            kv.value,
-                                            static_cast<uint32_t>(update.expire_ts_seconds));
+            resp.error = db_write_batch_put_ctx(ctx,
+                                                composite_raw_key(update.hash_key, kv.key),
+                                                kv.value,
+                                                static_cast<uint32_t>(update.expire_ts_seconds));
             if (resp.error) {
                 clear_up_batch_states(decree, resp.error);
                 return resp.error;
@@ -460,12 +489,12 @@ public:
 
     /// For batch write.
 
-    int batch_put(int64_t decree,
+    int batch_put(const db_write_context &ctx,
                   const dsn::apps::update_request &update,
                   dsn::apps::update_response &resp)
     {
-        resp.error = db_write_batch_put(
-            decree, update.key, update.value, static_cast<uint32_t>(update.expire_ts_seconds));
+        resp.error = db_write_batch_put_ctx(
+            ctx, update.key, update.value, static_cast<uint32_t>(update.expire_ts_seconds));
         _update_responses.emplace_back(&resp);
         return resp.error;
     }
@@ -500,13 +529,48 @@ private:
                            dsn::string_view value,
                            uint32_t expire_sec)
     {
+        return db_write_batch_put_ctx(db_write_context::empty(decree), raw_key, value, expire_sec);
+    }
+
+    int db_write_batch_put_ctx(const db_write_context &ctx,
+                               dsn::string_view raw_key,
+                               dsn::string_view value,
+                               uint32_t expire_sec)
+    {
         FAIL_POINT_INJECT_F("db_write_batch_put",
                             [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
+        uint64_t new_timetag = ctx.remote_timetag;
+        if (!ctx.is_duplicated_write()) { // local write
+            new_timetag = generate_timetag(ctx.timestamp, get_cluster_id_if_exists(), false);
+        }
+
+        if (ctx.verify_timetag &&         // needs read-before-write
+            _pegasus_data_version >= 1 && // data version 0 doesn't support timetag.
+            !raw_key.empty()) {           // not an empty write
+
+            db_get_context get_ctx;
+            int err = db_get(raw_key, &get_ctx);
+            if (dsn_unlikely(err != 0)) {
+                return err;
+            }
+            // if record exists and is not expired.
+            if (get_ctx.found && !get_ctx.expired) {
+                uint64_t local_timetag =
+                    pegasus_extract_timetag(_pegasus_data_version, get_ctx.raw_value);
+
+                if (local_timetag >= new_timetag) {
+                    // ignore this stale update with lower timetag,
+                    // and write an empty record instead
+                    raw_key = value = dsn::string_view();
+                }
+            }
+        }
+
         rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
         rocksdb::SliceParts skey_parts(&skey, 1);
-        rocksdb::SliceParts svalue =
-            _value_generator.generate_value(_pegasus_data_version, value, db_expire_ts(expire_sec));
+        rocksdb::SliceParts svalue = _value_generator.generate_value(
+            _pegasus_data_version, value, db_expire_ts(expire_sec), new_timetag);
         rocksdb::Status s = _batch.Put(skey_parts, svalue);
         if (dsn_unlikely(!s.ok())) {
             ::dsn::blob hash_key, sort_key;
@@ -514,7 +578,7 @@ private:
             derror_rocksdb("WriteBatchPut",
                            s.ToString(),
                            "decree: {}, hash_key: {}, sort_key: {}, expire_ts: {}",
-                           decree,
+                           ctx.decree,
                            utils::c_escape_string(hash_key),
                            utils::c_escape_string(sort_key),
                            expire_sec);
@@ -556,6 +620,37 @@ private:
         return status.code();
     }
 
+    // The resulted `expire_ts` is -1 if record is expired.
+    int db_get(dsn::string_view raw_key,
+               /*out*/ db_get_context *ctx)
+    {
+        FAIL_POINT_INJECT_F("db_get", [](dsn::string_view) -> int { return FAIL_DB_GET; });
+
+        rocksdb::Status s = _db->Get(_rd_opts, utils::to_rocksdb_slice(raw_key), &(ctx->raw_value));
+        if (dsn_likely(s.ok())) {
+            // success
+            ctx->found = true;
+            ctx->expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, ctx->raw_value);
+            if (check_if_ts_expired(utils::epoch_now(), ctx->expire_ts)) {
+                ctx->expired = true;
+            }
+            return 0;
+        }
+        if (s.IsNotFound()) {
+            // NotFound is an acceptable error
+            ctx->found = false;
+            return 0;
+        }
+        ::dsn::blob hash_key, sort_key;
+        pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
+        derror_rocksdb("Get",
+                       s.ToString(),
+                       "hash_key: {}, sort_key: {}",
+                       utils::c_escape_string(hash_key),
+                       utils::c_escape_string(sort_key));
+        return s.code();
+    }
+
     void clear_up_batch_states(int64_t decree, int err)
     {
         if (!_update_responses.empty()) {
@@ -574,7 +669,7 @@ private:
         _batch.Clear();
     }
 
-    dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
+    static dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, sort_key);
@@ -582,7 +677,7 @@ private:
     }
 
     // return true if the check type is supported
-    bool is_check_type_supported(::dsn::apps::cas_check_type::type check_type)
+    static bool is_check_type_supported(::dsn::apps::cas_check_type::type check_type)
     {
         return check_type >= ::dsn::apps::cas_check_type::CT_NO_CHECK &&
                check_type <= ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER;
@@ -701,17 +796,19 @@ private:
 private:
     friend class pegasus_write_service_test;
     friend class pegasus_server_write_test;
+    friend class pegasus_write_service_impl_test;
+    FRIEND_TEST(pegasus_write_service_impl_test, put_verify_timetag);
+    FRIEND_TEST(pegasus_write_service_impl_test, verify_timetag_compatible_with_version_0);
 
     const std::string _primary_address;
     const uint32_t _pegasus_data_version;
 
     rocksdb::WriteBatch _batch;
     rocksdb::DB *_db;
-    rocksdb::WriteOptions &_wt_opts;
+    rocksdb::WriteOptions _wt_opts;
     rocksdb::ReadOptions &_rd_opts;
     volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
-
     pegasus_value_generator _value_generator;
 
     // for setting update_response.error after committed.

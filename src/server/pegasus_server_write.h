@@ -39,7 +39,7 @@ private:
 
     int on_single_put_in_batch(put_rpc &rpc)
     {
-        int err = _write_svc->batch_put(_decree, rpc.request(), rpc.response());
+        int err = _write_svc->batch_put(_write_ctx, rpc.request(), rpc.response());
         request_key_check(_decree, rpc.dsn_request(), rpc.request().key);
         return err;
     }
@@ -58,11 +58,13 @@ private:
 private:
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;
+    friend class pegasus_write_service_impl_test;
 
     std::unique_ptr<pegasus_write_service> _write_svc;
     std::vector<put_rpc> _put_rpc_batch;
     std::vector<remove_rpc> _remove_rpc_batch;
 
+    db_write_context _write_ctx;
     int64_t _decree;
 
     const bool _verbose_log;

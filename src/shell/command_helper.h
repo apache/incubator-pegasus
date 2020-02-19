@@ -9,7 +9,6 @@
 #include <iomanip>
 #include <fstream>
 #include <queue>
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>
@@ -21,6 +20,7 @@
 #include <dsn/dist/replication/mutation_log_tool.h>
 #include <dsn/perf_counter/perf_counter_utils.h>
 #include <dsn/utility/string_view.h>
+#include <dsn/utility/time_utils.h>
 
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb_types.h>
@@ -512,6 +512,14 @@ inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
 
 struct row_data
 {
+    double get_total_qps() const
+    {
+        return get_qps + multi_get_qps + scan_qps + put_qps + multi_put_qps + remove_qps +
+               multi_remove_qps + incr_qps + check_and_set_qps + check_and_mutate_qps;
+    }
+
+    double get_total_cu() const { return recent_read_cu + recent_write_cu; }
+
     std::string row_name;
     int32_t app_id = 0;
     int32_t partition_count = 0;

@@ -5,6 +5,7 @@
 #include "pegasus_manual_compact_service.h"
 
 #include <dsn/utility/string_conv.h>
+#include <dsn/utility/time_utils.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <dsn/tool-api/async_calls.h>
@@ -211,7 +212,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
         int32_t target_level;
         if (dsn::buf2int32(find->second, target_level) &&
             (target_level == -1 ||
-             (target_level >= 1 && target_level <= _app->_db_opts.num_levels))) {
+             (target_level >= 1 && target_level <= _app->_data_cf_opts.num_levels))) {
             options.target_level = target_level;
         } else {
             dwarn_replica("{}={} is invalid, use default value {}",
