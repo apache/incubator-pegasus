@@ -228,6 +228,13 @@ public:
     // query app envs.
     virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs) = 0;
 
+    // `partition_version` is used to guarantee data consistency during partition split.
+    // In normal cases, partition_version = partition_count-1, when this replica rejects read
+    // and write request, partition_version = -1.
+    //
+    // Thread-safe.
+    virtual void set_partition_version(int32_t partition_version){};
+
 public:
     //
     // utility functions to be used by app

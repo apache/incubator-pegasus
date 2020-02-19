@@ -312,6 +312,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         _app = nullptr;
     } else {
         _is_initializing = true;
+        _app->set_partition_version(_app_info.partition_count - 1);
 
         if (nullptr == _private_log) {
             ddebug("%s: clear private log, dir = %s", name(), log_dir.c_str());
