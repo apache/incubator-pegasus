@@ -155,8 +155,7 @@ public class ColdBackupLoader implements PegasusLoader {
     try (BufferedReader bufferedReader = fdsService.getReader(appMetaDataUrl)) {
       if ((appMetaData = bufferedReader.readLine()) != null) {
         JSONObject jsonObject = new JSONObject(appMetaData);
-        String partitionCount = jsonObject.getString("partition_count");
-        return Integer.valueOf(partitionCount);
+        return jsonObject.getInt("partition_count");
       }
     } catch (IOException | JSONException e) {
       LOG.error("get the partition count failed from " + appMetaDataUrl, e);
