@@ -5,6 +5,11 @@ import org.apache.spark.sql.{Row, SaveMode, SparkSession}
 
 object ConvertParquet {
 
+  private val FS_URL = ""
+  private val FS_PORT = "80"
+  private val CLUSTER_NAME = ""
+  private val TABLE_NAME = ""
+
   def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder()
@@ -16,9 +21,9 @@ object ConvertParquet {
 
 
     coldBackupConfig.setRemote(
-      "",
-      "80")
-      .setTableInfo("c3srv-browser", "alchemy_feed_exchange_record")
+      FS_URL,
+      FS_PORT)
+      .setTableInfo(CLUSTER_NAME, TABLE_NAME)
 
     val pc = new PegasusContext(spark.sparkContext)
     val rdd = pc.pegasusSnapshotRDD(new ColdBackupLoader(coldBackupConfig))
@@ -35,10 +40,10 @@ object ConvertParquet {
       .format("parquet")
       .mode(SaveMode.Overwrite)
       // in online, you need save on hdfs
-      .save("c3srv-browser_alchemy_feed_exchange_record.parquet")
+      .save("/tmp")
 
     //after convert success(only test)
-    val dataFrameResult = spark.read.parquet("c3srv-browser_alchemy_feed_exchange_record.parquet")
+    val dataFrameResult = spark.read.parquet("/tmp")
     dataFrameResult.show(10)
   }
 }
