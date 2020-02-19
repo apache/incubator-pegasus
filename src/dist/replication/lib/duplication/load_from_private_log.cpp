@@ -103,15 +103,17 @@ void load_from_private_log::find_log_file_to_start(std::map<int, log_file_ptr> l
 
 void load_from_private_log::replay_log_block()
 {
-    error_s err =
-        mutation_log::replay_block(_current,
-                                   [this](int log_bytes_length, mutation_ptr &mu) -> bool {
-                                       auto es = _mutation_batch.add(std::move(mu));
-                                       dassert_replica(es.is_ok(), es.description());
-                                       return true;
-                                   },
-                                   _start_offset,
-                                   _current_global_end_offset);
+    error_s err = mutation_log::replay_block(
+        _current,
+        [this](int log_bytes_length, mutation_ptr &mu) -> bool {
+            auto es = _mutation_batch.add(std::move(mu));
+            dassert_replica(es.is_ok(), es.description());
+            _stub->_counter_dup_log_read_bytes_rate->add(log_bytes_length);
+            _stub->_counter_dup_log_read_mutations_rate->increment();
+            return true;
+        },
+        _start_offset,
+        _current_global_end_offset);
     if (!err.is_ok()) {
         if (err.code() == ERR_HANDLE_EOF && switch_to_next_log_file()) {
             repeat();

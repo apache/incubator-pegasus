@@ -129,6 +129,7 @@ error_s replica_duplicator::update_progress(const duplication_progress &p)
                        _progress.confirmed_decree);
     }
 
+    decree last_confirmed_decree = _progress.confirmed_decree;
     _progress.confirmed_decree = std::max(_progress.confirmed_decree, p.confirmed_decree);
     _progress.last_decree = std::max(_progress.last_decree, p.last_decree);
 
@@ -138,6 +139,11 @@ error_s replica_duplicator::update_progress(const duplication_progress &p)
                        _progress.last_decree,
                        _progress.confirmed_decree);
     }
+    if (_progress.confirmed_decree > last_confirmed_decree) {
+        // has confirmed_decree updated.
+        _stub->_counter_dup_confirmed_rate->add(_progress.confirmed_decree - last_confirmed_decree);
+    }
+
     return error_s::ok();
 }
 
@@ -158,6 +164,15 @@ void replica_duplicator::verify_start_decree(decree start_decree)
 decree replica_duplicator::get_max_gced_decree() const
 {
     return _replica->private_log()->max_gced_decree(_replica->get_gpid());
+}
+
+uint64_t replica_duplicator::get_pending_mutations_count() const
+{
+    // it's not atomic to read last_committed_decree in not-REPLICATION thread pool,
+    // but enough for approximate statistic.
+    int64_t cnt = _replica->last_committed_decree() - progress().last_decree;
+    // since last_committed_decree() is not atomic, `cnt` could probably be negative.
+    return cnt > 0 ? static_cast<uint64_t>(cnt) : 0;
 }
 
 } // namespace replication
