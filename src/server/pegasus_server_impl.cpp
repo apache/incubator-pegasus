@@ -416,7 +416,14 @@ void pegasus_server_impl::parse_checkpoints()
     }
 }
 
-pegasus_server_impl::~pegasus_server_impl() = default;
+pegasus_server_impl::~pegasus_server_impl()
+{
+    if (_is_open) {
+        dassert(_db != nullptr, "");
+        delete _db;
+        _db = nullptr;
+    }
+}
 
 void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
 {
@@ -1666,8 +1673,10 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
 void pegasus_server_impl::cancel_background_work(bool wait)
 {
-    dassert(_db != nullptr, "");
-    rocksdb::CancelAllBackgroundWork(_db, wait);
+    if (_is_open) {
+        dassert(_db != nullptr, "");
+        rocksdb::CancelAllBackgroundWork(_db, wait);
+    }
 }
 
 ::dsn::error_code pegasus_server_impl::stop(bool clear_state)
@@ -2766,7 +2775,7 @@ std::string pegasus_server_impl::query_compact_state() const
     return _manual_compact_svc.query_compact_state();
 }
 
-void pegasus_server_impl::set_partition_version(uint32_t partition_version)
+void pegasus_server_impl::set_partition_version(int32_t partition_version)
 {
     ddebug_replica(
         "update partition version from {} to {}", _partition_version.load(), partition_version);
