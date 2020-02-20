@@ -2777,9 +2777,9 @@ std::string pegasus_server_impl::query_compact_state() const
 
 void pegasus_server_impl::set_partition_version(int32_t partition_version)
 {
+    int32_t old_partition_version = _partition_version.exchange(partition_version);
     ddebug_replica(
-        "update partition version from {} to {}", _partition_version.load(), partition_version);
-    _partition_version.store(partition_version);
+        "update partition version from {} to {}", old_partition_version, partition_version);
 
     // TODO(heyuchen): set filter _partition_version in further pr
 }
