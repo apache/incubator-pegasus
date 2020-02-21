@@ -56,7 +56,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _pegasus_data_version(PEGASUS_DATA_VERSION_MAX),
       _last_durable_decree(0),
       _is_checkpointing(false),
-      _manual_compact_svc(this)
+      _manual_compact_svc(this),
+      _partition_version(0)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -415,7 +416,14 @@ void pegasus_server_impl::parse_checkpoints()
     }
 }
 
-pegasus_server_impl::~pegasus_server_impl() = default;
+pegasus_server_impl::~pegasus_server_impl()
+{
+    if (_is_open) {
+        dassert(_db != nullptr, "");
+        delete _db;
+        _db = nullptr;
+    }
+}
 
 void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
 {
@@ -1665,8 +1673,10 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
 void pegasus_server_impl::cancel_background_work(bool wait)
 {
-    dassert(_db != nullptr, "");
-    rocksdb::CancelAllBackgroundWork(_db, wait);
+    if (_is_open) {
+        dassert(_db != nullptr, "");
+        rocksdb::CancelAllBackgroundWork(_db, wait);
+    }
 }
 
 ::dsn::error_code pegasus_server_impl::stop(bool clear_state)
@@ -2763,6 +2773,15 @@ bool pegasus_server_impl::release_storage_after_manual_compact()
 std::string pegasus_server_impl::query_compact_state() const
 {
     return _manual_compact_svc.query_compact_state();
+}
+
+void pegasus_server_impl::set_partition_version(int32_t partition_version)
+{
+    int32_t old_partition_version = _partition_version.exchange(partition_version);
+    ddebug_replica(
+        "update partition version from {} to {}", old_partition_version, partition_version);
+
+    // TODO(heyuchen): set filter _partition_version in further pr
 }
 
 } // namespace server
