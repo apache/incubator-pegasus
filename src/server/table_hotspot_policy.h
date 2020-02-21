@@ -64,7 +64,7 @@ public:
         // n: Number of samples
         while (!temp_data.empty()) {
             for (auto partition_data : temp_data.front()) {
-                if (partition_data.total_qps > 1.00) {
+                if (partition_data.total_qps - 1.00 > 0) {
                     data_samples.push_back(partition_data.total_qps);
                     avg += partition_data.total_qps;
                     n++;
