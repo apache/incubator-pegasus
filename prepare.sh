@@ -30,6 +30,7 @@ for i in $(seq "${META_COUNT}"); do
 done
 sed -i "s/%{meta.server.list}/$meta_list/g" "${DOCKER_DIR}/config.ini"
 sed -i "s/%{zk.server.list}/${zookeeper_addr}/g" "${DOCKER_DIR}/config.ini"
+sed -i "s/%{meta.port}/$META_PORT/g" "${DOCKER_DIR}/config.ini"
 
 cp -f "${ROOT}"/docker-compose.yml "${DOCKER_DIR}"
 for i in $(seq "${META_COUNT}"); do
@@ -37,7 +38,7 @@ for i in $(seq "${META_COUNT}"); do
     echo "  meta$((i)):
     image: @IMAGE_NAME@
     ports:
-      - $meta_port:34601
+      - $meta_port:$meta_port
     volumes:
       - ./config.ini:/pegasus/bin/config.ini:ro
       - ./meta$((i))/data:/pegasus/data
