@@ -4738,10 +4738,11 @@ inline std::ostream &operator<<(std::ostream &out, const duplication_add_request
 
 typedef struct _duplication_add_response__isset
 {
-    _duplication_add_response__isset() : err(false), appid(false), dupid(false) {}
+    _duplication_add_response__isset() : err(false), appid(false), dupid(false), hint(false) {}
     bool err : 1;
     bool appid : 1;
     bool dupid : 1;
+    bool hint : 1;
 } _duplication_add_response__isset;
 
 class duplication_add_response
@@ -4751,12 +4752,13 @@ public:
     duplication_add_response(duplication_add_response &&);
     duplication_add_response &operator=(const duplication_add_response &);
     duplication_add_response &operator=(duplication_add_response &&);
-    duplication_add_response() : appid(0), dupid(0) {}
+    duplication_add_response() : appid(0), dupid(0), hint() {}
 
     virtual ~duplication_add_response() throw();
     ::dsn::error_code err;
     int32_t appid;
     int32_t dupid;
+    std::string hint;
 
     _duplication_add_response__isset __isset;
 
@@ -4766,6 +4768,8 @@ public:
 
     void __set_dupid(const int32_t val);
 
+    void __set_hint(const std::string &val);
+
     bool operator==(const duplication_add_response &rhs) const
     {
         if (!(err == rhs.err))
@@ -4773,6 +4777,10 @@ public:
         if (!(appid == rhs.appid))
             return false;
         if (!(dupid == rhs.dupid))
+            return false;
+        if (__isset.hint != rhs.__isset.hint)
+            return false;
+        else if (__isset.hint && !(hint == rhs.hint))
             return false;
         return true;
     }

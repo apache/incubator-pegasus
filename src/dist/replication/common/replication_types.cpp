@@ -11012,6 +11012,12 @@ void duplication_add_response::__set_appid(const int32_t val) { this->appid = va
 
 void duplication_add_response::__set_dupid(const int32_t val) { this->dupid = val; }
 
+void duplication_add_response::__set_hint(const std::string &val)
+{
+    this->hint = val;
+    __isset.hint = true;
+}
+
 uint32_t duplication_add_response::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -11055,6 +11061,14 @@ uint32_t duplication_add_response::read(::apache::thrift::protocol::TProtocol *i
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 4:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->hint);
+                this->__isset.hint = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -11085,6 +11099,11 @@ uint32_t duplication_add_response::write(::apache::thrift::protocol::TProtocol *
     xfer += oprot->writeI32(this->dupid);
     xfer += oprot->writeFieldEnd();
 
+    if (this->__isset.hint) {
+        xfer += oprot->writeFieldBegin("hint", ::apache::thrift::protocol::T_STRING, 4);
+        xfer += oprot->writeString(this->hint);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -11096,6 +11115,7 @@ void swap(duplication_add_response &a, duplication_add_response &b)
     swap(a.err, b.err);
     swap(a.appid, b.appid);
     swap(a.dupid, b.dupid);
+    swap(a.hint, b.hint);
     swap(a.__isset, b.__isset);
 }
 
@@ -11104,6 +11124,7 @@ duplication_add_response::duplication_add_response(const duplication_add_respons
     err = other460.err;
     appid = other460.appid;
     dupid = other460.dupid;
+    hint = other460.hint;
     __isset = other460.__isset;
 }
 duplication_add_response::duplication_add_response(duplication_add_response &&other461)
@@ -11111,6 +11132,7 @@ duplication_add_response::duplication_add_response(duplication_add_response &&ot
     err = std::move(other461.err);
     appid = std::move(other461.appid);
     dupid = std::move(other461.dupid);
+    hint = std::move(other461.hint);
     __isset = std::move(other461.__isset);
 }
 duplication_add_response &duplication_add_response::
@@ -11119,6 +11141,7 @@ operator=(const duplication_add_response &other462)
     err = other462.err;
     appid = other462.appid;
     dupid = other462.dupid;
+    hint = other462.hint;
     __isset = other462.__isset;
     return *this;
 }
@@ -11127,6 +11150,7 @@ duplication_add_response &duplication_add_response::operator=(duplication_add_re
     err = std::move(other463.err);
     appid = std::move(other463.appid);
     dupid = std::move(other463.dupid);
+    hint = std::move(other463.hint);
     __isset = std::move(other463.__isset);
     return *this;
 }
@@ -11139,6 +11163,9 @@ void duplication_add_response::printTo(std::ostream &out) const
         << "appid=" << to_string(appid);
     out << ", "
         << "dupid=" << to_string(dupid);
+    out << ", "
+        << "hint=";
+    (__isset.hint ? (out << to_string(hint)) : (out << "<null>"));
     out << ")";
 }
 

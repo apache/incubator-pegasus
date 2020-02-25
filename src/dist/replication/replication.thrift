@@ -648,6 +648,7 @@ struct duplication_add_response
     1:dsn.error_code   err;
     2:i32              appid;
     3:i32              dupid;
+    4:optional string  hint;
 }
 
 // This request is sent from client to meta.
