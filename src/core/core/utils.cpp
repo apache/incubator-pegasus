@@ -190,5 +190,5 @@ bool list_hostname_from_ip_port(const char *ip_port_list, std::string *hostname_
     *hostname_result_list = result.str();
     return all_ok;
 }
-}
-}
+} // namespace utils
+} // namespace dsn

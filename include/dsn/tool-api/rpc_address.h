@@ -25,14 +25,11 @@
  */
 #pragma once
 
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
-#include <cstring>
 #include <string>
-#include <cstdlib>
-#include <cstdint>
+
+#include <arpa/inet.h>
 #include <thrift/protocol/TProtocol.h>
+#include <dsn/utility/string_conv.h>
 
 typedef enum dsn_host_type_t {
     HOST_TYPE_INVALID = 0,
@@ -105,25 +102,31 @@ public:
 
     std::string to_std_string() const { return std::string(to_string()); }
 
+    // This function is used for validating the format of ipv4 like "192.168.0.1:12345"
+    // Due to historical legacy, we also consider "localhost:8080" is in a valid format
+    // IP address without port like "127.0.0.1" is invalid here
     bool from_string_ipv4(const char *s)
     {
         set_invalid();
-        std::string str = std::string(s);
-        auto pos = str.find_last_of(':');
-        if (pos == std::string::npos)
+        std::string ip_port = std::string(s);
+        auto pos = ip_port.find_last_of(':');
+        if (pos == std::string::npos) {
             return false;
-        else {
-            auto host = str.substr(0, pos);
-            auto port_str = str.substr(pos + 1);
-            char *p = nullptr;
-            long port = ::strtol(port_str.data(), &p, 10);
-            if (*p != 0) // bad string
-                return false;
-            if (port <= 0 || port > UINT16_MAX) // out of range
-                return false;
-            assign_ipv4(host.c_str(), (uint16_t)port);
+        }
+        std::string ip = ip_port.substr(0, pos);
+        std::string port = ip_port.substr(pos + 1);
+        // check port
+        unsigned int port_num;
+        if (!dsn::internal::buf2unsigned(port, port_num) || port_num > UINT16_MAX) {
+            return false;
+        }
+        // check localhost & IP
+        uint32_t ip_addr;
+        if (ip == "localhost" || inet_pton(AF_INET, ip.c_str(), &ip_addr)) {
+            assign_ipv4(ip.c_str(), (uint16_t)port_num);
             return true;
         }
+        return false;
     }
 
     uint64_t &value() { return _addr.value; }
