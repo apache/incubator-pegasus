@@ -105,9 +105,6 @@ copy_file `get_system_lib server ssl` ${pack}/bin/`get_system_libname server ssl
 copy_file `get_system_lib server aio` ${pack}/bin/`get_system_libname server aio`
 copy_file `get_system_lib server zstd` ${pack}/bin/`get_system_libname server zstd`
 copy_file `get_system_lib server lz4` ${pack}/bin/`get_system_libname server lz4`
-copy_file `get_system_lib server icui18n` ${pack}/bin/`get_system_libname server icui18n`
-copy_file `get_system_lib server icuuc` ${pack}/bin/`get_system_libname server icuuc`
-copy_file `get_system_lib server icudata` ${pack}/bin/`get_system_libname server icudata`
 
 chmod +x ${pack}/bin/pegasus_* ${pack}/bin/*.sh
 chmod -x ${pack}/bin/lib*
