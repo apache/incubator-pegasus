@@ -9,6 +9,23 @@
 namespace pegasus {
 namespace server {
 
+TEST(table_hotspot_policy, hotspot_algo_qps_skew)
+{
+    std::vector<row_data> test_rows(2);
+    test_rows[0].get_qps = 1234.0;
+    test_rows[1].get_qps = 4321.0;
+    std::unique<hotspot_policy> policy(new hotspot_algo_qps_skew());
+    hotspot_calculator test_hotspot_calculator("TEST", 2, std::move(policy));
+    test_hotspot_calculator.aggregate(test_rows);
+    test_hotspot_calculator.start_alg();
+    std::vector<double> result(2);
+    for (int i = 0; i < test_hotspot_calculator._points.size(); i++) {
+        result[i] = test_hotspot_calculator._points[i]->get_value();
+    }
+    std::vector<double> expect_vector{1, 3};
+    ASSERT_EQ(expect_vector, result);
+}
+
 TEST(table_hotspot_policy, hotspot_algo_qps_variance)
 {
     std::vector<row_data> test_rows(8);
