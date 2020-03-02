@@ -56,7 +56,7 @@ public:
         std::vector<double> data_samples;
         data_samples.reserve(hotspot_app_data.size() * perf_counters.size());
         auto temp_data = hotspot_app_data;
-        double total = 0, sd = 0;
+        double total = 0, sd = 0, avg = 0;
         int n = 0;
         // avg: Average number
         // sd: Standard deviation

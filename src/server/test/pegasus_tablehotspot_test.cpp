@@ -14,7 +14,7 @@ TEST(table_hotspot_policy, hotspot_algo_qps_skew)
     std::vector<row_data> test_rows(2);
     test_rows[0].get_qps = 1234.0;
     test_rows[1].get_qps = 4321.0;
-    std::unique<hotspot_policy> policy(new hotspot_algo_qps_skew());
+    std::unique_ptr<hotspot_policy> policy(new hotspot_algo_qps_skew());
     hotspot_calculator test_hotspot_calculator("TEST", 2, std::move(policy));
     test_hotspot_calculator.aggregate(test_rows);
     test_hotspot_calculator.start_alg();
@@ -37,7 +37,7 @@ TEST(table_hotspot_policy, hotspot_algo_qps_variance)
     test_rows[5].get_qps = 1000.0;
     test_rows[6].get_qps = 1000.0;
     test_rows[7].get_qps = 5000.0;
-    std::unique_ptr <hotspot_policy> policy(new hotspot_algo_qps_variance());
+    std::unique_ptr<hotspot_policy> policy(new hotspot_algo_qps_variance());
     hotspot_calculator test_hotspot_calculator("TEST", 8, std::move(policy));
     test_hotspot_calculator.aggregate(test_rows);
     test_hotspot_calculator.start_alg();
