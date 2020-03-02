@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "simple_logger.h"
 #include <sstream>
 #include <dsn/utility/filesystem.h>
@@ -84,6 +75,11 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
             fprintf(fp, "%6s.%7s.%05d: ", task::get_current_node_name(), "io-thrd", tid);
         }
     }
+}
+
+screen_logger::screen_logger(bool short_header) : logging_provider("./")
+{
+    _short_header = short_header;
 }
 
 screen_logger::screen_logger(const char *log_dir) : logging_provider(log_dir)

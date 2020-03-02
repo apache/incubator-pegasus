@@ -51,7 +51,6 @@ class task_engine;
 class rpc_engine;
 class disk_engine;
 class env_provider;
-class logging_provider;
 class nfs_node;
 class task_queue;
 class task_worker_pool;
@@ -128,7 +127,6 @@ public:
     // ServiceMode Mode() const { return _spec.Mode; }
     const service_spec &spec() const { return _spec; }
     env_provider *env() const { return _env; }
-    logging_provider *logging() const { return _logging.get(); }
     static std::string get_runtime_info(const std::vector<std::string> &args);
     static std::string get_queue_info(const std::vector<std::string> &args);
 
@@ -141,7 +139,6 @@ public:
 private:
     service_spec _spec;
     env_provider *_env;
-    std::unique_ptr<logging_provider> _logging;
 
     // <port, servicenode>
     typedef std::map<int, service_node *>
@@ -152,4 +149,4 @@ private:
 
 // ------------ inline impl ---------------------
 
-} // end namespace
+} // namespace dsn

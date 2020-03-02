@@ -213,10 +213,6 @@ void service_engine::init_before_toollets(const service_spec &spec)
 {
     _spec = spec;
 
-    // init common providers (first half)
-    _logging.reset(factory_store<logging_provider>::create(
-        spec.logging_factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.dir_log.c_str()));
-
     // init common for all per-node providers
     message_ex::s_local_hash =
         (uint32_t)dsn_config_get_value_uint64("core",

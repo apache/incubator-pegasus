@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/tool_api.h>
@@ -42,9 +33,13 @@
 namespace dsn {
 namespace tools {
 
+/*
+ * screen_logger provides a logger which writes to terminal.
+ */
 class screen_logger : public logging_provider
 {
 public:
+    screen_logger(bool short_header);
     screen_logger(const char *log_dir);
     virtual ~screen_logger(void);
 
@@ -68,6 +63,10 @@ private:
     bool _short_header;
 };
 
+/*
+ * simple_logger provides a logger which writes to file.
+ * The max number of lines in a logger file is 200000.
+ */
 class simple_logger : public logging_provider
 {
 public:
