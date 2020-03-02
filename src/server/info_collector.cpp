@@ -289,20 +289,21 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
-    hotspot_policy policy;
+    std::unique_ptr<hotspot_policy> policy;
     switch (_hotspot_detect_algorithm) {
     case "qps_variance":
-        policy = new hotspot_algo_qps_variance();
+        policy.reset(new hotspot_algo_qps_variance());
         break;
     case "qps_skew":
-        policy = new hotspot_algo_qps_skew());
+        policy.reset(new hotspot_algo_qps_skew()));
         break;
     default:
         ddebug("no such hotspot_detect_algorithm, hotspot_calculator will use 'qps_variance' "
                "detect algorithm");
-        policy = new hotspot_algo_qps_variance();
+        policy.reset(new hotspot_algo_qps_variance())
     }
-    hotspot_calculator *calculator_address = new hotspot_calculator(app_name, partition_num);
+    hotspot_calculator *calculator_address =
+        new hotspot_calculator(app_name, partition_num, std::move(policy));
     _hotspot_calculator_store[app_name] = calculator_address;
     return calculator_address;
 }
