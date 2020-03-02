@@ -95,8 +95,10 @@ public:
 class hotspot_calculator
 {
 public:
-    hotspot_calculator(const std::string &app_name, const int partition_num, hotspot_policy policy)
-        : _app_name(app_name), _points(partition_num), _policy(policy)
+    hotspot_calculator(const std::string &app_name,
+                       const int partition_num,
+                       std::unique_prt<hotspot_policy> policy)
+        : _app_name(app_name), _points(partition_num), _policy(std::move(policy))
     {
         init_perf_counter(partition_num);
     }
