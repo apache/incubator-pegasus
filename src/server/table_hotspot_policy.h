@@ -114,6 +114,7 @@ private:
     static const int kMaxQueueSize = 100;
 
     FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_variance);
+    FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_skew);
 };
 } // namespace server
 } // namespace pegasus
