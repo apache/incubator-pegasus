@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "shell/commands.h"
+#include "idl_utils.h"
 
 static void
 print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &contexts,
@@ -737,8 +738,7 @@ bool check_and_set(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "ERROR: check_type not provided\n");
         return false;
     }
-    if (!check_operand_provided &&
-        check_type >= ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
+    if (!check_operand_provided && pegasus::cas_is_check_operand_needed(check_type)) {
         fprintf(stderr, "ERROR: check_operand not provided\n");
         return false;
     }
