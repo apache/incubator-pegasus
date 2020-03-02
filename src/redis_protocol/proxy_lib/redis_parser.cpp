@@ -681,7 +681,7 @@ void redis_parser::del_internal(message_entry &entry)
                     simple_error_reply(entry,
                                        "internal error " + std::to_string(rrdb_response.error));
                 } else {
-                    simple_integer_reply(entry, -1);
+                    simple_integer_reply(entry, 1);
                 }
             }
         };
@@ -719,7 +719,7 @@ void redis_parser::del_geo_internal(message_entry &entry)
             if (PERR_OK != ec) {
                 simple_error_reply(entry, _geo_client->get_error_string(ec));
             } else {
-                simple_ok_reply(entry);
+                simple_integer_reply(entry, 1);
             }
         };
         _geo_client->async_del(redis_request.sub_requests[1].data.to_string(), // key => hash_key
