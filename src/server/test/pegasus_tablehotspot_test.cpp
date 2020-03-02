@@ -20,8 +20,8 @@ TEST(table_hotspot_policy, hotspot_algo_qps_variance)
     test_rows[5].get_qps = 1000.0;
     test_rows[6].get_qps = 1000.0;
     test_rows[7].get_qps = 5000.0;
-    hotspot_policy policy = new hotspot_algo_qps_variance();
-    hotspot_calculator test_hotspot_calculator("TEST", 8, policy);
+    std::unique<hotspot_policy> policy(new hotspot_algo_qps_variance());
+    hotspot_calculator test_hotspot_calculator("TEST", 8, std::move(policy));
     test_hotspot_calculator.aggregate(test_rows);
     test_hotspot_calculator.start_alg();
     std::vector<double> result(8);
