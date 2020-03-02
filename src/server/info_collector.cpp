@@ -77,6 +77,10 @@ info_collector::info_collector()
                                               "storage_size_fetch_interval_seconds",
                                               3600, // default value 1h
                                               "storage size fetch interval seconds");
+    _hotspot_detect_algorithm = dsn_config_get_value_string("pegasus.collector",
+                                                            "hotspot_detect_algorithm",
+                                                            "qps_variance",
+                                                            "hotspot_detect_algorithm");
     // _storage_size_retry_wait_seconds is in range of [1, 60]
     _storage_size_retry_wait_seconds =
         std::min(60u, std::max(1u, _storage_size_fetch_interval_seconds / 10));
@@ -284,6 +288,19 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
     auto iter = _hotspot_calculator_store.find(app_name);
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
+    }
+    hotspot_policy policy;
+    switch (_hotspot_detect_algorithm) {
+    case "qps_variance":
+        policy = new hotspot_algo_qps_variance();
+        break;
+    case "qps_skew":
+        policy = new hotspot_algo_qps_skew());
+        break;
+    default:
+        ddebug("no such hotspot_detect_algorithm, hotspot_calculator will use 'qps_variance' "
+               "detect algorithm");
+        policy = new hotspot_algo_qps_variance();
     }
     hotspot_calculator *calculator_address = new hotspot_calculator(app_name, partition_num);
     _hotspot_calculator_store[app_name] = calculator_address;
