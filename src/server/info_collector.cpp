@@ -290,7 +290,7 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
         return iter->second;
     }
     std::unique_ptr<hotspot_policy> policy;
-    switch (_hotspot_detect_algorithm) {
+    switch (_hotspot_detect_algorithm.c_ctr()) {
     case "qps_variance":
         policy.reset(new hotspot_algo_qps_variance());
         break;
