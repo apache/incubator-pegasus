@@ -29,9 +29,13 @@ public:
 
     void test_duplicate()
     {
+        std::cout << "tyz1" << std::endl;
         replica_base replica(dsn::gpid(1, 1), "fake_replica");
+        std::cout << "tyz2" << std::endl;
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
+        std::cout << "tyz3" << std::endl;
         duplicator->set_task_environment(&_env);
+        std::cout << "tyz4" << std::endl;
 
         mutation_tuple_set muts;
         for (uint64_t i = 0; i < 100; i++) {
