@@ -663,7 +663,7 @@ function run_start_onebox()
         sed "s/@LOCAL_IP@/${LOCAL_IP}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
             ${CONFIG_FILE} >${ROOT}/src/server/test/config.ini
     fi
-    
+
     echo "starting server"
     ld_library_path=${SERVER_PATH}:$LD_LIBRARY_PATH
     export LD_LIBRARY_PATH=$ld_library_path
