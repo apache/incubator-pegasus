@@ -655,6 +655,9 @@ function run_start_onebox()
         sed -i 's/%{zk.server.list}/'"${LOCAL_IP}"':22181/g' ${ROOT}/config-server.ini
         sed -i 's/app_name = .*$/app_name = '"$APP_NAME"'/' ${ROOT}/config-server.ini
         sed -i 's/partition_count = .*$/partition_count = '"$PARTITION_COUNT"'/' ${ROOT}/config-server.ini
+        echo "LOCAL_IP: ${LOCAL_IP}"
+        cat  ${ROOT}/src/test/config.ini
+        exit 1
     else
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.min.ini
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
