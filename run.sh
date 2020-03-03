@@ -662,7 +662,7 @@ function run_start_onebox()
             ${CONFIG_FILE} >${ROOT}/config-server.ini
     fi
     echo "LOCAL_IP: ${LOCAL_IP}"
-    cat  ${ROOT}/src/test/config.ini
+    cat  ${ROOT}/src/server/test/config.ini
     exit 1
     echo "starting server"
     ld_library_path=${SERVER_PATH}:$LD_LIBRARY_PATH
