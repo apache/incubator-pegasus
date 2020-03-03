@@ -660,6 +660,8 @@ function run_start_onebox()
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
         sed "s/@LOCAL_IP@/${LOCAL_IP}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
             ${CONFIG_FILE} >${ROOT}/config-server.ini
+        sed "s/@LOCAL_IP@/${LOCAL_IP}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
+            ${CONFIG_FILE} >${ROOT}/src/server/test/config.ini
     fi
     echo "starting server"
     ld_library_path=${SERVER_PATH}:$LD_LIBRARY_PATH
