@@ -724,9 +724,6 @@ function run_start_onebox()
             fi
         done
     fi
-    echo "LOCAL_IP: ${LOCAL_IP}"
-    echo "CONFIG_FILE:${CONFIG_FILE}"
-    cat  ${ROOT}/src/server/test/config.ini
     exit 1
 }
 
