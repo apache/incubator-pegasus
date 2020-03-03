@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "shell/commands.h"
+#include "base/idl_utils.h"
 #include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/utilities/ldb_cmd.h>
 #include <fmt/time.h>
@@ -129,6 +130,29 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
                        << pegasus::utils::c_escape_string(hash_key, sc->escape_all) << "\" : \""
                        << pegasus::utils::c_escape_string(sort_key, sc->escape_all) << "\" => "
                        << update.increment << std::endl;
+                } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+                    dsn::apps::check_and_set_request update;
+                    dsn::unmarshall(request, update);
+                    auto set_sort_key =
+                        update.set_diff_sort_key ? update.set_sort_key : update.check_sort_key;
+                    std::string check_operand;
+                    if (pegasus::cas_is_check_operand_needed(update.check_type)) {
+                        check_operand = fmt::format(
+                            "\"{}\" ",
+                            pegasus::utils::c_escape_string(update.check_operand, sc->escape_all));
+                    }
+                    os << INDENT
+                       << fmt::format(
+                              "[CHECK_AND_SET] \"{}\" : IF SORT_KEY({}) {} {}"
+                              "THEN SET SORT_KEY({}) => VALUE({}) [expire={}]\n",
+                              pegasus::utils::c_escape_string(update.hash_key, sc->escape_all),
+                              pegasus::utils::c_escape_string(update.check_sort_key,
+                                                              sc->escape_all),
+                              pegasus::cas_check_type_to_string(update.check_type),
+                              check_operand,
+                              pegasus::utils::c_escape_string(set_sort_key, sc->escape_all),
+                              pegasus::utils::c_escape_string(update.set_value, sc->escape_all),
+                              update.set_expire_ts_seconds);
                 } else {
                     os << INDENT << "ERROR: unsupported code "
                        << ::dsn::task_code(msg->local_rpc_code).to_string() << "("
