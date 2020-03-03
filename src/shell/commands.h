@@ -239,3 +239,7 @@ bool remove_dup(command_executor *e, shell_context *sc, arguments args);
 bool start_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool pause_dup(command_executor *e, shell_context *sc, arguments args);
+
+// == disk rebalance (see 'commands/disk_rebalance.cpp') == //
+
+bool query_disk_info(command_executor *e, shell_context *sc, arguments args);
