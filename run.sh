@@ -631,6 +631,7 @@ function run_start_onebox()
 
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
+        echo "CONFIG_FILE:${CONFIG_FILE}"
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
         cp -f ${CONFIG_FILE} ${ROOT}/config-server.ini
         sed -i 's/\<34601\>/@META_PORT@/' ${ROOT}/config-server.ini
