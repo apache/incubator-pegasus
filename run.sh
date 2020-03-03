@@ -724,7 +724,6 @@ function run_start_onebox()
             fi
         done
     fi
-    exit 1
 }
 
 #####################
