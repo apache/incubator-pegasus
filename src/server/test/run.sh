@@ -51,8 +51,6 @@ function get_local_ip()
 
 LOCAL_IP=`get_local_ip`
 
-echo ${LOCAL_IP}
-
 sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  config.ini
 
 
