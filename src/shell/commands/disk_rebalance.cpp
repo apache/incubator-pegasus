@@ -5,6 +5,7 @@
 #include "shell/commands.h"
 #include "shell/argh.h"
 
+#include <math.h>
 #include <fmt/ostream.h>
 #include <dsn/utility/errors.h>
 #include <dsn/utility/output_utils.h>
@@ -13,25 +14,11 @@
 
 bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
 {
-    // disk_info [-n|--node node_address] [-a|--app app_name]
+    // disk_info [-n|--node node_address]
 
     argh::parser cmd(args.argc, args.argv);
-    if (cmd.pos_args().size() > 3) {
+    if (cmd.pos_args().size() > 1) {
         fmt::print(stderr, "too many params\n");
-        return false;
-    }
-
-    for (const auto &flag : cmd.flags()) {
-        if (flag != "r" && flag != "resolve_ip") {
-            fmt::print(stderr, "unknown flag {}\n", flag);
-            return false;
-        }
-    }
-
-    std::map<std::string, std::string> params = cmd.params();
-
-    if (params.find("app") != params.end() && params.find("node") == params.end()) {
-        fmt::print(stderr, "please input node_address!\n");
         return false;
     }
 
@@ -39,39 +26,120 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
     auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
     if (error != dsn::ERR_OK) {
         std::cout << "list nodes failed, error=" << error.to_string() << std::endl;
-        return true;
+        return false;
     }
 
-    std::vector<dsn::rpc_address> target;
+    std::map<std::string, std::string> params = cmd.params();
+    std::vector<dsn::rpc_address> targets;
     if (params.find("node") != params.end()) {
         std::string node_address = params["node"];
         bool exist = false;
         for (const auto &node : nodes) {
             // TODO(jiashuo1) check and test ipv4_str value
             if (node.first.ipv4_str() == node_address) {
-                target.emplace_back(node);
+                targets.emplace_back(node);
                 exist = true;
             }
         }
         if (!exist) {
             fmt::print(stderr, "please input valid node_address!\n");
-        } else {
-            const auto &err_resps = sc->ddl_client->query_disk_info(target);
-            const auto &resp = err_resps.back();
-            if (params.find("app") != params.end()) {
-                std::string app_name = params["app"];
-                // TODO(jiashuo1) filter app and print
-            } else {
-                // TODO(jiashuo1) print all
-            }
+            return false;
         }
     } else {
         for (const auto &node : nodes) {
-            target.emplace_back(node);
+            targets.emplace_back(node);
         }
-        const auto err_resps = sc->ddl_client->query_disk_info(target);
-        for (const auto &err_resp : err_resps) {
-            // TODO(jiashuo1) print all node without everl disk info
+    }
+
+    const auto &err_resps = sc->ddl_client->query_disk_info(targets);
+
+    dsn::utils::table_printer node_printer;
+    node_printer.add_title("node");
+    node_printer.add_column("capacity");
+    node_printer.add_column("avalable");
+    node_printer.add_column("ratio");
+    node_printer.add_column("balance");
+
+    for (int i = 0; i < targets.size(); i++) {
+        dsn::error_s err = err_resps[i].get_error();
+        if (!err.is_ok()) {
+            fmt::print(stderr,
+                       "disk[{}] info skiped because request failed, error={}\n",
+                       targets[i].ipv4_str(),
+                       err.description());
+        } else {
+            const auto &resp = err_resps[i].get_value();
+            int total_capacity_tatio =
+                std::round((double)resp.total_available_mb / resp.total_capacity_mb);
+
+            int temp;
+            for (const auto &disk_info : resp.disk_infos) {
+                temp += pow(
+                    std::round((double)disk_info.disk_available_mb / disk_info.disk_capacity_mb) -
+                        total_capacity_tatio,
+                    2);
+            }
+
+            int balance = sqrt(temp);
+
+            node_printer.add_row(targets[i].ipv4_str());
+            node_printer.append_data(resp.total_capacity_mb);
+            node_printer.append_data(resp.total_available_mb);
+            node_printer.append_data(total_capacity_tatio);
+            node_printer.append_data(balance);
+        }
+    }
+    node_printer.output(std::cout);
+    std::cout << std::endl;
+
+    if (params.find("node") != params.end()) {
+        const auto &err_resp = err_resps.back();
+        dsn::error_s err = err_resp.get_error();
+        if (!err.is_ok()) {
+            return false;
+        } else {
+            const auto &resp = err_resp.get_value();
+
+            int total_capacity_tatio =
+                std::round((double)resp.total_available_mb / resp.total_capacity_mb);
+
+            dsn::utils::table_printer disk_printer;
+
+            disk_printer.add_title("disk");
+            disk_printer.add_column("capacity");
+            disk_printer.add_column("avalable");
+            disk_printer.add_column("ratio");
+            disk_printer.add_column("density");
+            disk_printer.add_column("primary");
+            disk_printer.add_column("secondary");
+            disk_printer.add_column("replica");
+
+            for (const auto &disk_info : resp.disk_infos) {
+
+                int disk_avalable_ratio =
+                    std::round((double)disk_info.disk_available_mb / disk_info.disk_capacity_mb);
+                int disk_density = disk_avalable_ratio - total_capacity_tatio;
+                disk_printer.add_row(disk_info.tag);
+                disk_printer.append_data(disk_info.disk_capacity_mb);
+                disk_printer.append_data(disk_info.disk_available_mb);
+                disk_printer.append_data(disk_avalable_ratio);
+                disk_printer.append_data(disk_density);
+
+                int primary_count;
+                int secondary_count;
+                for (const auto &replica_count : disk_info.holding_primary_replica_counts) {
+                    primary_count += replica_count.second;
+                }
+
+                for (const auto &replica_count : disk_info.holding_secondary_replica_counts) {
+                    secondary_count += replica_count.second;
+                }
+
+                disk_printer.append_data(primary_count);
+                disk_printer.append_data(secondary_count);
+                disk_printer.append_data(primary_count + secondary_count);
+            }
+            disk_printer.output(std::cout);
         }
     }
 }
