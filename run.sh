@@ -374,7 +374,9 @@ function run_test()
         echo "ERROR: unable to continue on testing because starting onebox failed"
         exit 1
     fi
-
+    
+    sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  $ROOT/src/builder/server/test/config.ini
+    
     for module in `echo $test_modules`; do
         pushd $ROOT/src/builder/bin/$module
         REPORT_DIR=$REPORT_DIR ./run.sh $on_travis
