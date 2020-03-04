@@ -13,7 +13,7 @@
 
 bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
 {
-    // disk_info [-n|--node node_address] [-a|--app app_name] [-r|--resolve_ip]
+    // disk_info [-n|--node node_address] [-a|--app app_name]
 
     argh::parser cmd(args.argc, args.argv);
     if (cmd.pos_args().size() > 3) {
@@ -28,29 +28,50 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    std::string node_address = cmd.params["node"];
-    std::string app_name = cmd.params["app"];
-    bool resolve_ip = cmd[{"-r", "--resolve_ip"}];
+    std::map<std::string, std::string> params = cmd.params();
 
-    if (node_address == "" && app_name != "") {
+    if (params.find("app") != params.end() && params.find("node") == params.end()) {
         fmt::print(stderr, "please input node_address!\n");
         return false;
     }
 
-    auto err_resp = sc->ddl_client->query_disk_info(node_address, app_name, resolve_ip);
-    dsn::error_s err = err_resp.get_error();
-    if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
+    auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
+    if (error != dsn::ERR_OK) {
+        std::cout << "list nodes failed, error=" << error.to_string() << std::endl;
+        return true;
     }
-    if (!err.is_ok()) {
-        fmt::print(stderr, "querying disk_info error={}\n", err.description());
-    } else if (node_address == "" && app_name == "") {
-    }
-}
-else if (node_address != "" && app_name == "") {}
-else if (node_address != "" && app_name != "") {}
-return true;
-}
 
-// 伪代码
-if ()
+    std::vector<dsn::rpc_address> target;
+    if (params.find("node") != params.end()) {
+        std::string node_address = params["node"];
+        bool exist = false;
+        for (const auto &node : nodes) {
+            // TODO(jiashuo1) check and test ipv4_str value
+            if (node.first.ipv4_str() == node_address) {
+                target.emplace_back(node);
+                exist = true;
+            }
+        }
+        if (!exist) {
+            fmt::print(stderr, "please input valid node_address!\n");
+        } else {
+            const auto &err_resps = sc->ddl_client->query_disk_info(target);
+            const auto &resp = err_resps.back();
+            if (params.find("app") != params.end()) {
+                std::string app_name = params["app"];
+                // TODO(jiashuo1) filter app and print
+            } else {
+                // TODO(jiashuo1) print all
+            }
+        }
+    } else {
+        for (const auto &node : nodes) {
+            target.emplace_back(node);
+        }
+        const auto err_resps = sc->ddl_client->query_disk_info(target);
+        for (const auto &err_resp : err_resps) {
+            // TODO(jiashuo1) print all node without everl disk info
+        }
+    }
+}
