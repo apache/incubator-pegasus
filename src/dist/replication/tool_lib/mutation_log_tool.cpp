@@ -24,17 +24,9 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <dsn/dist/replication/mutation_log_tool.h>
-#include "../lib/mutation_log.h"
+#include <dsn/utility/time_utils.h>
+#include "dist/replication/lib/mutation_log.h"
 
 namespace dsn {
 namespace replication {
@@ -48,18 +40,21 @@ bool mutation_log_tool::dump(
     mutation_log_ptr mlog = new mutation_log_shared(log_dir, 32, false);
     error_code err = mlog->open(
         [mlog, &output, callback](int log_length, mutation_ptr &mu) -> bool {
-            if (mlog->max_decree(mu->data.header.pid) == 0)
+            if (mlog->max_decree(mu->data.header.pid) == 0) {
                 mlog->set_valid_start_offset_on_open(mu->data.header.pid, 0);
+            }
+            char timestamp_buf[32];
+            utils::time_ms_to_string(mu->data.header.timestamp / 1000, timestamp_buf);
             output << "mutation [" << mu->name() << "]: "
                    << "gpid=" << mu->data.header.pid.get_app_id() << "."
                    << mu->data.header.pid.get_partition_index() << ", "
                    << "ballot=" << mu->data.header.ballot << ", decree=" << mu->data.header.decree
                    << ", "
-                   << "timestamp=" << mu->data.header.timestamp
+                   << "timestamp=" << timestamp_buf
                    << ", last_committed_decree=" << mu->data.header.last_committed_decree << ", "
                    << "log_offset=" << mu->data.header.log_offset << ", log_length=" << log_length
                    << ", "
-                   << "update_count=" << mu->data.updates.size() << std::endl;
+                   << "update_count=" << mu->data.updates.size();
             if (callback && mu->data.updates.size() > 0) {
 
                 dsn::message_ex **batched_requests =
@@ -92,5 +87,5 @@ bool mutation_log_tool::dump(
         return true;
     }
 }
-}
-}
+} // namespace replication
+} // namespace dsn
