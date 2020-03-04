@@ -48,11 +48,9 @@ function get_local_ip()
     fi
 }
 
-
 LOCAL_IP=`get_local_ip`
 
 sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  config.ini
-
 
 ./pegasus_unit_test
 
