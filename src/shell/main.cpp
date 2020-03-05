@@ -440,6 +440,7 @@ static command_executor commands[] = {
     {
         "exit", "exit shell", "", exit_shell,
     },
+    {"disk_info", "query node disk info", "[-n|--node node_address]", query_disk_info},
     {
         nullptr, nullptr, nullptr, nullptr,
     }};

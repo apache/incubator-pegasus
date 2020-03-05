@@ -35,7 +35,7 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
         std::string node_address = params["node"];
         bool exist = false;
         for (const auto &node : nodes) {
-            // TODO(jiashuo1) check and test ipv4_str value
+            // TODO(jiashuo1) check and test ipv4_str return value
             if (node.first.ipv4_str() == node_address) {
                 targets.emplace_back(node);
                 exist = true;
@@ -60,15 +60,15 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
     node_printer.add_column("ratio");
     node_printer.add_column("balance");
 
-    for (int i = 0; i < targets.size(); i++) {
-        dsn::error_s err = err_resps[i].get_error();
+    for (const auto &err_resp : err_resps) {
+        dsn::error_s err = err_resp.second.get_error();
         if (!err.is_ok()) {
             fmt::print(stderr,
                        "disk[{}] info skiped because request failed, error={}\n",
-                       targets[i].ipv4_str(),
+                       err_resp.first.ipv4_str(),
                        err.description());
         } else {
-            const auto &resp = err_resps[i].get_value();
+            const auto &resp = err_resp.second.get_value();
             int total_capacity_tatio =
                 std::round((double)resp.total_available_mb / resp.total_capacity_mb);
 
@@ -82,7 +82,7 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
 
             int balance = sqrt(temp);
 
-            node_printer.add_row(targets[i].ipv4_str());
+            node_printer.add_row(err_resp.first.ipv4_str());
             node_printer.append_data(resp.total_capacity_mb);
             node_printer.append_data(resp.total_available_mb);
             node_printer.append_data(total_capacity_tatio);
@@ -93,18 +93,12 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
     std::cout << std::endl;
 
     if (params.find("node") != params.end()) {
-        const auto &err_resp = err_resps.back();
-        dsn::error_s err = err_resp.get_error();
+        const auto &err_resp = err_resps.begin();
+        dsn::error_s err = err_resp->second.get_error();
         if (!err.is_ok()) {
             return false;
         } else {
-            const auto &resp = err_resp.get_value();
-
-            int total_capacity_tatio =
-                std::round((double)resp.total_available_mb / resp.total_capacity_mb);
-
             dsn::utils::table_printer disk_printer;
-
             disk_printer.add_title("disk");
             disk_printer.add_column("capacity");
             disk_printer.add_column("avalable");
@@ -114,8 +108,11 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
             disk_printer.add_column("secondary");
             disk_printer.add_column("replica");
 
-            for (const auto &disk_info : resp.disk_infos) {
+            const auto &resp = err_resp->second.get_value();
 
+            int total_capacity_tatio =
+                std::round((double)resp.total_available_mb / resp.total_capacity_mb);
+            for (const auto &disk_info : resp.disk_infos) {
                 int disk_avalable_ratio =
                     std::round((double)disk_info.disk_available_mb / disk_info.disk_capacity_mb);
                 int disk_density = disk_avalable_ratio - total_capacity_tatio;
