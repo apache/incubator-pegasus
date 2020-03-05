@@ -299,7 +299,7 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
     } else if (_hotspot_detect_algorithm == "hotspot_algo_qps_skew") {
         policy.reset(new hotspot_algo_qps_skew());
     } else {
-        ddebug("no such hotspot detect algorithm");
+        dwarn("hotspot detection is disabled");
         return nullptr;
     }
     hotspot_calculator *calculator =
