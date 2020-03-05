@@ -681,9 +681,11 @@ void redis_parser::del_internal(message_entry &entry)
                     simple_error_reply(entry,
                                        "internal error " + std::to_string(rrdb_response.error));
                 } else {
-                    // NOTE: Deleting a non-existed key returns 1 too. But standard Redis returns 0. Pegasus behaves 
+                    // NOTE: Deleting a non-existed key returns 1 too. But standard Redis returns 0.
+                    // Pegasus behaves
                     // differently in this case intentionally for performance.
-                    // Because if we need to check the existence, we should use check_and_mutate instead.
+                    // Because if we need to check the existence, we should use check_and_mutate
+                    // instead.
                     simple_integer_reply(entry, 1);
                 }
             }
