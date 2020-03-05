@@ -152,6 +152,10 @@ void info_collector::on_app_stat()
         // hotspot_calculator is to detect hotspots
         hotspot_calculator *hotspot_calculator =
             get_hotspot_calculator(app_rows.first, app_rows.second.size());
+        if (hotspot_calculator == NULL) {
+            ddebug("hotspot_calculator pointer is NULL, hotspot detect won't continue!");
+            continue;
+        }
         hotspot_calculator->aggregate(app_rows.second);
         // new policy can be designed by strategy pattern in hotspot_partition_data.h
         hotspot_calculator->start_alg();
@@ -296,12 +300,13 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
         policy.reset(new hotspot_algo_qps_skew());
     } else {
         ddebug("no such hotspot detect algorithm");
-        policy.release();
+        policy = nullptr;
+        return NULL;
     }
-    hotspot_calculator *calculator_address =
+    hotspot_calculator *calculator =
         new hotspot_calculator(app_name, partition_num, std::move(policy));
-    _hotspot_calculator_store[app_name] = calculator_address;
-    return calculator_address;
+    _hotspot_calculator_store[app_name] = calculator;
+    return calculator;
 }
 
 } // namespace server
