@@ -57,29 +57,29 @@ public:
         data_samples.reserve(hotspot_app_data.size() * perf_counters.size());
         auto temp_data = hotspot_app_data;
         double total = 0, sd = 0, avg = 0;
-        int n = 0;
+        int sample_count = 0;
         // avg: Average number
         // sd: Standard deviation
-        // n: Number of samples
+        // sample_count: Number of samples
         while (!temp_data.empty()) {
             for (auto partition_data : temp_data.front()) {
                 if (partition_data.total_qps - 1.00 > 0) {
                     data_samples.push_back(partition_data.total_qps);
                     total += partition_data.total_qps;
-                    n++;
+                    sample_count++;
                 }
             }
             temp_data.pop();
         }
-        if (n == 0) {
+        if (sample_count == 0) {
             ddebug("hotspot_app_data size == 0");
             return;
         }
-        avg = total / n;
+        avg = total / sample_count;
         for (auto data_sample : data_samples) {
             sd += pow((data_sample - avg), 2);
         }
-        sd = sqrt(sd / n);
+        sd = sqrt(sd / sample_count);
         const auto &anly_data = hotspot_app_data.back();
         for (int i = 0; i < perf_counters.size(); i++) {
             double hot_point = (anly_data[i].total_qps - avg) / sd;
