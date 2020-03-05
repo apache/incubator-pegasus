@@ -152,8 +152,7 @@ void info_collector::on_app_stat()
         // hotspot_calculator is to detect hotspots
         hotspot_calculator *hotspot_calculator =
             get_hotspot_calculator(app_rows.first, app_rows.second.size());
-        if (hotspot_calculator == NULL) {
-            ddebug("hotspot_calculator pointer is NULL, hotspot detect won't continue!");
+        if (!hotspot_calculator) {
             continue;
         }
         hotspot_calculator->aggregate(app_rows.second);
