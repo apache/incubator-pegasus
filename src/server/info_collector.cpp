@@ -296,7 +296,7 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
         policy.reset(new hotspot_algo_qps_skew());
     } else {
         ddebug("no such hotspot detect algorithm");
-        policy.reset(new hotspot_algo_qps_variance());
+        policy.release();
     }
     hotspot_calculator *calculator_address =
         new hotspot_calculator(app_name, partition_num, std::move(policy));
