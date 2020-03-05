@@ -77,6 +77,10 @@ info_collector::info_collector()
                                               "storage_size_fetch_interval_seconds",
                                               3600, // default value 1h
                                               "storage size fetch interval seconds");
+    _hotspot_detect_algorithm = dsn_config_get_value_string("pegasus.collector",
+                                                            "hotspot_detect_algorithm",
+                                                            "hotspot_algo_qps_variance",
+                                                            "hotspot_detect_algorithm");
     // _storage_size_retry_wait_seconds is in range of [1, 60]
     _storage_size_retry_wait_seconds =
         std::min(60u, std::max(1u, _storage_size_fetch_interval_seconds / 10));
@@ -148,6 +152,9 @@ void info_collector::on_app_stat()
         // hotspot_calculator is to detect hotspots
         hotspot_calculator *hotspot_calculator =
             get_hotspot_calculator(app_rows.first, app_rows.second.size());
+        if (!hotspot_calculator) {
+            continue;
+        }
         hotspot_calculator->aggregate(app_rows.second);
         // new policy can be designed by strategy pattern in hotspot_partition_data.h
         hotspot_calculator->start_alg();
@@ -285,9 +292,20 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
-    hotspot_calculator *calculator_address = new hotspot_calculator(app_name, partition_num);
-    _hotspot_calculator_store[app_name] = calculator_address;
-    return calculator_address;
+    std::unique_ptr<hotspot_policy> policy;
+    if (_hotspot_detect_algorithm == "hotspot_algo_qps_variance") {
+        policy.reset(new hotspot_algo_qps_variance());
+    } else if (_hotspot_detect_algorithm == "hotspot_algo_qps_skew") {
+        policy.reset(new hotspot_algo_qps_skew());
+    } else {
+        dwarn("hotspot detection is disabled");
+        _hotspot_calculator_store[app_name] = nullptr;
+        return nullptr;
+    }
+    hotspot_calculator *calculator =
+        new hotspot_calculator(app_name, partition_num, std::move(policy));
+    _hotspot_calculator_store[app_name] = calculator;
+    return calculator;
 }
 
 } // namespace server
