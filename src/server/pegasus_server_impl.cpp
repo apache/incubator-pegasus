@@ -148,7 +148,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     "rocksdb options.writable_file_max_buffer_size");
 
     _statistics = rocksdb::CreateDBStatistics();
-    _statistics->stats_level_ = rocksdb::kExceptDetailedTimers;
+    _statistics->set_stats_level(rocksdb::kExceptDetailedTimers);
     _db_opts.statistics = _statistics;
 
     _db_opts.listeners.emplace_back(new pegasus_event_listener());
