@@ -23,6 +23,12 @@ public:
                                    std::placeholders::_1,
                                    std::placeholders::_2),
                          "ip:port/meta/app?app_name=temp");
+        register_handler("app/duplication",
+                         std::bind(&meta_http_service::query_duplication_handler,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2),
+                         "ip:port/meta/app/duplication?name=<app_name>");
         register_handler("apps",
                          std::bind(&meta_http_service::list_app_handler,
                                    this,
@@ -63,6 +69,7 @@ public:
     void get_cluster_info_handler(const http_request &req, http_response &resp);
     void get_app_envs_handler(const http_request &req, http_response &resp);
     void query_backup_policy_handler(const http_request &req, http_response &resp);
+    void query_duplication_handler(const http_request &req, http_response &resp);
 
 private:
     // set redirect location if current server is not primary

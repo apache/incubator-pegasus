@@ -280,6 +280,15 @@ check_and_download "${CURL_PKG}"\
     "${CURL_NAME}"
 exit_if_fail $?
 
+# nlohmann_json
+# from: https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip
+NLOHMANN_JSON_NAME=nlohmann_json-3.7.3
+NLOHMANN_JSON_PKG=${NLOHMANN_JSON_NAME}.zip
+check_and_download "${NLOHMANN_JSON_PKG}" \
+    "${OSS_URL_PREFIX}/${NLOHMANN_JSON_PKG}" \
+    "7249387593792b565dcb30d87bca0de3" \
+    "${NLOHMANN_JSON_NAME}"
+
 # s2geometry
 # from: https://github.com/google/s2geometry/archive/0239455c1e260d6d2c843649385b4fb9f5b28dba.zip
 S2GEOMETRY_NAME=s2geometry-0239455c1e260d6d2c843649385b4fb9f5b28dba

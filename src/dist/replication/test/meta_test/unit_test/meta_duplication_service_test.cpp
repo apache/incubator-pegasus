@@ -26,9 +26,11 @@
 
 #include <gtest/gtest.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/time_utils.h>
 
 #include "dist/replication/meta_server/server_load_balancer.h"
 #include "dist/replication/meta_server/meta_server_failure_detector.h"
+#include "dist/replication/meta_server/meta_http_service.h"
 #include "dist/replication/meta_server/duplication/meta_duplication_service.h"
 #include "dist/replication/test/meta_test/misc/misc.h"
 
@@ -648,6 +650,37 @@ TEST_F(meta_duplication_service_test, add_duplication_freezed) { test_add_duplic
 TEST_F(meta_duplication_service_test, recover_from_corrupted_meta_data)
 {
     test_recover_from_corrupted_meta_data();
+}
+
+TEST_F(meta_duplication_service_test, query_duplication_handler)
+{
+    std::string test_app = "test-app";
+    create_app(test_app);
+    create_dup(test_app);
+    meta_http_service mhs(_ms.get());
+
+    http_request fake_req;
+    http_response fake_resp;
+    fake_req.query_args["name"] = test_app + "not-found";
+    mhs.query_duplication_handler(fake_req, fake_resp);
+    ASSERT_EQ(fake_resp.status_code, http_status_code::not_found);
+
+    const auto &duplications = find_app(test_app)->duplications;
+    ASSERT_EQ(duplications.size(), 1);
+    auto dup = duplications.begin()->second;
+
+    fake_req.query_args["name"] = test_app;
+    mhs.query_duplication_handler(fake_req, fake_resp);
+    ASSERT_EQ(fake_resp.status_code, http_status_code::ok);
+    char ts_buf[32];
+    utils::time_ms_to_date_time(
+        static_cast<uint64_t>(dup->create_timestamp_ms), ts_buf, sizeof(ts_buf));
+    ASSERT_EQ(
+        fake_resp.body,
+        std::string() +
+            R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" + std::to_string(dup->id) +
+            R"(,"not_confirmed_mutations_num":{"0":1,"1":1,"2":1,"3":1,"4":1,"5":1,"6":1,"7":1})"
+            R"(,"remote":"slave-cluster","status":"DS_START"},"appid":2})");
 }
 
 } // namespace replication

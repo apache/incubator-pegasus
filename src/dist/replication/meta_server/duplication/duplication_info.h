@@ -115,12 +115,8 @@ public:
 
     // duplication_query_rpc is handled in THREAD_POOL_META_SERVER,
     // which is not thread safe for read.
-    void append_if_valid_for_query(
-        /*out*/ std::vector<duplication_entry> &entry_list) const
-    {
-        zauto_read_lock l(_lock);
-        entry_list.emplace_back(to_duplication_entry());
-    }
+    void append_if_valid_for_query(const app_state &app,
+                                   /*out*/ std::vector<duplication_entry> &entry_list) const;
 
     duplication_entry to_duplication_entry() const
     {
@@ -129,6 +125,7 @@ public:
         entry.create_ts = create_timestamp_ms;
         entry.remote = remote;
         entry.status = _status;
+        entry.__isset.progress = true;
         for (const auto &kv : _progress) {
             if (!kv.second.is_inited) {
                 continue;

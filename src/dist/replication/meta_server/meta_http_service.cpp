@@ -8,6 +8,7 @@
 #include <dsn/cpp/json_helper.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 #include <dsn/dist/replication/replication_types.h>
+#include <dsn/dist/replication/duplication_common.h>
 #include <dsn/utility/config_api.h>
 #include <dsn/utility/output_utils.h>
 #include <dsn/utility/time_utils.h>
@@ -16,6 +17,7 @@
 #include "meta_server_failure_detector.h"
 #include "server_load_balancer.h"
 #include "server_state.h"
+#include "duplication/meta_duplication_service.h"
 
 namespace dsn {
 namespace replication {
@@ -573,8 +575,39 @@ void meta_http_service::query_backup_policy_handler(const http_request &req, htt
     tp_query_backup_policy.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
+}
 
-    return;
+void meta_http_service::query_duplication_handler(const http_request &req, http_response &resp)
+{
+    if (!redirect_if_not_primary(req, resp)) {
+        return;
+    }
+    if (_service->_dup_svc == nullptr) {
+        resp.body = "duplication is not enabled [duplication_enabled=false]";
+        resp.status_code = http_status_code::not_found;
+        return;
+    }
+    duplication_query_request rpc_req;
+    auto it = req.query_args.find("name");
+    if (it == req.query_args.end()) {
+        resp.body = "name should not be empty";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+    rpc_req.app_name = it->second;
+    duplication_query_response rpc_resp;
+    _service->_dup_svc->query_duplication_info(rpc_req, rpc_resp);
+    if (rpc_resp.err != ERR_OK) {
+        resp.body = rpc_resp.err.to_string();
+        if (rpc_resp.err == ERR_APP_NOT_EXIST) {
+            resp.status_code = http_status_code::not_found;
+        } else {
+            resp.status_code = http_status_code::internal_server_error;
+        }
+        return;
+    }
+    resp.status_code = http_status_code::ok;
+    resp.body = duplication_query_response_to_string(rpc_resp);
 }
 
 bool meta_http_service::redirect_if_not_primary(const http_request &req, http_response &resp)

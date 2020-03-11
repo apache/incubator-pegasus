@@ -127,23 +127,29 @@ void http_server::add_service(http_service *service)
         unresolved_query = decoded_unresolved_query.get_value();
     }
 
+    // remove tailing '\0'
+    if (!unresolved_path.empty() && *unresolved_path.crbegin() == '\0') {
+        unresolved_path.pop_back();
+    }
     std::vector<std::string> args;
     boost::split(args, unresolved_path, boost::is_any_of("/"));
-    std::vector<string_view> real_args;
-    for (string_view arg : args) {
-        if (!arg.empty() && strlen(arg.data()) != 0) {
-            real_args.emplace_back(string_view(arg.data()));
+    std::vector<std::string> real_args;
+    for (std::string &arg : args) {
+        if (!arg.empty()) {
+            real_args.emplace_back(std::move(arg));
         }
     }
-    if (real_args.size() > 2) {
-        return error_s::make(ERR_INVALID_PARAMETERS);
-    }
-    if (real_args.size() == 1) {
-        ret.service_method = {std::string(real_args[0]), ""};
-    } else if (real_args.size() == 0) {
+    if (real_args.size() == 0) {
         ret.service_method = {"", ""};
+    } else if (real_args.size() == 1) {
+        ret.service_method = {std::move(real_args[0]), ""};
     } else {
-        ret.service_method = {std::string(real_args[0]), std::string(real_args[1])};
+        std::string method = std::move(real_args[1]);
+        for (int i = 2; i < real_args.size(); i++) {
+            method += '/';
+            method += real_args[i];
+        }
+        ret.service_method = {std::move(real_args[0]), std::move(method)};
     }
 
     // find if there are method args (<ip>:<port>/<service>/<method>?<arg>=<val>&<arg>=<val>)

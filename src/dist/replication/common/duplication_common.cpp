@@ -28,9 +28,8 @@
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/singleton.h>
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/prettywriter.h>
+#include <dsn/utility/time_utils.h>
+#include <nlohmann/json.hpp>
 
 namespace dsn {
 namespace replication {
@@ -114,32 +113,48 @@ public:
 
 // TODO(wutao1): implement our C++ version of `TSimpleJSONProtocol` if there're
 //               more cases for converting thrift to JSON
-/*extern*/ std::string duplication_entry_to_string(const duplication_entry &dup)
+static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
 {
-    rapidjson::Document doc;
-    doc.SetObject();
-    auto &alloc = doc.GetAllocator();
-
-    doc.AddMember("dupid", dup.dupid, alloc);
-    doc.AddMember("status", rapidjson::StringRef(duplication_status_to_string(dup.status)), alloc);
-    doc.AddMember("remote", rapidjson::StringRef(dup.remote.data(), dup.remote.length()), alloc);
-    doc.AddMember("create_ts", dup.create_ts, alloc);
-
-    doc.AddMember("progress", rapidjson::Value(), alloc);
-    auto &p = doc["progress"];
-    p.SetArray();
-    for (const auto &kv : dup.progress) {
-        rapidjson::Value part;
-        part.SetObject();
-        part.AddMember("pid", kv.first, alloc);
-        part.AddMember("confirmed", kv.second, alloc);
-        p.PushBack(std::move(part), alloc);
+    char ts_buf[30];
+    utils::time_ms_to_date_time(static_cast<uint64_t>(ent.create_ts), ts_buf, sizeof(ts_buf));
+    nlohmann::json json{
+        {"dupid", ent.dupid},
+        {"create_ts", ts_buf},
+        {"remote", ent.remote},
+        {"status", duplication_status_to_string(ent.status)},
+    };
+    if (ent.__isset.not_confirmed) {
+        nlohmann::json sub_json;
+        for (const auto &p : ent.not_confirmed) {
+            sub_json[std::to_string(p.first)] = p.second;
+        }
+        json["not_confirmed_mutations_num"] = sub_json;
     }
+    if (ent.__isset.progress) {
+        nlohmann::json sub_json;
+        for (const auto &p : ent.progress) {
+            sub_json[std::to_string(p.first)] = p.second;
+        }
+        json["progress"] = sub_json;
+    }
+    return json;
+}
 
-    rapidjson::StringBuffer sb;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-    doc.Accept(writer);
-    return sb.GetString();
+/*extern*/ std::string duplication_entry_to_string(const duplication_entry &ent)
+{
+    return duplication_entry_to_json(ent).dump();
+}
+
+/*extern*/ std::string duplication_query_response_to_string(const duplication_query_response &resp)
+{
+    nlohmann::json json;
+    int i = 1;
+    for (const auto &ent : resp.entry_list) {
+        json["appid"] = resp.appid;
+        json[std::to_string(i)] = duplication_entry_to_json(ent);
+        i++;
+    }
+    return json.dump();
 }
 
 /*extern*/ const std::map<std::string, uint8_t> &get_duplication_group()

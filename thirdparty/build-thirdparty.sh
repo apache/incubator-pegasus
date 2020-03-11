@@ -312,3 +312,10 @@ if [ ! -d $TP_OUTPUT/include/prometheus ]; then
 else
     echo "skip build prometheus-cpp"
 fi
+
+#build nlohmann_json
+if [ ! -d $TP_OUTPUT/include/nlohmann ]; then
+    mv $TP_SRC/nlohmann_json-3.7.3/include/nlohmann $TP_OUTPUT/include
+else
+    echo "skip build nlohmann_json"
+fi

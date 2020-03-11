@@ -53,7 +53,7 @@ void meta_duplication_service::query_duplication_info(const duplication_query_re
             response.appid = app->app_id;
             for (auto &dup_id_to_info : app->duplications) {
                 const duplication_info_s_ptr &dup = dup_id_to_info.second;
-                dup->append_if_valid_for_query(response.entry_list);
+                dup->append_if_valid_for_query(*app, response.entry_list);
             }
         }
     }
