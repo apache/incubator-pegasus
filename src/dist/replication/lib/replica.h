@@ -389,6 +389,14 @@ private:
     // child send notification to primary parent when it finish async learn
     void child_notify_catch_up();
 
+    // primary parent handle child catch_up request
+    void parent_handle_child_catch_up(const notify_catch_up_request &request,
+                                      notify_cacth_up_response &response);
+
+    // primary parent check if sync_point has been committed
+    // sync_point is the first decree after parent send write request to child synchronously
+    void parent_check_sync_point_commit(decree sync_point);
+
     // return true if parent status is valid
     bool parent_check_states();
 

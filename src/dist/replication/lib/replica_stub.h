@@ -115,6 +115,13 @@ public:
     void on_copy_checkpoint(const replica_configuration &request, /*out*/ learn_response &response);
 
     //
+    //    functions while executing partition split
+    //
+    // on primary, child notify itself has been caught up parent
+    void on_notify_primary_split_catch_up(const notify_catch_up_request &request,
+                                          notify_cacth_up_response &response);
+
+    //
     //    local messages
     //
     void on_meta_server_connected();

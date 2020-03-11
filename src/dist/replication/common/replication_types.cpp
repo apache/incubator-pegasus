@@ -13309,5 +13309,262 @@ void app_partition_split_response::printTo(std::ostream &out) const
         << "partition_count=" << to_string(partition_count);
     out << ")";
 }
+
+notify_catch_up_request::~notify_catch_up_request() throw() {}
+
+void notify_catch_up_request::__set_parent_gpid(const ::dsn::gpid &val) { this->parent_gpid = val; }
+
+void notify_catch_up_request::__set_child_gpid(const ::dsn::gpid &val) { this->child_gpid = val; }
+
+void notify_catch_up_request::__set_child_ballot(const int64_t val) { this->child_ballot = val; }
+
+void notify_catch_up_request::__set_child_address(const ::dsn::rpc_address &val)
+{
+    this->child_address = val;
+}
+
+uint32_t notify_catch_up_request::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->parent_gpid.read(iprot);
+                this->__isset.parent_gpid = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->child_gpid.read(iprot);
+                this->__isset.child_gpid = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 3:
+            if (ftype == ::apache::thrift::protocol::T_I64) {
+                xfer += iprot->readI64(this->child_ballot);
+                this->__isset.child_ballot = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 4:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->child_address.read(iprot);
+                this->__isset.child_address = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t notify_catch_up_request::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("notify_catch_up_request");
+
+    xfer += oprot->writeFieldBegin("parent_gpid", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->parent_gpid.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("child_gpid", ::apache::thrift::protocol::T_STRUCT, 2);
+    xfer += this->child_gpid.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("child_ballot", ::apache::thrift::protocol::T_I64, 3);
+    xfer += oprot->writeI64(this->child_ballot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("child_address", ::apache::thrift::protocol::T_STRUCT, 4);
+    xfer += this->child_address.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(notify_catch_up_request &a, notify_catch_up_request &b)
+{
+    using ::std::swap;
+    swap(a.parent_gpid, b.parent_gpid);
+    swap(a.child_gpid, b.child_gpid);
+    swap(a.child_ballot, b.child_ballot);
+    swap(a.child_address, b.child_address);
+    swap(a.__isset, b.__isset);
+}
+
+notify_catch_up_request::notify_catch_up_request(const notify_catch_up_request &other578)
+{
+    parent_gpid = other578.parent_gpid;
+    child_gpid = other578.child_gpid;
+    child_ballot = other578.child_ballot;
+    child_address = other578.child_address;
+    __isset = other578.__isset;
+}
+notify_catch_up_request::notify_catch_up_request(notify_catch_up_request &&other579)
+{
+    parent_gpid = std::move(other579.parent_gpid);
+    child_gpid = std::move(other579.child_gpid);
+    child_ballot = std::move(other579.child_ballot);
+    child_address = std::move(other579.child_address);
+    __isset = std::move(other579.__isset);
+}
+notify_catch_up_request &notify_catch_up_request::operator=(const notify_catch_up_request &other580)
+{
+    parent_gpid = other580.parent_gpid;
+    child_gpid = other580.child_gpid;
+    child_ballot = other580.child_ballot;
+    child_address = other580.child_address;
+    __isset = other580.__isset;
+    return *this;
+}
+notify_catch_up_request &notify_catch_up_request::operator=(notify_catch_up_request &&other581)
+{
+    parent_gpid = std::move(other581.parent_gpid);
+    child_gpid = std::move(other581.child_gpid);
+    child_ballot = std::move(other581.child_ballot);
+    child_address = std::move(other581.child_address);
+    __isset = std::move(other581.__isset);
+    return *this;
+}
+void notify_catch_up_request::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "notify_catch_up_request(";
+    out << "parent_gpid=" << to_string(parent_gpid);
+    out << ", "
+        << "child_gpid=" << to_string(child_gpid);
+    out << ", "
+        << "child_ballot=" << to_string(child_ballot);
+    out << ", "
+        << "child_address=" << to_string(child_address);
+    out << ")";
+}
+
+notify_cacth_up_response::~notify_cacth_up_response() throw() {}
+
+void notify_cacth_up_response::__set_err(const ::dsn::error_code &val) { this->err = val; }
+
+uint32_t notify_cacth_up_response::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->err.read(iprot);
+                this->__isset.err = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t notify_cacth_up_response::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("notify_cacth_up_response");
+
+    xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->err.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(notify_cacth_up_response &a, notify_cacth_up_response &b)
+{
+    using ::std::swap;
+    swap(a.err, b.err);
+    swap(a.__isset, b.__isset);
+}
+
+notify_cacth_up_response::notify_cacth_up_response(const notify_cacth_up_response &other582)
+{
+    err = other582.err;
+    __isset = other582.__isset;
+}
+notify_cacth_up_response::notify_cacth_up_response(notify_cacth_up_response &&other583)
+{
+    err = std::move(other583.err);
+    __isset = std::move(other583.__isset);
+}
+notify_cacth_up_response &notify_cacth_up_response::
+operator=(const notify_cacth_up_response &other584)
+{
+    err = other584.err;
+    __isset = other584.__isset;
+    return *this;
+}
+notify_cacth_up_response &notify_cacth_up_response::operator=(notify_cacth_up_response &&other585)
+{
+    err = std::move(other585.err);
+    __isset = std::move(other585.__isset);
+    return *this;
+}
+void notify_cacth_up_response::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "notify_cacth_up_response(";
+    out << "err=" << to_string(err);
+    out << ")";
+}
 }
 } // namespace

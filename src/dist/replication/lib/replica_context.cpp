@@ -92,6 +92,10 @@ void primary_context::cleanup(bool clean_pending_mutations)
     CLEANUP_TASK_ALWAYS(checkpoint_task)
 
     membership.ballot = 0;
+
+    caught_up_children.clear();
+
+    sync_send_write_request = false;
 }
 
 bool primary_context::is_cleaned()

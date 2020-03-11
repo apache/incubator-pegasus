@@ -785,6 +785,23 @@ struct app_partition_split_response
     3:i32                    partition_count;
 }
 
+// child to primary parent, notifying that itself has caught up with parent
+struct notify_catch_up_request
+{
+    1:dsn.gpid          parent_gpid;
+    2:dsn.gpid          child_gpid;
+    3:i64               child_ballot;
+    4:dsn.rpc_address   child_address;
+}
+
+struct notify_cacth_up_response
+{
+    // Possible errors:
+    // - ERR_OBJECT_NOT_FOUND: replica can not be found
+    // - ERR_INVALID_STATE: replica is not primary or ballot not match or child_gpid not match
+    1:dsn.error_code    err;
+}
+
 /*
 service replica_s
 {

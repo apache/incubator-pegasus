@@ -102,6 +102,22 @@ public:
     dsn::task_ptr checkpoint_task;
 
     uint64_t last_prepare_ts_ms;
+
+    // Used for partition split
+    // child addresses who has been caught up with its parent
+    std::unordered_set<dsn::rpc_address> caught_up_children;
+
+    // Used for partition split
+    // whether parent's write request should be sent to child synchronously
+    // if {sync_send_write_request} = true
+    // - parent should recevie prepare ack from child synchronously during 2pc
+    // if {sync_send_write_request} = false and replica is during partition split
+    // - parent should copy mutations to child asynchronously, child is during async-learn
+    // whether a replica is during partition split is determined by a variety named `_child_gpid` of
+    // replica class
+    // if app_id of `_child_gpid` is greater than zero, it means replica is during partition split,
+    // otherwise, not during partition split
+    bool sync_send_write_request{false};
 };
 
 class secondary_context

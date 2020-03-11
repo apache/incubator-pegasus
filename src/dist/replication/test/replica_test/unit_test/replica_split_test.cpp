@@ -36,9 +36,18 @@ public:
 
     void mock_group_check_request()
     {
-        _req.child_gpid = _child_pid;
-        _req.config.ballot = _init_ballot;
-        _req.config.status = partition_status::PS_PRIMARY;
+        _group_check_req.child_gpid = _child_pid;
+        _group_check_req.config.ballot = _init_ballot;
+        _group_check_req.config.status = partition_status::PS_PRIMARY;
+    }
+
+    void mock_notify_catch_up_request()
+    {
+        _parent->set_child_gpid(_child_pid);
+        _catch_up_req.child_gpid = _child_pid;
+        _catch_up_req.parent_gpid = _parent_pid;
+        _catch_up_req.child_ballot = _init_ballot;
+        _catch_up_req.child_address = dsn::rpc_address("127.0.0.1", 1);
     }
 
     void generate_child(partition_status::type status)
@@ -106,6 +115,23 @@ public:
         }
     }
 
+    void mock_parent_primary_context(bool will_all_caught_up)
+    {
+        _parent->_primary_states.statuses[dsn::rpc_address("127.0.0.1", 1)] =
+            partition_status::PS_PRIMARY;
+        _parent->_primary_states.statuses[dsn::rpc_address("127.0.0.1", 2)] =
+            partition_status::PS_SECONDARY;
+        _parent->_primary_states.statuses[dsn::rpc_address("127.0.0.1", 3)] =
+            partition_status::PS_SECONDARY;
+        _parent->_primary_states.caught_up_children.insert(dsn::rpc_address("127.0.0.1", 2));
+        if (will_all_caught_up) {
+            _parent->_primary_states.caught_up_children.insert(dsn::rpc_address("127.0.0.1", 3));
+        }
+        _parent->_primary_states.sync_send_write_request = false;
+    }
+
+    bool get_sync_send_write_request() { return _parent->_primary_states.sync_send_write_request; }
+
     void
     mock_child_async_learn_states(mock_replica_ptr plist_rep, bool add_to_plog, decree min_decree)
     {
@@ -133,7 +159,7 @@ public:
 
     void test_on_add_child()
     {
-        _parent->on_add_child(_req);
+        _parent->on_add_child(_group_check_req);
         _parent->tracker()->wait_outstanding_tasks();
     }
 
@@ -187,6 +213,14 @@ public:
         _child->tracker()->wait_outstanding_tasks();
     }
 
+    dsn::error_code test_parent_handle_child_catch_up()
+    {
+        notify_cacth_up_response resp;
+        _parent->parent_handle_child_catch_up(_catch_up_req, resp);
+        _parent->tracker()->wait_outstanding_tasks();
+        return resp.err;
+    }
+
 public:
     std::unique_ptr<mock_replica_stub> _stub;
 
@@ -200,7 +234,8 @@ public:
     ballot _init_ballot = 3;
     decree _decree = 5;
 
-    group_check_request _req;
+    group_check_request _group_check_req;
+    notify_catch_up_request _catch_up_req;
     std::vector<std::string> _private_log_files;
     std::vector<mutation_ptr> _mutation_list;
     const uint32_t _max_count = 10;
@@ -212,7 +247,7 @@ public:
 TEST_F(replica_split_test, add_child_wrong_ballot)
 {
     ballot wrong_ballot = 5;
-    _req.config.ballot = wrong_ballot;
+    _group_check_req.config.ballot = wrong_ballot;
     test_on_add_child();
     ASSERT_EQ(_stub->get_replica(_child_pid), nullptr);
 }
@@ -378,6 +413,47 @@ TEST_F(replica_split_test, catch_up_succeed_with_learn_in_memory_mutations)
 
     cleanup_prepare_list(_child);
     cleanup_child_split_context();
+}
+
+TEST_F(replica_split_test, handle_catch_up_with_ballot_wrong)
+{
+    mock_notify_catch_up_request();
+    _catch_up_req.child_ballot = 1;
+
+    fail::setup();
+    fail::cfg("replica_parent_check_sync_point_commit", "return()");
+    dsn::error_code err = test_parent_handle_child_catch_up();
+    fail::teardown();
+
+    ASSERT_EQ(err, ERR_INVALID_STATE);
+}
+
+TEST_F(replica_split_test, handle_catch_up_with_not_all_caught_up)
+{
+    mock_parent_primary_context(false);
+    mock_notify_catch_up_request();
+
+    fail::setup();
+    fail::cfg("replica_parent_check_sync_point_commit", "return()");
+    dsn::error_code err = test_parent_handle_child_catch_up();
+    fail::teardown();
+
+    ASSERT_EQ(err, ERR_OK);
+    ASSERT_FALSE(get_sync_send_write_request());
+}
+
+TEST_F(replica_split_test, handle_catch_up_with_all_caught_up)
+{
+    mock_parent_primary_context(true);
+    mock_notify_catch_up_request();
+
+    fail::setup();
+    fail::cfg("replica_parent_check_sync_point_commit", "return()");
+    dsn::error_code err = test_parent_handle_child_catch_up();
+    fail::teardown();
+
+    ASSERT_EQ(err, ERR_OK);
+    ASSERT_TRUE(get_sync_send_write_request());
 }
 
 } // namespace replication
