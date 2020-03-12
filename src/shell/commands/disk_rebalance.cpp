@@ -14,12 +14,21 @@
 
 bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
 {
-    // disk_info [-n|--node node_address] [-a|--app app_id]
+    // disk_info [-n|--node node_address] [-a|--app app_replica_count]
 
     argh::parser cmd(args.argc, args.argv);
-    if (cmd.pos_args().size() > 4) {
+    if (cmd.pos_args().size() > 3) {
         fmt::print(stderr, "too many params\n");
         return false;
+    }
+
+    bool query_one_node = cmd[{"-n", "--node"}];
+    bool query_app_replica_count = cmd[{"-a", "--app_replica"}];
+
+    // only test
+    fmt::print(stderr, "too many params {}\n", cmd.pos_args().size());
+    for (auto n : cmd.pos_args()) {
+        fmt::print(stderr, "params= {}\n", n.c_str());
     }
 
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
@@ -29,19 +38,22 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    int app_id;
     std::string node_address;
     std::vector<dsn::rpc_address> targets;
-    if (cmd({"-n", "--node"}) >> node_address) {
+    if (query_one_node) {
+        if (!cmd(1)) {
+            fmt::print(stderr, "missing param <node_address>\n");
+            return false;
+        }
+        node_address = cmd(1).str();
+        // TODO(jiashuo1) will delete ip_port split.
         std::vector<std::string> ip_port;
         dsn::utils::split_args(node_address.c_str(), ip_port, ':');
 
-        if(ip_port.size() < 2){
+        if (ip_port.size() < 2) {
             fmt::print(stderr, "please input valid node_address!\n");
             return false;
         }
-
-        dassert(std::stoi(ip_port[1]),"port error");
 
         for (auto &node : nodes) {
             // TODO(jiashuo1) check and test ipv4_str return value
@@ -49,13 +61,15 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
                 targets.emplace_back(node.first);
             }
         }
+
         if (targets.empty()) {
-            fmt::print(stderr, "please input valid node_address!\n");
+            fmt::print(stderr, "please input valid target node_address!\n");
             return false;
         }
     } else {
-        if (cmd({"-a", "--app"})) {
-            fmt::print(stderr, "please input node_address when query an app replica counts!\n");
+        // TODO(jiashuo1) will move
+        if (query_app_replica_count) {
+            fmt::print(stderr, "please input node_address when query app replica count!\n");
             return false;
         }
         for (const auto &node : nodes) {
@@ -63,20 +77,21 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    if (!(cmd({"-a", "--app"}) >> app_id)) {
-        app_id = 0;
+    int app_id = 0;
+    if (query_app_replica_count) {
+        if (cmd(2)) {
+            app_id = stoi(cmd(2).str());
+        }
     }
-
-    fmt::print(stderr, "app={}!\n",app_id);
 
     const auto &err_resps = sc->ddl_client->query_disk_info(targets, app_id);
 
     dsn::utils::table_printer node_printer;
-    node_printer.add_title("node");
-    node_printer.add_column("capacity");
-    node_printer.add_column("avalable");
-    node_printer.add_column("ratio");
-    node_printer.add_column("balance");
+    node_printer.add_title("node_address");
+    node_printer.add_column("total_capacity(MB)");
+    node_printer.add_column("avalable_capacity(MB)");
+    node_printer.add_column("avalable_ratio(%)");
+    node_printer.add_column("capacity_balance");
 
     for (const auto &err_resp : err_resps) {
         dsn::error_s err = err_resp.second.get_error();
@@ -101,61 +116,70 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
                             2);
             }
 
-            int balance = sqrt(temp);
+            int capacity_balance = sqrt(temp);
 
             node_printer.add_row(err_resp.first.ipv4_str());
             node_printer.append_data(resp.total_capacity_mb);
             node_printer.append_data(resp.total_available_mb);
             node_printer.append_data(total_capacity_tatio);
-            node_printer.append_data(balance);
+            node_printer.append_data(capacity_balance);
         }
     }
     node_printer.output(std::cout);
     std::cout << std::endl;
 
-    if (cmd({"-n", "--node"})) {
+    if (query_one_node) {
         const auto &err_resp = err_resps.begin();
         dsn::error_s err = err_resp->second.get_error();
+        if (err.is_ok()) {
+            err = dsn::error_s::make(err_resp->second.get_value().err);
+        }
         if (!err.is_ok()) {
             return false;
         } else {
             dsn::utils::table_printer disk_printer;
             disk_printer.add_title("disk");
-            disk_printer.add_column("capacity");
-            disk_printer.add_column("avalable");
-            disk_printer.add_column("ratio");
-            disk_printer.add_column("density");
-            disk_printer.add_column("primary");
-            disk_printer.add_column("secondary");
-            disk_printer.add_column("replica");
-
             const auto &resp = err_resp->second.get_value();
+            if (query_app_replica_count) {
+                disk_printer.add_column("primary_count");
+                disk_printer.add_column("secondary_count");
+                disk_printer.add_column("replica_count");
 
-            int total_capacity_tatio =
-                std::round((double)resp.total_available_mb * 100 / resp.total_capacity_mb);
-            for (const auto &disk_info : resp.disk_infos) {
-                int disk_avalable_ratio =
-                    std::round((double)disk_info.disk_available_mb * 100 / disk_info.disk_capacity_mb);
-                int disk_density = disk_avalable_ratio - total_capacity_tatio;
-                disk_printer.add_row(disk_info.tag);
-                disk_printer.append_data(disk_info.disk_capacity_mb);
-                disk_printer.append_data(disk_info.disk_available_mb);
-                disk_printer.append_data(disk_avalable_ratio);
-                disk_printer.append_data(disk_density);
+                for (const auto &disk_info : resp.disk_infos) {
+                    int primary_count = 0;
+                    int secondary_count = 0;
+                    for (const auto &replica_count : disk_info.holding_primary_replica_counts) {
+                        primary_count += replica_count.second;
+                    }
 
-                int primary_count = 0;
-                int secondary_count = 0;
-                for (const auto &replica_count : disk_info.holding_primary_replica_counts) {
-                    primary_count += replica_count.second;
+                    for (const auto &replica_count : disk_info.holding_secondary_replica_counts) {
+                        secondary_count += replica_count.second;
+                    }
+                    disk_printer.add_row(disk_info.tag);
+                    disk_printer.append_data(primary_count);
+                    disk_printer.append_data(secondary_count);
+                    disk_printer.append_data(primary_count + secondary_count);
                 }
 
-                for (const auto &replica_count : disk_info.holding_secondary_replica_counts) {
-                    secondary_count += replica_count.second;
-                }
+            } else {
+                disk_printer.add_column("total_capacity(MB)");
+                disk_printer.add_column("avalable_capacity(MB)");
+                disk_printer.add_column("avalable_ratio(%)");
+                disk_printer.add_column("disk_density");
 
-                disk_printer.append_data(primary_count);
-                disk_printer.append_data(secondary_count);
-                disk_printer.append_data(primary_count + secondary_count);
+                int total_capacity_ratio =
+                    std::round((double)resp.total_available_mb * 100 / resp.total_capacity_mb);
+
+                for (const auto &disk_info : resp.disk_infos) {
+                    int disk_avalable_ratio = std::round((double)disk_info.disk_available_mb * 100 /
+                                                         disk_info.disk_capacity_mb);
+                    int disk_density = disk_avalable_ratio - total_capacity_ratio;
+                    disk_printer.add_row(disk_info.tag);
+                    disk_printer.append_data(disk_info.disk_capacity_mb);
+                    disk_printer.append_data(disk_info.disk_available_mb);
+                    disk_printer.append_data(disk_avalable_ratio);
+                    disk_printer.append_data(disk_density);
+                }
             }
             disk_printer.output(std::cout);
         }
