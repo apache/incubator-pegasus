@@ -34,7 +34,35 @@ void hotspot_calculator::init_perf_counter(const int perf_counter_count)
     }
 }
 
-void hotspot_calculator::start_alg() { _policy->analysis(_app_data, _points); }
+vector<partition_id> hotspot_calculator::excpetion_check()
+{
+    vector<partition_id> suspected_partition;
+    for (int i=0;i<_points.size();i++){
+        if (_points[i]>THRESHOLD_1){
+            global_count[i]++;
+            if (global_count[i]>THRESHOLD_2){
+                suspected_partition.push(i);
+            }
+        }
+    }
+    return suspected_partition;
+}
+
+void send_rpc(suspected_partition){
+    if (suspected_partition in watch_list){
+        return;
+    }
+    result = send_to_relica();
+    show result in some way;
+}
+
+void hotspot_calculator::start_alg() {
+    _policy->analysis(_app_data, _points);
+    //we can also send_rpc manully
+    if (auto_detect_on){
+        this->send_rpc(excpetion_check());
+    }
+}
 
 } // namespace server
 } // namespace pegasus
