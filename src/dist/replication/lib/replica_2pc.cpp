@@ -29,6 +29,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include <dsn/dist/replication/replication_app_base.h>
+#include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
 namespace replication {
@@ -41,6 +42,18 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         // Do not relay any message to the peer client to let it timeout, it's OK coz some users
         // may retry immediately when they got a not success code which will make the server side
         // pressure more and more heavy.
+        return;
+    }
+
+    if (dsn_unlikely(_stub->_max_allowed_write_size &&
+                     request->body_size() > _stub->_max_allowed_write_size)) {
+        dwarn_replica("client from {} write request body size exceed threshold, request_body_size "
+                      "= {}, max_allowed_write_size = {}, it will be rejected!",
+                      request->header->from_address.to_string(),
+                      request->body_size(),
+                      _stub->_max_allowed_write_size);
+        _stub->_counter_recent_write_size_exceed_threshold_count->increment();
+        response_client_write(request, ERR_INVALID_DATA);
         return;
     }
 

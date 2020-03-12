@@ -273,6 +273,7 @@ private:
     friend class duplication_sync_timer;
     friend class duplication_sync_timer_test;
     friend class replica_duplicator_manager_test;
+    friend class replica_test;
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
@@ -343,6 +344,9 @@ private:
     // cli service
     std::unique_ptr<dsn::cli_service> _cli_service;
 
+    // write body size exceed this threshold will be logged and reject, 0 means no check
+    uint64_t _max_allowed_write_size;
+
     // performance counters
     perf_counter_wrapper _counter_replicas_count;
     perf_counter_wrapper _counter_replicas_opening_count;
@@ -401,6 +405,8 @@ private:
     perf_counter_wrapper _counter_recent_write_fail_count;
     perf_counter_wrapper _counter_recent_read_busy_count;
     perf_counter_wrapper _counter_recent_write_busy_count;
+
+    perf_counter_wrapper _counter_recent_write_size_exceed_threshold_count;
 
     dsn::task_tracker _tracker;
 };
