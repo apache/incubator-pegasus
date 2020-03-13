@@ -32,32 +32,22 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
-    auto error = sc->ddl_client->list_nodes(dsn::replication::node_status::NS_ALIVE, nodes);
+    auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
     if (error != dsn::ERR_OK) {
         std::cout << "list nodes failed, error=" << error.to_string() << std::endl;
         return false;
     }
 
-    std::string node_address;
     std::vector<dsn::rpc_address> targets;
     if (query_one_node) {
         if (!cmd(1)) {
             fmt::print(stderr, "missing param <node_address>\n");
             return false;
         }
-        node_address = cmd(1).str();
-        // TODO(jiashuo1) will delete ip_port split.
-        std::vector<std::string> ip_port;
-        dsn::utils::split_args(node_address.c_str(), ip_port, ':');
-
-        if (ip_port.size() < 2) {
-            fmt::print(stderr, "please input valid node_address!\n");
-            return false;
-        }
+        std::string node_address = cmd(1).str();
 
         for (auto &node : nodes) {
-            // TODO(jiashuo1) check and test ipv4_str return value
-            if (node.first.ipv4_str() == ip_port[0] && node.first.port() == std::stoi(ip_port[1])) {
+            if (node.first.to_std_string() == node_address) {
                 targets.emplace_back(node.first);
             }
         }
@@ -67,7 +57,6 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
             return false;
         }
     } else {
-        // TODO(jiashuo1) will move
         if (query_app_replica_count) {
             fmt::print(stderr, "please input node_address when query app replica count!\n");
             return false;
@@ -87,7 +76,7 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
     const auto &err_resps = sc->ddl_client->query_disk_info(targets, app_id);
 
     dsn::utils::table_printer node_printer;
-    node_printer.add_title("node_address");
+    node_printer.add_title("node");
     node_printer.add_column("total_capacity(MB)");
     node_printer.add_column("avalable_capacity(MB)");
     node_printer.add_column("avalable_ratio(%)");
@@ -125,7 +114,7 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
 
             int capacity_balance = sqrt(temp);
 
-            node_printer.add_row(err_resp.first.ipv4_str());
+            node_printer.add_row(err_resp.first.to_std_string());
             node_printer.append_data(resp.total_capacity_mb);
             node_printer.append_data(resp.total_available_mb);
             node_printer.append_data(total_capacity_ratio);
