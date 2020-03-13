@@ -23,6 +23,8 @@ import (
 
 // The logger module in this file is inspired by etcd/clientv3/logger
 
+// Logger is the internal logger served for pegasus go client.
+// WARN: Don't use this logger for your application.
 type Logger interface {
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
@@ -40,6 +42,8 @@ type settableLogger struct {
 }
 
 // StderrLogger is an implementation of Logger that outputs logs to stderr.
+// WARN: Don't use it in your production environment. Lack of logs after failures will make it
+// 		 significantly difficult to track the root cause.
 var StderrLogger = log.New(os.Stderr, "", log.LstdFlags)
 
 func init() {

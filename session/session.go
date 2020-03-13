@@ -129,11 +129,11 @@ func (n *nodeSession) String() string {
 // only 1 goroutine dialing simultaneously.
 // This goroutine will not be killed due to io failure, unless the session
 // is manually closed.
-func (n *nodeSession) loopForDialing() error {
+func (n *nodeSession) loopForDialing() error { // no error returned actually
 	for {
 		select {
 		case <-n.tom.Dying():
-			return n.tom.Err()
+			return nil
 		case <-n.redialc:
 			if n.ConnState() != rpc.ConnStateReady {
 				n.dial()
@@ -165,6 +165,7 @@ func (n *nodeSession) dial() {
 	case <-n.tom.Dying():
 		// ended if session closed.
 	default:
+		n.logger.Print("dial to ", n)
 		err := n.conn.TryConnect()
 		n.lastDialTime = time.Now()
 
@@ -193,11 +194,11 @@ func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
 
 // single-routine worker used for sending requests.
 // Any un-retryable error occurred will end up this goroutine.
-func (n *nodeSession) loopForRequest() error {
+func (n *nodeSession) loopForRequest() error { // no error returned actually
 	for {
 		select {
 		case <-n.tom.Dying():
-			return n.tom.Err()
+			return nil
 		case req := <-n.reqc:
 			n.mu.Lock()
 			n.pendingResp[req.call.SeqId] = req
@@ -224,11 +225,11 @@ func (n *nodeSession) loopForRequest() error {
 // We register a map of sequence id -> recvItem when each request comes,
 // so that when a response is received, we are able to notify its caller.
 // Any un-retryable error occurred will end up this goroutine.
-func (n *nodeSession) loopForResponse() error {
+func (n *nodeSession) loopForResponse() error { // no error returned actually
 	for {
 		select {
 		case <-n.tom.Dying():
-			return n.tom.Err()
+			return nil
 		default:
 		}
 
@@ -239,10 +240,10 @@ func (n *nodeSession) loopForResponse() error {
 			}
 			if rpc.IsNetworkClosed(err) { // EOF
 				n.logger.Printf("session %s is closed by the peer", n)
-				return err
+				return nil
 			}
 			n.logger.Printf("failed to read response from %s: %s", n, err)
-			return err
+			return nil
 		}
 		call.OnRpcRecv = time.Now()
 
@@ -287,9 +288,6 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 			}
 		}
 
-		if !n.tom.Alive() {
-			return fmt.Errorf("session %s is unable to connect [%s]", n, n.tom.Err())
-		}
 		if !ready {
 			return fmt.Errorf("session %s is unable to connect within %dms", n, time.Since(dialStart)/time.Millisecond)
 		}
@@ -298,10 +296,6 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 }
 
 func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args RpcRequestArgs, name string) (result RpcResponseResult, err error) {
-	if !n.tom.Alive() {
-		return nil, fmt.Errorf("session %s is unalive. maybe table configuration was changed or peer node is disconnected [%s]", n, n.tom.Err())
-	}
-
 	// either the ctx cancelled or the tomb killed will stop this rpc call.
 	ctxWithTomb := n.tom.Context(ctx)
 	if err := n.waitUntilSessionReady(ctxWithTomb); err != nil {

@@ -87,7 +87,7 @@ const (
 )
 
 func (e DsnErrCode) Error() string {
-	return fmt.Sprintf("DSN_ERR(%s)", e.String())
+	return fmt.Sprintf("[%s]", e.String())
 }
 
 func (ec *ErrorCode) Read(iprot thrift.TProtocol) (err error) {

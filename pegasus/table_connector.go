@@ -917,6 +917,15 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 			confUpdate = true
 		}
 
+		switch err {
+		case base.ERR_BUSY:
+			err = errors.New(err.Error() + " Rate of requests exceeds the throughput limit")
+		case base.ERR_INVALID_STATE:
+			err = errors.New(err.Error() + " The target replica is not primary")
+		case base.ERR_OBJECT_NOT_FOUND:
+			err = errors.New(err.Error() + " The replica server doesn't serve this partition")
+		}
+
 		if confUpdate {
 			// we need to check if there's newer configuration.
 			p.tryConfUpdate(err, replica)
@@ -938,7 +947,7 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 func (p *pegasusTableConnector) tryConfUpdate(err error, replica *session.ReplicaSession) {
 	select {
 	case p.confUpdateCh <- true:
-		p.logger.Print("trigger configuration update of table [%s] due to RPC failure [%s] to %s", p.tableName, err, replica)
+		p.logger.Printf("trigger configuration update of table [%s] due to RPC failure [%s] to %s", p.tableName, err, replica)
 	default:
 	}
 }
