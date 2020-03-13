@@ -25,12 +25,6 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
     bool query_one_node = cmd[{"-n", "--node"}];
     bool query_app_replica_count = cmd[{"-a", "--app_replica"}];
 
-    // only test
-    fmt::print(stderr, "too many params {}\n", cmd.pos_args().size());
-    for (auto n : cmd.pos_args()) {
-        fmt::print(stderr, "params= {}\n", n.c_str());
-    }
-
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
     auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
     if (error != dsn::ERR_OK) {
@@ -90,8 +84,8 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
         }
         if (!err.is_ok()) {
             fmt::print(stderr,
-                       "disk[{}] info skiped because request failed, error={}\n",
-                       err_resp.first.ipv4_str(),
+                       "disk of node[{}] info skiped because request failed, error={}\n",
+                       err_resp.first.to_std_string(),
                        err.description());
             if (query_one_node) {
                 return false;
