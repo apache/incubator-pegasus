@@ -50,6 +50,10 @@ type MultiGetOptions struct {
 
 	// Query order
 	Reverse bool
+
+	// Whether to retrieve keys only, without value.
+	// Enabling this option will reduce the network load, improve the RPC latency.
+	NoValue bool
 }
 
 // DefaultMultiGetOptions defines the defaults of MultiGetOptions.
@@ -62,6 +66,7 @@ var DefaultMultiGetOptions = &MultiGetOptions{
 	},
 	MaxFetchCount: 100,
 	MaxFetchSize:  100000,
+	NoValue:       false,
 }
 
 // TableConnector is used to communicate with single Pegasus table.
@@ -434,6 +439,7 @@ func setRequestByOption(options *MultiGetOptions, request *rrdb.MultiGetRequest)
 	request.SortKeyFilterType = rrdb.FilterType(options.SortKeyFilter.Type)
 	request.SortKeyFilterPattern = &base.Blob{Data: options.SortKeyFilter.Pattern}
 	request.Reverse = options.Reverse
+	request.NoValue = options.NoValue
 }
 
 func (p *pegasusTableConnector) MultiGetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, options *MultiGetOptions) ([]*KeyValue, bool, error) {
