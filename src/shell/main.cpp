@@ -437,10 +437,10 @@ static command_executor commands[] = {
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
     {"pause_dup", "pause duplication", "<app_name> <dup_id>", pause_dup},
+    {"disk_info", "query node disk info", "[-n|--node node_address] [-a|--app app_replica_count]", query_disk_info},
     {
         "exit", "exit shell", "", exit_shell,
     },
-    {"disk_info", "query node disk info", "[-n|--node node_address]", query_disk_info},
     {
         nullptr, nullptr, nullptr, nullptr,
     }};
