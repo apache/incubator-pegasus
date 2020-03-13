@@ -32,7 +32,7 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
-    auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
+    auto error = sc->ddl_client->list_nodes(dsn::replication::node_status::NS_ALIVE, nodes);
     if (error != dsn::ERR_OK) {
         std::cout << "list nodes failed, error=" << error.to_string() << std::endl;
         return false;
