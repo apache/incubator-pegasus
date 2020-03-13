@@ -93,6 +93,7 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
     node_printer.add_column("avalable_ratio(%)");
     node_printer.add_column("capacity_balance");
 
+    int total_capacity_ratio = 0;
     for (const auto &err_resp : err_resps) {
         dsn::error_s err = err_resp.second.get_error();
         if (err.is_ok()) {
@@ -105,15 +106,18 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
                        err.description());
         } else {
             const auto &resp = err_resp.second.get_value();
-            int total_capacity_tatio =
-                std::round((double)resp.total_available_mb * 100 / resp.total_capacity_mb);
+            total_capacity_ratio =
+                resp.total_capacity_mb == 0
+                    ? 0
+                    : std::round((double)resp.total_available_mb * 100 / resp.total_capacity_mb);
 
             int temp = 0;
             for (const auto &disk_info : resp.disk_infos) {
-                temp += pow(std::round((double)disk_info.disk_available_mb * 100 /
-                                       disk_info.disk_capacity_mb) -
-                                total_capacity_tatio,
-                            2);
+                int disk_available_ratio = disk_info.disk_capacity_mb == 0
+                                               ? 0
+                                               : std::round((double)disk_info.disk_available_mb *
+                                                            100 / disk_info.disk_capacity_mb);
+                temp += pow((disk_available_ratio - total_capacity_ratio), 2);
             }
 
             int capacity_balance = sqrt(temp);
@@ -121,7 +125,7 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
             node_printer.add_row(err_resp.first.ipv4_str());
             node_printer.append_data(resp.total_capacity_mb);
             node_printer.append_data(resp.total_available_mb);
-            node_printer.append_data(total_capacity_tatio);
+            node_printer.append_data(total_capacity_ratio);
             node_printer.append_data(capacity_balance);
         }
     }
@@ -167,17 +171,17 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
                 disk_printer.add_column("avalable_ratio(%)");
                 disk_printer.add_column("disk_density");
 
-                int total_capacity_ratio =
-                    std::round((double)resp.total_available_mb * 100 / resp.total_capacity_mb);
-
                 for (const auto &disk_info : resp.disk_infos) {
-                    int disk_avalable_ratio = std::round((double)disk_info.disk_available_mb * 100 /
-                                                         disk_info.disk_capacity_mb);
-                    int disk_density = disk_avalable_ratio - total_capacity_ratio;
+                    int disk_available_ratio =
+                        disk_info.disk_capacity_mb == 0
+                            ? 0
+                            : std::round((double)disk_info.disk_available_mb * 100 /
+                                         disk_info.disk_capacity_mb);
+                    int disk_density = disk_available_ratio - total_capacity_ratio;
                     disk_printer.add_row(disk_info.tag);
                     disk_printer.append_data(disk_info.disk_capacity_mb);
                     disk_printer.append_data(disk_info.disk_available_mb);
-                    disk_printer.append_data(disk_avalable_ratio);
+                    disk_printer.append_data(disk_available_ratio);
                     disk_printer.append_data(disk_density);
                 }
             }
