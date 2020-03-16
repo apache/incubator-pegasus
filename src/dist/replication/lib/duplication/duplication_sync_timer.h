@@ -30,6 +30,15 @@ public:
 
     void close();
 
+    struct replica_dup_state
+    {
+        gpid id;
+        bool duplicating{false};
+        decree not_duplicated{0};
+        decree not_confirmed{0};
+    };
+    std::multimap<dupid_t, replica_dup_state> get_dup_states(int app_id, /*out*/ bool *app_found);
+
 private:
     // replica server periodically uploads current confirm points to meta server by sending
     // `duplication_sync_request`.

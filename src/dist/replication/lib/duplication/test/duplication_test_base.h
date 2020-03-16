@@ -8,6 +8,7 @@
 #include "dist/replication/test/replica_test/unit_test/replica_test_base.h"
 #include "dist/replication/lib/duplication/replica_duplicator.h"
 #include "dist/replication/lib/duplication/replica_duplicator_manager.h"
+#include "dist/replication/lib/duplication/duplication_sync_timer.h"
 
 namespace dsn {
 namespace replication {
@@ -20,6 +21,7 @@ public:
         mutation_duplicator::creator = [](replica_base *r, dsn::string_view, dsn::string_view) {
             return make_unique<mock_mutation_duplicator>(r);
         };
+        stub->_duplication_sync_timer = make_unique<duplication_sync_timer>(stub.get());
     }
 
     void add_dup(mock_replica *r, replica_duplicator_u_ptr dup)

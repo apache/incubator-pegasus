@@ -30,6 +30,7 @@
 #include "dist/replication/common/replication_common.h"
 #include "dist/http/server_info_http_services.h"
 #include "replica_stub.h"
+#include "replica_http_service.h"
 
 namespace dsn {
 namespace replication {
@@ -48,6 +49,7 @@ replication_service_app::replication_service_app(const service_app_info *info)
     _version_http_service = new version_http_service();
     _http_server->add_service(_version_http_service);
     _http_server->add_service(new recent_start_time_http_service());
+    _http_server->add_service(new replica_http_service(_stub.get()));
 }
 
 replication_service_app::~replication_service_app(void) {}
