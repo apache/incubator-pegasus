@@ -439,7 +439,7 @@ static command_executor commands[] = {
     {"pause_dup", "pause duplication", "<app_name> <dup_id>", pause_dup},
     {"disk_info",
      "query node disk info",
-     "[-n|--node node_address] [-a|--app app_replica_count]",
+     "[-n|--node node_address] [-r|--replica app_id]",
      query_disk_info},
     {
         "exit", "exit shell", "", exit_shell,

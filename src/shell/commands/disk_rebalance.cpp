@@ -14,32 +14,37 @@
 
 bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
 {
-    // disk_info [-n|--node node_address] [-a|--app app_replica_count]
+    // disk_info [-n|--node node_address] [-r|--replica app_id]
 
     argh::parser cmd(args.argc, args.argv);
-    if (cmd.pos_args().size() > 3) {
-        fmt::print(stderr, "too many params\n");
+    if (cmd.size() > 3) {
+        fmt::print(stderr, "too many params!\n");
         return false;
     }
 
     bool query_one_node = cmd[{"-n", "--node"}];
-    bool query_app_replica_count = cmd[{"-a", "--app_replica"}];
+    bool query_app_replica_count = cmd[{"-r", "--replica"}];
+
+    if (query_one_node && !cmd(1)) {
+        fmt::print(stderr, "missing param <node_address>\n");
+        return false;
+    }
+
+    if (!query_one_node && query_app_replica_count) {
+        fmt::print(stderr, "please input node_address when query app replica count!\n");
+        return false;
+    }
 
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
     auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
     if (error != dsn::ERR_OK) {
-        std::cout << "list nodes failed, error=" << error.to_string() << std::endl;
+        fmt::print(stderr, "list nodes failed, error={}\n", error.to_string());
         return false;
     }
 
     std::vector<dsn::rpc_address> targets;
     if (query_one_node) {
-        if (!cmd(1)) {
-            fmt::print(stderr, "missing param <node_address>\n");
-            return false;
-        }
         std::string node_address = cmd(1).str();
-
         for (auto &node : nodes) {
             if (node.first.to_std_string() == node_address) {
                 targets.emplace_back(node.first);
@@ -51,23 +56,17 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
             return false;
         }
     } else {
-        if (query_app_replica_count) {
-            fmt::print(stderr, "please input node_address when query app replica count!\n");
-            return false;
-        }
         for (const auto &node : nodes) {
             targets.emplace_back(node.first);
         }
     }
 
-    int app_id = 0;
-    if (query_app_replica_count) {
-        if (cmd(2)) {
-            app_id = stoi(cmd(2).str());
-        }
+    std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
+    dsn::replication::app_id app_id = 0;
+    if (query_app_replica_count && cmd(2)) {
+        dsn::buf2int32(cmd(2).str(), app_id);
     }
-
-    const auto &err_resps = sc->ddl_client->query_disk_info(targets, app_id);
+    sc->ddl_client->query_disk_info(targets, err_resps, app_id);
 
     dsn::utils::table_printer node_printer;
     node_printer.add_title("node");
@@ -95,14 +94,14 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
             total_capacity_ratio =
                 resp.total_capacity_mb == 0
                     ? 0
-                    : std::round((double)resp.total_available_mb * 100 / resp.total_capacity_mb);
+                    : std::round(resp.total_available_mb * 100.0 / resp.total_capacity_mb);
 
             int temp = 0;
             for (const auto &disk_info : resp.disk_infos) {
                 int disk_available_ratio = disk_info.disk_capacity_mb == 0
                                                ? 0
-                                               : std::round((double)disk_info.disk_available_mb *
-                                                            100 / disk_info.disk_capacity_mb);
+                                               : std::round(disk_info.disk_available_mb * 100.0 /
+                                                            disk_info.disk_capacity_mb);
                 temp += pow((disk_available_ratio - total_capacity_ratio), 2);
             }
 
@@ -143,7 +142,6 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
                 disk_printer.append_data(secondary_count);
                 disk_printer.append_data(primary_count + secondary_count);
             }
-
         } else {
             disk_printer.add_column("total_capacity(MB)");
             disk_printer.add_column("avalable_capacity(MB)");
@@ -153,8 +151,8 @@ bool query_disk_info(command_executor *e, shell_context *sc, arguments args)
             for (const auto &disk_info : resp.disk_infos) {
                 int disk_available_ratio = disk_info.disk_capacity_mb == 0
                                                ? 0
-                                               : std::round((double)disk_info.disk_available_mb *
-                                                            100 / disk_info.disk_capacity_mb);
+                                               : std::round(disk_info.disk_available_mb * 100.0 /
+                                                            disk_info.disk_capacity_mb);
                 int disk_density = disk_available_ratio - total_capacity_ratio;
                 disk_printer.add_row(disk_info.tag);
                 disk_printer.append_data(disk_info.disk_capacity_mb);
