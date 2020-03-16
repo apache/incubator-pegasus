@@ -229,7 +229,7 @@ function run_build()
     echo "INFO: start build rocksdb..."
     ROCKSDB_BUILD_DIR="$ROOT/rocksdb/build"
     ROCKSDB_BUILD_OUTPUT="$ROCKSDB_BUILD_DIR/output"
-    CMAKE_OPTIONS="-DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DWITH_LZ4=ON -DWITH_ZSTD=ON -DWITH_SNAPPY=ON -DWITH_BZ2=OFF -DWITH_TESTS=OFF -DCMAKE_CXX_FLAGS=-g"
+    CMAKE_OPTIONS="-DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DWITH_LZ4=ON -DWITH_ZSTD=ON -DWITH_SNAPPY=ON -DWITH_BZ2=OFF -DWITH_TESTS=OFF -DWITH_GFLAGS=OFF -DUSE_RTTI=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-g"
     if [ "$WARNING_ALL" == "YES" ]
     then
         echo "WARNING_ALL=YES"
@@ -374,7 +374,9 @@ function run_test()
         echo "ERROR: unable to continue on testing because starting onebox failed"
         exit 1
     fi
-
+    
+    sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  $ROOT/src/builder/server/test/config.ini
+    
     for module in `echo $test_modules`; do
         pushd $ROOT/src/builder/bin/$module
         REPORT_DIR=$REPORT_DIR ./run.sh $on_travis

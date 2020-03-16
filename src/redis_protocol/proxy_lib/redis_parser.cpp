@@ -681,7 +681,12 @@ void redis_parser::del_internal(message_entry &entry)
                     simple_error_reply(entry,
                                        "internal error " + std::to_string(rrdb_response.error));
                 } else {
-                    simple_integer_reply(entry, -1);
+                    // NOTE: Deleting a non-existed key returns 1 too. But standard Redis returns 0.
+                    // Pegasus behaves
+                    // differently in this case intentionally for performance.
+                    // Because if we need to check the existence, we should use check_and_mutate
+                    // instead.
+                    simple_integer_reply(entry, 1);
                 }
             }
         };
@@ -719,7 +724,7 @@ void redis_parser::del_geo_internal(message_entry &entry)
             if (PERR_OK != ec) {
                 simple_error_reply(entry, _geo_client->get_error_string(ec));
             } else {
-                simple_ok_reply(entry);
+                simple_integer_reply(entry, 1);
             }
         };
         _geo_client->async_del(redis_request.sub_requests[1].data.to_string(), // key => hash_key
