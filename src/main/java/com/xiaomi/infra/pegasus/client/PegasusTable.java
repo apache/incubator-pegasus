@@ -1761,7 +1761,9 @@ public class PegasusTable implements PegasusTableInterface {
     String replicaServer;
     try {
       replicaServer =
-          replicaConfiguration.primary.get_ip() + ":" + replicaConfiguration.primary.get_port();
+          replicaConfiguration.primaryAddress.get_ip()
+              + ":"
+              + replicaConfiguration.primaryAddress.get_port();
     } catch (UnknownHostException e) {
       promise.setFailure(new PException(e));
       return;

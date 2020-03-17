@@ -122,7 +122,8 @@ public class MetaSession extends HostNameResolver {
             onFinishQueryMeta(round);
           }
         },
-        eachQueryTimeoutInMills);
+        eachQueryTimeoutInMills,
+        false);
   }
 
   void onFinishQueryMeta(final MetaRequestRound round) {

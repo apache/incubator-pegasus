@@ -47,7 +47,7 @@ public class ClusterManagerTest {
 
     TableHandler result = null;
     try {
-      result = testManager.openTable("testName", KeyHasher.DEFAULT);
+      result = testManager.openTable("testName", KeyHasher.DEFAULT, 0);
     } catch (ReplicationException e) {
       Assert.assertEquals(error_code.error_types.ERR_SESSION_RESET, e.getErrorType());
     } finally {
@@ -61,7 +61,7 @@ public class ClusterManagerTest {
     };
     testManager = new ClusterManager(1000, 1, false, null, 60, addr_list2);
     try {
-      result = testManager.openTable("hehe", KeyHasher.DEFAULT);
+      result = testManager.openTable("hehe", KeyHasher.DEFAULT, 0);
     } catch (ReplicationException e) {
       Assert.assertEquals(error_code.error_types.ERR_OBJECT_NOT_FOUND, e.getErrorType());
     } finally {
@@ -70,7 +70,7 @@ public class ClusterManagerTest {
 
     // test open an valid table
     try {
-      result = testManager.openTable("temp", KeyHasher.DEFAULT);
+      result = testManager.openTable("temp", KeyHasher.DEFAULT, 0);
     } catch (ReplicationException e) {
       Assert.fail();
     } finally {

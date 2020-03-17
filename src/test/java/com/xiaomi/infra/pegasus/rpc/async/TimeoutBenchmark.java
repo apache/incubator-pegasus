@@ -66,7 +66,7 @@ public class TimeoutBenchmark {
 
     TableHandler handle;
     try {
-      handle = manager.openTable("temp", KeyHasher.DEFAULT);
+      handle = manager.openTable("temp", KeyHasher.DEFAULT, 0);
     } catch (ReplicationException e) {
       e.printStackTrace();
       Assert.fail();

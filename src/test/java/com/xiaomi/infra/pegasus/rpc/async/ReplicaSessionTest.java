@@ -72,7 +72,7 @@ public class ReplicaSessionTest {
               });
 
       callbacks.add(cb);
-      rs.asyncSend(op, cb, 1000);
+      rs.asyncSend(op, cb, 1000, false);
     }
 
     for (FutureTask<Void> cb : callbacks) {
@@ -129,7 +129,7 @@ public class ReplicaSessionTest {
               });
 
       callbacks.add(cb);
-      rs.asyncSend(op, cb, 500);
+      rs.asyncSend(op, cb, 500, false);
     }
 
     for (int i = 0; i < 80; ++i) {
@@ -151,7 +151,7 @@ public class ReplicaSessionTest {
       callbacks.add(cb);
       // these requests have longer timeout, so they should be responsed later than the server is
       // killed
-      rs.asyncSend(op, cb, 2000);
+      rs.asyncSend(op, cb, 2000, false);
     }
 
     for (FutureTask<Void> cb : callbacks) {
@@ -206,7 +206,7 @@ public class ReplicaSessionTest {
                   return null;
                 }
               });
-      rs.asyncSend(op, cb, 2000);
+      rs.asyncSend(op, cb, 2000, false);
       Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
     }
   }

@@ -60,7 +60,7 @@ public class TableHandlerTest {
     System.out.println("TableHandlerTest#testOperateOp");
     TableHandler table = null;
     try {
-      table = testManager.openTable("temp", KeyHasher.DEFAULT);
+      table = testManager.openTable("temp", KeyHasher.DEFAULT, 0);
     } catch (ReplicationException e) {
       Assert.fail();
     }
@@ -77,14 +77,14 @@ public class TableHandlerTest {
     ReplicaConfiguration handle = table.getReplicaConfig(pid.get_pidx());
 
     // 1. modify the replica handler to a not exist one
-    final com.xiaomi.infra.pegasus.base.rpc_address old_addr = handle.session.getAddress();
+    final com.xiaomi.infra.pegasus.base.rpc_address old_addr = handle.primarySession.getAddress();
     logger.info("the right primary for {} is {}", pid.toString(), old_addr.toString());
 
     com.xiaomi.infra.pegasus.base.rpc_address addr =
         new com.xiaomi.infra.pegasus.base.rpc_address();
     addr.fromString("127.0.0.1:123");
     handle.ballot--;
-    handle.session = testManager.getReplicaSession(addr);
+    handle.primarySession = testManager.getReplicaSession(addr);
 
     client_operator op = new Toollet.test_operator(pid, request);
 
@@ -103,7 +103,8 @@ public class TableHandlerTest {
             new Toollet.BoolCallable() {
               @Override
               public boolean call() {
-                ReplicaSession session = finalTableRef.getReplicaConfig(pid.get_pidx()).session;
+                ReplicaSession session =
+                    finalTableRef.getReplicaConfig(pid.get_pidx()).primarySession;
                 if (session == null) return false;
                 return session.getAddress().equals(old_addr);
               }
@@ -128,7 +129,7 @@ public class TableHandlerTest {
 
     Assert.assertFalse(addr.equals(old_addr));
     handle.ballot--;
-    handle.session = testManager.getReplicaSession(addr);
+    handle.primarySession = testManager.getReplicaSession(addr);
 
     op = new Toollet.test_operator(pid, request);
     try {
@@ -146,7 +147,7 @@ public class TableHandlerTest {
     TableHandler table = null;
 
     try {
-      table = testManager.openTable("temp", KeyHasher.DEFAULT);
+      table = testManager.openTable("temp", KeyHasher.DEFAULT, 0);
     } catch (ReplicationException e) {
       Assert.fail();
     }
@@ -157,14 +158,14 @@ public class TableHandlerTest {
     for (int i = 0; i < tableConfig.replicas.size(); ++i) {
       ReplicaConfiguration handle = tableConfig.replicas.get(i);
       Assert.assertNotNull(handle);
-      Assert.assertNotNull(handle.session);
+      Assert.assertNotNull(handle.primarySession);
     }
 
     // mark a handler to inactive
     ReplicaConfiguration handle = tableConfig.replicas.get(0);
     long oldBallot = handle.ballot - 1;
     handle.ballot = oldBallot;
-    handle.session = null;
+    handle.primarySession = null;
 
     boolean doTheQuerying = table.tryQueryMeta(tableConfig.updateVersion);
     Assert.assertTrue(doTheQuerying);
@@ -175,7 +176,7 @@ public class TableHandlerTest {
             new Toollet.BoolCallable() {
               @Override
               public boolean call() {
-                return finalRef.getReplicaConfig(0).session != null;
+                return finalRef.getReplicaConfig(0).primarySession != null;
               }
             },
             10));
@@ -190,7 +191,7 @@ public class TableHandlerTest {
     TableHandler table = null;
 
     try {
-      table = testManager.openTable("temp", KeyHasher.DEFAULT);
+      table = testManager.openTable("temp", KeyHasher.DEFAULT, 0);
     } catch (ReplicationException e) {
       Assert.fail();
     }
@@ -199,7 +200,7 @@ public class TableHandlerTest {
     Thread.sleep(100);
     ArrayList<ReplicaConfiguration> replicas = table.tableConfig_.get().replicas;
     for (ReplicaConfiguration r : replicas) {
-      Assert.assertEquals(r.session.getState(), ReplicaSession.ConnState.CONNECTED);
+      Assert.assertEquals(r.primarySession.getState(), ReplicaSession.ConnState.CONNECTED);
     }
   }
 }

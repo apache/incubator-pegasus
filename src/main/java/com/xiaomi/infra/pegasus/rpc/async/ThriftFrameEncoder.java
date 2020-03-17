@@ -33,7 +33,7 @@ public class ThriftFrameEncoder extends MessageToByteEncoder<ReplicaSession.Requ
     TBinaryProtocol protocol = new TBinaryProtocol(new TByteBufTransport(out));
 
     // write meta
-    e.op.prepare_thrift_meta(protocol, (int) e.timeoutMs);
+    e.op.prepare_thrift_meta(protocol, (int) e.timeoutMs, e.isBackupRequest);
     int meta_length = out.readableBytes() - ThriftHeader.HEADER_LENGTH;
 
     // write body

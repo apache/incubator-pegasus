@@ -29,6 +29,7 @@ public class ReplicaSession {
     public Runnable callback;
     public ScheduledFuture<?> timeoutTask;
     public long timeoutMs;
+    public boolean isBackupRequest;
   }
 
   public enum ConnState {
@@ -79,7 +80,11 @@ public class ReplicaSession {
     this.filter = filter;
   }
 
-  public int asyncSend(client_operator op, Runnable callbackFunc, long timeoutInMilliseconds) {
+  public int asyncSend(
+      client_operator op,
+      Runnable callbackFunc,
+      long timeoutInMilliseconds,
+      boolean isBackupRequest) {
     RequestEntry entry = new RequestEntry();
     entry.sequenceId = seqId.getAndIncrement();
     entry.op = op;
@@ -89,6 +94,7 @@ public class ReplicaSession {
     pendingResponse.put(entry.sequenceId, entry);
     entry.timeoutTask = addTimer(entry.sequenceId, timeoutInMilliseconds);
     entry.timeoutMs = timeoutInMilliseconds;
+    entry.isBackupRequest = isBackupRequest;
 
     // We store the connection_state & netty channel in a struct so that they can fetch and update
     // in atomic.

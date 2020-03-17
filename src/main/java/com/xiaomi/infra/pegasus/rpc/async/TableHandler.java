@@ -18,8 +18,7 @@ import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.Table;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.EventExecutor;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -31,8 +30,9 @@ public class TableHandler extends Table {
   public static final class ReplicaConfiguration {
     public gpid pid = new gpid();
     public long ballot = 0;
-    public rpc_address primary = new rpc_address();
-    public ReplicaSession session = null;
+    public rpc_address primaryAddress = new rpc_address();
+    public ReplicaSession primarySession = null;
+    public List<ReplicaSession> secondarySessions = new ArrayList<>();
   }
 
   static final class TableConfiguration {
@@ -47,8 +47,10 @@ public class TableHandler extends Table {
   AtomicReference<TableConfiguration> tableConfig_;
   AtomicBoolean inQuerying_;
   long lastQueryTime_;
+  int backupRequestDelayMs;
 
-  public TableHandler(ClusterManager mgr, String name, KeyHasher h) throws ReplicationException {
+  public TableHandler(ClusterManager mgr, String name, KeyHasher h, int backupRequestDelayMs)
+      throws ReplicationException {
     int i = 0;
     for (; i < name.length(); i++) {
       char c = name.charAt(i);
@@ -92,6 +94,10 @@ public class TableHandler extends Table {
     // members of this
     manager_ = mgr;
     executor_ = manager_.getExecutor(name, 1);
+    this.backupRequestDelayMs = backupRequestDelayMs;
+    if (backupRequestDelayMs > 0) {
+      logger.info("the delay time of backup request is \"{}\"", backupRequestDelayMs);
+    }
 
     tableConfig_ = new AtomicReference<TableConfiguration>(null);
     initTableConfiguration(resp);
@@ -105,6 +111,7 @@ public class TableHandler extends Table {
   }
 
   // update the table configuration & appID_ according to to queried response
+  // there should only be one thread to do the table config update
   void initTableConfiguration(query_cfg_response resp) {
     TableConfiguration oldConfig = tableConfig_.get();
 
@@ -118,22 +125,29 @@ public class TableHandler extends Table {
       newConfig.replicas.add(newReplicaConfig);
     }
 
-    // set partition configuration by resp, and create sessions
+    // create sessions for primary and secondaries
     FutureGroup<Void> futureGroup = new FutureGroup<>(resp.getPartition_count());
     for (partition_configuration pc : resp.getPartitions()) {
       ReplicaConfiguration s = newConfig.replicas.get(pc.getPid().get_pidx());
       s.ballot = pc.ballot;
-      s.primary = pc.primary;
-      if (pc.primary.isInvalid()) {
-        s.session = null;
-      } else {
-        if (s.session == null || !s.session.getAddress().equals(pc.primary)) {
-          // reset to new primary
-          s.session = manager_.getReplicaSession(pc.primary);
-          ChannelFuture fut = s.session.tryConnect();
-          if (fut != null) {
-            futureGroup.add(fut);
-          }
+
+      // If the primary address is invalid, we don't create secondary session either.
+      // Because all of these sessions will be recreated later.
+      s.primaryAddress = pc.primary;
+      if (!pc.primary.isInvalid()) {
+        s.primarySession = tryConnect(pc.primary, futureGroup);
+
+        // backup request is enabled, get all secondary sessions
+        s.secondarySessions.clear();
+        if (isBackupRequestEnabled()) {
+          // secondary sessions
+          pc.secondaries.forEach(
+              secondary -> {
+                ReplicaSession session = tryConnect(secondary, futureGroup);
+                if (session != null) {
+                  s.secondarySessions.add(session);
+                }
+              });
         }
       }
     }
@@ -149,6 +163,20 @@ public class TableHandler extends Table {
     // there should only be one thread to do the table config update
     appID_ = resp.getApp_id();
     tableConfig_.set(newConfig);
+  }
+
+  public ReplicaSession tryConnect(final rpc_address addr, FutureGroup<Void> futureGroup) {
+    if (addr.isInvalid()) {
+      return null;
+    }
+
+    ReplicaSession session = manager_.getReplicaSession(addr);
+    ChannelFuture fut = session.tryConnect();
+    if (fut != null) {
+      futureGroup.add(fut);
+    }
+
+    return session;
   }
 
   void onUpdateConfiguration(final query_cfg_operator op) {
@@ -207,12 +235,26 @@ public class TableHandler extends Table {
   }
 
   void onRpcReply(
-      ClientRequestRound round,
-      int tryId,
-      ReplicaConfiguration cachedHandle,
-      long cachedConfigVersion) {
-    client_operator operator = round.getOperator();
+      ClientRequestRound round, int tryId, long cachedConfigVersion, String serverAddr) {
+    // judge if it is the first response
+    if (round.isCompleted) {
+      return;
+    } else {
+      synchronized (round) {
+        // the fastest response has been received
+        if (round.isCompleted) {
+          return;
+        }
+        round.isCompleted = true;
+      }
+    }
 
+    // cancel the backup request task
+    if (round.backupRequestTask != null) {
+      round.backupRequestTask.cancel(true);
+    }
+
+    client_operator operator = round.getOperator();
     boolean needQueryMeta = false;
     switch (operator.rpc_error.errno) {
       case ERR_OK:
@@ -224,7 +266,7 @@ public class TableHandler extends Table {
         logger.warn(
             "{}: replica server({}) rpc timeout for gpid({}), operator({}), try({}), error_code({}), not retry",
             tableName_,
-            cachedHandle.session.name(),
+            serverAddr,
             operator.get_gpid().toString(),
             operator,
             tryId,
@@ -238,7 +280,7 @@ public class TableHandler extends Table {
         logger.warn(
             "{}: replica server({}) doesn't serve gpid({}), operator({}), try({}), error_code({}), need query meta",
             tableName_,
-            cachedHandle.session.name(),
+            serverAddr,
             operator.get_gpid().toString(),
             operator,
             tryId,
@@ -252,7 +294,7 @@ public class TableHandler extends Table {
         logger.warn(
             "{}: replica server({}) can't serve writing for gpid({}), operator({}), try({}), error_code({}), retry later",
             tableName_,
-            cachedHandle.session.name(),
+            serverAddr,
             operator.get_gpid().toString(),
             operator,
             tryId,
@@ -264,7 +306,7 @@ public class TableHandler extends Table {
         logger.error(
             "{}: replica server({}) fails for gpid({}), operator({}), try({}), error_code({}), not retry",
             tableName_,
-            cachedHandle.session.name(),
+            serverAddr,
             operator.get_gpid().toString(),
             operator,
             tryId,
@@ -277,7 +319,11 @@ public class TableHandler extends Table {
       tryQueryMeta(cachedConfigVersion);
     }
 
-    tryDelayCall(round, tryId + 1);
+    // must use new round here, because round.isSuccess is true now
+    tryDelayCall(
+        new ClientRequestRound(
+            round.operator, round.callback, round.enableCounter, round.timeoutMs),
+        tryId + 1);
   }
 
   void tryDelayCall(final ClientRequestRound round, final int tryId) {
@@ -307,16 +353,24 @@ public class TableHandler extends Table {
     final TableConfiguration tableConfig = tableConfig_.get();
     final ReplicaConfiguration handle =
         tableConfig.replicas.get(round.getOperator().get_gpid().get_pidx());
-    if (handle.session != null) {
-      handle.session.asyncSend(
+
+    if (handle.primarySession != null) {
+      // if backup request is enabled, schedule to send to secondary
+      if (round.operator.enableBackupRequest && isBackupRequestEnabled()) {
+        backupCall(round, tryId);
+      }
+
+      // send request to primary
+      handle.primarySession.asyncSend(
           round.getOperator(),
           new Runnable() {
             @Override
             public void run() {
-              onRpcReply(round, tryId, handle, tableConfig.updateVersion);
+              onRpcReply(round, tryId, tableConfig.updateVersion, handle.primarySession.name());
             }
           },
-          round.timeoutMs);
+          round.timeoutMs,
+          false);
     } else {
       logger.warn(
           "{}: no primary for gpid({}), operator({}), try({}), retry later",
@@ -327,6 +381,37 @@ public class TableHandler extends Table {
       tryQueryMeta(tableConfig.updateVersion);
       tryDelayCall(round, tryId + 1);
     }
+  }
+
+  void backupCall(final ClientRequestRound round, final int tryId) {
+    final TableConfiguration tableConfig = tableConfig_.get();
+    final ReplicaConfiguration handle =
+        tableConfig.replicas.get(round.getOperator().get_gpid().get_pidx());
+
+    round.backupRequestTask =
+        executor_.schedule(
+            new Runnable() {
+              @Override
+              public void run() {
+                // pick a secondary at random
+                ReplicaSession secondarySession =
+                    handle.secondarySessions.get(
+                        new Random().nextInt(handle.secondarySessions.size()));
+                secondarySession.asyncSend(
+                    round.getOperator(),
+                    new Runnable() {
+                      @Override
+                      public void run() {
+                        onRpcReply(
+                            round, tryId, tableConfig.updateVersion, secondarySession.name());
+                      }
+                    },
+                    round.timeoutMs,
+                    true);
+              }
+            },
+            backupRequestDelayMs,
+            TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -412,5 +497,9 @@ public class TableHandler extends Table {
         message = " Unable to connect to the meta servers!";
     }
     throw new ReplicationException(err_type, header + message);
+  }
+
+  private boolean isBackupRequestEnabled() {
+    return backupRequestDelayMs > 0;
   }
 }

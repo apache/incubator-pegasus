@@ -131,8 +131,9 @@ public class ClusterManager extends Cluster {
   }
 
   @Override
-  public TableHandler openTable(String name, KeyHasher h) throws ReplicationException {
-    return new TableHandler(this, name, h);
+  public TableHandler openTable(String name, KeyHasher h, int backupRequestDelayMs)
+      throws ReplicationException {
+    return new TableHandler(this, name, h, backupRequestDelayMs);
   }
 
   @Override
