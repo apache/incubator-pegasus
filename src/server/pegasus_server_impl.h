@@ -231,6 +231,8 @@ private:
 
     void update_slow_query_threshold(const std::map<std::string, std::string> &envs);
 
+    void update_rocksdb_iterate_threshold(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -309,6 +311,11 @@ private:
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
     uint64_t _slow_query_threshold_ns_in_config;
+    // abnormal multi_get/rocksdb_iteration
+    uint64_t _multi_get_iterate_size_threshold;
+    uint64_t _rocksdb_iterate_count_threshold;
+    uint64_t _rocksdb_iterate_threshold_ns_in_config;
+    uint64_t _rocksdb_iterate_threshold_ns;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;

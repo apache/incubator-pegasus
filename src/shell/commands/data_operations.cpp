@@ -1013,6 +1013,8 @@ bool sortkey_count(command_executor *e, shell_context *sc, arguments args)
     int ret = sc->pg_client->sortkey_count(hash_key, count, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
+    } else if (count == -1) {
+        fprintf(stderr, "ERROR: it takes too long to count sortkey\n");
     } else {
         fprintf(stderr, "%" PRId64 "\n", count);
     }
