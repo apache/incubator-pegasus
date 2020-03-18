@@ -12,6 +12,31 @@
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/replication/duplication_common.h>
 
+bool fill_valid_targets(argh::parser &cmd,
+                        bool query_one_node,
+                        std::map<dsn::rpc_address, dsn::replication::node_status::type> &nodes,
+                        std::vector<dsn::rpc_address> &targets)
+{
+    if (query_one_node) {
+        std::string node_address = cmd(1).str();
+        for (auto &node : nodes) {
+            if (node.first.to_std_string() == node_address) {
+                targets.emplace_back(node.first);
+            }
+        }
+
+        if (targets.empty()) {
+            fmt::print(stderr, "please input valid target node_address!\n");
+            return false;
+        }
+    } else {
+        for (const auto &node : nodes) {
+            targets.emplace_back(node.first);
+        }
+    }
+    return true;
+}
+
 bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 {
     // disk_capacity [-n|--node str] [-d|--detail]
@@ -133,7 +158,7 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
 
     std::string app_name = std::string();
     if (query_one_app) {
-        app_name = cmd(2);
+        app_name = cmd(2).str();
     }
 
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
@@ -190,29 +215,4 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
         }
     }
     return true;
-}
-
-bool fill_valid_targets(argh::parser &cmd,
-                        bool query_one_node,
-                        std::map<dsn::rpc_address, dsn::replication::node_status::type> &nodes,
-                        std::vector<dsn::rpc_address> &targets)
-{
-    std::vector<dsn::rpc_address> targets;
-    if (query_one_node) {
-        std::string node_address = cmd(1).str();
-        for (auto &node : nodes) {
-            if (node.first.to_std_string() == node_address) {
-                targets.emplace_back(node.first);
-            }
-        }
-
-        if (targets.empty()) {
-            fmt::print(stderr, "please input valid target node_address!\n");
-            return false;
-        }
-    } else {
-        for (const auto &node : nodes) {
-            targets.emplace_back(node.first);
-        }
-    }
 }
