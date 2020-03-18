@@ -68,6 +68,12 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
     sc->ddl_client->query_disk_info(targets, err_resps);
 
+    dsn::utils::table_printer node_printer;
+    node_printer.add_title("node");
+    node_printer.add_column("total_capacity(MB)");
+    node_printer.add_column("avalable_capacity(MB)");
+    node_printer.add_column("avalable_ratio(%)");
+    node_printer.add_column("capacity_balance");
     for (const auto &err_resp : err_resps) {
         dsn::error_s err = err_resp.second.get_error();
         if (err.is_ok()) {
@@ -83,7 +89,7 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
             }
         } else {
             dsn::utils::table_printer disk_printer;
-            query_detail_info ? disk_printer.add_title("disk") : disk_printer.add_title("node");
+            disk_printer.add_title("disk");
             disk_printer.add_column("total_capacity(MB)");
             disk_printer.add_column("avalable_capacity(MB)");
             disk_printer.add_column("avalable_ratio(%)");
@@ -120,19 +126,26 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 
             int capacity_balance = sqrt(variance);
 
-            query_detail_info ? disk_printer.add_row("total")
-                              : disk_printer.add_row(err_resp.first.to_std_string());
-            disk_printer.append_data(resp.total_capacity_mb);
-            disk_printer.append_data(resp.total_available_mb);
-            disk_printer.append_data(total_capacity_ratio);
-            disk_printer.append_data(capacity_balance);
-
             if (query_detail_info) {
+                disk_printer.add_row("total");
+                disk_printer.append_data(resp.total_capacity_mb);
+                disk_printer.append_data(resp.total_available_mb);
+                disk_printer.append_data(total_capacity_ratio);
+                disk_printer.append_data(capacity_balance);
                 fmt::print(stdout, "[{}]\n", err_resp.first.to_std_string());
+                disk_printer.output(std::cout);
+                std::cout << std::endl;
+            } else {
+                node_printer.add_row(err_resp.first.to_std_string());
+                node_printer.append_data(resp.total_capacity_mb);
+                node_printer.append_data(resp.total_available_mb);
+                node_printer.append_data(total_capacity_ratio);
+                node_printer.append_data(capacity_balance);
             }
-            disk_printer.output(std::cout);
-            std::cout << std::endl;
         }
+    }
+    if (!query_detail_info) {
+        node_printer.output(std::cout);
     }
     return true;
 }
