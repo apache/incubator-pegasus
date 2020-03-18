@@ -69,6 +69,12 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
     sc->ddl_client->query_disk_info(targets, err_resps);
 
     dsn::utils::table_printer disk_printer;
+    query_detail_info ? disk_printer.add_title("disk") : disk_printer.add_title("node");
+    disk_printer.add_column("total_capacity(MB)");
+    disk_printer.add_column("avalable_capacity(MB)");
+    disk_printer.add_column("avalable_ratio(%)");
+    disk_printer.add_column("capacity_balance");
+
     for (const auto &err_resp : err_resps) {
         dsn::error_s err = err_resp.second.get_error();
         if (err.is_ok()) {
@@ -83,17 +89,6 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
                 return false;
             }
         } else {
-            if (query_detail_info) {
-                fmt::print(stdout, "[{}]\n", err_resp.first.to_std_string());
-                disk_printer.add_title("disk");
-            } else {
-                disk_printer.add_title("node");
-            }
-            disk_printer.add_column("total_capacity(MB)");
-            disk_printer.add_column("avalable_capacity(MB)");
-            disk_printer.add_column("avalable_ratio(%)");
-            disk_printer.add_column("capacity_balance");
-
             const auto &resp = err_resp.second.get_value();
             int total_capacity_ratio =
                 resp.total_capacity_mb == 0
@@ -131,6 +126,8 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
             disk_printer.append_data(resp.total_available_mb);
             disk_printer.append_data(total_capacity_ratio);
             disk_printer.append_data(capacity_balance);
+
+            fmt::print(stdout, "[{}]\n", err_resp.first.to_std_string());
             disk_printer.output(std::cout);
             std::cout << std::endl;
         }
@@ -174,6 +171,10 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
     sc->ddl_client->query_disk_info(targets, err_resps, app_name);
 
     dsn::utils::table_printer disk_printer;
+    disk_printer.add_title("disk");
+    disk_printer.add_column("primary_count");
+    disk_printer.add_column("secondary_count");
+    disk_printer.add_column("replica_count");
     for (const auto &err_resp : err_resps) {
         dsn::error_s err = err_resp.second.get_error();
         if (err.is_ok()) {
@@ -188,12 +189,6 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
                 return false;
             }
         } else {
-            fmt::print(stdout, "[{}]\n", err_resp.first.to_std_string());
-            disk_printer.add_title("disk");
-            disk_printer.add_column("primary_count");
-            disk_printer.add_column("secondary_count");
-            disk_printer.add_column("replica_count");
-
             const auto &resp = err_resp.second.get_value();
             for (const auto &disk_info : resp.disk_infos) {
                 int primary_count = 0;
@@ -209,6 +204,8 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
                 disk_printer.append_data(primary_count);
                 disk_printer.append_data(secondary_count);
                 disk_printer.append_data(primary_count + secondary_count);
+
+                fmt::print(stdout, "[{}]\n", err_resp.first.to_std_string());
                 disk_printer.output(std::cout);
                 std::cout << std::endl;
             }
