@@ -216,7 +216,7 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
 
     std::string node_address = cmd({"-n", "--node"}).str();
     if (query_one_node && node_address.empty()) {
-        fmt::print(stderr, "missing node addreess [-n|--node ip:port]\n");
+        fmt::print(stderr, "missing node address [-n|--node ip:port]\n");
         return false;
     }
 
