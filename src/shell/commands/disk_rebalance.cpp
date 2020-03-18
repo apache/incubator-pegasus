@@ -61,13 +61,25 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 
     std::string node_address = cmd({"-n", "--node"}).str();
     if (query_one_node && node_address.empty()) {
-        fmt::print(stderr, "missing param [-n|--node ip:port]\n");
+        fmt::print(stderr, "missing node address [-n|--node ip:port]\n");
         return false;
     }
 
     std::string file_name = cmd({"-o", "--out"}).str();
     if (output_to_file && file_name.empty()) {
-        fmt::print(stderr, "missing param [-o|--out file_name]\n");
+        fmt::print(stderr, "missing file name [-o|--out file_name]\n");
+        return false;
+    }
+
+    std::string json = cmd({"-j", "--json"}).str();
+    if (!json.empty()) {
+        fmt::print(stderr, "illegal param: {}\n", json);
+        return false;
+    }
+
+    std::string detail = cmd({"-d", "--detail"}).str();
+    if (!detail.empty()) {
+        fmt::print(stderr, "illegal param: {}\n", detail);
         return false;
     }
 
@@ -204,19 +216,25 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
 
     std::string node_address = cmd({"-n", "--node"}).str();
     if (query_one_node && node_address.empty()) {
-        fmt::print(stderr, "missing param [-n|--node ip:port]\n");
+        fmt::print(stderr, "missing node addreess [-n|--node ip:port]\n");
         return false;
     }
 
     std::string app_name = cmd({"-a", "--app"}).str();
     if (query_one_app && app_name.empty()) {
-        fmt::print(stderr, "missing param [-n|--app app_name]\n");
+        fmt::print(stderr, "missing app_name [-n|--app app_name]\n");
         return false;
     }
 
     std::string file_name = cmd({"-o", "--out"}).str();
     if (output_to_file && file_name.empty()) {
-        fmt::print(stderr, "missing param [-o|--out file_name]\n");
+        fmt::print(stderr, "missing file_name [-o|--out file_name]\n");
+        return false;
+    }
+
+    std::string json = cmd({"-j", "--json"}).str();
+    if (!json.empty()) {
+        fmt::print(stderr, "illegal param: {}\n", json);
         return false;
     }
 

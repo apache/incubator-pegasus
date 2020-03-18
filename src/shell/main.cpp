@@ -439,7 +439,7 @@ static command_executor commands[] = {
     {"pause_dup", "pause duplication", "<app_name> <dup_id>", pause_dup},
     {"disk_capacity",
      "query disk capacity info",
-     "[-n|--node replica_server] [-o|--out file_name][-j|-json][-d|--detail]",
+     "[-n|--node replica_server][-o|--out file_name][-j|-json][-d|--detail]",
      query_disk_capacity},
     {"disk_replica",
      "query disk replica count info",
