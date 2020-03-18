@@ -48,7 +48,7 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    for (const auto &flag : cmd.flags()) {
+    for (const auto flag : cmd.flags()) {
         if (std::find(flags.begin(), flags.end(), flag) == flags.end()) {
             fmt::print(stderr, "unknown flag {}\n", flag);
             return false;
@@ -169,7 +169,7 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    for (const auto &flag : cmd.flags()) {
+    for (const auto flag : cmd.flags()) {
         if (std::find(flags.begin(), flags.end(), flag) == flags.end()) {
             fmt::print(stderr, "unknown flag {}\n", flag);
             return false;
