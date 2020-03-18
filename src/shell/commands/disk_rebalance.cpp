@@ -40,7 +40,7 @@ bool fill_valid_targets(argh::parser &cmd,
 bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 {
     // disk_capacity [-n|--node str] [-d|--detail]
-    std::vector<std::string> flags = {"-n", "--node", "-d", "--detail"};
+    std::vector<std::string> flags = {"n", "node", "d", "detail"};
 
     argh::parser cmd(args.argc, args.argv);
     if (cmd.size() > 2) {
@@ -48,7 +48,7 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    for (const auto flag : cmd.flags()) {
+    for (const auto &flag : cmd.flags()) {
         if (std::find(flags.begin(), flags.end(), flag) == flags.end()) {
             fmt::print(stderr, "unknown flag {}\n", flag);
             return false;
@@ -59,7 +59,7 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
     bool query_detail_info = cmd[{"-d", "--detail"}];
 
     if (query_one_node && !cmd(1)) {
-        fmt::print(stderr, "missing param <node_address>\n");
+        fmt::print(stderr, "missing param [-n|--node ip:port]\n");
         return false;
     }
 
@@ -161,7 +161,7 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
 {
     // disk_capacity [-n|--node ip:port][-a|app_name str]
-    std::vector<std::string> flags = {"-n", "--node", "-a", "--app_name"};
+    std::vector<std::string> flags = {"n", "node", "a", "app_name"};
 
     argh::parser cmd(args.argc, args.argv);
     if (cmd.size() > 3) {
@@ -169,7 +169,7 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    for (const auto flag : cmd.flags()) {
+    for (const auto &flag : cmd.flags()) {
         if (std::find(flags.begin(), flags.end(), flag) == flags.end()) {
             fmt::print(stderr, "unknown flag {}\n", flag);
             return false;
