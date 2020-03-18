@@ -194,7 +194,7 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
 {
     // disk_capacity [-n|--node ip:port][-a|-app app_name][-o|--out file_name][-j|--json]
-    std::vector<std::string> flags = {"n", "node", "a", "app_name", "o", "out", "j", "json"};
+    std::vector<std::string> flags = {"n", "node", "a", "app", "o", "out", "j", "json"};
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
     if (cmd.size() > 1) {
