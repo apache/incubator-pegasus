@@ -31,6 +31,8 @@ bool fill_valid_targets(argh::parser &cmd,
         }
     } else {
         for (const auto &node : nodes) {
+            // TODO
+            fmt::print(stderr, "list nodes:{}\n",node.first.to_std_string());
             targets.emplace_back(node.first);
         }
     }
