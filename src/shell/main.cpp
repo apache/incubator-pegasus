@@ -443,7 +443,7 @@ static command_executor commands[] = {
      query_disk_capacity},
     {"disk_replica",
      "query disk replica count info",
-     "[-n|--node ip:port] [-a|--app_name str] [-d|--detail]",
+     "[-n|--node ip:port] [-a|--app_name str]",
      query_disk_replica},
     {
         "exit", "exit shell", "", exit_shell,
