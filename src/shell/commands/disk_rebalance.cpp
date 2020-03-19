@@ -12,18 +12,73 @@
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/replication/duplication_common.h>
 
-bool fill_valid_targets(argh::parser &cmd,
-                        std::string node_address,
-                        std::map<dsn::rpc_address, dsn::replication::node_status::type> &nodes,
-                        std::vector<dsn::rpc_address> &targets)
+bool parse_cmd(argh::parser &cmd,
+               const std::vector<std::string> &params,
+               const std::vector<std::string> &flags)
 {
+    if (cmd.size() > 1) {
+        fmt::print(stderr, "too many params!\n");
+        return false;
+    }
+
+    for (const auto &param : cmd.params()) {
+        if (std::find(params.begin(), params.end(), param.first) == params.end()) {
+            fmt::print(stderr, "unknown param {}={} \n", param.first, param.second);
+            return false;
+        }
+    }
+
+    for (const auto &flag : cmd.flags()) {
+        if (std::find(params.begin(), params.end(), flag) != params.end()) {
+            fmt::print(stderr, "missing value of {}\n", flag);
+            return false;
+        }
+
+        if (std::find(flags.begin(), flags.end(), flag) == flags.end()) {
+            fmt::print(stderr, "unknown flag {}\n", flag);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+std::ostream *get_out_stream(std::string &file_name)
+{
+    std::ostream *os_ptr = nullptr;
+    if (file_name.empty()) {
+        os_ptr = &std::cout;
+    } else {
+        os_ptr = new std::ofstream(file_name);
+        if (!*os_ptr) {
+            fprintf(stderr, "ERROR: open output file %s failed\n", file_name.c_str());
+            delete os_ptr;
+        }
+    }
+    return os_ptr;
+}
+
+bool query_disk_info(
+    shell_context *sc,
+    argh::parser &cmd,
+    std::string &node_address,
+    std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> &err_resps,
+    std::string app_name = std::string())
+{
+    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
+    auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
+    if (error != dsn::ERR_OK) {
+        fmt::print(stderr, "list nodes failed, error={}\n", error.to_string());
+        return false;
+    }
+
+    std::vector<dsn::rpc_address> targets;
     if (!node_address.empty()) {
-        for (auto &node : nodes) {
+        for (const auto &node : nodes) {
             if (node.first.to_std_string() == node_address) {
                 targets.emplace_back(node.first);
             }
         }
-
         if (targets.empty()) {
             fmt::print(stderr, "please input valid target node_address!\n");
             return false;
@@ -33,68 +88,37 @@ bool fill_valid_targets(argh::parser &cmd,
             targets.emplace_back(node.first);
         }
     }
+
+    sc->ddl_client->query_disk_info(targets, err_resps, app_name);
     return true;
 }
 
 bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 {
-    // disk_capacity [-n|--node replica_server] [-o|--out file_name][-j|-json][-d|--detail]
-    std::vector<std::string> flags = {"n", "node", "o", "out", "j", "json", "d", "detail"};
-
+    // disk_capacity [-n|--node replica_server(ip:port)] [-o|--out file_name][-j|-json][-d|--detail]
+    const std::vector<std::string> &params = {"n", "node", "o", "out"};
+    const std::vector<std::string> &flags = {"j", "json", "d", "detail"};
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
-    if (cmd.size() > 1) {
-        fmt::print(stderr, "too many params!\n");
+    if (!parse_cmd(cmd, params, flags)) {
         return false;
     }
 
-    for (const auto &flag : cmd.flags()) {
-        if (std::find(flags.begin(), flags.end(), flag) == flags.end()) {
-            fmt::print(stderr, "unknown flag {}\n", flag);
-            return false;
-        }
-    }
-
-    bool query_one_node = cmd[{"-n", "--node"}];
-    bool output_to_file = cmd[{"-o", "--out"}];
     bool format_to_json = cmd[{"-j", "--json"}];
     bool query_detail_info = cmd[{"-d", "--detail"}];
-
     std::string node_address = cmd({"-n", "--node"}).str();
-    if (query_one_node && node_address.empty()) {
-        fmt::print(stderr, "missing node address [-n|--node ip:port]\n");
-        return false;
-    }
-
     std::string file_name = cmd({"-o", "--out"}).str();
-    if (output_to_file && file_name.empty()) {
-        fmt::print(stderr, "missing file name [-o|--out file_name]\n");
-        return false;
-    }
-
-    std::string json = cmd({"-j", "--json"}).str();
-    if (!json.empty()) {
-        fmt::print(stderr, "illegal param: {}\n", json);
-        return false;
-    }
-
-    std::string detail = cmd({"-d", "--detail"}).str();
-    if (!detail.empty()) {
-        fmt::print(stderr, "illegal param: {}\n", detail);
-        return false;
-    }
-
-    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
-    auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
-    if (error != dsn::ERR_OK) {
-        fmt::print(stderr, "list nodes failed, error={}\n", error.to_string());
-        return false;
-    }
-
-    std::vector<dsn::rpc_address> targets;
-    fill_valid_targets(cmd, node_address, nodes, targets);
 
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
-    sc->ddl_client->query_disk_info(targets, err_resps);
+    if (!query_disk_info(sc, cmd, node_address, err_resps)) {
+        return false;
+    }
+
+    std::ostream *ostream_ptr = get_out_stream(file_name);
+    if (!ostream_ptr) {
+        fmt::print(stderr, "get output stream failed!");
+        return false;
+    }
+    std::ostream &out = *ostream_ptr;
 
     dsn::utils::table_printer node_printer;
     node_printer.add_title("node");
@@ -102,16 +126,6 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
     node_printer.add_column("avalable_capacity(MB)");
     node_printer.add_column("avalable_ratio(%)");
     node_printer.add_column("capacity_balance");
-
-    std::streambuf *buf;
-    std::ofstream of;
-    if (!file_name.empty()) {
-        of.open(file_name);
-        buf = of.rdbuf();
-    } else {
-        buf = std::cout.rdbuf();
-    }
-    std::ostream out(buf);
 
     dsn::utils::multi_table_printer multi_printer;
     for (const auto &err_resp : err_resps) {
@@ -140,10 +154,10 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
                                                ? 0
                                                : std::round(disk_info.disk_available_mb * 100.0 /
                                                             disk_info.disk_capacity_mb);
-                variance += pow((disk_available_ratio - total_capacity_ratio), 2);
+                variance += std::pow((disk_available_ratio - total_capacity_ratio), 2);
             }
 
-            int capacity_balance = sqrt(variance);
+            int capacity_balance = std::sqrt(variance);
 
             if (query_detail_info) {
                 dsn::utils::table_printer disk_printer(err_resp.first.to_std_string());
@@ -193,72 +207,31 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 
 bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
 {
-    // disk_capacity [-n|--node ip:port][-a|-app app_name][-o|--out file_name][-j|--json]
-    std::vector<std::string> flags = {"n", "node", "a", "app", "o", "out", "j", "json"};
-
+    // disk_capacity [-n|--node replica_server(ip:port)][-a|-app app_name][-o|--out
+    // file_name][-j|--json]
+    const std::vector<std::string> &params = {"n", "node", "a", "app", "o", "out"};
+    const std::vector<std::string> &flags = {"j", "json"};
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
-    if (cmd.size() > 1) {
-        fmt::print(stderr, "too many params!\n");
+    if (!parse_cmd(cmd, params, flags)) {
         return false;
     }
 
-    for (const auto &flag : cmd.flags()) {
-        if (std::find(flags.begin(), flags.end(), flag) == flags.end()) {
-            fmt::print(stderr, "unknown flag {}\n", flag);
-            return false;
-        }
-    }
-
-    bool query_one_node = cmd[{"-n", "--node"}];
-    bool query_one_app = cmd[{"-a", "--app"}];
-    bool output_to_file = cmd[{"-o", "--out"}];
     bool format_to_json = cmd[{"-j", "--json"}];
-
     std::string node_address = cmd({"-n", "--node"}).str();
-    if (query_one_node && node_address.empty()) {
-        fmt::print(stderr, "missing node address [-n|--node ip:port]\n");
-        return false;
-    }
-
     std::string app_name = cmd({"-a", "--app"}).str();
-    if (query_one_app && app_name.empty()) {
-        fmt::print(stderr, "missing app_name [-n|--app app_name]\n");
-        return false;
-    }
-
     std::string file_name = cmd({"-o", "--out"}).str();
-    if (output_to_file && file_name.empty()) {
-        fmt::print(stderr, "missing file_name [-o|--out file_name]\n");
-        return false;
-    }
 
-    std::string json = cmd({"-j", "--json"}).str();
-    if (!json.empty()) {
-        fmt::print(stderr, "illegal param: {}\n", json);
-        return false;
-    }
-
-    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
-    auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
-    if (error != dsn::ERR_OK) {
-        fmt::print(stderr, "list nodes failed, error={}\n", error.to_string());
-        return false;
-    }
-
-    std::vector<dsn::rpc_address> targets;
-    fill_valid_targets(cmd, node_address, nodes, targets);
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
-    sc->ddl_client->query_disk_info(targets, err_resps, app_name);
-
-    std::streambuf *buf;
-    std::ofstream of;
-    if (!file_name.empty()) {
-        of.open(file_name);
-        buf = of.rdbuf();
-    } else {
-        buf = std::cout.rdbuf();
+    if (!query_disk_info(sc, cmd, node_address, err_resps, app_name)) {
+        return false;
     }
-    std::ostream out(buf);
+
+    std::ostream *ostream_ptr = get_out_stream(file_name);
+    if (!ostream_ptr) {
+        fmt::print(stderr, "get output stream failed!");
+        return false;
+    }
+    std::ostream &out = *ostream_ptr;
 
     dsn::utils::multi_table_printer multi_printer;
     for (const auto &err_resp : err_resps) {
