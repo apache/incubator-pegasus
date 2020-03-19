@@ -169,6 +169,11 @@ public:
 
     dsn::error_code ddd_diagnose(gpid pid, std::vector<ddd_partition_info> &ddd_partitions);
 
+    void query_disk_info(
+        const std::vector<dsn::rpc_address> &targets,
+        const std::string &app_name,
+        /*out*/ std::map<dsn::rpc_address, error_with<query_disk_info_response>> &resps);
+
 private:
     bool static valid_app_char(int c);
 
@@ -222,9 +227,45 @@ private:
         return error_with<TResponse>(std::move(rpc.response()));
     }
 
+    /// Send request to multi replica server synchronously.
+    template <typename TRpcHolder, typename TResponse = typename TRpcHolder::response_type>
+    void call_rpcs_async(std::map<dsn::rpc_address, TRpcHolder> &rpcs,
+                         std::map<dsn::rpc_address, error_with<TResponse>> &resps,
+                         int reply_thread_hash = 0,
+                         bool enable_retry = true)
+    {
+        dsn::task_tracker tracker;
+        error_code err = ERR_UNKNOWN;
+        for (auto &rpc : rpcs) {
+            rpc.second.call(
+                rpc.first, &tracker, [&err, &resps, &rpcs, &rpc](error_code code) mutable {
+                    err = code;
+                    if (err == dsn::ERR_OK) {
+                        resps.emplace(rpc.first, std::move(rpc.second.response()));
+                        rpcs.erase(rpc.first);
+                    } else {
+                        resps.emplace(
+                            rpc.first,
+                            std::move(error_s::make(err, "unable to send rpc to server")));
+                    }
+                });
+        }
+        tracker.wait_outstanding_tasks();
+
+        if (enable_retry && rpcs.size() > 0) {
+            std::map<dsn::rpc_address, dsn::error_with<TResponse>> retry_resps;
+            call_rpcs_async(rpcs, retry_resps, reply_thread_hash, false);
+            for (auto &resp : retry_resps) {
+                resps.emplace(resp.first, std::move(resp.second));
+            }
+        }
+    }
+
 private:
     dsn::rpc_address _meta_server;
     dsn::task_tracker _tracker;
+
+    typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;
 };
 } // namespace replication
 } // namespace dsn
