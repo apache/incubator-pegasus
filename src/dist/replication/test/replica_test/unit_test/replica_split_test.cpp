@@ -165,12 +165,6 @@ public:
 
     bool test_parent_check_states() { return _parent->parent_check_states(); }
 
-    void test_parent_prepare_states()
-    {
-        _parent->parent_prepare_states(_parent->_app->learn_dir());
-        _parent->tracker()->wait_outstanding_tasks();
-    }
-
     void test_child_copy_prepare_list()
     {
         mock_child_async_learn_states(_parent, false, _decree);
@@ -277,8 +271,11 @@ TEST_F(replica_split_test, parent_check_states_with_wrong_status)
     generate_child(partition_status::PS_PARTITION_SPLIT);
     _parent->set_partition_status(partition_status::PS_POTENTIAL_SECONDARY);
 
+    fail::setup();
+    fail::cfg("replica_stub_split_replica_exec", "return()");
     bool flag = test_parent_check_states();
     ASSERT_FALSE(flag);
+    fail::teardown();
 }
 
 TEST_F(replica_split_test, parent_check_states)
@@ -288,27 +285,13 @@ TEST_F(replica_split_test, parent_check_states)
     ASSERT_TRUE(flag);
 }
 
-TEST_F(replica_split_test, parent_prepare_states_succeed)
-{
-    mock_parent_states();
-    generate_child(partition_status::PS_PARTITION_SPLIT);
-
-    fail::setup();
-    fail::cfg("replica_parent_check_states", "return()");
-    fail::cfg("replica_child_copy_prepare_list", "return()");
-    test_parent_prepare_states();
-    fail::teardown();
-
-    cleanup_prepare_list(_parent);
-}
-
 TEST_F(replica_split_test, copy_prepare_list_with_wrong_status)
 {
     generate_child(partition_status::PS_INACTIVE);
     mock_child_split_context(_parent_pid, false, false);
 
     fail::setup();
-    fail::cfg("replica_child_learn_states", "return()");
+    fail::cfg("replica_stub_split_replica_exec", "return()");
     test_child_copy_prepare_list();
     fail::teardown();
 
@@ -322,6 +305,7 @@ TEST_F(replica_split_test, copy_prepare_list_succeed)
     mock_child_split_context(_parent_pid, false, false);
 
     fail::setup();
+    fail::cfg("replica_stub_split_replica_exec", "return()");
     fail::cfg("replica_child_learn_states", "return()");
     test_child_copy_prepare_list();
     fail::teardown();

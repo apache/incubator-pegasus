@@ -2493,39 +2493,26 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-void replica_stub::split_replica_exec(gpid pid,
-                                      local_execution handler,
-                                      local_execution error_handler,
-                                      gpid error_handler_gpid)
+void replica_stub::split_replica_error_handler(gpid pid, local_execution handler)
 {
-    // app_id = 0 means child replica is invalid
-    replica_ptr replica = pid.get_app_id() == 0 ? nullptr : get_replica(pid);
-    replica_ptr error_handler_replica =
-        error_handler_gpid.get_app_id() == 0 ? nullptr : get_replica(error_handler_gpid);
-
-    if (replica && handler) {
-        handler(replica);
-    } else if (error_handler_replica && error_handler) {
-        ddebug_f("replica({}) is invalid, replica({}) will execute its handler)",
-                 pid,
-                 error_handler_gpid);
-        error_handler(error_handler_replica);
-    } else {
-        dwarn_f(
-            "both replica({}) and error handler replica({}) are invalid", pid, error_handler_gpid);
-    }
+    split_replica_exec(LPC_PARTITION_SPLIT_ERROR, pid, handler);
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-void replica_stub::split_replica_error_handler(gpid pid, local_execution handler)
+dsn::error_code
+replica_stub::split_replica_exec(dsn::task_code code, gpid pid, local_execution handler)
 {
-    // app_id = 0 means child replica is invalid
+    FAIL_POINT_INJECT_F("replica_stub_split_replica_exec", [](dsn::string_view) { return ERR_OK; });
     replica_ptr replica = pid.get_app_id() == 0 ? nullptr : get_replica(pid);
     if (replica && handler) {
-        handler(replica);
-    } else {
-        dwarn_f("replica({}) is invalid", pid);
+        tasking::enqueue(code,
+                         replica.get()->tracker(),
+                         [this, handler, replica]() { handler(replica); },
+                         pid.thread_hash());
+        return ERR_OK;
     }
+    dwarn_f("replica({}) is invalid", pid);
+    return ERR_OBJECT_NOT_FOUND;
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION

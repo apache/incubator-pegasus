@@ -186,18 +186,12 @@ public:
     typedef std::function<void(::dsn::replication::replica *rep)> local_execution;
 
     // This function is used for partition split, caller(replica)
-    // - case1. parent want child execute <handler>, child will execute <handler> if child is
-    // valid(<pid>.app_id>0) and existed, otherwise parent will execute <error_handler>
-    // - case2. child want parent execute <handler>, parent will execute <handler> if parent
-    // exist, otherwise child will execute <error_handler>
-    void split_replica_exec(gpid pid,
-                            local_execution handler,
-                            local_execution error_handler,
-                            gpid error_handler_gpid);
+    // parent/child may want child/parent to execute function during partition split
+    // if replica `pid` exists, will execute function `handler` and return ERR_OK, otherwise return
+    // ERR_OBJECT_NOT_FOUND
+    dsn::error_code split_replica_exec(dsn::task_code code, gpid pid, local_execution handler);
 
-    // This function is used for partition split error handler, caller(replica)
-    // if partition split meet error, parent/child may want child/parent execute error handler
-    // if replica <pid> valid and exist, execute <handler>, otherwise return
+    // This function is used for partition split error handler
     void split_replica_error_handler(gpid pid, local_execution handler);
 
 private:
