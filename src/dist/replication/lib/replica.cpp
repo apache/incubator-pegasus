@@ -82,6 +82,10 @@ replica::replica(
     // init table level latency perf counters
     init_table_level_latency_counters();
 
+    counter_str = fmt::format("backup_request_qps@{}", _app_info.app_name);
+    _counter_backup_request_qps.init_app_counter(
+        "eon.replica", counter_str.c_str(), COUNTER_TYPE_RATE, counter_str.c_str());
+
     if (need_restore) {
         // add an extra env for restore
         _extra_envs.insert(
@@ -166,6 +170,8 @@ void replica::on_client_read(dsn::message_ex *request)
             response_client_read(request, ERR_INVALID_STATE);
             return;
         }
+    } else {
+        _counter_backup_request_qps->increment();
     }
 
     uint64_t start_time_ns = dsn_now_ns();

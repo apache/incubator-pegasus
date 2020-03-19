@@ -420,6 +420,7 @@ private:
     friend class replica_duplicator_manager;
     friend class load_mutation;
     friend class replica_split_test;
+    friend class replica_test;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -511,6 +512,7 @@ private:
     perf_counter_wrapper _counter_recent_write_throttling_delay_count;
     perf_counter_wrapper _counter_recent_write_throttling_reject_count;
     std::vector<perf_counter *> _counters_table_level_latency;
+    perf_counter_wrapper _counter_backup_request_qps;
 
     dsn::task_tracker _tracker;
     // the thread access checker

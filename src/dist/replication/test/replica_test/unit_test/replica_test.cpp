@@ -16,18 +16,24 @@ class replica_test : public replica_test_base
 public:
     dsn::app_info _app_info;
     dsn::gpid pid = gpid(2, 1);
+    mock_replica_ptr _mock_replica;
 
 public:
     void SetUp() override
     {
         stub->install_perf_counters();
         mock_app_info();
-        stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1);
+        _mock_replica = stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1);
     }
 
     int get_write_size_exceed_threshold_count()
     {
         return stub->_counter_recent_write_size_exceed_threshold_count->get_value();
+    }
+
+    int get_table_level_backup_request_qps()
+    {
+        return _mock_replica->_counter_backup_request_qps->get_integer_value();
     }
 
     void mock_app_info()
@@ -57,6 +63,22 @@ TEST_F(replica_test, write_size_limited)
     }
 
     ASSERT_EQ(get_write_size_exceed_threshold_count(), count);
+}
+
+TEST_F(replica_test, backup_request_qps)
+{
+    // create backup request
+    struct dsn::message_header header;
+    header.context.u.is_backup_request = true;
+    message_ptr backup_request = dsn::message_ex::create_request(task_code());
+    backup_request->header = &header;
+
+    _mock_replica->on_client_read(backup_request);
+
+    // We have to sleep >= 0.1s, or the value this perf-counter will be 0, according to the
+    // implementation of perf-counter which type is COUNTER_TYPE_RATE.
+    usleep(1e5);
+    ASSERT_GT(get_table_level_backup_request_qps(), 0);
 }
 
 } // namespace replication
