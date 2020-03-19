@@ -252,6 +252,12 @@ class query_replica_info_request;
 
 class query_replica_info_response;
 
+class disk_info;
+
+class query_disk_info_request;
+
+class query_disk_info_response;
+
 class query_app_info_request;
 
 class query_app_info_response;
@@ -3134,6 +3140,209 @@ public:
 void swap(query_replica_info_response &a, query_replica_info_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const query_replica_info_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _disk_info__isset
+{
+    _disk_info__isset()
+        : tag(false),
+          full_dir(false),
+          disk_capacity_mb(false),
+          disk_available_mb(false),
+          holding_primary_replica_counts(false),
+          holding_secondary_replica_counts(false)
+    {
+    }
+    bool tag : 1;
+    bool full_dir : 1;
+    bool disk_capacity_mb : 1;
+    bool disk_available_mb : 1;
+    bool holding_primary_replica_counts : 1;
+    bool holding_secondary_replica_counts : 1;
+} _disk_info__isset;
+
+class disk_info
+{
+public:
+    disk_info(const disk_info &);
+    disk_info(disk_info &&);
+    disk_info &operator=(const disk_info &);
+    disk_info &operator=(disk_info &&);
+    disk_info() : tag(), full_dir(), disk_capacity_mb(0), disk_available_mb(0) {}
+
+    virtual ~disk_info() throw();
+    std::string tag;
+    std::string full_dir;
+    int64_t disk_capacity_mb;
+    int64_t disk_available_mb;
+    std::map<int32_t, int32_t> holding_primary_replica_counts;
+    std::map<int32_t, int32_t> holding_secondary_replica_counts;
+
+    _disk_info__isset __isset;
+
+    void __set_tag(const std::string &val);
+
+    void __set_full_dir(const std::string &val);
+
+    void __set_disk_capacity_mb(const int64_t val);
+
+    void __set_disk_available_mb(const int64_t val);
+
+    void __set_holding_primary_replica_counts(const std::map<int32_t, int32_t> &val);
+
+    void __set_holding_secondary_replica_counts(const std::map<int32_t, int32_t> &val);
+
+    bool operator==(const disk_info &rhs) const
+    {
+        if (!(tag == rhs.tag))
+            return false;
+        if (!(full_dir == rhs.full_dir))
+            return false;
+        if (!(disk_capacity_mb == rhs.disk_capacity_mb))
+            return false;
+        if (!(disk_available_mb == rhs.disk_available_mb))
+            return false;
+        if (!(holding_primary_replica_counts == rhs.holding_primary_replica_counts))
+            return false;
+        if (!(holding_secondary_replica_counts == rhs.holding_secondary_replica_counts))
+            return false;
+        return true;
+    }
+    bool operator!=(const disk_info &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const disk_info &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(disk_info &a, disk_info &b);
+
+inline std::ostream &operator<<(std::ostream &out, const disk_info &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _query_disk_info_request__isset
+{
+    _query_disk_info_request__isset() : node(false), app_name(false) {}
+    bool node : 1;
+    bool app_name : 1;
+} _query_disk_info_request__isset;
+
+class query_disk_info_request
+{
+public:
+    query_disk_info_request(const query_disk_info_request &);
+    query_disk_info_request(query_disk_info_request &&);
+    query_disk_info_request &operator=(const query_disk_info_request &);
+    query_disk_info_request &operator=(query_disk_info_request &&);
+    query_disk_info_request() : app_name() {}
+
+    virtual ~query_disk_info_request() throw();
+    ::dsn::rpc_address node;
+    std::string app_name;
+
+    _query_disk_info_request__isset __isset;
+
+    void __set_node(const ::dsn::rpc_address &val);
+
+    void __set_app_name(const std::string &val);
+
+    bool operator==(const query_disk_info_request &rhs) const
+    {
+        if (!(node == rhs.node))
+            return false;
+        if (!(app_name == rhs.app_name))
+            return false;
+        return true;
+    }
+    bool operator!=(const query_disk_info_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const query_disk_info_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(query_disk_info_request &a, query_disk_info_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const query_disk_info_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _query_disk_info_response__isset
+{
+    _query_disk_info_response__isset()
+        : err(false), total_capacity_mb(false), total_available_mb(false), disk_infos(false)
+    {
+    }
+    bool err : 1;
+    bool total_capacity_mb : 1;
+    bool total_available_mb : 1;
+    bool disk_infos : 1;
+} _query_disk_info_response__isset;
+
+class query_disk_info_response
+{
+public:
+    query_disk_info_response(const query_disk_info_response &);
+    query_disk_info_response(query_disk_info_response &&);
+    query_disk_info_response &operator=(const query_disk_info_response &);
+    query_disk_info_response &operator=(query_disk_info_response &&);
+    query_disk_info_response() : total_capacity_mb(0), total_available_mb(0) {}
+
+    virtual ~query_disk_info_response() throw();
+    ::dsn::error_code err;
+    int64_t total_capacity_mb;
+    int64_t total_available_mb;
+    std::vector<disk_info> disk_infos;
+
+    _query_disk_info_response__isset __isset;
+
+    void __set_err(const ::dsn::error_code &val);
+
+    void __set_total_capacity_mb(const int64_t val);
+
+    void __set_total_available_mb(const int64_t val);
+
+    void __set_disk_infos(const std::vector<disk_info> &val);
+
+    bool operator==(const query_disk_info_response &rhs) const
+    {
+        if (!(err == rhs.err))
+            return false;
+        if (!(total_capacity_mb == rhs.total_capacity_mb))
+            return false;
+        if (!(total_available_mb == rhs.total_available_mb))
+            return false;
+        if (!(disk_infos == rhs.disk_infos))
+            return false;
+        return true;
+    }
+    bool operator!=(const query_disk_info_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const query_disk_info_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(query_disk_info_response &a, query_disk_info_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const query_disk_info_response &obj)
 {
     obj.printTo(out);
     return out;

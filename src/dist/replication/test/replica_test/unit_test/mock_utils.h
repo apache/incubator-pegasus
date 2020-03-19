@@ -211,6 +211,30 @@ public:
         return rep;
     }
 
+    void generate_replicas_base_dir_nodes_for_app(app_info mock_app,
+                                                  int primary_count_for_disk = 1,
+                                                  int secondary_count_for_disk = 2)
+    {
+        const auto &dir_nodes = _fs_manager._dir_nodes;
+        for (auto &dir_node : dir_nodes) {
+            const auto &replica_iter = dir_node->holding_replicas.find(mock_app.app_id);
+            if (replica_iter == dir_node->holding_replicas.end()) {
+                continue;
+            }
+            const std::set<gpid> &pids = replica_iter->second;
+            for (const gpid &pid : pids) {
+                // generate primary replica and secondary replica.
+                if (primary_count_for_disk-- > 0) {
+                    add_replica(generate_replica(
+                        mock_app, pid, partition_status::PS_PRIMARY, mock_app.app_id));
+                } else if (secondary_count_for_disk-- > 0) {
+                    add_replica(generate_replica(
+                        mock_app, pid, partition_status::PS_SECONDARY, mock_app.app_id));
+                }
+            }
+        }
+    }
+
     void set_log(mutation_log_ptr log) { _log = log; }
 };
 

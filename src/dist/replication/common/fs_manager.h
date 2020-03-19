@@ -50,16 +50,22 @@ public:
     std::string full_dir;
     int64_t disk_capacity_mb;
     int64_t disk_available_mb;
-    int64_t disk_available_ratio;
+    int disk_available_ratio;
     std::map<app_id, std::set<gpid>> holding_replicas;
+    std::map<app_id, std::set<gpid>> holding_primary_replicas;
+    std::map<app_id, std::set<gpid>> holding_secondary_replicas;
 
 public:
-    dir_node(const std::string &tag_, const std::string &dir_)
+    dir_node(const std::string &tag_,
+             const std::string &dir_,
+             int64_t disk_capacity_mb_ = 0,
+             int64_t disk_available_mb_ = 0,
+             int disk_available_ratio_ = 0)
         : tag(tag_),
           full_dir(dir_),
-          disk_capacity_mb(0),
-          disk_available_mb(0),
-          disk_available_ratio(0)
+          disk_capacity_mb(disk_capacity_mb_),
+          disk_available_mb(disk_available_mb_),
+          disk_available_ratio(disk_available_ratio_)
     {
     }
     unsigned replicas_count(app_id id) const;
@@ -91,18 +97,38 @@ public:
     void update_disk_stat();
 
 private:
+    void reset_disk_stat()
+    {
+        _total_capacity_mb = 0;
+        _total_available_mb = 0;
+        _total_available_ratio = 0;
+        _min_available_ratio = 100;
+        _max_available_ratio = 0;
+    }
+
     dir_node *get_dir_node(const std::string &subdir);
 
     // when visit the tag/storage of the _dir_nodes map, there's no need to protect by the lock.
     // but when visit the holding_replicas, you must take care.
     mutable zrwlock_nr _lock;
-    std::vector<std::unique_ptr<dir_node>> _dir_nodes;
 
-    perf_counter_wrapper _counter_capacity_total_mb;
-    perf_counter_wrapper _counter_available_total_mb;
-    perf_counter_wrapper _counter_available_total_ratio;
-    perf_counter_wrapper _counter_available_min_ratio;
-    perf_counter_wrapper _counter_available_max_ratio;
+    int64_t _total_capacity_mb = 0;
+    int64_t _total_available_mb = 0;
+    int _total_available_ratio = 0;
+    int _min_available_ratio = 100;
+    int _max_available_ratio = 0;
+
+    std::vector<std::shared_ptr<dir_node>> _dir_nodes;
+
+    perf_counter_wrapper _counter_total_capacity_mb;
+    perf_counter_wrapper _counter_total_available_mb;
+    perf_counter_wrapper _counter_total_available_ratio;
+    perf_counter_wrapper _counter_min_available_ratio;
+    perf_counter_wrapper _counter_max_available_ratio;
+
+    friend class replica_stub;
+    friend class mock_replica_stub;
+    friend class replica_disk_test;
 };
-}
-}
+} // replication
+} // dsn

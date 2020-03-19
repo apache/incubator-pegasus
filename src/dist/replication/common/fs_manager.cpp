@@ -36,6 +36,7 @@
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <thread>
+#include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
 namespace replication {
@@ -79,39 +80,39 @@ void dir_node::update_disk_stat()
     if (dsn::utils::filesystem::get_disk_space_info(full_dir, info)) {
         disk_capacity_mb = info.capacity / 1024 / 1024;
         disk_available_mb = info.available / 1024 / 1024;
-        disk_available_ratio =
-            disk_capacity_mb == 0 ? 0 : disk_available_mb * 100 / disk_capacity_mb;
-        ddebug("update disk space succeed: dir = %s, capacity_mb = %" PRId64
-               ", available_mb = %" PRId64 ", available_ratio = %" PRId64 "%%",
-               full_dir.c_str(),
-               disk_capacity_mb,
-               disk_available_mb,
-               disk_available_ratio);
+        disk_available_ratio = static_cast<int>(
+            disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
+        ddebug_f("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
+                 "available_ratio = {}%",
+                 full_dir,
+                 disk_capacity_mb,
+                 disk_available_mb,
+                 disk_available_ratio);
     } else {
-        derror("update disk space failed: dir = %s", full_dir.c_str());
+        derror_f("update disk space failed: dir = {}", full_dir);
     }
 }
 
 fs_manager::fs_manager(bool for_test)
 {
     if (!for_test) {
-        _counter_capacity_total_mb.init_app_counter("eon.replica_stub",
+        _counter_total_capacity_mb.init_app_counter("eon.replica_stub",
                                                     "disk.capacity.total(MB)",
                                                     COUNTER_TYPE_NUMBER,
                                                     "total disk capacity in MB");
-        _counter_available_total_mb.init_app_counter("eon.replica_stub",
+        _counter_total_available_mb.init_app_counter("eon.replica_stub",
                                                      "disk.available.total(MB)",
                                                      COUNTER_TYPE_NUMBER,
                                                      "total disk available in MB");
-        _counter_available_total_ratio.init_app_counter("eon.replica_stub",
+        _counter_total_available_ratio.init_app_counter("eon.replica_stub",
                                                         "disk.available.total.ratio",
                                                         COUNTER_TYPE_NUMBER,
                                                         "total disk available ratio");
-        _counter_available_min_ratio.init_app_counter("eon.replica_stub",
+        _counter_min_available_ratio.init_app_counter("eon.replica_stub",
                                                       "disk.available.min.ratio",
                                                       COUNTER_TYPE_NUMBER,
                                                       "minimal disk available ratio in all disks");
-        _counter_available_max_ratio.init_app_counter("eon.replica_stub",
+        _counter_max_available_ratio.init_app_counter("eon.replica_stub",
                                                       "disk.available.max.ratio",
                                                       COUNTER_TYPE_NUMBER,
                                                       "maximal disk available ratio in all disks");
@@ -279,36 +280,31 @@ bool fs_manager::for_each_dir_node(const std::function<bool(const dir_node &)> &
 
 void fs_manager::update_disk_stat()
 {
-    int64_t capacity_total_mb = 0;
-    int64_t available_total_mb = 0;
-    int64_t available_total_ratio = 0;
-    int64_t available_min_ratio = 100;
-    int64_t available_max_ratio = 0;
-    for (auto &n : _dir_nodes) {
-        n->update_disk_stat();
-        capacity_total_mb += n->disk_capacity_mb;
-        available_total_mb += n->disk_available_mb;
-        if (n->disk_available_ratio < available_min_ratio)
-            available_min_ratio = n->disk_available_ratio;
-        if (n->disk_available_ratio > available_max_ratio)
-            available_max_ratio = n->disk_available_ratio;
+    reset_disk_stat();
+    for (auto &dir_node : _dir_nodes) {
+        dir_node->update_disk_stat();
+        _total_capacity_mb += dir_node->disk_capacity_mb;
+        _total_available_mb += dir_node->disk_available_mb;
+        _min_available_ratio = std::min(dir_node->disk_available_ratio, _min_available_ratio);
+        _max_available_ratio = std::max(dir_node->disk_available_ratio, _max_available_ratio);
     }
-    available_total_ratio =
-        capacity_total_mb == 0 ? 0 : available_total_mb * 100 / capacity_total_mb;
-    ddebug("update disk space succeed: disk_count = %d, capacity_total_mb = %" PRId64
-           ", available_total_mb = %" PRId64 ", available_total_ratio = %" PRId64
-           "%%, available_min_ratio = %" PRId64 "%%, available_max_ratio = %" PRId64 "%%",
-           (int)_dir_nodes.size(),
-           capacity_total_mb,
-           available_total_mb,
-           available_total_ratio,
-           available_min_ratio,
-           available_max_ratio);
-    _counter_capacity_total_mb->set(capacity_total_mb);
-    _counter_available_total_mb->set(available_total_mb);
-    _counter_available_total_ratio->set(available_total_ratio);
-    _counter_available_min_ratio->set(available_min_ratio);
-    _counter_available_max_ratio->set(available_max_ratio);
+    _total_available_ratio = static_cast<int>(
+        _total_capacity_mb == 0 ? 0 : std::round(_total_available_mb * 100.0 / _total_capacity_mb));
+
+    ddebug_f("update disk space succeed: disk_count = {}, total_capacity_mb = {}, "
+             "total_available_mb = {}, total_available_ratio = {}%, min_available_ratio = {}%, "
+             "max_available_ratio = {}%",
+             _dir_nodes.size(),
+             _total_capacity_mb,
+             _total_available_mb,
+             _total_available_ratio,
+             _min_available_ratio,
+             _max_available_ratio);
+    _counter_total_capacity_mb->set(_total_capacity_mb);
+    _counter_total_available_mb->set(_total_available_mb);
+    _counter_total_available_ratio->set(_total_available_ratio);
+    _counter_min_available_ratio->set(_min_available_ratio);
+    _counter_max_available_ratio->set(_max_available_ratio);
 }
-}
-}
+} // namespace replication
+} // namespace dsn

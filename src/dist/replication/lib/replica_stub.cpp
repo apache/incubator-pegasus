@@ -902,6 +902,59 @@ void replica_stub::on_query_replica_info(const query_replica_info_request &req,
     resp.err = ERR_OK;
 }
 
+// ThreadPool: THREAD_POOL_DEFAULT
+void replica_stub::on_query_disk_info(const query_disk_info_request &req,
+                                      /*out*/ query_disk_info_response &resp)
+{
+    int app_id = 0;
+    if (!req.app_name.empty()) {
+        zauto_read_lock l(_replicas_lock);
+        if (!(app_id = get_app_id_from_replicas(req.app_name))) {
+            resp.err = ERR_OBJECT_NOT_FOUND;
+            return;
+        }
+    }
+
+    for (const auto &dir_node : _fs_manager._dir_nodes) {
+        disk_info info;
+        // app_name empty means query all app replica_count
+        if (req.app_name.empty()) {
+            for (const auto &holding_primary_replicas : dir_node->holding_primary_replicas) {
+                info.holding_primary_replica_counts[holding_primary_replicas.first] =
+                    static_cast<int>(holding_primary_replicas.second.size());
+            }
+
+            for (const auto &holding_secondary_replicas : dir_node->holding_secondary_replicas) {
+                info.holding_secondary_replica_counts[holding_secondary_replicas.first] =
+                    static_cast<int>(holding_secondary_replicas.second.size());
+            }
+        } else {
+            const auto &primary_iter = dir_node->holding_primary_replicas.find(app_id);
+            if (primary_iter != dir_node->holding_primary_replicas.end()) {
+                info.holding_primary_replica_counts[app_id] =
+                    static_cast<int>(primary_iter->second.size());
+            }
+
+            const auto &secondary_iter = dir_node->holding_secondary_replicas.find(app_id);
+            if (secondary_iter != dir_node->holding_secondary_replicas.end()) {
+                info.holding_secondary_replica_counts[app_id] =
+                    static_cast<int>(secondary_iter->second.size());
+            }
+        }
+        info.tag = dir_node->tag;
+        info.full_dir = dir_node->full_dir;
+        info.disk_capacity_mb = dir_node->disk_capacity_mb;
+        info.disk_available_mb = dir_node->disk_available_mb;
+
+        resp.disk_infos.emplace_back(info);
+    }
+
+    resp.total_capacity_mb = _fs_manager._total_capacity_mb;
+    resp.total_available_mb = _fs_manager._total_available_mb;
+
+    resp.err = ERR_OK;
+}
+
 void replica_stub::on_query_app_info(const query_app_info_request &req,
                                      query_app_info_response &resp)
 {
@@ -1725,6 +1778,7 @@ void replica_stub::on_disk_stat()
     _counter_replicas_garbage_replica_dir_count->set(garbage_replica_dir_count);
 
     _fs_manager.update_disk_stat();
+    update_disk_holding_replicas();
 
     ddebug("finish to update disk stat, time_used_ns = %" PRIu64, dsn_now_ns() - start);
 }
@@ -1982,7 +2036,7 @@ void replica_stub::open_service()
         RPC_QUERY_REPLICA_INFO, "query_replica_info", &replica_stub::on_query_replica_info);
     register_rpc_handler(
         RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
-
+    register_rpc_handler(RPC_QUERY_DISK_INFO, "query_disk_info", &replica_stub::on_query_disk_info);
     register_rpc_handler(RPC_QUERY_APP_INFO, "query_app_info", &replica_stub::on_query_app_info);
     register_rpc_handler(RPC_COLD_BACKUP, "ColdBackup", &replica_stub::on_cold_backup);
     register_rpc_handler(RPC_SPLIT_NOTIFY_CATCH_UP,
@@ -2524,6 +2578,30 @@ void replica_stub::on_notify_primary_split_catch_up(const notify_catch_up_reques
         replica->parent_handle_child_catch_up(request, response);
     } else {
         response.err = ERR_OBJECT_NOT_FOUND;
+    }
+}
+
+void replica_stub::update_disk_holding_replicas()
+{
+    for (const auto &dir_node : _fs_manager._dir_nodes) {
+        // clear the holding_primary_replicas/holding_secondary_replicas and re-calculate it from
+        // holding_replicas
+        dir_node->holding_primary_replicas.clear();
+        dir_node->holding_secondary_replicas.clear();
+        for (const auto &holding_replicas : dir_node->holding_replicas) {
+            const std::set<dsn::gpid> &pids = holding_replicas.second;
+            for (const auto &pid : pids) {
+                replica_ptr replica = get_replica(pid);
+                if (replica == nullptr) {
+                    continue;
+                }
+                if (replica->status() == partition_status::PS_PRIMARY) {
+                    dir_node->holding_primary_replicas[holding_replicas.first].emplace(pid);
+                } else if (replica->status() == partition_status::PS_SECONDARY) {
+                    dir_node->holding_secondary_replicas[holding_replicas.first].emplace(pid);
+                }
+            }
+        }
     }
 }
 

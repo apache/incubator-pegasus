@@ -436,6 +436,35 @@ struct query_replica_info_response
     2:list<replica_info>  replicas;
 }
 
+struct disk_info
+{
+    // TODO(jiashuo1): figure out what the "tag" means and decide if it's necessary
+    1:string tag;
+    2:string full_dir;
+    3:i64 disk_capacity_mb;
+    4:i64 disk_available_mb;
+    // map<i32,i32> means map<app_id, replica_counts>
+    5:map<i32,i32> holding_primary_replica_counts;
+    6:map<i32,i32> holding_secondary_replica_counts;
+}
+
+// This request is sent from client to replica_server.
+struct query_disk_info_request
+{
+    1:dsn.rpc_address node;
+    2:string          app_name;
+}
+
+// This response is recieved replica_server.
+struct query_disk_info_response
+{
+    // app not existed will return "ERR_OBJECT_NOT_FOUND", otherwise "ERR_OK"
+    1:dsn.error_code err;
+    2:i64 total_capacity_mb;
+    3:i64 total_available_mb;
+    4:list<disk_info> disk_infos;
+}
+
 struct query_app_info_request
 {
     1:dsn.rpc_address meta_server;
