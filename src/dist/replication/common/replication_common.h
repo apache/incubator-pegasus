@@ -51,7 +51,6 @@ public:
     bool verbose_commit_log_on_start;
     bool delay_for_fd_timeout_on_start;
     bool empty_write_disabled;
-    bool allow_non_idempotent_write;
     bool duplication_enabled;
 
     int32_t prepare_timeout_ms_for_secondaries;

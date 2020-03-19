@@ -174,7 +174,7 @@ public:
     // Duplication
     //
     replica_duplicator_manager *get_duplication_manager() const { return _duplication_mgr.get(); }
-    bool is_duplicating() const { return _app_info.duplicating; }
+    bool is_duplicating() const { return _duplicating; }
 
     void update_last_checkpoint_generate_time();
 
@@ -495,6 +495,7 @@ private:
 
     // duplication
     std::unique_ptr<replica_duplicator_manager> _duplication_mgr;
+    bool _duplicating{false};
 
     // partition split
     // _child_gpid = gpid({app_id},{pidx}+{old_partition_count}) for parent partition
@@ -512,6 +513,7 @@ private:
     perf_counter_wrapper _counter_recent_write_throttling_delay_count;
     perf_counter_wrapper _counter_recent_write_throttling_reject_count;
     std::vector<perf_counter *> _counters_table_level_latency;
+    perf_counter_wrapper _counter_dup_disabled_non_idempotent_write_count;
     perf_counter_wrapper _counter_backup_request_qps;
 
     dsn::task_tracker _tracker;

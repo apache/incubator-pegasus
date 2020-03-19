@@ -976,6 +976,7 @@ void replica::on_config_sync(const app_info &info, const partition_configuration
         return;
 
     update_app_envs(info.envs);
+    _duplicating = info.duplicating;
 
     if (status() == partition_status::PS_PRIMARY ||
         nullptr != _primary_states.reconfiguration_task) {

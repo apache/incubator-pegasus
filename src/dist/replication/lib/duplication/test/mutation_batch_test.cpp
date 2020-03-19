@@ -24,14 +24,15 @@
  * THE SOFTWARE.
  */
 
-#include "dist/replication/test/replica_test/unit_test/replica_test_base.h"
+#include "duplication_test_base.h"
 #include "dist/replication/lib/duplication/mutation_batch.h"
 
 namespace dsn {
 namespace replication {
 
-class mutation_batch_test : public replica_test_base
+class mutation_batch_test : public duplication_test_base
 {
+public:
 };
 
 TEST_F(mutation_batch_test, add_mutation_if_valid)
@@ -57,6 +58,17 @@ TEST_F(mutation_batch_test, add_mutation_if_valid)
     mutation_ptr mu3 = create_test_mutation(1, s);
     add_mutation_if_valid(mu2, result, 2);
     ASSERT_EQ(result.size(), 2);
+}
+
+TEST_F(mutation_batch_test, ignore_non_idempotent_write)
+{
+    mutation_tuple_set result;
+
+    std::string s = "hello";
+    mutation_ptr mu = create_test_mutation(1, s);
+    mu->data.updates[0].code = RPC_DUPLICATION_NON_IDEMPOTENT_WRITE;
+    add_mutation_if_valid(mu, result, 0);
+    ASSERT_EQ(result.size(), 0);
 }
 
 } // namespace replication
