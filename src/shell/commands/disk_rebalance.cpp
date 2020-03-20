@@ -94,16 +94,6 @@ bool query_disk_info(
     return true;
 }
 
-bool query_disk_info(
-    shell_context *sc,
-    const argh::parser &cmd,
-    const std::string &node_address,
-    /*out*/ std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> &err_resps)
-{
-    // passing empty app_name(app_name = "") means query all app disk info
-    return query_disk_info(sc, cmd, node_address, "", err_resps);
-}
-
 bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 {
     // disk_capacity [-n|--node replica_server(ip:port)] [-o|--out file_name][-j|-json][-d|--detail]
@@ -127,7 +117,8 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
     std::ostream &out = *ostream_ptr;
 
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
-    if (!query_disk_info(sc, cmd, node_address, err_resps)) {
+    // passing empty app_name(app_name = "") means query all app disk info.
+    if (!query_disk_info(sc, cmd, node_address, "", err_resps)) {
         if (ostream_ptr != &std::cout) {
             delete ostream_ptr;
         }
