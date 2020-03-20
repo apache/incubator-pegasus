@@ -65,6 +65,7 @@ public:
             rdb_estimate_num_keys->set(row_stats.total_rdb_estimate_num_keys);
             read_qps->set(row_stats.get_total_read_qps());
             write_qps->set(row_stats.get_total_write_qps());
+            backup_request_qps->set(row_stats.total_backup_request_qps);
         }
 
         ::dsn::perf_counter_wrapper get_qps;
@@ -93,6 +94,7 @@ public:
         ::dsn::perf_counter_wrapper rdb_estimate_num_keys;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
+        ::dsn::perf_counter_wrapper backup_request_qps;
     };
 
     info_collector();
