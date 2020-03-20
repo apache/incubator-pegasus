@@ -12,7 +12,7 @@
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/replication/duplication_common.h>
 
-bool validate_cmd(argh::parser &cmd,
+bool validate_cmd(const argh::parser &cmd,
                   const std::set<std::string> &params,
                   const std::set<std::string> &flags)
 {
@@ -22,19 +22,19 @@ bool validate_cmd(argh::parser &cmd,
     }
 
     for (const auto &param : cmd.params()) {
-        if (std::find(params.begin(), params.end(), param.first) == params.end()) {
+        if (params.find(param.first) == params.end()) {
             fmt::print(stderr, "unknown param {}={} \n", param.first, param.second);
             return false;
         }
     }
 
     for (const auto &flag : cmd.flags()) {
-        if (std::find(params.begin(), params.end(), flag) != params.end()) {
+        if (params.find(flag) != params.end()) {
             fmt::print(stderr, "missing value of {}\n", flag);
             return false;
         }
 
-        if (std::find(flags.begin(), flags.end(), flag) == flags.end()) {
+        if (flags.find(flag) == flags.end()) {
             fmt::print(stderr, "unknown flag {}\n", flag);
             return false;
         }
@@ -43,7 +43,7 @@ bool validate_cmd(argh::parser &cmd,
     return true;
 }
 
-std::ostream *get_out_stream(std::string &file_name)
+std::ostream *get_out_stream(const std::string &file_name)
 {
     std::ostream *os_ptr = nullptr;
     if (file_name.empty()) {
@@ -60,10 +60,10 @@ std::ostream *get_out_stream(std::string &file_name)
 
 bool query_disk_info(
     shell_context *sc,
-    argh::parser &cmd,
-    std::string &node_address,
-    std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> &err_resps,
-    std::string app_name = std::string())
+    const argh::parser &cmd,
+    const std::string &node_address,
+    const std::string &app_name,
+    /*out*/ std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> &err_resps)
 {
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
     auto error = sc->ddl_client->list_nodes(::dsn::replication::node_status::NS_INVALID, nodes);
@@ -76,21 +76,32 @@ bool query_disk_info(
     if (!node_address.empty()) {
         for (const auto &node : nodes) {
             if (node.first.to_std_string() == node_address) {
-                targets.emplace_back(node.first);
+                targets.push_back(node.first);
+                break;
             }
-        }
-        if (targets.empty()) {
-            fmt::print(stderr, "please input valid target node_address!\n");
-            return false;
         }
     } else {
         for (const auto &node : nodes) {
-            targets.emplace_back(node.first);
+            targets.push_back(node.first);
         }
     }
 
-    sc->ddl_client->query_disk_info(targets, err_resps, app_name);
+    if (targets.empty()) {
+        fmt::print(stderr, "invalid target replica server address!\n");
+        return false;
+    }
+    sc->ddl_client->query_disk_info(targets, app_name, err_resps);
     return true;
+}
+
+bool query_disk_info(
+    shell_context *sc,
+    const argh::parser &cmd,
+    const std::string &node_address,
+    /*out*/ std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> &err_resps)
+{
+    std::string app_name;
+    return query_disk_info(sc, cmd, node_address, app_name, err_resps);
 }
 
 bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
@@ -117,6 +128,9 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
 
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
     if (!query_disk_info(sc, cmd, node_address, err_resps)) {
+        if (ostream_ptr != &std::cout) {
+            delete ostream_ptr;
+        }
         return false;
     }
 
@@ -185,13 +199,13 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
             disk_printer.append_data(capacity_balance);
 
             multi_printer.add(std::move(disk_printer));
+        } else {
+            node_printer.add_row(err_resp.first.to_std_string());
+            node_printer.append_data(resp.total_capacity_mb);
+            node_printer.append_data(resp.total_available_mb);
+            node_printer.append_data(total_capacity_ratio);
+            node_printer.append_data(capacity_balance);
         }
-
-        node_printer.add_row(err_resp.first.to_std_string());
-        node_printer.append_data(resp.total_capacity_mb);
-        node_printer.append_data(resp.total_available_mb);
-        node_printer.append_data(total_capacity_ratio);
-        node_printer.append_data(capacity_balance);
     }
     if (query_detail_info) {
         multi_printer.output(
@@ -232,7 +246,10 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
     std::ostream &out = *ostream_ptr;
 
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
-    if (!query_disk_info(sc, cmd, node_address, err_resps, app_name)) {
+    if (!query_disk_info(sc, cmd, node_address, app_name, err_resps)) {
+        if (ostream_ptr != &std::cout) {
+            delete ostream_ptr;
+        }
         return false;
     }
 
