@@ -23,7 +23,7 @@ bool validate_cmd(const argh::parser &cmd,
 
     for (const auto &param : cmd.params()) {
         if (params.find(param.first) == params.end()) {
-            fmt::print(stderr, "unknown param {}={} \n", param.first, param.second);
+            fmt::print(stderr, "unknown param {} = {}\n", param.first, param.second);
             return false;
         }
     }
@@ -51,7 +51,7 @@ std::ostream *get_out_stream(const std::string &file_name)
     } else {
         os_ptr = new std::ofstream(file_name);
         if (!*os_ptr) {
-            fmt::print(stderr, "ERROR: open output file {} failed\n", file_name);
+            fmt::print(stderr, "open output file {} failed\n", file_name);
             delete os_ptr;
         }
     }
@@ -100,8 +100,8 @@ bool query_disk_info(
     const std::string &node_address,
     /*out*/ std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> &err_resps)
 {
-    std::string app_name;
-    return query_disk_info(sc, cmd, node_address, app_name, err_resps);
+    // passing empty app_name(app_name = "") means query all app disk info
+    return query_disk_info(sc, cmd, node_address, "", err_resps);
 }
 
 bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
