@@ -757,7 +757,7 @@ inline bool get_app_partition_stat(shell_context *sc,
                     row.app_id = app_id_x;
                     update_app_pegasus_perf_counter(row, counter_name, m.value);
                 }
-            } else if (parse_app_perf_counter_name(m.name, app_name,counter_name)) {
+            } else if (parse_app_perf_counter_name(m.name, app_name, counter_name)) {
                 // perf-counter value will be set into partition index 0.
                 row_data &row = rows[app_name][0];
                 row.app_id = app_name_id[app_name];
