@@ -510,6 +510,33 @@ inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
     return true;
 }
 
+inline bool parse_app_perf_counter_name(const std::string &name,
+                                        std::string &app_name,
+                                        std::string &counter_name)
+{
+    /**
+     * name format:
+     *   1.{node}*{section}*{counter_name}@{app_name}.{percent_line}
+     *   2.{node}*{section}*{counter_name}@{app_name}
+     */
+    std::string::size_type find = name.find_last_of('@');
+    if (find == std::string::npos)
+        return false;
+
+    std::string::size_type find2 = name.find_last_of('.');
+    if (find2 == std::string::npos) {
+        app_name = name.substr(find + 1);
+    } else {
+        app_name = name.substr(find + 1, find2 - find - 1);
+    }
+
+    std::string::size_type find3 = name.find_last_of('*');
+    if (find3 == std::string::npos)
+        return false;
+    counter_name = name.substr(find3 + 1, find - find3 - 1);
+    return true;
+}
+
 struct row_data
 {
     double get_total_qps() const
@@ -547,6 +574,7 @@ struct row_data
     double rdb_index_and_filter_blocks_mem_usage = 0;
     double rdb_memtable_mem_usage = 0;
     double rdb_estimate_num_keys = 0;
+    double backup_request_qps = 0;
 };
 
 inline bool
@@ -600,6 +628,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_memtable_mem_usage += value;
     else if (counter_name == "rdb.estimate_num_keys")
         row.rdb_estimate_num_keys += value;
+    else if (counter_name == "backup_request_qps")
+        row.backup_request_qps += value;
     else
         return false;
     return true;
@@ -679,10 +709,12 @@ inline bool get_app_partition_stat(shell_context *sc,
         return false;
     }
 
-    // get app_id --> app_name
+    // get the relationship between app_id and app_name
     std::map<int32_t, std::string> app_id_name;
+    std::map<std::string, int32_t> app_name_id;
     for (::dsn::app_info &app : apps) {
         app_id_name[app.app_id] = app.app_name;
+        app_name_id[app.app_name] = app.app_id;
         rows[app.app_name].resize(app.partition_count);
     }
 
@@ -709,22 +741,26 @@ inline bool get_app_partition_stat(shell_context *sc,
         }
 
         for (dsn::perf_counter_metric &m : info.counters) {
-            // get app_id/partition_id/counter_name from the name of perf-counter
+            // get app_id/partition_id/counter_name/app_name from the name of perf-counter
             int32_t app_id_x, partition_index_x;
             std::string counter_name;
-            if (!parse_app_pegasus_perf_counter_name(
-                    m.name, app_id_x, partition_index_x, counter_name)) {
-                continue;
-            }
+            std::string app_name;
 
-            // only on primary partition will be counted
-            auto find = app_partitions.find(app_id_x);
-            if (find != app_partitions.end() &&
-                find->second[partition_index_x].primary == nodes[i].address) {
-                const std::string &app_name = app_id_name[app_id_x];
-                row_data &row = rows[app_name][partition_index_x];
-                row.row_name = std::to_string(partition_index_x);
-                row.app_id = app_id_x;
+            if (parse_app_pegasus_perf_counter_name(
+                    m.name, app_id_x, partition_index_x, counter_name)) {
+                // only primary partition will be counted
+                auto find = app_partitions.find(app_id_x);
+                if (find != app_partitions.end() &&
+                    find->second[partition_index_x].primary == nodes[i].address) {
+                    row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
+                    row.row_name = std::to_string(partition_index_x);
+                    row.app_id = app_id_x;
+                    update_app_pegasus_perf_counter(row, counter_name, m.value);
+                }
+            } else if (parse_app_perf_counter_name(m.name, app_name,counter_name)) {
+                // perf-counter value will be set into partition index 0.
+                row_data &row = rows[app_name][0];
+                row.app_id = app_name_id[app_name];
                 update_app_pegasus_perf_counter(row, counter_name, m.value);
             }
         }
