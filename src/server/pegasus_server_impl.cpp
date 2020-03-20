@@ -92,23 +92,23 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     _multi_get_iterate_size_threshold =
         dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_multi_get_iterate_size_threshold",
+                                    "rocksdb_multi_get_max_iteration_size",
                                     100000000,
                                     "multi-get operation total key-value size exceed "
                                     "this threshold will stop iterating rocksdb, 0 means no check");
 
     _rocksdb_iterate_count_threshold = dsn_config_get_value_uint64(
         "pegasus.server",
-        "rocksdb_iterate_count_threshold",
+        "rocksdb_max_iteration_count",
         1000,
-        "max iterate count for each rocksdb iterator operation, if exceed this threshold,"
+        "max iteration count for each rocksdb iterator operation, if exceed this threshold,"
         "iterator will be stopped");
 
     _rocksdb_iterate_threshold_ns_in_config =
         dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_iterate_threshold_ns",
+                                    "rocksdb_iteration_threshold_ns",
                                     30000000000,
-                                    "max duration for each rocksdb iterator operation if exceed "
+                                    "max duration for rocksdb iterator operation if exceed "
                                     "this threshold, iterator will be stopped, 0 means no check");
     _rocksdb_iterate_threshold_ns = _rocksdb_iterate_threshold_ns_in_config;
 
