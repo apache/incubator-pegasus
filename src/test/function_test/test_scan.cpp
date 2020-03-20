@@ -401,9 +401,9 @@ TEST_F(scan, OVERALL)
     compare(data, base);
 }
 
-TEST_F(scan, ITERATE_TIME_LIMIT)
+TEST_F(scan, ITERATION_TIME_LIMIT)
 {
-    // update iterate threshold to 1ms
+    // update iteration threshold to 1ms
     auto response = ddl_client->set_app_envs(
         client->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD}, {std::to_string(1)});
     ASSERT_EQ(true, response.is_ok());
