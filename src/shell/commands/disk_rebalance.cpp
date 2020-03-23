@@ -53,6 +53,7 @@ std::ostream *get_out_stream(const std::string &file_name)
         if (!*os_ptr) {
             fmt::print(stderr, "open output file {} failed\n", file_name);
             delete os_ptr;
+            os_ptr = nullptr;
         }
     }
     return os_ptr;
