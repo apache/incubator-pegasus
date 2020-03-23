@@ -53,6 +53,16 @@ bool check_slow_query(const std::string &env_value, std::string &hint_message)
     return true;
 }
 
+bool check_rocksdb_iteration(const std::string &env_value, std::string &hint_message)
+{
+    uint64_t threshold = 0;
+    if (!dsn::buf2uint64(env_value, threshold) || threshold < 0) {
+        hint_message = "Rocksdb iteration threshold must be greater than zero";
+        return false;
+    }
+    return true;
+}
+
 bool check_write_throttling(const std::string &env_value, std::string &hint_message)
 {
     std::vector<std::string> sargs;
@@ -141,6 +151,8 @@ void app_env_validator::register_all_validators()
          std::bind(&check_write_throttling, std::placeholders::_1, std::placeholders::_2)},
         {replica_envs::WRITE_SIZE_THROTTLING,
          std::bind(&check_write_throttling, std::placeholders::_1, std::placeholders::_2)},
+        {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
+         std::bind(&check_rocksdb_iteration, std::placeholders::_1, std::placeholders::_2)},
         // TODO(zhaoliwei): not implemented
         {replica_envs::BUSINESS_INFO, nullptr},
         {replica_envs::DENY_CLIENT_WRITE, nullptr},
