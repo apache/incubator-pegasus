@@ -33,8 +33,7 @@
 namespace dsn {
 namespace replication {
 
-typedef rpc_holder<duplication_status_change_request, duplication_status_change_response>
-    duplication_status_change_rpc;
+typedef rpc_holder<duplication_modify_request, duplication_modify_response> duplication_modify_rpc;
 typedef rpc_holder<duplication_add_request, duplication_add_response> duplication_add_rpc;
 typedef rpc_holder<duplication_query_request, duplication_query_response> duplication_query_rpc;
 typedef rpc_holder<duplication_sync_request, duplication_sync_response> duplication_sync_rpc;

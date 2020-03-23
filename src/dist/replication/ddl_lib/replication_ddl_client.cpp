@@ -1354,15 +1354,14 @@ replication_ddl_client::add_dup(std::string app_name, std::string remote_cluster
     return call_rpc_sync(duplication_add_rpc(std::move(req), RPC_CM_ADD_DUPLICATION));
 }
 
-error_with<duplication_status_change_response> replication_ddl_client::change_dup_status(
+error_with<duplication_modify_response> replication_ddl_client::change_dup_status(
     std::string app_name, int dupid, duplication_status::type status)
 {
-    auto req = make_unique<duplication_status_change_request>();
+    auto req = make_unique<duplication_modify_request>();
     req->app_name = std::move(app_name);
     req->dupid = dupid;
-    req->status = status;
-    return call_rpc_sync(
-        duplication_status_change_rpc(std::move(req), RPC_CM_CHANGE_DUPLICATION_STATUS));
+    req->__set_status(status);
+    return call_rpc_sync(duplication_modify_rpc(std::move(req), RPC_CM_MODIFY_DUPLICATION));
 }
 
 error_with<duplication_query_response> replication_ddl_client::query_dup(std::string app_name)

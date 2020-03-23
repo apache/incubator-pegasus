@@ -306,9 +306,9 @@ class duplication_add_request;
 
 class duplication_add_response;
 
-class duplication_status_change_request;
+class duplication_modify_request;
 
-class duplication_status_change_response;
+class duplication_modify_response;
 
 class duplication_entry;
 
@@ -5015,31 +5015,29 @@ inline std::ostream &operator<<(std::ostream &out, const duplication_add_respons
     return out;
 }
 
-typedef struct _duplication_status_change_request__isset
+typedef struct _duplication_modify_request__isset
 {
-    _duplication_status_change_request__isset() : app_name(false), dupid(false), status(false) {}
+    _duplication_modify_request__isset() : app_name(false), dupid(false), status(false) {}
     bool app_name : 1;
     bool dupid : 1;
     bool status : 1;
-} _duplication_status_change_request__isset;
+} _duplication_modify_request__isset;
 
-class duplication_status_change_request
+class duplication_modify_request
 {
 public:
-    duplication_status_change_request(const duplication_status_change_request &);
-    duplication_status_change_request(duplication_status_change_request &&);
-    duplication_status_change_request &operator=(const duplication_status_change_request &);
-    duplication_status_change_request &operator=(duplication_status_change_request &&);
-    duplication_status_change_request() : app_name(), dupid(0), status((duplication_status::type)0)
-    {
-    }
+    duplication_modify_request(const duplication_modify_request &);
+    duplication_modify_request(duplication_modify_request &&);
+    duplication_modify_request &operator=(const duplication_modify_request &);
+    duplication_modify_request &operator=(duplication_modify_request &&);
+    duplication_modify_request() : app_name(), dupid(0), status((duplication_status::type)0) {}
 
-    virtual ~duplication_status_change_request() throw();
+    virtual ~duplication_modify_request() throw();
     std::string app_name;
     int32_t dupid;
     duplication_status::type status;
 
-    _duplication_status_change_request__isset __isset;
+    _duplication_modify_request__isset __isset;
 
     void __set_app_name(const std::string &val);
 
@@ -5047,19 +5045,21 @@ public:
 
     void __set_status(const duplication_status::type val);
 
-    bool operator==(const duplication_status_change_request &rhs) const
+    bool operator==(const duplication_modify_request &rhs) const
     {
         if (!(app_name == rhs.app_name))
             return false;
         if (!(dupid == rhs.dupid))
             return false;
-        if (!(status == rhs.status))
+        if (__isset.status != rhs.__isset.status)
+            return false;
+        else if (__isset.status && !(status == rhs.status))
             return false;
         return true;
     }
-    bool operator!=(const duplication_status_change_request &rhs) const { return !(*this == rhs); }
+    bool operator!=(const duplication_modify_request &rhs) const { return !(*this == rhs); }
 
-    bool operator<(const duplication_status_change_request &) const;
+    bool operator<(const duplication_modify_request &) const;
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
@@ -5067,41 +5067,41 @@ public:
     virtual void printTo(std::ostream &out) const;
 };
 
-void swap(duplication_status_change_request &a, duplication_status_change_request &b);
+void swap(duplication_modify_request &a, duplication_modify_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const duplication_status_change_request &obj)
+inline std::ostream &operator<<(std::ostream &out, const duplication_modify_request &obj)
 {
     obj.printTo(out);
     return out;
 }
 
-typedef struct _duplication_status_change_response__isset
+typedef struct _duplication_modify_response__isset
 {
-    _duplication_status_change_response__isset() : err(false), appid(false) {}
+    _duplication_modify_response__isset() : err(false), appid(false) {}
     bool err : 1;
     bool appid : 1;
-} _duplication_status_change_response__isset;
+} _duplication_modify_response__isset;
 
-class duplication_status_change_response
+class duplication_modify_response
 {
 public:
-    duplication_status_change_response(const duplication_status_change_response &);
-    duplication_status_change_response(duplication_status_change_response &&);
-    duplication_status_change_response &operator=(const duplication_status_change_response &);
-    duplication_status_change_response &operator=(duplication_status_change_response &&);
-    duplication_status_change_response() : appid(0) {}
+    duplication_modify_response(const duplication_modify_response &);
+    duplication_modify_response(duplication_modify_response &&);
+    duplication_modify_response &operator=(const duplication_modify_response &);
+    duplication_modify_response &operator=(duplication_modify_response &&);
+    duplication_modify_response() : appid(0) {}
 
-    virtual ~duplication_status_change_response() throw();
+    virtual ~duplication_modify_response() throw();
     ::dsn::error_code err;
     int32_t appid;
 
-    _duplication_status_change_response__isset __isset;
+    _duplication_modify_response__isset __isset;
 
     void __set_err(const ::dsn::error_code &val);
 
     void __set_appid(const int32_t val);
 
-    bool operator==(const duplication_status_change_response &rhs) const
+    bool operator==(const duplication_modify_response &rhs) const
     {
         if (!(err == rhs.err))
             return false;
@@ -5109,9 +5109,9 @@ public:
             return false;
         return true;
     }
-    bool operator!=(const duplication_status_change_response &rhs) const { return !(*this == rhs); }
+    bool operator!=(const duplication_modify_response &rhs) const { return !(*this == rhs); }
 
-    bool operator<(const duplication_status_change_response &) const;
+    bool operator<(const duplication_modify_response &) const;
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
@@ -5119,9 +5119,9 @@ public:
     virtual void printTo(std::ostream &out) const;
 };
 
-void swap(duplication_status_change_response &a, duplication_status_change_response &b);
+void swap(duplication_modify_response &a, duplication_modify_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const duplication_status_change_response &obj)
+inline std::ostream &operator<<(std::ostream &out, const duplication_modify_response &obj)
 {
     obj.printTo(out);
     return out;

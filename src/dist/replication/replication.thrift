@@ -681,14 +681,14 @@ struct duplication_add_response
 }
 
 // This request is sent from client to meta.
-struct duplication_status_change_request
+struct duplication_modify_request
 {
     1:string                    app_name;
     2:i32                       dupid;
-    3:duplication_status        status;
+    3:optional duplication_status status;
 }
 
-struct duplication_status_change_response
+struct duplication_modify_response
 {
     // Possible errors:
     // - ERR_APP_NOT_EXIST: app is not found

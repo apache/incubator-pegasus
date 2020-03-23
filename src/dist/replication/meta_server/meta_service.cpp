@@ -805,7 +805,7 @@ void meta_service::on_add_duplication(duplication_add_rpc rpc)
                      server_state::sStateHash);
 }
 
-void meta_service::on_change_duplication_status(duplication_status_change_rpc rpc)
+void meta_service::on_modify_duplication(duplication_modify_rpc rpc)
 {
     RPC_CHECK_STATUS(rpc.dsn_request(), rpc.response());
 
@@ -815,7 +815,7 @@ void meta_service::on_change_duplication_status(duplication_status_change_rpc rp
     }
     tasking::enqueue(LPC_META_STATE_NORMAL,
                      tracker(),
-                     [this, rpc]() { _dup_svc->change_duplication_status(std::move(rpc)); },
+                     [this, rpc]() { _dup_svc->modify_duplication(std::move(rpc)); },
                      server_state::sStateHash);
 }
 
@@ -857,9 +857,8 @@ void meta_service::register_duplication_rpc_handlers()
 {
     register_rpc_handler_with_rpc_holder(
         RPC_CM_ADD_DUPLICATION, "add_duplication", &meta_service::on_add_duplication);
-    register_rpc_handler_with_rpc_holder(RPC_CM_CHANGE_DUPLICATION_STATUS,
-                                         "change duplication status",
-                                         &meta_service::on_change_duplication_status);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_MODIFY_DUPLICATION, "modify duplication", &meta_service::on_modify_duplication);
     register_rpc_handler_with_rpc_holder(RPC_CM_QUERY_DUPLICATION,
                                          "query duplication info",
                                          &meta_service::on_query_duplication_info);

@@ -77,15 +77,14 @@ public:
 
     // change current status to `to_status`.
     // error will be returned if this state transition is not allowed.
-    error_code alter_status(duplication_status::type to_status)
-    {
-        zauto_write_lock l(_lock);
-        return do_alter_status(to_status);
-    }
+    error_code alter_status(duplication_status::type to_status);
 
     // persist current status to `next_status`
     // call this function after data has been persisted on meta storage.
     void persist_status();
+
+    // not thread-safe
+    duplication_status::type status() const { return _status; }
 
     // if this duplication is in valid status.
     bool is_valid() const { return is_duplication_status_valid(_status); }
@@ -150,8 +149,6 @@ public:
 private:
     friend class duplication_info_test;
     friend class meta_duplication_service_test;
-
-    error_code do_alter_status(duplication_status::type to_status);
 
     // Whether there's ongoing meta storage update.
     bool _is_altering{false};

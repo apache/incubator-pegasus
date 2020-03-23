@@ -115,8 +115,10 @@ public:
 
     error_with<duplication_add_response>
     add_dup(std::string app_name, std::string remote_address, bool freezed);
-    error_with<duplication_status_change_response>
+
+    error_with<duplication_modify_response>
     change_dup_status(std::string app_name, int dupid, duplication_status::type status);
+
     error_with<duplication_query_response> query_dup(std::string app_name);
 
     dsn::error_code do_restore(const std::string &backup_provider_name,

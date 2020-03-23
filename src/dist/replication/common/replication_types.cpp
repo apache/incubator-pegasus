@@ -11734,21 +11734,19 @@ void duplication_add_response::printTo(std::ostream &out) const
     out << ")";
 }
 
-duplication_status_change_request::~duplication_status_change_request() throw() {}
+duplication_modify_request::~duplication_modify_request() throw() {}
 
-void duplication_status_change_request::__set_app_name(const std::string &val)
-{
-    this->app_name = val;
-}
+void duplication_modify_request::__set_app_name(const std::string &val) { this->app_name = val; }
 
-void duplication_status_change_request::__set_dupid(const int32_t val) { this->dupid = val; }
+void duplication_modify_request::__set_dupid(const int32_t val) { this->dupid = val; }
 
-void duplication_status_change_request::__set_status(const duplication_status::type val)
+void duplication_modify_request::__set_status(const duplication_status::type val)
 {
     this->status = val;
+    __isset.status = true;
 }
 
-uint32_t duplication_status_change_request::read(::apache::thrift::protocol::TProtocol *iprot)
+uint32_t duplication_modify_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
     apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
@@ -11805,12 +11803,11 @@ uint32_t duplication_status_change_request::read(::apache::thrift::protocol::TPr
     return xfer;
 }
 
-uint32_t
-duplication_status_change_request::write(::apache::thrift::protocol::TProtocol *oprot) const
+uint32_t duplication_modify_request::write(::apache::thrift::protocol::TProtocol *oprot) const
 {
     uint32_t xfer = 0;
     apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-    xfer += oprot->writeStructBegin("duplication_status_change_request");
+    xfer += oprot->writeStructBegin("duplication_modify_request");
 
     xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 1);
     xfer += oprot->writeString(this->app_name);
@@ -11820,16 +11817,17 @@ duplication_status_change_request::write(::apache::thrift::protocol::TProtocol *
     xfer += oprot->writeI32(this->dupid);
     xfer += oprot->writeFieldEnd();
 
-    xfer += oprot->writeFieldBegin("status", ::apache::thrift::protocol::T_I32, 3);
-    xfer += oprot->writeI32((int32_t)this->status);
-    xfer += oprot->writeFieldEnd();
-
+    if (this->__isset.status) {
+        xfer += oprot->writeFieldBegin("status", ::apache::thrift::protocol::T_I32, 3);
+        xfer += oprot->writeI32((int32_t)this->status);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
 }
 
-void swap(duplication_status_change_request &a, duplication_status_change_request &b)
+void swap(duplication_modify_request &a, duplication_modify_request &b)
 {
     using ::std::swap;
     swap(a.app_name, b.app_name);
@@ -11838,24 +11836,22 @@ void swap(duplication_status_change_request &a, duplication_status_change_reques
     swap(a.__isset, b.__isset);
 }
 
-duplication_status_change_request::duplication_status_change_request(
-    const duplication_status_change_request &other499)
+duplication_modify_request::duplication_modify_request(const duplication_modify_request &other499)
 {
     app_name = other499.app_name;
     dupid = other499.dupid;
     status = other499.status;
     __isset = other499.__isset;
 }
-duplication_status_change_request::duplication_status_change_request(
-    duplication_status_change_request &&other500)
+duplication_modify_request::duplication_modify_request(duplication_modify_request &&other500)
 {
     app_name = std::move(other500.app_name);
     dupid = std::move(other500.dupid);
     status = std::move(other500.status);
     __isset = std::move(other500.__isset);
 }
-duplication_status_change_request &duplication_status_change_request::
-operator=(const duplication_status_change_request &other501)
+duplication_modify_request &duplication_modify_request::
+operator=(const duplication_modify_request &other501)
 {
     app_name = other501.app_name;
     dupid = other501.dupid;
@@ -11863,8 +11859,8 @@ operator=(const duplication_status_change_request &other501)
     __isset = other501.__isset;
     return *this;
 }
-duplication_status_change_request &duplication_status_change_request::
-operator=(duplication_status_change_request &&other502)
+duplication_modify_request &duplication_modify_request::
+operator=(duplication_modify_request &&other502)
 {
     app_name = std::move(other502.app_name);
     dupid = std::move(other502.dupid);
@@ -11872,28 +11868,26 @@ operator=(duplication_status_change_request &&other502)
     __isset = std::move(other502.__isset);
     return *this;
 }
-void duplication_status_change_request::printTo(std::ostream &out) const
+void duplication_modify_request::printTo(std::ostream &out) const
 {
     using ::apache::thrift::to_string;
-    out << "duplication_status_change_request(";
+    out << "duplication_modify_request(";
     out << "app_name=" << to_string(app_name);
     out << ", "
         << "dupid=" << to_string(dupid);
     out << ", "
-        << "status=" << to_string(status);
+        << "status=";
+    (__isset.status ? (out << to_string(status)) : (out << "<null>"));
     out << ")";
 }
 
-duplication_status_change_response::~duplication_status_change_response() throw() {}
+duplication_modify_response::~duplication_modify_response() throw() {}
 
-void duplication_status_change_response::__set_err(const ::dsn::error_code &val)
-{
-    this->err = val;
-}
+void duplication_modify_response::__set_err(const ::dsn::error_code &val) { this->err = val; }
 
-void duplication_status_change_response::__set_appid(const int32_t val) { this->appid = val; }
+void duplication_modify_response::__set_appid(const int32_t val) { this->appid = val; }
 
-uint32_t duplication_status_change_response::read(::apache::thrift::protocol::TProtocol *iprot)
+uint32_t duplication_modify_response::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
     apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
@@ -11940,12 +11934,11 @@ uint32_t duplication_status_change_response::read(::apache::thrift::protocol::TP
     return xfer;
 }
 
-uint32_t
-duplication_status_change_response::write(::apache::thrift::protocol::TProtocol *oprot) const
+uint32_t duplication_modify_response::write(::apache::thrift::protocol::TProtocol *oprot) const
 {
     uint32_t xfer = 0;
     apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-    xfer += oprot->writeStructBegin("duplication_status_change_response");
+    xfer += oprot->writeStructBegin("duplication_modify_response");
 
     xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
     xfer += this->err.write(oprot);
@@ -11960,7 +11953,7 @@ duplication_status_change_response::write(::apache::thrift::protocol::TProtocol 
     return xfer;
 }
 
-void swap(duplication_status_change_response &a, duplication_status_change_response &b)
+void swap(duplication_modify_response &a, duplication_modify_response &b)
 {
     using ::std::swap;
     swap(a.err, b.err);
@@ -11968,40 +11961,39 @@ void swap(duplication_status_change_response &a, duplication_status_change_respo
     swap(a.__isset, b.__isset);
 }
 
-duplication_status_change_response::duplication_status_change_response(
-    const duplication_status_change_response &other503)
+duplication_modify_response::duplication_modify_response(
+    const duplication_modify_response &other503)
 {
     err = other503.err;
     appid = other503.appid;
     __isset = other503.__isset;
 }
-duplication_status_change_response::duplication_status_change_response(
-    duplication_status_change_response &&other504)
+duplication_modify_response::duplication_modify_response(duplication_modify_response &&other504)
 {
     err = std::move(other504.err);
     appid = std::move(other504.appid);
     __isset = std::move(other504.__isset);
 }
-duplication_status_change_response &duplication_status_change_response::
-operator=(const duplication_status_change_response &other505)
+duplication_modify_response &duplication_modify_response::
+operator=(const duplication_modify_response &other505)
 {
     err = other505.err;
     appid = other505.appid;
     __isset = other505.__isset;
     return *this;
 }
-duplication_status_change_response &duplication_status_change_response::
-operator=(duplication_status_change_response &&other506)
+duplication_modify_response &duplication_modify_response::
+operator=(duplication_modify_response &&other506)
 {
     err = std::move(other506.err);
     appid = std::move(other506.appid);
     __isset = std::move(other506.__isset);
     return *this;
 }
-void duplication_status_change_response::printTo(std::ostream &out) const
+void duplication_modify_response::printTo(std::ostream &out) const
 {
     using ::apache::thrift::to_string;
-    out << "duplication_status_change_response(";
+    out << "duplication_modify_response(";
     out << "err=" << to_string(err);
     out << ", "
         << "appid=" << to_string(appid);

@@ -60,7 +60,7 @@ public:
 
     void add_duplication(duplication_add_rpc rpc);
 
-    void change_duplication_status(duplication_status_change_rpc rpc);
+    void modify_duplication(duplication_modify_rpc rpc);
 
     void duplication_sync(duplication_sync_rpc rpc);
 
@@ -72,9 +72,9 @@ private:
                             duplication_info_s_ptr &dup,
                             duplication_add_rpc &rpc);
 
-    void do_change_duplication_status(std::shared_ptr<app_state> &app,
-                                      duplication_info_s_ptr &dup,
-                                      duplication_status_change_rpc &rpc);
+    void do_modify_duplication(std::shared_ptr<app_state> &app,
+                               duplication_info_s_ptr &dup,
+                               duplication_modify_rpc &rpc);
 
     void do_restore_duplication(dupid_t dup_id, std::shared_ptr<app_state> app);
 

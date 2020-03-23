@@ -64,7 +64,7 @@ namespace replication {
 }
 
 // lock held
-error_code duplication_info::do_alter_status(duplication_status::type to_status)
+error_code duplication_info::alter_status(duplication_status::type to_status)
 {
     if (_is_altering) {
         return ERR_BUSY;
@@ -78,11 +78,13 @@ error_code duplication_info::do_alter_status(duplication_status::type to_status)
         return ERR_INVALID_PARAMETERS;
     }
 
-    if (_status != to_status) {
-        _is_altering = true;
-        _next_status = to_status;
+    if (_status == to_status) {
+        return ERR_OK;
     }
 
+    zauto_write_lock l(_lock);
+    _is_altering = true;
+    _next_status = to_status;
     return ERR_OK;
 }
 

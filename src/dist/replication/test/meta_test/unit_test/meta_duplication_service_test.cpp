@@ -71,16 +71,16 @@ public:
         return rpc.response();
     }
 
-    duplication_status_change_response
+    duplication_modify_response
     change_dup_status(const std::string &app_name, dupid_t dupid, duplication_status::type status)
     {
-        auto req = make_unique<duplication_status_change_request>();
+        auto req = make_unique<duplication_modify_request>();
         req->dupid = dupid;
         req->app_name = app_name;
-        req->status = status;
+        req->__set_status(status);
 
-        duplication_status_change_rpc rpc(std::move(req), RPC_CM_CHANGE_DUPLICATION_STATUS);
-        dup_svc().change_duplication_status(rpc);
+        duplication_modify_rpc rpc(std::move(req), RPC_CM_MODIFY_DUPLICATION);
+        dup_svc().modify_duplication(rpc);
         wait_all();
 
         return rpc.response();
