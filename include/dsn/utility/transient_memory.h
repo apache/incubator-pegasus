@@ -51,6 +51,13 @@ namespace dsn {
 
 typedef struct tls_transient_memory_t
 {
+    ~tls_transient_memory_t()
+    {
+        if (nullptr != block) {
+            *block = nullptr;
+        }
+    }
+
     unsigned int magic;
     size_t remain_bytes;
     char block_ptr_buffer[sizeof(std::shared_ptr<char>)];
@@ -59,7 +66,7 @@ typedef struct tls_transient_memory_t
     bool committed;
 } tls_transient_memory_t;
 
-extern __thread tls_transient_memory_t tls_trans_memory;
+extern thread_local tls_transient_memory_t tls_trans_memory;
 
 // initialize the default block size, should call this at the beginning of the process
 void tls_trans_mem_init(size_t default_per_block_bytes);

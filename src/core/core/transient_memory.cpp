@@ -40,7 +40,7 @@
 
 namespace dsn {
 
-__thread tls_transient_memory_t tls_trans_memory;
+thread_local tls_transient_memory_t tls_trans_memory;
 
 static size_t tls_trans_mem_default_block_bytes = 1024 * 1024; // 1 MB
 
