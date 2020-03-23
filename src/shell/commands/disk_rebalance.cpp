@@ -43,20 +43,20 @@ bool validate_cmd(const argh::parser &cmd,
     return true;
 }
 
-std::ostream *get_out_stream(const std::string &file_name)
+std::unique_ptr<std::ostream> get_out_stream(const std::string &file_name)
 {
-    std::ostream *os_ptr = nullptr;
+    auto ostream_ptr = std::unique_ptr<std::ostream>();
+
     if (file_name.empty()) {
-        os_ptr = &std::cout;
+        ostream_ptr = std::unique_ptr<std::ostream>(&std::cout);
     } else {
-        os_ptr = new std::ofstream(file_name);
-        if (!*os_ptr) {
+        ostream_ptr = std::unique_ptr<std::ofstream>(new std::ofstream(file_name));
+        if (!*ostream_ptr) {
             fmt::print(stderr, "open output file {} failed\n", file_name);
-            delete os_ptr;
-            os_ptr = nullptr;
+            return nullptr;
         }
     }
-    return os_ptr;
+    return ostream_ptr;
 }
 
 bool query_disk_info(
@@ -75,7 +75,7 @@ bool query_disk_info(
 
     std::vector<dsn::rpc_address> targets;
     for (const auto &node : nodes) {
-        if (!node_address.empty() || node_address == node.first.to_std_string()) {
+        if (node_address.empty() || node_address == node.first.to_std_string()) {
             targets.push_back(node.first);
             if (!node_address.empty())
                 break;
@@ -105,7 +105,7 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
     std::string node_address = cmd({"-n", "--node"}).str();
     std::string file_name = cmd({"-o", "--out"}).str();
 
-    std::ostream *ostream_ptr = get_out_stream(file_name);
+    auto ostream_ptr = get_out_stream(file_name);
     if (!ostream_ptr) {
         fmt::print(stderr, "get output stream failed!");
         return false;
@@ -115,8 +115,8 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
     // passing empty app_name(app_name = "") means query all app disk info.
     if (!query_disk_info(sc, cmd, node_address, "", err_resps)) {
-        if (ostream_ptr != &std::cout) {
-            delete ostream_ptr;
+        if (ostream_ptr.get() == &std::cout) {
+            ostream_ptr.release();
         }
         return false;
     }
@@ -202,8 +202,8 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
             out, format_to_json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
     }
 
-    if (ostream_ptr != &std::cout) {
-        delete ostream_ptr;
+    if (ostream_ptr.get() == &std::cout) {
+        ostream_ptr.release();
     }
 
     return true;
@@ -225,7 +225,7 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
     std::string app_name = cmd({"-a", "--app"}).str();
     std::string file_name = cmd({"-o", "--out"}).str();
 
-    std::ostream *ostream_ptr = get_out_stream(file_name);
+    auto ostream_ptr = get_out_stream(file_name);
     if (!ostream_ptr) {
         fmt::print(stderr, "get output stream failed!");
         return false;
@@ -234,8 +234,8 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
 
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
     if (!query_disk_info(sc, cmd, node_address, app_name, err_resps)) {
-        if (ostream_ptr != &std::cout) {
-            delete ostream_ptr;
+        if (ostream_ptr.get() == &std::cout) {
+            ostream_ptr.release();
         }
         return false;
     }
@@ -281,8 +281,8 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
     multi_printer.output(
         out, format_to_json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
-    if (ostream_ptr != &std::cout) {
-        delete ostream_ptr;
+    if (ostream_ptr.get() == &std::cout) {
+        ostream_ptr.release();
     }
 
     return true;
