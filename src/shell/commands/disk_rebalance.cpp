@@ -46,7 +46,6 @@ bool validate_cmd(const argh::parser &cmd,
 std::unique_ptr<std::ostream> get_out_stream(const std::string &file_name)
 {
     auto ostream_ptr = std::unique_ptr<std::ostream>();
-
     if (file_name.empty()) {
         ostream_ptr = std::unique_ptr<std::ostream>(&std::cout);
     } else {
