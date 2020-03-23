@@ -73,16 +73,11 @@ bool query_disk_info(
     }
 
     std::vector<dsn::rpc_address> targets;
-    if (!node_address.empty()) {
-        for (const auto &node : nodes) {
-            if (node.first.to_std_string() == node_address) {
-                targets.push_back(node.first);
-                break;
-            }
-        }
-    } else {
-        for (const auto &node : nodes) {
+    for (const auto &node : nodes) {
+        if (!node_address.empty() || node_address == node.first.to_std_string()) {
             targets.push_back(node.first);
+            if (!node_address.empty())
+                break;
         }
     }
 
