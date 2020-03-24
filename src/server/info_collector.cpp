@@ -211,6 +211,7 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(rdb_estimate_num_keys);
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
+    INIT_COUNTER(backup_request_qps);
     _app_stat_counters[app_name] = counters;
     return counters;
 }
