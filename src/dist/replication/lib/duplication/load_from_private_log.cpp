@@ -13,18 +13,17 @@
 namespace dsn {
 namespace replication {
 
-static constexpr int MAX_ALLOWED_REPEATS = 3;
+/*static*/ constexpr int load_from_private_log::MAX_ALLOWED_BLOCK_REPEATS;
 
 // Fast path to next file. If next file (_current->index + 1) is invalid,
 // we try to list all files and select a new one to start (find_log_file_to_start).
 bool load_from_private_log::switch_to_next_log_file()
 {
-    std::string new_path = fmt::format(
-        "{}/log.{}.{}", _private_log->dir(), _current->index() + 1, _current_global_end_offset);
-
-    if (utils::filesystem::file_exists(new_path)) {
+    auto file_map = _private_log->get_log_file_map();
+    auto next_file_it = file_map.find(_current->index() + 1);
+    if (next_file_it != file_map.end()) {
         log_file_ptr file;
-        error_s es = log_utils::open_read(new_path, file);
+        error_s es = log_utils::open_read(next_file_it->second->path(), file);
         if (!es.is_ok()) {
             derror_replica("{}", es);
             _current = nullptr;
@@ -33,6 +32,7 @@ bool load_from_private_log::switch_to_next_log_file()
         start_from_log_file(file);
         return true;
     } else {
+        ddebug_f("no next log file (log.{}) is found", _current->index() + 1);
         _current = nullptr;
         return false;
     }
@@ -78,6 +78,7 @@ void load_from_private_log::find_log_file_to_start()
 
 void load_from_private_log::find_log_file_to_start(std::map<int, log_file_ptr> log_file_map)
 {
+    _current = nullptr;
     if (dsn_unlikely(log_file_map.empty())) {
         derror_replica("unable to start duplication since no log file is available");
         return;
@@ -88,46 +89,49 @@ void load_from_private_log::find_log_file_to_start(std::map<int, log_file_ptr> l
         if (next_it == log_file_map.end()) {
             // use the last file if no file to read
             if (!_current) {
-                start_from_log_file(it->second);
+                _current = it->second;
             }
-            return;
+            break;
         }
         if (it->second->previous_log_max_decree(get_gpid()) < _start_decree &&
             _start_decree <= next_it->second->previous_log_max_decree(get_gpid())) {
             // `start_decree` is within the range
-            start_from_log_file(it->second);
+            _current = it->second;
             // find the latest file that matches the condition
         }
     }
+    start_from_log_file(_current);
 }
 
 void load_from_private_log::replay_log_block()
 {
-    error_s err = mutation_log::replay_block(
-        _current,
-        [this](int log_bytes_length, mutation_ptr &mu) -> bool {
-            auto es = _mutation_batch.add(std::move(mu));
-            dassert_replica(es.is_ok(), es.description());
-            _stub->_counter_dup_log_read_bytes_rate->add(log_bytes_length);
-            _stub->_counter_dup_log_read_mutations_rate->increment();
-            return true;
-        },
-        _start_offset,
-        _current_global_end_offset);
+    error_s err =
+        mutation_log::replay_block(_current,
+                                   [this](int log_bytes_length, mutation_ptr &mu) -> bool {
+                                       auto es = _mutation_batch.add(std::move(mu));
+                                       dassert_replica(es.is_ok(), es.description());
+                                       _counter_dup_log_read_bytes_rate->add(log_bytes_length);
+                                       _counter_dup_log_read_mutations_rate->increment();
+                                       return true;
+                                   },
+                                   _start_offset,
+                                   _current_global_end_offset);
     if (!err.is_ok()) {
         if (err.code() == ERR_HANDLE_EOF && switch_to_next_log_file()) {
             repeat();
             return;
         }
 
-        _err_repeats_num++;
-        if (_err_repeats_num > MAX_ALLOWED_REPEATS) {
-            derror_replica("loading mutation logs failed for {} times: [err: {}, file: {}, "
-                           "start_offset: {}], retry from start",
-                           MAX_ALLOWED_REPEATS,
-                           err,
-                           _current->path(),
-                           _start_offset);
+        _err_block_repeats_num++;
+        if (_err_block_repeats_num >= MAX_ALLOWED_BLOCK_REPEATS) {
+            derror_replica(
+                "loading mutation logs failed for {} times: [err: {}, file: {}, start_offset: {}]",
+                _err_block_repeats_num,
+                err,
+                _current->path(),
+                _start_offset);
+            _counter_dup_load_file_failed_count->increment();
+            // retry from file start
             find_log_file_to_start();
         }
         repeat(_repeat_delay);
@@ -147,6 +151,20 @@ load_from_private_log::load_from_private_log(replica *r, replica_duplicator *dup
       _stub(r->get_replica_stub()),
       _mutation_batch(dup)
 {
+    _counter_dup_log_read_bytes_rate.init_app_counter("eon.replica_stub",
+                                                      "dup.log_read_bytes_rate",
+                                                      COUNTER_TYPE_RATE,
+                                                      "reading rate of private log in bytes");
+    _counter_dup_log_read_mutations_rate.init_app_counter(
+        "eon.replica_stub",
+        "dup.log_read_mutations_rate",
+        COUNTER_TYPE_RATE,
+        "reading rate of mutations from private log");
+    _counter_dup_load_file_failed_count.init_app_counter(
+        "eon.replica_stub",
+        "dup.load_file_failed_count",
+        COUNTER_TYPE_NUMBER,
+        "the number of failures loading a private log file during duplication");
 }
 
 void load_from_private_log::set_start_decree(decree start_decree)
@@ -162,7 +180,7 @@ void load_from_private_log::start_from_log_file(log_file_ptr f)
     _current = std::move(f);
     _start_offset = 0;
     _current_global_end_offset = _current->start_offset();
-    _err_repeats_num = 0;
+    _err_block_repeats_num = 0;
 }
 
 } // namespace replication

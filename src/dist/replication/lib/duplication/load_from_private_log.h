@@ -7,6 +7,7 @@
 #include <dsn/cpp/pipeline.h>
 #include <dsn/utility/errors.h>
 #include <dsn/dist/replication/mutation_duplicator.h>
+#include <gtest/gtest_prod.h>
 
 #include "dist/replication/lib/mutation_log.h"
 #include "mutation_batch.h"
@@ -48,6 +49,12 @@ public:
 
     void start_from_log_file(log_file_ptr f);
 
+    void TEST_set_repeat_delay(std::chrono::milliseconds delay)
+    {
+        const_cast<std::chrono::milliseconds &>(_repeat_delay) = delay;
+    }
+    static constexpr int MAX_ALLOWED_BLOCK_REPEATS{3};
+
 private:
     friend class load_from_private_log_test;
 
@@ -61,10 +68,14 @@ private:
     int64_t _current_global_end_offset{0};
     mutation_batch _mutation_batch;
 
-    // How many times it repeats reading from _start_offset but failed.
-    int _err_repeats_num{0};
+    // How many times it repeats reading from current block but failed.
+    int _err_block_repeats_num{0};
 
     decree _start_decree{0};
+
+    perf_counter_wrapper _counter_dup_load_file_failed_count;
+    perf_counter_wrapper _counter_dup_log_read_bytes_rate;
+    perf_counter_wrapper _counter_dup_log_read_mutations_rate;
 
     std::chrono::milliseconds _repeat_delay{10_s};
 };

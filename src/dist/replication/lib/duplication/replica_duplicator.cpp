@@ -64,11 +64,13 @@ void replica_duplicator::pause_dup()
     ddebug_replica("pausing duplication: {}", to_string());
 
     pause();
-    wait_all();
+    cancel_all();
 
     _load.reset();
     _ship.reset();
     _load_private.reset();
+
+    ddebug_replica("duplication paused: {}", to_string());
 }
 
 std::string replica_duplicator::to_string() const

@@ -55,7 +55,7 @@ void ship_mutation::ship(mutation_tuple_set &&in)
 {
     _mutation_duplicator->duplicate(std::move(in), [this](size_t total_shipped_size) mutable {
         update_progress();
-        _stub->_counter_dup_shipped_bytes_rate->add(total_shipped_size);
+        _counter_dup_shipped_bytes_rate->add(total_shipped_size);
         step_down_next_stage();
     });
 }
@@ -93,6 +93,11 @@ ship_mutation::ship_mutation(replica_duplicator *duplicator)
     _mutation_duplicator = new_mutation_duplicator(
         duplicator, _duplicator->remote_cluster_name(), _replica->get_app_info()->app_name);
     _mutation_duplicator->set_task_environment(duplicator);
+
+    _counter_dup_shipped_bytes_rate.init_app_counter("eon.replica_stub",
+                                                     "dup.shipped_bytes_rate",
+                                                     COUNTER_TYPE_RATE,
+                                                     "shipping rate of private log in bytes");
 }
 
 } // namespace replication

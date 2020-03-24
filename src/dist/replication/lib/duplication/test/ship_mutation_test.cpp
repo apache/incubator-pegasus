@@ -66,10 +66,42 @@ struct ship_mutation_test : public duplication_test_base
         ASSERT_EQ(duplicator->progress().last_decree, 2);
     }
 
+    ship_mutation *mock_ship_mutation()
+    {
+        duplicator->_ship = make_unique<ship_mutation>(duplicator.get());
+        return duplicator->_ship.get();
+    }
+
     std::unique_ptr<replica_duplicator> duplicator;
 };
 
 TEST_F(ship_mutation_test, ship_mutation_tuple_set) { test_ship_mutation_tuple_set(); }
+
+void retry(pipeline::base *base)
+{
+    base->schedule([base]() { retry(base); }, 10_s);
+}
+
+TEST_F(ship_mutation_test, pause)
+{
+    auto shipper = mock_ship_mutation();
+
+    mutation_batch batch(duplicator.get());
+    batch.add(create_test_mutation(1, "hello"));
+    batch.add(create_test_mutation(2, "hello"));
+    mutation_tuple_set in = batch.move_all_mutations();
+    ASSERT_EQ(in.size(), 1);
+    _replica->set_last_committed_decree(2);
+
+    mock_mutation_duplicator::mock([this](mutation_tuple_set, mutation_duplicator::callback) {
+        // mock RPC retry infinitely.
+        retry(duplicator.get());
+    });
+    shipper->run(2, std::move(in));
+
+    // the ongoing RPC will be abandoned when pause_dup called.
+    duplicator->pause_dup();
+}
 
 } // namespace replication
 } // namespace dsn

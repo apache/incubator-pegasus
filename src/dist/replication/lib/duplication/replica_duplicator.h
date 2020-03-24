@@ -108,6 +108,7 @@ private:
     friend class replica_duplicator_test;
     friend class duplication_sync_timer_test;
     friend class load_from_private_log_test;
+    friend class ship_mutation_test;
 
     friend class load_mutation;
     friend class ship_mutation;

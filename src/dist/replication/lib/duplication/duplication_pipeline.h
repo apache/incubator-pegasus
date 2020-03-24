@@ -70,6 +70,8 @@ private:
     replica_stub *_stub;
 
     decree _last_decree{invalid_decree};
+
+    perf_counter_wrapper _counter_dup_shipped_bytes_rate;
 };
 
 } // namespace replication
