@@ -4,6 +4,7 @@
 
 #include "shell/commands.h"
 #include "shell/argh.h"
+#include "shell/command_output.h"
 
 #include <math.h>
 #include <fmt/ostream.h>
@@ -41,21 +42,6 @@ bool validate_cmd(const argh::parser &cmd,
     }
 
     return true;
-}
-
-std::unique_ptr<std::ostream> get_out_stream(const std::string &file_name)
-{
-    auto ostream_ptr = std::unique_ptr<std::ostream>();
-    if (file_name.empty()) {
-        ostream_ptr = std::unique_ptr<std::ostream>(&std::cout);
-    } else {
-        ostream_ptr = std::unique_ptr<std::ofstream>(new std::ofstream(file_name));
-        if (!*ostream_ptr) {
-            fmt::print(stderr, "open output file {} failed\n", file_name);
-            return nullptr;
-        }
-    }
-    return ostream_ptr;
 }
 
 bool query_disk_info(
@@ -104,19 +90,15 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
     std::string node_address = cmd({"-n", "--node"}).str();
     std::string file_name = cmd({"-o", "--out"}).str();
 
-    auto ostream_ptr = get_out_stream(file_name);
-    if (!ostream_ptr) {
-        fmt::print(stderr, "get output stream failed!");
+    command_output out(file_name);
+    if (!out.stream()) {
+        fmt::print(stderr, "get output stream failed!\n");
         return false;
     }
-    std::ostream &out = *ostream_ptr;
 
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
     // passing empty app_name(app_name = "") means query all app disk info.
     if (!query_disk_info(sc, cmd, node_address, "", err_resps)) {
-        if (ostream_ptr.get() == &std::cout) {
-            ostream_ptr.release();
-        }
         return false;
     }
 
@@ -194,15 +176,13 @@ bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args)
         }
     }
     if (query_detail_info) {
-        multi_printer.output(
-            out, format_to_json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
+        multi_printer.output(*out.stream(),
+                             format_to_json ? tp_output_format::kJsonPretty
+                                            : tp_output_format::kTabular);
     } else {
-        node_printer.output(
-            out, format_to_json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
-    }
-
-    if (ostream_ptr.get() == &std::cout) {
-        ostream_ptr.release();
+        node_printer.output(*out.stream(),
+                            format_to_json ? tp_output_format::kJsonPretty
+                                           : tp_output_format::kTabular);
     }
 
     return true;
@@ -224,18 +204,14 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
     std::string app_name = cmd({"-a", "--app"}).str();
     std::string file_name = cmd({"-o", "--out"}).str();
 
-    auto ostream_ptr = get_out_stream(file_name);
-    if (!ostream_ptr) {
+    command_output out(file_name);
+    if (!out.stream()) {
         fmt::print(stderr, "get output stream failed!");
         return false;
     }
-    std::ostream &out = *ostream_ptr;
 
     std::map<dsn::rpc_address, dsn::error_with<query_disk_info_response>> err_resps;
     if (!query_disk_info(sc, cmd, node_address, app_name, err_resps)) {
-        if (ostream_ptr.get() == &std::cout) {
-            ostream_ptr.release();
-        }
         return false;
     }
 
@@ -278,11 +254,7 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
         }
     }
     multi_printer.output(
-        out, format_to_json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
-
-    if (ostream_ptr.get() == &std::cout) {
-        ostream_ptr.release();
-    }
+        *out.stream(), format_to_json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
     return true;
 }
