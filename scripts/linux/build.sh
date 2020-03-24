@@ -190,7 +190,7 @@ echo "################################# start testing ##########################
 if [ -z "$TEST_MODULE" ]
 then
     # supported test module
-    TEST_MODULE="dsn.core.tests,dsn.tests,dsn_nfs_test,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.meta.test,dsn.replica.test,dsn_http_test"
+    TEST_MODULE="dsn.core.tests,dsn.tests,dsn_nfs_test,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.meta.test,dsn.replica.test,dsn_http_test,dsn_replica_dup_test"
 fi
 
 echo "TEST_MODULE=$TEST_MODULE"

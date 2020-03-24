@@ -201,16 +201,9 @@ void duplication_info::append_if_valid_for_query(
 
     entry_list.emplace_back(to_duplication_entry());
     duplication_entry &ent = entry_list.back();
-    ent.__isset.not_confirmed = true;
     // the confirmed decree is not useful for displaying
-    // the overall state of duplication, instead we show pending mutations.
+    // the overall state of duplication
     ent.__isset.progress = false;
-    for (const partition_configuration &part : app.partitions) {
-        int pid = part.pid.get_partition_index();
-        auto it = _progress.find(pid);
-        int64_t pending = part.last_committed_decree - it->second.stored_decree;
-        ent.not_confirmed[pid] = std::max(pending, int64_t(0));
-    }
 }
 
 } // namespace replication

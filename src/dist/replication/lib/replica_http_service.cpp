@@ -46,8 +46,8 @@ void replica_http_service::query_duplication_handler(const http_request &req, ht
     for (const auto &s : states) {
         json[std::to_string(s.first)][s.second.id.to_string()] = nlohmann::json{
             {"duplicating", s.second.duplicating},
-            {"not_confirmed", s.second.not_confirmed},
-            {"not_duplicated", s.second.not_duplicated},
+            {"not_confirmed_mutations_num", s.second.not_confirmed},
+            {"not_duplicated_mutations_num", s.second.not_duplicated},
         };
     }
     resp.status_code = http_status_code::ok;

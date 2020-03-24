@@ -675,12 +675,10 @@ TEST_F(meta_duplication_service_test, query_duplication_handler)
     char ts_buf[32];
     utils::time_ms_to_date_time(
         static_cast<uint64_t>(dup->create_timestamp_ms), ts_buf, sizeof(ts_buf));
-    ASSERT_EQ(
-        fake_resp.body,
-        std::string() +
-            R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" + std::to_string(dup->id) +
-            R"(,"not_confirmed_mutations_num":{"0":1,"1":1,"2":1,"3":1,"4":1,"5":1,"6":1,"7":1})"
-            R"(,"remote":"slave-cluster","status":"DS_START"},"appid":2})");
+    ASSERT_EQ(fake_resp.body,
+              std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
+                  std::to_string(dup->id) +
+                  R"(,"remote":"slave-cluster","status":"DS_START"},"appid":2})");
 }
 
 } // namespace replication
