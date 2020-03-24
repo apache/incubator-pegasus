@@ -405,7 +405,7 @@ TEST_F(scan, ITERATION_TIME_LIMIT)
 {
     // update iteration threshold to 1ms
     auto response = ddl_client->set_app_envs(
-        client->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD}, {std::to_string(1)});
+        client->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(1)});
     ASSERT_EQ(true, response.is_ok());
     ASSERT_EQ(dsn::ERR_OK, response.get_value().err);
     // wait envs to be synced.
@@ -430,4 +430,12 @@ TEST_F(scan, ITERATION_TIME_LIMIT)
     int ret = client->sortkey_count(expected_hash_key, count);
     ASSERT_EQ(0, ret);
     ASSERT_EQ(count, -1);
+
+    // set iteration threshold to 100ms
+    response = ddl_client->set_app_envs(
+        client->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(100)});
+    ASSERT_EQ(true, response.is_ok());
+    ASSERT_EQ(dsn::ERR_OK, response.get_value().err);
+    // wait envs to be synced.
+    std::this_thread::sleep_for(std::chrono::seconds(30));
 }
