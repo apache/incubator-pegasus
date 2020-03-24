@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "shell/commands.h"
+#include <dsn/utility/smart_pointers.h>
 
 class command_output
 {
@@ -10,7 +11,7 @@ public:
     explicit command_output(const std::string &file_name) : _file_name(file_name)
     {
         if (!file_name.empty()) {
-            _file_stream = std::make_unique<std::ofstream>(_file_name);
+            _file_stream = dsn::make_unique<std::ofstream>(_file_name);
         }
     }
     std::ostream *stream() const
