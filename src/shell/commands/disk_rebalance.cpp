@@ -205,7 +205,6 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
 
     command_output out(file_name);
     if (!out.stream()) {
-        fmt::print(stderr, "get output stream failed!");
         return false;
     }
 
