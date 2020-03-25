@@ -109,7 +109,7 @@ fds_service::~fds_service() {}
 error_code fds_service::initialize(const std::vector<std::string> &args)
 {
     galaxy::fds::FDSClientConfiguration config;
-    config.enableHttps(false);
+    config.enableHttps(true);
     config.setEndpoint(args[0]);
     const std::string &access_key = args[1];
     const std::string &secret_key = args[2];
