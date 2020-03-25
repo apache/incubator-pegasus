@@ -1824,8 +1824,7 @@ private:
     {
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
         dcheck_gt_replica(last_commit, last_durable_decree());
-        int64_t last_flushed = static_cast<int64_t>(
-            _meta_store->get_last_flushed_decree(meta_store::meta_store_type::kManifestOnly));
+        int64_t last_flushed = static_cast<int64_t>(_db->GetLastFlushedDecree());
         dcheck_eq_replica(last_commit, last_flushed);
         if (!_checkpoints.empty()) {
             dcheck_gt_replica(last_commit, _checkpoints.back());
@@ -1877,11 +1876,14 @@ private:
         }
 
         // flush required, but not wait
-        if (::dsn::ERR_OK == flush_all_family_columns(false)) {
-            ddebug_replica("trigger flushing memtable succeed");
+        rocksdb::FlushOptions options;
+        options.wait = false;
+        auto status = _db->Flush(options);
+        if (status.ok()) {
+            ddebug_replica("trigger flushing memtable succeed, status = {}", status.ToString());
             return ::dsn::ERR_TRY_AGAIN;
         } else {
-            derror_replica("trigger flushing memtable failed");
+            ddebug_replica("trigger flushing memtable failed, status = {}", status.ToString());
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
     }
