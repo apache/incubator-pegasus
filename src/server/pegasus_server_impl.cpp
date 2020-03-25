@@ -1989,6 +1989,8 @@ private:
         }
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
+    ddebug_replica("copy checkpoint to dir({}) succeed, last_decree = {}", checkpoint_dir, ci);
+
     if (checkpoint_decree != nullptr) {
         *checkpoint_decree = static_cast<int64_t>(ci);
     }
