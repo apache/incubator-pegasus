@@ -867,7 +867,8 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             it->SeekForPrev(stop);
             bool first_exclusive = !stop_inclusive;
             std::vector<::dsn::apps::key_value> reverse_kvs;
-            while (iteration_count < max_iteration_count && size < max_kv_size && it->Valid()) {
+            while (iteration_count < max_iteration_count && size < max_iteration_size &&
+                   it->Valid()) {
                 // check start sort key
                 int c = it->key().compare(start);
                 if (c < 0 || (c == 0 && !start_inclusive)) {
@@ -1016,7 +1017,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             // extract value
             if (status.ok()) {
                 // check if exceed limit
-                if (iteration_count > max_iteration_count || size > max_kv_size) {
+                if (iteration_count > max_iteration_count || size > max_iteration_size) {
                     exceed_limit = true;
                     break;
                 }
