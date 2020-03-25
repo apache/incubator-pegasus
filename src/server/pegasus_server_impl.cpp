@@ -1779,7 +1779,7 @@ private:
     // no need to do checkpoint
     if (last_durable == last_commit) {
         ddebug_replica(
-            "no need to checkpoint because last_durable_decree = last_committed_decree = {}",
+            "no need to do checkpoint because last_durable_decree = last_committed_decree = {}",
             last_durable);
         return ::dsn::ERR_OK;
     }
@@ -1797,7 +1797,7 @@ private:
     auto dir = chkpt_get_dir_name(last_commit);
     auto checkpoint_dir = ::dsn::utils::filesystem::path_combine(data_dir(), dir);
     if (::dsn::utils::filesystem::directory_exists(checkpoint_dir)) {
-        ddebug_replica("checkpoint directory {} is already exist, remove it first", checkpoint_dir);
+        ddebug_replica("checkpoint directory {} is already existed, remove it first", checkpoint_dir);
         if (!::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
             derror_replica("remove checkpoint directory {} failed", checkpoint_dir);
             return ::dsn::ERR_FILE_OPERATION_FAILED;
@@ -1895,7 +1895,7 @@ private:
     std::string tmp_dir = ::dsn::utils::filesystem::path_combine(
         data_dir(), std::string("checkpoint.tmp.") + std::to_string(dsn_now_us()));
     if (::dsn::utils::filesystem::directory_exists(tmp_dir)) {
-        ddebug_replica("temporary checkpoint directory {} already exist, remove it first", tmp_dir);
+        ddebug_replica("temporary checkpoint directory {} is already existed, remove it first", tmp_dir);
         if (!::dsn::utils::filesystem::remove_path(tmp_dir)) {
             derror_replica("remove temporary checkpoint directory {} failed", tmp_dir);
             return ::dsn::ERR_FILE_OPERATION_FAILED;
@@ -1912,7 +1912,7 @@ private:
     auto checkpoint_dir =
         ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(checkpoint_decree));
     if (::dsn::utils::filesystem::directory_exists(checkpoint_dir)) {
-        ddebug_replica("checkpoint directory {} already exist, remove it first", checkpoint_dir);
+        ddebug_replica("checkpoint directory {} is already existed, remove it first", checkpoint_dir);
         if (!::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
             derror_replica("remove old checkpoint directory {} failed", checkpoint_dir);
             if (!::dsn::utils::filesystem::remove_path(tmp_dir)) {
@@ -1973,7 +1973,7 @@ private:
     std::unique_ptr<rocksdb::Checkpoint> chkpt(chkpt_raw);
 
     if (::dsn::utils::filesystem::directory_exists(checkpoint_dir)) {
-        ddebug_replica("checkpoint directory {} is already exist, remove it first", checkpoint_dir);
+        ddebug_replica("checkpoint directory {} is already existed, remove it first", checkpoint_dir);
         if (!::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
             derror_replica("remove checkpoint directory {} failed", checkpoint_dir);
             return ::dsn::ERR_FILE_OPERATION_FAILED;
