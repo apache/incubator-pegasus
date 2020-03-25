@@ -644,7 +644,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         pegasus_extract_user_data(_pegasus_data_version, std::move(value), resp.value);
     }
 
-    _cu_calculator->add_get_cu(resp.error, resp.value);
+    _cu_calculator->add_get_cu(resp.error, key, resp.value);
     _pfc_get_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);
@@ -669,7 +669,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                reply.to_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
-        _cu_calculator->add_multi_get_cu(resp.error, resp.kvs);
+        _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         reply(resp);
         return;
@@ -747,7 +747,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                       stop_inclusive ? "inclusive" : "exclusive");
             }
             resp.error = rocksdb::Status::kOk;
-            _cu_calculator->add_multi_get_cu(resp.error, resp.kvs);
+            _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
             _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
             reply(resp);
             return;
@@ -1028,7 +1028,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    _cu_calculator->add_multi_get_cu(resp.error, resp.kvs);
+    _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);
@@ -1093,7 +1093,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
         resp.count = 0;
     }
 
-    _cu_calculator->add_sortkey_count_cu(resp.error);
+    _cu_calculator->add_sortkey_count_cu(resp.error, hash_key);
 
     reply(resp);
 }
@@ -1156,7 +1156,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
         }
     }
 
-    _cu_calculator->add_ttl_cu(resp.error);
+    _cu_calculator->add_ttl_cu(resp.error, key);
 
     reply(resp);
 }
