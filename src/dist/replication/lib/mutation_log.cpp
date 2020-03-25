@@ -54,7 +54,7 @@ namespace replication {
 
     // init pending buffer
     if (nullptr == _pending_write) {
-        _pending_write.reset(log_file::prepare_log_block());
+        _pending_write.reset(new log_block());
         _pending_write_callbacks.reset(new callbacks());
         _pending_write_mutations.reset(new mutations());
         _pending_write_start_offset = mark_new_offset(0, true).second;
@@ -241,7 +241,7 @@ mutation_log_private::mutation_log_private(const std::string &dir,
 
     // init pending buffer
     if (nullptr == _pending_write) {
-        _pending_write.reset(log_file::prepare_log_block());
+        _pending_write.reset(new log_block());
         _pending_write_mutations.reset(new mutations());
         _pending_write_start_offset = mark_new_offset(0, true).second;
         _pending_write_start_time_ms = dsn_now_ms();
@@ -797,7 +797,7 @@ error_code mutation_log::create_new_log_file()
         header_len = logf->write_file_header(temp_writer, _shared_log_info_map);
     }
 
-    log_block *blk = logf->prepare_log_block();
+    log_block *blk = new log_block();
     blk->add(temp_writer.get_buffer());
     _global_end_offset += blk->size();
 
@@ -2072,19 +2072,6 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
     _crc32 = crc;
 
     return ERR_OK;
-}
-
-log_block *log_file::prepare_log_block()
-{
-    log_block_header hdr;
-    hdr.magic = 0xdeadbeef;
-    hdr.length = 0;
-    hdr.body_crc = 0;
-    hdr.local_offset = 0;
-
-    binary_writer temp_writer;
-    temp_writer.write_pod(hdr);
-    return new log_block(temp_writer.get_buffer());
 }
 
 aio_task_ptr log_file::commit_log_block(log_block &block,

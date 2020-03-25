@@ -91,7 +91,7 @@ TEST(replication, log_file)
     ASSERT_EQ(offset, lf->start_offset());
     ASSERT_EQ(offset, lf->end_offset());
     for (int i = 0; i < 100; i++) {
-        auto writer = lf->prepare_log_block();
+        auto writer = new log_block();
 
         if (i == 0) {
             binary_writer temp_writer;

@@ -126,7 +126,7 @@ public:
     // because:
     //   - the private log may be transfered to other node with different program
     //   - the private/shared log may be replayed by different program when server restart
-    void write_to(std::function<void(const blob &)> inserter) const;
+    void write_to(const std::function<void(const blob &)> &inserter) const;
     void write_to(binary_writer &writer, dsn::message_ex *to) const;
     static mutation_ptr read_from(binary_reader &reader, dsn::message_ex *from);
 

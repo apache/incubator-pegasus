@@ -164,7 +164,7 @@ void mutation::add_client_request(task_code code, dsn::message_ex *request)
     dassert(client_requests.size() == data.updates.size(), "size must be equal");
 }
 
-void mutation::write_to(std::function<void(const blob &)> inserter) const
+void mutation::write_to(const std::function<void(const blob &)> &inserter) const
 {
     binary_writer writer(1024);
     write_mutation_header(writer, data.header);
