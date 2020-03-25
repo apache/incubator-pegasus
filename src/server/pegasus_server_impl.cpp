@@ -1653,7 +1653,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _meta_store->set_last_manual_compact_finish_time(last_manual_compact_finish_time);
     }
 
-    // only enable filter after correct value_schema_version set
+    // only enable filter after correct pegasus_data_version set
     _key_ttl_compaction_filter_factory->SetPegasusDataVersion(_pegasus_data_version);
     _key_ttl_compaction_filter_factory->EnableFilter();
 
