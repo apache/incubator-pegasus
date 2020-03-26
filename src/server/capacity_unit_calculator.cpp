@@ -153,7 +153,6 @@ void capacity_unit_calculator::add_put_cu(int32_t status,
     if (status != rocksdb::Status::kOk) {
         return;
     }
-
     add_write_cu(key.size() + value.size());
 }
 
@@ -162,7 +161,6 @@ void capacity_unit_calculator::add_remove_cu(int32_t status, const dsn::blob &ke
     if (status != rocksdb::Status::kOk) {
         return;
     }
-
     add_write_cu(key.size());
 }
 
