@@ -66,20 +66,6 @@ private:
 
     ::dsn::perf_counter_wrapper _pfc_recent_read_cu;
     ::dsn::perf_counter_wrapper _pfc_recent_write_cu;
-
-    ::dsn::perf_counter_wrapper _pfc_recent_get_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_multi_get_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_scan_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_sortkey_count_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_ttl_throughput;
-
-    ::dsn::perf_counter_wrapper _pfc_recent_put_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_remove_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_multi_put_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_multi_remove_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_incr_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_check_and_set_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_check_and_mutate_throughput;
 };
 
 } // namespace server
