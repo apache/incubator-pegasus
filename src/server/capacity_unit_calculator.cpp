@@ -206,7 +206,6 @@ void capacity_unit_calculator::add_incr_cu(int32_t status, const dsn::blob &key)
         return;
     }
 
-    int64_t data_size = 0;
     if (status == rocksdb::Status::kOk) {
         add_write_cu(key.size());
     }
