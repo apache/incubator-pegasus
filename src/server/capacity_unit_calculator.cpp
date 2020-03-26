@@ -40,6 +40,62 @@ capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_ba
                                           name,
                                           COUNTER_TYPE_VOLATILE_NUMBER,
                                           "statistic the recent write capacity units");
+
+    snprintf(name, 255, "recent_get_throughput@%s", str_gpid.c_str());
+    _pfc_recent_get_throughput.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent get throughput");
+    snprintf(name, 255, "recent_multi_get_throughput@%s", str_gpid.c_str());
+    _pfc_recent_multi_get_throughput.init_app_counter("app.pegasus",
+                                                      name,
+                                                      COUNTER_TYPE_VOLATILE_NUMBER,
+                                                      "statistic the recent multi get throughput");
+    snprintf(name, 255, "recent_scan_throughput@%s", str_gpid.c_str());
+    _pfc_recent_scan_throughput.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent scan throughput");
+    snprintf(name, 255, "recent_sortkey_count_throughput@%s", str_gpid.c_str());
+    _pfc_recent_sortkey_count_throughput.init_app_counter(
+        "app.pegasus",
+        name,
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "statistic the recent sortkey count throughput");
+    snprintf(name, 255, "recent_ttl_throughput@%s", str_gpid.c_str());
+    _pfc_recent_ttl_throughput.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent ttl throughput");
+
+    snprintf(name, 255, "recent_put_throughput@%s", str_gpid.c_str());
+    _pfc_recent_put_throughput.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent put throughput");
+    snprintf(name, 255, "recent_remove_throughput@%s", str_gpid.c_str());
+    _pfc_recent_remove_throughput.init_app_counter("app.pegasus",
+                                                   name,
+                                                   COUNTER_TYPE_VOLATILE_NUMBER,
+                                                   "statistic the recent remove throughput");
+    snprintf(name, 255, "recent_multi_put_throughput@%s", str_gpid.c_str());
+    _pfc_recent_multi_put_throughput.init_app_counter("app.pegasus",
+                                                      name,
+                                                      COUNTER_TYPE_VOLATILE_NUMBER,
+                                                      "statistic the recent multi put throughput");
+    snprintf(name, 255, "recent_multi_remove_throughput@%s", str_gpid.c_str());
+    _pfc_recent_multi_remove_throughput.init_app_counter(
+        "app.pegasus",
+        name,
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "statistic the recent multi remove throughput");
+    snprintf(name, 255, "recent_incr_throughput@%s", str_gpid.c_str());
+    _pfc_recent_incr_throughput.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent incr throughput");
+    snprintf(name, 255, "recent_check_and_set_throughput@%s", str_gpid.c_str());
+    _pfc_recent_check_and_set_throughput.init_app_counter(
+        "app.pegasus",
+        name,
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "statistic the recent check and set throughput");
+    snprintf(name, 255, "recent_check_and_mutate_throughput@%s", str_gpid.c_str());
+    _pfc_recent_check_and_mutate_throughput.init_app_counter(
+        "app.pegasus",
+        name,
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "statistic the recent check and mutate throughput");
 }
 
 int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
@@ -69,7 +125,7 @@ void capacity_unit_calculator::add_get_cu(int32_t status,
         return;
     }
     if (status != rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+        add_read_cu(kNotFound);
         _pfc_recent_get_throughput->add(key.size());
         return;
     }
@@ -94,7 +150,7 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
     }
 
     if (status != rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+        add_read_cu(kNotFound);
         _pfc_recent_multi_get_throughput->add(data_size);
         return;
     }
@@ -115,7 +171,7 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
     }
 
     if (status != rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+        add_read_cu(kNotFound);
         return;
     }
 
@@ -135,7 +191,7 @@ void capacity_unit_calculator::add_sortkey_count_cu(int32_t status, const dsn::b
     }
 
     if (status != rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+        add_read_cu(kNotFound);
         _pfc_recent_multi_get_throughput->add(hash_key.size());
         return;
     }
@@ -153,7 +209,7 @@ void capacity_unit_calculator::add_ttl_cu(int32_t status, const dsn::blob &key)
     }
 
     if (status != rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+        add_read_cu(kNotFound);
         _pfc_recent_multi_get_throughput->add(key.size());
         return;
     }

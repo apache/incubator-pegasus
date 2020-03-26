@@ -101,32 +101,40 @@ TEST_F(capacity_unit_calculator_test, init) { test_init(); }
 TEST_F(capacity_unit_calculator_test, get)
 {
     // value < 4KB
-    _cal->add_get_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes("value"));
+    _cal->add_get_cu(rocksdb::Status::kOk,
+                     dsn::blob::create_from_bytes("key"),
+                     dsn::blob::create_from_bytes("value"));
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
     // value = 4KB
-    _cal->add_get_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes(std::string(4096, ' ')));
+    _cal->add_get_cu(rocksdb::Status::kOk,
+                     dsn::blob::create_from_bytes("key"),
+                     dsn::blob::create_from_bytes(std::string(4093, ' ')));
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
     // value > 4KB
-    _cal->add_get_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes(std::string(4097, ' ')));
+    _cal->add_get_cu(rocksdb::Status::kOk,
+                     dsn::blob::create_from_bytes("key"),
+                     dsn::blob::create_from_bytes(std::string(4097, ' ')));
     ASSERT_EQ(_cal->read_cu, 2);
     _cal->reset();
 
     // value > 8KB
     _cal->add_get_cu(rocksdb::Status::kOk,
+                     dsn::blob::create_from_bytes("key"),
                      dsn::blob::create_from_bytes(std::string(4096 * 2 + 1, ' ')));
     ASSERT_EQ(_cal->read_cu, 3);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
-    _cal->add_get_cu(rocksdb::Status::kNotFound, dsn::blob());
+    _cal->add_get_cu(rocksdb::Status::kNotFound, dsn::blob::create_from_bytes("key"), dsn::blob());
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_get_cu(rocksdb::Status::kCorruption, dsn::blob());
+    _cal->add_get_cu(
+        rocksdb::Status::kCorruption, dsn::blob::create_from_bytes("key"), dsn::blob());
     ASSERT_EQ(_cal->read_cu, 0);
     _cal->reset();
 }
@@ -136,26 +144,27 @@ TEST_F(capacity_unit_calculator_test, multi_get)
     std::vector<::dsn::apps::key_value> kvs;
 
     generate_n_kvs(100, kvs);
-    _cal->add_multi_get_cu(rocksdb::Status::kIncomplete, kvs);
+    _cal->add_multi_get_cu(rocksdb::Status::kIncomplete, dsn::blob::create_from_bytes("key"), kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
     generate_n_kvs(500, kvs);
-    _cal->add_multi_get_cu(rocksdb::Status::kOk, kvs);
+    _cal->add_multi_get_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes("key"), kvs);
     ASSERT_GT(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
     kvs.clear();
-    _cal->add_multi_get_cu(rocksdb::Status::kNotFound, kvs);
+    _cal->add_multi_get_cu(rocksdb::Status::kNotFound, dsn::blob::create_from_bytes("key"), kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_multi_get_cu(rocksdb::Status::kInvalidArgument, kvs);
+    _cal->add_multi_get_cu(
+        rocksdb::Status::kInvalidArgument, dsn::blob::create_from_bytes("key"), kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_multi_get_cu(rocksdb::Status::kCorruption, kvs);
+    _cal->add_multi_get_cu(rocksdb::Status::kCorruption, dsn::blob::create_from_bytes("key"), kvs);
     ASSERT_EQ(_cal->read_cu, 0);
     _cal->reset();
 }
@@ -196,7 +205,7 @@ TEST_F(capacity_unit_calculator_test, scan)
 TEST_F(capacity_unit_calculator_test, sortkey_count)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_sortkey_count_cu(i);
+        _cal->add_sortkey_count_cu(i, dsn::blob::create_from_bytes("key"));
         if (i == rocksdb::Status::kOk) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
@@ -210,7 +219,7 @@ TEST_F(capacity_unit_calculator_test, sortkey_count)
 TEST_F(capacity_unit_calculator_test, ttl)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_ttl_cu(i);
+        _cal->add_ttl_cu(i, dsn::blob::create_from_bytes("key"));
         if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
@@ -256,13 +265,13 @@ TEST_F(capacity_unit_calculator_test, multi_put)
     std::vector<::dsn::apps::key_value> kvs;
 
     generate_n_kvs(100, kvs);
-    _cal->add_multi_put_cu(rocksdb::Status::kOk, kvs);
+    _cal->add_multi_put_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes("key"), kvs);
     ASSERT_EQ(_cal->write_cu, 1);
     _cal->reset();
 
     generate_n_kvs(500, kvs);
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_multi_put_cu(i, kvs);
+        _cal->add_multi_put_cu(i, dsn::blob::create_from_bytes("key"), kvs);
         if (i == rocksdb::Status::kOk) {
             ASSERT_GT(_cal->write_cu, 1);
         } else {
@@ -278,13 +287,13 @@ TEST_F(capacity_unit_calculator_test, multi_remove)
     std::vector<::dsn::blob> keys;
 
     generate_n_keys(100, keys);
-    _cal->add_multi_remove_cu(rocksdb::Status::kOk, keys);
+    _cal->add_multi_remove_cu(rocksdb::Status::kOk, dsn::blob::create_from_bytes("key"), keys);
     ASSERT_EQ(_cal->write_cu, 1);
     _cal->reset();
 
     generate_n_keys(1000, keys);
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_multi_remove_cu(i, keys);
+        _cal->add_multi_remove_cu(i, dsn::blob::create_from_bytes("key"), keys);
         if (i == rocksdb::Status::kOk) {
             ASSERT_GT(_cal->write_cu, 1);
         } else {
@@ -298,7 +307,7 @@ TEST_F(capacity_unit_calculator_test, multi_remove)
 TEST_F(capacity_unit_calculator_test, incr)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_incr_cu(i);
+        _cal->add_incr_cu(i, dsn::blob::create_from_bytes("key"));
         if (i == rocksdb::Status::kOk) {
             ASSERT_EQ(_cal->read_cu, 1);
             ASSERT_EQ(_cal->write_cu, 1);
@@ -316,28 +325,36 @@ TEST_F(capacity_unit_calculator_test, incr)
 TEST_F(capacity_unit_calculator_test, check_and_set)
 {
     _cal->add_check_and_set_cu(rocksdb::Status::kOk,
-                               dsn::blob::create_from_bytes("key"),
+                               dsn::blob::create_from_bytes("hash_key"),
+                               dsn::blob::create_from_bytes("check_sort_key"),
+                               dsn::blob::create_from_bytes("set_sort_key"),
                                dsn::blob::create_from_bytes("value"));
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 1);
     _cal->reset();
 
     _cal->add_check_and_set_cu(rocksdb::Status::kInvalidArgument,
-                               dsn::blob::create_from_bytes("key"),
+                               dsn::blob::create_from_bytes("hash_key"),
+                               dsn::blob::create_from_bytes("check_sort_key"),
+                               dsn::blob::create_from_bytes("set_sort_key"),
                                dsn::blob::create_from_bytes("value"));
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
     _cal->add_check_and_set_cu(rocksdb::Status::kTryAgain,
-                               dsn::blob::create_from_bytes("key"),
+                               dsn::blob::create_from_bytes("hash_key"),
+                               dsn::blob::create_from_bytes("check_sort_key"),
+                               dsn::blob::create_from_bytes("set_sort_key"),
                                dsn::blob::create_from_bytes("value"));
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
     _cal->add_check_and_set_cu(rocksdb::Status::kCorruption,
-                               dsn::blob::create_from_bytes("key"),
+                               dsn::blob::create_from_bytes("hash_key"),
+                               dsn::blob::create_from_bytes("check_sort_key"),
+                               dsn::blob::create_from_bytes("set_sort_key"),
                                dsn::blob::create_from_bytes("value"));
     ASSERT_EQ(_cal->read_cu, 0);
     ASSERT_EQ(_cal->write_cu, 0);
@@ -349,28 +366,43 @@ TEST_F(capacity_unit_calculator_test, check_and_mutate)
     std::vector<::dsn::apps::mutate> mutate_list;
 
     generate_n_mutates(100, mutate_list);
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk, mutate_list);
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk,
+                                  dsn::blob::create_from_bytes("hash_key"),
+                                  dsn::blob::create_from_bytes("check_sort_key"),
+                                  mutate_list);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 1);
     _cal->reset();
 
     generate_n_mutates(1000, mutate_list);
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk, mutate_list);
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk,
+                                  dsn::blob::create_from_bytes("hash_key"),
+                                  dsn::blob::create_from_bytes("check_sort_key"),
+                                  mutate_list);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_GT(_cal->write_cu, 1);
     _cal->reset();
 
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kInvalidArgument, mutate_list);
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kInvalidArgument,
+                                  dsn::blob::create_from_bytes("hash_key"),
+                                  dsn::blob::create_from_bytes("check_sort_key"),
+                                  mutate_list);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kTryAgain, mutate_list);
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kTryAgain,
+                                  dsn::blob::create_from_bytes("hash_key"),
+                                  dsn::blob::create_from_bytes("check_sort_key"),
+                                  mutate_list);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kCorruption, mutate_list);
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kCorruption,
+                                  dsn::blob::create_from_bytes("hash_key"),
+                                  dsn::blob::create_from_bytes("check_sort_key"),
+                                  mutate_list);
     ASSERT_EQ(_cal->read_cu, 0);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
