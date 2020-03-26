@@ -154,8 +154,7 @@ void capacity_unit_calculator::add_put_cu(int32_t status,
         return;
     }
 
-    int64_t data_size = key.size() + value.size();
-    add_write_cu(data_size);
+    add_write_cu(key.size() + value.size());
 }
 
 void capacity_unit_calculator::add_remove_cu(int32_t status, const dsn::blob &key)
