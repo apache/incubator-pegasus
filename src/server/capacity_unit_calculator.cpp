@@ -291,7 +291,7 @@ void capacity_unit_calculator::add_incr_cu(int32_t status, const dsn::blob &key)
         add_write_cu(key.size());
     }
     add_read_cu(key.size());
-     _pfc_recent_incr_throughput->add(key.size());
+    _pfc_recent_incr_throughput->add(key.size());
 }
 
 void capacity_unit_calculator::add_check_and_set_cu(int32_t status,
