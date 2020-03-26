@@ -19,6 +19,20 @@ struct table_stats
                total_incr_qps + total_check_and_set_qps + total_check_and_mutate_qps;
     }
 
+    double get_total_read_throughput() const
+    {
+        return total_recent_get_throughput + total_recent_multi_get_throughput +
+               total_recent_scan_throughput;
+    }
+
+    double get_total_write_throughput() const
+    {
+        return total_recent_put_throughput + total_recent_multi_put_throughput +
+               total_recent_remove_throughput + total_recent_multi_remove_throughput +
+               total_recent_incr_throughput + total_recent_check_and_set_throughput +
+               total_recent_check_and_mutate_throughput;
+    }
+
     void aggregate(const row_data &row)
     {
         total_get_qps += row.get_qps;
@@ -46,6 +60,16 @@ struct table_stats
         total_rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
         total_rdb_estimate_num_keys += row.rdb_estimate_num_keys;
         total_backup_request_qps += row.backup_request_qps;
+        total_recent_get_throughput = row.recent_get_throughput;
+        total_recent_multi_get_throughput = row.recent_multi_get_throughput;
+        total_recent_scan_throughput = row.recent_scan_throughput;
+        total_recent_put_throughput = row.recent_put_throughput;
+        total_recent_remove_throughput = row.recent_remove_throughput;
+        total_recent_multi_put_throughput = row.recent_multi_put_throughput;
+        total_recent_multi_remove_throughput = row.recent_multi_remove_throughput;
+        total_recent_incr_throughput = row.recent_incr_throughput;
+        total_recent_check_and_set_throughput = row.recent_check_and_set_throughput;
+        total_recent_check_and_mutate_throughput = row.recent_check_and_mutate_throughput;
     }
 
     void merge(const table_stats &row_stats)
@@ -78,6 +102,17 @@ struct table_stats
         total_rdb_memtable_mem_usage += row_stats.total_rdb_memtable_mem_usage;
         total_rdb_estimate_num_keys += row_stats.total_rdb_estimate_num_keys;
         total_backup_request_qps += row_stats.total_backup_request_qps;
+        total_recent_get_throughput = row_stats.total_recent_get_throughput;
+        total_recent_multi_get_throughput = row_stats.total_recent_multi_get_throughput;
+        total_recent_scan_throughput = row_stats.total_recent_scan_throughput;
+        total_recent_put_throughput = row_stats.total_recent_put_throughput;
+        total_recent_remove_throughput = row_stats.total_recent_remove_throughput;
+        total_recent_multi_put_throughput = row_stats.total_recent_multi_put_throughput;
+        total_recent_multi_remove_throughput = row_stats.total_recent_multi_remove_throughput;
+        total_recent_incr_throughput = row_stats.total_recent_incr_throughput;
+        total_recent_check_and_set_throughput = row_stats.total_recent_check_and_set_throughput;
+        total_recent_check_and_mutate_throughput =
+            row_stats.total_recent_check_and_mutate_throughput;
     }
 
     std::string app_name;
@@ -106,6 +141,17 @@ struct table_stats
     double total_rdb_memtable_mem_usage = 0;
     double total_rdb_estimate_num_keys = 0;
     double total_backup_request_qps = 0;
+
+    double total_recent_get_throughput = 0;
+    double total_recent_multi_get_throughput = 0;
+    double total_recent_scan_throughput = 0;
+    double total_recent_put_throughput = 0;
+    double total_recent_remove_throughput = 0;
+    double total_recent_multi_put_throughput = 0;
+    double total_recent_multi_remove_throughput = 0;
+    double total_recent_incr_throughput = 0;
+    double total_recent_check_and_set_throughput = 0;
+    double total_recent_check_and_mutate_throughput = 0;
     double max_total_qps = 0;
     double min_total_qps = INT_MAX;
     double max_total_cu = 0;
