@@ -70,9 +70,6 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_get_throughput;
     ::dsn::perf_counter_wrapper _pfc_recent_multi_get_throughput;
     ::dsn::perf_counter_wrapper _pfc_recent_scan_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_sortkey_count_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_ttl_throughput;
-
     ::dsn::perf_counter_wrapper _pfc_recent_put_throughput;
     ::dsn::perf_counter_wrapper _pfc_recent_remove_throughput;
     ::dsn::perf_counter_wrapper _pfc_recent_multi_put_throughput;

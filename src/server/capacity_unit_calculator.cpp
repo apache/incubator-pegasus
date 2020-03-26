@@ -44,52 +44,51 @@ capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_ba
     snprintf(name, 255, "recent_get_throughput@%s", str_gpid.c_str());
     _pfc_recent_get_throughput.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent get throughput");
+
     snprintf(name, 255, "recent_multi_get_throughput@%s", str_gpid.c_str());
     _pfc_recent_multi_get_throughput.init_app_counter("app.pegasus",
                                                       name,
                                                       COUNTER_TYPE_VOLATILE_NUMBER,
                                                       "statistic the recent multi get throughput");
+
     snprintf(name, 255, "recent_scan_throughput@%s", str_gpid.c_str());
     _pfc_recent_scan_throughput.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent scan throughput");
-    snprintf(name, 255, "recent_sortkey_count_throughput@%s", str_gpid.c_str());
-    _pfc_recent_sortkey_count_throughput.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "statistic the recent sortkey count throughput");
-    snprintf(name, 255, "recent_ttl_throughput@%s", str_gpid.c_str());
-    _pfc_recent_ttl_throughput.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent ttl throughput");
 
     snprintf(name, 255, "recent_put_throughput@%s", str_gpid.c_str());
     _pfc_recent_put_throughput.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent put throughput");
+
     snprintf(name, 255, "recent_remove_throughput@%s", str_gpid.c_str());
     _pfc_recent_remove_throughput.init_app_counter("app.pegasus",
                                                    name,
                                                    COUNTER_TYPE_VOLATILE_NUMBER,
                                                    "statistic the recent remove throughput");
+
     snprintf(name, 255, "recent_multi_put_throughput@%s", str_gpid.c_str());
     _pfc_recent_multi_put_throughput.init_app_counter("app.pegasus",
                                                       name,
                                                       COUNTER_TYPE_VOLATILE_NUMBER,
                                                       "statistic the recent multi put throughput");
+
     snprintf(name, 255, "recent_multi_remove_throughput@%s", str_gpid.c_str());
     _pfc_recent_multi_remove_throughput.init_app_counter(
         "app.pegasus",
         name,
         COUNTER_TYPE_VOLATILE_NUMBER,
         "statistic the recent multi remove throughput");
+
     snprintf(name, 255, "recent_incr_throughput@%s", str_gpid.c_str());
     _pfc_recent_incr_throughput.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent incr throughput");
+
     snprintf(name, 255, "recent_check_and_set_throughput@%s", str_gpid.c_str());
     _pfc_recent_check_and_set_throughput.init_app_counter(
         "app.pegasus",
         name,
         COUNTER_TYPE_VOLATILE_NUMBER,
         "statistic the recent check and set throughput");
+
     snprintf(name, 255, "recent_check_and_mutate_throughput@%s", str_gpid.c_str());
     _pfc_recent_check_and_mutate_throughput.init_app_counter(
         "app.pegasus",
