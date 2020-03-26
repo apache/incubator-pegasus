@@ -238,13 +238,12 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
         return;
     }
 
-    int64_t data_size = 0;
-    for (const auto &m : mutate_list) {
-        data_size += m.sort_key.size() + m.value.size();
-    }
-    data_size = data_size + hash_key.size();
-
     if (status == rocksdb::Status::kOk) {
+        int64_t data_size = 0;
+        for (const auto &m : mutate_list) {
+            data_size += m.sort_key.size() + m.value.size();
+        }
+        data_size = data_size + hash_key.size();
         add_write_cu(data_size);
     }
     add_read_cu(hash_key.size() + check_sort_key.size());
