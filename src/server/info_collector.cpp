@@ -222,6 +222,8 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(recent_incr_throughput);
     INIT_COUNTER(recent_check_and_set_throughput);
     INIT_COUNTER(recent_check_and_mutate_throughput);
+    INIT_COUNTER(recent_read_throughput);
+    INIT_COUNTER(recent_write_throughput);
     _app_stat_counters[app_name] = counters;
     return counters;
 }

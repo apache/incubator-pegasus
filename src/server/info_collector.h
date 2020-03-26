@@ -119,8 +119,8 @@ public:
         ::dsn::perf_counter_wrapper recent_incr_throughput;
         ::dsn::perf_counter_wrapper recent_check_and_set_throughput;
         ::dsn::perf_counter_wrapper recent_check_and_mutate_throughput;
-        ::dsn::perf_counter_wrapper read_throughput;
-        ::dsn::perf_counter_wrapper write_throughput;
+        ::dsn::perf_counter_wrapper recent_read_throughput;
+        ::dsn::perf_counter_wrapper recent_write_throughput;
     };
 
     info_collector();
