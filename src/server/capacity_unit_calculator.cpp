@@ -120,15 +120,17 @@ void capacity_unit_calculator::add_get_cu(int32_t status,
                                           const dsn::blob &key,
                                           const dsn::blob &value)
 {
-    if (status != rocksdb::Status::kOk) {
-        _pfc_recent_get_throughput->add(key.size());
-        return;
-    }
-    if (status != rocksdb::Status::kNotFound) {
+    if (status == rocksdb::Status::kNotFound) {
         add_read_cu(kNotFound);
         _pfc_recent_get_throughput->add(key.size());
         return;
     }
+
+    if (status != rocksdb::Status::kOk) {
+        _pfc_recent_get_throughput->add(key.size());
+        return;
+    }
+
     int64_t data_size = key.size() + value.size();
     add_read_cu(data_size);
     _pfc_recent_get_throughput->add(data_size);
@@ -143,14 +145,15 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
         sort_key_data_size += kv.key.size();
     }
     int64_t data_size = hash_key.size() + sort_key_data_size;
-    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
-        status != rocksdb::Status::kInvalidArgument) {
+
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(kNotFound);
         _pfc_recent_multi_get_throughput->add(data_size);
         return;
     }
 
-    if (status != rocksdb::Status::kNotFound) {
-        add_read_cu(kNotFound);
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
+        status != rocksdb::Status::kInvalidArgument) {
         _pfc_recent_multi_get_throughput->add(data_size);
         return;
     }
@@ -165,13 +168,13 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
 void capacity_unit_calculator::add_scan_cu(int32_t status,
                                            const std::vector<::dsn::apps::key_value> &kvs)
 {
-    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
-        status != rocksdb::Status::kInvalidArgument) {
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(kNotFound);
         return;
     }
 
-    if (status != rocksdb::Status::kNotFound) {
-        add_read_cu(kNotFound);
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
+        status != rocksdb::Status::kInvalidArgument) {
         return;
     }
 
@@ -185,14 +188,14 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
 
 void capacity_unit_calculator::add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key)
 {
-    if (status != rocksdb::Status::kOk) {
-        _pfc_recent_sortkey_count_throughput->add(hash_key.size());
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(kNotFound);
+        _pfc_recent_multi_get_throughput->add(hash_key.size());
         return;
     }
 
-    if (status != rocksdb::Status::kNotFound) {
-        add_read_cu(kNotFound);
-        _pfc_recent_multi_get_throughput->add(hash_key.size());
+    if (status != rocksdb::Status::kOk) {
+        _pfc_recent_sortkey_count_throughput->add(hash_key.size());
         return;
     }
 
@@ -203,14 +206,14 @@ void capacity_unit_calculator::add_sortkey_count_cu(int32_t status, const dsn::b
 
 void capacity_unit_calculator::add_ttl_cu(int32_t status, const dsn::blob &key)
 {
-    if (status != rocksdb::Status::kOk) {
-        _pfc_recent_sortkey_count_throughput->add(key.size());
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(kNotFound);
+        _pfc_recent_multi_get_throughput->add(key.size());
         return;
     }
 
-    if (status != rocksdb::Status::kNotFound) {
-        add_read_cu(kNotFound);
-        _pfc_recent_multi_get_throughput->add(key.size());
+    if (status != rocksdb::Status::kOk) {
+        _pfc_recent_sortkey_count_throughput->add(key.size());
         return;
     }
 
@@ -227,6 +230,7 @@ void capacity_unit_calculator::add_put_cu(int32_t status,
         _pfc_recent_put_throughput->add(key.size());
         return;
     }
+
     int64_t data_size = key.size() + value.size();
     add_write_cu(data_size);
     _pfc_recent_put_throughput->add(data_size);
@@ -238,6 +242,7 @@ void capacity_unit_calculator::add_remove_cu(int32_t status, const dsn::blob &ke
         _pfc_recent_put_throughput->add(key.size());
         return;
     }
+
     add_write_cu(key.size());
     _pfc_recent_remove_throughput->add(key.size());
 }
@@ -251,6 +256,7 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
         kv_data_size += kv.key.size() + kv.value.size();
     }
     int64_t data_size = hash_key.size() + kv_data_size;
+
     if (status != rocksdb::Status::kOk) {
         _pfc_recent_multi_put_throughput->add(data_size);
         return;
@@ -269,6 +275,7 @@ void capacity_unit_calculator::add_multi_remove_cu(int32_t status,
         sort_key_data_size += sort_key.size();
     }
     int64_t data_size = hash_key.size() + sort_key_data_size;
+
     if (status != rocksdb::Status::kOk) {
         _pfc_recent_multi_remove_throughput->add(data_size);
         return;
@@ -284,6 +291,7 @@ void capacity_unit_calculator::add_incr_cu(int32_t status, const dsn::blob &hash
         _pfc_recent_put_throughput->add(hash_key.size());
         return;
     }
+
     int64_t data_size = 0;
     if (status == rocksdb::Status::kOk) {
         data_size = hash_key.size() + 1;
@@ -305,6 +313,7 @@ void capacity_unit_calculator::add_check_and_set_cu(int32_t status,
         _pfc_recent_check_and_set_throughput->add(data_size);
         return;
     }
+
     if (status == rocksdb::Status::kOk) {
         add_write_cu(data_size);
     }
@@ -323,11 +332,13 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
         kv_data_size += m.sort_key.size() + m.value.size();
     }
     int64_t data_size = hash_key.size() + kv_data_size;
+
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kInvalidArgument &&
         status != rocksdb::Status::kTryAgain) {
         _pfc_recent_check_and_mutate_throughput->add(data_size);
         return;
     }
+
     if (status == rocksdb::Status::kOk) {
         add_write_cu(data_size);
     }
