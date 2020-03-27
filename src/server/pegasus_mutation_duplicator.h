@@ -29,7 +29,7 @@ public:
 
     void duplicate(mutation_tuple_set muts, callback cb) override;
 
-    ~pegasus_mutation_duplicator() override { _env.__conf.tracker->wait_outstanding_tasks(); }
+    ~pegasus_mutation_duplicator() override { _env.__conf.tracker->cancel_outstanding_tasks(); }
 
 private:
     void send(uint64_t hash, callback cb);

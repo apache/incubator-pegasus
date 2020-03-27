@@ -127,10 +127,7 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
                    err.description());
     } else if (detail) {
         fmt::print("duplications of app [{}] in detail:\n", app_name);
-        const auto &resp = err_resp.get_value();
-        for (auto info : resp.entry_list) {
-            fmt::print("{}\n\n", duplication_entry_to_string(info));
-        }
+        fmt::print("{}", duplication_query_response_to_string(err_resp.get_value()) + "\n\n");
     } else {
         const auto &resp = err_resp.get_value();
         fmt::print("duplications of app [{}] are listed as below:\n", app_name);
@@ -155,6 +152,24 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
         }
     }
     return true;
+}
+
+void handle_duplication_modify_response(
+    const std::string &operation, const dsn::error_with<duplication_modify_response> &err_resp)
+{
+    dsn::error_s err = err_resp.get_error();
+    if (err.is_ok()) {
+        err = dsn::error_s::make(err_resp.get_value().err);
+    }
+    std::string hint;
+    if (err.code() == dsn::ERR_OBJECT_NOT_FOUND) {
+        hint = " [duplication not found]";
+    }
+    if (err.is_ok()) {
+        fmt::print("{} succeed\n", operation);
+    } else {
+        fmt::print(stderr, "{} failed, error={}{}\n", operation, err.description(), hint);
+    }
 }
 
 bool change_dup_status(command_executor *e,
@@ -189,20 +204,8 @@ bool change_dup_status(command_executor *e,
     }
 
     auto err_resp = sc->ddl_client->change_dup_status(app_name, dup_id, status);
-    dsn::error_s err = err_resp.get_error();
-    if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
-    }
-    if (err.is_ok()) {
-        fmt::print("{}({}) for app [{}] succeed\n", operation, dup_id, app_name);
-    } else {
-        fmt::print(stderr,
-                   "{}({}) for app [{}] failed, error={}\n",
-                   operation,
-                   dup_id,
-                   app_name,
-                   err.description());
-    }
+    handle_duplication_modify_response(
+        fmt::format("{}({}) for app {}", operation, dup_id, app_name), err_resp);
     return true;
 }
 
@@ -219,4 +222,36 @@ bool start_dup(command_executor *e, shell_context *sc, arguments args)
 bool pause_dup(command_executor *e, shell_context *sc, arguments args)
 {
     return change_dup_status(e, sc, args, duplication_status::DS_PAUSE);
+}
+
+bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args)
+{
+    // set_dup_fail_mode <app_name> <dupid> <slow|skip>
+    using namespace dsn::replication;
+
+    argh::parser cmd(args.argc, args.argv);
+    if (cmd.pos_args().size() > 4) {
+        fmt::print(stderr, "too many params\n");
+        return false;
+    }
+    std::string app_name = cmd(1).str();
+    std::string dupid_str = cmd(2).str();
+    dupid_t dup_id;
+    if (!dsn::buf2int32(dupid_str, dup_id)) {
+        fmt::print(stderr, "invalid dup_id {}\n", dupid_str);
+        return false;
+    }
+    std::string fail_mode_str = cmd(3).str();
+    if (fail_mode_str != "slow" && fail_mode_str != "skip") {
+        fmt::print(stderr, "fail_mode must be \"slow\" or  \"skip\": {}\n", fail_mode_str);
+        return false;
+    }
+    auto fmode = fail_mode_str == "slow" ? duplication_fail_mode::FAIL_SLOW
+                                         : duplication_fail_mode::FAIL_SKIP;
+
+    auto err_resp = sc->ddl_client->update_dup_fail_mode(app_name, dup_id, fmode);
+    auto operation = fmt::format(
+        "set duplication({}) fail_mode ({}) for app {}", dup_id, fail_mode_str, app_name);
+    handle_duplication_modify_response(operation, err_resp);
+    return true;
 }

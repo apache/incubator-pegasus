@@ -515,7 +515,8 @@ struct row_data
     double get_total_qps() const
     {
         return get_qps + multi_get_qps + scan_qps + put_qps + multi_put_qps + remove_qps +
-               multi_remove_qps + incr_qps + check_and_set_qps + check_and_mutate_qps;
+               multi_remove_qps + incr_qps + check_and_set_qps + check_and_mutate_qps +
+               duplicate_qps;
     }
 
     double get_total_cu() const { return recent_read_cu + recent_write_cu; }
@@ -533,6 +534,8 @@ struct row_data
     double check_and_set_qps = 0;
     double check_and_mutate_qps = 0;
     double scan_qps = 0;
+    double duplicate_qps = 0;
+    double duplicate_failed_qps = 0;
     double recent_read_cu = 0;
     double recent_write_cu = 0;
     double recent_expire_count = 0;
@@ -572,6 +575,10 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.check_and_mutate_qps += value;
     else if (counter_name == "scan_qps")
         row.scan_qps += value;
+    else if (counter_name == "duplicate_qps")
+        row.duplicate_qps += value;
+    else if (counter_name == "duplicate_failed_qps")
+        row.duplicate_failed_qps += value;
     else if (counter_name == "recent.read.cu")
         row.recent_read_cu += value;
     else if (counter_name == "recent.write.cu")

@@ -437,6 +437,10 @@ static command_executor commands[] = {
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
     {"pause_dup", "pause duplication", "<app_name> <dup_id>", pause_dup},
+    {"set_dup_fail_mode",
+     "set fail_mode of duplication",
+     "<app_name> <dup_id> <slow|skip>",
+     set_dup_fail_mode},
     {
         "exit", "exit shell", "", exit_shell,
     },

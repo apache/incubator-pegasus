@@ -131,7 +131,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
         // errors are acceptable.
         // TODO(wutao1): print the entire request for future debugging.
         if (dsn::rand::next_double01() <= 0.01) {
-            derror_replica("duplicate_rpc failed: {} [code:{}, timestamp:{}]",
+            derror_replica("duplicate_rpc failed: {} [timestamp:{}]",
                            err == dsn::ERR_OK ? _client->get_error_string(perr) : err.to_string(),
                            rpc.request().timestamp);
         }

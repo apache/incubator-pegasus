@@ -239,3 +239,5 @@ bool remove_dup(command_executor *e, shell_context *sc, arguments args);
 bool start_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool pause_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args);
