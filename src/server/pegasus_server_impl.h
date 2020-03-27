@@ -26,6 +26,7 @@ namespace server {
 class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;
+class range_read_limiter_options;
 
 class pegasus_server_impl : public ::dsn::apps::rrdb_service
 {

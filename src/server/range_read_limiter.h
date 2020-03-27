@@ -10,15 +10,14 @@
 namespace pegasus {
 namespace server {
 
-class iteration_limiter
+class range_read_limiter
 {
 public:
-    iteration_limiter(uint32_t max_iteration_count,
-                      uint64_t max_iteration_size,
-                      uint64_t threshold_time_ms)
+    range_read_limiter(uint32_t max_iteration_count,
+                       uint64_t max_iteration_size,
+                       uint64_t threshold_time_ms)
+        : _max_count(max_iteration_count), _max_size(max_iteration_size)
     {
-        _max_count = max_iteration_count;
-        _max_size = max_iteration_size;
         _module_num = _max_count <= 10 ? 1 : _max_count / 10;
         _max_duration_time = threshold_time_ms > 0 ? threshold_time_ms * 1e6 : 0;
         _iteration_start_time_ns = dsn_now_ns();

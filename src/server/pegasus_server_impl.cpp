@@ -24,7 +24,7 @@
 #include "pegasus_event_listener.h"
 #include "pegasus_server_write.h"
 #include "meta_store.h"
-#include "iteration_limiter.h"
+#include "range_read_limiter.h"
 
 using namespace dsn::literals::chrono_literals;
 
@@ -808,7 +808,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         std::unique_ptr<rocksdb::Iterator> it;
         bool complete = false;
 
-        std::unique_ptr<iteration_limiter> limiter = dsn::make_unique<iteration_limiter>(
+        std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
             max_iteration_count, max_iteration_size, _rocksdb_iteration_threshold_time_ms);
 
         if (!request.reverse) {
@@ -1132,7 +1132,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
     uint64_t expire_count = 0;
 
-    std::unique_ptr<iteration_limiter> limiter = dsn::make_unique<iteration_limiter>(
+    std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
         _rocksdb_max_iteration_count, 0, _rocksdb_iteration_threshold_time_ms);
 
     while (it->Valid()) {
@@ -1359,8 +1359,8 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     uint32_t batch_count = std::min(request_batch_size, _rocksdb_max_iteration_count);
     resp.kvs.reserve(batch_count);
 
-    std::unique_ptr<iteration_limiter> limiter =
-        dsn::make_unique<iteration_limiter>(batch_count, 0, _rocksdb_iteration_threshold_time_ms);
+    std::unique_ptr<range_read_limiter> limiter =
+        dsn::make_unique<range_read_limiter>(batch_count, 0, _rocksdb_iteration_threshold_time_ms);
 
     while (limiter->valid() && it->Valid()) {
         int c = it->key().compare(stop);
@@ -1520,7 +1520,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         uint32_t context_batch_size = context->batch_size > 0 ? context->batch_size : INT_MAX;
         uint32_t batch_count = std::min(context_batch_size, _rocksdb_max_iteration_count);
 
-        std::unique_ptr<iteration_limiter> limiter = dsn::make_unique<iteration_limiter>(
+        std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
             batch_count, 0, _rocksdb_iteration_threshold_time_ms);
 
         while (limiter->valid() && it->Valid()) {
