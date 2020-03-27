@@ -322,6 +322,7 @@ private:
     uint64_t _slow_query_threshold_ns;
     uint64_t _slow_query_threshold_ns_in_config;
     // abnormal multi_get/rocksdb_iteration
+    uint32_t _multi_get_max_iteration_count;
     uint64_t _multi_get_max_iteration_size;
     uint32_t _rocksdb_max_iteration_count;
     uint64_t _rocksdb_iteration_threshold_time_ms_in_config;
