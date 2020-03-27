@@ -49,14 +49,22 @@ public:
 
     void start_from_log_file(log_file_ptr f);
 
+    bool will_fail_skip() const;
+    bool will_fail_fast() const;
+
     void TEST_set_repeat_delay(std::chrono::milliseconds delay)
     {
         const_cast<std::chrono::milliseconds &>(_repeat_delay) = delay;
     }
     static constexpr int MAX_ALLOWED_BLOCK_REPEATS{3};
+    static constexpr int MAX_ALLOWED_FILE_REPEATS{10};
 
 private:
     friend class load_from_private_log_test;
+    friend class load_fail_mode_test;
+    FRIEND_TEST(load_fail_mode_test, fail_skip);
+    FRIEND_TEST(load_fail_mode_test, fail_slow);
+    FRIEND_TEST(load_fail_mode_test, fail_skip_real_corrupted_file);
 
     mutation_log_ptr _private_log;
     replica_duplicator *_duplicator;
@@ -70,10 +78,13 @@ private:
 
     // How many times it repeats reading from current block but failed.
     int _err_block_repeats_num{0};
+    // How many times it repeats reading current log file but failed.
+    int _err_file_repeats_num{0};
 
     decree _start_decree{0};
 
     perf_counter_wrapper _counter_dup_load_file_failed_count;
+    perf_counter_wrapper _counter_dup_load_skipped_bytes_count;
     perf_counter_wrapper _counter_dup_log_read_bytes_rate;
     perf_counter_wrapper _counter_dup_log_read_mutations_rate;
 

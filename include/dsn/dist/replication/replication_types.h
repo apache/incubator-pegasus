@@ -162,6 +162,18 @@ struct duplication_status
 
 extern const std::map<int, const char *> _duplication_status_VALUES_TO_NAMES;
 
+struct duplication_fail_mode
+{
+    enum type
+    {
+        FAIL_SLOW = 0,
+        FAIL_SKIP = 1,
+        FAIL_FAST = 2
+    };
+};
+
+extern const std::map<int, const char *> _duplication_fail_mode_VALUES_TO_NAMES;
+
 class mutation_header;
 
 class mutation_update;
@@ -5017,10 +5029,14 @@ inline std::ostream &operator<<(std::ostream &out, const duplication_add_respons
 
 typedef struct _duplication_modify_request__isset
 {
-    _duplication_modify_request__isset() : app_name(false), dupid(false), status(false) {}
+    _duplication_modify_request__isset()
+        : app_name(false), dupid(false), status(false), fail_mode(false)
+    {
+    }
     bool app_name : 1;
     bool dupid : 1;
     bool status : 1;
+    bool fail_mode : 1;
 } _duplication_modify_request__isset;
 
 class duplication_modify_request
@@ -5030,12 +5046,19 @@ public:
     duplication_modify_request(duplication_modify_request &&);
     duplication_modify_request &operator=(const duplication_modify_request &);
     duplication_modify_request &operator=(duplication_modify_request &&);
-    duplication_modify_request() : app_name(), dupid(0), status((duplication_status::type)0) {}
+    duplication_modify_request()
+        : app_name(),
+          dupid(0),
+          status((duplication_status::type)0),
+          fail_mode((duplication_fail_mode::type)0)
+    {
+    }
 
     virtual ~duplication_modify_request() throw();
     std::string app_name;
     int32_t dupid;
     duplication_status::type status;
+    duplication_fail_mode::type fail_mode;
 
     _duplication_modify_request__isset __isset;
 
@@ -5044,6 +5067,8 @@ public:
     void __set_dupid(const int32_t val);
 
     void __set_status(const duplication_status::type val);
+
+    void __set_fail_mode(const duplication_fail_mode::type val);
 
     bool operator==(const duplication_modify_request &rhs) const
     {
@@ -5054,6 +5079,10 @@ public:
         if (__isset.status != rhs.__isset.status)
             return false;
         else if (__isset.status && !(status == rhs.status))
+            return false;
+        if (__isset.fail_mode != rhs.__isset.fail_mode)
+            return false;
+        else if (__isset.fail_mode && !(fail_mode == rhs.fail_mode))
             return false;
         return true;
     }
@@ -5135,7 +5164,7 @@ typedef struct _duplication_entry__isset
           remote(false),
           create_ts(false),
           progress(false),
-          not_confirmed(false)
+          fail_mode(false)
     {
     }
     bool dupid : 1;
@@ -5143,7 +5172,7 @@ typedef struct _duplication_entry__isset
     bool remote : 1;
     bool create_ts : 1;
     bool progress : 1;
-    bool not_confirmed : 1;
+    bool fail_mode : 1;
 } _duplication_entry__isset;
 
 class duplication_entry
@@ -5153,7 +5182,14 @@ public:
     duplication_entry(duplication_entry &&);
     duplication_entry &operator=(const duplication_entry &);
     duplication_entry &operator=(duplication_entry &&);
-    duplication_entry() : dupid(0), status((duplication_status::type)0), remote(), create_ts(0) {}
+    duplication_entry()
+        : dupid(0),
+          status((duplication_status::type)0),
+          remote(),
+          create_ts(0),
+          fail_mode((duplication_fail_mode::type)0)
+    {
+    }
 
     virtual ~duplication_entry() throw();
     int32_t dupid;
@@ -5161,7 +5197,7 @@ public:
     std::string remote;
     int64_t create_ts;
     std::map<int32_t, int64_t> progress;
-    std::map<int32_t, int64_t> not_confirmed;
+    duplication_fail_mode::type fail_mode;
 
     _duplication_entry__isset __isset;
 
@@ -5175,7 +5211,7 @@ public:
 
     void __set_progress(const std::map<int32_t, int64_t> &val);
 
-    void __set_not_confirmed(const std::map<int32_t, int64_t> &val);
+    void __set_fail_mode(const duplication_fail_mode::type val);
 
     bool operator==(const duplication_entry &rhs) const
     {
@@ -5191,9 +5227,9 @@ public:
             return false;
         else if (__isset.progress && !(progress == rhs.progress))
             return false;
-        if (__isset.not_confirmed != rhs.__isset.not_confirmed)
+        if (__isset.fail_mode != rhs.__isset.fail_mode)
             return false;
-        else if (__isset.not_confirmed && !(not_confirmed == rhs.not_confirmed))
+        else if (__isset.fail_mode && !(fail_mode == rhs.fail_mode))
             return false;
         return true;
     }

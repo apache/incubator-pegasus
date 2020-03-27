@@ -65,9 +65,10 @@ void meta_duplication_service::modify_duplication(duplication_modify_rpc rpc)
     const auto &request = rpc.request();
     auto &response = rpc.response();
 
-    ddebug_f("modify duplication({}) to {} for app({})",
+    ddebug_f("modify duplication({}) to [status={},fail_mode={}] for app({})",
              request.dupid,
              request.__isset.status ? duplication_status_to_string(request.status) : "nil",
+             request.__isset.fail_mode ? duplication_fail_mode_to_string(request.fail_mode) : "nil",
              request.app_name);
 
     dupid_t dupid = request.dupid;
@@ -86,7 +87,8 @@ void meta_duplication_service::modify_duplication(duplication_modify_rpc rpc)
 
     duplication_info_s_ptr dup = it->second;
     auto to_status = request.__isset.status ? request.status : dup->status();
-    response.err = dup->alter_status(to_status);
+    auto to_fail_mode = request.__isset.fail_mode ? request.fail_mode : dup->fail_mode();
+    response.err = dup->alter_status(to_status, to_fail_mode);
     if (response.err != ERR_OK) {
         return;
     }

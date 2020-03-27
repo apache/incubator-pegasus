@@ -36,6 +36,7 @@ public:
         bool duplicating{false};
         decree not_duplicated{0};
         decree not_confirmed{0};
+        duplication_fail_mode::type fail_mode{duplication_fail_mode::FAIL_SLOW};
     };
     std::multimap<dupid_t, replica_dup_state> get_dup_states(int app_id, /*out*/ bool *app_found);
 

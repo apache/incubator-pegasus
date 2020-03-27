@@ -28,6 +28,24 @@ public:
         duplicator = create_test_duplicator();
     }
 
+    // return number of entries written
+    int generate_multiple_log_files(uint files_num = 3)
+    {
+        // decree ranges from [1, files_num*10)
+        for (int f = 0; f < files_num; f++) {
+            // each round mlog will replay the former logs, and create new file
+            mutation_log_ptr mlog = create_private_log();
+            for (int i = 1; i <= 10; i++) {
+                std::string msg = "hello!";
+                mutation_ptr mu = create_test_mutation(10 * f + i, msg);
+                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+            }
+            mlog->tracker()->wait_outstanding_tasks();
+            mlog->close();
+        }
+        return static_cast<int>(files_num * 10);
+    }
+
     void test_find_log_file_to_start()
     {
         load_from_private_log load(_replica.get(), duplicator.get());
@@ -47,15 +65,7 @@ public:
         load.find_log_file_to_start({});
         ASSERT_FALSE(load._current);
 
-        { // writing mutations to log which will generate multiple files
-            for (int i = 0; i < 1000 * 50; i++) {
-                std::string msg = "hello!";
-                mutations.push_back(msg);
-                mutation_ptr mu = create_test_mutation(2 + i, msg);
-                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
-            }
-            mlog->tracker()->wait_outstanding_tasks();
-        }
+        int num_entries = generate_multiple_log_files(3);
 
         auto files = open_log_file_map(_log_dir);
 
@@ -65,14 +75,14 @@ public:
         ASSERT_EQ(load._current->index(), 1);
 
         load._current = nullptr;
-        load.set_start_decree(50);
+        load.set_start_decree(5);
         load.find_log_file_to_start(files);
         ASSERT_TRUE(load._current);
         ASSERT_EQ(load._current->index(), 1);
 
         int last_idx = files.rbegin()->first;
         load._current = nullptr;
-        load.set_start_decree(1000 * 50 + 200);
+        load.set_start_decree(num_entries + 200);
         load.find_log_file_to_start(files);
         ASSERT_TRUE(load._current);
         ASSERT_EQ(load._current->index(), last_idx);
@@ -165,17 +175,7 @@ public:
     {
         load_from_private_log load(_replica.get(), duplicator.get());
 
-        // start duplication from a compacted plog dir.
-        // first log file is log.2.xxx
-        for (int f = 0; f < 2; f++) {
-            mutation_log_ptr mlog = create_private_log();
-            for (int i = 0; i < 100; i++) {
-                std::string msg = "hello!";
-                mutation_ptr mu = create_test_mutation(39000 + 100 * f + i, msg);
-                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
-            }
-            mlog->tracker()->wait_outstanding_tasks();
-        }
+        int num_entries = generate_multiple_log_files(2);
 
         std::vector<std::string> files;
         ASSERT_EQ(log_utils::list_all_files(_log_dir, files), error_s::ok());
@@ -369,6 +369,96 @@ TEST_F(load_from_private_log_test, ignore_useless)
     // no mutation will be loaded.
     result = load_and_wait_all_entries_loaded(0, 100, 0);
     ASSERT_EQ(result.size(), 0);
+}
+
+class load_fail_mode_test : public load_from_private_log_test
+{
+public:
+    void SetUp() override
+    {
+        const int num_entries = generate_multiple_log_files();
+
+        // prepare loading pipeline
+        mlog = create_private_log();
+        _replica->init_private_log(mlog);
+        duplicator = create_test_duplicator(1);
+        load = make_unique<load_from_private_log>(_replica.get(), duplicator.get());
+        load->TEST_set_repeat_delay(0_ms); // no delay
+        load->set_start_decree(duplicator->progress().last_decree + 1);
+        end_stage = make_unique<end_stage_t>(
+            [this, num_entries](decree &&d, mutation_tuple_set &&mutations) {
+                load->set_start_decree(d + 1);
+                if (d < num_entries - 1) {
+                    load->run();
+                }
+            });
+        duplicator->from(*load).link(*end_stage);
+    }
+
+    mutation_log_ptr mlog;
+    std::unique_ptr<load_from_private_log> load;
+
+    using end_stage_t = pipeline::do_when<decree, mutation_tuple_set>;
+    std::unique_ptr<end_stage_t> end_stage;
+};
+
+TEST_F(load_fail_mode_test, fail_skip)
+{
+    duplicator->update_fail_mode(duplication_fail_mode::FAIL_SKIP);
+    ASSERT_EQ(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+
+    // will trigger fail-skip and read the subsequent file, some mutations will be lost.
+    auto repeats = load->MAX_ALLOWED_BLOCK_REPEATS * load->MAX_ALLOWED_FILE_REPEATS;
+    fail::setup();
+    fail::cfg("mutation_log_replay_block", fmt::format("100%{}*return()", repeats));
+    duplicator->run_pipeline();
+    duplicator->wait_all();
+    fail::teardown();
+
+    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(),
+              load_from_private_log::MAX_ALLOWED_FILE_REPEATS);
+    ASSERT_GT(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+}
+
+TEST_F(load_fail_mode_test, fail_slow)
+{
+    duplicator->update_fail_mode(duplication_fail_mode::FAIL_SLOW);
+    ASSERT_EQ(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(), 0);
+
+    // will trigger fail-slow and retry infinitely
+    auto repeats = load->MAX_ALLOWED_BLOCK_REPEATS * load->MAX_ALLOWED_FILE_REPEATS;
+    fail::setup();
+    fail::cfg("mutation_log_replay_block", fmt::format("100%{}*return()", repeats));
+    duplicator->run_pipeline();
+    duplicator->wait_all();
+    fail::teardown();
+
+    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(),
+              load_from_private_log::MAX_ALLOWED_FILE_REPEATS);
+    ASSERT_EQ(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+}
+
+TEST_F(load_fail_mode_test, fail_skip_real_corrupted_file)
+{
+    { // inject some bad data in the middle of the first file
+        std::string log_path = _log_dir + "/log.1.0";
+        auto file_size = boost::filesystem::file_size(log_path);
+        int fd = open(log_path.c_str(), O_WRONLY);
+        const char buf[] = "xxxxxx";
+        auto written_size = pwrite(fd, buf, sizeof(buf), file_size / 2);
+        ASSERT_EQ(written_size, sizeof(buf));
+        close(fd);
+    }
+
+    duplicator->update_fail_mode(duplication_fail_mode::FAIL_SKIP);
+    duplicator->run_pipeline();
+    duplicator->wait_all();
+
+    // ensure the bad file will be skipped
+    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(),
+              load_from_private_log::MAX_ALLOWED_FILE_REPEATS);
+    ASSERT_GT(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
 }
 
 } // namespace replication

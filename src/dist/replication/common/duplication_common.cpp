@@ -43,6 +43,15 @@ namespace replication {
     return it->second;
 }
 
+/*extern*/ const char *duplication_fail_mode_to_string(duplication_fail_mode::type fmode)
+{
+    auto it = _duplication_fail_mode_VALUES_TO_NAMES.find(fmode);
+    dassert(it != _duplication_fail_mode_VALUES_TO_NAMES.end(),
+            "unexpected type of duplication_fail_mode: %d",
+            fmode);
+    return it->second;
+}
+
 /*extern*/ const char *get_current_cluster_name()
 {
     static const char *cluster_name =
@@ -122,6 +131,7 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
         {"create_ts", ts_buf},
         {"remote", ent.remote},
         {"status", duplication_status_to_string(ent.status)},
+        {"fail_mode", duplication_fail_mode_to_string(ent.fail_mode)},
     };
     if (ent.__isset.progress) {
         nlohmann::json sub_json;

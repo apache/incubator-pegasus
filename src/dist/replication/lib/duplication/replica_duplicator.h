@@ -65,6 +65,15 @@ public:
     // Not thread-safe.
     void update_status_if_needed(duplication_status::type next_status);
 
+    void update_fail_mode(duplication_fail_mode::type fmode)
+    {
+        _fail_mode.store(fmode, std::memory_order_relaxed);
+    }
+    duplication_fail_mode::type fail_mode() const
+    {
+        return _fail_mode.load(std::memory_order_relaxed);
+    }
+
     dupid_t id() const { return _id; }
 
     const std::string &remote_cluster_name() const { return _remote_cluster_name; }
@@ -121,6 +130,7 @@ private:
     dsn::task_tracker _tracker;
 
     duplication_status::type _status{duplication_status::DS_INIT};
+    std::atomic<duplication_fail_mode::type> _fail_mode{duplication_fail_mode::FAIL_SLOW};
 
     // protect the access of _progress.
     mutable zrwlock_nr _lock;

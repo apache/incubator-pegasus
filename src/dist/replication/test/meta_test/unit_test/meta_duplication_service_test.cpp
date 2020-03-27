@@ -86,6 +86,21 @@ public:
         return rpc.response();
     }
 
+    duplication_modify_response
+    update_fail_mode(const std::string &app_name, dupid_t dupid, duplication_fail_mode::type fmode)
+    {
+        auto req = make_unique<duplication_modify_request>();
+        req->dupid = dupid;
+        req->app_name = app_name;
+        req->__set_fail_mode(fmode);
+
+        duplication_modify_rpc rpc(std::move(req), RPC_CM_MODIFY_DUPLICATION);
+        dup_svc().modify_duplication(rpc);
+        wait_all();
+
+        return rpc.response();
+    }
+
     duplication_sync_response
     duplication_sync(const rpc_address &node,
                      std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list)
@@ -522,6 +537,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].status, duplication_status::DS_START);
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].create_ts, dup->create_timestamp_ms);
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].remote, dup->remote);
+        ASSERT_EQ(resp.dup_map[app->app_id][dupid].fail_mode, dup->fail_mode());
 
         auto progress_map = resp.dup_map[app->app_id][dupid].progress;
         ASSERT_EQ(progress_map.size(), 8);
@@ -678,7 +694,55 @@ TEST_F(meta_duplication_service_test, query_duplication_handler)
     ASSERT_EQ(fake_resp.body,
               std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
                   std::to_string(dup->id) +
+                  R"(,"fail_mode":"FAIL_SLOW")"
                   R"(,"remote":"slave-cluster","status":"DS_START"},"appid":2})");
+}
+
+TEST_F(meta_duplication_service_test, fail_mode)
+{
+    std::string test_app = "test-app";
+    create_app(test_app);
+    auto app = find_app(test_app);
+
+    auto dup_add_resp = create_dup(test_app);
+    auto dup = app->duplications[dup_add_resp.dupid];
+    ASSERT_EQ(dup->fail_mode(), duplication_fail_mode::FAIL_SLOW);
+    ASSERT_EQ(dup->status(), duplication_status::DS_START);
+
+    auto resp = update_fail_mode(test_app, dup->id, duplication_fail_mode::FAIL_SKIP);
+    ASSERT_EQ(resp.err, ERR_OK);
+    ASSERT_EQ(dup->fail_mode(), duplication_fail_mode::FAIL_SKIP);
+    ASSERT_EQ(dup->status(), duplication_status::DS_START);
+
+    // change nothing
+    resp = update_fail_mode(test_app, dup->id, duplication_fail_mode::FAIL_SKIP);
+    ASSERT_EQ(resp.err, ERR_OK);
+    ASSERT_EQ(dup->fail_mode(), duplication_fail_mode::FAIL_SKIP);
+    ASSERT_EQ(dup->status(), duplication_status::DS_START);
+
+    // change status but fail mode not changed
+    resp = change_dup_status(test_app, dup->id, duplication_status::DS_PAUSE);
+    ASSERT_EQ(resp.err, ERR_OK);
+    ASSERT_EQ(dup->fail_mode(), duplication_fail_mode::FAIL_SKIP);
+    ASSERT_EQ(dup->status(), duplication_status::DS_PAUSE);
+
+    // ensure dup_sync will synchronize fail_mode
+    std::vector<rpc_address> server_nodes = generate_node_list(3);
+    rpc_address node = server_nodes[0];
+    for (partition_configuration &pc : app->partitions) {
+        pc.primary = server_nodes[0];
+    }
+    initialize_node_state();
+    duplication_sync_response sync_resp = duplication_sync(node, {});
+    ASSERT_TRUE(sync_resp.dup_map[app->app_id][dup->id].__isset.fail_mode);
+    ASSERT_EQ(sync_resp.dup_map[app->app_id][dup->id].fail_mode, duplication_fail_mode::FAIL_SKIP);
+
+    // ensure recovery will not lose fail_mode.
+    SetUp();
+    recover_from_meta_state();
+    app = find_app(test_app);
+    dup = app->duplications[dup->id];
+    ASSERT_EQ(dup->fail_mode(), duplication_fail_mode::FAIL_SKIP);
 }
 
 } // namespace replication

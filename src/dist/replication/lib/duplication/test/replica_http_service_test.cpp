@@ -48,7 +48,7 @@ TEST_F(replica_http_service_test, query_duplication_handler)
         resp.body,
         R"({)"
         R"("1583306653":)"
-        R"({"1.1":{"duplicating":false,"not_confirmed_mutations_num":100,"not_duplicated_mutations_num":50}})"
+        R"({"1.1":{"duplicating":false,"fail_mode":"FAIL_SLOW","not_confirmed_mutations_num":100,"not_duplicated_mutations_num":50}})"
         R"(})");
 }
 

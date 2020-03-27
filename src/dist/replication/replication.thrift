@@ -659,6 +659,22 @@ enum duplication_status
     DS_REMOVED,
 }
 
+// How duplication reacts on permanent failure.
+enum duplication_fail_mode
+{
+    // The default mode. If some permanent failure occurred that makes duplication
+    // blocked, it will retry forever until external interference.
+    FAIL_SLOW = 0,
+
+    // Skip the writes that failed to duplicate, which means minor data loss on the remote cluster.
+    // This will certainly achieve better stability of the system.
+    FAIL_SKIP,
+
+    // Stop immediately after it ensures itself unable to duplicate.
+    // WARN: this mode kills the server process, replicas on the server will all be effected.
+    FAIL_FAST
+}
+
 // This request is sent from client to meta.
 struct duplication_add_request
 {
@@ -686,6 +702,7 @@ struct duplication_modify_request
     1:string                    app_name;
     2:i32                       dupid;
     3:optional duplication_status status;
+    4:optional duplication_fail_mode fail_mode;
 }
 
 struct duplication_modify_response
@@ -709,8 +726,7 @@ struct duplication_entry
     // partition_index => confirmed decree
     5:optional map<i32, i64> progress;
 
-    // partition_index => approximate number of mutations that are not confirmed yet
-    6:optional map<i32, i64> not_confirmed;
+    7:optional duplication_fail_mode fail_mode;
 }
 
 // This request is sent from client to meta.

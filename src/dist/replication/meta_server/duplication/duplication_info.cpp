@@ -63,8 +63,36 @@ namespace replication {
     return false;
 }
 
+/*extern*/ void json_encode(dsn::json::JsonWriter &out, const duplication_fail_mode::type &fmode)
+{
+    json::json_encode(out, duplication_fail_mode_to_string(fmode));
+}
+
+/*extern*/ bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::type &fmode)
+{
+    static const std::map<std::string, duplication_fail_mode::type>
+        _duplication_fail_mode_NAMES_TO_VALUES = {
+            {"FAIL_SLOW", duplication_fail_mode::FAIL_SLOW},
+            {"FAIL_SKIP", duplication_fail_mode::FAIL_SKIP},
+            {"FAIL_FAST", duplication_fail_mode::FAIL_FAST},
+        };
+
+    std::string name;
+    json::json_decode(in, name);
+    auto it = _duplication_fail_mode_NAMES_TO_VALUES.find(name);
+    if (it != _duplication_fail_mode_NAMES_TO_VALUES.end()) {
+        fmode = it->second;
+        return true;
+    }
+    derror_f("unexpected duplication_fail_mode name: {}", name);
+    // marked as default value.
+    fmode = duplication_fail_mode::FAIL_SLOW;
+    return false;
+}
+
 // lock held
-error_code duplication_info::alter_status(duplication_status::type to_status)
+error_code duplication_info::alter_status(duplication_status::type to_status,
+                                          duplication_fail_mode::type to_fail_mode)
 {
     if (_is_altering) {
         return ERR_BUSY;
@@ -78,13 +106,14 @@ error_code duplication_info::alter_status(duplication_status::type to_status)
         return ERR_INVALID_PARAMETERS;
     }
 
-    if (_status == to_status) {
+    if (_status == to_status && _fail_mode == to_fail_mode) {
         return ERR_OK;
     }
 
     zauto_write_lock l(_lock);
     _is_altering = true;
     _next_status = to_status;
+    _next_fail_mode = to_fail_mode;
     return ERR_OK;
 }
 
@@ -148,6 +177,7 @@ void duplication_info::persist_status()
     _is_altering = false;
     _status = _next_status;
     _next_status = duplication_status::DS_INIT;
+    _fail_mode = _next_fail_mode;
 }
 
 std::string duplication_info::to_string() const
@@ -161,6 +191,7 @@ blob duplication_info::to_json_blob() const
     copy.create_timestamp_ms = create_timestamp_ms;
     copy.remote = remote;
     copy.status = _next_status;
+    copy.fail_mode = _next_fail_mode;
     return json::json_forwarder<json_helper>::encode(copy);
 }
 
@@ -190,6 +221,7 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
                                                   std::move(info.remote),
                                                   std::move(store_path));
     dup->_status = info.status;
+    dup->_fail_mode = info.fail_mode;
     return dup;
 }
 

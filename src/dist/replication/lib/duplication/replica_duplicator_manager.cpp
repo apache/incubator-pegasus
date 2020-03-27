@@ -57,6 +57,9 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
         duplication_progress newp = dup->progress().set_confirmed_decree(it->second);
         dcheck_eq_replica(dup->update_progress(newp), error_s::ok());
         dup->update_status_if_needed(next_status);
+        if (ent.__isset.fail_mode) {
+            dup->update_fail_mode(ent.fail_mode);
+        }
     }
 }
 
@@ -142,6 +145,7 @@ replica_duplicator_manager::get_dup_states() const
         auto progress = dup.second->progress();
         state.last_decree = progress.last_decree;
         state.confirmed_decree = progress.confirmed_decree;
+        state.fail_mode = dup.second->fail_mode();
         ret.emplace_back(state);
     }
     return ret;
