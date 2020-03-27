@@ -54,23 +54,9 @@ namespace replication {
 
     // init pending buffer
     if (nullptr == _pending_write) {
-        _pending_write.reset(new log_block());
-        _pending_write_callbacks.reset(new callbacks());
-        _pending_write_mutations.reset(new mutations());
-        _pending_write_start_offset = mark_new_offset(0, true).second;
+        _pending_write = make_unique<log_block>(mark_new_offset(0, true).second);
     }
-
-    // save mutations
-    _pending_write_mutations->push_back(mu);
-
-    // save cb for pinning buffer
-    if (cb) {
-        _pending_write_callbacks->push_back(cb);
-    }
-
-    // write mutation to pending buffer
-    mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
-    mu->write_to([this](blob bb) { _pending_write->add(bb); });
+    _pending_write->append_mutation(mu, cb);
 
     // update meta
     update_max_decree(mu->data.header.pid, d);
@@ -125,19 +111,13 @@ void mutation_log_shared::write_pending_mutations(bool release_lock_required)
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write->size() > 0, "pending write size = %d", (int)_pending_write->size());
     auto pr = mark_new_offset(_pending_write->size(), false);
-    dassert(pr.second == _pending_write_start_offset,
-            "%" PRId64 " VS %" PRId64 "",
-            pr.second,
-            _pending_write_start_offset);
+    dcheck_eq(pr.second, _pending_write->start_offset());
 
     _is_writing.store(true, std::memory_order_release);
 
     // move or reset pending variables
     std::shared_ptr<log_block> blk = std::move(_pending_write);
-    std::shared_ptr<callbacks> pwu = std::move(_pending_write_callbacks);
-    std::shared_ptr<mutations> pmu = std::move(_pending_write_mutations);
-    int64_t start_offset = _pending_write_start_offset;
-    _pending_write_start_offset = 0;
+    int64_t start_offset = blk->start_offset();
 
     // seperate commit_log_block from within the lock
     _slock.unlock();
@@ -147,13 +127,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock_required)
         start_offset,
         LPC_WRITE_REPLICATION_LOG_SHARED,
         &_tracker,
-        [
-          this,
-          lf = pr.first,
-          block = blk,
-          callbacks = std::move(pwu),
-          mutations = std::move(pmu)
-        ](error_code err, size_t sz) mutable {
+        [ this, lf = pr.first, block = blk ](error_code err, size_t sz) mutable {
             dassert(_is_writing.load(std::memory_order_relaxed), "");
 
             auto hdr = (log_block_header *)block->front().data();
@@ -192,7 +166,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock_required)
 
             // notify the callbacks
             // ATTENTION: callback may be called before this code block executed done.
-            for (auto &c : *callbacks) {
+            for (auto &c : block->callbacks()) {
                 c->enqueue(err, sz);
             }
 
@@ -241,18 +215,10 @@ mutation_log_private::mutation_log_private(const std::string &dir,
 
     // init pending buffer
     if (nullptr == _pending_write) {
-        _pending_write.reset(new log_block());
-        _pending_write_mutations.reset(new mutations());
-        _pending_write_start_offset = mark_new_offset(0, true).second;
+        _pending_write = make_unique<log_block>(mark_new_offset(0, true).second);
         _pending_write_start_time_ms = dsn_now_ms();
     }
-
-    // save mu for pinning buffer
-    _pending_write_mutations->push_back(mu);
-
-    // write mutation to pending buffer
-    mu->data.header.log_offset = _pending_write_start_offset + _pending_write->size();
-    mu->write_to([this](blob bb) { _pending_write->add(bb); });
+    _pending_write->append_mutation(mu, nullptr);
 
     // update meta
     _pending_write_max_commit =
@@ -281,22 +247,22 @@ mutation_log_private::mutation_log_private(const std::string &dir,
 bool mutation_log_private::get_learn_state_in_memory(decree start_decree,
                                                      binary_writer &writer) const
 {
-    std::shared_ptr<mutations> issued_mutations;
+    std::shared_ptr<log_block> issued_block;
     mutations pending_mutations;
     {
         zauto_lock l(_plock);
 
-        issued_mutations = _issued_write_mutations.lock();
+        issued_block = _issued_write.lock();
 
-        if (_pending_write_mutations) {
-            pending_mutations = *_pending_write_mutations;
+        if (_pending_write) {
+            pending_mutations = _pending_write->mutations();
         }
     }
 
     int learned_count = 0;
 
-    if (issued_mutations) {
-        for (auto &mu : *issued_mutations) {
+    if (issued_block) {
+        for (auto &mu : issued_block->mutations()) {
             if (mu->get_decree() >= start_decree) {
                 mu->write_to(writer, nullptr);
                 learned_count++;
@@ -318,18 +284,18 @@ void mutation_log_private::get_in_memory_mutations(decree start_decree,
                                                    ballot start_ballot,
                                                    std::vector<mutation_ptr> &mutation_list) const
 {
-    std::shared_ptr<mutations> issued_mutations;
+    std::shared_ptr<log_block> issued_block;
     mutations pending_mutations;
     {
         zauto_lock l(_plock);
-        issued_mutations = _issued_write_mutations.lock();
-        if (_pending_write_mutations) {
-            pending_mutations = *_pending_write_mutations;
+        issued_block = _issued_write.lock();
+        if (_pending_write) {
+            pending_mutations = _pending_write->mutations();
         }
     }
 
-    if (issued_mutations) {
-        for (auto &mu : *issued_mutations) {
+    if (issued_block) {
+        for (auto &mu : issued_block->mutations()) {
             // if start_ballot is invalid or equal to mu.ballot, check decree
             // otherwise check ballot
             ballot current_ballot =
@@ -386,10 +352,8 @@ void mutation_log_private::init_states()
     mutation_log::init_states();
 
     _is_writing.store(false, std::memory_order_release);
-    _issued_write_mutations.reset();
+    _issued_write.reset();
     _pending_write = nullptr;
-    _pending_write_mutations = nullptr;
-    _pending_write_start_offset = 0;
     _pending_write_start_time_ms = 0;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
@@ -402,7 +366,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write->size() > 0, "pending write size = %d", (int)_pending_write->size());
     auto pr = mark_new_offset(_pending_write->size(), false);
-    dcheck_eq_replica(pr.second, _pending_write_start_offset);
+    dcheck_eq_replica(pr.second, _pending_write->start_offset());
 
     _is_writing.store(true, std::memory_order_release);
 
@@ -410,16 +374,15 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
 
     // move or reset pending variables
     std::shared_ptr<log_block> blk = std::move(_pending_write);
-    _issued_write_mutations = _pending_write_mutations;
-    std::shared_ptr<mutations> pwu = std::move(_pending_write_mutations);
-    int64_t start_offset = _pending_write_start_offset;
-    _pending_write_start_offset = 0;
+    _issued_write = blk;
+    int64_t start_offset = blk->start_offset();
     _pending_write_start_time_ms = 0;
     decree max_commit = _pending_write_max_commit;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
 
-    // seperate commit_log_block from within the lock
+    // Free plog from lock during committing log block, in the meantime
+    // new mutations can still be appended.
     _plock.unlock();
 
     pr.first->commit_log_block(
@@ -427,8 +390,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
         start_offset,
         LPC_WRITE_REPLICATION_LOG_PRIVATE,
         &_tracker,
-        [ this, lf = pr.first, block = blk, mutations = std::move(pwu), max_commit ](
-            error_code err, size_t sz) mutable {
+        [ this, lf = pr.first, block = blk, max_commit ](error_code err, size_t sz) mutable {
             dassert(_is_writing.load(std::memory_order_relaxed), "");
 
             auto hdr = (log_block_header *)block->front().data();

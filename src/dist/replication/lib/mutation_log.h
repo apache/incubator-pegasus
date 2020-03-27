@@ -430,7 +430,6 @@ public:
                         perf_counter_wrapper *write_size_counter = nullptr)
         : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
           _is_writing(false),
-          _pending_write_start_offset(0),
           _force_flush(force_flush),
           _write_size_counter(write_size_counter)
     {
@@ -467,14 +466,9 @@ private:
 
 private:
     // bufferring - only one concurrent write is allowed
-    typedef std::vector<aio_task_ptr> callbacks;
-    typedef std::vector<mutation_ptr> mutations;
     mutable zlock _slock;
     std::atomic_bool _is_writing;
     std::shared_ptr<log_block> _pending_write;
-    std::shared_ptr<callbacks> _pending_write_callbacks;
-    std::shared_ptr<mutations> _pending_write_mutations;
-    int64_t _pending_write_start_offset;
 
     bool _force_flush;
     perf_counter_wrapper *_write_size_counter;
@@ -545,10 +539,11 @@ private:
     // bufferring - only one concurrent write is allowed
     typedef std::vector<mutation_ptr> mutations;
     std::atomic_bool _is_writing;
-    std::weak_ptr<mutations> _issued_write_mutations;
+    // Writes that are emitted to `commit_log_block` but are not completely written.
+    // The weak_ptr used here is a trick. Once the pointer freed, ie.
+    // `_issued_write.lock() == nullptr`, it means the emitted writes all finished.
+    std::weak_ptr<log_block> _issued_write;
     std::shared_ptr<log_block> _pending_write;
-    std::shared_ptr<mutations> _pending_write_mutations;
-    int64_t _pending_write_start_offset;
     uint64_t _pending_write_start_time_ms;
     decree _pending_write_max_commit;
     decree _pending_write_max_decree;

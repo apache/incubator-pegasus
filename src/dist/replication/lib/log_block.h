@@ -26,8 +26,14 @@ class log_block
 {
     std::vector<blob> _data; // the first blob is log_block_header
     size_t _size{0};         // total data size of all blobs
+    std::vector<mutation_ptr> _mutations;
+    std::vector<aio_task_ptr> _callbacks;
+    int64_t _start_offset{0};
+
 public:
     log_block();
+
+    explicit log_block(int64_t start_offset);
 
     // get all blobs in the block
     const std::vector<blob> &data() const { return _data; }
@@ -54,11 +60,21 @@ public:
         _data.push_back(bb);
     }
 
+    void append_mutation(const mutation_ptr &mu, const aio_task_ptr &cb);
+
+    const std::vector<mutation_ptr> &mutations() const { return _mutations; }
+
+    const std::vector<aio_task_ptr> &callbacks() const { return _callbacks; }
+
     // return total data size in the block
     size_t size() const { return _size; }
+
+    // global offset to start writting this block
+    int64_t start_offset() const { return _start_offset; }
 
 private:
     void init();
 };
+
 } // namespace replication
 } // namespace dsn
