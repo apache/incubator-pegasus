@@ -59,28 +59,11 @@ capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_ba
     _pfc_recent_put_throughput.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent put throughput");
 
-    snprintf(name, 255, "recent_remove_throughput@%s", str_gpid.c_str());
-    _pfc_recent_remove_throughput.init_app_counter("app.pegasus",
-                                                   name,
-                                                   COUNTER_TYPE_VOLATILE_NUMBER,
-                                                   "statistic the recent remove throughput");
-
     snprintf(name, 255, "recent_multi_put_throughput@%s", str_gpid.c_str());
     _pfc_recent_multi_put_throughput.init_app_counter("app.pegasus",
                                                       name,
                                                       COUNTER_TYPE_VOLATILE_NUMBER,
                                                       "statistic the recent multi put throughput");
-
-    snprintf(name, 255, "recent_multi_remove_throughput@%s", str_gpid.c_str());
-    _pfc_recent_multi_remove_throughput.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "statistic the recent multi remove throughput");
-
-    snprintf(name, 255, "recent_incr_throughput@%s", str_gpid.c_str());
-    _pfc_recent_incr_throughput.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent incr throughput");
 
     snprintf(name, 255, "recent_check_and_set_throughput@%s", str_gpid.c_str());
     _pfc_recent_check_and_set_throughput.init_app_counter(
@@ -227,12 +210,10 @@ void capacity_unit_calculator::add_put_cu(int32_t status,
 void capacity_unit_calculator::add_remove_cu(int32_t status, const dsn::blob &key)
 {
     if (status != rocksdb::Status::kOk) {
-        _pfc_recent_remove_throughput->add(key.size());
         return;
     }
 
     add_write_cu(key.size());
-    _pfc_recent_remove_throughput->add(key.size());
 }
 
 void capacity_unit_calculator::add_multi_put_cu(int32_t status,
@@ -258,25 +239,21 @@ void capacity_unit_calculator::add_multi_remove_cu(int32_t status,
                                                    const dsn::blob &hash_key,
                                                    const std::vector<::dsn::blob> &sort_keys)
 {
+    if (status != rocksdb::Status::kOk) {
+        return;
+    }
+
     int64_t data_size = 0;
     for (const auto &sort_key : sort_keys) {
         data_size += sort_key.size();
     }
-    data_size = data_size + hash_key.size();
 
-    if (status != rocksdb::Status::kOk) {
-        _pfc_recent_multi_remove_throughput->add(data_size);
-        return;
-    }
-
-    add_write_cu(data_size);
-    _pfc_recent_multi_remove_throughput->add(data_size);
+    add_write_cu(data_size + hash_key.size());
 }
 
 void capacity_unit_calculator::add_incr_cu(int32_t status, const dsn::blob &key)
 {
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kInvalidArgument) {
-        _pfc_recent_incr_throughput->add(key.size());
         return;
     }
 
@@ -284,7 +261,6 @@ void capacity_unit_calculator::add_incr_cu(int32_t status, const dsn::blob &key)
         add_write_cu(key.size());
     }
     add_read_cu(key.size());
-    _pfc_recent_incr_throughput->add(key.size());
 }
 
 void capacity_unit_calculator::add_check_and_set_cu(int32_t status,

@@ -70,15 +70,12 @@ public:
             recent_multi_get_throughput->set(row_stats.total_recent_multi_get_throughput);
             recent_scan_throughput->set(row_stats.total_recent_scan_throughput);
             recent_put_throughput->set(row_stats.total_recent_put_throughput);
-            recent_remove_throughput->set(row_stats.total_recent_remove_throughput);
             recent_multi_put_throughput->set(row_stats.total_recent_multi_put_throughput);
-            recent_multi_remove_throughput->set(row_stats.total_recent_multi_remove_throughput);
-            recent_incr_throughput->set(row_stats.total_recent_incr_throughput);
             recent_check_and_set_throughput->set(row_stats.total_recent_check_and_set_throughput);
             recent_check_and_mutate_throughput->set(
                 row_stats.total_recent_check_and_mutate_throughput);
-            read_throughput->set(row_stats.get_total_read_throughput());
-            write_throughput->set(row_stats.get_total_write_throughput);
+            recent_read_throughput->set(row_stats.get_total_read_throughput());
+            recent_write_throughput->set(row_stats.get_total_write_throughput());
         }
 
         ::dsn::perf_counter_wrapper get_qps;
@@ -113,10 +110,7 @@ public:
         ::dsn::perf_counter_wrapper recent_multi_get_throughput;
         ::dsn::perf_counter_wrapper recent_scan_throughput;
         ::dsn::perf_counter_wrapper recent_put_throughput;
-        ::dsn::perf_counter_wrapper recent_remove_throughput;
         ::dsn::perf_counter_wrapper recent_multi_put_throughput;
-        ::dsn::perf_counter_wrapper recent_multi_remove_throughput;
-        ::dsn::perf_counter_wrapper recent_incr_throughput;
         ::dsn::perf_counter_wrapper recent_check_and_set_throughput;
         ::dsn::perf_counter_wrapper recent_check_and_mutate_throughput;
         ::dsn::perf_counter_wrapper recent_read_throughput;
