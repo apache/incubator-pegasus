@@ -65,7 +65,7 @@ void capacity_unit_calculator::add_get_cu(int32_t status,
                                           const dsn::blob &value)
 {
     if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(kNotFound);
+        add_read_cu(kSizeForNotFound);
         return;
     }
 
@@ -81,7 +81,7 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
                                                 const std::vector<::dsn::apps::key_value> &kvs)
 {
     if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(kNotFound);
+        add_read_cu(kSizeForNotFound);
         return;
     }
 
@@ -102,7 +102,7 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
                                            const std::vector<::dsn::apps::key_value> &kvs)
 {
     if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(kNotFound);
+        add_read_cu(kSizeForNotFound);
         return;
     }
 
@@ -121,7 +121,7 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
 void capacity_unit_calculator::add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key)
 {
     if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(kNotFound);
+        add_read_cu(kSizeForNotFound);
         return;
     }
 
@@ -135,7 +135,7 @@ void capacity_unit_calculator::add_sortkey_count_cu(int32_t status, const dsn::b
 void capacity_unit_calculator::add_ttl_cu(int32_t status, const dsn::blob &key)
 {
     if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(kNotFound);
+        add_read_cu(kSizeForNotFound);
         return;
     }
 
