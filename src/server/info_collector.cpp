@@ -212,15 +212,15 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
     INIT_COUNTER(backup_request_qps);
-    INIT_COUNTER(recent_get_throughput);
-    INIT_COUNTER(recent_multi_get_throughput);
-    INIT_COUNTER(recent_scan_throughput);
-    INIT_COUNTER(recent_put_throughput);
-    INIT_COUNTER(recent_multi_put_throughput);
-    INIT_COUNTER(recent_check_and_set_throughput);
-    INIT_COUNTER(recent_check_and_mutate_throughput);
-    INIT_COUNTER(recent_read_throughput);
-    INIT_COUNTER(recent_write_throughput);
+    INIT_COUNTER(get_bytes);
+    INIT_COUNTER(multi_get_bytes);
+    INIT_COUNTER(scan_bytes);
+    INIT_COUNTER(put_bytes);
+    INIT_COUNTER(multi_put_bytes);
+    INIT_COUNTER(check_and_set_bytes);
+    INIT_COUNTER(check_and_mutate_bytes);
+    INIT_COUNTER(read_bytes);
+    INIT_COUNTER(write_bytes);
     _app_stat_counters[app_name] = counters;
     return counters;
 }

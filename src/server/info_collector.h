@@ -66,16 +66,15 @@ public:
             read_qps->set(row_stats.get_total_read_qps());
             write_qps->set(row_stats.get_total_write_qps());
             backup_request_qps->set(row_stats.total_backup_request_qps);
-            recent_get_throughput->set(row_stats.total_recent_get_throughput);
-            recent_multi_get_throughput->set(row_stats.total_recent_multi_get_throughput);
-            recent_scan_throughput->set(row_stats.total_recent_scan_throughput);
-            recent_put_throughput->set(row_stats.total_recent_put_throughput);
-            recent_multi_put_throughput->set(row_stats.total_recent_multi_put_throughput);
-            recent_check_and_set_throughput->set(row_stats.total_recent_check_and_set_throughput);
-            recent_check_and_mutate_throughput->set(
-                row_stats.total_recent_check_and_mutate_throughput);
-            recent_read_throughput->set(row_stats.get_total_read_throughput());
-            recent_write_throughput->set(row_stats.get_total_write_throughput());
+            get_bytes->set(row_stats.total_get_bytes);
+            multi_get_bytes->set(row_stats.total_multi_get_bytes);
+            scan_bytes->set(row_stats.total_scan_bytes);
+            put_bytes->set(row_stats.total_put_bytes);
+            multi_put_bytes->set(row_stats.total_multi_put_bytes);
+            check_and_set_bytes->set(row_stats.total_check_and_set_bytes);
+            check_and_mutate_bytes->set(row_stats.total_check_and_mutate_bytes);
+            read_bytes->set(row_stats.get_total_read_bytes());
+            write_bytes->set(row_stats.get_total_write_bytes());
         }
 
         ::dsn::perf_counter_wrapper get_qps;
@@ -106,15 +105,15 @@ public:
         ::dsn::perf_counter_wrapper write_qps;
         ::dsn::perf_counter_wrapper backup_request_qps;
 
-        ::dsn::perf_counter_wrapper recent_get_throughput;
-        ::dsn::perf_counter_wrapper recent_multi_get_throughput;
-        ::dsn::perf_counter_wrapper recent_scan_throughput;
-        ::dsn::perf_counter_wrapper recent_put_throughput;
-        ::dsn::perf_counter_wrapper recent_multi_put_throughput;
-        ::dsn::perf_counter_wrapper recent_check_and_set_throughput;
-        ::dsn::perf_counter_wrapper recent_check_and_mutate_throughput;
-        ::dsn::perf_counter_wrapper recent_read_throughput;
-        ::dsn::perf_counter_wrapper recent_write_throughput;
+        ::dsn::perf_counter_wrapper get_bytes;
+        ::dsn::perf_counter_wrapper multi_get_bytes;
+        ::dsn::perf_counter_wrapper scan_bytes;
+        ::dsn::perf_counter_wrapper put_bytes;
+        ::dsn::perf_counter_wrapper multi_put_bytes;
+        ::dsn::perf_counter_wrapper check_and_set_bytes;
+        ::dsn::perf_counter_wrapper check_and_mutate_bytes;
+        ::dsn::perf_counter_wrapper read_bytes;
+        ::dsn::perf_counter_wrapper write_bytes;
     };
 
     info_collector();

@@ -55,10 +55,6 @@ protected:
 #endif
 
 private:
-    // add_read_cu(kNotFound) or add_write_cu(kNotFound) mean the cu = 1, see the two
-    // functions definition.
-    const int kNotFound = 0;
-
     uint64_t _read_capacity_unit_size;
     uint64_t _write_capacity_unit_size;
     uint32_t _log_read_cu_size;
@@ -67,13 +63,13 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_read_cu;
     ::dsn::perf_counter_wrapper _pfc_recent_write_cu;
 
-    ::dsn::perf_counter_wrapper _pfc_recent_get_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_multi_get_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_scan_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_put_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_multi_put_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_check_and_set_throughput;
-    ::dsn::perf_counter_wrapper _pfc_recent_check_and_mutate_throughput;
+    ::dsn::perf_counter_wrapper _pfc_get_bytes;
+    ::dsn::perf_counter_wrapper _pfc_multi_get_bytes;
+    ::dsn::perf_counter_wrapper _pfc_scan_bytes;
+    ::dsn::perf_counter_wrapper _pfc_put_bytes;
+    ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
+    ::dsn::perf_counter_wrapper _pfc_check_and_set_bytes;
+    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_bytes;
 };
 
 } // namespace server

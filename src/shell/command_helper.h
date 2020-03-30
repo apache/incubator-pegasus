@@ -575,16 +575,13 @@ struct row_data
     double rdb_memtable_mem_usage = 0;
     double rdb_estimate_num_keys = 0;
     double backup_request_qps = 0;
-    double recent_get_throughput = 0;
-    double recent_multi_get_throughput = 0;
-    double recent_scan_throughput = 0;
-    double recent_put_throughput = 0;
-    double recent_remove_throughput = 0;
-    double recent_multi_put_throughput = 0;
-    double recent_multi_remove_throughput = 0;
-    double recent_incr_throughput = 0;
-    double recent_check_and_set_throughput = 0;
-    double recent_check_and_mutate_throughput = 0;
+    double get_bytes = 0;
+    double multi_get_bytes = 0;
+    double scan_bytes = 0;
+    double put_bytes = 0;
+    double multi_put_bytes = 0;
+    double check_and_set_bytes = 0;
+    double check_and_mutate_bytes = 0;
 };
 
 inline bool
@@ -640,26 +637,20 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_estimate_num_keys += value;
     else if (counter_name == "backup_request_qps")
         row.backup_request_qps += value;
-    else if (counter_name == "recent_get_throughput")
-        row.recent_get_throughput += value;
-    else if (counter_name == "recent_multi_get_throughput")
-        row.recent_multi_get_throughput += value;
-    else if (counter_name == "recent_scan_throughput")
-        row.recent_scan_throughput += value;
-    else if (counter_name == "recent_put_throughput")
-        row.recent_put_throughput += value;
-    else if (counter_name == "recent_remove_throughput")
-        row.recent_remove_throughput += value;
-    else if (counter_name == "recent_multi_put_throughput")
-        row.recent_multi_put_throughput += value;
-    else if (counter_name == "recent_multi_remove_throughput")
-        row.recent_multi_remove_throughput += value;
-    else if (counter_name == "recent_incr_throughput")
-        row.recent_incr_throughput += value;
-    else if (counter_name == "recent_check_and_set_throughput")
-        row.recent_check_and_set_throughput += value;
-    else if (counter_name == "recent_check_and_mutate_throughput")
-        row.recent_check_and_mutate_throughput += value;
+    else if (counter_name == "get_bytes")
+        row.get_bytes += value;
+    else if (counter_name == "multi_get_bytes")
+        row.multi_get_bytes += value;
+    else if (counter_name == "scan_bytes")
+        row.scan_bytes += value;
+    else if (counter_name == "put_bytes")
+        row.put_bytes += value;
+    else if (counter_name == "multi_put_bytes")
+        row.multi_put_bytes += value;
+    else if (counter_name == "check_and_set_bytes")
+        row.check_and_set_bytes += value;
+    else if (counter_name == "check_and_mutate_bytes")
+        row.check_and_mutate_bytes += value;
 
     else
         return false;
