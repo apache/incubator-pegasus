@@ -55,9 +55,9 @@ protected:
 #endif
 
 private:
-    // add_read_cu(kNotFound) or add_write_cu(kNotFound) mean the cu = 1, see the two
+    // add_read_cu(kSizeForNotFound) or add_write_cu(kSizeForNotFound) mean the cu = 1, see the two
     // functions definition.
-    const int kNotFound = 0;
+    const int kSizeForNotFound = 0;
 
     uint64_t _read_capacity_unit_size;
     uint64_t _write_capacity_unit_size;
