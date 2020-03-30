@@ -317,38 +317,30 @@ TEST_F(capacity_unit_calculator_test, incr)
 
 TEST_F(capacity_unit_calculator_test, check_and_set)
 {
-    _cal->add_check_and_set_cu(rocksdb::Status::kOk,
-                               dsn::blob::create_from_bytes("hash_key"),
-                               dsn::blob::create_from_bytes("check_sort_key"),
-                               dsn::blob::create_from_bytes("set_sort_key"),
-                               dsn::blob::create_from_bytes("value"));
+    dsn::blob hash_key = dsn::blob::create_from_bytes("hash_key");
+    dsn::blob check_sort_key = dsn::blob::create_from_bytes("check_sort_key");
+    dsn::blob set_sort_key = dsn::blob::create_from_bytes("set_sort_key");
+    dsn::blob value = dsn::blob::create_from_bytes("value");
+
+    _cal->add_check_and_set_cu(rocksdb::Status::kOk, hash_key, check_sort_key, set_sort_key, value);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 1);
     _cal->reset();
 
-    _cal->add_check_and_set_cu(rocksdb::Status::kInvalidArgument,
-                               dsn::blob::create_from_bytes("hash_key"),
-                               dsn::blob::create_from_bytes("check_sort_key"),
-                               dsn::blob::create_from_bytes("set_sort_key"),
-                               dsn::blob::create_from_bytes("value"));
+    _cal->add_check_and_set_cu(
+        rocksdb::Status::kInvalidArgument, hash_key, check_sort_key, set_sort_key, value);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
-    _cal->add_check_and_set_cu(rocksdb::Status::kTryAgain,
-                               dsn::blob::create_from_bytes("hash_key"),
-                               dsn::blob::create_from_bytes("check_sort_key"),
-                               dsn::blob::create_from_bytes("set_sort_key"),
-                               dsn::blob::create_from_bytes("value"));
+    _cal->add_check_and_set_cu(
+        rocksdb::Status::kTryAgain, hash_key, check_sort_key, set_sort_key, value);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
-    _cal->add_check_and_set_cu(rocksdb::Status::kCorruption,
-                               dsn::blob::create_from_bytes("hash_key"),
-                               dsn::blob::create_from_bytes("check_sort_key"),
-                               dsn::blob::create_from_bytes("set_sort_key"),
-                               dsn::blob::create_from_bytes("value"));
+    _cal->add_check_and_set_cu(
+        rocksdb::Status::kCorruption, hash_key, check_sort_key, set_sort_key, value);
     ASSERT_EQ(_cal->read_cu, 0);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
@@ -356,46 +348,36 @@ TEST_F(capacity_unit_calculator_test, check_and_set)
 
 TEST_F(capacity_unit_calculator_test, check_and_mutate)
 {
+    dsn::blob hash_key = dsn::blob::create_from_bytes("hash_key");
+    dsn::blob check_sort_key = dsn::blob::create_from_bytes("check_sort_key");
     std::vector<::dsn::apps::mutate> mutate_list;
 
     generate_n_mutates(100, mutate_list);
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk,
-                                  dsn::blob::create_from_bytes("hash_key"),
-                                  dsn::blob::create_from_bytes("check_sort_key"),
-                                  mutate_list);
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk, hash_key, check_sort_key, mutate_list);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 1);
     _cal->reset();
 
     generate_n_mutates(1000, mutate_list);
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk,
-                                  dsn::blob::create_from_bytes("hash_key"),
-                                  dsn::blob::create_from_bytes("check_sort_key"),
-                                  mutate_list);
+    _cal->add_check_and_mutate_cu(rocksdb::Status::kOk, hash_key, check_sort_key, mutate_list);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_GT(_cal->write_cu, 1);
     _cal->reset();
 
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kInvalidArgument,
-                                  dsn::blob::create_from_bytes("hash_key"),
-                                  dsn::blob::create_from_bytes("check_sort_key"),
-                                  mutate_list);
+    _cal->add_check_and_mutate_cu(
+        rocksdb::Status::kInvalidArgument, hash_key, check_sort_key, mutate_list);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kTryAgain,
-                                  dsn::blob::create_from_bytes("hash_key"),
-                                  dsn::blob::create_from_bytes("check_sort_key"),
-                                  mutate_list);
+    _cal->add_check_and_mutate_cu(
+        rocksdb::Status::kTryAgain, hash_key, check_sort_key, mutate_list);
     ASSERT_EQ(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
-    _cal->add_check_and_mutate_cu(rocksdb::Status::kCorruption,
-                                  dsn::blob::create_from_bytes("hash_key"),
-                                  dsn::blob::create_from_bytes("check_sort_key"),
-                                  mutate_list);
+    _cal->add_check_and_mutate_cu(
+        rocksdb::Status::kCorruption, hash_key, check_sort_key, mutate_list);
     ASSERT_EQ(_cal->read_cu, 0);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
