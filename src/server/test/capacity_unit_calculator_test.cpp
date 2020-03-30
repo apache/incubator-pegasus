@@ -201,7 +201,7 @@ TEST_F(capacity_unit_calculator_test, sortkey_count)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
         _cal->add_sortkey_count_cu(i, key);
-        if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
+        if (i == rocksdb::Status::kOk) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
             ASSERT_EQ(_cal->read_cu, 0);
