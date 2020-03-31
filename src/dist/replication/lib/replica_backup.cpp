@@ -42,10 +42,9 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                     // send clear request to secondaries
                     send_backup_request_to_secondary(request);
                 }
+
                 // clear local checkpoint dirs in background thread
-                tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, policy_name]() {
-                    clear_backup_checkpoint(policy_name);
-                });
+                background_clear_backup_checkpoint(policy_name);
                 return;
             }
 
@@ -106,10 +105,9 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                         // send clear request to secondaries
                         send_backup_request_to_secondary(request);
                     }
+
                     // clear local checkpoint dirs in background thread
-                    tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, policy_name]() {
-                        clear_backup_checkpoint(policy_name);
-                    });
+                    background_clear_backup_checkpoint(policy_name);
                 }
             }
             return;
@@ -194,10 +192,9 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
             backup_request new_request = request;
             new_request.backup_id = 0;
             send_backup_request_to_secondary(new_request);
+
             // clear local checkpoint dirs in background thread
-            tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, policy_name]() {
-                clear_backup_checkpoint(policy_name);
-            });
+            background_clear_backup_checkpoint(policy_name);
             response.err = ERR_OK;
         } else {
             dwarn(
@@ -419,6 +416,18 @@ static bool backup_parse_dir_name(const char *name,
         return (std::string(name) ==
                 backup_get_dir_name(policy_name, backup_id, decree, timestamp));
     }
+}
+
+void replica::background_clear_backup_checkpoint(const std::string &policy_name)
+{
+    ddebug_replica("schedule to clear all checkpoint dirs of policy({}) in {} minutes",
+                   policy_name,
+                   options()->cold_backup_checkpoint_reserve_minutes);
+    tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP,
+                     &_tracker,
+                     [this, policy_name]() { clear_backup_checkpoint(policy_name); },
+                     get_gpid().thread_hash(),
+                     std::chrono::minutes(options()->cold_backup_checkpoint_reserve_minutes));
 }
 
 // clear all checkpoint dirs of the policy

@@ -1204,6 +1204,7 @@ void backup_service::start()
     start_create_policy_meta_root(after_create_policy_meta_root);
 }
 
+// TODO(zhaoliwei) refactor function add_backup_policy
 void backup_service::add_backup_policy(dsn::message_ex *msg)
 {
     configuration_add_backup_policy_request request;
@@ -1212,6 +1213,20 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     ::dsn::unmarshall(msg, request);
     std::set<int32_t> app_ids;
     std::map<int32_t, std::string> app_names;
+
+    // The backup interval must be greater than checkpoint reserve time.
+    // Or the next cold backup checkpoint may be cleared by the clear operation.
+    if (request.backup_interval_seconds <=
+        _meta_svc->get_options().cold_backup_checkpoint_reserve_minutes * 60) {
+        response.err = ERR_INVALID_PARAMETERS;
+        response.hint_message = fmt::format(
+            "backup interval must be greater than cold_backup_checkpoint_reserve_minutes={}",
+            _meta_svc->get_options().cold_backup_checkpoint_reserve_minutes);
+        _meta_svc->reply_data(msg, response);
+        msg->release_ref();
+        return;
+    }
+
     {
         // check app status
         zauto_read_lock l;

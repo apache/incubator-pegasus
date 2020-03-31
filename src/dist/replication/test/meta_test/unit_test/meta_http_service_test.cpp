@@ -100,7 +100,7 @@ public:
 
         request.policy_name = policy_name;
         request.backup_provider_type = "local_service";
-        request.backup_interval_seconds = 1;
+        request.backup_interval_seconds = 24 * 60 * 60;
         request.backup_history_count_to_keep = 1;
         request.start_time = "12:00";
         request.app_ids.clear();
@@ -148,19 +148,19 @@ TEST_F(meta_backup_test_base, get_backup_policy)
         {"", "{}\n", http_status_code::ok},
         {"TEST1",
          "{\"TEST1\":{\"name\":\"TEST1\",\"backup_provider_type\":\"local_service\","
-         "\"backup_interval\":\"1\",\"app_ids\":\"[2]\",\"start_time\":\"12:00\","
+         "\"backup_interval\":\"86400\",\"app_ids\":\"[2]\",\"start_time\":\"12:00\","
          "\"status\":\"enabled\",\"backup_history_count\":\"1\"}}\n",
          http_status_code::ok},
         {"TEST2",
          "{\"TEST2\":{\"name\":\"TEST2\",\"backup_provider_type\":\"local_service\","
-         "\"backup_interval\":\"1\",\"app_ids\":\"[2]\",\"start_time\":\"12:00\","
+         "\"backup_interval\":\"86400\",\"app_ids\":\"[2]\",\"start_time\":\"12:00\","
          "\"status\":\"enabled\",\"backup_history_count\":\"1\"}}\n",
          http_status_code::ok},
         {"",
          "{\"TEST1\":{\"name\":\"TEST1\",\"backup_provider_type\":\"local_service\",\"backup_"
-         "interval\":\"1\",\"app_ids\":\"[2]\",\"start_time\":\"12:00\",\"status\":\"enabled\","
+         "interval\":\"86400\",\"app_ids\":\"[2]\",\"start_time\":\"12:00\",\"status\":\"enabled\","
          "\"backup_history_count\":\"1\"},\"TEST2\":{\"name\":\"TEST2\",\"backup_provider_"
-         "type\":\"local_service\",\"backup_interval\":\"1\",\"app_ids\":\"[2]\",\"start_"
+         "type\":\"local_service\",\"backup_interval\":\"86400\",\"app_ids\":\"[2]\",\"start_"
          "time\":\"12:00\",\"status\":\"enabled\",\"backup_history_count\":\"1\"}}\n",
          http_status_code::ok},
         {"TEST3", "{}\n", http_status_code::ok},

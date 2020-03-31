@@ -311,6 +311,7 @@ private:
     /////////////////////////////////////////////////////////////////
     // cold backup
     void clear_backup_checkpoint(const std::string &policy_name);
+    void background_clear_backup_checkpoint(const std::string &policy_name);
     void generate_backup_checkpoint(cold_backup_context_ptr backup_context);
     void trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
     void wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
