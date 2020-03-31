@@ -21,8 +21,8 @@ public:
                           const dsn::blob &hash_key,
                           const std::vector<::dsn::apps::key_value> &kvs);
     void add_scan_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
-    void add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key);
-    void add_ttl_cu(int32_t status, const dsn::blob &key);
+    void add_sortkey_count_cu(int32_t status);
+    void add_ttl_cu(int32_t status);
 
     void add_put_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_remove_cu(int32_t status, const dsn::blob &key);
@@ -32,7 +32,7 @@ public:
     void add_multi_remove_cu(int32_t status,
                              const dsn::blob &hash_key,
                              const std::vector<::dsn::blob> &sort_keys);
-    void add_incr_cu(int32_t status, const dsn::blob &key);
+    void add_incr_cu(int32_t status);
     void add_check_and_set_cu(int32_t status,
                               const dsn::blob &hash_key,
                               const dsn::blob &check_sort_key,
@@ -55,10 +55,6 @@ protected:
 #endif
 
 private:
-    // add_read_cu(kSizeForNotFound) or add_write_cu(kSizeForNotFound) mean the cu = 1, see the two
-    // functions definition.
-    const int kSizeForNotFound = 0;
-
     uint64_t _read_capacity_unit_size;
     uint64_t _write_capacity_unit_size;
     uint32_t _log_read_cu_size;

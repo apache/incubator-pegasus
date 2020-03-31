@@ -200,7 +200,7 @@ TEST_F(capacity_unit_calculator_test, scan)
 TEST_F(capacity_unit_calculator_test, sortkey_count)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_sortkey_count_cu(i, key);
+        _cal->add_sortkey_count_cu(i);
         if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
@@ -214,7 +214,7 @@ TEST_F(capacity_unit_calculator_test, sortkey_count)
 TEST_F(capacity_unit_calculator_test, ttl)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_ttl_cu(i, key);
+        _cal->add_ttl_cu(i);
         if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
@@ -300,7 +300,7 @@ TEST_F(capacity_unit_calculator_test, multi_remove)
 TEST_F(capacity_unit_calculator_test, incr)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_incr_cu(i, key);
+        _cal->add_incr_cu(i);
         if (i == rocksdb::Status::kOk) {
             ASSERT_EQ(_cal->read_cu, 1);
             ASSERT_EQ(_cal->write_cu, 1);

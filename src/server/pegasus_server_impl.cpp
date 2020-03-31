@@ -1108,7 +1108,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
         resp.count = 0;
     }
 
-    _cu_calculator->add_sortkey_count_cu(resp.error, hash_key);
+    _cu_calculator->add_sortkey_count_cu(resp.error);
 
     reply(resp);
 }
@@ -1171,7 +1171,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
         }
     }
 
-    _cu_calculator->add_ttl_cu(resp.error, key);
+    _cu_calculator->add_ttl_cu(resp.error);
 
     reply(resp);
 }
