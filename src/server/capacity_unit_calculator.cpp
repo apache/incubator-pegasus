@@ -119,29 +119,17 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
 
 void capacity_unit_calculator::add_sortkey_count_cu(int32_t status)
 {
-    if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
     }
-
-    if (status != rocksdb::Status::kOk) {
-        return;
-    }
-
     add_read_cu(1);
 }
 
 void capacity_unit_calculator::add_ttl_cu(int32_t status)
 {
-    if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
     }
-
-    if (status != rocksdb::Status::kOk) {
-        return;
-    }
-
     add_read_cu(1);
 }
 
