@@ -134,7 +134,7 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
     _pfc_scan_bytes->add(data_size);
 }
 
-void capacity_unit_calculator::add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key)
+void capacity_unit_calculator::add_sortkey_count_cu(int32_t status)
 {
     if (status != rocksdb::Status::kOk) {
         return;
@@ -142,7 +142,7 @@ void capacity_unit_calculator::add_sortkey_count_cu(int32_t status, const dsn::b
     add_read_cu(1);
 }
 
-void capacity_unit_calculator::add_ttl_cu(int32_t status, const dsn::blob &key)
+void capacity_unit_calculator::add_ttl_cu(int32_t status)
 {
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
@@ -190,7 +190,6 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
 }
 
 void capacity_unit_calculator::add_multi_remove_cu(int32_t status,
-                                                   const dsn::blob &hash_key,
                                                    const std::vector<::dsn::blob> &sort_keys)
 {
     if (status != rocksdb::Status::kOk) {
@@ -203,7 +202,7 @@ void capacity_unit_calculator::add_multi_remove_cu(int32_t status,
     add_write_cu(data_size);
 }
 
-void capacity_unit_calculator::add_incr_cu(int32_t status, const dsn::blob &key)
+void capacity_unit_calculator::add_incr_cu(int32_t status)
 {
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kInvalidArgument) {
         return;

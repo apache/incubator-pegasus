@@ -134,7 +134,7 @@ int pegasus_write_service::multi_remove(int64_t decree,
     int err = _impl->multi_remove(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_multi_remove_cu(resp.error, update.hash_key, update.sort_keys);
+        _cu_calculator->add_multi_remove_cu(resp.error, update.sort_keys);
     }
 
     _pfc_multi_remove_latency->set(dsn_now_ns() - start_time);
@@ -150,7 +150,7 @@ int pegasus_write_service::incr(int64_t decree,
     int err = _impl->incr(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_incr_cu(resp.error, update.key);
+        _cu_calculator->add_incr_cu(resp.error);
     }
 
     _pfc_incr_latency->set(dsn_now_ns() - start_time);
