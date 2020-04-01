@@ -247,8 +247,9 @@ bool query_disk_replica(command_executor *e, shell_context *sc, arguments args)
             disk_printer.append_data(primary_count);
             disk_printer.append_data(secondary_count);
             disk_printer.append_data(primary_count + secondary_count);
+
+            multi_printer.add(std::move(disk_printer));
         }
-        multi_printer.add(std::move(disk_printer));
     }
     multi_printer.output(
         *out.stream(), format_to_json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
