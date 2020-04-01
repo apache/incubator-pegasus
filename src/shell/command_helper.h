@@ -651,7 +651,6 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.check_and_set_bytes += value;
     else if (counter_name == "check_and_mutate_bytes")
         row.check_and_mutate_bytes += value;
-
     else
         return false;
     return true;
