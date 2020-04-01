@@ -92,12 +92,11 @@ void capacity_unit_calculator::add_get_cu(int32_t status,
                                           const dsn::blob &key,
                                           const dsn::blob &value)
 {
+    _pfc_get_bytes->add(key.size() + value.size());
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
-        _pfc_get_bytes->add(key.size());
         return;
     }
     add_read_cu(value.size());
-    _pfc_get_bytes->add(key.size() + value.size());
 }
 
 void capacity_unit_calculator::add_multi_get_cu(int32_t status,
@@ -109,14 +108,13 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
         data_size += kv.key.size() + kv.value.size();
     }
     int64_t multi_get_bytes = hash_key.size() + data_size;
+    _pfc_multi_get_bytes->add(multi_get_bytes);
 
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
         status != rocksdb::Status::kIncomplete && status != rocksdb::Status::kInvalidArgument) {
-        _pfc_multi_get_bytes->add(multi_get_bytes);
         return;
     }
     add_read_cu(data_size);
-    _pfc_multi_get_bytes->add(multi_get_bytes);
 }
 
 void capacity_unit_calculator::add_scan_cu(int32_t status,
@@ -154,13 +152,11 @@ void capacity_unit_calculator::add_put_cu(int32_t status,
                                           const dsn::blob &key,
                                           const dsn::blob &value)
 {
+    _pfc_put_bytes->add(key.size() + value.size());
     if (status != rocksdb::Status::kOk) {
-        _pfc_put_bytes->add(key.size());
         return;
     }
-
     add_write_cu(key.size() + value.size());
-    _pfc_put_bytes->add(key.size() + value.size());
 }
 
 void capacity_unit_calculator::add_remove_cu(int32_t status, const dsn::blob &key)
@@ -180,13 +176,12 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
         data_size += kv.key.size() + kv.value.size();
     }
     int64_t multi_put_bytes = hash_key.size() + data_size;
+    _pfc_multi_put_bytes->add(multi_put_bytes);
 
     if (status != rocksdb::Status::kOk) {
-        _pfc_multi_put_bytes->add(multi_put_bytes);
         return;
     }
     add_write_cu(data_size);
-    _pfc_multi_put_bytes->add(multi_put_bytes);
 }
 
 void capacity_unit_calculator::add_multi_remove_cu(int32_t status,
@@ -219,19 +214,18 @@ void capacity_unit_calculator::add_check_and_set_cu(int32_t status,
                                                     const dsn::blob &set_sort_key,
                                                     const dsn::blob &value)
 {
-    int64_t check_and_set_bytes =
-        hash_key.size() + check_sort_key.size() + set_sort_key.size() + value.size();
+
+    _pfc_check_and_set_bytes->add(hash_key.size() + check_sort_key.size() + set_sort_key.size() +
+                                  value.size());
 
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kInvalidArgument &&
         status != rocksdb::Status::kTryAgain) {
-        _pfc_check_and_set_bytes->add(check_and_set_bytes);
         return;
     }
     if (status == rocksdb::Status::kOk) {
         add_write_cu(set_sort_key.size() + value.size());
     }
     add_read_cu(1);
-    _pfc_check_and_set_bytes->add(check_and_set_bytes);
 }
 
 void capacity_unit_calculator::add_check_and_mutate_cu(
@@ -244,11 +238,10 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
     for (const auto &m : mutate_list) {
         data_size += m.sort_key.size() + m.value.size();
     }
-    int64_t check_and_mutate_bytes = data_size + hash_key.size() + check_sort_key.size();
+    _pfc_check_and_mutate_bytes->add(data_size + hash_key.size() + check_sort_key.size());
 
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kInvalidArgument &&
         status != rocksdb::Status::kTryAgain) {
-        _pfc_check_and_mutate_bytes->add(check_and_mutate_bytes);
         return;
     }
 
@@ -256,7 +249,6 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
         add_write_cu(data_size);
     }
     add_read_cu(1);
-    _pfc_check_and_mutate_bytes->add(check_and_mutate_bytes);
 }
 
 } // namespace server
