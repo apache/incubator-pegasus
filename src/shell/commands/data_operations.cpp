@@ -2432,7 +2432,7 @@ void escape_sds_argv(int argc, sds *argv)
 {
     for (int i = 0; i < argc; i++) {
         const size_t dest_len = sdslen(argv[i]) * 4 + 1; // Maximum possible expansion
-        sds new_arg = sdsnewlen("", dest_len);
+        sds new_arg = sdsnewlen(NULL, dest_len);
         pegasus::utils::c_escape_string(argv[i], sdslen(argv[i]), new_arg, dest_len);
         sdsfree(argv[i]);
         argv[i] = new_arg;
