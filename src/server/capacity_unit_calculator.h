@@ -16,19 +16,29 @@ class capacity_unit_calculator : public dsn::replication::replica_base
 public:
     explicit capacity_unit_calculator(replica_base *r);
 
-    void add_get_cu(int32_t status, const dsn::blob &value);
-    void add_multi_get_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
+    void add_get_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
+    void add_multi_get_cu(int32_t status,
+                          const dsn::blob &hash_key,
+                          const std::vector<::dsn::apps::key_value> &kvs);
     void add_scan_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
     void add_sortkey_count_cu(int32_t status);
     void add_ttl_cu(int32_t status);
 
     void add_put_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_remove_cu(int32_t status, const dsn::blob &key);
-    void add_multi_put_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
+    void add_multi_put_cu(int32_t status,
+                          const dsn::blob &hash_key,
+                          const std::vector<::dsn::apps::key_value> &kvs);
     void add_multi_remove_cu(int32_t status, const std::vector<::dsn::blob> &sort_keys);
     void add_incr_cu(int32_t status);
-    void add_check_and_set_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
+    void add_check_and_set_cu(int32_t status,
+                              const dsn::blob &hash_key,
+                              const dsn::blob &check_sort_key,
+                              const dsn::blob &set_sort_key,
+                              const dsn::blob &value);
     void add_check_and_mutate_cu(int32_t status,
+                                 const dsn::blob &hash_key,
+                                 const dsn::blob &check_sort_key,
                                  const std::vector<::dsn::apps::mutate> &mutate_list);
 
 protected:
@@ -50,6 +60,14 @@ private:
 
     ::dsn::perf_counter_wrapper _pfc_recent_read_cu;
     ::dsn::perf_counter_wrapper _pfc_recent_write_cu;
+
+    ::dsn::perf_counter_wrapper _pfc_get_bytes;
+    ::dsn::perf_counter_wrapper _pfc_multi_get_bytes;
+    ::dsn::perf_counter_wrapper _pfc_scan_bytes;
+    ::dsn::perf_counter_wrapper _pfc_put_bytes;
+    ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
+    ::dsn::perf_counter_wrapper _pfc_check_and_set_bytes;
+    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_bytes;
 };
 
 } // namespace server
