@@ -575,6 +575,13 @@ struct row_data
     double rdb_memtable_mem_usage = 0;
     double rdb_estimate_num_keys = 0;
     double backup_request_qps = 0;
+    double get_bytes = 0;
+    double multi_get_bytes = 0;
+    double scan_bytes = 0;
+    double put_bytes = 0;
+    double multi_put_bytes = 0;
+    double check_and_set_bytes = 0;
+    double check_and_mutate_bytes = 0;
 };
 
 inline bool

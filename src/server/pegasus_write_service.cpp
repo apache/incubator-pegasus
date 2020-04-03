@@ -118,7 +118,7 @@ int pegasus_write_service::multi_put(const db_write_context &ctx,
     int err = _impl->multi_put(ctx, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_multi_put_cu(resp.error, update.kvs);
+        _cu_calculator->add_multi_put_cu(resp.error, update.hash_key, update.kvs);
     }
 
     _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
@@ -166,7 +166,11 @@ int pegasus_write_service::check_and_set(int64_t decree,
     int err = _impl->check_and_set(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_check_and_set_cu(resp.error, update.set_sort_key, update.set_value);
+        _cu_calculator->add_check_and_set_cu(resp.error,
+                                             update.hash_key,
+                                             update.check_sort_key,
+                                             update.set_sort_key,
+                                             update.set_value);
     }
 
     _pfc_check_and_set_latency->set(dsn_now_ns() - start_time);
@@ -182,7 +186,8 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
     int err = _impl->check_and_mutate(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_check_and_mutate_cu(resp.error, update.mutate_list);
+        _cu_calculator->add_check_and_mutate_cu(
+            resp.error, update.hash_key, update.check_sort_key, update.mutate_list);
     }
 
     _pfc_check_and_mutate_latency->set(dsn_now_ns() - start_time);
