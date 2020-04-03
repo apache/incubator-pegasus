@@ -19,6 +19,7 @@
 #include "pegasus_scan_context.h"
 #include "pegasus_manual_compact_service.h"
 #include "pegasus_write_service.h"
+#include "range_read_limiter.h"
 
 namespace pegasus {
 namespace server {
@@ -26,7 +27,6 @@ namespace server {
 class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;
-class range_read_limiter_options;
 
 class pegasus_server_impl : public ::dsn::apps::rrdb_service
 {
@@ -322,12 +322,8 @@ private:
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
     uint64_t _slow_query_threshold_ns_in_config;
-    // abnormal multi_get/rocksdb_iteration
-    uint32_t _multi_get_max_iteration_count;
-    uint64_t _multi_get_max_iteration_size;
-    uint32_t _rocksdb_max_iteration_count;
-    uint64_t _rocksdb_iteration_threshold_time_ms_in_config;
-    uint64_t _rocksdb_iteration_threshold_time_ms;
+
+    range_read_limiter_options _rng_rd_opts;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
