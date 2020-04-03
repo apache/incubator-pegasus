@@ -41,14 +41,14 @@ public:
         if (_max_size > 0 && _iteration_size >= _max_size) {
             return false;
         }
-        return true;
+        return time_check();
     }
 
     // during rocksdb iteration, if iteration_count % module_num == 0, we will check if iteration
     // exceed time threshold, which means we at most check ten times during iteration
     bool time_check()
     {
-        if (_max_duration_time > 0 && _iteration_count % _module_num == 0 &&
+        if (_max_duration_time > 0 && (_iteration_count + 1) % _module_num == 0 &&
             dsn_now_ns() - _iteration_start_time_ns > _max_duration_time) {
             _exceed_limit = true;
             _iteration_duration_time_ns = dsn_now_ns() - _iteration_start_time_ns;

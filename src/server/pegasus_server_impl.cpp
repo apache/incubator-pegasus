@@ -840,9 +840,6 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 }
 
                 limiter->add_count();
-                if (!limiter->time_check()) {
-                    break;
-                }
 
                 // extract value
                 int r = append_key_value_for_multi_get(resp.kvs,
@@ -906,9 +903,6 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 }
 
                 limiter->add_count();
-                if (!limiter->time_check()) {
-                    break;
-                }
 
                 // extract value
                 int r = append_key_value_for_multi_get(reverse_kvs,
@@ -1145,9 +1139,6 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
 
     while (it->Valid()) {
         limiter->add_count();
-        if (!limiter->time_check()) {
-            break;
-        }
 
         if (check_if_record_expired(epoch_now, it->value())) {
             expire_count++;
@@ -1388,9 +1379,6 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         }
 
         limiter->add_count();
-        if (!limiter->time_check()) {
-            break;
-        }
 
         int r = append_key_value_for_scan(resp.kvs,
                                           it->key(),
@@ -1541,9 +1529,6 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
             }
 
             limiter->add_count();
-            if (!limiter->time_check()) {
-                break;
-            }
 
             int r = append_key_value_for_scan(resp.kvs,
                                               it->key(),
