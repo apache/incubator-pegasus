@@ -981,6 +981,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     } else { // condition: !request.sort_keys.empty()
         bool error_occurred = false;
         rocksdb::Status final_status;
+        int32_t multiget_count = 0;
         bool exceed_limit = false;
         std::vector<::dsn::blob> keys_holder;
         std::vector<rocksdb::Slice> keys;
@@ -1017,7 +1018,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             }
             // check ttl
             if (status.ok()) {
-                iteration_count++;
+                multiget_count++;
                 uint32_t expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, value);
                 if (expire_ts > 0 && expire_ts <= epoch_now) {
                     expire_count++;
@@ -1032,7 +1033,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             // extract value
             if (status.ok()) {
                 // check if exceed limit
-                if (iteration_count > max_iteration_count || size > max_iteration_size) {
+                if (multiget_count > max_iteration_count || size > max_iteration_size) {
                     exceed_limit = true;
                     break;
                 }
