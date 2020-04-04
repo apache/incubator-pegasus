@@ -1136,8 +1136,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
         dsn::make_unique<range_read_limiter>(_rng_rd_opts.rocksdb_max_iteration_count,
                                              0,
                                              _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
-
-    while (it->Valid()) {
+    while (limiter->time_check() && it->Valid()) {
         limiter->add_count();
 
         if (check_if_record_expired(epoch_now, it->value())) {
