@@ -62,6 +62,14 @@ private:
 
     ::dsn::perf_counter_wrapper _pfc_recent_read_cu;
     ::dsn::perf_counter_wrapper _pfc_recent_write_cu;
+
+    ::dsn::perf_counter_wrapper _pfc_get_bytes;
+    ::dsn::perf_counter_wrapper _pfc_multi_get_bytes;
+    ::dsn::perf_counter_wrapper _pfc_scan_bytes;
+    ::dsn::perf_counter_wrapper _pfc_put_bytes;
+    ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
+    ::dsn::perf_counter_wrapper _pfc_check_and_set_bytes;
+    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_bytes;
 };
 
 } // namespace server
