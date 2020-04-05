@@ -192,8 +192,8 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
                                                 const std::vector<::dsn::apps::key_value> &kvs)
 {
     int64_t data_size = 0;
-    int64_t multi_put_bytes = 0
-    for (const auto &kv : kvs) {
+    int64_t multi_put_bytes = 0 for (const auto &kv : kvs)
+    {
         multi_put_bytes += kv.key.size() + kv.value.size();
         data_size += hash_key.size() + multi_put_bytes;
     }
@@ -261,13 +261,14 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
     const std::vector<::dsn::apps::mutate> &mutate_list)
 {
 
-    int64_t data_size = 0; 
+    int64_t data_size = 0;
     int64_t check_and_mutate_bytes = 0;
     for (const auto &m : mutate_list) {
         check_and_mutate_bytes += m.sort_key.size() + m.value.size();
         data_size += hash_key.size() + check_and_mutate_bytes;
     }
-    _pfc_check_and_mutate_bytes->add(hash_key.size() + check_sort_key.size() + check_and_mutate_bytes);
+    _pfc_check_and_mutate_bytes->add(hash_key.size() + check_sort_key.size() +
+                                     check_and_mutate_bytes);
 
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kInvalidArgument &&
         status != rocksdb::Status::kTryAgain) {
