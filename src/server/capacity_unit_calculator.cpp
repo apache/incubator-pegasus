@@ -114,7 +114,7 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
     int64_t multi_get_bytes = 0;
     for (const auto &kv : kvs) {
         multi_get_bytes += kv.key.size() + kv.value.size();
-        data_size += hash_key.size() + multi_get_bytes;
+        data_size += hash_key.size() + kv.key.size() + kv.value.size();
     }
     _pfc_multi_get_bytes->add(hash_key.size() + multi_get_bytes);
 
@@ -195,7 +195,7 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
     int64_t multi_put_bytes = 0;
     for (const auto &kv : kvs) {
         multi_put_bytes += kv.key.size() + kv.value.size();
-        data_size += hash_key.size() + multi_put_bytes;
+        data_size += hash_key.size() + kv.key.size() + kv.value.size();
     }
     _pfc_multi_put_bytes->add(hash_key.size() + multi_put_bytes);
 
@@ -265,7 +265,7 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
     int64_t check_and_mutate_bytes = 0;
     for (const auto &m : mutate_list) {
         check_and_mutate_bytes += m.sort_key.size() + m.value.size();
-        data_size += hash_key.size() + check_and_mutate_bytes;
+        data_size += hash_key.size() + m.sort_key.size() + m.value.size();
     }
     _pfc_check_and_mutate_bytes->add(hash_key.size() + check_sort_key.size() +
                                      check_and_mutate_bytes);
