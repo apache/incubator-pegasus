@@ -285,7 +285,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 else if (m.name.find("replica*app.pegasus*put_qps") != std::string::npos)
                     h.put_qps += m.value;
                 else if (m.name.find("replica*app.pegasus*multi_put_qps") != std::string::npos)
-                    h.put_qps += m.value;
+                    h.multi_put_qps += m.value;
                 else if (m.name.find("replica*app.pegasus*recent.read.cu") != std::string::npos)
                     h.read_cu += m.value;
                 else if (m.name.find("replica*app.pegasus*recent.write.cu") != std::string::npos)
