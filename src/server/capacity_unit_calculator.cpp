@@ -116,8 +116,8 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
     }
     _pfc_multi_get_bytes->add(hash_key.size() + multi_get_bytes);
 
-    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
-        status != rocksdb::Status::kInvalidArgument && status != rocksdb::Status::kNotFound) {
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
+        status != rocksdb::Status::kIncomplete && status != rocksdb::Status::kInvalidArgument) {
         return;
     }
 
