@@ -401,7 +401,7 @@ public:
     bool is_ready_for_check() const { return _status.load() == ColdBackupChecking; }
 
     // check if it is ready for checkpointing.
-    bool is_ready_for_checkpoint() const { return _status.load() == ColdBackupCheckpointing; }
+    bool is_checkpointing() const { return _status.load() == ColdBackupCheckpointing; }
 
     // check if it is ready for uploading.
     bool is_ready_for_upload() const { return _status.load() == ColdBackupUploading; }

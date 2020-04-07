@@ -29,6 +29,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "duplication/replica_duplicator_manager.h"
+#include "dist/replication/lib/backup/replica_backup_manager.h"
 
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/replication/replication_app_base.h>
@@ -57,7 +58,8 @@ replica::replica(
       _restore_progress(0),
       _restore_status(ERR_OK),
       _duplication_mgr(new replica_duplicator_manager(this)),
-      _duplicating(app.duplicating)
+      _duplicating(app.duplicating),
+      _backup_mgr(new replica_backup_manager(this))
 {
     dassert(_app_info.app_type != "", "");
     dassert(stub != nullptr, "");
@@ -414,6 +416,8 @@ void replica::close()
     // duplication_impl may have ongoing tasks.
     // release it before release replica.
     _duplication_mgr.reset();
+
+    _backup_mgr.reset();
 
     ddebug("%s: replica closed, time_used = %" PRIu64 "ms", name(), dsn_now_ms() - start_time);
 }

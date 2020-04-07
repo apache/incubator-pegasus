@@ -6,6 +6,7 @@
 #include <dsn/dist/replication/replication_app_base.h>
 
 #include "dist/replication/common/block_service_manager.h"
+#include "dist/replication/lib/backup/replica_backup_manager.h"
 
 #include "replica.h"
 #include "mutation.h"
@@ -15,7 +16,6 @@
 namespace dsn {
 namespace replication {
 
-// backup_id == 0 means clear backup context and checkpoint dirs of the policy.
 void replica::on_cold_backup(const backup_request &request, /*out*/ backup_response &response)
 {
     _checker.only_one_thread_access();
@@ -25,10 +25,9 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
     cold_backup_context_ptr new_context(
         new cold_backup_context(this, request, _options->max_concurrent_uploading_file_count));
 
-    ddebug("%s: received cold backup request, partition_status = %s%s",
-           new_context->name,
-           enum_to_string(status()),
-           backup_id == 0 ? ", this is a clear request" : "");
+    ddebug_replica("{}: received cold backup request, partition_status = {}",
+                   new_context->name,
+                   enum_to_string(status()));
 
     if (status() == partition_status::type::PS_PRIMARY ||
         status() == partition_status::type::PS_SECONDARY) {
@@ -37,17 +36,6 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
         if (find != _cold_backup_contexts.end()) {
             backup_context = find->second;
         } else {
-            if (backup_id == 0) {
-                if (status() == partition_status::type::PS_PRIMARY) {
-                    // send clear request to secondaries
-                    send_backup_request_to_secondary(request);
-                }
-
-                // clear local checkpoint dirs in background thread
-                background_clear_backup_checkpoint(policy_name);
-                return;
-            }
-
             /// TODO: policy may change provider
             dist::block_service::block_filesystem *block_service =
                 _stub->_block_service_manager.get_block_filesystem(
@@ -74,8 +62,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                 policy_name.c_str());
         cold_backup_status backup_status = backup_context->status();
 
-        if (backup_id == 0 || backup_context->request.backup_id < backup_id ||
-            backup_status == ColdBackupCanceled) {
+        if (backup_context->request.backup_id < backup_id || backup_status == ColdBackupCanceled) {
             if (backup_status == ColdBackupCheckpointing) {
                 ddebug("%s: delay clearing obsoleted cold backup context, cause backup_status == "
                        "ColdBackupCheckpointing",
@@ -97,18 +84,8 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                        cold_backup_status_to_string(backup_status));
                 backup_context->cancel();
                 _cold_backup_contexts.erase(policy_name);
-                if (backup_id != 0) {
-                    // go to another round
-                    on_cold_backup(request, response);
-                } else { // backup_id == 0
-                    if (status() == partition_status::type::PS_PRIMARY) {
-                        // send clear request to secondaries
-                        send_backup_request_to_secondary(request);
-                    }
-
-                    // clear local checkpoint dirs in background thread
-                    background_clear_backup_checkpoint(policy_name);
-                }
+                // go to another round
+                on_cold_backup(request, response);
             }
             return;
         }
@@ -188,13 +165,11 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
             _cold_backup_contexts.erase(policy_name);
         } else if (backup_status == ColdBackupCompleted) {
             ddebug("%s: upload checkpoint completed, response ERR_OK", backup_context->name);
-            // send clear request to secondaries
-            backup_request new_request = request;
-            new_request.backup_id = 0;
-            send_backup_request_to_secondary(new_request);
+            _backup_mgr->send_clear_request_to_secondaries(backup_context->request.pid,
+                                                           policy_name);
 
             // clear local checkpoint dirs in background thread
-            background_clear_backup_checkpoint(policy_name);
+            _backup_mgr->background_clear_backup_checkpoint(policy_name);
             response.err = ERR_OK;
         } else {
             dwarn(
@@ -250,39 +225,6 @@ backup_get_tmp_dir_name(const std::string &policy_name, int64_t backup_id, int64
     sprintf(
         buffer, "backup_tmp.%s.%" PRId64 ".%" PRId64 "", policy_name.c_str(), backup_id, timestamp);
     return std::string(buffer);
-}
-
-// returns true if this checkpoint dir belongs to the policy
-static bool is_policy_checkpoint(const std::string &chkpt_dirname, const std::string &policy_name)
-{
-    std::vector<std::string> strs;
-    utils::split_args(chkpt_dirname.c_str(), strs, '.');
-    // backup_tmp.<policy_name>.* or backup.<policy_name>.*
-    return strs.size() >= 2 &&
-           (strs[0] == std::string("backup_tmp") || strs[0] == std::string("backup")) &&
-           strs[1] == policy_name;
-}
-
-// get all backup checkpoint dirs which belong to the policy
-static bool get_policy_checkpoint_dirs(const std::string &dir,
-                                       const std::string &policy,
-                                       /*out*/ std::vector<std::string> &chkpt_dirs)
-{
-    chkpt_dirs.clear();
-    // list sub dirs
-    std::vector<std::string> sub_dirs;
-    if (!utils::filesystem::get_subdirectories(dir, sub_dirs, false)) {
-        derror("list sub dirs of dir %s failed", dir.c_str());
-        return false;
-    }
-
-    for (std::string &d : sub_dirs) {
-        std::string dirname = utils::filesystem::get_file_name(d);
-        if (is_policy_checkpoint(dirname, policy)) {
-            chkpt_dirs.emplace_back(std::move(dirname));
-        }
-    }
-    return true;
 }
 
 // returns:
@@ -415,41 +357,6 @@ static bool backup_parse_dir_name(const char *name,
         timestamp = boost::lexical_cast<int64_t>(strs[4]);
         return (std::string(name) ==
                 backup_get_dir_name(policy_name, backup_id, decree, timestamp));
-    }
-}
-
-void replica::background_clear_backup_checkpoint(const std::string &policy_name)
-{
-    ddebug_replica("schedule to clear all checkpoint dirs of policy({}) in {} minutes",
-                   policy_name,
-                   options()->cold_backup_checkpoint_reserve_minutes);
-    tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP,
-                     &_tracker,
-                     [this, policy_name]() { clear_backup_checkpoint(policy_name); },
-                     get_gpid().thread_hash(),
-                     std::chrono::minutes(options()->cold_backup_checkpoint_reserve_minutes));
-}
-
-// clear all checkpoint dirs of the policy
-void replica::clear_backup_checkpoint(const std::string &policy_name)
-{
-    ddebug_replica("clear all checkpoint dirs of policy({})", policy_name);
-    auto backup_dir = _app->backup_dir();
-    if (!utils::filesystem::directory_exists(backup_dir)) {
-        return;
-    }
-    std::vector<std::string> chkpt_dirs;
-    if (!get_policy_checkpoint_dirs(backup_dir, policy_name, chkpt_dirs)) {
-        dwarn_replica("get checkpoint dirs in backup dir({}) failed", backup_dir);
-        return;
-    }
-    for (const std::string &dirname : chkpt_dirs) {
-        std::string full_path = utils::filesystem::path_combine(backup_dir, dirname);
-        if (utils::filesystem::remove_path(full_path)) {
-            ddebug_replica("remove backup checkpoint dir({}) succeed", full_path);
-        } else {
-            dwarn_replica("remove backup checkpoint dir({}) failed", full_path);
-        }
     }
 }
 

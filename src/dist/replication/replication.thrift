@@ -508,8 +508,6 @@ struct configuration_restore_request
     8:bool              skip_bad_partition;
 }
 
-// if backup_id == 0, means clear all backup resources (including backup contexts and
-// checkpoint dirs) of this policy.
 struct backup_request
 {
     1:dsn.gpid              pid;
@@ -526,6 +524,13 @@ struct backup_response
     4:string            policy_name;
     5:i64               backup_id;
     6:i64               checkpoint_total_size;
+}
+
+// clear all backup resources (including backup contexts and checkpoint dirs) of this policy.
+struct backup_clear_request
+{
+    1:dsn.gpid          pid;
+    2:string            policy_name;
 }
 
 struct configuration_modify_backup_policy_request

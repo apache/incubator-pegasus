@@ -286,6 +286,8 @@ class backup_request;
 
 class backup_response;
 
+class backup_clear_request;
+
 class configuration_modify_backup_policy_request;
 
 class configuration_modify_backup_policy_response;
@@ -3874,6 +3876,58 @@ public:
 void swap(backup_response &a, backup_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const backup_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _backup_clear_request__isset
+{
+    _backup_clear_request__isset() : pid(false), policy_name(false) {}
+    bool pid : 1;
+    bool policy_name : 1;
+} _backup_clear_request__isset;
+
+class backup_clear_request
+{
+public:
+    backup_clear_request(const backup_clear_request &);
+    backup_clear_request(backup_clear_request &&);
+    backup_clear_request &operator=(const backup_clear_request &);
+    backup_clear_request &operator=(backup_clear_request &&);
+    backup_clear_request() : policy_name() {}
+
+    virtual ~backup_clear_request() throw();
+    ::dsn::gpid pid;
+    std::string policy_name;
+
+    _backup_clear_request__isset __isset;
+
+    void __set_pid(const ::dsn::gpid &val);
+
+    void __set_policy_name(const std::string &val);
+
+    bool operator==(const backup_clear_request &rhs) const
+    {
+        if (!(pid == rhs.pid))
+            return false;
+        if (!(policy_name == rhs.policy_name))
+            return false;
+        return true;
+    }
+    bool operator!=(const backup_clear_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const backup_clear_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(backup_clear_request &a, backup_clear_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const backup_clear_request &obj)
 {
     obj.printTo(out);
     return out;
