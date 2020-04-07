@@ -93,12 +93,12 @@ void capacity_unit_calculator::add_get_cu(int32_t status,
                                           const dsn::blob &value)
 {
     _pfc_get_bytes->add(key.size() + value.size());
-    if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
     }
 
-    if (status != rocksdb::Status::kOk) {
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(1);
         return;
     }
     add_read_cu(key.size() + value.size());
@@ -116,13 +116,13 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
     }
     _pfc_multi_get_bytes->add(hash_key.size() + multi_get_bytes);
 
-    if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
+        status != rocksdb::Status::kInvalidArgument && status != rocksdb::Status::kNotFound) {
         return;
     }
 
-    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
-        status != rocksdb::Status::kInvalidArgument) {
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(1);
         return;
     }
     add_read_cu(data_size);
@@ -131,13 +131,13 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
 void capacity_unit_calculator::add_scan_cu(int32_t status,
                                            const std::vector<::dsn::apps::key_value> &kvs)
 {
-    if (status == rocksdb::Status::kNotFound) {
-        add_read_cu(1);
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
+        status != rocksdb::Status::kInvalidArgument && status != rocksdb::Status::kNotFound) {
         return;
     }
 
-    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kIncomplete &&
-        status != rocksdb::Status::kInvalidArgument) {
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(1);
         return;
     }
 
