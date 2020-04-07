@@ -61,6 +61,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     bool resolve_ip = false;
     bool resource_usage = false;
     bool show_qps = false;
+    bool show_latency = false;
     bool json = false;
     optind = 0;
     while (true) {
@@ -81,6 +82,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'q':
             show_qps = true;
+            show_latency = true;
             break;
         case 'j':
             json = true;
@@ -240,13 +242,67 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        // TODO(heyuchen): add cu statistics
+        ::dsn::command command;
+        command.cmd = "perf-counters-by-prefix";
+        command.arguments.push_back("replica*app.pegasus*get_qps");
+        command.arguments.push_back("replica*app.pegasus*multi_get_qps");
+        command.arguments.push_back("replica*app.pegasus*put_qps");
+        command.arguments.push_back("replica*app.pegasus*multi_put_qps");
+        command.arguments.push_back("replica*app.pegasus*recent.read.cu");
+        command.arguments.push_back("replica*app.pegasus*recent.write.cu");
+
+        std::vector<std::pair<bool, std::string>> results;
+        call_remote_command(sc, nodes, command, results);
+
+        for (int i = 0; i < nodes.size(); ++i) {
+            dsn::rpc_address node_addr = nodes[i].address;
+            auto tmp_it = tmp_map.find(node_addr);
+            if (tmp_it == tmp_map.end())
+                continue;
+            if (!results[i].first) {
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " failed" << std::endl;
+                return true;
+            }
+            dsn::perf_counter_info info;
+            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
+            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+                std::cout << "decode perf counter info from node " << node_addr.to_string()
+                          << " failed, result = " << results[i].second << std::endl;
+                return true;
+            }
+            if (info.result != "OK") {
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " returns error, error = " << info.result << std::endl;
+                return true;
+            }
+            list_nodes_helper &h = tmp_it->second;
+            for (dsn::perf_counter_metric &m : info.counters) {
+                if (m.name.find("replica*app.pegasus*get_qps") != std::string::npos)
+                    h.get_qps += m.value;
+                else if (m.name.find("replica*app.pegasus*multi_get_qps") != std::string::npos)
+                    h.multi_get_qps += m.value;
+                else if (m.name.find("replica*app.pegasus*put_qps") != std::string::npos)
+                    h.put_qps += m.value;
+                else if (m.name.find("replica*app.pegasus*multi_put_qps") != std::string::npos)
+                    h.put_qps += m.value;
+                else if (m.name.find("replica*app.pegasus*recent.read.cu") != std::string::npos)
+                    h.read_cu += m.value;
+                else if (m.name.find("replica*app.pegasus*recent.write.cu") != std::string::npos)
+                    h.write_cu += m.value;
+            }
+        }
+    }
+
+    if (show_latency) {
+        std::vector<node_desc> nodes;
+        if (!fill_nodes(sc, "replica-server", nodes)) {
+            std::cout << "get replica server node list failed" << std::endl;
+            return true;
+        }
+
         ::dsn::command command;
         command.cmd = "perf-counters-by-postfix";
-        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_GET.qps");
-        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_PUT.qps");
-        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_MULTI_GET.qps");
-        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.qps");
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_GET.latency.server");
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_PUT.latency.server");
         command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server");
@@ -278,15 +334,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             }
             list_nodes_helper &h = tmp_it->second;
             for (dsn::perf_counter_metric &m : info.counters) {
-                if (m.name.find("RPC_RRDB_RRDB_GET.qps") != std::string::npos)
-                    h.get_qps = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_PUT.qps") != std::string::npos)
-                    h.put_qps = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_MULTI_GET.qps") != std::string::npos)
-                    h.multi_get_qps = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_MULTI_PUT.qps") != std::string::npos)
-                    h.put_qps = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_GET.latency.server") != std::string::npos)
+                if (m.name.find("RPC_RRDB_RRDB_GET.latency.server") != std::string::npos)
                     h.get_p99 = m.value;
                 else if (m.name.find("RPC_RRDB_RRDB_PUT.latency.server") != std::string::npos)
                     h.put_p99 = m.value;
@@ -328,12 +376,16 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     }
     if (show_qps) {
         tp.add_column("get_qps", tp_alignment::kRight);
-        tp.add_column("get_p99(ms)", tp_alignment::kRight);
         tp.add_column("mget_qps", tp_alignment::kRight);
-        tp.add_column("mget_p99(ms)", tp_alignment::kRight);
+        tp.add_column("read_cu", tp_alignment::kRight);
         tp.add_column("put_qps", tp_alignment::kRight);
-        tp.add_column("put_p99(ms)", tp_alignment::kRight);
         tp.add_column("mput_qps", tp_alignment::kRight);
+        tp.add_column("write_cu", tp_alignment::kRight);
+    }
+    if (show_latency) {
+        tp.add_column("get_p99(ms)", tp_alignment::kRight);
+        tp.add_column("mget_p99(ms)", tp_alignment::kRight);
+        tp.add_column("put_p99(ms)", tp_alignment::kRight);
         tp.add_column("mput_p99(ms)", tp_alignment::kRight);
     }
     for (auto &kv : tmp_map) {
@@ -354,13 +406,17 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
         if (show_qps) {
             tp.append_data(kv.second.get_qps);
-            tp.append_data(kv.second.get_p99 / 1000000);
             tp.append_data(kv.second.multi_get_qps);
-            tp.append_data(kv.second.multi_get_p99 / 1000000);
+            tp.append_data(kv.second.read_cu);
             tp.append_data(kv.second.put_qps);
-            tp.append_data(kv.second.put_p99 / 1000000);
             tp.append_data(kv.second.multi_put_qps);
-            tp.append_data(kv.second.multi_put_p99 / 1000000);
+            tp.append_data(kv.second.write_cu);
+        }
+        if (show_latency) {
+            tp.append_data(kv.second.get_p99 / 1e6);
+            tp.append_data(kv.second.multi_get_p99 / 1e6);
+            tp.append_data(kv.second.put_p99 / 1e6);
+            tp.append_data(kv.second.multi_put_p99 / 1e6);
         }
     }
     mtp.add(std::move(tp));
