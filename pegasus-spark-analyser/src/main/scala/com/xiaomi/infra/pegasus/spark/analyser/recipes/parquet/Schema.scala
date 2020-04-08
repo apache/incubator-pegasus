@@ -8,6 +8,7 @@ object Schema {
       StructField("hashKey", StringType),
       StructField("sortKey", StringType),
       StructField("value", StringType)
-    ))
+    )
+  )
 
 }

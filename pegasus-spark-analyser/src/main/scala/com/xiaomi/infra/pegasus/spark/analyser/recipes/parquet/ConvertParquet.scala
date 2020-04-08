@@ -1,6 +1,10 @@
 package com.xiaomi.infra.pegasus.spark.analyser.recipes.parquet
 
-import com.xiaomi.infra.pegasus.spark.analyser.{ColdBackupConfig, ColdBackupLoader, PegasusContext}
+import com.xiaomi.infra.pegasus.spark.analyser.{
+  ColdBackupConfig,
+  ColdBackupLoader,
+  PegasusContext
+}
 import org.apache.spark.sql.{Row, SaveMode, SparkSession}
 
 object ConvertParquet {
@@ -19,10 +23,8 @@ object ConvertParquet {
 
     val coldBackupConfig = new ColdBackupConfig()
 
-
-    coldBackupConfig.setRemote(
-      FS_URL,
-      FS_PORT)
+    coldBackupConfig
+      .setRemote(FS_URL, FS_PORT)
       .setTableInfo(CLUSTER_NAME, TABLE_NAME)
 
     val pc = new PegasusContext(spark.sparkContext)
@@ -31,8 +33,10 @@ object ConvertParquet {
     // please make sure your data can be converted valid string value
     val dataFrame = spark.createDataFrame(
       rdd.map(i =>
-        Row(new String(i.hashKey), new String(i.sortKey), new String(i.value))),
-      Schema.struct)
+        Row(new String(i.hashKey), new String(i.sortKey), new String(i.value))
+      ),
+      Schema.struct
+    )
 
     dataFrame
       .coalesce(1)

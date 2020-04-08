@@ -8,10 +8,9 @@ import org.apache.commons.lang3.Validate
 import org.apache.commons.lang3.tuple.ImmutablePair
 import org.rocksdb.RocksIterator
 
-object PegasusRecord {
-  private def restoreKey(
-      key: Array[Byte]
-  ): ImmutablePair[Array[Byte], Array[Byte]] = {
+abstract class DataVersion extends Serializable {
+
+  def restoreKey(key: Array[Byte]): ImmutablePair[Array[Byte], Array[Byte]] = {
     Validate.isTrue(key != null && key.length >= 2)
     val buf = ByteBuffer.wrap(key)
     val hashKeyLen = 0xFFFF & buf.getShort
@@ -22,30 +21,51 @@ object PegasusRecord {
     )
   }
 
-  private def restoreValue(value: Array[Byte]): Array[Byte] =
-    util.Arrays.copyOfRange(value, 4, value.length)
+  def restoreExpireTs(value: Array[Byte]): Int = {
+    val bytes = util.Arrays.copyOfRange(value, 0, 4)
+    ByteBuffer.wrap(bytes).getInt()
+  }
 
-  def create(rocksIterator: RocksIterator): PegasusRecord = {
-    val keyPair = PegasusRecord.restoreKey(rocksIterator.key)
-    new PegasusRecord(
+  def restoreValue(value: Array[Byte]): Array[Byte]
+
+  def getPegasusRecord(rocksIterator: RocksIterator): PegasusRecord = {
+    val keyPair = restoreKey(rocksIterator.key)
+    PegasusRecord(
       keyPair.getLeft,
       keyPair.getRight,
-      PegasusRecord.restoreValue(rocksIterator.value)
+      restoreValue(rocksIterator.value),
+      restoreExpireTs(rocksIterator.value)
     )
   }
 }
 
-case class PegasusRecord private (
+class DataVersion1 extends DataVersion {
+
+  def restoreValue(value: Array[Byte]): Array[Byte] =
+    util.Arrays.copyOfRange(value, 4, value.length)
+
+}
+
+class DataVersion2 extends DataVersion {
+
+  def restoreValue(value: Array[Byte]): Array[Byte] =
+    util.Arrays.copyOfRange(value, 12, value.length)
+
+}
+
+case class PegasusRecord(
     hashKey: Array[Byte],
     sortKey: Array[Byte],
-    value: Array[Byte]
+    value: Array[Byte],
+    expireTs: Int
 ) {
   override def toString: String =
     String.format(
-      "[HashKey=%s, SortKey=%s, Value=%s]",
+      "[HashKey=%s, SortKey=%s, Value=%s, ExpireTs=%s]",
       util.Arrays.toString(hashKey),
       util.Arrays.toString(sortKey),
-      util.Arrays.toString(value)
+      util.Arrays.toString(value),
+      String.valueOf(expireTs)
     )
 
   override def equals(other: Any): Boolean = {
@@ -54,7 +74,8 @@ case class PegasusRecord private (
         (that canEqual this) &&
           hashKey.sameElements(that.hashKey) &&
           sortKey.sameElements(that.sortKey) &&
-          value.sameElements(that.value)
+          value.sameElements(that.value) &&
+          expireTs == that.expireTs
       case _ => false
     }
   }
@@ -64,6 +85,7 @@ case class PegasusRecord private (
       .append(hashKey)
       .append(sortKey)
       .append(value)
+      .append(expireTs)
       .hashCode()
   }
 }

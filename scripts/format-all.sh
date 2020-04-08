@@ -26,3 +26,8 @@ if [[ ! -f "${PROJECT_DIR}"/scalafmt ]]; then
     rm -rf scalafmt-linux.zip scalafmt-linux
     chmod +x scalafmt
 fi
+
+if ! "${PROJECT_DIR}"/scalafmt; then
+    echo "ERROR: failed to format scala codes"
+    exit 1
+fi

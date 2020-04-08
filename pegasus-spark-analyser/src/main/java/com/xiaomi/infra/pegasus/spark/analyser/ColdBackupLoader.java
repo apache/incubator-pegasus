@@ -12,6 +12,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.rocksdb.RocksIterator;
 
 public class ColdBackupLoader implements PegasusLoader {
 
@@ -63,6 +64,11 @@ public class ColdBackupLoader implements PegasusLoader {
   @Override
   public Map<Integer, String> getCheckpointUrls() {
     return checkpointUrls;
+  }
+
+  @Override
+  public PegasusRecord restoreRecord(RocksIterator rocksIterator) {
+    return globalConfig.dataVersion.getPegasusRecord(rocksIterator);
   }
 
   private void initCheckpointUrls(String prefix, int counter) throws FDSException {

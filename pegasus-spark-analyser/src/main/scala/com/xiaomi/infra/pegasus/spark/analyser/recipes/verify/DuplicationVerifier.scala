@@ -1,7 +1,11 @@
 package com.xiaomi.infra.pegasus.spark.analyser.recipes.verify
 
 import com.typesafe.config.{ConfigException, ConfigFactory}
-import com.xiaomi.infra.pegasus.spark.analyser.{ColdBackupConfig, ColdBackupLoader, PegasusContext}
+import com.xiaomi.infra.pegasus.spark.analyser.{
+  ColdBackupConfig,
+  ColdBackupLoader,
+  PegasusContext
+}
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -45,15 +49,13 @@ class DuplicationVerifier(opts: DuplicationVerifierOptions) {
     val sc = new SparkContext(conf)
 
     val coldBackupConfig1 = new ColdBackupConfig()
-    coldBackupConfig1.setRemote(
-      FS_URL,
-      FS_PORT)
+    coldBackupConfig1
+      .setRemote(FS_URL, FS_PORT)
       .setTableInfo(options.cluster1, options.tableName)
 
     val coldBackupConfig2 = new ColdBackupConfig()
-    coldBackupConfig2.setRemote(
-      FS_URL,
-      FS_PORT)
+    coldBackupConfig2
+      .setRemote(FS_URL, FS_PORT)
       .setTableInfo(options.cluster2, options.tableName)
 
     val pc = new PegasusContext(sc)

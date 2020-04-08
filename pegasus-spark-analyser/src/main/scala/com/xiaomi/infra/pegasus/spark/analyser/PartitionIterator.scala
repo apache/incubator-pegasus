@@ -25,12 +25,15 @@ private[analyser] class PartitionIterator private (
   private var thisRecord: PegasusRecord = _
   private var nextRecord: PegasusRecord = _
 
+  private var pegasusLoader: PegasusLoader = _
+
   private var name: String = _
   // TODO(wutao1): add metrics for counting the number of iterated records.
 
   def this(context: TaskContext, snapshotLoader: PegasusLoader, pid: Int) {
     this(context, pid)
 
+    pegasusLoader = snapshotLoader
     rocksDBOptions = new RocksDBOptions(snapshotLoader.getConfig)
     val checkPointUrls = snapshotLoader.getCheckpointUrls
     val dbPath = checkPointUrls.get(pid)
@@ -40,7 +43,7 @@ private[analyser] class PartitionIterator private (
     assert(rocksIterator.isValid)
     rocksIterator.next() // skip the first record
     if (rocksIterator.isValid) {
-      nextRecord = PegasusRecord.create(rocksIterator)
+      nextRecord = pegasusLoader.restoreRecord(rocksIterator)
     }
     name = "PartitionIterator[pid=%d]".format(pid)
 
@@ -69,7 +72,7 @@ private[analyser] class PartitionIterator private (
     thisRecord = nextRecord
     rocksIterator.next()
     if (rocksIterator.isValid) {
-      nextRecord = PegasusRecord.create(rocksIterator)
+      nextRecord = pegasusLoader.restoreRecord(rocksIterator)
     } else {
       nextRecord = null
     }
