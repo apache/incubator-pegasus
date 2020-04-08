@@ -201,7 +201,7 @@ TEST_F(capacity_unit_calculator_test, sortkey_count)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
         _cal->add_sortkey_count_cu(i);
-        if (i == rocksdb::Status::kOk) {
+        if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
             ASSERT_EQ(_cal->read_cu, 0);
@@ -280,13 +280,13 @@ TEST_F(capacity_unit_calculator_test, multi_remove)
     std::vector<::dsn::blob> keys;
 
     generate_n_keys(100, keys);
-    _cal->add_multi_remove_cu(rocksdb::Status::kOk, keys);
+    _cal->add_multi_remove_cu(rocksdb::Status::kOk, key, keys);
     ASSERT_EQ(_cal->write_cu, 1);
     _cal->reset();
 
     generate_n_keys(1000, keys);
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_multi_remove_cu(i, keys);
+        _cal->add_multi_remove_cu(i, key, keys);
         if (i == rocksdb::Status::kOk) {
             ASSERT_GT(_cal->write_cu, 1);
         } else {
