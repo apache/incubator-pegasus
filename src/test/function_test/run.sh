@@ -41,9 +41,9 @@ exit_if_fail $? "run test check_and_set failed: $test_case $config_file $table_n
 GTEST_OUTPUT="xml:$REPORT_DIR/check_and_mutate.xml" GTEST_FILTER="check_and_mutate.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test check_and_mutate failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/scan.xml" GTEST_FILTER="scan.*" ./$test_case $config_file $table_name
+exit_if_fail $? "run test scan failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/ttl.xml" GTEST_FILTER="ttl.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test ttl failed: $test_case $config_file $table_name"
-exit_if_fail $? "run test scan failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/slog_log.xml" GTEST_FILTER="lost_log.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test slog_lost failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/recall.xml" GTEST_FILTER="drop_and_recall.*" ./$test_case $config_file $table_name

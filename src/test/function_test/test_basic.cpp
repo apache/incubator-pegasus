@@ -546,6 +546,16 @@ TEST(basic, multi_get)
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("5", new_values["5"]);
 
+    // set a expired value
+    ret = client->set("basic_test_multi_get", "", "expire_value", 5000, 1);
+    ASSERT_EQ(PERR_OK, ret);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values, 2);
+    ASSERT_EQ(PERR_INCOMPLETE, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+
     // multi_del
     std::set<std::string> sortkeys;
     sortkeys.insert("");
