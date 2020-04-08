@@ -327,8 +327,6 @@ private:
     void set_backup_context_pause();
     void clear_cold_backup_state();
 
-    void collect_backup_info();
-
     /////////////////////////////////////////////////////////////////
     // replica restore from backup
     bool read_cold_backup_metadata(const std::string &file, cold_backup_metadata &backup_metadata);
@@ -477,7 +475,6 @@ private:
     partition_split_context _split_states;
 
     // timer task that running in replication-thread
-    dsn::task_ptr _collect_info_timer;
     std::atomic<uint64_t> _cold_backup_running_count;
     std::atomic<uint64_t> _cold_backup_max_duration_time_ms;
     std::atomic<uint64_t> _cold_backup_max_upload_file_size;

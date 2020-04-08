@@ -31,7 +31,7 @@ static bool get_policy_checkpoint_dirs(const std::string &dir,
     // list sub dirs
     std::vector<std::string> sub_dirs;
     if (!utils::filesystem::get_subdirectories(dir, sub_dirs, false)) {
-        derror("list sub dirs of dir {} failed", dir.c_str());
+        derror_f("list sub dirs of dir {} failed", dir.c_str());
         return false;
     }
 
@@ -42,6 +42,15 @@ static bool get_policy_checkpoint_dirs(const std::string &dir,
         }
     }
     return true;
+}
+
+replica_backup_manager::replica_backup_manager(replica *r) : replica_base(r), _replica(r) {}
+
+replica_backup_manager::~replica_backup_manager()
+{
+    if (_collect_info_timer != nullptr) {
+        _collect_info_timer->cancel(true);
+    }
 }
 
 void replica_backup_manager::on_clear_cold_backup(const backup_clear_request &request)
@@ -71,6 +80,53 @@ void replica_backup_manager::on_clear_cold_backup(const backup_clear_request &re
     }
 
     background_clear_backup_checkpoint(request.policy_name);
+}
+
+void replica_backup_manager::start_collect_backup_info()
+{
+    if (_collect_info_timer == nullptr) {
+        _collect_info_timer =
+            tasking::enqueue_timer(LPC_PER_REPLICA_COLLECT_INFO_TIMER,
+                                   &_replica->_tracker,
+                                   [this]() { collect_backup_info(); },
+                                   std::chrono::milliseconds(_replica->options()->gc_interval_ms),
+                                   get_gpid().thread_hash());
+    }
+}
+
+void replica_backup_manager::collect_backup_info()
+{
+    uint64_t cold_backup_running_count = 0;
+    uint64_t cold_backup_max_duration_time_ms = 0;
+    uint64_t cold_backup_max_upload_file_size = 0;
+    uint64_t now_ms = dsn_now_ms();
+
+    // collect backup info from all of the cold backup contexts
+    for (const auto &p : _replica->_cold_backup_contexts) {
+        const cold_backup_context_ptr &backup_context = p.second;
+        cold_backup_status backup_status = backup_context->status();
+        if (_replica->status() == partition_status::type::PS_PRIMARY) {
+            if (backup_status > ColdBackupInvalid && backup_status < ColdBackupCanceled) {
+                cold_backup_running_count++;
+            }
+        } else if (_replica->status() == partition_status::type::PS_SECONDARY) {
+            // secondary end backup with status ColdBackupCheckpointed
+            if (backup_status > ColdBackupInvalid && backup_status < ColdBackupCheckpointed) {
+                cold_backup_running_count++;
+            }
+        }
+
+        if (backup_status == ColdBackupUploading) {
+            cold_backup_max_duration_time_ms = std::max(
+                cold_backup_max_duration_time_ms, now_ms - backup_context->get_start_time_ms());
+            cold_backup_max_upload_file_size =
+                std::max(cold_backup_max_upload_file_size, backup_context->get_upload_file_size());
+        }
+    }
+
+    _replica->_cold_backup_running_count.store(cold_backup_running_count);
+    _replica->_cold_backup_max_duration_time_ms.store(cold_backup_max_duration_time_ms);
+    _replica->_cold_backup_max_upload_file_size.store(cold_backup_max_upload_file_size);
 }
 
 void replica_backup_manager::background_clear_backup_checkpoint(const std::string &policy_name)

@@ -703,42 +703,5 @@ void replica::set_backup_context_pause()
 }
 
 void replica::clear_cold_backup_state() { _cold_backup_contexts.clear(); }
-
-void replica::collect_backup_info()
-{
-    uint64_t cold_backup_running_count = 0;
-    uint64_t cold_backup_max_duration_time_ms = 0;
-    uint64_t cold_backup_max_upload_file_size = 0;
-    if (!_cold_backup_contexts.empty()) {
-        for (const auto &p : _cold_backup_contexts) {
-            const cold_backup_context_ptr &backup_context = p.second;
-            cold_backup_status backup_status = backup_context->status();
-            if (status() == partition_status::type::PS_PRIMARY) {
-                if (backup_status != ColdBackupInvalid && backup_status != ColdBackupCompleted &&
-                    backup_status != ColdBackupCanceled && backup_status != ColdBackupFailed) {
-                    cold_backup_running_count++;
-                }
-            } else if (status() == partition_status::type::PS_SECONDARY) {
-                if (backup_status != ColdBackupInvalid && backup_status != ColdBackupFailed &&
-                    backup_status != ColdBackupCanceled &&
-                    backup_status != ColdBackupCheckpointed) {
-                    // secondary end backup with status ColdBackupCheckpointed
-                    cold_backup_running_count++;
-                }
-            }
-
-            if (backup_status == ColdBackupUploading) {
-                cold_backup_max_duration_time_ms =
-                    std::max(cold_backup_max_duration_time_ms,
-                             (dsn_now_ms() - backup_context->get_start_time_ms()));
-                cold_backup_max_upload_file_size = std::max(cold_backup_max_upload_file_size,
-                                                            backup_context->get_upload_file_size());
-            }
-        }
-    }
-    _cold_backup_running_count.store(cold_backup_running_count);
-    _cold_backup_max_duration_time_ms.store(cold_backup_max_duration_time_ms);
-    _cold_backup_max_upload_file_size.store(cold_backup_max_upload_file_size);
-}
 }
 } // namespace

@@ -29,7 +29,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "duplication/replica_duplicator_manager.h"
-#include "dist/replication/lib/backup/replica_backup_manager.h"
+#include "backup/replica_backup_manager.h"
 
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/replication/replication_app_base.h>
@@ -366,11 +366,6 @@ void replica::close()
     if (_checkpoint_timer != nullptr) {
         _checkpoint_timer->cancel(true);
         _checkpoint_timer = nullptr;
-    }
-
-    if (_collect_info_timer != nullptr) {
-        _collect_info_timer->cancel(true);
-        _collect_info_timer = nullptr;
     }
 
     if (_app != nullptr) {

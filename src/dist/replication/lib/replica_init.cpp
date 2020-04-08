@@ -28,6 +28,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include "backup/replica_backup_manager.h"
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/replication/replication_app_base.h>
@@ -351,14 +352,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                     get_gpid().thread_hash());
             }
 
-            if (_collect_info_timer == nullptr) {
-                _collect_info_timer =
-                    tasking::enqueue_timer(LPC_PER_REPLICA_COLLECT_INFO_TIMER,
-                                           &_tracker,
-                                           [this]() { collect_backup_info(); },
-                                           std::chrono::milliseconds(_options->gc_interval_ms),
-                                           get_gpid().thread_hash());
-            }
+            _backup_mgr->start_collect_backup_info();
         }
     }
 
