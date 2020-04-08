@@ -90,6 +90,38 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
+    _rng_rd_opts.multi_get_max_iteration_count = (uint32_t)dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_multi_get_max_iteration_count",
+        3000,
+        "max iteration count for each range read for multi-get operation, if "
+        "exceed this threshold,"
+        "iterator will be stopped");
+
+    _rng_rd_opts.multi_get_max_iteration_size =
+        dsn_config_get_value_uint64("pegasus.server",
+                                    "rocksdb_multi_get_max_iteration_size",
+                                    30 << 20,
+                                    "multi-get operation total key-value size exceed "
+                                    "this threshold will stop iterating rocksdb, 0 means no check");
+
+    _rng_rd_opts.rocksdb_max_iteration_count =
+        (uint32_t)dsn_config_get_value_uint64("pegasus.server",
+                                              "rocksdb_max_iteration_count",
+                                              1000,
+                                              "max iteration count for each range "
+                                              "read, if exceed this threshold, "
+                                              "iterator will be stopped");
+
+    _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_iteration_threshold_time_ms",
+        30000,
+        "max duration for handling one pegasus scan request(sortkey_count/multiget/scan) if exceed "
+        "this threshold, iterator will be stopped, 0 means no check");
+    _rng_rd_opts.rocksdb_iteration_threshold_time_ms =
+        _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config;
+
     // init rocksdb::DBOptions
     _db_opts.pegasus_data = true;
     _db_opts.create_if_missing = true;
@@ -674,12 +706,20 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         return;
     }
 
-    int32_t max_kv_count = request.max_kv_count > 0 ? request.max_kv_count : INT_MAX;
+    uint32_t max_kv_count = request.max_kv_count > 0 ? request.max_kv_count : INT_MAX;
+    uint32_t max_iteration_count =
+        std::min(max_kv_count, _rng_rd_opts.multi_get_max_iteration_count);
+
     int32_t max_kv_size = request.max_kv_size > 0 ? request.max_kv_size : INT_MAX;
+    int32_t max_iteration_size_config = _rng_rd_opts.multi_get_max_iteration_size > 0
+                                            ? _rng_rd_opts.multi_get_max_iteration_size
+                                            : INT_MAX;
+    int32_t max_iteration_size = std::min(max_kv_size, max_iteration_size_config);
+
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
     int32_t count = 0;
     int64_t size = 0;
-    int32_t iterate_count = 0;
+    int32_t iteration_count = 0;
     int32_t expire_count = 0;
     int32_t filter_count = 0;
 
@@ -754,11 +794,17 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
 
         std::unique_ptr<rocksdb::Iterator> it;
         bool complete = false;
+
+        std::unique_ptr<range_read_limiter> limiter =
+            dsn::make_unique<range_read_limiter>(max_iteration_count,
+                                                 max_iteration_size,
+                                                 _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
+
         if (!request.reverse) {
             it.reset(_db->NewIterator(_data_cf_rd_opts));
             it->Seek(start);
             bool first_exclusive = !start_inclusive;
-            while (count < max_kv_count && size < max_kv_size && it->Valid()) {
+            while (limiter->valid() && it->Valid()) {
                 // check stop sort key
                 int c = it->key().compare(stop);
                 if (c > 0 || (c == 0 && !stop_inclusive)) {
@@ -777,7 +823,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                     }
                 }
 
-                iterate_count++;
+                limiter->add_count();
 
                 // extract value
                 int r = append_key_value_for_multi_get(resp.kvs,
@@ -790,7 +836,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 if (r == 1) {
                     count++;
                     auto &kv = resp.kvs.back();
-                    size += kv.key.length() + kv.value.length();
+                    limiter->add_size(kv.key.length() + kv.value.length());
                 } else if (r == 2) {
                     expire_count++;
                 } else { // r == 3
@@ -821,7 +867,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             it->SeekForPrev(stop);
             bool first_exclusive = !stop_inclusive;
             std::vector<::dsn::apps::key_value> reverse_kvs;
-            while (count < max_kv_count && size < max_kv_size && it->Valid()) {
+            while (limiter->valid() && it->Valid()) {
                 // check start sort key
                 int c = it->key().compare(start);
                 if (c < 0 || (c == 0 && !start_inclusive)) {
@@ -840,7 +886,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                     }
                 }
 
-                iterate_count++;
+                limiter->add_count();
 
                 // extract value
                 int r = append_key_value_for_multi_get(reverse_kvs,
@@ -853,7 +899,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 if (r == 1) {
                     count++;
                     auto &kv = reverse_kvs.back();
-                    size += kv.key.length() + kv.value.length();
+                    limiter->add_size(kv.key.length() + kv.value.length());
                 } else if (r == 2) {
                     expire_count++;
                 } else { // r == 3
@@ -878,6 +924,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             }
         }
 
+        iteration_count = limiter->get_iteration_count();
         resp.error = it->status().code();
         if (!it->status().ok()) {
             // error occur
@@ -901,8 +948,15 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         } else if (it->Valid() && !complete) {
             // scan not completed
             resp.error = rocksdb::Status::kIncomplete;
+            if (limiter->exceed_limit()) {
+                dwarn_replica(
+                    "rocksdb abnormal scan from {}: time_used({}ns) VS time_threshold({}ns)",
+                    reply.to_address().to_string(),
+                    limiter->duration_time(),
+                    limiter->max_duration_time());
+            }
         }
-    } else {
+    } else { // condition: !request.sort_keys.empty()
         bool error_occurred = false;
         rocksdb::Status final_status;
         bool exceed_limit = false;
@@ -992,13 +1046,13 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
 #endif
 
     uint64_t time_used = dsn_now_ns() - start_time;
-    if (is_multi_get_abnormal(time_used, size, iterate_count)) {
+    if (is_multi_get_abnormal(time_used, size, iteration_count)) {
         dwarn_replica(
             "rocksdb abnormal multi_get from {}: hash_key = {}, "
             "start_sort_key = {} ({}), stop_sort_key = {} ({}), "
             "sort_key_filter_type = {}, sort_key_filter_pattern = {}, "
             "max_kv_count = {}, max_kv_size = {}, reverse = {}, "
-            "result_count = {}, result_size = {}, iterate_count = {}, "
+            "result_count = {}, result_size = {}, iteration_count = {}, "
             "expire_count = {}, filter_count = {}, time_used = {} ns",
             reply.to_address().to_string(),
             ::pegasus::utils::c_escape_string(request.hash_key),
@@ -1013,7 +1067,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             request.reverse ? "true" : "false",
             count,
             size,
-            iterate_count,
+            iteration_count,
             expire_count,
             filter_count,
             time_used);
@@ -1038,6 +1092,9 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
 {
     dassert(_is_open, "");
 
+    _pfc_scan_qps->increment();
+    uint64_t start_time = dsn_now_ns();
+
     ::dsn::apps::count_response resp;
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
@@ -1056,7 +1113,14 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
     resp.count = 0;
     uint32_t epoch_now = ::pegasus::utils::epoch_now();
     uint64_t expire_count = 0;
-    while (it->Valid()) {
+
+    std::unique_ptr<range_read_limiter> limiter =
+        dsn::make_unique<range_read_limiter>(_rng_rd_opts.rocksdb_max_iteration_count,
+                                             0,
+                                             _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
+    while (limiter->time_check() && it->Valid()) {
+        limiter->add_count();
+
         if (check_if_record_expired(epoch_now, it->value())) {
             expire_count++;
             if (_verbose_log) {
@@ -1090,9 +1154,16 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
                    it->status().ToString().c_str());
         }
         resp.count = 0;
+    } else if (limiter->exceed_limit()) {
+        dwarn_replica("rocksdb abnormal scan from {}: time_used({}ns) VS time_threshold({}ns)",
+                      reply.to_address().to_string(),
+                      limiter->duration_time(),
+                      limiter->max_duration_time());
+        resp.count = -1;
     }
 
     _cu_calculator->add_sortkey_count_cu(resp.error);
+    _pfc_scan_latency->set(dsn_now_ns() - start_time);
 
     reply(resp);
 }
@@ -1263,8 +1334,15 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
     uint64_t expire_count = 0;
     uint64_t filter_count = 0;
     int32_t count = 0;
-    resp.kvs.reserve(request.batch_size);
-    while (count < request.batch_size && it->Valid()) {
+
+    uint32_t request_batch_size = request.batch_size > 0 ? request.batch_size : INT_MAX;
+    uint32_t batch_count = std::min(request_batch_size, _rng_rd_opts.rocksdb_max_iteration_count);
+    resp.kvs.reserve(batch_count);
+
+    std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
+        batch_count, 0, _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
+
+    while (limiter->valid() && it->Valid()) {
         int c = it->key().compare(stop);
         if (c > 0 || (c == 0 && !stop_inclusive)) {
             // out of range
@@ -1280,6 +1358,8 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                 continue;
             }
         }
+
+        limiter->add_count();
 
         int r = append_key_value_for_scan(resp.kvs,
                                           it->key(),
@@ -1307,6 +1387,11 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         it->Next();
     }
 
+    // check iteration time whether exceed limit
+    if (!complete) {
+        limiter->time_check_after_incomplete_scan();
+    }
+
     resp.error = it->status().code();
     if (!it->status().ok()) {
         // error occur
@@ -1320,7 +1405,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                    request.start_inclusive ? "inclusive" : "exclusive",
                    ::pegasus::utils::c_escape_string(stop).c_str(),
                    request.stop_inclusive ? "inclusive" : "exclusive",
-                   request.batch_size,
+                   batch_count,
                    count,
                    it->status().ToString().c_str());
         } else {
@@ -1330,6 +1415,15 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                    it->status().ToString().c_str());
         }
         resp.kvs.clear();
+    } else if (limiter->exceed_limit()) {
+        // scan exceed limit time
+        resp.error = rocksdb::Status::kIncomplete;
+        dwarn_replica("rocksdb abnormal scan from {}: batch_count={}, time_used_ns({}) VS "
+                      "time_threshold_ns({})",
+                      reply.to_address().to_string(),
+                      batch_count,
+                      limiter->duration_time(),
+                      limiter->max_duration_time());
     } else if (it->Valid() && !complete) {
         // scan not completed
         std::unique_ptr<pegasus_scan_context> context(
@@ -1342,7 +1436,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                                      request.sort_key_filter_type,
                                      std::string(request.sort_key_filter_pattern.data(),
                                                  request.sort_key_filter_pattern.length()),
-                                     request.batch_size,
+                                     batch_count,
                                      request.no_value));
         int64_t handle = _context_cache.put(std::move(context));
         resp.context_id = handle;
@@ -1387,7 +1481,6 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
     std::unique_ptr<pegasus_scan_context> context = _context_cache.fetch(request.context_id);
     if (context) {
         rocksdb::Iterator *it = context->iterator.get();
-        int32_t batch_size = context->batch_size;
         const rocksdb::Slice &stop = context->stop;
         bool stop_inclusive = context->stop_inclusive;
         ::dsn::apps::filter_type::type hash_key_filter_type = context->hash_key_filter_type;
@@ -1401,13 +1494,22 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         uint64_t filter_count = 0;
         int32_t count = 0;
 
-        while (count < batch_size && it->Valid()) {
+        uint32_t context_batch_size = context->batch_size > 0 ? context->batch_size : INT_MAX;
+        uint32_t batch_count =
+            std::min(context_batch_size, _rng_rd_opts.rocksdb_max_iteration_count);
+
+        std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
+            batch_count, 0, _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
+
+        while (limiter->valid() && it->Valid()) {
             int c = it->key().compare(stop);
             if (c > 0 || (c == 0 && !stop_inclusive)) {
                 // out of range
                 complete = true;
                 break;
             }
+
+            limiter->add_count();
 
             int r = append_key_value_for_scan(resp.kvs,
                                               it->key(),
@@ -1435,6 +1537,11 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
             it->Next();
         }
 
+        // check iteration time whether exceed limit
+        if (!complete) {
+            limiter->time_check_after_incomplete_scan();
+        }
+
         resp.error = it->status().code();
         if (!it->status().ok()) {
             // error occur
@@ -1447,7 +1554,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
                        request.context_id,
                        ::pegasus::utils::c_escape_string(stop).c_str(),
                        stop_inclusive ? "inclusive" : "exclusive",
-                       batch_size,
+                       batch_count,
                        count,
                        it->status().ToString().c_str());
             } else {
@@ -1457,6 +1564,15 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
                        it->status().ToString().c_str());
             }
             resp.kvs.clear();
+        } else if (limiter->exceed_limit()) {
+            // scan exceed limit time
+            resp.error = rocksdb::Status::kIncomplete;
+            dwarn_replica("rocksdb abnormal scan from {}: batch_count={}, time_used({}ns) VS "
+                          "time_threshold({}ns)",
+                          reply.to_address().to_string(),
+                          batch_count,
+                          limiter->duration_time(),
+                          limiter->max_duration_time());
         } else if (it->Valid() && !complete) {
             // scan not completed
             int64_t handle = _context_cache.put(std::move(context));
@@ -2360,6 +2476,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
     update_slow_query_threshold(envs);
+    update_rocksdb_iteration_threshold(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2370,6 +2487,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     update_default_ttl(envs);
     update_checkpoint_reserve(envs);
     update_slow_query_threshold(envs);
+    update_rocksdb_iteration_threshold(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2473,6 +2591,28 @@ void pegasus_server_impl::update_slow_query_threshold(
                        _slow_query_threshold_ns,
                        threshold_ns);
         _slow_query_threshold_ns = threshold_ns;
+    }
+}
+
+void pegasus_server_impl::update_rocksdb_iteration_threshold(
+    const std::map<std::string, std::string> &envs)
+{
+    uint64_t threshold_ms = _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config;
+    auto find = envs.find(ROCKSDB_ITERATION_THRESHOLD_TIME_MS);
+    if (find != envs.end()) {
+        // the unit of iteration threshold from env is ms
+        if (!dsn::buf2uint64(find->second, threshold_ms) || threshold_ms < 0) {
+            derror_replica("{}={} is invalid.", find->first, find->second);
+            return;
+        }
+    }
+
+    if (_rng_rd_opts.rocksdb_iteration_threshold_time_ms != threshold_ms) {
+        ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
+                       ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
+                       _rng_rd_opts.rocksdb_iteration_threshold_time_ms,
+                       threshold_ms);
+        _rng_rd_opts.rocksdb_iteration_threshold_time_ms = threshold_ms;
     }
 }
 

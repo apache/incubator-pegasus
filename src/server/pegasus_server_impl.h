@@ -18,6 +18,7 @@
 #include "pegasus_scan_context.h"
 #include "pegasus_manual_compact_service.h"
 #include "pegasus_write_service.h"
+#include "range_read_limiter.h"
 
 namespace pegasus {
 namespace server {
@@ -229,6 +230,8 @@ private:
 
     void update_slow_query_threshold(const std::map<std::string, std::string> &envs);
 
+    void update_rocksdb_iteration_threshold(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -307,6 +310,8 @@ private:
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
     uint64_t _slow_query_threshold_ns_in_config;
+
+    range_read_limiter_options _rng_rd_opts;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
