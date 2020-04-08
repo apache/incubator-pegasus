@@ -637,6 +637,20 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_estimate_num_keys += value;
     else if (counter_name == "backup_request_qps")
         row.backup_request_qps += value;
+    else if (counter_name == "get_bytes")
+        row.get_bytes += value;
+    else if (counter_name == "multi_get_bytes")
+        row.multi_get_bytes += value;
+    else if (counter_name == "scan_bytes")
+        row.scan_bytes += value;
+    else if (counter_name == "put_bytes")
+        row.put_bytes += value;
+    else if (counter_name == "multi_put_bytes")
+        row.multi_put_bytes += value;
+    else if (counter_name == "check_and_set_bytes")
+        row.check_and_set_bytes += value;
+    else if (counter_name == "check_and_mutate_bytes")
+        row.check_and_mutate_bytes += value;
     else
         return false;
     return true;
