@@ -7,14 +7,17 @@
 #include <vector>
 #include <map>
 
+#include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/service_api_c.h>
 #include <unistd.h>
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
+#include "base/pegasus_const.h"
 
 using namespace ::pegasus;
 
 extern pegasus_client *client;
+extern std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client;
 static const char CCH[] = "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 static char buffer[256];
 static std::map<std::string, std::map<std::string, std::string>> base;
@@ -396,4 +399,43 @@ TEST_F(scan, OVERALL)
         delete scanner;
     }
     compare(data, base);
+}
+
+TEST_F(scan, ITERATION_TIME_LIMIT)
+{
+    // update iteration threshold to 1ms
+    auto response = ddl_client->set_app_envs(
+        client->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(1)});
+    ASSERT_EQ(true, response.is_ok());
+    ASSERT_EQ(dsn::ERR_OK, response.get_value().err);
+    // wait envs to be synced.
+    std::this_thread::sleep_for(std::chrono::seconds(30));
+
+    // write data into table
+    int32_t i = 0;
+    std::string sort_key;
+    std::string value;
+    while (i < 9000) {
+        sort_key = random_string();
+        value = random_string();
+        int ret = client->set(expected_hash_key, sort_key, value);
+        ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << expected_hash_key
+                                << ", sort_key=" << sort_key
+                                << ", error=" << client->get_error_string(ret);
+        i++;
+    }
+
+    // get sortkey count timeout
+    int64_t count = 0;
+    int ret = client->sortkey_count(expected_hash_key, count);
+    ASSERT_EQ(0, ret);
+    ASSERT_EQ(count, -1);
+
+    // set iteration threshold to 100ms
+    response = ddl_client->set_app_envs(
+        client->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(100)});
+    ASSERT_EQ(true, response.is_ok());
+    ASSERT_EQ(dsn::ERR_OK, response.get_value().err);
+    // wait envs to be synced.
+    std::this_thread::sleep_for(std::chrono::seconds(30));
 }
