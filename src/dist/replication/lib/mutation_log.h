@@ -460,6 +460,8 @@ private:
     // appropriately for less lock contention
     void write_pending_mutations(bool release_lock_required);
 
+    void commit_pending_mutations(log_file_ptr &lf, std::shared_ptr<log_block> &pending);
+
     // flush at most count times
     // if count <= 0, means flush until all data is on disk
     void flush_internal(int max_count);
@@ -523,6 +525,10 @@ private:
     // release_lock_required should always be true => this function must release the lock
     // appropriately for less lock contention
     void write_pending_mutations(bool release_lock_required);
+
+    void commit_pending_mutations(log_file_ptr &lf,
+                                  std::shared_ptr<log_block> &pending,
+                                  decree max_commit);
 
     virtual void init_states() override;
 

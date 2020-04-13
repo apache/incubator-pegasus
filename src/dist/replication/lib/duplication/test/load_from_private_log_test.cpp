@@ -91,15 +91,7 @@ public:
     void test_start_duplication(int num_entries, int private_log_size_mb)
     {
         std::vector<std::string> mutations;
-
-        mutation_log_ptr mlog = new mutation_log_private(_replica->dir(),
-                                                         private_log_size_mb,
-                                                         _replica->get_gpid(),
-                                                         _replica.get(),
-                                                         1024,
-                                                         512,
-                                                         50000);
-        EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+        mutation_log_ptr mlog = create_private_log(private_log_size_mb, _replica->get_gpid());
 
         {
             for (int i = 1; i <= num_entries; i++) {
@@ -175,7 +167,7 @@ public:
     {
         load_from_private_log load(_replica.get(), duplicator.get());
 
-        int num_entries = generate_multiple_log_files(2);
+        generate_multiple_log_files(2);
 
         std::vector<std::string> files;
         ASSERT_EQ(log_utils::list_all_files(_log_dir, files), error_s::ok());
@@ -200,9 +192,19 @@ public:
         std::map<gpid, decree> replay_condition;
         replay_condition[id] = 0; // duplicating
         mutation_log::replay_callback cb = [](int, mutation_ptr &) { return true; };
-        mutation_log_ptr mlog = new mutation_log_private(
-            _replica->dir(), private_log_size_mb, id, _replica.get(), 1024, 512, 10000);
-        EXPECT_EQ(mlog->open(cb, nullptr, replay_condition), ERR_OK);
+        mutation_log_ptr mlog;
+
+        int try_cnt = 0;
+        while (try_cnt < 5) {
+            try_cnt++;
+            mlog = new mutation_log_private(
+                _replica->dir(), private_log_size_mb, id, _replica.get(), 1024, 512, 10000);
+            error_code err = mlog->open(cb, nullptr, replay_condition);
+            if (err == ERR_OK) {
+                break;
+            }
+            derror_f("mlog open failed, encountered error: {}", err);
+        }
         return mlog;
     }
 

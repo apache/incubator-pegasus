@@ -117,17 +117,22 @@ void mutation_log_shared::write_pending_mutations(bool release_lock_required)
 
     // move or reset pending variables
     std::shared_ptr<log_block> blk = std::move(_pending_write);
-    int64_t start_offset = blk->start_offset();
 
     // seperate commit_log_block from within the lock
     _slock.unlock();
+    commit_pending_mutations(pr.first, blk);
+}
 
-    pr.first->commit_log_block(
+void mutation_log_shared::commit_pending_mutations(log_file_ptr &lf,
+                                                   std::shared_ptr<log_block> &blk)
+{
+    int64_t start_offset = blk->start_offset();
+    lf->commit_log_block(
         *blk,
         start_offset,
         LPC_WRITE_REPLICATION_LOG_SHARED,
         &_tracker,
-        [ this, lf = pr.first, block = blk ](error_code err, size_t sz) mutable {
+        [ this, lf, block = blk ](error_code err, size_t sz) mutable {
             dassert(_is_writing.load(std::memory_order_relaxed), "");
 
             auto hdr = (log_block_header *)block->front().data();
@@ -375,7 +380,6 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     // move or reset pending variables
     std::shared_ptr<log_block> blk = std::move(_pending_write);
     _issued_write = blk;
-    int64_t start_offset = blk->start_offset();
     _pending_write_start_time_ms = 0;
     decree max_commit = _pending_write_max_commit;
     _pending_write_max_commit = 0;
@@ -384,65 +388,65 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     // Free plog from lock during committing log block, in the meantime
     // new mutations can still be appended.
     _plock.unlock();
+    commit_pending_mutations(pr.first, blk, max_commit);
+}
 
-    pr.first->commit_log_block(
+void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
+                                                    std::shared_ptr<log_block> &blk,
+                                                    decree max_commit)
+{
+    int64_t start_offset = blk->start_offset();
+    lf->commit_log_block(
         *blk,
         start_offset,
         LPC_WRITE_REPLICATION_LOG_PRIVATE,
         &_tracker,
-        [ this, lf = pr.first, block = blk, max_commit ](error_code err, size_t sz) mutable {
+        [ this, lf, block = blk, max_commit ](error_code err, size_t sz) mutable {
             dassert(_is_writing.load(std::memory_order_relaxed), "");
 
             auto hdr = (log_block_header *)block->front().data();
             dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
 
-            if (err == ERR_OK) {
-                dassert(sz == block->size(),
-                        "log write size must equal to the given size: %d vs %d",
-                        (int)sz,
-                        block->size());
-
-                dassert(sz == sizeof(log_block_header) + hdr->length,
-                        "log write size must equal to (header size + data size): %d vs (%d + %d)",
-                        (int)sz,
-                        (int)sizeof(log_block_header),
-                        hdr->length);
-
-                // flush to ensure that there is no gap between private log and in-memory buffer
-                // so that we can get all mutations in learning process.
-                //
-                // FIXME : the file could have been closed
-                lf->flush();
-
-                // update _private_max_commit_on_disk after written into log file done
-                update_max_commit_on_disk(max_commit);
-            } else {
-                derror("write private log failed, err = %s", err.to_string());
-            }
-
-            // here we use _is_writing instead of _issued_write.expired() to check writing done,
-            // because the following callbacks may run before "block" released, which may cause
-            // the next init_prepare() not starting the write.
-            _is_writing.store(false, std::memory_order_relaxed);
-
-            // notify error when necessary
             if (err != ERR_OK) {
+                derror("write private log failed, err = %s", err.to_string());
+                _is_writing.store(false, std::memory_order_relaxed);
                 if (_io_error_callback) {
                     _io_error_callback(err);
                 }
-            } else {
-                // start to write if possible
-                _plock.lock();
+                return;
+            }
+            dassert(sz == block->size(),
+                    "log write size must equal to the given size: %d vs %d",
+                    (int)sz,
+                    block->size());
 
-                if (!_is_writing.load(std::memory_order_acquire) && _pending_write &&
-                    (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes ||
-                     static_cast<uint32_t>(_pending_write->data().size()) >=
-                         _batch_buffer_max_count ||
-                     flush_interval_expired())) {
-                    write_pending_mutations(true);
-                } else {
-                    _plock.unlock();
-                }
+            dassert(sz == sizeof(log_block_header) + hdr->length,
+                    "log write size must equal to (header size + data size): %d vs (%d + %d)",
+                    (int)sz,
+                    (int)sizeof(log_block_header),
+                    hdr->length);
+
+            // flush to ensure that there is no gap between private log and in-memory buffer
+            // so that we can get all mutations in learning process.
+            //
+            // FIXME : the file could have been closed
+            lf->flush();
+
+            // update _private_max_commit_on_disk after written into log file done
+            update_max_commit_on_disk(max_commit);
+
+            _is_writing.store(false, std::memory_order_relaxed);
+
+            // start to write if possible
+            _plock.lock();
+
+            if (!_is_writing.load(std::memory_order_acquire) && _pending_write &&
+                (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes ||
+                 static_cast<uint32_t>(_pending_write->data().size()) >= _batch_buffer_max_count ||
+                 flush_interval_expired())) {
+                write_pending_mutations(true);
+            } else {
+                _plock.unlock();
             }
         },
         0);
