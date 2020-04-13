@@ -32,4 +32,5 @@
     <suppress checks="NonEmptyAtclauseDescription" files=".*\.java"/>
     <suppress checks="ParameterName" files=".*\.java"/>
     <suppress checks="VariableDeclarationUsageDistance" files=".*\.java"/>
+    <suppress checks="RightCurly" files=".*\.java"/>
 </suppressions>
