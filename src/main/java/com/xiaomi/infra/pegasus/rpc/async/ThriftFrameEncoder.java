@@ -4,10 +4,10 @@
 package com.xiaomi.infra.pegasus.rpc.async;
 
 import com.xiaomi.infra.pegasus.rpc.ThriftHeader;
-import com.xiaomi.infra.pegasus.thrift.protocol.TBinaryProtocol;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+import org.apache.thrift.protocol.TBinaryProtocol;
 import org.slf4j.Logger;
 
 /** Created by sunweijie@xiaomi.com on 16-11-9. */

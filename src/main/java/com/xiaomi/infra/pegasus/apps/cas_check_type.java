@@ -10,7 +10,7 @@
 package com.xiaomi.infra.pegasus.apps;
 
 
-public enum cas_check_type implements com.xiaomi.infra.pegasus.thrift.TEnum {
+public enum cas_check_type implements org.apache.thrift.TEnum {
   CT_NO_CHECK(0),
   CT_VALUE_NOT_EXIST(1),
   CT_VALUE_NOT_EXIST_OR_EMPTY(2),

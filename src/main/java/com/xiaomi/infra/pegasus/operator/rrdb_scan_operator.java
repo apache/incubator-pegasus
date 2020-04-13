@@ -6,10 +6,10 @@ package com.xiaomi.infra.pegasus.operator;
 import com.xiaomi.infra.pegasus.apps.rrdb;
 import com.xiaomi.infra.pegasus.apps.scan_request;
 import com.xiaomi.infra.pegasus.apps.scan_response;
-import com.xiaomi.infra.pegasus.thrift.TException;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessageType;
-import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TProtocol;
 
 public class rrdb_scan_operator extends client_operator {
   public rrdb_scan_operator(
@@ -25,8 +25,7 @@ public class rrdb_scan_operator extends client_operator {
     return "scan";
   }
 
-  public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid)
-      throws TException {
+  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
     TMessage msg = new TMessage("RPC_RRDB_RRDB_SCAN", TMessageType.CALL, seqid);
     oprot.writeMessageBegin(msg);
     rrdb.scan_args args = new rrdb.scan_args(request);
@@ -39,9 +38,8 @@ public class rrdb_scan_operator extends client_operator {
     result.read(iprot);
     if (result.isSetSuccess()) resp = result.success;
     else
-      throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
-          com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
-          "scan failed: unknown result");
+      throw new org.apache.thrift.TApplicationException(
+          org.apache.thrift.TApplicationException.MISSING_RESULT, "scan failed: unknown result");
   }
 
   public scan_response get_response() {

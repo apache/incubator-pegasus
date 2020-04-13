@@ -6,9 +6,9 @@ package com.xiaomi.infra.pegasus.operator;
 import com.xiaomi.infra.pegasus.apps.multi_get_request;
 import com.xiaomi.infra.pegasus.apps.multi_get_response;
 import com.xiaomi.infra.pegasus.apps.rrdb;
-import com.xiaomi.infra.pegasus.thrift.TException;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessageType;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
 
 public class rrdb_multi_get_operator extends client_operator {
   public rrdb_multi_get_operator(
@@ -24,8 +24,7 @@ public class rrdb_multi_get_operator extends client_operator {
     return "multi_get";
   }
 
-  public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid)
-      throws TException {
+  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
     TMessage msg = new TMessage("RPC_RRDB_RRDB_MULTI_GET", TMessageType.CALL, seqid);
     oprot.writeMessageBegin(msg);
     rrdb.multi_get_args get_args = new rrdb.multi_get_args(request);
@@ -33,14 +32,13 @@ public class rrdb_multi_get_operator extends client_operator {
     oprot.writeMessageEnd();
   }
 
-  public void recv_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol iprot)
-      throws TException {
+  public void recv_data(org.apache.thrift.protocol.TProtocol iprot) throws TException {
     rrdb.multi_get_result result = new rrdb.multi_get_result();
     result.read(iprot);
     if (result.isSetSuccess()) resp = result.success;
     else
-      throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
-          com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
+      throw new org.apache.thrift.TApplicationException(
+          org.apache.thrift.TApplicationException.MISSING_RESULT,
           "multi get failed: unknown result");
   }
 

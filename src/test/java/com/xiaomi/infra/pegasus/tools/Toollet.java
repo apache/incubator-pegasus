@@ -10,13 +10,13 @@ import com.xiaomi.infra.pegasus.apps.update_response;
 import com.xiaomi.infra.pegasus.base.gpid;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
-import com.xiaomi.infra.pegasus.thrift.TException;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessageType;
-import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TProtocol;
 import org.slf4j.Logger;
 
 public class Toollet {
@@ -146,8 +146,7 @@ public class Toollet {
       super(gpid, "", request, 0);
     }
 
-    public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid)
-        throws TException {
+    public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
       TMessage msg = new TMessage("RPC_RRDB_RRDB_TEST_PUT", TMessageType.CALL, seqid);
       oprot.writeMessageBegin(msg);
       rrdb.put_args put_args = new rrdb.put_args(req);
@@ -160,9 +159,8 @@ public class Toollet {
       result.read(iprot);
       if (result.isSetSuccess()) resp = result.success;
       else
-        throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
-            com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
-            "put failed: unknown result");
+        throw new org.apache.thrift.TApplicationException(
+            org.apache.thrift.TApplicationException.MISSING_RESULT, "put failed: unknown result");
     }
 
     private update_request req;

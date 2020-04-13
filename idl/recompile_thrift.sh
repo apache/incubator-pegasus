@@ -25,8 +25,6 @@ mkdir -p $TMP_DIR
 $thrift --gen java rrdb.thrift
 $thrift --gen java replication.thrift 
 
-# as we pack the thrift source in our project, so we need to replace the package name
-find $TMP_DIR -name "*.java" | xargs sed -i -e "s/org.apache.thrift/com.xiaomi.infra.pegasus.thrift/g"
 for gen_file in `find $TMP_DIR -name "*.java"`; do
     cat apache-licence-template $gen_file > $gen_file.tmp
     mv $gen_file.tmp $gen_file

@@ -2,14 +2,6 @@
 
     <Match>
         <Or>
-            <!-- thrift -->
-            <Package name="com.xiaomi.infra.pegasus.thrift.*"/>
-            <Package name="com.xiaomi.infra.pegasus.thrift.meta_data.*"/>
-            <Package name="com.xiaomi.infra.pegasus.thrift.protocol.*"/>
-            <Package name="com.xiaomi.infra.pegasus.thrift.server.*"/>
-            <Package name="com.xiaomi.infra.pegasus.thrift.transport.*"/>
-            <Package name="com.xiaomi.infra.pegasus.thrift.async.*"/>
-
             <!-- thrift generated files -->
             <Package name="com.xiaomi.infra.pegasus.apps"/>
             <Package name="com.xiaomi.infra.pegasus.base"/>

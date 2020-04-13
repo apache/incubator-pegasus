@@ -6,10 +6,10 @@ package com.xiaomi.infra.pegasus.operator;
 /** Created by weijiesun on 16-11-8. */
 import com.xiaomi.infra.pegasus.apps.meta;
 import com.xiaomi.infra.pegasus.replication.*;
-import com.xiaomi.infra.pegasus.thrift.TException;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessageType;
-import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TProtocol;
 
 public class query_cfg_operator extends client_operator {
   public query_cfg_operator(com.xiaomi.infra.pegasus.base.gpid gpid, query_cfg_request request) {
@@ -21,8 +21,7 @@ public class query_cfg_operator extends client_operator {
     return "query_config";
   }
 
-  public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid)
-      throws TException {
+  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
     TMessage msg = new TMessage("RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX", TMessageType.CALL, seqid);
     oprot.writeMessageBegin(msg);
     meta.query_cfg_args args = new meta.query_cfg_args(request);
@@ -35,8 +34,8 @@ public class query_cfg_operator extends client_operator {
     result.read(iprot);
     if (result.isSetSuccess()) response = result.success;
     else
-      throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
-          com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
+      throw new org.apache.thrift.TApplicationException(
+          org.apache.thrift.TApplicationException.MISSING_RESULT,
           "query config failed: unknown result");
   }
 

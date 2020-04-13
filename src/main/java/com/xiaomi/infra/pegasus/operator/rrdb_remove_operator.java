@@ -6,10 +6,10 @@ package com.xiaomi.infra.pegasus.operator;
 import com.xiaomi.infra.pegasus.apps.rrdb;
 import com.xiaomi.infra.pegasus.apps.update_response;
 import com.xiaomi.infra.pegasus.base.blob;
-import com.xiaomi.infra.pegasus.thrift.TException;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessageType;
-import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TProtocol;
 
 public class rrdb_remove_operator extends client_operator {
   public rrdb_remove_operator(
@@ -22,8 +22,7 @@ public class rrdb_remove_operator extends client_operator {
     return "remove";
   }
 
-  public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid)
-      throws TException {
+  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
     TMessage msg = new TMessage("RPC_RRDB_RRDB_REMOVE", TMessageType.CALL, seqid);
     oprot.writeMessageBegin(msg);
     rrdb.remove_args remove_args = new rrdb.remove_args(request);
@@ -36,9 +35,8 @@ public class rrdb_remove_operator extends client_operator {
     result.read(iprot);
     if (result.isSetSuccess()) resp = result.success;
     else
-      throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
-          com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
-          "remove failed: unknown result");
+      throw new org.apache.thrift.TApplicationException(
+          org.apache.thrift.TApplicationException.MISSING_RESULT, "remove failed: unknown result");
   }
 
   public update_response get_response() {

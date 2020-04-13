@@ -6,9 +6,9 @@ package com.xiaomi.infra.pegasus.operator;
 import com.xiaomi.infra.pegasus.apps.rrdb;
 import com.xiaomi.infra.pegasus.apps.ttl_response;
 import com.xiaomi.infra.pegasus.base.blob;
-import com.xiaomi.infra.pegasus.thrift.TException;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessage;
-import com.xiaomi.infra.pegasus.thrift.protocol.TMessageType;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
 
 public class rrdb_ttl_operator extends client_operator {
   public rrdb_ttl_operator(
@@ -21,8 +21,7 @@ public class rrdb_ttl_operator extends client_operator {
     return "ttl";
   }
 
-  public void send_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol oprot, int seqid)
-      throws TException {
+  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
     TMessage msg = new TMessage("RPC_RRDB_RRDB_TTL", TMessageType.CALL, seqid);
     oprot.writeMessageBegin(msg);
     rrdb.get_args get_args = new rrdb.get_args(request);
@@ -30,15 +29,13 @@ public class rrdb_ttl_operator extends client_operator {
     oprot.writeMessageEnd();
   }
 
-  public void recv_data(com.xiaomi.infra.pegasus.thrift.protocol.TProtocol iprot)
-      throws TException {
+  public void recv_data(org.apache.thrift.protocol.TProtocol iprot) throws TException {
     rrdb.ttl_result result = new rrdb.ttl_result();
     result.read(iprot);
     if (result.isSetSuccess()) resp = result.success;
     else
-      throw new com.xiaomi.infra.pegasus.thrift.TApplicationException(
-          com.xiaomi.infra.pegasus.thrift.TApplicationException.MISSING_RESULT,
-          "get ttl failed: unknown result");
+      throw new org.apache.thrift.TApplicationException(
+          org.apache.thrift.TApplicationException.MISSING_RESULT, "get ttl failed: unknown result");
   }
 
   public ttl_response get_response() {

@@ -10,7 +10,7 @@
 package com.xiaomi.infra.pegasus.apps;
 
 
-public enum mutate_operation implements com.xiaomi.infra.pegasus.thrift.TEnum {
+public enum mutate_operation implements org.apache.thrift.TEnum {
   MO_PUT(0),
   MO_DELETE(1);
 

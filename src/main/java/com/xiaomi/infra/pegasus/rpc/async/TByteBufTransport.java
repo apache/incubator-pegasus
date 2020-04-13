@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.rpc.async;
 
-import com.xiaomi.infra.pegasus.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransport;
 
 /** Created by sunweijie@xiaomi.com on 16-11-9. */
 public class TByteBufTransport extends TTransport {

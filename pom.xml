@@ -25,17 +25,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
-      <version>4.0.0</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
-      <version>4.5.5</version>
-    </dependency>
-    <dependency>
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-core</artifactId>
       <version>3.1.2</version>
@@ -75,6 +64,11 @@
       <artifactId>zstd-jni</artifactId>
       <version>1.3.7-1</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>libthrift</artifactId>
+      <version>0.11.0</version>
+    </dependency>
   </dependencies>
   <reporting>
     <plugins>
@@ -109,6 +103,7 @@
                 <includes>
                   <include>com.101tec</include>
                   <include>com.google.guava</include>
+                  <include>org.apache.thrift</include>
                 </includes>
               </artifactSet>
               <relocations>
@@ -119,6 +114,10 @@
                 <relocation>
                   <pattern>org.I0Itec</pattern>
                   <shadedPattern>${pegasus.shade.name}.org.I0Itec</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.thrift</pattern>
+                  <shadedPattern>${pegasus.shade.name}.org.apache.thrift</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>
@@ -235,13 +234,6 @@
                 com/xiaomi/infra/pegasus/apps/*,
                 com/xiaomi/infra/pegasus/base/*,
                 com/xiaomi/infra/pegasus/replication/*,
-                com/xiaomi/infra/pegasus/thrift/*,
-                com/xiaomi/infra/pegasus/thrift/meta_data/*,
-                com/xiaomi/infra/pegasus/thrift/async/*,
-                com/xiaomi/infra/pegasus/thrift/server/*,
-                com/xiaomi/infra/pegasus/thrift/transport/*,
-                com/xiaomi/infra/pegasus/thrift/protocol/*,
-                com/xiaomi/infra/pegasus/thrift/scheme/*,
               </excludes>
             </configuration>
             <goals>

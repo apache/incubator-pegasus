@@ -4,8 +4,8 @@
 package com.xiaomi.infra.pegasus.rpc;
 
 import com.xiaomi.infra.pegasus.rpc.async.ClusterManager;
-import com.xiaomi.infra.pegasus.thrift.TException;
 import java.util.Properties;
+import org.apache.thrift.TException;
 
 public abstract class Cluster {
   public static final int MIN_SOCK_CONNECT_TIMEOUT = 1000;

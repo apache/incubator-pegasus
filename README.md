@@ -96,19 +96,3 @@ If you'd like to integrate pegasus client with other monitor system, please let 
 ## Document
 
 For Pegasus Java API document, please refer to: https://github.com/XiaoMi/pegasus/wiki/Java%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%96%87%E6%A1%A3
-
-## About thrift
-
-In order to prevent the conflict of different thrift version, we copy the thrift source into our project. Currently we use 
-the version of 0.11.0. 
-
-If you'd like to use another version of thrift, please copy whole directory
-"${YOUR\_THRIFT\_SRC\_ROOT}/lib/java/src/org/apache/thrift" into "src/main/java/com/xiaomi/infra/pegasus", and modify the package name by
-
-`
-find src/main/java/com/xiaomi/infra -name "*.java" | xargs sed -i -e 's/org.apache.thrift/com.xiaomi.infra.pegasus.thrift/g'
-`
-
-After the modification, compilation of the project may fail due to missing of dependencies. 
-You should find related dependencies and modify the pom.xml
-

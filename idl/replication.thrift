@@ -37,4 +37,5 @@ struct request_meta {
     2:i32 partition_index;
     3:i32 client_timeout;
     4:i64 partition_hash;
+    5:bool is_backup_request;
 }

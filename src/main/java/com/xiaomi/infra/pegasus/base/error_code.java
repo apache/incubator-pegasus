@@ -8,16 +8,16 @@
  */
 package com.xiaomi.infra.pegasus.base;
 
-import com.xiaomi.infra.pegasus.thrift.*;
-import com.xiaomi.infra.pegasus.thrift.async.*;
-import com.xiaomi.infra.pegasus.thrift.meta_data.*;
-import com.xiaomi.infra.pegasus.thrift.protocol.*;
-import com.xiaomi.infra.pegasus.thrift.transport.*;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.thrift.*;
+import org.apache.thrift.async.*;
+import org.apache.thrift.meta_data.*;
+import org.apache.thrift.protocol.*;
+import org.apache.thrift.transport.*;
 
 public class error_code
     implements TBase<error_code, error_code._Fields>, java.io.Serializable, Cloneable {

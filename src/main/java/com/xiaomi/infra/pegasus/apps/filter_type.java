@@ -10,7 +10,7 @@
 package com.xiaomi.infra.pegasus.apps;
 
 
-public enum filter_type implements com.xiaomi.infra.pegasus.thrift.TEnum {
+public enum filter_type implements org.apache.thrift.TEnum {
   FT_NO_FILTER(0),
   FT_MATCH_ANYWHERE(1),
   FT_MATCH_PREFIX(2),

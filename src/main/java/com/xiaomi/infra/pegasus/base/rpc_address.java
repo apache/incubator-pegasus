@@ -8,17 +8,17 @@
  */
 package com.xiaomi.infra.pegasus.base;
 
-import com.xiaomi.infra.pegasus.thrift.TBase;
-import com.xiaomi.infra.pegasus.thrift.TException;
-import com.xiaomi.infra.pegasus.thrift.TFieldIdEnum;
-import com.xiaomi.infra.pegasus.thrift.meta_data.FieldMetaData;
-import com.xiaomi.infra.pegasus.thrift.protocol.TProtocol;
-import com.xiaomi.infra.pegasus.thrift.protocol.TStruct;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
+import org.apache.thrift.TBase;
+import org.apache.thrift.TException;
+import org.apache.thrift.TFieldIdEnum;
+import org.apache.thrift.meta_data.FieldMetaData;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.protocol.TStruct;
 
 public final class rpc_address
     implements TBase<rpc_address, rpc_address._Fields>, java.io.Serializable, Cloneable {
