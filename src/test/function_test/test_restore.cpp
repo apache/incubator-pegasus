@@ -30,6 +30,8 @@ public:
         system("cp src/server/config.min.ini config-server-test-restore.ini");
         system("sed -i \"/^\\s*cold_backup_disabled/c cold_backup_disabled = false\" "
                "config-server-test-restore.ini");
+        system("sed -i \"/^\\s*cold_backup_checkpoint_reserve_minutes/c cold_backup_checkpoint_reserve_minutes = 0\" "
+               "config-server-test-restore.ini");
         std::string cmd = "sed -i \"/^\\s*cold_backup_root/c cold_backup_root = " + cluster_name;
         cmd = cmd + std::string("\" config-server-test-restore.ini");
         system(cmd.c_str());
