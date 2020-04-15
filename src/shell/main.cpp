@@ -280,7 +280,7 @@ static command_executor commands[] = {
     {
         "count_data",
         "get app row count",
-        "[-c|--pricise][-p|--partition num]"
+        "[-c|--pricise] [-p|--partition num]"
         "[-b|--max_batch_count num]"
         "[-t|--timeout_ms num]"
         "[-h|--hash_key_filter_type anywhere|prefix|postfix] "
