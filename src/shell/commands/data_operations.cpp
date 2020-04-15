@@ -2097,8 +2097,12 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                            {"top_count", required_argument, 0, 'n'},
                                            {"run_seconds", required_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
+
+    // "count_data" usually need scan all online records to get precise result, which may affect
+    // cluster availability, so here define precise = false defaultly and it will return estimate
+    // count immediately.
     bool precise = false;
-    bool count = false;
+    bool need_scan = false;
     int32_t partition = -1;
     int max_batch_count = 500;
     int timeout_ms = sc->timeout_ms;
@@ -2124,7 +2128,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             args.argc, args.argv, "cp:b:t:h:x:s:y:v:z:dan:r:", long_options, &option_index);
         if (c == -1)
             break;
-        count = true;
+        need_scan = true;
         switch (c) {
         case 'c':
             precise = true;
@@ -2207,7 +2211,9 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    if (!(precise == count)) {
+    // if input [-p|--partition] etc. means you want to get precise count by scanning, but no input
+    // [-c|--precise], it will return false
+    if (!(precise == need_scan)) {
         fprintf(stderr,
                 "ERROR: you must input [-c|-pricise] flag when you expect to get pricise "
                 "result by scaning all record online\n");
