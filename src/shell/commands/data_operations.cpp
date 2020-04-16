@@ -2211,16 +2211,16 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    // if input [-p|--partition] etc. means you want to get precise count by scanning, but no input
-    // [-c|--precise], it will return false
-    if (need_scan && !precise) {
-        fprintf(stderr,
-                "ERROR: you must input [-c|-pricise] flag when you expect to get pricise "
-                "result by scaning all record online\n");
-        return false;
-    }
-
     if (!precise) {
+        // if input [-p|--partition] etc. means you want to get precise count by scanning, but no
+        // input [-c|--precise], it will return false
+        if (need_scan) {
+            fprintf(stderr,
+                    "ERROR: you must input [-c|-pricise] flag when you expect to get pricise "
+                    "result by scaning all record online\n");
+            return false;
+        }
+
         // get estimate key number
         std::vector<row_data> rows;
         std::string app_name = sc->pg_client->get_app_name();
@@ -2233,14 +2233,14 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         row_data &sum = rows.back();
         sum.row_name = "(total:" + std::to_string(rows.size() - 1) + ")";
         for (int i = 0; i < rows.size() - 1; ++i) {
-            row_data &row = rows[i];
+            const row_data &row = rows[i];
             sum.rdb_estimate_num_keys += row.rdb_estimate_num_keys;
         }
 
         ::dsn::utils::table_printer tp("count_data");
         tp.add_title("pidx");
         tp.add_column("estimate_count");
-        for (row_data &row : rows) {
+        for (const row_data &row : rows) {
             tp.add_row(row.row_name);
             tp.append_data(row.rdb_estimate_num_keys);
         }
