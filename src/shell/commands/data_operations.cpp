@@ -2128,6 +2128,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             args.argc, args.argv, "cp:b:t:h:x:s:y:v:z:dan:r:", long_options, &option_index);
         if (c == -1)
             break;
+        // if input [-p|--partition] etc. means you want to get precise count by scanning.
         need_scan = true;
         switch (c) {
         case 'c':
@@ -2212,8 +2213,6 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
     }
 
     if (!precise) {
-        // if input [-p|--partition] etc. means you want to get precise count by scanning, but no
-        // input [-c|--precise], it will return false
         if (need_scan) {
             fprintf(stderr,
                     "ERROR: you must input [-c|-pricise] flag when you expect to get pricise "
