@@ -2215,7 +2215,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
     if (!precise) {
         if (need_scan) {
             fprintf(stderr,
-                    "ERROR: you must input [-c|-pricise] flag when you expect to get pricise "
+                    "ERROR: you must input [-c|--precise] flag when you expect to get precise "
                     "result by scaning all record online\n");
             return false;
         }
