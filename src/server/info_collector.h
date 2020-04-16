@@ -68,6 +68,16 @@ public:
             rdb_estimate_num_keys->set(row_stats.total_rdb_estimate_num_keys);
             read_qps->set(row_stats.get_total_read_qps());
             write_qps->set(row_stats.get_total_write_qps());
+            backup_request_qps->set(row_stats.total_backup_request_qps);
+            get_bytes->set(row_stats.total_get_bytes);
+            multi_get_bytes->set(row_stats.total_multi_get_bytes);
+            scan_bytes->set(row_stats.total_scan_bytes);
+            put_bytes->set(row_stats.total_put_bytes);
+            multi_put_bytes->set(row_stats.total_multi_put_bytes);
+            check_and_set_bytes->set(row_stats.total_check_and_set_bytes);
+            check_and_mutate_bytes->set(row_stats.total_check_and_mutate_bytes);
+            read_bytes->set(row_stats.get_total_read_bytes());
+            write_bytes->set(row_stats.get_total_write_bytes());
         }
 
         ::dsn::perf_counter_wrapper get_qps;
@@ -99,6 +109,17 @@ public:
         ::dsn::perf_counter_wrapper rdb_estimate_num_keys;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
+        ::dsn::perf_counter_wrapper backup_request_qps;
+
+        ::dsn::perf_counter_wrapper get_bytes;
+        ::dsn::perf_counter_wrapper multi_get_bytes;
+        ::dsn::perf_counter_wrapper scan_bytes;
+        ::dsn::perf_counter_wrapper put_bytes;
+        ::dsn::perf_counter_wrapper multi_put_bytes;
+        ::dsn::perf_counter_wrapper check_and_set_bytes;
+        ::dsn::perf_counter_wrapper check_and_mutate_bytes;
+        ::dsn::perf_counter_wrapper read_bytes;
+        ::dsn::perf_counter_wrapper write_bytes;
     };
 
     info_collector();
@@ -138,6 +159,7 @@ private:
     uint32_t _storage_size_fetch_interval_seconds;
     uint32_t _storage_size_retry_wait_seconds;
     uint32_t _storage_size_retry_max_count;
+    std::string _hotspot_detect_algorithm;
     ::dsn::task_ptr _storage_size_stat_timer_task;
     ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'

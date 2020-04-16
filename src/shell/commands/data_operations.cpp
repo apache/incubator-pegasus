@@ -1013,6 +1013,8 @@ bool sortkey_count(command_executor *e, shell_context *sc, arguments args)
     int ret = sc->pg_client->sortkey_count(hash_key, count, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
+    } else if (count == -1) {
+        fprintf(stderr, "ERROR: it takes too long to count sortkey\n");
     } else {
         fprintf(stderr, "%" PRId64 "\n", count);
     }
@@ -2430,7 +2432,7 @@ void escape_sds_argv(int argc, sds *argv)
 {
     for (int i = 0; i < argc; i++) {
         const size_t dest_len = sdslen(argv[i]) * 4 + 1; // Maximum possible expansion
-        sds new_arg = sdsnewlen("", dest_len);
+        sds new_arg = sdsnewlen(NULL, dest_len);
         pegasus::utils::c_escape_string(argv[i], sdslen(argv[i]), new_arg, dest_len);
         sdsfree(argv[i]);
         argv[i] = new_arg;

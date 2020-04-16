@@ -20,6 +20,17 @@ struct table_stats
                total_dup_qps;
     }
 
+    double get_total_read_bytes() const
+    {
+        return total_get_bytes + total_multi_get_bytes + total_scan_bytes;
+    }
+
+    double get_total_write_bytes() const
+    {
+        return total_put_bytes + total_multi_put_bytes + total_check_and_set_bytes +
+               total_check_and_mutate_bytes;
+    }
+
     void aggregate(const row_data &row)
     {
         total_get_qps += row.get_qps;
@@ -49,6 +60,14 @@ struct table_stats
         total_rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         total_rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
         total_rdb_estimate_num_keys += row.rdb_estimate_num_keys;
+        total_backup_request_qps += row.backup_request_qps;
+        total_get_bytes += row.get_bytes;
+        total_multi_get_bytes += row.multi_get_bytes;
+        total_scan_bytes += row.scan_bytes;
+        total_put_bytes += row.put_bytes;
+        total_multi_put_bytes += row.multi_put_bytes;
+        total_check_and_set_bytes += row.check_and_set_bytes;
+        total_check_and_mutate_bytes += row.check_and_mutate_bytes;
     }
 
     void merge(const table_stats &row_stats)
@@ -83,6 +102,14 @@ struct table_stats
             row_stats.total_rdb_index_and_filter_blocks_mem_usage;
         total_rdb_memtable_mem_usage += row_stats.total_rdb_memtable_mem_usage;
         total_rdb_estimate_num_keys += row_stats.total_rdb_estimate_num_keys;
+        total_backup_request_qps += row_stats.total_backup_request_qps;
+        total_get_bytes += row_stats.total_get_bytes;
+        total_multi_get_bytes += row_stats.total_multi_get_bytes;
+        total_scan_bytes += row_stats.total_scan_bytes;
+        total_put_bytes += row_stats.total_put_bytes;
+        total_multi_put_bytes += row_stats.total_multi_put_bytes;
+        total_check_and_set_bytes += row_stats.total_check_and_set_bytes;
+        total_check_and_mutate_bytes += row_stats.total_check_and_mutate_bytes;
     }
 
     std::string app_name;
@@ -113,6 +140,14 @@ struct table_stats
     double total_rdb_index_and_filter_blocks_mem_usage = 0;
     double total_rdb_memtable_mem_usage = 0;
     double total_rdb_estimate_num_keys = 0;
+    double total_backup_request_qps = 0;
+    double total_get_bytes = 0;
+    double total_multi_get_bytes = 0;
+    double total_scan_bytes = 0;
+    double total_put_bytes = 0;
+    double total_multi_put_bytes = 0;
+    double total_check_and_set_bytes = 0;
+    double total_check_and_mutate_bytes = 0;
     double max_total_qps = 0;
     double min_total_qps = INT_MAX;
     double max_total_cu = 0;

@@ -55,6 +55,8 @@ struct list_nodes_helper
     double put_p99;
     double multi_get_p99;
     double multi_put_p99;
+    double read_cu;
+    double write_cu;
     list_nodes_helper(const std::string &n, const std::string &s)
         : node_name(n),
           node_status(s),
@@ -73,7 +75,9 @@ struct list_nodes_helper
           get_p99(0.0),
           put_p99(0.0),
           multi_get_p99(0.0),
-          multi_put_p99(0.0)
+          multi_put_p99(0.0),
+          read_cu(0.0),
+          write_cu(0.0)
     {
     }
 };
@@ -241,3 +245,9 @@ bool start_dup(command_executor *e, shell_context *sc, arguments args);
 bool pause_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args);
+
+// == disk rebalance (see 'commands/disk_rebalance.cpp') == //
+
+bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args);
+
+bool query_disk_replica(command_executor *e, shell_context *sc, arguments args);
