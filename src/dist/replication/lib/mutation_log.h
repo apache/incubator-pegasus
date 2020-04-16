@@ -460,7 +460,7 @@ private:
     // appropriately for less lock contention
     void write_pending_mutations(bool release_lock_required);
 
-    void commit_pending_mutations(log_file_ptr &lf, std::shared_ptr<log_block> &pending);
+    void commit_pending_mutations(log_file_ptr &lf, std::shared_ptr<log_appender> &pending);
 
     // flush at most count times
     // if count <= 0, means flush until all data is on disk
@@ -470,7 +470,7 @@ private:
     // bufferring - only one concurrent write is allowed
     mutable zlock _slock;
     std::atomic_bool _is_writing;
-    std::shared_ptr<log_block> _pending_write;
+    std::shared_ptr<log_appender> _pending_write;
 
     bool _force_flush;
     perf_counter_wrapper *_write_size_counter;
@@ -527,7 +527,7 @@ private:
     void write_pending_mutations(bool release_lock_required);
 
     void commit_pending_mutations(log_file_ptr &lf,
-                                  std::shared_ptr<log_block> &pending,
+                                  std::shared_ptr<log_appender> &pending,
                                   decree max_commit);
 
     virtual void init_states() override;
@@ -548,8 +548,8 @@ private:
     // Writes that are emitted to `commit_log_block` but are not completely written.
     // The weak_ptr used here is a trick. Once the pointer freed, ie.
     // `_issued_write.lock() == nullptr`, it means the emitted writes all finished.
-    std::weak_ptr<log_block> _issued_write;
-    std::shared_ptr<log_block> _pending_write;
+    std::weak_ptr<log_appender> _issued_write;
+    std::shared_ptr<log_appender> _pending_write;
     uint64_t _pending_write_start_time_ms;
     decree _pending_write_max_commit;
     decree _pending_write_max_decree;
@@ -633,6 +633,11 @@ public:
                                        dsn::task_tracker *tracker,
                                        aio_handler &&callback,
                                        int hash);
+    dsn::aio_task_ptr commit_log_blocks(log_appender &pending,
+                                        dsn::task_code evt,
+                                        dsn::task_tracker *tracker,
+                                        aio_handler &&callback,
+                                        int hash);
 
     //
     // others

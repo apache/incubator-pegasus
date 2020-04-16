@@ -20,14 +20,22 @@ void log_block::init()
     add(temp_writer.get_buffer());
 }
 
-void log_block::append_mutation(const mutation_ptr &mu, const aio_task_ptr &cb)
+void log_appender::append_mutation(const mutation_ptr &mu, const aio_task_ptr &cb)
 {
     _mutations.push_back(mu);
     if (cb) {
         _callbacks.push_back(cb);
     }
-    mu->data.header.log_offset = _start_offset + size();
-    mu->write_to([this](const blob &bb) { add(bb); });
+    log_block *blk = &_blocks.back();
+    if (blk->size() > DEFAULT_MAX_BLOCK_BYTES) {
+        _full_blocks_size += blk->size();
+        _full_blocks_blob_cnt += blk->data().size();
+        int64_t new_block_start_offset = blk->start_offset() + blk->size();
+        _blocks.emplace_back(new_block_start_offset);
+        blk = &_blocks.back();
+    }
+    mu->data.header.log_offset = blk->start_offset() + blk->size();
+    mu->write_to([blk](const blob &bb) { blk->add(bb); });
 }
 
 } // namespace replication

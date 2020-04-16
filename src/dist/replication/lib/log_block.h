@@ -26,8 +26,6 @@ class log_block
 {
     std::vector<blob> _data; // the first blob is log_block_header
     size_t _size{0};         // total data size of all blobs
-    std::vector<mutation_ptr> _mutations;
-    std::vector<aio_task_ptr> _callbacks;
     int64_t _start_offset{0};
 
 public:
@@ -60,12 +58,6 @@ public:
         _data.push_back(bb);
     }
 
-    void append_mutation(const mutation_ptr &mu, const aio_task_ptr &cb);
-
-    const std::vector<mutation_ptr> &mutations() const { return _mutations; }
-
-    const std::vector<aio_task_ptr> &callbacks() const { return _callbacks; }
-
     // return total data size in the block
     size_t size() const { return _size; }
 
@@ -73,7 +65,52 @@ public:
     int64_t start_offset() const { return _start_offset; }
 
 private:
+    friend class log_appender;
     void init();
+};
+
+// Append writes into a buffer which consists of one or more fixed-size log blocks,
+// which will be continuously flushed into one log file.
+// Not thread-safe. Requires lock protection.
+class log_appender
+{
+public:
+    explicit log_appender(int64_t start_offset) { _blocks.emplace_back(start_offset); }
+
+    log_appender(int64_t start_offset, log_block &block)
+    {
+        block._start_offset = start_offset;
+        _blocks.emplace_back(std::move(block));
+    }
+
+    void append_mutation(const mutation_ptr &mu, const aio_task_ptr &cb);
+
+    size_t size() const { return _full_blocks_size + _blocks.crbegin()->size(); }
+    size_t blob_count() const { return _full_blocks_blob_cnt + _blocks.crbegin()->data().size(); }
+
+    std::vector<mutation_ptr> mutations() const { return _mutations; }
+
+    // The callback registered for each write.
+    const std::vector<aio_task_ptr> &callbacks() const { return _callbacks; }
+
+    // Returns the heading block's start_offset.
+    int64_t start_offset() const { return _blocks.cbegin()->start_offset(); }
+
+    std::vector<log_block> &all_blocks() { return _blocks; }
+
+protected:
+    static constexpr size_t DEFAULT_MAX_BLOCK_BYTES = 1 * 1024 * 1024; // 1MB
+
+    // |---------------------- _blocks ----------------------|
+    // | full block 0 | full block 1 | .... | unfilled block |
+
+    // New block is appended to tail.
+    // The tailing block is the only block that may be unfilled.
+    std::vector<log_block> _blocks;
+    size_t _full_blocks_size{0};
+    size_t _full_blocks_blob_cnt{0};
+    std::vector<aio_task_ptr> _callbacks;
+    std::vector<mutation_ptr> _mutations;
 };
 
 } // namespace replication
