@@ -2128,7 +2128,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             args.argc, args.argv, "cp:b:t:h:x:s:y:v:z:dan:r:", long_options, &option_index);
         if (c == -1)
             break;
-        // if input [-p|--partition] etc. means you want to get precise count by scanning.
+        // input any valid parameter means you want to get precise count by scanning.
         need_scan = true;
         switch (c) {
         case 'c':
