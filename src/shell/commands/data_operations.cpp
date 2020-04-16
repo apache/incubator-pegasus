@@ -2213,7 +2213,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
 
     // if input [-p|--partition] etc. means you want to get precise count by scanning, but no input
     // [-c|--precise], it will return false
-    if (!(precise == need_scan)) {
+    if (need_scan && !precise) {
         fprintf(stderr,
                 "ERROR: you must input [-c|-pricise] flag when you expect to get pricise "
                 "result by scaning all record online\n");
