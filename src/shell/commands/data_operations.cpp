@@ -2082,7 +2082,8 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
 
 bool count_data(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"partition", required_argument, 0, 'p'},
+    static struct option long_options[] = {{"precise", no_argument, 0, 'c'},
+                                           {"partition", required_argument, 0, 'p'},
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
                                            {"hash_key_filter_type", required_argument, 0, 'h'},
@@ -2097,6 +2098,11 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                            {"run_seconds", required_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
 
+    // "count_data" usually need scan all online records to get precise result, which may affect
+    // cluster availability, so here define precise = false defaultly and it will return estimate
+    // count immediately.
+    bool precise = false;
+    bool need_scan = false;
     int32_t partition = -1;
     int max_batch_count = 500;
     int timeout_ms = sc->timeout_ms;
@@ -2119,10 +2125,15 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         int option_index = 0;
         int c;
         c = getopt_long(
-            args.argc, args.argv, "p:b:t:h:x:s:y:v:z:dan:r:", long_options, &option_index);
+            args.argc, args.argv, "cp:b:t:h:x:s:y:v:z:dan:r:", long_options, &option_index);
         if (c == -1)
             break;
+        // input any valid parameter means you want to get precise count by scanning.
+        need_scan = true;
         switch (c) {
+        case 'c':
+            precise = true;
+            break;
         case 'p':
             if (!dsn::buf2int32(optarg, partition)) {
                 fprintf(stderr, "ERROR: parse %s as partition failed\n", optarg);
@@ -2199,6 +2210,42 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         default:
             return false;
         }
+    }
+
+    if (!precise) {
+        if (need_scan) {
+            fprintf(stderr,
+                    "ERROR: you must input [-c|--precise] flag when you expect to get precise "
+                    "result by scaning all record online\n");
+            return false;
+        }
+
+        // get estimate key number
+        std::vector<row_data> rows;
+        std::string app_name = sc->pg_client->get_app_name();
+        if (!get_app_stat(sc, app_name, rows)) {
+            fprintf(stderr, "ERROR: query app stat from server failed");
+            return true;
+        }
+
+        rows.resize(rows.size() + 1);
+        row_data &sum = rows.back();
+        sum.row_name = "(total:" + std::to_string(rows.size() - 1) + ")";
+        for (int i = 0; i < rows.size() - 1; ++i) {
+            const row_data &row = rows[i];
+            sum.rdb_estimate_num_keys += row.rdb_estimate_num_keys;
+        }
+
+        ::dsn::utils::table_printer tp("count_data");
+        tp.add_title("pidx");
+        tp.add_column("estimate_count");
+        for (const row_data &row : rows) {
+            tp.add_row(row.row_name);
+            tp.append_data(row.rdb_estimate_num_keys);
+        }
+
+        tp.output(std::cout, tp_output_format::kTabular);
+        return true;
     }
 
     if (max_batch_count <= 1) {
