@@ -44,8 +44,8 @@ struct table_stats
         total_check_and_mutate_qps += row.check_and_mutate_qps;
         total_scan_qps += row.scan_qps;
         total_dup_qps += row.dup_qps;
-        total_dup_shipped_ops = row.dup_shipped_ops;
-        total_dup_failed_shipping_ops = row.dup_failed_shipping_ops;
+        total_dup_shipped_ops += row.dup_shipped_ops;
+        total_dup_failed_shipping_ops += row.dup_failed_shipping_ops;
         total_recent_read_cu += row.recent_read_cu;
         total_recent_write_cu += row.recent_write_cu;
         total_recent_expire_count += row.recent_expire_count;
@@ -84,7 +84,7 @@ struct table_stats
         total_scan_qps += row_stats.total_scan_qps;
         total_dup_qps += row_stats.total_dup_qps;
         total_dup_shipped_ops += row_stats.total_dup_shipped_ops;
-        total_dup_failed_shipping_ops = row_stats.total_dup_failed_shipping_ops;
+        total_dup_failed_shipping_ops += row_stats.total_dup_failed_shipping_ops;
         total_recent_read_cu += row_stats.total_recent_read_cu;
         total_recent_write_cu += row_stats.total_recent_write_cu;
         total_recent_expire_count += row_stats.total_recent_expire_count;
