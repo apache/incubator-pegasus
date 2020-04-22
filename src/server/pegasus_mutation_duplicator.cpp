@@ -175,10 +175,10 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         dsn::task_code rpc_code = std::get<1>(mut);
         dsn::blob raw_message = std::get<2>(mut);
         auto dreq = dsn::make_unique<dsn::apps::duplicate_request>();
-        uint64_t hash = get_hash_from_request(rpc_code, raw_message);
 
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
             // ignore if it is a DUPLICATE
+            continue;
         } else {
             dreq->__set_raw_message(raw_message);
             dreq->__set_task_code(rpc_code);
@@ -186,6 +186,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             dreq->__set_cluster_id(get_current_cluster_id());
         }
 
+        uint64_t hash = get_hash_from_request(rpc_code, raw_message);
         duplicate_rpc rpc(std::move(dreq),
                           dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
                           10_s, // TODO(wutao1): configurable timeout.

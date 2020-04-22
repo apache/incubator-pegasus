@@ -18,6 +18,7 @@ using namespace dsn::replication;
 
 class pegasus_mutation_duplicator_test : public pegasus_server_test_base
 {
+protected:
     dsn::task_tracker _tracker;
     dsn::pipeline::environment _env;
 
@@ -258,7 +259,7 @@ TEST_F(pegasus_mutation_duplicator_test, get_hash_from_request)
 
 // Verifies that calls on `get_hash_key_from_request` won't make
 // message unable to read. (if `get_hash_key_from_request` doesn't
-// use copy the message internally, it will.)
+// copy the message internally, it will.)
 TEST_F(pegasus_mutation_duplicator_test, read_after_get_hash_key)
 {
     std::string hash_key("hash");
@@ -291,6 +292,38 @@ TEST_F(pegasus_mutation_duplicator_test, duplicate_isolated_hashkeys)
 }
 
 TEST_F(pegasus_mutation_duplicator_test, create_duplicator) { test_create_duplicator(); }
+
+TEST_F(pegasus_mutation_duplicator_test, duplicate_duplicate)
+{
+    replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
+    auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
+    duplicator->set_task_environment(&_env);
+
+    dsn::apps::update_request request;
+    pegasus::pegasus_generate_key(request.key, std::string("hash"), std::string("sort"));
+    dsn::message_ptr msg =
+        dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
+    auto data = dsn::move_message_to_blob(msg.get());
+
+    // a duplicate from onebox2
+    dsn::apps::duplicate_request duplicate;
+    duplicate.cluster_id = 2;
+    duplicate.raw_message = data;
+    duplicate.timestamp = 200;
+    msg = dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_DUPLICATE);
+    data = dsn::move_message_to_blob(msg.get());
+
+    mutation_tuple_set muts;
+    muts.insert(std::make_tuple(200, dsn::apps::RPC_RRDB_RRDB_DUPLICATE, data));
+    RPC_MOCKING(duplicate_rpc)
+    {
+        duplicator->duplicate(muts, [&](size_t sz) {
+            // ensure no DUPLICATE is duplicated
+            ASSERT_EQ(sz, 0);
+        });
+    }
+    _tracker.wait_outstanding_tasks();
+}
 
 } // namespace server
 } // namespace pegasus
