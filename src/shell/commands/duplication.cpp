@@ -127,7 +127,7 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
                    err.description());
     } else if (detail) {
         fmt::print("duplications of app [{}] in detail:\n", app_name);
-        fmt::print("{}", duplication_query_response_to_string(err_resp.get_value()) + "\n\n");
+        fmt::print("{}\n\n", duplication_query_response_to_string(err_resp.get_value()));
     } else {
         const auto &resp = err_resp.get_value();
         fmt::print("duplications of app [{}] are listed as below:\n", app_name);
