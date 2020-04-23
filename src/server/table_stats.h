@@ -56,6 +56,11 @@ struct table_stats
         total_rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         total_rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
         total_rdb_estimate_num_keys += row.rdb_estimate_num_keys;
+        total_rdb_bf_seek_negatives += row.rdb_bf_seek_negatives;
+        total_rdb_bf_seek_total += row.rdb_bf_seek_total;
+        total_rdb_bf_point_positive_true += row.rdb_bf_point_positive_true;
+        total_rdb_bf_point_positive_total += row.rdb_bf_point_positive_total;
+        total_rdb_bf_point_negatives += row.rdb_bf_point_negatives;
         total_backup_request_qps += row.backup_request_qps;
         total_get_bytes += row.get_bytes;
         total_multi_get_bytes += row.multi_get_bytes;
@@ -95,6 +100,11 @@ struct table_stats
             row_stats.total_rdb_index_and_filter_blocks_mem_usage;
         total_rdb_memtable_mem_usage += row_stats.total_rdb_memtable_mem_usage;
         total_rdb_estimate_num_keys += row_stats.total_rdb_estimate_num_keys;
+        total_rdb_bf_seek_negatives += row_stats.total_rdb_bf_seek_negatives;
+        total_rdb_bf_seek_total += row_stats.total_rdb_bf_seek_total;
+        total_rdb_bf_point_positive_true += row_stats.total_rdb_bf_point_positive_true;
+        total_rdb_bf_point_positive_total += row_stats.total_rdb_bf_point_positive_total;
+        total_rdb_bf_point_negatives += row_stats.total_rdb_bf_point_negatives;
         total_backup_request_qps += row_stats.total_backup_request_qps;
         total_get_bytes += row_stats.total_get_bytes;
         total_multi_get_bytes += row_stats.total_multi_get_bytes;
@@ -130,6 +140,11 @@ struct table_stats
     double total_rdb_index_and_filter_blocks_mem_usage = 0;
     double total_rdb_memtable_mem_usage = 0;
     double total_rdb_estimate_num_keys = 0;
+    double total_rdb_bf_seek_negatives = 0;
+    double total_rdb_bf_seek_total = 0;
+    double total_rdb_bf_point_positive_true = 0;
+    double total_rdb_bf_point_positive_total = 0;
+    double total_rdb_bf_point_negatives = 0;
     double total_backup_request_qps = 0;
     double total_get_bytes = 0;
     double total_multi_get_bytes = 0;
