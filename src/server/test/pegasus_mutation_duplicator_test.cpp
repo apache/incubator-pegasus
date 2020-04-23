@@ -306,11 +306,11 @@ TEST_F(pegasus_mutation_duplicator_test, duplicate_duplicate)
     auto data = dsn::move_message_to_blob(msg.get());
 
     // a duplicate from onebox2
-    dsn::apps::duplicate_request duplicate;
-    duplicate.cluster_id = 2;
-    duplicate.raw_message = data;
-    duplicate.timestamp = 200;
-    msg = dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_DUPLICATE);
+    dsn::apps::duplicate_request dup;
+    dup.cluster_id = 2;
+    dup.raw_message = data;
+    dup.timestamp = 200;
+    msg = dsn::from_thrift_request_to_received_message(dup, dsn::apps::RPC_RRDB_RRDB_DUPLICATE);
     data = dsn::move_message_to_blob(msg.get());
 
     mutation_tuple_set muts;
