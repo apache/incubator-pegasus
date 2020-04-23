@@ -43,7 +43,7 @@ public:
             check_and_set_qps->set(row_stats.total_check_and_set_qps);
             check_and_mutate_qps->set(row_stats.total_check_and_mutate_qps);
             scan_qps->set(row_stats.total_scan_qps);
-            dup_qps->set(row_stats.total_dup_qps);
+            duplicate_qps->set(row_stats.total_duplicate_qps);
             dup_shipped_ops->set(row_stats.total_dup_shipped_ops);
             dup_failed_shipping_ops->set(row_stats.total_dup_failed_shipping_ops);
             recent_read_cu->set(row_stats.total_recent_read_cu);
@@ -90,7 +90,7 @@ public:
         ::dsn::perf_counter_wrapper check_and_set_qps;
         ::dsn::perf_counter_wrapper check_and_mutate_qps;
         ::dsn::perf_counter_wrapper scan_qps;
-        ::dsn::perf_counter_wrapper dup_qps;
+        ::dsn::perf_counter_wrapper duplicate_qps;
         ::dsn::perf_counter_wrapper dup_shipped_ops;
         ::dsn::perf_counter_wrapper dup_failed_shipping_ops;
         ::dsn::perf_counter_wrapper recent_read_cu;
