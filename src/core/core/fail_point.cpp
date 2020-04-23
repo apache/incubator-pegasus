@@ -103,7 +103,7 @@ bool fail_point::parse_from_string(string_view action)
             }
 
             sub_match = match[3];
-            string_view task_type = sub_match.str();
+            std::string task_type = sub_match.str();
             if (task_type.compare("off") == 0) {
                 _task = Off;
             } else if (task_type.compare("return") == 0) {
