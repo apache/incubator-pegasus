@@ -295,7 +295,7 @@ TEST_F(pegasus_mutation_duplicator_test, create_duplicator) { test_create_duplic
 
 TEST_F(pegasus_mutation_duplicator_test, duplicate_duplicate)
 {
-    replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
+    replica_base replica(dsn::gpid(1, 1), "fake_replica");
     auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
     duplicator->set_task_environment(&_env);
 
