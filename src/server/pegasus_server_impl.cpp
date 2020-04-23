@@ -433,16 +433,20 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "statistics the estimated number of keys inside the rocksdb");
 
     snprintf(name, 255, "rdb.bf_seek_negatives@%s", str_gpid.c_str());
-    _pfc_rdb_bf_seek_negatives.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the number of times bloom filter was "
-                                                  "checked before creating iterator on a file and "
-                                                  "useful in avoiding iterator creation (and thus "
-                                                  "likely IOPs)");
+    _pfc_rdb_bf_seek_negatives.init_app_counter("app.pegasus",
+                                                name,
+                                                COUNTER_TYPE_NUMBER,
+                                                "statistics the number of times bloom filter was "
+                                                "checked before creating iterator on a file and "
+                                                "useful in avoiding iterator creation (and thus "
+                                                "likely IOPs)");
 
     snprintf(name, 255, "rdb.bf_seek_total@%s", str_gpid.c_str());
-    _pfc_rdb_bf_seek_total.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the number of times bloom filter was "
-                                                  "checked before creating iterator on a file");
+    _pfc_rdb_bf_seek_total.init_app_counter("app.pegasus",
+                                            name,
+                                            COUNTER_TYPE_NUMBER,
+                                            "statistics the number of times bloom filter was "
+                                            "checked before creating iterator on a file");
 
     snprintf(name, 255, "rdb.bf_point_positive_true@%s", str_gpid.c_str());
     _pfc_rdb_bf_point_positive_true.init_app_counter(
@@ -459,10 +463,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "statistics the number of times bloom FullFilter has not avoided the reads");
 
     snprintf(name, 255, "rdb.bf_point_negatives@%s", str_gpid.c_str());
-    _pfc_rdb_bf_point_negatives.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the number of times bloom FullFilter "
-                                                  "has not avoided the reads and data actually "
-                                                  "exist");
+    _pfc_rdb_bf_point_negatives.init_app_counter("app.pegasus",
+                                                 name,
+                                                 COUNTER_TYPE_NUMBER,
+                                                 "statistics the number of times bloom FullFilter "
+                                                 "has not avoided the reads and data actually "
+                                                 "exist");
 }
 
 void pegasus_server_impl::parse_checkpoints()
