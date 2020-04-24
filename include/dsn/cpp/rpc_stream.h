@@ -121,4 +121,4 @@ private:
     int _last_write_next_total_size;
 };
 typedef ::dsn::ref_ptr<rpc_write_stream> rpc_write_stream_ptr;
-}
+} // namespace dsn

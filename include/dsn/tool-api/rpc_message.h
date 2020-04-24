@@ -209,6 +209,12 @@ public:
     size_t body_size() { return (size_t)header->body_length; }
     DSN_API void *rw_ptr(size_t offset_begin);
 
+    // rpc_read_stream can read a msg many times by restore()
+    // rpc_read_stream stream1(msg)
+    // msg->restore_read()
+    // rpc_read_stream stream2(msg)
+    DSN_API void restore_read();
+
     bool is_backup_request() const { return header->context.u.is_backup_request; }
 
 private:

@@ -520,6 +520,13 @@ void message_ex::read_commit(size_t size)
     this->_rw_committed = true;
 }
 
+void message_ex::restore_read()
+{
+    _rw_index = -1;
+    _rw_committed = true;
+    _rw_offset = 0;
+}
+
 void *message_ex::rw_ptr(size_t offset_begin)
 {
     // printf("%p %s\n", this, __FUNCTION__);

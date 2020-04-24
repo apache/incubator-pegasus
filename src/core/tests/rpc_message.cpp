@@ -36,6 +36,7 @@
 #include <dsn/utility/crc.h>
 #include <dsn/utility/transient_memory.h>
 #include <dsn/tool-api/rpc_message.h>
+#include <core/core/message_utils.cpp>
 #include <gtest/gtest.h>
 
 using namespace ::dsn;
@@ -181,5 +182,16 @@ TEST(core, message_ex)
 
         request->add_ref();
         request->release_ref();
+    }
+}
+
+TEST(rpc_message, restore_read)
+{
+    using namespace dsn;
+    configuration_query_by_index_request request, result;
+    message_ptr msg = from_thrift_request_to_received_message(request, RPC_CODE_FOR_TEST);
+    for (int i = 0; i < 10; i++) {
+        unmarshall(msg, result);
+        msg->restore_read();
     }
 }
