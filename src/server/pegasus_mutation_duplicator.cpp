@@ -178,6 +178,8 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
 
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
             // ignore if it is a DUPLICATE
+            // Because DUPLICATE comes from other clusters should not be forwarded to any other
+            // destinations. A DUPLICATE is meant to be targeting only one cluster.
             continue;
         } else {
             dreq->__set_raw_message(raw_message);
