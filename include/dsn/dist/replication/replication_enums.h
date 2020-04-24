@@ -58,6 +58,7 @@ ENUM_REG(replication::config_type::CT_REMOVE)
 ENUM_REG(replication::config_type::CT_ADD_SECONDARY_FOR_LB)
 ENUM_REG(replication::config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT)
 ENUM_REG(replication::config_type::CT_DROP_PARTITION)
+ENUM_REG(replication::config_type::CT_REGISTER_CHILD)
 ENUM_END2(replication::config_type::type, config_type)
 
 ENUM_BEGIN2(replication::node_status::type, node_status, replication::node_status::NS_INVALID)

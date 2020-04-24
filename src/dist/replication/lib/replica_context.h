@@ -118,6 +118,10 @@ public:
     // if app_id of `_child_gpid` is greater than zero, it means replica is during partition split,
     // otherwise, not during partition split
     bool sync_send_write_request{false};
+
+    // Used for partition split
+    // primary parent register child on meta_server task
+    dsn::task_ptr register_child_task;
 };
 
 class secondary_context

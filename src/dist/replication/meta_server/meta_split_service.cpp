@@ -131,5 +131,146 @@ void meta_split_service::do_app_partition_split(std::shared_ptr<app_state> app,
     _meta_svc->get_meta_storage()->set_data(
         _state->get_app_path(*app), std::move(value), on_write_storage_complete);
 }
+
+void meta_split_service::register_child_on_meta(register_child_rpc rpc)
+{
+    const auto &request = rpc.request();
+    auto &response = rpc.response();
+    response.err = ERR_IO_PENDING;
+
+    zauto_write_lock(app_lock());
+    std::shared_ptr<app_state> app = _state->get_app(request.app.app_id);
+    dassert_f(app != nullptr, "app is not existed, id({})", request.app.app_id);
+    dassert_f(app->is_stateful, "app is stateless currently, id({})", request.app.app_id);
+
+    dsn::gpid parent_gpid = request.parent_config.pid;
+    dsn::gpid child_gpid = request.child_config.pid;
+    const partition_configuration &parent_config =
+        app->partitions[parent_gpid.get_partition_index()];
+    const partition_configuration &child_config = app->partitions[child_gpid.get_partition_index()];
+    config_context &parent_context = app->helpers->contexts[parent_gpid.get_partition_index()];
+
+    if (request.parent_config.ballot < parent_config.ballot) {
+        dwarn_f("partition({}) register child failed, request is out-dated, request ballot = {}, "
+                "meta ballot = {}",
+                parent_gpid,
+                request.parent_config.ballot,
+                parent_config.ballot);
+        response.err = ERR_INVALID_VERSION;
+        return;
+    }
+
+    if (child_config.ballot != invalid_ballot) {
+        dwarn_f(
+            "duplicated register child request, child({}) has already been registered, ballot = {}",
+            child_gpid,
+            child_config.ballot);
+        response.err = ERR_CHILD_REGISTERED;
+        return;
+    }
+
+    if (parent_context.stage == config_status::pending_proposal ||
+        parent_context.stage == config_status::pending_remote_sync) {
+        dwarn_f("another request is syncing with remote storage, ignore this request");
+        return;
+    }
+
+    ddebug_f("parent({}) will register child({})", parent_gpid, child_gpid);
+    parent_context.stage = config_status::pending_remote_sync;
+    parent_context.msg = rpc.dsn_request();
+    parent_context.pending_sync_task = add_child_on_remote_storage(rpc, true);
+}
+
+dsn::task_ptr meta_split_service::add_child_on_remote_storage(register_child_rpc rpc,
+                                                              bool create_new)
+{
+    const auto &request = rpc.request();
+    const std::string &partition_path = _state->get_partition_path(request.child_config.pid);
+    blob value = dsn::json::json_forwarder<partition_configuration>::encode(request.child_config);
+    if (create_new) {
+        return _meta_svc->get_remote_storage()->create_node(
+            partition_path,
+            LPC_META_STATE_HIGH,
+            std::bind(&meta_split_service::on_add_child_on_remote_storage_reply,
+                      this,
+                      std::placeholders::_1,
+                      rpc,
+                      create_new),
+            value);
+    } else {
+        return _meta_svc->get_remote_storage()->set_data(
+            partition_path,
+            value,
+            LPC_META_STATE_HIGH,
+            std::bind(&meta_split_service::on_add_child_on_remote_storage_reply,
+                      this,
+                      std::placeholders::_1,
+                      rpc,
+                      create_new),
+            _meta_svc->tracker());
+    }
+}
+
+void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
+                                                              register_child_rpc rpc,
+                                                              bool create_new)
+{
+    zauto_write_lock(app_lock());
+
+    const auto &request = rpc.request();
+    auto &response = rpc.response();
+
+    std::shared_ptr<app_state> app = _state->get_app(request.app.app_id);
+    dassert_f(app != nullptr, "app is not existed, id({})", request.app.app_id);
+    dassert_f(app->status == app_status::AS_AVAILABLE || app->status == app_status::AS_DROPPING,
+              "app is not available now, id({})",
+              request.app.app_id);
+
+    dsn::gpid parent_gpid = request.parent_config.pid;
+    dsn::gpid child_gpid = request.child_config.pid;
+    config_context &parent_context = app->helpers->contexts[parent_gpid.get_partition_index()];
+
+    if (ec == ERR_TIMEOUT ||
+        (ec == ERR_NODE_ALREADY_EXIST && create_new)) { // retry register child on remote storage
+        bool retry_create_new = (ec == ERR_TIMEOUT) ? create_new : false;
+        int delay = (ec == ERR_TIMEOUT) ? 1 : 0;
+        parent_context.pending_sync_task =
+            tasking::enqueue(LPC_META_STATE_HIGH,
+                             nullptr,
+                             [this, parent_context, rpc, retry_create_new]() mutable {
+                                 parent_context.pending_sync_task =
+                                     add_child_on_remote_storage(rpc, retry_create_new);
+                             },
+                             0,
+                             std::chrono::seconds(delay));
+        return;
+    }
+    dassert_f(ec == ERR_OK, "we can't handle this right now, err = {}", ec.to_string());
+
+    ddebug_f("parent({}) resgiter child({}) on remote storage succeed", parent_gpid, child_gpid);
+
+    // update local child partition configuration
+    std::shared_ptr<configuration_update_request> update_child_request =
+        std::make_shared<configuration_update_request>();
+    update_child_request->config = request.child_config;
+    update_child_request->info = *app;
+    update_child_request->type = config_type::CT_REGISTER_CHILD;
+    update_child_request->node = request.primary_address;
+
+    partition_configuration child_config = app->partitions[child_gpid.get_partition_index()];
+    child_config.secondaries = request.child_config.secondaries;
+    _state->update_configuration_locally(*app, update_child_request);
+
+    parent_context.pending_sync_task = nullptr;
+    parent_context.stage = config_status::not_pending;
+    if (parent_context.msg) {
+        response.err = ERR_OK;
+        response.app = *app;
+        response.parent_config = app->partitions[parent_gpid.get_partition_index()];
+        response.child_config = app->partitions[child_gpid.get_partition_index()];
+        parent_context.msg = nullptr;
+    }
+}
+
 } // namespace replication
 } // namespace dsn

@@ -123,6 +123,8 @@ private:
     void sanity_check();
 };
 
+typedef rpc_holder<register_child_request, register_child_response> register_child_rpc;
+
 extern const char *partition_status_to_string(partition_status::type status);
 
 class cold_backup_constant

@@ -119,6 +119,11 @@ public:
         return rpc.response();
     }
 
+    void mock_node_state(const rpc_address &addr, const node_state &node)
+    {
+        _ss->_nodes[addr] = node;
+    }
+
     std::shared_ptr<app_state> find_app(const std::string &name) { return _ss->get_app(name); }
 
     meta_duplication_service &dup_svc() { return *(_ms->_dup_svc); }

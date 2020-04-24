@@ -1388,7 +1388,7 @@ void server_state::update_configuration_locally(
     health_status new_health_status = partition_health_status(new_cfg, min_2pc_count);
 
     if (app.is_stateful) {
-        dassert(old_cfg.ballot + 1 == new_cfg.ballot,
+        dassert(old_cfg.ballot == invalid_ballot || old_cfg.ballot + 1 == new_cfg.ballot,
                 "invalid configuration update request, old ballot %" PRId64 ", new ballot %" PRId64
                 "",
                 old_cfg.ballot,
@@ -1438,6 +1438,14 @@ void server_state::update_configuration_locally(
         case config_type::CT_ADD_SECONDARY_FOR_LB:
             dassert(false, "invalid execution work flow");
             break;
+        case config_type::CT_REGISTER_CHILD: {
+            ns->put_partition(gpid, true);
+            for (auto &secondary : config_request->config.secondaries) {
+                auto secondary_node = get_node_state(_nodes, secondary, false);
+                secondary_node->put_partition(gpid, false);
+            }
+            break;
+        }
         default:
             dassert(false, "");
             break;

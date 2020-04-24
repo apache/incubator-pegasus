@@ -401,6 +401,17 @@ private:
     // sync_point is the first decree after parent send write request to child synchronously
     void parent_check_sync_point_commit(decree sync_point);
 
+    // primary parent register children on meta_server
+    void register_child_on_meta(ballot b);
+    void on_register_child_on_meta_reply(dsn::error_code ec,
+                                         const register_child_request &request,
+                                         const register_child_response &response);
+    // primary sends register request to meta_server
+    void parent_send_register_request(const register_child_request &request);
+
+    // child partition has been registered on meta_server, could be active
+    void child_partition_active(const partition_configuration &config);
+
     // return true if parent status is valid
     bool parent_check_states();
 
