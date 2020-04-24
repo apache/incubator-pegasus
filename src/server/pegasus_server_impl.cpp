@@ -2493,8 +2493,7 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
 
     // Update _pfc_rdb_estimate_num_keys
     // NOTE: for the same n kv pairs, kEstimateNumKeys will be counted n times, you need compaction
-    // to
-    // remove duplicate
+    // to remove duplicate
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateNumKeys, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         _pfc_rdb_estimate_num_keys->set(val);
