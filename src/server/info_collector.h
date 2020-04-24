@@ -30,6 +30,11 @@ class info_collector
 public:
     struct app_stat_counters
     {
+        double convert_to_1M_ratio(double hit, double total)
+        {
+            return std::abs(total) < 1e-6 ? 0 : hit / total * 1e6;
+        }
+
         void set(const row_data &row_stats)
         {
             get_qps->set(row_stats.get_qps);
@@ -52,15 +57,25 @@ public:
                 row_stats.recent_write_throttling_reject_count);
             storage_mb->set(row_stats.storage_mb);
             storage_count->set(row_stats.storage_count);
-            rdb_block_cache_hit_rate->set(std::abs(row_stats.rdb_block_cache_total_count) < 1e-6
-                                              ? 0
-                                              : row_stats.rdb_block_cache_hit_count /
-                                                    row_stats.rdb_block_cache_total_count *
-                                                    1000000);
+            rdb_block_cache_hit_rate->set(
+                convert_to_1M_ratio(row_stats.rdb_block_cache_hit_count,
+                                    row_stats.rdb_block_cache_total_count));
             rdb_index_and_filter_blocks_mem_usage->set(
                 row_stats.rdb_index_and_filter_blocks_mem_usage);
             rdb_memtable_mem_usage->set(row_stats.rdb_memtable_mem_usage);
             rdb_estimate_num_keys->set(row_stats.rdb_estimate_num_keys);
+            rdb_bf_seek_negatives_rate->set(convert_to_1M_ratio(
+                row_stats.rdb_bf_seek_negatives, row_stats.rdb_bf_seek_total));
+            rdb_bf_point_negatives_rate->set(
+                convert_to_1M_ratio(row_stats.rdb_bf_point_negatives,
+                                    row_stats.rdb_bf_point_negatives +
+                                        row_stats.rdb_bf_point_positive_total));
+            rdb_bf_point_false_positive_rate->set(
+                convert_to_1M_ratio(row_stats.rdb_bf_point_positive_total -
+                                        row_stats.rdb_bf_point_positive_true,
+                                    (row_stats.rdb_bf_point_positive_total -
+                                     row_stats.rdb_bf_point_positive_true) +
+                                        row_stats.rdb_bf_point_negatives));
             read_qps->set(row_stats.get_total_read_qps());
             write_qps->set(row_stats.get_total_write_qps());
             backup_request_qps->set(row_stats.backup_request_qps);
@@ -99,6 +114,9 @@ public:
         ::dsn::perf_counter_wrapper rdb_index_and_filter_blocks_mem_usage;
         ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
         ::dsn::perf_counter_wrapper rdb_estimate_num_keys;
+        ::dsn::perf_counter_wrapper rdb_bf_seek_negatives_rate;
+        ::dsn::perf_counter_wrapper rdb_bf_point_negatives_rate;
+        ::dsn::perf_counter_wrapper rdb_bf_point_false_positive_rate;
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
         ::dsn::perf_counter_wrapper backup_request_qps;

@@ -628,6 +628,11 @@ struct row_data
     double rdb_index_and_filter_blocks_mem_usage = 0;
     double rdb_memtable_mem_usage = 0;
     double rdb_estimate_num_keys = 0;
+    double rdb_bf_seek_negatives = 0;
+    double rdb_bf_seek_total = 0;
+    double rdb_bf_point_positive_true = 0;
+    double rdb_bf_point_positive_total = 0;
+    double rdb_bf_point_negatives = 0;
     double backup_request_qps = 0;
     double get_bytes = 0;
     double multi_get_bytes = 0;
@@ -689,6 +694,16 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_memtable_mem_usage += value;
     else if (counter_name == "rdb.estimate_num_keys")
         row.rdb_estimate_num_keys += value;
+    else if (counter_name == "rdb.bf_seek_negatives")
+        row.rdb_bf_seek_negatives += value;
+    else if (counter_name == "rdb.bf_seek_total")
+        row.rdb_bf_seek_total += value;
+    else if (counter_name == "rdb.bf_point_positive_true")
+        row.rdb_bf_point_positive_true += value;
+    else if (counter_name == "rdb.bf_point_positive_total")
+        row.rdb_bf_point_positive_total += value;
+    else if (counter_name == "rdb.bf_point_negatives")
+        row.rdb_bf_point_negatives += value;
     else if (counter_name == "backup_request_qps")
         row.backup_request_qps += value;
     else if (counter_name == "get_bytes")
@@ -833,6 +848,11 @@ inline bool get_app_partition_stat(shell_context *sc,
                     update_app_pegasus_perf_counter(row, counter_name, m.value);
                 }
             } else if (parse_app_perf_counter_name(m.name, app_name, counter_name)) {
+                // if the app_name from perf-counter isn't existed(maybe the app was dropped), it
+                // will be ignored.
+                if (app_name_id.find(app_name) == app_name_id.end()) {
+                    continue;
+                }
                 // perf-counter value will be set into partition index 0.
                 row_data &row = rows[app_name][0];
                 row.app_id = app_name_id[app_name];

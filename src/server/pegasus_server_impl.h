@@ -389,6 +389,11 @@ private:
     ::dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
     ::dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
     ::dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_seek_total;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
 };
 
 } // namespace server
