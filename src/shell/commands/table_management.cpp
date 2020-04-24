@@ -4,6 +4,11 @@
 
 #include "shell/commands.h"
 
+double convert_to_ratio(double hit, double total)
+{
+    return std::abs(total) < 1e-6 ? 0 : hit / total;
+}
+
 bool ls_apps(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"all", no_argument, 0, 'a'},
@@ -493,6 +498,11 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
         sum.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         sum.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
+        sum.rdb_bf_seek_negatives += row.rdb_bf_seek_negatives;
+        sum.rdb_bf_seek_total += row.rdb_bf_seek_total;
+        sum.rdb_bf_point_positive_true += row.rdb_bf_point_positive_true;
+        sum.rdb_bf_point_positive_total += row.rdb_bf_point_positive_total;
+        sum.rdb_bf_point_negatives += row.rdb_bf_point_negatives;
     }
 
     std::streambuf *buf;
@@ -538,6 +548,9 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("mem_idx_mb", tp_alignment::kRight);
     }
     tp.add_column("hit_rate", tp_alignment::kRight);
+    tp.add_column("seek_n_rate", tp_alignment::kRight);
+    tp.add_column("point_n_rate", tp_alignment::kRight);
+    tp.add_column("point_fp_rate", tp_alignment::kRight);
 
     for (row_data &row : rows) {
         tp.add_row(row.row_name);
@@ -570,11 +583,16 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.rdb_memtable_mem_usage / (1 << 20U));
             tp.append_data(row.rdb_index_and_filter_blocks_mem_usage / (1 << 20U));
         }
-        double block_cache_hit_rate =
-            std::abs(row.rdb_block_cache_total_count) < 1e-6
-                ? 0.0
-                : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
-        tp.append_data(block_cache_hit_rate);
+        tp.append_data(
+            convert_to_ratio(row.rdb_block_cache_hit_count, row.rdb_block_cache_total_count));
+        tp.append_data(convert_to_ratio(row.rdb_bf_seek_negatives, row.rdb_bf_seek_total));
+        tp.append_data(
+            convert_to_ratio(row.rdb_bf_point_negatives,
+                             row.rdb_bf_point_negatives + row.rdb_bf_point_positive_total));
+        tp.append_data(
+            convert_to_ratio(row.rdb_bf_point_positive_total - row.rdb_bf_point_positive_true,
+                             (row.rdb_bf_point_positive_total - row.rdb_bf_point_positive_true) +
+                                 row.rdb_bf_point_negatives));
     }
     tp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 

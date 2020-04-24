@@ -431,6 +431,44 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         name,
         COUNTER_TYPE_NUMBER,
         "statistics the estimated number of keys inside the rocksdb");
+
+    snprintf(name, 255, "rdb.bf_seek_negatives@%s", str_gpid.c_str());
+    _pfc_rdb_bf_seek_negatives.init_app_counter("app.pegasus",
+                                                name,
+                                                COUNTER_TYPE_NUMBER,
+                                                "statistics the number of times bloom filter was "
+                                                "checked before creating iterator on a file and "
+                                                "useful in avoiding iterator creation (and thus "
+                                                "likely IOPs)");
+
+    snprintf(name, 255, "rdb.bf_seek_total@%s", str_gpid.c_str());
+    _pfc_rdb_bf_seek_total.init_app_counter("app.pegasus",
+                                            name,
+                                            COUNTER_TYPE_NUMBER,
+                                            "statistics the number of times bloom filter was "
+                                            "checked before creating iterator on a file");
+
+    snprintf(name, 255, "rdb.bf_point_positive_true@%s", str_gpid.c_str());
+    _pfc_rdb_bf_point_positive_true.init_app_counter(
+        "app.pegasus",
+        name,
+        COUNTER_TYPE_NUMBER,
+        "statistics the number of times bloom filter has avoided file reads, i.e., negatives");
+
+    snprintf(name, 255, "rdb.bf_point_positive_total@%s", str_gpid.c_str());
+    _pfc_rdb_bf_point_positive_total.init_app_counter(
+        "app.pegasus",
+        name,
+        COUNTER_TYPE_NUMBER,
+        "statistics the number of times bloom FullFilter has not avoided the reads");
+
+    snprintf(name, 255, "rdb.bf_point_negatives@%s", str_gpid.c_str());
+    _pfc_rdb_bf_point_negatives.init_app_counter("app.pegasus",
+                                                 name,
+                                                 COUNTER_TYPE_NUMBER,
+                                                 "statistics the number of times bloom FullFilter "
+                                                 "has not avoided the reads and data actually "
+                                                 "exist");
 }
 
 void pegasus_server_impl::parse_checkpoints()
@@ -2408,6 +2446,8 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
 {
     std::string str_val;
     uint64_t val = 0;
+
+    // Update _pfc_rdb_sst_count
     for (int i = 0; i < _data_cf_opts.num_levels; ++i) {
         int cur_level_count = 0;
         if (_db->GetProperty(rocksdb::DB::Properties::kNumFilesAtLevelPrefix + std::to_string(i),
@@ -2419,6 +2459,7 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     _pfc_rdb_sst_count->set(val);
     dinfo_replica("_pfc_rdb_sst_count: {}", val);
 
+    // Update _pfc_rdb_sst_size
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kTotalSstFilesSize, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         static uint64_t bytes_per_mb = 1U << 20U;
@@ -2426,6 +2467,7 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         dinfo_replica("_pfc_rdb_sst_size: {} bytes", val);
     }
 
+    // Update _pfc_rdb_block_cache_hit_count and _pfc_rdb_block_cache_total_count
     uint64_t block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
     _pfc_rdb_block_cache_hit_count->set(block_cache_hit);
     dinfo_replica("_pfc_rdb_block_cache_hit_count: {}", block_cache_hit);
@@ -2435,29 +2477,60 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     _pfc_rdb_block_cache_total_count->set(block_cache_total);
     dinfo_replica("_pfc_rdb_block_cache_total_count: {}", block_cache_total);
 
+    // Update _pfc_rdb_index_and_filter_blocks_mem_usage
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateTableReadersMem, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         _pfc_rdb_index_and_filter_blocks_mem_usage->set(val);
         dinfo_replica("_pfc_rdb_index_and_filter_blocks_mem_usage: {} bytes", val);
     }
 
+    // Update _pfc_rdb_memtable_mem_usage
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kCurSizeAllMemTables, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         _pfc_rdb_memtable_mem_usage->set(val);
         dinfo_replica("_pfc_rdb_memtable_mem_usage: {} bytes", val);
     }
 
-    // for the same n kv pairs, kEstimateNumKeys will be counted n times, you need compaction to
-    // remove duplicate
+    // Update _pfc_rdb_estimate_num_keys
+    // NOTE: for the same n kv pairs, kEstimateNumKeys will be counted n times, you need compaction
+    // to remove duplicate
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateNumKeys, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         _pfc_rdb_estimate_num_keys->set(val);
         dinfo_replica("_pfc_rdb_estimate_num_keys: {}", val);
     }
+
+    // Update _pfc_rdb_bf_seek_negatives
+    uint64_t bf_seek_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_USEFUL);
+    _pfc_rdb_bf_seek_negatives->set(bf_seek_negatives);
+    dinfo_replica("_pfc_rdb_bf_seek_negatives: {}", bf_seek_negatives);
+
+    // Update _pfc_rdb_bf_seek_total
+    uint64_t bf_seek_total = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_CHECKED);
+    _pfc_rdb_bf_seek_total->set(bf_seek_total);
+    dinfo_replica("_pfc_rdb_bf_seek_total: {}", bf_seek_total);
+
+    // Update _pfc_rdb_bf_point_positive_true
+    uint64_t bf_point_positive_true =
+        _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_TRUE_POSITIVE);
+    _pfc_rdb_bf_point_positive_true->set(bf_point_positive_true);
+    dinfo_replica("_pfc_rdb_bf_point_positive_true: {}", bf_point_positive_true);
+
+    // Update _pfc_rdb_bf_point_positive_total
+    uint64_t bf_point_positive_total =
+        _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_POSITIVE);
+    _pfc_rdb_bf_point_positive_total->set(bf_point_positive_total);
+    dinfo_replica("_pfc_rdb_bf_point_positive_total: {}", bf_point_positive_total);
+
+    // Update _pfc_rdb_bf_point_negatives
+    uint64_t bf_point_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_USEFUL);
+    _pfc_rdb_bf_point_negatives->set(bf_point_negatives);
+    dinfo_replica("_pfc_rdb_bf_point_negatives: {}", bf_point_negatives);
 }
 
 void pegasus_server_impl::update_server_rocksdb_statistics()
 {
+    // Update _pfc_rdb_block_cache_mem_usage
     if (_s_block_cache) {
         uint64_t val = _s_block_cache->GetUsage();
         _pfc_rdb_block_cache_mem_usage->set(val);
