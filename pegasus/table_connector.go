@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"sort"
 	"sync"
 	"time"
 
@@ -519,10 +518,6 @@ func (p *pegasusTableConnector) doMultiGet(ctx context.Context, hashKey []byte, 
 				Value:   blobKv.Value.Data,
 			}
 		}
-
-		sort.Slice(kvs, func(i, j int) bool {
-			return bytes.Compare(kvs[i].SortKey, kvs[j].SortKey) < 0
-		})
 
 		return kvs, allFetched, nil
 	}
