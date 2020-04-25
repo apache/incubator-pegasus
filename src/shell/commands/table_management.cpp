@@ -516,7 +516,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    ::dsn::utils::table_printer tp("app_stat");
+    ::dsn::utils::table_printer tp("app_stat", 2 /* tabular_width */, 3 /* precision */);
     tp.add_title(app_name.empty() ? "app_name" : "pidx");
     if (app_name.empty()) {
         tp.add_column("app_id", tp_alignment::kRight);
