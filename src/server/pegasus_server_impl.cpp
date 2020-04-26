@@ -293,7 +293,43 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     bool disable_bloom_filter = dsn_config_get_value_bool(
         "pegasus.server", "rocksdb_disable_bloom_filter", false, "Whether to disable bloom filter");
     if (!disable_bloom_filter) {
-        tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+        // average bits allocated per key in bloom filter.
+        // bits_per_key    |           false positive rate
+        //                 | format_version < 5 | format_version = 5
+        //       6                5.70953              5.69888
+        //       8                2.45766              2.29709
+        //      10                1.13977              0.959254
+        //      12                0.662498             0.411593
+        //      16                0.353023             0.0873754
+        //      24                0.261552             0.0060971
+        //      50                0.225453             ~0.00003
+        // Recommend using no more than three decimal digits after the decimal point, as in 6.667.
+        // More details: https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter
+        double bits_per_key =
+            dsn_config_get_value_double("pegasus.server",
+                                        "rocksdb_bloom_filter_bits_per_key",
+                                        10,
+                                        "average bits allocated per key in bloom filter");
+        // COMPATIBILITY ATTENTION:
+        // Although old releases would see the new structure as corrupt filter data and read the
+        // table as if there's no filter, we've decided only to enable the new Bloom filter with new
+        // format_version=5. This provides a smooth path for automatic adoption over time, with an
+        // option for early opt-in.
+        // Reference from rocksdb commit:
+        // https://github.com/facebook/rocksdb/commit/f059c7d9b96300091e07429a60f4ad55dac84859
+        int format_version =
+            (int)dsn_config_get_value_int64("pegasus.server",
+                                            "rocksdb_format_version",
+                                            2,
+                                            "block based table data format version, "
+                                            "only 2 and 5 is supported in Pegasus. "
+                                            "2 is the old version, 5 is the new "
+                                            "version supported since rocksdb "
+                                            "v6.6.4");
+        dassert(format_version == 2 || format_version == 5,
+                "[pegasus.server]rocksdb_format_version should be either '2' or '5'.");
+        tbl_opts.format_version = format_version;
+        tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(bits_per_key, false));
 
         std::string filter_type =
             dsn_config_get_value_string("pegasus.server",
