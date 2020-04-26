@@ -1,6 +1,7 @@
 set(MY_PROJ_NAME pegasus_unit_test)
 
 set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
+                "../pegasus_server_impl_init.cpp"
                 "../pegasus_manual_compact_service.cpp"
                 "../pegasus_event_listener.cpp"
                 "../pegasus_write_service.cpp"
