@@ -16,7 +16,8 @@ struct table_stats
     double get_total_write_qps() const
     {
         return total_put_qps + total_multi_put_qps + total_remove_qps + total_multi_remove_qps +
-               total_incr_qps + total_check_and_set_qps + total_check_and_mutate_qps;
+               total_incr_qps + total_check_and_set_qps + total_check_and_mutate_qps +
+               total_duplicate_qps;
     }
 
     double get_total_read_bytes() const
@@ -42,6 +43,9 @@ struct table_stats
         total_check_and_set_qps += row.check_and_set_qps;
         total_check_and_mutate_qps += row.check_and_mutate_qps;
         total_scan_qps += row.scan_qps;
+        total_duplicate_qps += row.duplicate_qps;
+        total_dup_shipped_ops += row.dup_shipped_ops;
+        total_dup_failed_shipping_ops += row.dup_failed_shipping_ops;
         total_recent_read_cu += row.recent_read_cu;
         total_recent_write_cu += row.recent_write_cu;
         total_recent_expire_count += row.recent_expire_count;
@@ -83,6 +87,9 @@ struct table_stats
         total_check_and_set_qps += row_stats.total_check_and_set_qps;
         total_check_and_mutate_qps += row_stats.total_check_and_mutate_qps;
         total_scan_qps += row_stats.total_scan_qps;
+        total_duplicate_qps += row_stats.total_duplicate_qps;
+        total_dup_shipped_ops += row_stats.total_dup_shipped_ops;
+        total_dup_failed_shipping_ops += row_stats.total_dup_failed_shipping_ops;
         total_recent_read_cu += row_stats.total_recent_read_cu;
         total_recent_write_cu += row_stats.total_recent_write_cu;
         total_recent_expire_count += row_stats.total_recent_expire_count;
@@ -126,6 +133,9 @@ struct table_stats
     double total_check_and_set_qps = 0;
     double total_check_and_mutate_qps = 0;
     double total_scan_qps = 0;
+    double total_duplicate_qps = 0;
+    double total_dup_shipped_ops = 0;
+    double total_dup_failed_shipping_ops = 0;
     double total_recent_read_cu = 0;
     double total_recent_write_cu = 0;
     double total_recent_expire_count = 0;
