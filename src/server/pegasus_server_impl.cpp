@@ -317,12 +317,15 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         // option for early opt-in.
         // Reference from rocksdb commit:
         // https://github.com/facebook/rocksdb/commit/f059c7d9b96300091e07429a60f4ad55dac84859
-        int format_version = (int)dsn_config_get_value_int64(
-            "pegasus.server", "rocksdb_format_version", 2, "block based table data format version, "
-                                                           "only 2 and 5 is supported in Pegasus. "
-                                                           "2 is the old version, 5 is the new "
-                                                           "version supported since rocksdb "
-                                                           "v6.6.4");
+        int format_version =
+            (int)dsn_config_get_value_int64("pegasus.server",
+                                            "rocksdb_format_version",
+                                            2,
+                                            "block based table data format version, "
+                                            "only 2 and 5 is supported in Pegasus. "
+                                            "2 is the old version, 5 is the new "
+                                            "version supported since rocksdb "
+                                            "v6.6.4");
         dassert(format_version == 2 || format_version == 5,
                 "[pegasus.server]rocksdb_format_version should be either '2' or '5'.");
         tbl_opts.format_version = format_version;
