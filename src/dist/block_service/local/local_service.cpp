@@ -412,15 +412,16 @@ dsn::task_ptr local_file_object::read(const read_request &req,
                 }
 
                 dinfo("read file(%s), size = %ld", file_name().c_str(), total_sz);
-                std::shared_ptr<char> buf = std::shared_ptr<char>(new char[total_sz + 1]);
+                std::string buf;
+                buf.reserve(total_sz + 1);
                 std::ifstream fin(file_name(), std::ifstream::in);
                 if (!fin.is_open()) {
                     resp.err = ERR_FS_INTERNAL;
                 } else {
                     fin.seekg(static_cast<int64_t>(req.remote_pos), fin.beg);
-                    fin.read(buf.get(), total_sz);
-                    buf.get()[fin.gcount()] = '\0';
-                    resp.buffer.assign(std::move(buf), 0, fin.gcount());
+                    fin.read((char *)buf.c_str(), total_sz);
+                    buf[fin.gcount()] = '\0';
+                    resp.buffer = blob::create_from_bytes(std::move(buf));
                 }
                 fin.close();
             }
