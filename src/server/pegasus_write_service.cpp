@@ -8,6 +8,7 @@
 #include "capacity_unit_calculator.h"
 
 #include <dsn/cpp/message_utils.h>
+#include <dsn/utility/defer.h>
 
 namespace pegasus {
 namespace server {
@@ -103,6 +104,12 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
                                         fmt::format("duplicate_qps@{}", str_gpid).c_str(),
                                         COUNTER_TYPE_RATE,
                                         "statistic the qps of DUPLICATE requests");
+
+    _pfc_dup_time_lag.init_app_counter(
+        "app.pegasus",
+        fmt::format("dup.time_lag_ms@{}", str_gpid).c_str(),
+        COUNTER_TYPE_NUMBER_PERCENTILES,
+        "the time (in ms) lag between master and slave in the duplication");
 }
 
 pegasus_write_service::~pegasus_write_service() {}
@@ -286,6 +293,10 @@ int pegasus_write_service::duplicate(int64_t decree,
     }
 
     _pfc_duplicate_qps->increment();
+    auto cleanup = dsn::defer([this, &request]() {
+        uint64_t latency_us = dsn_now_us() - request.timestamp;
+        _pfc_dup_time_lag->set(latency_us / 1000);
+    });
     dsn::message_ex *write = dsn::from_blob_to_received_msg(request.task_code, request.raw_message);
     bool is_delete = request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE ||
                      request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE;

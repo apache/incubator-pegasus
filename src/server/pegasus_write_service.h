@@ -177,6 +177,7 @@ private:
     ::dsn::perf_counter_wrapper _pfc_check_and_set_qps;
     ::dsn::perf_counter_wrapper _pfc_check_and_mutate_qps;
     ::dsn::perf_counter_wrapper _pfc_duplicate_qps;
+    ::dsn::perf_counter_wrapper _pfc_dup_time_lag;
 
     ::dsn::perf_counter_wrapper _pfc_put_latency;
     ::dsn::perf_counter_wrapper _pfc_multi_put_latency;
