@@ -20,7 +20,7 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <fmt/format.h>
+#include <dsn/dist/fmt_logging.h>
 
 using namespace ::dsn;
 
@@ -32,16 +32,6 @@ static std::string get_hostname()
         return {};
     }
     return hostname;
-}
-
-static std::string get_hostip()
-{
-    uint32_t ip = dsn::rpc_address::ipv4_from_network_interface("");
-    uint32_t ipnet = htonl(ip);
-    char buffer[512];
-    memset(buffer, 0, sizeof(buffer));
-    assert(inet_ntop(AF_INET, &ipnet, buffer, sizeof(buffer)));
-    return buffer;
 }
 
 static void format_metrics_name(std::string &metrics_name)
@@ -87,12 +77,13 @@ pegasus_counter_reporter::~pegasus_counter_reporter() { stop(); }
 void pegasus_counter_reporter::prometheus_initialize()
 {
     _prometheus_port = (uint16_t)dsn_config_get_value_uint64(
-        "pegasus.server", "prometheus_port", 9091, "prometheus gateway port");
+        "pegasus.server", "prometheus_port", 9091, "prometheus exposer port");
 
     _registry = std::make_shared<prometheus::Registry>();
-    _exposer = dsn::make_unique<prometheus::Exposer>(
-        fmt::format("{}:{}", get_hostip().c_str(), _prometheus_port));
+    _exposer = dsn::make_unique<prometheus::Exposer>(fmt::format("0.0.0.0:{}", _prometheus_port));
     _exposer->RegisterCollectable(_registry);
+
+    ddebug_f("prometheus exposer [0.0.0.0:{}] started", _prometheus_port);
 }
 
 void pegasus_counter_reporter::falcon_initialize()
