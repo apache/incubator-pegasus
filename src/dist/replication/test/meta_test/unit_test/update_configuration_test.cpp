@@ -23,7 +23,10 @@ private:
 public:
     fake_sender_meta_service(meta_service_test_app *app) : meta_service(), _app(app) {}
 
-    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override {}
+    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override
+    {
+        destroy_message(response);
+    }
     virtual void send_message(const dsn::rpc_address &target, dsn::message_ex *request) override
     {
         // we expect this is a configuration_update_request proposal
