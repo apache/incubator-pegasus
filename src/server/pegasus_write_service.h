@@ -85,7 +85,7 @@ class capacity_unit_calculator;
 /// As the signatures imply, this class is not responsible for replying the rpc,
 /// the caller(pegasus_server_write) should do.
 /// \see pegasus::server::pegasus_server_write::on_batched_write_requests
-class pegasus_write_service
+class pegasus_write_service : dsn::replication::replica_base
 {
 public:
     explicit pegasus_write_service(pegasus_server_impl *server);

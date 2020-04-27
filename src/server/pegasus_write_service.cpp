@@ -14,7 +14,8 @@ namespace pegasus {
 namespace server {
 
 pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
-    : _server(server),
+    : replica_base(server),
+      _server(server),
       _impl(new impl(server)),
       _batch_start_time(0),
       _cu_calculator(server->_cu_calculator.get())
@@ -107,7 +108,7 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
 
     _pfc_dup_time_lag.init_app_counter(
         "app.pegasus",
-        fmt::format("dup.time_lag_ms@{}", str_gpid).c_str(),
+        fmt::format("dup.time_lag_ms@{}", app_name()).c_str(),
         COUNTER_TYPE_NUMBER_PERCENTILES,
         "the time (in ms) lag between master and slave in the duplication");
 }
