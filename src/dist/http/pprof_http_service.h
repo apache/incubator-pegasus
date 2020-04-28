@@ -58,6 +58,9 @@ public:
     void growth_handler(const http_request &req, http_response &resp);
 
     void profile_handler(const http_request &req, http_response &resp);
+
+private:
+    std::atomic_bool _in_pprof_action{false};
 };
 
 } // namespace dsn
