@@ -1201,7 +1201,7 @@ static bool should_reserve_file(log_file_ptr log,
 }
 
 int mutation_log::garbage_collection(gpid gpid,
-                                     decree durable_decree,
+                                     decree cleanable_decree,
                                      int64_t valid_start_offset,
                                      int64_t reserve_max_size,
                                      int64_t reserve_max_time)
@@ -1252,27 +1252,25 @@ int mutation_log::garbage_collection(gpid gpid,
 
         // log is invalid, ok to delete
         else if (valid_start_offset >= log->end_offset()) {
-            dinfo("gc_private @ %d.%d: max_offset for %s is %" PRId64 " vs %" PRId64
-                  " as app.valid_start_offset.private,"
-                  " safe to delete this and all older logs",
-                  _private_gpid.get_app_id(),
-                  _private_gpid.get_partition_index(),
-                  mark_it->second->path().c_str(),
-                  mark_it->second->end_offset(),
-                  valid_start_offset);
+            ddebug_f("gc_private @ {}: will remove files {} ~ log.{} because "
+                     "valid_start_offset={} outdates log_end_offset={}",
+                     _private_gpid,
+                     files.begin()->second->path(),
+                     log->index(),
+                     valid_start_offset,
+                     log->end_offset());
             break;
         }
 
-        // all decrees are durable, ok to delete
-        else if (durable_decree >= max_decree) {
-            dinfo("gc_private @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64
-                  " as app.durable decree,"
-                  " safe to delete this and all older logs",
-                  _private_gpid.get_app_id(),
-                  _private_gpid.get_partition_index(),
-                  mark_it->second->path().c_str(),
-                  max_decree,
-                  durable_decree);
+        // all mutations are cleanable, ok to delete
+        else if (cleanable_decree >= max_decree) {
+            ddebug_f("gc_private @ {}: will remove files {} ~ log.{} because "
+                     "cleanable_decree={} outdates max_decree={}",
+                     _private_gpid,
+                     files.begin()->second->path(),
+                     log->index(),
+                     cleanable_decree,
+                     max_decree);
             break;
         }
 
@@ -1296,7 +1294,7 @@ int mutation_log::garbage_collection(gpid gpid,
     for (auto it = files.begin(); it != files.end() && it->second->index() <= largest_to_delete;
          ++it) {
         log_file_ptr log = it->second;
-        dassert(it->first == log->index(), "%d VS %d", it->first, log->index());
+        dcheck_eq(it->first, log->index());
 
         // close first
         log->close();
@@ -1312,10 +1310,7 @@ int mutation_log::garbage_collection(gpid gpid,
         }
 
         // delete succeed
-        ddebug("gc_private @ %d.%d: log file %s is removed",
-               _private_gpid.get_app_id(),
-               _private_gpid.get_partition_index(),
-               fpath.c_str());
+        ddebug_f("gc_private @ {}: log file {} is removed", _private_gpid, fpath);
         deleted++;
 
         // erase from _log_files

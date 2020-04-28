@@ -300,7 +300,8 @@ public:
     // Decree of the maximum garbage-collected mutation.
     // For example, given mutations [20, 100], if [20, 50] is garbage-collected,
     // the max_gced_decree=50.
-    // In production the mutations may not be ordered with the file-id. Given 3 log files:
+    // Under the real-world cases, the mutations may not be ordered with the file-id.
+    // Given 3 log files:
     //   #1:[20, 30], #2:[30, 50], #3:[10, 50]
     // The third file is learned from primary of new epoch. Since it contains mutations smaller
     // than the others, the max_gced_decree = 9.

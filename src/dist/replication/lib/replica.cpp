@@ -45,7 +45,7 @@ namespace replication {
 replica::replica(
     replica_stub *stub, gpid gpid, const app_info &app, const char *dir, bool need_restore)
     : serverlet<replica>("replica"),
-      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str)),
+      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str), app.app_name),
       _app_info(app),
       _primary_states(
           gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled),

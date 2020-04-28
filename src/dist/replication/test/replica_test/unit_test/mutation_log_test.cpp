@@ -307,15 +307,55 @@ public:
         ASSERT_EQ(std::string(lhs.data(), lhs.length()), std::string(rhs.data(), rhs.length()));
     }
 
+    // return number of entries written
+    int generate_multiple_log_files(uint files_num = 3)
+    {
+        // decree ranges from [1, files_num*10)
+        for (int f = 0; f < files_num; f++) {
+            // each round mlog will replay the former logs, and create new file
+            mutation_log_ptr mlog = create_private_log();
+            for (int i = 1; i <= 10; i++) {
+                std::string msg = "hello!";
+                mutation_ptr mu = create_test_mutation(msg, 10 * f + i);
+                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+            }
+            mlog->tracker()->wait_outstanding_tasks();
+            mlog->close();
+        }
+        return static_cast<int>(files_num * 10);
+    }
+
+    mutation_log_ptr create_private_log() { return create_private_log(1); }
+
+    mutation_log_ptr create_private_log(int private_log_size_mb, decree replay_start_decree = 0)
+    {
+        gpid id = get_gpid();
+        std::map<gpid, decree> replay_condition;
+        replay_condition[id] = replay_start_decree;
+        mutation_log::replay_callback cb = [](int, mutation_ptr &) { return true; };
+        mutation_log_ptr mlog;
+
+        int try_cnt = 0;
+        while (try_cnt < 5) {
+            try_cnt++;
+            mlog = new mutation_log_private(
+                _replica->dir(), private_log_size_mb, id, _replica.get(), 1024, 512, 10000);
+            error_code err = mlog->open(cb, nullptr, replay_condition);
+            if (err == ERR_OK) {
+                break;
+            }
+            derror_f("mlog open failed, encountered error: {}", err);
+        }
+        EXPECT_NE(mlog, nullptr);
+        return mlog;
+    }
+
     void test_replay_single_file(int num_entries)
     {
         std::vector<mutation_ptr> mutations;
 
         { // writing logs
-            mutation_log_ptr mlog = new mutation_log_private(
-                _log_dir, 1024, get_gpid(), _replica.get(), 1024, 512, 10000);
-
-            EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+            mutation_log_ptr mlog = create_private_log();
 
             for (int i = 0; i < num_entries; i++) {
                 mutation_ptr mu = create_test_mutation("hello!", 2 + i);
@@ -354,10 +394,7 @@ public:
         std::vector<mutation_ptr> mutations;
 
         { // writing logs
-            mutation_log_ptr mlog = new mutation_log_private(
-                _log_dir, private_log_file_size_mb, get_gpid(), _replica.get(), 1024, 512, 10000);
-            EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
-
+            mutation_log_ptr mlog = create_private_log(private_log_file_size_mb);
             for (int i = 0; i < num_entries; i++) {
                 mutation_ptr mu = create_test_mutation("hello!", 2 + i);
                 mutations.push_back(mu);
@@ -366,8 +403,7 @@ public:
         }
 
         { // reading logs
-            mutation_log_ptr mlog =
-                new mutation_log_private(_log_dir, 4, get_gpid(), _replica.get(), 1024, 512, 10000);
+            mutation_log_ptr mlog = create_private_log(private_log_file_size_mb);
 
             std::vector<std::string> log_files;
             ASSERT_TRUE(utils::filesystem::get_subfiles(mlog->dir(), log_files, false));
@@ -411,10 +447,7 @@ TEST_F(mutation_log_test, open)
     std::vector<mutation_ptr> mutations;
 
     { // writing logs
-        mutation_log_ptr mlog =
-            new mutation_log_private(_log_dir, 4, get_gpid(), _replica.get(), 1024, 512, 10000);
-
-        EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+        mutation_log_ptr mlog = create_private_log(4);
 
         for (int i = 0; i < 1000; i++) {
             mutation_ptr mu = create_test_mutation("hello!", 2 + i);
@@ -448,6 +481,19 @@ TEST_F(mutation_log_test, replay_multiple_files_10000_1mb) { test_replay_multipl
 TEST_F(mutation_log_test, replay_multiple_files_20000_1mb) { test_replay_multiple_files(20000, 1); }
 
 TEST_F(mutation_log_test, replay_multiple_files_50000_1mb) { test_replay_multiple_files(50000, 1); }
+
+TEST_F(mutation_log_test, replay_start_decree)
+{
+    // decree ranges from [1, 30)
+    generate_multiple_log_files(3);
+
+    decree replay_start_decree = 11; // start replay from second file, the first file is ignored.
+    mutation_log_ptr mlog = create_private_log(1, replay_start_decree);
+
+    // ensure the first file is not stripped out.
+    ASSERT_EQ(mlog->max_gced_decree(get_gpid()), 0);
+    ASSERT_EQ(mlog->get_log_file_map().size(), 3);
+}
 
 } // namespace replication
 } // namespace dsn

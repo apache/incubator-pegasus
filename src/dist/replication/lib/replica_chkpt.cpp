@@ -73,7 +73,12 @@ void replica::on_checkpoint_timer()
         decree last_durable_decree = _app->last_durable_decree();
         decree min_confirmed_decree = _duplication_mgr->min_confirmed_decree();
         decree cleanable_decree = last_durable_decree;
+        int64_t valid_start_offset = _app->init_info().init_offset_in_private_log;
+
         if (min_confirmed_decree >= 0) {
+            // Do not rely on valid_start_offset for GC during duplication.
+            // cleanable_decree is the only GC trigger.
+            valid_start_offset = 0;
             if (min_confirmed_decree < last_durable_decree) {
                 ddebug_replica("gc_private {}: delay gc for duplication: min_confirmed_decree({}) "
                                "last_durable_decree({})",
@@ -87,20 +92,15 @@ void replica::on_checkpoint_timer()
                                min_confirmed_decree,
                                last_durable_decree);
             }
-        } else {
-            // protect the logs from being truncated
-            // if this app is in duplication
-            if (is_duplicating()) {
-                // unsure if the logs can be dropped, because min_confirmed_decree
-                // is currently unavailable
-                ddebug_replica(
-                    "gc_private {}: skip gc because confirmed duplication progress is unknown",
-                    enum_to_string(status()));
-                return;
-            }
+        } else if (is_duplicating()) {
+            // unsure if the logs can be dropped, because min_confirmed_decree
+            // is currently unavailable
+            ddebug_replica(
+                "gc_private {}: skip gc because confirmed duplication progress is unknown",
+                enum_to_string(status()));
+            return;
         }
 
-        int64_t valid_start_offset = _app->init_info().init_offset_in_private_log;
         tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
                          &_tracker,
                          [this, plog, cleanable_decree, valid_start_offset] {

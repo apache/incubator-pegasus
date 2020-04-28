@@ -398,7 +398,6 @@ private:
     //               if we need to duplicate to multiple clusters someday.
     perf_counter_wrapper _counter_dup_confirmed_rate;
     perf_counter_wrapper _counter_dup_pending_mutations_count;
-    perf_counter_wrapper _counter_dup_time_lag;
 
     perf_counter_wrapper _counter_cold_backup_running_count;
     perf_counter_wrapper _counter_cold_backup_recent_start_count;

@@ -80,7 +80,8 @@ mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r)
     // Prepend a special tag identifying this is a mutation_batch,
     // so `dxxx_replica` logging in prepare_list will print along with its real caller.
     // This helps for debugging.
-    replica_base base(r->get_gpid(), std::string("mutation_batch@") + r->replica_name());
+    replica_base base(
+        r->get_gpid(), std::string("mutation_batch@") + r->replica_name(), r->app_name());
     _mutation_buffer =
         make_unique<prepare_list>(&base, 0, PREPARE_LIST_NUM_ENTRIES, [this](mutation_ptr &mu) {
             // committer
