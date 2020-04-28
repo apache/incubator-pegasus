@@ -308,7 +308,7 @@ int pegasus_write_service::duplicate(int64_t decree,
     _pfc_duplicate_qps->increment();
     auto cleanup = dsn::defer([this, &request]() {
         uint64_t latency_us = dsn_now_us() - request.timestamp;
-        if (latency_us > _dup_lagging_write_threshold_ms) {
+        if (latency_us > _dup_lagging_write_threshold_ms * 1000) {
             _pfc_dup_lagging_writes->increment();
         }
         _pfc_dup_time_lag->set(latency_us / 1000);
