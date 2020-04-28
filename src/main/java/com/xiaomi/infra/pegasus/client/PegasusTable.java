@@ -1696,88 +1696,92 @@ public class PegasusTable implements PegasusTableInterface {
       options.timeoutMillis = defaultTimeout;
     }
 
-    ScanOptions o = new ScanOptions(options);
+    ScanOptions scanOptions = new ScanOptions(options);
 
     // generate key range by start_sort_key and stop_sort_key
     byte[] start = PegasusClient.generateKey(hashKey, startSortKey);
     byte[] stop;
     if (stopSortKey == null || stopSortKey.length == 0) {
       stop = PegasusClient.generateNextBytes(hashKey);
-      o.stopInclusive = false;
+      scanOptions.stopInclusive = false;
     } else {
       stop = PegasusClient.generateKey(hashKey, stopSortKey);
     }
 
     // limit key range by prefix filter
-    if (o.sortKeyFilterType == FilterType.FT_MATCH_PREFIX
-        && o.sortKeyFilterPattern != null
-        && o.sortKeyFilterPattern.length > 0) {
-      byte[] prefix_start = PegasusClient.generateKey(hashKey, o.sortKeyFilterPattern);
+    if (scanOptions.sortKeyFilterType == FilterType.FT_MATCH_PREFIX
+        && scanOptions.sortKeyFilterPattern != null
+        && scanOptions.sortKeyFilterPattern.length > 0) {
+      byte[] prefix_start = PegasusClient.generateKey(hashKey, scanOptions.sortKeyFilterPattern);
       if (PegasusClient.bytesCompare(prefix_start, start) > 0) {
         start = prefix_start;
-        o.startInclusive = true;
+        scanOptions.startInclusive = true;
       }
-      byte[] prefix_stop = PegasusClient.generateNextBytes(hashKey, o.sortKeyFilterPattern);
+      byte[] prefix_stop =
+          PegasusClient.generateNextBytes(hashKey, scanOptions.sortKeyFilterPattern);
       if (PegasusClient.bytesCompare(prefix_stop, stop) <= 0) {
         stop = prefix_stop;
-        o.stopInclusive = false;
+        scanOptions.stopInclusive = false;
       }
     }
 
     // check if range is empty
     int cmp = PegasusClient.bytesCompare(start, stop);
 
-    long[] hash;
-    gpid[] v;
-    if (cmp < 0 || cmp == 0 && o.startInclusive && o.stopInclusive) {
+    long[] partitionHashes;
+    gpid[] partitions;
+    if (cmp < 0 || cmp == 0 && scanOptions.startInclusive && scanOptions.stopInclusive) {
       long startHash = table.getHash(start);
-      hash = new long[] {startHash};
-      v = new gpid[] {table.getGpidByHash(startHash)};
+      partitionHashes = new long[] {startHash};
+      partitions = new gpid[] {table.getGpidByHash(startHash)};
     } else {
-      hash = new long[] {0};
-      v = new gpid[0];
+      partitionHashes = new long[] {0};
+      partitions = new gpid[0];
     }
 
-    return new PegasusScanner(table, v, o, new blob(start), new blob(stop), hash, false);
+    return new PegasusScanner(
+        table, partitions, scanOptions, new blob(start), new blob(stop), partitionHashes, false);
   }
 
   @Override
-  public List<PegasusScannerInterface> getUnorderedScanners(int maxSplitCount, ScanOptions options)
-      throws PException {
-    if (maxSplitCount <= 0) {
+  public List<PegasusScannerInterface> getUnorderedScanners(
+      int maxScannerCount, ScanOptions options) throws PException {
+    if (maxScannerCount <= 0) {
       throw new PException("Invalid parameter: the max count of splits must be greater than 0");
     }
     if (options.timeoutMillis <= 0) {
       options.timeoutMillis = defaultTimeout;
     }
 
-    gpid[] all = table.getAllGpid();
-    int count = all.length;
-    int split = count < maxSplitCount ? count : maxSplitCount;
-    List<PegasusScannerInterface> ret = new ArrayList<PegasusScannerInterface>(split);
+    gpid[] allPartitions = table.getAllGpid();
+    int partitionCount = allPartitions.length;
+    int scannerCount = partitionCount < maxScannerCount ? partitionCount : maxScannerCount;
+    List<PegasusScannerInterface> ret = new ArrayList<PegasusScannerInterface>(scannerCount);
 
-    int size = count / split;
-    int more = count - size * split;
+    int averageSize = partitionCount / scannerCount;
+    int remainder = partitionCount % scannerCount;
 
-    // use default value for other fields in scan_options
-    ScanOptions opt = new ScanOptions();
-    opt.timeoutMillis = options.timeoutMillis;
-    opt.batchSize = options.batchSize;
-    opt.noValue = options.noValue;
-    opt.sortKeyFilterType = options.sortKeyFilterType;
-    opt.sortKeyFilterPattern = options.sortKeyFilterPattern;
-    opt.hashKeyFilterPattern = options.hashKeyFilterPattern;
-    opt.hashKeyFilterType = options.hashKeyFilterType;
-    for (int i = 0; i < split; i++) {
-      int s = i < more ? size + 1 : size;
-      gpid[] v = new gpid[s];
-      long[] hash = new long[s];
-      for (int j = 0; j < s; j++) {
-        --count;
-        v[j] = all[count];
-        hash[j] = count;
+    ScanOptions scanOption = new ScanOptions(options);
+    scanOption.startInclusive = true;
+    scanOption.stopInclusive = false;
+
+    /*
+     * For example, if gpidCount = 16, maxScannerCount = 9
+     * then scannerCount = 9, averageSize = 1, more = 7
+     * It means that we should return nine scanners
+     * the first seven scanners will serve two partitions' data
+     * and the remaining two scanners will serve only one partition's data
+     * */
+    for (int i = 0; i < scannerCount; i++) {
+      int size = i < remainder ? averageSize + 1 : averageSize;
+      gpid[] gpidArray = new gpid[size];
+      long[] hashArray = new long[size];
+      for (int j = 0; j < size; j++) {
+        --partitionCount;
+        gpidArray[j] = allPartitions[partitionCount];
+        hashArray[j] = partitionCount;
       }
-      PegasusScanner scanner = new PegasusScanner(table, v, opt, hash, true);
+      PegasusScanner scanner = new PegasusScanner(table, gpidArray, scanOption, hashArray, true);
       ret.add(scanner);
     }
     return ret;

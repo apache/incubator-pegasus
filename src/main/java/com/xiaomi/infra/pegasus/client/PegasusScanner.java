@@ -38,34 +38,39 @@ public class PegasusScanner implements PegasusScannerInterface {
   private static final int CONTEXT_ID_NOT_EXIST = -2;
 
   public PegasusScanner(
-      Table table, gpid[] splitGpid, ScanOptions options, long[] splitHash, boolean needCheckHash) {
-    this(table, splitGpid, options, min, max, splitHash, needCheckHash);
+      Table table,
+      gpid[] partitions,
+      ScanOptions options,
+      long[] partitionHashes,
+      boolean needCheckHash) {
+    this(table, partitions, options, min, max, partitionHashes, needCheckHash);
     options.startInclusive = true;
     options.stopInclusive = false;
   }
 
   public PegasusScanner(
       Table table,
-      gpid[] splitGpid,
+      gpid[] partitions,
       ScanOptions options,
       blob startKey,
       blob stopKey,
-      long[] splitHash,
+      long[] partitionHashes,
       boolean needCheckHash) {
     _table = table;
-    _split_hash = splitHash;
-    _split_gpid = splitGpid == null ? new gpid[0] : splitGpid;
+    _partitionHashes = partitionHashes;
+    _partitions = partitions == null ? new gpid[0] : partitions;
     _options = options;
     _startKey = startKey;
     _stopKey = stopKey;
-    _p = -1;
-    _context = CONTEXT_ID_COMPLETED;
-    _hash_p = _split_gpid.length;
+    _readKvIter = -1;
+    _contextId = CONTEXT_ID_COMPLETED;
+    _partitionIter = _partitions.length;
     _kvs = new ArrayList<key_value>();
     _promises = new LinkedList<DefaultPromise<Pair<Pair<byte[], byte[]>, byte[]>>>();
     _rpcRunning = false;
     _encounterError = false;
     _needCheckHash = needCheckHash;
+    _incomplete = false;
   }
 
   public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException {
@@ -96,17 +101,17 @@ public class PegasusScanner implements PegasusScannerInterface {
 
   @Override
   public void close() {
-    if (_context >= CONTEXT_ID_VALID_MIN) {
+    if (_contextId >= CONTEXT_ID_VALID_MIN) {
       try {
         rrdb_clear_scanner_operator op =
-            new rrdb_clear_scanner_operator(_gpid, _table.getTableName(), _context, _hash);
+            new rrdb_clear_scanner_operator(_gpid, _table.getTableName(), _contextId, _hash);
         _table.operate(op, 0);
       } catch (Throwable e) {
         // ignore
       }
-      _context = CONTEXT_ID_COMPLETED;
+      _contextId = CONTEXT_ID_COMPLETED;
     }
-    _hash_p = 0;
+    _partitionIter = 0;
   }
 
   private void asyncStartScan() {
@@ -170,7 +175,7 @@ public class PegasusScanner implements PegasusScannerInterface {
       return;
     }
     _rpcRunning = true;
-    scan_request request = new scan_request(_context);
+    scan_request request = new scan_request(_contextId);
     rrdb_scan_operator op = new rrdb_scan_operator(_gpid, _table.getTableName(), request, _hash);
     Table.ClientOPCallback callback =
         new Table.ClientOPCallback() {
@@ -203,11 +208,16 @@ public class PegasusScanner implements PegasusScannerInterface {
     if (err.errno == error_code.error_types.ERR_OK) {
       if (response.error == 0) { // ERR_OK
         _kvs = response.kvs;
-        _p = -1;
-        _context = response.context_id;
+        _readKvIter = -1;
+        _contextId = response.context_id;
       } else if (response.error
           == 1) { // rocksDB error kNotFound, that scan context has been removed
-        _context = CONTEXT_ID_NOT_EXIST;
+        _contextId = CONTEXT_ID_NOT_EXIST;
+      } else if (response.error == 7) { // rocksDB error kIncomplete
+        _kvs = response.kvs;
+        _readKvIter = -1;
+        _contextId = CONTEXT_ID_COMPLETED;
+        _incomplete = true;
       } else { // rpc succeed, but operation encounter some error in server side
         _encounterError = true;
         _cause = new PException("rocksDB error: " + response.error);
@@ -225,25 +235,37 @@ public class PegasusScanner implements PegasusScannerInterface {
       }
       _promises.clear();
       // we don't reset the flag, just abandon this scan operation
-      // _encounterError = false;
       return;
     }
     while (!_promises.isEmpty()) {
-      while (++_p >= _kvs.size()) {
-        if (_context == CONTEXT_ID_COMPLETED) {
-          // reach the end of one partition
-          if (_hash_p <= 0) {
+      while (++_readKvIter >= _kvs.size()) {
+        if (_contextId == CONTEXT_ID_COMPLETED) {
+          // this scan operation got incomplete from server, abandon scan operation
+          if (_incomplete) {
+            for (DefaultPromise<Pair<Pair<byte[], byte[]>, byte[]>> p : _promises) {
+              logger.error(
+                  "scan got incomplete error, " + "tableName({}), {}",
+                  _table.getTableName(),
+                  _gpid.toString());
+              p.setFailure(new PException("scan got incomplete error, retry later"));
+            }
+            _promises.clear();
+            return;
+          }
+
+          // reach the end of one partition, finish scan operation
+          if (_partitionIter <= 0) {
             for (DefaultPromise<Pair<Pair<byte[], byte[]>, byte[]>> p : _promises) {
               p.setSuccess(null);
             }
             _promises.clear();
             return;
-          } else {
-            _gpid = _split_gpid[--_hash_p];
-            _hash = _split_hash[_hash_p];
-            splitReset();
           }
-        } else if (_context == CONTEXT_ID_NOT_EXIST) {
+
+          _gpid = _partitions[--_partitionIter];
+          _hash = _partitionHashes[_partitionIter];
+          contextReset();
+        } else if (_contextId == CONTEXT_ID_NOT_EXIST) {
           // no valid context_id found
           asyncStartScan();
           return;
@@ -255,32 +277,33 @@ public class PegasusScanner implements PegasusScannerInterface {
       DefaultPromise<Pair<Pair<byte[], byte[]>, byte[]>> p = _promises.getFirst();
       p.setSuccess(
           new ImmutablePair<Pair<byte[], byte[]>, byte[]>(
-              PegasusClient.restoreKey(_kvs.get(_p).key.data), _kvs.get(_p).value.data));
+              PegasusClient.restoreKey(_kvs.get(_readKvIter).key.data),
+              _kvs.get(_readKvIter).value.data));
       _promises.removeFirst();
     }
   }
 
-  private void splitReset() {
+  private void contextReset() {
     _kvs.clear();
-    _p = -1;
-    _context = CONTEXT_ID_NOT_EXIST;
+    _readKvIter = -1;
+    _contextId = CONTEXT_ID_NOT_EXIST;
   }
 
   private Table _table;
   private blob _startKey;
   private blob _stopKey;
   private ScanOptions _options;
-  private gpid[] _split_gpid;
-  private long[] _split_hash;
-  private int _hash_p;
+  private gpid[] _partitions;
+  private long[] _partitionHashes;
+  private int _partitionIter;
 
   private gpid _gpid;
   private long _hash;
 
   private List<key_value> _kvs;
-  private int _p;
+  private int _readKvIter;
 
-  private long _context;
+  private long _contextId;
 
   private final Object _promisesLock = new Object();
   private Deque<DefaultPromise<Pair<Pair<byte[], byte[]>, byte[]>>> _promises;
@@ -290,6 +313,8 @@ public class PegasusScanner implements PegasusScannerInterface {
   Throwable _cause;
 
   private boolean _needCheckHash;
+  // whether scan operation got incomplete error
+  private boolean _incomplete;
 
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(PegasusScanner.class);
 }

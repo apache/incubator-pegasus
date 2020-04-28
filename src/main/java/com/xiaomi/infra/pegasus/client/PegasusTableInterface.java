@@ -1122,11 +1122,11 @@ public interface PegasusTableInterface {
   /**
    * Get Scanners for all data in database
    *
-   * @param maxSplitCount how many scanner expected
+   * @param maxScannerCount how many scanner expected
    * @param options scan options like batchSize
-   * @return scanners, count of which would be no more than maxSplitCount
+   * @return scanners, count of which would be no more than maxScannerCount
    * @throws PException throw exception if any error occurs.
    */
-  public List<PegasusScannerInterface> getUnorderedScanners(int maxSplitCount, ScanOptions options)
-      throws PException;
+  public List<PegasusScannerInterface> getUnorderedScanners(
+      int maxScannerCount, ScanOptions options) throws PException;
 }
