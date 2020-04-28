@@ -168,6 +168,7 @@ private:
     uint64_t _batch_start_time;
 
     capacity_unit_calculator *_cu_calculator;
+    int64_t _dup_lagging_write_threshold_ms;
 
     ::dsn::perf_counter_wrapper _pfc_put_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_put_qps;
@@ -178,6 +179,7 @@ private:
     ::dsn::perf_counter_wrapper _pfc_check_and_mutate_qps;
     ::dsn::perf_counter_wrapper _pfc_duplicate_qps;
     ::dsn::perf_counter_wrapper _pfc_dup_time_lag;
+    ::dsn::perf_counter_wrapper _pfc_dup_lagging_writes;
 
     ::dsn::perf_counter_wrapper _pfc_put_latency;
     ::dsn::perf_counter_wrapper _pfc_multi_put_latency;
