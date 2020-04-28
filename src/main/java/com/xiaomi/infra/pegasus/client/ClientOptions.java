@@ -37,6 +37,7 @@ public class ClientOptions {
   public static final boolean DEFAULT_ENABLE_PERF_COUNTER = false;
   public static final String DEFAULT_FALCON_PERF_COUNTER_TAGS = "";
   public static final Duration DEFAULT_FALCON_PUSH_INTERVAL = Duration.ofSeconds(10);
+  public static final boolean DEFAULT_ENABLE_WRITE_LIMIT = true;
 
   private final String metaServers;
   private final Duration operationTimeout;
@@ -44,6 +45,7 @@ public class ClientOptions {
   private final boolean enablePerfCounter;
   private final String falconPerfCounterTags;
   private final Duration falconPushInterval;
+  private final boolean enableWriteLimit;
 
   protected ClientOptions(Builder builder) {
     this.metaServers = builder.metaServers;
@@ -52,6 +54,7 @@ public class ClientOptions {
     this.enablePerfCounter = builder.enablePerfCounter;
     this.falconPerfCounterTags = builder.falconPerfCounterTags;
     this.falconPushInterval = builder.falconPushInterval;
+    this.enableWriteLimit = builder.enableWriteLimit;
   }
 
   protected ClientOptions(ClientOptions original) {
@@ -61,6 +64,7 @@ public class ClientOptions {
     this.enablePerfCounter = original.isEnablePerfCounter();
     this.falconPerfCounterTags = original.getFalconPerfCounterTags();
     this.falconPushInterval = original.getFalconPushInterval();
+    this.enableWriteLimit = original.isWriteLimitEnabled();
   }
 
   /**
@@ -103,7 +107,8 @@ public class ClientOptions {
           && this.asyncWorkers == clientOptions.asyncWorkers
           && this.enablePerfCounter == clientOptions.enablePerfCounter
           && this.falconPerfCounterTags.equals(clientOptions.falconPerfCounterTags)
-          && this.falconPushInterval.toMillis() == clientOptions.falconPushInterval.toMillis();
+          && this.falconPushInterval.toMillis() == clientOptions.falconPushInterval.toMillis()
+          && this.enableWriteLimit == clientOptions.enableWriteLimit;
     }
     return false;
   }
@@ -125,6 +130,8 @@ public class ClientOptions {
         + '\''
         + ", falconPushInterval(s)="
         + falconPushInterval.getSeconds()
+        + ",enableWriteLimit="
+        + enableWriteLimit
         + '}';
   }
 
@@ -136,6 +143,7 @@ public class ClientOptions {
     private boolean enablePerfCounter = DEFAULT_ENABLE_PERF_COUNTER;
     private String falconPerfCounterTags = DEFAULT_FALCON_PERF_COUNTER_TAGS;
     private Duration falconPushInterval = DEFAULT_FALCON_PUSH_INTERVAL;
+    private boolean enableWriteLimit = DEFAULT_ENABLE_WRITE_LIMIT;
 
     protected Builder() {}
 
@@ -214,6 +222,19 @@ public class ClientOptions {
     }
 
     /**
+     * whether to enable write limit . if true, exceed the threshold set will throw exception, See
+     * {@linkplain com.xiaomi.infra.pegasus.tools.WriteLimiter WriteLimiter}. Defaults to {@literal
+     * true}, see {@link #DEFAULT_ENABLE_WRITE_LIMIT}
+     *
+     * @param enableWriteLimit enableWriteLimit
+     * @return {@code this}
+     */
+    public Builder enableWriteLimit(boolean enableWriteLimit) {
+      this.enableWriteLimit = enableWriteLimit;
+      return this;
+    }
+
+    /**
      * Create a new instance of {@link ClientOptions}.
      *
      * @return new instance of {@link ClientOptions}.
@@ -238,7 +259,8 @@ public class ClientOptions {
         .asyncWorkers(getAsyncWorkers())
         .enablePerfCounter(isEnablePerfCounter())
         .falconPerfCounterTags(getFalconPerfCounterTags())
-        .falconPushInterval(getFalconPushInterval());
+        .falconPushInterval(getFalconPushInterval())
+        .enableWriteLimit(isWriteLimitEnabled());
     return builder;
   }
 
@@ -297,5 +319,16 @@ public class ClientOptions {
    */
   public Duration getFalconPushInterval() {
     return falconPushInterval;
+  }
+
+  /**
+   * whether to enable write limit. if true, exceed the threshold set will throw exception, See
+   * {@linkplain com.xiaomi.infra.pegasus.tools.WriteLimiter WriteLimiter}. Defaults to {@literal
+   * true}, See {@link #DEFAULT_ENABLE_WRITE_LIMIT}
+   *
+   * @return whether to enable write size limit
+   */
+  public boolean isWriteLimitEnabled() {
+    return enableWriteLimit;
   }
 }

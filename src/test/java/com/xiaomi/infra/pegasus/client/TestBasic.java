@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Assert;
 import org.junit.Test;
@@ -2481,5 +2482,127 @@ public class TestBasic {
     Assert.assertTrue(valueStr.contains("v_97"));
     Assert.assertTrue(valueStr.contains("v_98"));
     Assert.assertTrue(valueStr.contains("v_99"));
+  }
+
+  @Test
+  public void testWriteSizeLimit() throws PException {
+    // Test config from pegasus.properties
+    PegasusClientInterface client1 = PegasusClientFactory.getSingletonClient();
+    testWriteSizeLimit(client1);
+    // Test config from ClientOptions
+    ClientOptions clientOptions = ClientOptions.create();
+    PegasusClientInterface client2 = PegasusClientFactory.createClient(clientOptions);
+    testWriteSizeLimit(client2);
+  }
+
+  private void testWriteSizeLimit(PegasusClientInterface client) {
+    Assert.assertNotNull(client);
+    String tableName = "temp";
+    // test hashKey size > 1024
+    String hashKeyExceed = RandomStringUtils.random(1025, true, true);
+    String sortKey = "limitSortKey";
+    String value = "limitValueSize";
+    try {
+      client.set(tableName, hashKeyExceed.getBytes(), sortKey.getBytes(), value.getBytes());
+    } catch (PException e) {
+      Assert.assertTrue(
+          e.getMessage()
+              .contains("Exceed the hashKey length threshold = 1024,hashKeyLength = 1025"));
+    }
+
+    // test sortKey size > 1024
+    String hashKey = "limitHashKey";
+    String sortKeyExceed = RandomStringUtils.random(1025, true, true);
+    try {
+      client.set(tableName, hashKey.getBytes(), sortKeyExceed.getBytes(), value.getBytes());
+    } catch (PException e) {
+      Assert.assertTrue(
+          e.getMessage()
+              .contains("Exceed the sort key length threshold = 1024,sortKeyLength = 1025"));
+    }
+
+    // test singleValue size > 400 * 1024
+    String valueExceed = RandomStringUtils.random(400 * 1024 + 1, true, true);
+    try {
+      client.set(tableName, hashKey.getBytes(), sortKey.getBytes(), valueExceed.getBytes());
+    } catch (PException e) {
+      Assert.assertTrue(
+          e.getMessage()
+              .contains("Exceed the value length threshold = 409600,valueLength = 409601"));
+    }
+
+    // test multi value count > 1000
+    int count = 2000;
+    List<Pair<byte[], byte[]>> multiValues = new ArrayList<Pair<byte[], byte[]>>();
+    while (count-- > 0) {
+      multiValues.add(Pair.of(sortKey.getBytes(), value.getBytes()));
+    }
+    try {
+      client.multiSet(tableName, hashKey.getBytes(), multiValues);
+    } catch (PException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Exceed the value count threshold = 1000,valueCount = 2000"));
+    }
+
+    // test multi value size > 1024 * 1024
+    String multiValue2 = RandomStringUtils.random(5 * 1024, true, true);
+    List<Pair<byte[], byte[]>> multiValues2 = new ArrayList<Pair<byte[], byte[]>>();
+    int count2 = 500;
+    while (count2-- > 0) {
+      multiValues2.add(Pair.of(sortKey.getBytes(), multiValue2.getBytes()));
+    }
+    try {
+      client.multiSet(tableName, hashKey.getBytes(), multiValues2);
+    } catch (PException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Exceed the multi value length threshold = 1048576"));
+    }
+
+    // test mutations value count > 1000
+    CheckAndMutateOptions options = new CheckAndMutateOptions();
+    Mutations mutations = new Mutations();
+
+    int count3 = 1500;
+    while (count3-- > 0) {
+      mutations.set(sortKey.getBytes(), value.getBytes(), 0);
+    }
+
+    try {
+      PegasusTableInterface.CheckAndMutateResult result =
+          client.checkAndMutate(
+              tableName,
+              hashKey.getBytes(),
+              sortKey.getBytes(),
+              CheckType.CT_VALUE_NOT_EXIST,
+              null,
+              mutations,
+              options);
+    } catch (PException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Exceed the value count threshold = 1000,valueCount = 1500"));
+    }
+
+    // test mutations value size > 1024 * 1024
+    int count4 = 100;
+    Mutations mutations2 = new Mutations();
+    String mutationValue2 = RandomStringUtils.random(20 * 1024, true, true);
+    while (count4-- > 0) {
+      mutations2.set(sortKey.getBytes(), mutationValue2.getBytes(), 0);
+    }
+
+    try {
+      PegasusTableInterface.CheckAndMutateResult result =
+          client.checkAndMutate(
+              tableName,
+              hashKey.getBytes(),
+              sortKey.getBytes(),
+              CheckType.CT_VALUE_NOT_EXIST,
+              null,
+              mutations2,
+              options);
+    } catch (PException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Exceed the multi value length threshold = 1048576"));
+    }
   }
 }

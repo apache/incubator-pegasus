@@ -11,26 +11,22 @@ import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TProtocol;
 
 public abstract class client_operator {
-  public client_operator(gpid gpid, String tableName, boolean enableBackupRequest) {
+
+  public client_operator(
+      gpid gpid, String tableName, long partitionHash, boolean enableBackupRequest) {
     this.header = new ThriftHeader();
     this.meta = new request_meta();
     this.meta.setApp_id(gpid.get_app_id());
     this.meta.setPartition_index(gpid.get_pidx());
+    this.meta.setPartition_hash(partitionHash);
     this.pid = gpid;
     this.tableName = tableName;
     this.rpc_error = new error_code();
     this.enableBackupRequest = enableBackupRequest;
   }
 
-  public client_operator(
-      gpid gpid, String tableName, long partitionHash, boolean enableBackupRequest) {
-    this(gpid, tableName, enableBackupRequest);
-    this.meta.setPartition_hash(partitionHash);
-  }
-
   public client_operator(gpid gpid, String tableName, long partitionHash) {
-    this(gpid, tableName, false);
-    this.meta.setPartition_hash(partitionHash);
+    this(gpid, tableName, partitionHash, false);
   }
 
   public final byte[] prepare_thrift_header(int meta_length, int body_length) {

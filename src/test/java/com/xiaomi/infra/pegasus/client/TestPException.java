@@ -60,7 +60,8 @@ public class TestPException {
 
     // set failure in promise, the exception is thrown as ExecutionException.
     int timeout = 1000;
-    PegasusTable pegasusTable = new PegasusTable(null, table);
+    PegasusClient client = (PegasusClient) PegasusClientFactory.getSingletonClient();
+    PegasusTable pegasusTable = new PegasusTable(client, table);
     pegasusTable.handleReplicaException(promise, op, table, timeout);
     try {
       promise.get();
@@ -94,7 +95,8 @@ public class TestPException {
     rrdb_put_operator op = new rrdb_put_operator(gpid, table.getTableName(), req, 0);
     op.rpc_error.errno = error_types.ERR_TIMEOUT;
 
-    PegasusTable pegasusTable = new PegasusTable(null, table);
+    PegasusClient client = (PegasusClient) PegasusClientFactory.getSingletonClient();
+    PegasusTable pegasusTable = new PegasusTable(client, table);
     pegasusTable.handleReplicaException(promise, op, table, 0);
     try {
       promise.get();
