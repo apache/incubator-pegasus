@@ -121,7 +121,7 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
     _pfc_dup_lagging_writes.init_app_counter(
         "app.pegasus",
         fmt::format("dup.lagging_writes@{}", app_name()).c_str(),
-        COUNTER_TYPE_NUMBER,
+        COUNTER_TYPE_VOLATILE_NUMBER,
         "the number of lagging writes (time lag larger than `dup_lagging_write_threshold_ms`)");
 }
 
