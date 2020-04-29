@@ -8,7 +8,8 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <errno.h>
-
+#include <rrdb.code.definition.h>
+#include <pegasus_rpc_types.h>
 namespace pegasus {
 namespace utils {
 
@@ -172,7 +173,26 @@ int c_unescape_string(const std::string &src, std::string &dest)
     return len;
 }
 
-void pegasus_abnormal_log::print_abnormal_write(const dsn::message_ex **requests) {}
+void pegasus_abnormal_log::print_abnormal_write(dsn::message_ex *request)
+{
+
+    dsn::task_code rpc_code(request->rpc_code());
+
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
+        auto rpc = multi_put_rpc::auto_reply(request);
+        // TODO print
+    }
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+        auto rpc = check_and_set_rpc::auto_reply(request);
+    }
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+        auto rpc = check_and_mutate_rpc::auto_reply(request);
+    }
+
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
+        auto rpc = put_rpc::auto_reply(request);
+    }
+}
 
 } // namespace utils
 } // namespace pegasus

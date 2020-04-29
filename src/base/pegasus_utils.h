@@ -61,7 +61,7 @@ class pegasus_abnormal_log : public dsn::replication::abnormal_log
 {
 
 public:
-    void print_abnormal_write(const dsn::message_ex **requests) override;
+    void print_abnormal_write(dsn::message_ex *request) override;
 };
 
 // ----------------------------------------------------------------------
