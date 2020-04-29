@@ -27,10 +27,31 @@
 #include "simple_logger.h"
 #include <sstream>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/flags.h>
 #include <dsn/utility/time_utils.h>
 
 namespace dsn {
 namespace tools {
+
+DSN_DEFINE_bool("tools.simple_logger", fast_flush, false, "whether to flush immediately");
+
+DSN_DEFINE_bool("tools.simple_logger",
+                short_header,
+                true,
+                "whether to use short header (excluding file/function etc.)");
+
+DSN_DEFINE_uint64("tools.simple_logger",
+                  max_number_of_log_files_on_disk,
+                  20,
+                  "max number of log files reserved on disk, older logs are auto deleted");
+
+DSN_DEFINE_string("tools.simple_logger",
+                  stderr_start_level,
+                  "LOG_LEVEL_WARNING",
+                  "copy log messages at or above this level to stderr in addition to logfiles");
+DSN_DEFINE_validator(stderr_start_level, [](const char *level) -> bool {
+    return strcmp(level, "LOG_LEVEL_INVALID") != 0;
+});
 
 static void print_header(FILE *fp, dsn_log_level_t log_level)
 {
@@ -120,28 +141,7 @@ simple_logger::simple_logger(const char *log_dir) : logging_provider(log_dir)
     _index = 1;
     _lines = 0;
     _log = nullptr;
-    _short_header =
-        dsn_config_get_value_bool("tools.simple_logger",
-                                  "short_header",
-                                  true,
-                                  "whether to use short header (excluding file/function etc.)");
-    _fast_flush = dsn_config_get_value_bool(
-        "tools.simple_logger", "fast_flush", false, "whether to flush immediately");
-    _stderr_start_level = enum_from_string(
-        dsn_config_get_value_string(
-            "tools.simple_logger",
-            "stderr_start_level",
-            enum_to_string(LOG_LEVEL_WARNING),
-            "copy log messages at or above this level to stderr in addition to logfiles"),
-        LOG_LEVEL_INVALID);
-    dassert(_stderr_start_level != LOG_LEVEL_INVALID,
-            "invalid [tools.simple_logger] stderr_start_level specified");
-
-    _max_number_of_log_files_on_disk = dsn_config_get_value_uint64(
-        "tools.simple_logger",
-        "max_number_of_log_files_on_disk",
-        20,
-        "max number of log files reserved on disk, older logs are auto deleted");
+    _stderr_start_level = enum_from_string(FLAGS_stderr_start_level, LOG_LEVEL_INVALID);
 
     // check existing log files
     std::vector<std::string> sub_list;
@@ -185,7 +185,7 @@ void simple_logger::create_log_file()
     _log = ::fopen(str.str().c_str(), "w+");
 
     // TODO: move gc out of criticial path
-    while (_index - _start_index > _max_number_of_log_files_on_disk) {
+    while (_index - _start_index > FLAGS_max_number_of_log_files_on_disk) {
         std::stringstream str2;
         str2 << "log." << _start_index++ << ".txt";
         auto dp = utils::filesystem::path_combine(_log_dir, str2.str());
@@ -226,18 +226,18 @@ void simple_logger::dsn_logv(const char *file,
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
     print_header(_log, log_level);
-    if (!_short_header) {
+    if (!FLAGS_short_header) {
         fprintf(_log, "%s:%d:%s(): ", file, line, function);
     }
     vfprintf(_log, fmt, args);
     fprintf(_log, "\n");
-    if (_fast_flush || log_level >= LOG_LEVEL_ERROR) {
+    if (FLAGS_fast_flush || log_level >= LOG_LEVEL_ERROR) {
         ::fflush(_log);
     }
 
     if (log_level >= _stderr_start_level) {
         print_header(stdout, log_level);
-        if (!_short_header) {
+        if (!FLAGS_short_header) {
             printf("%s:%d:%s(): ", file, line, function);
         }
         vprintf(fmt, args2);
@@ -258,17 +258,17 @@ void simple_logger::dsn_log(const char *file,
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
     print_header(_log, log_level);
-    if (!_short_header) {
+    if (!FLAGS_short_header) {
         fprintf(_log, "%s:%d:%s(): ", file, line, function);
     }
     fprintf(_log, "%s\n", str);
-    if (_fast_flush || log_level >= LOG_LEVEL_ERROR) {
+    if (FLAGS_fast_flush || log_level >= LOG_LEVEL_ERROR) {
         ::fflush(_log);
     }
 
     if (log_level >= _stderr_start_level) {
         print_header(stdout, log_level);
-        if (!_short_header) {
+        if (!FLAGS_short_header) {
             printf("%s:%d:%s(): ", file, line, function);
         }
         printf("%s\n", str);
@@ -278,5 +278,6 @@ void simple_logger::dsn_log(const char *file,
         create_log_file();
     }
 }
-}
-}
+
+} // namespace tools
+} // namespace dsn

@@ -99,10 +99,7 @@ private:
     int _start_index;
     int _index;
     int _lines;
-    bool _short_header;
-    bool _fast_flush;
     dsn_log_level_t _stderr_start_level;
-    int _max_number_of_log_files_on_disk;
 };
 }
 }

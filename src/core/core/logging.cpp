@@ -30,10 +30,17 @@
 #include <dsn/tool_api.h>
 #include "service_engine.h"
 #include <dsn/tool-api/auto_codes.h>
+#include <dsn/utility/flags.h>
 #include <dsn/utility/smart_pointers.h>
 #include "core/tools/common/simple_logger.h"
 
 DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMATION;
+DSN_DEFINE_string("core",
+                  logging_start_level,
+                  "LOG_LEVEL_INFORMATION",
+                  "logs with level below this will not be logged");
+
+DSN_DEFINE_bool("core", logging_flush_on_exit, true, "flush log when exit system");
 
 static void log_on_sys_exit(::dsn::sys_exit_type)
 {
@@ -43,20 +50,14 @@ static void log_on_sys_exit(::dsn::sys_exit_type)
 
 void dsn_log_init(const std::string &logging_factory_name, const std::string &dir_log)
 {
-    dsn_log_start_level = enum_from_string(
-        dsn_config_get_value_string("core",
-                                    "logging_start_level",
-                                    enum_to_string(dsn_log_start_level),
-                                    "logs with level below this will not be logged"),
-        dsn_log_level_t::LOG_LEVEL_INVALID);
+    dsn_log_start_level =
+        enum_from_string(FLAGS_logging_start_level, dsn_log_level_t::LOG_LEVEL_INVALID);
 
     dassert(dsn_log_start_level != dsn_log_level_t::LOG_LEVEL_INVALID,
             "invalid [core] logging_start_level specified");
 
     // register log flush on exit
-    bool logging_flush_on_exit = dsn_config_get_value_bool(
-        "core", "logging_flush_on_exit", true, "flush log when exit system");
-    if (logging_flush_on_exit) {
+    if (FLAGS_logging_flush_on_exit) {
         ::dsn::tools::sys_exit.put_back(log_on_sys_exit, "log.flush");
     }
 
@@ -81,12 +82,8 @@ void dsn_log_init(const std::string &logging_factory_name, const std::string &di
         [](const std::vector<std::string> &args) {
             dsn_log_level_t start_level;
             if (args.size() == 0) {
-                start_level = enum_from_string(
-                    dsn_config_get_value_string("core",
-                                                "logging_start_level",
-                                                enum_to_string(dsn_log_start_level),
-                                                "logs with level below this will not be logged"),
-                    dsn_log_level_t::LOG_LEVEL_INVALID);
+                start_level =
+                    enum_from_string(FLAGS_logging_start_level, dsn_log_level_t::LOG_LEVEL_INVALID);
             } else {
                 std::string level_str = "LOG_LEVEL_" + args[0];
                 start_level =

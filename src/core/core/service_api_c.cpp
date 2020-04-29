@@ -29,6 +29,7 @@
 #include <dsn/cpp/serialization.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/process_utils.h>
+#include <dsn/utility/flags.h>
 #include <dsn/tool-api/command_manager.h>
 #include <fstream>
 #ifdef DSN_ENABLE_GPERF
@@ -306,6 +307,8 @@ bool run(const char *config_file,
         printf("Fail to load config file %s\n", config_file);
         return false;
     }
+
+    dsn::flags_initialize();
 
     // pause when necessary
     if (dsn_config_get_value_bool("core",
