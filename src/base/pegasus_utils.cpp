@@ -172,5 +172,7 @@ int c_unescape_string(const std::string &src, std::string &dest)
     return len;
 }
 
+void pegasus_abnormal_log::print_abnormal_write(const dsn::message_ex **requests) {}
+
 } // namespace utils
 } // namespace pegasus

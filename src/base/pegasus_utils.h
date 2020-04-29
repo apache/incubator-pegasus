@@ -12,6 +12,7 @@
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/utility/string_view.h>
 #include <rocksdb/slice.h>
+#include <dsn/tool/abnormal_log.h>
 
 namespace pegasus {
 namespace utils {
@@ -52,6 +53,15 @@ public:
 
 protected:
     data_priority_queue _queue;
+};
+
+//----------------
+//----------------
+class pegasus_abnormal_log : public dsn::replication::abnormal_log
+{
+
+public:
+    void print_abnormal_write(const dsn::message_ex **requests) override;
 };
 
 // ----------------------------------------------------------------------
