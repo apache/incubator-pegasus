@@ -307,11 +307,11 @@ int pegasus_write_service::duplicate(int64_t decree,
 
     _pfc_duplicate_qps->increment();
     auto cleanup = dsn::defer([this, &request]() {
-        uint64_t latency_us = dsn_now_us() - request.timestamp;
-        if (latency_us > _dup_lagging_write_threshold_ms * 1000) {
+        uint64_t latency_ms = (dsn_now_us() - request.timestamp) / 1000;
+        if (latency_ms > _dup_lagging_write_threshold_ms) {
             _pfc_dup_lagging_writes->increment();
         }
-        _pfc_dup_time_lag->set(latency_us / 1000);
+        _pfc_dup_time_lag->set(latency_ms);
     });
     dsn::message_ex *write = dsn::from_blob_to_received_msg(request.task_code, request.raw_message);
     bool is_delete = request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE ||
