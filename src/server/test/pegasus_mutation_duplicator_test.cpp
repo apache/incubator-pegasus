@@ -30,7 +30,7 @@ public:
 
     void test_duplicate()
     {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica");
+        replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
 
@@ -87,7 +87,7 @@ public:
 
     void test_duplicate_failed()
     {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica");
+        replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
 
@@ -150,7 +150,7 @@ public:
 
     void test_duplicate_isolated_hashkeys()
     {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica");
+        replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
 
@@ -196,7 +196,7 @@ public:
 
     void test_create_duplicator()
     {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica");
+        replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
@@ -295,7 +295,7 @@ TEST_F(pegasus_mutation_duplicator_test, create_duplicator) { test_create_duplic
 
 TEST_F(pegasus_mutation_duplicator_test, duplicate_duplicate)
 {
-    replica_base replica(dsn::gpid(1, 1), "fake_replica");
+    replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
     auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
     duplicator->set_task_environment(&_env);
 
