@@ -505,6 +505,13 @@ meta_state_service_simple::~meta_state_service_simple()
 {
     _tracker.cancel_outstanding_tasks();
     file::close(_log);
+
+    for (const auto &kv : _quick_map) {
+        if ("/" != kv.first) {
+            delete kv.second;
+        }
+    }
+    _quick_map.clear();
 }
 }
 }
