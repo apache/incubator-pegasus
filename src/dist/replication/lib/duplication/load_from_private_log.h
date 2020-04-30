@@ -52,10 +52,8 @@ public:
     bool will_fail_skip() const;
     bool will_fail_fast() const;
 
-    void TEST_set_repeat_delay(std::chrono::milliseconds delay)
-    {
-        const_cast<std::chrono::milliseconds &>(_repeat_delay) = delay;
-    }
+    void TEST_set_repeat_delay(std::chrono::milliseconds delay) { _repeat_delay = delay; }
+
     static constexpr int MAX_ALLOWED_BLOCK_REPEATS{3};
     static constexpr int MAX_ALLOWED_FILE_REPEATS{10};
 
