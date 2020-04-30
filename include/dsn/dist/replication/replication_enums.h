@@ -65,4 +65,18 @@ ENUM_BEGIN2(replication::node_status::type, node_status, replication::node_statu
 ENUM_REG(replication::node_status::NS_ALIVE)
 ENUM_REG(replication::node_status::NS_UNALIVE)
 ENUM_END2(replication::node_status::type, node_status)
+
+ENUM_BEGIN2(replication::bulk_load_status::type,
+            bulk_load_status,
+            replication::bulk_load_status::BLS_INVALID)
+ENUM_REG(replication::bulk_load_status::BLS_INVALID)
+ENUM_REG(replication::bulk_load_status::BLS_DOWNLOADING)
+ENUM_REG(replication::bulk_load_status::BLS_DOWNLOADED)
+ENUM_REG(replication::bulk_load_status::BLS_INGESTING)
+ENUM_REG(replication::bulk_load_status::BLS_SUCCEED)
+ENUM_REG(replication::bulk_load_status::BLS_FAILED)
+ENUM_REG(replication::bulk_load_status::BLS_PAUSING)
+ENUM_REG(replication::bulk_load_status::BLS_PAUSED)
+ENUM_REG(replication::bulk_load_status::BLS_CANCELED)
+ENUM_END2(replication::bulk_load_status::type, bulk_load_status)
 }

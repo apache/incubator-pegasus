@@ -57,6 +57,7 @@ class server_load_balancer;
 class replication_checker;
 class meta_duplication_service;
 class meta_split_service;
+class bulk_load_service;
 namespace test {
 class test_checker;
 }
@@ -96,6 +97,7 @@ public:
         }
         return level;
     }
+    void set_function_level(meta_function_level::type level) { _function_level.store(level); }
 
     template <typename TResponse>
     void reply_data(dsn::message_ex *request, const TResponse &data)
@@ -223,6 +225,8 @@ private:
     std::unique_ptr<meta_duplication_service> _dup_svc;
 
     std::unique_ptr<meta_split_service> _split_svc;
+
+    std::unique_ptr<bulk_load_service> _bulk_load_svc;
 
     // handle all the block filesystems for current meta service
     // (in other words, current service node)

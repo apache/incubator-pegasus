@@ -625,6 +625,14 @@ struct configuration_query_restore_response
     3:list<i32>             restore_progress;
 }
 
+// Used for cold backup and bulk load
+struct file_meta
+{
+    1:string    name;
+    2:i64       size;
+    3:string    md5;
+}
+
 enum app_env_operation
 {
     APP_ENV_OP_INVALID,
@@ -872,6 +880,28 @@ struct register_child_response
     2:dsn.layer2.app_info                   app;
     3:dsn.layer2.partition_configuration    parent_config;
     4:dsn.layer2.partition_configuration    child_config;
+}
+
+/////////////////// bulk-load-related structs ////////////////////
+
+// app partition bulk load status
+enum bulk_load_status
+{
+    BLS_INVALID,
+    BLS_DOWNLOADING,
+    BLS_DOWNLOADED,
+    BLS_INGESTING,
+    BLS_SUCCEED,
+    BLS_FAILED,
+    BLS_PAUSING,
+    BLS_PAUSED,
+    BLS_CANCELED
+}
+
+struct bulk_load_metadata
+{
+    1:list<file_meta>   files;
+    2:i64               file_total_size;
 }
 
 /*

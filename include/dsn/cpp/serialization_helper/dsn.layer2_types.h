@@ -293,7 +293,8 @@ typedef struct _app_info__isset
           create_second(false),
           drop_second(false),
           duplicating(false),
-          init_partition_count(true)
+          init_partition_count(true),
+          is_bulk_loading(true)
     {
     }
     bool status : 1;
@@ -309,6 +310,7 @@ typedef struct _app_info__isset
     bool drop_second : 1;
     bool duplicating : 1;
     bool init_partition_count : 1;
+    bool is_bulk_loading : 1;
 } _app_info__isset;
 
 class app_info
@@ -330,7 +332,8 @@ public:
           create_second(0),
           drop_second(0),
           duplicating(0),
-          init_partition_count(-1)
+          init_partition_count(-1),
+          is_bulk_loading(false)
     {
         status = (app_status::type)0;
     }
@@ -349,6 +352,7 @@ public:
     int64_t drop_second;
     bool duplicating;
     int32_t init_partition_count;
+    bool is_bulk_loading;
 
     _app_info__isset __isset;
 
@@ -377,6 +381,8 @@ public:
     void __set_duplicating(const bool val);
 
     void __set_init_partition_count(const int32_t val);
+
+    void __set_is_bulk_loading(const bool val);
 
     bool operator==(const app_info &rhs) const
     {
@@ -407,6 +413,10 @@ public:
         else if (__isset.duplicating && !(duplicating == rhs.duplicating))
             return false;
         if (!(init_partition_count == rhs.init_partition_count))
+            return false;
+        if (__isset.is_bulk_loading != rhs.__isset.is_bulk_loading)
+            return false;
+        else if (__isset.is_bulk_loading && !(is_bulk_loading == rhs.is_bulk_loading))
             return false;
         return true;
     }

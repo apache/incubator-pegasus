@@ -175,6 +175,24 @@ struct duplication_fail_mode
 
 extern const std::map<int, const char *> _duplication_fail_mode_VALUES_TO_NAMES;
 
+struct bulk_load_status
+{
+    enum type
+    {
+        BLS_INVALID = 0,
+        BLS_DOWNLOADING = 1,
+        BLS_DOWNLOADED = 2,
+        BLS_INGESTING = 3,
+        BLS_SUCCEED = 4,
+        BLS_FAILED = 5,
+        BLS_PAUSING = 6,
+        BLS_PAUSED = 7,
+        BLS_CANCELED = 8
+    };
+};
+
+extern const std::map<int, const char *> _bulk_load_status_VALUES_TO_NAMES;
+
 class mutation_header;
 
 class mutation_update;
@@ -313,6 +331,8 @@ class configuration_query_restore_request;
 
 class configuration_query_restore_response;
 
+class file_meta;
+
 class configuration_update_app_env_request;
 
 class configuration_update_app_env_response;
@@ -356,6 +376,8 @@ class notify_cacth_up_response;
 class register_child_request;
 
 class register_child_response;
+
+class bulk_load_metadata;
 
 typedef struct _mutation_header__isset
 {
@@ -4819,6 +4841,64 @@ inline std::ostream &operator<<(std::ostream &out, const configuration_query_res
     return out;
 }
 
+typedef struct _file_meta__isset
+{
+    _file_meta__isset() : name(false), size(false), md5(false) {}
+    bool name : 1;
+    bool size : 1;
+    bool md5 : 1;
+} _file_meta__isset;
+
+class file_meta
+{
+public:
+    file_meta(const file_meta &);
+    file_meta(file_meta &&);
+    file_meta &operator=(const file_meta &);
+    file_meta &operator=(file_meta &&);
+    file_meta() : name(), size(0), md5() {}
+
+    virtual ~file_meta() throw();
+    std::string name;
+    int64_t size;
+    std::string md5;
+
+    _file_meta__isset __isset;
+
+    void __set_name(const std::string &val);
+
+    void __set_size(const int64_t val);
+
+    void __set_md5(const std::string &val);
+
+    bool operator==(const file_meta &rhs) const
+    {
+        if (!(name == rhs.name))
+            return false;
+        if (!(size == rhs.size))
+            return false;
+        if (!(md5 == rhs.md5))
+            return false;
+        return true;
+    }
+    bool operator!=(const file_meta &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const file_meta &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(file_meta &a, file_meta &b);
+
+inline std::ostream &operator<<(std::ostream &out, const file_meta &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
 typedef struct _configuration_update_app_env_request__isset
 {
     _configuration_update_app_env_request__isset()
@@ -6178,6 +6258,58 @@ public:
 void swap(register_child_response &a, register_child_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const register_child_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _bulk_load_metadata__isset
+{
+    _bulk_load_metadata__isset() : files(false), file_total_size(false) {}
+    bool files : 1;
+    bool file_total_size : 1;
+} _bulk_load_metadata__isset;
+
+class bulk_load_metadata
+{
+public:
+    bulk_load_metadata(const bulk_load_metadata &);
+    bulk_load_metadata(bulk_load_metadata &&);
+    bulk_load_metadata &operator=(const bulk_load_metadata &);
+    bulk_load_metadata &operator=(bulk_load_metadata &&);
+    bulk_load_metadata() : file_total_size(0) {}
+
+    virtual ~bulk_load_metadata() throw();
+    std::vector<file_meta> files;
+    int64_t file_total_size;
+
+    _bulk_load_metadata__isset __isset;
+
+    void __set_files(const std::vector<file_meta> &val);
+
+    void __set_file_total_size(const int64_t val);
+
+    bool operator==(const bulk_load_metadata &rhs) const
+    {
+        if (!(files == rhs.files))
+            return false;
+        if (!(file_total_size == rhs.file_total_size))
+            return false;
+        return true;
+    }
+    bool operator!=(const bulk_load_metadata &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const bulk_load_metadata &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(bulk_load_metadata &a, bulk_load_metadata &b);
+
+inline std::ostream &operator<<(std::ostream &out, const bulk_load_metadata &obj)
 {
     obj.printTo(out);
     return out;

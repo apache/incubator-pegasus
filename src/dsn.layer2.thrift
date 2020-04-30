@@ -71,6 +71,10 @@ struct app_info
     // child partition is not existed on remote stroage, but partition count changed.
     // We use init_partition_count to handle those child partitions while sync_apps_from_remote_stroage
     13:i32          init_partition_count = -1;
+
+    // New fields for bulk load
+    // Whether this app is executing bulk load
+    14:optional bool    is_bulk_loading = false;
 }
 
 // Metadata field of the request in rDSN's thrift protocol (version 1).

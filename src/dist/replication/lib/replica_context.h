@@ -227,14 +227,6 @@ enum cold_backup_status
 };
 const char *cold_backup_status_to_string(cold_backup_status status);
 
-struct file_meta
-{
-    std::string name;
-    int64_t size;
-    std::string md5;
-    DEFINE_JSON_SERIALIZATION(name, size, md5)
-};
-
 struct cold_backup_metadata
 {
     int64_t checkpoint_decree;

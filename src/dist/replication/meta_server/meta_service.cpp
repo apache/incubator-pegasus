@@ -44,6 +44,7 @@
 #include "server_load_balancer.h"
 #include "duplication/meta_duplication_service.h"
 #include "meta_split_service.h"
+#include "meta_bulk_load_service.h"
 
 namespace dsn {
 namespace replication {
@@ -239,6 +240,13 @@ void meta_service::start_service()
                          nullptr,
                          std::bind(&backup_service::start, _backup_handler.get()));
     }
+
+    if (_bulk_load_svc) {
+        ddebug("start bulk load service");
+        tasking::enqueue(LPC_META_STATE_NORMAL, tracker(), [this]() {
+            _bulk_load_svc->initialize_bulk_load_service();
+        });
+    }
 }
 
 // the start function is executed in threadpool default
@@ -300,6 +308,9 @@ error_code meta_service::start()
             _opts.cold_backup_root,
             [](backup_service *bs) { return std::make_shared<policy_context>(bs); });
     }
+
+    _bulk_load_svc = make_unique<bulk_load_service>(
+        this, meta_options::concat_path_unix_style(_cluster_root, "bulk_load"));
 
     // initialize the server_state
     _state->initialize(this, meta_options::concat_path_unix_style(_cluster_root, "apps"));

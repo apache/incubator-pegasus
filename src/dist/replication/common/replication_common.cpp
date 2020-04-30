@@ -514,6 +514,11 @@ void replication_options::initialize()
                                          cold_backup_checkpoint_reserve_minutes,
                                          "reserve minutes of cold backup checkpoint");
 
+    bulk_load_provider_root = dsn_config_get_value_string("replication",
+                                                          "bulk_load_provider_root",
+                                                          "bulk_load_root",
+                                                          "bulk load root on remote file provider");
+
     replica_helper::load_meta_servers(meta_servers);
 
     sanity_check();
@@ -629,6 +634,7 @@ const std::string replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS(
 const std::string replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS(
     "replica.rocksdb_iteration_threshold_time_ms");
 const std::string replica_envs::BUSINESS_INFO("business.info");
+const std::string bulk_load_constant::BULK_LOAD_INFO("bulk_load_info");
 
 namespace cold_backup {
 std::string get_policy_path(const std::string &root, const std::string &policy_name)

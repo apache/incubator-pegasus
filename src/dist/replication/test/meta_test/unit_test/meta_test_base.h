@@ -7,6 +7,7 @@
 #include "dist/replication/meta_server/server_load_balancer.h"
 #include "dist/replication/meta_server/meta_server_failure_detector.h"
 #include "dist/replication/meta_server/meta_split_service.h"
+#include "dist/replication/meta_server/meta_bulk_load_service.h"
 #include "dist/replication/test/meta_test/misc/misc.h"
 
 #include "meta_service_test_app.h"
@@ -30,11 +31,16 @@ public:
         ASSERT_TRUE(_ms->_dup_svc);
         _ms->_split_svc = make_unique<meta_split_service>(_ms.get());
         ASSERT_TRUE(_ms->_split_svc);
+        _ms->_bulk_load_svc = make_unique<bulk_load_service>(
+            _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
+        ASSERT_TRUE(_ms->_bulk_load_svc);
+        _ms->_bulk_load_svc->initialize_bulk_load_service();
 
         _ss = _ms->_state;
         _ss->initialize(_ms.get(), _ms->_cluster_root + "/apps");
 
         _ms->_started = true;
+        _ms->set_function_level(meta_function_level::fl_steady);
 
         // recover apps from meta storage
         ASSERT_EQ(_ss->initialize_data_structure(), ERR_OK);
@@ -129,6 +135,8 @@ public:
     meta_duplication_service &dup_svc() { return *(_ms->_dup_svc); }
 
     meta_split_service &split_svc() { return *(_ms->_split_svc); }
+
+    bulk_load_service &bulk_svc() { return *(_ms->_bulk_load_svc); }
 
     std::shared_ptr<server_state> _ss;
     std::unique_ptr<meta_service> _ms;
