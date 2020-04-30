@@ -5,7 +5,7 @@
 #include "pegasus_server_impl.h"
 
 #include <rocksdb/filter_policy.h>
-
+#include <pegasus_utils.h>
 #include "capacity_unit_calculator.h"
 #include "hashkey_transform.h"
 #include "meta_store.h"
@@ -24,7 +24,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _last_durable_decree(0),
       _is_checkpointing(false),
       _manual_compact_svc(this),
-      _partition_version(0)
+      _partition_version(0),
+      _abnormal_log(new pegasus_abnormal_log())
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
