@@ -96,7 +96,11 @@ public:
     typedef std::function<cur_ptr(const dsn::rpc_address &target, dsn::message_ex *request)> filter;
     message_filter(meta_load_balance_test *app) : meta_service(), _app(app) {}
     void set_filter(const filter &f) { _filter = f; }
-    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override {}
+    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override
+    {
+        destroy_message(response);
+    }
+
     virtual void send_message(const dsn::rpc_address &target, dsn::message_ex *request) override
     {
         // we expect this is a configuration_update_request proposal
