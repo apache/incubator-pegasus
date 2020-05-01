@@ -38,7 +38,7 @@ echo
 online_list_file="/tmp/$UID.$PID.pegasus.online_node.list"
 echo "Generating $online_list_file..."
 minos_show_replica $cluster $online_list_file
-replica_server_count=`cat $online_list_file= | wc -l`
+replica_server_count=`cat $online_list_file | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
   exit 1
@@ -76,9 +76,9 @@ for id in `echo $replica_task_id_list | sed 's/,/ /g'` ; do
       exit 1;
     fi
   fi
-  pair=`grep "^$id " $rs_list_file`
+  pair=`grep "^$id " $online_list_file`
   if [ "$pair" == "" ]; then
-    echo "ERROR: replica task id $id not found, refer to $rs_list_file"
+    echo "ERROR: replica task id $id not found, refer to $online_list_file"
     exit 1;
   fi
   node_str=`echo $pair | awk '{print $2}'`
@@ -143,8 +143,8 @@ echo "Wait for 3 minutes to do load balance..."
       break
     fi
     if [ $op_count -eq 0 ]; then
-      echo "Cluster may be balanced, try wait 10 seconds..."
-      sleep 10
+      echo "Cluster may be balanced, try wait 30 seconds..."
+      sleep 30
       op_count=`echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2`
       if [ $op_count -eq 0 ]; then
         echo "Cluster becomes balanced."
