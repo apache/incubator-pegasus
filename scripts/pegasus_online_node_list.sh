@@ -106,7 +106,7 @@ echo
 for id in $id_list
 do
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-  minos_start $cluster replica $id
+  minos_bootstrap $cluster replica $id
   if [ $? -ne 0 ]; then
     echo "ERROR: offline replica task $id failed"
     exit 1
@@ -116,6 +116,7 @@ do
   sleep 10
 done
 
+echo "set meta.lb.only_move_primary true"
 echo "remote_command -l $pmeta meta.lb.only_move_primary true" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.online_node.only_move_primary
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.online_node.only_move_primary | wc -l`
 if [ $set_ok -ne 1 ]; then
@@ -132,9 +133,8 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
-
 echo "Wait cluster to become balanced..."
-  echo "Wait for 3 minutes to do load balance..."
+echo "Wait for 3 minutes to do load balance..."
   sleep 180
   while true
   do
@@ -143,15 +143,38 @@ echo "Wait cluster to become balanced..."
       break
     fi
     if [ $op_count -eq 0 ]; then
-      echo "Cluster becomes balanced."
-      break
+      echo "Cluster may be balanced, try wait 10 seconds..."
+      sleep 10
+      op_count=`echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2`
+      if [ $op_count -eq 0 ]; then
+        echo "Cluster becomes balanced."
+        break
+      fi
     else
       echo "Still $op_count balance operations to do..."
-      sleep 10
+      sleep 1
     fi
   done
-  echo
+echo
 
+
+
+echo "Set meta level to steady..."
+echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.online_node.set_meta_level
+set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.online_node.set_meta_level | wc -l`
+if [ $set_ok -ne 1 ]; then
+  echo "ERROR: set meta level to steady failed"
+  exit 1
+fi
+
+echo "set meta.lb.only_move_primary false"
+echo "remote_command -l $pmeta meta.lb.only_move_primary false" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.online_node.only_move_primary
+set_ok=`grep OK /tmp/$UID.$PID.pegasus.online_node.only_move_primary | wc -l`
+if [ $set_ok -ne 1 ]; then
+  echo "ERROR: meta.lb.only_move_primary false"
+  exit 1
+fi
+echo
 
 echo "Finish time: `date`"
 all_finish_time=$((`date +%s`))

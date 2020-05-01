@@ -124,18 +124,17 @@ function minos_restart()
   cd $pwd
 }
 
-# usage: minos_start <cluster_name> <job_name> [task_id]
-function minos_start()
+# usage: minos_bootstrap <cluster_name> <job_name> [task_id]
+function minos_bootstrap()
 {
   local pwd=`pwd`
   local options="--job $2"
   if [ -n "$3" ]; then
     options="$options --task $3"
   fi
-  options="$options --skip_confirm"
   cd $minos_client_dir
-  echo "./deploy start pegasus $1 $options"
-  ./deploy start pegasus $1 $options
+  echo "./deploy bootstrap pegasus $1 $options"
+  ./deploy bootstrap pegasus $1 $options
   if [ $? -ne 0 ]; then
     echo "ERROR: minos restart failed"
     exit 1
