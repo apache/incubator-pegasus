@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Offline replica servers using minos.
+# Online replica servers using minos.
 #
 
 PID=$$
@@ -35,10 +35,10 @@ echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
 
-rs_list_file="/tmp/$UID.$PID.pegasus.rolling_update.rs.list"
-echo "Generating $rs_list_file..."
-minos_show_replica $cluster $rs_list_file
-replica_server_count=`cat $rs_list_file | wc -l`
+online_list_file="/tmp/$UID.$PID.pegasus.online_node.list"
+echo "Generating $online_list_file..."
+minos_show_replica $cluster $online_list_file
+replica_server_count=`cat $online_list_file= | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
   exit 1
@@ -108,7 +108,7 @@ do
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
   minos_bootstrap $cluster replica $id
   if [ $? -ne 0 ]; then
-    echo "ERROR: offline replica task $id failed"
+    echo "ERROR: online replica task $id failed"
     exit 1
   fi
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
