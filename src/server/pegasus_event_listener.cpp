@@ -3,11 +3,14 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "pegasus_event_listener.h"
+#include "logging_utils.h"
+
+#include <dsn/c/api_utilities.h>
 
 namespace pegasus {
 namespace server {
 
-pegasus_event_listener::pegasus_event_listener()
+pegasus_event_listener::pegasus_event_listener(replica_base *r) : replica_base(r)
 {
     _pfc_recent_flush_completed_count.init_app_counter("app.pegasus",
                                                        "recent.flush.completed.count",
@@ -42,8 +45,6 @@ pegasus_event_listener::pegasus_event_listener()
         "rocksdb recent write change stopped count");
 }
 
-pegasus_event_listener::~pegasus_event_listener() {}
-
 void pegasus_event_listener::OnFlushCompleted(rocksdb::DB *db,
                                               const rocksdb::FlushJobInfo &flush_job_info)
 {
@@ -61,10 +62,13 @@ void pegasus_event_listener::OnCompactionCompleted(rocksdb::DB *db,
 
 void pegasus_event_listener::OnStallConditionsChanged(const rocksdb::WriteStallInfo &info)
 {
-    if (info.condition.cur == rocksdb::WriteStallCondition::kDelayed)
+    if (info.condition.cur == rocksdb::WriteStallCondition::kDelayed) {
+        derror_replica("rocksdb write delayed");
         _pfc_recent_write_change_delayed_count->increment();
-    else if (info.condition.cur == rocksdb::WriteStallCondition::kStopped)
+    } else if (info.condition.cur == rocksdb::WriteStallCondition::kStopped) {
+        derror_replica("rocksdb write stopped");
         _pfc_recent_write_change_stopped_count->increment();
+    }
 }
 
 } // namespace server

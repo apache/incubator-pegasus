@@ -7,23 +7,22 @@
 #include <rocksdb/db.h>
 #include <rocksdb/listener.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
+#include <dsn/dist/replication/replica_base.h>
 
 namespace pegasus {
 namespace server {
 
-class pegasus_event_listener : public rocksdb::EventListener
+class pegasus_event_listener : public rocksdb::EventListener, dsn::replication::replica_base
 {
 public:
-    pegasus_event_listener();
-    virtual ~pegasus_event_listener();
+    explicit pegasus_event_listener(replica_base *r);
+    ~pegasus_event_listener() override = default;
 
-    virtual void OnFlushCompleted(rocksdb::DB *db,
-                                  const rocksdb::FlushJobInfo &flush_job_info) override;
+    void OnFlushCompleted(rocksdb::DB *db, const rocksdb::FlushJobInfo &flush_job_info) override;
 
-    virtual void OnCompactionCompleted(rocksdb::DB *db,
-                                       const rocksdb::CompactionJobInfo &ci) override;
+    void OnCompactionCompleted(rocksdb::DB *db, const rocksdb::CompactionJobInfo &ci) override;
 
-    virtual void OnStallConditionsChanged(const rocksdb::WriteStallInfo &info) override;
+    void OnStallConditionsChanged(const rocksdb::WriteStallInfo &info) override;
 
 private:
     ::dsn::perf_counter_wrapper _pfc_recent_flush_completed_count;

@@ -122,7 +122,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _statistics->set_stats_level(rocksdb::kExceptDetailedTimers);
     _db_opts.statistics = _statistics;
 
-    _db_opts.listeners.emplace_back(new pegasus_event_listener());
+    _db_opts.listeners.emplace_back(new pegasus_event_listener(this));
 
     // flush threads are shared among all rocksdb instances in one process.
     _db_opts.max_background_flushes =
