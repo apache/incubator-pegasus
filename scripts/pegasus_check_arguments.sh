@@ -1,28 +1,28 @@
 #!/bin/bash
 #
-# Offline replica servers using minos.
+# Check offline_node_list.sh and online_node_list.sh arguments.
 #
 
 PID=$$
 
-if [ $# -le 2 ]; then
+if [ $# -le 3 ]; then
   echo "USAGE: $0 <check_type> <cluster-name> <cluster-meta-list> <replica-task-id-list>"
   echo
-  echo "check_type includes: online_node, offline_node, for example:"
-  echo "  $0 online_node onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3"
+  echo "check_type includes: online_node_list, offline_node_list, for example:"
+  echo "  $0 online_node_list onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3"
   echo
   exit 1
 fi
 
-check_type = $1
+check_type=$1
 cluster=$2
 meta_list=$3
 replica_task_id_list=$4
 
-
-pwd="$( cd "$( dirname "$0"  )" && pwd )"
-shell_dir="$( cd $pwd/.. && pwd )"
-cd $shell_dir
+if [ "$check_type" != "online_node_list" -a "$check_type" != "offline_node_list" ]; then
+  echo "ERROR: $check_type is invalid, only support \"online_node_list\" and \"offline_node_list\""
+  exit 1
+fi
 
 source ./scripts/minos_common.sh
 find_cluster $cluster
@@ -37,10 +37,10 @@ echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
 
-node_list_file="/tmp/$UID.$PID.pegasus.$check_type.list"
-echo "Generating $node_list_file..."
-minos_show_replica $cluster $node_list_file
-replica_server_count=`cat $node_list_file | wc -l`
+id_list_file="/tmp/$UID.$PID.pegasus.$check_type.id_list"
+echo "Generating $id_list_file..."
+minos_show_replica $cluster $id_list_file
+replica_server_count=`cat $id_list_file | wc -l`
 if [ $replica_server_count -eq 0 ]; then
   echo "ERROR: replica server count is 0 by minos show"
   exit 1
@@ -60,9 +60,9 @@ if [ "$pmeta" == "" ]; then
   exit 1
 fi
 
-echo "Generating /tmp/$UID.$PID.pegasus.$check_type.nodes..."
-echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.$check_type.nodes
-rs_port=`grep '^[0-9.]*:' /tmp/$UID.$PID.pegasus.$check_type.nodes | head -n 1 | grep -o ':[0-9]*' | grep -o '[0-9]*'`
+echo "Generating /tmp/$UID.$PID.pegasus.$check_type.nodes_list..."
+echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.$check_type.nodes_list
+rs_port=`grep '^[0-9.]*:' /tmp/$UID.$PID.pegasus.$check_type.nodes_list | head -n 1 | grep -o ':[0-9]*' | grep -o '[0-9]*'`
 if [ "$rs_port" == "" ]; then
   echo "ERROR: extract replica server port by shell failed"
   exit 1
@@ -78,9 +78,9 @@ for id in `echo $replica_task_id_list | sed 's/,/ /g'` ; do
       exit 1;
     fi
   fi
-  pair=`grep "^$id " $node_list_file`
+  pair=`grep "^$id " $id_list_file`
   if [ "$pair" == "" ]; then
-    echo "ERROR: replica task id $id not found, refer to $node_list_file"
+    echo "ERROR: replica task id $id not found, refer to $id_list_file"
     exit 1;
   fi
   node_str=`echo $pair | awk '{print $2}'`
@@ -95,7 +95,8 @@ for id in `echo $replica_task_id_list | sed 's/,/ /g'` ; do
   fi
 done
 
-export task_id_list = $id_list
+export task_id_list=$id_list
+
 
 
 

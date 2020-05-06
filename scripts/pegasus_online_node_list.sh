@@ -18,8 +18,12 @@ cluster=$1
 meta_list=$2
 replica_task_id_list=$3
 
+pwd="$( cd "$( dirname "$0"  )" && pwd )"
+shell_dir="$( cd $pwd/.. && pwd )"
+cd $shell_dir
+
 echo "Check the argument..."
-./pegasus_check_arguments.sh online_node $cluster $meta_list $replica_task_id_list
+source ./scripts/pegasus_check_arguments.sh online_node_list $cluster $meta_list $replica_task_id_list
 
 if [ $? -ne 0 ]; then
     echo "ERROR: the argument check failed"
