@@ -96,12 +96,3 @@ for id in `echo $replica_task_id_list | sed 's/,/ /g'` ; do
 done
 
 export task_id_list=$id_list
-
-
-
-
-
-
-
-
-
