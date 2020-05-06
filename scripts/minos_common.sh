@@ -136,7 +136,7 @@ function minos_bootstrap()
   echo "./deploy bootstrap pegasus $1 $options"
   ./deploy bootstrap pegasus $1 $options
   if [ $? -ne 0 ]; then
-    echo "ERROR: minos restart failed"
+    echo "ERROR: minos bootstrap failed"
     exit 1
   fi
   cd $pwd
