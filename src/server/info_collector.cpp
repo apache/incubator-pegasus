@@ -6,17 +6,13 @@
 
 #include <cstdlib>
 #include <iomanip>
-#include <iostream>
 #include <vector>
 #include <chrono>
-#include <functional>
 #include <dsn/tool-api/group_address.h>
+#include <dsn/dist/replication/duplication_common.h>
 
-#include "base/pegasus_utils.h"
 #include "base/pegasus_const.h"
 #include "result_writer.h"
-
-#define METRICSNUM 3
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -42,8 +38,7 @@ info_collector::info_collector()
         _meta_servers.group_address()->add(ms);
     }
 
-    _cluster_name = dsn_config_get_value_string("pegasus.collector", "cluster", "", "cluster name");
-    dassert(!_cluster_name.empty(), "");
+    _cluster_name = dsn::replication::get_current_cluster_name();
 
     _shell_context.current_cluster_name = _cluster_name;
     _shell_context.meta_list = meta_servers;
@@ -82,6 +77,10 @@ info_collector::info_collector()
                                               "storage_size_fetch_interval_seconds",
                                               3600, // default value 1h
                                               "storage size fetch interval seconds");
+    _hotspot_detect_algorithm = dsn_config_get_value_string("pegasus.collector",
+                                                            "hotspot_detect_algorithm",
+                                                            "hotspot_algo_qps_variance",
+                                                            "hotspot_detect_algorithm");
     // _storage_size_retry_wait_seconds is in range of [1, 60]
     _storage_size_retry_wait_seconds =
         std::min(60u, std::max(1u, _storage_size_fetch_interval_seconds / 10));
@@ -95,6 +94,9 @@ info_collector::~info_collector()
     stop();
     for (auto kv : _app_stat_counters) {
         delete kv.second;
+    }
+    for (auto store : _hotspot_calculator_store) {
+        delete store.second;
     }
 }
 
@@ -130,98 +132,49 @@ void info_collector::stop() { _tracker.cancel_outstanding_tasks(); }
 void info_collector::on_app_stat()
 {
     ddebug("start to stat apps");
-    std::vector<row_data> rows;
-    if (!get_app_stat(&_shell_context, "", rows)) {
+    std::map<std::string, std::vector<row_data>> all_rows;
+    if (!get_app_partition_stat(&_shell_context, all_rows)) {
         derror("call get_app_stat() failed");
         return;
     }
-    std::vector<double> read_qps;
-    std::vector<double> write_qps;
-    rows.resize(rows.size() + 1);
-    read_qps.resize(rows.size());
-    write_qps.resize(rows.size());
-    row_data &all = rows.back();
-    all.row_name = "_all_";
-    for (int i = 0; i < rows.size() - 1; ++i) {
-        row_data &row = rows[i];
-        all.get_qps += row.get_qps;
-        all.multi_get_qps += row.multi_get_qps;
-        all.put_qps += row.put_qps;
-        all.multi_put_qps += row.multi_put_qps;
-        all.remove_qps += row.remove_qps;
-        all.multi_remove_qps += row.multi_remove_qps;
-        all.incr_qps += row.incr_qps;
-        all.check_and_set_qps += row.check_and_set_qps;
-        all.check_and_mutate_qps += row.check_and_mutate_qps;
-        all.scan_qps += row.scan_qps;
-        all.recent_read_cu += row.recent_read_cu;
-        all.recent_write_cu += row.recent_write_cu;
-        all.recent_expire_count += row.recent_expire_count;
-        all.recent_filter_count += row.recent_filter_count;
-        all.recent_abnormal_count += row.recent_abnormal_count;
-        all.recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
-        all.recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
-        all.storage_mb += row.storage_mb;
-        all.storage_count += row.storage_count;
-        all.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
-        all.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
-        all.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
-        all.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
-        read_qps[i] = row.get_qps + row.multi_get_qps + row.scan_qps;
-        write_qps[i] = row.put_qps + row.multi_put_qps + row.remove_qps + row.multi_remove_qps +
-                       row.incr_qps + row.check_and_set_qps + row.check_and_mutate_qps;
+
+    table_stats all_stats("_all_");
+    for (const auto &app_rows : all_rows) {
+        // get statistics data for app
+        table_stats app_stats(app_rows.first);
+        for (auto partition_row : app_rows.second) {
+            app_stats.aggregate(partition_row);
+        }
+        get_app_counters(app_stats.app_name)->set(app_stats);
+        // get row data statistics for all of the apps
+        all_stats.merge(app_stats);
+
+        // hotspot_calculator is to detect hotspots
+        hotspot_calculator *hotspot_calculator =
+            get_hotspot_calculator(app_rows.first, app_rows.second.size());
+        if (!hotspot_calculator) {
+            continue;
+        }
+        hotspot_calculator->aggregate(app_rows.second);
+        // new policy can be designed by strategy pattern in hotspot_partition_data.h
+        hotspot_calculator->start_alg();
     }
-    read_qps[read_qps.size() - 1] = all.get_qps + all.multi_get_qps + all.scan_qps;
-    write_qps[read_qps.size() - 1] = all.put_qps + all.multi_put_qps + all.remove_qps +
-                                     all.multi_remove_qps + all.incr_qps + all.check_and_set_qps +
-                                     all.check_and_mutate_qps;
-    for (int i = 0; i < rows.size(); ++i) {
-        row_data &row = rows[i];
-        AppStatCounters *counters = get_app_counters(row.row_name);
-        counters->get_qps->set(row.get_qps);
-        counters->multi_get_qps->set(row.multi_get_qps);
-        counters->put_qps->set(row.put_qps);
-        counters->multi_put_qps->set(row.multi_put_qps);
-        counters->remove_qps->set(row.remove_qps);
-        counters->multi_remove_qps->set(row.multi_remove_qps);
-        counters->incr_qps->set(row.incr_qps);
-        counters->check_and_set_qps->set(row.check_and_set_qps);
-        counters->check_and_mutate_qps->set(row.check_and_mutate_qps);
-        counters->scan_qps->set(row.scan_qps);
-        counters->recent_read_cu->set(row.recent_read_cu);
-        counters->recent_write_cu->set(row.recent_write_cu);
-        counters->recent_expire_count->set(row.recent_expire_count);
-        counters->recent_filter_count->set(row.recent_filter_count);
-        counters->recent_abnormal_count->set(row.recent_abnormal_count);
-        counters->recent_write_throttling_delay_count->set(row.recent_write_throttling_delay_count);
-        counters->recent_write_throttling_reject_count->set(
-            row.recent_write_throttling_reject_count);
-        counters->storage_mb->set(row.storage_mb);
-        counters->storage_count->set(row.storage_count);
-        counters->rdb_block_cache_hit_rate->set(
-            std::abs(row.rdb_block_cache_total_count) < 1e-6
-                ? 0
-                : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count * 1000000);
-        counters->rdb_index_and_filter_blocks_mem_usage->set(
-            row.rdb_index_and_filter_blocks_mem_usage);
-        counters->rdb_memtable_mem_usage->set(row.rdb_memtable_mem_usage);
-        counters->read_qps->set(read_qps[i]);
-        counters->write_qps->set(write_qps[i]);
-    }
+    get_app_counters(all_stats.app_name)->set(all_stats);
+
     ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
-           (int)(rows.size() - 1),
-           read_qps[read_qps.size() - 1],
-           write_qps[read_qps.size() - 1]);
+           (int)(all_rows.size() - 1),
+           all_stats.get_total_read_qps(),
+           all_stats.get_total_write_qps());
 }
 
-info_collector::AppStatCounters *info_collector::get_app_counters(const std::string &app_name)
+info_collector::app_stat_counters *info_collector::get_app_counters(const std::string &app_name)
 {
     ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_app_stat_counter_lock);
     auto find = _app_stat_counters.find(app_name);
     if (find != _app_stat_counters.end()) {
         return find->second;
     }
-    AppStatCounters *counters = new AppStatCounters();
+    app_stat_counters *counters = new app_stat_counters();
 
     char counter_name[1024];
     char counter_desc[1024];
@@ -243,6 +196,9 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(check_and_set_qps);
     INIT_COUNTER(check_and_mutate_qps);
     INIT_COUNTER(scan_qps);
+    INIT_COUNTER(duplicate_qps);
+    INIT_COUNTER(dup_shipped_ops);
+    INIT_COUNTER(dup_failed_shipping_ops);
     INIT_COUNTER(recent_read_cu);
     INIT_COUNTER(recent_write_cu);
     INIT_COUNTER(recent_expire_count);
@@ -255,8 +211,22 @@ info_collector::AppStatCounters *info_collector::get_app_counters(const std::str
     INIT_COUNTER(rdb_block_cache_hit_rate);
     INIT_COUNTER(rdb_index_and_filter_blocks_mem_usage);
     INIT_COUNTER(rdb_memtable_mem_usage);
+    INIT_COUNTER(rdb_estimate_num_keys);
+    INIT_COUNTER(rdb_bf_seek_negatives_rate);
+    INIT_COUNTER(rdb_bf_point_negatives_rate);
+    INIT_COUNTER(rdb_bf_point_false_positive_rate);
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
+    INIT_COUNTER(backup_request_qps);
+    INIT_COUNTER(get_bytes);
+    INIT_COUNTER(multi_get_bytes);
+    INIT_COUNTER(scan_bytes);
+    INIT_COUNTER(put_bytes);
+    INIT_COUNTER(multi_put_bytes);
+    INIT_COUNTER(check_and_set_bytes);
+    INIT_COUNTER(check_and_mutate_bytes);
+    INIT_COUNTER(read_bytes);
+    INIT_COUNTER(write_bytes);
     _app_stat_counters[app_name] = counters;
     return counters;
 }
@@ -329,6 +299,29 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
         return;
     }
     _result_writer->set_result(st_stat.timestamp, "ss", st_stat.dump_to_json());
+}
+
+hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &app_name,
+                                                           const int partition_num)
+{
+    auto iter = _hotspot_calculator_store.find(app_name);
+    if (iter != _hotspot_calculator_store.end()) {
+        return iter->second;
+    }
+    std::unique_ptr<hotspot_policy> policy;
+    if (_hotspot_detect_algorithm == "hotspot_algo_qps_variance") {
+        policy.reset(new hotspot_algo_qps_variance());
+    } else if (_hotspot_detect_algorithm == "hotspot_algo_qps_skew") {
+        policy.reset(new hotspot_algo_qps_skew());
+    } else {
+        dwarn("hotspot detection is disabled");
+        _hotspot_calculator_store[app_name] = nullptr;
+        return nullptr;
+    }
+    hotspot_calculator *calculator =
+        new hotspot_calculator(app_name, partition_num, std::move(policy));
+    _hotspot_calculator_store[app_name] = calculator;
+    return calculator;
 }
 
 } // namespace server

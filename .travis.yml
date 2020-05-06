@@ -13,13 +13,14 @@ addons:
     packages:
       - libsnappy-dev
       - liblz4-dev
+      - clang-format-3.9
 
 cache:
     - ccache
     - apt
 
 before_install:
-    - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/build-depends.tar.gz
+    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/build-depends.tar.gz
     - tar xfz build-depends.tar.gz
     - rm -f build-depends.tar.gz
     - cd packages
@@ -30,17 +31,18 @@ install:
     - wget https://github.com/facebook/zstd/archive/v1.3.7.zip; unzip v1.3.7; cd zstd-1.3.7;
     - mkdir cmake-build; cd cmake-build; cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DZSTD_BUILD_PROGRAMS=OFF ../build/cmake; sudo make install -j8;
     - cd ../..
+    - rm -rf v1.3.7.zip zstd-1.3.7;
 
 before_script:
     - cd rdsn/thirdparty
-    - wget https://raw.githubusercontent.com/xiaomi/pegasus-common/master/pegasus-thirdparty-prebuild.tar.gz
-    - tar xfz pegasus-thirdparty-prebuild.tar.gz
+    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-thirdparty-prebuild.tar.gz
+    - tar xf pegasus-thirdparty-prebuild.tar.gz
     - rm -f pegasus-thirdparty-prebuild.tar.gz
     - cd ../..
     - ulimit -c unlimited -S
 
 script:
-    - ./run.sh build --skip_thirdparty --disable_gperf && ./run.sh test
+    - ./scripts/travis.sh
 
 after_script:
     - ./run.sh stop_zk

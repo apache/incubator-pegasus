@@ -10,15 +10,8 @@ set(MY_PROJ_SRC "linenoise/linenoise.c" "sds/sds.c")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB_RECURSE")
 
-set(MY_PROJ_INC_PATH
-    "${PEGASUS_PROJECT_DIR}/src/include"
-    "${PEGASUS_PROJECT_DIR}/src/base"
-    "${PEGASUS_PROJECT_DIR}/rocksdb")
-
-set(MY_PROJ_LIB_PATH
-    "${PEGASUS_PROJECT_DIR}/rocksdb/build")
-
 set(MY_PROJ_LIBS
+    pegasus_base
     dsn.replication.tool
     dsn_replica_server
     dsn_replication_common
@@ -33,19 +26,18 @@ set(MY_PROJ_LIBS
     PocoFoundation
     PocoNetSSL
     PocoJSON
-    crypto
-    fmt
     pegasus_geo_lib
+    RocksDB::rocksdb
     s2
-    ${ROCKSDB_LINK_LIBRARIES}
-    z
-    rt
-    aio
-    pthread)
+    )
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS
+    Boost::system
+    Boost::filesystem 
+    Boost::regex # dsn_replica_server.so needs
+    )
 
 SET(CMAKE_INSTALL_RPATH ".")
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)

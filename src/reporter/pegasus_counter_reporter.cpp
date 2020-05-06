@@ -8,17 +8,41 @@
 #include <ios>
 #include <iomanip>
 #include <iostream>
-#include <fstream>
-
 #include <unistd.h>
 
-#include <dsn/utility/smart_pointers.h>
 #include <dsn/cpp/service_app.h>
+#include <dsn/dist/replication/duplication_common.h>
 
 #include "base/pegasus_utils.h"
 #include "pegasus_io_service.h"
 
+#include <chrono>
+#include <map>
+#include <memory>
+#include <string>
+#include <dsn/dist/fmt_logging.h>
+
 using namespace ::dsn;
+
+static std::string get_hostname()
+{
+    char hostname[1024];
+
+    if (::gethostname(hostname, sizeof(hostname))) {
+        return {};
+    }
+    return hostname;
+}
+
+static void format_metrics_name(std::string &metrics_name)
+{
+    replace(metrics_name.begin(), metrics_name.end(), '@', ':');
+    replace(metrics_name.begin(), metrics_name.end(), '#', ':');
+    replace(metrics_name.begin(), metrics_name.end(), '.', '_');
+    replace(metrics_name.begin(), metrics_name.end(), '*', '_');
+    replace(metrics_name.begin(), metrics_name.end(), '(', '_');
+    replace(metrics_name.begin(), metrics_name.end(), ')', '_');
+}
 
 namespace pegasus {
 namespace server {
@@ -42,12 +66,25 @@ pegasus_counter_reporter::pegasus_counter_reporter()
       _update_interval_seconds(0),
       _last_report_time_ms(0),
       _enable_logging(false),
-      _enable_falcon(false),
-      _falcon_port(0)
+      _perf_counter_sink(perf_counter_sink_t::INVALID),
+      _falcon_port(0),
+      _prometheus_port(0)
 {
 }
 
 pegasus_counter_reporter::~pegasus_counter_reporter() { stop(); }
+
+void pegasus_counter_reporter::prometheus_initialize()
+{
+    _prometheus_port = (uint16_t)dsn_config_get_value_uint64(
+        "pegasus.server", "prometheus_port", 9091, "prometheus exposer port");
+
+    _registry = std::make_shared<prometheus::Registry>();
+    _exposer = dsn::make_unique<prometheus::Exposer>(fmt::format("0.0.0.0:{}", _prometheus_port));
+    _exposer->RegisterCollectable(_registry);
+
+    ddebug_f("prometheus exposer [0.0.0.0:{}] started", _prometheus_port);
+}
 
 void pegasus_counter_reporter::falcon_initialize()
 {
@@ -95,9 +132,7 @@ void pegasus_counter_reporter::start()
 
     _app_name = dsn::service_app::current_service_app_info().full_name;
 
-    _cluster_name = dsn_config_get_value_string(
-        "pegasus.server", "perf_counter_cluster_name", "", "perf_counter_cluster_name");
-    dassert(_cluster_name.size() > 0, "");
+    _cluster_name = dsn::replication::get_current_cluster_name();
 
     _update_interval_seconds = dsn_config_get_value_uint64("pegasus.server",
                                                            "perf_counter_update_interval_seconds",
@@ -110,11 +145,23 @@ void pegasus_counter_reporter::start()
 
     _enable_logging = dsn_config_get_value_bool(
         "pegasus.server", "perf_counter_enable_logging", true, "perf_counter_enable_logging");
-    _enable_falcon = dsn_config_get_value_bool(
-        "pegasus.server", "perf_counter_enable_falcon", false, "perf_counter_enable_falcon");
 
-    if (_enable_falcon) {
+    std::string perf_counter_sink =
+        dsn_config_get_value_string("pegasus.server", "perf_counter_sink", "", "perf_counter_sink");
+    if ("prometheus" == perf_counter_sink) {
+        _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
+    } else if ("falcon" == perf_counter_sink) {
+        _perf_counter_sink = perf_counter_sink_t::FALCON;
+    } else {
+        _perf_counter_sink = perf_counter_sink_t::INVALID;
+    }
+
+    if (perf_counter_sink_t::FALCON == _perf_counter_sink) {
         falcon_initialize();
+    }
+
+    if (perf_counter_sink_t::PROMETHEUS == _perf_counter_sink) {
+        prometheus_initialize();
     }
 
     event_set_log_callback(libevent_log);
@@ -132,6 +179,8 @@ void pegasus_counter_reporter::stop()
     if (_report_timer != nullptr) {
         _report_timer->cancel();
     }
+    _exposer = nullptr;
+    _registry = nullptr;
 }
 
 void pegasus_counter_reporter::update_counters_to_falcon(const std::string &result,
@@ -161,25 +210,88 @@ void pegasus_counter_reporter::update()
         ddebug("%s", oss.str().c_str());
     }
 
-    if (_enable_falcon) {
+    if (perf_counter_sink_t::FALCON == _perf_counter_sink) {
         std::stringstream oss;
         oss << "[";
 
         bool first_append = true;
         _falcon_metric.timestamp = timestamp;
+
         perf_counters::instance().iterate_snapshot(
             [&oss, &first_append, this](const dsn::perf_counters::counter_snapshot &cs) {
                 _falcon_metric.metric = cs.name;
                 _falcon_metric.value = cs.value;
                 _falcon_metric.counterType = "GAUGE";
+
                 if (!first_append)
                     oss << ",";
                 _falcon_metric.encode_json_state(oss);
                 first_append = false;
             });
         oss << "]";
-
         update_counters_to_falcon(oss.str(), timestamp);
+    }
+
+    if (perf_counter_sink_t::PROMETHEUS == _perf_counter_sink) {
+        const std::string hostname = get_hostname();
+        perf_counters::instance().iterate_snapshot([&hostname, this](
+            const dsn::perf_counters::counter_snapshot &cs) {
+            std::string metrics_name = cs.name;
+
+            // prometheus metric_name don't support characters like .*()@, it only support ":"
+            // and "_"
+            // so change the name to make it all right
+            format_metrics_name(metrics_name);
+
+            // split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or
+            // "collector_app_pegasus_app_stat_multi_put_qps:1_0"
+            // app[0] = "1" which is the app(app name or app id)
+            // app[1] = "0" which is the partition_index
+            // app[2] = "p999" or "" which represent the percent
+            std::string app[3] = {"", "", ""};
+            std::list<std::string> lv;
+            ::dsn::utils::split_args(metrics_name.c_str(), lv, ':');
+            if (lv.size() > 1) {
+                std::list<std::string> lv1;
+                ::dsn::utils::split_args(lv.back().c_str(), lv1, '_');
+                int i = 0;
+                for (auto &v : lv1) {
+                    app[i] = v;
+                    i++;
+                }
+            }
+            /**
+             * deal with corner case, for example:
+             *  replica*eon.replica*table.level.RPC_RRDB_RRDB_GET.latency(ns)@${table_name}.p999
+             * in this case, app[0] = app name, app[1] = p999, app[2] = ""
+             **/
+            if ("p999" == app[1]) {
+                app[2] = app[1];
+                app[1].clear();
+            }
+
+            // create metrics that prometheus support to report data
+            metrics_name = lv.front() + app[2];
+            std::map<std::string, prometheus::Family<prometheus::Gauge> *>::iterator it =
+                _gauge_family_map.find(metrics_name);
+            if (it == _gauge_family_map.end()) {
+                auto &add_gauge_family = prometheus::BuildGauge()
+                                             .Name(metrics_name)
+                                             .Labels({{"service", "pegasus"},
+                                                      {"host_name", hostname},
+                                                      {"cluster", _cluster_name},
+                                                      {"pegasus_job", _app_name},
+                                                      {"port", std::to_string(_local_port)}})
+                                             .Register(*_registry);
+                it = _gauge_family_map
+                         .insert(std::pair<std::string, prometheus::Family<prometheus::Gauge> *>(
+                             metrics_name, &add_gauge_family))
+                         .first;
+            }
+
+            auto &second_gauge = it->second->Add({{"app", app[0]}, {"partition", app[1]}});
+            second_gauge.Set(cs.value);
+        });
     }
 
     ddebug("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
@@ -247,5 +359,5 @@ void pegasus_counter_reporter::on_report_timer(std::shared_ptr<boost::asio::dead
         dassert(false, "pegasus report timer error!!!");
     }
 }
-}
-} // namespace
+} // namespace server
+} // namespace pegasus

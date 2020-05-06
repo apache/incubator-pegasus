@@ -6,6 +6,7 @@
 #include "pegasus_server_test_base.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service_impl.h"
+#include "message_utils.h"
 
 namespace pegasus {
 namespace server {
@@ -13,11 +14,13 @@ namespace server {
 class pegasus_write_service_test : public pegasus_server_test_base
 {
 protected:
-    pegasus_write_service *_write_svc;
+    pegasus_write_service *_write_svc{nullptr};
     std::unique_ptr<pegasus_server_write> _server_write;
 
 public:
-    pegasus_write_service_test() : pegasus_server_test_base()
+    pegasus_write_service_test() = default;
+
+    void SetUp() override
     {
         start();
         _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
@@ -36,7 +39,8 @@ public:
 
         // alarm for empty request
         request.hash_key = dsn::blob(hash_key.data(), 0, hash_key.size());
-        int err = _write_svc->multi_put(decree, request, response);
+        auto ctx = db_write_context::create(decree, 1000);
+        int err = _write_svc->multi_put(ctx, request, response);
         ASSERT_EQ(err, 0);
         verify_response(response, rocksdb::Status::kInvalidArgument, decree);
 
@@ -57,20 +61,20 @@ public:
 
         {
             dsn::fail::cfg("db_write_batch_put", "100%1*return()");
-            err = _write_svc->multi_put(decree, request, response);
+            err = _write_svc->multi_put(ctx, request, response);
             ASSERT_EQ(err, FAIL_DB_WRITE_BATCH_PUT);
             verify_response(response, err, decree);
         }
 
         {
             dsn::fail::cfg("db_write", "100%1*return()");
-            err = _write_svc->multi_put(decree, request, response);
+            err = _write_svc->multi_put(ctx, request, response);
             ASSERT_EQ(err, FAIL_DB_WRITE);
             verify_response(response, err, decree);
         }
 
         { // success
-            err = _write_svc->multi_put(decree, request, response);
+            err = _write_svc->multi_put(ctx, request, response);
             ASSERT_EQ(err, 0);
             verify_response(response, 0, decree);
         }
@@ -80,6 +84,8 @@ public:
 
     void test_multi_remove()
     {
+        dsn::fail::setup();
+
         dsn::apps::multi_remove_request request;
         dsn::apps::multi_remove_response response;
 
@@ -123,12 +129,16 @@ public:
             ASSERT_EQ(err, 0);
             verify_response(response, 0, decree);
         }
+
+        dsn::fail::teardown();
     }
 
     void test_batched_writes()
     {
         int64_t decree = 10;
         std::string hash_key = "hash_key";
+
+        auto ctx = db_write_context::create(decree, 1000);
 
         constexpr int kv_num = 100;
         dsn::blob key[kv_num];
@@ -149,7 +159,7 @@ public:
             for (int i = 0; i < kv_num; i++) {
                 dsn::apps::update_request req;
                 req.key = key[i];
-                _write_svc->batch_put(decree, req, responses[i]);
+                _write_svc->batch_put(ctx, req, responses[i]);
             }
             for (int i = 0; i < kv_num; i++) {
                 _write_svc->batch_remove(decree, key[i], responses[i]);
@@ -180,6 +190,110 @@ TEST_F(pegasus_write_service_test, multi_put) { test_multi_put(); }
 TEST_F(pegasus_write_service_test, multi_remove) { test_multi_remove(); }
 
 TEST_F(pegasus_write_service_test, batched_writes) { test_batched_writes(); }
+
+TEST_F(pegasus_write_service_test, duplicate_not_batched)
+{
+    std::string hash_key = "hash_key";
+    constexpr int kv_num = 100;
+    std::string sort_key[kv_num];
+    std::string value[kv_num];
+
+    for (int i = 0; i < 100; i++) {
+        sort_key[i] = "sort_key_" + std::to_string(i);
+        value[i] = "value_" + std::to_string(i);
+    }
+
+    dsn::apps::duplicate_request duplicate;
+    duplicate.timestamp = 1000;
+    duplicate.cluster_id = 2;
+    dsn::apps::duplicate_response resp;
+
+    {
+        dsn::apps::multi_put_request mput;
+        for (int i = 0; i < 100; i++) {
+            mput.kvs.emplace_back();
+            mput.kvs.back().key.assign(sort_key[i].data(), 0, sort_key[i].size());
+            mput.kvs.back().value.assign(value[i].data(), 0, value[i].size());
+        }
+        dsn::message_ptr mput_msg = pegasus::create_multi_put_request(mput);
+
+        duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_PUT;
+        duplicate.raw_message = dsn::move_message_to_blob(mput_msg.get());
+
+        _write_svc->duplicate(1, duplicate, resp);
+        ASSERT_EQ(resp.error, 0);
+    }
+
+    {
+        dsn::apps::multi_remove_request mremove;
+        for (int i = 0; i < 100; i++) {
+            mremove.sort_keys.emplace_back();
+            mremove.sort_keys.back().assign(sort_key[i].data(), 0, sort_key[i].size());
+        }
+        dsn::message_ptr mremove_msg = pegasus::create_multi_remove_request(mremove);
+
+        duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
+        duplicate.raw_message = dsn::move_message_to_blob(mremove_msg.get());
+
+        _write_svc->duplicate(1, duplicate, resp);
+        ASSERT_EQ(resp.error, 0);
+    }
+}
+
+TEST_F(pegasus_write_service_test, duplicate_batched)
+{
+    std::string hash_key = "hash_key";
+    constexpr int kv_num = 100;
+    std::string sort_key[kv_num];
+    std::string value[kv_num];
+
+    for (int i = 0; i < 100; i++) {
+        sort_key[i] = "sort_key_" + std::to_string(i);
+        value[i] = "value_" + std::to_string(i);
+    }
+
+    {
+        dsn::apps::duplicate_request duplicate;
+        duplicate.timestamp = 1000;
+        duplicate.cluster_id = 2;
+        dsn::apps::duplicate_response resp;
+
+        for (int i = 0; i < kv_num; i++) {
+            dsn::apps::update_request request;
+            pegasus::pegasus_generate_key(request.key, hash_key, sort_key[i]);
+            request.value.assign(value[i].data(), 0, value[i].size());
+
+            dsn::message_ptr msg_ptr = pegasus::create_put_request(request);
+            duplicate.raw_message = dsn::move_message_to_blob(msg_ptr.get());
+            duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+            _write_svc->duplicate(1, duplicate, resp);
+            ASSERT_EQ(resp.error, 0);
+        }
+    }
+}
+
+TEST_F(pegasus_write_service_test, illegal_duplicate_request)
+{
+    std::string hash_key = "hash_key";
+    std::string sort_key = "sort_key";
+    std::string value = "value";
+
+    // cluster=13 is from nowhere
+    dsn::apps::duplicate_request duplicate;
+    duplicate.cluster_id = 13;
+    duplicate.timestamp = 10;
+    dsn::apps::duplicate_response resp;
+
+    dsn::apps::update_request request;
+    pegasus::pegasus_generate_key(request.key, hash_key, sort_key);
+    request.value.assign(value.data(), 0, value.size());
+
+    dsn::message_ptr msg_ptr = pegasus::create_put_request(request); // auto release memory
+    duplicate.raw_message = dsn::move_message_to_blob(msg_ptr.get());
+    duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+    _write_svc->duplicate(1, duplicate, resp);
+    ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);
+}
 
 } // namespace server
 } // namespace pegasus

@@ -251,6 +251,32 @@ struct scan_response
     6:string        server;
 }
 
+struct duplicate_request
+{
+    // The timestamp of this write.
+    1: optional i64 timestamp
+
+    // The code to identify this write.
+    2: optional dsn.task_code task_code
+
+    // The binary form of the write.
+    3: optional dsn.blob raw_message
+
+    // ID of the cluster where this write comes from.
+    4: optional byte cluster_id
+
+    // Whether to compare the timetag of old value with the new write's.
+    5: optional bool verify_timetag
+}
+
+struct duplicate_response
+{
+    1: optional i32 error;
+
+    // hints on the reason why this duplicate failed.
+    2: optional string error_hint;
+}
+
 service rrdb
 {
     update_response put(1:update_request update);

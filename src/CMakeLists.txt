@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.5.2)
 
 project(pegasus C CXX)
 
@@ -20,8 +20,6 @@ if((DSN_THIRDPARTY_ROOT STREQUAL "") OR (NOT EXISTS "${DSN_THIRDPARTY_ROOT}/"))
     message(FATAL_ERROR "Please make sure that ${DSN_THIRDPARTY_ROOT} is defined and does exists.")
 endif()
 
-
-set(DSN_BUILD_RUNTIME FALSE)
 add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
 dsn_common_setup()
 
@@ -31,7 +29,6 @@ execute_process(COMMAND cp -rf ${DSN_ROOT} ${PEGASUS_PROJECT_DIR})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${PEGASUS_PROJECT_DIR}/rocksdb/include)
 include_directories(${PEGASUS_ROOT}/include)
 
 link_directories(${PEGASUS_ROOT}/lib)
@@ -42,11 +39,12 @@ set(CMAKE_INSTALL_PREFIX ${PEGASUS_ROOT} CACHE STRING "" FORCE)
 message (STATUS "pegasus Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
 
 # rocksdb
-set(CMAKE_MODULE_PATH "${PEGASUS_PROJECT_DIR}/rocksdb/cmake/modules")
-find_package(snappy REQUIRED)
-find_package(zstd REQUIRED)
-find_package(lz4 REQUIRED)
-set(ROCKSDB_LINK_LIBRARIES librocksdb.a ${ZSTD_LIBRARIES} ${LZ4_LIBRARIES} ${SNAPPY_LIBRARIES})
+list(APPEND CMAKE_MODULE_PATH "${PEGASUS_PROJECT_DIR}/rocksdb/cmake/modules/")
+find_package(snappy)
+find_package(zstd)
+find_package(lz4)
+set(CMAKE_PREFIX_PATH ${PEGASUS_PROJECT_DIR}/rocksdb/build/output;${CMAKE_PREFIX_PATH})
+find_package(RocksDB REQUIRED) # RocksDB::rocksdb means librocksdb.a
 
 add_subdirectory(base)
 add_subdirectory(reporter)

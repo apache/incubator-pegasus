@@ -10,7 +10,11 @@
 #include <s2/util/units/length-units.h>
 #include <dsn/tool-api/task_tracker.h>
 #include <pegasus/client.h>
-#include "latlng_extractor.h"
+#include "latlng_codec.h"
+
+namespace dsn {
+class error_s;
+} // namespace dsn
 
 namespace pegasus {
 namespace geo {
@@ -19,11 +23,13 @@ struct SearchResult;
 using geo_search_callback_t =
     std::function<void(int error_code, std::list<SearchResult> &&results)>;
 using distance_callback_t = std::function<void(int error_code, double distance)>;
+using get_latlng_callback_t =
+    std::function<void(int error_code, int id, double lat_degrees, double lng_degrees)>;
 
 /// the search result structure used by `search_radial` APIs
 struct SearchResult
 {
-    double lat_degrees; // latitude and longitude extract by `latlng_extractor`, in degree
+    double lat_degrees; // latitude and longitude extract by `latlng_codec`, in degree
     double lng_degrees;
     double distance;      // distance from the input and the result, in meter
     std::string hash_key; // the original hash_key, sort_key, and value when data inserted
@@ -79,8 +85,7 @@ public:
     geo_client(const char *config_file,
                const char *cluster_name,
                const char *common_app_name,
-               const char *geo_app_name,
-               latlng_extractor *extractor);
+               const char *geo_app_name);
 
     ~geo_client() { _tracker.wait_outstanding_tasks(); }
 
@@ -102,7 +107,7 @@ public:
     ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
-    /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_extractor
+    /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_codec
     int set(const std::string &hash_key,
             const std::string &sort_key,
             const std::string &value,
@@ -116,6 +121,63 @@ public:
                    pegasus_client::async_set_callback_t &&callback = nullptr,
                    int timeout_ms = 5000,
                    int ttl_seconds = 0);
+
+    void async_set(const std::string &hash_key,
+                   const std::string &sort_key,
+                   double lat_degrees,
+                   double lng_degrees,
+                   pegasus_client::async_set_callback_t &&callback = nullptr,
+                   int timeout_ms = 5000,
+                   int ttl_seconds = 0);
+
+    ///
+    /// \brief get
+    ///     get latitude and longitude of key pair from the cluster
+    ///     key pair is composed of hash_key and sort_key.
+    /// \param hash_key
+    ///     used to decide which partition to get value
+    /// \param sort_key
+    ///     all the k-v under hash_key will be sorted by sort_key
+    /// \param lat_degrees
+    ///     latitude in degree of this key
+    /// \param lng_degrees
+    ///     longitude in degree of this key
+    /// \param timeout_ms
+    ///     if wait longer than this value, will return timeout error
+    /// \return
+    ///     int, the error indicates whether or not the operation is succeeded.
+    /// this error can be converted to a string using get_error_string()
+    ///
+    /// REQUIRES: value of this key can be correctly extracted to latitude and longitude by
+    /// latlng_codec
+    int get(const std::string &hash_key,
+            const std::string &sort_key,
+            double &lat_degrees,
+            double &lng_degrees,
+            int timeout_ms = 5000);
+
+    ///
+    /// \brief async_get
+    ///     get latitude and longitude of key pair from the cluster asynchronous
+    ///     key pair is composed of hash_key and sort_key.
+    /// \param hash_key
+    ///     used to decide which partition to get value
+    /// \param sort_key
+    ///     all the k-v under hash_key will be sorted by sort_key
+    /// \param id
+    ///     to distinguish different calls
+    /// \param callback
+    ///     callback function either success or not
+    /// \param timeout_ms
+    ///     if wait longer than this value, will return timeout error
+    ///
+    /// REQUIRES: value of this key can be correctly extracted to latitude and longitude by
+    /// latlng_codec
+    void async_get(const std::string &hash_key,
+                   const std::string &sort_key,
+                   int id,
+                   get_latlng_callback_t &&callback = nullptr,
+                   int timeout_ms = 5000);
 
     ///
     /// \brief del
@@ -162,7 +224,7 @@ public:
     ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
-    /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_extractor
+    /// REQUIRES: latitude and longitude can be correctly extracted from `value` by latlng_codec
     int set_geo_data(const std::string &hash_key,
                      const std::string &sort_key,
                      const std::string &value,
@@ -236,7 +298,7 @@ public:
     ///     int, the error indicates whether or not the operation is succeeded.
     /// this error can be converted to a string using get_error_string()
     ///
-    /// REQUIRES: latitude and longitude can be correctly extracted by latlng_extractor from the
+    /// REQUIRES: latitude and longitude can be correctly extracted by latlng_codec from the
     /// value corresponding to `hash_key` and `sort_key`
     int search_radial(const std::string &hash_key,
                       const std::string &sort_key,
@@ -285,7 +347,10 @@ public:
         return _common_data_client->get_error_string(error_code);
     }
 
-    void set_max_level(int level) { _max_level = level; }
+    dsn::error_s set_max_level(int level);
+
+    // For test.
+    const latlng_codec &get_codec() const { return _codec; }
 
 private:
     friend class geo_client_test;
@@ -300,11 +365,11 @@ private:
         int error_code, pegasus_client::internal_info &&info, DataType data_type)>;
     using scan_all_area_callback_t =
         std::function<void(std::list<std::list<SearchResult>> &&results)>;
-    using scan_one_area_callback = std::function<void()>;
+    using scan_one_area_callback_t = std::function<void()>;
 
     // generate hash_key and sort_key in geo database from hash_key and sort_key in common data
     // database
-    // geo hash_key is the prefix of cell id which is calculated from value by `_extractor`, its
+    // geo hash_key is the prefix of cell id which is calculated from value by `_codec`, its
     // length is associated with `_min_level`
     // geo sort_key is composed with the postfix of the same cell id and origin hash_key and
     // sort_key
@@ -382,30 +447,30 @@ private:
                     std::shared_ptr<S2Cap> cap_ptr,
                     int count,
                     int timeout_ms,
-                    scan_one_area_callback &&callback,
+                    scan_one_area_callback_t &&callback,
                     std::list<SearchResult> &result);
 
     void do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper,
                  std::shared_ptr<S2Cap> cap_ptr,
                  int count,
-                 scan_one_area_callback &&callback,
+                 scan_one_area_callback_t &&callback,
                  std::list<SearchResult> &result);
 
 private:
     // cell id at this level is the hash-key in pegasus
     // `_min_level` is immutable after geo_client data has been inserted into DB.
-    const int _min_level = 12; // edge length at level 12 is about 2km
+    int _min_level = 12; // edge length at level 12 is about 2km
 
     // cell id at this level is the prefix of sort-key in pegasus, and
     // it's convenient for scan operation
     // `_max_level` is mutable at any time, and geo_client-lib users can change it to a appropriate
     // value
     // to improve performance in their scenario.
-    int _max_level = 16;
+    int _max_level = 16; // edge length at level 16 is about 150m
 
     dsn::task_tracker _tracker;
 
-    std::shared_ptr<const latlng_extractor> _extractor = nullptr;
+    latlng_codec _codec;
     pegasus_client *_common_data_client = nullptr;
     pegasus_client *_geo_data_client = nullptr;
 };

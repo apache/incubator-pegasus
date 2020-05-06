@@ -5,13 +5,12 @@
 #pragma once
 
 #include <dsn/cpp/service_app.h>
+#include <dsn/tool-api/http_server.h>
 #include "info_collector.h"
 #include "available_detector.h"
 
 namespace pegasus {
 namespace server {
-
-DEFINE_TASK_CODE(LPC_PEGASUS_COLLECTOR_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 class info_collector_app : public ::dsn::service_app
 {
@@ -26,6 +25,7 @@ private:
     info_collector _collector;
     available_detector _detector;
     bool _updater_started;
+    std::unique_ptr<::dsn::http_server> _http_server;
 };
 }
 } // namespace

@@ -11,7 +11,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
-#include <rocksdb/sst_dump_tool.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/output_utils.h>
 #include <dsn/utility/string_conv.h>
@@ -48,6 +47,16 @@ struct list_nodes_helper
     int64_t mem_idx_bytes;
     int64_t disk_available_total_ratio;
     int64_t disk_available_min_ratio;
+    double get_qps;
+    double put_qps;
+    double multi_get_qps;
+    double multi_put_qps;
+    double get_p99;
+    double put_p99;
+    double multi_get_p99;
+    double multi_put_p99;
+    double read_cu;
+    double write_cu;
     list_nodes_helper(const std::string &n, const std::string &s)
         : node_name(n),
           node_status(s),
@@ -58,7 +67,17 @@ struct list_nodes_helper
           mem_tbl_bytes(0),
           mem_idx_bytes(0),
           disk_available_total_ratio(0),
-          disk_available_min_ratio(0)
+          disk_available_min_ratio(0),
+          get_qps(0.0),
+          put_qps(0.0),
+          multi_get_qps(0.0),
+          multi_put_qps(0.0),
+          get_p99(0.0),
+          put_p99(0.0),
+          multi_get_p99(0.0),
+          multi_put_p99(0.0),
+          read_cu(0.0),
+          write_cu(0.0)
     {
     }
 };
@@ -206,3 +225,29 @@ bool sst_dump(command_executor *e, shell_context *sc, arguments args);
 bool mlog_dump(command_executor *e, shell_context *sc, arguments args);
 
 bool local_get(command_executor *e, shell_context *sc, arguments args);
+
+bool rdb_key_hex2str(command_executor *e, shell_context *sc, arguments args);
+
+bool rdb_key_str2hex(command_executor *e, shell_context *sc, arguments args);
+
+bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args);
+
+// == duplication (see 'commands/duplication.cpp') == //
+
+bool add_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool query_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool remove_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool start_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool pause_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args);
+
+// == disk rebalance (see 'commands/disk_rebalance.cpp') == //
+
+bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args);
+
+bool query_disk_replica(command_executor *e, shell_context *sc, arguments args);

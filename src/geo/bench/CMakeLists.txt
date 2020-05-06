@@ -10,21 +10,18 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../../rocksdb")
-set(MY_PROJ_LIB_PATH "../../../rocksdb/build")
-
 set(MY_PROJ_LIBS
         pegasus_geo_lib
         s2testing
         s2
         pegasus_client_static
-        fmt
-        ${ROCKSDB_LINK_LIBRARIES}
-        z)
+        RocksDB::rocksdb
+        )
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES "config.ini")
 
 dsn_add_executable()
+
 dsn_install_executable()

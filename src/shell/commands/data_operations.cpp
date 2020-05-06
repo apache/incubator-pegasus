@@ -3,14 +3,14 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "shell/commands.h"
+#include "idl_utils.h"
 
 static void
 print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &contexts,
                          const std::string &stop_desc,
                          bool stat_size,
+                         std::shared_ptr<rocksdb::Statistics> statistics,
                          bool count_hash_key);
-static void print_simple_histogram(const std::string &name,
-                                   const rocksdb::HistogramImpl &histogram);
 
 void escape_sds_argv(int argc, sds *argv);
 int mutation_check(int args_count, sds *args);
@@ -738,8 +738,7 @@ bool check_and_set(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "ERROR: check_type not provided\n");
         return false;
     }
-    if (!check_operand_provided &&
-        check_type >= ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
+    if (!check_operand_provided && pegasus::cas_is_check_operand_needed(check_type)) {
         fprintf(stderr, "ERROR: check_operand not provided\n");
         return false;
     }
@@ -1014,6 +1013,8 @@ bool sortkey_count(command_executor *e, shell_context *sc, arguments args)
     int ret = sc->pg_client->sortkey_count(hash_key, count, sc->timeout_ms, &info);
     if (ret != pegasus::PERR_OK) {
         fprintf(stderr, "ERROR: %s\n", sc->pg_client->get_error_string(ret));
+    } else if (count == -1) {
+        fprintf(stderr, "ERROR: it takes too long to count sortkey\n");
     } else {
         fprintf(stderr, "%" PRId64 "\n", count);
     }
@@ -1709,12 +1710,10 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
 
     std::unique_ptr<pegasus::geo::geo_client> target_geo_client;
     if (is_geo_data) {
-        target_geo_client.reset(
-            new pegasus::geo::geo_client("config.ini",
-                                         target_cluster_name.c_str(),
-                                         target_app_name.c_str(),
-                                         target_geo_app_name.c_str(),
-                                         new pegasus::geo::latlng_extractor_for_lbs()));
+        target_geo_client.reset(new pegasus::geo::geo_client("config.ini",
+                                                             target_cluster_name.c_str(),
+                                                             target_app_name.c_str(),
+                                                             target_geo_app_name.c_str()));
     }
 
     std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
@@ -2083,7 +2082,8 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
 
 bool count_data(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"partition", required_argument, 0, 'p'},
+    static struct option long_options[] = {{"precise", no_argument, 0, 'c'},
+                                           {"partition", required_argument, 0, 'p'},
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
                                            {"hash_key_filter_type", required_argument, 0, 'h'},
@@ -2098,6 +2098,11 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                            {"run_seconds", required_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
 
+    // "count_data" usually need scan all online records to get precise result, which may affect
+    // cluster availability, so here define precise = false defaultly and it will return estimate
+    // count immediately.
+    bool precise = false;
+    bool need_scan = false;
     int32_t partition = -1;
     int max_batch_count = 500;
     int timeout_ms = sc->timeout_ms;
@@ -2120,10 +2125,15 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         int option_index = 0;
         int c;
         c = getopt_long(
-            args.argc, args.argv, "p:b:t:h:x:s:y:v:z:dan:r:", long_options, &option_index);
+            args.argc, args.argv, "cp:b:t:h:x:s:y:v:z:dan:r:", long_options, &option_index);
         if (c == -1)
             break;
+        // input any valid parameter means you want to get precise count by scanning.
+        need_scan = true;
         switch (c) {
+        case 'c':
+            precise = true;
+            break;
         case 'p':
             if (!dsn::buf2int32(optarg, partition)) {
                 fprintf(stderr, "ERROR: parse %s as partition failed\n", optarg);
@@ -2200,6 +2210,42 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         default:
             return false;
         }
+    }
+
+    if (!precise) {
+        if (need_scan) {
+            fprintf(stderr,
+                    "ERROR: you must input [-c|--precise] flag when you expect to get precise "
+                    "result by scaning all record online\n");
+            return false;
+        }
+
+        // get estimate key number
+        std::vector<row_data> rows;
+        std::string app_name = sc->pg_client->get_app_name();
+        if (!get_app_stat(sc, app_name, rows)) {
+            fprintf(stderr, "ERROR: query app stat from server failed");
+            return true;
+        }
+
+        rows.resize(rows.size() + 1);
+        row_data &sum = rows.back();
+        sum.row_name = "(total:" + std::to_string(rows.size() - 1) + ")";
+        for (int i = 0; i < rows.size() - 1; ++i) {
+            const row_data &row = rows[i];
+            sum.rdb_estimate_num_keys += row.rdb_estimate_num_keys;
+        }
+
+        ::dsn::utils::table_printer tp("count_data");
+        tp.add_title("pidx");
+        tp.add_column("estimate_count");
+        for (const row_data &row : rows) {
+            tp.add_row(row.row_name);
+            tp.append_data(row.rdb_estimate_num_keys);
+        }
+
+        tp.output(std::cout, tp_output_format::kTabular);
+        return true;
     }
 
     if (max_batch_count <= 1) {
@@ -2293,6 +2339,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
 
     std::atomic_bool error_occurred(false);
     std::vector<std::unique_ptr<scan_data_context>> contexts;
+    std::shared_ptr<rocksdb::Statistics> statistics = rocksdb::CreateDBStatistics();
     for (int i = 0; i < split_count; i++) {
         scan_data_context *context = new scan_data_context(SCAN_COUNT,
                                                            i,
@@ -2303,6 +2350,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            nullptr,
                                                            &error_occurred,
                                                            stat_size,
+                                                           statistics,
                                                            top_count,
                                                            diff_hash_key);
         context->set_sort_key_filter(sort_key_filter_type, sort_key_filter_pattern);
@@ -2366,7 +2414,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             break;
         last_total_rows = cur_total_rows;
         if (stat_size && sleep_seconds % 10 == 0) {
-            print_current_scan_state(contexts, "partially", stat_size, diff_hash_key);
+            print_current_scan_state(contexts, "partially", stat_size, statistics, diff_hash_key);
         }
     }
 
@@ -2389,7 +2437,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         stop_desc = "done";
     }
 
-    print_current_scan_state(contexts, stop_desc, stat_size, diff_hash_key);
+    print_current_scan_state(contexts, stop_desc, stat_size, statistics, diff_hash_key);
 
     if (stat_size) {
         if (top_count > 0) {
@@ -2431,7 +2479,7 @@ void escape_sds_argv(int argc, sds *argv)
 {
     for (int i = 0; i < argc; i++) {
         const size_t dest_len = sdslen(argv[i]) * 4 + 1; // Maximum possible expansion
-        sds new_arg = sdsnewlen("", dest_len);
+        sds new_arg = sdsnewlen(NULL, dest_len);
         pegasus::utils::c_escape_string(argv[i], sdslen(argv[i]), new_arg, dest_len);
         sdsfree(argv[i]);
         argv[i] = new_arg;
@@ -2517,22 +2565,11 @@ int mutation_check(int args_count, sds *args)
     return ret;
 }
 
-static void print_simple_histogram(const std::string &name, const rocksdb::HistogramImpl &histogram)
-{
-    fprintf(stderr, "[%s]\n", name.c_str());
-    fprintf(stderr, "    max = %ld\n", histogram.max());
-    fprintf(stderr, "    med = %.2f\n", histogram.Median());
-    fprintf(stderr, "    avg = %.2f\n", histogram.Average());
-    fprintf(stderr, "    min = %ld\n", histogram.min());
-    fprintf(stderr, "    P99 = %.2f\n", histogram.Percentile(99.0));
-    fprintf(stderr, "    P95 = %.2f\n", histogram.Percentile(95.0));
-    fprintf(stderr, "    P90 = %.2f\n", histogram.Percentile(90.0));
-}
-
 static void
 print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &contexts,
                          const std::string &stop_desc,
                          bool stat_size,
+                         std::shared_ptr<rocksdb::Statistics> statistics,
                          bool count_hash_key)
 {
     long total_rows = 0;
@@ -2557,20 +2594,26 @@ print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &
     }
 
     if (stat_size) {
-        rocksdb::HistogramImpl hash_key_size_histogram;
-        rocksdb::HistogramImpl sort_key_size_histogram;
-        rocksdb::HistogramImpl value_size_histogram;
-        rocksdb::HistogramImpl row_size_histogram;
-        for (const auto &context : contexts) {
-            hash_key_size_histogram.Merge(context->hash_key_size_histogram);
-            sort_key_size_histogram.Merge(context->sort_key_size_histogram);
-            value_size_histogram.Merge(context->value_size_histogram);
-            row_size_histogram.Merge(context->row_size_histogram);
-        }
-        print_simple_histogram("hash_key_size", hash_key_size_histogram);
-        print_simple_histogram("sort_key_size", sort_key_size_histogram);
-        print_simple_histogram("value_size", value_size_histogram);
-        print_simple_histogram("row_size", row_size_histogram);
+        fprintf(stderr,
+                "\n============================[hash_key_size]============================\n"
+                "%s=======================================================================",
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::HASH_KEY_SIZE))
+                    .c_str());
+        fprintf(stderr,
+                "\n============================[sort_key_size]============================\n"
+                "%s=======================================================================",
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::SORT_KEY_SIZE))
+                    .c_str());
+        fprintf(stderr,
+                "\n==============================[value_size]=============================\n"
+                "%s=======================================================================",
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::VALUE_SIZE))
+                    .c_str());
+        fprintf(stderr,
+                "\n===============================[row_size]==============================\n"
+                "%s=======================================================================\n\n",
+                statistics->getHistogramString(static_cast<uint32_t>(histogram_type::ROW_SIZE))
+                    .c_str());
     }
 }
 

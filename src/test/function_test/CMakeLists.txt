@@ -10,25 +10,14 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include")
-
-set(MY_BOOST_PACKAGES "system")
 set(MY_PROJ_LIBS
     dsn.replication.ddlclient
     dsn_replication_common
     pegasus_client_static
-    fmt
+    gtest
     )
 
-if (UNIX)
-    set(MY_PROJ_LIBS ${MY_PROJ_LIBS} gtest pthread)
-else()
-    set(MY_PROJ_LIBS ${MY_PROJ_LIBS} gtest)
-endif()
-
-set(MY_BOOST_PACKAGES system filesystem)
-
-set(MY_PROJ_LIB_PATH "../..")
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_BINPLACES "config.ini" "run.sh")
 

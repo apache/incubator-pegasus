@@ -2,15 +2,20 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
+#include "base/pegasus_rpc_types.h"
 #include "pegasus_write_service.h"
 #include "pegasus_write_service_impl.h"
 #include "capacity_unit_calculator.h"
+
+#include <dsn/cpp/message_utils.h>
+#include <dsn/utility/defer.h>
 
 namespace pegasus {
 namespace server {
 
 pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
-    : _server(server),
+    : replica_base(server),
+      _server(server),
       _impl(new impl(server)),
       _batch_start_time(0),
       _cu_calculator(server->_cu_calculator.get())
@@ -95,22 +100,45 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
         name.c_str(),
         COUNTER_TYPE_NUMBER_PERCENTILES,
         "statistic the latency of CHECK_AND_MUTATE request");
+
+    _pfc_duplicate_qps.init_app_counter("app.pegasus",
+                                        fmt::format("duplicate_qps@{}", str_gpid).c_str(),
+                                        COUNTER_TYPE_RATE,
+                                        "statistic the qps of DUPLICATE requests");
+
+    _pfc_dup_time_lag.init_app_counter(
+        "app.pegasus",
+        fmt::format("dup.time_lag_ms@{}", app_name()).c_str(),
+        COUNTER_TYPE_NUMBER_PERCENTILES,
+        "the time (in ms) lag between master and slave in the duplication");
+
+    _dup_lagging_write_threshold_ms = dsn_config_get_value_int64(
+        "pegasus.server",
+        "dup_lagging_write_threshold_ms",
+        10 * 1000,
+        "If the duration that a write flows from master to slave is larger than this threshold, "
+        "the write is defined a lagging write.");
+    _pfc_dup_lagging_writes.init_app_counter(
+        "app.pegasus",
+        fmt::format("dup.lagging_writes@{}", app_name()).c_str(),
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "the number of lagging writes (time lag larger than `dup_lagging_write_threshold_ms`)");
 }
 
 pegasus_write_service::~pegasus_write_service() {}
 
 int pegasus_write_service::empty_put(int64_t decree) { return _impl->empty_put(decree); }
 
-int pegasus_write_service::multi_put(int64_t decree,
+int pegasus_write_service::multi_put(const db_write_context &ctx,
                                      const dsn::apps::multi_put_request &update,
                                      dsn::apps::update_response &resp)
 {
     uint64_t start_time = dsn_now_ns();
     _pfc_multi_put_qps->increment();
-    int err = _impl->multi_put(decree, update, resp);
+    int err = _impl->multi_put(ctx, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_multi_put_cu(resp.error, update.kvs);
+        _cu_calculator->add_multi_put_cu(resp.error, update.hash_key, update.kvs);
     }
 
     _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
@@ -126,7 +154,7 @@ int pegasus_write_service::multi_remove(int64_t decree,
     int err = _impl->multi_remove(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_multi_remove_cu(resp.error, update.sort_keys);
+        _cu_calculator->add_multi_remove_cu(resp.error, update.hash_key, update.sort_keys);
     }
 
     _pfc_multi_remove_latency->set(dsn_now_ns() - start_time);
@@ -158,7 +186,11 @@ int pegasus_write_service::check_and_set(int64_t decree,
     int err = _impl->check_and_set(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_check_and_set_cu(resp.error, update.set_sort_key, update.set_value);
+        _cu_calculator->add_check_and_set_cu(resp.error,
+                                             update.hash_key,
+                                             update.check_sort_key,
+                                             update.set_sort_key,
+                                             update.set_value);
     }
 
     _pfc_check_and_set_latency->set(dsn_now_ns() - start_time);
@@ -174,7 +206,8 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
     int err = _impl->check_and_mutate(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_check_and_mutate_cu(resp.error, update.mutate_list);
+        _cu_calculator->add_check_and_mutate_cu(
+            resp.error, update.hash_key, update.check_sort_key, update.mutate_list);
     }
 
     _pfc_check_and_mutate_latency->set(dsn_now_ns() - start_time);
@@ -189,7 +222,7 @@ void pegasus_write_service::batch_prepare(int64_t decree)
     _batch_start_time = dsn_now_ns();
 }
 
-int pegasus_write_service::batch_put(int64_t decree,
+int pegasus_write_service::batch_put(const db_write_context &ctx,
                                      const dsn::apps::update_request &update,
                                      dsn::apps::update_response &resp)
 {
@@ -197,7 +230,7 @@ int pegasus_write_service::batch_put(int64_t decree,
 
     _batch_qps_perfcounters.push_back(_pfc_put_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
-    int err = _impl->batch_put(decree, update, resp);
+    int err = _impl->batch_put(ctx, update, resp);
 
     if (_server->is_primary()) {
         _cu_calculator->add_put_cu(resp.error, update.key, update.value);
@@ -254,6 +287,72 @@ void pegasus_write_service::clear_up_batch_states()
     _batch_qps_perfcounters.clear();
     _batch_latency_perfcounters.clear();
     _batch_start_time = 0;
+}
+
+int pegasus_write_service::duplicate(int64_t decree,
+                                     const dsn::apps::duplicate_request &request,
+                                     dsn::apps::duplicate_response &resp)
+{
+    // Verifies the cluster_id.
+    if (!dsn::replication::is_cluster_id_configured(request.cluster_id)) {
+        resp.__set_error(rocksdb::Status::kInvalidArgument);
+        resp.__set_error_hint("request cluster id is unconfigured");
+        return empty_put(decree);
+    }
+    if (request.cluster_id == get_current_cluster_id()) {
+        resp.__set_error(rocksdb::Status::kInvalidArgument);
+        resp.__set_error_hint("self-duplicating");
+        return empty_put(decree);
+    }
+
+    _pfc_duplicate_qps->increment();
+    auto cleanup = dsn::defer([this, &request]() {
+        uint64_t latency_ms = (dsn_now_us() - request.timestamp) / 1000;
+        if (latency_ms > _dup_lagging_write_threshold_ms) {
+            _pfc_dup_lagging_writes->increment();
+        }
+        _pfc_dup_time_lag->set(latency_ms);
+    });
+    dsn::message_ex *write = dsn::from_blob_to_received_msg(request.task_code, request.raw_message);
+    bool is_delete = request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE ||
+                     request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE;
+    auto remote_timetag = generate_timetag(request.timestamp, request.cluster_id, is_delete);
+    auto ctx = db_write_context::create_duplicate(decree, remote_timetag, request.verify_timetag);
+
+    if (request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
+        multi_put_rpc rpc(write);
+        resp.__set_error(_impl->multi_put(ctx, rpc.request(), rpc.response()));
+        return resp.error;
+    }
+    if (request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
+        multi_remove_rpc rpc(write);
+        resp.__set_error(_impl->multi_remove(ctx.decree, rpc.request(), rpc.response()));
+        return resp.error;
+    }
+    put_rpc put;
+    remove_rpc remove;
+    if (request.task_code == dsn::apps::RPC_RRDB_RRDB_PUT ||
+        request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+        int err = 0;
+        if (request.task_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
+            put = put_rpc(write);
+            err = _impl->batch_put(ctx, put.request(), put.response());
+        }
+        if (request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+            remove = remove_rpc(write);
+            err = _impl->batch_remove(ctx.decree, remove.request(), remove.response());
+        }
+        if (!err) {
+            err = _impl->batch_commit(ctx.decree);
+        } else {
+            _impl->batch_abort(ctx.decree, err);
+        }
+        resp.__set_error(err);
+        return resp.error;
+    }
+    resp.__set_error(rocksdb::Status::kInvalidArgument);
+    resp.__set_error_hint(fmt::format("unrecognized task code {}", request.task_code));
+    return empty_put(ctx.decree);
 }
 
 } // namespace server

@@ -28,22 +28,27 @@ class recovery_test : public testing::Test
 protected:
     virtual void SetUp()
     {
+        // THREAD_POOL_META_SERVER worker count should be greater than 1
+        // This function test update 'distributed_lock_service_type' to
+        // 'distributed_lock_service_simple', which executes in threadpool THREAD_POOL_META_SERVER
+        // As a result, failure detection lock executes in this pool
+        // if worker count = 1, it will lead to ERR_TIMEOUT when execute 'ddl_client->do_recovery'
+
         // 1. restart onebox, modify the config
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
 
-        system("cp src/server/config-server.ini config-server-test-recovery.ini");
-        system("sed -i \"/^meta_state_service_type/c meta_state_service_type = "
+        system("cp src/server/config.min.ini config-server-test-recovery.ini");
+        system("sed -i \"/^\\s*meta_state_service_type/c meta_state_service_type = "
                "meta_state_service_simple\" config-server-test-recovery.ini");
-        system("sed -i \"/^distributed_lock_service_type/c distributed_lock_service_type = "
+        system("sed -i \"/^\\s*distributed_lock_service_type/c distributed_lock_service_type = "
                "distributed_lock_service_simple\" config-server-test-recovery.ini");
-        system("sed -i \"/^server_list/c server_list = @LOCAL_IP@:34601\" "
+        system("sed -i \"/^\\s*server_list/c server_list = @LOCAL_IP@:34601\" "
                "config-server-test-recovery.ini");
-        system("sed -i \"/^perf_counter_enable_logging/c perf_counter_enable_logging = false\" "
+        system("sed -i \"/^\\s*perf_counter_enable_logging/c perf_counter_enable_logging = false\" "
                "config-server-test-recovery.ini");
 
-        system(
-            "./run.sh start_onebox -m 1 -r 3 --config_path config-server-test-recovery.ini");
+        system("./run.sh start_onebox -m 1 -r 3 --config_path config-server-test-recovery.ini");
         std::cout << "sleep for a while to wait the new onebox start" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -159,11 +164,12 @@ public:
     void config_meta_to_do_cold_recovery()
     {
         char command[512];
-        snprintf(command,
-                 512,
-                 "cd %s && sed -i \"/^recover_from_replica_server/c recover_from_replica_server = "
-                 "true\" onebox/meta1/config.ini",
-                 global_env::instance()._pegasus_root.c_str());
+        snprintf(
+            command,
+            512,
+            "cd %s && sed -i \"/^\\s*recover_from_replica_server/c recover_from_replica_server = "
+            "true\" onebox/meta1/config.ini",
+            global_env::instance()._pegasus_root.c_str());
         system(command);
     }
 

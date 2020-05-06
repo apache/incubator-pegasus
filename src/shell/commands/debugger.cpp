@@ -3,6 +3,10 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "shell/commands.h"
+#include "base/idl_utils.h"
+#include <rocksdb/sst_dump_tool.h>
+#include <rocksdb/utilities/ldb_cmd.h>
+#include <fmt/time.h>
 
 bool sst_dump(command_executor *e, shell_context *sc, arguments args)
 {
@@ -126,6 +130,29 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
                        << pegasus::utils::c_escape_string(hash_key, sc->escape_all) << "\" : \""
                        << pegasus::utils::c_escape_string(sort_key, sc->escape_all) << "\" => "
                        << update.increment << std::endl;
+                } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+                    dsn::apps::check_and_set_request update;
+                    dsn::unmarshall(request, update);
+                    auto set_sort_key =
+                        update.set_diff_sort_key ? update.set_sort_key : update.check_sort_key;
+                    std::string check_operand;
+                    if (pegasus::cas_is_check_operand_needed(update.check_type)) {
+                        check_operand = fmt::format(
+                            "\"{}\" ",
+                            pegasus::utils::c_escape_string(update.check_operand, sc->escape_all));
+                    }
+                    os << INDENT
+                       << fmt::format(
+                              "[CHECK_AND_SET] \"{}\" : IF SORT_KEY({}) {} {}"
+                              "THEN SET SORT_KEY({}) => VALUE({}) [expire={}]\n",
+                              pegasus::utils::c_escape_string(update.hash_key, sc->escape_all),
+                              pegasus::utils::c_escape_string(update.check_sort_key,
+                                                              sc->escape_all),
+                              pegasus::cas_check_type_to_string(update.check_type),
+                              check_operand,
+                              pegasus::utils::c_escape_string(set_sort_key, sc->escape_all),
+                              pegasus::utils::c_escape_string(update.set_value, sc->escape_all),
+                              update.set_expire_ts_seconds);
                 } else {
                     os << INDENT << "ERROR: unsupported code "
                        << ::dsn::task_code(msg->local_rpc_code).to_string() << "("
@@ -187,5 +214,54 @@ bool local_get(command_executor *e, shell_context *sc, arguments args)
     }
 
     delete db;
+    return true;
+}
+
+bool rdb_key_str2hex(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc != 3) {
+        return false;
+    }
+    std::string hash_key = sds_to_string(args.argv[1]);
+    std::string sort_key = sds_to_string(args.argv[2]);
+    ::dsn::blob key;
+    pegasus::pegasus_generate_key(key, hash_key, sort_key);
+    rocksdb::Slice skey(key.data(), key.length());
+    fprintf(stderr, "\"%s\"\n", skey.ToString(true).c_str());
+    return true;
+}
+
+bool rdb_key_hex2str(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc != 2) {
+        return false;
+    }
+    std::string hex_rdb_key = sds_to_string(args.argv[1]);
+    dsn::blob key = dsn::blob::create_from_bytes(rocksdb::LDBCommand::HexToString(hex_rdb_key));
+    std::string hash_key, sort_key;
+    pegasus::pegasus_restore_key(key, hash_key, sort_key);
+    fmt::print(
+        stderr, "\nhash key: \"{}\"\n", pegasus::utils::c_escape_string(hash_key, sc->escape_all));
+    fmt::print(
+        stderr, "\nsort key: \"{}\"\n", pegasus::utils::c_escape_string(sort_key, sc->escape_all));
+    return true;
+}
+
+bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc != 2) {
+        return false;
+    }
+    std::string hex_rdb_value = sds_to_string(args.argv[1]);
+    std::string pegasus_value = rocksdb::LDBCommand::HexToString(hex_rdb_value);
+    auto expire_ts = static_cast<int64_t>(pegasus::pegasus_extract_expire_ts(0, pegasus_value)) +
+                     pegasus::utils::epoch_begin; // TODO(wutao): pass user specified version
+    fmt::print(stderr, "\nWhen to expire:\n  {:%Y-%m-%d %H:%M:%S}\n", *std::localtime(&expire_ts));
+
+    dsn::blob user_data;
+    pegasus::pegasus_extract_user_data(0, std::move(pegasus_value), user_data);
+    fprintf(stderr,
+            "user_data:\n  \"%s\"\n",
+            pegasus::utils::c_escape_string(user_data.to_string(), sc->escape_all).c_str());
     return true;
 }

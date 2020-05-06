@@ -4,6 +4,11 @@
 
 #include "shell/commands.h"
 
+double convert_to_ratio(double hit, double total)
+{
+    return std::abs(total) < 1e-6 ? 0 : hit / total;
+}
+
 bool ls_apps(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"all", no_argument, 0, 'a'},
@@ -121,7 +126,8 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     if (args.argc <= 1)
         return false;
 
-    static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
+    static struct option long_options[] = {{"resolve_ip", no_argument, 0, 'r'},
+                                           {"detailed", no_argument, 0, 'd'},
                                            {"json", no_argument, 0, 'j'},
                                            {"output", required_argument, 0, 'o'},
                                            {0, 0, 0, 0}};
@@ -130,17 +136,21 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     std::string out_file;
     bool detailed = false;
     bool json = false;
+    bool resolve_ip = false;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "djo:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "drjo:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
         case 'd':
             detailed = true;
+            break;
+        case 'r':
+            resolve_ip = true;
             break;
         case 'j':
             json = true;
@@ -152,7 +162,6 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             return false;
         }
     }
-
     if (app_name.empty()) {
         std::cout << "ERROR: null app name" << std::endl;
         return false;
@@ -184,6 +193,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     int32_t partition_count = 0;
     int32_t max_replica_count = 0;
     std::vector<dsn::partition_configuration> partitions;
+
     dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
     if (err != ::dsn::ERR_OK) {
         std::cout << "ERROR: list app " << app_name << " failed, error=" << err.to_string()
@@ -304,7 +314,13 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
             }
             std::stringstream oss;
-            oss << p.primary.to_string() << "(";
+            std::string hostname;
+            std::string ip = p.primary.to_string();
+            if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
+                oss << hostname << "(";
+            } else {
+                oss << p.primary.to_string() << "(";
+            };
             if (disk_found)
                 oss << disk_value;
             else
@@ -348,7 +364,14 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                         count_value = f3->second;
                     }
                 }
-                oss << p.secondaries[j].to_string() << "(";
+
+                std::string hostname;
+                std::string ip = p.secondaries[j].to_string();
+                if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
+                    oss << hostname << "(";
+                } else {
+                    oss << p.secondaries[j].to_string() << "(";
+                };
                 if (found)
                     oss << value;
                 else
@@ -475,6 +498,11 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.rdb_block_cache_total_count += row.rdb_block_cache_total_count;
         sum.rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
         sum.rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
+        sum.rdb_bf_seek_negatives += row.rdb_bf_seek_negatives;
+        sum.rdb_bf_seek_total += row.rdb_bf_seek_total;
+        sum.rdb_bf_point_positive_true += row.rdb_bf_point_positive_true;
+        sum.rdb_bf_point_positive_total += row.rdb_bf_point_positive_total;
+        sum.rdb_bf_point_negatives += row.rdb_bf_point_negatives;
     }
 
     std::streambuf *buf;
@@ -488,7 +516,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    ::dsn::utils::table_printer tp("app_stat");
+    ::dsn::utils::table_printer tp("app_stat", 2 /* tabular_width */, 3 /* precision */);
     tp.add_title(app_name.empty() ? "app_name" : "pidx");
     if (app_name.empty()) {
         tp.add_column("app_id", tp_alignment::kRight);
@@ -520,6 +548,9 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("mem_idx_mb", tp_alignment::kRight);
     }
     tp.add_column("hit_rate", tp_alignment::kRight);
+    tp.add_column("seek_n_rate", tp_alignment::kRight);
+    tp.add_column("point_n_rate", tp_alignment::kRight);
+    tp.add_column("point_fp_rate", tp_alignment::kRight);
 
     for (row_data &row : rows) {
         tp.add_row(row.row_name);
@@ -552,11 +583,16 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.rdb_memtable_mem_usage / (1 << 20U));
             tp.append_data(row.rdb_index_and_filter_blocks_mem_usage / (1 << 20U));
         }
-        double block_cache_hit_rate =
-            std::abs(row.rdb_block_cache_total_count) < 1e-6
-                ? 0.0
-                : row.rdb_block_cache_hit_count / row.rdb_block_cache_total_count;
-        tp.append_data(block_cache_hit_rate);
+        tp.append_data(
+            convert_to_ratio(row.rdb_block_cache_hit_count, row.rdb_block_cache_total_count));
+        tp.append_data(convert_to_ratio(row.rdb_bf_seek_negatives, row.rdb_bf_seek_total));
+        tp.append_data(
+            convert_to_ratio(row.rdb_bf_point_negatives,
+                             row.rdb_bf_point_negatives + row.rdb_bf_point_positive_total));
+        tp.append_data(
+            convert_to_ratio(row.rdb_bf_point_positive_total - row.rdb_bf_point_positive_true,
+                             (row.rdb_bf_point_positive_total - row.rdb_bf_point_positive_true) +
+                                 row.rdb_bf_point_negatives));
     }
     tp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
@@ -744,11 +780,19 @@ bool set_app_envs(command_executor *e, shell_context *sc, arguments args)
         values.emplace_back(args.argv[idx++]);
     }
 
-    ::dsn::error_code ret = sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
-
-    if (ret != ::dsn::ERR_OK) {
-        fprintf(stderr, "set app env failed with err = %s\n", ret.to_string());
+    auto err_resp = sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
+    dsn::error_s err = err_resp.get_error();
+    std::string hint_msg;
+    if (err.is_ok()) {
+        err = dsn::error_s::make(err_resp.get_value().err);
+        hint_msg = err_resp.get_value().hint_message;
     }
+    if (!err.is_ok()) {
+        fmt::print(stderr, "set app envs failed with error {} [hint:\"{}\"]!\n", err, hint_msg);
+    } else {
+        fmt::print(stdout, "set app envs succeed\n");
+    }
+
     return true;
 }
 

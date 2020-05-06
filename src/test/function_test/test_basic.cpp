@@ -546,6 +546,16 @@ TEST(basic, multi_get)
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("5", new_values["5"]);
 
+    // set a expired value
+    ret = client->set("basic_test_multi_get", "", "expire_value", 5000, 1);
+    ASSERT_EQ(PERR_OK, ret);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    new_values.clear();
+    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values, 2);
+    ASSERT_EQ(PERR_INCOMPLETE, ret);
+    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ("1", new_values["1"]);
+
     // multi_del
     std::set<std::string> sortkeys;
     sortkeys.insert("");
@@ -1627,7 +1637,7 @@ TEST(basic, scan_with_filter)
     kvs["n_1"] = "b";
     kvs["n_2"] = "b";
     kvs["n_3"] = "b";
-    int ret = client->multi_set("x", kvs);
+    int ret = client->multi_set("xyz", kvs);
     ASSERT_EQ(PERR_OK, ret);
 
     // scan with batch_size = 10
@@ -1637,7 +1647,7 @@ TEST(basic, scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 10;
         pegasus_client::pegasus_scanner *scanner = nullptr;
-        ret = client->get_scanner("x", "", "", options, scanner);
+        ret = client->get_scanner("xyz", "", "", options, scanner);
         ASSERT_EQ(0, ret) << "Error occurred when getting scanner. error="
                           << client->get_error_string(ret);
         ASSERT_NE(nullptr, scanner);
@@ -1646,7 +1656,7 @@ TEST(basic, scan_with_filter)
         std::string sort_key;
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
-            ASSERT_EQ("x", hash_key);
+            ASSERT_EQ("xyz", hash_key);
             ASSERT_EQ("a", value);
             data[sort_key] = value;
         }
@@ -1666,7 +1676,7 @@ TEST(basic, scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 3;
         pegasus_client::pegasus_scanner *scanner = nullptr;
-        ret = client->get_scanner("x", "", "", options, scanner);
+        ret = client->get_scanner("xyz", "", "", options, scanner);
         ASSERT_EQ(PERR_OK, ret);
         ASSERT_NE(nullptr, scanner);
         std::map<std::string, std::string> data;
@@ -1674,7 +1684,7 @@ TEST(basic, scan_with_filter)
         std::string sort_key;
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
-            ASSERT_EQ("x", hash_key);
+            ASSERT_EQ("xyz", hash_key);
             ASSERT_EQ("a", value);
             data[sort_key] = value;
         }
@@ -1685,6 +1695,29 @@ TEST(basic, scan_with_filter)
         ASSERT_NE(data.end(), data.find("m_3"));
         ASSERT_NE(data.end(), data.find("m_4"));
         ASSERT_NE(data.end(), data.find("m_5"));
+    }
+
+    // scan with batch_size = 10
+    {
+        pegasus_client::scan_options options;
+        options.hash_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
+        options.hash_key_filter_pattern = "xy";
+        options.batch_size = 10;
+        pegasus_client::pegasus_scanner *scanner = nullptr;
+        ret = client->get_scanner("xyz", "", "", options, scanner);
+        ASSERT_EQ(0, ret) << "Error occurred when getting scanner. error="
+                          << client->get_error_string(ret);
+        ASSERT_NE(nullptr, scanner);
+        std::map<std::string, std::string> data;
+        std::string hash_key;
+        std::string sort_key;
+        std::string value;
+        while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
+            ASSERT_EQ("xyz", hash_key);
+            data[sort_key] = value;
+        }
+        delete scanner;
+        ASSERT_EQ(kvs, data);
     }
 
     // multi_del
@@ -1710,10 +1743,10 @@ TEST(basic, full_scan_with_filter)
     kvs["n_1"] = "b";
     kvs["n_2"] = "b";
     kvs["n_3"] = "b";
-    int ret = client->multi_set("x", kvs);
+    int ret = client->multi_set("xyz", kvs);
     ASSERT_EQ(PERR_OK, ret);
 
-    // scan with batch_size = 10
+    // scan with sort key filter and batch_size = 10
     {
         pegasus_client::scan_options options;
         options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
@@ -1729,7 +1762,7 @@ TEST(basic, full_scan_with_filter)
         std::string sort_key;
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
-            ASSERT_EQ("x", hash_key);
+            ASSERT_EQ("xyz", hash_key);
             ASSERT_EQ("a", value);
             data[sort_key] = value;
         }
@@ -1742,7 +1775,7 @@ TEST(basic, full_scan_with_filter)
         ASSERT_NE(data.end(), data.find("m_5"));
     }
 
-    // scan with batch_size = 3
+    // scan with sort key filter and batch_size = 3
     {
         pegasus_client::scan_options options;
         options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
@@ -1758,7 +1791,7 @@ TEST(basic, full_scan_with_filter)
         std::string sort_key;
         std::string value;
         while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
-            ASSERT_EQ("x", hash_key);
+            ASSERT_EQ("xyz", hash_key);
             ASSERT_EQ("a", value);
             data[sort_key] = value;
         }
@@ -1769,6 +1802,29 @@ TEST(basic, full_scan_with_filter)
         ASSERT_NE(data.end(), data.find("m_3"));
         ASSERT_NE(data.end(), data.find("m_4"));
         ASSERT_NE(data.end(), data.find("m_5"));
+    }
+
+    // scan with hash key filter and batch_size = 10
+    {
+        pegasus_client::scan_options options;
+        options.hash_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
+        options.hash_key_filter_pattern = "xy";
+        options.batch_size = 10;
+        std::vector<pegasus_client::pegasus_scanner *> scanners;
+        ret = client->get_unordered_scanners(1, options, scanners);
+        ASSERT_EQ(PERR_OK, ret);
+        ASSERT_EQ(1, scanners.size());
+        pegasus_client::pegasus_scanner *scanner = scanners[0];
+        std::map<std::string, std::string> data;
+        std::string hash_key;
+        std::string sort_key;
+        std::string value;
+        while (!(ret = (scanner->next(hash_key, sort_key, value)))) {
+            ASSERT_EQ("xyz", hash_key);
+            data[sort_key] = value;
+        }
+        delete scanner;
+        ASSERT_EQ(kvs, data);
     }
 
     // multi_del

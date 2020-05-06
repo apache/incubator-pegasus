@@ -9,18 +9,18 @@
 #include <iomanip>
 #include <fstream>
 #include <queue>
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
 #include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/env.h>
-#include <monitoring/histogram.h>
+#include <rocksdb/statistics.h>
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 #include <dsn/perf_counter/perf_counter_utils.h>
 #include <dsn/utility/string_view.h>
+#include <dsn/utility/time_utils.h>
 
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb_types.h>
@@ -98,6 +98,14 @@ private:
     dsn::utils::ex_lock_nr _lock;
 };
 
+enum class histogram_type
+{
+    HASH_KEY_SIZE,
+    SORT_KEY_SIZE,
+    VALUE_SIZE,
+    ROW_SIZE
+};
+
 struct scan_data_context
 {
     scan_data_operator op;
@@ -119,10 +127,7 @@ struct scan_data_context
     std::atomic_long split_request_count;
     std::atomic_bool split_completed;
     bool stat_size;
-    rocksdb::HistogramImpl hash_key_size_histogram;
-    rocksdb::HistogramImpl sort_key_size_histogram;
-    rocksdb::HistogramImpl value_size_histogram;
-    rocksdb::HistogramImpl row_size_histogram;
+    std::shared_ptr<rocksdb::Statistics> statistics;
     int top_count;
     top_container top_rows;
     bool count_hash_key;
@@ -137,6 +142,7 @@ struct scan_data_context
                       pegasus::geo::geo_client *geoclient_,
                       std::atomic_bool *error_occurred_,
                       bool stat_size_ = false,
+                      std::shared_ptr<rocksdb::Statistics> statistics_ = nullptr,
                       int top_count_ = 0,
                       bool count_hash_key_ = false)
         : op(op_),
@@ -154,6 +160,7 @@ struct scan_data_context
           split_request_count(0),
           split_completed(false),
           stat_size(stat_size_),
+          statistics(statistics_),
           top_count(top_count_),
           top_rows(top_count_),
           count_hash_key(count_hash_key_),
@@ -339,18 +346,24 @@ inline void scan_data_next(scan_data_context *context)
                         break;
                     case SCAN_COUNT:
                         context->split_rows++;
-                        if (context->stat_size) {
+                        if (context->stat_size && context->statistics) {
                             long hash_key_size = hash_key.size();
-                            context->hash_key_size_histogram.Add(hash_key_size);
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::HASH_KEY_SIZE),
+                                hash_key_size);
 
                             long sort_key_size = sort_key.size();
-                            context->sort_key_size_histogram.Add(sort_key_size);
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::SORT_KEY_SIZE),
+                                sort_key_size);
 
                             long value_size = value.size();
-                            context->value_size_histogram.Add(value_size);
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::VALUE_SIZE), value_size);
 
                             long row_size = hash_key_size + sort_key_size + value_size;
-                            context->row_size_histogram.Add(row_size);
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::ROW_SIZE), row_size);
 
                             if (context->top_count > 0) {
                                 context->top_rows.push(
@@ -497,8 +510,44 @@ inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
     return true;
 }
 
+inline bool parse_app_perf_counter_name(const std::string &name,
+                                        std::string &app_name,
+                                        std::string &counter_name)
+{
+    /**
+     * name format:
+     *   1.{node}*{section}*{counter_name}@{app_name}.{percent_line}
+     *   2.{node}*{section}*{counter_name}@{app_name}
+     */
+    std::string::size_type find = name.find_last_of('@');
+    if (find == std::string::npos)
+        return false;
+
+    std::string::size_type find2 = name.find_last_of('.');
+    if (find2 == std::string::npos) {
+        app_name = name.substr(find + 1);
+    } else {
+        app_name = name.substr(find + 1, find2 - find - 1);
+    }
+
+    std::string::size_type find3 = name.find_last_of('*');
+    if (find3 == std::string::npos)
+        return false;
+    counter_name = name.substr(find3 + 1, find - find3 - 1);
+    return true;
+}
+
 struct row_data
 {
+    double get_total_qps() const
+    {
+        return get_qps + multi_get_qps + scan_qps + put_qps + multi_put_qps + remove_qps +
+               multi_remove_qps + incr_qps + check_and_set_qps + check_and_mutate_qps +
+               duplicate_qps;
+    }
+
+    double get_total_cu() const { return recent_read_cu + recent_write_cu; }
+
     std::string row_name;
     int32_t app_id = 0;
     int32_t partition_count = 0;
@@ -512,6 +561,9 @@ struct row_data
     double check_and_set_qps = 0;
     double check_and_mutate_qps = 0;
     double scan_qps = 0;
+    double duplicate_qps = 0;
+    double dup_shipped_ops = 0;
+    double dup_failed_shipping_ops = 0;
     double recent_read_cu = 0;
     double recent_write_cu = 0;
     double recent_expire_count = 0;
@@ -525,6 +577,20 @@ struct row_data
     double rdb_block_cache_total_count = 0;
     double rdb_index_and_filter_blocks_mem_usage = 0;
     double rdb_memtable_mem_usage = 0;
+    double rdb_estimate_num_keys = 0;
+    double rdb_bf_seek_negatives = 0;
+    double rdb_bf_seek_total = 0;
+    double rdb_bf_point_positive_true = 0;
+    double rdb_bf_point_positive_total = 0;
+    double rdb_bf_point_negatives = 0;
+    double backup_request_qps = 0;
+    double get_bytes = 0;
+    double multi_get_bytes = 0;
+    double scan_bytes = 0;
+    double put_bytes = 0;
+    double multi_put_bytes = 0;
+    double check_and_set_bytes = 0;
+    double check_and_mutate_bytes = 0;
 };
 
 inline bool
@@ -550,6 +616,12 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.check_and_mutate_qps += value;
     else if (counter_name == "scan_qps")
         row.scan_qps += value;
+    else if (counter_name == "duplicate_qps")
+        row.duplicate_qps += value;
+    else if (counter_name == "dup_shipped_ops")
+        row.dup_shipped_ops += value;
+    else if (counter_name == "dup_failed_shipping_ops")
+        row.dup_failed_shipping_ops += value;
     else if (counter_name == "recent.read.cu")
         row.recent_read_cu += value;
     else if (counter_name == "recent.write.cu")
@@ -576,6 +648,34 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_index_and_filter_blocks_mem_usage += value;
     else if (counter_name == "rdb.memtable.memory_usage")
         row.rdb_memtable_mem_usage += value;
+    else if (counter_name == "rdb.estimate_num_keys")
+        row.rdb_estimate_num_keys += value;
+    else if (counter_name == "rdb.bf_seek_negatives")
+        row.rdb_bf_seek_negatives += value;
+    else if (counter_name == "rdb.bf_seek_total")
+        row.rdb_bf_seek_total += value;
+    else if (counter_name == "rdb.bf_point_positive_true")
+        row.rdb_bf_point_positive_true += value;
+    else if (counter_name == "rdb.bf_point_positive_total")
+        row.rdb_bf_point_positive_total += value;
+    else if (counter_name == "rdb.bf_point_negatives")
+        row.rdb_bf_point_negatives += value;
+    else if (counter_name == "backup_request_qps")
+        row.backup_request_qps += value;
+    else if (counter_name == "get_bytes")
+        row.get_bytes += value;
+    else if (counter_name == "multi_get_bytes")
+        row.multi_get_bytes += value;
+    else if (counter_name == "scan_bytes")
+        row.scan_bytes += value;
+    else if (counter_name == "put_bytes")
+        row.put_bytes += value;
+    else if (counter_name == "multi_put_bytes")
+        row.multi_put_bytes += value;
+    else if (counter_name == "check_and_set_bytes")
+        row.check_and_set_bytes += value;
+    else if (counter_name == "check_and_mutate_bytes")
+        row.check_and_mutate_bytes += value;
     else
         return false;
     return true;
@@ -644,6 +744,81 @@ inline bool decode_node_perf_counter_info(const dsn::rpc_address &node_addr,
     return true;
 }
 
+// rows: key-app name, value-perf counters for each partition
+inline bool get_app_partition_stat(shell_context *sc,
+                                   std::map<std::string, std::vector<row_data>> &rows)
+{
+    // get apps and nodes
+    std::vector<::dsn::app_info> apps;
+    std::vector<node_desc> nodes;
+    if (!get_apps_and_nodes(sc, apps, nodes)) {
+        return false;
+    }
+
+    // get the relationship between app_id and app_name
+    std::map<int32_t, std::string> app_id_name;
+    std::map<std::string, int32_t> app_name_id;
+    for (::dsn::app_info &app : apps) {
+        app_id_name[app.app_id] = app.app_name;
+        app_name_id[app.app_name] = app.app_id;
+        rows[app.app_name].resize(app.partition_count);
+    }
+
+    // get app_id --> partitions
+    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
+    if (!get_app_partitions(sc, apps, app_partitions)) {
+        return false;
+    }
+
+    // get all of the perf counters with format ".*@.*"
+    ::dsn::command command;
+    command.cmd = "perf-counters";
+    char tmp[256];
+    sprintf(tmp, ".*@.*");
+    command.arguments.emplace_back(tmp);
+    std::vector<std::pair<bool, std::string>> results;
+    call_remote_command(sc, nodes, command, results);
+
+    for (int i = 0; i < nodes.size(); ++i) {
+        // decode info of perf-counters on node i
+        dsn::perf_counter_info info;
+        if (!decode_node_perf_counter_info(nodes[i].address, results[i], info)) {
+            return false;
+        }
+
+        for (dsn::perf_counter_metric &m : info.counters) {
+            // get app_id/partition_id/counter_name/app_name from the name of perf-counter
+            int32_t app_id_x, partition_index_x;
+            std::string counter_name;
+            std::string app_name;
+
+            if (parse_app_pegasus_perf_counter_name(
+                    m.name, app_id_x, partition_index_x, counter_name)) {
+                // only primary partition will be counted
+                auto find = app_partitions.find(app_id_x);
+                if (find != app_partitions.end() &&
+                    find->second[partition_index_x].primary == nodes[i].address) {
+                    row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
+                    row.row_name = std::to_string(partition_index_x);
+                    row.app_id = app_id_x;
+                    update_app_pegasus_perf_counter(row, counter_name, m.value);
+                }
+            } else if (parse_app_perf_counter_name(m.name, app_name, counter_name)) {
+                // if the app_name from perf-counter isn't existed(maybe the app was dropped), it
+                // will be ignored.
+                if (app_name_id.find(app_name) == app_name_id.end()) {
+                    continue;
+                }
+                // perf-counter value will be set into partition index 0.
+                row_data &row = rows[app_name][0];
+                row.app_id = app_name_id[app_name];
+                update_app_pegasus_perf_counter(row, counter_name, m.value);
+            }
+        }
+    }
+    return true;
+}
+
 inline bool
 get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_data> &rows)
 {
@@ -667,12 +842,13 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     }
 
     ::dsn::command command;
-    command.cmd = "perf-counters-by-substr";
+    command.cmd = "perf-counters";
     char tmp[256];
-    if (app_name.empty())
-        sprintf(tmp, "@");
-    else
-        sprintf(tmp, "@%d.", app_info->app_id);
+    if (app_name.empty()) {
+        sprintf(tmp, ".*@.*");
+    } else {
+        sprintf(tmp, ".*@%d\\..*", app_info->app_id);
+    }
     command.arguments.emplace_back(tmp);
     std::vector<std::pair<bool, std::string>> results;
     call_remote_command(sc, nodes, command, results);
@@ -701,9 +877,10 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             for (dsn::perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
                 std::string counter_name;
-                bool parse_ret = parse_app_pegasus_perf_counter_name(
-                    m.name, app_id_x, partition_index_x, counter_name);
-                dassert(parse_ret, "name = %s", m.name.c_str());
+                if (!parse_app_pegasus_perf_counter_name(
+                        m.name, app_id_x, partition_index_x, counter_name)) {
+                    continue;
+                }
                 auto find = app_partitions.find(app_id_x);
                 if (find == app_partitions.end())
                     continue;

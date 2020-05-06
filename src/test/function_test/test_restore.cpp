@@ -27,10 +27,13 @@ public:
 
         // modify the config to enable backup, and restart onebox
         system("./run.sh clear_onebox");
-        system("cp src/server/config-server.ini config-server-test-restore.ini");
-        system("sed -i \"/^cold_backup_disabled/c cold_backup_disabled = false\" "
+        system("cp src/server/config.min.ini config-server-test-restore.ini");
+        system("sed -i \"/^\\s*cold_backup_disabled/c cold_backup_disabled = false\" "
                "config-server-test-restore.ini");
-        std::string cmd = "sed -i \"/^cold_backup_root/c cold_backup_root = " + cluster_name;
+        system("sed -i \"/^\\s*cold_backup_checkpoint_reserve_minutes/c "
+               "cold_backup_checkpoint_reserve_minutes = 0\" "
+               "config-server-test-restore.ini");
+        std::string cmd = "sed -i \"/^\\s*cold_backup_root/c cold_backup_root = " + cluster_name;
         cmd = cmd + std::string("\" config-server-test-restore.ini");
         system(cmd.c_str());
         system("./run.sh start_onebox --config_path config-server-test-restore.ini");

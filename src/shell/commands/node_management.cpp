@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "shell/commands.h"
+#include <dsn/utility/utils.h>
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {
@@ -48,6 +49,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
                                            {"resolve_ip", no_argument, 0, 'r'},
                                            {"resource_usage", no_argument, 0, 'u'},
+                                           {"qps", no_argument, 0, 'q'},
                                            {"json", no_argument, 0, 'j'},
                                            {"status", required_argument, 0, 's'},
                                            {"output", required_argument, 0, 'o'},
@@ -58,12 +60,14 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     bool detailed = false;
     bool resolve_ip = false;
     bool resource_usage = false;
+    bool show_qps = false;
+    bool show_latency = false;
     bool json = false;
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "drujs:o:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "druqjs:o:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -75,6 +79,10 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'u':
             resource_usage = true;
+            break;
+        case 'q':
+            show_qps = true;
+            show_latency = true;
             break;
         case 'j':
             json = true;
@@ -127,7 +135,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         std::string node_name = kv.first.to_std_string();
         if (resolve_ip) {
             // TODO: put hostname_from_ip_port into common utils
-            node_name = sc->ddl_client->hostname_from_ip_port(node_name.c_str());
+            dsn::utils::hostname_from_ip_port(node_name.c_str(), &node_name);
         }
         tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
     }
@@ -171,7 +179,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     if (resource_usage) {
         std::vector<node_desc> nodes;
         if (!fill_nodes(sc, "replica-server", nodes)) {
-            derror("get replica server node list failed");
+            std::cout << "get replica server node list failed" << std::endl;
             return true;
         }
 
@@ -192,21 +200,20 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             if (tmp_it == tmp_map.end())
                 continue;
             if (!results[i].first) {
-                derror("query perf counter info from node %s failed", node_addr.to_string());
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " failed" << std::endl;
                 return true;
             }
             dsn::perf_counter_info info;
             dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
             if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                derror("decode perf counter info from node %s failed, result = %s",
-                       node_addr.to_string(),
-                       results[i].second.c_str());
+                std::cout << "decode perf counter info from node " << node_addr.to_string()
+                          << " failed, result = " << results[i].second << std::endl;
                 return true;
             }
             if (info.result != "OK") {
-                derror("query perf counter info from node %s returns error, error = %s",
-                       node_addr.to_string(),
-                       info.result.c_str());
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " returns error, error = " << info.result << std::endl;
                 return true;
             }
             list_nodes_helper &h = tmp_it->second;
@@ -224,6 +231,117 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 else if (m.name.find("rdb.index_and_filter_blocks.memory_usage") !=
                          std::string::npos)
                     h.mem_idx_bytes += m.value;
+            }
+        }
+    }
+
+    if (show_qps) {
+        std::vector<node_desc> nodes;
+        if (!fill_nodes(sc, "replica-server", nodes)) {
+            std::cout << "get replica server node list failed" << std::endl;
+            return true;
+        }
+
+        ::dsn::command command;
+        command.cmd = "perf-counters-by-prefix";
+        command.arguments.push_back("replica*app.pegasus*get_qps");
+        command.arguments.push_back("replica*app.pegasus*multi_get_qps");
+        command.arguments.push_back("replica*app.pegasus*put_qps");
+        command.arguments.push_back("replica*app.pegasus*multi_put_qps");
+        command.arguments.push_back("replica*app.pegasus*recent.read.cu");
+        command.arguments.push_back("replica*app.pegasus*recent.write.cu");
+
+        std::vector<std::pair<bool, std::string>> results;
+        call_remote_command(sc, nodes, command, results);
+
+        for (int i = 0; i < nodes.size(); ++i) {
+            dsn::rpc_address node_addr = nodes[i].address;
+            auto tmp_it = tmp_map.find(node_addr);
+            if (tmp_it == tmp_map.end())
+                continue;
+            if (!results[i].first) {
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " failed" << std::endl;
+                return true;
+            }
+            dsn::perf_counter_info info;
+            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
+            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+                std::cout << "decode perf counter info from node " << node_addr.to_string()
+                          << " failed, result = " << results[i].second << std::endl;
+                return true;
+            }
+            if (info.result != "OK") {
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " returns error, error = " << info.result << std::endl;
+                return true;
+            }
+            list_nodes_helper &h = tmp_it->second;
+            for (dsn::perf_counter_metric &m : info.counters) {
+                if (m.name.find("replica*app.pegasus*get_qps") != std::string::npos)
+                    h.get_qps += m.value;
+                else if (m.name.find("replica*app.pegasus*multi_get_qps") != std::string::npos)
+                    h.multi_get_qps += m.value;
+                else if (m.name.find("replica*app.pegasus*put_qps") != std::string::npos)
+                    h.put_qps += m.value;
+                else if (m.name.find("replica*app.pegasus*multi_put_qps") != std::string::npos)
+                    h.multi_put_qps += m.value;
+                else if (m.name.find("replica*app.pegasus*recent.read.cu") != std::string::npos)
+                    h.read_cu += m.value;
+                else if (m.name.find("replica*app.pegasus*recent.write.cu") != std::string::npos)
+                    h.write_cu += m.value;
+            }
+        }
+    }
+
+    if (show_latency) {
+        std::vector<node_desc> nodes;
+        if (!fill_nodes(sc, "replica-server", nodes)) {
+            std::cout << "get replica server node list failed" << std::endl;
+            return true;
+        }
+
+        ::dsn::command command;
+        command.cmd = "perf-counters-by-postfix";
+        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_GET.latency.server");
+        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_PUT.latency.server");
+        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server");
+        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server");
+        std::vector<std::pair<bool, std::string>> results;
+        call_remote_command(sc, nodes, command, results);
+
+        for (int i = 0; i < nodes.size(); ++i) {
+            dsn::rpc_address node_addr = nodes[i].address;
+            auto tmp_it = tmp_map.find(node_addr);
+            if (tmp_it == tmp_map.end())
+                continue;
+            if (!results[i].first) {
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " failed" << std::endl;
+                return true;
+            }
+            dsn::perf_counter_info info;
+            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
+            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+                std::cout << "decode perf counter info from node " << node_addr.to_string()
+                          << " failed, result = " << results[i].second << std::endl;
+                return true;
+            }
+            if (info.result != "OK") {
+                std::cout << "query perf counter info from node " << node_addr.to_string()
+                          << " returns error, error = " << info.result << std::endl;
+                return true;
+            }
+            list_nodes_helper &h = tmp_it->second;
+            for (dsn::perf_counter_metric &m : info.counters) {
+                if (m.name.find("RPC_RRDB_RRDB_GET.latency.server") != std::string::npos)
+                    h.get_p99 = m.value;
+                else if (m.name.find("RPC_RRDB_RRDB_PUT.latency.server") != std::string::npos)
+                    h.put_p99 = m.value;
+                else if (m.name.find("RPC_RRDB_RRDB_MULTI_GET.latency.server") != std::string::npos)
+                    h.multi_get_p99 = m.value;
+                else if (m.name.find("RPC_RRDB_RRDB_MULTI_PUT.latency.server") != std::string::npos)
+                    h.multi_put_p99 = m.value;
             }
         }
     }
@@ -256,6 +374,20 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         tp.add_column("disk_avl_total_ratio", tp_alignment::kRight);
         tp.add_column("disk_avl_min_ratio", tp_alignment::kRight);
     }
+    if (show_qps) {
+        tp.add_column("get_qps", tp_alignment::kRight);
+        tp.add_column("mget_qps", tp_alignment::kRight);
+        tp.add_column("read_cu", tp_alignment::kRight);
+        tp.add_column("put_qps", tp_alignment::kRight);
+        tp.add_column("mput_qps", tp_alignment::kRight);
+        tp.add_column("write_cu", tp_alignment::kRight);
+    }
+    if (show_latency) {
+        tp.add_column("get_p99(ms)", tp_alignment::kRight);
+        tp.add_column("mget_p99(ms)", tp_alignment::kRight);
+        tp.add_column("put_p99(ms)", tp_alignment::kRight);
+        tp.add_column("mput_p99(ms)", tp_alignment::kRight);
+    }
     for (auto &kv : tmp_map) {
         tp.add_row(kv.second.node_name);
         tp.append_data(kv.second.node_status);
@@ -271,6 +403,20 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(kv.second.mem_idx_bytes / (1 << 20U));
             tp.append_data(kv.second.disk_available_total_ratio);
             tp.append_data(kv.second.disk_available_min_ratio);
+        }
+        if (show_qps) {
+            tp.append_data(kv.second.get_qps);
+            tp.append_data(kv.second.multi_get_qps);
+            tp.append_data(kv.second.read_cu);
+            tp.append_data(kv.second.put_qps);
+            tp.append_data(kv.second.multi_put_qps);
+            tp.append_data(kv.second.write_cu);
+        }
+        if (show_latency) {
+            tp.append_data(kv.second.get_p99 / 1e6);
+            tp.append_data(kv.second.multi_get_p99 / 1e6);
+            tp.append_data(kv.second.put_p99 / 1e6);
+            tp.append_data(kv.second.multi_put_p99 / 1e6);
         }
     }
     mtp.add(std::move(tp));
@@ -312,15 +458,17 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"node_type", required_argument, 0, 't'},
                                            {"node_list", required_argument, 0, 'l'},
+                                           {"resolve_ip", no_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
 
     std::string type;
     std::string nodes;
     optind = 0;
+    bool resolve_ip = false;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "t:l:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "t:l:r", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -329,6 +477,9 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'l':
             nodes = optarg;
+            break;
+        case 'r':
+            resolve_ip = true;
             break;
         default:
             return false;
@@ -398,7 +549,13 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     // TODO (yingchun) output is hard to read, need do some refactor
     for (int i = 0; i < node_list.size(); ++i) {
         node_desc &n = node_list[i];
-        fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), n.address.to_string());
+        std::string hostname;
+        if (resolve_ip) {
+            dsn::utils::hostname_from_ip_port(n.address.to_string(), &hostname);
+        } else {
+            hostname = n.address.to_string();
+        }
+        fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
         if (results[i].first) {
             fprintf(stderr, "succeed: %s\n", results[i].second.c_str());
             succeed++;

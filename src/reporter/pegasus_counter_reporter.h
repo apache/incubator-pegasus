@@ -15,6 +15,9 @@
 #include <event2/http_struct.h>
 #include <event2/keyvalq_struct.h>
 
+#include <prometheus/registry.h>
+#include <prometheus/exposer.h>
+
 namespace pegasus {
 namespace server {
 
@@ -32,6 +35,13 @@ struct falcon_metric
     DEFINE_JSON_SERIALIZATION(endpoint, metric, timestamp, step, value, counterType, tags)
 };
 
+enum class perf_counter_sink_t
+{
+    FALCON,
+    PROMETHEUS,
+    INVALID
+};
+
 class pegasus_counter_reporter : public ::dsn::utils::singleton<pegasus_counter_reporter>
 {
 public:
@@ -42,6 +52,7 @@ public:
 
 private:
     void falcon_initialize();
+    void prometheus_initialize();
 
     void update_counters_to_falcon(const std::string &result, int64_t timestamp);
 
@@ -68,13 +79,19 @@ private:
 
     // perf counter flags
     bool _enable_logging;
-    bool _enable_falcon;
+    perf_counter_sink_t _perf_counter_sink;
 
-    // falcon related
+    // falcon relates
     std::string _falcon_host;
     uint16_t _falcon_port;
     std::string _falcon_path;
     falcon_metric _falcon_metric;
+
+    // prometheus relates
+    uint16_t _prometheus_port;
+    std::shared_ptr<prometheus::Registry> _registry;
+    std::unique_ptr<prometheus::Exposer> _exposer;
+    std::map<std::string, prometheus::Family<prometheus::Gauge> *> _gauge_family_map;
 };
 }
 } // namespace

@@ -21,10 +21,16 @@ detect_table="test"
 app_stat_result="/tmp/$UID.$PID.pegasus.stat_available.app_stat_result"
 tmp_file="/tmp/$UID.$PID.pegasus.stat_available.app_stat"
 echo "app_stat -o $app_stat_result" | ./run.sh shell -n $cluster &>$tmp_file
-app_stat_ok=`grep "succeed" $tmp_file | wc -l`
-if [ $app_stat_ok -ne 1 ]; then
-  echo "ERROR: app stat failed, refer error to $tmp_file"
-  exit 1
+app_stat_fail=`grep "\<failed\>" $tmp_file | wc -l`
+if [ $app_stat_fail -eq 1 ]; then
+  # retry after 1 second
+  sleep 1
+  echo "app_stat -o $app_stat_result" | ./run.sh shell -n $cluster &>$tmp_file
+  app_stat_fail=`grep "\<failed\>" $tmp_file | wc -l`
+  if [ $app_stat_fail -eq 1 ]; then
+    echo "ERROR: app stat failed, refer error to $tmp_file"
+    exit 1
+  fi
 fi
 
 app_count=`cat $app_stat_result | wc -l`
@@ -38,7 +44,7 @@ rm -f $all_result
 for filter in $*; do
   result_file="/tmp/$UID.$PID.pegasus.stat_available.scan_result.$filter"
   tmp_file="/tmp/$UID.$PID.pegasus.stat_available.scan"
-  echo -e "use $detect_table\nhash_scan detect_available_minute '' '' -s prefix -y \"$filter\" -o $result_file" | ./run.sh shell -n $cluster &>$tmp_file
+  echo -e "use $detect_table\nhash_scan detect_available_minute '' '' -s prefix -y \"$filter\" -t 10000 -o $result_file" | ./run.sh shell -n $cluster &>$tmp_file
   scan_ok=`grep 'key-value pairs got' $tmp_file | wc -l`
   if [ $scan_ok -ne 1 ]; then
     echo "ERROR: scan detect table failed, refer error to $tmp_file"

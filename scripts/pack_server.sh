@@ -97,6 +97,7 @@ copy_file ./src/server/config.ini ${pack}/bin
 
 copy_file `get_boost_lib $custom_boost_lib system` ${pack}/bin
 copy_file `get_boost_lib $custom_boost_lib filesystem` ${pack}/bin
+copy_file `get_boost_lib $custom_boost_lib regex` ${pack}/bin
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/bin
 copy_file `get_system_lib server snappy` ${pack}/bin/`get_system_libname server snappy`
 copy_file `get_system_lib server crypto` ${pack}/bin/`get_system_libname server crypto`
@@ -104,6 +105,17 @@ copy_file `get_system_lib server ssl` ${pack}/bin/`get_system_libname server ssl
 copy_file `get_system_lib server aio` ${pack}/bin/`get_system_libname server aio`
 copy_file `get_system_lib server zstd` ${pack}/bin/`get_system_libname server zstd`
 copy_file `get_system_lib server lz4` ${pack}/bin/`get_system_libname server lz4`
+
+DISTRIB_ID=$(cat /etc/*-release | grep DISTRIB_ID | awk -F'=' '{print $2}')
+DISTRIB_RELEASE=$(cat /etc/*-release | grep DISTRIB_RELEASE | awk -F'=' '{print $2}')
+if [ -n "$DISTRIB_ID" ] && [ -n "$DISTRIB_RELEASE" ]; then
+  if [ "$DISTRIB_ID" == "Ubuntu" ] && [ "$DISTRIB_RELEASE" == "18.04" ]; then
+    copy_file "$(get_system_lib server icui18n)" "$pack/bin/$(get_system_libname server icui18n)"
+    copy_file "$(get_system_lib server icuuc)" "$pack/bin/$(get_system_libname server icuuc)"
+    copy_file "$(get_system_lib server icudata)" "$pack/bin/$(get_system_libname server icudata)"
+  fi
+  # more cases can be added here.
+fi
 
 chmod +x ${pack}/bin/pegasus_* ${pack}/bin/*.sh
 chmod -x ${pack}/bin/lib*

@@ -13,15 +13,18 @@
 #include <dsn/dist/replication/replication.codes.h>
 #include <rrdb/rrdb_types.h>
 #include <rrdb/rrdb.server.h>
+#include <gtest/gtest_prod.h>
 
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
 #include "pegasus_manual_compact_service.h"
 #include "pegasus_write_service.h"
+#include "range_read_limiter.h"
 
 namespace pegasus {
 namespace server {
 
+class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;
 
@@ -146,15 +149,19 @@ public:
 
     virtual int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
 
-    virtual int64_t last_flushed_decree() const override { return _db->GetLastFlushedDecree(); }
+    virtual int64_t last_flushed_decree() const override;
 
     virtual void update_app_envs(const std::map<std::string, std::string> &envs) override;
 
     virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs) override;
 
+    virtual void set_partition_version(int32_t partition_version) override;
+
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
+    friend class pegasus_server_impl_test;
+    FRIEND_TEST(pegasus_server_impl_test, default_data_version);
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
@@ -224,6 +231,10 @@ private:
 
     void update_checkpoint_reserve(const std::map<std::string, std::string> &envs);
 
+    void update_slow_query_threshold(const std::map<std::string, std::string> &envs);
+
+    void update_rocksdb_iteration_threshold(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -262,32 +273,75 @@ private:
             _pegasus_data_version, epoch_now, utils::to_string_view(raw_value));
     }
 
+    bool is_multi_get_abnormal(uint64_t time_used, uint64_t size, uint64_t iterate_count)
+    {
+        if (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) {
+            return true;
+        }
+        if (_abnormal_multi_get_iterate_count_threshold &&
+            iterate_count >= _abnormal_multi_get_iterate_count_threshold) {
+            return true;
+        }
+        if (time_used >= _slow_query_threshold_ns) {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
+    {
+        if (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) {
+            return true;
+        }
+        if (time_used >= _slow_query_threshold_ns) {
+            return true;
+        }
+
+        return false;
+    }
+
+    ::dsn::error_code check_meta_cf(const std::string &path, bool *need_create_meta_cf);
+
+    void release_db();
+
+    ::dsn::error_code flush_all_family_columns(bool wait);
+
 private:
     static const std::string COMPRESSION_HEADER;
+    // Column family names.
+    static const std::string DATA_COLUMN_FAMILY_NAME;
+    static const std::string META_COLUMN_FAMILY_NAME;
 
     dsn::gpid _gpid;
     std::string _primary_address;
     bool _verbose_log;
-    uint64_t _abnormal_get_time_threshold_ns;
     uint64_t _abnormal_get_size_threshold;
-    uint64_t _abnormal_multi_get_time_threshold_ns;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
+    // slow query time threshold. exceed this threshold will be logged.
+    uint64_t _slow_query_threshold_ns;
+    uint64_t _slow_query_threshold_ns_in_config;
+
+    range_read_limiter_options _rng_rd_opts;
 
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
-    rocksdb::BlockBasedTableOptions _tbl_opts;
-    rocksdb::Options _db_opts;
-    rocksdb::WriteOptions _wt_opts;
-    rocksdb::ReadOptions _rd_opts;
+    rocksdb::DBOptions _db_opts;
+    rocksdb::ColumnFamilyOptions _data_cf_opts;
+    rocksdb::ColumnFamilyOptions _meta_cf_opts;
+    rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
 
     rocksdb::DB *_db;
-    static std::shared_ptr<rocksdb::Cache> _block_cache;
+    rocksdb::ColumnFamilyHandle *_data_cf;
+    rocksdb::ColumnFamilyHandle *_meta_cf;
+    static std::shared_ptr<rocksdb::Cache> _s_block_cache;
     volatile bool _is_open;
     uint32_t _pegasus_data_version;
     std::atomic<int64_t> _last_durable_decree;
 
+    std::unique_ptr<meta_store> _meta_store;
     std::unique_ptr<capacity_unit_calculator> _cu_calculator;
     std::unique_ptr<pegasus_server_write> _server_write;
 
@@ -306,6 +360,8 @@ private:
     static ::dsn::task_ptr _update_server_rdb_stat;
 
     pegasus_manual_compact_service _manual_compact_svc;
+
+    std::atomic<int32_t> _partition_version;
 
     dsn::task_tracker _tracker;
 
@@ -332,6 +388,12 @@ private:
     ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
     ::dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
     ::dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
+    ::dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_seek_total;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
+    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
 };
 
 } // namespace server

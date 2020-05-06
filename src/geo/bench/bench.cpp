@@ -8,9 +8,10 @@
 
 #include <s2/s2testing.h>
 #include <s2/s2cell.h>
-#include <monitoring/histogram.h>
+#include <rocksdb/statistics.h>
 #include <rocksdb/env.h>
 
+#include <dsn/utility/errors.h>
 #include <dsn/utility/strings.h>
 #include <dsn/utility/string_conv.h>
 
@@ -18,9 +19,9 @@ static const int data_count = 10000;
 
 int main(int argc, char **argv)
 {
-    if (argc != 7) {
-        std::cerr << "USAGE: " << argv[0]
-                  << " <cluster_name> <app_name> <geo_app_name> <radius> <test_count> <max_level>"
+    if (argc < 7) {
+        std::cerr << "USAGE: " << argv[0] << " <cluster_name> <app_name> <geo_app_name> <radius> "
+                                             "<test_count> <max_level> [gen_data]"
                   << std::endl;
         return -1;
     }
@@ -43,37 +44,51 @@ int main(int argc, char **argv)
         std::cerr << "max_level is invalid: " << argv[6] << std::endl;
         return -1;
     }
-    pegasus::geo::geo_client my_geo("config.ini",
-                                    cluster_name.c_str(),
-                                    app_name.c_str(),
-                                    geo_app_name.c_str(),
-                                    new pegasus::geo::latlng_extractor_for_lbs());
-    my_geo.set_max_level(max_level);
+    bool gen_data = false;
+    if (argc >= 8) {
+        if (!dsn::buf2bool(argv[7], gen_data)) {
+            std::cerr << "gen_data is invalid: " << argv[7] << std::endl;
+            return -1;
+        }
+    }
+
+    pegasus::geo::geo_client my_geo(
+        "config.ini", cluster_name.c_str(), app_name.c_str(), geo_app_name.c_str());
+    if (!my_geo.set_max_level(max_level).is_ok()) {
+        std::cerr << "set_max_level failed" << std::endl;
+        return -1;
+    }
 
     // cover beijing 5th ring road
     S2LatLngRect rect(S2LatLng::FromDegrees(39.810151, 116.194511),
                       S2LatLng::FromDegrees(40.028697, 116.535087));
 
     // generate data for test
-    //    for (int i = 0; i < data_count; ++i) {
-    //        S2LatLng latlng(S2Testing::SamplePoint(rect));
-    //        std::string id = std::to_string(i);
-    //        std::string value = id + "|2018-06-05 12:00:00|2018-06-05 13:00:00|abcdefg|" +
-    //                            std::to_string(latlng.lng().degrees()) + "|" +
-    //                            std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";
-    //
-    //        int ret = my_geo.set(id, "", value, 1000);
-    //        if (ret != pegasus::PERR_OK) {
-    //            std::cerr << "set data failed. error=" << ret << std::endl;
-    //        }
-    //    }
+    if (gen_data) {
+        const pegasus::geo::latlng_codec &codec = my_geo.get_codec();
+        for (int i = 0; i < data_count; ++i) {
+            std::string value;
+            S2LatLng latlng(S2Testing::SamplePoint(rect));
+            bool ok = codec.encode_to_value(latlng.lat().degrees(), latlng.lng().degrees(), value);
+            assert(ok);
+            int ret = my_geo.set(std::to_string(i), "", value, 1000);
+            if (ret != pegasus::PERR_OK) {
+                std::cerr << "set data failed. error=" << ret << std::endl;
+            }
+        }
+    }
 
-    rocksdb::HistogramImpl latency_histogram;
-    rocksdb::HistogramImpl result_count_histogram;
+    enum class histogram_type : uint32_t
+    {
+        LATENCY,
+        RESULT_COUNT
+    };
+    auto statistics = rocksdb::CreateDBStatistics();
     rocksdb::Env *env = rocksdb::Env::Default();
     uint64_t start = env->NowNanos();
     std::atomic<uint64_t> count(test_count);
     dsn::utils::notify_event get_completed;
+
     // test search_radial by lat & lng
     for (int i = 0; i < test_count; ++i) {
         S2LatLng latlng(S2Testing::SamplePoint(rect));
@@ -87,8 +102,10 @@ int main(int argc, char **argv)
             pegasus::geo::geo_client::SortType::random,
             500,
             [&, start_nanos](int error_code, std::list<pegasus::geo::SearchResult> &&results) {
-                latency_histogram.Add(env->NowNanos() - start_nanos);
-                result_count_histogram.Add(results.size());
+                statistics->measureTime(static_cast<uint32_t>(histogram_type::LATENCY),
+                                        env->NowNanos() - start_nanos);
+                statistics->measureTime(static_cast<uint32_t>(histogram_type::RESULT_COUNT),
+                                        results.size());
                 uint64_t left = count.fetch_sub(1);
                 if (left == 1) {
                     get_completed.notify();
@@ -102,9 +119,11 @@ int main(int argc, char **argv)
     std::cout << "start time: " << start << ", end time: " << end
               << ", QPS: " << test_count / ((end - start) / 1e9) << std::endl;
     std::cout << "latency_histogram: " << std::endl;
-    std::cout << latency_histogram.ToString() << std::endl;
+    std::cout << statistics->getHistogramString(static_cast<uint32_t>(histogram_type::LATENCY))
+              << std::endl;
     std::cout << "result_count_histogram: " << std::endl;
-    std::cout << result_count_histogram.ToString() << std::endl;
+    std::cout << statistics->getHistogramString(static_cast<uint32_t>(histogram_type::RESULT_COUNT))
+              << std::endl;
 
     return 0;
 }

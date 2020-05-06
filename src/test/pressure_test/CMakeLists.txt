@@ -10,15 +10,13 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_INC_PATH "../../include")
-
 set(MY_PROJ_LIBS
     pegasus_client_static
     )
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-pressure.ini")
 
-set(MY_BOOST_PACKAGES system filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 if (UNIX)
     SET(CMAKE_INSTALL_RPATH ".")
