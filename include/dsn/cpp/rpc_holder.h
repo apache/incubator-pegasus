@@ -89,8 +89,9 @@ public:
     rpc_holder(std::unique_ptr<TRequest> req,
                task_code code,
                std::chrono::milliseconds timeout = 0_ms,
-               uint64_t partition_hash = 0)
-        : _i(new internal(req, code, timeout, partition_hash))
+               uint64_t partition_hash = 0,
+               int thread_hash = 0)
+        : _i(new internal(req, code, timeout, partition_hash, thread_hash))
     {
     }
 
@@ -251,14 +252,14 @@ private:
         internal(std::unique_ptr<TRequest> &req,
                  task_code code,
                  std::chrono::milliseconds timeout,
-                 uint64_t partition_hash)
+                 uint64_t partition_hash,
+                 int thread_hash)
             : thrift_request(std::move(req)), auto_reply(false)
         {
             dassert(thrift_request != nullptr, "req should not be null");
 
-            // leave thread_hash to 0
             dsn_request = message_ex::create_request(
-                code, static_cast<int>(timeout.count()), 0, partition_hash);
+                code, static_cast<int>(timeout.count()), thread_hash, partition_hash);
             dsn_request->add_ref();
             marshall(dsn_request, *thrift_request);
         }
