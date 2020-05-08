@@ -3,6 +3,13 @@
 
 #include <dsn/dist/block_service.h>
 
+namespace folly {
+template <typename Clock>
+class BasicTokenBucket;
+
+using TokenBucket = BasicTokenBucket<std::chrono::steady_clock>;
+}
+
 namespace galaxy {
 namespace fds {
 class GalaxyFDSClient;
@@ -64,6 +71,10 @@ public:
 private:
     std::shared_ptr<galaxy::fds::GalaxyFDSClient> _client;
     std::string _bucket_name;
+    std::unique_ptr<folly::TokenBucket> _read_token_bucket;
+    std::unique_ptr<folly::TokenBucket> _write_token_bucket;
+
+    friend class fds_file_object;
 };
 
 class fds_file_object : public block_file
@@ -101,11 +112,19 @@ public:
                                    dsn::task_tracker *tracker) override;
 
 private:
-    dsn::error_code get_content(uint64_t pos,
-                                int64_t length,
-                                /*out*/ std::ostream &os,
-                                /*out*/ uint64_t &transfered_bytes);
-    dsn::error_code put_content(/*in-out*/ std::istream &is, /*out*/ uint64_t &transfered_bytes);
+    error_code get_content_in_batches(uint64_t start,
+                                      int64_t length,
+                                      /*out*/ std::ostream &os,
+                                      /*out*/ uint64_t &transfered_bytes);
+    error_code get_content(uint64_t pos,
+                           uint64_t length,
+                           /*out*/ std::ostream &os,
+                           /*out*/ uint64_t &transfered_bytes);
+    error_code put_content(/*in-out*/ std::istream &is,
+                           /*int*/ int64_t to_transfer_bytes,
+                           /*out*/ uint64_t &transfered_bytes);
+    error_code get_file_meta();
+
     fds_service *_service;
     std::string _fds_path;
     std::string _md5sum;
