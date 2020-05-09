@@ -64,7 +64,7 @@ echo "Set meta level to lively..."
 echo "set_meta_level lively" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.online_node.set_meta_level
 set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.online_node.set_meta_level | wc -l`
 if [ $set_ok -ne 1 ]; then
-  echo "ERROR: set meta level to steady failed"
+  echo "ERROR: set meta level to lively failed"
   exit 1
 fi
 
