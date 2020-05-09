@@ -70,26 +70,25 @@ fi
 
 echo "Wait cluster to become balanced..."
 echo "Wait for 3 minutes to do load balance..."
-  sleep 180
-  while true
-  do
-    op_count=`echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2`
+sleep 180
+while true; do
+    op_count=$(echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2)
     if [ -z "op_count" ]; then
-      break
+        break
     fi
     if [ $op_count -eq 0 ]; then
-      echo "Cluster may be balanced, try wait 30 seconds..."
-      sleep 30
-      op_count=`echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2`
-      if [ $op_count -eq 0 ]; then
-        echo "Cluster becomes balanced."
-        break
-      fi
+        echo "Cluster may be balanced, try wait 30 seconds..."
+        sleep 30
+        op_count=$(echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2)
+        if [ $op_count -eq 0 ]; then
+            echo "Cluster becomes balanced."
+            break
+        fi
     else
-      echo "Still $op_count balance operations to do..."
-      sleep 1
+        echo "Still $op_count balance operations to do..."
+        sleep 1
     fi
-  done
+done
 echo
 
 
