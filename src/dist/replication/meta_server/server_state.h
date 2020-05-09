@@ -305,6 +305,7 @@ private:
     friend class meta_duplication_service;
     friend class meta_split_service;
     friend class bulk_load_service;
+    friend class bulk_load_service_test;
 
     dsn::task_tracker _tracker;
 

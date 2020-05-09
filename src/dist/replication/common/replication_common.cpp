@@ -516,7 +516,7 @@ void replication_options::initialize()
 
     bulk_load_provider_root = dsn_config_get_value_string("replication",
                                                           "bulk_load_provider_root",
-                                                          "bulk_load_root",
+                                                          "bulk_load_provider_root",
                                                           "bulk load root on remote file provider");
 
     replica_helper::load_meta_servers(meta_servers);

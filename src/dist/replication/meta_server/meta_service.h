@@ -187,6 +187,9 @@ private:
     void on_app_partition_split(app_partition_split_rpc rpc);
     void on_register_child_on_meta(register_child_rpc rpc);
 
+    // bulk load
+    void on_start_bulk_load(start_bulk_load_rpc rpc);
+
     // common routines
     // ret:
     //   1. the meta is leader
@@ -201,6 +204,7 @@ private:
     friend class replication_checker;
     friend class test::test_checker;
     friend class meta_service_test_app;
+    friend class bulk_load_service_test;
 
     replication_options _opts;
     meta_options _meta_opts;

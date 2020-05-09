@@ -387,6 +387,8 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler_with_rpc_holder(RPC_CM_REGISTER_CHILD_REPLICA,
                                          "register_child_on_meta",
                                          &meta_service::on_register_child_on_meta);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_START_BULK_LOAD, "start_bulk_load", &meta_service::on_start_bulk_load);
 }
 
 int meta_service::check_leader(dsn::message_ex *req, dsn::rpc_address *forward_address)
@@ -945,6 +947,22 @@ void meta_service::on_register_child_on_meta(register_child_rpc rpc)
                      tracker(),
                      [this, rpc]() { _split_svc->register_child_on_meta(std::move(rpc)); },
                      server_state::sStateHash);
+}
+
+void meta_service::on_start_bulk_load(start_bulk_load_rpc rpc)
+{
+    auto &response = rpc.response();
+    RPC_CHECK_STATUS(rpc.dsn_request(), response);
+
+    if (!_bulk_load_svc) {
+        derror("meta doesn't support bulk load");
+        response.err = ERR_SERVICE_NOT_ACTIVE;
+    } else {
+        tasking::enqueue(LPC_META_STATE_NORMAL,
+                         tracker(),
+                         [this, rpc]() { _bulk_load_svc->on_start_bulk_load(std::move(rpc)); },
+                         server_state::sStateHash);
+    }
 }
 
 } // namespace replication

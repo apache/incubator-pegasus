@@ -31,7 +31,7 @@ set(MY_PROJ_LIBS
         crypto
         gtest)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 # Extra files that will be installed
 set(MY_BINPLACES clear.sh run.sh config-ddl-test.ini config-test.ini suite1 suite2)
