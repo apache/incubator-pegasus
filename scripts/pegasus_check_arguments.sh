@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Check offline_node_list.sh and online_node_list.sh arguments.
+# Check offline_node_list.sh and add_node_list.sh arguments.
 #
 
 PID=$$
@@ -8,8 +8,8 @@ PID=$$
 if [ $# -le 3 ]; then
   echo "USAGE: $0 <check_type> <cluster-name> <cluster-meta-list> <replica-task-id-list>"
   echo
-  echo "check_type includes: online_node_list, offline_node_list, for example:"
-  echo "  $0 online_node_list onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3"
+  echo "check_type includes: add_node_list, offline_node_list, for example:"
+  echo "  $0 add_node_list onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3"
   echo
   exit 1
 fi
@@ -19,8 +19,8 @@ cluster=$2
 meta_list=$3
 replica_task_id_list=$4
 
-if [ "$check_type" != "online_node_list" -a "$check_type" != "offline_node_list" ]; then
-  echo "ERROR: $check_type is invalid, only support \"online_node_list\" and \"offline_node_list\""
+if [ "$check_type" != "add_node_list" -a "$check_type" != "offline_node_list" ]; then
+  echo "ERROR: $check_type is invalid, only support \"add_node_list\" and \"offline_node_list\""
   exit 1
 fi
 
