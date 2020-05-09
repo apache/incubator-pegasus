@@ -2,6 +2,8 @@
 
 This is the official go client for [xiaomi/pegasus](https://github.com/XiaoMi/pegasus).
 
+[![GoDoc](https://godoc.org/github.com/XiaoMi/pegasus-go-client?status.svg)](https://pkg.go.dev/github.com/XiaoMi/pegasus-go-client/pegasus)
+
 ## Requirement
 
 Go1.12+.
