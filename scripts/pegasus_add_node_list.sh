@@ -49,7 +49,7 @@ do
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 done
 
-echo "set meta.lb.only_move_primary true"
+echo "Set meta.lb.only_move_primary true"
 echo "This remote-command tells the meta-server to ignore copying primaries during rebalancing."
 echo "So the following steps only include move_primary and copy_secondary."
 echo "remote_command -l $pmeta meta.lb.only_move_primary true" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.add_node_list.only_move_primary
@@ -101,7 +101,8 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
-echo "set meta.lb.only_move_primary false"
+echo "Set meta.lb.only_move_primary false"
+echo "This remote-command tells the meta-server to rebalance with copying primaries."
 echo "remote_command -l $pmeta meta.lb.only_move_primary false" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.add_node_list.only_move_primary
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.add_node_list.only_move_primary | wc -l`
 if [ $set_ok -ne 1 ]; then
