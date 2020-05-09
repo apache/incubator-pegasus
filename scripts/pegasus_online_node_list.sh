@@ -52,6 +52,8 @@ do
 done
 
 echo "set meta.lb.only_move_primary true"
+echo "This remote-command tells the meta-server to ignore copying primaries during rebalancing."
+echo "So the following steps only include move_primary and copy_secondary."
 echo "remote_command -l $pmeta meta.lb.only_move_primary true" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.online_node.only_move_primary
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.online_node.only_move_primary | wc -l`
 if [ $set_ok -ne 1 ]; then
