@@ -10,8 +10,10 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_string("pegasus.server", get_meta_store_type, "manifest",
-    "Where to get meta data, now support 'manifest' and 'metacf'");
+DSN_DEFINE_string("pegasus.server",
+                  get_meta_store_type,
+                  "manifest",
+                  "Where to get meta data, now support 'manifest' and 'metacf'");
 DSN_DEFINE_validator(get_meta_store_type, [](const char *type) {
     return strcmp(type, "manifest") == 0 || strcmp(type, "metacf") == 0;
 });
@@ -28,7 +30,9 @@ meta_store::meta_store(pegasus_server_impl *server,
 {
     // disable write ahead logging as replication handles logging instead now
     _wt_opts.disableWAL = true;
-    _get_meta_store_type = (strcmp(FLAGS_get_meta_store_type, "manifest") == 0 ? meta_store_type::kManifestOnly : meta_store_type::kMetaCFOnly);
+    _get_meta_store_type =
+        (strcmp(FLAGS_get_meta_store_type, "manifest") == 0 ? meta_store_type::kManifestOnly
+                                                            : meta_store_type::kMetaCFOnly);
 }
 
 uint64_t meta_store::get_last_flushed_decree() const
