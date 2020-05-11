@@ -18,8 +18,6 @@ public:
         return 0;
     }
 
-    std::unique_ptr<abnormal_log> _abnormal_log;
-
 protected:
     // all service handlers to be implemented further
     // RPC_RRDB_RRDB_PUT
