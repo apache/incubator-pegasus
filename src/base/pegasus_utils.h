@@ -55,16 +55,6 @@ protected:
     data_priority_queue _queue;
 };
 
-//----------------
-//----------------
-class pegasus_abnormal_log : public dsn::replication::abnormal_log
-{
-
-public:
-    void dwarn_write_operation(dsn::message_ex *request,
-                               const std::string &message = std::string()) override;
-};
-
 // ----------------------------------------------------------------------
 // c_escape_string()
 //    Copies 'src' to 'dest', escaping dangerous characters using

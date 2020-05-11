@@ -3,6 +3,7 @@
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/replication/storage_serverlet.h>
 #include <rrdb/rrdb.code.definition.h>
+#include <dsn/tool/abnormal_log.h>
 
 namespace dsn {
 namespace apps {
@@ -17,6 +18,8 @@ public:
         handle_request(request);
         return 0;
     }
+
+    std::unique_ptr<abnormal_log> _abnormal_log;
 
 protected:
     // all service handlers to be implemented further

@@ -175,55 +175,5 @@ int c_unescape_string(const std::string &src, std::string &dest)
     return len;
 }
 
-void pegasus_abnormal_log::dwarn_write_operation(dsn::message_ex *request,
-                                                 const std::string &message = std::string())
-{
-
-    dsn::task_code rpc_code(request->rpc_code());
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
-        auto put = put_rpc::auto_reply(request).request();
-        ::dsn::blob hash_key, sort_key;
-        pegasus_generate_key(put.key, hash_key, sort_key);
-        dwarn_replica("abnormal put: %s, hash_key = %s, sort_key = %s, put_bytes = %s",
-                      message,
-                      ::pegasus::utils::c_escape_string(hash_key),
-                      ::pegasus::utils::c_escape_string(sort_key) request->header->body_length());
-        return;
-    }
-
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-        auto multi_put = multi_put_rpc::auto_reply(request).request();
-        dwarn_replica(
-            "abnormal multi_put: %s, hash_key  = %s, multi_put_count = %d, multi_put_bytes = %s",
-            message,
-            ::pegasus::utils::c_escape_string(multi_put.hash_key),
-            multi_put.kvs.size(),
-            request->header->body_length());
-        return;
-    }
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
-        auto check_and_set = check_and_set_rpc::auto_reply(request).request();
-        dwarn_replica("abnormal check_and_set: %s, hash_key  = %s, check_sort_key = %s, "
-                      "set_sort_key = %s, check_and_set_bytes = %s",
-                      message,
-                      ::pegasus::utils::c_escape_string(check_and_set.hash_key),
-                      ::pegasus::utils::c_escape_string(check_and_set.check_sort_key),
-                      ::pegasus::utils::c_escape_string(check_and_set.set_sort_key),
-                      request->header->body_length());
-        return;
-    }
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
-        auto check_and_mutate = check_and_mutate_rpc::auto_reply(request).request();
-        dwarn_replica("abnormal check_and_mutate: %s, hash_key  = %s, check_sort_key = %s, "
-                      "set_value_count = %d, check_and_mutate_bytes = %s",
-                      message,
-                      ::pegasus::utils::c_escape_string(check_and_mutate.hash_key),
-                      ::pegasus::utils::c_escape_string(check_and_mutate.check_sort_key),
-                      check_and_mutate.mutate_list.size(),
-                      request->header->body_length());
-        return;
-    }
-}
-
 } // namespace utils
 } // namespace pegasus

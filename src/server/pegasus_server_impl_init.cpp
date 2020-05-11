@@ -24,8 +24,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _last_durable_decree(0),
       _is_checkpointing(false),
       _manual_compact_svc(this),
-      _partition_version(0),
-      _abnormal_log(new pegasus_abnormal_log())
+      _partition_version(0)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
