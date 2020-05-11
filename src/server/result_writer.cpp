@@ -3,9 +3,15 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "result_writer.h"
+#include <dsn/utility/flags.h>
 
 namespace pegasus {
 namespace server {
+
+DSN_DEFINE_int32("pegasus.collector",
+                 capacity_unit_saving_ttl_days,
+                 90,
+                 "the ttl of the CU data, 0 if no ttl");
 
 DEFINE_TASK_CODE(LPC_WRITE_RESULT, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
@@ -50,7 +56,12 @@ void result_writer::set_result(const std::string &hash_key,
         }
     };
 
-    _client->async_set(hash_key, sort_key, value, std::move(async_set_callback));
+    _client->async_set(hash_key,
+                       sort_key,
+                       value,
+                       std::move(async_set_callback),
+                       5000,
+                       FLAGS_capacity_unit_saving_ttl_days * 3600 * 24);
 }
 } // namespace server
 } // namespace pegasus
