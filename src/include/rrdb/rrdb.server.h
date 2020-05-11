@@ -3,7 +3,6 @@
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/replication/storage_serverlet.h>
 #include <rrdb/rrdb.code.definition.h>
-#include <dsn/tool/abnormal_log.h>
 
 namespace dsn {
 namespace apps {

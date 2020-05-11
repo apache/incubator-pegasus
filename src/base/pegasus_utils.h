@@ -12,7 +12,6 @@
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/utility/string_view.h>
 #include <rocksdb/slice.h>
-#include <dsn/tool/abnormal_log.h>
 
 namespace pegasus {
 namespace utils {
