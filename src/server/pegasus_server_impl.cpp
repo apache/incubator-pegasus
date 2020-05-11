@@ -2675,7 +2675,7 @@ void pegasus_server_impl::dwarn_write_operation(dsn::message_ex *request,
             request->header->from_address.to_std_string(),
             ::pegasus::utils::c_escape_string(check_and_mutate.hash_key).c_str(),
             ::pegasus::utils::c_escape_string(check_and_mutate.check_sort_key).c_str(),
-            check_and_mutate.mutate_list.size().c_str(),
+            check_and_mutate.mutate_list.size(),
             request->body_size(),
             max_allowed_write_size);
         return;
