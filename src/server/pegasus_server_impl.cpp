@@ -2635,7 +2635,7 @@ void pegasus_server_impl::dwarn_write_operation(dsn::message_ex *request,
         pegasus_generate_key(put.key, hash_key, sort_key);
         dwarn_replica("abnormal put: client_address = {}, hash_key = {}, sort_key = {}, put_bytes "
                       "= {}, max_allowed_write_size = {}",
-                      request->header->from_address.to_string(),
+                      request->header->from_address.to_std_string(),
                       ::pegasus::utils::c_escape_string(hash_key),
                       ::pegasus::utils::c_escape_string(sort_key),
                       request->body_size(),
@@ -2647,7 +2647,7 @@ void pegasus_server_impl::dwarn_write_operation(dsn::message_ex *request,
         auto multi_put = multi_put_rpc::auto_reply(request).request();
         dwarn_replica("abnormal multi_put: client_address = {}, hash_key  = {}, multi_put_count = "
                       "{}, multi_put_bytes = {}, max_allowed_write_size = {}",
-                      request->header->from_address.to_string(),
+                      request->header->from_address.to_std_string(),
                       ::pegasus::utils::c_escape_string(multi_put.hash_key),
                       multi_put.kvs.size(),
                       request->body_size(),
@@ -2659,7 +2659,7 @@ void pegasus_server_impl::dwarn_write_operation(dsn::message_ex *request,
         dwarn_replica(
             "abnormal check_and_set: client_address = {}, hash_key  = {}, check_sort_key = {}, "
             "set_sort_key = {}, check_and_set_bytes = {}, max_allowed_write_size = {}",
-            request->header->from_address.to_string(),
+            request->header->from_address.to_std_string(),
             ::pegasus::utils::c_escape_string(check_and_set.hash_key),
             ::pegasus::utils::c_escape_string(check_and_set.check_sort_key),
             ::pegasus::utils::c_escape_string(check_and_set.set_sort_key),
@@ -2672,7 +2672,7 @@ void pegasus_server_impl::dwarn_write_operation(dsn::message_ex *request,
         dwarn_replica(
             "abnormal check_and_mutate: client_address = {}, hash_key  = {}, check_sort_key = {}, "
             "set_value_count = {}, check_and_mutate_bytes = {}, max_allowed_write_size = {}",
-            request->header->from_address.to_string(),
+            request->header->from_address.to_std_string(),
             ::pegasus::utils::c_escape_string(check_and_mutate.hash_key),
             ::pegasus::utils::c_escape_string(check_and_mutate.check_sort_key),
             check_and_mutate.mutate_list.size(),
