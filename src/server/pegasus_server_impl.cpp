@@ -2632,9 +2632,9 @@ void pegasus_server_impl::dwarn_write_operation(dsn::message_ex *request,
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
         auto put = put_rpc::auto_reply(request).request();
         ::dsn::blob hash_key, sort_key;
-        pegasus_generate_key(put.key, hash_key, sort_key);
+        pegasus_restore_key(put.key, hash_key, sort_key);
         dwarn_replica("abnormal put: client_address = {}, hash_key = {}, sort_key = {}, put_bytes "
-                      "= {}, max_allowed_write_sizessssssssssss = {}",
+                      "= {}, max_allowed_write_size = {}",
                       request->header->from_address.to_std_string(),
                       ::pegasus::utils::c_escape_string(hash_key).c_str(),
                       ::pegasus::utils::c_escape_string(sort_key).c_str(),
