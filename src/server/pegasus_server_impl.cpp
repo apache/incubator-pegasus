@@ -2634,7 +2634,7 @@ void pegasus_server_impl::dwarn_write_operation(dsn::message_ex *request,
         ::dsn::blob hash_key, sort_key;
         pegasus_generate_key(put.key, hash_key, sort_key);
         dwarn_replica("abnormal put: client_address = {}, hash_key = {}, sort_key = {}, put_bytes "
-                      "= {}, max_allowed_write_size = {}",
+                      "= {}, max_allowed_write_sizessssssssssss = {}",
                       request->header->from_address.to_std_string(),
                       ::pegasus::utils::c_escape_string(hash_key).c_str(),
                       ::pegasus::utils::c_escape_string(sort_key).c_str(),
