@@ -8,7 +8,6 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <rrdb.code.definition.h>
 #include <pegasus_rpc_types.h>
 #include <dsn/dist/fmt_logging.h>
 #include "pegasus_key_schema.h"
