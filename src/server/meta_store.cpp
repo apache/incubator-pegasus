@@ -5,9 +5,16 @@
 #include "meta_store.h"
 
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/flags.h>
 
 namespace pegasus {
 namespace server {
+
+DSN_DEFINE_string("pegasus.server", meta_store_type, "manifest",
+    "Where to get meta data, now support 'manifest' and 'metacf'");
+DSN_DEFINE_validator(meta_store_type, [](const char *meta_store_type) {
+    return strcmp(meta_store_type, "manifest") == 0 || strcmp(meta_store_type, "metacf") == 0;
+});
 
 const std::string meta_store::DATA_VERSION = "pegasus_data_version";
 const std::string meta_store::LAST_FLUSHED_DECREE = "pegasus_last_flushed_decree";
@@ -21,11 +28,12 @@ meta_store::meta_store(pegasus_server_impl *server,
 {
     // disable write ahead logging as replication handles logging instead now
     _wt_opts.disableWAL = true;
+    _get_meta_store_type = (strcmp(meta_store_type, "manifest") == 0 ? meta_store_type::kManifestOnly : meta_store_type::kMetaCFOnly);
 }
 
-uint64_t meta_store::get_last_flushed_decree(meta_store_type type) const
+uint64_t meta_store::get_last_flushed_decree() const
 {
-    switch (type) {
+    switch (_get_meta_store_type) {
     case meta_store_type::kManifestOnly:
         return _db->GetLastFlushedDecree();
     case meta_store_type::kMetaCFOnly: {
@@ -39,9 +47,9 @@ uint64_t meta_store::get_last_flushed_decree(meta_store_type type) const
     }
 }
 
-uint32_t meta_store::get_data_version(meta_store_type type) const
+uint32_t meta_store::get_data_version() const
 {
-    switch (type) {
+    switch (_get_meta_store_type) {
     case meta_store_type::kManifestOnly:
         return _db->GetPegasusDataVersion();
     case meta_store_type::kMetaCFOnly: {
@@ -55,9 +63,9 @@ uint32_t meta_store::get_data_version(meta_store_type type) const
     }
 }
 
-uint64_t meta_store::get_last_manual_compact_finish_time(meta_store_type type) const
+uint64_t meta_store::get_last_manual_compact_finish_time() const
 {
-    switch (type) {
+    switch (_get_meta_store_type) {
     case meta_store_type::kManifestOnly:
         return _db->GetLastManualCompactFinishTime();
     case meta_store_type::kMetaCFOnly: {
