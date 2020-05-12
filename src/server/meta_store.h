@@ -32,9 +32,9 @@ public:
 
     meta_store(pegasus_server_impl *server, rocksdb::DB *db, rocksdb::ColumnFamilyHandle *meta_cf);
 
-    uint64_t get_last_flushed_decree(meta_store_type type) const;
-    uint32_t get_data_version(meta_store_type type) const;
-    uint64_t get_last_manual_compact_finish_time(meta_store_type type) const;
+    uint64_t get_last_flushed_decree() const;
+    uint32_t get_data_version() const;
+    uint64_t get_last_manual_compact_finish_time() const;
 
     void set_last_flushed_decree(uint64_t decree) const;
     void set_data_version(uint32_t version) const;
@@ -55,6 +55,8 @@ private:
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_meta_cf;
     rocksdb::WriteOptions _wt_opts;
+
+    meta_store_type _get_meta_store_type;
 };
 
 } // namespace server
