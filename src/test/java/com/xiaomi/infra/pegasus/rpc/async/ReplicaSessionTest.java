@@ -12,6 +12,7 @@ import com.xiaomi.infra.pegasus.client.PegasusClient;
 import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.operator.rrdb_get_operator;
 import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
+import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.rpc.async.ReplicaSession.ConnState;
 import com.xiaomi.infra.pegasus.tools.Toollet;
@@ -40,7 +41,7 @@ public class ReplicaSessionTest {
 
   @Before
   public void before() throws Exception {
-    manager = new ClusterManager(1000, 1, false, null, 60, metaList);
+    manager = new ClusterManager(ClusterOptions.forTest(metaList));
   }
 
   @After

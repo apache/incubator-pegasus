@@ -3,13 +3,14 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.rpc.async;
 
-import static java.lang.Math.max;
+import static java.lang.Integer.max;
 
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.metrics.MetricsManager;
 import com.xiaomi.infra.pegasus.rpc.Cluster;
-import com.xiaomi.infra.pegasus.rpc.KeyHasher;
+import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
+import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -20,7 +21,6 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 
-/** Created by sunweijie@xiaomi.com on 16-11-11. */
 public class ClusterManager extends Cluster {
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(ClusterManager.class);
 
@@ -43,32 +43,25 @@ public class ClusterManager extends Cluster {
     logger.info("operating system name: {}", osName);
   }
 
-  public ClusterManager(
-      int timeout,
-      int io_threads,
-      boolean enableCounter,
-      String perfCounterTags,
-      int pushIntervalSecs,
-      String[] address_list)
-      throws IllegalArgumentException {
-    setTimeout(timeout);
-    this.enableCounter = enableCounter;
+  public ClusterManager(ClusterOptions opts) throws IllegalArgumentException {
+    setTimeout(opts.operationTimeout());
+    this.enableCounter = opts.enablePerfCounter();
     if (enableCounter) {
-      MetricsManager.detectHostAndInit(perfCounterTags, pushIntervalSecs);
+      MetricsManager.detectHostAndInit(opts.perfCounterTags(), opts.pushCounterIntervalSecs());
     }
 
     replicaSessions = new ConcurrentHashMap<rpc_address, ReplicaSession>();
-    replicaGroup = getEventLoopGroupInstance(io_threads);
+    replicaGroup = getEventLoopGroupInstance(opts.asyncWorkers());
     metaGroup = getEventLoopGroupInstance(1);
     tableGroup = getEventLoopGroupInstance(1);
 
-    metaList = address_list;
+    metaList = opts.metaList();
     // the constructor of meta session is depend on the replicaSessions,
     // so the replicaSessions should be initialized earlier
-    metaSession = new MetaSession(this, address_list, timeout, 10, metaGroup);
+    metaSession = new MetaSession(this, opts.metaList(), opts.operationTimeout(), 10, metaGroup);
   }
 
-  public EventExecutor getExecutor(String name, int threadCount) {
+  public EventExecutor getExecutor() {
     return tableGroup.next();
   }
 
@@ -87,7 +80,9 @@ public class ClusterManager extends Cluster {
       if (ss != null) return ss;
       ss =
           new ReplicaSession(
-              address, replicaGroup, max(operationTimeout, Cluster.MIN_SOCK_CONNECT_TIMEOUT));
+              address,
+              replicaGroup,
+              max(operationTimeout, ClusterOptions.MIN_SOCK_CONNECT_TIMEOUT));
       replicaSessions.put(address, ss);
       return ss;
     }
@@ -131,9 +126,8 @@ public class ClusterManager extends Cluster {
   }
 
   @Override
-  public TableHandler openTable(String name, KeyHasher h, int backupRequestDelayMs)
-      throws ReplicationException {
-    return new TableHandler(this, name, h, backupRequestDelayMs);
+  public TableHandler openTable(String name, TableOptions options) throws ReplicationException {
+    return new TableHandler(this, name, options);
   }
 
   @Override

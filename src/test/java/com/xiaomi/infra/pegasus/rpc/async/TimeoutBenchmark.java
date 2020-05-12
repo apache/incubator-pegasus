@@ -5,8 +5,9 @@ package com.xiaomi.infra.pegasus.rpc.async;
 
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.gpid;
-import com.xiaomi.infra.pegasus.rpc.KeyHasher;
+import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
+import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Assert;
@@ -62,11 +63,11 @@ public class TimeoutBenchmark {
   @Test
   public void timeoutChecker() {
     String[] metaList = {"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"};
-    ClusterManager manager = new ClusterManager(1000, 1, false, null, 60, metaList);
+    ClusterManager manager = new ClusterManager(ClusterOptions.forTest(metaList));
 
     TableHandler handle;
     try {
-      handle = manager.openTable("temp", KeyHasher.DEFAULT, 0);
+      handle = manager.openTable("temp", TableOptions.forTest());
     } catch (ReplicationException e) {
       e.printStackTrace();
       Assert.fail();

@@ -7,8 +7,9 @@ import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.operator.client_operator;
-import com.xiaomi.infra.pegasus.rpc.KeyHasher;
+import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
+import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import com.xiaomi.infra.pegasus.rpc.async.TableHandler.ReplicaConfiguration;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class TableHandlerTest {
 
   @Before
   public void before() throws Exception {
-    testManager = new ClusterManager(1000, 1, false, null, 60, addr_list);
+    testManager = new ClusterManager(ClusterOptions.forTest(addr_list));
   }
 
   @After
@@ -60,7 +61,7 @@ public class TableHandlerTest {
     System.out.println("TableHandlerTest#testOperateOp");
     TableHandler table = null;
     try {
-      table = testManager.openTable("temp", KeyHasher.DEFAULT, 0);
+      table = testManager.openTable("temp", TableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.fail();
     }
@@ -147,7 +148,7 @@ public class TableHandlerTest {
     TableHandler table = null;
 
     try {
-      table = testManager.openTable("temp", KeyHasher.DEFAULT, 0);
+      table = testManager.openTable("temp", TableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.fail();
     }
@@ -191,7 +192,7 @@ public class TableHandlerTest {
     TableHandler table = null;
 
     try {
-      table = testManager.openTable("temp", KeyHasher.DEFAULT, 0);
+      table = testManager.openTable("temp", TableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.fail();
     }

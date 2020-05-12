@@ -13,12 +13,15 @@ import com.xiaomi.infra.pegasus.operator.query_cfg_operator;
 import com.xiaomi.infra.pegasus.replication.partition_configuration;
 import com.xiaomi.infra.pegasus.replication.query_cfg_request;
 import com.xiaomi.infra.pegasus.replication.query_cfg_response;
-import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.Table;
+import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.EventExecutor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,9 +51,8 @@ public class TableHandler extends Table {
   AtomicBoolean inQuerying_;
   long lastQueryTime_;
   int backupRequestDelayMs;
-  private boolean enableWriteLimit;
 
-  public TableHandler(ClusterManager mgr, String name, KeyHasher h, int backupRequestDelayMs)
+  public TableHandler(ClusterManager mgr, String name, TableOptions options)
       throws ReplicationException {
     int i = 0;
     for (; i < name.length(); i++) {
@@ -90,12 +92,12 @@ public class TableHandler extends Table {
     // superclass members
     tableName_ = name;
     appID_ = resp.app_id;
-    hasher_ = h;
+    hasher_ = options.keyHasher();
 
     // members of this
     manager_ = mgr;
-    executor_ = manager_.getExecutor(name, 1);
-    this.backupRequestDelayMs = backupRequestDelayMs;
+    executor_ = manager_.getExecutor();
+    this.backupRequestDelayMs = options.backupRequestDelayMs();
     if (backupRequestDelayMs > 0) {
       logger.info("the delay time of backup request is \"{}\"", backupRequestDelayMs);
     }

@@ -5,8 +5,9 @@ package com.xiaomi.infra.pegasus.rpc.async;
 
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.rpc_address;
-import com.xiaomi.infra.pegasus.rpc.KeyHasher;
+import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
+import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -30,7 +31,7 @@ public class ClusterManagerTest {
   public void testGetReplicaSession() throws Exception {
     String[] address_list = {"127.0.0.1:1", "127.0.0.1:2", "127.0.0.1:3"};
 
-    ClusterManager testManager = new ClusterManager(1000, 1, false, null, 60, address_list);
+    ClusterManager testManager = new ClusterManager(ClusterOptions.forTest(address_list));
 
     // input an invalid rpc address
     rpc_address address = new rpc_address();
@@ -43,11 +44,11 @@ public class ClusterManagerTest {
   public void testOpenTable() throws Exception {
     // test invalid meta list
     String[] addr_list = {"127.0.0.1:123", "127.0.0.1:124", "127.0.0.1:125"};
-    ClusterManager testManager = new ClusterManager(1000, 1, false, null, 60, addr_list);
+    ClusterManager testManager = new ClusterManager(ClusterOptions.forTest(addr_list));
 
     TableHandler result = null;
     try {
-      result = testManager.openTable("testName", KeyHasher.DEFAULT, 0);
+      result = testManager.openTable("testName", TableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.assertEquals(error_code.error_types.ERR_SESSION_RESET, e.getErrorType());
     } finally {
@@ -59,9 +60,9 @@ public class ClusterManagerTest {
     String[] addr_list2 = {
       "127.0.0.1:123", "127.0.0.1:34603", "127.0.0.1:34601", "127.0.0.1:34602"
     };
-    testManager = new ClusterManager(1000, 1, false, null, 60, addr_list2);
+    testManager = new ClusterManager(ClusterOptions.forTest(addr_list2));
     try {
-      result = testManager.openTable("hehe", KeyHasher.DEFAULT, 0);
+      result = testManager.openTable("hehe", TableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.assertEquals(error_code.error_types.ERR_OBJECT_NOT_FOUND, e.getErrorType());
     } finally {
@@ -70,7 +71,7 @@ public class ClusterManagerTest {
 
     // test open an valid table
     try {
-      result = testManager.openTable("temp", KeyHasher.DEFAULT, 0);
+      result = testManager.openTable("temp", TableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.fail();
     } finally {
