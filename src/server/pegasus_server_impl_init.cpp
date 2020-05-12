@@ -5,7 +5,6 @@
 #include "pegasus_server_impl.h"
 
 #include <rocksdb/filter_policy.h>
-#include <pegasus_utils.h>
 #include "capacity_unit_calculator.h"
 #include "hashkey_transform.h"
 #include "meta_store.h"

@@ -2645,7 +2645,7 @@ void pegasus_server_impl::dwarn_write_request(dsn::message_ex *request,
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         auto multi_put = multi_put_rpc::auto_reply(request).request();
-        dwarn_replica("abnormal multi_put: client_address = {}, hash_key  = {}, multi_put_count = "
+        dwarn_replica("abnormal multi_put: client_address = {}, hash_key = {}, multi_put_count = "
                       "{}, multi_put_bytes = {}, max_allowed_write_size = {}",
                       request->header->from_address.to_std_string(),
                       ::pegasus::utils::c_escape_string(multi_put.hash_key).c_str(),
