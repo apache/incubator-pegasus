@@ -157,8 +157,8 @@ public:
 
     virtual void set_partition_version(int32_t partition_version) override;
 
-    virtual void dwarn_write_operation(dsn::message_ex *request,
-                                       uint64_t max_allowed_write_size) override;
+    virtual void dwarn_write_request(dsn::message_ex *request,
+                                     uint64_t max_allowed_write_size) override;
 
 private:
     friend class manual_compact_service_test;

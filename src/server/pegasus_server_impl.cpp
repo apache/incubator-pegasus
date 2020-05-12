@@ -2624,8 +2624,8 @@ void pegasus_server_impl::release_db()
     _db = nullptr;
 }
 
-void pegasus_server_impl::dwarn_write_operation(dsn::message_ex *request,
-                                                uint64_t max_allowed_write_size)
+void pegasus_server_impl::dwarn_write_request(dsn::message_ex *request,
+                                              uint64_t max_allowed_write_size)
 {
 
     dsn::task_code rpc_code(request->rpc_code());
