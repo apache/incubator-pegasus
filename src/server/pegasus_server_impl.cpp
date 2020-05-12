@@ -1366,12 +1366,9 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     // Create _meta_store which provide Pegasus meta data read and write.
     _meta_store = dsn::make_unique<meta_store>(this, _db, _meta_cf);
 
-    _last_committed_decree =
-        _meta_store->get_last_flushed_decree(meta_store::meta_store_type::kManifestOnly);
-    _pegasus_data_version =
-        _meta_store->get_data_version(meta_store::meta_store_type::kManifestOnly);
-    uint64_t last_manual_compact_finish_time = _meta_store->get_last_manual_compact_finish_time(
-        meta_store::meta_store_type::kManifestOnly);
+    _last_committed_decree = _meta_store->get_last_flushed_decree();
+    _pegasus_data_version = _meta_store->get_data_version();
+    uint64_t last_manual_compact_finish_time = _meta_store->get_last_manual_compact_finish_time();
     if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
         derror_replica("open app failed, unsupported data version {}", _pegasus_data_version);
         release_db();
@@ -1594,8 +1591,7 @@ private:
     {
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
         dcheck_gt_replica(last_commit, last_durable_decree());
-        int64_t last_flushed = static_cast<int64_t>(
-            _meta_store->get_last_flushed_decree(meta_store::meta_store_type::kManifestOnly));
+        int64_t last_flushed = static_cast<int64_t>(_meta_store->get_last_flushed_decree());
         dcheck_eq_replica(last_commit, last_flushed);
         if (!_checkpoints.empty()) {
             dcheck_gt_replica(last_commit, _checkpoints.back());
@@ -1620,8 +1616,7 @@ private:
         return ::dsn::ERR_WRONG_TIMING;
 
     int64_t last_durable = last_durable_decree();
-    int64_t last_flushed = static_cast<int64_t>(
-        _meta_store->get_last_flushed_decree(meta_store::meta_store_type::kManifestOnly));
+    int64_t last_flushed = static_cast<int64_t>(_meta_store->get_last_flushed_decree());
     int64_t last_commit = last_committed_decree();
 
     dcheck_le_replica(last_durable, last_flushed);
@@ -2170,7 +2165,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
 
 int64_t pegasus_server_impl::last_flushed_decree() const
 {
-    return _meta_store->get_last_flushed_decree(meta_store::meta_store_type::kManifestOnly);
+    return _meta_store->get_last_flushed_decree();
 }
 
 void pegasus_server_impl::update_app_envs_before_open_db(
@@ -2529,8 +2524,7 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
     // update rocksdb statistics immediately
     update_replica_rocksdb_statistics();
 
-    return _meta_store->get_last_manual_compact_finish_time(
-        meta_store::meta_store_type::kManifestOnly);
+    return _meta_store->get_last_manual_compact_finish_time();
 }
 
 bool pegasus_server_impl::release_storage_after_manual_compact()
