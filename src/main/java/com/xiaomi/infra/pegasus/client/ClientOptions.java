@@ -25,6 +25,7 @@ import java.time.Duration;
  *          .enablePerfCounter(false)
  *          .falconPerfCounterTags("")
  *          .falconPushInterval(Duration.ofSeconds(10))
+ *          .metaQueryTimeout(Duration.ofMillis(5000))
  *          .build();
  * }</pre>
  */
@@ -38,6 +39,7 @@ public class ClientOptions {
   public static final String DEFAULT_FALCON_PERF_COUNTER_TAGS = "";
   public static final Duration DEFAULT_FALCON_PUSH_INTERVAL = Duration.ofSeconds(10);
   public static final boolean DEFAULT_ENABLE_WRITE_LIMIT = true;
+  public static final Duration DEFAULT_META_QUERY_TIMEOUT = Duration.ofMillis(5000);
 
   private final String metaServers;
   private final Duration operationTimeout;
@@ -46,6 +48,7 @@ public class ClientOptions {
   private final String falconPerfCounterTags;
   private final Duration falconPushInterval;
   private final boolean enableWriteLimit;
+  private final Duration metaQueryTimeout;
 
   protected ClientOptions(Builder builder) {
     this.metaServers = builder.metaServers;
@@ -55,6 +58,7 @@ public class ClientOptions {
     this.falconPerfCounterTags = builder.falconPerfCounterTags;
     this.falconPushInterval = builder.falconPushInterval;
     this.enableWriteLimit = builder.enableWriteLimit;
+    this.metaQueryTimeout = builder.metaQueryTimeout;
   }
 
   protected ClientOptions(ClientOptions original) {
@@ -65,6 +69,7 @@ public class ClientOptions {
     this.falconPerfCounterTags = original.getFalconPerfCounterTags();
     this.falconPushInterval = original.getFalconPushInterval();
     this.enableWriteLimit = original.isWriteLimitEnabled();
+    this.metaQueryTimeout = original.getMetaQueryTimeout();
   }
 
   /**
@@ -108,7 +113,8 @@ public class ClientOptions {
           && this.enablePerfCounter == clientOptions.enablePerfCounter
           && this.falconPerfCounterTags.equals(clientOptions.falconPerfCounterTags)
           && this.falconPushInterval.toMillis() == clientOptions.falconPushInterval.toMillis()
-          && this.enableWriteLimit == clientOptions.enableWriteLimit;
+          && this.enableWriteLimit == clientOptions.enableWriteLimit
+          && this.metaQueryTimeout.toMillis() == clientOptions.metaQueryTimeout.toMillis();
     }
     return false;
   }
@@ -132,6 +138,8 @@ public class ClientOptions {
         + falconPushInterval.getSeconds()
         + ",enableWriteLimit="
         + enableWriteLimit
+        + ", metaQueryTimeout(ms)="
+        + metaQueryTimeout.toMillis()
         + '}';
   }
 
@@ -144,6 +152,7 @@ public class ClientOptions {
     private String falconPerfCounterTags = DEFAULT_FALCON_PERF_COUNTER_TAGS;
     private Duration falconPushInterval = DEFAULT_FALCON_PUSH_INTERVAL;
     private boolean enableWriteLimit = DEFAULT_ENABLE_WRITE_LIMIT;
+    private Duration metaQueryTimeout = DEFAULT_META_QUERY_TIMEOUT;
 
     protected Builder() {}
 
@@ -235,6 +244,18 @@ public class ClientOptions {
     }
 
     /**
+     * The timeout for query meta server. Defaults to {@literal 5000ms}, see {@link
+     * #DEFAULT_META_QUERY_TIMEOUT}.
+     *
+     * @param metaQueryTimeout metaQueryTimeout
+     * @return {@code this}
+     */
+    public Builder metaQueryTimeout(Duration metaQueryTimeout) {
+      this.metaQueryTimeout = metaQueryTimeout;
+      return this;
+    }
+
+    /**
      * Create a new instance of {@link ClientOptions}.
      *
      * @return new instance of {@link ClientOptions}.
@@ -260,7 +281,8 @@ public class ClientOptions {
         .enablePerfCounter(isEnablePerfCounter())
         .falconPerfCounterTags(getFalconPerfCounterTags())
         .falconPushInterval(getFalconPushInterval())
-        .enableWriteLimit(isWriteLimitEnabled());
+        .enableWriteLimit(isWriteLimitEnabled())
+        .metaQueryTimeout(getMetaQueryTimeout());
     return builder;
   }
 
@@ -330,5 +352,14 @@ public class ClientOptions {
    */
   public boolean isWriteLimitEnabled() {
     return enableWriteLimit;
+  }
+
+  /**
+   * The timeout for query meta server. Defaults to {@literal 5000ms}.
+   *
+   * @return the timeout for query meta server.
+   */
+  public Duration getMetaQueryTimeout() {
+    return metaQueryTimeout;
   }
 }

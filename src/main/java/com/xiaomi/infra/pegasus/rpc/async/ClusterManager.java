@@ -58,7 +58,7 @@ public class ClusterManager extends Cluster {
     metaList = opts.metaList();
     // the constructor of meta session is depend on the replicaSessions,
     // so the replicaSessions should be initialized earlier
-    metaSession = new MetaSession(this, opts.metaList(), opts.operationTimeout(), 10, metaGroup);
+    metaSession = new MetaSession(this, opts.metaList(), opts.metaQueryTimeout(), 10, metaGroup);
   }
 
   public EventExecutor getExecutor() {
