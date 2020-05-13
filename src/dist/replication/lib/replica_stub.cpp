@@ -2049,6 +2049,7 @@ void replica_stub::open_service()
     register_rpc_handler(RPC_SPLIT_NOTIFY_CATCH_UP,
                          "child_notify_catch_up",
                          &replica_stub::on_notify_primary_split_catch_up);
+    register_rpc_handler(RPC_BULK_LOAD, "bulk_load", &replica_stub::on_bulk_load);
 
     _kill_partition_command = ::dsn::command_manager::instance().register_app_command(
         {"kill_partition"},
@@ -2630,6 +2631,18 @@ void replica_stub::update_disk_holding_replicas()
                 }
             }
         }
+    }
+}
+
+void replica_stub::on_bulk_load(const bulk_load_request &request, bulk_load_response &response)
+{
+    ddebug_f("[{}@{}]: receive bulk load request", request.pid, _primary_address_str);
+    replica_ptr rep = get_replica(request.pid);
+    if (rep != nullptr) {
+        rep->on_bulk_load(request, response);
+    } else {
+        derror_f("replica({}) is not existed", request.pid);
+        response.err = ERR_OBJECT_NOT_FOUND;
     }
 }
 

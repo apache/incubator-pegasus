@@ -101,6 +101,7 @@ public:
                            /*out*/ query_app_info_response &resp);
     void on_cold_backup(const backup_request &request, /*out*/ backup_response &response);
     void on_clear_cold_backup(const backup_clear_request &request);
+    void on_bulk_load(const bulk_load_request &request, /*out*/ bulk_load_response &response);
 
     //
     //    messages from peers (primary or secondary)

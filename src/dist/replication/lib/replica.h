@@ -424,6 +424,22 @@ private:
 
     void init_table_level_latency_counters();
 
+    /////////////////////////////////////////////////////////////////
+    // replica bulk load
+    void on_bulk_load(const bulk_load_request &request, /*out*/ bulk_load_response &response);
+    void broadcast_group_bulk_load(const bulk_load_request &meta_req);
+
+    error_code do_bulk_load(const std::string &app_name,
+                            bulk_load_status::type meta_status,
+                            const std::string &cluster_name,
+                            const std::string &provider_name);
+
+    void report_bulk_load_states_to_meta(bulk_load_status::type remote_status,
+                                         bool report_metadata,
+                                         /*out*/ bulk_load_response &response);
+
+    bulk_load_status::type get_bulk_load_status() { return _bulk_load_context._status; }
+
 private:
     friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
@@ -437,6 +453,7 @@ private:
     friend class replica_split_test;
     friend class replica_test;
     friend class replica_backup_manager;
+    friend class replica_bulk_load_test;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -484,6 +501,7 @@ private:
     // policy_name --> cold_backup_context
     std::map<std::string, cold_backup_context_ptr> _cold_backup_contexts;
     partition_split_context _split_states;
+    bulk_load_context _bulk_load_context;
 
     // timer task that running in replication-thread
     std::atomic<uint64_t> _cold_backup_running_count;
