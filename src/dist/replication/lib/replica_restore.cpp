@@ -293,6 +293,7 @@ dsn::error_code replica::download_checkpoint(const configuration_restore_request
             derror("%s: checkpoint is damaged, chkpt = %s", name(), local_chkpt_dir.c_str());
             // if checkpoint is damaged, using corruption to represent it
             err = ERR_CORRUPTION;
+            _restore_status = ERR_CORRUPTION;
         } else {
             ddebug("%s: checkpoint is valid, chkpt = %s", name(), local_chkpt_dir.c_str());
             // checkpoint is valid, we should delete the backup_metadata under checkpoint
@@ -444,26 +445,22 @@ dsn::error_code replica::restore_checkpoint()
 
     if (err == dsn::ERR_OK) {
         err = download_checkpoint(restore_req, remote_chkpt_dir, restore_dir);
-        if (err != ERR_OK) {
-            if (_restore_status == ERR_CORRUPTION) {
-                if (skip_bad_partition) {
-                    err = skip_restore_partition(restore_dir);
-                } else {
-                    tell_meta_to_restore_rollback();
-                    return ERR_CORRUPTION;
-                }
-            }
-        }
-    } else { // find valid checkpoint failed
-        if (err == ERR_OBJECT_NOT_FOUND) {
+        if (_restore_status == ERR_CORRUPTION) {
             if (skip_bad_partition) {
                 err = skip_restore_partition(restore_dir);
             } else {
-                // current_checkpoint doesn't exist, we think partition is damaged
                 tell_meta_to_restore_rollback();
-                _restore_status = ERR_CORRUPTION;
                 return ERR_CORRUPTION;
             }
+        }
+    } else if (err == ERR_OBJECT_NOT_FOUND) { // find valid checkpoint failed
+        if (skip_bad_partition) {
+            err = skip_restore_partition(restore_dir);
+        } else {
+            // current_checkpoint doesn't exist, we think partition is damaged
+            tell_meta_to_restore_rollback();
+            _restore_status = ERR_CORRUPTION;
+            return ERR_CORRUPTION;
         }
     }
     report_restore_status_to_meta();
