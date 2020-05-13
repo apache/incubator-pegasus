@@ -323,10 +323,16 @@ public class TableHandler extends Table {
     }
 
     // must use new round here, because round.isSuccess is true now
-    tryDelayCall(
+    // must use round.expireNanoTime to init, otherwise "round.expireNanoTime - System.nanoTime() >
+    // nanoDelay" in "tryDelayCall()" will be always true
+    ClientRequestRound delayRequestRound =
         new ClientRequestRound(
-            round.operator, round.callback, round.enableCounter, round.timeoutMs),
-        tryId + 1);
+            round.operator,
+            round.callback,
+            round.enableCounter,
+            round.expireNanoTime,
+            round.timeoutMs);
+    tryDelayCall(delayRequestRound, tryId + 1);
   }
 
   void tryDelayCall(final ClientRequestRound round, final int tryId) {
