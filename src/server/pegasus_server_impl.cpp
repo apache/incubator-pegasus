@@ -2628,7 +2628,7 @@ std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
         std::string request("put_request:");
         request.append("hash_key=")
             .append(pegasus::utils::c_escape_string(hash_key))
-            .append("sort_key=")
+            .append(",sort_key=")
             .append(pegasus::utils::c_escape_string(sort_key));
         return request;
     }
@@ -2638,7 +2638,7 @@ std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
         std::string request("multi_put_request:");
         request.append("hash_key=")
             .append(pegasus::utils::c_escape_string((multi_put.hash_key))
-                        .append("multi_put_count=")
+                        .append(",multi_put_count=")
                         .append(std::to_string(multi_put.kvs.size())));
         return request;
     }
@@ -2648,9 +2648,9 @@ std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
         std::string request("check_and_set_request:");
         request.append("hash_key=")
             .append(pegasus::utils::c_escape_string(check_and_set.hash_key))
-            .append("check_sort_key=")
+            .append(",check_sort_key=")
             .append(pegasus::utils::c_escape_string(check_and_set.check_sort_key))
-            .append("set_sort_key=")
+            .append(",set_sort_key=")
             .append(pegasus::utils::c_escape_string(check_and_set.set_sort_key));
         return request;
     }
@@ -2660,9 +2660,9 @@ std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
         std::string request("check_and_mutate_request:");
         request.append("hash_key=")
             .append(pegasus::utils::c_escape_string(check_and_mutate.hash_key))
-            .append("check_sort_key=")
+            .append(",check_sort_key=")
             .append(pegasus::utils::c_escape_string(check_and_mutate.check_sort_key))
-            .append("set_value_count=")
+            .append(",set_value_count=")
             .append(std::to_string(check_and_mutate.mutate_list.size()));
         return request;
     }
