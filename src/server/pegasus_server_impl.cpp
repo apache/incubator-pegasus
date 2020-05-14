@@ -2666,6 +2666,8 @@ std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
             .append(std::to_string(check_and_mutate.mutate_list.size()));
         return request;
     }
+
+    return "other write request type";
 }
 
 } // namespace server
