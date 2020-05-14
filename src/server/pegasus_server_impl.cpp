@@ -2625,7 +2625,7 @@ std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
         auto put = put_rpc::auto_reply(request).request();
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(put.key, hash_key, sort_key);
-        std::string request("put_request:");
+        std::string request("put:");
         request.append("hash_key=")
             .append(pegasus::utils::c_escape_string(hash_key))
             .append(",sort_key=")
@@ -2635,7 +2635,7 @@ std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         auto multi_put = multi_put_rpc::auto_reply(request).request();
-        std::string request("multi_put_request:");
+        std::string request("multi_put:");
         request.append("hash_key=")
             .append(pegasus::utils::c_escape_string((multi_put.hash_key))
                         .append(",multi_put_count=")
@@ -2645,7 +2645,7 @@ std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
         auto check_and_set = check_and_set_rpc::auto_reply(request).request();
-        std::string request("check_and_set_request:");
+        std::string request("check_and_set:");
         request.append("hash_key=")
             .append(pegasus::utils::c_escape_string(check_and_set.hash_key))
             .append(",check_sort_key=")
@@ -2657,7 +2657,7 @@ std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
         auto check_and_mutate = check_and_mutate_rpc::auto_reply(request).request();
-        std::string request("check_and_mutate_request:");
+        std::string request("check_and_mutate:");
         request.append("hash_key=")
             .append(pegasus::utils::c_escape_string(check_and_mutate.hash_key))
             .append(",check_sort_key=")
