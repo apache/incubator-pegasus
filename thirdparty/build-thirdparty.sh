@@ -50,9 +50,9 @@ mkdir -p $TP_OUTPUT/bin
 
 # build concurrentqueue
 if [ ! -d $TP_OUTPUT/include/concurrentqueue ]; then
-    cd $TP_SRC/concurrentqueue-1.0.0-beta
+    cd $TP_SRC/concurrentqueue-1.0.1
     mkdir -p $TP_OUTPUT/include/concurrentqueue
-    cp -R blockingconcurrentqueue.h concurrentqueue.h internal/ $TP_OUTPUT/include/concurrentqueue
+    cp -R blockingconcurrentqueue.h concurrentqueue.h lightweightsemaphore.h internal/ $TP_OUTPUT/include/concurrentqueue
     cd $TP_DIR
     exit_if_fail "concurrentqueue" $?
 else

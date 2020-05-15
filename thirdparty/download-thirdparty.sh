@@ -120,12 +120,12 @@ fi
 cd $TP_SRC
 
 # concurrent queue
-# from: https://codeload.github.com/cameron314/concurrentqueue/tar.gz/v1.0.0-beta
-CONCURRENT_QUEUE_NAME=concurrentqueue-1.0.0-beta
+# from: https://codeload.github.com/cameron314/concurrentqueue/tar.gz/v1.0.1
+CONCURRENT_QUEUE_NAME=concurrentqueue-1.0.1
 CONCURRENT_QUEUE_PKG=${CONCURRENT_QUEUE_NAME}.tar.gz
 check_and_download "${CONCURRENT_QUEUE_PKG}"\
     "${OSS_URL_PREFIX}/${CONCURRENT_QUEUE_PKG}"\
-    "761446e2392942aa342f437697ddb72e"\
+    "80016b584fddffd67073349efd7b8958"\
     "${CONCURRENT_QUEUE_NAME}"
 exit_if_fail $?
 
