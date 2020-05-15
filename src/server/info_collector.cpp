@@ -307,7 +307,7 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
 {
     // use appname+partition_num as a key can prevent the impact of dynamic partition changes
     std::string app_name_pcount = fmt::format("{}.{}", app_name, partition_num);
-    auto iter = _hotspot_calculator_store.find(app_name_count);
+    auto iter = _hotspot_calculator_store.find(app_name_pcount);
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
@@ -318,12 +318,12 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
         policy.reset(new hotspot_algo_qps_skew());
     } else {
         dwarn("hotspot detection is disabled");
-        _hotspot_calculator_store[app_name_count] = nullptr;
+        _hotspot_calculator_store[app_name_pcount] = nullptr;
         return nullptr;
     }
     hotspot_calculator *calculator =
-        new hotspot_calculator(app_name_count, partition_num, std::move(policy));
-    _hotspot_calculator_store[app_name_count] = calculator;
+        new hotspot_calculator(app_name_pcount, partition_num, std::move(policy));
+    _hotspot_calculator_store[app_name_pcount] = calculator;
     return calculator;
 }
 
