@@ -10,6 +10,7 @@
 #include <chrono>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/fmt_logging.h>
 
 #include "base/pegasus_const.h"
 #include "result_writer.h"
@@ -304,7 +305,9 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
 hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &app_name,
                                                            const int partition_num)
 {
-    auto iter = _hotspot_calculator_store.find(app_name);
+    // use appname+partition_num as a key can prevent the impact of dynamic partition changes
+    std::string app_name_pcount = fmt::format("{}.{}", app_name, partition_num);
+    auto iter = _hotspot_calculator_store.find(app_name_pcount);
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
@@ -315,12 +318,12 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
         policy.reset(new hotspot_algo_qps_skew());
     } else {
         dwarn("hotspot detection is disabled");
-        _hotspot_calculator_store[app_name] = nullptr;
+        _hotspot_calculator_store[app_name_pcount] = nullptr;
         return nullptr;
     }
     hotspot_calculator *calculator =
-        new hotspot_calculator(app_name, partition_num, std::move(policy));
-    _hotspot_calculator_store[app_name] = calculator;
+        new hotspot_calculator(app_name_pcount, partition_num, std::move(policy));
+    _hotspot_calculator_store[app_name_pcount] = calculator;
     return calculator;
 }
 
