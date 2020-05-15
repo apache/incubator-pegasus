@@ -402,6 +402,10 @@ class bulk_load_request;
 
 class bulk_load_response;
 
+class group_bulk_load_request;
+
+class group_bulk_load_response;
+
 typedef struct _mutation_header__isset
 {
     _mutation_header__isset()
@@ -6782,6 +6786,154 @@ public:
 void swap(bulk_load_response &a, bulk_load_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const bulk_load_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _group_bulk_load_request__isset
+{
+    _group_bulk_load_request__isset()
+        : app_name(false),
+          target_address(false),
+          config(false),
+          provider_name(false),
+          cluster_name(false),
+          meta_bulk_load_status(false)
+    {
+    }
+    bool app_name : 1;
+    bool target_address : 1;
+    bool config : 1;
+    bool provider_name : 1;
+    bool cluster_name : 1;
+    bool meta_bulk_load_status : 1;
+} _group_bulk_load_request__isset;
+
+class group_bulk_load_request
+{
+public:
+    group_bulk_load_request(const group_bulk_load_request &);
+    group_bulk_load_request(group_bulk_load_request &&);
+    group_bulk_load_request &operator=(const group_bulk_load_request &);
+    group_bulk_load_request &operator=(group_bulk_load_request &&);
+    group_bulk_load_request()
+        : app_name(),
+          provider_name(),
+          cluster_name(),
+          meta_bulk_load_status((bulk_load_status::type)0)
+    {
+    }
+
+    virtual ~group_bulk_load_request() throw();
+    std::string app_name;
+    ::dsn::rpc_address target_address;
+    replica_configuration config;
+    std::string provider_name;
+    std::string cluster_name;
+    bulk_load_status::type meta_bulk_load_status;
+
+    _group_bulk_load_request__isset __isset;
+
+    void __set_app_name(const std::string &val);
+
+    void __set_target_address(const ::dsn::rpc_address &val);
+
+    void __set_config(const replica_configuration &val);
+
+    void __set_provider_name(const std::string &val);
+
+    void __set_cluster_name(const std::string &val);
+
+    void __set_meta_bulk_load_status(const bulk_load_status::type val);
+
+    bool operator==(const group_bulk_load_request &rhs) const
+    {
+        if (!(app_name == rhs.app_name))
+            return false;
+        if (!(target_address == rhs.target_address))
+            return false;
+        if (!(config == rhs.config))
+            return false;
+        if (!(provider_name == rhs.provider_name))
+            return false;
+        if (!(cluster_name == rhs.cluster_name))
+            return false;
+        if (!(meta_bulk_load_status == rhs.meta_bulk_load_status))
+            return false;
+        return true;
+    }
+    bool operator!=(const group_bulk_load_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const group_bulk_load_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(group_bulk_load_request &a, group_bulk_load_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const group_bulk_load_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _group_bulk_load_response__isset
+{
+    _group_bulk_load_response__isset() : err(false), status(false), bulk_load_state(false) {}
+    bool err : 1;
+    bool status : 1;
+    bool bulk_load_state : 1;
+} _group_bulk_load_response__isset;
+
+class group_bulk_load_response
+{
+public:
+    group_bulk_load_response(const group_bulk_load_response &);
+    group_bulk_load_response(group_bulk_load_response &&);
+    group_bulk_load_response &operator=(const group_bulk_load_response &);
+    group_bulk_load_response &operator=(group_bulk_load_response &&);
+    group_bulk_load_response() : status((bulk_load_status::type)0) {}
+
+    virtual ~group_bulk_load_response() throw();
+    ::dsn::error_code err;
+    bulk_load_status::type status;
+    partition_bulk_load_state bulk_load_state;
+
+    _group_bulk_load_response__isset __isset;
+
+    void __set_err(const ::dsn::error_code &val);
+
+    void __set_status(const bulk_load_status::type val);
+
+    void __set_bulk_load_state(const partition_bulk_load_state &val);
+
+    bool operator==(const group_bulk_load_response &rhs) const
+    {
+        if (!(err == rhs.err))
+            return false;
+        if (!(status == rhs.status))
+            return false;
+        if (!(bulk_load_state == rhs.bulk_load_state))
+            return false;
+        return true;
+    }
+    bool operator!=(const group_bulk_load_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const group_bulk_load_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(group_bulk_load_response &a, group_bulk_load_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const group_bulk_load_response &obj)
 {
     obj.printTo(out);
     return out;

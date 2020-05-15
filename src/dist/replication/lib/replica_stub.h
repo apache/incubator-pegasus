@@ -108,6 +108,7 @@ public:
     //        - prepare
     //        - commit
     //        - learn
+    //        - bulk_load
     //
     void on_prepare(dsn::message_ex *request);
     void on_learn(dsn::message_ex *msg);
@@ -117,6 +118,8 @@ public:
     void on_remove(const replica_configuration &request);
     void on_group_check(const group_check_request &request, /*out*/ group_check_response &response);
     void on_copy_checkpoint(const replica_configuration &request, /*out*/ learn_response &response);
+    void on_group_bulk_load(const group_bulk_load_request &request,
+                            /*out*/ group_bulk_load_response &response);
 
     //
     //    functions while executing partition split

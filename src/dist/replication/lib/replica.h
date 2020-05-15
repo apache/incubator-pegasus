@@ -428,6 +428,11 @@ private:
     // replica bulk load
     void on_bulk_load(const bulk_load_request &request, /*out*/ bulk_load_response &response);
     void broadcast_group_bulk_load(const bulk_load_request &meta_req);
+    void on_group_bulk_load(const group_bulk_load_request &request,
+                            /*out*/ group_bulk_load_response &response);
+    void on_group_bulk_load_reply(error_code err,
+                                  const group_bulk_load_request &req,
+                                  const group_bulk_load_response &resp);
 
     error_code do_bulk_load(const std::string &app_name,
                             bulk_load_status::type meta_status,
@@ -437,6 +442,9 @@ private:
     void report_bulk_load_states_to_meta(bulk_load_status::type remote_status,
                                          bool report_metadata,
                                          /*out*/ bulk_load_response &response);
+
+    void report_bulk_load_states_to_primary(bulk_load_status::type remote_status,
+                                            /*out*/ group_bulk_load_response &response);
 
     bulk_load_status::type get_bulk_load_status() { return _bulk_load_context._status; }
 

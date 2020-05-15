@@ -978,6 +978,31 @@ struct bulk_load_response
     10:optional bool                                    is_group_bulk_load_paused;
 }
 
+struct group_bulk_load_request
+{
+    1:string                        app_name;
+    2:dsn.rpc_address               target_address;
+    3:replica_configuration         config;
+    4:string                        provider_name;
+    5:string                        cluster_name;
+    6:bulk_load_status              meta_bulk_load_status;
+}
+
+struct group_bulk_load_response
+{
+    // Possible error:
+    // - ERR_OBJECT_NOT_FOUND: replica not found
+    // - ERR_VERSION_OUTDATED: request out-dated
+    // - ERR_INVALID_STATE: replica has invalid state
+    // - ERR_BUSY: node has enough replica executing bulk load downloading
+    // - ERR_FILE_OPERATION_FAILED: local file system error during bulk load downloading
+    // - ERR_FS_INTERNAL: remote file provider error during bulk load downloading
+    // - ERR_CORRUPTION: metadata corruption during bulk load downloading
+    1:dsn.error_code            err;
+    2:bulk_load_status          status;
+    3:partition_bulk_load_state bulk_load_state;
+}
+
 /*
 service replica_s
 {

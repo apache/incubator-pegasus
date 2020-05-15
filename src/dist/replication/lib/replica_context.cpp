@@ -46,30 +46,6 @@
 namespace dsn {
 namespace replication {
 
-#define CLEANUP_TASK(task_, force)                                                                 \
-    {                                                                                              \
-        task_ptr t = task_;                                                                        \
-        if (t != nullptr) {                                                                        \
-            bool finished;                                                                         \
-            t->cancel(force, &finished);                                                           \
-            if (!finished && !dsn_task_is_running_inside(task_.get()))                             \
-                return false;                                                                      \
-            task_ = nullptr;                                                                       \
-        }                                                                                          \
-    }
-
-#define CLEANUP_TASK_ALWAYS(task_)                                                                 \
-    {                                                                                              \
-        task_ptr t = task_;                                                                        \
-        if (t != nullptr) {                                                                        \
-            bool finished;                                                                         \
-            t->cancel(false, &finished);                                                           \
-            dassert(finished || dsn_task_is_running_inside(task_.get()),                           \
-                    "task must be finished at this point");                                        \
-            task_ = nullptr;                                                                       \
-        }                                                                                          \
-    }
-
 void primary_context::cleanup(bool clean_pending_mutations)
 {
     do_cleanup_pending_mutations(clean_pending_mutations);
@@ -94,6 +70,12 @@ void primary_context::cleanup(bool clean_pending_mutations)
     // clean up register child task
     CLEANUP_TASK_ALWAYS(register_child_task)
 
+    // cleanup group bulk load
+    for (auto &kv : group_bulk_load_pending_replies) {
+        CLEANUP_TASK_ALWAYS(kv.second);
+    }
+    group_bulk_load_pending_replies.clear();
+
     membership.ballot = 0;
 
     caught_up_children.clear();
@@ -105,7 +87,7 @@ bool primary_context::is_cleaned()
 {
     return nullptr == group_check_task && nullptr == reconfiguration_task &&
            nullptr == checkpoint_task && group_check_pending_replies.empty() &&
-           nullptr == register_child_task;
+           nullptr == register_child_task && group_bulk_load_pending_replies.empty();
 }
 
 void primary_context::do_cleanup_pending_mutations(bool clean_pending_mutations)

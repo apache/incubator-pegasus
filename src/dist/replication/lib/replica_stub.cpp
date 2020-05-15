@@ -2050,6 +2050,7 @@ void replica_stub::open_service()
                          "child_notify_catch_up",
                          &replica_stub::on_notify_primary_split_catch_up);
     register_rpc_handler(RPC_BULK_LOAD, "bulk_load", &replica_stub::on_bulk_load);
+    register_rpc_handler(RPC_GROUP_BULK_LOAD, "group_bulk_load", &replica_stub::on_group_bulk_load);
 
     _kill_partition_command = ::dsn::command_manager::instance().register_app_command(
         {"kill_partition"},
@@ -2642,6 +2643,26 @@ void replica_stub::on_bulk_load(const bulk_load_request &request, bulk_load_resp
         rep->on_bulk_load(request, response);
     } else {
         derror_f("replica({}) is not existed", request.pid);
+        response.err = ERR_OBJECT_NOT_FOUND;
+    }
+}
+
+void replica_stub::on_group_bulk_load(const group_bulk_load_request &request,
+                                      /*out*/ group_bulk_load_response &response)
+{
+    ddebug_f("[{}@{}]: received group bulk load request, primary = {}, ballot = {}, "
+             "meta_bulk_load_status = {}",
+             request.config.pid,
+             _primary_address_str,
+             request.config.primary.to_string(),
+             request.config.ballot,
+             enum_to_string(request.meta_bulk_load_status));
+
+    replica_ptr rep = get_replica(request.config.pid);
+    if (rep != nullptr) {
+        rep->on_group_bulk_load(request, response);
+    } else {
+        derror_f("replica({}) is not existed", request.config.pid);
         response.err = ERR_OBJECT_NOT_FOUND;
     }
 }
