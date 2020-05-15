@@ -156,7 +156,7 @@ public:
 
     void set_partition_version(int32_t partition_version) override;
 
-    std::string restore_write_request(dsn::message_ex *request) override;
+    std::string dump_write_request(dsn::message_ex *request) override;
 
 private:
     friend class manual_compact_service_test;

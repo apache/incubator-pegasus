@@ -2618,7 +2618,7 @@ void pegasus_server_impl::release_db()
     _db = nullptr;
 }
 
-std::string pegasus_server_impl::restore_write_request(dsn::message_ex *request)
+std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
 {
     dsn::task_code rpc_code(request->rpc_code());
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
