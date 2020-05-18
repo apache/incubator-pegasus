@@ -111,8 +111,31 @@ private:
                                       const bulk_load_request &request,
                                       const bulk_load_response &response);
 
+    // if app is still in bulk load, resend bulk_load_request to primary after interval seconds
+    void try_resend_bulk_load_request(const std::string &app_name,
+                                      const gpid &pid,
+                                      const int32_t interval);
+
+    void handle_app_downloading(const bulk_load_response &response,
+                                const rpc_address &primary_addr);
+
+    void handle_app_downloaded(const bulk_load_response &response);
+
+    void handle_app_ingestion(const bulk_load_response &response, const rpc_address &primary_addr);
+
+    // when app status is `succeed, `failed`, `canceled`, meta and replica should cleanup bulk load
+    // states
+    void handle_bulk_load_finish(const bulk_load_response &response,
+                                 const rpc_address &primary_addr);
+
+    void handle_app_pausing(const bulk_load_response &response, const rpc_address &primary_addr);
+
     // app not existed or not available during bulk load
     void handle_app_unavailable(int32_t app_id, const std::string &app_name);
+
+    void try_rollback_to_downloading(const std::string &app_name, const gpid &pid);
+
+    void handle_bulk_load_failed(int32_t app_id);
 
     ///
     /// update bulk load states to remote storage functions
@@ -200,6 +223,27 @@ private:
         } else {
             return bulk_load_status::BLS_INVALID;
         }
+    }
+
+    inline bulk_load_status::type get_app_bulk_load_status(int32_t app_id)
+    {
+        zauto_read_lock l(_lock);
+        return get_app_bulk_load_status_unlock(app_id);
+    }
+
+    inline bulk_load_status::type get_app_bulk_load_status_unlock(int32_t app_id) const
+    {
+        const auto &iter = _app_bulk_load_info.find(app_id);
+        if (iter != _app_bulk_load_info.end()) {
+            return iter->second.status;
+        } else {
+            return bulk_load_status::BLS_INVALID;
+        }
+    }
+
+    inline bool is_app_bulk_loading_unlock(int32_t app_id) const
+    {
+        return (_bulk_load_app_id.find(app_id) != _bulk_load_app_id.end());
     }
 
 private:

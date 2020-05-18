@@ -102,5 +102,8 @@ TEST_F(bulk_load_service_test, start_bulk_load_succeed)
 
     fail::teardown();
 }
+
+// TODO(heyuchen): add unit tests for on_partition_bulk_load_reply
+
 } // namespace replication
 } // namespace dsn
