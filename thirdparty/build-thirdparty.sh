@@ -59,6 +59,17 @@ else
     echo "skip build concurrentqueue"
 fi
 
+# build readerwriterqueue
+if [ ! -d $TP_OUTPUT/include/readerwriterqueue ]; then
+    cd $TP_SRC/readerwriterqueue-1.0.2
+    mkdir -p $TP_OUTPUT/include/readerwriterqueue
+    cp -R atomicops.h readerwriterqueue.h $TP_OUTPUT/include/readerwriterqueue
+    cd $TP_DIR
+    exit_if_fail "readerwriterqueue" $?
+else
+    echo "skip build readerwriterqueue"
+fi
+
 # build gtest
 if [ ! -d $TP_OUTPUT/include/gtest ]; then
     mkdir -p $TP_BUILD/googletest
