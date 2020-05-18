@@ -40,7 +40,7 @@ sudo apt-get install default-jre netcat
 ```
 For CentOS:
 ```
-yum -y install cmake boost-devel libaio-devel snappy-devel bzip2-devel lz4-devel automake libtool patch unzip openssl-devel python-devel libzstd-devel
+yum -y install cmake boost-devel libaio-devel snappy-devel bzip2-devel zlib-devel lz4-devel automake libtool patch unzip openssl-devel python-devel libzstd-devel
 ```
 Zstd may not available in the default EPEL. To install the EPEL repository on CentOS-7/6, simply type:
 ```
