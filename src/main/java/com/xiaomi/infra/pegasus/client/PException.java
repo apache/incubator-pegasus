@@ -4,6 +4,7 @@
 package com.xiaomi.infra.pegasus.client;
 
 import com.xiaomi.infra.pegasus.base.error_code;
+import com.xiaomi.infra.pegasus.client.PegasusTable.Request;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import java.util.concurrent.TimeoutException;
 
@@ -40,13 +41,14 @@ public class PException extends Exception {
             String.format("[table=%s] Thread was interrupted: %s", tableName, e.getMessage())));
   }
 
-  static PException timeout(String tableName, int timeout, TimeoutException e) {
+  static PException timeout(
+      String metaList, String tableName, Request request, int timeout, TimeoutException e) {
     return new PException(
         new ReplicationException(
             error_code.error_types.ERR_TIMEOUT,
             String.format(
-                "[table=%s, timeout=%dms] Timeout on Future await: %s",
-                tableName, timeout, e.getMessage())));
+                "[metaServer=%s, table=%s, request=%s, timeout=%dms] Timeout on Future await: %s",
+                metaList, tableName, request.toString(), timeout, e.getMessage())));
   }
 
   private static String loadVersion() {

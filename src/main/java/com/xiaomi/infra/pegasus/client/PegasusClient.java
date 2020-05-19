@@ -32,6 +32,7 @@ public class PegasusClient implements PegasusClientInterface {
   private final Properties config;
   private final ConcurrentHashMap<String, PegasusTable> tableMap;
   private final Object tableMapLock;
+  private final String[] metaList;
   private Cluster cluster;
 
   private static class PegasusHasher implements KeyHasher {
@@ -88,6 +89,7 @@ public class PegasusClient implements PegasusClientInterface {
     this.cluster = Cluster.createCluster(config);
     this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
     this.tableMapLock = new Object();
+    this.metaList = cluster.getMetaList();
     this.enableWriteLimit =
         Boolean.parseBoolean(
             config.getProperty(PEGASUS_ENABLE_WRITE_LIMIT, PEGASUS_ENABLE_WRITE_LIMIT_DEF));
@@ -96,6 +98,10 @@ public class PegasusClient implements PegasusClientInterface {
 
   public boolean isWriteLimitEnabled() {
     return enableWriteLimit;
+  }
+
+  String getMetaList() {
+    return Arrays.toString(metaList);
   }
 
   @Override

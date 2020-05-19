@@ -9,6 +9,7 @@ import com.xiaomi.infra.pegasus.base.blob;
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.gpid;
+import com.xiaomi.infra.pegasus.client.PegasusTable.Request;
 import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
 import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
 import com.xiaomi.infra.pegasus.rpc.TableOptions;
@@ -21,20 +22,26 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestPException {
+  private String metaList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
+  private Request request = new Request("hashKey".getBytes(), "sortKey".getBytes());
+
   @Test
   public void testThreadInterrupted() throws Exception {
     PException ex = PException.threadInterrupted("test", new InterruptedException("intxxx"));
-    Assert.assertEquals(
-        "{version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_THREAD_INTERRUPTED: [table=test] Thread was interrupted: intxxx",
-        ex.getMessage());
+    String exceptionInfo =
+        "{version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_THREAD_INTERRUPTED: [table=test] Thread was interrupted: intxxx";
+    Assert.assertEquals(exceptionInfo, ex.getMessage());
   }
 
   @Test
   public void testTimeout() throws Exception {
-    PException ex = PException.timeout("test", 1000, new TimeoutException("tmxxx"));
-    Assert.assertEquals(
-        "{version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_TIMEOUT: [table=test, timeout=1000ms] Timeout on Future await: tmxxx",
-        ex.getMessage());
+    PException ex =
+        PException.timeout(metaList, "test", request, 1000, new TimeoutException("tmxxx"));
+    String exceptionInfo =
+        String.format(
+            "{version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_TIMEOUT: [metaServer=%s, table=test, request=%s, timeout=1000ms] Timeout on Future await: tmxxx",
+            metaList, request.toString());
+    Assert.assertEquals(exceptionInfo, ex.getMessage());
   }
 
   @Test
@@ -63,7 +70,7 @@ public class TestPException {
     int timeout = 1000;
     PegasusClient client = (PegasusClient) PegasusClientFactory.getSingletonClient();
     PegasusTable pegasusTable = new PegasusTable(client, table);
-    pegasusTable.handleReplicaException(promise, op, table, timeout);
+    pegasusTable.handleReplicaException(request, promise, op, table, timeout);
     try {
       promise.get();
     } catch (ExecutionException e) {
@@ -73,8 +80,8 @@ public class TestPException {
 
       String msg =
           String.format(
-              "com.xiaomi.infra.pegasus.client.PException: {version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_OBJECT_NOT_FOUND: [table=temp,operation=put,replicaServer=%s,gpid=(%s),timeout=%dms] The replica server doesn't serve this partition!",
-              server, gpid.toString(), timeout);
+              "com.xiaomi.infra.pegasus.client.PException: {version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_OBJECT_NOT_FOUND: [metaServer=%s,table=temp,operation=put,request=%s,replicaServer=%s,gpid=(%s),timeout=%dms] The replica server doesn't serve this partition!",
+              client.getMetaList(), request.toString(), server, gpid.toString(), timeout);
       Assert.assertEquals(e.getMessage(), msg);
       return;
     } catch (InterruptedException e) {
@@ -98,7 +105,7 @@ public class TestPException {
 
     PegasusClient client = (PegasusClient) PegasusClientFactory.getSingletonClient();
     PegasusTable pegasusTable = new PegasusTable(client, table);
-    pegasusTable.handleReplicaException(promise, op, table, 0);
+    pegasusTable.handleReplicaException(request, promise, op, table, 0);
     try {
       promise.get();
     } catch (Exception e) {
@@ -108,8 +115,8 @@ public class TestPException {
 
       String msg =
           String.format(
-              "com.xiaomi.infra.pegasus.client.PException: {version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_TIMEOUT: [table=temp,operation=put,replicaServer=%s,gpid=(%s),timeout=1000ms] The operation is timed out!",
-              server, gpid.toString());
+              "com.xiaomi.infra.pegasus.client.PException: {version}: com.xiaomi.infra.pegasus.rpc.ReplicationException: ERR_TIMEOUT: [metaServer=%s,table=temp,operation=put,request=%s,replicaServer=%s,gpid=(%s),timeout=1000ms] The operation is timed out!",
+              client.getMetaList(), request.toString(), server, gpid.toString());
       Assert.assertEquals(e.getMessage(), msg);
     }
   }
