@@ -39,22 +39,22 @@ public:
     }
     explicit pegasus_server_impl(dsn::replication::replica *r);
 
-    virtual ~pegasus_server_impl() override;
+    ~pegasus_server_impl() override;
 
     // the following methods may set physical error if internal error occurs
-    virtual void on_get(const ::dsn::blob &key,
-                        ::dsn::rpc_replier<::dsn::apps::read_response> &reply) override;
-    virtual void on_multi_get(const ::dsn::apps::multi_get_request &args,
-                              ::dsn::rpc_replier<::dsn::apps::multi_get_response> &reply) override;
-    virtual void on_sortkey_count(const ::dsn::blob &args,
-                                  ::dsn::rpc_replier<::dsn::apps::count_response> &reply) override;
-    virtual void on_ttl(const ::dsn::blob &key,
-                        ::dsn::rpc_replier<::dsn::apps::ttl_response> &reply) override;
-    virtual void on_get_scanner(const ::dsn::apps::get_scanner_request &args,
-                                ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
-    virtual void on_scan(const ::dsn::apps::scan_request &args,
-                         ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
-    virtual void on_clear_scanner(const int64_t &args) override;
+    void on_get(const ::dsn::blob &key,
+                ::dsn::rpc_replier<::dsn::apps::read_response> &reply) override;
+    void on_multi_get(const ::dsn::apps::multi_get_request &args,
+                      ::dsn::rpc_replier<::dsn::apps::multi_get_response> &reply) override;
+    void on_sortkey_count(const ::dsn::blob &args,
+                          ::dsn::rpc_replier<::dsn::apps::count_response> &reply) override;
+    void on_ttl(const ::dsn::blob &key,
+                ::dsn::rpc_replier<::dsn::apps::ttl_response> &reply) override;
+    void on_get_scanner(const ::dsn::apps::get_scanner_request &args,
+                        ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
+    void on_scan(const ::dsn::apps::scan_request &args,
+                 ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
+    void on_clear_scanner(const int64_t &args) override;
 
     // input:
     //  - argc = 0 : re-open the db
@@ -63,14 +63,14 @@ public:
     //  - ERR_OK
     //  - ERR_FILE_OPERATION_FAILED
     //  - ERR_LOCAL_APP_FAILURE
-    virtual ::dsn::error_code start(int argc, char **argv) override;
+    ::dsn::error_code start(int argc, char **argv) override;
 
-    virtual void cancel_background_work(bool wait) override;
+    void cancel_background_work(bool wait) override;
 
     // returns:
     //  - ERR_OK
     //  - ERR_FILE_OPERATION_FAILED
-    virtual ::dsn::error_code stop(bool clear_state) override;
+    ::dsn::error_code stop(bool clear_state) override;
 
     /// Each of the write request (specifically, the rpc that's configured as write, see
     /// option `rpc_request_is_write_operation` in rDSN `task_spec`) will first be
@@ -79,12 +79,12 @@ public:
     ///
     /// \see dsn::replication::replication_app_base::apply_mutation
     /// \inherit dsn::replication::replication_app_base
-    virtual int on_batched_write_requests(int64_t decree,
-                                          uint64_t timestamp,
-                                          dsn::message_ex **requests,
-                                          int count) override;
+    int on_batched_write_requests(int64_t decree,
+                                  uint64_t timestamp,
+                                  dsn::message_ex **requests,
+                                  int count) override;
 
-    virtual ::dsn::error_code prepare_get_checkpoint(dsn::blob &learn_req) override
+    ::dsn::error_code prepare_get_checkpoint(dsn::blob &learn_req) override
     {
         return ::dsn::ERR_OK;
     }
@@ -95,7 +95,7 @@ public:
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
     //  - ERR_FILE_OPERATION_FAILED: some file failure
     // ATTENTION: make sure that no other threads is writing into the replica.
-    virtual ::dsn::error_code sync_checkpoint() override;
+    ::dsn::error_code sync_checkpoint() override;
 
     // returns:
     //  - ERR_OK: checkpoint succeed
@@ -103,7 +103,7 @@ public:
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
     //  - ERR_FILE_OPERATION_FAILED: some file failure
     //  - ERR_TRY_AGAIN: flush memtable triggered, need try again later
-    virtual ::dsn::error_code async_checkpoint(bool flush_memtable) override;
+    ::dsn::error_code async_checkpoint(bool flush_memtable) override;
 
     //
     // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
@@ -112,8 +112,8 @@ public:
     //
     // must be thread safe
     // this method will not trigger flush(), just copy even if the app is empty.
-    virtual ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                                     /*output*/ int64_t *last_decree) override;
+    ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
+                                             /*output*/ int64_t *last_decree) override;
 
     //
     // help function, just copy checkpoint to specified dir and ignore _is_checkpointing.
@@ -130,9 +130,9 @@ public:
     //  - ERR_OK
     //  - ERR_OBJECT_NOT_FOUND
     //  - ERR_FILE_OPERATION_FAILED
-    virtual ::dsn::error_code get_checkpoint(int64_t learn_start,
-                                             const dsn::blob &learn_request,
-                                             dsn::replication::learn_state &state) override;
+    ::dsn::error_code get_checkpoint(int64_t learn_start,
+                                     const dsn::blob &learn_request,
+                                     dsn::replication::learn_state &state) override;
 
     // apply checkpoint, this will clear and recreate the db
     // if succeed:
@@ -143,19 +143,20 @@ public:
     //  - error code of close()
     //  - error code of open()
     //  - error code of checkpoint()
-    virtual ::dsn::error_code
-    storage_apply_checkpoint(chkpt_apply_mode mode,
-                             const dsn::replication::learn_state &state) override;
+    ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
+                                               const dsn::replication::learn_state &state) override;
 
-    virtual int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
+    int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
 
-    virtual int64_t last_flushed_decree() const override;
+    int64_t last_flushed_decree() const override;
 
-    virtual void update_app_envs(const std::map<std::string, std::string> &envs) override;
+    void update_app_envs(const std::map<std::string, std::string> &envs) override;
 
-    virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs) override;
+    void query_app_envs(/*out*/ std::map<std::string, std::string> &envs) override;
 
-    virtual void set_partition_version(int32_t partition_version) override;
+    void set_partition_version(int32_t partition_version) override;
+
+    std::string dump_write_request(dsn::message_ex *request) override;
 
 private:
     friend class manual_compact_service_test;
