@@ -34,10 +34,13 @@
  */
 #include <dsn/utility/filesystem.h>
 #include <queue>
+#include <dsn/tool-api/command_manager.h>
 #include "nfs_client_impl.h"
 
 namespace dsn {
 namespace service {
+
+DSN_DEFINE_int32("nfs", max_copy_rate_megabytes, 500, "max rate of copying from remote node(MB/s)");
 
 nfs_client_impl::nfs_client_impl(nfs_opts &opts)
     : _opts(opts),
@@ -65,7 +68,19 @@ nfs_client_impl::nfs_client_impl(nfs_opts &opts)
         "recent_write_fail_count",
         COUNTER_TYPE_VOLATILE_NUMBER,
         "nfs client write fail count count in the recent period");
+
+    uint32_t max_copy_rate_bytes = FLAGS_max_copy_rate_megabytes << 20;
+    // max_copy_rate_bytes should be greater than nfs_copy_block_bytes which is the max batch copy
+    // size once
+    dassert(max_copy_rate_bytes > _opts.nfs_copy_block_bytes,
+            "max_copy_rate_bytes should be greater than nfs_copy_block_bytes");
+    _copy_token_bucket.reset(new TokenBucket(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes));
+    _opts.max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
+
+    register_cli_commands();
 }
+
+nfs_client_impl::~nfs_client_impl() { _tracker.cancel_outstanding_tasks(); }
 
 void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rci,
                                         aio_task *nfs_task)
@@ -217,6 +232,8 @@ void nfs_client_impl::continue_copy()
             zauto_lock l(req->lock);
             const user_request_ptr &ureq = req->file_ctx->user_req;
             if (req->is_valid) {
+                _copy_token_bucket->consumeWithBorrowAndWait(req->size);
+
                 copy_request copy_req;
                 copy_req.source = ureq->file_size_req.source;
                 copy_req.file_name = req->file_ctx->file_name;
@@ -501,6 +518,44 @@ void nfs_client_impl::handle_completion(const user_request_ptr &req, error_code 
 
     // notify aio_task
     req->nfs_task->enqueue(err, err == ERR_OK ? total_size : 0);
+}
+
+void nfs_client_impl::register_cli_commands()
+{
+    dsn::command_manager::instance().register_app_command(
+        {"nfs.max_copy_rate_megabytes"},
+        "nfs.max_copy_rate_megabytes [num | DEFAULT]",
+        "control the max rate(MB/s) to copy file from remote node",
+        [this](const std::vector<std::string> &args) {
+            std::string result("OK");
+
+            if (args.empty()) {
+                return std::to_string(_opts.max_copy_rate_megabytes);
+            }
+
+            if (args[0] == "DEFAULT") {
+                uint32_t max_copy_rate_bytes = FLAGS_max_copy_rate_megabytes << 20;
+                _copy_token_bucket->reset(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes);
+                _opts.max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
+                return result;
+            }
+
+            int32_t max_copy_rate_megabytes = 0;
+            if (!dsn::buf2int32(args[0], max_copy_rate_megabytes) || max_copy_rate_megabytes <= 0) {
+                return std::string("ERR: invalid arguments");
+            }
+
+            uint32_t max_copy_rate_bytes = max_copy_rate_megabytes << 20;
+            if (max_copy_rate_bytes <= _opts.nfs_copy_block_bytes) {
+                result = std::string("ERR: max_copy_rate_bytes(max_copy_rate_megabytes << 20) "
+                                     "should be greater than nfs_copy_block_bytes:")
+                             .append(std::to_string(_opts.nfs_copy_block_bytes));
+                return result;
+            }
+            _copy_token_bucket->reset(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes);
+            _opts.max_copy_rate_megabytes = max_copy_rate_megabytes;
+            return result;
+        });
 }
 }
 }

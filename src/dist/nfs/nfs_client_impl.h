@@ -39,15 +39,20 @@
 #include <dsn/tool-api/zlocks.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/nfs_node.h>
-
+#include <dsn/utility/defer.h>
+#include <dsn/utility/TokenBucket.h>
+#include <dsn/utility/flags.h>
 #include "nfs_client.h"
 
 namespace dsn {
 namespace service {
 
+using TokenBucket = folly::BasicTokenBucket<std::chrono::steady_clock>;
+
 struct nfs_opts
 {
     uint32_t nfs_copy_block_bytes;
+    uint32_t max_copy_rate_megabytes;
     int max_concurrent_remote_copy_requests;
     int max_concurrent_local_writes;
     int max_buffered_local_writes;
@@ -288,7 +293,7 @@ public:
 
 public:
     nfs_client_impl(nfs_opts &opts);
-    virtual ~nfs_client_impl() { _tracker.cancel_outstanding_tasks(); }
+    virtual ~nfs_client_impl();
 
     // copy file request entry
     void begin_remote_copy(std::shared_ptr<remote_copy_request> &rci, aio_task *nfs_task);
@@ -309,8 +314,12 @@ private:
 
     void handle_completion(const user_request_ptr &req, error_code err);
 
+    void register_cli_commands();
+
 private:
     nfs_opts &_opts;
+
+    std::unique_ptr<folly::TokenBucket> _copy_token_bucket; // rate limiter of copy from remote
 
     std::atomic<int> _concurrent_copy_request_count; // record concurrent request count, limited
                                                      // by max_concurrent_remote_copy_requests.

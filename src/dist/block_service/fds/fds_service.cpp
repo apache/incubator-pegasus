@@ -103,8 +103,6 @@ const std::string fds_service::FILE_MD5_KEY = "content-md5";
 
 fds_service::fds_service()
 {
-    const int BYTE_TO_BIT = 8;
-
     /// In normal scenario, the sst file size of level 0 is write_buffer_size * [0.75, 1.25]
     /// And in BULK_LOAD scenario, it is 4 * write_buffer_size * [0.75, 1.25].
     /// In rdsn, we can't get the scenario, so if we take BULK_LOAD scenario into consideration,
@@ -113,30 +111,27 @@ fds_service::fds_service()
     uint64_t target_file_size =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_target_file_size_base",
-                                    64 * 1024 * 1024,
+                                    64 << 20,
                                     "rocksdb options.target_file_size_base");
     uint64_t write_buffer_size = dsn_config_get_value_uint64("pegasus.server",
                                                              "rocksdb_write_buffer_size",
-                                                             64 * 1024 * 1024,
+                                                             64 << 20,
                                                              "rocksdb options.write_buffer_size");
     uint64_t max_sst_file_size = std::max(target_file_size, (uint64_t)1.25 * write_buffer_size);
 
     uint32_t write_rate_limit = (uint32_t)dsn_config_get_value_uint64(
-        "replication", "fds_write_limit_rate", 20, "rate limit of fds(Mb/s)");
+        "replication", "fds_write_limit_rate", 100, "rate limit of fds(MB/s)");
     /// For write operation, we can't send a file in batches. Because putContent interface of fds
     /// will overwrite what was sent before for the same file. So we must send a file as a whole.
     /// If file size > burst size, the file will be rejected by the token bucket.
     ///  Here we set burst_size = max_sst_file_size + 3MB, a litte greater than max_sst_file_size
-    uint32_t burst_size =
-        std::max(2 * write_rate_limit * 1e6 / BYTE_TO_BIT, max_sst_file_size + 3e6);
-    _write_token_bucket.reset(
-        new folly::TokenBucket(write_rate_limit * 1e6 / BYTE_TO_BIT, burst_size));
+    uint32_t burst_size = std::max(2.0 * (write_rate_limit << 20), max_sst_file_size + 3e6);
+    _write_token_bucket.reset(new folly::TokenBucket(write_rate_limit << 20, burst_size));
 
     uint32_t read_rate_limit = (uint32_t)dsn_config_get_value_uint64(
-        "replication", "fds_read_limit_rate", 20, "rate limit of fds(Mb/s)");
-    burst_size = 2 * read_rate_limit * 1e6 / BYTE_TO_BIT;
-    _read_token_bucket.reset(
-        new folly::TokenBucket(read_rate_limit * 1e6 / BYTE_TO_BIT, burst_size));
+        "replication", "fds_read_limit_rate", 100, "rate limit of fds(MB/s)");
+    burst_size = 2 * read_rate_limit << 20;
+    _read_token_bucket.reset(new folly::TokenBucket(read_rate_limit << 20, burst_size));
 }
 
 fds_service::~fds_service() {}
@@ -569,7 +564,7 @@ error_code fds_file_object::get_content_in_batches(uint64_t start,
                                                    /*out*/ uint64_t &transfered_bytes)
 {
     // the max batch size is 1MB
-    const uint64_t BATCH_MAX = 1e6;
+    const uint64_t BATCH_MAX = 1 << 20;
     error_code err = ERR_OK;
     transfered_bytes = 0;
 
