@@ -2667,7 +2667,7 @@ std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
         return request;
     }
 
-    return "other write request type";
+    return "default";
 }
 
 } // namespace server
