@@ -44,7 +44,7 @@ namespace dsn {
 namespace tools {
 class hpc_concurrent_task_queue : public task_queue
 {
-    moodycamel::details::mpmc_sema::LightweightSemaphore _sema;
+    moodycamel::LightweightSemaphore _sema;
     struct queue_t
     {
         moodycamel::ConcurrentQueue<task *> q;
