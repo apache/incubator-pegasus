@@ -118,6 +118,7 @@ public:
     int32_t cold_backup_checkpoint_reserve_minutes;
 
     std::string bulk_load_provider_root;
+    int32_t max_concurrent_bulk_load_downloading_count;
 
 public:
     replication_options();
@@ -162,6 +163,8 @@ public:
     static const std::string BULK_LOAD_INFO;
     static const int32_t BULK_LOAD_REQUEST_INTERVAL;
     static const int32_t BULK_LOAD_REQUEST_SHORT_INTERVAL;
+    static const std::string BULK_LOAD_METADATA;
+    static const std::string BULK_LOAD_LOCAL_ROOT_DIR;
     // TODO(heyuchen): add more constant in further pr
 };
 

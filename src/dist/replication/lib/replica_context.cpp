@@ -81,6 +81,8 @@ void primary_context::cleanup(bool clean_pending_mutations)
     caught_up_children.clear();
 
     sync_send_write_request = false;
+
+    cleanup_bulk_load_states();
 }
 
 bool primary_context::is_cleaned()
@@ -150,6 +152,13 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status::typ
         dassert(false, "invalid partition_status, status = %s", enum_to_string(st));
         return false;
     }
+}
+
+void primary_context::cleanup_bulk_load_states()
+{
+    // TODO(heyuchen): TBD
+    // primary will save bulk load states reported from secondaries, this function is to cleanup
+    // those states
 }
 
 bool secondary_context::cleanup(bool force)

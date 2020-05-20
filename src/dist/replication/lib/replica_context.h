@@ -97,6 +97,8 @@ public:
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
 
+    void cleanup_bulk_load_states();
+
 public:
     // membership mgr, including learners
     partition_configuration membership;
@@ -585,6 +587,11 @@ private:
     friend class replica_bulk_load_test;
 
     bulk_load_status::type _status{bulk_load_status::BLS_INVALID};
+    bulk_load_metadata _metadata;
+
+    std::atomic<error_code> _download_status{ERR_OK};
+    // file_name -> downloading task
+    std::map<std::string, task_ptr> _download_task;
 };
 
 //---------------inline impl----------------------------------------------------------------

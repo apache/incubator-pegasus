@@ -25,12 +25,20 @@
  */
 
 #include "replication_common.h"
-#include <dsn/utility/filesystem.h>
+
 #include <fstream>
+
 #include <dsn/dist/replication/replica_envs.h>
+#include <dsn/utility/flags.h>
+#include <dsn/utility/filesystem.h>
 
 namespace dsn {
 namespace replication {
+
+DSN_DEFINE_int32("replication",
+                 max_concurrent_bulk_load_downloading_count,
+                 5,
+                 "concurrent bulk load downloading replica count");
 
 /*extern*/ const char *partition_status_to_string(partition_status::type status)
 {
@@ -519,6 +527,8 @@ void replication_options::initialize()
                                                           "bulk_load_provider_root",
                                                           "bulk load root on remote file provider");
 
+    max_concurrent_bulk_load_downloading_count = FLAGS_max_concurrent_bulk_load_downloading_count;
+
     replica_helper::load_meta_servers(meta_servers);
 
     sanity_check();
@@ -638,6 +648,8 @@ const std::string replica_envs::BUSINESS_INFO("business.info");
 const std::string bulk_load_constant::BULK_LOAD_INFO("bulk_load_info");
 const int32_t bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL = 10;
 const int32_t bulk_load_constant::BULK_LOAD_REQUEST_SHORT_INTERVAL = 5;
+const std::string bulk_load_constant::BULK_LOAD_METADATA("bulk_load_metadata");
+const std::string bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR(".bulk_load");
 
 namespace cold_backup {
 std::string get_policy_path(const std::string &root, const std::string &policy_name)

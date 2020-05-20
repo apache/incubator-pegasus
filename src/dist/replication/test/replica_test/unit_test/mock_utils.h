@@ -236,6 +236,12 @@ public:
     }
 
     void set_log(mutation_log_ptr log) { _log = log; }
+
+    int32_t get_bulk_load_downloading_count() const { return _bulk_load_downloading_count.load(); }
+    void set_bulk_load_downloading_count(int32_t count)
+    {
+        _bulk_load_downloading_count.store(count);
+    }
 };
 
 class mock_log_file : public log_file
