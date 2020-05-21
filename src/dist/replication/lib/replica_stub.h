@@ -63,6 +63,7 @@ class replica_stub;
 typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
 class duplication_sync_timer;
+class replica_bulk_loader;
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:
@@ -280,6 +281,7 @@ private:
 
     friend class replica_duplicator;
     friend class replica_http_service;
+    friend class replica_bulk_loader;
 
     friend class mock_replica_stub;
     friend class duplication_sync_timer;

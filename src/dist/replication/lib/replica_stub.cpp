@@ -37,8 +37,10 @@
 #include "replica_stub.h"
 #include "mutation_log.h"
 #include "mutation.h"
+#include "bulk_load/replica_bulk_loader.h"
 #include "duplication/duplication_sync_timer.h"
 #include "dist/replication/lib/backup/replica_backup_manager.h"
+
 #include <dsn/cpp/json_helper.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/rand.h>
@@ -2675,7 +2677,7 @@ void replica_stub::on_bulk_load(const bulk_load_request &request, bulk_load_resp
     ddebug_f("[{}@{}]: receive bulk load request", request.pid, _primary_address_str);
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
-        rep->on_bulk_load(request, response);
+        rep->get_bulk_loader()->on_bulk_load(request, response);
     } else {
         derror_f("replica({}) is not existed", request.pid);
         response.err = ERR_OBJECT_NOT_FOUND;
@@ -2695,7 +2697,7 @@ void replica_stub::on_group_bulk_load(const group_bulk_load_request &request,
 
     replica_ptr rep = get_replica(request.config.pid);
     if (rep != nullptr) {
-        rep->on_group_bulk_load(request, response);
+        rep->get_bulk_loader()->on_group_bulk_load(request, response);
     } else {
         derror_f("replica({}) is not existed", request.config.pid);
         response.err = ERR_OBJECT_NOT_FOUND;

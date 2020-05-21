@@ -64,6 +64,7 @@ class replica_stub;
 class replication_checker;
 class replica_duplicator_manager;
 class replica_backup_manager;
+class replica_bulk_loader;
 
 namespace test {
 class test_checker;
@@ -184,6 +185,11 @@ public:
     replica_backup_manager *get_backup_manager() const { return _backup_mgr.get(); }
 
     void update_last_checkpoint_generate_time();
+
+    //
+    // Bulk load
+    //
+    replica_bulk_loader *get_bulk_loader() const { return _bulk_loader.get(); }
 
     //
     // Statistics
@@ -424,37 +430,6 @@ private:
 
     void init_table_level_latency_counters();
 
-    /////////////////////////////////////////////////////////////////
-    // replica bulk load
-    void on_bulk_load(const bulk_load_request &request, /*out*/ bulk_load_response &response);
-    void broadcast_group_bulk_load(const bulk_load_request &meta_req);
-    void on_group_bulk_load(const group_bulk_load_request &request,
-                            /*out*/ group_bulk_load_response &response);
-    void on_group_bulk_load_reply(error_code err,
-                                  const group_bulk_load_request &req,
-                                  const group_bulk_load_response &resp);
-
-    error_code do_bulk_load(const std::string &app_name,
-                            bulk_load_status::type meta_status,
-                            const std::string &cluster_name,
-                            const std::string &provider_name);
-
-    // replica start or restart download sst files from remote provider
-    // \return ERR_BUSY if node has already had enough replica executing downloading
-    // \return download errors by function `download_sst_files`
-    error_code bulk_load_start_download(const std::string &app_name,
-                                        const std::string &cluster_name,
-                                        const std::string &provider_name);
-
-    // download metadata and sst files from remote provider
-    // metadata and sst files will be downloaded in {_dir}/.bulk_load directory
-    // \return ERR_FILE_OPERATION_FAILED: create local bulk load dir failed
-    // \return download metadata file error, see function `do_download`
-    // \return parse metadata file error, see function `parse_bulk_load_metadata`
-    error_code download_sst_files(const std::string &app_name,
-                                  const std::string &cluster_name,
-                                  const std::string &provider_name);
-
     // download files from remote file system
     // \return  ERR_FILE_OPERATION_FAILED: local file system error
     // \return  ERR_FS_INTERNAL: remote file system error
@@ -465,49 +440,6 @@ private:
                            const std::string &file_name,
                            dist::block_service::block_filesystem *fs,
                            /*out*/ uint64_t &download_file_size);
-
-    // \return ERR_FILE_OPERATION_FAILED: file not exist, get size failed, open file failed
-    // \return ERR_CORRUPTION: parse failed
-    error_code parse_bulk_load_metadata(const std::string &fname, /*out*/ bulk_load_metadata &meta);
-
-    bool verify_sst_files(const file_meta &f_meta, const std::string &local_dir);
-    void update_bulk_load_download_progress(uint64_t file_size, const std::string &file_name);
-    void try_decrease_bulk_load_download_count();
-
-    void clear_bulk_load_states();
-
-    void report_bulk_load_states_to_meta(bulk_load_status::type remote_status,
-                                         bool report_metadata,
-                                         /*out*/ bulk_load_response &response);
-    void report_bulk_load_states_to_primary(bulk_load_status::type remote_status,
-                                            /*out*/ group_bulk_load_response &response);
-
-    ///
-    /// bulk load path on remote file provider:
-    /// <bulk_load_root>/<cluster_name>/<app_name>/{bulk_load_info}
-    /// <bulk_load_root>/<cluster_name>/<app_name>/<partition_index>/<file_name>
-    /// <bulk_load_root>/<cluster_name>/<app_name>/<partition_index>/bulk_load_metadata
-    ///
-    // get partition's file dir on remote file provider
-    inline std::string get_remote_bulk_load_dir(const std::string &app_name,
-                                                const std::string &cluster_name,
-                                                uint32_t pidx) const
-    {
-        std::ostringstream oss;
-        oss << _options->bulk_load_provider_root << "/" << cluster_name << "/" << app_name << "/"
-            << pidx;
-        return oss.str();
-    }
-
-    inline bulk_load_status::type get_bulk_load_status() const
-    {
-        return _bulk_load_context._status;
-    }
-
-    inline void set_bulk_load_status(bulk_load_status::type status)
-    {
-        _bulk_load_context._status = status;
-    }
 
 private:
     friend class ::dsn::replication::replication_checker;
@@ -522,7 +454,7 @@ private:
     friend class replica_split_test;
     friend class replica_test;
     friend class replica_backup_manager;
-    friend class replica_bulk_load_test;
+    friend class replica_bulk_loader;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -570,7 +502,6 @@ private:
     // policy_name --> cold_backup_context
     std::map<std::string, cold_backup_context_ptr> _cold_backup_contexts;
     partition_split_context _split_states;
-    bulk_load_context _bulk_load_context;
 
     // timer task that running in replication-thread
     std::atomic<uint64_t> _cold_backup_running_count;
@@ -612,6 +543,9 @@ private:
     // in normal cases, _partition_version = partition_count-1
     // when replica reject client read write request, partition_version = -1
     std::atomic<int32_t> _partition_version;
+
+    // bulk load
+    std::unique_ptr<replica_bulk_loader> _bulk_loader;
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;
