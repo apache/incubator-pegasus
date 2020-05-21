@@ -131,12 +131,12 @@ exit_if_fail $?
 
 # readwrite queue
 # from: https://codeload.github.com/cameron314/readerwriterqueue/tar.gz/v1.0.2
-CONCURRENT_QUEUE_NAME=readerwriterqueue-1.0.2
-CONCURRENT_QUEUE_PKG=${CONCURRENT_QUEUE_NAME}.tar.gz
-check_and_download "${CONCURRENT_QUEUE_PKG}"\
-    "${OSS_URL_PREFIX}/${CONCURRENT_QUEUE_PKG}"\
+READERWRITER_QUEUE_NAME=readerwriterqueue-1.0.2
+READERWRITER_QUEUE_PKG=${READERWRITER_QUEUE_NAME}.tar.gz
+check_and_download "${READERWRITER_QUEUE_PKG}"\
+    "${OSS_URL_PREFIX}/${READERWRITER_QUEUE_PKG}"\
     "9e355a2660bd2810cb1874fb7366906e"\
-    "${CONCURRENT_QUEUE_NAME}"
+    "${READERWRITER_QUEUE_NAME}"
 exit_if_fail $?
 
 # googletest
