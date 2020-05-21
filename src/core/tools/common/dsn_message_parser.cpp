@@ -75,6 +75,7 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
                        header->rpc_name,
                        header->from_address.to_string());
                 read_next = -1;
+                delete msg;
                 return nullptr;
             } else {
                 reader->_buffer = buf.range(msg_sz);
