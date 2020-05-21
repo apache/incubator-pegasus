@@ -439,6 +439,11 @@ void task::enqueue(task_worker_pool *pool)
     pool->enqueue(this);
 }
 
+const std::vector<task_worker *> &get_threadpool_threads_info(threadpool_code code)
+{
+    return dsn::task::get_current_node2()->computation()->get_pool(code)->workers();
+}
+
 timer_task::timer_task(
     task_code code, const task_handler &cb, int interval_milliseconds, int hash, service_node *node)
     : task(code, hash, node), _interval_milliseconds(interval_milliseconds), _cb(cb)

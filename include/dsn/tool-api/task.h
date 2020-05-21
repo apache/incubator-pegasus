@@ -614,6 +614,8 @@ private:
 };
 typedef dsn::ref_ptr<aio_task> aio_task_ptr;
 
+const std::vector<task_worker *> &get_threadpool_threads_info(threadpool_code code);
+
 // ------------------------ inline implementations --------------------
 __inline /*static*/ void task::check_tls_dsn()
 {
