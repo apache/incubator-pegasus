@@ -4,7 +4,7 @@
 package com.xiaomi.infra.pegasus.client;
 
 public class DelRangeOptions {
-  public String nextSortKey = "";
+  public byte[] nextSortKey = null;
   public boolean startInclusive = true; // if the startSortKey is included
   public boolean stopInclusive = false; // if the stopSortKey is included
   public FilterType sortKeyFilterType = FilterType.FT_NO_FILTER; // filter type for sort key

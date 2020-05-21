@@ -12,7 +12,9 @@ import java.util.Map;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /** Created by mi on 16-3-22. */
 public class TestBasic {
@@ -2364,124 +2366,147 @@ public class TestBasic {
     PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
     DelRangeOptions delRangeOptions = new DelRangeOptions();
 
+    String tableName = "temp";
+
     // multi set values
     List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
     int count = 0;
-    try {
-      while (count < 150) {
-        values.add(Pair.of(("k_" + count).getBytes(), ("v_" + count).getBytes()));
-        count++;
-      }
-      client.multiSet("temp", "delRange".getBytes(), values);
-    } catch (Exception e) {
-      e.printStackTrace();
-      Assert.assertTrue(false);
-    }
 
-    // delRange with default delRangeOptions
-    try {
-      client.delRange(
-          "temp", "delRange".getBytes(), "k_0".getBytes(), "k_90".getBytes(), delRangeOptions);
-    } catch (Exception e) {
-      e.printStackTrace();
-      Assert.assertTrue(false);
+    while (count < 150) {
+      values.add(Pair.of(("k_" + count).getBytes(), ("v_" + count).getBytes()));
+      count++;
     }
-
-    Assert.assertTrue(delRangeOptions.nextSortKey == null);
     List<byte[]> remainingSortKey = new ArrayList<byte[]>();
-
-    remainingSortKey.add("k_90".getBytes());
-    remainingSortKey.add("k_91".getBytes());
-    remainingSortKey.add("k_92".getBytes());
-    remainingSortKey.add("k_93".getBytes());
-    remainingSortKey.add("k_94".getBytes());
-    remainingSortKey.add("k_95".getBytes());
-    remainingSortKey.add("k_96".getBytes());
-    remainingSortKey.add("k_97".getBytes());
-    remainingSortKey.add("k_98".getBytes());
-    remainingSortKey.add("k_99".getBytes());
     List<Pair<byte[], byte[]>> remainingValue = new ArrayList<Pair<byte[], byte[]>>();
 
-    try {
-      client.multiGet("temp", "delRange".getBytes(), remainingSortKey, remainingValue);
-    } catch (Exception e) {
-      e.printStackTrace();
-      Assert.assertTrue(false);
-    }
+    Assertions.assertNull(
+        Assertions.assertDoesNotThrow(
+            () -> {
+              client.multiSet(tableName, "delRange".getBytes(), values);
+              client.delRange(
+                  tableName,
+                  "delRange".getBytes(),
+                  "k_0".getBytes(),
+                  "k_90".getBytes(),
+                  delRangeOptions);
+
+              remainingSortKey.add("k_90".getBytes());
+              remainingSortKey.add("k_91".getBytes());
+              remainingSortKey.add("k_92".getBytes());
+              remainingSortKey.add("k_93".getBytes());
+              remainingSortKey.add("k_94".getBytes());
+              remainingSortKey.add("k_95".getBytes());
+              remainingSortKey.add("k_96".getBytes());
+              remainingSortKey.add("k_97".getBytes());
+              remainingSortKey.add("k_98".getBytes());
+              remainingSortKey.add("k_99".getBytes());
+              client.multiGet(tableName, "delRange".getBytes(), remainingSortKey, remainingValue);
+
+              return delRangeOptions.nextSortKey;
+            }));
 
     List<String> valueStr = new ArrayList<String>();
     for (Pair<byte[], byte[]> pair : remainingValue) {
       valueStr.add(new String(pair.getValue()));
     }
-    Assert.assertEquals(10, valueStr.size());
-    Assert.assertTrue(valueStr.contains("v_90"));
-    Assert.assertTrue(valueStr.contains("v_91"));
-    Assert.assertTrue(valueStr.contains("v_92"));
-    Assert.assertTrue(valueStr.contains("v_93"));
-    Assert.assertTrue(valueStr.contains("v_94"));
-    Assert.assertTrue(valueStr.contains("v_95"));
-    Assert.assertTrue(valueStr.contains("v_96"));
-    Assert.assertTrue(valueStr.contains("v_97"));
-    Assert.assertTrue(valueStr.contains("v_98"));
-    Assert.assertTrue(valueStr.contains("v_99"));
+    Assertions.assertEquals(10, valueStr.size());
+    Assertions.assertTrue(valueStr.contains("v_90"));
+    Assertions.assertTrue(valueStr.contains("v_91"));
+    Assertions.assertTrue(valueStr.contains("v_92"));
+    Assertions.assertTrue(valueStr.contains("v_93"));
+    Assertions.assertTrue(valueStr.contains("v_94"));
+    Assertions.assertTrue(valueStr.contains("v_95"));
+    Assertions.assertTrue(valueStr.contains("v_96"));
+    Assertions.assertTrue(valueStr.contains("v_97"));
+    Assertions.assertTrue(valueStr.contains("v_98"));
+    Assertions.assertTrue(valueStr.contains("v_99"));
+    remainingValue.clear();
+    valueStr.clear();
 
     // delRange with FT_MATCH_POSTFIX option
     delRangeOptions.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
     delRangeOptions.sortKeyFilterPattern = "k_93".getBytes();
-    try {
-      client.delRange(
-          "temp", "delRange".getBytes(), "k_90".getBytes(), "k_95".getBytes(), delRangeOptions);
-    } catch (Exception e) {
-      e.printStackTrace();
-      Assert.assertTrue(false);
-    }
 
-    remainingValue.clear();
-    valueStr.clear();
-    try {
-      client.multiGet("temp", "delRange".getBytes(), remainingSortKey, remainingValue);
-    } catch (Exception e) {
-      e.printStackTrace();
-      Assert.assertTrue(false);
-    }
+    Assertions.assertDoesNotThrow(
+        () -> {
+          client.delRange(
+              tableName,
+              "delRange".getBytes(),
+              "k_90".getBytes(),
+              "k_95".getBytes(),
+              delRangeOptions);
+          client.multiGet(tableName, "delRange".getBytes(), remainingSortKey, remainingValue);
+        });
     for (Pair<byte[], byte[]> pair : remainingValue) {
       valueStr.add(new String(pair.getValue()));
     }
-
-    Assert.assertEquals(9, valueStr.size());
-    Assert.assertTrue(!valueStr.contains("v_93"));
+    Assertions.assertEquals(9, valueStr.size());
+    Assertions.assertTrue(!valueStr.contains("v_93"));
+    remainingValue.clear();
+    valueStr.clear();
 
     // delRange with "*Inclusive" option
     delRangeOptions.startInclusive = false;
     delRangeOptions.stopInclusive = true;
     delRangeOptions.sortKeyFilterType = FilterType.FT_NO_FILTER;
     delRangeOptions.sortKeyFilterPattern = null;
-    try {
-      client.delRange(
-          "temp", "delRange".getBytes(), "k_90".getBytes(), "k_95".getBytes(), delRangeOptions);
-    } catch (Exception e) {
-      e.printStackTrace();
-      Assert.assertTrue(false);
-    }
+    Assertions.assertDoesNotThrow(
+        () -> {
+          client.delRange(
+              tableName,
+              "delRange".getBytes(),
+              "k_90".getBytes(),
+              "k_95".getBytes(),
+              delRangeOptions);
+          client.multiGet(tableName, "delRange".getBytes(), remainingSortKey, remainingValue);
+        });
 
-    remainingValue.clear();
-    valueStr.clear();
-    try {
-      client.multiGet("temp", "delRange".getBytes(), remainingSortKey, remainingValue);
-    } catch (Exception e) {
-      e.printStackTrace();
-      Assert.assertTrue(false);
-    }
     for (Pair<byte[], byte[]> pair : remainingValue) {
       valueStr.add(new String(pair.getValue()));
     }
 
-    Assert.assertEquals(5, valueStr.size());
-    Assert.assertTrue(valueStr.contains("v_90"));
-    Assert.assertTrue(valueStr.contains("v_96"));
-    Assert.assertTrue(valueStr.contains("v_97"));
-    Assert.assertTrue(valueStr.contains("v_98"));
-    Assert.assertTrue(valueStr.contains("v_99"));
+    Assertions.assertEquals(5, valueStr.size());
+    Assertions.assertTrue(valueStr.contains("v_90"));
+    Assertions.assertTrue(valueStr.contains("v_96"));
+    Assertions.assertTrue(valueStr.contains("v_97"));
+    Assertions.assertTrue(valueStr.contains("v_98"));
+    Assertions.assertTrue(valueStr.contains("v_99"));
+    remainingValue.clear();
+    valueStr.clear();
+
+    DelRangeOptions delRangeOptions2 = new DelRangeOptions();
+    // test hashKey can't be null or ""
+    Assertions.assertEquals(
+        "{version}: Invalid parameter: hash key can't be empty",
+        Assertions.assertThrows(
+                PException.class,
+                () -> {
+                  client.delRange(
+                      tableName, null, "k1".getBytes(), "k2".getBytes(), delRangeOptions2);
+                })
+            .getMessage());
+
+    Assertions.assertEquals(
+        "{version}: Invalid parameter: hash key can't be empty",
+        Assertions.assertThrows(
+                PException.class,
+                () -> {
+                  client.delRange(
+                      tableName, "".getBytes(), "k1".getBytes(), "k2".getBytes(), delRangeOptions2);
+                })
+            .getMessage());
+
+    // test sortKey can be null, means delete from first to last
+    Assertions.assertNull(
+        Assertions.assertDoesNotThrow(
+            () -> {
+              client.multiSet(tableName, "delRange".getBytes(), values);
+              client.delRange(tableName, "delRange".getBytes(), null, null, delRangeOptions2);
+              client.multiGet(tableName, "delRange".getBytes(), remainingSortKey, remainingValue);
+              return delRangeOptions2.nextSortKey;
+            }));
+
+    Assertions.assertEquals(remainingValue.size(), 0);
   }
 
   @Test
