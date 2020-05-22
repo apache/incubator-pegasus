@@ -75,7 +75,6 @@ struct __tls_dsn__
     int node_id;
 
     rpc_engine *rpc;
-    disk_engine *disk;
     env_provider *env;
 
     int last_worker_queue_size;
@@ -248,7 +247,6 @@ public:
     static int get_current_worker_index();
     static const char *get_current_node_name();
     static rpc_engine *get_current_rpc();
-    static disk_engine *get_current_disk();
     static env_provider *get_current_env();
 
     static void set_tls_dsn_context(
@@ -572,6 +570,7 @@ public:
     {
     }
 };
+typedef dsn::ref_ptr<aio_context> aio_context_ptr;
 
 class aio_task : public task
 {
@@ -608,7 +607,7 @@ protected:
     void clear_non_trivial_on_task_end() override { _cb = nullptr; }
 
 private:
-    dsn::ref_ptr<aio_context> _aio_ctx;
+    aio_context_ptr _aio_ctx;
     size_t _transferred_size;
     aio_handler _cb;
 };
@@ -675,12 +674,6 @@ __inline /*static*/ rpc_engine *task::get_current_rpc()
 {
     check_tls_dsn();
     return tls_dsn.rpc;
-}
-
-__inline /*static*/ disk_engine *task::get_current_disk()
-{
-    check_tls_dsn();
-    return tls_dsn.disk;
 }
 
 __inline /*static*/ env_provider *task::get_current_env()

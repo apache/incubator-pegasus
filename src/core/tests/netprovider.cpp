@@ -38,7 +38,6 @@
 
 #include <gtest/gtest.h>
 
-#include <dsn/tool-api/aio_provider.h>
 #include <dsn/service_api_cpp.h>
 
 #include <dsn/tool-api/task.h>

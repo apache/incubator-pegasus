@@ -38,6 +38,7 @@
 #include <dsn/utility/singleton_store.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/config_api.h>
+#include <dsn/utility/flags.h>
 
 #include <dsn/tool-api/global_config.h>
 #include <dsn/tool-api/task_spec.h>
@@ -45,6 +46,8 @@
 #include <dsn/cpp/service_app.h>
 
 namespace dsn {
+
+DSN_DEFINE_string("core", aio_factory_name, "", "asynchonous file system provider");
 
 static bool build_client_network_confs(const char *section,
                                        /*out*/ network_client_configs &nss,

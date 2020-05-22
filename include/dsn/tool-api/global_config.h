@@ -152,7 +152,6 @@ struct service_spec
     bool enable_default_app_mimic;
 
     std::string timer_factory_name;
-    std::string aio_factory_name;
     std::string env_factory_name;
     std::string lock_factory_name;
     std::string lock_nr_factory_name;
@@ -189,7 +188,6 @@ CONFIG_FLD(
     "; in this case, a [apps.mimic] section must be defined in config files");
 
 CONFIG_FLD_STRING(timer_factory_name, "", "timer service provider")
-CONFIG_FLD_STRING(aio_factory_name, "", "asynchonous file system provider")
 CONFIG_FLD_STRING(env_factory_name, "", "environment provider")
 CONFIG_FLD_STRING(lock_factory_name, "", "recursive exclusive lock provider")
 CONFIG_FLD_STRING(lock_nr_factory_name, "", "non-recurisve exclusive lock provider")
@@ -213,4 +211,6 @@ ENUM_REG(SYS_EXIT_NORMAL)
 ENUM_REG(SYS_EXIT_BREAK)
 ENUM_REG(SYS_EXIT_EXCEPTION)
 ENUM_END(sys_exit_type)
+
+extern const char *FLAGS_aio_factory_name;
 } // namespace dsn

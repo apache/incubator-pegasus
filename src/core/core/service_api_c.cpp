@@ -38,7 +38,6 @@
 
 #include "service_engine.h"
 #include "rpc_engine.h"
-#include "disk_engine.h"
 #include "task_engine.h"
 #include "coredump.h"
 

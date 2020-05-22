@@ -49,13 +49,11 @@ namespace dsn {
 
 class task_engine;
 class rpc_engine;
-class disk_engine;
 class env_provider;
 class nfs_node;
 class task_queue;
 class task_worker_pool;
 class timer_service;
-class aio_provider;
 
 //
 //
@@ -66,8 +64,6 @@ public:
     struct io_engine
     {
         std::unique_ptr<rpc_engine> rpc;
-        std::unique_ptr<disk_engine> disk;
-        std::unique_ptr<aio_provider> aio;
     };
 
 public:
@@ -76,7 +72,6 @@ public:
     ~service_node();
 
     rpc_engine *rpc() const { return _node_io.rpc.get(); }
-    disk_engine *disk() const { return _node_io.disk.get(); }
     task_engine *computation() const { return _computation.get(); }
 
     void get_runtime_info(const std::string &indent,

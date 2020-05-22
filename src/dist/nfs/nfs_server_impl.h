@@ -36,7 +36,7 @@
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 
-#include "core/core/disk_engine.h"
+#include "core/aio/disk_engine.h"
 #include "nfs_server.h"
 #include "nfs_client_impl.h"
 

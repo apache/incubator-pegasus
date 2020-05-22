@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include "aio_provider.h"
+
 #include <dsn/tool_api.h>
 #include <dsn/utility/synchronize.h>
 #include <queue>
@@ -37,7 +39,6 @@
 #include <inttypes.h> /* uint64_t */
 
 namespace dsn {
-namespace tools {
 
 class native_linux_aio_provider : public aio_provider
 {
@@ -50,8 +51,6 @@ public:
     virtual error_code flush(dsn_handle_t fh) override;
     virtual void aio(aio_task *aio) override;
     virtual aio_context *prepare_aio_context(aio_task *tsk) override;
-
-    virtual void start() override;
 
     class linux_disk_aio_context : public aio_context
     {
@@ -80,5 +79,4 @@ private:
     std::thread _worker;
 };
 
-} // namespace tools
 } // namespace dsn

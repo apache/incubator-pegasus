@@ -24,30 +24,21 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#pragma once
-
-#include <dsn/tool_api.h>
-#include "core/tools/common/native_aio_provider.linux.h"
+#include "aio_provider.h"
+#include "disk_engine.h"
 
 namespace dsn {
-namespace tools {
 
-class sim_aio_provider : public native_linux_aio_provider
+aio_provider::aio_provider(disk_engine *disk, aio_provider *inner_provider) : _engine(disk) {}
+
+service_node *aio_provider::node() const { return _engine->node(); }
+
+void aio_provider::complete_io(aio_task *aio,
+                               error_code err,
+                               uint32_t bytes,
+                               int delay_milliseconds)
 {
-public:
-    sim_aio_provider(disk_engine *disk, aio_provider *inner_provider);
-    ~sim_aio_provider(void);
+    _engine->complete_io(aio, err, bytes, delay_milliseconds);
+}
 
-    virtual void aio(aio_task *aio) override;
-};
-} // namespace tools
 } // namespace dsn

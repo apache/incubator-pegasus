@@ -26,10 +26,9 @@
 
 #pragma once
 
-#include "service_engine.h"
+#include "aio_provider.h"
 
 #include <dsn/utility/synchronize.h>
-#include <dsn/tool-api/aio_provider.h>
 #include <dsn/utility/work_queue.h>
 
 namespace dsn {
@@ -68,14 +67,9 @@ private:
     work_queue<aio_task> _read_queue;
 };
 
-class disk_engine
+class disk_engine : public utils::singleton<disk_engine>
 {
 public:
-    disk_engine(service_node *node);
-    ~disk_engine();
-
-    void start(aio_provider *provider);
-
     // asynchonous file read/write
     disk_file *open(const char *file_name, int flag, int pmode);
     error_code close(disk_file *fh);
@@ -84,19 +78,22 @@ public:
     void write(aio_task *aio);
 
     aio_context *prepare_aio_context(aio_task *tsk) { return _provider->prepare_aio_context(tsk); }
-
     service_node *node() const { return _node; }
 
 private:
-    friend class aio_provider;
-    friend class batch_write_io_task;
+    // the object of disk_engine must be created by `singleton::instance`
+    disk_engine();
+    ~disk_engine();
+
     void process_write(aio_task *wk, uint32_t sz);
     void complete_io(aio_task *aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
 
-private:
-    volatile bool _is_running;
-    aio_provider *_provider;
+    std::unique_ptr<aio_provider> _provider;
     service_node *_node;
+
+    friend class aio_provider;
+    friend class batch_write_io_task;
+    friend class utils::singleton<disk_engine>;
 };
 
 } // namespace dsn

@@ -25,6 +25,8 @@
  */
 
 #include "disk_engine.h"
+#include "sim_aio_provider.h"
+#include "core/core/service_engine.h"
 
 using namespace dsn::utils;
 
@@ -132,24 +134,19 @@ aio_task *disk_file::on_write_completed(aio_task *wk, void *ctx, error_code err,
 }
 
 //----------------- disk_engine ------------------------
-disk_engine::disk_engine(service_node *node)
+disk_engine::disk_engine()
 {
-    _is_running = false;
-    _provider = nullptr;
-    _node = node;
+    _node = service_engine::instance().get_all_nodes().begin()->second.get();
+
+    // use native_linux_aio_provider in default
+    if (!strcmp(FLAGS_aio_factory_name, "dsn::tools::sim_aio_provider")) {
+        _provider.reset(new aio::sim_aio_provider(this, nullptr));
+    } else {
+        _provider.reset(new native_linux_aio_provider(this, nullptr));
+    }
 }
 
 disk_engine::~disk_engine() {}
-
-void disk_engine::start(aio_provider *provider)
-{
-    if (_is_running)
-        return;
-
-    _provider = provider;
-    _provider->start();
-    _is_running = true;
-}
 
 disk_file *disk_engine::open(const char *file_name, int flag, int pmode)
 {
@@ -185,11 +182,6 @@ error_code disk_engine::flush(disk_file *fh)
 
 void disk_engine::read(aio_task *aio)
 {
-    if (!_is_running) {
-        aio->enqueue(ERR_SERVICE_NOT_FOUND, 0);
-        return;
-    }
-
     if (!aio->spec().on_aio_call.execute(task::get_current_task(), aio, true)) {
         aio->enqueue(ERR_FILE_OPERATION_FAILED, 0);
         return;
@@ -233,11 +225,6 @@ public:
 
 void disk_engine::write(aio_task *aio)
 {
-    if (!_is_running) {
-        aio->enqueue(ERR_SERVICE_NOT_FOUND, 0);
-        return;
-    }
-
     if (!aio->spec().on_aio_call.execute(task::get_current_task(), aio, true)) {
         aio->enqueue(ERR_FILE_OPERATION_FAILED, 0);
         return;
@@ -342,5 +329,4 @@ void disk_engine::complete_io(aio_task *aio, error_code err, uint32_t bytes, int
         }
     }
 }
-
 } // namespace dsn

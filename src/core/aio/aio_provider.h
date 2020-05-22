@@ -89,8 +89,6 @@ public:
 
     virtual aio_context *prepare_aio_context(aio_task *) = 0;
 
-    virtual void start() = 0;
-
 protected:
     DSN_API void
     complete_io(aio_task *aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);

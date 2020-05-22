@@ -87,5 +87,7 @@ extern aio_task_ptr write_vector(disk_file *file,
                                  aio_handler &&callback,
                                  int hash = 0);
 
+extern aio_context_ptr prepare_aio_context(aio_task *tsk);
+
 } // namespace file
 } // namespace dsn

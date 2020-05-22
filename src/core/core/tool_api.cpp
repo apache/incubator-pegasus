@@ -150,13 +150,6 @@ bool register_component_provider(const char *name, network::factory f, ::dsn::pr
 }
 
 bool register_component_provider(const char *name,
-                                 aio_provider::factory f,
-                                 ::dsn::provider_type type)
-{
-    return dsn::utils::factory_store<aio_provider>::register_factory(name, f, type);
-}
-
-bool register_component_provider(const char *name,
                                  env_provider::factory f,
                                  ::dsn::provider_type type)
 {

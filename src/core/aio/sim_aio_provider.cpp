@@ -24,30 +24,28 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#include <dsn/tool-api/aio_provider.h>
-#include "disk_engine.h"
+#include "sim_aio_provider.h"
 
 namespace dsn {
+namespace aio {
 
-aio_provider::aio_provider(disk_engine *disk, aio_provider *inner_provider) : _engine(disk) {}
+DEFINE_TASK_CODE(LPC_NATIVE_AIO_REDIRECT, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
 
-service_node *aio_provider::node() const { return _engine->node(); }
-
-void aio_provider::complete_io(aio_task *aio,
-                               error_code err,
-                               uint32_t bytes,
-                               int delay_milliseconds)
+sim_aio_provider::sim_aio_provider(disk_engine *disk, aio_provider *inner_provider)
+    : native_linux_aio_provider(disk, inner_provider)
 {
-    _engine->complete_io(aio, err, bytes, delay_milliseconds);
 }
 
-} // end namespace dsn
+sim_aio_provider::~sim_aio_provider(void) {}
+
+void sim_aio_provider::aio(aio_task *aio)
+{
+    error_code err;
+    uint32_t bytes;
+
+    err = aio_internal(aio, false, &bytes);
+    complete_io(aio, err, bytes, 0);
+}
+
+} // namespace aio
+} // namespace dsn

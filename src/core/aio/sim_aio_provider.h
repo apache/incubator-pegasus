@@ -24,36 +24,21 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
+#pragma once
 
-#include "diske.sim.h"
+#include "native_linux_aio_provider.h"
 
 namespace dsn {
-namespace tools {
+namespace aio {
 
-DEFINE_TASK_CODE(LPC_NATIVE_AIO_REDIRECT, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
-
-sim_aio_provider::sim_aio_provider(disk_engine *disk, aio_provider *inner_provider)
-    : native_linux_aio_provider(disk, inner_provider)
+class sim_aio_provider : public native_linux_aio_provider
 {
-}
+public:
+    sim_aio_provider(disk_engine *disk, aio_provider *inner_provider);
+    ~sim_aio_provider(void);
 
-sim_aio_provider::~sim_aio_provider(void) {}
+    virtual void aio(aio_task *aio) override;
+};
 
-void sim_aio_provider::aio(aio_task *aio)
-{
-    error_code err;
-    uint32_t bytes;
-
-    err = aio_internal(aio, false, &bytes);
-    complete_io(aio, err, bytes, 0);
-}
-}
-} // end namespace
+} // namespace aio
+} // namespace dsn
