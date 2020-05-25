@@ -37,6 +37,7 @@
 #include <dsn/tool-api/command_manager.h>
 #include <algorithm> // for std::remove_if
 #include <cctype>    // for ::isspace
+#include <dsn/dist/fmt_logging.h>
 
 #include "meta_service.h"
 #include "server_state.h"
@@ -345,9 +346,9 @@ void meta_service::register_rpc_handlers()
                          "query_configuration_by_node",
                          &meta_service::on_query_configuration_by_node);
     register_rpc_handler(RPC_CM_CONFIG_SYNC, "config_sync", &meta_service::on_config_sync);
-    register_rpc_handler(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
-                         "query_configuration_by_index",
-                         &meta_service::on_query_configuration_by_index);
+    register_rpc_handler_with_rpc_holder(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
+                                         "query_configuration_by_index",
+                                         &meta_service::on_query_configuration_by_index);
     register_rpc_handler(RPC_CM_UPDATE_PARTITION_CONFIGURATION,
                          "update_configuration",
                          &meta_service::on_update_configuration);
@@ -567,17 +568,19 @@ void meta_service::on_query_configuration_by_node(dsn::message_ex *msg)
     reply(msg, response);
 }
 
-void meta_service::on_query_configuration_by_index(dsn::message_ex *msg)
+void meta_service::on_query_configuration_by_index(configuration_query_by_index_rpc rpc)
 {
-    configuration_query_by_index_response response;
+    configuration_query_by_index_response &response = rpc.response();
 
     // here we do not use RPC_CHECK_STATUS macro, but specially handle it
     // to response forward address.
     dinfo("rpc %s called", __FUNCTION__);
     rpc_address forward_address;
-    int result = check_leader(msg, &forward_address);
-    if (result == 0)
+    int result = check_leader(rpc.dsn_request(), &forward_address);
+    if (result == 0) {
+        rpc.disable_auto_reply();
         return;
+    }
     if (result == -1 || !_started) {
         if (result == -1) {
             response.err = ERR_FORWARD_TO_OTHERS;
@@ -592,14 +595,16 @@ void meta_service::on_query_configuration_by_index(dsn::message_ex *msg)
             response.err = ERR_SERVICE_NOT_ACTIVE;
         }
         ddebug("reject request with %s", response.err.to_string());
-        reply(msg, response);
         return;
     }
 
-    configuration_query_by_index_request request;
-    dsn::unmarshall(msg, request);
-    _state->query_configuration_by_index(request, response);
-    reply(msg, response);
+    _state->query_configuration_by_index(rpc.request(), response);
+    if (ERR_OK == response.err) {
+        ddebug_f("client {} queried an available app {} with appid {}",
+                 rpc.dsn_request()->header->from_address.to_string(),
+                 rpc.request().app_name,
+                 response.app_id);
+    }
 }
 
 // partition sever => meta sever

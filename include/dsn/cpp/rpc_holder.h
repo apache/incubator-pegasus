@@ -210,6 +210,9 @@ public:
         return rpc;
     }
 
+    // disable auto reply which is performed in the destructor of _i
+    void disable_auto_reply() { _i->auto_reply = false; }
+
     // Only use this function when testing.
     // In mock mode, all messages will be dropped into mail_box without going through network,
     // and response callbacks will never be called.
