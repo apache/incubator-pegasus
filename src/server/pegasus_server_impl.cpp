@@ -2073,20 +2073,23 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         dinfo_replica("_pfc_rdb_estimate_num_keys: {}", val);
     }
 
-    // Update _pfc_rdb_write_amp
+    // Update _pfc_rdb_write_amplification
     std::map<std::string, std::string> props;
     if (_db->GetMapProperty(_data_cf, "rocksdb.cfstats", &props)) {
-        auto write_amp_iter = props.find("compaction.Sum.WriteAmp");
-        auto write_amp = write_amp_iter == props.end() ? 0 : std::stod(write_amp_iter->second);
-        _pfc_rdb_write_amp->set(write_amp);
-        dinfo_replica("_pfc_rdb_write_amp: {}", write_amp);
+        auto write_amplification_iter = props.find("compaction.Sum.WriteAmp");
+        auto write_amplification = write_amplification_iter == props.end()
+                                       ? 0
+                                       : std::stod(write_amplification_iter->second);
+        _pfc_rdb_write_amplification->set(write_amplification);
+        dinfo_replica("_pfc_rdb_write_amplification: {}", write_amplification);
     }
 
-    // Update _pfc_rdb_read_amp
-    int64_t read_amp = _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
-                       _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
-                       _pfc_rdb_write_amp->set(read_amp);
-    dinfo_replica("_pfc_rdb_read_amp: {}", read_amp);
+    // Update _pfc_rdb_read_amplification
+    int64_t read_amplification =
+        _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
+        _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
+    _pfc_rdb_write_amplification->set(read_amplification);
+    dinfo_replica("_pfc_rdb_read_amplification: {}", read_amplification);
 
     // Update _pfc_rdb_bf_seek_negatives
     uint64_t bf_seek_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_USEFUL);

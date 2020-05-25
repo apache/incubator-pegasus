@@ -467,6 +467,14 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                                  "statistics the number of times bloom FullFilter "
                                                  "has not avoided the reads and data actually "
                                                  "exist");
+
+    snprintf(name, 255, "rdb.write_amplification@%s", str_gpid.c_str());
+    _pfc_rdb_write_amplification.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the write amplification of rocksdb");
+
+    snprintf(name, 255, "rdb.write_amplification@%s", str_gpid.c_str());
+    _pfc_rdb_read_amplification.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read amplification of rocksdb");
 }
 } // namespace server
 } // namespace pegasus
