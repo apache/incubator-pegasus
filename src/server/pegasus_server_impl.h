@@ -395,6 +395,8 @@ private:
     ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
     ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
     ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
+    ::dsn::perf_counter_wrapper _pfc_rdb_write_amp;
+    ::dsn::perf_counter_wrapper _pfc_rdb_read_amp;
 };
 
 } // namespace server
