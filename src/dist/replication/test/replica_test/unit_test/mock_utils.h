@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include "block_service_mock.h"
+
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/replication/mutation_duplicator.h>
 #include <dsn/dist/fmt_logging.h>
@@ -243,6 +245,12 @@ public:
     void set_bulk_load_downloading_count(int32_t count)
     {
         _bulk_load_downloading_count.store(count);
+    }
+
+    std::unique_ptr<block_service_mock> get_block_filesystem()
+    {
+        std::unique_ptr<block_service_mock> block_service = make_unique<block_service_mock>();
+        return block_service;
     }
 };
 

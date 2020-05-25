@@ -455,6 +455,7 @@ private:
     friend class replica_test;
     friend class replica_backup_manager;
     friend class replica_bulk_loader;
+    friend class replica_file_provider_test;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
