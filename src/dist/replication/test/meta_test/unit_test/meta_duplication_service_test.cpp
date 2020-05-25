@@ -309,6 +309,8 @@ public:
         std::string invalid_remote = "test-invalid-remote";
         std::string ok_remote = "slave-cluster";
 
+        std::string cluster_without_address = "cluster_without_address_for_test";
+
         create_app(test_app);
 
         create_app(test_app_invalid_ver);
@@ -328,6 +330,8 @@ public:
             {test_app, invalid_remote, ERR_INVALID_PARAMETERS},
 
             {test_app, get_current_cluster_name(), ERR_INVALID_PARAMETERS},
+
+            {test_app, cluster_without_address, ERR_INVALID_PARAMETERS},
         };
 
         for (auto tt : tests) {

@@ -141,13 +141,20 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         response.__set_hint("illegal operation: adding duplication to itself");
         return;
     }
-
     auto remote_cluster_id = get_duplication_cluster_id(request.remote_cluster_name);
     if (!remote_cluster_id.is_ok()) {
         response.err = ERR_INVALID_PARAMETERS;
         response.__set_hint(fmt::format("get_duplication_cluster_id({}) failed, error: {}",
                                         request.remote_cluster_name,
                                         remote_cluster_id.get_error()));
+        return;
+    }
+    std::vector<std::string> clusters;
+    dsn_config_get_all_keys("pegasus.clusters", clusters);
+    if (std::find(clusters.begin(), clusters.end(), request.remote_cluster_name) ==
+        clusters.end()) {
+        response.err = ERR_INVALID_PARAMETERS;
+        response.__set_hint("failed to find cluster address in config [pegasus.clusters]");
         return;
     }
 
