@@ -241,8 +241,7 @@ void bulk_load_service::create_partition_bulk_load_dir(const std::string &app_na
                 if (--_apps_in_progress_count[pid.get_app_id()] == 0) {
                     ddebug_f("app({}) start bulk load succeed", app_name);
                     _apps_in_progress_count[pid.get_app_id()] = partition_count;
-                    auto response = rpc.response();
-                    response.err = ERR_OK;
+                    rpc.response().err = ERR_OK;
                 }
             }
             // start send bulk load to replica servers

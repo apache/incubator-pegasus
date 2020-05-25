@@ -492,7 +492,7 @@ void replica::child_notify_catch_up() // on child partition
     rpc.call(_config.primary,
              tracker(),
              [this, rpc](error_code ec) mutable {
-                 auto response = rpc.response();
+                 const auto &response = rpc.response();
                  if (ec == ERR_TIMEOUT) {
                      dwarn_replica("notify primary catch up timeout, please wait and retry");
                      tasking::enqueue(LPC_PARTITION_SPLIT,
