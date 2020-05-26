@@ -208,6 +208,8 @@ void asio_udp_provider::send_message(message_ex *request)
                 // we do not handle failure here, rpc matcher would handle timeouts
             }
         });
+    request->add_ref();
+    request->release_ref();
 }
 
 asio_udp_provider::asio_udp_provider(rpc_engine *srv, network *inner_provider)
