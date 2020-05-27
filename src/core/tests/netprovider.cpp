@@ -146,8 +146,8 @@ TEST(tools_common, asio_net_provider)
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
-    asio_network_provider *asio_network =
-        new asio_network_provider(task::get_current_rpc(), nullptr);
+    std::unique_ptr<asio_network_provider> asio_network(
+        new asio_network_provider(task::get_current_rpc(), nullptr));
 
     error_code start_result;
     start_result = asio_network->start(RPC_CHANNEL_TCP, TEST_PORT, true);
@@ -160,8 +160,8 @@ TEST(tools_common, asio_net_provider)
     rpc_address network_addr = asio_network->address();
     ASSERT_TRUE(network_addr.port() == TEST_PORT);
 
-    asio_network_provider *asio_network2 =
-        new asio_network_provider(task::get_current_rpc(), nullptr);
+    std::unique_ptr<asio_network_provider> asio_network2(
+        new asio_network_provider(task::get_current_rpc(), nullptr));
     start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, true);
     ASSERT_TRUE(start_result == ERR_OK);
 
@@ -193,7 +193,8 @@ TEST(tools_common, asio_udp_provider)
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
-    auto client = new asio_udp_provider(task::get_current_rpc(), nullptr);
+    std::unique_ptr<asio_udp_provider> client(
+        new asio_udp_provider(task::get_current_rpc(), nullptr));
 
     error_code start_result;
     start_result = client->start(RPC_CHANNEL_UDP, 0, true);
@@ -235,7 +236,8 @@ TEST(tools_common, sim_net_provider)
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
-    sim_network_provider *sim_net = new sim_network_provider(task::get_current_rpc(), nullptr);
+    std::unique_ptr<sim_network_provider> sim_net(
+        new sim_network_provider(task::get_current_rpc(), nullptr));
 
     error_code ans;
     ans = sim_net->start(RPC_CHANNEL_TCP, TEST_PORT, false);
@@ -264,8 +266,8 @@ TEST(tools_common, asio_network_provider_connection_threshold)
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
-    asio_network_provider_test *asio_network =
-        new asio_network_provider_test(task::get_current_rpc(), nullptr);
+    std::unique_ptr<asio_network_provider_test> asio_network(
+        new asio_network_provider_test(task::get_current_rpc(), nullptr));
 
     error_code start_result;
     start_result = asio_network->start(RPC_CHANNEL_TCP, TEST_PORT, false);
