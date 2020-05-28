@@ -58,9 +58,9 @@ function usage_build()
     echo "   -h|--help             print the help info"
     echo "   -t|--type             build type: debug|release, default is release"
     echo "   -s|--serialize        serialize type: dsn|thrift|proto, default is thrift"
-    echo "   -c|--clear            clear rdsn/rocksdb/pegasus before building, not clear thirdparty"
-    echo "   -cc|--half-clear      clear pegasus before building, not clear thirdparty/rdsn/rocksdb"
-    echo "   --clear_thirdparty    clear thirdparty/rdsn/rocksdb/pegasus before building"
+    echo "   -c|--clear            clear rdsn/pegasus before building, not clear thirdparty"
+    echo "   -cc|--half-clear      clear pegasus before building, not clear thirdparty/rdsn"
+    echo "   --clear_thirdparty    clear thirdparty/rdsn/pegasus before building"
     echo "   --compiler            specify c and cxx compiler, sperated by ','"
     echo "                         e.g., \"gcc,g++\" or \"clang-3.9,clang++-3.9\""
     echo "                         default is \"gcc,g++\""
@@ -224,79 +224,6 @@ function run_build()
     if [ $? -ne 0 ]; then
         echo "ERROR: build rdsn failed"
         exit 1
-    fi
-
-    echo "INFO: start build rocksdb..."
-    ROCKSDB_BUILD_DIR="$ROOT/rocksdb/build"
-    ROCKSDB_BUILD_OUTPUT="$ROCKSDB_BUILD_DIR/output"
-    CMAKE_OPTIONS="-DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DWITH_LZ4=ON -DWITH_ZSTD=ON -DWITH_SNAPPY=ON -DWITH_BZ2=OFF -DWITH_TESTS=OFF -DWITH_GFLAGS=OFF -DUSE_RTTI=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-g"
-    if [ "$WARNING_ALL" == "YES" ]
-    then
-        echo "WARNING_ALL=YES"
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DWARNING_ALL=TRUE"
-    else
-        echo "WARNING_ALL=NO"
-    fi
-    if [ "$ENABLE_GCOV" == "YES" ]
-    then
-        echo "ENABLE_GCOV=YES"
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DENABLE_GCOV=TRUE"
-    else
-        echo "ENABLE_GCOV=NO"
-    fi
-    if [ "$BUILD_TYPE" == "debug" ]
-    then
-        echo "BUILD_TYPE=debug"
-        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=RelWithDebInfo"
-    else
-        echo "BUILD_TYPE=release"
-    fi
-
-    if [ -f $ROCKSDB_BUILD_DIR/CMAKE_OPTIONS ]
-    then
-        LAST_OPTIONS=`cat $ROCKSDB_BUILD_DIR/CMAKE_OPTIONS`
-        if [ "$CMAKE_OPTIONS" != "$LAST_OPTIONS" ]
-        then
-            echo "WARNING: CMAKE_OPTIONS has changed from last build, clear environment first"
-            CLEAR=YES
-        fi
-    fi
-
-    if [ "$CLEAR" == "YES" ] && [ -d "$ROCKSDB_BUILD_DIR" ]
-    then
-        echo "Clear $ROCKSDB_BUILD_DIR ..."
-        rm -rf $ROCKSDB_BUILD_DIR
-    fi
-
-    if [ ! -f $ROCKSDB_BUILD_DIR/Makefile ]; then
-        echo "Running cmake..."
-        mkdir -p $ROCKSDB_BUILD_DIR
-        cd $ROCKSDB_BUILD_DIR
-        echo "$CMAKE_OPTIONS" >CMAKE_OPTIONS
-        cmake .. -DCMAKE_INSTALL_PREFIX=$ROCKSDB_BUILD_OUTPUT $CMAKE_OPTIONS
-        if [ $? -ne 0 ]; then
-            echo "ERROR: cmake failed"
-            exit 1
-        fi
-    else
-        cd $ROCKSDB_BUILD_DIR
-    fi
-
-    echo "Building..."
-    if [ "$RUN_VERBOSE" == "YES" ]
-    then
-        echo "RUN_VERBOSE=YES"
-        MAKE_OPTIONS="$MAKE_OPTIONS VERBOSE=1"
-    else
-        echo "RUN_VERBOSE=NO"
-    fi
-    make install -j $JOB_NUM $MAKE_OPTIONS
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: build rocksdb failed"
-        exit 1
-    else
-        echo "Build rocksdb succeed"
     fi
 
     echo "INFO: start build pegasus..."
