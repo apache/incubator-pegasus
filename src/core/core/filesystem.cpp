@@ -33,7 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <fstream>
+
 #include <dsn/c/api_utilities.h>
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/safe_strerror_posix.h>
@@ -763,6 +766,36 @@ std::pair<error_code, bool> is_directory_empty(const std::string &dirname)
     }
     return res;
 }
+
+error_code read_file(const std::string &fname, std::string &buf)
+{
+    if (!file_exists(fname)) {
+        derror_f("file({}) doesn't exist", fname);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    int64_t file_sz = 0;
+    if (!file_size(fname, file_sz)) {
+        derror_f("get file({}) size failed", fname);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    buf.resize(file_sz);
+    std::ifstream fin(fname, std::ifstream::in);
+    if (!fin.is_open()) {
+        derror_f("open file({}) failed", fname);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+    fin.read(&buf[0], file_sz);
+    dassert_f(file_sz == fin.gcount(),
+              "read file({}) failed, file_size = {} but read size = {}",
+              fname,
+              file_sz,
+              fin.gcount());
+    fin.close();
+    return ERR_OK;
+}
+
 } // namespace filesystem
 } // namespace utils
 } // namespace dsn

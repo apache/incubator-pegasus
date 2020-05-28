@@ -51,12 +51,19 @@ private:
 
     // \return ERR_FILE_OPERATION_FAILED: file not exist, get size failed, open file failed
     // \return ERR_CORRUPTION: parse failed
-    error_code parse_bulk_load_metadata(const std::string &fname, /*out*/ bulk_load_metadata &meta);
+    error_code parse_bulk_load_metadata(const std::string &fname);
 
-    bool verify_sst_files(const file_meta &f_meta, const std::string &local_dir);
+    // TODO(heyuchen): move this function into block service manager, also used by restore
+    // compare file metadata calculated by file and parsed by metadata
+    bool verify_file(const file_meta &f_meta, const std::string &local_dir);
+
+    // update download progress after downloading sst files succeed
     void update_bulk_load_download_progress(uint64_t file_size, const std::string &file_name);
-    void try_decrease_bulk_load_download_count();
 
+    void try_decrease_bulk_load_download_count();
+    void check_download_finish();
+
+    void cleanup_download_task();
     void clear_bulk_load_states();
 
     void report_bulk_load_states_to_meta(bulk_load_status::type remote_status,
@@ -102,6 +109,8 @@ private:
 
     bulk_load_status::type _status{bulk_load_status::BLS_INVALID};
     bulk_load_metadata _metadata;
+    std::atomic<uint64_t> _cur_downloaded_size{0};
+    std::atomic<int32_t> _download_progress{0};
     std::atomic<error_code> _download_status{ERR_OK};
     // file_name -> downloading task
     std::map<std::string, task_ptr> _download_task;

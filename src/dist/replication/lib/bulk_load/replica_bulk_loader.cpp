@@ -4,8 +4,6 @@
 
 #include "replica_bulk_loader.h"
 
-#include <fstream>
-
 #include <dsn/dist/block_service.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
@@ -275,7 +273,7 @@ error_code replica_bulk_loader::download_sst_files(const std::string &app_name,
     // parse metadata
     const std::string &local_metadata_file_name =
         utils::filesystem::path_combine(local_dir, bulk_load_constant::BULK_LOAD_METADATA);
-    err = parse_bulk_load_metadata(local_metadata_file_name, _metadata);
+    err = parse_bulk_load_metadata(local_metadata_file_name);
     if (err != ERR_OK) {
         derror_replica("parse bulk load metadata failed, error = {}", err.to_string());
         return err;
@@ -288,7 +286,7 @@ error_code replica_bulk_loader::download_sst_files(const std::string &app_name,
                 uint64_t f_size = 0;
                 error_code ec =
                     _replica->do_download(remote_dir, local_dir, f_meta.name, fs, f_size);
-                if (ec == ERR_OK && !verify_sst_files(f_meta, local_dir)) {
+                if (ec == ERR_OK && !verify_file(f_meta, local_dir)) {
                     ec = ERR_CORRUPTION;
                 }
                 if (ec != ERR_OK) {
@@ -309,19 +307,54 @@ error_code replica_bulk_loader::download_sst_files(const std::string &app_name,
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-error_code replica_bulk_loader::parse_bulk_load_metadata(const std::string &fname,
-                                                         /*out*/ bulk_load_metadata &meta)
+error_code replica_bulk_loader::parse_bulk_load_metadata(const std::string &fname)
 {
-    // TODO(heyuchen): TBD
-    // read file and parse file content as bulk_load_metadata
+    std::string buf;
+    error_code ec = utils::filesystem::read_file(fname, buf);
+    if (ec != ERR_OK) {
+        derror_replica("read file {} failed, error = {}", fname, ec);
+        return ec;
+    }
+
+    blob bb = blob::create_from_bytes(std::move(buf));
+    if (!json::json_forwarder<bulk_load_metadata>::decode(bb, _metadata)) {
+        derror_replica("file({}) is damaged", fname);
+        return ERR_CORRUPTION;
+    }
+
+    if (_metadata.file_total_size <= 0) {
+        derror_replica("bulk_load_metadata has invalid file_total_size({})",
+                       _metadata.file_total_size);
+        return ERR_CORRUPTION;
+    }
+
     return ERR_OK;
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION_LONG
-bool replica_bulk_loader::verify_sst_files(const file_meta &f_meta, const std::string &local_dir)
+bool replica_bulk_loader::verify_file(const file_meta &f_meta, const std::string &local_dir)
 {
-    // TODO(heyuchen): TBD
-    // compare sst file metadata calculated by file and parsed by metadata
+    const std::string local_file = utils::filesystem::path_combine(local_dir, f_meta.name);
+    int64_t f_size = 0;
+    if (!utils::filesystem::file_size(local_file, f_size)) {
+        derror_replica("verify file({}) failed, becaused failed to get file size", local_file);
+        return false;
+    }
+    std::string md5;
+    if (utils::filesystem::md5sum(local_file, md5) != ERR_OK) {
+        derror_replica("verify file({}) failed, becaused failed to get file md5", local_file);
+        return false;
+    }
+    if (f_size != f_meta.size || md5 != f_meta.md5) {
+        derror_replica(
+            "verify file({}) failed, because file damaged, size: {} VS {}, md5: {} VS {}",
+            local_file,
+            f_size,
+            f_meta.size,
+            md5,
+            f_meta.md5);
+        return false;
+    }
     return true;
 }
 
@@ -329,8 +362,27 @@ bool replica_bulk_loader::verify_sst_files(const file_meta &f_meta, const std::s
 void replica_bulk_loader::update_bulk_load_download_progress(uint64_t file_size,
                                                              const std::string &file_name)
 {
-    // TODO(heyuchen): TBD
-    // update download progress after downloading sst files succeed
+    if (_metadata.file_total_size <= 0) {
+        derror_replica("bulk_load_metadata has invalid file_total_size({})",
+                       _metadata.file_total_size);
+        return;
+    }
+
+    ddebug_replica("update progress after downloading file({})", file_name);
+    _cur_downloaded_size.fetch_add(file_size);
+    auto total_size = static_cast<double>(_metadata.file_total_size);
+    auto cur_downloaded_size = static_cast<double>(_cur_downloaded_size.load());
+    auto cur_progress = static_cast<int32_t>((cur_downloaded_size / total_size) * 100);
+    _download_progress.store(cur_progress);
+    ddebug_replica("total_size = {}, cur_downloaded_size = {}, progress = {}",
+                   total_size,
+                   cur_downloaded_size,
+                   cur_progress);
+
+    tasking::enqueue(LPC_REPLICATION_COMMON,
+                     tracker(),
+                     std::bind(&replica_bulk_loader::check_download_finish, this),
+                     get_gpid().thread_hash());
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION, THREAD_POOL_REPLICATION_LONG
@@ -340,6 +392,27 @@ void replica_bulk_loader::try_decrease_bulk_load_download_count()
     ddebug_replica("node[{}] has {} replica executing downloading",
                    _stub->_primary_address_str,
                    _stub->_bulk_load_downloading_count.load());
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_bulk_loader::check_download_finish()
+{
+    if (_download_progress.load() == bulk_load_constant::PROGRESS_FINISHED &&
+        _status == bulk_load_status::BLS_DOWNLOADING) {
+        ddebug_replica("download all files succeed");
+        _status = bulk_load_status::BLS_DOWNLOADED;
+        try_decrease_bulk_load_download_count();
+        cleanup_download_task();
+    }
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_bulk_loader::cleanup_download_task()
+{
+    for (auto &kv : _download_task) {
+        CLEANUP_TASK_ALWAYS(kv.second)
+    }
+    _download_task.clear();
 }
 
 void replica_bulk_loader::clear_bulk_load_states()

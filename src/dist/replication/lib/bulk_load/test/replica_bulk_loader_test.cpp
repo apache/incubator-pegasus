@@ -47,6 +47,20 @@ public:
         return _bulk_loader->bulk_load_start_download(APP_NAME, CLUSTER, PROVIDER);
     }
 
+    error_code test_parse_bulk_load_metadata(const std::string &file_path)
+    {
+        return _bulk_loader->parse_bulk_load_metadata(file_path);
+    }
+
+    bool test_verify_file(int64_t size, const std::string &md5)
+    {
+        file_meta f_meta;
+        f_meta.name = FILE_NAME;
+        f_meta.size = size;
+        f_meta.md5 = md5;
+        return _bulk_loader->verify_file(f_meta, LOCAL_DIR);
+    }
+
     /// mock structure functions
 
     void
@@ -101,14 +115,81 @@ public:
         config.secondaries.emplace_back(SECONDARY2);
     }
 
+    void create_local_file(const std::string &file_name)
+    {
+        std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, file_name);
+        utils::filesystem::create_file(whole_name);
+        std::ofstream test_file;
+        test_file.open(whole_name);
+        test_file << "write some data.\n";
+        test_file.close();
+
+        _file_meta.name = whole_name;
+        utils::filesystem::md5sum(whole_name, _file_meta.md5);
+        utils::filesystem::file_size(whole_name, _file_meta.size);
+    }
+
+    error_code create_local_metadata_file()
+    {
+        create_local_file(FILE_NAME);
+        _metadata.files.emplace_back(_file_meta);
+        _metadata.file_total_size = _file_meta.size;
+
+        std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
+        utils::filesystem::create_file(whole_name);
+        std::ofstream os(whole_name.c_str(),
+                         (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
+        if (!os.is_open()) {
+            derror("open file %s failed", whole_name.c_str());
+            return ERR_FILE_OPERATION_FAILED;
+        }
+
+        blob bb = json::json_forwarder<bulk_load_metadata>::encode(_metadata);
+        os.write((const char *)bb.data(), (std::streamsize)bb.length());
+        if (os.bad()) {
+            derror("write file %s failed", whole_name.c_str());
+            return ERR_FILE_OPERATION_FAILED;
+        }
+        os.close();
+
+        return ERR_OK;
+    }
+
+    bool validate_metadata()
+    {
+        auto target = _bulk_loader->_metadata;
+        if (target.file_total_size != _metadata.file_total_size) {
+            return false;
+        }
+        if (target.files.size() != _metadata.files.size()) {
+            return false;
+        }
+        for (int i = 0; i < target.files.size(); ++i) {
+            if (target.files[i].name != _metadata.files[i].name) {
+                return false;
+            }
+            if (target.files[i].size != _metadata.files[i].size) {
+                return false;
+            }
+            if (target.files[i].md5 != _metadata.files[i].md5) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // helper functions
     bulk_load_status::type get_bulk_load_status() const { return _bulk_loader->_status; }
 
 public:
     std::unique_ptr<mock_replica> _replica;
     std::unique_ptr<replica_bulk_loader> _bulk_loader;
+
     bulk_load_request _req;
     group_bulk_load_request _group_req;
+
+    file_meta _file_meta;
+    bulk_load_metadata _metadata;
 
     std::string APP_NAME = "replica";
     std::string CLUSTER = "cluster";
@@ -119,6 +200,9 @@ public:
     rpc_address SECONDARY = rpc_address("127.0.0.3", 34801);
     rpc_address SECONDARY2 = rpc_address("127.0.0.4", 34801);
     int32_t MAX_DOWNLOADING_COUNT = 5;
+    std::string LOCAL_DIR = bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR;
+    std::string METADATA = bulk_load_constant::BULK_LOAD_METADATA;
+    std::string FILE_NAME = "test_sst_file";
 };
 
 // on_bulk_load unit tests
@@ -194,6 +278,54 @@ TEST_F(replica_bulk_loader_test, start_downloading_test)
         ASSERT_EQ(get_bulk_load_status(), test.expected_status);
         ASSERT_EQ(stub->get_bulk_load_downloading_count(), test.expected_downloading_count);
     }
+}
+
+// parse_bulk_load_metadata unit tests
+TEST_F(replica_bulk_loader_test, bulk_load_metadata_not_exist)
+{
+    ASSERT_EQ(test_parse_bulk_load_metadata("path_not_exist"), ERR_FILE_OPERATION_FAILED);
+}
+
+TEST_F(replica_bulk_loader_test, bulk_load_metadata_corrupt)
+{
+    // create file can not parse as bulk_load_metadata structure
+    utils::filesystem::create_directory(LOCAL_DIR);
+    create_local_file(METADATA);
+    std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
+    error_code ec = test_parse_bulk_load_metadata(metadata_file_name);
+    ASSERT_EQ(ec, ERR_CORRUPTION);
+    utils::filesystem::remove_path(LOCAL_DIR);
+}
+
+TEST_F(replica_bulk_loader_test, bulk_load_metadata_parse_succeed)
+{
+    utils::filesystem::create_directory(LOCAL_DIR);
+    error_code ec = create_local_metadata_file();
+    ASSERT_EQ(ec, ERR_OK);
+
+    std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
+    ec = test_parse_bulk_load_metadata(metadata_file_name);
+    ASSERT_EQ(ec, ERR_OK);
+    ASSERT_TRUE(validate_metadata());
+    utils::filesystem::remove_path(LOCAL_DIR);
+}
+
+// TODO(heyuchen): move tests into block service
+// verify_file unit tests
+TEST_F(replica_bulk_loader_test, verify_file_failed)
+{
+    utils::filesystem::create_directory(LOCAL_DIR);
+    create_local_file(FILE_NAME);
+    ASSERT_FALSE(test_verify_file(_file_meta.size, "wrong_md5"));
+    utils::filesystem::remove_path(LOCAL_DIR);
+}
+
+TEST_F(replica_bulk_loader_test, verify_file_succeed)
+{
+    utils::filesystem::create_directory(LOCAL_DIR);
+    create_local_file(FILE_NAME);
+    ASSERT_TRUE(test_verify_file(_file_meta.size, _file_meta.md5));
+    utils::filesystem::remove_path(LOCAL_DIR);
 }
 
 } // namespace replication

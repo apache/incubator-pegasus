@@ -165,7 +165,7 @@ public:
     static const int32_t BULK_LOAD_REQUEST_SHORT_INTERVAL;
     static const std::string BULK_LOAD_METADATA;
     static const std::string BULK_LOAD_LOCAL_ROOT_DIR;
-    // TODO(heyuchen): add more constant in further pr
+    static const int32_t PROGRESS_FINISHED;
 };
 
 namespace cold_backup {
