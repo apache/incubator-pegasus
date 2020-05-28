@@ -16,6 +16,7 @@ set(MY_PROJ_LIBS
     dsn_replica_server
     dsn_replication_common
     dsn.replication.ddlclient
+    dsn.block_service
     dsn.block_service.local
     dsn.block_service.fds
     dsn.failure_detector
