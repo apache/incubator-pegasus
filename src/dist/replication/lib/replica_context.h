@@ -152,6 +152,8 @@ public:
     // Used for bulk load
     // group bulk_load response tasks of RPC_GROUP_BULK_LOAD for each secondary replica
     node_tasks group_bulk_load_pending_replies;
+    // bulk_load_state of secondary replicas
+    std::unordered_map<rpc_address, partition_bulk_load_state> secondary_bulk_load_states;
 };
 
 class secondary_context

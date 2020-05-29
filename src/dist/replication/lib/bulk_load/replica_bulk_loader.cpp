@@ -426,14 +426,94 @@ void replica_bulk_loader::report_bulk_load_states_to_meta(bulk_load_status::type
                                                           bool report_metadata,
                                                           /*out*/ bulk_load_response &response)
 {
-    // TODO(heyuchen): TBD
+    if (status() != partition_status::PS_PRIMARY) {
+        response.err = ERR_INVALID_STATE;
+        return;
+    }
+
+    if (report_metadata && !_metadata.files.empty()) {
+        response.__set_metadata(_metadata);
+    }
+
+    switch (remote_status) {
+    case bulk_load_status::BLS_DOWNLOADING:
+    case bulk_load_status::BLS_DOWNLOADED:
+        report_group_download_progress(response);
+        break;
+    // TODO(heyuchen): add other status
+    default:
+        break;
+    }
+
+    response.primary_bulk_load_status = _status;
 }
 
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_bulk_loader::report_group_download_progress(/*out*/ bulk_load_response &response)
+{
+    if (status() != partition_status::PS_PRIMARY) {
+        dwarn_replica("replica status={}, should be {}",
+                      enum_to_string(status()),
+                      enum_to_string(partition_status::PS_PRIMARY));
+        response.err = ERR_INVALID_STATE;
+        return;
+    }
+
+    partition_bulk_load_state primary_state;
+    primary_state.__set_download_progress(_download_progress.load());
+    primary_state.__set_download_status(_download_status.load());
+    response.group_bulk_load_state[_replica->_primary_states.membership.primary] = primary_state;
+    ddebug_replica("primary = {}, download progress = {}%, status = {}",
+                   _replica->_primary_states.membership.primary.to_string(),
+                   primary_state.download_progress,
+                   primary_state.download_status);
+
+    int32_t total_progress = primary_state.download_progress;
+    for (const auto &target_address : _replica->_primary_states.membership.secondaries) {
+        const auto &secondary_state =
+            _replica->_primary_states.secondary_bulk_load_states[target_address];
+        int32_t s_progress =
+            secondary_state.__isset.download_progress ? secondary_state.download_progress : 0;
+        error_code s_status =
+            secondary_state.__isset.download_status ? secondary_state.download_status : ERR_OK;
+        ddebug_replica("secondary = {}, download progress = {}%, status={}",
+                       target_address.to_string(),
+                       s_progress,
+                       s_status);
+        response.group_bulk_load_state[target_address] = secondary_state;
+        total_progress += s_progress;
+    }
+
+    total_progress /= _replica->_primary_states.membership.max_replica_count;
+    ddebug_replica("total download progress = {}%", total_progress);
+    response.__set_total_download_progress(total_progress);
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
 void replica_bulk_loader::report_bulk_load_states_to_primary(
     bulk_load_status::type remote_status,
     /*out*/ group_bulk_load_response &response)
 {
-    // TODO(heyuchen): TBD
+    if (status() != partition_status::PS_SECONDARY) {
+        response.err = ERR_INVALID_STATE;
+        return;
+    }
+
+    partition_bulk_load_state bulk_load_state;
+    auto local_status = _status;
+    switch (remote_status) {
+    case bulk_load_status::BLS_DOWNLOADING:
+    case bulk_load_status::BLS_DOWNLOADED:
+        bulk_load_state.__set_download_progress(_download_progress.load());
+        bulk_load_state.__set_download_status(_download_status.load());
+        break;
+    // TODO(heyuchen): add other status
+    default:
+        break;
+    }
+
+    response.status = local_status;
+    response.bulk_load_state = bulk_load_state;
 }
 
 } // namespace replication

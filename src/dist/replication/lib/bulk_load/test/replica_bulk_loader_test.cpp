@@ -61,6 +61,17 @@ public:
         return _bulk_loader->verify_file(f_meta, LOCAL_DIR);
     }
 
+    int32_t test_report_group_download_progress(bulk_load_status::type status,
+                                                int32_t p_progress,
+                                                int32_t s1_progress,
+                                                int32_t s2_progress)
+    {
+        mock_group_progress(status, p_progress, s1_progress, s2_progress);
+        bulk_load_response response;
+        _bulk_loader->report_group_download_progress(response);
+        return response.total_download_progress;
+    }
+
     /// mock structure functions
 
     void
@@ -105,14 +116,14 @@ public:
     void mock_primary_states()
     {
         mock_replica_config(partition_status::PS_PRIMARY);
-        primary_context p_context = _replica->get_primary_context();
-        partition_configuration &config = p_context.membership;
+        partition_configuration config;
         config.max_replica_count = 3;
         config.pid = PID;
         config.ballot = BALLOT;
         config.primary = PRIMARY;
         config.secondaries.emplace_back(SECONDARY);
         config.secondaries.emplace_back(SECONDARY2);
+        _replica->set_primary_partition_configuration(config);
     }
 
     void create_local_file(const std::string &file_name)
@@ -176,6 +187,51 @@ public:
             }
         }
         return true;
+    }
+
+    void mock_replica_bulk_load_varieties(bulk_load_status::type status,
+                                          int32_t download_progress,
+                                          ingestion_status::type istatus,
+                                          bool is_ingestion = false)
+    {
+        _bulk_loader->_status = status;
+        _bulk_loader->_download_progress = download_progress;
+        // TODO(heyuchen): add ingestion status
+    }
+
+    void mock_secondary_progress(int32_t secondary_progress1, int32_t secondary_progress2)
+    {
+        mock_primary_states();
+        partition_bulk_load_state state1, state2;
+        state1.__set_download_status(ERR_OK);
+        state1.__set_download_progress(secondary_progress1);
+        state2.__set_download_status(ERR_OK);
+        state2.__set_download_progress(secondary_progress2);
+        _replica->set_secondary_bulk_load_state(SECONDARY, state1);
+        _replica->set_secondary_bulk_load_state(SECONDARY2, state2);
+    }
+
+    void mock_group_progress(bulk_load_status::type p_status,
+                             int32_t p_progress,
+                             int32_t s1_progress,
+                             int32_t s2_progress)
+    {
+        if (p_status == bulk_load_status::BLS_INVALID) {
+            p_progress = 0;
+        } else if (p_status == bulk_load_status::BLS_DOWNLOADED) {
+            p_progress = 100;
+        }
+        mock_replica_bulk_load_varieties(p_status, p_progress, ingestion_status::IS_INVALID);
+        mock_secondary_progress(s1_progress, s2_progress);
+    }
+
+    void mock_group_progress(bulk_load_status::type p_status)
+    {
+        if (p_status == bulk_load_status::BLS_INVALID) {
+            mock_group_progress(p_status, 0, 0, 0);
+        } else if (p_status == bulk_load_status::BLS_DOWNLOADED) {
+            mock_group_progress(p_status, 100, 100, 100);
+        }
     }
 
     // helper functions
@@ -326,6 +382,31 @@ TEST_F(replica_bulk_loader_test, verify_file_succeed)
     create_local_file(FILE_NAME);
     ASSERT_TRUE(test_verify_file(_file_meta.size, _file_meta.md5));
     utils::filesystem::remove_path(LOCAL_DIR);
+}
+
+// report_group_download_progress unit tests
+TEST_F(replica_bulk_loader_test, report_group_download_progress_test)
+{
+    struct test_struct
+    {
+        bulk_load_status::type primary_status;
+        int32_t primary_progress;
+        int32_t secondary1_progress;
+        int32_t secondary2_progress;
+        int32_t total_progress;
+    } tests[]{
+        {bulk_load_status::BLS_DOWNLOADING, 10, 10, 10, 10},
+        {bulk_load_status::BLS_DOWNLOADED, 100, 0, 0, 33},
+        {bulk_load_status::BLS_DOWNLOADED, 100, 100, 100, 100},
+    };
+
+    for (auto test : tests) {
+        ASSERT_EQ(test_report_group_download_progress(test.primary_status,
+                                                      test.primary_progress,
+                                                      test.secondary1_progress,
+                                                      test.secondary2_progress),
+                  test.total_progress);
+    }
 }
 
 } // namespace replication

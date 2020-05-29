@@ -159,6 +159,8 @@ void primary_context::cleanup_bulk_load_states()
     // TODO(heyuchen): TBD
     // primary will save bulk load states reported from secondaries, this function is to cleanup
     // those states
+    secondary_bulk_load_states.erase(secondary_bulk_load_states.begin(),
+                                     secondary_bulk_load_states.end());
 }
 
 bool secondary_context::cleanup(bool force)

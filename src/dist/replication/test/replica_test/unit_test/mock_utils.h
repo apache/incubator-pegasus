@@ -141,8 +141,15 @@ public:
     void prepare_list_commit_hard(decree d) { _prepare_list->commit(d, COMMIT_TO_DECREE_HARD); }
     decree get_app_last_committed_decree() { return _app->last_committed_decree(); }
     void set_app_last_committed_decree(decree d) { _app->_last_committed_decree = d; }
-    primary_context get_primary_context() { return _primary_states; }
-    void set_primary_context(primary_context context) { _primary_states = context; }
+    void set_primary_partition_configuration(partition_configuration &pconfig)
+    {
+        _primary_states.membership = pconfig;
+    }
+    void set_secondary_bulk_load_state(const rpc_address &node,
+                                       const partition_bulk_load_state &state)
+    {
+        _primary_states.secondary_bulk_load_states[node] = state;
+    }
 
 private:
     decree _max_gced_decree{invalid_decree - 1};
