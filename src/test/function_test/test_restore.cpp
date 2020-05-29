@@ -19,7 +19,6 @@ public:
     virtual void SetUp() override
     {
         pegasus_root_dir = global_env::instance()._pegasus_root;
-        working_root_dir = global_env::instance()._working_dir;
 
         chdir(pegasus_root_dir.c_str());
         system("pwd");
@@ -278,10 +277,10 @@ public:
     pegasus_client *new_pg_client;
     std::shared_ptr<replication_ddl_client> ddl_client;
     std::string pegasus_root_dir;
-    std::string working_root_dir;
     std::string policy_dir;
 
-    std::string cluster_name = "mycluster";
+    const std::string cluster_name = "mycluster";
+    const std::string new_app_name = "backup_test_new";
     int32_t old_app_id;
     int64_t time_stamp;
 
@@ -293,7 +292,6 @@ public:
     static const std::string backup_data_dir;
 
     static const std::string app_name;
-    static const std::string new_app_name;
 
     static const std::string hash_key_prefix;
     static const std::string sort_key_prefix;
@@ -315,7 +313,6 @@ const std::string restore_test::start_time = "24:0";
 const std::string restore_test::backup_data_dir = "backup_data";
 
 const std::string restore_test::app_name = "backup_test";
-const std::string restore_test::new_app_name = "backup_test_new";
 
 const std::string restore_test::hash_key_prefix = "hash_key";
 const std::string restore_test::sort_key_prefix = "sort_key";
