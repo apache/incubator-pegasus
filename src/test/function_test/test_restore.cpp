@@ -37,6 +37,11 @@ public:
         system("./run.sh start_onebox --config_path config-server-test-restore.ini");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
+        // First of all, we are in the path of pegasus root, for example: /home/mi/pegasus.
+        // And we can get the provider_dir which actually is `block_service/local_service`,
+        // from config-server-test-restore.ini.
+        // With cluster_name = mycluster and policy_name = policy_1, we can get the absolute
+        // path of policy: /home/mi/pegasus/onebox/block_service/local_service/mycluster/policy_1
         cmd = "grep -A 5 block_service." + backup_provider_name +
               " config-server-test-restore.ini | grep args | cut -f2,3 -d'/'";
         std::stringstream ss;
