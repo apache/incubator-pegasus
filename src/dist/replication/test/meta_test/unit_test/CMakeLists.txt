@@ -19,7 +19,7 @@ set(MY_PROJ_LIBS
         dsn.block_service.local
         dsn.block_service.fds
         dsn.failure_detector
-        dsn_cli
+        dsn_dist_cmd
         dsn_http
         dsn_runtime
         dsn_aio

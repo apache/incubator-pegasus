@@ -39,7 +39,6 @@
 
 #include <dsn/cpp/serverlet.h>
 #include <dsn/dist/meta_state_service.h>
-#include <dsn/dist/cli/cli.server.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 
 #include "dist/replication/common/replication_common.h"
@@ -237,9 +236,6 @@ private:
     // handle all the block filesystems for current meta service
     // (in other words, current service node)
     block_service_manager _block_service_manager;
-
-    // handle the command line service
-    std::unique_ptr<dsn::cli_service> _cli_service;
 
     // [
     // this is protected by failure_detector::_lock

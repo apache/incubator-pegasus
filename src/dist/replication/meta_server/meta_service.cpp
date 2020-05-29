@@ -34,6 +34,7 @@
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/meta_state_service.h>
 #include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/remote_command.h>
 #include <dsn/tool-api/command_manager.h>
 #include <algorithm> // for std::remove_if
 #include <cctype>    // for ::isspace
@@ -282,10 +283,9 @@ error_code meta_service::start()
     // can tell others who is the current leader
     register_rpc_handlers();
 
-    // start cli service before acquiring leader lock,
+    // start remote command service before acquiring leader lock,
     // so that the command line call can be handled
-    _cli_service = std::move(dsn::cli_service::create_service());
-    _cli_service->open_service();
+    dist::cmd::register_remote_command_rpc();
 
     _failure_detector->acquire_leader_lock();
     dassert(_failure_detector->get_leader(nullptr), "must be primary at this point");

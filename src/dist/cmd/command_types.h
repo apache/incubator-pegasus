@@ -4,8 +4,8 @@
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  *  @generated
  */
-#ifndef cli_TYPES_H
-#define cli_TYPES_H
+#ifndef command_TYPES_H
+#define command_TYPES_H
 
 #include <iosfwd>
 
@@ -17,6 +17,8 @@
 #include <thrift/cxxfunctional.h>
 
 namespace dsn {
+namespace dist {
+namespace cmd {
 
 class command;
 
@@ -71,7 +73,8 @@ inline std::ostream &operator<<(std::ostream &out, const command &obj)
     obj.printTo(out);
     return out;
 }
-
-} // namespace
+} // namespace cmd
+} // namespace dist
+} // namespace dsn
 
 #endif

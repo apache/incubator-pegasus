@@ -54,6 +54,7 @@
 #include <gperftools/malloc_extension.h>
 #endif
 #include <dsn/utility/fail_point.h>
+#include <dsn/dist/remote_command.h>
 
 namespace dsn {
 namespace replication {
@@ -647,8 +648,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     _nfs = std::move(dsn::nfs_node::create());
     _nfs->start();
 
-    _cli_service = std::move(dsn::cli_service::create_service());
-    _cli_service->open_service();
+    dist::cmd::register_remote_command_rpc();
 
     if (_options.delay_for_fd_timeout_on_start) {
         uint64_t now_time_ms = dsn_now_ms();

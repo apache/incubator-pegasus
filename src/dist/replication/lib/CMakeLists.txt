@@ -34,7 +34,7 @@ set(MY_PROJ_LIBS
     dsn.failure_detector
     dsn.failure_detector.multimaster
     dsn_nfs
-    dsn_cli
+    dsn_dist_cmd
     dsn_http
     dsn_runtime
     dsn_aio

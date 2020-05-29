@@ -78,22 +78,15 @@ thrift_description = [
         "path": "src/dist/replication/storage_engine/simple_kv"
     },
     {
-        "name": "cli",
-        "path": "src/dist/cli",
+        "name": "command",
+        "path": "src/dist/cmd",
         "file_move": {
-            "_types.h": "include/dsn/dist/cli"
-        },
-        "include_fix": {
-            "_types.h": {
-                "remove": ["\"dsn_types.h\""]
-            },
-            "_types.cpp": {
-                "add": ["<dsn/dist/cli/cli_types.h>"],
-                "remove": ["\"cli_types.h\""]
-            },
+            "_types.h": "src/dist/cmd",
+            "_types.cpp": "src/dist/cmd"
         }
     }
 ]
+
 
 class CompileError(Exception):
     """ Raised when dealing with thrift idl have errors"""

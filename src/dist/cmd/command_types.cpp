@@ -4,7 +4,7 @@
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  *  @generated
  */
-#include <dsn/dist/cli/cli_types.h>
+#include "command_types.h"
 
 #include <algorithm>
 #include <ostream>
@@ -12,6 +12,8 @@
 #include <thrift/TToString.h>
 
 namespace dsn {
+namespace dist {
+namespace cmd {
 
 command::~command() throw() {}
 
@@ -147,5 +149,6 @@ void command::printTo(std::ostream &out) const
         << "arguments=" << to_string(arguments);
     out << ")";
 }
-
-} // namespace
+} // namespace cmd
+} // namespace dist
+} // namespace dsn
