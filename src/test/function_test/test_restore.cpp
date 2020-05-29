@@ -85,7 +85,6 @@ public:
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
         system("./run.sh start_onebox -w");
-        system(cmd.c_str());
         chdir(global_env::instance()._working_dir.c_str());
     }
 
