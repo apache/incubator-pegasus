@@ -85,7 +85,6 @@ public:
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
         system("./run.sh start_onebox -w");
-        std::string cmd = "rm -rf " + backup_data_dir;
         system(cmd.c_str());
         chdir(global_env::instance()._working_dir.c_str());
     }
@@ -289,7 +288,6 @@ public:
     static const int backup_interval_seconds;
     static const int backup_history_count_to_keep;
     static const std::string start_time;
-    static const std::string backup_data_dir;
 
     static const std::string app_name;
 
@@ -310,7 +308,6 @@ const std::string restore_test::backup_provider_name = "local_service";
 const int restore_test::backup_interval_seconds = 1;
 const int restore_test::backup_history_count_to_keep = 6;
 const std::string restore_test::start_time = "24:0";
-const std::string restore_test::backup_data_dir = "backup_data";
 
 const std::string restore_test::app_name = "backup_test";
 
