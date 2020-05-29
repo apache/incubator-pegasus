@@ -113,6 +113,7 @@ public:
 
     bool verify_data()
     {
+        int err = PERR_OK;
         std::cout << "start to get " << kv_pair_cnt << " key-value pairs, using get()..."
                   << std::endl;
         new_pg_client =
@@ -122,7 +123,6 @@ public:
             return false;
         }
 
-        int err = PERR_OK;
         int64_t start = dsn_now_ms();
         for (int i = 1; i <= kv_pair_cnt; i++) {
             std::string index = std::to_string(i);
