@@ -13,16 +13,13 @@
 #include <atomic>
 #include <memory>
 #include <sys/time.h>
+#include <dsn/dist/remote_command.h>
 
 #include "partition_kill_testor.h"
 
 namespace pegasus {
 namespace test {
-partition_kill_testor::partition_kill_testor(const char *config_file) : kill_testor(config_file)
-{
-    cmd.cmd = "replica.kill_partition";
-    cmd.arguments.resize(2);
-}
+partition_kill_testor::partition_kill_testor(const char *config_file) : kill_testor(config_file) {}
 
 void partition_kill_testor::Run()
 {
@@ -49,28 +46,31 @@ void partition_kill_testor::run()
     std::vector<int> random_indexs;
     generate_random(random_indexs, random_num, 0, partitions.size() - 1);
 
-    dsn::cli_client cli;
     std::vector<dsn::task_ptr> tasks(random_num);
     std::vector<std::pair<bool, std::string>> results(random_num);
 
+    std::vector<std::string> arguments(2);
     for (int i = 0; i < random_indexs.size(); ++i) {
         int index = random_indexs[i];
         const auto &p = partitions[index];
 
-        cmd.arguments[0] = to_string(p.pid.get_app_id());
-        cmd.arguments[1] = to_string(p.pid.get_partition_index());
+        arguments[0] = to_string(p.pid.get_app_id());
+        arguments[1] = to_string(p.pid.get_partition_index());
 
-        auto callback = [&results,
-                         i](::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) {
+        auto callback = [&results, i](::dsn::error_code err, const std::string &resp) {
             if (err == ::dsn::ERR_OK) {
                 results[i].first = true;
-                ::dsn::unmarshall(resp, results[i].second);
+                results[i].second = resp;
             } else {
                 results[i].first = false;
                 results[i].second = err.to_string();
             }
         };
-        tasks[i] = cli.call(cmd, callback, std::chrono::milliseconds(5000), 0, 0, 0, p.primary);
+        tasks[i] = dsn::dist::cmd::async_call_remote(p.primary,
+                                                     "replica.kill_partition",
+                                                     arguments,
+                                                     callback,
+                                                     std::chrono::milliseconds(5000));
     }
 
     for (int i = 0; i < tasks.size(); ++i) {

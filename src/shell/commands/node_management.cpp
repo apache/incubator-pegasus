@@ -183,16 +183,16 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        ::dsn::command command;
-        command.cmd = "perf-counters-by-prefix";
-        command.arguments.push_back("replica*server*memused.res(MB)");
-        command.arguments.push_back("replica*app.pegasus*rdb.block_cache.memory_usage");
-        command.arguments.push_back("replica*eon.replica_stub*disk.available.total.ratio");
-        command.arguments.push_back("replica*eon.replica_stub*disk.available.min.ratio");
-        command.arguments.push_back("replica*app.pegasus*rdb.memtable.memory_usage");
-        command.arguments.push_back("replica*app.pegasus*rdb.index_and_filter_blocks.memory_usage");
-        std::vector<std::pair<bool, std::string>> results;
-        call_remote_command(sc, nodes, command, results);
+        std::vector<std::pair<bool, std::string>> results =
+            call_remote_command(sc,
+                                nodes,
+                                "perf-counters-by-prefix",
+                                {"replica*server*memused.res(MB)",
+                                 "replica*app.pegasus*rdb.block_cache.memory_usage",
+                                 "replica*eon.replica_stub*disk.available.total.ratio",
+                                 "replica*eon.replica_stub*disk.available.min.ratio",
+                                 "replica*app.pegasus*rdb.memtable.memory_usage",
+                                 "replica*app.pegasus*rdb.index_and_filter_blocks.memory_usage"});
 
         for (int i = 0; i < nodes.size(); ++i) {
             dsn::rpc_address node_addr = nodes[i].address;
@@ -242,17 +242,16 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        ::dsn::command command;
-        command.cmd = "perf-counters-by-prefix";
-        command.arguments.push_back("replica*app.pegasus*get_qps");
-        command.arguments.push_back("replica*app.pegasus*multi_get_qps");
-        command.arguments.push_back("replica*app.pegasus*put_qps");
-        command.arguments.push_back("replica*app.pegasus*multi_put_qps");
-        command.arguments.push_back("replica*app.pegasus*recent.read.cu");
-        command.arguments.push_back("replica*app.pegasus*recent.write.cu");
-
-        std::vector<std::pair<bool, std::string>> results;
-        call_remote_command(sc, nodes, command, results);
+        std::vector<std::pair<bool, std::string>> results =
+            call_remote_command(sc,
+                                nodes,
+                                "perf-counters-by-prefix",
+                                {"replica*app.pegasus*get_qps",
+                                 "replica*app.pegasus*multi_get_qps",
+                                 "replica*app.pegasus*put_qps",
+                                 "replica*app.pegasus*multi_put_qps",
+                                 "replica*app.pegasus*recent.read.cu",
+                                 "replica*app.pegasus*recent.write.cu"});
 
         for (int i = 0; i < nodes.size(); ++i) {
             dsn::rpc_address node_addr = nodes[i].address;
@@ -301,14 +300,14 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        ::dsn::command command;
-        command.cmd = "perf-counters-by-postfix";
-        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_GET.latency.server");
-        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_PUT.latency.server");
-        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server");
-        command.arguments.push_back("zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server");
-        std::vector<std::pair<bool, std::string>> results;
-        call_remote_command(sc, nodes, command, results);
+        std::vector<std::pair<bool, std::string>> results =
+            call_remote_command(sc,
+                                nodes,
+                                "perf-counters-by-postfix",
+                                {"zion*profiler*RPC_RRDB_RRDB_GET.latency.server",
+                                 "zion*profiler*RPC_RRDB_RRDB_PUT.latency.server",
+                                 "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server",
+                                 "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server"});
 
         for (int i = 0; i < nodes.size(); ++i) {
             dsn::rpc_address node_addr = nodes[i].address;
@@ -505,10 +504,10 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    ::dsn::command cmd;
-    cmd.cmd = args.argv[optind];
+    std::string cmd = args.argv[optind];
+    std::vector<std::string> arguments;
     for (int i = optind + 1; i < args.argc; i++) {
-        cmd.arguments.push_back(args.argv[i]);
+        arguments.push_back(args.argv[i]);
     }
 
     std::vector<node_desc> node_list;
@@ -535,14 +534,14 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    fprintf(stderr, "COMMAND: %s", cmd.cmd.c_str());
-    for (auto &s : cmd.arguments) {
+    fprintf(stderr, "COMMAND: %s", cmd.c_str());
+    for (auto &s : arguments) {
         fprintf(stderr, " %s", s.c_str());
     }
     fprintf(stderr, "\n\n");
 
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, node_list, cmd, results);
+    std::vector<std::pair<bool, std::string>> results =
+        call_remote_command(sc, node_list, cmd, arguments);
 
     int succeed = 0;
     int failed = 0;
