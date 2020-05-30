@@ -19,10 +19,8 @@ public:
     virtual void SetUp() override
     {
         pegasus_root_dir = global_env::instance()._pegasus_root;
-        working_root_dir = global_env::instance()._working_dir;
 
         chdir(pegasus_root_dir.c_str());
-        cluster_name = dsn::utils::filesystem::path_combine(pegasus_root_dir, backup_data_dir);
         system("pwd");
 
         // modify the config to enable backup, and restart onebox
@@ -39,9 +37,22 @@ public:
         system("./run.sh start_onebox --config_path config-server-test-restore.ini");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
+        // First of all, we are in the path of pegasus root, for example: /home/mi/pegasus.
+        // And we can get the provider_dir which actually is `block_service/local_service`,
+        // from config-server-test-restore.ini.
+        // With cluster_name = mycluster and policy_name = policy_1, we can get the absolute
+        // path of policy: /home/mi/pegasus/onebox/block_service/local_service/mycluster/policy_1
+        cmd = "grep -A 5 block_service." + backup_provider_name +
+              " config-server-test-restore.ini | grep args | cut -f2,3 -d'/'";
+        std::stringstream ss;
+        assert(dsn::utils::pipe_execute(cmd.c_str(), ss) == 0);
+        std::string provider_dir = ss.str().substr(0, ss.str().length() - 1);
+        policy_dir = "onebox/" + provider_dir + '/' +
+                     dsn::utils::filesystem::path_combine(cluster_name, policy_name);
+
         std::vector<dsn::rpc_address> meta_list;
         replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name.c_str());
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
         error_code err =
@@ -56,7 +67,8 @@ public:
             old_app_id = app_id;
         }
         ASSERT_GE(app_id, 0);
-        pg_client = pegasus::pegasus_client_factory::get_client("mycluster", app_name.c_str());
+        pg_client =
+            pegasus::pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
         ASSERT_NE(pg_client, nullptr);
 
         write_data();
@@ -78,8 +90,6 @@ public:
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
         system("./run.sh start_onebox -w");
-        std::string cmd = "rm -rf " + backup_data_dir;
-        system(cmd.c_str());
         chdir(global_env::instance()._working_dir.c_str());
     }
 
@@ -108,6 +118,13 @@ public:
         int err = PERR_OK;
         std::cout << "start to get " << kv_pair_cnt << " key-value pairs, using get()..."
                   << std::endl;
+        new_pg_client =
+            pegasus::pegasus_client_factory::get_client(cluster_name.c_str(), new_app_name.c_str());
+        if (nullptr == new_pg_client) {
+            std::cout << "error to create client for " << new_app_name << std::endl;
+            return false;
+        }
+
         int64_t start = dsn_now_ms();
         for (int i = 1; i <= kv_pair_cnt; i++) {
             std::string index = std::to_string(i);
@@ -115,10 +132,10 @@ public:
             std::string s_key = sort_key_prefix + "_" + index;
             std::string value = value_prefix + "_" + index;
             std::string value_new;
-            err = pg_client->get(h_key, s_key, value_new);
+            err = new_pg_client->get(h_key, s_key, value_new);
             if (err != PERR_OK) {
                 std::cout << "get <" << h_key << ">, <" << s_key
-                          << "> failed， with err = " << pg_client->get_error_string(err)
+                          << "> failed， with err = " << new_pg_client->get_error_string(err)
                           << std::endl;
                 return false;
             }
@@ -136,8 +153,6 @@ public:
 
     bool restore()
     {
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox");
         std::this_thread::sleep_for(std::chrono::seconds(3));
         time_stamp = get_first_backup_timestamp();
         std::cout << "first backup_timestamp = " << time_stamp << std::endl;
@@ -147,7 +162,7 @@ public:
                                                 time_stamp,
                                                 app_name,
                                                 old_app_id,
-                                                app_name,
+                                                new_app_name,
                                                 false);
         if (err != ERR_OK) {
             std::cout << "restore failed, err = " << err.to_string() << std::endl;
@@ -178,9 +193,9 @@ public:
 
             p_confs.clear();
             app_id = 0, partition_cnt = 0;
-            err = ddl_client->list_app(app_name, app_id, partition_cnt, p_confs);
+            err = ddl_client->list_app(new_app_name, app_id, partition_cnt, p_confs);
             if (err != ERR_OK) {
-                std::cout << "list app failed, app_name = " << app_name
+                std::cout << "list app failed, app_name = " << new_app_name
                           << ", with err = " << err.to_string() << std::endl;
                 continue;
             }
@@ -232,7 +247,6 @@ public:
 
     int64_t get_first_backup_timestamp()
     {
-        std::string policy_dir = dsn::utils::filesystem::path_combine(cluster_name, policy_name);
         std::string cmd = "cd " + policy_dir + "; "
                                                "ls -c > restore_app_from_backup_test_tmp; "
                                                "tail -n 1 restore_app_from_backup_test_tmp; "
@@ -256,7 +270,6 @@ public:
 
     bool find_second_backup_timestamp()
     {
-        std::string policy_dir = dsn::utils::filesystem::path_combine(cluster_name, policy_name);
         std::vector<std::string> dirs;
         ::dsn::utils::filesystem::get_subdirectories(policy_dir, dirs, false);
         return (dirs.size() >= 2);
@@ -264,11 +277,13 @@ public:
 
 public:
     pegasus_client *pg_client;
+    pegasus_client *new_pg_client;
     std::shared_ptr<replication_ddl_client> ddl_client;
     std::string pegasus_root_dir;
-    std::string working_root_dir;
+    std::string policy_dir;
 
-    std::string cluster_name;
+    const std::string cluster_name = "mycluster";
+    const std::string new_app_name = "backup_test_new";
     int32_t old_app_id;
     int64_t time_stamp;
 
@@ -277,7 +292,6 @@ public:
     static const int backup_interval_seconds;
     static const int backup_history_count_to_keep;
     static const std::string start_time;
-    static const std::string backup_data_dir;
 
     static const std::string app_name;
 
@@ -298,7 +312,6 @@ const std::string restore_test::backup_provider_name = "local_service";
 const int restore_test::backup_interval_seconds = 1;
 const int restore_test::backup_history_count_to_keep = 6;
 const std::string restore_test::start_time = "24:0";
-const std::string restore_test::backup_data_dir = "backup_data";
 
 const std::string restore_test::app_name = "backup_test";
 
