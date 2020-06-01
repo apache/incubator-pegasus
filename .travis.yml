@@ -35,9 +35,9 @@ install:
 
 before_script:
     - cd rdsn/thirdparty
-    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-thirdparty-prebuild.tar.gz
-    - tar xf pegasus-thirdparty-prebuild.tar.gz
-    - rm -f pegasus-thirdparty-prebuild.tar.gz
+    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-thirdparty-prebuild.zip
+    - unzip pegasus-thirdparty-prebuild.zip
+    - rm -f pegasus-thirdparty-prebuild.zip
     - cd ../..
     - ulimit -c unlimited -S
 
