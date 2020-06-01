@@ -33,7 +33,7 @@ public class MetricsPoolTest {
     pool.genJsonsFromMeter("TestName", m, builder);
 
     JSONArray array = new JSONArray("[" + builder.toString() + "]");
-    Assert.assertEquals(4, array.length());
+    Assert.assertEquals(1, array.length());
 
     String[] metrics = {
       "TestName.cps-1sec", "TestName.cps-1min", "TestName.cps-5min", "TestName.cps-15min"
@@ -62,9 +62,9 @@ public class MetricsPoolTest {
     pool.genJsonsFromHistogram("TestHist", h, builder);
 
     JSONArray array = new JSONArray("[" + builder.toString() + "]");
-    Assert.assertEquals(4, array.length());
+    Assert.assertEquals(2, array.length());
 
-    String[] metrics = {"TestHist.p50", "TestHist.p99", "TestHist.p999", "TestHist.max"};
+    String[] metrics = {"TestHist.p99", "TestHist.p999"};
 
     for (int i = 0; i < array.length(); ++i) {
       JSONObject j = array.getJSONObject(i);
@@ -119,17 +119,24 @@ public class MetricsPoolTest {
     String tags = "what=you,like=another";
     MetricsPool pool = new MetricsPool(host, tags, 20);
 
-    pool.setMeter("aaa", 1);
+    pool.setMeter("aaa@temp", 1);
     pool.setMeter("aaa", 2);
 
-    for (int i = 0; i < 10000; ++i) pool.setHistorgram("ccc", i);
+    for (int i = 0; i < 10000; ++i) {
+      pool.setHistorgram("ccc", i);
+      pool.setHistorgram("ccc@temp", i);
+    }
 
     JSONArray array = new JSONArray(pool.metricsToJson());
-    Assert.assertEquals(8, array.length());
+    Assert.assertEquals(6, array.length());
     for (int i = 0; i < array.length(); ++i) {
       JSONObject j = array.getJSONObject(i);
 
-      Assert.assertEquals(tags, j.getString("tags"));
+      if (j.getString("metric").contains("@")) {
+        Assert.assertEquals(tags + ",table=temp", j.getString("tags"));
+      } else {
+        Assert.assertEquals(tags, j.getString("tags"));
+      }
       Assert.assertEquals("GAUGE", j.getString("counterType"));
       Assert.assertEquals(20, j.getInt("step"));
       Assert.assertEquals(host, j.getString("endpoint"));

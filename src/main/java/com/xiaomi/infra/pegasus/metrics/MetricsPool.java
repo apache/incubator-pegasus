@@ -15,11 +15,15 @@ import org.json.JSONObject;
 
 /** Created by weijiesun on 18-3-9. */
 public final class MetricsPool {
+
+  private final String defaultTags;
+
   public MetricsPool(String host, String tags, int reportStepSec) {
     theMetric = new FalconMetric();
     theMetric.endpoint = host;
     theMetric.step = reportStepSec;
     theMetric.tags = tags;
+    defaultTags = tags;
   }
 
   public void setMeter(String counterName, long count) {
@@ -35,22 +39,8 @@ public final class MetricsPool {
     theMetric.counterType = "GAUGE";
 
     theMetric.metric = name + ".cps-1sec";
+    theMetric.tags = getTableTag(name);
     theMetric.value = meter.getMeanRate();
-    oneMetricToJson(theMetric, output);
-    output.append(',');
-
-    theMetric.metric = name + ".cps-1min";
-    theMetric.value = meter.getOneMinuteRate();
-    oneMetricToJson(theMetric, output);
-    output.append(',');
-
-    theMetric.metric = name + ".cps-5min";
-    theMetric.value = meter.getFiveMinuteRate();
-    oneMetricToJson(theMetric, output);
-    output.append(',');
-
-    theMetric.metric = name + ".cps-15min";
-    theMetric.value = meter.getFifteenMinuteRate();
     oneMetricToJson(theMetric, output);
   }
 
@@ -59,23 +49,15 @@ public final class MetricsPool {
     theMetric.counterType = "GAUGE";
     Snapshot s = hist.getSnapshot();
 
-    theMetric.metric = name + ".p50";
-    theMetric.value = s.getMedian();
-    oneMetricToJson(theMetric, output);
-    output.append(',');
-
     theMetric.metric = name + ".p99";
+    theMetric.tags = getTableTag(name);
     theMetric.value = s.get99thPercentile();
     oneMetricToJson(theMetric, output);
     output.append(',');
 
     theMetric.metric = name + ".p999";
+    theMetric.tags = getTableTag(name);
     theMetric.value = s.get999thPercentile();
-    oneMetricToJson(theMetric, output);
-    output.append(',');
-
-    theMetric.metric = name + ".max";
-    theMetric.value = s.getMax();
     oneMetricToJson(theMetric, output);
   }
 
@@ -98,25 +80,36 @@ public final class MetricsPool {
     StringBuilder builder = new StringBuilder();
     builder.append('[');
     SortedMap<String, Meter> meters = registry.getMeters();
-    boolean start = true;
     for (Map.Entry<String, Meter> entry : meters.entrySet()) {
-      if (!start) {
-        builder.append(',');
-      }
       genJsonsFromMeter(entry.getKey(), entry.getValue(), builder);
-      start = false;
+      builder.append(',');
     }
 
     for (Map.Entry<String, Histogram> entry : registry.getHistograms().entrySet()) {
-      if (!start) {
-        builder.append(',');
-      }
       genJsonsFromHistogram(entry.getKey(), entry.getValue(), builder);
-      start = false;
+      builder.append(',');
     }
+
+    if (builder.charAt(builder.length() - 1) == ',') {
+      builder.deleteCharAt(builder.length() - 1);
+    }
+
     builder.append("]");
 
     return builder.toString();
+  }
+
+  private String getTableTag(String counterName) {
+    if (defaultTags.contains("table=")) {
+      return defaultTags;
+    }
+    String[] result = counterName.split("@");
+    if (result.length >= 2) {
+      return defaultTags.equals("")
+          ? ("table=" + result[1])
+          : (defaultTags + ",table=" + result[1]);
+    }
+    return defaultTags;
   }
 
   static final class FalconMetric {

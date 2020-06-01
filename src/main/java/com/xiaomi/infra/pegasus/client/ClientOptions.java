@@ -35,7 +35,7 @@ public class ClientOptions {
       "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
   public static final Duration DEFAULT_OPERATION_TIMEOUT = Duration.ofMillis(1000);
   public static final int DEFAULT_ASYNC_WORKERS = Runtime.getRuntime().availableProcessors();
-  public static final boolean DEFAULT_ENABLE_PERF_COUNTER = false;
+  public static final boolean DEFAULT_ENABLE_PERF_COUNTER = true;
   public static final String DEFAULT_FALCON_PERF_COUNTER_TAGS = "";
   public static final Duration DEFAULT_FALCON_PUSH_INTERVAL = Duration.ofSeconds(10);
   public static final boolean DEFAULT_ENABLE_WRITE_LIMIT = true;
@@ -195,7 +195,7 @@ public class ClientOptions {
     /**
      * Whether to enable performance statistics. If true, the client will periodically report
      * metrics to local falcon agent (currently we only support falcon as monitoring system).
-     * Defaults to {@literal false}, see {@link #DEFAULT_ENABLE_PERF_COUNTER}.
+     * Defaults to {@literal true}, see {@link #DEFAULT_ENABLE_PERF_COUNTER}.
      *
      * @param enablePerfCounter enablePerfCounter
      * @return {@code this}
@@ -317,7 +317,7 @@ public class ClientOptions {
   /**
    * Whether to enable performance statistics. If true, the client will periodically report metrics
    * to local falcon agent (currently we only support falcon as monitoring system). Defaults to
-   * {@literal false}.
+   * {@literal true}.
    *
    * @return whether to enable performance statistics.
    */

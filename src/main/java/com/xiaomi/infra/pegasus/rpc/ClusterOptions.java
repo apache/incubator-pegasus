@@ -19,7 +19,7 @@ public class ClusterOptions {
       String.valueOf(Runtime.getRuntime().availableProcessors());
 
   public static final String PEGASUS_ENABLE_PERF_COUNTER_KEY = "enable_perf_counter";
-  public static final String PEGASUS_ENABLE_PERF_COUNTER_DEF = "false";
+  public static final String PEGASUS_ENABLE_PERF_COUNTER_DEF = "true";
 
   public static final String PEGASUS_PERF_COUNTER_TAGS_KEY = "perf_counter_tags";
   public static final String PEGASUS_PERF_COUNTER_TAGS_DEF = "";
