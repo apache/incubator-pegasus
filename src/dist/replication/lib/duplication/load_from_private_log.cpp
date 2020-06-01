@@ -205,12 +205,12 @@ load_from_private_log::load_from_private_log(replica *r, replica_duplicator *dup
     _counter_dup_load_file_failed_count.init_app_counter(
         "eon.replica_stub",
         "dup.load_file_failed_count",
-        COUNTER_TYPE_NUMBER,
+        COUNTER_TYPE_VOLATILE_NUMBER,
         "the number of failures loading a private log file during duplication");
     _counter_dup_load_skipped_bytes_count.init_app_counter(
         "eon.replica_stub",
         "dup.load_skipped_bytes_count",
-        COUNTER_TYPE_NUMBER,
+        COUNTER_TYPE_VOLATILE_NUMBER,
         "bytes of mutations that were skipped because of failure during duplication");
 }
 
