@@ -38,14 +38,6 @@ link_directories(${PEGASUS_ROOT}/lib)
 set(CMAKE_INSTALL_PREFIX ${PEGASUS_ROOT} CACHE STRING "" FORCE)
 message (STATUS "pegasus Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
 
-# rocksdb
-list(APPEND CMAKE_MODULE_PATH "${PEGASUS_PROJECT_DIR}/rocksdb/cmake/modules/")
-find_package(snappy)
-find_package(zstd)
-find_package(lz4)
-set(CMAKE_PREFIX_PATH ${PEGASUS_PROJECT_DIR}/rocksdb/build/output;${CMAKE_PREFIX_PATH})
-find_package(RocksDB REQUIRED) # RocksDB::rocksdb means librocksdb.a
-
 add_subdirectory(base)
 add_subdirectory(reporter)
 add_subdirectory(base/test)
