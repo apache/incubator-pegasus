@@ -218,7 +218,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "parse rocksdb_compression_type failed.");
 
     rocksdb::BlockBasedTableOptions tbl_opts;
-    tbl_opts.read_amp_bytes_per_bit = 16; // todo
+    tbl_opts.read_amp_bytes_per_bit = 1; // todo
 
     if (dsn_config_get_value_bool("pegasus.server",
                                   "rocksdb_disable_table_block_cache",
@@ -310,7 +310,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         }
     }
 
-    
     _data_cf_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
     _meta_cf_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
 
