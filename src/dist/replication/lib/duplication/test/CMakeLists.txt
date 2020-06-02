@@ -8,16 +8,8 @@ set(MY_PROJ_LIBS dsn_meta_server
         dsn_replica_server
         dsn.replication.zookeeper_provider
         dsn_replication_common
-        dsn.block_service.local
-        dsn.block_service.fds
         dsn.failure_detector
         zookeeper_mt
-        galaxy-fds-sdk-cpp
-        PocoNet
-        PocoFoundation
-        PocoNetSSL
-        PocoJSON
-        crypto
         gtest
 )
 

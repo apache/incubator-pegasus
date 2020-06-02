@@ -40,7 +40,7 @@
 
 #include "dist/replication/common/replication_common.h"
 #include "dist/replication/common/fs_manager.h"
-#include "dist/replication/common/block_service_manager.h"
+#include "dist/block_service/block_service_manager.h"
 #include "replica.h"
 
 namespace dsn {
@@ -357,7 +357,7 @@ private:
 
     // handle all the block filesystems for current replica stub
     // (in other words, current service node)
-    block_service_manager _block_service_manager;
+    dist::block_service::block_service_manager _block_service_manager;
 
     // nfs_node
     std::unique_ptr<dsn::nfs_node> _nfs;

@@ -52,15 +52,6 @@ public:
         return _bulk_loader->parse_bulk_load_metadata(file_path);
     }
 
-    bool test_verify_file(int64_t size, const std::string &md5)
-    {
-        file_meta f_meta;
-        f_meta.name = FILE_NAME;
-        f_meta.size = size;
-        f_meta.md5 = md5;
-        return _bulk_loader->verify_file(f_meta, LOCAL_DIR);
-    }
-
     int32_t test_report_group_download_progress(bulk_load_status::type status,
                                                 int32_t p_progress,
                                                 int32_t s1_progress,
@@ -363,24 +354,6 @@ TEST_F(replica_bulk_loader_test, bulk_load_metadata_parse_succeed)
     ec = test_parse_bulk_load_metadata(metadata_file_name);
     ASSERT_EQ(ec, ERR_OK);
     ASSERT_TRUE(validate_metadata());
-    utils::filesystem::remove_path(LOCAL_DIR);
-}
-
-// TODO(heyuchen): move tests into block service
-// verify_file unit tests
-TEST_F(replica_bulk_loader_test, verify_file_failed)
-{
-    utils::filesystem::create_directory(LOCAL_DIR);
-    create_local_file(FILE_NAME);
-    ASSERT_FALSE(test_verify_file(_file_meta.size, "wrong_md5"));
-    utils::filesystem::remove_path(LOCAL_DIR);
-}
-
-TEST_F(replica_bulk_loader_test, verify_file_succeed)
-{
-    utils::filesystem::create_directory(LOCAL_DIR);
-    create_local_file(FILE_NAME);
-    ASSERT_TRUE(test_verify_file(_file_meta.size, _file_meta.md5));
     utils::filesystem::remove_path(LOCAL_DIR);
 }
 

@@ -5,7 +5,7 @@
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
 
-#include "dist/replication/common/block_service_manager.h"
+#include "dist/block_service/block_service_manager.h"
 #include "dist/replication/lib/backup/replica_backup_manager.h"
 
 #include "replica.h"

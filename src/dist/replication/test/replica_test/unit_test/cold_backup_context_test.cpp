@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "block_service_mock.h"
+#include "backup_block_service_mock.h"
 
 ref_ptr<block_file_mock> current_chkpt_file = new block_file_mock("", 0, "");
 ref_ptr<block_file_mock> backup_metadata_file = new block_file_mock("", 0, "");
@@ -8,7 +8,8 @@ ref_ptr<block_file_mock> regular_file = new block_file_mock("", 0, "");
 static std::string backup_root = "root";
 static backup_request request;
 static int32_t concurrent_uploading_file_cnt = 1;
-std::shared_ptr<block_service_mock> block_service = std::make_shared<block_service_mock>();
+std::shared_ptr<backup_block_service_mock> block_service =
+    std::make_shared<backup_block_service_mock>();
 
 void replication_service_test_app::check_backup_on_remote_test()
 {

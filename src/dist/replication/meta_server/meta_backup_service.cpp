@@ -6,7 +6,7 @@
 #include "meta_backup_service.h"
 #include "dist/replication/meta_server/meta_service.h"
 #include "dist/replication/meta_server/server_state.h"
-#include "dist/replication/common/block_service_manager.h"
+#include "dist/block_service/block_service_manager.h"
 
 namespace dsn {
 namespace replication {
@@ -1262,7 +1262,7 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
         }
 
         {
-            block_service_manager _block_service_manager;
+            dist::block_service::block_service_manager _block_service_manager;
             if (_block_service_manager.get_block_filesystem(request.backup_provider_type) ==
                 nullptr) {
                 derror("invalid backup_provider_type(%s)", request.backup_provider_type.c_str());

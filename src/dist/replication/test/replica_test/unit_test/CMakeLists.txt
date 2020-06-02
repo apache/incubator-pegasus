@@ -14,20 +14,10 @@ set(MY_PROJ_LIBS dsn_meta_server
                  dsn.replication.ddlclient
                  dsn.replication.zookeeper_provider
                  dsn_replication_common
-                 dsn.block_service.local
-                 dsn.block_service.fds
                  dsn.failure_detector
                  dsn_http
                  dsn_runtime
                  zookeeper_mt
-                 galaxy-fds-sdk-cpp
-                 PocoCrypto
-                 PocoFoundation
-                 PocoJSON
-                 PocoNet
-                 PocoNetSSL
-                 PocoUtil
-                 crypto
                  gtest)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
