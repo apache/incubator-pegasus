@@ -23,10 +23,13 @@ set(MY_PROJ_LIBS
     dsn.failure_detector.multimaster
     pegasus_client_static
     galaxy-fds-sdk-cpp
-    PocoNet
+    PocoCrypto
     PocoFoundation
-    PocoNetSSL
     PocoJSON
+    PocoNet
+    PocoNetSSL
+    PocoUtil
+    crypto
     pegasus_geo_lib
     RocksDB::rocksdb
     s2

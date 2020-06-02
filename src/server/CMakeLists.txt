@@ -27,10 +27,13 @@ set(MY_PROJ_LIBS
     zookeeper_mt
     event
     galaxy-fds-sdk-cpp
-    PocoNet
+    PocoCrypto
     PocoFoundation
-    PocoNetSSL
     PocoJSON
+    PocoNet
+    PocoNetSSL
+    PocoUtil
+    crypto
     )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
