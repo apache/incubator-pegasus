@@ -1,9 +1,7 @@
 sudo: required
-dist: trusty
+dist: bionic
 
 language: cpp
-
-os: linux
 
 compiler:
     - gcc
@@ -12,28 +10,19 @@ cache:
     - ccache
     - apt
 
-addons:
-    apt:
-        packages:
-            - clang-format-3.9
-
 before_install:
-    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/build-depends.tar.gz
-    - tar xfz build-depends.tar.gz
-    - rm -f build-depends.tar.gz
-    - cd packages
-    - ls | xargs sudo dpkg -i --force-depends
-    - cd ..
+    - sudo apt-get -y install libboost-all-dev libaio-dev clang-format-3.9
 
 before_script:
     - cd thirdparty
-    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-thirdparty-prebuild.tar.gz
-    - tar xf pegasus-thirdparty-prebuild.tar.gz
-    - rm -f pegasus-thirdparty-prebuild.tar.gz
+    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-thirdparty-prebuild.zip
+    - unzip pegasus-thirdparty-prebuild.zip
+    - rm -f pegasus-thirdparty-prebuild.zip
     - cd ..
     - ulimit -c unlimited -S
 
 script:
+    - export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib/:$LD_LIBRARY_PATH
     - ./run.sh test --skip_thirdparty --check --disable_gperf
 
 after_script:

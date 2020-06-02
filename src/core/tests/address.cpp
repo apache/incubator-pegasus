@@ -52,7 +52,9 @@ static inline uint32_t host_ipv4(uint8_t sec1, uint8_t sec2, uint8_t sec3, uint8
 TEST(core, rpc_address_ipv4_from_host)
 {
     // localhost --> 127.0.0.1
-    ASSERT_EQ(host_ipv4(127, 0, 0, 1), rpc_address::ipv4_from_host("localhost"));
+    // on some systems "localhost" could be "127.0.1.1" (debian)
+    ASSERT_TRUE(host_ipv4(127, 0, 0, 1) == rpc_address::ipv4_from_host("localhost") ||
+                host_ipv4(127, 0, 1, 1) == rpc_address::ipv4_from_host("localhost"));
 
     // 127.0.0.1 --> 127.0.0.1
     ASSERT_EQ(host_ipv4(127, 0, 0, 1), rpc_address::ipv4_from_host("127.0.0.1"));
@@ -115,7 +117,8 @@ TEST(core, dsn_address_build)
         ASSERT_EQ(host_ipv4(127, 0, 0, 1), addr.ip());
         ASSERT_EQ(8080, addr.port());
 
-        ASSERT_EQ(addr, dsn::rpc_address("localhost", 8080));
+        ASSERT_TRUE(dsn::rpc_address("127.0.0.1", 8080) == dsn::rpc_address("localhost", 8080) ||
+                    dsn::rpc_address("127.0.1.1", 8080) == dsn::rpc_address("localhost", 8080));
         ASSERT_EQ(addr, dsn::rpc_address("127.0.0.1", 8080));
         ASSERT_EQ(addr, dsn::rpc_address(host_ipv4(127, 0, 0, 1), 8080));
     }
