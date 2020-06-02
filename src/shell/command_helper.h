@@ -15,7 +15,7 @@
 #include <rocksdb/env.h>
 #include <rocksdb/statistics.h>
 #include <dsn/cpp/json_helper.h>
-#include <dsn/dist/cli/cli.client.h>
+#include <dsn/dist/remote_command.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 #include <dsn/perf_counter/perf_counter_utils.h>
@@ -464,32 +464,33 @@ inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<n
     return true;
 }
 
-inline void call_remote_command(shell_context *sc,
-                                const std::vector<node_desc> &nodes,
-                                const ::dsn::command &cmd,
-                                std::vector<std::pair<bool, std::string>> &results)
+inline std::vector<std::pair<bool, std::string>>
+call_remote_command(shell_context *sc,
+                    const std::vector<node_desc> &nodes,
+                    const std::string &cmd,
+                    const std::vector<std::string> &arguments)
 {
-    dsn::cli_client cli;
+    std::vector<std::pair<bool, std::string>> results;
     std::vector<dsn::task_ptr> tasks;
     tasks.resize(nodes.size());
     results.resize(nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
-        auto callback = [&results,
-                         i](::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) {
+        auto callback = [&results, i](::dsn::error_code err, const std::string &resp) {
             if (err == ::dsn::ERR_OK) {
                 results[i].first = true;
-                ::dsn::unmarshall(resp, results[i].second);
+                results[i].second = resp;
             } else {
                 results[i].first = false;
                 results[i].second = err.to_string();
             }
         };
-        tasks[i] =
-            cli.call(cmd, callback, std::chrono::milliseconds(5000), 0, 0, 0, nodes[i].address);
+        tasks[i] = dsn::dist::cmd::async_call_remote(
+            nodes[i].address, cmd, arguments, callback, std::chrono::milliseconds(5000));
     }
     for (int i = 0; i < nodes.size(); ++i) {
         tasks[i]->wait();
     }
+    return results;
 }
 
 inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
@@ -771,13 +772,8 @@ inline bool get_app_partition_stat(shell_context *sc,
     }
 
     // get all of the perf counters with format ".*@.*"
-    ::dsn::command command;
-    command.cmd = "perf-counters";
-    char tmp[256];
-    sprintf(tmp, ".*@.*");
-    command.arguments.emplace_back(tmp);
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, nodes, command, results);
+    std::vector<std::pair<bool, std::string>> results =
+        call_remote_command(sc, nodes, "perf-counters", {".*@.*"});
 
     for (int i = 0; i < nodes.size(); ++i) {
         // decode info of perf-counters on node i
@@ -841,17 +837,16 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
         }
     }
 
-    ::dsn::command command;
-    command.cmd = "perf-counters";
+    std::vector<std::string> arguments;
     char tmp[256];
     if (app_name.empty()) {
         sprintf(tmp, ".*@.*");
     } else {
         sprintf(tmp, ".*@%d\\..*", app_info->app_id);
     }
-    command.arguments.emplace_back(tmp);
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, nodes, command, results);
+    arguments.emplace_back(tmp);
+    std::vector<std::pair<bool, std::string>> results =
+        call_remote_command(sc, nodes, "perf-counters", arguments);
 
     if (app_name.empty()) {
         std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
@@ -964,11 +959,8 @@ inline bool get_capacity_unit_stat(shell_context *sc,
         return false;
     }
 
-    ::dsn::command command;
-    command.cmd = "perf-counters-by-substr";
-    command.arguments.emplace_back(".cu@");
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, nodes, command, results);
+    std::vector<std::pair<bool, std::string>> results =
+        call_remote_command(sc, nodes, "perf-counters-by-substr", {".cu@"});
 
     nodes_stat.resize(nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
@@ -1036,11 +1028,8 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         }
     }
 
-    ::dsn::command command;
-    command.cmd = "perf-counters-by-prefix";
-    command.arguments.emplace_back("replica*app.pegasus*disk.storage.sst(MB)");
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, nodes, command, results);
+    std::vector<std::pair<bool, std::string>> results = call_remote_command(
+        sc, nodes, "perf-counters-by-prefix", {"replica*app.pegasus*disk.storage.sst(MB)"});
 
     for (int i = 0; i < nodes.size(); ++i) {
         dsn::rpc_address node_addr = nodes[i].address;
