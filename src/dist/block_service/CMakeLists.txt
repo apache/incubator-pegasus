@@ -16,7 +16,7 @@ set(MY_BINPLACES "")
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
-dsn_add_shared_library()
+dsn_add_static_library()
 
 add_subdirectory(fds)
 add_subdirectory(local)
