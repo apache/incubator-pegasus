@@ -19,8 +19,6 @@ addons:
 cache:
     - ccache
     - apt
-    - directories:
-        - rdsn/builder
 
 before_script:
     - cd rdsn/thirdparty
