@@ -16338,5 +16338,237 @@ void group_bulk_load_response::printTo(std::ostream &out) const
         << "bulk_load_state=" << to_string(bulk_load_state);
     out << ")";
 }
+
+ingestion_request::~ingestion_request() throw() {}
+
+void ingestion_request::__set_app_name(const std::string &val) { this->app_name = val; }
+
+void ingestion_request::__set_metadata(const bulk_load_metadata &val) { this->metadata = val; }
+
+uint32_t ingestion_request::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->app_name);
+                this->__isset.app_name = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->metadata.read(iprot);
+                this->__isset.metadata = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t ingestion_request::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("ingestion_request");
+
+    xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 1);
+    xfer += oprot->writeString(this->app_name);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("metadata", ::apache::thrift::protocol::T_STRUCT, 2);
+    xfer += this->metadata.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(ingestion_request &a, ingestion_request &b)
+{
+    using ::std::swap;
+    swap(a.app_name, b.app_name);
+    swap(a.metadata, b.metadata);
+    swap(a.__isset, b.__isset);
+}
+
+ingestion_request::ingestion_request(const ingestion_request &other689)
+{
+    app_name = other689.app_name;
+    metadata = other689.metadata;
+    __isset = other689.__isset;
+}
+ingestion_request::ingestion_request(ingestion_request &&other690)
+{
+    app_name = std::move(other690.app_name);
+    metadata = std::move(other690.metadata);
+    __isset = std::move(other690.__isset);
+}
+ingestion_request &ingestion_request::operator=(const ingestion_request &other691)
+{
+    app_name = other691.app_name;
+    metadata = other691.metadata;
+    __isset = other691.__isset;
+    return *this;
+}
+ingestion_request &ingestion_request::operator=(ingestion_request &&other692)
+{
+    app_name = std::move(other692.app_name);
+    metadata = std::move(other692.metadata);
+    __isset = std::move(other692.__isset);
+    return *this;
+}
+void ingestion_request::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "ingestion_request(";
+    out << "app_name=" << to_string(app_name);
+    out << ", "
+        << "metadata=" << to_string(metadata);
+    out << ")";
+}
+
+ingestion_response::~ingestion_response() throw() {}
+
+void ingestion_response::__set_err(const ::dsn::error_code &val) { this->err = val; }
+
+void ingestion_response::__set_rocksdb_error(const int32_t val) { this->rocksdb_error = val; }
+
+uint32_t ingestion_response::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->err.read(iprot);
+                this->__isset.err = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                xfer += iprot->readI32(this->rocksdb_error);
+                this->__isset.rocksdb_error = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t ingestion_response::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("ingestion_response");
+
+    xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->err.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("rocksdb_error", ::apache::thrift::protocol::T_I32, 2);
+    xfer += oprot->writeI32(this->rocksdb_error);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(ingestion_response &a, ingestion_response &b)
+{
+    using ::std::swap;
+    swap(a.err, b.err);
+    swap(a.rocksdb_error, b.rocksdb_error);
+    swap(a.__isset, b.__isset);
+}
+
+ingestion_response::ingestion_response(const ingestion_response &other693)
+{
+    err = other693.err;
+    rocksdb_error = other693.rocksdb_error;
+    __isset = other693.__isset;
+}
+ingestion_response::ingestion_response(ingestion_response &&other694)
+{
+    err = std::move(other694.err);
+    rocksdb_error = std::move(other694.rocksdb_error);
+    __isset = std::move(other694.__isset);
+}
+ingestion_response &ingestion_response::operator=(const ingestion_response &other695)
+{
+    err = other695.err;
+    rocksdb_error = other695.rocksdb_error;
+    __isset = other695.__isset;
+    return *this;
+}
+ingestion_response &ingestion_response::operator=(ingestion_response &&other696)
+{
+    err = std::move(other696.err);
+    rocksdb_error = std::move(other696.rocksdb_error);
+    __isset = std::move(other696.__isset);
+    return *this;
+}
+void ingestion_response::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "ingestion_response(";
+    out << "err=" << to_string(err);
+    out << ", "
+        << "rocksdb_error=" << to_string(rocksdb_error);
+    out << ")";
+}
 }
 } // namespace

@@ -149,6 +149,6 @@ void command::printTo(std::ostream &out) const
         << "arguments=" << to_string(arguments);
     out << ")";
 }
-} // namespace cmd
-} // namespace dist
-} // namespace dsn
+}
+}
+} // namespace

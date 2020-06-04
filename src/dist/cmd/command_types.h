@@ -73,8 +73,8 @@ inline std::ostream &operator<<(std::ostream &out, const command &obj)
     obj.printTo(out);
     return out;
 }
-} // namespace cmd
-} // namespace dist
-} // namespace dsn
+}
+}
+} // namespace
 
 #endif
