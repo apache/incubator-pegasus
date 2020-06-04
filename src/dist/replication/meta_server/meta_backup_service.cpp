@@ -1342,20 +1342,20 @@ void backup_service::do_add_policy(dsn::message_ex *req,
 }
 
 void backup_service::do_update_policy_to_remote_storage(
-    dsn::message_ex *req, const policy &p, std::shared_ptr<policy_context> &p_context_ptr)
+    configuration_modify_backup_policy_rpc rpc,
+    const policy &p,
+    std::shared_ptr<policy_context> &p_context_ptr)
 {
     std::string policy_path = get_policy_path(p.policy_name);
     blob value = json::json_forwarder<policy>::encode(p);
     _meta_svc->get_remote_storage()->set_data(
-        policy_path, value, LPC_DEFAULT_CALLBACK, [this, req, p, p_context_ptr](error_code err) {
+        policy_path, value, LPC_DEFAULT_CALLBACK, [this, rpc, p, p_context_ptr](error_code err) {
             if (err == ERR_OK) {
                 configuration_modify_backup_policy_response resp;
                 resp.err = ERR_OK;
                 ddebug("update backup policy to remote storage succeed, policy_name = %s",
                        p.policy_name.c_str());
                 p_context_ptr->set_policy(p);
-                _meta_svc->reply_data(req, resp);
-                req->release_ref();
             } else if (err == ERR_TIMEOUT) {
                 derror("update backup policy to remote storage failed, policy_name = %s, retry "
                        "after %" PRId64 "(ms)",
@@ -1365,7 +1365,7 @@ void backup_service::do_update_policy_to_remote_storage(
                                  &_tracker,
                                  std::bind(&backup_service::do_update_policy_to_remote_storage,
                                            this,
-                                           req,
+                                           rpc,
                                            p,
                                            p_context_ptr),
                                  0,
@@ -1453,13 +1453,12 @@ void backup_service::query_backup_policy(query_backup_policy_rpc rpc)
     }
 }
 
-void backup_service::modify_backup_policy(dsn::message_ex *msg)
+void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc rpc)
 {
-    configuration_modify_backup_policy_request request;
-    configuration_modify_backup_policy_response response;
+    const configuration_modify_backup_policy_request &request = rpc.request();
+    configuration_modify_backup_policy_response &response = rpc.response();
     response.err = ERR_OK;
 
-    ::dsn::unmarshall(msg, request);
     std::shared_ptr<policy_context> context_ptr;
     {
         zauto_lock _(_lock);
@@ -1472,8 +1471,6 @@ void backup_service::modify_backup_policy(dsn::message_ex *msg)
         }
     }
     if (context_ptr == nullptr) {
-        _meta_svc->reply_data(msg, response);
-        msg->release_ref();
         return;
     }
     policy cur_policy = context_ptr->get_policy();
@@ -1587,10 +1584,7 @@ void backup_service::modify_backup_policy(dsn::message_ex *msg)
     }
 
     if (have_modify_policy) {
-        do_update_policy_to_remote_storage(msg, cur_policy, context_ptr);
-    } else {
-        _meta_svc->reply_data(msg, response);
-        msg->release_ref();
+        do_update_policy_to_remote_storage(rpc, cur_policy, context_ptr);
     }
 }
 

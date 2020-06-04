@@ -224,53 +224,18 @@ void meta_service_test_app::state_sync_test()
         ss2->initialize_node_state();
 
         // then let's test the query configuration calls
-        // 1. by node
-        configuration_query_by_node_request request;
-        configuration_query_by_node_response response;
-
-        std::cerr << "test query config by node normal " << std::endl;
-        request.node = server_list[random32(0, 8)];
-        ss2->query_configuration_by_node(request, response);
-        ASSERT_EQ(dsn::ERR_OK, response.err);
-
-        std::vector<dsn::partition_configuration> pc_list;
-        for (auto &iter : ss1->_all_apps) {
-            std::shared_ptr<app_state> &app = iter.second;
-            for (dsn::partition_configuration &pc : app->partitions)
-                if (is_member(pc, request.node))
-                    pc_list.push_back(pc);
-        }
-
-        auto cmp1 = [](const configuration_update_request &pc1,
-                       const configuration_update_request &pc2) {
-            return pc1.config.pid < pc2.config.pid;
-        };
-        auto cmp2 = [](const dsn::partition_configuration &pc1,
-                       const dsn::partition_configuration &pc2) { return pc1.pid < pc2.pid; };
-
-        std::sort(pc_list.begin(), pc_list.end(), cmp2);
-        std::sort(response.partitions.begin(), response.partitions.end(), cmp1);
-        ASSERT_EQ(pc_list.size(), response.partitions.size());
-        for (unsigned i = 0; i != pc_list.size(); ++i)
-            ASSERT_EQ(pc_list[i], response.partitions[i].config);
-
-        // 1.2 invalid address
-        request.node.assign_ipv4("1.2.3.4", 1234);
-        ss2->query_configuration_by_node(request, response);
-        ASSERT_EQ(dsn::ERR_OBJECT_NOT_FOUND, response.err);
-
-        // 2.1. normal gpid
+        // 1.1. normal gpid
         dsn::gpid gpid = {15, 0};
         dsn::partition_configuration pc;
         ASSERT_TRUE(ss2->query_configuration_by_gpid(gpid, pc));
         ASSERT_EQ(ss1->_all_apps[15]->partitions[0], pc);
-        // 2.2 dropped app
+        // 1.2 dropped app
         if (!drop_set.empty()) {
             gpid.set_app_id(drop_set[0]);
             ASSERT_FALSE(ss2->query_configuration_by_gpid(gpid, pc));
         }
 
-        // 3.1 query configuration by index
+        // 2.1 query configuration by index
         dsn::configuration_query_by_index_request req;
         dsn::configuration_query_by_index_response resp;
         req.app_name = "test_app15";
@@ -285,12 +250,12 @@ void meta_service_test_app::state_sync_test()
         for (int i = 1; i <= 3; ++i)
             ASSERT_EQ(resp.partitions[i - 1], app_created->partitions[i]);
 
-        // 3.2 no exist app
+        // 2.2 no exist app
         req.app_name = "make_no_sense";
         ss2->query_configuration_by_index(req, resp);
         ASSERT_EQ(dsn::ERR_OBJECT_NOT_FOUND, resp.err);
 
-        // 3.3 app is dropping/creating/recalling
+        // 2.3 app is dropping/creating/recalling
         std::shared_ptr<app_state> app = ss2->get_app(15);
         req.app_name = app->app_name;
 

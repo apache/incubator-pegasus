@@ -21,6 +21,9 @@ class backup_service;
 typedef rpc_holder<configuration_query_backup_policy_request,
                    configuration_query_backup_policy_response>
     query_backup_policy_rpc;
+typedef rpc_holder<configuration_modify_backup_policy_request,
+                   configuration_modify_backup_policy_response>
+    configuration_modify_backup_policy_rpc;
 
 struct backup_info_status
 {
@@ -320,7 +323,7 @@ public:
     const std::string &policy_root() const { return _policy_meta_root; }
     void add_backup_policy(dsn::message_ex* msg);
     void query_backup_policy(query_backup_policy_rpc rpc);
-    void modify_backup_policy(dsn::message_ex* msg);
+    void modify_backup_policy(configuration_modify_backup_policy_rpc rpc);
 
     // compose the absolute path(AP) for policy
     // input:
@@ -343,7 +346,7 @@ private:
     void do_add_policy(dsn::message_ex* req,
                        std::shared_ptr<policy_context> p,
                        const std::string &hint_msg);
-    void do_update_policy_to_remote_storage(dsn::message_ex* req,
+    void do_update_policy_to_remote_storage(configuration_modify_backup_policy_rpc rpc,
                                             const policy &p,
                                             std::shared_ptr<policy_context> &p_context_ptr);
 

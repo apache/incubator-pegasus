@@ -138,9 +138,6 @@ public:
         return iter->second;
     }
 
-    // query state
-    void query_configuration_by_node(const configuration_query_by_node_request &request,
-                                     /*out*/ configuration_query_by_node_response &response);
     void query_configuration_by_index(const configuration_query_by_index_request &request,
                                       /*out*/ configuration_query_by_index_response &response);
     bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &config);
@@ -159,7 +156,7 @@ public:
     void clear_app_envs(const app_env_rpc &env_rpc);
 
     // update configuration
-    void on_config_sync(dsn::message_ex *msg);
+    void on_config_sync(configuration_query_by_node_rpc rpc);
     void on_update_configuration(std::shared_ptr<configuration_update_request> &request,
                                  dsn::message_ex *msg);
 
@@ -172,9 +169,9 @@ public:
                              configuration_balancer_response &response);
     void on_start_recovery(const configuration_recovery_request &request,
                            configuration_recovery_response &response);
-    void on_recv_restore_report(dsn::message_ex *msg);
+    void on_recv_restore_report(configuration_report_restore_status_rpc rpc);
 
-    void on_query_restore_status(dsn::message_ex *msg);
+    void on_query_restore_status(configuration_query_restore_rpc rpc);
 
     // return true if no need to do any actions
     bool check_all_partitions();
