@@ -46,6 +46,18 @@
 namespace dsn {
 namespace replication {
 
+typedef rpc_holder<group_check_response, learn_notify_response> learn_completion_notification_rpc;
+typedef rpc_holder<group_check_request, group_check_response> group_check_rpc;
+typedef rpc_holder<query_replica_decree_request, query_replica_decree_response>
+    query_replica_decree_rpc;
+typedef rpc_holder<query_replica_info_request, query_replica_info_response> query_replica_info_rpc;
+typedef rpc_holder<replica_configuration, learn_response> copy_checkpoint_rpc;
+typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;
+typedef rpc_holder<query_app_info_request, query_app_info_response> query_app_info_rpc;
+typedef rpc_holder<backup_request, backup_response> backup_rpc;
+typedef rpc_holder<notify_catch_up_request, notify_cacth_up_response> notify_catch_up_rpc;
+typedef rpc_holder<group_bulk_load_request, group_bulk_load_response> group_bulk_load_rpc;
+
 class mutation_log;
 class replication_checker;
 namespace test {
@@ -91,17 +103,13 @@ public:
     //    messages from meta server
     //
     void on_config_proposal(const configuration_update_request &proposal);
-    void on_query_decree(const query_replica_decree_request &req,
-                         /*out*/ query_replica_decree_response &resp);
-    void on_query_replica_info(const query_replica_info_request &req,
-                               /*out*/ query_replica_info_response &resp);
-    void on_query_disk_info(const query_disk_info_request &req,
-                            /*out*/ query_disk_info_response &resp);
-    void on_query_app_info(const query_app_info_request &req,
-                           /*out*/ query_app_info_response &resp);
-    void on_cold_backup(const backup_request &request, /*out*/ backup_response &response);
+    void on_query_decree(query_replica_decree_rpc rpc);
+    void on_query_replica_info(query_replica_info_rpc rpc);
+    void on_query_disk_info(query_disk_info_rpc rpc);
+    void on_query_app_info(query_app_info_rpc rpc);
+    void on_cold_backup(backup_rpc rpc);
     void on_clear_cold_backup(const backup_clear_request &request);
-    void on_bulk_load(const bulk_load_request &request, /*out*/ bulk_load_response &response);
+    void on_bulk_load(bulk_load_rpc rpc);
 
     //
     //    messages from peers (primary or secondary)
@@ -112,21 +120,18 @@ public:
     //
     void on_prepare(dsn::message_ex *request);
     void on_learn(dsn::message_ex *msg);
-    void on_learn_completion_notification(const group_check_response &report,
-                                          /*out*/ learn_notify_response &response);
+    void on_learn_completion_notification(learn_completion_notification_rpc rpc);
     void on_add_learner(const group_check_request &request);
     void on_remove(const replica_configuration &request);
-    void on_group_check(const group_check_request &request, /*out*/ group_check_response &response);
-    void on_copy_checkpoint(const replica_configuration &request, /*out*/ learn_response &response);
-    void on_group_bulk_load(const group_bulk_load_request &request,
-                            /*out*/ group_bulk_load_response &response);
+    void on_group_check(group_check_rpc rpc);
+    void on_copy_checkpoint(copy_checkpoint_rpc rpc);
+    void on_group_bulk_load(group_bulk_load_rpc rpc);
 
     //
     //    functions while executing partition split
     //
     // on primary, child notify itself has been caught up parent
-    void on_notify_primary_split_catch_up(const notify_catch_up_request &request,
-                                          notify_cacth_up_response &response);
+    void on_notify_primary_split_catch_up(notify_catch_up_rpc rpc);
 
     //
     //    local messages

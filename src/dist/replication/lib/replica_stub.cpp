@@ -850,9 +850,11 @@ void replica_stub::on_config_proposal(const configuration_update_request &propos
     }
 }
 
-void replica_stub::on_query_decree(const query_replica_decree_request &req,
-                                   /*out*/ query_replica_decree_response &resp)
+void replica_stub::on_query_decree(query_replica_decree_rpc rpc)
 {
+    const query_replica_decree_request &req = rpc.request();
+    query_replica_decree_response &resp = rpc.response();
+
     replica_ptr rep = get_replica(req.pid);
     if (rep != nullptr) {
         resp.err = ERR_OK;
@@ -869,9 +871,9 @@ void replica_stub::on_query_decree(const query_replica_decree_request &req,
     }
 }
 
-void replica_stub::on_query_replica_info(const query_replica_info_request &req,
-                                         /*out*/ query_replica_info_response &resp)
+void replica_stub::on_query_replica_info(query_replica_info_rpc rpc)
 {
+    query_replica_info_response &resp = rpc.response();
     std::set<gpid> visited_replicas;
     {
         zauto_read_lock l(_replicas_lock);
@@ -903,9 +905,10 @@ void replica_stub::on_query_replica_info(const query_replica_info_request &req,
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
-void replica_stub::on_query_disk_info(const query_disk_info_request &req,
-                                      /*out*/ query_disk_info_response &resp)
+void replica_stub::on_query_disk_info(query_disk_info_rpc rpc)
 {
+    const query_disk_info_request &req = rpc.request();
+    query_disk_info_response &resp = rpc.response();
     int app_id = 0;
     if (!req.app_name.empty()) {
         zauto_read_lock l(_replicas_lock);
@@ -955,9 +958,11 @@ void replica_stub::on_query_disk_info(const query_disk_info_request &req,
     resp.err = ERR_OK;
 }
 
-void replica_stub::on_query_app_info(const query_app_info_request &req,
-                                     query_app_info_response &resp)
+void replica_stub::on_query_app_info(query_app_info_rpc rpc)
 {
+    const query_app_info_request &req = rpc.request();
+    query_app_info_response &resp = rpc.response();
+
     ddebug("got query app info request from (%s)", req.meta_server.to_string());
     resp.err = dsn::ERR_OK;
     std::set<app_id> visited_apps;
@@ -988,8 +993,11 @@ void replica_stub::on_query_app_info(const query_app_info_request &req,
     }
 }
 
-void replica_stub::on_cold_backup(const backup_request &request, /*out*/ backup_response &response)
+void replica_stub::on_cold_backup(backup_rpc rpc)
 {
+    const backup_request &request = rpc.request();
+    backup_response &response = rpc.response();
+
     ddebug("received cold backup request: backup{%s.%s.%" PRId64 "}",
            request.pid.to_string(),
            request.policy.policy_name.c_str(),
@@ -1047,9 +1055,10 @@ void replica_stub::on_prepare(dsn::message_ex *request)
     }
 }
 
-void replica_stub::on_group_check(const group_check_request &request,
-                                  /*out*/ group_check_response &response)
+void replica_stub::on_group_check(group_check_rpc rpc)
 {
+    const group_check_request &request = rpc.request();
+    group_check_response &response = rpc.response();
     if (!is_connected()) {
         dwarn("%s@%s: received group check: not connected, ignore",
               request.config.pid.to_string(),
@@ -1098,9 +1107,11 @@ void replica_stub::on_learn(dsn::message_ex *msg)
     }
 }
 
-void replica_stub::on_copy_checkpoint(const replica_configuration &request,
-                                      /*out*/ learn_response &response)
+void replica_stub::on_copy_checkpoint(copy_checkpoint_rpc rpc)
 {
+    const replica_configuration &request = rpc.request();
+    learn_response &response = rpc.response();
+
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
         rep->on_copy_checkpoint(request, response);
@@ -1109,9 +1120,10 @@ void replica_stub::on_copy_checkpoint(const replica_configuration &request,
     }
 }
 
-void replica_stub::on_learn_completion_notification(const group_check_response &report,
-                                                    /*out*/ learn_notify_response &response)
+void replica_stub::on_learn_completion_notification(learn_completion_notification_rpc rpc)
 {
+    const group_check_response &report = rpc.request();
+    learn_notify_response &response = rpc.response();
     response.pid = report.pid;
     response.signature = report.learner_signature;
     replica_ptr rep = get_replica(report.pid);
@@ -2034,30 +2046,35 @@ void replica_stub::handle_log_failure(error_code err)
 void replica_stub::open_service()
 {
     register_rpc_handler(RPC_CONFIG_PROPOSAL, "ProposeConfig", &replica_stub::on_config_proposal);
-
     register_rpc_handler(RPC_PREPARE, "prepare", &replica_stub::on_prepare);
     register_rpc_handler(RPC_LEARN, "Learn", &replica_stub::on_learn);
-    register_rpc_handler(RPC_LEARN_COMPLETION_NOTIFY,
-                         "LearnNotify",
-                         &replica_stub::on_learn_completion_notification);
+    register_rpc_handler_with_rpc_holder(RPC_LEARN_COMPLETION_NOTIFY,
+                                         "LearnNotify",
+                                         &replica_stub::on_learn_completion_notification);
     register_rpc_handler(RPC_LEARN_ADD_LEARNER, "LearnAdd", &replica_stub::on_add_learner);
     register_rpc_handler(RPC_REMOVE_REPLICA, "remove", &replica_stub::on_remove);
-    register_rpc_handler(RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
-    register_rpc_handler(RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
-    register_rpc_handler(
+    register_rpc_handler_with_rpc_holder(
+        RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
+    register_rpc_handler_with_rpc_holder(
+        RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
+    register_rpc_handler_with_rpc_holder(
         RPC_QUERY_REPLICA_INFO, "query_replica_info", &replica_stub::on_query_replica_info);
-    register_rpc_handler(
+    register_rpc_handler_with_rpc_holder(
         RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
-    register_rpc_handler(RPC_QUERY_DISK_INFO, "query_disk_info", &replica_stub::on_query_disk_info);
-    register_rpc_handler(RPC_QUERY_APP_INFO, "query_app_info", &replica_stub::on_query_app_info);
-    register_rpc_handler(RPC_COLD_BACKUP, "cold_backup", &replica_stub::on_cold_backup);
+    register_rpc_handler_with_rpc_holder(
+        RPC_QUERY_DISK_INFO, "query_disk_info", &replica_stub::on_query_disk_info);
+    register_rpc_handler_with_rpc_holder(
+        RPC_QUERY_APP_INFO, "query_app_info", &replica_stub::on_query_app_info);
+    register_rpc_handler_with_rpc_holder(
+        RPC_COLD_BACKUP, "cold_backup", &replica_stub::on_cold_backup);
     register_rpc_handler(
         RPC_CLEAR_COLD_BACKUP, "clear_cold_backup", &replica_stub::on_clear_cold_backup);
-    register_rpc_handler(RPC_SPLIT_NOTIFY_CATCH_UP,
-                         "child_notify_catch_up",
-                         &replica_stub::on_notify_primary_split_catch_up);
-    register_rpc_handler(RPC_BULK_LOAD, "bulk_load", &replica_stub::on_bulk_load);
-    register_rpc_handler(RPC_GROUP_BULK_LOAD, "group_bulk_load", &replica_stub::on_group_bulk_load);
+    register_rpc_handler_with_rpc_holder(RPC_SPLIT_NOTIFY_CATCH_UP,
+                                         "child_notify_catch_up",
+                                         &replica_stub::on_notify_primary_split_catch_up);
+    register_rpc_handler_with_rpc_holder(RPC_BULK_LOAD, "bulk_load", &replica_stub::on_bulk_load);
+    register_rpc_handler_with_rpc_holder(
+        RPC_GROUP_BULK_LOAD, "group_bulk_load", &replica_stub::on_group_bulk_load);
 
     _kill_partition_command = ::dsn::command_manager::instance().register_app_command(
         {"kill_partition"},
@@ -2637,9 +2654,10 @@ replica_stub::split_replica_exec(dsn::task_code code, gpid pid, local_execution 
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-void replica_stub::on_notify_primary_split_catch_up(const notify_catch_up_request &request,
-                                                    notify_cacth_up_response &response)
+void replica_stub::on_notify_primary_split_catch_up(notify_catch_up_rpc rpc)
 {
+    const notify_catch_up_request &request = rpc.request();
+    notify_cacth_up_response &response = rpc.response();
     replica_ptr replica = get_replica(request.parent_gpid);
     if (replica != nullptr) {
         replica->parent_handle_child_catch_up(request, response);
@@ -2672,8 +2690,11 @@ void replica_stub::update_disk_holding_replicas()
     }
 }
 
-void replica_stub::on_bulk_load(const bulk_load_request &request, bulk_load_response &response)
+void replica_stub::on_bulk_load(bulk_load_rpc rpc)
 {
+    const bulk_load_request &request = rpc.request();
+    bulk_load_response &response = rpc.response();
+
     ddebug_f("[{}@{}]: receive bulk load request", request.pid, _primary_address_str);
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
@@ -2684,9 +2705,11 @@ void replica_stub::on_bulk_load(const bulk_load_request &request, bulk_load_resp
     }
 }
 
-void replica_stub::on_group_bulk_load(const group_bulk_load_request &request,
-                                      /*out*/ group_bulk_load_response &response)
+void replica_stub::on_group_bulk_load(group_bulk_load_rpc rpc)
 {
+    const group_bulk_load_request &request = rpc.request();
+    group_bulk_load_response &response = rpc.response();
+
     ddebug_f("[{}@{}]: received group bulk load request, primary = {}, ballot = {}, "
              "meta_bulk_load_status = {}",
              request.config.pid,

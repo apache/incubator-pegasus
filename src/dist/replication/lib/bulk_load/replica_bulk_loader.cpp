@@ -13,8 +13,6 @@
 namespace dsn {
 namespace replication {
 
-typedef rpc_holder<group_bulk_load_request, group_bulk_load_response> group_bulk_load_rpc;
-
 replica_bulk_loader::replica_bulk_loader(replica *r)
     : replica_base(r), _replica(r), _stub(r->get_replica_stub())
 {

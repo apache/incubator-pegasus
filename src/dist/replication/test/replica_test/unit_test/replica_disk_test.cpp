@@ -91,10 +91,18 @@ private:
 TEST_F(replica_disk_test, on_query_disk_info_all_app)
 {
     // disk_info_request.app_id default value = 0 means test query all apps' replica_count
-    query_disk_info_request disk_info_request;
-    query_disk_info_response disk_info_response;
-    stub->on_query_disk_info(disk_info_request, disk_info_response);
+    // create fake request
+    dsn::message_ptr fake_request = dsn::message_ex::create_request(RPC_QUERY_DISK_INFO);
+    query_disk_info_request request;
+    ::dsn::marshall(fake_request, request);
 
+    // get received request and query disk info
+    dsn::message_ex *recvd_request = fake_request->copy(true, true);
+    auto rpc =
+        rpc_holder<query_disk_info_request, query_disk_info_response>::auto_reply(recvd_request);
+    stub->on_query_disk_info(rpc);
+
+    query_disk_info_response &disk_info_response = rpc.response();
     // test response disk_info
     ASSERT_EQ(disk_info_response.total_capacity_mb, 2500);
     ASSERT_EQ(disk_info_response.total_available_mb, 750);
@@ -119,22 +127,39 @@ TEST_F(replica_disk_test, on_query_disk_info_all_app)
 TEST_F(replica_disk_test, on_query_disk_info_app_not_existed)
 {
     // test app_id not existed
-    query_disk_info_request disk_info_request_without_existed_app;
-    query_disk_info_response disk_info_response_without_existed_app;
-    disk_info_request_without_existed_app.app_name = "not_existed_app";
-    stub->on_query_disk_info(disk_info_request_without_existed_app,
-                             disk_info_response_without_existed_app);
-    ASSERT_EQ(disk_info_response_without_existed_app.err, ERR_OBJECT_NOT_FOUND);
+    // create fake request
+    dsn::message_ptr fake_request = dsn::message_ex::create_request(RPC_QUERY_DISK_INFO);
+    query_disk_info_request tmp_request;
+    ::dsn::marshall(fake_request, tmp_request);
+
+    // get received request and query disk info
+    dsn::message_ex *recvd_request = fake_request->copy(true, true);
+    auto rpc =
+        rpc_holder<query_disk_info_request, query_disk_info_response>::auto_reply(recvd_request);
+    query_disk_info_request &request = const_cast<query_disk_info_request &>(rpc.request());
+    request.app_name = "not_existed_app";
+    stub->on_query_disk_info(rpc);
+
+    ASSERT_EQ(rpc.response().err, ERR_OBJECT_NOT_FOUND);
 }
 
 TEST_F(replica_disk_test, on_query_disk_info_one_app)
 {
     // test app_name = "disk_test_1"
-    query_disk_info_request disk_info_request_with_app_1;
-    query_disk_info_response disk_info_response_with_app_1;
-    disk_info_request_with_app_1.app_name = app_info_1.app_name;
-    stub->on_query_disk_info(disk_info_request_with_app_1, disk_info_response_with_app_1);
-    auto &disk_infos_with_app_1 = disk_info_response_with_app_1.disk_infos;
+    // create fake request
+    dsn::message_ptr fake_request = dsn::message_ex::create_request(RPC_QUERY_DISK_INFO);
+    query_disk_info_request tmp_request;
+    ::dsn::marshall(fake_request, tmp_request);
+
+    // get received request and query disk info
+    dsn::message_ex *recvd_request = fake_request->copy(true, true);
+    auto rpc =
+        rpc_holder<query_disk_info_request, query_disk_info_response>::auto_reply(recvd_request);
+    query_disk_info_request &request = const_cast<query_disk_info_request &>(rpc.request());
+    request.app_name = app_info_1.app_name;
+    stub->on_query_disk_info(rpc);
+
+    auto &disk_infos_with_app_1 = rpc.response().disk_infos;
     int info_size = disk_infos_with_app_1.size();
     for (int i = 0; i < info_size; i++) {
         ASSERT_EQ(disk_infos_with_app_1[i].holding_primary_replica_counts.size(), 1);

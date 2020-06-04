@@ -14,8 +14,6 @@
 namespace dsn {
 namespace replication {
 
-typedef rpc_holder<notify_catch_up_request, notify_cacth_up_response> notify_catch_up_rpc;
-
 // ThreadPool: THREAD_POOL_REPLICATION
 void replica::on_add_child(const group_check_request &request) // on parent partition
 {
