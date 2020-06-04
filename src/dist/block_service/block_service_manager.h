@@ -39,9 +39,6 @@ public:
                              block_filesystem *fs,
                              /*out*/ uint64_t &download_file_size);
 
-    // compare file metadata calculated by file and file_meta parsed from metadata file
-    bool verify_file(const replication::file_meta &f_meta, const std::string &local_dir);
-
 private:
     block_service_registry &_registry_holder;
 

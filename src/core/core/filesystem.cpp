@@ -796,6 +796,36 @@ error_code read_file(const std::string &fname, std::string &buf)
     return ERR_OK;
 }
 
+bool verify_file(const std::string &fname,
+                 const std::string &expected_md5,
+                 const int64_t &expected_fsize)
+{
+    if (!file_exists(fname)) {
+        derror_f("file({}) is not existed", fname);
+        return false;
+    }
+    int64_t f_size = 0;
+    if (!file_size(fname, f_size)) {
+        derror_f("verify file({}) failed, becaused failed to get file size", fname);
+        return false;
+    }
+    std::string md5;
+    if (md5sum(fname, md5) != ERR_OK) {
+        derror_f("verify file({}) failed, becaused failed to get file md5", fname);
+        return false;
+    }
+    if (f_size != expected_fsize || md5 != expected_md5) {
+        derror_f("verify file({}) failed, because file damaged, size: {} VS {}, md5: {} VS {}",
+                 fname,
+                 f_size,
+                 expected_fsize,
+                 md5,
+                 expected_md5);
+        return false;
+    }
+    return true;
+}
+
 } // namespace filesystem
 } // namespace utils
 } // namespace dsn

@@ -33,14 +33,6 @@ public:
             PROVIDER, LOCAL_DIR, FILE_NAME, _fs.get(), download_size);
     }
 
-    bool test_verify_file(int64_t size, const std::string &md5)
-    {
-        _file_meta.name = FILE_NAME;
-        _file_meta.size = size;
-        _file_meta.md5 = md5;
-        return _block_service_manager.verify_file(_file_meta, LOCAL_DIR);
-    }
-
     void create_local_file(const std::string &file_name)
     {
         std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, file_name);
@@ -101,19 +93,6 @@ TEST_F(block_service_manager_test, do_download_succeed)
     std::string file_name = utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME);
     utils::filesystem::remove_path(file_name);
     ASSERT_EQ(test_download_file(), ERR_OK);
-}
-
-// verify_file unit tests
-TEST_F(block_service_manager_test, verify_file_failed)
-{
-    create_local_file(FILE_NAME);
-    ASSERT_FALSE(test_verify_file(_file_meta.size, "wrong_md5"));
-}
-
-TEST_F(block_service_manager_test, verify_file_succeed)
-{
-    create_local_file(FILE_NAME);
-    ASSERT_TRUE(test_verify_file(_file_meta.size, _file_meta.md5));
 }
 
 } // namespace block_service

@@ -214,32 +214,6 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
     return download_err;
 }
 
-bool block_service_manager::verify_file(const replication::file_meta &f_meta,
-                                        const std::string &local_dir)
-{
-    const std::string local_file = utils::filesystem::path_combine(local_dir, f_meta.name);
-    int64_t f_size = 0;
-    if (!utils::filesystem::file_size(local_file, f_size)) {
-        derror_f("verify file({}) failed, becaused failed to get file size", local_file);
-        return false;
-    }
-    std::string md5;
-    if (utils::filesystem::md5sum(local_file, md5) != ERR_OK) {
-        derror_f("verify file({}) failed, becaused failed to get file md5", local_file);
-        return false;
-    }
-    if (f_size != f_meta.size || md5 != f_meta.md5) {
-        derror_f("verify file({}) failed, because file damaged, size: {} VS {}, md5: {} VS {}",
-                 local_file,
-                 f_size,
-                 f_meta.size,
-                 md5,
-                 f_meta.md5);
-        return false;
-    }
-    return true;
-}
-
 } // namespace block_service
 } // namespace dist
 } // namespace dsn
