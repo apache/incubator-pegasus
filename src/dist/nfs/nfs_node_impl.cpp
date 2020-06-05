@@ -42,17 +42,11 @@ namespace service {
 
 nfs_node_simple::nfs_node_simple() : nfs_node()
 {
-    _opts = new nfs_opts();
-    _opts->init();
     _server = nullptr;
     _client = nullptr;
 }
 
-nfs_node_simple::~nfs_node_simple()
-{
-    stop();
-    delete _opts;
-}
+nfs_node_simple::~nfs_node_simple() { stop(); }
 
 void nfs_node_simple::call(std::shared_ptr<remote_copy_request> rci, aio_task *callback)
 {
@@ -61,10 +55,10 @@ void nfs_node_simple::call(std::shared_ptr<remote_copy_request> rci, aio_task *c
 
 error_code nfs_node_simple::start()
 {
-    _server = new nfs_service_impl(*_opts);
+    _server = new nfs_service_impl();
     _server->open_service();
 
-    _client = new nfs_client_impl(*_opts);
+    _client = new nfs_client_impl();
     return ERR_OK;
 }
 
@@ -79,5 +73,5 @@ error_code nfs_node_simple::stop()
 
     return ERR_OK;
 }
-}
-}
+} // namespace service
+} // namespace dsn

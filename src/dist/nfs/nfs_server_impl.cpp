@@ -42,14 +42,16 @@
 namespace dsn {
 namespace service {
 
-nfs_service_impl::nfs_service_impl(nfs_opts &opts)
-    : ::dsn::serverlet<nfs_service_impl>("nfs"), _opts(opts)
+DSN_DECLARE_int32(file_close_timer_interval_ms_on_server);
+DSN_DECLARE_int32(file_close_expire_time_ms);
+
+nfs_service_impl::nfs_service_impl() : ::dsn::serverlet<nfs_service_impl>("nfs")
 {
     _file_close_timer = ::dsn::tasking::enqueue_timer(
         LPC_NFS_FILE_CLOSE_TIMER,
         &_tracker,
         [this] { close_file(); },
-        std::chrono::milliseconds(opts.file_close_timer_interval_ms_on_server));
+        std::chrono::milliseconds(FLAGS_file_close_timer_interval_ms_on_server));
 
     _recent_copy_data_size.init_app_counter("eon.nfs_server",
                                             "recent_copy_data_size",
@@ -232,12 +234,12 @@ void nfs_service_impl::close_file() // release out-of-date file handle
 
         // not used and expired
         if (fptr->file_access_count == 0 &&
-            dsn_now_ms() - fptr->last_access_time > (uint64_t)_opts.file_close_expire_time_ms) {
+            dsn_now_ms() - fptr->last_access_time > (uint64_t)FLAGS_file_close_expire_time_ms) {
             dinfo("nfs: close file handle %s", it->first.c_str());
             it = _handles_map.erase(it);
         } else
             it++;
     }
 }
-}
-}
+} // namespace service
+} // namespace dsn

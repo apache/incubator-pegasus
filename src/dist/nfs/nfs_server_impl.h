@@ -46,7 +46,7 @@ class nfs_service_impl : public ::dsn::service::nfs_service,
                          public ::dsn::serverlet<nfs_service_impl>
 {
 public:
-    nfs_service_impl(nfs_opts &opts);
+    nfs_service_impl();
     virtual ~nfs_service_impl() { _tracker.cancel_outstanding_tasks(); }
 
 protected:
@@ -109,8 +109,6 @@ private:
     void close_file();
 
 private:
-    nfs_opts &_opts;
-
     zlock _handles_map_lock;
     std::unordered_map<std::string, std::shared_ptr<file_handle_info_on_server>>
         _handles_map; // cache file handles
@@ -122,5 +120,5 @@ private:
 
     dsn::task_tracker _tracker;
 };
-}
-}
+} // namespace service
+} // namespace dsn

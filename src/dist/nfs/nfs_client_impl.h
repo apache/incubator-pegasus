@@ -49,69 +49,6 @@ namespace service {
 
 using TokenBucket = folly::BasicTokenBucket<std::chrono::steady_clock>;
 
-struct nfs_opts
-{
-    uint32_t nfs_copy_block_bytes;
-    uint32_t max_copy_rate_megabytes;
-    int max_concurrent_remote_copy_requests;
-    int max_concurrent_local_writes;
-    int max_buffered_local_writes;
-    int high_priority_speed_rate;
-
-    int file_close_expire_time_ms;
-    int file_close_timer_interval_ms_on_server;
-    int max_file_copy_request_count_per_file;
-    int max_retry_count_per_copy_request;
-    int64_t rpc_timeout_ms;
-
-    void init()
-    {
-        nfs_copy_block_bytes =
-            (uint32_t)dsn_config_get_value_uint64("nfs",
-                                                  "nfs_copy_block_bytes",
-                                                  4 * 1024 * 1024,
-                                                  "max block size (bytes) for each network copy");
-        max_concurrent_remote_copy_requests = (int)dsn_config_get_value_uint64(
-            "nfs",
-            "max_concurrent_remote_copy_requests",
-            50,
-            "max concurrent remote copy to the same server on nfs client");
-        max_concurrent_local_writes = (int)dsn_config_get_value_uint64(
-            "nfs", "max_concurrent_local_writes", 50, "max local file writes on nfs client");
-        max_buffered_local_writes = (int)dsn_config_get_value_uint64(
-            "nfs", "max_buffered_local_writes", 500, "max buffered file writes on nfs client");
-        high_priority_speed_rate = (int)dsn_config_get_value_uint64(
-            "nfs",
-            "high_priority_speed_rate",
-            2,
-            "the copy speed rate of high priority comparing with low priority on nfs client");
-        file_close_expire_time_ms =
-            (int)dsn_config_get_value_uint64("nfs",
-                                             "file_close_expire_time_ms",
-                                             60 * 1000,
-                                             "max idle time for an opening file on nfs server");
-        file_close_timer_interval_ms_on_server = (int)dsn_config_get_value_uint64(
-            "nfs",
-            "file_close_timer_interval_ms_on_server",
-            30 * 1000,
-            "time interval for checking whether cached file handles need to be closed");
-        max_file_copy_request_count_per_file = (int)dsn_config_get_value_uint64(
-            "nfs",
-            "max_file_copy_request_count_per_file",
-            2,
-            "maximum concurrent remote copy requests for the same file on nfs client"
-            "to limit each file copy speed");
-        max_retry_count_per_copy_request = (int)dsn_config_get_value_uint64(
-            "nfs", "max_retry_count_per_copy_request", 2, "maximum retry count when copy failed");
-        rpc_timeout_ms =
-            (int)dsn_config_get_value_uint64("nfs",
-                                             "rpc_timeout_ms",
-                                             10000,
-                                             "rpc timeout in milliseconds for nfs copy, "
-                                             "0 means use default timeout of rpc engine");
-    }
-};
-
 class nfs_client_impl : public ::dsn::service::nfs_client
 {
 public:
@@ -292,7 +229,7 @@ public:
     };
 
 public:
-    nfs_client_impl(nfs_opts &opts);
+    nfs_client_impl();
     virtual ~nfs_client_impl();
 
     // copy file request entry
@@ -317,8 +254,6 @@ private:
     void register_cli_commands();
 
 private:
-    nfs_opts &_opts;
-
     std::unique_ptr<folly::TokenBucket> _copy_token_bucket; // rate limiter of copy from remote
 
     std::atomic<int> _concurrent_copy_request_count; // record concurrent request count, limited
@@ -343,5 +278,5 @@ private:
 
     dsn::task_tracker _tracker;
 };
-}
-}
+} // namespace service
+} // namespace dsn

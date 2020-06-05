@@ -27,6 +27,7 @@
 #pragma once
 #include <iostream>
 #include <dsn/cpp/serverlet.h>
+#include <dsn/utility/flags.h>
 #include "nfs_code_definition.h"
 #include "nfs_types.h"
 
@@ -70,5 +71,5 @@ public:
         this->unregister_rpc_handler(RPC_NFS_GET_FILE_SIZE);
     }
 };
-}
-}
+} // namespace service
+} // namespace dsn

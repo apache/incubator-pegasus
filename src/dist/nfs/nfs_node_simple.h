@@ -42,7 +42,6 @@ namespace service {
 
 class nfs_service_impl;
 class nfs_client_impl;
-struct nfs_opts;
 
 class nfs_node_simple : public nfs_node
 {
@@ -58,9 +57,8 @@ public:
     virtual error_code stop() override;
 
 private:
-    nfs_opts *_opts;
     nfs_service_impl *_server;
     nfs_client_impl *_client;
 };
-}
-}
+} // namespace service
+} // namespace dsn

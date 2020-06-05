@@ -40,15 +40,50 @@
 namespace dsn {
 namespace service {
 
+DSN_DEFINE_uint32("nfs",
+                  nfs_copy_block_bytes,
+                  4 * 1024 * 1024,
+                  "max block size (bytes) for each network copy");
 DSN_DEFINE_int32("nfs", max_copy_rate_megabytes, 500, "max rate of copying from remote node(MB/s)");
+DSN_DEFINE_int32("nfs",
+                 max_concurrent_remote_copy_requests,
+                 50,
+                 "max concurrent remote copy to the same server on nfs client");
+DSN_DEFINE_int32("nfs", max_concurrent_local_writes, 50, "max local file writes on nfs client");
+DSN_DEFINE_int32("nfs", max_buffered_local_writes, 500, "max buffered file writes on nfs client");
+DSN_DEFINE_int32("nfs",
+                 high_priority_speed_rate,
+                 2,
+                 "the copy speed rate of high priority comparing with low priority on nfs client");
+DSN_DEFINE_int32("nfs",
+                 file_close_expire_time_ms,
+                 60 * 1000,
+                 "max idle time for an opening file on nfs server");
+DSN_DEFINE_int32("nfs",
+                 file_close_timer_interval_ms_on_server,
+                 30 * 1000,
+                 "time interval for checking whether cached file handles need to be closed");
+DSN_DEFINE_int32("nfs",
+                 max_file_copy_request_count_per_file,
+                 2,
+                 "maximum concurrent remote copy requests for the same file on nfs client"
+                 "to limit each file copy speed");
+DSN_DEFINE_int32("nfs",
+                 max_retry_count_per_copy_request,
+                 2,
+                 "maximum retry count when copy failed");
+DSN_DEFINE_int32("nfs",
+                 rpc_timeout_ms,
+                 10000,
+                 "rpc timeout in milliseconds for nfs copy, "
+                 "0 means use default timeout of rpc engine");
 
-nfs_client_impl::nfs_client_impl(nfs_opts &opts)
-    : _opts(opts),
-      _concurrent_copy_request_count(0),
+nfs_client_impl::nfs_client_impl()
+    : _concurrent_copy_request_count(0),
       _concurrent_local_write_count(0),
       _buffered_local_write_count(0),
-      _copy_requests_low(_opts.max_file_copy_request_count_per_file),
-      _high_priority_remaining_time(_opts.high_priority_speed_rate)
+      _copy_requests_low(FLAGS_max_file_copy_request_count_per_file),
+      _high_priority_remaining_time(FLAGS_high_priority_speed_rate)
 {
     _recent_copy_data_size.init_app_counter("eon.nfs_client",
                                             "recent_copy_data_size",
@@ -72,10 +107,10 @@ nfs_client_impl::nfs_client_impl(nfs_opts &opts)
     uint32_t max_copy_rate_bytes = FLAGS_max_copy_rate_megabytes << 20;
     // max_copy_rate_bytes should be greater than nfs_copy_block_bytes which is the max batch copy
     // size once
-    dassert(max_copy_rate_bytes > _opts.nfs_copy_block_bytes,
+    dassert(max_copy_rate_bytes > FLAGS_nfs_copy_block_bytes,
             "max_copy_rate_bytes should be greater than nfs_copy_block_bytes");
     _copy_token_bucket.reset(new TokenBucket(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes));
-    _opts.max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
+    FLAGS_max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
 
     register_cli_commands();
 }
@@ -99,7 +134,7 @@ void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rc
                   [=](error_code err, get_file_size_response &&resp) {
                       end_get_file_size(err, std::move(resp), req);
                   },
-                  std::chrono::milliseconds(_opts.rpc_timeout_ms),
+                  std::chrono::milliseconds(FLAGS_rpc_timeout_ms),
                   0,
                   0,
                   0,
@@ -139,15 +174,15 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
         // init copy requests
         uint64_t size = resp.size_list[i];
         uint64_t req_offset = 0;
-        uint32_t req_size = size > _opts.nfs_copy_block_bytes ? _opts.nfs_copy_block_bytes
+        uint32_t req_size = size > FLAGS_nfs_copy_block_bytes ? FLAGS_nfs_copy_block_bytes
                                                               : static_cast<uint32_t>(size);
 
-        filec->copy_requests.reserve(size / _opts.nfs_copy_block_bytes + 1);
+        filec->copy_requests.reserve(size / FLAGS_nfs_copy_block_bytes + 1);
         int idx = 0;
         for (;;) // send one file with multi-round rpc
         {
             copy_request_ex_ptr req(
-                new copy_request_ex(filec, idx++, _opts.max_retry_count_per_copy_request));
+                new copy_request_ex(filec, idx++, FLAGS_max_retry_count_per_copy_request));
             req->offset = req_offset;
             req->size = req_size;
             req->is_last = (size <= req_size);
@@ -162,7 +197,7 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
                 break;
             }
 
-            req_size = size > _opts.nfs_copy_block_bytes ? _opts.nfs_copy_block_bytes
+            req_size = size > FLAGS_nfs_copy_block_bytes ? FLAGS_nfs_copy_block_bytes
                                                          : static_cast<uint32_t>(size);
         }
     }
@@ -181,13 +216,13 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
 
 void nfs_client_impl::continue_copy()
 {
-    if (_buffered_local_write_count >= _opts.max_buffered_local_writes) {
+    if (_buffered_local_write_count >= FLAGS_max_buffered_local_writes) {
         // exceed max_buffered_local_writes limit, pause.
         // the copy task will be triggered by continue_copy() invoked in local_write_callback().
         return;
     }
 
-    if (++_concurrent_copy_request_count > _opts.max_concurrent_remote_copy_requests) {
+    if (++_concurrent_copy_request_count > FLAGS_max_concurrent_remote_copy_requests) {
         // exceed max_concurrent_remote_copy_requests limit, pause.
         // the copy task will be triggered by continue_copy() invoked in end_copy().
         --_concurrent_copy_request_count;
@@ -208,7 +243,7 @@ void nfs_client_impl::continue_copy()
                 // try to pop from low queue
                 req = _copy_requests_low.pop();
                 if (req) {
-                    _high_priority_remaining_time = _opts.high_priority_speed_rate;
+                    _high_priority_remaining_time = FLAGS_high_priority_speed_rate;
                 }
             }
 
@@ -254,7 +289,7 @@ void nfs_client_impl::continue_copy()
                                                      tsk = std::move(req->remote_copy_task);
                                                  }
                                              },
-                                             std::chrono::milliseconds(_opts.rpc_timeout_ms),
+                                             std::chrono::milliseconds(FLAGS_rpc_timeout_ms),
                                              0,
                                              0,
                                              0,
@@ -265,7 +300,7 @@ void nfs_client_impl::continue_copy()
             }
         }
 
-        if (++_concurrent_copy_request_count > _opts.max_concurrent_remote_copy_requests) {
+        if (++_concurrent_copy_request_count > FLAGS_max_concurrent_remote_copy_requests) {
             // exceed max_concurrent_remote_copy_requests limit, pause.
             // the copy task will be triggered by continue_copy() invoked in end_copy().
             --_concurrent_copy_request_count;
@@ -360,7 +395,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
 void nfs_client_impl::continue_write()
 {
     // check write quota
-    if (++_concurrent_local_write_count > _opts.max_concurrent_local_writes) {
+    if (++_concurrent_local_write_count > FLAGS_max_concurrent_local_writes) {
         // exceed max_concurrent_local_writes limit, pause.
         // the copy task will be triggered by continue_write() invoked in
         // local_write_callback().
@@ -530,13 +565,13 @@ void nfs_client_impl::register_cli_commands()
             std::string result("OK");
 
             if (args.empty()) {
-                return std::to_string(_opts.max_copy_rate_megabytes);
+                return std::to_string(FLAGS_max_copy_rate_megabytes);
             }
 
             if (args[0] == "DEFAULT") {
                 uint32_t max_copy_rate_bytes = FLAGS_max_copy_rate_megabytes << 20;
                 _copy_token_bucket->reset(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes);
-                _opts.max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
+                FLAGS_max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
                 return result;
             }
 
@@ -546,16 +581,16 @@ void nfs_client_impl::register_cli_commands()
             }
 
             uint32_t max_copy_rate_bytes = max_copy_rate_megabytes << 20;
-            if (max_copy_rate_bytes <= _opts.nfs_copy_block_bytes) {
+            if (max_copy_rate_bytes <= FLAGS_nfs_copy_block_bytes) {
                 result = std::string("ERR: max_copy_rate_bytes(max_copy_rate_megabytes << 20) "
                                      "should be greater than nfs_copy_block_bytes:")
-                             .append(std::to_string(_opts.nfs_copy_block_bytes));
+                             .append(std::to_string(FLAGS_nfs_copy_block_bytes));
                 return result;
             }
             _copy_token_bucket->reset(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes);
-            _opts.max_copy_rate_megabytes = max_copy_rate_megabytes;
+            FLAGS_max_copy_rate_megabytes = max_copy_rate_megabytes;
             return result;
         });
 }
-}
-}
+} // namespace service
+} // namespace dsn
