@@ -315,6 +315,8 @@ replication_app_base::replication_app_base(replica *replica) : replica_base(repl
     _dir_data = utils::filesystem::path_combine(replica->dir(), "data");
     _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
     _dir_backup = utils::filesystem::path_combine(replica->dir(), "backup");
+    _dir_bulk_load = utils::filesystem::path_combine(replica->dir(),
+                                                     bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR);
     _last_committed_decree = 0;
     _replica = replica;
 }
@@ -470,6 +472,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
             (int)mu->client_requests.size());
     dassert(mu->data.updates.size() > 0, "");
 
+    bool has_ingestion_request = false;
     int request_count = static_cast<int>(mu->client_requests.size());
     dsn::message_ex **batched_requests =
         (dsn::message_ex **)alloca(sizeof(dsn::message_ex *) * request_count);
@@ -497,6 +500,9 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
             }
 
             batched_requests[batched_count++] = req;
+            if (update.code == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
+                has_ingestion_request = true;
+            }
         } else {
             // empty mutation write
             dinfo("%s: mutation %s #%d: dispatch rpc call %s",
@@ -517,7 +523,18 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
 
     if (perror != 0) {
         derror("%s: mutation %s: get internal error %d", _replica->name(), mu->name(), perror);
-        return ERR_LOCAL_APP_FAILURE;
+        // for normal write requests, if got rocksdb error, this replica will be set error and evoke
+        // learn for ingestion requests, should not do as normal write requests, there are two
+        // reasons:
+        // 1. all ingestion errors should be handled by meta server in function
+        // `on_partition_ingestion_reply`, rocksdb error will be returned to meta server in
+        // structure `ingestion_response`, not in this function
+        // 2. if replica apply ingestion mutation during learn, it may got error from rocksdb,
+        // because the external sst files may not exist, in this case, we won't consider it as an
+        // error
+        if (!has_ingestion_request) {
+            return ERR_LOCAL_APP_FAILURE;
+        }
     }
 
     ++_last_committed_decree;

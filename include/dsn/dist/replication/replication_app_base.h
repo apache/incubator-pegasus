@@ -238,6 +238,10 @@ public:
     // dump the write request some info to string, it may need overload
     virtual std::string dump_write_request(dsn::message_ex *request) { return "write request"; };
 
+    virtual void set_ingestion_status(ingestion_status::type status) {}
+
+    virtual ingestion_status::type get_ingestion_status() { return ingestion_status::IS_INVALID; }
+
 public:
     //
     // utility functions to be used by app
@@ -245,6 +249,7 @@ public:
     const std::string &data_dir() const { return _dir_data; }
     const std::string &learn_dir() const { return _dir_learn; }
     const std::string &backup_dir() const { return _dir_backup; }
+    const std::string &bulk_load_dir() const { return _dir_bulk_load; }
     ::dsn::replication::decree last_committed_decree() const
     {
         return _last_committed_decree.load();
@@ -268,9 +273,10 @@ private:
     ::dsn::error_code update_init_info_ballot_and_decree(replica *r);
 
 protected:
-    std::string _dir_data;   // ${replica_dir}/data
-    std::string _dir_learn;  // ${replica_dir}/learn
-    std::string _dir_backup; // ${replica_dir}/backup
+    std::string _dir_data;      // ${replica_dir}/data
+    std::string _dir_learn;     // ${replica_dir}/learn
+    std::string _dir_backup;    // ${replica_dir}/backup
+    std::string _dir_bulk_load; // ${replica_dir}/bulk_load
     replica *_replica;
     std::atomic<int64_t> _last_committed_decree;
     replica_init_info _info;

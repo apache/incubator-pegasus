@@ -536,6 +536,8 @@ private:
 
     // bulk load
     std::unique_ptr<replica_bulk_loader> _bulk_loader;
+    // if replica in bulk load ingestion 2pc, will reject other write requests
+    bool _is_bulk_load_ingestion{false};
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;

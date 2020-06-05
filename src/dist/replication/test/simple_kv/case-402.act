@@ -181,7 +181,7 @@ client:begin_write:id=169,key=k169,value=v169,timeout=0
 inject:on_aio_call:node=r2,task_code=LPC_WRITE_REPLICATION_LOG_SHARED
 config:{4,r1,[r3]}
 
-state:{{r1,pri,4,20},{r3,sec,4,11}}
+state:{{r1,pri,4,12},{r3,sec,4,12}}
 
 set:disable_load_balance=0
 
