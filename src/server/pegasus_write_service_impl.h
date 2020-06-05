@@ -12,6 +12,7 @@
 #include "meta_store.h"
 
 #include <dsn/utility/fail_point.h>
+#include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
 #include <gtest/gtest_prod.h>
 
@@ -490,6 +491,32 @@ public:
         return 0;
     }
 
+    // \return ERR_WRONG_CHECKSUM: verify files failed
+    // \return ERR_INGESTION_FAILED: rocksdb ingestion failed
+    // \return ERR_OK: rocksdb ingestion succeed
+    dsn::error_code ingestion_files(const int64_t decree,
+                                    const std::string &bulk_load_dir,
+                                    const dsn::replication::bulk_load_metadata metadata)
+    {
+        // verify external files before ingestion
+        std::vector<std::string> sst_file_list;
+        dsn::error_code err = get_external_files_path(bulk_load_dir, metadata, sst_file_list);
+        if (err != dsn::ERR_OK) {
+            return err;
+        }
+
+        // ingest external files
+        rocksdb::IngestExternalFileOptions ifo;
+        rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
+        if (!s.ok()) {
+            derror_rocksdb("IngestExternalFile", s.ToString(), "decree = {}", decree);
+            return dsn::ERR_INGESTION_FAILED;
+        } else {
+            ddebug_rocksdb("IngestExternalFile", "Ingest files succeed, decree = {}", decree);
+            return dsn::ERR_OK;
+        }
+    }
+
     /// For batch write.
 
     int batch_put(const db_write_context &ctx,
@@ -804,6 +831,23 @@ private:
         }
 
         return expire_ts;
+    }
+
+    dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
+                                            const dsn::replication::bulk_load_metadata &metadata,
+                                            /*out*/ std::vector<std::string> &files_path)
+    {
+        for (const auto &f_meta : metadata.files) {
+            // const dsn::replication::file_meta &f_meta = *file;
+            const std::string &file_name =
+                dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
+            if (dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
+                files_path.emplace_back(file_name);
+            } else {
+                break;
+            }
+        }
+        return files_path.size() == metadata.files.size() ? dsn::ERR_OK : dsn::ERR_WRONG_CHECKSUM;
     }
 
 private:
