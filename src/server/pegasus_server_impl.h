@@ -158,6 +158,7 @@ public:
 
     std::string dump_write_request(dsn::message_ex *request) override;
 
+    // Not thread-safe
     void set_ingestion_status(dsn::replication::ingestion_status::type status) override;
 
     dsn::replication::ingestion_status::type get_ingestion_status() override

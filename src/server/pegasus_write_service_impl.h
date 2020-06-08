@@ -838,7 +838,6 @@ private:
                                             /*out*/ std::vector<std::string> &files_path)
     {
         for (const auto &f_meta : metadata.files) {
-            // const dsn::replication::file_meta &f_meta = *file;
             const std::string &file_name =
                 dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
             if (dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
