@@ -496,7 +496,7 @@ public:
     // \return ERR_OK: rocksdb ingestion succeed
     dsn::error_code ingestion_files(const int64_t decree,
                                     const std::string &bulk_load_dir,
-                                    const dsn::replication::bulk_load_metadata metadata)
+                                    const dsn::replication::bulk_load_metadata &metadata)
     {
         // verify external files before ingestion
         std::vector<std::string> sst_file_list;

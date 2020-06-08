@@ -158,9 +158,9 @@ public:
 
     std::string dump_write_request(dsn::message_ex *request) override;
 
-    void set_ingestion_status(::dsn::replication::ingestion_status::type status) override;
+    void set_ingestion_status(dsn::replication::ingestion_status::type status) override;
 
-    ::dsn::replication::ingestion_status::type get_ingestion_status() override
+    dsn::replication::ingestion_status::type get_ingestion_status() override
     {
         return _ingestion_status;
     }
@@ -371,8 +371,8 @@ private:
 
     std::atomic<int32_t> _partition_version;
 
-    ::dsn::replication::ingestion_status::type _ingestion_status{
-        ::dsn::replication::ingestion_status::IS_INVALID};
+    dsn::replication::ingestion_status::type _ingestion_status{
+        dsn::replication::ingestion_status::IS_INVALID};
 
     dsn::task_tracker _tracker;
 
