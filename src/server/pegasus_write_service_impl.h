@@ -12,6 +12,7 @@
 #include "meta_store.h"
 
 #include <dsn/utility/fail_point.h>
+#include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
 #include <gtest/gtest_prod.h>
 
@@ -47,6 +48,22 @@ inline int get_cluster_id_if_exists()
         dsn::replication::get_duplication_cluster_id(dsn::replication::get_current_cluster_name());
     static uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
     return cluster_id;
+}
+
+inline dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
+                                               const dsn::replication::bulk_load_metadata &metadata,
+                                               /*out*/ std::vector<std::string> &files_path)
+{
+    for (const auto &f_meta : metadata.files) {
+        const std::string &file_name =
+            dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
+        if (dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
+            files_path.emplace_back(file_name);
+        } else {
+            break;
+        }
+    }
+    return files_path.size() == metadata.files.size() ? dsn::ERR_OK : dsn::ERR_WRONG_CHECKSUM;
 }
 
 class pegasus_write_service::impl : public dsn::replication::replica_base
@@ -488,6 +505,32 @@ public:
 
         clear_up_batch_states(decree, resp.error);
         return 0;
+    }
+
+    // \return ERR_WRONG_CHECKSUM: verify files failed
+    // \return ERR_INGESTION_FAILED: rocksdb ingestion failed
+    // \return ERR_OK: rocksdb ingestion succeed
+    dsn::error_code ingestion_files(const int64_t decree,
+                                    const std::string &bulk_load_dir,
+                                    const dsn::replication::bulk_load_metadata &metadata)
+    {
+        // verify external files before ingestion
+        std::vector<std::string> sst_file_list;
+        dsn::error_code err = get_external_files_path(bulk_load_dir, metadata, sst_file_list);
+        if (err != dsn::ERR_OK) {
+            return err;
+        }
+
+        // ingest external files
+        rocksdb::IngestExternalFileOptions ifo;
+        rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
+        if (!s.ok()) {
+            derror_rocksdb("IngestExternalFile", s.ToString(), "decree = {}", decree);
+            return dsn::ERR_INGESTION_FAILED;
+        } else {
+            ddebug_rocksdb("IngestExternalFile", "Ingest files succeed, decree = {}", decree);
+            return dsn::ERR_OK;
+        }
     }
 
     /// For batch write.

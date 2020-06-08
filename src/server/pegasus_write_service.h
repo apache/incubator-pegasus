@@ -7,6 +7,7 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>
 #include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/replication/replication_types.h>
 
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
@@ -124,6 +125,11 @@ public:
     int duplicate(int64_t decree,
                   const dsn::apps::duplicate_request &update,
                   dsn::apps::duplicate_response &resp);
+
+    // Execute bulk load ingestion
+    int ingestion_files(int64_t decree,
+                        const dsn::replication::ingestion_request &req,
+                        dsn::replication::ingestion_response &resp);
 
     /// For batch write.
 
