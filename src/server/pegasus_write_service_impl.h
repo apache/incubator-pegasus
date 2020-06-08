@@ -50,6 +50,22 @@ inline int get_cluster_id_if_exists()
     return cluster_id;
 }
 
+inline dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
+                                               const dsn::replication::bulk_load_metadata &metadata,
+                                               /*out*/ std::vector<std::string> &files_path)
+{
+    for (const auto &f_meta : metadata.files) {
+        const std::string &file_name =
+            dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
+        if (dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
+            files_path.emplace_back(file_name);
+        } else {
+            break;
+        }
+    }
+    return files_path.size() == metadata.files.size() ? dsn::ERR_OK : dsn::ERR_WRONG_CHECKSUM;
+}
+
 class pegasus_write_service::impl : public dsn::replication::replica_base
 {
 public:
@@ -831,22 +847,6 @@ private:
         }
 
         return expire_ts;
-    }
-
-    dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
-                                            const dsn::replication::bulk_load_metadata &metadata,
-                                            /*out*/ std::vector<std::string> &files_path)
-    {
-        for (const auto &f_meta : metadata.files) {
-            const std::string &file_name =
-                dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
-            if (dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
-                files_path.emplace_back(file_name);
-            } else {
-                break;
-            }
-        }
-        return files_path.size() == metadata.files.size() ? dsn::ERR_OK : dsn::ERR_WRONG_CHECKSUM;
     }
 
 private:
