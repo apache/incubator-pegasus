@@ -300,8 +300,14 @@ private:
         return false;
     }
 
+    ::dsn::error_code check_meta_cf(const std::string &path, bool *need_open_with_meta_cf);
+    void release_db();
+
 private:
     static const std::string COMPRESSION_HEADER;
+    // Column family names.
+    static const std::string DATA_COLUMN_FAMILY_NAME;
+    static const std::string META_COLUMN_FAMILY_NAME;
 
     dsn::gpid _gpid;
     std::string _primary_address;
@@ -322,7 +328,9 @@ private:
     rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
 
-    rocksdb::DB *_db;
+    rocksdb::DB *_db = nullptr;
+    rocksdb::ColumnFamilyHandle *_data_cf = nullptr;
+    rocksdb::ColumnFamilyHandle *_meta_cf = nullptr;
     static std::shared_ptr<rocksdb::Cache> _s_block_cache;
     volatile bool _is_open;
     uint32_t _pegasus_data_version;
