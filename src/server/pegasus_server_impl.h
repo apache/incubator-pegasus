@@ -159,6 +159,14 @@ public:
 
     std::string dump_write_request(dsn::message_ex *request) override;
 
+    // Not thread-safe
+    void set_ingestion_status(dsn::replication::ingestion_status::type status) override;
+
+    dsn::replication::ingestion_status::type get_ingestion_status() override
+    {
+        return _ingestion_status;
+    }
+
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
@@ -367,6 +375,9 @@ private:
     pegasus_manual_compact_service _manual_compact_svc;
 
     std::atomic<int32_t> _partition_version;
+
+    dsn::replication::ingestion_status::type _ingestion_status{
+        dsn::replication::ingestion_status::IS_INVALID};
 
     dsn::task_tracker _tracker;
 

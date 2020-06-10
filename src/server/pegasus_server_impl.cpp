@@ -2683,5 +2683,13 @@ std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
     return "default";
 }
 
+void pegasus_server_impl::set_ingestion_status(dsn::replication::ingestion_status::type status)
+{
+    ddebug_replica("ingestion status from {} to {}",
+                   dsn::enum_to_string(_ingestion_status),
+                   dsn::enum_to_string(status));
+    _ingestion_status = status;
+}
+
 } // namespace server
 } // namespace pegasus
