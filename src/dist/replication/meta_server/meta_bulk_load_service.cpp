@@ -804,7 +804,46 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
                                                      const std::string &app_name,
                                                      const gpid &pid)
 {
-    // TODO(heyuchen): TBD
+    // if meet 2pc error, ingesting will rollback to downloading, no need to retry here
+    if (err != ERR_OK) {
+        derror_f("app({}) partition({}) ingestion files failed, error = {}", app_name, pid, err);
+        tasking::enqueue(
+            LPC_META_STATE_NORMAL,
+            _meta_svc->tracker(),
+            std::bind(&bulk_load_service::try_rollback_to_downloading, this, app_name, pid));
+        return;
+    }
+
+    if (resp.err == ERR_TRY_AGAIN && resp.rocksdb_error != 0) {
+        derror_f("app({}) partition({}) ingestion files failed while empty write, rocksdb error = "
+                 "{}, retry it later",
+                 app_name,
+                 pid,
+                 resp.rocksdb_error);
+        tasking::enqueue(LPC_BULK_LOAD_INGESTION,
+                         _meta_svc->tracker(),
+                         std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
+                         0,
+                         std::chrono::milliseconds(10));
+        return;
+    }
+
+    // some unexpected errors happened, such as write empty write failed but rocksdb_error is ok
+    // stop bulk load process with failed
+    if (resp.err != ERR_OK || resp.rocksdb_error != 0) {
+        derror_f("app({}) partition({}) failed to ingestion files, error = {}, rocksdb error = {}",
+                 app_name,
+                 pid,
+                 resp.err,
+                 resp.rocksdb_error);
+        tasking::enqueue(
+            LPC_META_STATE_NORMAL,
+            _meta_svc->tracker(),
+            std::bind(&bulk_load_service::handle_bulk_load_failed, this, pid.get_app_id()));
+        return;
+    }
+
+    ddebug_f("app({}) partition({}) receive ingestion response succeed", app_name, pid);
 }
 
 // ThreadPool: THREAD_POOL_META_STATE

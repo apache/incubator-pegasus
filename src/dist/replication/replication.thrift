@@ -1014,7 +1014,8 @@ struct ingestion_request
 
 struct ingestion_response
 {
-    // Possible errors are same as write request errors, such as ERR_OBJECT_NOT_FOUND, ERR_INVALID_STATE
+    // Possible errors:
+    // - ERR_TRY_AGAIN: retry ingestion
     1:dsn.error_code    err;
     // rocksdb ingestion error code
     2:i32               rocksdb_error;
