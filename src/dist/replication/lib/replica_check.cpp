@@ -207,16 +207,16 @@ void replica::on_group_check_reply(error_code err,
     auto r = _primary_states.group_check_pending_replies.erase(req->node);
     dassert(r == 1, "invalid node address, address = %s", req->node.to_string());
 
-    if (err != ERR_OK) {
+    if (err != ERR_OK || resp->err != ERR_OK) {
+        if (ERR_OK == err) {
+            err = resp->err;
+        }
         handle_remote_failure(req->config.status, req->node, err, "group check");
+        _stub->_counter_replicas_recent_group_check_fail_count->increment();
     } else {
-        if (resp->err == ERR_OK) {
-            if (resp->learner_status_ == learner_status::LearningSucceeded &&
-                req->config.status == partition_status::PS_POTENTIAL_SECONDARY) {
-                handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
-            }
-        } else {
-            handle_remote_failure(req->config.status, req->node, resp->err, "group check");
+        if (resp->learner_status_ == learner_status::LearningSucceeded &&
+            req->config.status == partition_status::PS_POTENTIAL_SECONDARY) {
+            handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
         }
     }
 }

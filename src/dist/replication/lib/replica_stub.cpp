@@ -224,6 +224,12 @@ void replica_stub::install_perf_counters()
         COUNTER_TYPE_NUMBER,
         "garbage replica directory count");
 
+    _counter_replicas_recent_group_check_fail_count.init_app_counter(
+        "eon.replica_stub",
+        "replicas.recent.group.check.fail.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "group check fail count in the recent period");
+
     _counter_shared_log_size.init_app_counter(
         "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
     _counter_shared_log_recent_write_size.init_app_counter(
