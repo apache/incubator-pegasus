@@ -2935,7 +2935,7 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
             *need_open_with_meta_cf = true;
             continue;
         }
-        dassert_replica(true, "Column family '{}' should not present");
+        dassert_replica(false, "Column family '{}' should not present");
     }
     return ::dsn::ERR_OK;
 }
