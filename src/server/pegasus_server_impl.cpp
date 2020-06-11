@@ -2944,7 +2944,10 @@ void pegasus_server_impl::release_db()
 {
     _db->DestroyColumnFamilyHandle(_data_cf);
     _data_cf = nullptr;
-    _db->DestroyColumnFamilyHandle(_meta_cf);
+    if (_meta_cf != nullptr) {
+      _db->DestroyColumnFamilyHandle(_meta_cf);
+      _meta_cf = nullptr;
+    }
     _meta_cf = nullptr;
     delete _db;
     _db = nullptr;
