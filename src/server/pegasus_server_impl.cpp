@@ -1428,7 +1428,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                                       [this]() { this->update_replica_rocksdb_statistics(); },
                                       _update_rdb_stat_interval);
 
-    // These counters are singletons on this server shared by all replicas, its metrics update task
+    // These counters are singletons on this server shared by all replicas, their metrics update task
     // should be scheduled once an interval on the server view.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
