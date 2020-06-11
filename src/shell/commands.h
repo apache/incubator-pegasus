@@ -15,7 +15,6 @@
 #include <dsn/utility/output_utils.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/utility/string_view.h>
-#include <dsn/dist/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 
@@ -243,6 +242,8 @@ bool remove_dup(command_executor *e, shell_context *sc, arguments args);
 bool start_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool pause_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args);
 
 // == disk rebalance (see 'commands/disk_rebalance.cpp') == //
 

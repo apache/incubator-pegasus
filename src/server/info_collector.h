@@ -53,6 +53,26 @@ public:
             recent_filter_count->set(row_stats.recent_filter_count);
             recent_abnormal_count->set(row_stats.recent_abnormal_count);
             recent_write_throttling_delay_count->set(row_stats.recent_write_throttling_delay_count);
+            get_qps->set(row_stats.get_qps);
+            multi_get_qps->set(row_stats.multi_get_qps);
+            put_qps->set(row_stats.put_qps);
+            multi_put_qps->set(row_stats.multi_put_qps);
+            remove_qps->set(row_stats.remove_qps);
+            multi_remove_qps->set(row_stats.multi_remove_qps);
+            incr_qps->set(row_stats.incr_qps);
+            check_and_set_qps->set(row_stats.check_and_set_qps);
+            check_and_mutate_qps->set(row_stats.check_and_mutate_qps);
+            scan_qps->set(row_stats.scan_qps);
+            duplicate_qps->set(row_stats.duplicate_qps);
+            dup_shipped_ops->set(row_stats.dup_shipped_ops);
+            dup_failed_shipping_ops->set(row_stats.dup_failed_shipping_ops);
+            recent_read_cu->set(row_stats.recent_read_cu);
+            recent_write_cu->set(row_stats.recent_write_cu);
+            recent_expire_count->set(row_stats.recent_expire_count);
+            recent_filter_count->set(row_stats.recent_filter_count);
+            recent_abnormal_count->set(row_stats.recent_abnormal_count);
+            recent_write_throttling_delay_count->set(
+                row_stats.recent_write_throttling_delay_count);
             recent_write_throttling_reject_count->set(
                 row_stats.recent_write_throttling_reject_count);
             storage_mb->set(row_stats.storage_mb);
@@ -96,6 +116,9 @@ public:
         ::dsn::perf_counter_wrapper check_and_set_qps;
         ::dsn::perf_counter_wrapper check_and_mutate_qps;
         ::dsn::perf_counter_wrapper scan_qps;
+        ::dsn::perf_counter_wrapper duplicate_qps;
+        ::dsn::perf_counter_wrapper dup_shipped_ops;
+        ::dsn::perf_counter_wrapper dup_failed_shipping_ops;
         ::dsn::perf_counter_wrapper recent_read_cu;
         ::dsn::perf_counter_wrapper recent_write_cu;
         ::dsn::perf_counter_wrapper recent_expire_count;
@@ -106,7 +129,6 @@ public:
         ::dsn::perf_counter_wrapper storage_mb;
         ::dsn::perf_counter_wrapper storage_count;
         ::dsn::perf_counter_wrapper rdb_block_cache_hit_rate;
-        ::dsn::perf_counter_wrapper rdb_block_cache_mem_usage;
         ::dsn::perf_counter_wrapper rdb_index_and_filter_blocks_mem_usage;
         ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
         ::dsn::perf_counter_wrapper rdb_estimate_num_keys;

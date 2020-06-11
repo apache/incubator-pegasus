@@ -1,6 +1,7 @@
 set(MY_PROJ_NAME pegasus_unit_test)
 
 set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
+                "../pegasus_server_impl_init.cpp"
                 "../pegasus_manual_compact_service.cpp"
                 "../pegasus_event_listener.cpp"
                 "../pegasus_write_service.cpp"
@@ -20,6 +21,7 @@ set(MY_PROJ_LIBS
         dsn.replication.ddlclient
         dsn.block_service.local
         dsn.block_service.fds
+        dsn.block_service
         dsn.failure_detector
         dsn.failure_detector.multimaster
         dsn.replication.zookeeper_provider

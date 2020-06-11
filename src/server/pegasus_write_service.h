@@ -7,6 +7,7 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>
 #include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/replication/replication_types.h>
 
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
@@ -85,7 +86,7 @@ class capacity_unit_calculator;
 /// As the signatures imply, this class is not responsible for replying the rpc,
 /// the caller(pegasus_server_write) should do.
 /// \see pegasus::server::pegasus_server_write::on_batched_write_requests
-class pegasus_write_service
+class pegasus_write_service : dsn::replication::replica_base
 {
 public:
     explicit pegasus_write_service(pegasus_server_impl *server);
@@ -124,6 +125,11 @@ public:
     int duplicate(int64_t decree,
                   const dsn::apps::duplicate_request &update,
                   dsn::apps::duplicate_response &resp);
+
+    // Execute bulk load ingestion
+    int ingestion_files(int64_t decree,
+                        const dsn::replication::ingestion_request &req,
+                        dsn::replication::ingestion_response &resp);
 
     /// For batch write.
 
@@ -168,6 +174,7 @@ private:
     uint64_t _batch_start_time;
 
     capacity_unit_calculator *_cu_calculator;
+    int64_t _dup_lagging_write_threshold_ms;
 
     ::dsn::perf_counter_wrapper _pfc_put_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_put_qps;
@@ -177,6 +184,8 @@ private:
     ::dsn::perf_counter_wrapper _pfc_check_and_set_qps;
     ::dsn::perf_counter_wrapper _pfc_check_and_mutate_qps;
     ::dsn::perf_counter_wrapper _pfc_duplicate_qps;
+    ::dsn::perf_counter_wrapper _pfc_dup_time_lag;
+    ::dsn::perf_counter_wrapper _pfc_dup_lagging_writes;
 
     ::dsn::perf_counter_wrapper _pfc_put_latency;
     ::dsn::perf_counter_wrapper _pfc_multi_put_latency;

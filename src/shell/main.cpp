@@ -446,6 +446,10 @@ static command_executor commands[] = {
      "query disk replica count info",
      "[-n|--node replica_server(ip:port)][-a|-app app_name][-o|--out file_name][-j|--json]",
      query_disk_replica},
+    {"set_dup_fail_mode",
+     "set fail_mode of duplication",
+     "<app_name> <dup_id> <slow|skip>",
+     set_dup_fail_mode},
     {
         "exit", "exit shell", "", exit_shell,
     },

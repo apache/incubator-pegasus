@@ -8,12 +8,17 @@
 #include "capacity_unit_calculator.h"
 
 #include <dsn/cpp/message_utils.h>
+#include <dsn/dist/replication/replication.codes.h>
+#include <dsn/utility/defer.h>
 
 namespace pegasus {
 namespace server {
 
+DEFINE_TASK_CODE(LPC_INGESTION, TASK_PRIORITY_COMMON, THREAD_POOL_INGESTION)
+
 pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
-    : _server(server),
+    : replica_base(server),
+      _server(server),
       _impl(new impl(server)),
       _batch_start_time(0),
       _cu_calculator(server->_cu_calculator.get())
@@ -103,6 +108,24 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
                                         fmt::format("duplicate_qps@{}", str_gpid).c_str(),
                                         COUNTER_TYPE_RATE,
                                         "statistic the qps of DUPLICATE requests");
+
+    _pfc_dup_time_lag.init_app_counter(
+        "app.pegasus",
+        fmt::format("dup.time_lag_ms@{}", app_name()).c_str(),
+        COUNTER_TYPE_NUMBER_PERCENTILES,
+        "the time (in ms) lag between master and slave in the duplication");
+
+    _dup_lagging_write_threshold_ms = dsn_config_get_value_int64(
+        "pegasus.server",
+        "dup_lagging_write_threshold_ms",
+        10 * 1000,
+        "If the duration that a write flows from master to slave is larger than this threshold, "
+        "the write is defined a lagging write.");
+    _pfc_dup_lagging_writes.init_app_counter(
+        "app.pegasus",
+        fmt::format("dup.lagging_writes@{}", app_name()).c_str(),
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "the number of lagging writes (time lag larger than `dup_lagging_write_threshold_ms`)");
 }
 
 pegasus_write_service::~pegasus_write_service() {}
@@ -286,6 +309,13 @@ int pegasus_write_service::duplicate(int64_t decree,
     }
 
     _pfc_duplicate_qps->increment();
+    auto cleanup = dsn::defer([this, &request]() {
+        uint64_t latency_ms = (dsn_now_us() - request.timestamp) / 1000;
+        if (latency_ms > _dup_lagging_write_threshold_ms) {
+            _pfc_dup_lagging_writes->increment();
+        }
+        _pfc_dup_time_lag->set(latency_ms);
+    });
     dsn::message_ex *write = dsn::from_blob_to_received_msg(request.task_code, request.raw_message);
     bool is_delete = request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE ||
                      request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE;
@@ -326,6 +356,34 @@ int pegasus_write_service::duplicate(int64_t decree,
     resp.__set_error(rocksdb::Status::kInvalidArgument);
     resp.__set_error_hint(fmt::format("unrecognized task code {}", request.task_code));
     return empty_put(ctx.decree);
+}
+
+int pegasus_write_service::ingestion_files(int64_t decree,
+                                           const dsn::replication::ingestion_request &req,
+                                           dsn::replication::ingestion_response &resp)
+{
+    // TODO(heyuchen): consider cu
+
+    resp.err = dsn::ERR_OK;
+    // write empty put to flush decree
+    resp.rocksdb_error = empty_put(decree);
+    if (resp.rocksdb_error != 0) {
+        resp.err = dsn::ERR_TRY_AGAIN;
+        return resp.rocksdb_error;
+    }
+
+    // ingest files asynchronously
+    _server->set_ingestion_status(dsn::replication::ingestion_status::IS_RUNNING);
+    dsn::tasking::enqueue(LPC_INGESTION, &_server->_tracker, [this, decree, req]() {
+        dsn::error_code err =
+            _impl->ingestion_files(decree, _server->bulk_load_dir(), req.metadata);
+        if (err == dsn::ERR_OK) {
+            _server->set_ingestion_status(dsn::replication::ingestion_status::IS_SUCCEED);
+        } else {
+            _server->set_ingestion_status(dsn::replication::ingestion_status::IS_FAILED);
+        }
+    });
+    return rocksdb::Status::kOk;
 }
 
 } // namespace server
