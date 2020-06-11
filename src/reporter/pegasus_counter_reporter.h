@@ -9,7 +9,7 @@
 #include <dsn/cpp/json_helper.h>
 
 #include <boost/asio/deadline_timer.hpp>
-
+#include <event2/http_struct.h>
 #include <prometheus/registry.h>
 #include <prometheus/exposer.h>
 
