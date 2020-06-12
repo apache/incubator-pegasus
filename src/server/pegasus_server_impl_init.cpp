@@ -4,6 +4,7 @@
 
 #include "pegasus_server_impl.h"
 
+#include <dsn/utility/flags.h>
 #include <rocksdb/filter_policy.h>
 
 #include "capacity_unit_calculator.h"
@@ -14,6 +15,18 @@
 
 namespace pegasus {
 namespace server {
+
+DSN_DEFINE_int64(
+    "pegasus.server",
+    rocksdb_limiter_max_write_megabytes_per_sec,
+    500,
+    "max rate of rocksdb flush and compaction(MB/s), if less than or equal to 0 means close limit");
+
+DSN_DEFINE_bool("pegasus.server",
+                rocksdb_limiter_enable_auto_tune,
+                false,
+                "whether to enable write rate auto tune when open rocksdb write limit");
+
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     : pegasus_read_service(r),
       _db(nullptr),
@@ -251,6 +264,22 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         tbl_opts.block_cache = _s_block_cache;
     }
 
+    // FLAGS_rocksdb_limiter_max_write_megabytes_per_sec <= 0 means close the rate limit.
+    // For more detail arguments see
+    // https://github.com/facebook/rocksdb/blob/v6.6.4/include/rocksdb/rate_limiter.h#L111-L137
+    if (FLAGS_rocksdb_limiter_max_write_megabytes_per_sec > 0) {
+        static std::once_flag flag;
+        std::call_once(flag, [&]() {
+            _s_rate_limiter = std::shared_ptr<rocksdb::RateLimiter>(rocksdb::NewGenericRateLimiter(
+                FLAGS_rocksdb_limiter_max_write_megabytes_per_sec << 20,
+                100 * 1000, // refill_period_us
+                10,         // fairness
+                rocksdb::RateLimiter::Mode::kWritesOnly,
+                FLAGS_rocksdb_limiter_enable_auto_tune));
+        });
+        _db_opts.rate_limiter = _s_rate_limiter;
+    }
+
     // Bloom filter configurations.
     bool disable_bloom_filter = dsn_config_get_value_bool(
         "pegasus.server", "rocksdb_disable_bloom_filter", false, "Whether to disable bloom filter");
@@ -400,8 +429,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         COUNTER_TYPE_NUMBER,
         "statistic the total count of rocksdb block cache");
 
-    // Block cache is a singleton on this server shared by all replicas, so we initialize
-    // `_pfc_rdb_block_cache_mem_usage` only once.
+    // These counters are singletons on this server shared by all replicas, so we initialize
+    // them only once.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         _pfc_rdb_block_cache_mem_usage.init_global_counter(
@@ -410,6 +439,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "rdb.block_cache.memory_usage",
             COUNTER_TYPE_NUMBER,
             "statistic the memory usage of rocksdb block cache");
+
+        _pfc_rdb_write_limiter_rate_bytes.init_global_counter(
+            "replica",
+            "app.pegasus",
+            "rdb.write_limiter_rate_bytes",
+            COUNTER_TYPE_NUMBER,
+            "statistic the through bytes of rocksdb write rate limiter");
     });
 
     snprintf(name, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid.c_str());

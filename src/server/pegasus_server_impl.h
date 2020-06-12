@@ -13,6 +13,7 @@
 #include <dsn/dist/replication/replication.codes.h>
 #include <rrdb/rrdb_types.h>
 #include <gtest/gtest_prod.h>
+#include <rocksdb/rate_limiter.h>
 
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
@@ -317,6 +318,7 @@ private:
     ::dsn::error_code flush_all_family_columns(bool wait);
 
 private:
+    static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
     // Column family names.
     static const std::string DATA_COLUMN_FAMILY_NAME;
@@ -346,6 +348,8 @@ private:
     rocksdb::ColumnFamilyHandle *_data_cf;
     rocksdb::ColumnFamilyHandle *_meta_cf;
     static std::shared_ptr<rocksdb::Cache> _s_block_cache;
+    static std::shared_ptr<rocksdb::RateLimiter> _s_rate_limiter;
+    static int64_t _rocksdb_limiter_last_total_through;
     volatile bool _is_open;
     uint32_t _pegasus_data_version;
     std::atomic<int64_t> _last_durable_decree;
@@ -392,6 +396,7 @@ private:
 
     // rocksdb internal statistics
     // server level
+    static ::dsn::perf_counter_wrapper _pfc_rdb_write_limiter_rate_bytes;
     static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
     // replica level
     ::dsn::perf_counter_wrapper _pfc_rdb_sst_count;
