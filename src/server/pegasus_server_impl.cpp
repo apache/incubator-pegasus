@@ -42,12 +42,16 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
            std::string(name) == chkpt_get_dir_name(decree);
 }
 
+std::shared_ptr<rocksdb::RateLimiter> pegasus_server_impl::_s_rate_limiter;
+int64_t pegasus_server_impl::_rocksdb_limiter_last_total_through;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_s_block_cache;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_limiter_rate_bytes;
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
 const std::string pegasus_server_impl::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
+const std::chrono::seconds pegasus_server_impl::kServerStatUpdateTimeSec = std::chrono::seconds(10);
 
 void pegasus_server_impl::parse_checkpoints()
 {
@@ -1424,16 +1428,18 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                                       [this]() { this->update_replica_rocksdb_statistics(); },
                                       _update_rdb_stat_interval);
 
-    // Block cache is a singleton on this server shared by all replicas, its metrics update task
-    // should be scheduled once an interval on the server view.
+    // These counters are singletons on this server shared by all replicas, their metrics update
+    // task should be scheduled once an interval on the server view.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         // The timer task will always running even though there is no replicas
+        dassert(kServerStatUpdateTimeSec.count() != 0,
+                "kServerStatUpdateTimeSec shouldn't be zero");
         _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
             LPC_REPLICATION_LONG_COMMON,
             nullptr, // TODO: the tracker is nullptr, we will fix it later
             [this]() { update_server_rocksdb_statistics(); },
-            _update_rdb_stat_interval);
+            kServerStatUpdateTimeSec);
     });
 
     // initialize cu calculator and write service after server being initialized.
@@ -2107,9 +2113,16 @@ void pegasus_server_impl::update_server_rocksdb_statistics()
     if (_s_block_cache) {
         uint64_t val = _s_block_cache->GetUsage();
         _pfc_rdb_block_cache_mem_usage->set(val);
-        dinfo_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
-    } else {
-        dinfo("_pfc_rdb_block_cache_mem_usage: 0 bytes because block cache is disabled");
+    }
+
+    // Update _pfc_rdb_write_limiter_rate_bytes
+    if (_s_rate_limiter) {
+        uint64_t current_total_through = _s_rate_limiter->GetTotalBytesThrough();
+        uint64_t through_bytes_per_sec =
+            (current_total_through - _rocksdb_limiter_last_total_through) /
+            kServerStatUpdateTimeSec.count();
+        _pfc_rdb_write_limiter_rate_bytes->set(through_bytes_per_sec);
+        _rocksdb_limiter_last_total_through = current_total_through;
     }
 }
 
