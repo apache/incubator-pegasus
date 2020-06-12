@@ -23,7 +23,7 @@ DSN_DEFINE_int64(
     "max rate of rocksdb flush and compaction(MB/s), if less than or equal to 0 means close limit");
 
 DSN_DEFINE_bool("pegasus.server",
-                rocksdb_limiter_auto_tune_enable,
+                rocksdb_limiter_enable_auto_tune,
                 false,
                 "whether to enable write rate auto tune when open rocksdb write limit");
 
@@ -272,10 +272,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         std::call_once(flag, [&]() {
             _s_rate_limiter = std::shared_ptr<rocksdb::RateLimiter>(rocksdb::NewGenericRateLimiter(
                 FLAGS_rocksdb_limiter_max_write_megabytes_per_sec << 20,
-                100000,
-                10,
+                100 * 1000, // refill_period_us
+                10,         // fairness
                 rocksdb::RateLimiter::Mode::kWritesOnly,
-                FLAGS_rocksdb_limiter_auto_tune_enable));
+                FLAGS_rocksdb_limiter_enable_auto_tune));
         });
         _db_opts.rate_limiter = _s_rate_limiter;
     }
