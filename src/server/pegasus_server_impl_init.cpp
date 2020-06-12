@@ -28,7 +28,7 @@ DSN_DEFINE_bool("pegasus.server",
                 "whether to enable write rate auto tune when open rocksdb write limit");
 
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
-    : dsn::apps::rrdb_service(r),
+    : pegasus_read_service(r),
       _db(nullptr),
       _data_cf(nullptr),
       _meta_cf(nullptr),
