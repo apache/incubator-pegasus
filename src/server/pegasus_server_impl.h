@@ -12,7 +12,6 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <rrdb/rrdb_types.h>
-#include <rrdb/rrdb.server.h>
 #include <gtest/gtest_prod.h>
 
 #include "key_ttl_compaction_filter.h"
@@ -20,6 +19,7 @@
 #include "pegasus_manual_compact_service.h"
 #include "pegasus_write_service.h"
 #include "range_read_limiter.h"
+#include "pegasus_rrdb.server.h"
 
 namespace pegasus {
 namespace server {
@@ -28,7 +28,7 @@ class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;
 
-class pegasus_server_impl : public ::dsn::apps::rrdb_service
+class pegasus_server_impl : public pegasus_rrdb_service
 {
 public:
     static void register_service()
