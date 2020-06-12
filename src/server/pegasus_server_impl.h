@@ -19,7 +19,7 @@
 #include "pegasus_manual_compact_service.h"
 #include "pegasus_write_service.h"
 #include "range_read_limiter.h"
-#include "pegasus_rrdb.server.h"
+#include "pegasus_read_service.h"
 
 namespace pegasus {
 namespace server {
@@ -28,7 +28,7 @@ class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;
 
-class pegasus_server_impl : public pegasus_rrdb_service
+class pegasus_server_impl : public pegasus_read_service
 {
 public:
     static void register_service()

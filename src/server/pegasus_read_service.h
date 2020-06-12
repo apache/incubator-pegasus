@@ -6,14 +6,14 @@
 
 namespace pegasus {
 namespace server {
-class pegasus_rrdb_service : public dsn::replication::replication_app_base,
-                             public dsn::replication::storage_serverlet<pegasus_rrdb_service>
+class pegasus_read_service : public dsn::replication::replication_app_base,
+                             public dsn::replication::storage_serverlet<pegasus_read_service>
 {
 public:
-    pegasus_rrdb_service(dsn::replication::replica *r) : dsn::replication::replication_app_base(r)
+    pegasus_read_service(dsn::replication::replica *r) : dsn::replication::replication_app_base(r)
     {
     }
-    virtual ~pegasus_rrdb_service() {}
+    virtual ~pegasus_read_service() {}
     virtual int on_request(dsn::message_ex *request) override
     {
         handle_request(request);
@@ -58,43 +58,43 @@ protected:
     }
 
 private:
-    static void on_get(pegasus_rrdb_service *svc,
+    static void on_get(pegasus_read_service *svc,
                        const ::dsn::blob &args,
                        ::dsn::rpc_replier<dsn::apps::read_response> &reply)
     {
         svc->on_get(args, reply);
     }
-    static void on_multi_get(pegasus_rrdb_service *svc,
+    static void on_multi_get(pegasus_read_service *svc,
                              const dsn::apps::multi_get_request &args,
                              ::dsn::rpc_replier<dsn::apps::multi_get_response> &reply)
     {
         svc->on_multi_get(args, reply);
     }
-    static void on_sortkey_count(pegasus_rrdb_service *svc,
+    static void on_sortkey_count(pegasus_read_service *svc,
                                  const ::dsn::blob &args,
                                  ::dsn::rpc_replier<dsn::apps::count_response> &reply)
     {
         svc->on_sortkey_count(args, reply);
     }
-    static void on_ttl(pegasus_rrdb_service *svc,
+    static void on_ttl(pegasus_read_service *svc,
                        const ::dsn::blob &args,
                        ::dsn::rpc_replier<dsn::apps::ttl_response> &reply)
     {
         svc->on_ttl(args, reply);
     }
-    static void on_get_scanner(pegasus_rrdb_service *svc,
+    static void on_get_scanner(pegasus_read_service *svc,
                                const dsn::apps::get_scanner_request &args,
                                ::dsn::rpc_replier<dsn::apps::scan_response> &reply)
     {
         svc->on_get_scanner(args, reply);
     }
-    static void on_scan(pegasus_rrdb_service *svc,
+    static void on_scan(pegasus_read_service *svc,
                         const dsn::apps::scan_request &args,
                         ::dsn::rpc_replier<dsn::apps::scan_response> &reply)
     {
         svc->on_scan(args, reply);
     }
-    static void on_clear_scanner(pegasus_rrdb_service *svc, const int64_t &args)
+    static void on_clear_scanner(pegasus_read_service *svc, const int64_t &args)
     {
         svc->on_clear_scanner(args);
     }
