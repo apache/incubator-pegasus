@@ -24,6 +24,5 @@ echo
 echo "You should manually modify these files:"
 echo "  src/include/rrdb/rrdb.code.definition.h"
 echo "  src/include/rrdb/rrdb.client.h"
-echo "  src/include/rrdb/rrdb.server.h"
 echo
 echo "done"

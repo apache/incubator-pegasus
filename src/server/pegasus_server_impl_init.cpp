@@ -15,7 +15,7 @@
 namespace pegasus {
 namespace server {
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
-    : dsn::apps::rrdb_service(r),
+    : pegasus_read_service(r),
       _db(nullptr),
       _data_cf(nullptr),
       _meta_cf(nullptr),
