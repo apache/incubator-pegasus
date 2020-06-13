@@ -2,8 +2,6 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "pegasus_counter_reporter.h"
-
 #include <regex>
 #include <ios>
 #include <iomanip>
@@ -25,6 +23,7 @@
 
 #include "base/pegasus_utils.h"
 #include "pegasus_io_service.h"
+#include "pegasus_counter_reporter.h"
 
 using namespace ::dsn;
 
