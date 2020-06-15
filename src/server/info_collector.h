@@ -71,8 +71,7 @@ public:
             recent_expire_count->set(row_stats.recent_expire_count);
             recent_filter_count->set(row_stats.recent_filter_count);
             recent_abnormal_count->set(row_stats.recent_abnormal_count);
-            recent_write_throttling_delay_count->set(
-                row_stats.recent_write_throttling_delay_count);
+            recent_write_throttling_delay_count->set(row_stats.recent_write_throttling_delay_count);
             recent_write_throttling_reject_count->set(
                 row_stats.recent_write_throttling_reject_count);
             storage_mb->set(row_stats.storage_mb);
