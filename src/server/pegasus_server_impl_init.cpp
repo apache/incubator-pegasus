@@ -16,6 +16,10 @@
 namespace pegasus {
 namespace server {
 
+DSN_DEFINE_int32("pegasus.server",
+                 hotkey_analyse_time_interval_s,
+                 10,
+                 "hotkey_analyse_time_interval_s, in second");
 DSN_DEFINE_int64(
     "pegasus.server",
     rocksdb_limiter_max_write_megabytes_per_sec,
@@ -41,6 +45,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
+
+    _read_hotkey_collector.reset(new hotkey_collector(dsn::apps::hotkey_type::READ, this));
+    _write_hotkey_collector.reset(new hotkey_collector(dsn::apps::hotkey_type::WRITE, this));
 
     _verbose_log = dsn_config_get_value_bool("pegasus.server",
                                              "rocksdb_verbose_log",

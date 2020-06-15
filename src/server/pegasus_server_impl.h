@@ -20,14 +20,18 @@
 #include "pegasus_manual_compact_service.h"
 #include "pegasus_write_service.h"
 #include "range_read_limiter.h"
+#include "hotkey_collector.h"
 #include "pegasus_read_service.h"
 
 namespace pegasus {
 namespace server {
 
+DSN_DECLARE_int32(hotkey_analyse_time_interval_s);
+
 class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;
+class hotkey_collector;
 
 class pegasus_server_impl : public pegasus_read_service
 {
@@ -56,6 +60,8 @@ public:
     void on_scan(const ::dsn::apps::scan_request &args,
                  ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
     void on_clear_scanner(const int64_t &args) override;
+    void on_detect_hotkey(const ::dsn::apps::hotkey_detect_request &args,
+                          ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply) override;
 
     // input:
     //  - argc = 0 : re-open the db
@@ -167,6 +173,16 @@ public:
         return _ingestion_status;
     }
 
+    const std::shared_ptr<hotkey_collector> get_read_hotkey_collector()
+    {
+        return _read_hotkey_collector;
+    }
+
+    const std::shared_ptr<hotkey_collector> get_write_hotkey_collector()
+    {
+        return _write_hotkey_collector;
+    }
+
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
@@ -227,9 +243,8 @@ private:
     static void update_server_rocksdb_statistics();
 
     // get the absolute path of restore directory and the flag whether force restore from env
-    // return
-    //      std::pair<std::string, bool>, pair.first is the path of the restore dir; pair.second is
-    //      the flag that whether force restore
+    // return std::pair<std::string, bool>, pair.first is the path of the restore dir; pair.second
+    // is the flag that whether force restore
     std::pair<std::string, bool>
     get_restore_dir_from_env(const std::map<std::string, std::string> &env_kvs);
 
@@ -317,6 +332,11 @@ private:
 
     ::dsn::error_code flush_all_family_columns(bool wait);
 
+    void on_start_detect_hotkey(const ::dsn::apps::hotkey_detect_request &args,
+                                ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply);
+    void on_stop_detect_hotkey(const ::dsn::apps::hotkey_detect_request &args,
+                               ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply);
+
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
@@ -380,6 +400,9 @@ private:
         dsn::replication::ingestion_status::IS_INVALID};
 
     dsn::task_tracker _tracker;
+
+    std::shared_ptr<hotkey_collector> _read_hotkey_collector;
+    std::shared_ptr<hotkey_collector> _write_hotkey_collector;
 
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;
