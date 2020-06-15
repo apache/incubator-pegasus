@@ -34,6 +34,8 @@
  */
 
 #include <dsn/utility/factory_store.h>
+#include <dsn/utility/fail_point.h>
+#include <dsn/dist/fmt_logging.h>
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
 #include "meta_service.h"
@@ -83,6 +85,24 @@ void meta_server_failure_detector::on_worker_connected(rpc_address node)
 
 bool meta_server_failure_detector::get_leader(rpc_address *leader)
 {
+    FAIL_POINT_INJECT_F("meta_server_failure_detector_get_leader", [leader](dsn::string_view str) {
+        /// the format of str is : true#{ip}:{port} or false#{ip}:{port}
+        auto pos = str.find("#");
+        // get leader addr
+        auto addr_part = str.substr(pos + 1, str.length() - pos - 1);
+        if (!leader->from_string_ipv4(addr_part.data())) {
+            dassert_f(false, "parse {} to rpc_address failed", addr_part);
+        }
+
+        // get the return value which implies whether the current node is primary or not
+        bool is_leader = true;
+        auto is_leader_part = str.substr(0, pos);
+        if (!dsn::buf2bool(is_leader_part, is_leader)) {
+            dassert_f(false, "parse {} to bool failed", is_leader_part);
+        }
+        return is_leader;
+    });
+
     dsn::rpc_address holder;
     if (leader == nullptr) {
         leader = &holder;

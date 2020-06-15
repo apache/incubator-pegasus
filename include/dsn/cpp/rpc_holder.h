@@ -200,6 +200,18 @@ public:
         return t;
     }
 
+    void forward(const rpc_address &addr)
+    {
+        _i->auto_reply = false;
+        if (dsn_unlikely(_forward_mail_box != nullptr)) {
+            dsn_request()->header->from_address = addr;
+            _forward_mail_box->emplace_back(*this);
+            return;
+        }
+
+        dsn_rpc_forward(dsn_request(), addr);
+    }
+
     // Returns an rpc_holder that will reply the request after its lifetime ends.
     // By default rpc_holder never replies.
     // SEE: serverlet<T>::register_rpc_handler_with_rpc_holder
@@ -221,19 +233,31 @@ public:
     using mail_box_u_ptr = std::unique_ptr<mail_box_t>;
     static void enable_mocking()
     {
-        dassert(_mail_box == nullptr, "remember to call clear_mocking_env after testing");
+        dassert(_mail_box == nullptr && _forward_mail_box == nullptr,
+                "remember to call clear_mocking_env after testing");
         _mail_box = make_unique<mail_box_t>();
+        _forward_mail_box = make_unique<mail_box_t>();
     }
 
     // Only use this function when testing.
     // Remember to call it after test finishes, or it may effect the results of other tests.
     // This function is not thread-safe.
-    static void clear_mocking_env() { _mail_box.reset(nullptr); }
+    static void clear_mocking_env()
+    {
+        _mail_box.reset(nullptr);
+        _forward_mail_box.reset(nullptr);
+    }
 
     static mail_box_t &mail_box()
     {
         dassert(_mail_box != nullptr, "call this function only when you are in mock mode");
         return *_mail_box.get();
+    }
+
+    static mail_box_t &forward_mail_box()
+    {
+        dassert(_forward_mail_box != nullptr, "call this function only when you are in mock mode");
+        return *_forward_mail_box.get();
     }
 
     friend bool operator<(const rpc_holder &lhs, const rpc_holder &rhs) { return lhs._i < rhs._i; }
@@ -300,6 +324,7 @@ private:
     std::shared_ptr<internal> _i;
 
     static mail_box_u_ptr _mail_box;
+    static mail_box_u_ptr _forward_mail_box;
 };
 
 // ======== type traits ========
@@ -341,6 +366,9 @@ task_ptr call(rpc_address server,
 
 template <typename TRequest, typename TResponse>
 typename rpc_holder<TRequest, TResponse>::mail_box_u_ptr rpc_holder<TRequest, TResponse>::_mail_box;
+template <typename TRequest, typename TResponse>
+typename rpc_holder<TRequest, TResponse>::mail_box_u_ptr
+    rpc_holder<TRequest, TResponse>::_forward_mail_box;
 
 template <typename TRpcHolder>
 struct rpc_mock_wrapper

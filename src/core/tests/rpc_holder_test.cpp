@@ -122,3 +122,29 @@ TEST(rpc_holder, mock_rpc_reply)
         ASSERT_EQ(mail_box.size(), 10);
     }
 }
+
+TEST(rpc_holder, mock_rpc_forward)
+{
+    RPC_MOCKING(t_rpc)
+    {
+        auto &mail_box = t_rpc::mail_box();
+        auto &forward_mail_box = t_rpc::forward_mail_box();
+        rpc_address forward_addr("127.0.0.1", 10086);
+
+        for (int i = 0; i < 10; i++) {
+            configuration_query_by_index_request request;
+            auto msg = from_thrift_request_to_received_message(
+                request, RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
+            auto rpc = t_rpc::auto_reply(msg);
+            rpc.forward(forward_addr);
+
+            // destruct rpc and automatically reply via mail_box
+        }
+
+        ASSERT_EQ(mail_box.size(), 0);
+        ASSERT_EQ(forward_mail_box.size(), 10);
+        for (auto rpc : forward_mail_box) {
+            ASSERT_EQ(rpc.remote_address(), forward_addr);
+        }
+    }
+}

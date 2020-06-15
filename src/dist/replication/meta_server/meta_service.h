@@ -218,6 +218,10 @@ private:
     //  -1. meta isn't leader, and rpc-msg can't forward to others
     // if return -1 and `forward_address' != nullptr, then return leader by `forward_address'.
     int check_leader(dsn::message_ex *req, dsn::rpc_address *forward_address);
+    template <typename TRpcHolder>
+    int check_leader(TRpcHolder rpc, /*out*/ rpc_address *forward_address);
+    template <typename TRpcHolder>
+    bool check_status(TRpcHolder rpc, /*out*/ rpc_address *forward_address = nullptr);
     error_code remote_storage_initialize();
     bool check_freeze() const;
 
@@ -247,6 +251,7 @@ private:
     friend class meta_load_balance_test;
     friend class meta_backup_test_base;
     friend class meta_http_service;
+    friend class meta_service_test;
     std::unique_ptr<meta_duplication_service> _dup_svc;
 
     std::unique_ptr<meta_split_service> _split_svc;
