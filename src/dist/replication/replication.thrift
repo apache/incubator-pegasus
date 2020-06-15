@@ -47,6 +47,9 @@ struct replica_configuration
     3:dsn.rpc_address     primary;
     4:partition_status    status = partition_status.PS_INVALID;
     5:i64                 learner_signature;
+    // Used for bulk load
+    // secondary will pop all committed mutations even if buffer is not full
+    6:optional bool       pop_all = false;
 }
 
 struct prepare_msg

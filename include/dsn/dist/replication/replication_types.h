@@ -620,7 +620,12 @@ inline std::ostream &operator<<(std::ostream &out, const mutation_data &obj)
 typedef struct _replica_configuration__isset
 {
     _replica_configuration__isset()
-        : pid(false), ballot(false), primary(false), status(true), learner_signature(false)
+        : pid(false),
+          ballot(false),
+          primary(false),
+          status(true),
+          learner_signature(false),
+          pop_all(true)
     {
     }
     bool pid : 1;
@@ -628,6 +633,7 @@ typedef struct _replica_configuration__isset
     bool primary : 1;
     bool status : 1;
     bool learner_signature : 1;
+    bool pop_all : 1;
 } _replica_configuration__isset;
 
 class replica_configuration
@@ -637,7 +643,8 @@ public:
     replica_configuration(replica_configuration &&);
     replica_configuration &operator=(const replica_configuration &);
     replica_configuration &operator=(replica_configuration &&);
-    replica_configuration() : ballot(0), status((partition_status::type)0), learner_signature(0)
+    replica_configuration()
+        : ballot(0), status((partition_status::type)0), learner_signature(0), pop_all(false)
     {
         status = (partition_status::type)0;
     }
@@ -648,6 +655,7 @@ public:
     ::dsn::rpc_address primary;
     partition_status::type status;
     int64_t learner_signature;
+    bool pop_all;
 
     _replica_configuration__isset __isset;
 
@@ -661,6 +669,8 @@ public:
 
     void __set_learner_signature(const int64_t val);
 
+    void __set_pop_all(const bool val);
+
     bool operator==(const replica_configuration &rhs) const
     {
         if (!(pid == rhs.pid))
@@ -672,6 +682,10 @@ public:
         if (!(status == rhs.status))
             return false;
         if (!(learner_signature == rhs.learner_signature))
+            return false;
+        if (__isset.pop_all != rhs.__isset.pop_all)
+            return false;
+        else if (__isset.pop_all && !(pop_all == rhs.pop_all))
             return false;
         return true;
     }

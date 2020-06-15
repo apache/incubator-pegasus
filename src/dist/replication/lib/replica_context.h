@@ -154,6 +154,9 @@ public:
     node_tasks group_bulk_load_pending_replies;
     // bulk_load_state of secondary replicas
     std::unordered_map<rpc_address, partition_bulk_load_state> secondary_bulk_load_states;
+    // if primary send an empty prepare after ingestion succeed to gurantee secondary commit its
+    // ingestion request
+    bool ingestion_is_empty_prepare_sent{false};
 };
 
 class secondary_context

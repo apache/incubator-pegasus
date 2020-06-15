@@ -67,7 +67,9 @@ void prepare_list::truncate(decree init_decree)
     _last_committed_decree = init_decree;
 }
 
-error_code prepare_list::prepare(mutation_ptr &mu, partition_status::type status)
+error_code prepare_list::prepare(mutation_ptr &mu,
+                                 partition_status::type status,
+                                 bool pop_all_committed_mutations)
 {
     decree d = mu->data.header.decree;
     dcheck_gt_replica(d, last_committed_decree());
@@ -75,8 +77,9 @@ error_code prepare_list::prepare(mutation_ptr &mu, partition_status::type status
     error_code err;
     switch (status) {
     case partition_status::PS_PRIMARY:
-        // pop committed mutations if buffer is full
-        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree()) {
+        // pop committed mutations if buffer is full or pop_all_committed_mutations = true
+        while ((d - min_decree() >= capacity() || pop_all_committed_mutations) &&
+               last_committed_decree() > min_decree()) {
             pop_min();
         }
         return mutation_cache::put(mu);
@@ -85,8 +88,9 @@ error_code prepare_list::prepare(mutation_ptr &mu, partition_status::type status
     case partition_status::PS_POTENTIAL_SECONDARY:
         // all mutations with lower decree must be ready
         commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
-        // pop committed mutations if buffer is full
-        while (d - min_decree() >= capacity() && last_committed_decree() > min_decree()) {
+        // pop committed mutations if buffer is full or pop_all_committed_mutations = true
+        while ((d - min_decree() >= capacity() || pop_all_committed_mutations) &&
+               last_committed_decree() > min_decree()) {
             pop_min();
         }
         err = mutation_cache::put(mu);

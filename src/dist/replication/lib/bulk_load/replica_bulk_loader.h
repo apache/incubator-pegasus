@@ -33,12 +33,19 @@ private:
                             const std::string &cluster_name,
                             const std::string &provider_name);
 
+    // compare meta bulk load status and local bulk load status
+    // \return ERR_INVALID_STATE if local status is invalid
+    // for example, if meta status is ingestion, replica local status can only be downloaded or
+    // ingestion, if local status is other status, will return ERR_INVALID_STATE
+    error_code validate_bulk_load_status(bulk_load_status::type meta_status,
+                                         bulk_load_status::type local_status);
+
     // replica start or restart download sst files from remote provider
     // \return ERR_BUSY if node has already had enough replica executing downloading
     // \return download errors by function `download_sst_files`
-    error_code bulk_load_start_download(const std::string &app_name,
-                                        const std::string &cluster_name,
-                                        const std::string &provider_name);
+    error_code start_download(const std::string &app_name,
+                              const std::string &cluster_name,
+                              const std::string &provider_name);
 
     // download metadata and sst files from remote provider
     // metadata and sst files will be downloaded in {_dir}/.bulk_load directory
@@ -58,6 +65,8 @@ private:
 
     void try_decrease_bulk_load_download_count();
     void check_download_finish();
+    void start_ingestion();
+    void check_ingestion_finish();
 
     void cleanup_download_task();
     void clear_bulk_load_states();
@@ -66,6 +75,7 @@ private:
                                          bool report_metadata,
                                          /*out*/ bulk_load_response &response);
     void report_group_download_progress(/*out*/ bulk_load_response &response);
+    void report_group_ingestion_status(/*out*/ bulk_load_response &response);
 
     void report_bulk_load_states_to_primary(bulk_load_status::type remote_status,
                                             /*out*/ group_bulk_load_response &response);

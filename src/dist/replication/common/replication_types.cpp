@@ -698,6 +698,12 @@ void replica_configuration::__set_learner_signature(const int64_t val)
     this->learner_signature = val;
 }
 
+void replica_configuration::__set_pop_all(const bool val)
+{
+    this->pop_all = val;
+    __isset.pop_all = true;
+}
+
 uint32_t replica_configuration::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -759,6 +765,14 @@ uint32_t replica_configuration::read(::apache::thrift::protocol::TProtocol *ipro
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 6:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->pop_all);
+                this->__isset.pop_all = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -797,6 +811,11 @@ uint32_t replica_configuration::write(::apache::thrift::protocol::TProtocol *opr
     xfer += oprot->writeI64(this->learner_signature);
     xfer += oprot->writeFieldEnd();
 
+    if (this->__isset.pop_all) {
+        xfer += oprot->writeFieldBegin("pop_all", ::apache::thrift::protocol::T_BOOL, 6);
+        xfer += oprot->writeBool(this->pop_all);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -810,6 +829,7 @@ void swap(replica_configuration &a, replica_configuration &b)
     swap(a.primary, b.primary);
     swap(a.status, b.status);
     swap(a.learner_signature, b.learner_signature);
+    swap(a.pop_all, b.pop_all);
     swap(a.__isset, b.__isset);
 }
 
@@ -820,6 +840,7 @@ replica_configuration::replica_configuration(const replica_configuration &other1
     primary = other19.primary;
     status = other19.status;
     learner_signature = other19.learner_signature;
+    pop_all = other19.pop_all;
     __isset = other19.__isset;
 }
 replica_configuration::replica_configuration(replica_configuration &&other20)
@@ -829,6 +850,7 @@ replica_configuration::replica_configuration(replica_configuration &&other20)
     primary = std::move(other20.primary);
     status = std::move(other20.status);
     learner_signature = std::move(other20.learner_signature);
+    pop_all = std::move(other20.pop_all);
     __isset = std::move(other20.__isset);
 }
 replica_configuration &replica_configuration::operator=(const replica_configuration &other21)
@@ -838,6 +860,7 @@ replica_configuration &replica_configuration::operator=(const replica_configurat
     primary = other21.primary;
     status = other21.status;
     learner_signature = other21.learner_signature;
+    pop_all = other21.pop_all;
     __isset = other21.__isset;
     return *this;
 }
@@ -848,6 +871,7 @@ replica_configuration &replica_configuration::operator=(replica_configuration &&
     primary = std::move(other22.primary);
     status = std::move(other22.status);
     learner_signature = std::move(other22.learner_signature);
+    pop_all = std::move(other22.pop_all);
     __isset = std::move(other22.__isset);
     return *this;
 }
@@ -864,6 +888,9 @@ void replica_configuration::printTo(std::ostream &out) const
         << "status=" << to_string(status);
     out << ", "
         << "learner_signature=" << to_string(learner_signature);
+    out << ", "
+        << "pop_all=";
+    (__isset.pop_all ? (out << to_string(pop_all)) : (out << "<null>"));
     out << ")";
 }
 
