@@ -21,7 +21,7 @@ hotkey_fine_data_collector::hotkey_fine_data_collector(hotkey_collector *base)
                                     3,
                                     "the threshold of variance calculate to find the outliers");
     // Distinguish between single-threaded and multi-threaded environments
-    if (base->hotkey_type == dsn::apps::hotkey_type::READ) {
+    if (base->get_hotkey_type() == dsn::apps::hotkey_type::READ) {
         auto threads = dsn::get_threadpool_threads_info(THREAD_POOL_LOCAL_APP);
         _thread_queue_map.reset(new std::unordered_map<int, int>);
         int queue_num = threads.size();
@@ -52,7 +52,7 @@ inline int hotkey_fine_data_collector::get_queue_index()
 
 void hotkey_fine_data_collector::capture_fine_data(const std::string &data, int count)
 {
-    if (hotkey_collector::data_hash_method(data) != _target_bucket)
+    if (hotkey_collector::get_bucket_id(data) != _target_bucket)
         return;
     _string_capture_queue[get_queue_index()].try_emplace(std::make_pair(data, count));
 }

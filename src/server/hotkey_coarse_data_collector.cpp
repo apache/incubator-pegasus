@@ -21,7 +21,7 @@ hotkey_coarse_data_collector::hotkey_coarse_data_collector(hotkey_collector *bas
 
 void hotkey_coarse_data_collector::capture_coarse_data(const std::string &data, int count)
 {
-    _coarse_hash_buckets[hotkey_collector::data_hash_method(data)].fetch_add(count);
+    _coarse_hash_buckets[hotkey_collector::get_bucket_id(data)].fetch_add(count);
 }
 
 const int hotkey_coarse_data_collector::analyse_coarse_data()

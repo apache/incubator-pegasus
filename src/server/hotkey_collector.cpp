@@ -21,13 +21,13 @@ DSN_DEFINE_int32("pegasus.server",
                  37,
                  "the number of data capture hash buckets");
 
-inline bool hotkey_collector::_is_ready_to_detect()
+inline bool hotkey_collector::is_ready_to_detect()
 {
     return (_collector_state.load() == collector_state::STOP ||
             _collector_state.load() == collector_state::FINISH);
 }
 
-/*static*/ int hotkey_collector::data_hash_method(const std::string &data)
+/*static*/ int hotkey_collector::get_bucket_id(const std::string &data)
 {
     return std::hash<std::string>{}(data) % FLAGS_data_capture_hash_bucket_num;
 };
@@ -35,9 +35,9 @@ inline bool hotkey_collector::_is_ready_to_detect()
 hotkey_collector::hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
     : replica_base(r_base),
-      hotkey_type(hotkey_type),
       _collector_state(collector_state::STOP),
-      _coarse_result(-1)
+      _coarse_result(-1),
+      _hotkey_type(hotkey_type)
 {
     _collector_start_time = dsn_now_s();
 }
@@ -48,20 +48,20 @@ bool hotkey_collector::init()
     case collector_state::COARSE:
     case collector_state::FINE:
         derror_replica("Now is detecting {} hotkey, state is {}",
-                       hotkey_type == dsn::apps::hotkey_type::READ ? "read" : "write",
+                       get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write",
                        get_status());
         return false;
     case collector_state::FINISH:
         derror_replica(
             "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
-            hotkey_type == dsn::apps::hotkey_type::READ ? "Read" : "Write");
+            get_hotkey_type() == dsn::apps::hotkey_type::READ ? "Read" : "Write");
         return false;
     case collector_state::STOP:
         _collector_start_time = dsn_now_s();
         _coarse_data_collector.reset(new hotkey_coarse_data_collector(this));
         _collector_state.store(collector_state::COARSE);
         derror_replica("Is starting to detect {} hotkey",
-                       hotkey_type == dsn::apps::hotkey_type::READ ? "read" : "write");
+                       get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write");
         return true;
     default:
         derror_replica("Wrong collector state");
@@ -75,7 +75,7 @@ void hotkey_collector::clear()
     _coarse_data_collector.reset();
     _fine_data_collector.reset();
     derror_replica("Already cleared {} hotkey cache",
-                   hotkey_type == dsn::apps::hotkey_type::READ ? "read" : "write");
+                   get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write");
 }
 
 std::string hotkey_collector::get_status()
@@ -105,7 +105,7 @@ bool hotkey_collector::get_result(std::string &result)
 
 void hotkey_collector::capture_msg_data(dsn::message_ex **requests, const int count)
 {
-    if (_is_ready_to_detect() || count == 0) {
+    if (is_ready_to_detect() || count == 0) {
         return;
     }
     for (int i = 0; i < count; i++) {
@@ -157,7 +157,7 @@ void hotkey_collector::capture_msg_data(dsn::message_ex **requests, const int co
 void hotkey_collector::capture_multi_get_data(const ::dsn::apps::multi_get_request &request,
                                               const ::dsn::apps::multi_get_response &resp)
 {
-    if (_is_ready_to_detect()) {
+    if (is_ready_to_detect()) {
         return;
     }
     if (resp.kvs.size() != 0) {
@@ -169,7 +169,7 @@ void hotkey_collector::capture_multi_get_data(const ::dsn::apps::multi_get_reque
 
 void hotkey_collector::capture_blob_data(const ::dsn::blob &key, int count)
 {
-    if (_is_ready_to_detect()) {
+    if (is_ready_to_detect()) {
         return;
     }
     std::string hash_key, sort_key;
@@ -179,7 +179,7 @@ void hotkey_collector::capture_blob_data(const ::dsn::blob &key, int count)
 
 void hotkey_collector::capture_str_data(const std::string &data, int count)
 {
-    if (_is_ready_to_detect() || data.length() == 0) {
+    if (is_ready_to_detect() || data.length() == 0) {
         return;
     }
     if (_collector_state.load() == collector_state::COARSE && _coarse_data_collector != nullptr) {
@@ -192,7 +192,7 @@ void hotkey_collector::capture_str_data(const std::string &data, int count)
 
 void hotkey_collector::analyse_data()
 {
-    if (_is_ready_to_detect()) {
+    if (is_ready_to_detect()) {
         return;
     }
 
@@ -213,7 +213,7 @@ void hotkey_collector::analyse_data()
                _fine_data_collector != nullptr &&
                _fine_data_collector->analyse_fine_data(_fine_result)) {
         derror_replica("{} hotkey result: {}",
-                       hotkey_type == dsn::apps::hotkey_type::READ ? "read" : "write",
+                       get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write",
                        ::pegasus::utils::c_escape_string(_fine_result).c_str());
         _collector_state.store(collector_state::FINISH);
         _fine_data_collector.reset();

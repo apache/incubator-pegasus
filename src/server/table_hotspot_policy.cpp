@@ -18,7 +18,7 @@ namespace server {
 
 DSN_DEFINE_bool("pegasus.collector",
                 enable_hotkey_auto_detect,
-                true,
+                false,
                 "auto detect hot key in the hot paritition");
 
 // if hot_partition_counter >= FLAGS_hotpartition_threshold, This partition is a hot partition

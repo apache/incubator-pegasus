@@ -32,6 +32,9 @@ enum class collector_state
     FINISH  // capture and analyse is done, ready to get result
 };
 
+// `hotkey_collector` is responsible to find the hot keys after the partition was detected to be
+// hot. In general, there are 2 collectors once hotkey detection is enabled: one for read, the other
+// for write.
 class hotkey_collector : public dsn::replication::replica_base
 {
 public:
@@ -56,12 +59,12 @@ public:
     static bool variance_calc(const std::vector<int> &data_samples,
                               std::vector<int> &hot_values,
                               const int threshold);
-    static int data_hash_method(const std::string &data);
+    static int get_bucket_id(const std::string &data);
     int get_coarse_result() const { return _coarse_result; }
 
     // hotkey_type == READ, using THREAD_POOL_LOCAL_APP threadpool to distribute queue
     // hotkey_type == WRITE, using single queue
-    dsn::apps::hotkey_type::type hotkey_type;
+    dsn::apps::hotkey_type::type get_hotkey_type() const { return _hotkey_type; }
 
 private:
     std::atomic<collector_state> _collector_state;
@@ -71,8 +74,9 @@ private:
     std::unique_ptr<hotkey_fine_data_collector> _fine_data_collector;
     std::string _fine_result;
     int _coarse_result;
+    dsn::apps::hotkey_type::type _hotkey_type;
 
-    bool _is_ready_to_detect();
+    bool is_ready_to_detect();
 
     FRIEND_TEST(hotkey_collector_test, init_destory_timeout);
 };
