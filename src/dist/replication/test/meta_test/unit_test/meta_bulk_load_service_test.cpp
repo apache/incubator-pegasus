@@ -221,6 +221,20 @@ public:
         _resp.__set_metadata(metadata);
     }
 
+    void mock_response_ingestion_status(ingestion_status::type secondary_istatus)
+    {
+        create_basic_response(ERR_OK, bulk_load_status::BLS_INGESTING);
+
+        partition_bulk_load_state state, state2;
+        state.__set_ingest_status(ingestion_status::IS_SUCCEED);
+        state2.__set_ingest_status(secondary_istatus);
+
+        _resp.group_bulk_load_state[PRIMARY] = state;
+        _resp.group_bulk_load_state[SECONDARY1] = state;
+        _resp.group_bulk_load_state[SECONDARY2] = state2;
+        _resp.__set_is_group_ingestion_finished(secondary_istatus == ingestion_status::IS_SUCCEED);
+    }
+
     void test_on_partition_bulk_load_reply(int32_t in_progress_count,
                                            bulk_load_status::type status,
                                            error_code resp_err = ERR_OK)
@@ -295,6 +309,22 @@ TEST_F(bulk_load_process_test, start_ingesting)
     mock_response_progress(ERR_OK, true);
     test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_DOWNLOADED);
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
+}
+
+TEST_F(bulk_load_process_test, ingestion_running)
+{
+    mock_response_ingestion_status(ingestion_status::IS_RUNNING);
+    test_on_partition_bulk_load_reply(_partition_count, bulk_load_status::BLS_INGESTING);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
+}
+
+// TODO(heyuchen): add ingestion_error unit tests after implement function `handle_app_failed`
+
+TEST_F(bulk_load_process_test, normal_succeed)
+{
+    mock_response_ingestion_status(ingestion_status::IS_SUCCEED);
+    test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_INGESTING);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_SUCCEED);
 }
 
 // TODO(heyuchen): add other unit tests for `on_partition_bulk_load_reply`

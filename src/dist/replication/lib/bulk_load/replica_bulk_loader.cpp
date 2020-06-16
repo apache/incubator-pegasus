@@ -551,7 +551,10 @@ void replica_bulk_loader::report_group_ingestion_status(/*out*/ bulk_load_respon
                    _replica->_primary_states.membership.primary.to_string(),
                    enum_to_string(primary_state.ingest_status));
 
-    bool is_group_ingestion_finish = primary_state.ingest_status == ingestion_status::IS_SUCCEED;
+    bool is_group_ingestion_finish =
+        (primary_state.ingest_status == ingestion_status::IS_SUCCEED) &&
+        (_replica->_primary_states.membership.secondaries.size() + 1 ==
+         _replica->_primary_states.membership.max_replica_count);
     for (const auto &target_address : _replica->_primary_states.membership.secondaries) {
         const auto &secondary_state =
             _replica->_primary_states.secondary_bulk_load_states[target_address];
@@ -562,12 +565,9 @@ void replica_bulk_loader::report_group_ingestion_status(/*out*/ bulk_load_respon
                        target_address.to_string(),
                        enum_to_string(ingest_status));
         response.group_bulk_load_state[target_address] = secondary_state;
-        is_group_ingestion_finish =
-            is_group_ingestion_finish && (ingest_status == ingestion_status::IS_SUCCEED);
+        is_group_ingestion_finish &= (ingest_status == ingestion_status::IS_SUCCEED);
     }
-    response.__set_is_group_ingestion_finished(
-        is_group_ingestion_finish && (_replica->_primary_states.membership.secondaries.size() + 1 ==
-                                      _replica->_primary_states.membership.max_replica_count));
+    response.__set_is_group_ingestion_finished(is_group_ingestion_finish);
 
     // if group ingestion finish, recover wirte immediately
     if (is_group_ingestion_finish) {
