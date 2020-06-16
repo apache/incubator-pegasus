@@ -120,7 +120,7 @@ hotspot_calculator::notify_replica(const std::string &app_name,
                                   ddebug("Hotkey detect rpc sending failed");
                               }
                           } else {
-                              ddebug("Hotkey detect rpc sending failed, %s", err.to_string());
+                              ddebug_f("Hotkey detect rpc sending failed, {}", err.to_string());
                           }
                       },
                       std::chrono::seconds(10),
@@ -130,7 +130,7 @@ hotspot_calculator::notify_replica(const std::string &app_name,
 
 void hotspot_calculator::start_alg()
 {
-    ddebug("Start to detect hotspot partition");
+    ddebug_f("Start to detect hotspot partition: {}", _app_name.c_str());
     _policy->analysis(_app_data, _hot_partition_points);
 
     if (!FLAGS_enable_hotkey_auto_detect) {
