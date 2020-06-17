@@ -31,7 +31,7 @@ DSN_DEFINE_uint64("pegasus.server", prometheus_port, 9091, "prometheus exposer p
 
 DSN_DEFINE_string("pegasus.server", falcon_host, "127.0.0.1", "falcon agent host");
 DSN_DEFINE_uint64("pegasus.server", falcon_port, 1988, "falcon agent port");
-DSN_DEFINE_string("pegasus.server", falcon_path, "/v1/push", "falcon http path");
+DSN_DEFINE_string("pegasus.server", falcon_path, "/v1/push", "falcon agent http path");
 
 DSN_DEFINE_uint64("pegasus.server",
                   perf_counter_update_interval_seconds,
