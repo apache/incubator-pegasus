@@ -1248,69 +1248,27 @@ void pegasus_server_impl::on_detect_hotkey(
     const ::dsn::apps::hotkey_detect_request &args,
     ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply)
 {
-    if (args.operation == dsn::apps::hotkey_collector_operation::START) {
-        on_start_detect_hotkey(args, reply);
-    } else if (args.operation == dsn::apps::hotkey_collector_operation::STOP) {
-        on_stop_detect_hotkey(args, reply);
-    } else {
-        ::dsn::apps::hotkey_detect_response resp;
-        derror_replica("unkwnon hotkey_collector_operation");
-        resp.err = ::dsn::ERR_SERVICE_NOT_FOUND;
-        reply(resp);
-    }
-}
-
-void pegasus_server_impl::on_start_detect_hotkey(
-    const ::dsn::apps::hotkey_detect_request &args,
-    ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply)
-{
     ::dsn::apps::hotkey_detect_response resp;
-    std::shared_ptr<hotkey_collector> hotkey_collector_pointer;
-
-    if (args.type == dsn::apps::hotkey_type::READ) {
-        hotkey_collector_pointer = _read_hotkey_collector;
-        derror_replica("Received hotkey RPC, start to detect read hotkey");
-    } else if (args.type == dsn::apps::hotkey_type::WRITE) {
-        hotkey_collector_pointer = _write_hotkey_collector;
-        derror_replica("Received hotkey RPC, start to detect write hotkey");
-    } else {
-        derror_replica("Error hotkey_type");
+    if (args.operation != dsn::apps::hotkey_collector_operation::START &&
+        args.operation != dsn::apps::hotkey_collector_operation::STOP) {
         resp.err = ::dsn::ERR_SERVICE_NOT_FOUND;
+        resp.__set_err_hint("invalid hotkey_collector_operation");
         reply(resp);
-        return;
     }
-
-    if (hotkey_collector_pointer->init()) {
+    std::string op =
+        args.operation == dsn::apps::hotkey_collector_operation::START ? "START" : "STOP";
+    if (args.type != dsn::apps::hotkey_type::READ && args.type != dsn::apps::hotkey_type::WRITE) {
+        resp.err = ::dsn::ERR_SERVICE_NOT_FOUND;
+        resp.__set_err_hint("invalid hotkey_type");
+        reply(resp);
+    }
+    auto collector = args.type == dsn::apps::hotkey_type::READ ? _read_hotkey_collector
+                                                               : _write_hotkey_collector;
+    if (collector->handle_operation(args.operation)) {
         resp.err = ::dsn::ERR_OK;
     } else {
         resp.err = ::dsn::ERR_SERVICE_ALREADY_EXIST;
     }
-    reply(resp);
-    return;
-}
-
-void pegasus_server_impl::on_stop_detect_hotkey(
-    const ::dsn::apps::hotkey_detect_request &args,
-    ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply)
-{
-    ::dsn::apps::hotkey_detect_response resp;
-    std::shared_ptr<hotkey_collector> hotkey_collector_pointer;
-
-    if (args.type == dsn::apps::hotkey_type::READ) {
-        hotkey_collector_pointer = _read_hotkey_collector;
-        derror_replica("Received hotkey RPC, stop to detect read hotkey");
-    } else if (args.type == dsn::apps::hotkey_type::WRITE) {
-        hotkey_collector_pointer = _write_hotkey_collector;
-        derror_replica("Received hotkey RPC, stop to detect write hotkey");
-    } else {
-        derror("Error hotkey_type");
-        resp.err = ::dsn::ERR_SERVICE_NOT_FOUND;
-        reply(resp);
-        return;
-    }
-
-    hotkey_collector_pointer->clear();
-    resp.err = ::dsn::ERR_OK;
     reply(resp);
 }
 

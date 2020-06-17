@@ -2022,8 +2022,9 @@ inline std::ostream &operator<<(std::ostream &out, const hotkey_detect_request &
 
 typedef struct _hotkey_detect_response__isset
 {
-    _hotkey_detect_response__isset() : err(false) {}
+    _hotkey_detect_response__isset() : err(false), err_hint(false) {}
     bool err : 1;
+    bool err_hint : 1;
 } _hotkey_detect_response__isset;
 
 class hotkey_detect_response
@@ -2033,18 +2034,25 @@ public:
     hotkey_detect_response(hotkey_detect_response &&);
     hotkey_detect_response &operator=(const hotkey_detect_response &);
     hotkey_detect_response &operator=(hotkey_detect_response &&);
-    hotkey_detect_response() : err(0) {}
+    hotkey_detect_response() : err(0), err_hint() {}
 
     virtual ~hotkey_detect_response() throw();
     int32_t err;
+    std::string err_hint;
 
     _hotkey_detect_response__isset __isset;
 
     void __set_err(const int32_t val);
 
+    void __set_err_hint(const std::string &val);
+
     bool operator==(const hotkey_detect_response &rhs) const
     {
         if (!(err == rhs.err))
+            return false;
+        if (__isset.err_hint != rhs.__isset.err_hint)
+            return false;
+        else if (__isset.err_hint && !(err_hint == rhs.err_hint))
             return false;
         return true;
     }

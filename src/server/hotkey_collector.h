@@ -41,9 +41,12 @@ public:
     hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
                      dsn::replication::replica_base *r_base);
     // after receiving START RPC, start to capture and analyse
-    bool init();
+    // return true: start detecting successfully
+    //        false: The query is in progress or a hot spot has been found
+    bool start();
     // after receiving collector_state::STOP RPC or timeout, clear historical data
-    void clear();
+    // always return ture
+    bool stop();
     void capture_blob_data(const ::dsn::blob &key, int count = 1);
     void capture_msg_data(dsn::message_ex **requests_point, const int count);
     void capture_str_data(const std::string &data, int count);
@@ -61,6 +64,7 @@ public:
                               const int threshold);
     static int get_bucket_id(const std::string &data);
     int get_coarse_result() const { return _coarse_result; }
+    bool handle_operation(dsn::apps::hotkey_collector_operation::type op);
 
     // hotkey_type == READ, using THREAD_POOL_LOCAL_APP threadpool to distribute queue
     // hotkey_type == WRITE, using single queue

@@ -300,6 +300,7 @@ struct hotkey_detect_response {
     // - ERR_SERVICE_NOT_FOUND: wrong rpc type
     // - ERR_SERVICE_ALREADY_EXIST hotkey detection is running now
     1: i32 err;
+    2: optional string err_hint;
 }
 
 service rrdb

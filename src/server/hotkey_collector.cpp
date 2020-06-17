@@ -21,6 +21,11 @@ DSN_DEFINE_int32("pegasus.server",
                  37,
                  "the number of data capture hash buckets");
 
+bool hotkey_collector::handle_operation(dsn::apps::hotkey_collector_operation::type op)
+{
+    return op == dsn::apps::hotkey_collector_operation::START ? start() : stop();
+}
+
 inline bool hotkey_collector::is_ready_to_detect()
 {
     return (_collector_state.load() == collector_state::STOP ||
@@ -42,7 +47,7 @@ hotkey_collector::hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
     _collector_start_time = dsn_now_s();
 }
 
-bool hotkey_collector::init()
+bool hotkey_collector::start()
 {
     switch (_collector_state.load()) {
     case collector_state::COARSE:
@@ -69,13 +74,14 @@ bool hotkey_collector::init()
     }
 }
 
-void hotkey_collector::clear()
+bool hotkey_collector::stop()
 {
     _collector_state.store(collector_state::STOP);
     _coarse_data_collector.reset();
     _fine_data_collector.reset();
     derror_replica("Already cleared {} hotkey cache",
                    get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write");
+    return true;
 }
 
 std::string hotkey_collector::get_status()
@@ -198,7 +204,7 @@ void hotkey_collector::analyse_data()
 
     if (dsn_now_s() - _collector_start_time >= FLAGS_hotkey_collector_max_work_time) {
         derror_replica("Hotkey collector work time is exhausted but no hotkey has been found");
-        clear();
+        stop();
         return;
     }
 
