@@ -37,7 +37,7 @@ int hotkey_coarse_data_collector::analyse_data()
     }
     int result =
         hotkey_collector::variance_calc(data_samples, FLAGS_coarse_data_variance_threshold);
-    if (result > 0) {
+    if (result >= 0) {
         return result;
     } else {
         derror_replica("Can't find a hot bucket in coarse analyse");
