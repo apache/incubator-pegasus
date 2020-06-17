@@ -31,8 +31,6 @@ int hotkey_coarse_data_collector::analyse_data()
     std::vector<int> hot_values;
     data_samples.reserve(FLAGS_data_capture_hash_bucket_num);
     hot_values.reserve(FLAGS_data_capture_hash_bucket_num);
-    int hottest_index = 0;
-    int hottest_value = -1;
     for (int i = 0; i < FLAGS_data_capture_hash_bucket_num; i++) {
         data_samples.emplace_back(_coarse_hash_buckets[i].load());
         _coarse_hash_buckets[i].store(0);
