@@ -21,10 +21,11 @@ DSN_DEFINE_int32("pegasus.server",
                  37,
                  "the number of data capture hash buckets");
 
-bool hotkey_collector::handle_operation(dsn::apps::hotkey_collector_operation::type op)
+bool hotkey_collector::handle_operation(dsn::apps::hotkey_collector_operation::type op,
+                                        std::string &err_hint)
 {
     if (op == dsn::apps::hotkey_collector_operation::START) {
-        return start();
+        return start(err_hint);
     }
     stop();
     return true;
@@ -50,17 +51,17 @@ hotkey_collector::hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
     _collector_start_time = dsn_now_s();
 }
 
-bool hotkey_collector::start()
+bool hotkey_collector::start(std::string &err_hint)
 {
     switch (_state.load()) {
     case collector_state::COARSE:
     case collector_state::FINE:
-        derror_replica("Now is detecting {} hotkey, state is {}",
-                       get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write",
-                       get_status());
+        err_hint = fmt::format("Now is detecting {} hotkey, state is {}",
+                               get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write",
+                               get_status());
         return false;
     case collector_state::FINISH:
-        derror_replica(
+        err_hint = fmt::format(
             "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
             get_hotkey_type() == dsn::apps::hotkey_type::READ ? "Read" : "Write");
         return false;
@@ -72,7 +73,7 @@ bool hotkey_collector::start()
                        get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write");
         return true;
     default:
-        derror_replica("Wrong collector state");
+        err_hint = "Wrong collector state";
         return false;
     }
 }

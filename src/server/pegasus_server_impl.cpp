@@ -1264,10 +1264,12 @@ void pegasus_server_impl::on_detect_hotkey(
     }
     auto collector = args.type == dsn::apps::hotkey_type::READ ? _read_hotkey_collector
                                                                : _write_hotkey_collector;
-    if (collector->handle_operation(args.operation)) {
+    std::string err_hint;
+    if (collector->handle_operation(args.operation, err_hint)) {
         resp.err = ::dsn::ERR_OK;
     } else {
         resp.err = ::dsn::ERR_SERVICE_ALREADY_EXIST;
+        resp.__set_err_hint(err_hint.c_str());
     }
     reply(resp);
 }
