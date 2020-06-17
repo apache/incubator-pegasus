@@ -19,37 +19,27 @@ namespace server {
 
 DSN_DECLARE_int32(data_capture_hash_bucket_num);
 
-typedef std::shared_ptr<std::unordered_map<int, int>> thread_queue_map;
-
 class hotkey_coarse_data_collector;
 class hotkey_fine_data_collector;
 
 enum class collector_state
 {
     STOP,   // data has been cleared, ready to start
-    COARSE, // is running coarse capture and analyse
-    FINE,   // is running fine capture and analyse
+    COARSE, // is running coarse capture and analysis
+    FINE,   // is running fine capture and analysis
     FINISH  // capture and analyse is done, ready to get result
 };
 
-// `hotkey_collector` is responsible to find the hot keys after the partition was detected to be
-// hot. In general, there are 2 collectors once hotkey detection is enabled: one for read, the other
-// for write.
+// hotkey_collector is responsible to find the hot keys after the partition
+// was detected to be hot. The two types of hotkey, READ & WRITE, are detected
+// separately.
 class hotkey_collector : public dsn::replication::replica_base
 {
 public:
     hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
                      dsn::replication::replica_base *r_base);
-    // after receiving START RPC, start to capture and analyse
-    // return true: start detecting successfully
-    //        false: The query is in progress or a hot spot has been found
-    bool start();
-    // after receiving collector_state::STOP RPC or timeout, clear historical data
-    // always return true
-    bool stop();
     void capture_blob_data(const ::dsn::blob &key, int count = 1);
-    void capture_msg_data(dsn::message_ex **requests_point, const int count);
-    void capture_str_data(const std::string &data, int count);
+    void capture_msg_data(dsn::message_ex **requests_point, int count);
     void capture_multi_get_data(const ::dsn::apps::multi_get_request &request,
                                 const ::dsn::apps::multi_get_response &resp);
     // analyse_data is a periodic task, only valid when _collector_state == collector_state::COARSE
@@ -61,7 +51,7 @@ public:
     // Like hotspot_algo_qps_variance, we use PauTa Criterion to find the hotkey
     static bool variance_calc(const std::vector<int> &data_samples,
                               std::vector<int> &hot_values,
-                              const int threshold);
+                              int threshold);
     static int get_bucket_id(const std::string &data);
     int get_coarse_result() const { return _coarse_result; }
     bool handle_operation(dsn::apps::hotkey_collector_operation::type op);
@@ -69,6 +59,19 @@ public:
     // hotkey_type == READ, using THREAD_POOL_LOCAL_APP threadpool to distribute queue
     // hotkey_type == WRITE, using single queue
     dsn::apps::hotkey_type::type get_hotkey_type() const { return _hotkey_type; }
+
+private:
+    // after receiving START RPC, start to capture and analyse
+    // return true: start detecting successfully
+    //        false: The query is in progress or a hot spot has been found
+    bool start();
+    // after receiving collector_state::STOP RPC or timeout, clear historical data
+    // always return true
+    bool stop();
+
+    void capture_str_data(const std::string &data, int count);
+
+    bool is_ready_to_detect();
 
 private:
     std::atomic<collector_state> _collector_state;
@@ -79,16 +82,14 @@ private:
     std::string _fine_result;
     int _coarse_result;
     dsn::apps::hotkey_type::type _hotkey_type;
-
-    bool is_ready_to_detect();
 };
 
 class hotkey_coarse_data_collector : public dsn::replication::replica_base
 {
 public:
-    hotkey_coarse_data_collector(hotkey_collector *base);
+    explicit hotkey_coarse_data_collector(hotkey_collector *base);
     void capture_coarse_data(const std::string &data, int count);
-    const int analyse_coarse_data();
+    int analyse_coarse_data();
 
 private:
     std::vector<std::atomic<int>> _coarse_hash_buckets;
@@ -97,11 +98,13 @@ private:
 class hotkey_fine_data_collector : public dsn::replication::replica_base
 {
 public:
-    hotkey_fine_data_collector(hotkey_collector *base);
+    explicit hotkey_fine_data_collector(hotkey_collector *base);
     void capture_fine_data(const std::string &data, int count);
     bool analyse_fine_data(std::string &result);
 
 private:
+    typedef std::shared_ptr<std::unordered_map<int, int>> thread_queue_map;
+
     int _target_bucket;
     thread_queue_map _thread_queue_map;
     std::vector<moodycamel::ReaderWriterQueue<std::pair<std::string, int>>> _string_capture_queue;

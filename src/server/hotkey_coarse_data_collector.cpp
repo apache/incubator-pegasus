@@ -15,8 +15,9 @@ DSN_DEFINE_int32("pegasus.server",
 hotkey_coarse_data_collector::hotkey_coarse_data_collector(hotkey_collector *base)
     : replica_base(base), _coarse_hash_buckets(FLAGS_data_capture_hash_bucket_num)
 {
-    for (int i = 0; i < FLAGS_data_capture_hash_bucket_num; i++)
-        _coarse_hash_buckets[i].store(0);
+    for (std::atomic<int> &bucket : _coarse_hash_buckets) {
+        bucket.store(0);
+    }
 }
 
 void hotkey_coarse_data_collector::capture_coarse_data(const std::string &data, int count)
@@ -24,7 +25,7 @@ void hotkey_coarse_data_collector::capture_coarse_data(const std::string &data, 
     _coarse_hash_buckets[hotkey_collector::get_bucket_id(data)].fetch_add(count);
 }
 
-const int hotkey_coarse_data_collector::analyse_coarse_data()
+int hotkey_coarse_data_collector::analyse_coarse_data()
 {
     std::vector<int> data_samples;
     std::vector<int> hot_values;
