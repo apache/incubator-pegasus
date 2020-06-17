@@ -23,24 +23,27 @@ DSN_DEFINE_int32("pegasus.server",
 
 bool hotkey_collector::handle_operation(dsn::apps::hotkey_collector_operation::type op)
 {
-    return op == dsn::apps::hotkey_collector_operation::START ? start() : stop();
+    if (op == dsn::apps::hotkey_collector_operation::START) {
+        return start();
+    }
+    stop();
+    return true;
 }
 
 inline bool hotkey_collector::is_ready_to_detect()
 {
-    return (_collector_state.load() == collector_state::STOP ||
-            _collector_state.load() == collector_state::FINISH);
+    return (_state.load() == collector_state::STOP || _state.load() == collector_state::FINISH);
 }
 
 /*static*/ int hotkey_collector::get_bucket_id(const std::string &data)
 {
-    return std::hash<std::string>{}(data) % FLAGS_data_capture_hash_bucket_num;
+    return static_cast<int>(std::hash<std::string>{}(data) % FLAGS_data_capture_hash_bucket_num);
 };
 
 hotkey_collector::hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
     : replica_base(r_base),
-      _collector_state(collector_state::STOP),
+      _state(collector_state::STOP),
       _coarse_result(-1),
       _hotkey_type(hotkey_type)
 {
@@ -49,7 +52,7 @@ hotkey_collector::hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
 
 bool hotkey_collector::start()
 {
-    switch (_collector_state.load()) {
+    switch (_state.load()) {
     case collector_state::COARSE:
     case collector_state::FINE:
         derror_replica("Now is detecting {} hotkey, state is {}",
@@ -64,7 +67,7 @@ bool hotkey_collector::start()
     case collector_state::STOP:
         _collector_start_time = dsn_now_s();
         _coarse_data_collector.reset(new hotkey_coarse_data_collector(this));
-        _collector_state.store(collector_state::COARSE);
+        _state.store(collector_state::COARSE);
         derror_replica("Is starting to detect {} hotkey",
                        get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write");
         return true;
@@ -74,19 +77,18 @@ bool hotkey_collector::start()
     }
 }
 
-bool hotkey_collector::stop()
+void hotkey_collector::stop()
 {
-    _collector_state.store(collector_state::STOP);
+    _state.store(collector_state::STOP);
     _coarse_data_collector.reset();
     _fine_data_collector.reset();
     derror_replica("Already cleared {} hotkey cache",
                    get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write");
-    return true;
 }
 
 std::string hotkey_collector::get_status()
 {
-    switch (_collector_state.load()) {
+    switch (_state.load()) {
     case collector_state::COARSE:
         return "COARSE";
     case collector_state::FINE:
@@ -101,9 +103,9 @@ std::string hotkey_collector::get_status()
     }
 }
 
-bool hotkey_collector::get_result(std::string &result)
+bool hotkey_collector::get_result(std::string &result) const
 {
-    if (_collector_state.load() != collector_state::FINISH)
+    if (_state.load() != collector_state::FINISH)
         return false;
     result = _fine_result;
     return true;
@@ -122,7 +124,7 @@ void hotkey_collector::capture_msg_data(dsn::message_ex **requests, const int co
             unmarshall(requests[0], thrift_request);
             requests[0]->restore_read();
             key = thrift_request.hash_key;
-            capture_str_data(key.to_string(), thrift_request.kvs.size());
+            capture_blob_data(key, thrift_request.kvs.size());
             return;
         }
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
@@ -138,7 +140,7 @@ void hotkey_collector::capture_msg_data(dsn::message_ex **requests, const int co
             unmarshall(requests[0], thrift_request);
             requests[0]->restore_read();
             key = thrift_request.hash_key;
-            capture_str_data(key.to_string(), 1);
+            capture_blob_data(key);
             return;
         }
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
@@ -146,7 +148,7 @@ void hotkey_collector::capture_msg_data(dsn::message_ex **requests, const int co
             unmarshall(requests[0], thrift_request);
             requests[0]->restore_read();
             key = thrift_request.hash_key;
-            capture_str_data(key.to_string(), 1);
+            capture_blob_data(key);
             return;
         }
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
@@ -166,7 +168,7 @@ void hotkey_collector::capture_multi_get_data(const ::dsn::apps::multi_get_reque
     if (is_ready_to_detect()) {
         return;
     }
-    if (resp.kvs.size() != 0) {
+    if (!resp.kvs.empty()) {
         capture_blob_data(request.hash_key, resp.kvs.size());
     } else {
         capture_blob_data(request.hash_key);
@@ -188,11 +190,11 @@ void hotkey_collector::capture_str_data(const std::string &data, int count)
     if (is_ready_to_detect() || data.length() == 0) {
         return;
     }
-    if (_collector_state.load() == collector_state::COARSE && _coarse_data_collector != nullptr) {
-        _coarse_data_collector->capture_coarse_data(data, count);
+    if (_state.load() == collector_state::COARSE && _coarse_data_collector != nullptr) {
+        _coarse_data_collector->capture_data(data, count);
     }
-    if (_collector_state.load() == collector_state::FINE && _fine_data_collector != nullptr) {
-        _fine_data_collector->capture_fine_data(data, count);
+    if (_state.load() == collector_state::FINE && _fine_data_collector != nullptr) {
+        _fine_data_collector->capture_data(data, count);
     }
 }
 
@@ -208,27 +210,26 @@ void hotkey_collector::analyse_data()
         return;
     }
 
-    if (_collector_state.load() == collector_state::COARSE && _coarse_data_collector != nullptr) {
-        _coarse_result = _coarse_data_collector->analyse_coarse_data();
+    if (_state.load() == collector_state::COARSE && _coarse_data_collector != nullptr) {
+        _coarse_result = _coarse_data_collector->analyse_data();
         if (_coarse_result != -1) {
             _fine_data_collector.reset(new hotkey_fine_data_collector(this));
-            _collector_state.store(collector_state::FINE);
+            _state.store(collector_state::FINE);
             _coarse_data_collector.reset();
         }
-    } else if (_collector_state.load() == collector_state::FINE &&
-               _fine_data_collector != nullptr &&
-               _fine_data_collector->analyse_fine_data(_fine_result)) {
+    } else if (_state.load() == collector_state::FINE && _fine_data_collector != nullptr &&
+               _fine_data_collector->analyse_data(_fine_result)) {
         derror_replica("{} hotkey result: {}",
                        get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write",
                        ::pegasus::utils::c_escape_string(_fine_result).c_str());
-        _collector_state.store(collector_state::FINISH);
+        _state.store(collector_state::FINISH);
         _fine_data_collector.reset();
     }
 }
 
 bool hotkey_collector::variance_calc(const std::vector<int> &data_samples,
                                      std::vector<int> &hot_values,
-                                     const int threshold)
+                                     int threshold)
 {
     bool is_hotkey = false;
     int data_size = data_samples.size();

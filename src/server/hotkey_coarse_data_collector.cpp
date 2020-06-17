@@ -12,7 +12,7 @@ DSN_DEFINE_int32("pegasus.server",
                  3,
                  "the threshold of variance calculate to find the outliers");
 
-hotkey_coarse_data_collector::hotkey_coarse_data_collector(hotkey_collector *base)
+hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base)
     : replica_base(base), _coarse_hash_buckets(FLAGS_data_capture_hash_bucket_num)
 {
     for (std::atomic<int> &bucket : _coarse_hash_buckets) {
@@ -20,12 +20,12 @@ hotkey_coarse_data_collector::hotkey_coarse_data_collector(hotkey_collector *bas
     }
 }
 
-void hotkey_coarse_data_collector::capture_coarse_data(const std::string &data, int count)
+void hotkey_coarse_data_collector::capture_data(const std::string &data, int count)
 {
     _coarse_hash_buckets[hotkey_collector::get_bucket_id(data)].fetch_add(count);
 }
 
-int hotkey_coarse_data_collector::analyse_coarse_data()
+int hotkey_coarse_data_collector::analyse_data()
 {
     std::vector<int> data_samples;
     std::vector<int> hot_values;
@@ -64,7 +64,7 @@ int hotkey_coarse_data_collector::analyse_coarse_data()
         }
     }
 
-    derror_replica("Can't find a hot bucket in analyse_coarse_data()");
+    derror_replica("Can't find a hot bucket in analyse_data()");
     return -1;
 }
 

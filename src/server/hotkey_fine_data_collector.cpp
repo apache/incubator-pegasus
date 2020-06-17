@@ -50,14 +50,14 @@ inline int hotkey_fine_data_collector::get_queue_index()
     return result->second;
 }
 
-void hotkey_fine_data_collector::capture_fine_data(const std::string &data, int count)
+void hotkey_fine_data_collector::capture_data(const std::string &data, int count)
 {
     if (hotkey_collector::get_bucket_id(data) != _target_bucket)
         return;
     _string_capture_queue[get_queue_index()].try_emplace(std::make_pair(data, count));
 }
 
-bool hotkey_fine_data_collector::analyse_fine_data(std::string &result)
+bool hotkey_fine_data_collector::analyse_data(std::string &result)
 {
     std::unordered_map<std::string, int> fine_data_bucket;
     for (int i = 0; i < _string_capture_queue.size(); i++) {

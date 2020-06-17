@@ -42,12 +42,12 @@ public:
     void capture_msg_data(dsn::message_ex **requests_point, int count);
     void capture_multi_get_data(const ::dsn::apps::multi_get_request &request,
                                 const ::dsn::apps::multi_get_response &resp);
-    // analyse_data is a periodic task, only valid when _collector_state == collector_state::COARSE
+    // analyse_data is a periodic task, only valid when _state == collector_state::COARSE
     // || collector_state::FINE
     void analyse_data();
     std::string get_status();
     // true: result = hotkey, false: can't find hotkey
-    bool get_result(std::string &result);
+    bool get_result(std::string &result) const;
     // Like hotspot_algo_qps_variance, we use PauTa Criterion to find the hotkey
     static bool variance_calc(const std::vector<int> &data_samples,
                               std::vector<int> &hot_values,
@@ -66,15 +66,14 @@ private:
     //        false: The query is in progress or a hot spot has been found
     bool start();
     // after receiving collector_state::STOP RPC or timeout, clear historical data
-    // always return true
-    bool stop();
+    void stop();
 
     void capture_str_data(const std::string &data, int count);
 
     bool is_ready_to_detect();
 
 private:
-    std::atomic<collector_state> _collector_state;
+    std::atomic<collector_state> _state;
     // By _collector_start_time && FLAGS_hotkey_collector_max_work_time it can stop automatically
     uint64_t _collector_start_time;
     std::unique_ptr<hotkey_coarse_data_collector> _coarse_data_collector;
@@ -84,23 +83,31 @@ private:
     dsn::apps::hotkey_type::type _hotkey_type;
 };
 
+// hotkey_coarse_data_collector handles the first procedure of hotkey detection.
+// It captures the data without recording them, but simply divides the incoming requests
+// into a number of bucket and counts the accessed times of each bucket.
+// If the variance among the buckets is exceeds the threshold, the most accessed bucket
+// is regarded to contain the hotkey.
 class hotkey_coarse_data_collector : public dsn::replication::replica_base
 {
 public:
-    explicit hotkey_coarse_data_collector(hotkey_collector *base);
-    void capture_coarse_data(const std::string &data, int count);
-    int analyse_coarse_data();
+    explicit hotkey_coarse_data_collector(replica_base *base);
+    void capture_data(const std::string &data, int count);
+
+    // returns: id of the most accessed bucket.
+    int analyse_data();
 
 private:
     std::vector<std::atomic<int>> _coarse_hash_buckets;
 };
 
+// hotkey_fine_data_collector handles the second procedure of hotkey detection.
 class hotkey_fine_data_collector : public dsn::replication::replica_base
 {
 public:
     explicit hotkey_fine_data_collector(hotkey_collector *base);
-    void capture_fine_data(const std::string &data, int count);
-    bool analyse_fine_data(std::string &result);
+    void capture_data(const std::string &data, int count);
+    bool analyse_data(std::string &result);
 
 private:
     typedef std::shared_ptr<std::unordered_map<int, int>> thread_queue_map;
