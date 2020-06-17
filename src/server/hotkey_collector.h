@@ -27,7 +27,7 @@ class hotkey_fine_data_collector;
 enum class collector_state
 {
     STOP,   // data has been cleared, ready to start
-    COARSE, // is running corase capture and analyse
+    COARSE, // is running coarse capture and analyse
     FINE,   // is running fine capture and analyse
     FINISH  // capture and analyse is done, ready to get result
 };
@@ -45,7 +45,7 @@ public:
     //        false: The query is in progress or a hot spot has been found
     bool start();
     // after receiving collector_state::STOP RPC or timeout, clear historical data
-    // always return ture
+    // always return true
     bool stop();
     void capture_blob_data(const ::dsn::blob &key, int count = 1);
     void capture_msg_data(dsn::message_ex **requests_point, const int count);
@@ -56,7 +56,7 @@ public:
     // || collector_state::FINE
     void analyse_data();
     std::string get_status();
-    // ture: result = hotkey, false: can't find hotkey
+    // true: result = hotkey, false: can't find hotkey
     bool get_result(std::string &result);
     // Like hotspot_algo_qps_variance, we use PauTa Criterion to find the hotkey
     static bool variance_calc(const std::vector<int> &data_samples,
@@ -81,8 +81,6 @@ private:
     dsn::apps::hotkey_type::type _hotkey_type;
 
     bool is_ready_to_detect();
-
-    FRIEND_TEST(hotkey_collector_test, init_destory_timeout);
 };
 
 class hotkey_coarse_data_collector : public dsn::replication::replica_base
