@@ -12,14 +12,14 @@ namespace server {
 
 const int kMaxQueueSize = 1000;
 
+DSN_DEFINE_int32("pegasus.server",
+                 fine_data_variance_threshold,
+                 3,
+                 "the threshold of variance calculate to find the outliers");
+
 hotkey_fine_data_collector::hotkey_fine_data_collector(hotkey_collector *base)
     : replica_base(base), _target_bucket(base->get_coarse_result())
 {
-    _fine_data_variance_threshold =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "fine_data_variance_threshold",
-                                    3,
-                                    "the threshold of variance calculate to find the outliers");
     // Distinguish between single-threaded and multi-threaded environments
     if (base->get_hotkey_type() == dsn::apps::hotkey_type::READ) {
         auto threads = dsn::get_threadpool_threads_info(THREAD_POOL_LOCAL_APP);
@@ -89,7 +89,8 @@ bool hotkey_fine_data_collector::analyse_fine_data(std::string &result)
         result = count_max_key;
         return true;
     }
-    if (hotkey_collector::variance_calc(data_samples, hot_values, _fine_data_variance_threshold)) {
+    if (hotkey_collector::variance_calc(
+            data_samples, hot_values, FLAGS_fine_data_variance_threshold)) {
         result = count_max_key;
         return true;
     }

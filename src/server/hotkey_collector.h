@@ -108,7 +108,6 @@ private:
     int _target_bucket;
     thread_queue_map _thread_queue_map;
     std::vector<moodycamel::ReaderWriterQueue<std::pair<std::string, int>>> _string_capture_queue;
-    uint64_t _fine_data_variance_threshold;
 
     inline int get_queue_index();
 };
