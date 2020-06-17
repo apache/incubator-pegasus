@@ -237,14 +237,14 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
 }
 
-void pegasus_server_impl::on_get(const ::dsn::blob &key,
-                                 ::dsn::rpc_replier<::dsn::apps::read_response> &reply)
+void pegasus_server_impl::on_get(on_get_rpc rpc)
 {
+    const ::dsn::blob &key = rpc.request();
     dassert(_is_open, "");
     _pfc_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
-    ::dsn::apps::read_response resp;
+    ::dsn::apps::read_response &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -259,7 +259,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for get from %s",
                        replica_name(),
-                       reply.to_address().to_string());
+                       rpc.remote_address().to_string());
             }
             status = rocksdb::Status::NotFound();
         }
@@ -272,14 +272,14 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             derror("%s: rocksdb get failed for get from %s: "
                    "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    ::pegasus::utils::c_escape_string(sort_key).c_str(),
                    status.ToString().c_str());
         } else if (!status.IsNotFound()) {
             derror("%s: rocksdb get failed for get from %s: error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    status.ToString().c_str());
         }
     }
@@ -297,7 +297,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         dwarn_replica("rocksdb abnormal get from {}: "
                       "hash_key = {}, sort_key = {}, return = {}, "
                       "value_size = {}, time_used = {} ns",
-                      reply.to_address().to_string(),
+                      rpc.remote_address().to_string(),
                       ::pegasus::utils::c_escape_string(hash_key),
                       ::pegasus::utils::c_escape_string(sort_key),
                       status.ToString(),
@@ -313,8 +313,6 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
 
     _cu_calculator->add_get_cu(resp.error, key, resp.value);
     _pfc_get_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
 void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &request,

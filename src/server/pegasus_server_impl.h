@@ -43,8 +43,7 @@ public:
     ~pegasus_server_impl() override;
 
     // the following methods may set physical error if internal error occurs
-    void on_get(const ::dsn::blob &key,
-                ::dsn::rpc_replier<::dsn::apps::read_response> &reply) override;
+    void on_get(on_get_rpc rpc) override;
     void on_multi_get(const ::dsn::apps::multi_get_request &args,
                       ::dsn::rpc_replier<::dsn::apps::multi_get_response> &reply) override;
     void on_sortkey_count(const ::dsn::blob &args,

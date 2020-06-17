@@ -6,6 +6,9 @@
 
 namespace pegasus {
 namespace server {
+
+typedef dsn::rpc_holder<::dsn::blob, ::dsn::apps::read_response> on_get_rpc;
+
 class pegasus_read_service : public dsn::replication::replication_app_base,
                              public dsn::replication::storage_serverlet<pegasus_read_service>
 {
@@ -23,8 +26,7 @@ public:
 protected:
     // all service handlers to be implemented further
     // RPC_RRDB_RRDB_GET
-    virtual void on_get(const ::dsn::blob &args,
-                        ::dsn::rpc_replier<dsn::apps::read_response> &reply) = 0;
+    virtual void on_get(on_get_rpc rpc) = 0;
     // RPC_RRDB_RRDB_MULTI_GET
     virtual void on_multi_get(const dsn::apps::multi_get_request &args,
                               ::dsn::rpc_replier<dsn::apps::multi_get_response> &reply) = 0;
@@ -45,7 +47,7 @@ protected:
 
     static void register_rpc_handlers()
     {
-        register_async_rpc_handler(dsn::apps::RPC_RRDB_RRDB_GET, "get", on_get);
+        register_rpc_handler_with_rpc_holder(dsn::apps::RPC_RRDB_RRDB_GET, "get", on_get);
         register_async_rpc_handler(dsn::apps::RPC_RRDB_RRDB_MULTI_GET, "multi_get", on_multi_get);
         register_async_rpc_handler(
             dsn::apps::RPC_RRDB_RRDB_SORTKEY_COUNT, "sortkey_count", on_sortkey_count);
@@ -58,12 +60,7 @@ protected:
     }
 
 private:
-    static void on_get(pegasus_read_service *svc,
-                       const ::dsn::blob &args,
-                       ::dsn::rpc_replier<dsn::apps::read_response> &reply)
-    {
-        svc->on_get(args, reply);
-    }
+    static void on_get(pegasus_read_service *svc, on_get_rpc rpc) { svc->on_get(rpc); }
     static void on_multi_get(pegasus_read_service *svc,
                              const dsn::apps::multi_get_request &args,
                              ::dsn::rpc_replier<dsn::apps::multi_get_response> &reply)

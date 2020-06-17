@@ -41,8 +41,9 @@ public:
             // do on_get/on_multi_get operation,
             long before_count = _server->_pfc_recent_abnormal_count->get_integer_value();
             if (!test.is_multi_get) {
-                ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
-                _server->on_get(test_key, reply);
+                on_get_rpc rpc;
+                test_key = rpc.request();
+                _server->on_get(rpc);
             } else {
                 ::dsn::apps::multi_get_request request;
                 request.__set_hash_key(dsn::blob(test_hash_key.data(), 0, test_hash_key.size()));
