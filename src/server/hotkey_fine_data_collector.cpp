@@ -73,9 +73,7 @@ bool hotkey_fine_data_collector::analyse_data(std::string &result)
         return false;
     }
     std::vector<int> data_samples;
-    std::vector<int> hot_values;
     data_samples.reserve(FLAGS_data_capture_hash_bucket_num);
-    hot_values.reserve(FLAGS_data_capture_hash_bucket_num);
     std::string count_max_key;
     int count_max = -1;
     for (const auto &iter : fine_data_bucket) {
@@ -85,16 +83,12 @@ bool hotkey_fine_data_collector::analyse_data(std::string &result)
             count_max_key = iter.first;
         }
     }
-    if (data_samples.size() < 3) {
+    if (data_samples.size() < 3 ||
+        hotkey_collector::variance_calc(data_samples, FLAGS_fine_data_variance_threshold) != -1) {
         result = count_max_key;
         return true;
     }
-    if (hotkey_collector::variance_calc(
-            data_samples, hot_values, FLAGS_fine_data_variance_threshold)) {
-        result = count_max_key;
-        return true;
-    }
-    derror_replica("Analyse fine data failed");
+    derror_replica("Can't find a hot bucket in fine analyse");
     return false;
 }
 

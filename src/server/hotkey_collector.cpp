@@ -228,45 +228,35 @@ void hotkey_collector::analyse_data()
     }
 }
 
-bool hotkey_collector::variance_calc(const std::vector<int> &data_samples,
-                                     std::vector<int> &hot_values,
-                                     int threshold)
+/*static*/ int hotkey_collector::variance_calc(const std::vector<int> &data_samples, int threshold)
 {
     bool is_hotkey = false;
     int data_size = data_samples.size();
     double total = 0;
-    for (const auto &data_sample : data_samples) {
-        total += data_sample;
+    int hot_index = 0;
+    int hot_value = 0;
+    for (int i = 0; i < data_size; i++) {
+        total += data_samples[i];
+        if (data_samples[i] > hot_value) {
+            hot_index = i;
+            hot_value = data_samples[i];
+        }
     }
     // in case of sample size too small
     if (data_size < 3 || total < data_size) {
-        for (int i = 0; i < data_size; i++)
-            hot_values.emplace_back(0);
-        return false;
+        derror("Data samples too small");
+        return -1;
     }
-    std::vector<double> avgs;
-    std::vector<double> sds;
-    for (int i = 0; i < data_size; i++) {
-        double avg = (total - data_samples[i]) / (data_size - 1);
-        double sd = 0;
-        for (int j = 0; j < data_size; j++) {
-            if (j != i) {
-                sd += pow((data_samples[j] - avg), 2);
-            }
-        }
-        sd = sqrt(sd / (data_size - 2));
-        avgs.emplace_back(avg);
-        sds.emplace_back(sd);
-    }
-    for (int i = 0; i < data_size; i++) {
-        double hot_point = (data_samples[i] - avgs[i]) / sds[i];
-        hot_point = ceil(std::max(hot_point, double(0)));
-        hot_values.emplace_back(hot_point);
-        if (hot_point >= threshold) {
-            is_hotkey = true;
+    double avg = (total - data_samples[hot_index]) / (data_size - 1);
+    double sd = 0;
+    for (int j = 0; j < data_size; j++) {
+        if (j != hot_index) {
+            sd += pow((data_samples[j] - avg), 2);
         }
     }
-    return is_hotkey;
+    sd = sqrt(sd / (data_size - 2));
+    double hot_point = (hot_value - avg) / sd;
+    return hot_point > threshold ? hot_index : -1;
 }
 
 } // namespace server

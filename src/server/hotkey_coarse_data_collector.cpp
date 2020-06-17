@@ -31,41 +31,20 @@ int hotkey_coarse_data_collector::analyse_data()
     std::vector<int> hot_values;
     data_samples.reserve(FLAGS_data_capture_hash_bucket_num);
     hot_values.reserve(FLAGS_data_capture_hash_bucket_num);
+    int hottest_index = 0;
+    int hottest_value = -1;
     for (int i = 0; i < FLAGS_data_capture_hash_bucket_num; i++) {
         data_samples.emplace_back(_coarse_hash_buckets[i].load());
         _coarse_hash_buckets[i].store(0);
     }
-    if (hotkey_collector::variance_calc(
-            data_samples, hot_values, FLAGS_coarse_data_variance_threshold)) {
-        int hotkey_num = 0, hotkey_index = 0;
-        for (int i = 0; i < FLAGS_data_capture_hash_bucket_num; i++) {
-            if (hot_values[i] >= FLAGS_coarse_data_variance_threshold) {
-                hotkey_num++;
-                hotkey_index = i;
-            }
-        }
-        if (hotkey_num == 1) {
-            dinfo_replica("Find a hot bucket in coarse level, index: {}", hotkey_index);
-            return hotkey_index;
-        }
-        if (hotkey_num >= 2) {
-            int hottest = -1, hottest_index = -1;
-            for (int i = 0; i < FLAGS_data_capture_hash_bucket_num; i++) {
-                if (hottest < hot_values[i]) {
-                    hottest = hot_values[i];
-                    hottest_index = i;
-                }
-            }
-            dinfo_replica(
-                "Multiple hotkey_hash_bucket is hot in this app, select the hottest one to "
-                "detect, index: {}",
-                hottest_index);
-            return hottest_index;
-        }
+    int result =
+        hotkey_collector::variance_calc(data_samples, FLAGS_coarse_data_variance_threshold);
+    if (result > 0) {
+        return result;
+    } else {
+        derror_replica("Can't find a hot bucket in coarse analyse");
+        return -1;
     }
-
-    derror_replica("Can't find a hot bucket in analyse_data()");
-    return -1;
 }
 
 } // namespace server

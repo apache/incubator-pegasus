@@ -49,9 +49,7 @@ public:
     // true: result = hotkey, false: can't find hotkey
     bool get_result(std::string &result) const;
     // Like hotspot_algo_qps_variance, we use PauTa Criterion to find the hotkey
-    static bool variance_calc(const std::vector<int> &data_samples,
-                              std::vector<int> &hot_values,
-                              int threshold);
+    static int variance_calc(const std::vector<int> &data_samples, int threshold);
     static int get_bucket_id(const std::string &data);
     int get_coarse_result() const { return _coarse_result; }
     bool handle_operation(dsn::apps::hotkey_collector_operation::type op, std::string &err_hint);
