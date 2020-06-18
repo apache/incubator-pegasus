@@ -7,6 +7,8 @@
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_rpc_types.h"
 #include <math.h>
+#include <boost/functional/hash.hpp>
+#include <dsn/utility/smart_pointers.h>
 
 namespace pegasus {
 namespace server {
@@ -21,6 +23,11 @@ DSN_DEFINE_int32("pegasus.server",
                  37,
                  "the number of data capture hash buckets");
 
+static inline const char *hotkey_type_to_string(dsn::apps::hotkey_type::type type)
+{
+    return type == dsn::apps::hotkey_type::READ ? "READ" : "WRITE";
+}
+
 bool hotkey_collector::handle_operation(dsn::apps::hotkey_collector_operation::type op,
                                         std::string &err_hint)
 {
@@ -31,15 +38,11 @@ bool hotkey_collector::handle_operation(dsn::apps::hotkey_collector_operation::t
     return true;
 }
 
-inline bool hotkey_collector::is_ready_to_detect()
+/*static*/ int hotkey_collector::get_bucket_id(dsn::string_view data)
 {
-    return (_state.load() == collector_state::STOP || _state.load() == collector_state::FINISH);
+    int hash_value = static_cast<int>(boost::hash_range(data.begin(), data.end()));
+    return hash_value % FLAGS_data_capture_hash_bucket_num;
 }
-
-/*static*/ int hotkey_collector::get_bucket_id(const std::string &data)
-{
-    return static_cast<int>(std::hash<std::string>{}(data) % FLAGS_data_capture_hash_bucket_num);
-};
 
 hotkey_collector::hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
@@ -57,20 +60,19 @@ bool hotkey_collector::start(std::string &err_hint)
     case collector_state::COARSE:
     case collector_state::FINE:
         err_hint = fmt::format("Now is detecting {} hotkey, state is {}",
-                               get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write",
+                               hotkey_type_to_string(_hotkey_type),
                                get_status());
         return false;
     case collector_state::FINISH:
         err_hint = fmt::format(
             "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
-            get_hotkey_type() == dsn::apps::hotkey_type::READ ? "Read" : "Write");
+            hotkey_type_to_string(_hotkey_type));
         return false;
     case collector_state::STOP:
         _collector_start_time = dsn_now_s();
-        _coarse_data_collector.reset(new hotkey_coarse_data_collector(this));
+        _coarse_data_collector = dsn::make_unique<hotkey_coarse_data_collector>(this);
         _state.store(collector_state::COARSE);
-        derror_replica("Is starting to detect {} hotkey",
-                       get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write");
+        derror_replica("starting to detect {} hotkey", hotkey_type_to_string(_hotkey_type));
         return true;
     default:
         err_hint = "Wrong collector state";
@@ -83,8 +85,7 @@ void hotkey_collector::stop()
     _state.store(collector_state::STOP);
     _coarse_data_collector.reset();
     _fine_data_collector.reset();
-    derror_replica("Already cleared {} hotkey cache",
-                   get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write");
+    derror_replica("{} hotkey cache cleared", hotkey_type_to_string(_hotkey_type));
 }
 
 std::string hotkey_collector::get_status()
@@ -99,8 +100,7 @@ std::string hotkey_collector::get_status()
     case collector_state::STOP:
         return "STOP";
     default:
-        derror_replica("Wrong collector state");
-        return "false";
+        return "invalid status";
     }
 }
 
@@ -124,32 +124,28 @@ void hotkey_collector::capture_msg_data(dsn::message_ex **requests, const int co
             dsn::apps::multi_put_request thrift_request;
             unmarshall(requests[0], thrift_request);
             requests[0]->restore_read();
-            key = thrift_request.hash_key;
-            capture_blob_data(key, thrift_request.kvs.size());
+            capture_hash_key(thrift_request.hash_key, thrift_request.kvs.size());
             return;
         }
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
             dsn::apps::incr_request thrift_request;
             unmarshall(requests[0], thrift_request);
             requests[0]->restore_read();
-            key = thrift_request.key;
-            capture_blob_data(key);
+            capture_blob_data(thrift_request.key);
             return;
         }
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
             dsn::apps::check_and_set_request thrift_request;
             unmarshall(requests[0], thrift_request);
             requests[0]->restore_read();
-            key = thrift_request.hash_key;
-            capture_blob_data(key);
+            capture_hash_key(thrift_request.hash_key);
             return;
         }
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
             dsn::apps::check_and_mutate_request thrift_request;
             unmarshall(requests[0], thrift_request);
             requests[0]->restore_read();
-            key = thrift_request.hash_key;
-            capture_blob_data(key);
+            capture_hash_key(thrift_request.hash_key);
             return;
         }
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
@@ -170,32 +166,29 @@ void hotkey_collector::capture_multi_get_data(const ::dsn::apps::multi_get_reque
         return;
     }
     if (!resp.kvs.empty()) {
-        capture_blob_data(request.hash_key, resp.kvs.size());
+        capture_hash_key(request.hash_key, resp.kvs.size());
     } else {
-        capture_blob_data(request.hash_key);
+        capture_hash_key(request.hash_key);
     }
 }
 
-void hotkey_collector::capture_blob_data(const ::dsn::blob &key, int count)
+void hotkey_collector::capture_blob_data(const ::dsn::blob &raw_key)
 {
     if (is_ready_to_detect()) {
         return;
     }
-    std::string hash_key, sort_key;
-    pegasus_restore_key(key, hash_key, sort_key);
-    capture_str_data(hash_key, count);
+    dsn::blob hash_key, sort_key;
+    pegasus_restore_key(raw_key, hash_key, sort_key);
+    capture_hash_key(hash_key);
 }
 
-void hotkey_collector::capture_str_data(const std::string &data, int count)
+void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int row_cnt)
 {
-    if (is_ready_to_detect() || data.length() == 0) {
-        return;
-    }
     if (_state.load() == collector_state::COARSE && _coarse_data_collector != nullptr) {
-        _coarse_data_collector->capture_data(data, count);
+        _coarse_data_collector->capture_data(hash_key, row_cnt);
     }
     if (_state.load() == collector_state::FINE && _fine_data_collector != nullptr) {
-        _fine_data_collector->capture_data(data, count);
+        _fine_data_collector->capture_data(hash_key, row_cnt);
     }
 }
 
@@ -214,15 +207,16 @@ void hotkey_collector::analyse_data()
     if (_state.load() == collector_state::COARSE && _coarse_data_collector != nullptr) {
         _coarse_result = _coarse_data_collector->analyse_data();
         if (_coarse_result != -1) {
-            _fine_data_collector.reset(new hotkey_fine_data_collector(this));
+            _fine_data_collector =
+                dsn::make_unique<hotkey_fine_data_collector>(this, _coarse_result, _hotkey_type);
             _state.store(collector_state::FINE);
             _coarse_data_collector.reset();
         }
     } else if (_state.load() == collector_state::FINE && _fine_data_collector != nullptr &&
                _fine_data_collector->analyse_data(_fine_result)) {
         derror_replica("{} hotkey result: {}",
-                       get_hotkey_type() == dsn::apps::hotkey_type::READ ? "read" : "write",
-                       ::pegasus::utils::c_escape_string(_fine_result).c_str());
+                       hotkey_type_to_string(_hotkey_type),
+                       ::pegasus::utils::c_escape_string(_fine_result));
         _state.store(collector_state::FINISH);
         _fine_data_collector.reset();
     }
@@ -230,7 +224,6 @@ void hotkey_collector::analyse_data()
 
 /*static*/ int hotkey_collector::variance_calc(const std::vector<int> &data_samples, int threshold)
 {
-    bool is_hotkey = false;
     int data_size = data_samples.size();
     double total = 0;
     int hot_index = 0;
