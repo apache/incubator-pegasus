@@ -32,6 +32,18 @@ protected:
         return register_async_rpc_handler(rpc_code, name, h);
     }
 
+    template <typename TRpcHolder>
+    static bool register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
+                                                     const char *name,
+                                                     void (*handler)(T *svc, TRpcHolder))
+    {
+        rpc_handler h = [handler](T *p, dsn::message_ex *request) {
+            handler(p, TRpcHolder::auto_reply(request));
+        };
+
+        return register_async_rpc_handler(rpc_code, name, h);
+    }
+
     template <typename TReq>
     static bool register_async_rpc_handler(dsn::task_code rpc_code,
                                            const char *name,
@@ -95,5 +107,5 @@ std::unordered_map<std::string, typename storage_serverlet<T>::rpc_handler>
 
 template <typename T>
 std::vector<typename storage_serverlet<T>::rpc_handler> storage_serverlet<T>::s_vhandlers;
-}
-}
+} // namespace replication
+} // namespace dsn
