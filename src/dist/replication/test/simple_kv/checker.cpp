@@ -50,7 +50,7 @@
 #include "dist/replication/meta_server/server_load_balancer.h"
 
 #include "core/core/service_engine.h"
-#include "core/core/rpc_engine.h"
+#include "core/rpc/rpc_engine.h"
 
 namespace dsn {
 namespace replication {

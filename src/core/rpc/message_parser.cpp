@@ -169,8 +169,6 @@ char *message_reader::read_buffer_ptr(unsigned int read_next)
 }
 
 //-------------------- msg parser manager --------------------
-message_parser_manager::message_parser_manager() {}
-
 void message_parser_manager::register_factory(network_header_format fmt,
                                               const std::vector<const char *> &signatures,
                                               message_parser::factory f,

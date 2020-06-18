@@ -27,7 +27,7 @@
 #include <dsn/tool-api/task_queue.h>
 #include "task_engine.h"
 #include <dsn/tool-api/network.h>
-#include "rpc_engine.h"
+#include "core/rpc/rpc_engine.h"
 
 namespace dsn {
 

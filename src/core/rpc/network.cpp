@@ -27,7 +27,7 @@
 #include <dsn/tool-api/network.h>
 #include <dsn/utility/factory_store.h>
 #include "message_parser_manager.h"
-#include "rpc_engine.h"
+#include "core/rpc/rpc_engine.h"
 
 namespace dsn {
 /*static*/ join_point<void, rpc_session *>

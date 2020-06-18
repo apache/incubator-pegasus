@@ -51,8 +51,6 @@ public:
     };
 
 public:
-    message_parser_manager();
-
     // called only during system init, thread-unsafe
     void register_factory(network_header_format fmt,
                           const std::vector<const char *> &signatures,
@@ -63,6 +61,9 @@ public:
     const parser_factory_info &get(network_header_format fmt) { return _factory_vec[fmt]; }
 
 private:
+    friend class utils::singleton<message_parser_manager>;
+    message_parser_manager() = default;
+
     std::vector<parser_factory_info> _factory_vec;
 };
 }

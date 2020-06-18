@@ -31,7 +31,7 @@
 #include <arpa/inet.h>
 
 #include "rpc_engine.h"
-#include "service_engine.h"
+#include "core/core/service_engine.h"
 #include <dsn/utility/factory_store.h>
 #include <dsn/perf_counter/perf_counter.h>
 #include <dsn/tool-api/group_address.h>

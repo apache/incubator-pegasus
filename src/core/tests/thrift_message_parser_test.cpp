@@ -8,7 +8,7 @@
 #include <dsn/cpp/serialization_helper/thrift_helper.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 
-#include "core/tools/common/thrift_message_parser.h"
+#include "core/rpc/thrift_message_parser.h"
 
 namespace dsn {
 
