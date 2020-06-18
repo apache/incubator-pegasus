@@ -60,6 +60,17 @@ public:
 
     void test_start_ingestion() { _bulk_loader->start_ingestion(); }
 
+    void test_handle_bulk_load_finish(bulk_load_status::type status,
+                                      int32_t download_progress,
+                                      ingestion_status::type istatus,
+                                      bool is_bulk_load_ingestion,
+                                      bulk_load_status::type req_status)
+    {
+        mock_replica_bulk_load_varieties(
+            status, download_progress, istatus, is_bulk_load_ingestion);
+        _bulk_loader->handle_bulk_load_finish(req_status);
+    }
+
     int32_t test_report_group_download_progress(bulk_load_status::type status,
                                                 int32_t p_progress,
                                                 int32_t s1_progress,
@@ -83,6 +94,13 @@ public:
         bulk_load_response response;
         _bulk_loader->report_group_ingestion_status(response);
         return response.is_group_ingestion_finished;
+    }
+
+    bool test_report_group_cleaned_up()
+    {
+        bulk_load_response response;
+        _bulk_loader->report_group_cleaned_up(response);
+        return response.is_group_bulk_load_context_cleaned_up;
     }
 
     /// mock structure functions
@@ -272,8 +290,26 @@ public:
         _replica->set_secondary_bulk_load_state(SECONDARY2, state2);
     }
 
+    void mock_group_cleanup_flag(bulk_load_status::type primary_status,
+                                 bool s1_cleaned_up = true,
+                                 bool s2_cleaned_up = true)
+    {
+        int32_t primary_progress = primary_status == bulk_load_status::BLS_SUCCEED ? 100 : 0;
+        mock_replica_bulk_load_varieties(
+            primary_status, primary_progress, ingestion_status::IS_INVALID);
+        mock_secondary_ingestion_states(
+            ingestion_status::IS_INVALID, ingestion_status::IS_INVALID, true);
+
+        partition_bulk_load_state state1, state2;
+        state1.__set_is_cleaned_up(s1_cleaned_up);
+        state2.__set_is_cleaned_up(s2_cleaned_up);
+        _replica->set_secondary_bulk_load_state(SECONDARY, state1);
+        _replica->set_secondary_bulk_load_state(SECONDARY2, state2);
+    }
+
     // helper functions
     bulk_load_status::type get_bulk_load_status() const { return _bulk_loader->_status; }
+    bool is_cleaned_up() { return _bulk_loader->is_cleaned_up(); }
 
 public:
     std::unique_ptr<mock_replica> _replica;
@@ -366,6 +402,7 @@ TEST_F(replica_bulk_loader_test, start_downloading_test)
         if (test.mock_function) {
             fail::cfg("replica_bulk_loader_download_sst_files", "return()");
         }
+        mock_group_progress(bulk_load_status::BLS_INVALID);
         create_bulk_load_request(bulk_load_status::BLS_DOWNLOADING, test.downloading_count);
 
         ASSERT_EQ(test_start_downloading(), test.expected_err);
@@ -421,6 +458,53 @@ TEST_F(replica_bulk_loader_test, start_ingestion_test)
     mock_group_progress(bulk_load_status::BLS_DOWNLOADED);
     test_start_ingestion();
     ASSERT_EQ(get_bulk_load_status(), bulk_load_status::BLS_INGESTING);
+}
+
+// handle_bulk_load_finish unit tests
+TEST_F(replica_bulk_loader_test, bulk_load_finish_test)
+{
+    // Test cases
+    // - bulk load succeed
+    // - double bulk load finish
+    //  TODO(heyuchen): add following cases
+    //  istatus, is_ingestion, create_dir will be used in further tests
+    // - failed during downloading
+    // - failed during ingestion
+    // - cancel during downloaded
+    // - cancel during ingestion
+    // - cancel during succeed
+    struct test_struct
+    {
+        bulk_load_status::type local_status;
+        int32_t progress;
+        ingestion_status::type istatus;
+        bool is_ingestion;
+        bulk_load_status::type request_status;
+        bool create_dir;
+    } tests[]{{bulk_load_status::BLS_SUCCEED,
+               100,
+               ingestion_status::IS_INVALID,
+               false,
+               bulk_load_status::BLS_SUCCEED,
+               false},
+              {bulk_load_status::BLS_INVALID,
+               0,
+               ingestion_status::IS_INVALID,
+               false,
+               bulk_load_status::BLS_SUCCEED,
+               false}};
+
+    for (auto test : tests) {
+        if (test.create_dir) {
+            utils::filesystem::create_directory(LOCAL_DIR);
+        }
+        test_handle_bulk_load_finish(
+            test.local_status, test.progress, test.istatus, test.is_ingestion, test.request_status);
+        ASSERT_EQ(_replica->get_ingestion_status(), ingestion_status::IS_INVALID);
+        ASSERT_FALSE(_replica->is_ingestion());
+        ASSERT_TRUE(is_cleaned_up());
+        ASSERT_FALSE(utils::filesystem::directory_exists(LOCAL_DIR));
+    }
 }
 
 // report_group_download_progress unit tests
@@ -520,6 +604,26 @@ TEST_F(replica_bulk_loader_test, report_group_ingestion_status_test)
                   test.is_group_ingestion_finished);
         ASSERT_FALSE(_replica->is_ingestion());
     }
+}
+
+// report_group_context_clean_flag unit tests
+TEST_F(replica_bulk_loader_test, report_group_cleanup_flag_in_unhealthy_state)
+{
+    // _primary_states.membership.secondaries is empty
+    mock_replica_config(partition_status::PS_PRIMARY);
+    ASSERT_FALSE(test_report_group_cleaned_up());
+}
+
+TEST_F(replica_bulk_loader_test, report_group_cleanup_flag_not_cleaned_up)
+{
+    mock_group_cleanup_flag(bulk_load_status::BLS_SUCCEED, true, false);
+    ASSERT_FALSE(test_report_group_cleaned_up());
+}
+
+TEST_F(replica_bulk_loader_test, report_group_cleanup_flag_all_cleaned_up)
+{
+    mock_group_cleanup_flag(bulk_load_status::BLS_INVALID, true, true);
+    ASSERT_TRUE(test_report_group_cleaned_up());
 }
 
 } // namespace replication

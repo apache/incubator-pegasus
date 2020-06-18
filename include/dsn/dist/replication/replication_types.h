@@ -6479,14 +6479,14 @@ typedef struct _partition_bulk_load_state__isset
         : download_progress(true),
           download_status(false),
           ingest_status(true),
-          is_cleanuped(true),
+          is_cleaned_up(true),
           is_paused(true)
     {
     }
     bool download_progress : 1;
     bool download_status : 1;
     bool ingest_status : 1;
-    bool is_cleanuped : 1;
+    bool is_cleaned_up : 1;
     bool is_paused : 1;
 } _partition_bulk_load_state__isset;
 
@@ -6500,7 +6500,7 @@ public:
     partition_bulk_load_state()
         : download_progress(0),
           ingest_status((ingestion_status::type)0),
-          is_cleanuped(false),
+          is_cleaned_up(false),
           is_paused(false)
     {
         ingest_status = (ingestion_status::type)0;
@@ -6510,7 +6510,7 @@ public:
     int32_t download_progress;
     ::dsn::error_code download_status;
     ingestion_status::type ingest_status;
-    bool is_cleanuped;
+    bool is_cleaned_up;
     bool is_paused;
 
     _partition_bulk_load_state__isset __isset;
@@ -6521,7 +6521,7 @@ public:
 
     void __set_ingest_status(const ingestion_status::type val);
 
-    void __set_is_cleanuped(const bool val);
+    void __set_is_cleaned_up(const bool val);
 
     void __set_is_paused(const bool val);
 
@@ -6539,9 +6539,9 @@ public:
             return false;
         else if (__isset.ingest_status && !(ingest_status == rhs.ingest_status))
             return false;
-        if (__isset.is_cleanuped != rhs.__isset.is_cleanuped)
+        if (__isset.is_cleaned_up != rhs.__isset.is_cleaned_up)
             return false;
-        else if (__isset.is_cleanuped && !(is_cleanuped == rhs.is_cleanuped))
+        else if (__isset.is_cleaned_up && !(is_cleaned_up == rhs.is_cleaned_up))
             return false;
         if (__isset.is_paused != rhs.__isset.is_paused)
             return false;
@@ -6684,7 +6684,7 @@ typedef struct _bulk_load_response__isset
           metadata(false),
           total_download_progress(false),
           is_group_ingestion_finished(false),
-          is_group_bulk_load_context_cleaned(false),
+          is_group_bulk_load_context_cleaned_up(false),
           is_group_bulk_load_paused(false)
     {
     }
@@ -6696,7 +6696,7 @@ typedef struct _bulk_load_response__isset
     bool metadata : 1;
     bool total_download_progress : 1;
     bool is_group_ingestion_finished : 1;
-    bool is_group_bulk_load_context_cleaned : 1;
+    bool is_group_bulk_load_context_cleaned_up : 1;
     bool is_group_bulk_load_paused : 1;
 } _bulk_load_response__isset;
 
@@ -6712,7 +6712,7 @@ public:
           primary_bulk_load_status((bulk_load_status::type)0),
           total_download_progress(0),
           is_group_ingestion_finished(0),
-          is_group_bulk_load_context_cleaned(0),
+          is_group_bulk_load_context_cleaned_up(0),
           is_group_bulk_load_paused(0)
     {
     }
@@ -6726,7 +6726,7 @@ public:
     bulk_load_metadata metadata;
     int32_t total_download_progress;
     bool is_group_ingestion_finished;
-    bool is_group_bulk_load_context_cleaned;
+    bool is_group_bulk_load_context_cleaned_up;
     bool is_group_bulk_load_paused;
 
     _bulk_load_response__isset __isset;
@@ -6748,7 +6748,7 @@ public:
 
     void __set_is_group_ingestion_finished(const bool val);
 
-    void __set_is_group_bulk_load_context_cleaned(const bool val);
+    void __set_is_group_bulk_load_context_cleaned_up(const bool val);
 
     void __set_is_group_bulk_load_paused(const bool val);
 
@@ -6778,11 +6778,12 @@ public:
         else if (__isset.is_group_ingestion_finished &&
                  !(is_group_ingestion_finished == rhs.is_group_ingestion_finished))
             return false;
-        if (__isset.is_group_bulk_load_context_cleaned !=
-            rhs.__isset.is_group_bulk_load_context_cleaned)
+        if (__isset.is_group_bulk_load_context_cleaned_up !=
+            rhs.__isset.is_group_bulk_load_context_cleaned_up)
             return false;
-        else if (__isset.is_group_bulk_load_context_cleaned &&
-                 !(is_group_bulk_load_context_cleaned == rhs.is_group_bulk_load_context_cleaned))
+        else if (__isset.is_group_bulk_load_context_cleaned_up &&
+                 !(is_group_bulk_load_context_cleaned_up ==
+                   rhs.is_group_bulk_load_context_cleaned_up))
             return false;
         if (__isset.is_group_bulk_load_paused != rhs.__isset.is_group_bulk_load_paused)
             return false;

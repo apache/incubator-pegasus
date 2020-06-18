@@ -15197,10 +15197,10 @@ void partition_bulk_load_state::__set_ingest_status(const ingestion_status::type
     __isset.ingest_status = true;
 }
 
-void partition_bulk_load_state::__set_is_cleanuped(const bool val)
+void partition_bulk_load_state::__set_is_cleaned_up(const bool val)
 {
-    this->is_cleanuped = val;
-    __isset.is_cleanuped = true;
+    this->is_cleaned_up = val;
+    __isset.is_cleaned_up = true;
 }
 
 void partition_bulk_load_state::__set_is_paused(const bool val)
@@ -15256,8 +15256,8 @@ uint32_t partition_bulk_load_state::read(::apache::thrift::protocol::TProtocol *
             break;
         case 4:
             if (ftype == ::apache::thrift::protocol::T_BOOL) {
-                xfer += iprot->readBool(this->is_cleanuped);
-                this->__isset.is_cleanuped = true;
+                xfer += iprot->readBool(this->is_cleaned_up);
+                this->__isset.is_cleaned_up = true;
             } else {
                 xfer += iprot->skip(ftype);
             }
@@ -15303,9 +15303,9 @@ uint32_t partition_bulk_load_state::write(::apache::thrift::protocol::TProtocol 
         xfer += oprot->writeI32((int32_t)this->ingest_status);
         xfer += oprot->writeFieldEnd();
     }
-    if (this->__isset.is_cleanuped) {
-        xfer += oprot->writeFieldBegin("is_cleanuped", ::apache::thrift::protocol::T_BOOL, 4);
-        xfer += oprot->writeBool(this->is_cleanuped);
+    if (this->__isset.is_cleaned_up) {
+        xfer += oprot->writeFieldBegin("is_cleaned_up", ::apache::thrift::protocol::T_BOOL, 4);
+        xfer += oprot->writeBool(this->is_cleaned_up);
         xfer += oprot->writeFieldEnd();
     }
     if (this->__isset.is_paused) {
@@ -15324,7 +15324,7 @@ void swap(partition_bulk_load_state &a, partition_bulk_load_state &b)
     swap(a.download_progress, b.download_progress);
     swap(a.download_status, b.download_status);
     swap(a.ingest_status, b.ingest_status);
-    swap(a.is_cleanuped, b.is_cleanuped);
+    swap(a.is_cleaned_up, b.is_cleaned_up);
     swap(a.is_paused, b.is_paused);
     swap(a.__isset, b.__isset);
 }
@@ -15334,7 +15334,7 @@ partition_bulk_load_state::partition_bulk_load_state(const partition_bulk_load_s
     download_progress = other657.download_progress;
     download_status = other657.download_status;
     ingest_status = other657.ingest_status;
-    is_cleanuped = other657.is_cleanuped;
+    is_cleaned_up = other657.is_cleaned_up;
     is_paused = other657.is_paused;
     __isset = other657.__isset;
 }
@@ -15343,7 +15343,7 @@ partition_bulk_load_state::partition_bulk_load_state(partition_bulk_load_state &
     download_progress = std::move(other658.download_progress);
     download_status = std::move(other658.download_status);
     ingest_status = std::move(other658.ingest_status);
-    is_cleanuped = std::move(other658.is_cleanuped);
+    is_cleaned_up = std::move(other658.is_cleaned_up);
     is_paused = std::move(other658.is_paused);
     __isset = std::move(other658.__isset);
 }
@@ -15353,7 +15353,7 @@ operator=(const partition_bulk_load_state &other659)
     download_progress = other659.download_progress;
     download_status = other659.download_status;
     ingest_status = other659.ingest_status;
-    is_cleanuped = other659.is_cleanuped;
+    is_cleaned_up = other659.is_cleaned_up;
     is_paused = other659.is_paused;
     __isset = other659.__isset;
     return *this;
@@ -15364,7 +15364,7 @@ operator=(partition_bulk_load_state &&other660)
     download_progress = std::move(other660.download_progress);
     download_status = std::move(other660.download_status);
     ingest_status = std::move(other660.ingest_status);
-    is_cleanuped = std::move(other660.is_cleanuped);
+    is_cleaned_up = std::move(other660.is_cleaned_up);
     is_paused = std::move(other660.is_paused);
     __isset = std::move(other660.__isset);
     return *this;
@@ -15382,8 +15382,8 @@ void partition_bulk_load_state::printTo(std::ostream &out) const
         << "ingest_status=";
     (__isset.ingest_status ? (out << to_string(ingest_status)) : (out << "<null>"));
     out << ", "
-        << "is_cleanuped=";
-    (__isset.is_cleanuped ? (out << to_string(is_cleanuped)) : (out << "<null>"));
+        << "is_cleaned_up=";
+    (__isset.is_cleaned_up ? (out << to_string(is_cleaned_up)) : (out << "<null>"));
     out << ", "
         << "is_paused=";
     (__isset.is_paused ? (out << to_string(is_paused)) : (out << "<null>"));
@@ -15684,10 +15684,10 @@ void bulk_load_response::__set_is_group_ingestion_finished(const bool val)
     __isset.is_group_ingestion_finished = true;
 }
 
-void bulk_load_response::__set_is_group_bulk_load_context_cleaned(const bool val)
+void bulk_load_response::__set_is_group_bulk_load_context_cleaned_up(const bool val)
 {
-    this->is_group_bulk_load_context_cleaned = val;
-    __isset.is_group_bulk_load_context_cleaned = true;
+    this->is_group_bulk_load_context_cleaned_up = val;
+    __isset.is_group_bulk_load_context_cleaned_up = true;
 }
 
 void bulk_load_response::__set_is_group_bulk_load_paused(const bool val)
@@ -15797,8 +15797,8 @@ uint32_t bulk_load_response::read(::apache::thrift::protocol::TProtocol *iprot)
             break;
         case 9:
             if (ftype == ::apache::thrift::protocol::T_BOOL) {
-                xfer += iprot->readBool(this->is_group_bulk_load_context_cleaned);
-                this->__isset.is_group_bulk_load_context_cleaned = true;
+                xfer += iprot->readBool(this->is_group_bulk_load_context_cleaned_up);
+                this->__isset.is_group_bulk_load_context_cleaned_up = true;
             } else {
                 xfer += iprot->skip(ftype);
             }
@@ -15879,10 +15879,10 @@ uint32_t bulk_load_response::write(::apache::thrift::protocol::TProtocol *oprot)
         xfer += oprot->writeBool(this->is_group_ingestion_finished);
         xfer += oprot->writeFieldEnd();
     }
-    if (this->__isset.is_group_bulk_load_context_cleaned) {
+    if (this->__isset.is_group_bulk_load_context_cleaned_up) {
         xfer += oprot->writeFieldBegin(
-            "is_group_bulk_load_context_cleaned", ::apache::thrift::protocol::T_BOOL, 9);
-        xfer += oprot->writeBool(this->is_group_bulk_load_context_cleaned);
+            "is_group_bulk_load_context_cleaned_up", ::apache::thrift::protocol::T_BOOL, 9);
+        xfer += oprot->writeBool(this->is_group_bulk_load_context_cleaned_up);
         xfer += oprot->writeFieldEnd();
     }
     if (this->__isset.is_group_bulk_load_paused) {
@@ -15907,7 +15907,7 @@ void swap(bulk_load_response &a, bulk_load_response &b)
     swap(a.metadata, b.metadata);
     swap(a.total_download_progress, b.total_download_progress);
     swap(a.is_group_ingestion_finished, b.is_group_ingestion_finished);
-    swap(a.is_group_bulk_load_context_cleaned, b.is_group_bulk_load_context_cleaned);
+    swap(a.is_group_bulk_load_context_cleaned_up, b.is_group_bulk_load_context_cleaned_up);
     swap(a.is_group_bulk_load_paused, b.is_group_bulk_load_paused);
     swap(a.__isset, b.__isset);
 }
@@ -15922,7 +15922,7 @@ bulk_load_response::bulk_load_response(const bulk_load_response &other675)
     metadata = other675.metadata;
     total_download_progress = other675.total_download_progress;
     is_group_ingestion_finished = other675.is_group_ingestion_finished;
-    is_group_bulk_load_context_cleaned = other675.is_group_bulk_load_context_cleaned;
+    is_group_bulk_load_context_cleaned_up = other675.is_group_bulk_load_context_cleaned_up;
     is_group_bulk_load_paused = other675.is_group_bulk_load_paused;
     __isset = other675.__isset;
 }
@@ -15936,7 +15936,8 @@ bulk_load_response::bulk_load_response(bulk_load_response &&other676)
     metadata = std::move(other676.metadata);
     total_download_progress = std::move(other676.total_download_progress);
     is_group_ingestion_finished = std::move(other676.is_group_ingestion_finished);
-    is_group_bulk_load_context_cleaned = std::move(other676.is_group_bulk_load_context_cleaned);
+    is_group_bulk_load_context_cleaned_up =
+        std::move(other676.is_group_bulk_load_context_cleaned_up);
     is_group_bulk_load_paused = std::move(other676.is_group_bulk_load_paused);
     __isset = std::move(other676.__isset);
 }
@@ -15950,7 +15951,7 @@ bulk_load_response &bulk_load_response::operator=(const bulk_load_response &othe
     metadata = other677.metadata;
     total_download_progress = other677.total_download_progress;
     is_group_ingestion_finished = other677.is_group_ingestion_finished;
-    is_group_bulk_load_context_cleaned = other677.is_group_bulk_load_context_cleaned;
+    is_group_bulk_load_context_cleaned_up = other677.is_group_bulk_load_context_cleaned_up;
     is_group_bulk_load_paused = other677.is_group_bulk_load_paused;
     __isset = other677.__isset;
     return *this;
@@ -15965,7 +15966,8 @@ bulk_load_response &bulk_load_response::operator=(bulk_load_response &&other678)
     metadata = std::move(other678.metadata);
     total_download_progress = std::move(other678.total_download_progress);
     is_group_ingestion_finished = std::move(other678.is_group_ingestion_finished);
-    is_group_bulk_load_context_cleaned = std::move(other678.is_group_bulk_load_context_cleaned);
+    is_group_bulk_load_context_cleaned_up =
+        std::move(other678.is_group_bulk_load_context_cleaned_up);
     is_group_bulk_load_paused = std::move(other678.is_group_bulk_load_paused);
     __isset = std::move(other678.__isset);
     return *this;
@@ -15995,9 +15997,9 @@ void bulk_load_response::printTo(std::ostream &out) const
     (__isset.is_group_ingestion_finished ? (out << to_string(is_group_ingestion_finished))
                                          : (out << "<null>"));
     out << ", "
-        << "is_group_bulk_load_context_cleaned=";
-    (__isset.is_group_bulk_load_context_cleaned
-         ? (out << to_string(is_group_bulk_load_context_cleaned))
+        << "is_group_bulk_load_context_cleaned_up=";
+    (__isset.is_group_bulk_load_context_cleaned_up
+         ? (out << to_string(is_group_bulk_load_context_cleaned_up))
          : (out << "<null>"));
     out << ", "
         << "is_group_bulk_load_paused=";

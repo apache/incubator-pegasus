@@ -159,6 +159,7 @@ public:
     bool is_ingestion() { return _is_bulk_load_ingestion; }
     void set_is_ingestion(bool flag) { _is_bulk_load_ingestion = flag; }
     void set_ingestion_status(ingestion_status::type status) { _app->set_ingestion_status(status); }
+    ingestion_status::type get_ingestion_status() { return _app->get_ingestion_status(); }
 
 private:
     decree _max_gced_decree{invalid_decree - 1};
