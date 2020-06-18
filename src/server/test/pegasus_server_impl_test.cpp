@@ -41,15 +41,16 @@ public:
             // do on_get/on_multi_get operation,
             long before_count = _server->_pfc_recent_abnormal_count->get_integer_value();
             if (!test.is_multi_get) {
-                on_get_rpc rpc;
-                test_key = rpc.request();
+                get_rpc rpc(dsn::make_unique<dsn::blob>(test_key), dsn::apps::RPC_RRDB_RRDB_GET);
                 _server->on_get(rpc);
             } else {
                 ::dsn::apps::multi_get_request request;
                 request.__set_hash_key(dsn::blob(test_hash_key.data(), 0, test_hash_key.size()));
                 request.__set_sort_keys({dsn::blob(test_sort_key.data(), 0, test_sort_key.size())});
                 ::dsn::rpc_replier<::dsn::apps::multi_get_response> reply(nullptr);
-                _server->on_multi_get(request, reply);
+                multi_get_rpc rpc(dsn::make_unique<::dsn::apps::multi_get_request>(request),
+                                  dsn::apps::RPC_RRDB_RRDB_MULTI_GET);
+                _server->on_multi_get(rpc);
             }
             long after_count = _server->_pfc_recent_abnormal_count->get_integer_value();
 
