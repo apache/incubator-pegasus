@@ -6,6 +6,18 @@
 
 #include <dsn/tool-api/task.h>
 #include <dsn/dist/replication/replication.codes.h>
+#include <boost/functional/hash.hpp>
+
+namespace std {
+template <>
+struct hash<dsn::string_view>
+{
+    std::size_t operator()(const dsn::string_view &str) const
+    {
+        return boost::hash_range(str.begin(), str.end());
+    }
+};
+} // namespace std
 
 namespace pegasus {
 namespace server {
@@ -17,11 +29,13 @@ DSN_DEFINE_int32("pegasus.server",
                  3,
                  "the threshold of variance calculate to find the outliers");
 
-hotkey_fine_data_collector::hotkey_fine_data_collector(hotkey_collector *base)
-    : replica_base(base), _target_bucket(base->get_coarse_result())
+hotkey_fine_data_collector::hotkey_fine_data_collector(replica_base *base,
+                                                       int hot_bucket,
+                                                       dsn::apps::hotkey_type::type hotkey_type)
+    : replica_base(base), _target_bucket(hot_bucket)
 {
     // Distinguish between single-threaded and multi-threaded environments
-    if (base->get_hotkey_type() == dsn::apps::hotkey_type::READ) {
+    if (hotkey_type == dsn::apps::hotkey_type::READ) {
         auto threads = dsn::get_threadpool_threads_info(THREAD_POOL_LOCAL_APP);
         _thread_queue_map.reset(new std::unordered_map<int, int>);
         int queue_num = threads.size();
@@ -33,7 +47,7 @@ hotkey_fine_data_collector::hotkey_fine_data_collector(hotkey_collector *base)
             // Create a vector of the ReaderWriterQueue
             _string_capture_queue.emplace_back(kMaxQueueSize);
         }
-    } else {
+    } else { // WRITE
         _string_capture_queue.emplace_back(kMaxQueueSize);
         _thread_queue_map.reset();
     }
@@ -50,21 +64,22 @@ inline int hotkey_fine_data_collector::get_queue_index()
     return result->second;
 }
 
-void hotkey_fine_data_collector::capture_data(const std::string &data, int count)
+void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, int count)
 {
-    if (hotkey_collector::get_bucket_id(data) != _target_bucket)
+    if (hotkey_collector::get_bucket_id(hash_key) != _target_bucket) {
         return;
-    _string_capture_queue[get_queue_index()].try_emplace(std::make_pair(data, count));
+    }
+    _string_capture_queue[get_queue_index()].try_emplace(std::make_pair(hash_key, count));
 }
 
 bool hotkey_fine_data_collector::analyse_data(std::string &result)
 {
-    std::unordered_map<std::string, int> fine_data_bucket;
-    for (int i = 0; i < _string_capture_queue.size(); i++) {
-        std::pair<std::string, int> hash_key_pair;
+    std::unordered_map<dsn::string_view, int> fine_data_bucket;
+    for (auto &rw_queue : _string_capture_queue) {
+        std::pair<dsn::blob, int> hash_key_pair;
         // prevent endless loop
         int collect_sum = 0;
-        while (_string_capture_queue[i].try_dequeue(hash_key_pair) && collect_sum < kMaxQueueSize) {
+        while (rw_queue.try_dequeue(hash_key_pair) && collect_sum < kMaxQueueSize) {
             collect_sum++;
             fine_data_bucket[hash_key_pair.first] += hash_key_pair.second;
         }
@@ -74,7 +89,7 @@ bool hotkey_fine_data_collector::analyse_data(std::string &result)
     }
     std::vector<int> data_samples;
     data_samples.reserve(FLAGS_data_capture_hash_bucket_num);
-    std::string count_max_key;
+    dsn::string_view count_max_key;
     int count_max = -1;
     for (const auto &iter : fine_data_bucket) {
         data_samples.push_back(iter.second);
@@ -85,7 +100,7 @@ bool hotkey_fine_data_collector::analyse_data(std::string &result)
     }
     if (data_samples.size() < 3 ||
         hotkey_collector::variance_calc(data_samples, FLAGS_fine_data_variance_threshold) != -1) {
-        result = count_max_key;
+        result = std::string(count_max_key);
         return true;
     }
     derror_replica("Can't find a hot bucket in fine analyse");

@@ -1244,23 +1244,20 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
 
 void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache.fetch(args); }
 
-void pegasus_server_impl::on_detect_hotkey(
-    const ::dsn::apps::hotkey_detect_request &args,
-    ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply)
+void pegasus_server_impl::on_detect_hotkey(detect_hotkey_rpc rpc)
 {
-    ::dsn::apps::hotkey_detect_response resp;
+    const auto &args = rpc.request();
+    auto &resp = rpc.response();
     if (args.operation != dsn::apps::hotkey_collector_operation::START &&
         args.operation != dsn::apps::hotkey_collector_operation::STOP) {
         resp.err = ::dsn::ERR_SERVICE_NOT_FOUND;
         resp.__set_err_hint("invalid hotkey_collector_operation");
-        reply(resp);
     }
     std::string op =
         args.operation == dsn::apps::hotkey_collector_operation::START ? "START" : "STOP";
     if (args.type != dsn::apps::hotkey_type::READ && args.type != dsn::apps::hotkey_type::WRITE) {
         resp.err = ::dsn::ERR_SERVICE_NOT_FOUND;
         resp.__set_err_hint("invalid hotkey_type");
-        reply(resp);
     }
     auto collector = args.type == dsn::apps::hotkey_type::READ ? _read_hotkey_collector
                                                                : _write_hotkey_collector;
@@ -1271,7 +1268,6 @@ void pegasus_server_impl::on_detect_hotkey(
         resp.err = ::dsn::ERR_SERVICE_ALREADY_EXIST;
         resp.__set_err_hint(err_hint.c_str());
     }
-    reply(resp);
 }
 
 ::dsn::error_code pegasus_server_impl::start(int argc, char **argv)

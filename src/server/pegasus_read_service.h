@@ -6,6 +6,10 @@
 
 namespace pegasus {
 namespace server {
+
+typedef ::dsn::rpc_holder<::dsn::apps::hotkey_detect_request, dsn::apps::hotkey_detect_response>
+    detect_hotkey_rpc;
+
 class pegasus_read_service : public dsn::replication::replication_app_base,
                              public dsn::replication::storage_serverlet<pegasus_read_service>
 {
@@ -43,9 +47,7 @@ protected:
     // RPC_RRDB_RRDB_CLEAR_SCANNER
     virtual void on_clear_scanner(const int64_t &args) = 0;
     // RPC_DETECT_HOTKEY
-    virtual void
-    on_detect_hotkey(const ::dsn::apps::hotkey_detect_request &args,
-                     ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply) = 0;
+    virtual void on_detect_hotkey(detect_hotkey_rpc rpc) = 0;
 
     static void register_rpc_handlers()
     {
@@ -59,7 +61,7 @@ protected:
         register_async_rpc_handler(dsn::apps::RPC_RRDB_RRDB_SCAN, "scan", on_scan);
         register_async_rpc_handler(
             dsn::apps::RPC_RRDB_RRDB_CLEAR_SCANNER, "clear_scanner", on_clear_scanner);
-        register_async_rpc_handler(RPC_DETECT_HOTKEY, "detect_hotkey", on_detect_hotkey);
+        register_rpc_handler_with_rpc_holder(RPC_DETECT_HOTKEY, "detect_hotkey", on_detect_hotkey);
     }
 
 private:
@@ -103,11 +105,9 @@ private:
     {
         svc->on_clear_scanner(args);
     }
-    static void on_detect_hotkey(pegasus_read_service *svc,
-                                 const ::dsn::apps::hotkey_detect_request &args,
-                                 ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply)
+    static void on_detect_hotkey(pegasus_read_service *svc, detect_hotkey_rpc rpc)
     {
-        svc->on_detect_hotkey(args, reply);
+        svc->on_detect_hotkey(rpc);
     }
 };
 } // namespace server

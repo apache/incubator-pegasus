@@ -49,7 +49,8 @@ public:
         req.operation = dsn::apps::hotkey_collector_operation::START;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
         ASSERT_EQ(_server->get_read_hotkey_collector()->get_status(), "STOP");
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_read_hotkey_collector()->get_status(), "COARSE");
         srand(1);
         ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
@@ -70,7 +71,8 @@ public:
 
         req.type = dsn::apps::hotkey_type::READ;
         req.operation = dsn::apps::hotkey_collector_operation::STOP;
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
     }
 
     // test on_get one hotkey in random data
@@ -80,7 +82,8 @@ public:
         req.type = dsn::apps::hotkey_type::READ;
         req.operation = dsn::apps::hotkey_collector_operation::START;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
 
         dsn::blob key;
         ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
@@ -108,7 +111,8 @@ public:
         req.type = dsn::apps::hotkey_type::READ;
         req.operation = dsn::apps::hotkey_collector_operation::STOP;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_read_hotkey_collector()->get_status(), "STOP");
         ::dsn::rpc_replier<::dsn::apps::read_response> reply(nullptr);
         dsn::blob key;
@@ -134,7 +138,8 @@ public:
         req.type = dsn::apps::hotkey_type::READ;
         req.operation = dsn::apps::hotkey_collector_operation::START;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_read_hotkey_collector()->get_status(), "COARSE");
         dsn::blob key;
         for (int i = 0; i < 600; i++) {
@@ -161,7 +166,8 @@ public:
         req.type = dsn::apps::hotkey_type::WRITE;
         req.operation = dsn::apps::hotkey_collector_operation::START;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_write_hotkey_collector()->get_status(), "COARSE");
 
         dsn::blob key;
@@ -188,7 +194,8 @@ public:
 
         req.type = dsn::apps::hotkey_type::WRITE;
         req.operation = dsn::apps::hotkey_collector_operation::STOP;
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
     }
 
     void write_test_hotkey_data()
@@ -197,7 +204,8 @@ public:
         req.type = dsn::apps::hotkey_type::WRITE;
         req.operation = dsn::apps::hotkey_collector_operation::START;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_write_hotkey_collector()->get_status(), "COARSE");
 
         dsn::blob key;
@@ -230,7 +238,8 @@ public:
         req.type = dsn::apps::hotkey_type::WRITE;
         req.operation = dsn::apps::hotkey_collector_operation::STOP;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_write_hotkey_collector()->get_status(), "STOP");
 
         dsn::blob key;
@@ -262,7 +271,8 @@ public:
         req.type = dsn::apps::hotkey_type::WRITE;
         req.operation = dsn::apps::hotkey_collector_operation::START;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_write_hotkey_collector()->get_status(), "COARSE");
 
         dsn::blob key;
@@ -298,7 +308,8 @@ public:
         req.type = dsn::apps::hotkey_type::READ;
         req.operation = dsn::apps::hotkey_collector_operation::START;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_read_hotkey_collector()->get_status(), "COARSE");
 
         dsn::blob key;
@@ -316,7 +327,8 @@ public:
 
         req.type = dsn::apps::hotkey_type::READ;
         req.operation = dsn::apps::hotkey_collector_operation::STOP;
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_read_hotkey_collector()->get_status(), "STOP");
     }
 
@@ -326,7 +338,8 @@ public:
         req.type = dsn::apps::hotkey_type::WRITE;
         req.operation = dsn::apps::hotkey_collector_operation::START;
         ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> resp(nullptr);
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_write_hotkey_collector()->get_status(), "COARSE");
 
         dsn::blob key;
@@ -350,30 +363,32 @@ public:
 
         req.type = dsn::apps::hotkey_type::WRITE;
         req.operation = dsn::apps::hotkey_collector_operation::STOP;
-        _server->on_detect_hotkey(req, resp);
+        _server->on_detect_hotkey(detect_hotkey_rpc(
+            dsn::make_unique<::dsn::apps::hotkey_detect_request>(req), RPC_DETECT_HOTKEY));
         ASSERT_EQ(_server->get_write_hotkey_collector()->get_status(), "STOP");
     }
 };
 
-TEST_F(hotkey_collector_test, read_test)
-{
-    read_test_readom_data();
-    read_test_hotkey_data();
-    read_test_no_data();
-    read_test_multi_get();
-}
+TEST_F(hotkey_collector_test, read_test_readom_data) { read_test_readom_data(); }
 
-TEST_F(hotkey_collector_test, write_test)
-{
-    write_test_random_data();
-    write_test_hotkey_data();
-    write_test_no_data();
-    write_test_multi_put();
-}
+TEST_F(hotkey_collector_test, read_test_hotkey_data) { read_test_hotkey_data(); }
 
-TEST_F(hotkey_collector_test, start_stop_test)
+TEST_F(hotkey_collector_test, read_test_no_data) { read_test_no_data(); }
+
+TEST_F(hotkey_collector_test, read_test_multi_get) { read_test_multi_get(); }
+
+TEST_F(hotkey_collector_test, write_test_random_data) { write_test_random_data(); }
+
+TEST_F(hotkey_collector_test, write_test_hotkey_data) { write_test_hotkey_data(); }
+
+TEST_F(hotkey_collector_test, write_test_no_data) { write_test_no_data(); }
+
+TEST_F(hotkey_collector_test, write_test_multi_put) { write_test_multi_put(); }
+
+TEST_F(hotkey_collector_test, read_collector_start_stop_test) { read_collector_start_stop_test(); }
+
+TEST_F(hotkey_collector_test, write_collector_start_stop_test)
 {
-    read_collector_start_stop_test();
     write_collector_start_stop_test();
 }
 
