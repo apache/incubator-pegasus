@@ -7,12 +7,14 @@
 namespace pegasus {
 namespace server {
 
-typedef dsn::rpc_holder<::dsn::blob, ::dsn::apps::read_response> get_rpc;
-typedef dsn::rpc_holder<dsn::apps::multi_get_request, dsn::apps::multi_get_response> multi_get_rpc;
-typedef dsn::rpc_holder<::dsn::blob, dsn::apps::count_response> sortkey_count_rpc;
-typedef dsn::rpc_holder<::dsn::blob, dsn::apps::ttl_response> ttl_rpc;
-typedef dsn::rpc_holder<::dsn::apps::get_scanner_request, dsn::apps::scan_response> get_scanner_rpc;
-typedef dsn::rpc_holder<::dsn::apps::scan_request, dsn::apps::scan_response> scan_rpc;
+typedef ::dsn::rpc_holder<::dsn::blob, ::dsn::apps::read_response> get_rpc;
+typedef ::dsn::rpc_holder<dsn::apps::multi_get_request, dsn::apps::multi_get_response>
+    multi_get_rpc;
+typedef ::dsn::rpc_holder<::dsn::blob, dsn::apps::count_response> sortkey_count_rpc;
+typedef ::dsn::rpc_holder<::dsn::blob, dsn::apps::ttl_response> ttl_rpc;
+typedef ::dsn::rpc_holder<::dsn::apps::get_scanner_request, dsn::apps::scan_response>
+    get_scanner_rpc;
+typedef ::dsn::rpc_holder<::dsn::apps::scan_request, dsn::apps::scan_response> scan_rpc;
 
 class pegasus_read_service : public dsn::replication::replication_app_base,
                              public dsn::replication::storage_serverlet<pegasus_read_service>

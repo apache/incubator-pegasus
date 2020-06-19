@@ -239,12 +239,12 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 
 void pegasus_server_impl::on_get(get_rpc rpc)
 {
-    const ::dsn::blob &key = rpc.request();
     dassert(_is_open, "");
     _pfc_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
-    ::dsn::apps::read_response &resp = rpc.response();
+    const auto &key = rpc.request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -726,7 +726,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
     uint64_t start_time = dsn_now_ns();
 
     const auto &hash_key = rpc.request();
-    auto resp = rpc.response();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
