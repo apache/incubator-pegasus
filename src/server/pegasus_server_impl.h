@@ -47,18 +47,12 @@ public:
     ~pegasus_server_impl() override;
 
     // the following methods may set physical error if internal error occurs
-    void on_get(const ::dsn::blob &key,
-                ::dsn::rpc_replier<::dsn::apps::read_response> &reply) override;
-    void on_multi_get(const ::dsn::apps::multi_get_request &args,
-                      ::dsn::rpc_replier<::dsn::apps::multi_get_response> &reply) override;
-    void on_sortkey_count(const ::dsn::blob &args,
-                          ::dsn::rpc_replier<::dsn::apps::count_response> &reply) override;
-    void on_ttl(const ::dsn::blob &key,
-                ::dsn::rpc_replier<::dsn::apps::ttl_response> &reply) override;
-    void on_get_scanner(const ::dsn::apps::get_scanner_request &args,
-                        ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
-    void on_scan(const ::dsn::apps::scan_request &args,
-                 ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
+    void on_get(get_rpc rpc) override;
+    void on_multi_get(multi_get_rpc rpc) override;
+    void on_sortkey_count(sortkey_count_rpc rpc) override;
+    void on_ttl(ttl_rpc rpc) override;
+    void on_get_scanner(get_scanner_rpc rpc) override;
+    void on_scan(scan_rpc rpc) override;
     void on_clear_scanner(const int64_t &args) override;
     void on_detect_hotkey(detect_hotkey_rpc rpc) override;
 

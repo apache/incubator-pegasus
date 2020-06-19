@@ -238,16 +238,16 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
 }
 
-void pegasus_server_impl::on_get(const ::dsn::blob &key,
-                                 ::dsn::rpc_replier<::dsn::apps::read_response> &reply)
+void pegasus_server_impl::on_get(get_rpc rpc)
 {
     dassert(_is_open, "");
     _pfc_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
+    const auto &key = rpc.request();
+    auto &resp = rpc.response();
     _read_hotkey_collector->capture_blob_data(key);
 
-    ::dsn::apps::read_response resp;
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -262,7 +262,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for get from %s",
                        replica_name(),
-                       reply.to_address().to_string());
+                       rpc.remote_address().to_string());
             }
             status = rocksdb::Status::NotFound();
         }
@@ -275,14 +275,14 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             derror("%s: rocksdb get failed for get from %s: "
                    "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    ::pegasus::utils::c_escape_string(sort_key).c_str(),
                    status.ToString().c_str());
         } else if (!status.IsNotFound()) {
             derror("%s: rocksdb get failed for get from %s: error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    status.ToString().c_str());
         }
     }
@@ -300,7 +300,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         dwarn_replica("rocksdb abnormal get from {}: "
                       "hash_key = {}, sort_key = {}, return = {}, "
                       "value_size = {}, time_used = {} ns",
-                      reply.to_address().to_string(),
+                      rpc.remote_address().to_string(),
                       ::pegasus::utils::c_escape_string(hash_key),
                       ::pegasus::utils::c_escape_string(sort_key),
                       status.ToString(),
@@ -316,18 +316,16 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
 
     _cu_calculator->add_get_cu(resp.error, key, resp.value);
     _pfc_get_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
-void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &request,
-                                       ::dsn::rpc_replier<::dsn::apps::multi_get_response> &reply)
+void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 {
     dassert(_is_open, "");
     _pfc_multi_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
-    ::dsn::apps::multi_get_response resp;
+    const auto &request = rpc.request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -336,12 +334,11 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         derror("%s: invalid argument for multi_get from %s: "
                "sort key filter type %d not supported",
                replica_name(),
-               reply.to_address().to_string(),
+               rpc.remote_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-        reply(resp);
         return;
     }
 
@@ -410,7 +407,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                       "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
                       "final_start = \"%s\" (%s), final_stop = \"%s\" (%s)",
                       replica_name(),
-                      reply.to_address().to_string(),
+                      rpc.remote_address().to_string(),
                       ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                       ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
                       request.start_inclusive ? "inclusive" : "exclusive",
@@ -427,7 +424,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             resp.error = rocksdb::Status::kOk;
             _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
             _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-            reply(resp);
+
             return;
         }
 
@@ -571,7 +568,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 derror("%s: rocksdb scan failed for multi_get from %s: "
                        "hash_key = \"%s\", reverse = %s, error = %s",
                        replica_name(),
-                       reply.to_address().to_string(),
+                       rpc.remote_address().to_string(),
                        ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                        request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
@@ -579,7 +576,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 derror("%s: rocksdb scan failed for multi_get from %s: "
                        "reverse = %s, error = %s",
                        replica_name(),
-                       reply.to_address().to_string(),
+                       rpc.remote_address().to_string(),
                        request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
             }
@@ -590,7 +587,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             if (limiter->exceed_limit()) {
                 dwarn_replica(
                     "rocksdb abnormal scan from {}: time_used({}ns) VS time_threshold({}ns)",
-                    reply.to_address().to_string(),
+                    rpc.remote_address().to_string(),
                     limiter->duration_time(),
                     limiter->max_duration_time());
             }
@@ -621,14 +618,14 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                     derror("%s: rocksdb get failed for multi_get from %s: "
                            "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                            replica_name(),
-                           reply.to_address().to_string(),
+                           rpc.remote_address().to_string(),
                            ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                            ::pegasus::utils::c_escape_string(request.sort_keys[i]).c_str(),
                            status.ToString().c_str());
                 } else if (!status.IsNotFound()) {
                     derror("%s: rocksdb get failed for multi_get from %s: error = %s",
                            replica_name(),
-                           reply.to_address().to_string(),
+                           rpc.remote_address().to_string(),
                            status.ToString().c_str());
                 }
             }
@@ -640,7 +637,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                     if (_verbose_log) {
                         derror("%s: rocksdb data expired for multi_get from %s",
                                replica_name(),
-                               reply.to_address().to_string());
+                               rpc.remote_address().to_string());
                     }
                     status = rocksdb::Status::NotFound();
                 }
@@ -693,7 +690,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             "max_kv_count = {}, max_kv_size = {}, reverse = {}, "
             "result_count = {}, result_size = {}, iteration_count = {}, "
             "expire_count = {}, filter_count = {}, time_used = {} ns",
-            reply.to_address().to_string(),
+            rpc.remote_address().to_string(),
             ::pegasus::utils::c_escape_string(request.hash_key),
             ::pegasus::utils::c_escape_string(request.start_sortkey),
             request.start_inclusive ? "inclusive" : "exclusive",
@@ -723,18 +720,17 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
     _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
     _read_hotkey_collector->capture_multi_get_data(request, resp);
-    reply(resp);
 }
 
-void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
-                                           ::dsn::rpc_replier<::dsn::apps::count_response> &reply)
+void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 {
     dassert(_is_open, "");
 
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
-    ::dsn::apps::count_response resp;
+    const auto &hash_key = rpc.request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -765,7 +761,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for sortkey_count from %s",
                        replica_name(),
-                       reply.to_address().to_string());
+                       rpc.remote_address().to_string());
             }
         } else {
             resp.count++;
@@ -783,19 +779,19 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
             derror("%s: rocksdb scan failed for sortkey_count from %s: "
                    "hash_key = \"%s\", error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    it->status().ToString().c_str());
         } else {
             derror("%s: rocksdb scan failed for sortkey_count from %s: error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    it->status().ToString().c_str());
         }
         resp.count = 0;
     } else if (limiter->exceed_limit()) {
         dwarn_replica("rocksdb abnormal scan from {}: time_used({}ns) VS time_threshold({}ns)",
-                      reply.to_address().to_string(),
+                      rpc.remote_address().to_string(),
                       limiter->duration_time(),
                       limiter->max_duration_time());
         resp.count = -1;
@@ -803,16 +799,14 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
 
     _cu_calculator->add_sortkey_count_cu(resp.error);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
-void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
-                                 ::dsn::rpc_replier<::dsn::apps::ttl_response> &reply)
+void pegasus_server_impl::on_ttl(ttl_rpc rpc)
 {
     dassert(_is_open, "");
 
-    ::dsn::apps::ttl_response resp;
+    const auto &key = rpc.request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -830,7 +824,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for ttl from %s",
                        replica_name(),
-                       reply.to_address().to_string());
+                       rpc.remote_address().to_string());
             }
             status = rocksdb::Status::NotFound();
         }
@@ -843,14 +837,14 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
             derror("%s: rocksdb get failed for ttl from %s: "
                    "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    ::pegasus::utils::c_escape_string(sort_key).c_str(),
                    status.ToString().c_str());
         } else if (!status.IsNotFound()) {
             derror("%s: rocksdb get failed for ttl from %s: error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    status.ToString().c_str());
         }
     }
@@ -866,18 +860,16 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
     }
 
     _cu_calculator->add_ttl_cu(resp.error);
-
-    reply(resp);
 }
 
-void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request &request,
-                                         ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
+void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 {
     dassert(_is_open, "");
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
-    ::dsn::apps::scan_response resp;
+    const auto &request = rpc.request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -886,24 +878,24 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         derror("%s: invalid argument for get_scanner from %s: "
                "hash key filter type %d not supported",
                replica_name(),
-               reply.to_address().to_string(),
+               rpc.remote_address().to_string(),
                request.hash_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_scan_cu(resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
-        reply(resp);
+
         return;
     }
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
         derror("%s: invalid argument for get_scanner from %s: "
                "sort key filter type %d not supported",
                replica_name(),
-               reply.to_address().to_string(),
+               rpc.remote_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_scan_cu(resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
-        reply(resp);
+
         return;
     }
 
@@ -952,7 +944,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
             dwarn("%s: empty key range for get_scanner from %s: "
                   "start_key = \"%s\" (%s), stop_key = \"%s\" (%s)",
                   replica_name(),
-                  reply.to_address().to_string(),
+                  rpc.remote_address().to_string(),
                   ::pegasus::utils::c_escape_string(request.start_key).c_str(),
                   request.start_inclusive ? "inclusive" : "exclusive",
                   ::pegasus::utils::c_escape_string(request.stop_key).c_str(),
@@ -961,7 +953,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         resp.error = rocksdb::Status::kOk;
         _cu_calculator->add_scan_cu(resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
-        reply(resp);
+
         return;
     }
 
@@ -1039,7 +1031,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                    "start_key = \"%s\" (%s), stop_key = \"%s\" (%s), "
                    "batch_size = %d, read_count = %d, error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    ::pegasus::utils::c_escape_string(start).c_str(),
                    request.start_inclusive ? "inclusive" : "exclusive",
                    ::pegasus::utils::c_escape_string(stop).c_str(),
@@ -1050,7 +1042,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         } else {
             derror("%s: rocksdb scan failed for get_scanner from %s: error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    it->status().ToString().c_str());
         }
         resp.kvs.clear();
@@ -1059,7 +1051,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         resp.error = rocksdb::Status::kIncomplete;
         dwarn_replica("rocksdb abnormal scan from {}: batch_count={}, time_used_ns({}) VS "
                       "time_threshold_ns({})",
-                      reply.to_address().to_string(),
+                      rpc.remote_address().to_string(),
                       batch_count,
                       limiter->duration_time(),
                       limiter->max_duration_time());
@@ -1101,18 +1093,15 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
 
     _cu_calculator->add_scan_cu(resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
-void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
-                                  ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
+void pegasus_server_impl::on_scan(scan_rpc rpc)
 {
     dassert(_is_open, "");
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
-
-    ::dsn::apps::scan_response resp;
+    const auto &request = rpc.request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -1189,7 +1178,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
                        "context_id= %" PRId64 ", stop_key = \"%s\" (%s), "
                        "batch_size = %d, read_count = %d, error = %s",
                        replica_name(),
-                       reply.to_address().to_string(),
+                       rpc.remote_address().to_string(),
                        request.context_id,
                        ::pegasus::utils::c_escape_string(stop).c_str(),
                        stop_inclusive ? "inclusive" : "exclusive",
@@ -1199,7 +1188,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
             } else {
                 derror("%s: rocksdb scan failed for scan from %s: error = %s",
                        replica_name(),
-                       reply.to_address().to_string(),
+                       rpc.remote_address().to_string(),
                        it->status().ToString().c_str());
             }
             resp.kvs.clear();
@@ -1208,7 +1197,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
             resp.error = rocksdb::Status::kIncomplete;
             dwarn_replica("rocksdb abnormal scan from {}: batch_count={}, time_used({}ns) VS "
                           "time_threshold({}ns)",
-                          reply.to_address().to_string(),
+                          rpc.remote_address().to_string(),
                           batch_count,
                           limiter->duration_time(),
                           limiter->max_duration_time());
@@ -1238,8 +1227,6 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
 
     _cu_calculator->add_scan_cu(resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
 void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache.fetch(args); }
