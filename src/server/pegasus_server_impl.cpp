@@ -342,6 +342,8 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         return;
     }
 
+    _read_hotkey_collector->capture_multi_get_data(request);
+
     uint32_t max_kv_count = request.max_kv_count > 0 ? request.max_kv_count : INT_MAX;
     uint32_t max_iteration_count =
         std::min(max_kv_count, _rng_rd_opts.multi_get_max_iteration_count);
@@ -719,7 +721,6 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 
     _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-    _read_hotkey_collector->capture_multi_get_data(request, resp);
 }
 
 void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)

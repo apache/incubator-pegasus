@@ -8,16 +8,21 @@
 #include <dsn/dist/replication/replication.codes.h>
 #include <boost/functional/hash.hpp>
 
-namespace std {
-template <>
-struct hash<dsn::string_view>
+struct blob_hash
 {
-    std::size_t operator()(const dsn::string_view &str) const
+    std::size_t operator()(const dsn::blob &str) const
     {
-        return boost::hash_range(str.begin(), str.end());
+        dsn::string_view cp(str);
+        return boost::hash_range(cp.begin(), cp.end());
     }
 };
-} // namespace std
+struct blob_equal
+{
+    std::size_t operator()(const dsn::blob &lhs, const dsn::blob &rhs) const
+    {
+        return dsn::string_view(lhs) == dsn::string_view(rhs);
+    }
+};
 
 namespace pegasus {
 namespace server {
@@ -74,36 +79,36 @@ void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, int cou
 
 bool hotkey_fine_data_collector::analyse_data(std::string &result)
 {
-    std::unordered_map<dsn::string_view, int> fine_data_bucket;
+    std::unordered_map<dsn::blob, int, blob_hash, blob_equal> hash_key_accessed_cnt;
     for (auto &rw_queue : _string_capture_queue) {
         std::pair<dsn::blob, int> hash_key_pair;
         // prevent endless loop
         int collect_sum = 0;
         while (rw_queue.try_dequeue(hash_key_pair) && collect_sum < kMaxQueueSize) {
             collect_sum++;
-            fine_data_bucket[hash_key_pair.first] += hash_key_pair.second;
+            hash_key_accessed_cnt[hash_key_pair.first] += hash_key_pair.second;
         }
     }
-    if (fine_data_bucket.empty()) {
+    if (hash_key_accessed_cnt.empty()) {
         return false;
     }
-    std::vector<int> data_samples;
-    data_samples.reserve(FLAGS_data_capture_hash_bucket_num);
+    std::vector<int> counts;
+    counts.reserve(FLAGS_data_capture_hash_bucket_num);
     dsn::string_view count_max_key;
     int count_max = -1;
-    for (const auto &iter : fine_data_bucket) {
-        data_samples.push_back(iter.second);
+    for (const auto &iter : hash_key_accessed_cnt) {
+        counts.push_back(iter.second);
         if (iter.second > count_max) {
             count_max = iter.second;
-            count_max_key = iter.first;
+            count_max_key = iter.first; // the key with the max accessed count.
         }
     }
-    if (data_samples.size() < 3 ||
-        hotkey_collector::variance_calc(data_samples, FLAGS_fine_data_variance_threshold) != -1) {
+    // if the accessed counts differ hugely (depends on the variance threshold),
+    // the max key is the hotkey.
+    if (hotkey_collector::variance_calc(counts, FLAGS_fine_data_variance_threshold) != -1) {
         result = std::string(count_max_key);
         return true;
     }
-    derror_replica("Can't find a hot bucket in fine analyse");
     return false;
 }
 

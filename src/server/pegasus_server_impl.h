@@ -166,21 +166,12 @@ public:
         return _ingestion_status;
     }
 
-    const std::shared_ptr<hotkey_collector> get_read_hotkey_collector()
-    {
-        return _read_hotkey_collector;
-    }
-
-    const std::shared_ptr<hotkey_collector> get_write_hotkey_collector()
-    {
-        return _write_hotkey_collector;
-    }
-
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
     friend class pegasus_server_impl_test;
     FRIEND_TEST(pegasus_server_impl_test, default_data_version);
+    friend class hotkey_collector_test;
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
@@ -324,11 +315,6 @@ private:
     void release_db();
 
     ::dsn::error_code flush_all_family_columns(bool wait);
-
-    void on_start_detect_hotkey(const ::dsn::apps::hotkey_detect_request &args,
-                                ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply);
-    void on_stop_detect_hotkey(const ::dsn::apps::hotkey_detect_request &args,
-                               ::dsn::rpc_replier<::dsn::apps::hotkey_detect_response> &reply);
 
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;

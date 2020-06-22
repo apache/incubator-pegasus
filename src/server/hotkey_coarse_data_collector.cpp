@@ -28,8 +28,6 @@ void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, int r
 int hotkey_coarse_data_collector::analyse_data()
 {
     std::vector<int> buckets(FLAGS_data_capture_hash_bucket_num);
-    std::vector<int> hot_values;
-    hot_values.reserve(FLAGS_data_capture_hash_bucket_num);
     for (int i = 0; i < buckets.size(); i++) {
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);
@@ -37,10 +35,9 @@ int hotkey_coarse_data_collector::analyse_data()
     int result = hotkey_collector::variance_calc(buckets, FLAGS_coarse_data_variance_threshold);
     if (result >= 0) {
         return result;
-    } else {
-        derror_replica("Can't find a hot bucket in coarse analysis");
-        return -1;
     }
+    derror_replica("Can't find a hot bucket in coarse analysis");
+    return -1;
 }
 
 } // namespace server

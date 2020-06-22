@@ -41,8 +41,7 @@ public:
 
     void capture_blob_data(const ::dsn::blob &raw_key);
     void capture_msg_data(dsn::message_ex **requests_point, int count);
-    void capture_multi_get_data(const ::dsn::apps::multi_get_request &request,
-                                const ::dsn::apps::multi_get_response &resp);
+    void capture_multi_get_data(const ::dsn::apps::multi_get_request &request);
 
     // analyse_data is a periodic task, only valid when _state == collector_state::COARSE
     // || collector_state::FINE
@@ -57,6 +56,13 @@ public:
     static int get_bucket_id(dsn::string_view data);
 
 private:
+    friend class hotkey_collector_test;
+    FRIEND_TEST(hotkey_collector_test, start);
+    FRIEND_TEST(hotkey_collector_test, detection_enabled);
+    FRIEND_TEST(hotkey_collector_test, detection_disabled);
+    FRIEND_TEST(hotkey_collector_test, capture_read);
+    FRIEND_TEST(hotkey_collector_test, capture_write);
+
     // after receiving START RPC, start to capture and analyse
     // return true: start detecting successfully
     //        false: The query is in progress or a hot spot has been found
@@ -90,7 +96,7 @@ private:
 // is regarded to contain the hotkey.
 //
 // This technique intends to reduce the load of data recording during FINE procedure,
-// benefiting for both memory usage and performance.
+// filtering what's unnecessary to catch.
 //
 class hotkey_coarse_data_collector : public dsn::replication::replica_base
 {
@@ -105,11 +111,18 @@ public:
     int analyse_data();
 
 private:
+    FRIEND_TEST(hotkey_collector_test, capture_read);
+    FRIEND_TEST(hotkey_collector_test, capture_write);
     std::vector<std::atomic<int>> _hash_buckets;
 };
 
 // hotkey_fine_data_collector handles the second procedure (FINE) of hotkey detection.
 // It captures only the data mapping to the "hot" bucket.
+//
+// To prevent locking on the read path, we create one queue per thread of THREAD_POOL_LOCAL_APP.
+// The read request is captured right inside its execution thread.
+//
+// For writes we do not apply this optimization.
 class hotkey_fine_data_collector : public dsn::replication::replica_base
 {
 public:
@@ -121,13 +134,14 @@ public:
     bool analyse_data(std::string &result);
 
 private:
-    typedef std::shared_ptr<std::unordered_map<int, int>> thread_queue_map;
-
     const int _target_bucket;
-    thread_queue_map _thread_queue_map;
-    std::vector<moodycamel::ReaderWriterQueue<std::pair<dsn::blob, int>>> _string_capture_queue;
 
+    // thread's native id -> data queue id.
+    typedef std::shared_ptr<std::unordered_map<int, int>> thread_queue_map;
+    thread_queue_map _thread_queue_map;
     inline int get_queue_index();
+
+    std::vector<moodycamel::ReaderWriterQueue<std::pair<dsn::blob, int>>> _string_capture_queue;
 };
 
 } // namespace server
