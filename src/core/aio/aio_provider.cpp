@@ -41,4 +41,12 @@ void aio_provider::complete_io(aio_task *aio,
     _engine->complete_io(aio, err, bytes, delay_milliseconds);
 }
 
+namespace tools {
+namespace internal_use_only {
+bool register_component_provider(const char *name, aio_provider::factory f, dsn::provider_type type)
+{
+    return dsn::utils::factory_store<aio_provider>::register_factory(name, f, type);
+}
+} // namespace internal_use_only
+} // namespace tools
 } // namespace dsn

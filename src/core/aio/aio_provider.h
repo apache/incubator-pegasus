@@ -37,6 +37,7 @@
 
 #include <dsn/tool-api/task.h>
 #include <dsn/utility/dlib.h>
+#include <dsn/utility/factory_store.h>
 
 namespace dsn {
 
@@ -97,5 +98,10 @@ private:
     disk_engine *_engine;
 };
 
-/*@}*/
+namespace tools {
+namespace internal_use_only {
+DSN_API bool
+register_component_provider(const char *name, aio_provider::factory f, dsn::provider_type type);
+} // namespace internal_use_only
+} // namespace tools
 } // namespace dsn

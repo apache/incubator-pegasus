@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <dsn/dist/fmt_logging.h>
 #include "disk_engine.h"
 #include "sim_aio_provider.h"
 #include "core/core/service_engine.h"
@@ -31,8 +32,13 @@
 using namespace dsn::utils;
 
 namespace dsn {
+using namespace aio;
 
 DEFINE_TASK_CODE_AIO(LPC_AIO_BATCH_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+
+const char *native_aio_provider = "dsn::tools::native_aio_provider";
+DSN_REGISTER_COMPONENT_PROVIDER(native_linux_aio_provider, native_aio_provider);
+DSN_REGISTER_COMPONENT_PROVIDER(sim_aio_provider, "dsn::tools::sim_aio_provider");
 
 //----------------- disk_file ------------------------
 aio_task *disk_write_queue::unlink_next_workload(void *plength)
@@ -138,12 +144,16 @@ disk_engine::disk_engine()
 {
     _node = service_engine::instance().get_all_nodes().begin()->second.get();
 
-    // use native_linux_aio_provider in default
-    if (!strcmp(FLAGS_aio_factory_name, "dsn::tools::sim_aio_provider")) {
-        _provider.reset(new aio::sim_aio_provider(this, nullptr));
-    } else {
-        _provider.reset(new native_linux_aio_provider(this, nullptr));
+    aio_provider *provider = utils::factory_store<aio_provider>::create(
+        FLAGS_aio_factory_name, dsn::PROVIDER_TYPE_MAIN, this, nullptr);
+    // use native_aio_provider in default
+    if (nullptr == provider) {
+        derror_f("The config value of aio_factory_name is invalid, use {} in default",
+                 native_aio_provider);
+        provider = utils::factory_store<aio_provider>::create(
+            native_aio_provider, dsn::PROVIDER_TYPE_MAIN, this, nullptr);
     }
+    _provider.reset(provider);
 }
 
 disk_engine::~disk_engine() {}
