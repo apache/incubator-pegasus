@@ -45,25 +45,21 @@ bool service_node::rpc_register_handler(task_code code,
                                         const char *extra_name,
                                         const rpc_request_handler &h)
 {
-    return _node_io.rpc->register_rpc_handler(code, extra_name, h);
+    return _rpc->register_rpc_handler(code, extra_name, h);
 }
 
 bool service_node::rpc_unregister_handler(dsn::task_code rpc_code)
 {
-    return _node_io.rpc->unregister_rpc_handler(rpc_code);
+    return _rpc->unregister_rpc_handler(rpc_code);
 }
 
-error_code service_node::init_io_engine()
+error_code service_node::init_rpc_engine()
 {
     // init rpc engine
-    _node_io.rpc = make_unique<rpc_engine>(this);
-    return ERR_OK;
-}
+    _rpc = make_unique<rpc_engine>(this);
 
-error_code service_node::start_io_engine_in_main()
-{
     // start rpc engine
-    return _node_io.rpc->start(_app_spec);
+    return _rpc->start(_app_spec);
 }
 
 dsn::error_code service_node::start_app()
@@ -116,12 +112,10 @@ error_code service_node::start()
     _computation->create(_app_spec.pools);
     dassert(!_computation->is_started(), "task engine must not be started at this point");
 
-    err = init_io_engine();
+    // init rpc
+    err = init_rpc_engine();
     if (err != ERR_OK)
         return err;
-
-    // start io engines (only timer, disk and rpc), others are started in app start task
-    start_io_engine_in_main();
 
     // start task engine
     _computation->start();
@@ -134,7 +128,7 @@ error_code service_node::start()
     }
 
     // start rpc serving
-    _node_io.rpc->start_serving();
+    _rpc->start_serving();
 
     return err;
 }

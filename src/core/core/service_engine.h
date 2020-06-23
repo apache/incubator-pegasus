@@ -61,17 +61,11 @@ class timer_service;
 class service_node
 {
 public:
-    struct io_engine
-    {
-        std::unique_ptr<rpc_engine> rpc;
-    };
-
-public:
     explicit service_node(service_app_spec &app_spec);
 
     ~service_node();
 
-    rpc_engine *rpc() const { return _node_io.rpc.get(); }
+    rpc_engine *rpc() const { return _rpc.get(); }
     task_engine *computation() const { return _computation.get(); }
 
     void get_runtime_info(const std::string &indent,
@@ -100,15 +94,14 @@ private:
     service_app_spec _app_spec;
 
     std::unique_ptr<task_engine> _computation;
-    io_engine _node_io;
+    std::unique_ptr<rpc_engine> _rpc;
 
 private:
     // the service entity is initialized after the engine
     // is initialized, so this should be call in start()
     void init_service_app();
 
-    error_code init_io_engine();
-    error_code start_io_engine_in_main();
+    error_code init_rpc_engine();
 };
 
 typedef std::map<int, std::shared_ptr<service_node>> service_nodes_by_app_id;
