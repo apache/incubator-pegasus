@@ -27,18 +27,19 @@
 
 using namespace ::dsn;
 
-DSN_DEFINE_uint64("pegasus.server", prometheus_port, 9091, "prometheus exposer port");
-
-DSN_DEFINE_string("pegasus.server", falcon_host, "127.0.0.1", "falcon agent host");
-DSN_DEFINE_uint64("pegasus.server", falcon_port, 1988, "falcon agent port");
-DSN_DEFINE_string("pegasus.server", falcon_path, "/v1/push", "falcon agent http path");
-
 DSN_DEFINE_uint64("pegasus.server",
                   perf_counter_update_interval_seconds,
                   10,
                   "perf_counter_update_interval_seconds");
 DSN_DEFINE_bool("pegasus.server", perf_counter_enable_logging, true, "perf_counter_enable_logging");
+
 DSN_DEFINE_string("pegasus.server", perf_counter_sink, "", "perf_counter_sink");
+
+DSN_DEFINE_uint64("pegasus.server", prometheus_port, 9091, "prometheus exposer port");
+
+DSN_DEFINE_string("pegasus.server", falcon_host, "127.0.0.1", "falcon agent host");
+DSN_DEFINE_uint64("pegasus.server", falcon_port, 1988, "falcon agent port");
+DSN_DEFINE_string("pegasus.server", falcon_path, "/v1/push", "falcon agent http path");
 
 namespace pegasus {
 namespace server {
