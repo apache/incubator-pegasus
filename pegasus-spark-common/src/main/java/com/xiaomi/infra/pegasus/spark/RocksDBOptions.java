@@ -13,26 +13,18 @@ public class RocksDBOptions {
 
   private static final Log LOG = LogFactory.getLog(RocksDBOptions.class);
 
-  public Options options;
-  public ReadOptions readOptions;
+  public Options options = new Options();
+  public ReadOptions readOptions = new ReadOptions();
   private Env env;
 
-  public RocksDBOptions(Config config) {
-    if (config.remoteFsUrl.contains("fds")) {
-      env = new HdfsEnv(config.remoteFsUrl + "#" + config.remoteFsPort);
+  public RocksDBOptions(String remoteFsUrl, String remoteFsPort) throws FDSException {
+    if (remoteFsUrl.startsWith("fds://")) {
+      env = new HdfsEnv(remoteFsUrl + "#" + remoteFsPort);
+    } else if (remoteFsUrl.startsWith("hdfs://")) {
+      env = new HdfsEnv(remoteFsUrl + ":" + remoteFsPort);
     } else {
-      env = new HdfsEnv(config.remoteFsUrl + ":" + config.remoteFsPort);
+      throw new FDSException("the URL must start with 'fds://' or 'hdfs://'");
     }
-
-    options =
-        new Options()
-            .setDisableAutoCompactions(true)
-            .setCreateIfMissing(true)
-            .setEnv(env)
-            .setLevel0FileNumCompactionTrigger(-1)
-            .setMaxOpenFiles(config.dbMaxFileOpenCount);
-
-    readOptions = new ReadOptions().setReadaheadSize(config.dbReadAheadSize);
 
     Logger rocksDBLog =
         new Logger(options) {
@@ -41,8 +33,7 @@ public class RocksDBOptions {
             LOG.info("[rocksDB native log info]" + s);
           }
         };
-
-    options.setLogger(rocksDBLog);
+    options.setCreateIfMissing(true).setEnv(env).setLogger(rocksDBLog);
   }
 
   public void close() {

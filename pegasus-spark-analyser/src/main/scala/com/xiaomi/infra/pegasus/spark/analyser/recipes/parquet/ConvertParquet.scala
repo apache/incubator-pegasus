@@ -21,11 +21,8 @@ object ConvertParquet {
       .master("local[1]")
       .getOrCreate()
 
-    val coldBackupConfig = new ColdBackupConfig()
-
-    coldBackupConfig
-      .setRemote(FS_URL, FS_PORT)
-      .setTableInfo(CLUSTER_NAME, TABLE_NAME)
+    val coldBackupConfig =
+      new ColdBackupConfig(FS_URL, FS_PORT, CLUSTER_NAME, TABLE_NAME);
 
     val pc = new PegasusContext(spark.sparkContext)
     val rdd = pc.pegasusSnapshotRDD(new ColdBackupLoader(coldBackupConfig))

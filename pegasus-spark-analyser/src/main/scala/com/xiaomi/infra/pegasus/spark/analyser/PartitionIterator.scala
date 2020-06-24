@@ -34,7 +34,7 @@ private[analyser] class PartitionIterator private (
     this(context, pid)
 
     pegasusLoader = snapshotLoader
-    rocksDBOptions = new RocksDBOptions(snapshotLoader.getConfig)
+    rocksDBOptions = snapshotLoader.getConfig.rocksDBOptions
     val checkPointUrls = snapshotLoader.getCheckpointUrls
     val dbPath = checkPointUrls.get(pid)
     rocksDB = RocksDB.openReadOnly(rocksDBOptions.options, dbPath)

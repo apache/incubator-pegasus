@@ -48,15 +48,10 @@ class DuplicationVerifier(opts: DuplicationVerifierOptions) {
       .setIfMissing("spark.master", "local[9]")
     val sc = new SparkContext(conf)
 
-    val coldBackupConfig1 = new ColdBackupConfig()
-    coldBackupConfig1
-      .setRemote(FS_URL, FS_PORT)
-      .setTableInfo(options.cluster1, options.tableName)
-
-    val coldBackupConfig2 = new ColdBackupConfig()
-    coldBackupConfig2
-      .setRemote(FS_URL, FS_PORT)
-      .setTableInfo(options.cluster2, options.tableName)
+    val coldBackupConfig1 =
+      new ColdBackupConfig(FS_URL, FS_PORT, options.cluster1, options.tableName)
+    val coldBackupConfig2 =
+      new ColdBackupConfig(FS_URL, FS_PORT, options.cluster2, options.tableName)
 
     val pc = new PegasusContext(sc)
     val rdd1 = pc.pegasusSnapshotRDD(new ColdBackupLoader(coldBackupConfig1))
