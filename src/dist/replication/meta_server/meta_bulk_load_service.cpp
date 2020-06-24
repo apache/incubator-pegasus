@@ -572,8 +572,81 @@ void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
 void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &response,
                                                 const rpc_address &primary_addr)
 {
-    // TODO(heyuchen): TBD
-    // called by `on_partition_bulk_load_reply` when app status is succeed, failed, canceled
+    const std::string &app_name = response.app_name;
+    const gpid &pid = response.pid;
+
+    dassert_f(
+        response.__isset.is_group_bulk_load_context_cleaned_up,
+        "receive bulk load response from node({}) app({}), partition({}), primary_status({}), "
+        "but is_group_bulk_load_context_cleaned_up is not set",
+        primary_addr.to_string(),
+        app_name,
+        pid,
+        dsn::enum_to_string(response.primary_bulk_load_status));
+
+    for (const auto &kv : response.group_bulk_load_state) {
+        dassert_f(kv.second.__isset.is_cleaned_up,
+                  "receive bulk load response from node({}) app({}), partition({}), "
+                  "primary_status({}), but node({}) is_cleaned_up is not set",
+                  primary_addr.to_string(),
+                  app_name,
+                  pid,
+                  dsn::enum_to_string(response.primary_bulk_load_status),
+                  kv.first.to_string());
+    }
+
+    {
+        zauto_read_lock l(_lock);
+        if (_partitions_cleaned_up[pid]) {
+            dwarn_f(
+                "receive bulk load response from node({}) app({}) partition({}), current partition "
+                "has already been cleaned up",
+                primary_addr.to_string(),
+                app_name,
+                pid);
+            return;
+        }
+    }
+
+    // The replicas have cleaned up their bulk load states and removed temporary sst files
+    bool group_cleaned_up = response.is_group_bulk_load_context_cleaned_up;
+    ddebug_f("receive bulk load response from node({}) app({}) partition({}), primary status = {}, "
+             "is_group_bulk_load_context_cleaned_up = {}",
+             primary_addr.to_string(),
+             app_name,
+             pid,
+             dsn::enum_to_string(response.primary_bulk_load_status),
+             group_cleaned_up);
+    {
+        zauto_write_lock l(_lock);
+        _partitions_cleaned_up[pid] = group_cleaned_up;
+        _partitions_bulk_load_state[pid] = response.group_bulk_load_state;
+    }
+
+    if (group_cleaned_up) {
+        int32_t count = 0;
+        {
+            zauto_write_lock l(_lock);
+            count = --_apps_in_progress_count[pid.get_app_id()];
+        }
+        if (count == 0) {
+            std::shared_ptr<app_state> app;
+            {
+                zauto_read_lock l(app_lock());
+                app = _state->get_app(pid.get_app_id());
+                if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
+                    dwarn_f("app(name={}, id={}) is not existed, remove bulk load dir on remote "
+                            "storage",
+                            app_name,
+                            pid.get_app_id());
+                    remove_bulk_load_dir_on_remote_storage(pid.get_app_id(), app_name);
+                    return;
+                }
+            }
+            ddebug_f("app({}) all partitions cleanup bulk load context", app_name);
+            remove_bulk_load_dir_on_remote_storage(std::move(app), true);
+        }
+    }
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
@@ -898,6 +971,77 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
+void bulk_load_service::remove_bulk_load_dir_on_remote_storage(int32_t app_id,
+                                                               const std::string &app_name)
+{
+    std::string bulk_load_path = get_app_bulk_load_path(app_id);
+    _meta_svc->get_meta_storage()->delete_node_recursively(
+        std::move(bulk_load_path), [this, app_id, app_name, bulk_load_path]() {
+            ddebug_f("remove app({}) bulk load dir {} succeed", app_name, bulk_load_path);
+            reset_local_bulk_load_states(app_id, app_name);
+        });
+}
+
+// ThreadPool: THREAD_POOL_META_STATE
+void bulk_load_service::remove_bulk_load_dir_on_remote_storage(std::shared_ptr<app_state> app,
+                                                               bool set_app_not_bulk_loading)
+{
+    std::string bulk_load_path = get_app_bulk_load_path(app->app_id);
+    _meta_svc->get_meta_storage()->delete_node_recursively(
+        std::move(bulk_load_path), [this, app, set_app_not_bulk_loading, bulk_load_path]() {
+            ddebug_f("remove app({}) bulk load dir {} succeed", app->app_name, bulk_load_path);
+            reset_local_bulk_load_states(app->app_id, app->app_name);
+            if (set_app_not_bulk_loading) {
+                update_app_not_bulk_loading_on_remote_storage(std::move(app));
+            }
+        });
+}
+
+template <typename T>
+inline void erase_map_elem_by_id(int32_t app_id, std::unordered_map<gpid, T> &mymap)
+{
+    for (auto iter = mymap.begin(); iter != mymap.end();) {
+        if (iter->first.get_app_id() == app_id) {
+            mymap.erase(iter++);
+        } else {
+            iter++;
+        }
+    }
+}
+
+// ThreadPool: THREAD_POOL_META_STATE
+void bulk_load_service::reset_local_bulk_load_states(int32_t app_id, const std::string &app_name)
+{
+    zauto_write_lock l(_lock);
+    _app_bulk_load_info.erase(app_id);
+    _apps_in_progress_count.erase(app_id);
+    _apps_pending_sync_flag.erase(app_id);
+    erase_map_elem_by_id(app_id, _partitions_pending_sync_flag);
+    erase_map_elem_by_id(app_id, _partitions_bulk_load_state);
+    erase_map_elem_by_id(app_id, _partition_bulk_load_info);
+    erase_map_elem_by_id(app_id, _partitions_total_download_progress);
+    erase_map_elem_by_id(app_id, _partitions_cleaned_up);
+    // TODO(heyuchen): add other varieties
+    _bulk_load_app_id.erase(app_id);
+    ddebug_f("reset local app({}) bulk load context", app_name);
+}
+
+// ThreadPool: THREAD_POOL_META_STATE
+void bulk_load_service::update_app_not_bulk_loading_on_remote_storage(
+    std::shared_ptr<app_state> app)
+{
+    app_info info = *app;
+    info.__set_is_bulk_loading(false);
+
+    blob value = dsn::json::json_forwarder<app_info>::encode(info);
+    _meta_svc->get_meta_storage()->set_data(
+        _state->get_app_path(*app), std::move(value), [app, this]() {
+            zauto_write_lock l(app_lock());
+            app->is_bulk_loading = false;
+            ddebug_f("app({}) update app is_bulk_loading to false", app->app_name);
+        });
+}
+
 void bulk_load_service::create_bulk_load_root_dir(error_code &err, task_tracker &tracker)
 {
     blob value = blob();

@@ -144,6 +144,8 @@ private:
                                       const std::string &app_name,
                                       const gpid &pid);
 
+    void reset_local_bulk_load_states(int32_t app_id, const std::string &app_name);
+
     ///
     /// update bulk load states to remote storage functions
     ///
@@ -187,6 +189,19 @@ private:
                                                    bulk_load_status::type old_status,
                                                    bulk_load_status::type new_status,
                                                    bool should_send_request);
+
+    // called when app is not available or dropped during bulk load, remove bulk load directory on
+    // remote storage
+    void remove_bulk_load_dir_on_remote_storage(int32_t app_id, const std::string &app_name);
+
+    // called when app is available, remove bulk load directory on remote storage
+    // if `set_app_not_bulk_loading` = true: call function
+    // `update_app_not_bulk_loading_on_remote_storage` to set app not bulk_loading after removing
+    void remove_bulk_load_dir_on_remote_storage(std::shared_ptr<app_state> app,
+                                                bool set_app_not_bulk_loading);
+
+    // update app's is_bulk_loading to false on remote_storage
+    void update_app_not_bulk_loading_on_remote_storage(std::shared_ptr<app_state> app);
 
     ///
     /// sync bulk load states from remote storage
@@ -315,6 +330,8 @@ private:
     // partition_index -> group bulk load states(node address -> state)
     std::unordered_map<gpid, std::map<rpc_address, partition_bulk_load_state>>
         _partitions_bulk_load_state;
+
+    std::unordered_map<gpid, bool> _partitions_cleaned_up;
 };
 
 } // namespace replication

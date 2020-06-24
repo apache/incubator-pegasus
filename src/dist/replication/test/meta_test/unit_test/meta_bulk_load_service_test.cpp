@@ -235,6 +235,20 @@ public:
         _resp.__set_is_group_ingestion_finished(secondary_istatus == ingestion_status::IS_SUCCEED);
     }
 
+    void mock_response_cleaned_up_flag(bool all_cleaned_up, bulk_load_status::type status)
+    {
+        create_basic_response(ERR_OK, status);
+
+        partition_bulk_load_state state, state2;
+        state.__set_is_cleaned_up(true);
+        _resp.group_bulk_load_state[PRIMARY] = state;
+        _resp.group_bulk_load_state[SECONDARY1] = state;
+
+        state2.__set_is_cleaned_up(all_cleaned_up);
+        _resp.group_bulk_load_state[SECONDARY2] = state2;
+        _resp.__set_is_group_bulk_load_context_cleaned_up(all_cleaned_up);
+    }
+
     void test_on_partition_bulk_load_reply(int32_t in_progress_count,
                                            bulk_load_status::type status,
                                            error_code resp_err = ERR_OK)
@@ -326,6 +340,22 @@ TEST_F(bulk_load_process_test, normal_succeed)
     test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_INGESTING);
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_SUCCEED);
 }
+
+TEST_F(bulk_load_process_test, succeed_not_all_finished)
+{
+    mock_response_cleaned_up_flag(false, bulk_load_status::BLS_SUCCEED);
+    test_on_partition_bulk_load_reply(_partition_count, bulk_load_status::BLS_SUCCEED);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_SUCCEED);
+}
+
+TEST_F(bulk_load_process_test, succeed_all_finished)
+{
+    mock_response_cleaned_up_flag(true, bulk_load_status::BLS_SUCCEED);
+    test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_SUCCEED);
+    ASSERT_FALSE(app_is_bulk_loading(APP_NAME));
+}
+
+// TODO(heyuchen): add half cleanup test while failed
 
 // TODO(heyuchen): add other unit tests for `on_partition_bulk_load_reply`
 
