@@ -13,8 +13,8 @@ abstract class DataVersion extends Serializable {
   def restoreKey(key: Array[Byte]): ImmutablePair[Array[Byte], Array[Byte]] = {
     Validate.isTrue(key != null && key.length >= 2)
     val buf = ByteBuffer.wrap(key)
-    val hashKeyLen = 0xFFFF & buf.getShort
-    Validate.isTrue(hashKeyLen != 0xFFFF && (2 + hashKeyLen <= key.length))
+    val hashKeyLen = 0xffff & buf.getShort
+    Validate.isTrue(hashKeyLen != 0xffff && (2 + hashKeyLen <= key.length))
     new ImmutablePair[Array[Byte], Array[Byte]](
       util.Arrays.copyOfRange(key, 2, 2 + hashKeyLen),
       util.Arrays.copyOfRange(key, 2 + hashKeyLen, key.length)

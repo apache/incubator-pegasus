@@ -72,7 +72,9 @@ class DuplicationVerifier(opts: DuplicationVerifierOptions) {
     }
 
     val diffSet = rdd1.diff(rdd2)
-    if (options.diffSetTextFileLocation != null && !options.diffSetTextFileLocation.isEmpty) {
+    if (
+      options.diffSetTextFileLocation != null && !options.diffSetTextFileLocation.isEmpty
+    ) {
       LOG.info("Save diffSet to text file: " + options.diffSetTextFileLocation)
       diffSet.saveAsTextFile(options.diffSetTextFileLocation)
     }
