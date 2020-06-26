@@ -12,4 +12,4 @@
   http_path: ""
 
 - available_detect:
-  table_name = test
+  table_name : "test"
