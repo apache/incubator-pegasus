@@ -10,3 +10,6 @@
   host: "127.0.0.1"
   port: 1
   http_path: ""
+
+- available_detect:
+  table_name = test

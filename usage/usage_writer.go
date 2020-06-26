@@ -2,6 +2,7 @@ package usage
 
 import (
 	"context"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/pegasus"
 )
@@ -19,4 +20,21 @@ type tableUsageRecorderConfig struct {
 
 type tableUsageRecorder struct {
 	client *pegasus.Client
+
+	usageStatFetchInterval time.Duration
+}
+
+func (recorder *tableUsageRecorder) Start(ctx context.Context) error {
+	ticker := time.NewTicker(recorder.usageStatFetchInterval)
+	for {
+		select {
+		case <-ctx.Done(): // check if context cancelled
+			return nil
+		case <-ticker.C:
+			return nil
+		default:
+		}
+
+		// periodically set/get a configured Pegasus table.
+	}
 }

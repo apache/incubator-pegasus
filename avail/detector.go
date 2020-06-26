@@ -7,7 +7,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/pegasus"
 )
 
-// Detector periodically checks the availability of the remote cluster.
+// Detector periodically checks the availability of the remote Pegasus cluster.
 type Detector interface {
 
 	// Start detection until the ctx cancelled. This method will block the current thread.
@@ -15,21 +15,28 @@ type Detector interface {
 }
 
 // NewDetector returns a Detector.
-func NewDetector(client *pegasus.Client) (Detector, error) {
-	return &pegasusDetector{}, nil
+func NewDetector(client *pegasus.Client) Detector {
+	return &pegasusDetector{client: client}
 }
 
 type pegasusDetector struct {
-	client *pegasus.Client
+	client      *pegasus.Client
+	detectTable *pegasus.TableConnector
 
-	detectInterval time.Duration
+	detectInterval  time.Duration
+	detectTableName string
+	detectTimeout   time.Duration
 }
 
-func (d *pegasusDetector) Start(ctx context.Context) error {
+func (d *pegasusDetector) Start(rootCtx context.Context) error {
+	var err error
+	ctx, _ := context.WithTimeout(rootCtx, d.detectTimeout)
+	d.detectTable, err = d.client.OpenTable(ctx, d.detectTableName)
+
 	ticker := time.NewTicker(d.detectInterval)
 	for {
 		select {
-		case <-ctx.Done(): // check if context cancelled
+		case <-rootCtx.Done(): // check if context cancelled
 			return nil
 		case <-ticker.C:
 			return nil
