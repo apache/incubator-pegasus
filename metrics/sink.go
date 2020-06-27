@@ -9,47 +9,48 @@ import (
 // Sink is the destination where the metrics are reported to.
 type Sink interface {
 
-	// Report the metrics to the monitoring system. No retry even if it failed.
-	Report(metrics []Metric)
+	// Report the snapshot of metrics to the monitoring system. No retry even if it failed.
+	Report()
 }
 
 type falconConfig struct {
-	falconAgentHost     string `"falcon_agent_host"`
-	falconAgentPort     uint16 `"falcon_agent_port"`
-	falconAgentHTTPPath string `"falcon_agent_http_path"`
+	falconAgentHost     string `yaml:"falcon_agent.host"`
+	falconAgentPort     uint16 `yaml:"falcon_agent.port"`
+	falconAgentHTTPPath string `yaml:"falcon_agent.http_path"`
 }
 
 type falconSink struct {
 	cfg *falconConfig
 }
 
-func (*falconSink) load() {
-
+func (sink *falconSink) load() {
+	sink.cfg = &falconConfig{}
+	viper.Unmarshal(sink.cfg)
 }
 
-func (*falconSink) Report(metrics []Metric) {
-
+func (*falconSink) Report() {
 }
 
 type prometheusConfig struct {
-	exposerPort uint16 `"prometheus_exposer_port"`
+	prometheusExposerPort uint16 `yaml:"prometheus_exposer.port"`
 }
 
 type prometheusSink struct {
 	cfg *prometheusConfig
 }
 
-func (*prometheusSink) load() {
-
+func (sink *prometheusSink) load() {
+	sink.cfg = &prometheusConfig{}
+	viper.Unmarshal(sink.cfg)
 }
 
-func (*prometheusSink) Report(metrics []Metric) {
+func (sink *prometheusSink) Report() {
 
 }
 
 // NewSink creates a Sink which is a monitoring system.
 func NewSink() Sink {
-	cfgSink := viper.Get("metrics_sink")
+	cfgSink := viper.Get("metrics.sink")
 	if cfgSink == "falcon" {
 		sink := &falconSink{}
 		sink.load()

@@ -1,0 +1,14 @@
+metrics:
+  sink: falcon # use falcon as monitoring system.
+  report_interval: 10s
+
+prometheus:
+  exposer_port: 1111
+
+falcon_agent:
+  host: "127.0.0.1"
+  port: 1
+  http_path: ""
+
+available_detect:
+  table_name : test
