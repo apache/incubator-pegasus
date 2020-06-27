@@ -43,14 +43,14 @@ namespace dsn {
 class native_linux_aio_provider : public aio_provider
 {
 public:
-    native_linux_aio_provider(disk_engine *disk, aio_provider *inner_provider);
-    ~native_linux_aio_provider();
+    explicit native_linux_aio_provider(disk_engine *disk);
+    ~native_linux_aio_provider() override;
 
-    virtual dsn_handle_t open(const char *file_name, int flag, int pmode) override;
-    virtual error_code close(dsn_handle_t fh) override;
-    virtual error_code flush(dsn_handle_t fh) override;
-    virtual void aio(aio_task *aio) override;
-    virtual aio_context *prepare_aio_context(aio_task *tsk) override;
+    dsn_handle_t open(const char *file_name, int flag, int pmode) override;
+    error_code close(dsn_handle_t fh) override;
+    error_code flush(dsn_handle_t fh) override;
+    void submit_aio_task(aio_task *aio) override;
+    aio_context *prepare_aio_context(aio_task *tsk) override;
 
     class linux_disk_aio_context : public aio_context
     {

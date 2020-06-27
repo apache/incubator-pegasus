@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include <dsn/tool-api/task.h>
+#include <dsn/tool-api/aio_task.h>
 
 namespace dsn {
 

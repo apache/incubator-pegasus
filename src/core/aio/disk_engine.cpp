@@ -25,6 +25,7 @@
  */
 
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/tool-api/aio_task.h>
 #include "disk_engine.h"
 #include "sim_aio_provider.h"
 #include "core/core/service_engine.h"
@@ -145,18 +146,16 @@ disk_engine::disk_engine()
     _node = service_engine::instance().get_all_nodes().begin()->second.get();
 
     aio_provider *provider = utils::factory_store<aio_provider>::create(
-        FLAGS_aio_factory_name, dsn::PROVIDER_TYPE_MAIN, this, nullptr);
+        FLAGS_aio_factory_name, dsn::PROVIDER_TYPE_MAIN, this);
     // use native_aio_provider in default
     if (nullptr == provider) {
         derror_f("The config value of aio_factory_name is invalid, use {} in default",
                  native_aio_provider);
         provider = utils::factory_store<aio_provider>::create(
-            native_aio_provider, dsn::PROVIDER_TYPE_MAIN, this, nullptr);
+            native_aio_provider, dsn::PROVIDER_TYPE_MAIN, this);
     }
     _provider.reset(provider);
 }
-
-disk_engine::~disk_engine() {}
 
 disk_file *disk_engine::open(const char *file_name, int flag, int pmode)
 {
@@ -206,7 +205,7 @@ void disk_engine::read(aio_task *aio)
 
     auto wk = df->read(aio);
     if (wk) {
-        return _provider->aio(wk);
+        return _provider->submit_aio_task(wk);
     }
 }
 
@@ -268,7 +267,7 @@ void disk_engine::process_write(aio_task *aio, uint32_t sz)
             }
         }
         dassert(dio->buffer || dio->write_buffer_vec, "");
-        _provider->aio(aio);
+        _provider->submit_aio_task(aio);
     }
 
     // batching
@@ -325,7 +324,7 @@ void disk_engine::complete_io(aio_task *aio, error_code err, uint32_t bytes, int
         if (aio->get_aio_context()->type == AIO_Read) {
             auto wk = df->on_read_completed(aio, err, (size_t)bytes);
             if (wk) {
-                _provider->aio(wk);
+                _provider->submit_aio_task(wk);
             }
         }
 

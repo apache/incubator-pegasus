@@ -36,6 +36,7 @@
 #include <dsn/toollet/tracer.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/tool-api/command_manager.h>
+#include <dsn/tool-api/aio_task.h>
 
 namespace dsn {
 namespace tools {

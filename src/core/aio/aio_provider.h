@@ -24,18 +24,9 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     define the interface for disk operation provider
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include <dsn/tool-api/task.h>
+#include <dsn/tool-api/aio_task.h>
 #include <dsn/utility/dlib.h>
 #include <dsn/utility/factory_store.h>
 
@@ -46,34 +37,23 @@ class service_node;
 class task_worker_pool;
 class task_queue;
 
-#if defined(_WIN32)
-#define DSN_INVALID_FILE_HANDLE ((dsn_handle_t)(uintptr_t)0)
-#else
 #define DSN_INVALID_FILE_HANDLE ((dsn_handle_t)(uintptr_t)-1)
-#endif
 
-/*!
-@addtogroup tool-api-providers
-@{
-*/
-//
-// !!! all threads must be started with task::set_tls_dsn_context(provider->node(), null);
-//
 class aio_provider
 {
 public:
     template <typename T>
-    static aio_provider *create(disk_engine *disk, aio_provider *inner_provider)
+    static aio_provider *create(disk_engine *disk)
     {
-        return new T(disk, inner_provider);
+        return new T(disk);
     }
 
-    typedef aio_provider *(*factory)(disk_engine *, aio_provider *);
+    typedef aio_provider *(*factory)(disk_engine *);
 
-public:
-    DSN_API aio_provider(disk_engine *disk, aio_provider *inner_provider);
-    virtual ~aio_provider() {}
-    DSN_API service_node *node() const;
+    explicit aio_provider(disk_engine *disk);
+    virtual ~aio_provider() = default;
+
+    service_node *node() const;
 
     // return DSN_INVALID_FILE_HANDLE if failed
     // TODO(wutao1): return uint64_t instead (because we only support linux now)
@@ -85,8 +65,7 @@ public:
     // Submits the aio_task to the underlying disk-io executor.
     // This task may not be executed immediately, call `aio_task::wait`
     // to wait until it completes.
-    // TODO(wutao1): Call it aio_submit().
-    virtual void aio(aio_task *aio) = 0;
+    virtual void submit_aio_task(aio_task *aio) = 0;
 
     virtual aio_context *prepare_aio_context(aio_task *) = 0;
 
@@ -104,4 +83,5 @@ DSN_API bool
 register_component_provider(const char *name, aio_provider::factory f, dsn::provider_type type);
 } // namespace internal_use_only
 } // namespace tools
+
 } // namespace dsn

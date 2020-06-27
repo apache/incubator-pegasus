@@ -31,7 +31,7 @@
 #include <dsn/utility/utils.h>
 #include <dsn/utility/binary_reader.h>
 #include <dsn/utility/binary_writer.h>
-#include <dsn/tool-api/task.h>
+#include <dsn/tool-api/aio_task.h>
 
 namespace dsn {
 

@@ -29,7 +29,7 @@
 
 namespace dsn {
 
-aio_provider::aio_provider(disk_engine *disk, aio_provider *inner_provider) : _engine(disk) {}
+aio_provider::aio_provider(disk_engine *disk) : _engine(disk) {}
 
 service_node *aio_provider::node() const { return _engine->node(); }
 

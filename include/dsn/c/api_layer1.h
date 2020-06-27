@@ -261,21 +261,6 @@ extern DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_e
 
 /*@}*/
 
-/*!
-@defgroup file File Operations
-
-File Operations
-
-Note developers can easily plugin their own implementation to
-replace the underneath implementation of these primitives.
-@{
-*/
-typedef struct
-{
-    void *buffer;
-    int size;
-} dsn_file_buffer_t;
-
 extern DSN_API uint64_t dsn_now_ns();
 
 __inline uint64_t dsn_now_us() { return dsn_now_ns() / 1000; }

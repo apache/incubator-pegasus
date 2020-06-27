@@ -31,13 +31,14 @@
 namespace dsn {
 namespace aio {
 
+// sim_aio_provider is an aio_provider for simulator.
 class sim_aio_provider : public native_linux_aio_provider
 {
 public:
-    sim_aio_provider(disk_engine *disk, aio_provider *inner_provider);
-    ~sim_aio_provider(void);
+    explicit sim_aio_provider(disk_engine *disk);
+    ~sim_aio_provider() override = default;
 
-    virtual void aio(aio_task *aio) override;
+    void submit_aio_task(aio_task *aio) override;
 };
 
 } // namespace aio

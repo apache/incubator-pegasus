@@ -36,6 +36,7 @@
 #include <dsn/toollet/fault_injector.h>
 #include <dsn/service_api_c.h>
 #include <dsn/utility/rand.h>
+#include <dsn/tool-api/aio_task.h>
 
 namespace dsn {
 namespace tools {

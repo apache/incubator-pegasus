@@ -49,6 +49,7 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 */
 #include <dsn/toollet/profiler.h>
 #include <dsn/service_api_c.h>
+#include <dsn/tool-api/aio_task.h>
 #include "shared_io_service.h"
 #include "profiler_header.h"
 #include <dsn/tool-api/command_manager.h>
