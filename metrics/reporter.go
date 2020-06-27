@@ -27,6 +27,7 @@ type pegasusReporter struct {
 
 func (reporter *pegasusReporter) Start(tom *tomb.Tomb) {
 	ticker := time.NewTicker(reporter.reportInterval)
+	sink := NewSink()
 	for {
 		select {
 		case <-tom.Dying(): // check if context cancelled
@@ -35,7 +36,6 @@ func (reporter *pegasusReporter) Start(tom *tomb.Tomb) {
 		}
 
 		// periodically take snapshot of all the metrics and push them to the sink.
-		sink := NewSink()
 		sink.Report()
 	}
 }
