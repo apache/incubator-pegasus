@@ -3,10 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Properties;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.serialize.BytesPushThroughSerializer;
@@ -52,22 +49,19 @@ public class PConfigUtil {
   // load client configuration from configPath, which could be local file path or zk path or
   // resource path.
   public static Properties loadConfiguration(String configPath) throws PException {
+    InputStream stream = null;
     try {
       Properties config = new Properties();
       if (PConfigUtil.isZkPath(configPath)) {
-        config.load(new ByteArrayInputStream(PConfigUtil.loadConfigFromZK(configPath)));
+        stream = new ByteArrayInputStream(PConfigUtil.loadConfigFromZK(configPath));
       } else if (PConfigUtil.isLocalFile(configPath)) {
-        config.load(
+        stream =
             new BufferedInputStream(
-                new FileInputStream(configPath.substring(PConfigUtil.LOCAL_FILE_PREFIX.length()))));
+                new FileInputStream(configPath.substring(PConfigUtil.LOCAL_FILE_PREFIX.length())));
       } else if (PConfigUtil.isResource(configPath)) {
-        InputStream stream =
+        stream =
             PegasusClient.class.getResourceAsStream(
                 configPath.substring(PConfigUtil.RESOURCE_PREFIX.length()));
-        if (stream == null) {
-          throw new PException("config resource not found: " + configPath);
-        }
-        config.load(stream);
       } else {
         throw new PException(
             "configPath format error, "
@@ -77,12 +71,24 @@ public class PConfigUtil {
                 + "but actual configPath is "
                 + configPath);
       }
+      if (stream == null) {
+        throw new PException("config resource not found: " + configPath);
+      }
+      config.load(stream);
       return config;
     } catch (Throwable e) {
       if (e instanceof PException) {
         throw (PException) e;
       } else {
         throw new PException(e);
+      }
+    } finally {
+      if (stream != null) {
+        try {
+          stream.close();
+        } catch (Exception e) {
+          throw new PException(e);
+        }
       }
     }
   }
