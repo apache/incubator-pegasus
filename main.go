@@ -1,9 +1,7 @@
 package main
 
 import (
-	"collector/metrics"
 	"errors"
-
 	"fmt"
 	"os"
 	"os/signal"
@@ -11,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/pegasus-kv/collector/metrics"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"

@@ -1,14 +1,25 @@
+# the cluster that this collector is binding
 cluster_name : "onebox"
-port : 34101 # local server port
+
+# the meta server addresses of the cluster.
+meta_servers: 
+  - 127.0.0.1:34601
+  - 127.0.0.1:34602
+
+# local server port
+port : 34101
 
 metrics:
-  sink : falcon # use falcon as monitoring system.
+  # use falcon as monitoring system.
+  sink : falcon 
   report_interval : 10s
 
 prometheus:
-  exposer_port : 1111
+  # the exposed port for prometheus exposer
+  exposer_port : 1111 
 
 falcon_agent:
+  # the host IP of falcon agent
   host : "127.0.0.1"
   port : 1988
   http_path : "/v1/push"
