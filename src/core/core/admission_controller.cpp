@@ -34,7 +34,6 @@
  */
 
 #include <dsn/tool-api/admission_controller.h>
-#include "task_engine.h"
 
 namespace dsn {
 

@@ -42,7 +42,7 @@
 #include <gtest/gtest.h>
 #include <thread>
 #include "core/core/service_engine.h"
-#include "core/tools/simulator/task_engine.sim.h"
+#include "core/task/task_engine.sim.h"
 #include "core/tools/simulator/scheduler.h"
 
 TEST(tools_simulator, dsn_semaphore)

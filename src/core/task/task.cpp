@@ -44,7 +44,7 @@
 #include <dsn/dist/fmt_logging.h>
 
 #include "task_engine.h"
-#include "service_engine.h"
+#include "core/core/service_engine.h"
 #include "core/rpc/rpc_engine.h"
 
 namespace dsn {

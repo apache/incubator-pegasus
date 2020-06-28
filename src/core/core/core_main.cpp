@@ -44,14 +44,12 @@
 #include <dsn/toollet/explorer.h>
 
 #include <dsn/tool/providers.common.h>
-#include <dsn/tool/providers.hpc.h>
 #include <dsn/utility/singleton.h>
 
 void dsn_core_init()
 {
     // register all providers
     dsn::tools::register_common_providers();
-    dsn::tools::register_hpc_providers();
 
     // register all possible tools and toollets
     dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
