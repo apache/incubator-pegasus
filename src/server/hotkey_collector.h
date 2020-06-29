@@ -39,9 +39,8 @@ public:
     hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
                      dsn::replication::replica_base *r_base);
 
-    void capture_blob_data(const ::dsn::blob &raw_key);
-    void capture_msg_data(dsn::message_ex **requests_point, int count);
-    void capture_multi_get_data(const ::dsn::apps::multi_get_request &request);
+    void capture_raw_key(const ::dsn::blob &raw_key, uint64_t size);
+    void capture_hash_key(const dsn::blob &hash_key, uint64_t size);
 
     // analyse_data is a periodic task, only valid when _state == collector_state::COARSE
     // || collector_state::FINE
@@ -52,7 +51,7 @@ public:
     std::string get_status();
     // true: result = hotkey, false: can't find hotkey
     bool get_result(std::string &result) const;
-    static int variance_calc(const std::vector<int> &data_samples, int threshold);
+    static int variance_calc(const std::vector<uint64_t> &data_samples, int threshold);
     static int get_bucket_id(dsn::string_view data);
 
 private:
@@ -75,8 +74,6 @@ private:
         auto state = _state.load();
         return (state == collector_state::STOP || state == collector_state::FINISH);
     }
-
-    void capture_hash_key(const dsn::blob &hash_key, int row_cnt = 1);
 
 private:
     std::atomic<collector_state> _state;
@@ -104,7 +101,7 @@ public:
     explicit hotkey_coarse_data_collector(replica_base *base);
 
     // Counts `row_cnt` for the bucket of `hash_key`.
-    void capture_data(const dsn::blob &hash_key, int row_cnt);
+    void capture_data(const dsn::blob &hash_key, uint64_t size);
 
     // returns: id of the most accessed bucket.
     //          -1 if not hot bucket is found.
@@ -113,7 +110,7 @@ public:
 private:
     FRIEND_TEST(hotkey_collector_test, capture_read);
     FRIEND_TEST(hotkey_collector_test, capture_write);
-    std::vector<std::atomic<int>> _hash_buckets;
+    std::vector<std::atomic<uint64_t>> _hash_buckets;
 };
 
 // hotkey_fine_data_collector handles the second procedure (FINE) of hotkey detection.
@@ -130,7 +127,7 @@ public:
                                int hot_bucket,
                                dsn::apps::hotkey_type::type hotkey_type);
 
-    void capture_data(const dsn::blob &hash_key, int row_cnt);
+    void capture_data(const dsn::blob &hash_key, uint64_t size);
     bool analyse_data(std::string &result);
 
 private:
@@ -141,7 +138,8 @@ private:
     thread_queue_map _thread_queue_map;
     inline int get_queue_index();
 
-    std::vector<moodycamel::ReaderWriterQueue<std::pair<dsn::blob, int>>> _string_capture_queue;
+    std::vector<moodycamel::ReaderWriterQueue<std::pair<dsn::blob, uint64_t>>>
+        _string_capture_queue;
 };
 
 } // namespace server

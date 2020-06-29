@@ -16,8 +16,7 @@ struct table_stats
     double get_total_write_qps() const
     {
         return total_put_qps + total_multi_put_qps + total_remove_qps + total_multi_remove_qps +
-               total_incr_qps + total_check_and_set_qps + total_check_and_mutate_qps +
-               total_duplicate_qps;
+               total_check_and_set_qps + total_check_and_mutate_qps;
     }
 
     double get_total_read_bytes() const

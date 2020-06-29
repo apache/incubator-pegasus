@@ -113,83 +113,23 @@ bool hotkey_collector::get_result(std::string &result) const
     return true;
 }
 
-void hotkey_collector::capture_msg_data(dsn::message_ex **requests, const int count)
-{
-    if (is_ready_to_detect() || count == 0) {
-        return;
-    }
-    for (int i = 0; i < count; i++) {
-        dsn::task_code rpc_code(requests[i]->rpc_code());
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-            dsn::apps::multi_put_request thrift_request;
-            unmarshall(requests[i], thrift_request);
-            requests[i]->restore_read();
-            capture_hash_key(thrift_request.hash_key, thrift_request.kvs.size());
-            continue;
-        }
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
-            dsn::apps::incr_request thrift_request;
-            unmarshall(requests[i], thrift_request);
-            requests[i]->restore_read();
-            capture_blob_data(thrift_request.key);
-            continue;
-        }
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
-            dsn::apps::check_and_set_request thrift_request;
-            unmarshall(requests[i], thrift_request);
-            requests[i]->restore_read();
-            capture_hash_key(thrift_request.hash_key);
-            continue;
-        }
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
-            dsn::apps::check_and_mutate_request thrift_request;
-            unmarshall(requests[i], thrift_request);
-            requests[i]->restore_read();
-            capture_hash_key(thrift_request.hash_key);
-            continue;
-        }
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
-            dsn::apps::update_request thrift_request;
-            unmarshall(requests[i], thrift_request);
-            requests[i]->restore_read();
-            capture_blob_data(thrift_request.key);
-            continue;
-        }
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
-            dsn::blob key;
-            unmarshall(requests[i], key);
-            requests[i]->restore_read();
-            capture_blob_data(key);
-            continue;
-        }
-    }
-}
-
-void hotkey_collector::capture_multi_get_data(const ::dsn::apps::multi_get_request &request)
-{
-    if (is_ready_to_detect()) {
-        return;
-    }
-    capture_hash_key(request.hash_key, !request.sort_keys.empty() ? request.sort_keys.size() : 1);
-}
-
-void hotkey_collector::capture_blob_data(const ::dsn::blob &raw_key)
+void hotkey_collector::capture_raw_key(const ::dsn::blob &raw_key, uint64_t size)
 {
     if (is_ready_to_detect()) {
         return;
     }
     dsn::blob hash_key, sort_key;
     pegasus_restore_key(raw_key, hash_key, sort_key);
-    capture_hash_key(hash_key);
+    capture_hash_key(hash_key, size > 0 ? size : 1);
 }
 
-void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int row_cnt)
+void hotkey_collector::capture_hash_key(const ::dsn::blob &hash_key, uint64_t size)
 {
     if (_state.load() == collector_state::COARSE && _coarse_data_collector != nullptr) {
-        _coarse_data_collector->capture_data(hash_key, row_cnt);
+        _coarse_data_collector->capture_data(hash_key, size > 0 ? size : 1);
     }
     if (_state.load() == collector_state::FINE && _fine_data_collector != nullptr) {
-        _fine_data_collector->capture_data(hash_key, row_cnt);
+        _fine_data_collector->capture_data(hash_key, size > 0 ? size : 1);
     }
 }
 
@@ -223,7 +163,8 @@ void hotkey_collector::analyse_data()
     }
 }
 
-/*static*/ int hotkey_collector::variance_calc(const std::vector<int> &data_samples, int threshold)
+/*static*/ int hotkey_collector::variance_calc(const std::vector<uint64_t> &data_samples,
+                                               int threshold)
 {
     int data_size = data_samples.size();
     double total = 0;

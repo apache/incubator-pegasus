@@ -15,19 +15,19 @@ DSN_DEFINE_int32("pegasus.server",
 hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base)
     : replica_base(base), _hash_buckets(FLAGS_data_capture_hash_bucket_num)
 {
-    for (std::atomic<int> &bucket : _hash_buckets) {
+    for (std::atomic<uint64_t> &bucket : _hash_buckets) {
         bucket.store(0);
     }
 }
 
-void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, int row_cnt)
+void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, uint64_t size)
 {
-    _hash_buckets[hotkey_collector::get_bucket_id(hash_key)].fetch_add(row_cnt);
+    _hash_buckets[hotkey_collector::get_bucket_id(hash_key)].fetch_add(size);
 }
 
 int hotkey_coarse_data_collector::analyse_data()
 {
-    std::vector<int> buckets(FLAGS_data_capture_hash_bucket_num);
+    std::vector<uint64_t> buckets(FLAGS_data_capture_hash_bucket_num);
     for (int i = 0; i < buckets.size(); i++) {
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);

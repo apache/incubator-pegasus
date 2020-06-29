@@ -172,6 +172,8 @@ private:
     friend class pegasus_server_impl_test;
     FRIEND_TEST(pegasus_server_impl_test, default_data_version);
     friend class hotkey_collector_test;
+    FRIEND_TEST(hotkey_collector_test, capture_read);
+    FRIEND_TEST(hotkey_collector_test, capture_write);
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;

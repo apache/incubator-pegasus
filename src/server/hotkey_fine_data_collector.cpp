@@ -69,17 +69,17 @@ inline int hotkey_fine_data_collector::get_queue_index()
     return result->second;
 }
 
-void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, int count)
+void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, uint64_t size)
 {
     if (hotkey_collector::get_bucket_id(hash_key) != _target_bucket) {
         return;
     }
-    _string_capture_queue[get_queue_index()].try_emplace(std::make_pair(hash_key, count));
+    _string_capture_queue[get_queue_index()].try_emplace(std::make_pair(hash_key, size));
 }
 
 bool hotkey_fine_data_collector::analyse_data(std::string &result)
 {
-    std::unordered_map<dsn::blob, int, blob_hash, blob_equal> hash_key_accessed_cnt;
+    std::unordered_map<dsn::blob, uint64_t, blob_hash, blob_equal> hash_key_accessed_cnt;
     for (auto &rw_queue : _string_capture_queue) {
         std::pair<dsn::blob, int> hash_key_pair;
         // prevent endless loop
@@ -92,10 +92,10 @@ bool hotkey_fine_data_collector::analyse_data(std::string &result)
     if (hash_key_accessed_cnt.empty()) {
         return false;
     }
-    std::vector<int> counts;
+    std::vector<uint64_t> counts;
     counts.reserve(FLAGS_data_capture_hash_bucket_num);
     dsn::string_view count_max_key;
-    int count_max = -1;
+    uint64_t count_max = 0;
     for (const auto &iter : hash_key_accessed_cnt) {
         counts.push_back(iter.second);
         if (iter.second > count_max) {
@@ -105,7 +105,8 @@ bool hotkey_fine_data_collector::analyse_data(std::string &result)
     }
     // if the accessed counts differ hugely (depends on the variance threshold),
     // the max key is the hotkey.
-    if (hotkey_collector::variance_calc(counts, FLAGS_fine_data_variance_threshold) != -1) {
+    if (counts.size() < 3 ||
+        hotkey_collector::variance_calc(counts, FLAGS_fine_data_variance_threshold) != -1) {
         result = std::string(count_max_key);
         return true;
     }

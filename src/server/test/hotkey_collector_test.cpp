@@ -12,6 +12,7 @@
 #include "message_utils.h"
 #include "pegasus_server_test_base.h"
 #include "base/pegasus_key_schema.h"
+#include "server/capacity_unit_calculator.h"
 
 namespace pegasus {
 namespace server {
@@ -21,9 +22,9 @@ DSN_DECLARE_int32(hotkey_collector_max_work_time);
 class hotkey_collector_test : public pegasus_server_test_base
 {
 public:
-    static std::string generate_hash_key(bool is_hotkey)
+    static std::string generate_hash_key(bool is_hotkey, int probability = 100)
     {
-        if (is_hotkey) {
+        if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
             return "ThisisahotkeyThisisahotkey";
         }
         static const std::string chars("abcdefghijklmnopqrstuvwxyz"
@@ -86,6 +87,18 @@ public:
     }
     void start_read_hotkey_detection() { start_hotkey_detection(dsn::apps::hotkey_type::READ); }
     void start_write_hotkey_detection() { start_hotkey_detection(dsn::apps::hotkey_type::WRITE); }
+    void refresh_read_hotkey()
+    {
+        hotkey_collector *collector = &get_read_collector();
+        collector->stop();
+        start_read_hotkey_detection();
+    }
+    void refresh_write_hotkey()
+    {
+        hotkey_collector *collector = &get_write_collector();
+        collector->stop();
+        start_write_hotkey_detection();
+    }
 };
 
 TEST_F(hotkey_collector_test, detection_disabled)
@@ -96,7 +109,7 @@ TEST_F(hotkey_collector_test, detection_disabled)
     for (int round = 0; round < 8; round++) {
         for (int i = 0; i < 25; i++) {
             dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key(true));
-            collector.capture_hash_key(hash_key);
+            collector.capture_hash_key(hash_key, hash_key.size());
         }
         get_write_collector().analyse_data();
         ASSERT_EQ(collector.get_status(), "STOP");
@@ -116,7 +129,7 @@ TEST_F(hotkey_collector_test, detection_enabled)
         for (int i = 0; i < 25; i++) {
             // generates uniformly distributed key.
             dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key(false));
-            collector.capture_hash_key(hash_key);
+            collector.capture_hash_key(hash_key, hash_key.size());
         }
 
         collector.analyse_data();
@@ -133,18 +146,40 @@ TEST_F(hotkey_collector_test, detection_enabled)
         // with hotkey existence
         for (int i = 0; i < 100; i++) {
             dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key(true));
-            collector.capture_hash_key(hash_key);
+            collector.capture_hash_key(hash_key, hash_key.size());
         }
         collector.analyse_data();
         ASSERT_EQ(collector.get_status(), "FINE");
         for (int i = 0; i < 100; i++) {
             dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key(true));
-            collector.capture_hash_key(hash_key);
+            collector.capture_hash_key(hash_key, hash_key.size());
         }
         collector.analyse_data();
         ASSERT_EQ(collector.get_status(), "FINISH");
         std::string result;
         ASSERT_EQ(collector.get_result(result), true);
+        ASSERT_EQ(result, "ThisisahotkeyThisisahotkey");
+    }
+    collector.stop();
+    ASSERT_EQ(collector.get_status(), "STOP");
+    start_write_hotkey_detection();
+    {
+        // with random hotkey existence
+        for (int i = 0; i < 100; i++) {
+            dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key(true, 50));
+            collector.capture_hash_key(hash_key, hash_key.size());
+        }
+        collector.analyse_data();
+        ASSERT_EQ(collector.get_status(), "FINE");
+        for (int i = 0; i < 100; i++) {
+            dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key(true, 50));
+            collector.capture_hash_key(hash_key, hash_key.size());
+        }
+        collector.analyse_data();
+        ASSERT_EQ(collector.get_status(), "FINISH");
+        std::string result;
+        ASSERT_EQ(collector.get_result(result), true);
+        ASSERT_EQ(result, "ThisisahotkeyThisisahotkey");
     }
 }
 
@@ -180,86 +215,127 @@ TEST_F(hotkey_collector_test, start)
 
 TEST_F(hotkey_collector_test, capture_read)
 {
-    // ensure a capture_data is triggered for each read when detection enabled.
+    // ensure a capture_hash_key is triggered for each read when detection enabled.
 
     start_read_hotkey_detection();
     hotkey_collector *collector = &get_read_collector();
     { // hotkey on Get
-        std::string hash_key;
-        get_rpc rpc = generate_get_rpc(false, hash_key);
+        dsn::blob raw_key;
+        std::string hash_key = generate_hash_key(true);
+        pegasus_generate_key(raw_key, generate_hash_key(true), std::string("sortkey"));
+        dsn::blob value;
         for (int i = 0; i < 11; i++) {
-            dsn::tasking::enqueue(LPC_WRITE, nullptr, [&] { _server->on_get(rpc); })->wait();
+            dsn::tasking::enqueue(LPC_WRITE, nullptr, [&] {
+                _server->_cu_calculator->add_get_cu(
+                    0, raw_key, dsn::blob::create_from_bytes("value"));
+            })->wait();
         }
 
         int bucket_id = hotkey_collector::get_bucket_id(hash_key);
-        int bucket_size = get_read_coarse_collector()._hash_buckets[bucket_id];
-        ASSERT_EQ(bucket_size, 11);
+        uint64_t bucket_size = get_read_coarse_collector()._hash_buckets[bucket_id];
+        ASSERT_EQ(bucket_size, 440);
     }
     collector->stop();
     start_read_hotkey_detection();
     { // hotkey on MultiGet
-        multi_get_rpc rpc = generate_multi_get_rpc(false);
+        dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key(true));
+        std::vector<::dsn::apps::key_value> kvs;
+        ::dsn::apps::key_value kv;
+        kv.key = dsn::blob::create_from_bytes(generate_hash_key(true));
+        kv.value = dsn::blob::create_from_bytes(generate_hash_key(true));
         for (int i = 0; i < 5; i++) {
-            rpc.mutable_request()->sort_keys.push_back(
-                dsn::blob::create_from_bytes(std::to_string(i)));
+            kvs.push_back(kv);
         }
         std::vector<dsn::task_ptr> tasks;
         for (int i = 0; i < 11; i++) {
             // run reads concurrently
-            auto t = dsn::tasking::enqueue(LPC_WRITE, nullptr, [&] { _server->on_multi_get(rpc); });
+            auto t = dsn::tasking::enqueue(LPC_WRITE, nullptr, [&] {
+                _server->_cu_calculator->add_multi_get_cu(0, hash_key, kvs);
+            });
             tasks.push_back(t);
         }
         for (auto &t : tasks) {
             t->wait();
         }
-        int bucket_id = hotkey_collector::get_bucket_id(rpc.request().hash_key);
-        int bucket_size = get_read_coarse_collector()._hash_buckets[bucket_id];
-        ASSERT_EQ(bucket_size, 11 * 5);
+        int bucket_id = hotkey_collector::get_bucket_id(hash_key);
+        uint64_t bucket_size = get_read_coarse_collector()._hash_buckets[bucket_id];
+        ASSERT_EQ(bucket_size, 4290);
+        // hotkey on Scan
+        for (int i = 0; i < 11; i++) {
+            auto t = dsn::tasking::enqueue(LPC_WRITE, nullptr, [&] {
+                _server->_cu_calculator->add_scan_cu(0, kvs, hash_key);
+            });
+            tasks.push_back(t);
+        }
+        for (auto &t : tasks) {
+            t->wait();
+        }
+        bucket_size = get_read_coarse_collector()._hash_buckets[bucket_id];
+        ASSERT_EQ(bucket_size, 7150);
     }
 }
 
 TEST_F(hotkey_collector_test, capture_write)
 {
-    // hotkey on Put/Remove/Incr/MultiPut. For simplicity we do not include all writes.
+    // hotkey on Put/MultiPut/Remove/MultiRemove/MultiPut/CheckAndSet/CheckAndMutate
 
-    hotkey_collector *collector = &get_write_collector();
-    start_write_hotkey_detection();
-    std::string hash_key = generate_hash_key(true);
+    dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key(true));
     dsn::blob raw_key;
-    pegasus_generate_key(raw_key, hash_key, std::string("sortkey"));
-
-    dsn::apps::update_request update;
-    update.key = raw_key;
-    update.value = dsn::blob::create_from_bytes("value");
-
-    dsn::apps::incr_request incr_req;
-    incr_req.key = raw_key;
-    incr_req.increment = 1;
-    auto incr = pegasus::create_incr_request(incr_req);
-
-    dsn::apps::multi_put_request multi_put_req;
-    multi_put_req.hash_key = dsn::blob::create_from_bytes(std::string(hash_key));
-    multi_put_req.kvs.push_back({});
-    auto multi_put = pegasus::create_multi_put_request(multi_put_req);
-
-    for (int i = 0; i < 11; i++) {
-        // put & remove
-        std::vector<dsn::message_ex *> writes(
-            {pegasus::create_put_request(update), pegasus::create_remove_request(raw_key)});
-        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, nullptr, [&] {
-            _server->on_batched_write_requests(1, 0, writes.data(), writes.size());
-        })->wait();
-    }
-    for (auto msg : {multi_put, incr}) { // incr & multi_put
-        std::vector<dsn::message_ex *> writes({msg});
-        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, nullptr, [&] {
-            _server->on_batched_write_requests(1, 0, writes.data(), writes.size());
-        })->wait();
-    }
-
+    pegasus_generate_key(raw_key, generate_hash_key(true), std::string("sortkey"));
+    dsn::blob value = dsn::blob::create_from_bytes("value");
     int bucket_id = hotkey_collector::get_bucket_id(hash_key);
-    int bucket_size = get_write_coarse_collector()._hash_buckets[bucket_id];
-    ASSERT_EQ(bucket_size, 11 * 2 + 2);
+    std::vector<::dsn::apps::key_value> kvs;
+    ::dsn::apps::key_value kv;
+    kv.key = dsn::blob::create_from_bytes(generate_hash_key(true));
+    kv.value = dsn::blob::create_from_bytes(generate_hash_key(true));
+    for (int i = 0; i < 5; i++) {
+        kvs.push_back(kv);
+    }
+
+    start_write_hotkey_detection();
+    for (int i = 0; i < 11; i++) {
+        _server->_cu_calculator->add_put_cu(0, raw_key, value);
+    }
+    uint64_t bucket_size = get_write_coarse_collector()._hash_buckets[bucket_id];
+    ASSERT_EQ(bucket_size, 11 * (35 + 5));
+
+    refresh_write_hotkey();
+    for (int i = 0; i < 11; i++) {
+        _server->_cu_calculator->add_remove_cu(0, raw_key);
+    }
+    bucket_size = get_write_coarse_collector()._hash_buckets[bucket_id];
+    ASSERT_EQ(bucket_size, 11 * 35);
+
+    refresh_write_hotkey();
+    for (int i = 0; i < 11; i++) {
+        _server->_cu_calculator->add_multi_put_cu(0, hash_key, kvs);
+    }
+    bucket_size = get_write_coarse_collector()._hash_buckets[bucket_id];
+    ASSERT_EQ(bucket_size, 11 * 5 * (26 + 26 + 26));
+
+    refresh_write_hotkey();
+    for (int i = 0; i < 11; i++) {
+        _server->_cu_calculator->add_multi_remove_cu(
+            0, hash_key, {dsn::blob::create_from_bytes("sort_key")});
+    }
+    bucket_size = get_write_coarse_collector()._hash_buckets[bucket_id];
+    ASSERT_EQ(bucket_size, 11 * (26 + 8));
+
+    refresh_write_hotkey();
+    for (int i = 0; i < 11; i++) {
+        _server->_cu_calculator->add_check_and_set_cu(
+            0, hash_key, ::dsn::blob(), ::dsn::blob(), value);
+    }
+    bucket_size = get_write_coarse_collector()._hash_buckets[bucket_id];
+    ASSERT_EQ(bucket_size, 11 * (26 + 5));
+
+    refresh_write_hotkey();
+    for (int i = 0; i < 11; i++) {
+        _server->_cu_calculator->add_check_and_mutate_cu(
+            0, hash_key, ::dsn::blob(), std::vector<::dsn::apps::mutate>(1));
+    }
+    bucket_size = get_write_coarse_collector()._hash_buckets[bucket_id];
+    ASSERT_EQ(bucket_size, 11 * 26);
 }
 
 TEST_F(hotkey_collector_test, detection_exceeds_work_time)

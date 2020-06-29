@@ -233,7 +233,6 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 {
     dassert(_is_open, "");
     dassert(requests != nullptr, "");
-    _write_hotkey_collector->capture_msg_data(requests, count);
 
     return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
 }
@@ -246,7 +245,6 @@ void pegasus_server_impl::on_get(get_rpc rpc)
 
     const auto &key = rpc.request();
     auto &resp = rpc.response();
-    _read_hotkey_collector->capture_blob_data(key);
 
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
@@ -341,8 +339,6 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         return;
     }
-
-    _read_hotkey_collector->capture_multi_get_data(request);
 
     uint32_t max_kv_count = request.max_kv_count > 0 ? request.max_kv_count : INT_MAX;
     uint32_t max_iteration_count =
@@ -952,7 +948,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                   request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
-        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+        _cu_calculator->add_scan_cu(resp.error, resp.kvs, request.hash_key_filter_pattern);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
 
         return;
@@ -1092,7 +1088,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+    _cu_calculator->add_scan_cu(resp.error, resp.kvs, request.hash_key_filter_pattern);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
@@ -1461,7 +1457,8 @@ void pegasus_server_impl::on_detect_hotkey(detect_hotkey_rpc rpc)
     });
 
     // initialize cu calculator and write service after server being initialized.
-    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(this);
+    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
+        this, _read_hotkey_collector, _write_hotkey_collector);
     _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
 
     ::dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
