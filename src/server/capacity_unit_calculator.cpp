@@ -102,6 +102,7 @@ void capacity_unit_calculator::add_get_cu(int32_t status,
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
     }
+
     if (status == rocksdb::Status::kNotFound) {
         _read_hotkey_collector->capture_raw_key(key, key.size() + value.size());
         add_read_cu(1);
@@ -127,6 +128,7 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
         status != rocksdb::Status::kIncomplete && status != rocksdb::Status::kInvalidArgument) {
         return;
     }
+
     if (status == rocksdb::Status::kNotFound) {
         _read_hotkey_collector->capture_hash_key(hash_key, 1);
         add_read_cu(1);
@@ -208,6 +210,7 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
         data_size += hash_key.size() + kv.key.size() + kv.value.size();
     }
     _pfc_multi_put_bytes->add(hash_key.size() + multi_put_bytes);
+
     if (status != rocksdb::Status::kOk) {
         return;
     }
