@@ -9,20 +9,41 @@
 #include <iomanip>
 #include <iostream>
 #include <unistd.h>
-
-#include <dsn/cpp/service_app.h>
-#include <dsn/dist/replication/duplication_common.h>
-
-#include "base/pegasus_utils.h"
-#include "pegasus_io_service.h"
-
 #include <chrono>
 #include <map>
 #include <memory>
 #include <string>
+#include <event2/event.h>
+#include <event2/buffer.h>
+#include <event2/http.h>
+#include <event2/keyvalq_struct.h>
+
+#include <dsn/cpp/service_app.h>
+#include <dsn/dist/replication/duplication_common.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/flags.h>
+
+#include "base/pegasus_utils.h"
+#include "pegasus_io_service.h"
 
 using namespace ::dsn;
+
+DSN_DEFINE_uint64("pegasus.server",
+                  perf_counter_update_interval_seconds,
+                  10,
+                  "perf_counter_update_interval_seconds");
+DSN_DEFINE_bool("pegasus.server", perf_counter_enable_logging, true, "perf_counter_enable_logging");
+
+DSN_DEFINE_string("pegasus.server", perf_counter_sink, "", "perf_counter_sink");
+
+DSN_DEFINE_uint64("pegasus.server", prometheus_port, 9091, "prometheus exposer port");
+
+DSN_DEFINE_string("pegasus.server", falcon_host, "127.0.0.1", "falcon agent host");
+DSN_DEFINE_uint64("pegasus.server", falcon_port, 1988, "falcon agent port");
+DSN_DEFINE_string("pegasus.server", falcon_path, "/v1/push", "falcon agent http path");
+
+namespace pegasus {
+namespace server {
 
 static std::string get_hostname()
 {
@@ -44,9 +65,6 @@ static void format_metrics_name(std::string &metrics_name)
     replace(metrics_name.begin(), metrics_name.end(), ')', '_');
 }
 
-namespace pegasus {
-namespace server {
-
 static void libevent_log(int severity, const char *msg)
 {
     dsn_log_level_t level;
@@ -62,13 +80,7 @@ static void libevent_log(int severity, const char *msg)
 }
 
 pegasus_counter_reporter::pegasus_counter_reporter()
-    : _local_port(0),
-      _update_interval_seconds(0),
-      _last_report_time_ms(0),
-      _enable_logging(false),
-      _perf_counter_sink(perf_counter_sink_t::INVALID),
-      _falcon_port(0),
-      _prometheus_port(0)
+    : _local_port(0), _last_report_time_ms(0), _perf_counter_sink(perf_counter_sink_t::INVALID)
 {
 }
 
@@ -76,44 +88,22 @@ pegasus_counter_reporter::~pegasus_counter_reporter() { stop(); }
 
 void pegasus_counter_reporter::prometheus_initialize()
 {
-    _prometheus_port = (uint16_t)dsn_config_get_value_uint64(
-        "pegasus.server", "prometheus_port", 9091, "prometheus exposer port");
-
     _registry = std::make_shared<prometheus::Registry>();
-    _exposer = dsn::make_unique<prometheus::Exposer>(fmt::format("0.0.0.0:{}", _prometheus_port));
+    _exposer =
+        dsn::make_unique<prometheus::Exposer>(fmt::format("0.0.0.0:{}", FLAGS_prometheus_port));
     _exposer->RegisterCollectable(_registry);
 
-    ddebug_f("prometheus exposer [0.0.0.0:{}] started", _prometheus_port);
+    ddebug_f("prometheus exposer [0.0.0.0:{}] started", FLAGS_prometheus_port);
 }
 
 void pegasus_counter_reporter::falcon_initialize()
 {
-    _falcon_host = dsn_config_get_value_string(
-        "pegasus.server", "falcon_host", "127.0.0.1", "falcon agent host");
-    _falcon_port = (uint16_t)dsn_config_get_value_uint64(
-        "pegasus.server", "falcon_port", 1988, "falcon agent port");
-    _falcon_path = dsn_config_get_value_string(
-        "pegasus.server", "falcon_path", "/v1/push", "falcon http path");
-
     _falcon_metric.endpoint = _local_host;
-    _falcon_metric.step = _update_interval_seconds;
+    _falcon_metric.step = FLAGS_perf_counter_update_interval_seconds;
+    _falcon_metric.tags = fmt::format(
+        "service=pegasus,cluster={},job={},port={}", _cluster_name, _app_name, _local_port);
 
-    std::stringstream tag_stream;
-    tag_stream << "service"
-               << "="
-               << "pegasus";
-    tag_stream << ","
-               << "cluster"
-               << "=" << _cluster_name;
-    tag_stream << ","
-               << "job"
-               << "=" << _app_name;
-    tag_stream << ","
-               << "port"
-               << "=" << _local_port;
-    _falcon_metric.tags = tag_stream.str();
-
-    ddebug("falcon initialize: ep(%s), tag(%s)",
+    ddebug("falcon initialize: endpoint(%s), tag(%s)",
            _falcon_metric.endpoint.c_str(),
            _falcon_metric.tags.c_str());
 }
@@ -134,23 +124,11 @@ void pegasus_counter_reporter::start()
 
     _cluster_name = dsn::replication::get_current_cluster_name();
 
-    _update_interval_seconds = dsn_config_get_value_uint64("pegasus.server",
-                                                           "perf_counter_update_interval_seconds",
-                                                           10,
-                                                           "perf_counter_update_interval_seconds");
-    dassert(_update_interval_seconds > 0,
-            "perf_counter_update_interval_seconds(%u) should > 0",
-            _update_interval_seconds);
     _last_report_time_ms = dsn_now_ms();
 
-    _enable_logging = dsn_config_get_value_bool(
-        "pegasus.server", "perf_counter_enable_logging", true, "perf_counter_enable_logging");
-
-    std::string perf_counter_sink =
-        dsn_config_get_value_string("pegasus.server", "perf_counter_sink", "", "perf_counter_sink");
-    if ("prometheus" == perf_counter_sink) {
+    if (strcmp("prometheus", FLAGS_perf_counter_sink) == 0) {
         _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
-    } else if ("falcon" == perf_counter_sink) {
+    } else if (strcmp("falcon", FLAGS_perf_counter_sink) == 0) {
         _perf_counter_sink = perf_counter_sink_t::FALCON;
     } else {
         _perf_counter_sink = perf_counter_sink_t::INVALID;
@@ -168,7 +146,7 @@ void pegasus_counter_reporter::start()
 
     _report_timer.reset(new boost::asio::deadline_timer(pegasus_io_service::instance().ios));
     _report_timer->expires_from_now(
-        boost::posix_time::seconds(rand() % _update_interval_seconds + 1));
+        boost::posix_time::seconds(rand() % FLAGS_perf_counter_update_interval_seconds + 1));
     _report_timer->async_wait(std::bind(
         &pegasus_counter_reporter::on_report_timer, this, _report_timer, std::placeholders::_1));
 }
@@ -187,8 +165,11 @@ void pegasus_counter_reporter::update_counters_to_falcon(const std::string &resu
                                                          int64_t timestamp)
 {
     ddebug("update counters to falcon with timestamp = %" PRId64, timestamp);
-    http_post_request(
-        _falcon_host, _falcon_port, _falcon_path, "application/x-www-form-urlencoded", result);
+    http_post_request(FLAGS_falcon_host,
+                      FLAGS_falcon_port,
+                      FLAGS_falcon_path,
+                      "application/x-www-form-urlencoded",
+                      result);
 }
 
 void pegasus_counter_reporter::update()
@@ -198,7 +179,7 @@ void pegasus_counter_reporter::update()
 
     perf_counters::instance().take_snapshot();
 
-    if (_enable_logging) {
+    if (FLAGS_perf_counter_enable_logging) {
         std::stringstream oss;
         oss << "logging perf counter(name, type, value):" << std::endl;
         oss << std::fixed << std::setprecision(2);
@@ -352,7 +333,8 @@ void pegasus_counter_reporter::on_report_timer(std::shared_ptr<boost::asio::dead
     // NOTICE: the following code is running out of rDSN's tls_context
     if (!ec) {
         update();
-        timer->expires_from_now(boost::posix_time::seconds(_update_interval_seconds));
+        timer->expires_from_now(
+            boost::posix_time::seconds(FLAGS_perf_counter_update_interval_seconds));
         timer->async_wait(std::bind(
             &pegasus_counter_reporter::on_report_timer, this, timer, std::placeholders::_1));
     } else if (boost::system::errc::operation_canceled != ec) {
