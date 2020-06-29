@@ -9,11 +9,8 @@
 #include <dsn/cpp/json_helper.h>
 
 #include <boost/asio/deadline_timer.hpp>
-#include <event2/event.h>
-#include <event2/buffer.h>
 #include <event2/http.h>
 #include <event2/http_struct.h>
-#include <event2/keyvalq_struct.h>
 
 #include <prometheus/registry.h>
 #include <prometheus/exposer.h>
@@ -73,25 +70,18 @@ private:
     std::string _app_name;
     std::string _cluster_name;
 
-    uint32_t _update_interval_seconds;
     uint64_t _last_report_time_ms;
     std::shared_ptr<boost::asio::deadline_timer> _report_timer;
 
     // perf counter flags
-    bool _enable_logging;
     perf_counter_sink_t _perf_counter_sink;
 
-    // falcon relates
-    std::string _falcon_host;
-    uint16_t _falcon_port;
-    std::string _falcon_path;
     falcon_metric _falcon_metric;
 
     // prometheus relates
-    uint16_t _prometheus_port;
     std::shared_ptr<prometheus::Registry> _registry;
     std::unique_ptr<prometheus::Exposer> _exposer;
     std::map<std::string, prometheus::Family<prometheus::Gauge> *> _gauge_family_map;
 };
-}
-} // namespace
+} // namespace server
+} // namespace pegasus
