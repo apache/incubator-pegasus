@@ -84,7 +84,9 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
     }
 }
 
-uint64_t meta_store::get_last_flushed_decree_from_checkpoint(rocksdb::DB *db, rocksdb::ColumnFamilyHandle* meta_cf) const
+uint64_t
+meta_store::get_last_flushed_decree_from_checkpoint(rocksdb::DB *db,
+                                                    rocksdb::ColumnFamilyHandle *meta_cf) const
 {
     uint64_t last_flushed_decree = 0;
     auto ec = get_value_from_meta_cf(db, meta_cf, true, LAST_FLUSHED_DECREE, &last_flushed_decree);
@@ -99,7 +101,11 @@ uint64_t meta_store::get_last_flushed_decree_from_checkpoint(rocksdb::DB *db, ro
     return get_value_from_meta_cf(_db, _meta_cf, read_flushed_data, key, value);
 }
 
-::dsn::error_code meta_store::get_value_from_meta_cf(rocksdb::DB *db, rocksdb::ColumnFamilyHandle *cf, bool read_flushed_data, const std::string &key, uint64_t *value)
+::dsn::error_code meta_store::get_value_from_meta_cf(rocksdb::DB *db,
+                                                     rocksdb::ColumnFamilyHandle *cf,
+                                                     bool read_flushed_data,
+                                                     const std::string &key,
+                                                     uint64_t *value)
 {
     std::string data;
     rocksdb::ReadOptions rd_opts;

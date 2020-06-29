@@ -1335,7 +1335,8 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         }
         dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
     } else {
-        // When create new DB, we have to create a new column family to store meta data (meta column family).
+        // When create new DB, we have to create a new column family to store meta data (meta column
+        // family).
         _db_opts.create_missing_column_families = true;
     }
 
@@ -1359,7 +1360,8 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     if (db_exist) {
         _last_committed_decree = _meta_store->get_last_flushed_decree();
         _pegasus_data_version = _meta_store->get_data_version();
-        uint64_t last_manual_compact_finish_time = _meta_store->get_last_manual_compact_finish_time();
+        uint64_t last_manual_compact_finish_time =
+            _meta_store->get_last_manual_compact_finish_time();
         if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
             derror_replica("open app failed, unsupported data version {}", _pegasus_data_version);
             release_db();
@@ -1776,7 +1778,8 @@ private:
         }
         dcheck_eq_replica(handles_opened.size(), 2);
         dcheck_eq_replica(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
-        uint64_t last_flushed_decree = _meta_store->get_last_flushed_decree_from_checkpoint(snapshot_db, handles_opened[1]);
+        uint64_t last_flushed_decree =
+            _meta_store->get_last_flushed_decree_from_checkpoint(snapshot_db, handles_opened[1]);
         *checkpoint_decree = last_flushed_decree;
 
         cleanup(false);
@@ -2603,8 +2606,7 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
     // TODO(heyuchen): set filter _partition_version in further pr
 }
 
-::dsn::error_code pegasus_server_impl::check_meta_cf(const std::string &path,
-                                                     bool *missing_meta_cf)
+::dsn::error_code pegasus_server_impl::check_meta_cf(const std::string &path, bool *missing_meta_cf)
 {
     *missing_meta_cf = true;
     std::vector<std::string> column_families;
@@ -2635,12 +2637,10 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
     return ::dsn::ERR_OK;
 }
 
-void pegasus_server_impl::release_db()
-{
-    release_db(_db, {_data_cf, _meta_cf});
-}
+void pegasus_server_impl::release_db() { release_db(_db, {_data_cf, _meta_cf}); }
 
-void pegasus_server_impl::release_db(rocksdb::DB *db, const std::vector<rocksdb::ColumnFamilyHandle *>& handles)
+void pegasus_server_impl::release_db(rocksdb::DB *db,
+                                     const std::vector<rocksdb::ColumnFamilyHandle *> &handles)
 {
     if (db) {
         for (auto handle : handles) {
