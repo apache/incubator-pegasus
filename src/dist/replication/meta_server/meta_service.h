@@ -210,6 +210,7 @@ private:
 
     // bulk load
     void on_start_bulk_load(start_bulk_load_rpc rpc);
+    void on_control_bulk_load(control_bulk_load_rpc rpc);
 
     // common routines
     // ret:

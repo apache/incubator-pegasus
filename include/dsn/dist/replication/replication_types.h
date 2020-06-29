@@ -206,6 +206,19 @@ struct ingestion_status
 
 extern const std::map<int, const char *> _ingestion_status_VALUES_TO_NAMES;
 
+struct bulk_load_control_type
+{
+    enum type
+    {
+        BLC_PAUSE = 0,
+        BLC_RESTART = 1,
+        BLC_CANCEL = 2,
+        BLC_FORCE_CANCEL = 3
+    };
+};
+
+extern const std::map<int, const char *> _bulk_load_control_type_VALUES_TO_NAMES;
+
 class mutation_header;
 
 class mutation_update;
@@ -409,6 +422,10 @@ class group_bulk_load_response;
 class ingestion_request;
 
 class ingestion_response;
+
+class control_bulk_load_request;
+
+class control_bulk_load_response;
 
 typedef struct _mutation_header__isset
 {
@@ -7057,6 +7074,112 @@ public:
 void swap(ingestion_response &a, ingestion_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const ingestion_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _control_bulk_load_request__isset
+{
+    _control_bulk_load_request__isset() : app_name(false), type(false) {}
+    bool app_name : 1;
+    bool type : 1;
+} _control_bulk_load_request__isset;
+
+class control_bulk_load_request
+{
+public:
+    control_bulk_load_request(const control_bulk_load_request &);
+    control_bulk_load_request(control_bulk_load_request &&);
+    control_bulk_load_request &operator=(const control_bulk_load_request &);
+    control_bulk_load_request &operator=(control_bulk_load_request &&);
+    control_bulk_load_request() : app_name(), type((bulk_load_control_type::type)0) {}
+
+    virtual ~control_bulk_load_request() throw();
+    std::string app_name;
+    bulk_load_control_type::type type;
+
+    _control_bulk_load_request__isset __isset;
+
+    void __set_app_name(const std::string &val);
+
+    void __set_type(const bulk_load_control_type::type val);
+
+    bool operator==(const control_bulk_load_request &rhs) const
+    {
+        if (!(app_name == rhs.app_name))
+            return false;
+        if (!(type == rhs.type))
+            return false;
+        return true;
+    }
+    bool operator!=(const control_bulk_load_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const control_bulk_load_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(control_bulk_load_request &a, control_bulk_load_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const control_bulk_load_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _control_bulk_load_response__isset
+{
+    _control_bulk_load_response__isset() : err(false), hint_msg(false) {}
+    bool err : 1;
+    bool hint_msg : 1;
+} _control_bulk_load_response__isset;
+
+class control_bulk_load_response
+{
+public:
+    control_bulk_load_response(const control_bulk_load_response &);
+    control_bulk_load_response(control_bulk_load_response &&);
+    control_bulk_load_response &operator=(const control_bulk_load_response &);
+    control_bulk_load_response &operator=(control_bulk_load_response &&);
+    control_bulk_load_response() : hint_msg() {}
+
+    virtual ~control_bulk_load_response() throw();
+    ::dsn::error_code err;
+    std::string hint_msg;
+
+    _control_bulk_load_response__isset __isset;
+
+    void __set_err(const ::dsn::error_code &val);
+
+    void __set_hint_msg(const std::string &val);
+
+    bool operator==(const control_bulk_load_response &rhs) const
+    {
+        if (!(err == rhs.err))
+            return false;
+        if (__isset.hint_msg != rhs.__isset.hint_msg)
+            return false;
+        else if (__isset.hint_msg && !(hint_msg == rhs.hint_msg))
+            return false;
+        return true;
+    }
+    bool operator!=(const control_bulk_load_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const control_bulk_load_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(control_bulk_load_response &a, control_bulk_load_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const control_bulk_load_response &obj)
 {
     obj.printTo(out);
     return out;

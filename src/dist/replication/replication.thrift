@@ -1024,6 +1024,32 @@ struct ingestion_response
     2:i32               rocksdb_error;
 }
 
+enum bulk_load_control_type
+{
+    BLC_PAUSE,
+    BLC_RESTART,
+    BLC_CANCEL,
+    BLC_FORCE_CANCEL
+}
+
+// client -> meta server, pause/restart/cancel/force_cancel bulk load
+struct control_bulk_load_request
+{
+    1:string                    app_name;
+    2:bulk_load_control_type    type;
+}
+
+struct control_bulk_load_response
+{
+    // Possible error:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INACTIVE_STATE: app is not executing bulk load
+    // - ERR_INVALID_STATE: current bulk load process can not be paused/restarted/canceled
+    1:dsn.error_code    err;
+    2:optional string   hint_msg;
+}
+
 /*
 service replica_s
 {

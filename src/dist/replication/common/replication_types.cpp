@@ -178,6 +178,18 @@ const std::map<int, const char *> _ingestion_status_VALUES_TO_NAMES(
     ::apache::thrift::TEnumIterator(4, _kingestion_statusValues, _kingestion_statusNames),
     ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
+int _kbulk_load_control_typeValues[] = {bulk_load_control_type::BLC_PAUSE,
+                                        bulk_load_control_type::BLC_RESTART,
+                                        bulk_load_control_type::BLC_CANCEL,
+                                        bulk_load_control_type::BLC_FORCE_CANCEL};
+const char *_kbulk_load_control_typeNames[] = {
+    "BLC_PAUSE", "BLC_RESTART", "BLC_CANCEL", "BLC_FORCE_CANCEL"};
+const std::map<int, const char *> _bulk_load_control_type_VALUES_TO_NAMES(
+    ::apache::thrift::TEnumIterator(4,
+                                    _kbulk_load_control_typeValues,
+                                    _kbulk_load_control_typeNames),
+    ::apache::thrift::TEnumIterator(-1, NULL, NULL));
+
 mutation_header::~mutation_header() throw() {}
 
 void mutation_header::__set_pid(const ::dsn::gpid &val) { this->pid = val; }
@@ -16597,6 +16609,253 @@ void ingestion_response::printTo(std::ostream &out) const
     out << "err=" << to_string(err);
     out << ", "
         << "rocksdb_error=" << to_string(rocksdb_error);
+    out << ")";
+}
+
+control_bulk_load_request::~control_bulk_load_request() throw() {}
+
+void control_bulk_load_request::__set_app_name(const std::string &val) { this->app_name = val; }
+
+void control_bulk_load_request::__set_type(const bulk_load_control_type::type val)
+{
+    this->type = val;
+}
+
+uint32_t control_bulk_load_request::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->app_name);
+                this->__isset.app_name = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                int32_t ecast697;
+                xfer += iprot->readI32(ecast697);
+                this->type = (bulk_load_control_type::type)ecast697;
+                this->__isset.type = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t control_bulk_load_request::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("control_bulk_load_request");
+
+    xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 1);
+    xfer += oprot->writeString(this->app_name);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("type", ::apache::thrift::protocol::T_I32, 2);
+    xfer += oprot->writeI32((int32_t)this->type);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(control_bulk_load_request &a, control_bulk_load_request &b)
+{
+    using ::std::swap;
+    swap(a.app_name, b.app_name);
+    swap(a.type, b.type);
+    swap(a.__isset, b.__isset);
+}
+
+control_bulk_load_request::control_bulk_load_request(const control_bulk_load_request &other698)
+{
+    app_name = other698.app_name;
+    type = other698.type;
+    __isset = other698.__isset;
+}
+control_bulk_load_request::control_bulk_load_request(control_bulk_load_request &&other699)
+{
+    app_name = std::move(other699.app_name);
+    type = std::move(other699.type);
+    __isset = std::move(other699.__isset);
+}
+control_bulk_load_request &control_bulk_load_request::
+operator=(const control_bulk_load_request &other700)
+{
+    app_name = other700.app_name;
+    type = other700.type;
+    __isset = other700.__isset;
+    return *this;
+}
+control_bulk_load_request &control_bulk_load_request::
+operator=(control_bulk_load_request &&other701)
+{
+    app_name = std::move(other701.app_name);
+    type = std::move(other701.type);
+    __isset = std::move(other701.__isset);
+    return *this;
+}
+void control_bulk_load_request::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "control_bulk_load_request(";
+    out << "app_name=" << to_string(app_name);
+    out << ", "
+        << "type=" << to_string(type);
+    out << ")";
+}
+
+control_bulk_load_response::~control_bulk_load_response() throw() {}
+
+void control_bulk_load_response::__set_err(const ::dsn::error_code &val) { this->err = val; }
+
+void control_bulk_load_response::__set_hint_msg(const std::string &val)
+{
+    this->hint_msg = val;
+    __isset.hint_msg = true;
+}
+
+uint32_t control_bulk_load_response::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->err.read(iprot);
+                this->__isset.err = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->hint_msg);
+                this->__isset.hint_msg = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t control_bulk_load_response::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("control_bulk_load_response");
+
+    xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->err.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    if (this->__isset.hint_msg) {
+        xfer += oprot->writeFieldBegin("hint_msg", ::apache::thrift::protocol::T_STRING, 2);
+        xfer += oprot->writeString(this->hint_msg);
+        xfer += oprot->writeFieldEnd();
+    }
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(control_bulk_load_response &a, control_bulk_load_response &b)
+{
+    using ::std::swap;
+    swap(a.err, b.err);
+    swap(a.hint_msg, b.hint_msg);
+    swap(a.__isset, b.__isset);
+}
+
+control_bulk_load_response::control_bulk_load_response(const control_bulk_load_response &other702)
+{
+    err = other702.err;
+    hint_msg = other702.hint_msg;
+    __isset = other702.__isset;
+}
+control_bulk_load_response::control_bulk_load_response(control_bulk_load_response &&other703)
+{
+    err = std::move(other703.err);
+    hint_msg = std::move(other703.hint_msg);
+    __isset = std::move(other703.__isset);
+}
+control_bulk_load_response &control_bulk_load_response::
+operator=(const control_bulk_load_response &other704)
+{
+    err = other704.err;
+    hint_msg = other704.hint_msg;
+    __isset = other704.__isset;
+    return *this;
+}
+control_bulk_load_response &control_bulk_load_response::
+operator=(control_bulk_load_response &&other705)
+{
+    err = std::move(other705.err);
+    hint_msg = std::move(other705.hint_msg);
+    __isset = std::move(other705.__isset);
+    return *this;
+}
+void control_bulk_load_response::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "control_bulk_load_response(";
+    out << "err=" << to_string(err);
+    out << ", "
+        << "hint_msg=";
+    (__isset.hint_msg ? (out << to_string(hint_msg)) : (out << "<null>"));
     out << ")";
 }
 }
