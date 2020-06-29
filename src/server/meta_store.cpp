@@ -115,8 +115,7 @@ meta_store::get_last_flushed_decree_from_checkpoint(rocksdb::DB *db,
     }
     auto status = db->Get(rd_opts, cf, key, &data);
     if (status.ok()) {
-        bool ok = dsn::buf2uint64(data, *value);
-        dassert(ok,
+        dassert(dsn::buf2uint64(data, *value),
                 "rocksdb {} get {} from meta column family got error value {}",
                 db->GetName(),
                 key,
