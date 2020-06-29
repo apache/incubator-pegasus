@@ -1,7 +1,6 @@
 package com.xiaomi.infra.pegasus.spark.analyser
 
-import com.xiaomi.infra.pegasus.spark
-import com.xiaomi.infra.pegasus.spark.{FSConfig, RocksDBOptions}
+import com.xiaomi.infra.pegasus.spark.RocksDBOptions
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.TaskContext
 import org.rocksdb.{RocksDB, RocksIterator}
@@ -35,14 +34,14 @@ private[analyser] class PartitionIterator private (
 
     pegasusLoader = snapshotLoader
     rocksDBOptions = new RocksDBOptions(
-      snapshotLoader.getConfig.remoteFileSystemURL,
-      snapshotLoader.getConfig.remoteFileSystemPort
+      snapshotLoader.getConfig.getRemoteFileSystemURL,
+      snapshotLoader.getConfig.getRemoteFileSystemPort
     )
     rocksDBOptions.options.setMaxOpenFiles(
-      snapshotLoader.getConfig.fileOpenCount
+      snapshotLoader.getConfig.getFileOpenCount
     )
     rocksDBOptions.readOptions.setReadaheadSize(
-      snapshotLoader.getConfig.readAheadSize
+      snapshotLoader.getConfig.getReadAheadSize
     )
     val checkPointUrls = snapshotLoader.getCheckpointUrls
     val dbPath = checkPointUrls.get(pid)

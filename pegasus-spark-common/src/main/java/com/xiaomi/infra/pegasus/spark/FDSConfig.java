@@ -2,49 +2,49 @@ package com.xiaomi.infra.pegasus.spark;
 
 public class FDSConfig extends HDFSConfig {
 
-  String remoteFsBucketName;
-  String remoteFsEndPoint;
-  String remoteFsAccessKey;
-  String remoteFsAccessSecret;
+  String bucketName;
+  String endPoint;
+  String accessKey;
+  String accessSecret;
 
   public FDSConfig(
       String accessKey, String accessSecret, String bucketName, String endPoint, String port) {
     super("fds://" + accessKey + ":" + accessSecret + "@" + bucketName + "." + endPoint, port);
-    this.remoteFsAccessKey = accessKey;
-    this.remoteFsAccessSecret = accessSecret;
-    this.remoteFsBucketName = bucketName;
-    this.remoteFsEndPoint = endPoint;
+    this.accessKey = accessKey;
+    this.accessSecret = accessSecret;
+    this.bucketName = bucketName;
+    this.endPoint = endPoint;
   }
 
-  public void setRemoteFsBucketName(String remoteFsBucketName) {
-    this.remoteFsBucketName = remoteFsBucketName;
+  public void setBucketName(String bucketName) {
+    this.bucketName = bucketName;
   }
 
-  public void setRemoteFsEndPoint(String remoteFsEndPoint) {
-    this.remoteFsEndPoint = remoteFsEndPoint;
+  public void setEndPoint(String endPoint) {
+    this.endPoint = endPoint;
   }
 
-  public void setRemoteFsAccessKey(String remoteFsAccessKey) {
-    this.remoteFsAccessKey = remoteFsAccessKey;
+  public void setAccessKey(String accessKey) {
+    this.accessKey = accessKey;
   }
 
-  public void setRemoteFsAccessSecret(String remoteFsAccessSecret) {
-    this.remoteFsAccessSecret = remoteFsAccessSecret;
+  public void setAccessSecret(String accessSecret) {
+    this.accessSecret = accessSecret;
   }
 
-  public String getRemoteFsBucketName() {
-    return remoteFsBucketName;
+  public String getBucketName() {
+    return bucketName;
   }
 
-  public String getRemoteFsEndPoint() {
-    return remoteFsEndPoint;
+  public String getEndPoint() {
+    return endPoint;
   }
 
-  public String getRemoteFsAccessKey() {
-    return remoteFsAccessKey;
+  public String getAccessKey() {
+    return accessKey;
   }
 
-  public String getRemoteFsAccessSecret() {
-    return remoteFsAccessSecret;
+  public String getAccessSecret() {
+    return accessSecret;
   }
 }

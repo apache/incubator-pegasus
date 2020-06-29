@@ -18,20 +18,18 @@ public class FDSFileSystem extends HDFSFileSystem {
 
   @Override
   public String getFileMD5(String filePath) throws PegasusSparkException {
-    FDSClientConfiguration fdsClientConfiguration =
-        new FDSClientConfiguration(fdsConfig.remoteFsEndPoint);
+    FDSClientConfiguration fdsClientConfiguration = new FDSClientConfiguration(fdsConfig.endPoint);
     fdsClientConfiguration.enableCdnForDownload(false);
     fdsClientConfiguration.enableCdnForUpload(false);
 
     GalaxyFDS fdsClient =
         new GalaxyFDSClient(
-            new BasicFDSCredential(fdsConfig.remoteFsAccessKey, fdsConfig.remoteFsAccessSecret),
+            new BasicFDSCredential(fdsConfig.accessKey, fdsConfig.accessSecret),
             fdsClientConfiguration);
 
     try {
       FDSObject fdsObject =
-          fdsClient.getObject(
-              fdsConfig.remoteFsBucketName, filePath.split(fdsConfig.remoteFsEndPoint + "/")[1]);
+          fdsClient.getObject(fdsConfig.bucketName, filePath.split(fdsConfig.endPoint + "/")[1]);
       FDSObjectMetadata metaData = fdsObject.getObjectMetadata();
       return metaData.getContentMD5();
     } catch (GalaxyFDSClientException e) {

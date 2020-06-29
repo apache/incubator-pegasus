@@ -27,8 +27,7 @@ public class HDFSFileSystem implements RemoteFileSystem {
       InputStream inputStream =
           org.apache.hadoop.fs.FileSystem.get(new URI(filePath), new Configuration())
               .open(new Path(filePath));
-      BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-      return bufferedReader;
+      return new BufferedReader(new InputStreamReader(inputStream));
     } catch (Exception e) {
       throw new PegasusSparkException("get filePath reader failed, [url: " + filePath + "]", e);
     }
@@ -40,8 +39,7 @@ public class HDFSFileSystem implements RemoteFileSystem {
           new OutputStreamWriter(
               org.apache.hadoop.fs.FileSystem.get(new URI(filePath), new Configuration())
                   .create(new Path(filePath)));
-      BufferedWriter bufferedWriter = new BufferedWriter(outputStreamWriter);
-      return bufferedWriter;
+      return new BufferedWriter(outputStreamWriter);
     } catch (Exception e) {
       throw new PegasusSparkException("get filePath writer failed, [url: " + filePath + "]", e);
     }

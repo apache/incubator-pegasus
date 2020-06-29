@@ -43,8 +43,8 @@ class PegasusSnapshotRDD private[analyser] (
     LOG.info(
       "Create iterator for \"%s\" \"%s\" [pid: %d]"
         .format(
-          snapshotLoader.getConfig.clusterName,
-          snapshotLoader.getConfig.tableName,
+          snapshotLoader.getConfig.getClusterName,
+          snapshotLoader.getConfig.getTableName,
           split.index
         )
     )

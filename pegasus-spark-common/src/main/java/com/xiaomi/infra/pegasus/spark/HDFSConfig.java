@@ -3,27 +3,27 @@ package com.xiaomi.infra.pegasus.spark;
 import java.io.Serializable;
 
 public class HDFSConfig implements Serializable {
-  String remoteFsUrl;
-  String remoteFsPort;
+  private String url;
+  private String Port;
 
-  public HDFSConfig(String remoteFsUrl, String remoteFsPort) {
-    this.remoteFsUrl = remoteFsUrl;
-    this.remoteFsPort = remoteFsPort;
+  public HDFSConfig(String url, String Port) {
+    this.url = url;
+    this.Port = Port;
   }
 
-  public void setRemoteFsUrl(String remoteFsUrl) {
-    this.remoteFsUrl = remoteFsUrl;
+  public void setUrl(String url) {
+    this.url = url;
   }
 
-  public void setRemoteFsPort(String remoteFsPort) {
-    this.remoteFsPort = remoteFsPort;
+  public void setPort(String Port) {
+    this.Port = Port;
   }
 
-  public String getRemoteFsUrl() {
-    return remoteFsUrl;
+  public String getUrl() {
+    return url;
   }
 
-  public String getRemoteFsPort() {
-    return remoteFsPort;
+  public String getPort() {
+    return Port;
   }
 }
