@@ -1,6 +1,7 @@
 package com.xiaomi.infra.pegasus.spark.analyser.recipes.verify
 
 import com.typesafe.config.{ConfigException, ConfigFactory}
+import com.xiaomi.infra.pegasus.spark.FDSConfig
 import com.xiaomi.infra.pegasus.spark.analyser.{
   ColdBackupConfig,
   ColdBackupLoader,
@@ -10,9 +11,17 @@ import org.apache.commons.logging.LogFactory
 import org.apache.spark.{SparkConf, SparkContext}
 
 class DuplicationVerifierOptions {
+  // table config
   var tableName: String = ""
   var cluster1: String = ""
   var cluster2: String = ""
+
+  // filesystem config
+  var buckName: String = ""
+  var endPoint: String = ""
+  var port: String = ""
+  var accessKey: String = ""
+  var accessSecret: String = ""
 
   /**
     * Where you want to save the different records as text file.
@@ -47,11 +56,17 @@ class DuplicationVerifier(opts: DuplicationVerifierOptions) {
       )
       .setIfMissing("spark.master", "local[9]")
     val sc = new SparkContext(conf)
-
+    val fdsConfig = new FDSConfig(
+      options.accessKey,
+      options.accessSecret,
+      options.buckName,
+      options.endPoint,
+      options.port
+    )
     val coldBackupConfig1 =
-      new ColdBackupConfig(FS_URL, FS_PORT, options.cluster1, options.tableName)
+      new ColdBackupConfig(fdsConfig, options.cluster1, options.tableName)
     val coldBackupConfig2 =
-      new ColdBackupConfig(FS_URL, FS_PORT, options.cluster2, options.tableName)
+      new ColdBackupConfig(fdsConfig, options.cluster1, options.tableName)
 
     val pc = new PegasusContext(sc)
     val rdd1 = pc.pegasusSnapshotRDD(new ColdBackupLoader(coldBackupConfig1))
@@ -94,7 +109,10 @@ object DuplicationVerifier {
     val config = ConfigFactory.load(configPath)
     options.cluster1 = config.getString("cluster1")
     options.cluster2 = config.getString("cluster2")
-    options.tableName = config.getString("table-name")
+    options.tableName = config.getString("tableName")
+    options.buckName = config.getString("bucketName")
+    options.accessKey = config.getString("accessKey")
+    options.accessSecret = config.getString("accessSecret")
     try {
       options.diffSetTextFileLocation =
         config.getString("diffset-text-file-location")

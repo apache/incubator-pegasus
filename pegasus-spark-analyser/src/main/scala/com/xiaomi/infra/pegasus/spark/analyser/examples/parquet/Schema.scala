@@ -1,4 +1,4 @@
-package com.xiaomi.infra.pegasus.spark.analyser.recipes.parquet
+package com.xiaomi.infra.pegasus.spark.analyser.examples.parquet
 
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
