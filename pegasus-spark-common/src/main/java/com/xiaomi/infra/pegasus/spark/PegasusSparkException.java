@@ -1,22 +1,22 @@
 package com.xiaomi.infra.pegasus.spark;
 
-public class FDSException extends Exception {
+public class PegasusSparkException extends Exception {
   private static final String VERSION_PREFIX = loadVersion() + ": ";
 
-  public FDSException(String message, Throwable cause) {
+  public PegasusSparkException(String message, Throwable cause) {
     super(VERSION_PREFIX + message, cause);
   }
 
-  public FDSException(String message) {
+  public PegasusSparkException(String message) {
     super(VERSION_PREFIX + message);
   }
 
-  public FDSException(Throwable cause) {
+  public PegasusSparkException(Throwable cause) {
     super(VERSION_PREFIX + cause.toString(), cause);
   }
 
   private static String loadVersion() {
-    String ver = FDSException.class.getPackage().getImplementationVersion();
+    String ver = PegasusSparkException.class.getPackage().getImplementationVersion();
     if (ver == null) {
       return "{version}";
     }

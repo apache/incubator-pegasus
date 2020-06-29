@@ -17,13 +17,13 @@ public class RocksDBOptions {
   public ReadOptions readOptions = new ReadOptions();
   private Env env;
 
-  public RocksDBOptions(String remoteFsUrl, String remoteFsPort) throws FDSException {
+  public RocksDBOptions(String remoteFsUrl, String remoteFsPort) throws PegasusSparkException {
     if (remoteFsUrl.startsWith("fds://")) {
       env = new HdfsEnv(remoteFsUrl + "#" + remoteFsPort);
     } else if (remoteFsUrl.startsWith("hdfs://")) {
       env = new HdfsEnv(remoteFsUrl + ":" + remoteFsPort);
     } else {
-      throw new FDSException("the URL must start with 'fds://' or 'hdfs://'");
+      throw new PegasusSparkException("the URL must start with 'fds://' or 'hdfs://'");
     }
 
     Logger rocksDBLog =
