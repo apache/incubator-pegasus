@@ -1763,7 +1763,8 @@ private:
             release_db(snapshot_db, handles_opened);
         };
 
-        // always need to open default column family even though not use it
+        // Because of RocksDB's restriction, we have to to open default column family even though
+        // not use it
         std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
             {{DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
              {META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
