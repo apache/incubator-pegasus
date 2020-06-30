@@ -103,8 +103,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config;
 
     // init rocksdb::DBOptions
-    _db_opts.pegasus_data = true;
-    _db_opts.pegasus_data_version = _pegasus_data_version;
     _db_opts.create_if_missing = true;
     // atomic flush data CF and meta CF, aim to keep consistency of 'last flushed decree' in meta CF
     // and data in data CF.

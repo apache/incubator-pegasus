@@ -23,13 +23,6 @@ class pegasus_server_impl;
 class meta_store : public dsn::replication::replica_base
 {
 public:
-    enum class meta_store_type
-    {
-        kManifestOnly = 0,
-        kMetaCFOnly,
-        kBothManifestAndMetaCF,
-    };
-
     meta_store(pegasus_server_impl *server, rocksdb::DB *db, rocksdb::ColumnFamilyHandle *meta_cf);
 
     uint64_t get_last_flushed_decree() const;
@@ -63,8 +56,6 @@ private:
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_meta_cf;
     rocksdb::WriteOptions _wt_opts;
-
-    meta_store_type _get_meta_store_type;
 };
 
 } // namespace server
