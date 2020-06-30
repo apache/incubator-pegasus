@@ -3,7 +3,8 @@ package aggregate
 import (
 	"time"
 
-	"github.com/pegasus-kv/collector/meta"
+	"github.com/pegasus-kv/collector/client"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/tomb.v2"
 )
@@ -17,16 +18,17 @@ type TableStatsAggregator interface {
 
 // NewTableStatsAggregator returns a TableStatsAggregator instance.
 func NewTableStatsAggregator() TableStatsAggregator {
+	metaAddrs := viper.GetStringSlice("meta_servers")
 	return &tableStatsAggregator{
 		aggregateInterval: viper.GetDuration("metrics.report_interval"),
-		metaClient:        meta.NewClient(),
+		metaClient:        client.NewMetaClient(metaAddrs),
 	}
 }
 
 type tableStatsAggregator struct {
 	aggregateInterval time.Duration
 
-	metaClient meta.Client
+	metaClient client.MetaClient
 }
 
 func (ag *tableStatsAggregator) Start(tom *tomb.Tomb) {
@@ -43,4 +45,17 @@ func (ag *tableStatsAggregator) Start(tom *tomb.Tomb) {
 }
 
 func (ag *tableStatsAggregator) aggregate() {
+	nodes, err := ag.metaClient.ListNodes()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	for _, n := range nodes {
+		rcmdClient := client.NewRemoteCmdClient(n.Addr)
+		perfCounters := rcmdClient.GetAllPerfCounters()
+
+		for _, p := range perfCounters {
+		}
+	}
 }

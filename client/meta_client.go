@@ -1,16 +1,15 @@
-package meta
+package client
 
 import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
-	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
 )
 
-// Client has methods to query the MetaServer for metadata.
-type Client interface {
+// MetaClient has methods to query the MetaServer for metadata.
+type MetaClient interface {
 	GetTableInfo() (TableInfo, error)
 
 	ListNodes() ([]*NodeInfo, error)
@@ -27,26 +26,25 @@ type NodeInfo struct {
 	Addr string
 }
 
-// NewClient returns a HTTP-based MetaServer Client.
-func NewClient() Client {
-	metaAddrs := viper.GetStringSlice("meta_servers")
-	return &httpClient{
+// NewMetaClient returns a HTTP-based MetaServer Client.
+func NewMetaClient(metaAddrs []string) MetaClient {
+	return &httpMetaClient{
 		metaIPAddresses: metaAddrs,
 	}
 }
 
-// httpClient queries MetaServer via the HTTP interface.
-type httpClient struct {
+// httpMetaClient queries MetaServer via the HTTP interface.
+type httpMetaClient struct {
 	metaIPAddresses []string
 
 	hclient *http.Client
 }
 
-func (*httpClient) GetTableInfo() (TableInfo, error) {
+func (*httpMetaClient) GetTableInfo() (TableInfo, error) {
 	return TableInfo{}, nil
 }
 
-func (h *httpClient) ListNodes() ([]*NodeInfo, error) {
+func (h *httpMetaClient) ListNodes() ([]*NodeInfo, error) {
 	resp, err := h.hclient.Get(fmt.Sprintf("http://%s/meta/nodes?detail", h.metaIPAddresses[0]))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list nodes: %s", err.Error())
@@ -61,5 +59,5 @@ func (h *httpClient) ListNodes() ([]*NodeInfo, error) {
 		})
 		return nodes, nil
 	}
-	return nil, fmt.Errorf("invalid json format for /meta/nodes?detail")
+	return nil, fmt.Errorf("invalid json format in response of /meta/nodes?detail:\n%s", body)
 }
