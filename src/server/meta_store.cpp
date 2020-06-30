@@ -84,9 +84,8 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
     }
 }
 
-uint64_t
-meta_store::get_last_flushed_decree_from_checkpoint(rocksdb::DB *db,
-                                                    rocksdb::ColumnFamilyHandle *meta_cf) const
+uint64_t meta_store::get_decree_from_readonly_db(rocksdb::DB *db,
+                                                 rocksdb::ColumnFamilyHandle *meta_cf) const
 {
     uint64_t last_flushed_decree = 0;
     auto ec = get_value_from_meta_cf(db, meta_cf, true, LAST_FLUSHED_DECREE, &last_flushed_decree);

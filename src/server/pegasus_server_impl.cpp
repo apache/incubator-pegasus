@@ -1779,7 +1779,7 @@ private:
         dcheck_eq_replica(handles_opened.size(), 2);
         dcheck_eq_replica(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
         uint64_t last_flushed_decree =
-            _meta_store->get_last_flushed_decree_from_checkpoint(snapshot_db, handles_opened[1]);
+            _meta_store->get_decree_from_readonly_db(snapshot_db, handles_opened[1]);
         *checkpoint_decree = last_flushed_decree;
 
         cleanup(false);
