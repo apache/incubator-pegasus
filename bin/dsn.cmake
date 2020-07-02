@@ -296,7 +296,7 @@ function(dsn_setup_thirdparty_libs)
     set(DEFAULT_THIRDPARTY_LIBS ${THRIFT_LIB} fmt::fmt CACHE STRING "default thirdparty libs" FORCE)
 
     # rocksdb
-    list(APPEND CMAKE_MODULE_PATH "${DSN_PROJECT_DIR}/thirdparty/src/pegasus-rocksdb-6.6.4-base/cmake/modules")
+    list(APPEND CMAKE_MODULE_PATH "${DSN_PROJECT_DIR}/thirdparty/src/pegasus-rocksdb-6.6.4-compatible/cmake/modules")
     find_package(snappy)
     find_package(zstd)
     find_package(lz4)

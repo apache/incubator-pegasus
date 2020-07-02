@@ -335,16 +335,16 @@ fi
 if [ ! -d $TP_OUTPUT/include/rocksdb ]; then
     mkdir -p $TP_BUILD/rocksdb
     cd $TP_BUILD/rocksdb
-    cmake $TP_SRC/pegasus-rocksdb-6.6.4-base -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT \
-                                             -DWITH_LZ4=ON \
-                                             -DWITH_ZSTD=ON \
-                                             -DWITH_SNAPPY=ON \
-                                             -DWITH_BZ2=OFF \
-                                             -DWITH_TESTS=OFF \
-                                             -DWITH_GFLAGS=OFF \
-                                             -DUSE_RTTI=ON \
-                                             -DCMAKE_BUILD_TYPE=Release \
-                                             -DCMAKE_CXX_FLAGS=-g
+    cmake $TP_SRC/pegasus-rocksdb-6.6.4-compatible -DCMAKE_INSTALL_PREFIX=$TP_OUTPUT \
+                                                   -DWITH_LZ4=ON \
+                                                   -DWITH_ZSTD=ON \
+                                                   -DWITH_SNAPPY=ON \
+                                                   -DWITH_BZ2=OFF \
+                                                   -DWITH_TESTS=OFF \
+                                                   -DWITH_GFLAGS=OFF \
+                                                   -DUSE_RTTI=ON \
+                                                   -DCMAKE_BUILD_TYPE=Release \
+                                                   -DCMAKE_CXX_FLAGS=-g
     #rocksdb enable jemalloc by default, but we use regular malloc.
     make install -j4 DISABLE_JEMALLOC=1
 else
