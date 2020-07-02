@@ -71,6 +71,12 @@ public:
         _bulk_loader->handle_bulk_load_finish(req_status);
     }
 
+    void test_pause_bulk_load(bulk_load_status::type status, int32_t progress)
+    {
+        mock_replica_bulk_load_varieties(status, progress, ingestion_status::IS_INVALID);
+        _bulk_loader->pause_bulk_load();
+    }
+
     int32_t test_report_group_download_progress(bulk_load_status::type status,
                                                 int32_t p_progress,
                                                 int32_t s1_progress,
@@ -101,6 +107,19 @@ public:
         bulk_load_response response;
         _bulk_loader->report_group_cleaned_up(response);
         return response.is_group_bulk_load_context_cleaned_up;
+    }
+
+    bool test_report_group_is_paused(bulk_load_status::type status)
+    {
+        mock_group_progress(status, 10, 50, 50);
+        partition_bulk_load_state state;
+        state.__set_is_paused(true);
+        _replica->set_secondary_bulk_load_state(SECONDARY, state);
+        _replica->set_secondary_bulk_load_state(SECONDARY2, state);
+
+        bulk_load_response response;
+        _bulk_loader->report_group_is_paused(response);
+        return response.is_group_bulk_load_paused;
     }
 
     /// mock structure functions
@@ -310,6 +329,7 @@ public:
     // helper functions
     bulk_load_status::type get_bulk_load_status() const { return _bulk_loader->_status; }
     bool is_cleaned_up() { return _bulk_loader->is_cleaned_up(); }
+    int32_t get_download_progress() { return _bulk_loader->_download_progress.load(); }
 
 public:
     std::unique_ptr<mock_replica> _replica;
@@ -507,6 +527,31 @@ TEST_F(replica_bulk_loader_test, bulk_load_finish_test)
     }
 }
 
+// pause_bulk_load unit tests
+TEST_F(replica_bulk_loader_test, pause_bulk_load_test)
+{
+    // Test cases:
+    // pausing while not bulk load
+    // pausing during downloading
+    // pausing during downloaded
+    struct test_struct
+    {
+        bulk_load_status::type status;
+        int32_t progress;
+        int32_t expected_progress;
+    } tests[]{
+        {bulk_load_status::BLS_INVALID, 0, 0},
+        {bulk_load_status::BLS_DOWNLOADING, 10, 10},
+        {bulk_load_status::BLS_DOWNLOADED, 100, 100},
+    };
+
+    for (auto test : tests) {
+        test_pause_bulk_load(test.status, test.progress);
+        ASSERT_EQ(get_bulk_load_status(), bulk_load_status::BLS_PAUSED);
+        ASSERT_EQ(get_download_progress(), test.expected_progress);
+    }
+}
+
 // report_group_download_progress unit tests
 TEST_F(replica_bulk_loader_test, report_group_download_progress_test)
 {
@@ -624,6 +669,20 @@ TEST_F(replica_bulk_loader_test, report_group_cleanup_flag_all_cleaned_up)
 {
     mock_group_cleanup_flag(bulk_load_status::BLS_INVALID, true, true);
     ASSERT_TRUE(test_report_group_cleaned_up());
+}
+
+// report_group_is_paused unit tests
+TEST_F(replica_bulk_loader_test, report_group_is_paused_test)
+{
+    struct test_struct
+    {
+        bulk_load_status::type local_status;
+        bool expected;
+    } tests[]{{bulk_load_status::BLS_DOWNLOADING, false}, {bulk_load_status::BLS_PAUSED, true}};
+
+    for (auto test : tests) {
+        ASSERT_EQ(test_report_group_is_paused(test.local_status), test.expected);
+    }
 }
 
 } // namespace replication

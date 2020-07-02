@@ -653,8 +653,50 @@ void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &respon
 void bulk_load_service::handle_app_pausing(const bulk_load_response &response,
                                            const rpc_address &primary_addr)
 {
-    // TODO(heyuchen): TBD
-    // called by `on_partition_bulk_load_reply` when app status is pausing
+    const std::string &app_name = response.app_name;
+    const gpid &pid = response.pid;
+
+    if (!response.__isset.is_group_bulk_load_paused) {
+        dwarn_f("receive bulk load response from node({}) app({}) partition({}), "
+                "primary_status({}), but is_group_bulk_load_paused is not set",
+                primary_addr.to_string(),
+                app_name,
+                pid,
+                dsn::enum_to_string(response.primary_bulk_load_status));
+        return;
+    }
+
+    for (const auto &kv : response.group_bulk_load_state) {
+        if (!kv.second.__isset.is_paused) {
+            dwarn_f("receive bulk load response from node({}) app({}), partition({}), "
+                    "primary_status({}), but node({}) is_paused is not set",
+                    primary_addr.to_string(),
+                    app_name,
+                    pid,
+                    dsn::enum_to_string(response.primary_bulk_load_status),
+                    kv.first.to_string());
+            return;
+        }
+    }
+
+    bool is_group_paused = response.is_group_bulk_load_paused;
+    ddebug_f("receive bulk load response from node({}) app({}) partition({}), primary status = {}, "
+             "is_group_bulk_load_paused = {}",
+             primary_addr.to_string(),
+             app_name,
+             pid,
+             dsn::enum_to_string(response.primary_bulk_load_status),
+             is_group_paused);
+    {
+        zauto_write_lock l(_lock);
+        _partitions_bulk_load_state[pid] = response.group_bulk_load_state;
+    }
+
+    if (is_group_paused) {
+        ddebug_f("app({}) partirion({}) pause bulk load succeed", response.app_name, pid);
+        update_partition_status_on_remote_storage(
+            response.app_name, pid, bulk_load_status::BLS_PAUSED);
+    }
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
@@ -759,6 +801,7 @@ void bulk_load_service::update_partition_status_on_remote_storage_reply(
         case bulk_load_status::BLS_DOWNLOADED:
         case bulk_load_status::BLS_INGESTING:
         case bulk_load_status::BLS_SUCCEED:
+        case bulk_load_status::BLS_PAUSED:
             if (old_status != new_status && --_apps_in_progress_count[pid.get_app_id()] == 0) {
                 update_app_status_on_remote_storage_unlocked(pid.get_app_id(), new_status);
             }

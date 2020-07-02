@@ -70,8 +70,9 @@ private:
     void handle_bulk_load_succeed();
     // called when bulk load succeed or failed or canceled
     void handle_bulk_load_finish(bulk_load_status::type new_status);
-    error_code remove_local_bulk_load_dir(const std::string &bulk_load_dir);
+    void pause_bulk_load();
 
+    error_code remove_local_bulk_load_dir(const std::string &bulk_load_dir);
     void cleanup_download_task();
     void clear_bulk_load_states();
     bool is_cleaned_up();
@@ -82,6 +83,7 @@ private:
     void report_group_download_progress(/*out*/ bulk_load_response &response);
     void report_group_ingestion_status(/*out*/ bulk_load_response &response);
     void report_group_cleaned_up(/*out*/ bulk_load_response &response);
+    void report_group_is_paused(/*out*/ bulk_load_response &response);
 
     void report_bulk_load_states_to_primary(bulk_load_status::type remote_status,
                                             /*out*/ group_bulk_load_response &response);

@@ -229,6 +229,9 @@ error_code replica_bulk_loader::do_bulk_load(const std::string &app_name,
             handle_bulk_load_finish(meta_status);
         }
         break;
+    case bulk_load_status::BLS_PAUSING:
+        pause_bulk_load();
+        break;
     // TODO(heyuchen): add other bulk load status
     default:
         break;
@@ -559,6 +562,21 @@ bool replica_bulk_loader::is_cleaned_up()
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
+void replica_bulk_loader::pause_bulk_load()
+{
+    if (_status == bulk_load_status::BLS_PAUSED) {
+        ddebug_replica("bulk load has been paused");
+        return;
+    }
+    if (_status == bulk_load_status::BLS_DOWNLOADING) {
+        cleanup_download_task();
+        try_decrease_bulk_load_download_count();
+    }
+    _status = bulk_load_status::BLS_PAUSED;
+    ddebug_replica("bulk load is paused");
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
 void replica_bulk_loader::report_bulk_load_states_to_meta(bulk_load_status::type remote_status,
                                                           bool report_metadata,
                                                           /*out*/ bulk_load_response &response)
@@ -582,6 +600,9 @@ void replica_bulk_loader::report_bulk_load_states_to_meta(bulk_load_status::type
         break;
     case bulk_load_status::BLS_SUCCEED:
         report_group_cleaned_up(response);
+        break;
+    case bulk_load_status::BLS_PAUSING:
+        report_group_is_paused(response);
         break;
     // TODO(heyuchen): add other status
     default:
@@ -713,6 +734,40 @@ void replica_bulk_loader::report_group_cleaned_up(bulk_load_response &response)
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
+void replica_bulk_loader::report_group_is_paused(bulk_load_response &response)
+{
+    if (status() != partition_status::PS_PRIMARY) {
+        dwarn_replica("replica status={}, should be {}",
+                      enum_to_string(status()),
+                      enum_to_string(partition_status::PS_PRIMARY));
+        response.err = ERR_INVALID_STATE;
+        return;
+    }
+
+    partition_bulk_load_state primary_state;
+    primary_state.__set_is_paused(_status == bulk_load_status::BLS_PAUSED);
+    response.group_bulk_load_state[_replica->_primary_states.membership.primary] = primary_state;
+    ddebug_replica("primary = {}, bulk_load is_paused = {}",
+                   _replica->_primary_states.membership.primary.to_string(),
+                   primary_state.is_paused);
+
+    bool group_is_paused =
+        primary_state.is_paused && (_replica->_primary_states.membership.secondaries.size() + 1 ==
+                                    _replica->_primary_states.membership.max_replica_count);
+    for (const auto &target_address : _replica->_primary_states.membership.secondaries) {
+        partition_bulk_load_state secondary_state =
+            _replica->_primary_states.secondary_bulk_load_states[target_address];
+        bool is_paused = secondary_state.__isset.is_paused ? secondary_state.is_paused : false;
+        ddebug_replica(
+            "secondary = {}, bulk_load is_paused = {}", target_address.to_string(), is_paused);
+        response.group_bulk_load_state[target_address] = secondary_state;
+        group_is_paused &= is_paused;
+    }
+    ddebug_replica("group bulk load is_paused = {}", group_is_paused);
+    response.__set_is_group_bulk_load_paused(group_is_paused);
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
 void replica_bulk_loader::report_bulk_load_states_to_primary(
     bulk_load_status::type remote_status,
     /*out*/ group_bulk_load_response &response)
@@ -735,6 +790,9 @@ void replica_bulk_loader::report_bulk_load_states_to_primary(
         break;
     case bulk_load_status::BLS_SUCCEED:
         bulk_load_state.__set_is_cleaned_up(is_cleaned_up());
+        break;
+    case bulk_load_status::BLS_PAUSING:
+        bulk_load_state.__set_is_paused(local_status == bulk_load_status::BLS_PAUSED);
         break;
     // TODO(heyuchen): add other status
     default:

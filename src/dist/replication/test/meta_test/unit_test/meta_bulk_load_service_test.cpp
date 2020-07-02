@@ -297,6 +297,20 @@ public:
         _resp.__set_is_group_bulk_load_context_cleaned_up(all_cleaned_up);
     }
 
+    void mock_response_paused(bool is_group_paused)
+    {
+        create_basic_response(ERR_OK, bulk_load_status::BLS_PAUSED);
+
+        partition_bulk_load_state state, state2;
+        state.__set_is_paused(true);
+        state2.__set_is_paused(is_group_paused);
+
+        _resp.group_bulk_load_state[PRIMARY] = state;
+        _resp.group_bulk_load_state[SECONDARY1] = state;
+        _resp.group_bulk_load_state[SECONDARY2] = state2;
+        _resp.__set_is_group_bulk_load_paused(is_group_paused);
+    }
+
     void test_on_partition_bulk_load_reply(int32_t in_progress_count,
                                            bulk_load_status::type status,
                                            error_code resp_err = ERR_OK)
@@ -404,6 +418,20 @@ TEST_F(bulk_load_process_test, succeed_all_finished)
 }
 
 // TODO(heyuchen): add half cleanup test while failed
+
+TEST_F(bulk_load_process_test, pausing)
+{
+    mock_response_paused(false);
+    test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_PAUSING);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_PAUSING);
+}
+
+TEST_F(bulk_load_process_test, pause_succeed)
+{
+    mock_response_paused(true);
+    test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_PAUSING);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_PAUSED);
+}
 
 // TODO(heyuchen): add other unit tests for `on_partition_bulk_load_reply`
 
