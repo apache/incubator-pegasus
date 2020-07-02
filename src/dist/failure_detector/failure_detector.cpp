@@ -58,11 +58,14 @@ failure_detector::failure_detector()
 
 void failure_detector::register_ctrl_commands()
 {
-    _get_allow_list = dsn::command_manager::instance().register_app_command(
-        {"fd.allow_list"},
-        "fd.allow_list",
-        "show allow list of replica",
-        [this](const std::vector<std::string> &args) { return get_allow_list(args); });
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        _get_allow_list = dsn::command_manager::instance().register_command(
+            {"fd.allow_list"},
+            "fd.allow_list",
+            "show allow list of failure detector",
+            [this](const std::vector<std::string> &args) { return get_allow_list(args); });
+    });
 }
 
 void failure_detector::unregister_ctrl_commands() { UNREGISTER_VALID_HANDLER(_get_allow_list); }

@@ -110,7 +110,6 @@ nfs_client_impl::nfs_client_impl()
     dassert(max_copy_rate_bytes > FLAGS_nfs_copy_block_bytes,
             "max_copy_rate_bytes should be greater than nfs_copy_block_bytes");
     _copy_token_bucket.reset(new TokenBucket(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes));
-    FLAGS_max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
 
     register_cli_commands();
 }
@@ -557,40 +556,44 @@ void nfs_client_impl::handle_completion(const user_request_ptr &req, error_code 
 
 void nfs_client_impl::register_cli_commands()
 {
-    dsn::command_manager::instance().register_app_command(
-        {"nfs.max_copy_rate_megabytes"},
-        "nfs.max_copy_rate_megabytes [num | DEFAULT]",
-        "control the max rate(MB/s) to copy file from remote node",
-        [this](const std::vector<std::string> &args) {
-            std::string result("OK");
 
-            if (args.empty()) {
-                return std::to_string(FLAGS_max_copy_rate_megabytes);
-            }
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        dsn::command_manager::instance().register_command(
+            {"nfs.max_copy_rate_megabytes"},
+            "nfs.max_copy_rate_megabytes [num | DEFAULT]",
+            "control the max rate(MB/s) to copy file from remote node",
+            [this](const std::vector<std::string> &args) {
+                std::string result("OK");
 
-            if (args[0] == "DEFAULT") {
-                uint32_t max_copy_rate_bytes = FLAGS_max_copy_rate_megabytes << 20;
+                if (args.empty()) {
+                    return std::to_string(FLAGS_max_copy_rate_megabytes);
+                }
+
+                if (args[0] == "DEFAULT") {
+                    uint32_t max_copy_rate_bytes = FLAGS_max_copy_rate_megabytes << 20;
+                    _copy_token_bucket->reset(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes);
+                    return result;
+                }
+
+                int32_t max_copy_rate_megabytes = 0;
+                if (!dsn::buf2int32(args[0], max_copy_rate_megabytes) ||
+                    max_copy_rate_megabytes <= 0) {
+                    return std::string("ERR: invalid arguments");
+                }
+
+                uint32_t max_copy_rate_bytes = max_copy_rate_megabytes << 20;
+                if (max_copy_rate_bytes <= FLAGS_nfs_copy_block_bytes) {
+                    result = std::string("ERR: max_copy_rate_bytes(max_copy_rate_megabytes << 20) "
+                                         "should be greater than nfs_copy_block_bytes:")
+                                 .append(std::to_string(FLAGS_nfs_copy_block_bytes));
+                    return result;
+                }
                 _copy_token_bucket->reset(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes);
-                FLAGS_max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
+                FLAGS_max_copy_rate_megabytes = max_copy_rate_megabytes;
                 return result;
-            }
-
-            int32_t max_copy_rate_megabytes = 0;
-            if (!dsn::buf2int32(args[0], max_copy_rate_megabytes) || max_copy_rate_megabytes <= 0) {
-                return std::string("ERR: invalid arguments");
-            }
-
-            uint32_t max_copy_rate_bytes = max_copy_rate_megabytes << 20;
-            if (max_copy_rate_bytes <= FLAGS_nfs_copy_block_bytes) {
-                result = std::string("ERR: max_copy_rate_bytes(max_copy_rate_megabytes << 20) "
-                                     "should be greater than nfs_copy_block_bytes:")
-                             .append(std::to_string(FLAGS_nfs_copy_block_bytes));
-                return result;
-            }
-            _copy_token_bucket->reset(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes);
-            FLAGS_max_copy_rate_megabytes = max_copy_rate_megabytes;
-            return result;
-        });
+            });
+    });
 }
 } // namespace service
 } // namespace dsn

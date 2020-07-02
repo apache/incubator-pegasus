@@ -29,25 +29,9 @@
 #include <sstream>
 
 #include <dsn/utility/utils.h>
-#include <dsn/cpp/service_app.h>
 #include <dsn/tool-api/command_manager.h>
 
 namespace dsn {
-
-dsn_handle_t command_manager::register_app_command(const std::vector<std::string> &commands,
-                                                   const std::string &help_one_line,
-                                                   const std::string &help_long,
-                                                   command_handler handler)
-{
-    std::string app_tag = std::string(service_app::current_service_app_info().full_name) + ".";
-    std::vector<std::string> commands_with_app_tag;
-    commands_with_app_tag.reserve(commands.size());
-    for (const std::string &c : commands) {
-        commands_with_app_tag.push_back(app_tag + c);
-    }
-    return register_command(
-        commands_with_app_tag, app_tag + help_one_line, app_tag + help_long, handler);
-}
 
 dsn_handle_t command_manager::register_command(const std::vector<std::string> &commands,
                                                const std::string &help_one_line,

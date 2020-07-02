@@ -2082,182 +2082,198 @@ void replica_stub::open_service()
     register_rpc_handler_with_rpc_holder(
         RPC_GROUP_BULK_LOAD, "group_bulk_load", &replica_stub::on_group_bulk_load);
 
-    _kill_partition_command = ::dsn::command_manager::instance().register_app_command(
-        {"kill_partition"},
-        "kill_partition [app_id [partition_index]]",
-        "kill_partition: kill partitions by (all, one app, one partition)",
-        [this](const std::vector<std::string> &args) {
-            dsn::gpid pid;
-            if (args.size() == 0) {
-                pid.set_app_id(-1);
-                pid.set_partition_index(-1);
-            } else if (args.size() == 1) {
-                pid.set_app_id(atoi(args[0].c_str()));
-                pid.set_partition_index(-1);
-            } else if (args.size() == 2) {
-                pid.set_app_id(atoi(args[0].c_str()));
-                pid.set_partition_index(atoi(args[1].c_str()));
-            } else {
-                return std::string(ERR_INVALID_PARAMETERS.to_string());
-            }
-            dsn::error_code e = this->on_kill_replica(pid);
-            return std::string(e.to_string());
-        });
+    register_ctrl_command();
+}
 
-    _deny_client_command = ::dsn::command_manager::instance().register_app_command(
-        {"deny-client"},
-        "deny-client <true|false>",
-        "deny-client - control if deny client read & write request",
-        [this](const std::vector<std::string> &args) {
-            return remote_command_set_bool_flag(_deny_client, "deny-client", args);
-        });
-
-    _verbose_client_log_command = ::dsn::command_manager::instance().register_app_command(
-        {"verbose-client-log"},
-        "verbose-client-log <true|false>",
-        "verbose-client-log - control if print verbose error log when reply read & write request",
-        [this](const std::vector<std::string> &args) {
-            return remote_command_set_bool_flag(_verbose_client_log, "verbose-client-log", args);
-        });
-
-    _verbose_commit_log_command = ::dsn::command_manager::instance().register_app_command(
-        {"verbose-commit-log"},
-        "verbose-commit-log <true|false>",
-        "verbose-commit-log - control if print verbose log when commit mutation",
-        [this](const std::vector<std::string> &args) {
-            return remote_command_set_bool_flag(_verbose_commit_log, "verbose-commit-log", args);
-        });
-
-    _trigger_chkpt_command = ::dsn::command_manager::instance().register_app_command(
-        {"trigger-checkpoint"},
-        "trigger-checkpoint [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-        "trigger-checkpoint - trigger replicas to do checkpoint",
-        [this](const std::vector<std::string> &args) {
-            return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
-                tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                                 rep->tracker(),
-                                 std::bind(&replica_stub::trigger_checkpoint, this, rep, true),
-                                 rep->get_gpid().thread_hash());
-                return std::string("triggered");
-            });
-        });
-
-    _query_compact_command = ::dsn::command_manager::instance().register_app_command(
-        {"query-compact"},
-        "query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-        "query-compact - query full compact status on the underlying storage engine",
-        [this](const std::vector<std::string> &args) {
-            return exec_command_on_replica(
-                args, true, [](const replica_ptr &rep) { return rep->query_compact_state(); });
-        });
-
-    _query_app_envs_command = ::dsn::command_manager::instance().register_app_command(
-        {"query-app-envs"},
-        "query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-        "query-app-envs - query app envs on the underlying storage engine",
-        [this](const std::vector<std::string> &args) {
-            return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
-                std::map<std::string, std::string> kv_map;
-                rep->query_app_envs(kv_map);
-                return dsn::utils::kv_map_to_string(kv_map, ',', '=');
-            });
-        });
-
-    _useless_dir_reserve_seconds_command = dsn::command_manager::instance().register_app_command(
-        {"useless-dir-reserve-seconds"},
-        "useless-dir-reserve-seconds [num | DEFAULT]",
-        "control gc_disk_error_replica_interval_seconds and "
-        "gc_disk_garbage_replica_interval_seconds",
-        [this](const std::vector<std::string> &args) {
-            std::string result("OK");
-            if (args.empty()) {
-                result = "error_dir_reserve_seconds=" +
-                         std::to_string(_gc_disk_error_replica_interval_seconds) +
-                         ",garbage_dir_reserve_seconds=" +
-                         std::to_string(_gc_disk_garbage_replica_interval_seconds);
-            } else {
-                if (args[0] == "DEFAULT") {
-                    _gc_disk_error_replica_interval_seconds =
-                        _options.gc_disk_error_replica_interval_seconds;
-                    _gc_disk_garbage_replica_interval_seconds =
-                        _options.gc_disk_garbage_replica_interval_seconds;
+void replica_stub::register_ctrl_command()
+{
+    /// In simple_kv test, three replica apps are created, which means that three replica_stubs are
+    /// initialized in simple_kv test. If we don't use std::call_once, these command are registered
+    /// for three times. And in command_manager, one same command is not allowed to be registered
+    /// more than twice times. That is why we use std::call_once here. Same situation in
+    /// failure_detector::register_ctrl_commands and nfs_client_impl::register_cli_commands
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        _kill_partition_command = ::dsn::command_manager::instance().register_command(
+            {"replica.kill_partition"},
+            "kill_partition [app_id [partition_index]]",
+            "kill_partition: kill partitions by (all, one app, one partition)",
+            [this](const std::vector<std::string> &args) {
+                dsn::gpid pid;
+                if (args.size() == 0) {
+                    pid.set_app_id(-1);
+                    pid.set_partition_index(-1);
+                } else if (args.size() == 1) {
+                    pid.set_app_id(atoi(args[0].c_str()));
+                    pid.set_partition_index(-1);
+                } else if (args.size() == 2) {
+                    pid.set_app_id(atoi(args[0].c_str()));
+                    pid.set_partition_index(atoi(args[1].c_str()));
                 } else {
-                    int32_t seconds = 0;
-                    if (!dsn::buf2int32(args[0], seconds) || seconds < 0) {
-                        result = std::string("ERR: invalid arguments");
-                    } else {
-                        _gc_disk_error_replica_interval_seconds = seconds;
-                        _gc_disk_garbage_replica_interval_seconds = seconds;
-                    }
+                    return std::string(ERR_INVALID_PARAMETERS.to_string());
                 }
-            }
-            return result;
-        });
+                dsn::error_code e = this->on_kill_replica(pid);
+                return std::string(e.to_string());
+            });
 
-#ifdef DSN_ENABLE_GPERF
-    _release_tcmalloc_memory_command = ::dsn::command_manager::instance().register_app_command(
-        {"release-tcmalloc-memory"},
-        "release-tcmalloc-memory <true|false>",
-        "release-tcmalloc-memory - control if try to release tcmalloc memory",
-        [this](const std::vector<std::string> &args) {
-            return remote_command_set_bool_flag(
-                _release_tcmalloc_memory, "release-tcmalloc-memory", args);
-        });
+        _deny_client_command = ::dsn::command_manager::instance().register_command(
+            {"replica.deny-client"},
+            "deny-client <true|false>",
+            "deny-client - control if deny client read & write request",
+            [this](const std::vector<std::string> &args) {
+                return remote_command_set_bool_flag(_deny_client, "deny-client", args);
+            });
 
-    _max_reserved_memory_percentage_command = dsn::command_manager::instance().register_app_command(
-        {"mem-release-max-reserved-percentage"},
-        "mem-release-max-reserved-percentage [num | DEFAULT]",
-        "control tcmalloc max reserved but not-used memory percentage",
-        [this](const std::vector<std::string> &args) {
-            std::string result("OK");
-            if (args.empty()) {
-                // show current value
-                result = "mem-release-max-reserved-percentage = " +
-                         std::to_string(_mem_release_max_reserved_mem_percentage);
-                return result;
-            }
-            if (args[0] == "DEFAULT") {
-                // set to default value
-                _mem_release_max_reserved_mem_percentage =
-                    _options.mem_release_max_reserved_mem_percentage;
-                return result;
-            }
-            int32_t percentage = 0;
-            if (!dsn::buf2int32(args[0], percentage) || percentage <= 0 || percentage > 100) {
-                result = std::string("ERR: invalid arguments");
-            } else {
-                _mem_release_max_reserved_mem_percentage = percentage;
-            }
-            return result;
-        });
-#endif
-    _max_concurrent_bulk_load_downloading_count_command =
-        dsn::command_manager::instance().register_app_command(
-            {"max-concurrent-bulk-load-downloading-count"},
-            "max-concurrent-bulk-load-downloading-count [num | DEFAULT]",
-            "control stub max_concurrent_bulk_load_downloading_count",
+        _verbose_client_log_command = ::dsn::command_manager::instance().register_command(
+            {"replica.verbose-client-log"},
+            "verbose-client-log <true|false>",
+            "verbose-client-log - control if print verbose error log when reply read & write "
+            "request",
+            [this](const std::vector<std::string> &args) {
+                return remote_command_set_bool_flag(
+                    _verbose_client_log, "verbose-client-log", args);
+            });
+
+        _verbose_commit_log_command = ::dsn::command_manager::instance().register_command(
+            {"replica.verbose-commit-log"},
+            "verbose-commit-log <true|false>",
+            "verbose-commit-log - control if print verbose log when commit mutation",
+            [this](const std::vector<std::string> &args) {
+                return remote_command_set_bool_flag(
+                    _verbose_commit_log, "verbose-commit-log", args);
+            });
+
+        _trigger_chkpt_command = ::dsn::command_manager::instance().register_command(
+            {"replica.trigger-checkpoint"},
+            "trigger-checkpoint [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+            "trigger-checkpoint - trigger replicas to do checkpoint",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
+                    tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                                     rep->tracker(),
+                                     std::bind(&replica_stub::trigger_checkpoint, this, rep, true),
+                                     rep->get_gpid().thread_hash());
+                    return std::string("triggered");
+                });
+            });
+
+        _query_compact_command = ::dsn::command_manager::instance().register_command(
+            {"replica.query-compact"},
+            "query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+            "query-compact - query full compact status on the underlying storage engine",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(
+                    args, true, [](const replica_ptr &rep) { return rep->query_compact_state(); });
+            });
+
+        _query_app_envs_command = ::dsn::command_manager::instance().register_command(
+            {"replica.query-app-envs"},
+            "query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+            "query-app-envs - query app envs on the underlying storage engine",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    std::map<std::string, std::string> kv_map;
+                    rep->query_app_envs(kv_map);
+                    return dsn::utils::kv_map_to_string(kv_map, ',', '=');
+                });
+            });
+
+        _useless_dir_reserve_seconds_command = dsn::command_manager::instance().register_command(
+            {"replica.useless-dir-reserve-seconds"},
+            "useless-dir-reserve-seconds [num | DEFAULT]",
+            "control gc_disk_error_replica_interval_seconds and "
+            "gc_disk_garbage_replica_interval_seconds",
             [this](const std::vector<std::string> &args) {
                 std::string result("OK");
                 if (args.empty()) {
-                    result = "max_concurrent_bulk_load_downloading_count=" +
-                             std::to_string(_max_concurrent_bulk_load_downloading_count);
-                    return result;
-                }
-
-                if (args[0] == "DEFAULT") {
-                    _max_concurrent_bulk_load_downloading_count =
-                        _options.max_concurrent_bulk_load_downloading_count;
-                    return result;
-                }
-
-                int32_t count = 0;
-                if (!dsn::buf2int32(args[0], count) || count <= 0) {
-                    result = std::string("ERR: invalid arguments");
+                    result = "error_dir_reserve_seconds=" +
+                             std::to_string(_gc_disk_error_replica_interval_seconds) +
+                             ",garbage_dir_reserve_seconds=" +
+                             std::to_string(_gc_disk_garbage_replica_interval_seconds);
                 } else {
-                    _max_concurrent_bulk_load_downloading_count = count;
+                    if (args[0] == "DEFAULT") {
+                        _gc_disk_error_replica_interval_seconds =
+                            _options.gc_disk_error_replica_interval_seconds;
+                        _gc_disk_garbage_replica_interval_seconds =
+                            _options.gc_disk_garbage_replica_interval_seconds;
+                    } else {
+                        int32_t seconds = 0;
+                        if (!dsn::buf2int32(args[0], seconds) || seconds < 0) {
+                            result = std::string("ERR: invalid arguments");
+                        } else {
+                            _gc_disk_error_replica_interval_seconds = seconds;
+                            _gc_disk_garbage_replica_interval_seconds = seconds;
+                        }
+                    }
                 }
                 return result;
             });
+
+#ifdef DSN_ENABLE_GPERF
+        _release_tcmalloc_memory_command = ::dsn::command_manager::instance().register_command(
+            {"replica.release-tcmalloc-memory"},
+            "release-tcmalloc-memory <true|false>",
+            "release-tcmalloc-memory - control if try to release tcmalloc memory",
+            [this](const std::vector<std::string> &args) {
+                return remote_command_set_bool_flag(
+                    _release_tcmalloc_memory, "release-tcmalloc-memory", args);
+            });
+
+        _max_reserved_memory_percentage_command = dsn::command_manager::instance().register_command(
+            {"replica.mem-release-max-reserved-percentage"},
+            "mem-release-max-reserved-percentage [num | DEFAULT]",
+            "control tcmalloc max reserved but not-used memory percentage",
+            [this](const std::vector<std::string> &args) {
+                std::string result("OK");
+                if (args.empty()) {
+                    // show current value
+                    result = "mem-release-max-reserved-percentage = " +
+                             std::to_string(_mem_release_max_reserved_mem_percentage);
+                    return result;
+                }
+                if (args[0] == "DEFAULT") {
+                    // set to default value
+                    _mem_release_max_reserved_mem_percentage =
+                        _options.mem_release_max_reserved_mem_percentage;
+                    return result;
+                }
+                int32_t percentage = 0;
+                if (!dsn::buf2int32(args[0], percentage) || percentage <= 0 || percentage > 100) {
+                    result = std::string("ERR: invalid arguments");
+                } else {
+                    _mem_release_max_reserved_mem_percentage = percentage;
+                }
+                return result;
+            });
+#endif
+        _max_concurrent_bulk_load_downloading_count_command =
+            dsn::command_manager::instance().register_command(
+                {"replica.max-concurrent-bulk-load-downloading-count"},
+                "max-concurrent-bulk-load-downloading-count [num | DEFAULT]",
+                "control stub max_concurrent_bulk_load_downloading_count",
+                [this](const std::vector<std::string> &args) {
+                    std::string result("OK");
+                    if (args.empty()) {
+                        result = "max_concurrent_bulk_load_downloading_count=" +
+                                 std::to_string(_max_concurrent_bulk_load_downloading_count);
+                        return result;
+                    }
+
+                    if (args[0] == "DEFAULT") {
+                        _max_concurrent_bulk_load_downloading_count =
+                            _options.max_concurrent_bulk_load_downloading_count;
+                        return result;
+                    }
+
+                    int32_t count = 0;
+                    if (!dsn::buf2int32(args[0], count) || count <= 0) {
+                        result = std::string("ERR: invalid arguments");
+                    } else {
+                        _max_concurrent_bulk_load_downloading_count = count;
+                    }
+                    return result;
+                });
+    });
 }
 
 std::string
