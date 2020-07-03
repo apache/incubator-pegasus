@@ -47,6 +47,19 @@ public:
         return _bulk_loader->start_download(APP_NAME, CLUSTER, PROVIDER);
     }
 
+    void test_rollback_to_downloading(bulk_load_status::type cur_status)
+    {
+        switch (cur_status) {
+        case bulk_load_status::BLS_PAUSED:
+            mock_group_progress(bulk_load_status::BLS_DOWNLOADING, 30, 100, 100);
+            break;
+        default:
+            return;
+        }
+        create_bulk_load_request(bulk_load_status::BLS_DOWNLOADING);
+        test_start_downloading();
+    }
+
     error_code test_parse_bulk_load_metadata(const std::string &file_path)
     {
         return _bulk_loader->parse_bulk_load_metadata(file_path);
@@ -428,6 +441,26 @@ TEST_F(replica_bulk_loader_test, start_downloading_test)
         ASSERT_EQ(test_start_downloading(), test.expected_err);
         ASSERT_EQ(get_bulk_load_status(), test.expected_status);
         ASSERT_EQ(stub->get_bulk_load_downloading_count(), test.expected_downloading_count);
+    }
+}
+
+// start_downloading unit tests
+TEST_F(replica_bulk_loader_test, rollback_to_downloading_test)
+{
+    fail::cfg("replica_bulk_loader_download_sst_files", "return()");
+
+    // TODO(heyuchen): add other status
+    struct test_struct
+    {
+        bulk_load_status::type status;
+    } tests[]{{bulk_load_status::BLS_PAUSED}};
+
+    for (auto test : tests) {
+        test_rollback_to_downloading(test.status);
+        ASSERT_EQ(get_bulk_load_status(), bulk_load_status::BLS_DOWNLOADING);
+        ASSERT_TRUE(_replica->is_primary_bulk_load_states_cleaned());
+        ASSERT_EQ(_replica->get_ingestion_status(), ingestion_status::IS_INVALID);
+        ASSERT_FALSE(_replica->is_ingestion());
     }
 }
 

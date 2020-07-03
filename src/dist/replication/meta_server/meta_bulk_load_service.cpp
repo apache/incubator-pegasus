@@ -806,6 +806,18 @@ void bulk_load_service::update_partition_status_on_remote_storage_reply(
                 update_app_status_on_remote_storage_unlocked(pid.get_app_id(), new_status);
             }
             break;
+        case bulk_load_status::BLS_DOWNLOADING:
+            if (old_status != new_status) {
+                _partitions_bulk_load_state.erase(pid);
+                _partitions_total_download_progress[pid] = 0;
+                _partitions_cleaned_up[pid] = false;
+                if (--_apps_in_progress_count[pid.get_app_id()] == 0) {
+                    _apps_in_progress_count[pid.get_app_id()] =
+                        _app_bulk_load_info[pid.get_app_id()].partition_count;
+                    ddebug_f("app({}) restart to bulk load", app_name);
+                }
+            }
+            break;
         default:
             break;
         }
@@ -898,7 +910,8 @@ void bulk_load_service::update_app_status_on_remote_storage_reply(const app_bulk
     }
 
     // TODO(heyuchen): add other status
-    if (new_status == bulk_load_status::BLS_PAUSING) {
+    if (new_status == bulk_load_status::BLS_PAUSING ||
+        new_status == bulk_load_status::BLS_DOWNLOADING) {
         for (int i = 0; i < ainfo.partition_count; ++i) {
             update_partition_status_on_remote_storage(
                 ainfo.app_name, gpid(app_id, i), new_status, should_send_request);
@@ -1126,12 +1139,12 @@ void bulk_load_service::on_control_bulk_load(control_bulk_load_rpc rpc)
     switch (control_type) {
     case bulk_load_control_type::BLC_PAUSE: {
         if (app_status != bulk_load_status::BLS_DOWNLOADING) {
-            derror_f("pause bulk load for app({}) failed, can not pause bulk load with status({})",
-                     app_name,
-                     dsn::enum_to_string(app_status));
+            auto hint_msg = fmt::format("can not pause bulk load for app({}) with status({})",
+                                        app_name,
+                                        dsn::enum_to_string(app_status));
+            derror_f("{}", hint_msg);
             response.err = ERR_INVALID_STATE;
-            response.__set_hint_msg(
-                fmt::format("app({}) status={}", app_name, dsn::enum_to_string(app_status)));
+            response.__set_hint_msg(hint_msg);
             return;
         }
         ddebug_f("app({}) start to pause bulk load", app_name);
@@ -1144,7 +1157,23 @@ void bulk_load_service::on_control_bulk_load(control_bulk_load_rpc rpc)
                                    false));
     } break;
     case bulk_load_control_type::BLC_RESTART:
-    // TODO(heyuchen): TBD
+        if (app_status != bulk_load_status::BLS_PAUSED) {
+            auto hint_msg = fmt::format("can not restart bulk load for app({}) with status({})",
+                                        app_name,
+                                        dsn::enum_to_string(app_status));
+            derror_f("{}", hint_msg);
+            response.err = ERR_INVALID_STATE;
+            response.__set_hint_msg(hint_msg);
+            return;
+        }
+        ddebug_f("app({}) restart bulk load", app_name);
+        tasking::enqueue(LPC_META_STATE_NORMAL,
+                         _meta_svc->tracker(),
+                         std::bind(&bulk_load_service::update_app_status_on_remote_storage_unlocked,
+                                   this,
+                                   app_id,
+                                   bulk_load_status::BLS_DOWNLOADING,
+                                   true));
     case bulk_load_control_type::BLC_CANCEL:
     // TODO(heyuchen): TBD
     case bulk_load_control_type::BLC_FORCE_CANCEL:

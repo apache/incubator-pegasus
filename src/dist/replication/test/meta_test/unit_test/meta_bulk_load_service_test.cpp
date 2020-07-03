@@ -180,7 +180,9 @@ TEST_F(bulk_load_service_test, control_bulk_load_test)
         error_code expected_err;
     } tests[] = {
         {bulk_load_control_type::BLC_PAUSE, bulk_load_status::BLS_DOWNLOADING, ERR_OK},
-        {bulk_load_control_type::BLC_PAUSE, bulk_load_status::BLS_DOWNLOADED, ERR_INVALID_STATE}};
+        {bulk_load_control_type::BLC_PAUSE, bulk_load_status::BLS_DOWNLOADED, ERR_INVALID_STATE},
+        {bulk_load_control_type::BLC_RESTART, bulk_load_status::BLS_PAUSED, ERR_OK},
+        {bulk_load_control_type::BLC_RESTART, bulk_load_status::BLS_PAUSING, ERR_INVALID_STATE}};
 
     for (auto test : tests) {
         ASSERT_EQ(control_bulk_load(app->app_id, test.type, test.app_status), test.expected_err);
