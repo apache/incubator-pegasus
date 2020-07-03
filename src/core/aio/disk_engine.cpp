@@ -157,58 +157,6 @@ disk_engine::disk_engine()
     _provider.reset(provider);
 }
 
-disk_file *disk_engine::open(const char *file_name, int flag, int pmode)
-{
-    dsn_handle_t nh = _provider->open(file_name, flag, pmode);
-    if (nh != DSN_INVALID_FILE_HANDLE) {
-        return new disk_file(nh);
-    } else {
-        return nullptr;
-    }
-}
-
-error_code disk_engine::close(disk_file *fh)
-{
-    if (nullptr != fh) {
-        auto df = (disk_file *)fh;
-        auto ret = _provider->close(df->native_handle());
-        delete df;
-        return ret;
-    } else {
-        return ERR_INVALID_HANDLE;
-    }
-}
-
-error_code disk_engine::flush(disk_file *fh)
-{
-    if (nullptr != fh) {
-        auto df = (disk_file *)fh;
-        return _provider->flush(df->native_handle());
-    } else {
-        return ERR_INVALID_HANDLE;
-    }
-}
-
-void disk_engine::read(aio_task *aio)
-{
-    if (!aio->spec().on_aio_call.execute(task::get_current_task(), aio, true)) {
-        aio->enqueue(ERR_FILE_OPERATION_FAILED, 0);
-        return;
-    }
-
-    auto dio = aio->get_aio_context();
-    auto df = (disk_file *)dio->file;
-    dio->file = df->native_handle();
-    dio->file_object = df;
-    dio->engine = this;
-    dio->type = AIO_Read;
-
-    auto wk = df->read(aio);
-    if (wk) {
-        return _provider->submit_aio_task(wk);
-    }
-}
-
 class batch_write_io_task : public aio_task
 {
 public:

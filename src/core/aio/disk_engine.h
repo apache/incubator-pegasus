@@ -70,15 +70,10 @@ private:
 class disk_engine : public utils::singleton<disk_engine>
 {
 public:
-    // asynchronous file read/write
-    disk_file *open(const char *file_name, int flag, int pmode);
-    error_code close(disk_file *fh);
-    error_code flush(disk_file *fh);
-    void read(aio_task *aio);
     void write(aio_task *aio);
 
-    aio_context *prepare_aio_context(aio_task *tsk) { return _provider->prepare_aio_context(tsk); }
     service_node *node() const { return _node; }
+    static aio_provider &provider() { return *instance()._provider.get(); }
 
 private:
     // the object of disk_engine must be created by `singleton::instance`

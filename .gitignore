@@ -29,3 +29,4 @@ thirdparty/src
 thirdparty/output
 
 packages/
+cmake-build-debug/
