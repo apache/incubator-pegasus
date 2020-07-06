@@ -172,7 +172,6 @@ TEST_F(bulk_load_service_test, control_bulk_load_test)
     fail::setup();
     fail::cfg("meta_update_app_status_on_remote_storage_unlocked", "return()");
 
-    // TODO(heyuchen): add restart/cancel/force_cancel test cases
     struct control_test
     {
         bulk_load_control_type::type type;
@@ -182,7 +181,11 @@ TEST_F(bulk_load_service_test, control_bulk_load_test)
         {bulk_load_control_type::BLC_PAUSE, bulk_load_status::BLS_DOWNLOADING, ERR_OK},
         {bulk_load_control_type::BLC_PAUSE, bulk_load_status::BLS_DOWNLOADED, ERR_INVALID_STATE},
         {bulk_load_control_type::BLC_RESTART, bulk_load_status::BLS_PAUSED, ERR_OK},
-        {bulk_load_control_type::BLC_RESTART, bulk_load_status::BLS_PAUSING, ERR_INVALID_STATE}};
+        {bulk_load_control_type::BLC_RESTART, bulk_load_status::BLS_PAUSING, ERR_INVALID_STATE},
+        {bulk_load_control_type::BLC_CANCEL, bulk_load_status::BLS_DOWNLOADING, ERR_OK},
+        {bulk_load_control_type::BLC_CANCEL, bulk_load_status::BLS_PAUSED, ERR_OK},
+        {bulk_load_control_type::BLC_CANCEL, bulk_load_status::BLS_INGESTING, ERR_INVALID_STATE},
+        {bulk_load_control_type::BLC_FORCE_CANCEL, bulk_load_status::BLS_SUCCEED, ERR_OK}};
 
     for (auto test : tests) {
         ASSERT_EQ(control_bulk_load(app->app_id, test.type, test.app_status), test.expected_err);
@@ -416,6 +419,20 @@ TEST_F(bulk_load_process_test, succeed_all_finished)
 {
     mock_response_cleaned_up_flag(true, bulk_load_status::BLS_SUCCEED);
     test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_SUCCEED);
+    ASSERT_FALSE(app_is_bulk_loading(APP_NAME));
+}
+
+TEST_F(bulk_load_process_test, cancel_not_all_finished)
+{
+    mock_response_cleaned_up_flag(false, bulk_load_status::BLS_CANCELED);
+    test_on_partition_bulk_load_reply(_partition_count, bulk_load_status::BLS_CANCELED);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_CANCELED);
+}
+
+TEST_F(bulk_load_process_test, cancel_all_finished)
+{
+    mock_response_cleaned_up_flag(true, bulk_load_status::BLS_CANCELED);
+    test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_CANCELED);
     ASSERT_FALSE(app_is_bulk_loading(APP_NAME));
 }
 

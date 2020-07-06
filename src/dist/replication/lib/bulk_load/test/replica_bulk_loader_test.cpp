@@ -523,9 +523,6 @@ TEST_F(replica_bulk_loader_test, bulk_load_finish_test)
     //  istatus, is_ingestion, create_dir will be used in further tests
     // - failed during downloading
     // - failed during ingestion
-    // - cancel during downloaded
-    // - cancel during ingestion
-    // - cancel during succeed
     struct test_struct
     {
         bulk_load_status::type local_status;
@@ -545,7 +542,25 @@ TEST_F(replica_bulk_loader_test, bulk_load_finish_test)
                ingestion_status::IS_INVALID,
                false,
                bulk_load_status::BLS_SUCCEED,
-               false}};
+               false},
+              {bulk_load_status::BLS_DOWNLOADED,
+               100,
+               ingestion_status::IS_INVALID,
+               false,
+               bulk_load_status::BLS_CANCELED,
+               true},
+              {bulk_load_status::BLS_INGESTING,
+               100,
+               ingestion_status::type::IS_RUNNING,
+               true,
+               bulk_load_status::BLS_CANCELED,
+               true},
+              {bulk_load_status::BLS_SUCCEED,
+               100,
+               ingestion_status::IS_INVALID,
+               false,
+               bulk_load_status::BLS_CANCELED,
+               true}};
 
     for (auto test : tests) {
         if (test.create_dir) {
