@@ -712,15 +712,21 @@ void bulk_load_service::try_rollback_to_downloading(const std::string &app_name,
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::handle_bulk_load_failed(int32_t app_id)
 {
-    // TODO(heyuchen): TBD
-    // replica meets serious error during bulk load, such as file on remote storage is damaged
-    // should stop bulk load process, set bulk load failed
+    zauto_write_lock l(_lock);
+    if (!_apps_cleaning_up[app_id]) {
+        _apps_cleaning_up[app_id] = true;
+        update_app_status_on_remote_storage_unlocked(app_id, bulk_load_status::BLS_FAILED);
+    }
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::handle_app_unavailable(int32_t app_id, const std::string &app_name)
 {
-    // TODO(heyuchen): TBD
+    zauto_write_lock l(_lock);
+    if (is_app_bulk_loading_unlocked(app_id) && !_apps_cleaning_up[app_id]) {
+        _apps_cleaning_up[app_id] = true;
+        remove_bulk_load_dir_on_remote_storage(app_id, app_name);
+    }
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
@@ -799,7 +805,6 @@ void bulk_load_service::update_partition_status_on_remote_storage_reply(
                  dsn::enum_to_string(old_status),
                  dsn::enum_to_string(new_status));
 
-        // TODO(heyuchen): add other status
         switch (new_status) {
         case bulk_load_status::BLS_DOWNLOADED:
         case bulk_load_status::BLS_INGESTING:
@@ -822,6 +827,7 @@ void bulk_load_service::update_partition_status_on_remote_storage_reply(
             }
             break;
         default:
+            // do nothing in other status
             break;
         }
     }
@@ -912,10 +918,10 @@ void bulk_load_service::update_app_status_on_remote_storage_reply(const app_bulk
         }
     }
 
-    // TODO(heyuchen): add other status
     if (new_status == bulk_load_status::BLS_PAUSING ||
         new_status == bulk_load_status::BLS_DOWNLOADING ||
-        new_status == bulk_load_status::BLS_CANCELED) {
+        new_status == bulk_load_status::BLS_CANCELED ||
+        new_status == bulk_load_status::BLS_FAILED) {
         for (int i = 0; i < ainfo.partition_count; ++i) {
             update_partition_status_on_remote_storage(
                 ainfo.app_name, gpid(app_id, i), new_status, should_send_request);
@@ -1088,7 +1094,7 @@ void bulk_load_service::reset_local_bulk_load_states(int32_t app_id, const std::
     erase_map_elem_by_id(app_id, _partition_bulk_load_info);
     erase_map_elem_by_id(app_id, _partitions_total_download_progress);
     erase_map_elem_by_id(app_id, _partitions_cleaned_up);
-    // TODO(heyuchen): add other varieties
+    _apps_cleaning_up.erase(app_id);
     _bulk_load_app_id.erase(app_id);
     ddebug_f("reset local app({}) bulk load context", app_name);
 }

@@ -350,15 +350,25 @@ public:
 
 /// on_partition_bulk_load_reply unit tests
 
-// TODO(heyuchen):
-// add `downloading_fs_error` unit tests after implement function `handle_bulk_load_failed`
-// add `downloading_corrupt` unit tests after implement function `handle_bulk_load_failed`
+TEST_F(bulk_load_process_test, downloading_fs_error)
+{
+    test_on_partition_bulk_load_reply(
+        _partition_count, bulk_load_status::BLS_DOWNLOADING, ERR_FS_INTERNAL);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_FAILED);
+}
 
 TEST_F(bulk_load_process_test, downloading_busy)
 {
     test_on_partition_bulk_load_reply(
         _partition_count, bulk_load_status::BLS_DOWNLOADING, ERR_BUSY);
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_DOWNLOADING);
+}
+
+TEST_F(bulk_load_process_test, downloading_corrupt)
+{
+    mock_response_progress(ERR_CORRUPTION, false);
+    test_on_partition_bulk_load_reply(_partition_count, bulk_load_status::BLS_DOWNLOADING);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_FAILED);
 }
 
 TEST_F(bulk_load_process_test, downloading_report_metadata)
@@ -399,7 +409,12 @@ TEST_F(bulk_load_process_test, ingestion_running)
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
 }
 
-// TODO(heyuchen): add ingestion_error unit tests after implement function `handle_app_failed`
+TEST_F(bulk_load_process_test, ingestion_error)
+{
+    mock_response_ingestion_status(ingestion_status::IS_FAILED);
+    test_on_partition_bulk_load_reply(_partition_count, bulk_load_status::BLS_INGESTING);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_FAILED);
+}
 
 TEST_F(bulk_load_process_test, normal_succeed)
 {
@@ -436,7 +451,19 @@ TEST_F(bulk_load_process_test, cancel_all_finished)
     ASSERT_FALSE(app_is_bulk_loading(APP_NAME));
 }
 
-// TODO(heyuchen): add half cleanup test while failed
+TEST_F(bulk_load_process_test, failed_not_all_finished)
+{
+    mock_response_cleaned_up_flag(false, bulk_load_status::BLS_FAILED);
+    test_on_partition_bulk_load_reply(_partition_count, bulk_load_status::BLS_FAILED);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_FAILED);
+}
+
+TEST_F(bulk_load_process_test, failed_all_finished)
+{
+    mock_response_cleaned_up_flag(true, bulk_load_status::BLS_FAILED);
+    test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_FAILED);
+    ASSERT_FALSE(app_is_bulk_loading(APP_NAME));
+}
 
 TEST_F(bulk_load_process_test, pausing)
 {
@@ -457,7 +484,6 @@ TEST_F(bulk_load_process_test, pause_succeed)
 /// on_partition_ingestion_reply unit tests
 // TODO(heyuchen):
 // add ingest_rpc_error unit tests after implement function `rollback_downloading`
-// add ingest_wrong unit tests after implement function `handle_app_failed`
 
 TEST_F(bulk_load_process_test, ingest_empty_write_error)
 {
@@ -465,6 +491,14 @@ TEST_F(bulk_load_process_test, ingest_empty_write_error)
     mock_ingestion_context(ERR_TRY_AGAIN, 11, _partition_count);
     test_on_partition_ingestion_reply(_ingestion_resp, gpid(_app_id, _pidx));
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
+}
+
+TEST_F(bulk_load_process_test, ingest_wrong)
+{
+    mock_ingestion_context(ERR_OK, 1, _partition_count);
+    test_on_partition_ingestion_reply(_ingestion_resp, gpid(_app_id, _pidx));
+    wait_all();
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_FAILED);
 }
 
 TEST_F(bulk_load_process_test, ingest_succeed)

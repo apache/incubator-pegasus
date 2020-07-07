@@ -233,10 +233,13 @@ error_code replica_bulk_loader::do_bulk_load(const std::string &app_name,
     case bulk_load_status::BLS_PAUSING:
         pause_bulk_load();
         break;
-    case bulk_load_status::BLS_CANCELED: {
+    case bulk_load_status::BLS_CANCELED:
         handle_bulk_load_finish(bulk_load_status::BLS_CANCELED);
-    } break;
-    // TODO(heyuchen): add other bulk load status
+        break;
+    case bulk_load_status::BLS_FAILED:
+        handle_bulk_load_finish(bulk_load_status::BLS_FAILED);
+        // TODO(heyuchen): add perf-counter here
+        break;
     default:
         break;
     }
@@ -604,12 +607,12 @@ void replica_bulk_loader::report_bulk_load_states_to_meta(bulk_load_status::type
         break;
     case bulk_load_status::BLS_SUCCEED:
     case bulk_load_status::BLS_CANCELED:
+    case bulk_load_status::BLS_FAILED:
         report_group_cleaned_up(response);
         break;
     case bulk_load_status::BLS_PAUSING:
         report_group_is_paused(response);
         break;
-    // TODO(heyuchen): add other status
     default:
         break;
     }
@@ -795,12 +798,12 @@ void replica_bulk_loader::report_bulk_load_states_to_primary(
         break;
     case bulk_load_status::BLS_SUCCEED:
     case bulk_load_status::BLS_CANCELED:
+    case bulk_load_status::BLS_FAILED:
         bulk_load_state.__set_is_cleaned_up(is_cleaned_up());
         break;
     case bulk_load_status::BLS_PAUSING:
         bulk_load_state.__set_is_paused(local_status == bulk_load_status::BLS_PAUSED);
         break;
-    // TODO(heyuchen): add other status
     default:
         break;
     }
