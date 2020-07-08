@@ -57,45 +57,18 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
 {
     static char s_level_char[] = "IDWEF";
 
-    uint64_t ts = 0;
-    if (::dsn::tools::is_engine_ready())
-        ts = dsn_now_ns();
-
+    uint64_t ts = dsn_now_ns();
     char str[24];
-    ::dsn::utils::time_ms_to_string(ts / 1000000, str);
+    dsn::utils::time_ms_to_string(ts / 1000000, str);
 
-    int tid = ::dsn::utils::get_current_tid();
-
-    fprintf(fp, "%c%s (%" PRIu64 " %04x) ", s_level_char[log_level], str, ts, tid);
-
-    auto t = task::get_current_task_id();
-    if (t) {
-        if (nullptr != task::get_current_worker2()) {
-            fprintf(fp,
-                    "%6s.%7s%d.%016" PRIx64 ": ",
-                    task::get_current_node_name(),
-                    task::get_current_worker2()->pool_spec().name.c_str(),
-                    task::get_current_worker2()->index(),
-                    t);
-        } else {
-            fprintf(fp,
-                    "%6s.%7s.%05d.%016" PRIx64 ": ",
-                    task::get_current_node_name(),
-                    "io-thrd",
-                    tid,
-                    t);
-        }
-    } else {
-        if (nullptr != task::get_current_worker2()) {
-            fprintf(fp,
-                    "%6s.%7s%u: ",
-                    task::get_current_node_name(),
-                    task::get_current_worker2()->pool_spec().name.c_str(),
-                    task::get_current_worker2()->index());
-        } else {
-            fprintf(fp, "%6s.%7s.%05d: ", task::get_current_node_name(), "io-thrd", tid);
-        }
-    }
+    int tid = dsn::utils::get_current_tid();
+    fprintf(fp,
+            "%c%s (%" PRIu64 " %04x) %s",
+            s_level_char[log_level],
+            str,
+            ts,
+            tid,
+            log_prefixed_message_func().c_str());
 }
 
 screen_logger::screen_logger(bool short_header) : logging_provider("./")

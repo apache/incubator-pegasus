@@ -39,7 +39,6 @@
 #include <stdarg.h>
 
 namespace dsn {
-
 /*!
 @addtogroup tool-api-providers
 @{
@@ -87,6 +86,6 @@ private:
     static logging_provider *create_default_instance();
 };
 
-/*@}*/
-// ----------------------- inline implementation ---------------------------------------
+void set_log_prefixed_message_func(std::function<std::string()> func);
+extern std::function<std::string()> log_prefixed_message_func;
 } // namespace dsn
