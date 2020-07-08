@@ -88,6 +88,9 @@ private:
     void report_bulk_load_states_to_primary(bulk_load_status::type remote_status,
                                             /*out*/ group_bulk_load_response &response);
 
+    // called by `update_local_configuration` to do possible states cleaning up
+    void clear_bulk_load_states_if_needed(partition_status::type new_status);
+
     ///
     /// bulk load path on remote file provider:
     /// <bulk_load_root>/<cluster_name>/<app_name>/{bulk_load_info}

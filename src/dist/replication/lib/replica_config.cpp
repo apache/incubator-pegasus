@@ -38,6 +38,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include "bulk_load/replica_bulk_loader.h"
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/utility/fail_point.h>
@@ -748,6 +749,8 @@ bool replica::update_local_configuration(const replica_configuration &config,
             "%" PRId64 " VS %" PRId64 "",
             max_prepared_decree(),
             last_committed_decree());
+
+    _bulk_loader->clear_bulk_load_states_if_needed(config.status);
 
     // Notice: there has five ways that primary can change its partition_status
     //   1, primary change partition config, such as add/remove secondary

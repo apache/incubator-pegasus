@@ -154,6 +154,15 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status::typ
     }
 }
 
+void primary_context::reset_node_bulk_load_states(const rpc_address &node)
+{
+    secondary_bulk_load_states[node].__set_download_progress(0);
+    secondary_bulk_load_states[node].__set_download_status(ERR_OK);
+    secondary_bulk_load_states[node].__set_ingest_status(ingestion_status::IS_INVALID);
+    secondary_bulk_load_states[node].__set_is_cleaned_up(false);
+    secondary_bulk_load_states[node].__set_is_paused(false);
+}
+
 void primary_context::cleanup_bulk_load_states()
 {
     secondary_bulk_load_states.erase(secondary_bulk_load_states.begin(),

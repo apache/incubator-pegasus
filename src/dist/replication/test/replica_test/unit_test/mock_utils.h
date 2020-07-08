@@ -147,6 +147,10 @@ public:
     {
         _primary_states.membership = pconfig;
     }
+    partition_bulk_load_state get_secondary_bulk_load_state(const rpc_address &node)
+    {
+        return _primary_states.secondary_bulk_load_states[node];
+    }
     void set_secondary_bulk_load_state(const rpc_address &node,
                                        const partition_bulk_load_state &state)
     {

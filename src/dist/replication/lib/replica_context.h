@@ -97,6 +97,9 @@ public:
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
 
+    // reset bulk load states in secondary_bulk_load_states by node address
+    void reset_node_bulk_load_states(const rpc_address &node);
+
     void cleanup_bulk_load_states();
 
 public:
