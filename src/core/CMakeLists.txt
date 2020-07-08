@@ -2,7 +2,6 @@ add_subdirectory(core)
 add_subdirectory(perf_counter)
 add_subdirectory(tools)
 add_subdirectory(tests)
-add_subdirectory(aio)
 add_subdirectory(rpc)
 add_subdirectory(task)
 
