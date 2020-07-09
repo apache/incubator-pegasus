@@ -53,7 +53,6 @@ namespace replication {
 class server_state;
 class meta_server_failure_detector;
 class server_load_balancer;
-class replication_checker;
 class meta_duplication_service;
 class meta_split_service;
 class bulk_load_service;
@@ -227,7 +226,6 @@ private:
     bool check_freeze() const;
 
 private:
-    friend class replication_checker;
     friend class test::test_checker;
     friend class meta_service_test_app;
     friend class bulk_load_service_test;

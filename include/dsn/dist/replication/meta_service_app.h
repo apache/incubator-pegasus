@@ -42,7 +42,6 @@ class version_http_service;
 namespace replication {
 
 class meta_service;
-class replication_checker;
 
 namespace test {
 class test_checker;
@@ -70,7 +69,6 @@ public:
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
 private:
-    friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
     std::unique_ptr<dsn::replication::meta_service> _service;
     std::unique_ptr<http_server> _http_server;

@@ -61,7 +61,6 @@ namespace replication {
 
 class replication_app_base;
 class replica_stub;
-class replication_checker;
 class replica_duplicator_manager;
 class replica_backup_manager;
 class replica_bulk_loader;
@@ -439,7 +438,6 @@ private:
     void init_table_level_latency_counters();
 
 private:
-    friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
     friend class ::dsn::replication::replica_stub;

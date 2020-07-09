@@ -51,7 +51,6 @@
 namespace dsn {
 namespace replication {
 
-class replication_checker;
 namespace test {
 class test_checker;
 }
@@ -293,7 +292,6 @@ private:
     void transition_staging_state(std::shared_ptr<app_state> &app);
 
 private:
-    friend class replication_checker;
     friend class test::test_checker;
     friend class meta_service_test_app;
     friend class meta_test_base;

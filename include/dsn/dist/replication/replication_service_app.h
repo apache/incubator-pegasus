@@ -45,7 +45,6 @@ class version_http_service;
 
 namespace replication {
 
-class replication_checker;
 namespace test {
 class test_checker;
 }
@@ -70,7 +69,6 @@ public:
     on_intercepted_request(dsn::gpid gpid, bool is_write, dsn::message_ex *msg) override;
 
 private:
-    friend class ::dsn::replication::replication_checker;
     friend class ::dsn::replication::test::test_checker;
     replica_stub_ptr _stub;
     std::unique_ptr<http_server> _http_server;

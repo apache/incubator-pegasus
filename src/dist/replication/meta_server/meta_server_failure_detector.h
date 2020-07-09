@@ -120,7 +120,6 @@ private:
     // meta_service need to visit the failure_detector's lock
     friend class meta_service;
 
-    friend class replication_checker;
     friend class test::test_checker;
 
     // initialize in the constructor
