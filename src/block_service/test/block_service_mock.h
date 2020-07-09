@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "dist/block_service/block_service_manager.h"
+#include "block_service/block_service_manager.h"
 
 #include <dsn/dist/block_service.h>
 #include <dsn/utility/filesystem.h>

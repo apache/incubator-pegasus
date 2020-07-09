@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "block_service_mock.h"
-#include "dist/block_service/block_service_manager.h"
+#include "block_service/block_service_manager.h"
 
 #include <fstream>
 

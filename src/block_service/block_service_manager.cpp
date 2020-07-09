@@ -3,8 +3,8 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "block_service_manager.h"
-#include "fds/fds_service.h"
-#include "local/local_service.h"
+#include "block_service/fds/fds_service.h"
+#include "block_service/local/local_service.h"
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/factory_store.h>

@@ -6,7 +6,7 @@
 #include <memory>
 #include <fstream>
 
-#include "dist/block_service/fds/fds_service.h"
+#include "block_service/fds/fds_service.h"
 
 using namespace dsn;
 using namespace dsn::dist::block_service;
@@ -876,69 +876,3 @@ TEST_F(FDSClientTest, test_concurrent_upload_download)
         }
     }
 }
-
-// TEST_F(FDSClientTest, test_max_file_size)
-//{
-//    char block[1024];
-//    const char *str = "test_str";
-//    for (int i = 0; i < 128; ++i) {
-//        memcpy(block + i * 8, str, 8);
-//    }
-//
-//    std::shared_ptr<fds_service> _service = std::make_shared<fds_service>();
-//    std::vector<std::string> init_str = {server_address, access_key, access_secret, bucket_name};
-//
-//    if (server_address == example_server_address) {
-//        // user don't specify the server-address, we just return true
-//        return;
-//    }
-//    _service->initialize(init_str);
-//
-//    create_file_response cf_resp;
-//    _service
-//        ->create_file(create_file_request{"upload_test", true},
-//                      lpc_btest,
-//                      [&cf_resp](const create_file_response &r) { cf_resp = r; },
-//                      nullptr)
-//        ->wait();
-//
-//    ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
-//    ASSERT_NE(nullptr, cf_resp.file_handle.get());
-//
-//    unsigned long prev_size = 32 * 1024;
-//    unsigned long new_size = prev_size * 2;
-//    unsigned long ceiling = 0;
-//
-//    while (new_size > prev_size) {
-//        generate_file("test_local_file", new_size, block, 1024);
-//        upload_response u_resp;
-//
-//        uint64_t start = dsn_now_ms();
-//        cf_resp.file_handle
-//            ->upload(upload_request{"test_local_file"},
-//                     lpc_btest,
-//                     [&u_resp](const upload_response &r) { u_resp = r; },
-//                     nullptr)
-//            ->wait();
-//        uint64_t end = dsn_now_ms();
-//
-//        if (u_resp.err == dsn::ERR_OK && u_resp.uploaded_size == new_size) {
-//            printf("upload a file with size %lf MB succeed, time consume %lf sec\n",
-//                   new_size / (1024.0 * 1024.0),
-//                   (end - start) / 1000.0);
-//            if (ceiling == 0) {
-//                prev_size = new_size;
-//                new_size *= 2;
-//            } else {
-//                prev_size = new_size;
-//                new_size = (ceiling + prev_size) / 2;
-//            }
-//        } else {
-//            printf("upload a file with size %lf MB failed, time consume %lf sec\n",
-//                   new_size / (1024.0 * 1024.0),
-//                   (end - start) / 1000.0);
-//            ceiling = new_size;
-//            new_size = (ceiling + prev_size) / 2;
-//        }
-//    }
-//}

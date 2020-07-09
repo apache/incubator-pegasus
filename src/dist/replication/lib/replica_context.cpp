@@ -41,7 +41,7 @@
 #include "replica_stub.h"
 #include "mutation.h"
 #include "mutation_log.h"
-#include "dist/block_service/block_service_manager.h"
+#include "block_service/block_service_manager.h"
 
 namespace dsn {
 namespace replication {

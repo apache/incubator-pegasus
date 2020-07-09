@@ -11,7 +11,7 @@
 #include <dsn/dist/block_service.h>
 #include "dist/replication/lib/replica_context.h"
 #include "dist/replication/test/replica_test/unit_test/replication_service_test_app.h"
-#include "dist/block_service/test/block_service_mock.h"
+#include "block_service/test/block_service_mock.h"
 
 using namespace ::dsn;
 using namespace ::dsn::dist::block_service;

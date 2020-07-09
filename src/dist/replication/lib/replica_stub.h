@@ -40,7 +40,7 @@
 
 #include "dist/replication/common/replication_common.h"
 #include "dist/replication/common/fs_manager.h"
-#include "dist/block_service/block_service_manager.h"
+#include "block_service/block_service_manager.h"
 #include "replica.h"
 
 namespace dsn {

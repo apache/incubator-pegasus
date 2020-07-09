@@ -45,7 +45,7 @@
 #include "dist/replication/meta_server/meta_options.h"
 #include "dist/replication/meta_server/meta_backup_service.h"
 #include "dist/replication/meta_server/meta_state_service_utils.h"
-#include "dist/block_service/block_service_manager.h"
+#include "block_service/block_service_manager.h"
 
 namespace dsn {
 namespace replication {
