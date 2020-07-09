@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.failure_detector.multimaster)
+set(MY_PROJ_NAME dsn.failure_detector)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -15,3 +15,6 @@ set(MY_PROJ_LIBS "")
 set(MY_BINPLACES "")
 
 dsn_add_static_library()
+
+add_subdirectory(tests)
+

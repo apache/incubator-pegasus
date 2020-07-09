@@ -30,7 +30,7 @@ thrift_description = [
     },
     {
         "name": "fd",
-        "path": "src/dist/failure_detector",
+        "path": "src/failure_detector",
         "file_move": {
             "_types.h": "include/dsn/dist/failure_detector"
         },
