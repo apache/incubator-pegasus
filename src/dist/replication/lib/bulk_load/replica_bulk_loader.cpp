@@ -233,9 +233,10 @@ error_code replica_bulk_loader::do_bulk_load(const std::string &app_name,
 
     switch (meta_status) {
     case bulk_load_status::BLS_DOWNLOADING:
-        // TODO(heyuchen): add restart downloading status check
         if (local_status == bulk_load_status::BLS_INVALID ||
-            local_status == bulk_load_status::BLS_PAUSED) {
+            local_status == bulk_load_status::BLS_PAUSED ||
+            local_status == bulk_load_status::BLS_INGESTING ||
+            local_status == bulk_load_status::BLS_SUCCEED) {
             ec = start_download(app_name, cluster_name, provider_name);
         }
         break;

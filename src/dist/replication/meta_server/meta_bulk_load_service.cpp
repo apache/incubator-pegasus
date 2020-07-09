@@ -705,8 +705,19 @@ void bulk_load_service::handle_app_pausing(const bulk_load_response &response,
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::try_rollback_to_downloading(const std::string &app_name, const gpid &pid)
 {
-    // TODO(heyuchen): TBD
-    // replica meets error during bulk load, rollback to downloading to retry bulk load
+    zauto_read_lock l(_lock);
+    const auto app_status = get_app_bulk_load_status_unlocked(pid.get_app_id());
+    if (app_status == bulk_load_status::BLS_DOWNLOADING ||
+        app_status == bulk_load_status::BLS_DOWNLOADED ||
+        app_status == bulk_load_status::BLS_INGESTING ||
+        app_status == bulk_load_status::BLS_SUCCEED) {
+        update_app_status_on_remote_storage_unlocked(pid.get_app_id(),
+                                                     bulk_load_status::type::BLS_DOWNLOADING);
+    } else {
+        ddebug_f("app({}) status={}, no need to rollback to downloading, wait for next round",
+                 app_name,
+                 dsn::enum_to_string(app_status));
+    }
 }
 
 // ThreadPool: THREAD_POOL_META_STATE

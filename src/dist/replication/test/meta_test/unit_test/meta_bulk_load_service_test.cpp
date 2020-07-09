@@ -125,6 +125,11 @@ public:
         bulk_svc().reset_local_bulk_load_states(app_id, app_name);
     }
 
+    int32_t get_app_in_process_count(int32_t app_id)
+    {
+        return bulk_svc()._apps_in_progress_count[app_id];
+    }
+
 public:
     int32_t APP_ID = 1;
     std::string APP_NAME = "bulk_load_test";
@@ -479,11 +484,39 @@ TEST_F(bulk_load_process_test, pause_succeed)
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_PAUSED);
 }
 
-// TODO(heyuchen): add other unit tests for `on_partition_bulk_load_reply`
+TEST_F(bulk_load_process_test, rpc_error)
+{
+    mock_meta_bulk_load_context(_app_id, _partition_count, bulk_load_status::BLS_DOWNLOADED);
+    create_request(bulk_load_status::BLS_DOWNLOADED);
+    on_partition_bulk_load_reply(ERR_TIMEOUT, _req, _resp);
+    wait_all();
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_DOWNLOADING);
+    ASSERT_EQ(get_app_in_process_count(_app_id), _partition_count);
+}
+
+TEST_F(bulk_load_process_test, response_invalid_state)
+{
+    test_on_partition_bulk_load_reply(
+        _partition_count, bulk_load_status::BLS_SUCCEED, ERR_INVALID_STATE);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_DOWNLOADING);
+    ASSERT_EQ(get_app_in_process_count(_app_id), _partition_count);
+}
+
+TEST_F(bulk_load_process_test, response_object_not_found)
+{
+    test_on_partition_bulk_load_reply(
+        _partition_count, bulk_load_status::BLS_CANCELED, ERR_OBJECT_NOT_FOUND);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_CANCELED);
+    ASSERT_EQ(get_app_in_process_count(_app_id), _partition_count);
+}
 
 /// on_partition_ingestion_reply unit tests
-// TODO(heyuchen):
-// add ingest_rpc_error unit tests after implement function `rollback_downloading`
+TEST_F(bulk_load_process_test, ingest_rpc_error)
+{
+    mock_ingestion_context(ERR_OK, 1, _partition_count);
+    test_on_partition_ingestion_reply(_ingestion_resp, gpid(_app_id, _pidx), ERR_TIMEOUT);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_DOWNLOADING);
+}
 
 TEST_F(bulk_load_process_test, ingest_empty_write_error)
 {

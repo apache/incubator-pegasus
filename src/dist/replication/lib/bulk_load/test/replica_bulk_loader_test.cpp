@@ -53,6 +53,13 @@ public:
         case bulk_load_status::BLS_PAUSED:
             mock_group_progress(bulk_load_status::BLS_DOWNLOADING, 30, 100, 100);
             break;
+        case bulk_load_status::BLS_INGESTING:
+            mock_group_ingestion_states(
+                ingestion_status::IS_SUCCEED, ingestion_status::IS_SUCCEED, true);
+            break;
+        case bulk_load_status::BLS_SUCCEED:
+            mock_group_cleanup_flag(bulk_load_status::BLS_SUCCEED);
+            break;
         default:
             return;
         }
@@ -481,12 +488,12 @@ TEST_F(replica_bulk_loader_test, start_downloading_test)
 TEST_F(replica_bulk_loader_test, rollback_to_downloading_test)
 {
     fail::cfg("replica_bulk_loader_download_sst_files", "return()");
-
-    // TODO(heyuchen): add other status
     struct test_struct
     {
         bulk_load_status::type status;
-    } tests[]{{bulk_load_status::BLS_PAUSED}};
+    } tests[]{{bulk_load_status::BLS_PAUSED},
+              {bulk_load_status::BLS_INGESTING},
+              {bulk_load_status::BLS_SUCCEED}};
 
     for (auto test : tests) {
         test_rollback_to_downloading(test.status);
