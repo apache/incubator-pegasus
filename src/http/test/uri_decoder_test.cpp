@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/utility/error_code.h>
-#include <dist/http/uri_decoder.h>
+#include <http/uri_decoder.h>
 
 namespace dsn {
 namespace uri {

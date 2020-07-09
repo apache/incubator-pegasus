@@ -32,7 +32,7 @@
 #include "distributed_lock_service_simple.h"
 #include "meta_state_service_simple.h"
 
-#include "dist/http/server_info_http_services.h"
+#include "http/server_info_http_services.h"
 #include "dist/replication/zookeeper/distributed_lock_service_zookeeper.h"
 #include "dist/replication/zookeeper/meta_state_service_zookeeper.h"
 
