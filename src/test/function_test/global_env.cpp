@@ -14,7 +14,6 @@
 #include <arpa/inet.h>
 
 #include "global_env.h"
-global_env global_env::inst;
 
 global_env::global_env()
 {
