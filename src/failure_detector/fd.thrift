@@ -1,4 +1,4 @@
-include "../../dsn.thrift"
+include "../dsn.thrift"
 
 namespace cpp dsn.fd
 
