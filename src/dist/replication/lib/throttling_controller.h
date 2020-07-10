@@ -31,8 +31,6 @@
 
 namespace dsn {
 
-class message_ex;
-
 namespace replication {
 
 // Used for replica throttling.
@@ -83,7 +81,7 @@ public:
     // do throttling control, return throttling type.
     // 'delay_ms' is set when the return type is not PASS.
     throttling_type
-    control(const message_ex *request, int32_t request_units, /*out*/ int64_t &delay_ms);
+    control(const int64_t client_timeout_ms, int32_t request_units, /*out*/ int64_t &delay_ms);
 
 private:
     friend class throttling_controller_test;

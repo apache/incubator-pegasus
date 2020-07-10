@@ -29,7 +29,6 @@
 #include <dsn/c/api_layer1.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/utility/strings.h>
-#include <dsn/tool-api/rpc_message.h>
 
 namespace dsn {
 namespace replication {
@@ -150,8 +149,8 @@ void throttling_controller::reset(bool &changed, std::string &old_env_value)
     }
 }
 
-throttling_controller::throttling_type
-throttling_controller::control(const message_ex *request, int32_t request_units, int64_t &delay_ms)
+throttling_controller::throttling_type throttling_controller::control(
+    const int64_t client_timeout_ms, int32_t request_units, int64_t &delay_ms)
 {
     int64_t now_s = dsn_now_s();
     if (now_s != _last_request_time) {
@@ -161,18 +160,16 @@ throttling_controller::control(const message_ex *request, int32_t request_units,
     _cur_units += request_units;
     if (_reject_units > 0 && _cur_units > _reject_units) {
         _cur_units -= request_units;
-        int64_t client_timeout = request->header->client.timeout_ms;
-        if (client_timeout > 0) {
-            delay_ms = std::min(_reject_delay_ms, client_timeout / 2);
+        if (client_timeout_ms > 0) {
+            delay_ms = std::min(_reject_delay_ms, client_timeout_ms / 2);
         } else {
             delay_ms = _reject_delay_ms;
         }
         return REJECT;
     }
     if (_delay_units > 0 && _cur_units > _delay_units) {
-        int64_t client_timeout = request->header->client.timeout_ms;
-        if (client_timeout > 0) {
-            delay_ms = std::min(_delay_ms, client_timeout / 2);
+        if (client_timeout_ms > 0) {
+            delay_ms = std::min(_delay_ms, client_timeout_ms / 2);
         } else {
             delay_ms = _delay_ms;
         }

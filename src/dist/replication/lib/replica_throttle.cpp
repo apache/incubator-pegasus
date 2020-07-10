@@ -23,7 +23,7 @@ bool replica::throttle_request(throttling_controller &controller,
     }
 
     int64_t delay_ms = 0;
-    auto type = controller.control(request, request_units, delay_ms);
+    auto type = controller.control(request->header->client.timeout_ms, request_units, delay_ms);
     if (type != throttling_controller::PASS) {
         if (type == throttling_controller::DELAY) {
             tasking::enqueue(LPC_WRITE_THROTTLING_DELAY,
