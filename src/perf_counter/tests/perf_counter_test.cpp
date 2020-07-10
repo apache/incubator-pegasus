@@ -39,7 +39,7 @@
 #include <cmath>
 #include <vector>
 
-#include "core/perf_counter/perf_counter_atomic.h"
+#include "perf_counter/perf_counter_atomic.h"
 
 using namespace dsn;
 using namespace dsn::tools;

@@ -13,3 +13,5 @@ set(MY_PROJ_LIBS "")
 set(MY_BINPLACES "")
 
 dsn_add_object()
+
+add_subdirectory(tests)

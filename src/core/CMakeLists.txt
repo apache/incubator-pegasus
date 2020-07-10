@@ -1,10 +1,10 @@
 add_subdirectory(core)
-add_subdirectory(perf_counter)
 add_subdirectory(tools)
 add_subdirectory(tests)
 add_subdirectory(rpc)
 add_subdirectory(task)
 
+# TODO(zlw) remove perf_counter from dsn_runtime after the refactor by WuTao
 add_library(dsn_runtime STATIC
         $<TARGET_OBJECTS:dsn.core>
         $<TARGET_OBJECTS:dsn.rpc>
