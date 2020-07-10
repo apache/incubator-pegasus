@@ -37,8 +37,8 @@ private:
     // \return ERR_INVALID_STATE if local status is invalid
     // for example, if meta status is ingestion, replica local status can only be downloaded or
     // ingestion, if local status is other status, will return ERR_INVALID_STATE
-    error_code validate_bulk_load_status(bulk_load_status::type meta_status,
-                                         bulk_load_status::type local_status);
+    static error_code validate_status(const bulk_load_status::type meta_status,
+                                      const bulk_load_status::type local_status);
 
     // replica start or restart download sst files from remote provider
     // \return ERR_BUSY if node has already had enough replica executing downloading

@@ -153,6 +153,12 @@ public:
         _bulk_loader->on_group_bulk_load_reply(rpc_error, _group_req, resp);
     }
 
+    bool validate_status(const bulk_load_status::type meta_status,
+                         const bulk_load_status::type local_status)
+    {
+        return replica_bulk_loader::validate_status(meta_status, local_status) == ERR_OK;
+    }
+
     /// mock structure functions
 
     void
@@ -839,6 +845,41 @@ TEST_F(replica_bulk_loader_test, on_group_bulk_load_reply_rpc_error)
     mock_group_cleanup_flag(bulk_load_status::BLS_INVALID, true, false);
     test_on_group_bulk_load_reply(bulk_load_status::BLS_CANCELED, BALLOT, ERR_OBJECT_NOT_FOUND);
     ASSERT_TRUE(is_secondary_bulk_load_state_reset());
+}
+
+// validate_status unit test
+TEST_F(replica_bulk_loader_test, validate_status_test)
+{
+    struct validate_struct
+    {
+        bulk_load_status::type meta_status;
+        bulk_load_status::type local_status;
+        bool expected_flag;
+    } tests[] = {{bulk_load_status::BLS_INVALID, bulk_load_status::BLS_INVALID, true},
+                 {bulk_load_status::BLS_PAUSED, bulk_load_status::BLS_PAUSED, false},
+                 {bulk_load_status::BLS_FAILED, bulk_load_status::BLS_INGESTING, true},
+                 {bulk_load_status::BLS_CANCELED, bulk_load_status::BLS_SUCCEED, true},
+                 {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_INVALID, true},
+                 {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_INGESTING, true},
+                 {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_SUCCEED, true},
+                 {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_FAILED, false},
+                 {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_CANCELED, false},
+                 {bulk_load_status::BLS_DOWNLOADED, bulk_load_status::BLS_INVALID, false},
+                 {bulk_load_status::BLS_DOWNLOADED, bulk_load_status::BLS_DOWNLOADED, true},
+                 {bulk_load_status::BLS_INGESTING, bulk_load_status::BLS_DOWNLOADED, true},
+                 {bulk_load_status::BLS_INGESTING, bulk_load_status::BLS_SUCCEED, false},
+                 {bulk_load_status::BLS_SUCCEED, bulk_load_status::BLS_INVALID, true},
+                 {bulk_load_status::BLS_SUCCEED, bulk_load_status::BLS_INGESTING, true},
+                 {bulk_load_status::BLS_SUCCEED, bulk_load_status::BLS_DOWNLOADING, false},
+                 {bulk_load_status::BLS_PAUSING, bulk_load_status::BLS_INVALID, true},
+                 {bulk_load_status::BLS_PAUSING, bulk_load_status::BLS_DOWNLOADING, true},
+                 {bulk_load_status::BLS_PAUSING, bulk_load_status::BLS_DOWNLOADED, true},
+                 {bulk_load_status::BLS_PAUSING, bulk_load_status::BLS_PAUSED, true},
+                 {bulk_load_status::BLS_PAUSING, bulk_load_status::BLS_INGESTING, false}};
+
+    for (auto test : tests) {
+        ASSERT_EQ(validate_status(test.meta_status, test.local_status), test.expected_flag);
+    }
 }
 
 } // namespace replication
