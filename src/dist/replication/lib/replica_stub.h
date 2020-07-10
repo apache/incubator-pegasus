@@ -38,8 +38,8 @@
 #include <dsn/dist/failure_detector_multimaster.h>
 #include <dsn/dist/nfs_node.h>
 
-#include "dist/replication/common/replication_common.h"
-#include "dist/replication/common/fs_manager.h"
+#include "common/replication_common.h"
+#include "common/fs_manager.h"
 #include "block_service/block_service_manager.h"
 #include "replica.h"
 

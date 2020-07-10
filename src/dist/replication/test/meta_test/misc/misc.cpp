@@ -3,7 +3,7 @@
 #include <boost/lexical_cast.hpp>
 #include <dsn/utility/rand.h>
 
-#include "dist/replication/common/replication_common.h"
+#include "common/replication_common.h"
 #include "misc.h"
 
 using namespace dsn::replication;

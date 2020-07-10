@@ -36,7 +36,7 @@
 #pragma once
 
 #include <dsn/dist/replication.h>
-#include "dist/replication/common/replication_common.h"
+#include "common/replication_common.h"
 
 namespace dsn {
 namespace replication {

@@ -30,7 +30,7 @@
 #include <dsn/service_api_c.h>
 #include <dsn/service_api_cpp.h>
 #include "dist/replication/meta_server/meta_data.h"
-#include "dist/replication/common/fs_manager.h"
+#include "common/fs_manager.h"
 
 typedef std::map<dsn::rpc_address, std::shared_ptr<dsn::replication::fs_manager>> nodes_fs_manager;
 

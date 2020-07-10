@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "../common/replication_common.h"
+#include "common/replication_common.h"
 #include "mutation.h"
 #include <vector>
 #include <atomic>

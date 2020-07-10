@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <dist/replication/common/replication_common.h>
+#include "common/replication_common.h"
 #include <fmt/format.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>

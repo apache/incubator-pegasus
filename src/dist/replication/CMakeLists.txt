@@ -1,4 +1,3 @@
-add_subdirectory(common)
 add_subdirectory(tool_lib)
 add_subdirectory(meta_server)
 add_subdirectory(lib)

@@ -35,7 +35,7 @@
 
 #pragma once
 
-#include "../common/replication_common.h"
+#include "common/replication_common.h"
 #include <list>
 #include <atomic>
 #include <dsn/utility/link.h>

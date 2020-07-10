@@ -43,7 +43,7 @@
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 
-#include "dist/replication/common/replication_common.h"
+#include "common/replication_common.h"
 #include "dist/replication/meta_server/meta_data.h"
 
 #include "meta_service.h"

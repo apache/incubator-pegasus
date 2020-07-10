@@ -41,7 +41,7 @@
 #include <dsn/dist/meta_state_service.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 
-#include "dist/replication/common/replication_common.h"
+#include "common/replication_common.h"
 #include "dist/replication/meta_server/meta_options.h"
 #include "dist/replication/meta_server/meta_backup_service.h"
 #include "dist/replication/meta_server/meta_state_service_utils.h"

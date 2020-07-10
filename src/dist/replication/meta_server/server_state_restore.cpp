@@ -29,7 +29,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "block_service/block_service_manager.h"
-#include "dist/replication/common/replication_common.h"
+#include "common/replication_common.h"
 #include "dist/replication/meta_server/meta_service.h"
 #include "dist/replication/meta_server/server_state.h"
 
