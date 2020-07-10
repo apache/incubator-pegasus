@@ -11,7 +11,6 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS dsn_meta_server
                  dsn_replica_server
-                 dsn.replication.ddlclient
                  dsn.replication.zookeeper_provider
                  dsn_replication_common
                  dsn.failure_detector

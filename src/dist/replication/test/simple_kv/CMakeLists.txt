@@ -9,7 +9,7 @@ set(MY_PROJ_SRC ${MY_PROJ_SRC} ../../storage_engine/simple_kv/simple_kv_types.cp
 set(MY_PROJ_LIBS dsn_replica_server
                  dsn_meta_server
                  dsn_replication_common
-                 dsn_replication_client
+                 dsn_client
                  dsn.failure_detector
                  dsn.replication.zookeeper_provider
                  dsn_runtime

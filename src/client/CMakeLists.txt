@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.replication.ddlclient)
+set(MY_PROJ_NAME dsn_client)
 
 # Source files under CURRENT project directory will be automatically included.
 # You can manually set MY_PROJ_SRC to include source files under other directories.
@@ -11,6 +11,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS "")
 
+# Extra files that will be installed
 set(MY_BINPLACES "")
 
 dsn_add_static_library()

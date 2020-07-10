@@ -27,8 +27,8 @@
 #include <dsn/tool-api/zlocks.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/dist/replication/partition_resolver.h>
-#include "dist/replication/client/partition_resolver_simple.h"
-#include "dist/replication/client/partition_resolver_manager.h"
+#include "partition_resolver_simple.h"
+#include "partition_resolver_manager.h"
 
 namespace dsn {
 namespace replication {
