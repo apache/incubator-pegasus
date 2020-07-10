@@ -8,8 +8,8 @@
 
 #include <dsn/service_api_cpp.h>
 
-#include "dist/replication/zookeeper/distributed_lock_service_zookeeper.h"
-#include "dist/replication/zookeeper/lock_struct.h"
+#include "zookeeper/distributed_lock_service_zookeeper.h"
+#include "zookeeper/lock_struct.h"
 
 using namespace dsn;
 using namespace dsn::dist;

@@ -38,9 +38,9 @@
 #include <boost/lexical_cast.hpp>
 
 #include "meta_state_service_zookeeper.h"
-#include "zookeeper_session_mgr.h"
-#include "zookeeper_session.h"
-#include "zookeeper_error.h"
+#include "zookeeper/zookeeper_session_mgr.h"
+#include "zookeeper/zookeeper_session.h"
+#include "zookeeper/zookeeper_error.h"
 
 namespace dsn {
 namespace dist {

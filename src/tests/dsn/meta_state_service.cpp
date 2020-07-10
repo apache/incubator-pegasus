@@ -6,7 +6,7 @@
 #include <thread>
 
 #include "dist/replication/meta_server/meta_state_service_simple.h"
-#include "dist/replication/zookeeper/meta_state_service_zookeeper.h"
+#include "dist/replication/meta_server/meta_state_service_zookeeper.h"
 
 using namespace dsn;
 using namespace dsn::dist;

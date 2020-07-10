@@ -1,23 +1,5 @@
 #!/bin/bash
 
-function prepare_environment()
-{
-    if [ $1 == "distributed_lock_service_zookeeper.simple_lock_unlock" ]; then
-        echo "test $1, try to restart to zookeeper service periodically"
-        ./restart_zookeeper.sh >output.log 2>&1 &
-    fi
-}
-
-function destroy_environment()
-{
-    if [ $1 == "distributed_lock_service_zookeeper.simple_lock_unlock" ]; then
-        echo "stop restart-zookeeper process"
-        ps aux | grep restart_zookeeper | grep -v "grep" | awk '{print $2}' | xargs kill -9
-        echo "make sure the zookeeper is started"
-        pushd ../../../ && ./run.sh start_zk && popd
-    fi
-}
-
 if [ -z "${REPORT_DIR}" ]; then
     REPORT_DIR="."
 fi
