@@ -50,7 +50,7 @@ thrift_description = [
         "path": "src/dist/replication",
         "file_move": {
             "_types.h": "include/dsn/dist/replication",
-            "_types.cpp": "src/dist/replication/common"
+            "_types.cpp": "src/common"
         },
         "include_fix": {
             "_types.h": {
