@@ -11,7 +11,7 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-    dsn.replication.ddlclient
+    dsn_client
     dsn_replication_common
     pegasus_client_static
     gtest

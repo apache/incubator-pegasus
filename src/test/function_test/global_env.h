@@ -7,14 +7,12 @@
 #include <string>
 #include <sstream>
 
-class global_env
+class global_env : public dsn::utils::singleton<global_env>
 {
 public:
     std::string _pegasus_root;
     std::string _working_dir;
     std::string _host_ip;
-
-    static global_env &instance() { return inst; }
 
 private:
     global_env();
@@ -23,5 +21,6 @@ private:
 
     void get_hostip();
     void get_dirs();
-    static global_env inst;
+
+    friend dsn::utils::singleton<global_env>;
 };

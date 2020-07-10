@@ -13,7 +13,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
     pegasus_base
     pegasus_client_static
-    dsn.replication.ddlclient
+    dsn_client
     dsn_replication_common
     dsn_dist_cmd
     dsn_runtime

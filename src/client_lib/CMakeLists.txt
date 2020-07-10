@@ -13,7 +13,7 @@ target_include_directories(pegasus_client_impl_objects PUBLIC $<TARGET_PROPERTY:
 set(pegasus_client_static_lib ${CMAKE_CURRENT_BINARY_DIR}/libpegasus_client_static.a)
 add_custom_target(combine_lib
     COMMAND ar -x ${DSN_ROOT}/lib/libdsn_runtime.a
-    COMMAND ar -x ${DSN_ROOT}/lib/libdsn_replication_client.a
+    COMMAND ar -x ${DSN_ROOT}/lib/libdsn_client.a
     COMMAND ar -x ${DSN_ROOT}/lib/libdsn_replication_common.a
     COMMAND ar -x ${DSN_THIRDPARTY_ROOT}/lib/libthrift.a
     COMMAND ar -x ${CMAKE_BINARY_DIR}/base/libpegasus_base.a
@@ -36,7 +36,7 @@ add_library(pegasus_client_shared SHARED $<TARGET_OBJECTS:pegasus_client_impl_ob
 target_link_libraries(pegasus_client_shared PRIVATE
     pegasus_base
     dsn_runtime
-    dsn_replication_client
+    dsn_client
     dsn_replication_common
     thrift)
 install(TARGETS pegasus_client_shared DESTINATION "lib")
