@@ -18,7 +18,6 @@ set(MY_PROJ_LIBS
     dsn.block_service.fds
     dsn.block_service
     dsn.failure_detector
-    dsn.failure_detector.multimaster
     dsn.replication.zookeeper_provider
     RocksDB::rocksdb
     pegasus_reporter

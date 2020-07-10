@@ -20,7 +20,6 @@ set(MY_PROJ_LIBS
     dsn.block_service.fds
     dsn.block_service
     dsn.failure_detector
-    dsn.failure_detector.multimaster
     pegasus_client_static
     galaxy-fds-sdk-cpp
     PocoNet
