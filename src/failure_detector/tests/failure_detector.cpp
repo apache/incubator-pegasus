@@ -1,5 +1,5 @@
-#include "dist/replication/meta_server/meta_server_failure_detector.h"
-#include "dist/replication/meta_server/meta_options.h"
+#include "meta/meta_server_failure_detector.h"
+#include "meta/meta_options.h"
 #include "dist/replication/lib/replica_stub.h"
 
 #include <gtest/gtest.h>

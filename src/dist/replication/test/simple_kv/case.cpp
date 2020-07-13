@@ -39,7 +39,7 @@
 
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/rpc_message.h>
-#include "../../meta_server/server_load_balancer.h"
+#include "meta/server_load_balancer.h"
 #include "../../lib/replica_stub.h"
 #include "../../../../core/core/service_engine.h"
 
