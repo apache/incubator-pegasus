@@ -38,6 +38,7 @@ public:
 
         _ss = _ms->_state;
         _ss->initialize(_ms.get(), _ms->_cluster_root + "/apps");
+        _app_root = _ss->_apps_root;
 
         _ms->_started = true;
         _ms->set_function_level(meta_function_level::fl_steady);
@@ -140,6 +141,7 @@ public:
 
     std::shared_ptr<server_state> _ss;
     std::unique_ptr<meta_service> _ms;
+    std::string _app_root;
 };
 
 } // namespace replication

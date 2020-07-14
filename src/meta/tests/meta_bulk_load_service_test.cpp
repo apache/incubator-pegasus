@@ -130,6 +130,164 @@ public:
         return bulk_svc()._apps_in_progress_count[app_id];
     }
 
+    /// Used for bulk_load_failover_test
+
+    void initialize_meta_server_with_mock_bulk_load(
+        const std::unordered_set<int32_t> &app_id_set,
+        const std::unordered_map<app_id, app_bulk_load_info> &app_bulk_load_info_map,
+        const std::unordered_map<app_id, std::unordered_map<int32_t, partition_bulk_load_info>>
+            &partition_bulk_load_info_map,
+        const std::vector<app_info> &app_list)
+    {
+        // initialize meta service
+        auto meta_svc = new fake_receiver_meta_service();
+        meta_svc->remote_storage_initialize();
+
+        // initialize server_state
+        auto state = meta_svc->_state;
+        state->initialize(meta_svc, meta_svc->_cluster_root + "/apps");
+        _app_root = state->_apps_root;
+        meta_svc->_started = true;
+        _ms.reset(meta_svc);
+
+        // initialize bulk load service
+        _ms->_bulk_load_svc = make_unique<bulk_load_service>(
+            _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
+        mock_bulk_load_on_remote_storage(
+            app_id_set, app_bulk_load_info_map, partition_bulk_load_info_map);
+
+        // mock app
+        for (auto &info : app_list) {
+            mock_app_on_remote_stroage(info);
+        }
+        state->initialize_data_structure();
+
+        _ms->set_function_level(meta_function_level::fl_steady);
+        _ms->_failure_detector.reset(new meta_server_failure_detector(_ms.get()));
+        _ss = _ms->_state;
+    }
+
+    void mock_bulk_load_on_remote_storage(
+        const std::unordered_set<int32_t> &app_id_set,
+        const std::unordered_map<app_id, app_bulk_load_info> &app_bulk_load_info_map,
+        const std::unordered_map<app_id, std::unordered_map<int32_t, partition_bulk_load_info>>
+            &partition_bulk_load_info_map)
+    {
+        std::string path = bulk_svc()._bulk_load_root;
+        blob value = blob();
+        // create bulk_load_root
+        _ms->get_meta_storage()->create_node(
+            std::move(path),
+            std::move(value),
+            [this, &app_id_set, &app_bulk_load_info_map, &partition_bulk_load_info_map]() {
+                for (const auto app_id : app_id_set) {
+                    auto app_iter = app_bulk_load_info_map.find(app_id);
+                    auto partition_iter = partition_bulk_load_info_map.find(app_id);
+
+                    if (app_iter != app_bulk_load_info_map.end() &&
+                        partition_iter != partition_bulk_load_info_map.end()) {
+                        mock_app_bulk_load_info_on_remote_stroage(app_iter->second,
+                                                                  partition_iter->second);
+                    }
+                }
+            });
+        wait_all();
+    }
+
+    void mock_app_bulk_load_info_on_remote_stroage(
+        const app_bulk_load_info &ainfo,
+        const std::unordered_map<int32_t, partition_bulk_load_info> &partition_bulk_load_info_map)
+    {
+        std::string app_path = bulk_svc().get_app_bulk_load_path(ainfo.app_id);
+        blob value = json::json_forwarder<app_bulk_load_info>::encode(ainfo);
+        // create app_bulk_load_info
+        _ms->get_meta_storage()->create_node(
+            std::move(app_path),
+            std::move(value),
+            [this, app_path, &ainfo, &partition_bulk_load_info_map]() {
+                ddebug_f("create app({}) app_id={} bulk load dir({}), bulk_load_status={}",
+                         ainfo.app_name,
+                         ainfo.app_id,
+                         app_path,
+                         dsn::enum_to_string(ainfo.status));
+                for (const auto kv : partition_bulk_load_info_map) {
+                    mock_partition_bulk_load_info_on_remote_stroage(gpid(ainfo.app_id, kv.first),
+                                                                    kv.second);
+                }
+            });
+    }
+
+    void mock_partition_bulk_load_info_on_remote_stroage(const gpid &pid,
+                                                         const partition_bulk_load_info &pinfo)
+    {
+        std::string partition_path = bulk_svc().get_partition_bulk_load_path(pid);
+        blob value = json::json_forwarder<partition_bulk_load_info>::encode(pinfo);
+        _ms->get_meta_storage()->create_node(
+            std::move(partition_path), std::move(value), [this, partition_path, pid, &pinfo]() {
+                ddebug_f("create partition[{}] bulk load dir({}), bulk_load_status={}",
+                         pid,
+                         partition_path,
+                         dsn::enum_to_string(pinfo.status));
+            });
+    }
+
+    void mock_app_on_remote_stroage(const app_info &info)
+    {
+        static const char *lock_state = "lock";
+        static const char *unlock_state = "unlock";
+        std::string path = _app_root;
+
+        _ms->get_meta_storage()->create_node(
+            std::move(path), blob(lock_state, 0, strlen(lock_state)), [this]() {
+                ddebug_f("create app root {}", _app_root);
+            });
+        wait_all();
+
+        blob value = json::json_forwarder<app_info>::encode(info);
+        _ms->get_meta_storage()->create_node(
+            _app_root + "/" + boost::lexical_cast<std::string>(info.app_id),
+            std::move(value),
+            [this, &info]() {
+                ddebug_f("create app({}) app_id={}, dir succeed", info.app_name, info.app_id);
+                for (int i = 0; i < info.partition_count; ++i) {
+                    partition_configuration config;
+                    config.max_replica_count = 3;
+                    config.pid = gpid(info.app_id, i);
+                    config.ballot = BALLOT;
+                    blob v = json::json_forwarder<partition_configuration>::encode(config);
+                    _ms->get_meta_storage()->create_node(
+                        _app_root + "/" + boost::lexical_cast<std::string>(info.app_id) + "/" +
+                            boost::lexical_cast<std::string>(i),
+                        std::move(v),
+                        [info, i, this]() {
+                            ddebug_f("create app({}), partition({}.{}) dir succeed",
+                                     info.app_name,
+                                     info.app_id,
+                                     i);
+                        });
+                }
+            });
+        wait_all();
+
+        std::string app_root = _app_root;
+        _ms->get_meta_storage()->set_data(
+            std::move(app_root), blob(unlock_state, 0, strlen(unlock_state)), []() {});
+        wait_all();
+    }
+
+    int32_t get_app_id_set_size() { return bulk_svc()._bulk_load_app_id.size(); }
+
+    int32_t get_partition_bulk_load_info_size(int32_t app_id)
+    {
+        int count = 0;
+        for (const auto kv : bulk_svc()._partition_bulk_load_info) {
+            if (kv.first.get_app_id() == app_id) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
 public:
     int32_t APP_ID = 1;
     std::string APP_NAME = "bulk_load_test";
@@ -539,6 +697,170 @@ TEST_F(bulk_load_process_test, ingest_succeed)
     mock_ingestion_context(ERR_OK, 0, 1);
     test_on_partition_ingestion_reply(_ingestion_resp, gpid(_app_id, _pidx));
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
+}
+
+class bulk_load_failover_test : public bulk_load_service_test
+{
+public:
+    bulk_load_failover_test() {}
+
+    void SetUp()
+    {
+        fail::setup();
+        fail::cfg("meta_bulk_load_partition_bulk_load", "return()");
+        fail::cfg("meta_bulk_load_partition_ingestion", "return()");
+    }
+
+    void TearDown()
+    {
+        clean_up();
+        fail::teardown();
+        bulk_load_service_test::TearDown();
+    }
+
+    void try_to_continue_bulk_load(bulk_load_status::type app_status, bool is_bulk_loading = true)
+    {
+        prepare_bulk_load_structures(SYNC_APP_ID,
+                                     SYNC_PARTITION_COUNT,
+                                     SYNC_APP_NAME,
+                                     app_status,
+                                     _pstatus_map,
+                                     is_bulk_loading);
+        initialize_meta_server_with_mock_bulk_load(
+            _app_id_set, _app_bulk_load_info_map, _partition_bulk_load_info_map, _app_info_list);
+        bulk_svc().initialize_bulk_load_service();
+        wait_all();
+    }
+
+    void
+    prepare_bulk_load_structures(int32_t app_id,
+                                 int32_t partition_count,
+                                 std::string &app_name,
+                                 bulk_load_status::type app_status,
+                                 std::unordered_map<int32_t, bulk_load_status::type> &pstatus_map,
+                                 bool is_bulk_loading)
+    {
+        _app_id_set.insert(app_id);
+        mock_app_bulk_load_info(app_id, partition_count, app_name, app_status);
+        mock_partition_bulk_load_info(app_id, pstatus_map);
+        add_to_app_info_list(app_id, partition_count, app_name, is_bulk_loading);
+    }
+
+    void mock_app_bulk_load_info(int32_t app_id,
+                                 int32_t partition_count,
+                                 std::string &app_name,
+                                 bulk_load_status::type status)
+    {
+        app_bulk_load_info ainfo;
+        ainfo.app_id = app_id;
+        ainfo.app_name = app_name;
+        ainfo.cluster_name = CLUSTER;
+        ainfo.file_provider_type = PROVIDER;
+        ainfo.partition_count = partition_count;
+        ainfo.status = status;
+        _app_bulk_load_info_map[app_id] = ainfo;
+    }
+
+    void
+    mock_partition_bulk_load_info(int32_t app_id,
+                                  std::unordered_map<int32_t, bulk_load_status::type> &pstatus_map)
+    {
+        if (pstatus_map.size() <= 0) {
+            return;
+        }
+        std::unordered_map<int32_t, partition_bulk_load_info> pinfo_map;
+        for (auto iter = pstatus_map.begin(); iter != pstatus_map.end(); ++iter) {
+            partition_bulk_load_info pinfo;
+            pinfo.status = iter->second;
+            pinfo_map[iter->first] = pinfo;
+        }
+        _partition_bulk_load_info_map[app_id] = pinfo_map;
+    }
+
+    void add_to_app_info_list(int32_t app_id,
+                              int32_t partition_count,
+                              std::string &app_name,
+                              bool is_bulk_loading)
+    {
+        app_info ainfo;
+        ainfo.app_id = app_id;
+        ainfo.app_name = app_name;
+        ainfo.app_type = "pegasus";
+        ainfo.is_stateful = true;
+        ainfo.is_bulk_loading = is_bulk_loading;
+        ainfo.max_replica_count = 3;
+        ainfo.partition_count = partition_count;
+        ainfo.status = app_status::AS_AVAILABLE;
+        _app_info_list.emplace_back(ainfo);
+    }
+
+    void mock_pstatus_map(bulk_load_status::type status, int32_t end_index, int32_t start_index = 0)
+    {
+        for (auto i = start_index; i <= end_index; ++i) {
+            _pstatus_map[i] = status;
+        }
+    }
+
+    void clean_up()
+    {
+        _app_info_list.clear();
+        _app_bulk_load_info_map.clear();
+        _partition_bulk_load_info_map.clear();
+        _pstatus_map.clear();
+        _app_id_set.clear();
+    }
+
+    std::string SYNC_APP_NAME = "bulk_load_failover_table";
+    int32_t SYNC_APP_ID = 2;
+    int32_t SYNC_PARTITION_COUNT = 4;
+
+    std::vector<app_info> _app_info_list;
+    std::unordered_set<int32_t> _app_id_set;
+    std::unordered_map<app_id, app_bulk_load_info> _app_bulk_load_info_map;
+    std::unordered_map<app_id, std::unordered_map<int32_t, partition_bulk_load_info>>
+        _partition_bulk_load_info_map;
+    std::unordered_map<int32_t, bulk_load_status::type> _pstatus_map;
+};
+
+TEST_F(bulk_load_failover_test, sync_bulk_load)
+{
+    fail::cfg("meta_try_to_continue_bulk_load", "return()");
+
+    // mock app downloading with partition[0~1] downloading
+    std::unordered_map<int32_t, bulk_load_status::type> partition_bulk_load_status_map;
+    partition_bulk_load_status_map[0] = bulk_load_status::BLS_DOWNLOADING;
+    partition_bulk_load_status_map[1] = bulk_load_status::BLS_DOWNLOADING;
+    prepare_bulk_load_structures(SYNC_APP_ID,
+                                 SYNC_PARTITION_COUNT,
+                                 SYNC_APP_NAME,
+                                 bulk_load_status::BLS_DOWNLOADING,
+                                 partition_bulk_load_status_map,
+                                 true);
+
+    // mock app failed with no partition existed
+    partition_bulk_load_status_map.clear();
+    partition_bulk_load_status_map[0] = bulk_load_status::BLS_FAILED;
+    prepare_bulk_load_structures(APP_ID,
+                                 PARTITION_COUNT,
+                                 APP_NAME,
+                                 bulk_load_status::type::BLS_FAILED,
+                                 partition_bulk_load_status_map,
+                                 true);
+
+    initialize_meta_server_with_mock_bulk_load(
+        _app_id_set, _app_bulk_load_info_map, _partition_bulk_load_info_map, _app_info_list);
+    bulk_svc().initialize_bulk_load_service();
+    wait_all();
+
+    ASSERT_EQ(get_app_id_set_size(), 2);
+
+    ASSERT_TRUE(app_is_bulk_loading(SYNC_APP_NAME));
+    ASSERT_EQ(get_app_bulk_load_status(SYNC_APP_ID), bulk_load_status::BLS_DOWNLOADING);
+    ASSERT_EQ(get_partition_bulk_load_info_size(SYNC_APP_ID), 2);
+
+    ASSERT_TRUE(app_is_bulk_loading(APP_NAME));
+    ASSERT_EQ(get_app_bulk_load_status(APP_ID), bulk_load_status::BLS_FAILED);
+    ASSERT_EQ(get_partition_bulk_load_info_size(APP_ID), 1);
 }
 
 } // namespace replication
