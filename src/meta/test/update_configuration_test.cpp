@@ -8,7 +8,7 @@
 #include "meta/server_state.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_server_failure_detector.h"
-#include "meta/tests/misc/misc.h"
+#include "meta/test/misc/misc.h"
 
 #include "meta_service_test_app.h"
 

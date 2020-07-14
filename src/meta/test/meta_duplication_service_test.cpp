@@ -32,7 +32,7 @@
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_http_service.h"
 #include "meta/duplication/meta_duplication_service.h"
-#include "meta/tests/misc/misc.h"
+#include "meta/test/misc/misc.h"
 
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"

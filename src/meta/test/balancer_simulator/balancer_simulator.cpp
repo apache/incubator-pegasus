@@ -4,7 +4,7 @@
 #include "meta/meta_data.h"
 #include "meta/server_load_balancer.h"
 #include "meta/greedy_load_balancer.h"
-#include "meta/tests/misc/misc.h"
+#include "meta/test/misc/misc.h"
 
 using namespace dsn::replication;
 

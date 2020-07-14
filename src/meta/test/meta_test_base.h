@@ -8,7 +8,7 @@
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_split_service.h"
 #include "meta/meta_bulk_load_service.h"
-#include "meta/tests/misc/misc.h"
+#include "meta/test/misc/misc.h"
 
 #include "meta_service_test_app.h"
 

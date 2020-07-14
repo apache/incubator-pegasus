@@ -5,7 +5,7 @@
 #include "meta/meta_backup_service.h"
 #include "meta/meta_service.h"
 #include "meta_service_test_app.h"
-#include "meta/tests/misc/misc.h"
+#include "meta/test/misc/misc.h"
 
 namespace dsn {
 namespace replication {

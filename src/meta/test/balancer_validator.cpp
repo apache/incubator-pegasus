@@ -11,7 +11,7 @@
 #include "meta/server_load_balancer.h"
 #include "meta/greedy_load_balancer.h"
 
-#include "meta/tests/misc/misc.h"
+#include "meta/test/misc/misc.h"
 
 #include "meta_service_test_app.h"
 

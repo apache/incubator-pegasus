@@ -9,7 +9,7 @@
 #include "meta/meta_service.h"
 #include "meta/server_state.h"
 
-#include "meta/tests/misc/misc.h"
+#include "meta/test/misc/misc.h"
 
 #include "meta_service_test_app.h"
 

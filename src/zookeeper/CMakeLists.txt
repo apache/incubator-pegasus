@@ -17,4 +17,4 @@ set(MY_BINPLACES "")
 
 dsn_add_static_library()
 
-add_subdirectory(tests)
+add_subdirectory(test)
