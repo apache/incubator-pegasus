@@ -47,7 +47,7 @@ thrift_description = [
     },
     {
         "name": "replication",
-        "path": "src/dist/replication",
+        "path": "src/",
         "file_move": {
             "_types.h": "include/dsn/dist/replication",
             "_types.cpp": "src/common"
@@ -75,7 +75,7 @@ thrift_description = [
     },
     {
         "name": "simple_kv",
-        "path": "src/dist/replication/storage_engine/simple_kv"
+        "path": "src/replica/storage/simple_kv"
     },
     {
         "name": "command",
@@ -263,9 +263,9 @@ if __name__ == "__main__":
 
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
     ctor_configuration_proposal_action = "  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}"
-    add_hook("simple_kv", "src/apps/skv", constructor_hook,
+    add_hook("simple_kv", "src/replica/storage/simple_kv", constructor_hook,
              ["simple_kv_types.h", "kv_pair", ctor_kv_pair])
-    add_hook("replication", "src/dist/replication", constructor_hook,
+    add_hook("replication", "src/", constructor_hook,
              ["replication_types.h", "configuration_proposal_action", ctor_configuration_proposal_action])
     add_hook("dsn.layer2", "src", replace_hook, ["dsn.layer2_types.h", {
              r"dsn\.layer2_TYPES_H": 'dsn_layer2_TYPES_H'}])

@@ -1,2 +1,0 @@
-add_subdirectory(simple_kv)
-add_subdirectory(replica_test)
