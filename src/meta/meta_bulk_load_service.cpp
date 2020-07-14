@@ -1214,6 +1214,65 @@ void bulk_load_service::on_control_bulk_load(control_bulk_load_rpc rpc)
 }
 
 // ThreadPool: THREAD_POOL_META_SERVER
+void bulk_load_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
+{
+    const auto &request = rpc.request();
+    const std::string &app_name = request.app_name;
+
+    query_bulk_load_response &response = rpc.response();
+    response.err = ERR_OK;
+    response.app_name = app_name;
+
+    int32_t app_id, partition_count, max_replica_count;
+    {
+        zauto_read_lock l(app_lock());
+        std::shared_ptr<app_state> app = _state->get_app(app_name);
+
+        if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
+            auto hint_msg = fmt::format("app({}) is not existed or not available", app_name);
+            derror_f("{}", hint_msg);
+            response.err = app == nullptr ? ERR_APP_NOT_EXIST : ERR_APP_DROPPED;
+            response.__set_hint_msg(hint_msg);
+            return;
+        }
+
+        if (!app->is_bulk_loading) {
+            auto hint_msg = fmt::format("app({}) is not during bulk load", app_name);
+            derror_f("{}", hint_msg);
+            response.err = ERR_INVALID_STATE;
+            response.__set_hint_msg(hint_msg);
+            return;
+        }
+
+        app_id = app->app_id;
+        partition_count = app->partition_count;
+        max_replica_count = app->max_replica_count;
+    }
+
+    zauto_read_lock l(_lock);
+    response.max_replica_count = max_replica_count;
+    response.app_status = get_app_bulk_load_status_unlocked(app_id);
+
+    response.partitions_status.resize(partition_count);
+    for (const auto kv : _partition_bulk_load_info) {
+        if (kv.first.get_app_id() == app_id) {
+            response.partitions_status[kv.first.get_partition_index()] = kv.second.status;
+        }
+    }
+
+    response.bulk_load_states.resize(partition_count);
+    for (const auto kv : _partitions_bulk_load_state) {
+        if (kv.first.get_app_id() == app_id) {
+            response.bulk_load_states[kv.first.get_partition_index()] = kv.second;
+        }
+    }
+
+    ddebug_f("query app({}) bulk_load_status({}) succeed",
+             app_name,
+             dsn::enum_to_string(response.app_status));
+}
+
+// ThreadPool: THREAD_POOL_META_SERVER
 void bulk_load_service::create_bulk_load_root_dir()
 {
     blob value = blob();

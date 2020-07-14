@@ -16858,5 +16858,412 @@ void control_bulk_load_response::printTo(std::ostream &out) const
     (__isset.hint_msg ? (out << to_string(hint_msg)) : (out << "<null>"));
     out << ")";
 }
+
+query_bulk_load_request::~query_bulk_load_request() throw() {}
+
+void query_bulk_load_request::__set_app_name(const std::string &val) { this->app_name = val; }
+
+uint32_t query_bulk_load_request::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->app_name);
+                this->__isset.app_name = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t query_bulk_load_request::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("query_bulk_load_request");
+
+    xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 1);
+    xfer += oprot->writeString(this->app_name);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(query_bulk_load_request &a, query_bulk_load_request &b)
+{
+    using ::std::swap;
+    swap(a.app_name, b.app_name);
+    swap(a.__isset, b.__isset);
+}
+
+query_bulk_load_request::query_bulk_load_request(const query_bulk_load_request &other706)
+{
+    app_name = other706.app_name;
+    __isset = other706.__isset;
+}
+query_bulk_load_request::query_bulk_load_request(query_bulk_load_request &&other707)
+{
+    app_name = std::move(other707.app_name);
+    __isset = std::move(other707.__isset);
+}
+query_bulk_load_request &query_bulk_load_request::operator=(const query_bulk_load_request &other708)
+{
+    app_name = other708.app_name;
+    __isset = other708.__isset;
+    return *this;
+}
+query_bulk_load_request &query_bulk_load_request::operator=(query_bulk_load_request &&other709)
+{
+    app_name = std::move(other709.app_name);
+    __isset = std::move(other709.__isset);
+    return *this;
+}
+void query_bulk_load_request::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "query_bulk_load_request(";
+    out << "app_name=" << to_string(app_name);
+    out << ")";
+}
+
+query_bulk_load_response::~query_bulk_load_response() throw() {}
+
+void query_bulk_load_response::__set_err(const ::dsn::error_code &val) { this->err = val; }
+
+void query_bulk_load_response::__set_app_name(const std::string &val) { this->app_name = val; }
+
+void query_bulk_load_response::__set_app_status(const bulk_load_status::type val)
+{
+    this->app_status = val;
+}
+
+void query_bulk_load_response::__set_partitions_status(
+    const std::vector<bulk_load_status::type> &val)
+{
+    this->partitions_status = val;
+}
+
+void query_bulk_load_response::__set_max_replica_count(const int32_t val)
+{
+    this->max_replica_count = val;
+}
+
+void query_bulk_load_response::__set_bulk_load_states(
+    const std::vector<std::map<::dsn::rpc_address, partition_bulk_load_state>> &val)
+{
+    this->bulk_load_states = val;
+}
+
+void query_bulk_load_response::__set_hint_msg(const std::string &val)
+{
+    this->hint_msg = val;
+    __isset.hint_msg = true;
+}
+
+uint32_t query_bulk_load_response::read(::apache::thrift::protocol::TProtocol *iprot)
+{
+
+    apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+    uint32_t xfer = 0;
+    std::string fname;
+    ::apache::thrift::protocol::TType ftype;
+    int16_t fid;
+
+    xfer += iprot->readStructBegin(fname);
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    while (true) {
+        xfer += iprot->readFieldBegin(fname, ftype, fid);
+        if (ftype == ::apache::thrift::protocol::T_STOP) {
+            break;
+        }
+        switch (fid) {
+        case 1:
+            if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+                xfer += this->err.read(iprot);
+                this->__isset.err = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 2:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->app_name);
+                this->__isset.app_name = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 3:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                int32_t ecast710;
+                xfer += iprot->readI32(ecast710);
+                this->app_status = (bulk_load_status::type)ecast710;
+                this->__isset.app_status = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 4:
+            if (ftype == ::apache::thrift::protocol::T_LIST) {
+                {
+                    this->partitions_status.clear();
+                    uint32_t _size711;
+                    ::apache::thrift::protocol::TType _etype714;
+                    xfer += iprot->readListBegin(_etype714, _size711);
+                    this->partitions_status.resize(_size711);
+                    uint32_t _i715;
+                    for (_i715 = 0; _i715 < _size711; ++_i715) {
+                        int32_t ecast716;
+                        xfer += iprot->readI32(ecast716);
+                        this->partitions_status[_i715] = (bulk_load_status::type)ecast716;
+                    }
+                    xfer += iprot->readListEnd();
+                }
+                this->__isset.partitions_status = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 5:
+            if (ftype == ::apache::thrift::protocol::T_I32) {
+                xfer += iprot->readI32(this->max_replica_count);
+                this->__isset.max_replica_count = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 6:
+            if (ftype == ::apache::thrift::protocol::T_LIST) {
+                {
+                    this->bulk_load_states.clear();
+                    uint32_t _size717;
+                    ::apache::thrift::protocol::TType _etype720;
+                    xfer += iprot->readListBegin(_etype720, _size717);
+                    this->bulk_load_states.resize(_size717);
+                    uint32_t _i721;
+                    for (_i721 = 0; _i721 < _size717; ++_i721) {
+                        {
+                            this->bulk_load_states[_i721].clear();
+                            uint32_t _size722;
+                            ::apache::thrift::protocol::TType _ktype723;
+                            ::apache::thrift::protocol::TType _vtype724;
+                            xfer += iprot->readMapBegin(_ktype723, _vtype724, _size722);
+                            uint32_t _i726;
+                            for (_i726 = 0; _i726 < _size722; ++_i726) {
+                                ::dsn::rpc_address _key727;
+                                xfer += _key727.read(iprot);
+                                partition_bulk_load_state &_val728 =
+                                    this->bulk_load_states[_i721][_key727];
+                                xfer += _val728.read(iprot);
+                            }
+                            xfer += iprot->readMapEnd();
+                        }
+                    }
+                    xfer += iprot->readListEnd();
+                }
+                this->__isset.bulk_load_states = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        case 7:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->hint_msg);
+                this->__isset.hint_msg = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
+        default:
+            xfer += iprot->skip(ftype);
+            break;
+        }
+        xfer += iprot->readFieldEnd();
+    }
+
+    xfer += iprot->readStructEnd();
+
+    return xfer;
+}
+
+uint32_t query_bulk_load_response::write(::apache::thrift::protocol::TProtocol *oprot) const
+{
+    uint32_t xfer = 0;
+    apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+    xfer += oprot->writeStructBegin("query_bulk_load_response");
+
+    xfer += oprot->writeFieldBegin("err", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->err.write(oprot);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("app_name", ::apache::thrift::protocol::T_STRING, 2);
+    xfer += oprot->writeString(this->app_name);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("app_status", ::apache::thrift::protocol::T_I32, 3);
+    xfer += oprot->writeI32((int32_t)this->app_status);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("partitions_status", ::apache::thrift::protocol::T_LIST, 4);
+    {
+        xfer += oprot->writeListBegin(::apache::thrift::protocol::T_I32,
+                                      static_cast<uint32_t>(this->partitions_status.size()));
+        std::vector<bulk_load_status::type>::const_iterator _iter729;
+        for (_iter729 = this->partitions_status.begin(); _iter729 != this->partitions_status.end();
+             ++_iter729) {
+            xfer += oprot->writeI32((int32_t)(*_iter729));
+        }
+        xfer += oprot->writeListEnd();
+    }
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("max_replica_count", ::apache::thrift::protocol::T_I32, 5);
+    xfer += oprot->writeI32(this->max_replica_count);
+    xfer += oprot->writeFieldEnd();
+
+    xfer += oprot->writeFieldBegin("bulk_load_states", ::apache::thrift::protocol::T_LIST, 6);
+    {
+        xfer += oprot->writeListBegin(::apache::thrift::protocol::T_MAP,
+                                      static_cast<uint32_t>(this->bulk_load_states.size()));
+        std::vector<std::map<::dsn::rpc_address, partition_bulk_load_state>>::const_iterator
+            _iter730;
+        for (_iter730 = this->bulk_load_states.begin(); _iter730 != this->bulk_load_states.end();
+             ++_iter730) {
+            {
+                xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRUCT,
+                                             ::apache::thrift::protocol::T_STRUCT,
+                                             static_cast<uint32_t>((*_iter730).size()));
+                std::map<::dsn::rpc_address, partition_bulk_load_state>::const_iterator _iter731;
+                for (_iter731 = (*_iter730).begin(); _iter731 != (*_iter730).end(); ++_iter731) {
+                    xfer += _iter731->first.write(oprot);
+                    xfer += _iter731->second.write(oprot);
+                }
+                xfer += oprot->writeMapEnd();
+            }
+        }
+        xfer += oprot->writeListEnd();
+    }
+    xfer += oprot->writeFieldEnd();
+
+    if (this->__isset.hint_msg) {
+        xfer += oprot->writeFieldBegin("hint_msg", ::apache::thrift::protocol::T_STRING, 7);
+        xfer += oprot->writeString(this->hint_msg);
+        xfer += oprot->writeFieldEnd();
+    }
+    xfer += oprot->writeFieldStop();
+    xfer += oprot->writeStructEnd();
+    return xfer;
+}
+
+void swap(query_bulk_load_response &a, query_bulk_load_response &b)
+{
+    using ::std::swap;
+    swap(a.err, b.err);
+    swap(a.app_name, b.app_name);
+    swap(a.app_status, b.app_status);
+    swap(a.partitions_status, b.partitions_status);
+    swap(a.max_replica_count, b.max_replica_count);
+    swap(a.bulk_load_states, b.bulk_load_states);
+    swap(a.hint_msg, b.hint_msg);
+    swap(a.__isset, b.__isset);
+}
+
+query_bulk_load_response::query_bulk_load_response(const query_bulk_load_response &other732)
+{
+    err = other732.err;
+    app_name = other732.app_name;
+    app_status = other732.app_status;
+    partitions_status = other732.partitions_status;
+    max_replica_count = other732.max_replica_count;
+    bulk_load_states = other732.bulk_load_states;
+    hint_msg = other732.hint_msg;
+    __isset = other732.__isset;
+}
+query_bulk_load_response::query_bulk_load_response(query_bulk_load_response &&other733)
+{
+    err = std::move(other733.err);
+    app_name = std::move(other733.app_name);
+    app_status = std::move(other733.app_status);
+    partitions_status = std::move(other733.partitions_status);
+    max_replica_count = std::move(other733.max_replica_count);
+    bulk_load_states = std::move(other733.bulk_load_states);
+    hint_msg = std::move(other733.hint_msg);
+    __isset = std::move(other733.__isset);
+}
+query_bulk_load_response &query_bulk_load_response::
+operator=(const query_bulk_load_response &other734)
+{
+    err = other734.err;
+    app_name = other734.app_name;
+    app_status = other734.app_status;
+    partitions_status = other734.partitions_status;
+    max_replica_count = other734.max_replica_count;
+    bulk_load_states = other734.bulk_load_states;
+    hint_msg = other734.hint_msg;
+    __isset = other734.__isset;
+    return *this;
+}
+query_bulk_load_response &query_bulk_load_response::operator=(query_bulk_load_response &&other735)
+{
+    err = std::move(other735.err);
+    app_name = std::move(other735.app_name);
+    app_status = std::move(other735.app_status);
+    partitions_status = std::move(other735.partitions_status);
+    max_replica_count = std::move(other735.max_replica_count);
+    bulk_load_states = std::move(other735.bulk_load_states);
+    hint_msg = std::move(other735.hint_msg);
+    __isset = std::move(other735.__isset);
+    return *this;
+}
+void query_bulk_load_response::printTo(std::ostream &out) const
+{
+    using ::apache::thrift::to_string;
+    out << "query_bulk_load_response(";
+    out << "err=" << to_string(err);
+    out << ", "
+        << "app_name=" << to_string(app_name);
+    out << ", "
+        << "app_status=" << to_string(app_status);
+    out << ", "
+        << "partitions_status=" << to_string(partitions_status);
+    out << ", "
+        << "max_replica_count=" << to_string(max_replica_count);
+    out << ", "
+        << "bulk_load_states=" << to_string(bulk_load_states);
+    out << ", "
+        << "hint_msg=";
+    (__isset.hint_msg ? (out << to_string(hint_msg)) : (out << "<null>"));
+    out << ")";
+}
 }
 } // namespace

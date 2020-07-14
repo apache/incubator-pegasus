@@ -1,28 +1,6 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2015 Microsoft Corporation
- *
- * -=- Robust Distributed System Nucleus (rDSN) -=-
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+// Copyright (c) 2017-present, Xiaomi, Inc.  All rights reserved.
+// This source code is licensed under the Apache License Version 2.0, which
+// can be found in the LICENSE file in the root directory of this source tree.
 
 #include <gtest/gtest.h>
 #include <dsn/dist/fmt_logging.h>
@@ -73,6 +51,17 @@ public:
 
         control_bulk_load_rpc rpc(std::move(request), RPC_CM_CONTROL_BULK_LOAD);
         bulk_svc().on_control_bulk_load(rpc);
+        wait_all();
+        return rpc.response().err;
+    }
+
+    error_code query_bulk_load(const std::string &app_name)
+    {
+        auto request = dsn::make_unique<query_bulk_load_request>();
+        request->app_name = app_name;
+
+        query_bulk_load_rpc rpc(std::move(request), RPC_CM_QUERY_BULK_LOAD_STATUS);
+        bulk_svc().on_query_bulk_load_status(rpc);
         wait_all();
         return rpc.response().err;
     }
@@ -355,6 +344,21 @@ TEST_F(bulk_load_service_test, control_bulk_load_test)
     }
     reset_local_bulk_load_states(app->app_id, APP_NAME);
     fail::teardown();
+}
+
+/// query bulk load status unit tests
+TEST_F(bulk_load_service_test, query_bulk_load_status_with_wrong_state)
+{
+    create_app(APP_NAME);
+    ASSERT_EQ(query_bulk_load(APP_NAME), ERR_INVALID_STATE);
+}
+
+TEST_F(bulk_load_service_test, query_bulk_load_status_success)
+{
+    create_app(APP_NAME);
+    auto app = find_app(APP_NAME);
+    app->is_bulk_loading = true;
+    ASSERT_EQ(query_bulk_load(APP_NAME), ERR_OK);
 }
 
 /// bulk load process unit tests

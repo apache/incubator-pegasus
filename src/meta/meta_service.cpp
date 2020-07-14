@@ -438,6 +438,9 @@ void meta_service::register_rpc_handlers()
         RPC_CM_START_BULK_LOAD, "start_bulk_load", &meta_service::on_start_bulk_load);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_CONTROL_BULK_LOAD, "control_bulk_load", &meta_service::on_control_bulk_load);
+    register_rpc_handler_with_rpc_holder(RPC_CM_QUERY_BULK_LOAD_STATUS,
+                                         "query_bulk_load_status",
+                                         &meta_service::on_query_bulk_load_status);
 }
 
 int meta_service::check_leader(dsn::message_ex *req, dsn::rpc_address *forward_address)
@@ -1012,6 +1015,20 @@ void meta_service::on_control_bulk_load(control_bulk_load_rpc rpc)
                      tracker(),
                      [this, rpc]() { _bulk_load_svc->on_control_bulk_load(std::move(rpc)); },
                      server_state::sStateHash);
+}
+
+void meta_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
+{
+    if (!check_status(rpc)) {
+        return;
+    }
+
+    if (_bulk_load_svc == nullptr) {
+        derror_f("meta doesn't support bulk load");
+        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+        return;
+    }
+    _bulk_load_svc->on_query_bulk_load_status(std::move(rpc));
 }
 
 } // namespace replication

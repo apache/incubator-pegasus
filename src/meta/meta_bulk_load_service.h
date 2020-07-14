@@ -89,6 +89,8 @@ public:
     void on_start_bulk_load(start_bulk_load_rpc rpc);
     // client -> meta server to pause/restart/cancel/force_cancel bulk load
     void on_control_bulk_load(control_bulk_load_rpc rpc);
+    // client -> meta server to query bulk load status
+    void on_query_bulk_load_status(query_bulk_load_rpc rpc);
 
 private:
     // Called by `on_start_bulk_load`, check request params

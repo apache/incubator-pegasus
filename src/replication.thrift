@@ -1050,6 +1050,27 @@ struct control_bulk_load_response
     2:optional string   hint_msg;
 }
 
+struct query_bulk_load_request
+{
+    1:string   app_name;
+}
+
+struct query_bulk_load_response
+{
+    // Possible error:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_STATE: app is not executing bulk load
+    1:dsn.error_code                                        err;
+    2:string                                                app_name;
+    3:bulk_load_status                                      app_status;
+    4:list<bulk_load_status>                                partitions_status;
+    5:i32                                                   max_replica_count;
+    // detailed bulk load state for each replica
+    6:list<map<dsn.rpc_address, partition_bulk_load_state>> bulk_load_states;
+    7:optional string                                       hint_msg;
+}
+
 /*
 service replica_s
 {
