@@ -277,9 +277,6 @@ tool_app *get_current_tool() { return dsn_all.tool.get(); }
 } // namespace tools
 } // namespace dsn
 
-extern void dsn_log_init(const std::string &logging_factory_name,
-                         const std::string &dir_log,
-                         std::function<std::string()> dsn_log_prefixed_message_func);
 extern void dsn_core_init();
 
 inline void dsn_global_init()

@@ -156,13 +156,6 @@ bool register_component_provider(const char *name,
     return dsn::utils::factory_store<env_provider>::register_factory(name, f, type);
 }
 
-bool register_component_provider(const char *name,
-                                 logging_provider::factory f,
-                                 ::dsn::provider_type type)
-{
-    return dsn::utils::factory_store<logging_provider>::register_factory(name, f, type);
-}
-
 bool register_component_provider(network_header_format fmt,
                                  const std::vector<const char *> &signatures,
                                  message_parser::factory f,
@@ -183,6 +176,6 @@ toollet *get_toollet(const char *name, ::dsn::provider_type type)
         return tlt;
     }
 }
-}
-}
-} // end namespace dsn::tool_api
+} // namespace internal_use_only
+} // namespace tools
+} // namespace dsn

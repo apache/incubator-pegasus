@@ -39,6 +39,7 @@
 #include <dsn/tool_api.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <dsn/c/app_model.h>
 
 namespace dsn {
 namespace utils {
@@ -84,7 +85,7 @@ static void handle_term(int signal_id)
     fflush(stdout);
     dsn_exit(0);
 }
-}
-}
+} // namespace utils
+} // namespace dsn
 
 #endif
