@@ -36,6 +36,7 @@ add_library(pegasus_client_shared SHARED $<TARGET_OBJECTS:pegasus_client_impl_ob
 target_link_libraries(pegasus_client_shared PRIVATE
     pegasus_base
     dsn_runtime
+    dsn_utils
     dsn_client
     dsn_replication_common
     thrift)

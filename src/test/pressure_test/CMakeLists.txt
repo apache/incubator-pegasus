@@ -12,6 +12,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
     pegasus_client_static
+    dsn_utils
     )
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-pressure.ini")
