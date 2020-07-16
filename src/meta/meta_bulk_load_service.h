@@ -227,6 +227,25 @@ private:
     ///
     void try_to_continue_bulk_load();
 
+    void try_to_continue_app_bulk_load(
+        const app_bulk_load_info &ainfo,
+        const std::unordered_map<int32_t, partition_bulk_load_info> &partition_map);
+
+    static bool validate_app(int32_t app_id,
+                             int32_t partition_count,
+                             const app_bulk_load_info &ainfo,
+                             int32_t pinfo_count);
+
+    static bool
+    validate_partition(const app_bulk_load_info &ainfo,
+                       const std::unordered_map<int32_t, partition_bulk_load_info> &pinfo_map,
+                       const int32_t different_status_count);
+
+    void do_continue_app_bulk_load(
+        const app_bulk_load_info &ainfo,
+        const std::unordered_map<int32_t, partition_bulk_load_info> &pinfo_map,
+        const std::unordered_set<int32_t> &different_status_pidx_set);
+
     ///
     /// helper functions
     ///
