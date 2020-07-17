@@ -246,6 +246,13 @@ private:
         const std::unordered_map<int32_t, partition_bulk_load_info> &pinfo_map,
         const std::unordered_set<int32_t> &different_status_pidx_set);
 
+    // called by `do_continue_app_bulk_load`
+    // only used when app status is downloading and some partition bulk load info not existed on
+    // remote storage
+    void create_missing_partition_dir(const std::string &app_name,
+                                      const gpid &pid,
+                                      int32_t partition_count);
+
     ///
     /// helper functions
     ///
