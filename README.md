@@ -1,10 +1,28 @@
 # Pegasus with Docker
 
 This is a docker-compose solution to bootstrap a Pegasus cluster
-on your machine. The docker image is automatically downloaded from
-aliyun container registry.
+on your machine.
 
 ## HOW TO
+
+### Docker image
+
+Before setting up the dockers, you should first have a docker image of a specfic version of Pegasus.
+Check out the latest version 
+
+```sh
+git clone git@github.com:XiaoMi/pegasus.git
+
+cd pegasus
+./run.sh build -c # Compiling the code.
+./run.sh pack_server # Packaging the binaries of Pegasus server.
+
+./docker/build_docker.sh
+```
+
+> We will soon publish a docker image of Pegasus server 2.0.0.
+
+### Set up a docker cluster
 
 To start a cluster:
 
@@ -14,8 +32,6 @@ To start a cluster:
 
 To start multiple clusters, you should reconfigure the `cluster_args.sh` by
 using a different `CLUSTER_NAME` and `META_IP_PREFIX`. For example `onebox2` and `172.22.0`.
-
-## TROUBLESHOTTING
 
 ## Using pumba to inject faults to Pegasus
 
