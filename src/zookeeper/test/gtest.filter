@@ -1,2 +1,0 @@
-config-test.ini distributed_lock_service_zookeeper.simple_lock_unlock
-config-test.ini -distributed_lock_service_zookeeper.simple_lock_unlock

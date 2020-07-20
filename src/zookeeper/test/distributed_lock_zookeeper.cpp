@@ -157,7 +157,6 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
     cb_pair2.first->wait();
     cb_pair2.second->cancel(false);
 
-    cb_pair.first->wait();
     // try to cancel an locked lock
     task_ptr tsk = dlock_svc->cancel_pending_lock(
         lock_id, my_id, DLOCK_CALLBACK, [](error_code ec, const std::string &, int) {
@@ -195,6 +194,14 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
 
     tsk = dlock_svc->unlock(
         lock_id, my_id, true, DLOCK_CALLBACK, [](error_code ec) { ASSERT_TRUE(ec == ERR_OK); });
+
+    tsk->wait();
+
+    // the pending lock[lock_id, my_id2] will get the lock after
+    // [lock_id, my_id](the next step) unlocked
+    cb_pair2.first->wait();
+    tsk = dlock_svc->unlock(
+        lock_id, my_id2, true, DLOCK_CALLBACK, [](error_code ec) { ASSERT_TRUE(ec == ERR_OK); });
 
     tsk->wait();
 }
