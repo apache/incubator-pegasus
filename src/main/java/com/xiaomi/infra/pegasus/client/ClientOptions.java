@@ -34,7 +34,7 @@ public class ClientOptions {
   public static final String DEFAULT_META_SERVERS =
       "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
   public static final Duration DEFAULT_OPERATION_TIMEOUT = Duration.ofMillis(1000);
-  public static final int DEFAULT_ASYNC_WORKERS = Runtime.getRuntime().availableProcessors();
+  public static final int DEFAULT_ASYNC_WORKERS = 4;
   public static final boolean DEFAULT_ENABLE_PERF_COUNTER = true;
   public static final String DEFAULT_FALCON_PERF_COUNTER_TAGS = "";
   public static final Duration DEFAULT_FALCON_PUSH_INTERVAL = Duration.ofSeconds(10);
