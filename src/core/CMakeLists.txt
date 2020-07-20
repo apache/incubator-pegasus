@@ -13,4 +13,5 @@ add_library(dsn_runtime STATIC
         $<TARGET_OBJECTS:dsn.tools.common>
         $<TARGET_OBJECTS:dsn.tools.simulator>
         )
+target_link_libraries(dsn_runtime dsn_utils)
 install(TARGETS dsn_runtime DESTINATION "lib")

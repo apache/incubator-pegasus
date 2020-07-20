@@ -33,10 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/service_api_c.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/c/api_utilities.h>
 
 TEST(core, logging)
 {

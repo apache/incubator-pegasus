@@ -35,17 +35,28 @@
 
 #include "core/rpc/asio_net_provider.h"
 #include <dsn/tool/providers.common.h>
-#include "lockp.std.h"
+#include "utils/lockp.std.h"
 #include "core/task/simple_task_queue.h"
 #include "core/task/hpc_task_queue.h"
 #include "core/rpc/network.sim.h"
-#include "simple_logger.h"
+#include "utils/simple_logger.h"
 #include "core/rpc/dsn_message_parser.h"
 #include "core/rpc/thrift_message_parser.h"
 #include "core/rpc/raw_message_parser.h"
 
 namespace dsn {
 namespace tools {
+
+void register_std_lock_providers()
+{
+    lock_provider::register_component<std_lock_provider>("dsn::tools::std_lock_provider");
+    lock_nr_provider::register_component<std_lock_nr_provider>("dsn::tools::std_lock_nr_provider");
+    rwlock_nr_provider::register_component<std_rwlock_nr_provider>(
+        "dsn::tools::std_rwlock_nr_provider");
+    semaphore_provider::register_component<std_semaphore_provider>(
+        "dsn::tools::std_semaphore_provider");
+}
+
 void register_common_providers()
 {
     register_component_provider<env_provider>("dsn::env_provider");

@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "core/tools/common/simple_logger.h"
+#include "utils/simple_logger.h"
 #include <gtest/gtest.h>
 #include <dsn/utility/filesystem.h>
 
@@ -99,12 +99,7 @@ TEST(tools_common, simple_logger)
     // cases for print_header
     screen_logger *logger = new screen_logger("./");
     log_print(logger, "%s", "test_print");
-    std::thread t(
-        [](screen_logger *lg) {
-            tls_dsn.magic = 0xdeadbeef;
-            log_print(lg, "%s", "test_print");
-        },
-        logger);
+    std::thread t([](screen_logger *lg) { log_print(lg, "%s", "test_print"); }, logger);
     t.join();
 
     logger->flush();

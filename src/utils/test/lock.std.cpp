@@ -24,35 +24,38 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for command_manager.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#include <dsn/tool-api/command_manager.h>
+#include "utils/lockp.std.h"
 #include <gtest/gtest.h>
 
-using namespace ::dsn;
+using namespace dsn;
+using namespace dsn::tools;
 
-void command_manager_module_init()
+TEST(tools_common, std_lock_provider)
 {
-    dsn::command_manager::instance().register_command(
-        {"test-cmd"},
-        "test-cmd - just for command_manager unit-test",
-        "test-cmd arg1 arg2 ...",
-        [](const std::vector<std::string> &args) {
-            std::stringstream ss;
-            ss << "test-cmd response: [";
-            for (size_t i = 0; i < args.size(); ++i) {
-                if (i != 0)
-                    ss << " ";
-                ss << args[i];
-            }
-            ss << "]";
-            return ss.str();
-        });
+    std_lock_provider *lock = new std_lock_provider(nullptr);
+    lock->lock();
+    EXPECT_TRUE(lock->try_lock());
+    lock->unlock();
+    lock->unlock();
+
+    std_lock_nr_provider *nr_lock = new std_lock_nr_provider(nullptr);
+    nr_lock->lock();
+    EXPECT_FALSE(nr_lock->try_lock());
+    nr_lock->unlock();
+
+    std_rwlock_nr_provider *rwlock = new std_rwlock_nr_provider(nullptr);
+    rwlock->lock_read();
+    rwlock->unlock_read();
+    rwlock->lock_write();
+    rwlock->unlock_write();
+
+    std_semaphore_provider *sema = new std_semaphore_provider(0, nullptr);
+    std::thread t([](std_semaphore_provider *s) { s->wait(1000000); }, sema);
+    sema->signal(1);
+    t.join();
+
+    delete lock;
+    delete nr_lock;
+    delete rwlock;
+    delete sema;
 }

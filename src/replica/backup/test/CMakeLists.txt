@@ -10,6 +10,7 @@ set(MY_PROJ_LIBS dsn_meta_server
         dsn.block_service
         dsn.block_service.local
         dsn.block_service.fds
+        dsn_utils
         gtest
 )
 

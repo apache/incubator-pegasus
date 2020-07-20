@@ -26,29 +26,55 @@
 
 /*
  * Description:
- *     Unit-test for rpc_address.
+ *     Unit-test for command_manager.
  *
  * Revision history:
  *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/tool-api/env_provider.h>
+#include <dsn/tool-api/command_manager.h>
 #include <gtest/gtest.h>
-#include <dsn/utility/rand.h>
-#include "core/tools/simulator/env.sim.h"
 
 using namespace ::dsn;
 
-TEST(core, env)
+void command_manager_module_init()
 {
-    uint64_t xs[] = {0, std::numeric_limits<uint64_t>::max() - 1, 0xdeadbeef};
+    dsn::command_manager::instance().register_command(
+        {"test-cmd"},
+        "test-cmd - just for command_manager unit-test",
+        "test-cmd arg1 arg2 ...",
+        [](const std::vector<std::string> &args) {
+            std::stringstream ss;
+            ss << "test-cmd response: [";
+            for (size_t i = 0; i < args.size(); ++i) {
+                if (i != 0)
+                    ss << " ";
+                ss << args[i];
+            }
+            ss << "]";
+            return ss.str();
+        });
+}
 
-    for (auto &x : xs) {
-        auto r = rand::next_u64(x, x);
-        EXPECT_EQ(r, x);
+TEST(command_manager, exist_command)
+{
+    const std::string cmd = "test-cmd";
+    const std::vector<std::string> cmd_args{"this", "is", "test", "argument"};
+    std::string output;
+    dsn::command_manager::instance().run_command(cmd, cmd_args, output);
 
-        r = rand::next_u64(x, x + 1);
-        EXPECT_TRUE(r == x || r == (x + 1));
-    }
+    std::string expect_output = "test-cmd response: [this is test argument]";
+    ASSERT_EQ(output, expect_output);
+}
+
+TEST(command_manager, not_exist_command)
+{
+    const std::string cmd = "not-exist-cmd";
+    const std::vector<std::string> cmd_args{"arg1", "arg2"};
+    std::string output;
+    dsn::command_manager::instance().run_command(cmd, cmd_args, output);
+
+    std::string expect_output = std::string("unknown command '") + cmd + "'";
+    ASSERT_EQ(output, expect_output);
 }

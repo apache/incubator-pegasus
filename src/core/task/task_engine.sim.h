@@ -38,7 +38,7 @@
 #include <dsn/utility/priority_queue.h>
 #include <dsn/tool-api/timer_service.h>
 #include <dsn/tool-api/task_queue.h>
-#include "core/core/zlock_provider.h"
+#include "utils/zlock_provider.h"
 
 namespace dsn {
 namespace tools {

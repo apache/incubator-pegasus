@@ -56,7 +56,7 @@ public:
 
     typedef env_provider *(*factory)(env_provider *);
 
-    env_provider(env_provider *inner_provider);
+    env_provider(env_provider *inner_provider){};
 };
 /*@}*/
-} // end namespace
+} // namespace dsn

@@ -38,7 +38,6 @@
 
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/group_address.h>
-#include <dsn/tool-api/task.h>
 
 namespace dsn {
 

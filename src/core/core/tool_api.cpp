@@ -36,7 +36,7 @@
 #include <dsn/tool_api.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/singleton_store.h>
-#include "service_engine.h"
+#include "core/core/service_engine.h"
 #include "core/rpc/message_parser_manager.h"
 
 namespace dsn {

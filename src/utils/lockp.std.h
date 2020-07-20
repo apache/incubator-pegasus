@@ -36,7 +36,7 @@
 #pragma once
 
 #include <dsn/utility/synchronize.h>
-#include "core/core/zlock_provider.h"
+#include "utils/zlock_provider.h"
 
 namespace dsn {
 namespace tools {
@@ -102,7 +102,5 @@ public:
 private:
     dsn::utils::semaphore _sema;
 };
-
-void register_std_lock_providers();
 }
 } // end namespace dsn::tools
