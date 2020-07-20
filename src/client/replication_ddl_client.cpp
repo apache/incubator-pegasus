@@ -43,6 +43,8 @@
 #include <fmt/format.h>
 #include <dsn/utility/time_utils.h>
 
+#include "common/replication_common.h"
+
 namespace dsn {
 namespace replication {
 
@@ -1545,6 +1547,37 @@ void replication_ddl_client::query_disk_info(
                                      query_disk_info_rpc(std::move(request), RPC_QUERY_DISK_INFO));
     }
     call_rpcs_async(query_disk_info_rpcs, resps);
+}
+
+error_with<start_bulk_load_response>
+replication_ddl_client::start_bulk_load(const std::string &app_name,
+                                        const std::string &cluster_name,
+                                        const std::string &file_provider_type)
+{
+    auto req = make_unique<start_bulk_load_request>();
+    req->app_name = app_name;
+    req->cluster_name = cluster_name;
+    req->file_provider_type = file_provider_type;
+    return call_rpc_sync(start_bulk_load_rpc(std::move(req), RPC_CM_START_BULK_LOAD));
+}
+
+error_with<control_bulk_load_response>
+replication_ddl_client::control_bulk_load(const std::string &app_name,
+                                          const bulk_load_control_type::type control_type)
+{
+    auto req = make_unique<control_bulk_load_request>();
+    req->app_name = app_name;
+    req->type = control_type;
+    return call_rpc_sync(control_bulk_load_rpc(std::move(req), RPC_CM_CONTROL_BULK_LOAD));
+}
+
+error_with<query_bulk_load_response>
+replication_ddl_client::query_bulk_load(const std::string &app_name)
+{
+
+    auto req = make_unique<query_bulk_load_request>();
+    req->app_name = app_name;
+    return call_rpc_sync(query_bulk_load_rpc(std::move(req), RPC_CM_QUERY_BULK_LOAD_STATUS));
 }
 
 } // namespace replication

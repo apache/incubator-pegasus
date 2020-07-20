@@ -178,6 +178,15 @@ public:
         const std::string &app_name,
         /*out*/ std::map<dsn::rpc_address, error_with<query_disk_info_response>> &resps);
 
+    error_with<start_bulk_load_response> start_bulk_load(const std::string &app_name,
+                                                         const std::string &cluster_name,
+                                                         const std::string &file_provider_type);
+
+    error_with<control_bulk_load_response>
+    control_bulk_load(const std::string &app_name, const bulk_load_control_type::type control_type);
+
+    error_with<query_bulk_load_response> query_bulk_load(const std::string &app_name);
+
 private:
     bool static valid_app_char(int c);
 
