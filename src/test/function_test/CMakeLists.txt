@@ -13,6 +13,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
     dsn_client
     dsn_replication_common
+    dsn_utils
     pegasus_client_static
     gtest
     )

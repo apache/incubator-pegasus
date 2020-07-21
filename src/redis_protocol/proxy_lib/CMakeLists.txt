@@ -16,6 +16,7 @@ add_definitions(-Wno-attributes)
 dsn_add_static_library()
 
 target_link_libraries(${MY_PROJ_NAME} PRIVATE RocksDB::rocksdb
+                                              dsn_utils
                                               pegasus_base) # TODO(huangwei5): dsn_add_static_library doesnt link libs, need fix
 
 target_include_directories(${MY_PROJ_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
