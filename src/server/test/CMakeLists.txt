@@ -24,6 +24,7 @@ set(MY_PROJ_LIBS
         dsn.block_service
         dsn.failure_detector
         dsn.replication.zookeeper_provider
+        dsn_utils
         pegasus_reporter
         RocksDB::rocksdb
         pegasus_client_static
