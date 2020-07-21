@@ -79,11 +79,11 @@ uint64_t meta_store::get_decree_from_readonly_db(rocksdb::DB *db,
     }
     auto status = db->Get(rd_opts, cf, key, &data);
     if (status.ok()) {
-        dassert(dsn::buf2uint64(data, *value),
-                "rocksdb {} get {} from meta column family got error value {}",
-                db->GetName(),
-                key,
-                data);
+        dassert_f(dsn::buf2uint64(data, *value),
+                  "rocksdb {} get {} from meta column family got error value {}",
+                  db->GetName(),
+                  key,
+                  data);
         return ::dsn::ERR_OK;
     }
 
