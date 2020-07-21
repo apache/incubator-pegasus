@@ -48,6 +48,7 @@
 #include "server_load_balancer.h"
 #include "dump_file.h"
 #include "app_env_validator.h"
+#include "meta_bulk_load_service.h"
 
 using namespace dsn;
 
@@ -587,6 +588,13 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                             drop_partition(app, partition_id);
                         } else
                             process_one_partition(app);
+                        // check consistency between app bulk_loading flag and app bulk load dir
+                        if (app->helpers->partitions_in_progress.load() == 0 &&
+                            app->status == app_status::AS_AVAILABLE &&
+                            _meta_svc->get_bulk_load_service()) {
+                            _meta_svc->get_bulk_load_service()->check_app_bulk_load_states(
+                                std::move(app), app->is_bulk_loading);
+                        }
                     }
                 } else if (ec == ERR_OBJECT_NOT_FOUND) {
                     dwarn("partition node %s not exist on remote storage, may half create before",

@@ -92,6 +92,13 @@ public:
     // client -> meta server to query bulk load status
     void on_query_bulk_load_status(query_bulk_load_rpc rpc);
 
+    // Called by `sync_apps_from_remote_storage`, check bulk load state consistency
+    // Handle inconsistent conditions below:
+    // - app is_bulk_loading = true, app_bulk_load_info not existed, set is_bulk_loading=false
+    // - app is_bulk_loading = false, app_bulk_load_info existed, remove useless app bulk load on
+    // remote storage
+    void check_app_bulk_load_states(std::shared_ptr<app_state> app, bool is_app_bulk_loading);
+
 private:
     // Called by `on_start_bulk_load`, check request params
     // - ERR_OK: pass params check

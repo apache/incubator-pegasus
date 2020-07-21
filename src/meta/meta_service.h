@@ -110,6 +110,7 @@ public:
     {
         return _block_service_manager;
     }
+    bulk_load_service *get_bulk_load_service() { return _bulk_load_svc.get(); }
 
     meta_function_level::type get_function_level()
     {
