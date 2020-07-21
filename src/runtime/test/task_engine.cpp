@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "core/task/task_engine.h"
+#include "runtime/task/task_engine.h"
 #include "test_utils.h"
 #include <dsn/tool_api.h>
 #include <gtest/gtest.h>

@@ -41,9 +41,9 @@
 #include <dsn/utility/synchronize.h>
 #include <gtest/gtest.h>
 #include <thread>
-#include "core/core/service_engine.h"
-#include "core/task/task_engine.sim.h"
-#include "core/tools/simulator/scheduler.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task_engine.sim.h"
+#include "runtime/scheduler.h"
 
 TEST(tools_simulator, dsn_semaphore)
 {

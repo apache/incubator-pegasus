@@ -1,4 +1,4 @@
-set(MY_PROJ_NAME dsn.core.tests)
+set(MY_PROJ_NAME dsn_runtime_tests)
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search

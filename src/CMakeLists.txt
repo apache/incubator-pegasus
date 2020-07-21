@@ -1,7 +1,7 @@
 if(UNIX)
     add_compile_options(-fPIC)
 endif()
-add_subdirectory(core)
+add_subdirectory(runtime)
 add_subdirectory(aio)
 add_subdirectory(zookeeper)
 add_subdirectory(perf_counter)

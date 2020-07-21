@@ -31,7 +31,7 @@
 #include <arpa/inet.h>
 
 #include "rpc_engine.h"
-#include "core/core/service_engine.h"
+#include "runtime/service_engine.h"
 #include <dsn/utility/factory_store.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/tool-api/task_queue.h>

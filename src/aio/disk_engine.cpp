@@ -28,7 +28,7 @@
 #include <dsn/tool-api/aio_task.h>
 #include "disk_engine.h"
 #include "sim_aio_provider.h"
-#include "core/core/service_engine.h"
+#include "runtime/service_engine.h"
 
 using namespace dsn::utils;
 

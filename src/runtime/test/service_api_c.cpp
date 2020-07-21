@@ -43,7 +43,7 @@
 #include <gtest/gtest.h>
 #include <thread>
 #include <dsn/utility/rand.h>
-#include "core/core/service_engine.h"
+#include "runtime/service_engine.h"
 
 using namespace dsn;
 

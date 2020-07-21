@@ -59,7 +59,7 @@ function usage_build()
                                    type: address|leak|thread|undefined"
     if [ "$ONLY_BUILD" == "NO" ]; then
         echo "   -m|--test_module      specify modules to test, split by ',',"
-        echo "                         e.g., \"dsn.core.tests,dsn_meta_state_tests\","
+        echo "                         e.g., \"dsn_runtime_tests,dsn_meta_state_tests\","
         echo "                         if not set, then run all tests"
     fi
 }

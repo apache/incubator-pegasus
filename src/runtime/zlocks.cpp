@@ -36,7 +36,7 @@
 #include <dsn/utility/factory_store.h>
 #include <dsn/tool-api/zlocks.h>
 #include "utils/zlock_provider.h"
-#include "core/core/service_engine.h"
+#include "runtime/service_engine.h"
 
 namespace dsn {
 

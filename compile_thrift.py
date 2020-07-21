@@ -25,7 +25,7 @@ thrift_description = [
         },
         "file_move": {
             "_types.h": "include/dsn/cpp/serialization_helper",
-            "_types.cpp": "src/core/core"
+            "_types.cpp": "src/runtime"
         }
     },
     {

@@ -41,7 +41,7 @@
 #include <dsn/tool-api/message_parser.h>
 #include <cctype>
 
-#include "core/task/task_engine.h"
+#include "runtime/task/task_engine.h"
 
 using namespace dsn::utils;
 

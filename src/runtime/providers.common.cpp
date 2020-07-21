@@ -33,16 +33,16 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "core/rpc/asio_net_provider.h"
+#include "runtime/rpc/asio_net_provider.h"
 #include <dsn/tool/providers.common.h>
 #include "utils/lockp.std.h"
-#include "core/task/simple_task_queue.h"
-#include "core/task/hpc_task_queue.h"
-#include "core/rpc/network.sim.h"
+#include "runtime/task/simple_task_queue.h"
+#include "runtime/task/hpc_task_queue.h"
+#include "runtime/rpc/network.sim.h"
 #include "utils/simple_logger.h"
-#include "core/rpc/dsn_message_parser.h"
-#include "core/rpc/thrift_message_parser.h"
-#include "core/rpc/raw_message_parser.h"
+#include "runtime/rpc/dsn_message_parser.h"
+#include "runtime/rpc/thrift_message_parser.h"
+#include "runtime/rpc/raw_message_parser.h"
 
 namespace dsn {
 namespace tools {

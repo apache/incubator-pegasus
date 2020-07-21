@@ -40,7 +40,7 @@
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/rpc_message.h>
 #include "replica/replica_stub.h"
-#include "core/core/service_engine.h"
+#include "runtime/service_engine.h"
 #include "meta/server_load_balancer.h"
 
 #include <iostream>

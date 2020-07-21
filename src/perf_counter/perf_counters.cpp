@@ -40,7 +40,7 @@
 
 #include "perf_counter_atomic.h"
 #include "builtin_counters.h"
-#include "core/core/service_engine.h"
+#include "runtime/service_engine.h"
 
 namespace dsn {
 

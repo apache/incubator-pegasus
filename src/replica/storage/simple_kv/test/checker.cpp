@@ -49,8 +49,8 @@
 #include "meta/server_state.h"
 #include "meta/server_load_balancer.h"
 
-#include "core/core/service_engine.h"
-#include "core/rpc/rpc_engine.h"
+#include "runtime/service_engine.h"
+#include "runtime/rpc/rpc_engine.h"
 
 namespace dsn {
 namespace replication {

@@ -37,7 +37,7 @@
 #include "scheduler.h"
 
 #include "env.sim.h"
-#include "core/task/task_engine.sim.h"
+#include "runtime/task/task_engine.sim.h"
 #include "sim_clock.h"
 
 namespace dsn {

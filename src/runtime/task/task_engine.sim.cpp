@@ -35,7 +35,7 @@
 
 #include <dsn/utility/rand.h>
 #include "task_engine.sim.h"
-#include "core/tools/simulator/scheduler.h"
+#include "runtime/scheduler.h"
 
 namespace dsn {
 namespace tools {

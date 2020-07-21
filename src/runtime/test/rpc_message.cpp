@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "core/core/message_utils.cpp"
+#include "runtime/message_utils.cpp"
 #include <dsn/utility/crc.h>
 #include <dsn/utility/transient_memory.h>
 #include <dsn/tool-api/rpc_message.h>
