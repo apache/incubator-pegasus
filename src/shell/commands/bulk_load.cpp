@@ -66,8 +66,17 @@ bool start_bulk_load(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-bool pause_bulk_load(command_executor *e, shell_context *sc, arguments args)
+// helper function for pause/restart bulk load
+bool control_bulk_load_helper(command_executor *e,
+                              shell_context *sc,
+                              arguments args,
+                              dsn::replication::bulk_load_control_type::type type)
 {
+    if (type != dsn::replication::bulk_load_control_type::BLC_PAUSE &&
+        type != dsn::replication::bulk_load_control_type::BLC_RESTART) {
+        return false;
+    }
+
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'}, {0, 0, 0, 0}};
     std::string app_name;
 
@@ -92,64 +101,35 @@ bool pause_bulk_load(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    auto err_resp = sc->ddl_client->control_bulk_load(
-        app_name, dsn::replication::bulk_load_control_type::BLC_PAUSE);
+    auto err_resp = sc->ddl_client->control_bulk_load(app_name, type);
     dsn::error_s err = err_resp.get_error();
     std::string hint_msg;
     if (err.is_ok()) {
         err = dsn::error_s::make(err_resp.get_value().err);
         hint_msg = err_resp.get_value().hint_msg;
     }
+    std::string type_str =
+        type == dsn::replication::bulk_load_control_type::BLC_PAUSE ? "pause" : "restart";
     if (!err.is_ok()) {
-        fmt::print(stderr, "pause bulk load failed, error={} [hint:\"{}\"]\n", err, hint_msg);
+        fmt::print(
+            stderr, "{} bulk load failed, error={} [hint:\"{}\"]\n", type_str, err, hint_msg);
     } else {
-        fmt::print(stdout, "pause bulk load succeed\n");
+        fmt::print(stdout, "{} bulk load succeed\n", type_str);
     }
 
     return true;
 }
 
+bool pause_bulk_load(command_executor *e, shell_context *sc, arguments args)
+{
+    return control_bulk_load_helper(
+        e, sc, args, dsn::replication::bulk_load_control_type::BLC_PAUSE);
+}
+
 bool restart_bulk_load(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"app_name", required_argument, 0, 'a'}, {0, 0, 0, 0}};
-    std::string app_name;
-
-    optind = 0;
-    while (true) {
-        int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "a:", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 'a':
-            app_name = optarg;
-            break;
-        default:
-            return false;
-        }
-    }
-
-    if (app_name.empty()) {
-        fprintf(stderr, "app_name should not be empty\n");
-        return false;
-    }
-
-    auto err_resp = sc->ddl_client->control_bulk_load(
-        app_name, dsn::replication::bulk_load_control_type::BLC_RESTART);
-    dsn::error_s err = err_resp.get_error();
-    std::string hint_msg;
-    if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
-        hint_msg = err_resp.get_value().hint_msg;
-    }
-    if (!err.is_ok()) {
-        fmt::print(stderr, "restart bulk load failed, error={} [hint:\"{}\"]\n", err, hint_msg);
-    } else {
-        fmt::print(stdout, "restart bulk load succeed\n");
-    }
-
-    return true;
+    return control_bulk_load_helper(
+        e, sc, args, dsn::replication::bulk_load_control_type::BLC_RESTART);
 }
 
 bool cancel_bulk_load(command_executor *e, shell_context *sc, arguments args)
