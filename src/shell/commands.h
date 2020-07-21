@@ -250,3 +250,15 @@ bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args);
 bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args);
 
 bool query_disk_replica(command_executor *e, shell_context *sc, arguments args);
+
+// == bulk load (see 'commands/bulk_load.cpp') == //
+
+bool start_bulk_load(command_executor *e, shell_context *sc, arguments args);
+
+bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments args);
+
+bool pause_bulk_load(command_executor *e, shell_context *sc, arguments args);
+
+bool restart_bulk_load(command_executor *e, shell_context *sc, arguments args);
+
+bool cancel_bulk_load(command_executor *e, shell_context *sc, arguments args);
