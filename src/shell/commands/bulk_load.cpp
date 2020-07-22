@@ -189,6 +189,10 @@ bool cancel_bulk_load(command_executor *e, shell_context *sc, arguments args)
 template <typename T>
 static std::string get_short_status(T status)
 {
+    static_assert(std::is_same<T, dsn::replication::bulk_load_status::type>::value ||
+                      std::is_same<T, dsn::replication::ingestion_status::type>::value,
+                  "the given type is not bulk_load_status or ingestion_status");
+
     std::string str = dsn::enum_to_string(status);
     auto index = str.find_last_of(":");
     return str.substr(index + 1);
