@@ -112,6 +112,18 @@ private:
 
     inline void set_bulk_load_status(bulk_load_status::type status) { _status = status; }
 
+    inline uint64_t duration_ms() const
+    {
+        return _bulk_load_start_time_ms > 0 ? (dsn_now_ms() - _bulk_load_start_time_ms) : 0;
+    }
+
+    inline uint64_t ingestion_duration_ms() const
+    {
+        return _replica->_bulk_load_ingestion_start_time_ms > 0
+                   ? (dsn_now_ms() - _replica->_bulk_load_ingestion_start_time_ms)
+                   : 0;
+    }
+
     //
     // helper functions
     //
@@ -124,6 +136,7 @@ private:
     replica_stub *_stub;
 
     friend class replica;
+    friend class replica_stub;
     friend class replica_bulk_loader_test;
 
     bulk_load_status::type _status{bulk_load_status::BLS_INVALID};
@@ -133,6 +146,9 @@ private:
     std::atomic<error_code> _download_status{ERR_OK};
     // file_name -> downloading task
     std::map<std::string, task_ptr> _download_task;
+
+    // Used for perf-counter
+    uint64_t _bulk_load_start_time_ms{0};
 };
 
 } // namespace replication

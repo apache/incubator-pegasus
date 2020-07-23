@@ -335,6 +335,57 @@ void replica_stub::install_perf_counters()
         COUNTER_TYPE_VOLATILE_NUMBER,
         "write size exceed threshold count in the recent period");
 
+    // <- Bulk Load Metrics ->
+
+    _counter_bulk_load_running_count.init_app_counter("eon.replica_stub",
+                                                      "bulk.load.running.count",
+                                                      COUNTER_TYPE_VOLATILE_NUMBER,
+                                                      "current bulk load running count");
+    _counter_bulk_load_downloading_count.init_app_counter("eon.replica_stub",
+                                                          "bulk.load.downloading.count",
+                                                          COUNTER_TYPE_VOLATILE_NUMBER,
+                                                          "current bulk load downloading count");
+    _counter_bulk_load_ingestion_count.init_app_counter("eon.replica_stub",
+                                                        "bulk.load.ingestion.count",
+                                                        COUNTER_TYPE_VOLATILE_NUMBER,
+                                                        "current bulk load ingestion count");
+    _counter_bulk_load_succeed_count.init_app_counter("eon.replica_stub",
+                                                      "bulk.load.succeed.count",
+                                                      COUNTER_TYPE_VOLATILE_NUMBER,
+                                                      "current bulk load succeed count");
+    _counter_bulk_load_failed_count.init_app_counter("eon.replica_stub",
+                                                     "bulk.load.failed.count",
+                                                     COUNTER_TYPE_VOLATILE_NUMBER,
+                                                     "current bulk load failed count");
+    _counter_bulk_load_ingestion_reject_write_count.init_app_counter(
+        "eon.replica_stub",
+        "bulk.load.ingestion.reject.write.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "bulk load ingestion reject write requests count");
+    _counter_bulk_load_download_file_succ_count.init_app_counter(
+        "eon.replica_stub",
+        "bulk.load.download.file.success.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "bulk load recent download file success count");
+    _counter_bulk_load_download_file_fail_count.init_app_counter(
+        "eon.replica_stub",
+        "bulk.load.download.file.fail.count",
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "bulk load recent download file failed count");
+    _counter_bulk_load_download_file_size.init_app_counter("eon.replica_stub",
+                                                           "bulk.load.download.file.size",
+                                                           COUNTER_TYPE_VOLATILE_NUMBER,
+                                                           "bulk load recent download file size");
+    _counter_bulk_load_max_ingestion_time_ms.init_app_counter(
+        "eon.replica_stub",
+        "bulk.load.max.ingestion.duration.time.ms",
+        COUNTER_TYPE_NUMBER,
+        "bulk load max ingestion duration time(ms)");
+    _counter_bulk_load_max_duration_time_ms.init_app_counter("eon.replica_stub",
+                                                             "bulk.load.max.duration.time.ms",
+                                                             COUNTER_TYPE_NUMBER,
+                                                             "bulk load max duration time(ms)");
+
 #ifdef DSN_ENABLE_GPERF
     _counter_tcmalloc_release_memory_size.init_app_counter("eon.replica_stub",
                                                            "tcmalloc.release.memory.size",
@@ -1716,6 +1767,9 @@ void replica_stub::on_gc()
     uint64_t cold_backup_running_count = 0;
     uint64_t cold_backup_max_duration_time_ms = 0;
     uint64_t cold_backup_max_upload_file_size = 0;
+    uint64_t bulk_load_running_count = 0;
+    uint64_t bulk_load_max_ingestion_time_ms = 0;
+    uint64_t bulk_load_max_duration_time_ms = 0;
     for (auto &kv : rs) {
         replica_ptr &rep = kv.second.rep;
         if (rep->status() == partition_status::PS_POTENTIAL_SECONDARY) {
@@ -1733,6 +1787,14 @@ void replica_stub::on_gc()
                 cold_backup_max_duration_time_ms, rep->_cold_backup_max_duration_time_ms.load());
             cold_backup_max_upload_file_size = std::max(
                 cold_backup_max_upload_file_size, rep->_cold_backup_max_upload_file_size.load());
+
+            if (rep->get_bulk_loader()->get_bulk_load_status() != bulk_load_status::BLS_INVALID) {
+                bulk_load_running_count++;
+                bulk_load_max_ingestion_time_ms =
+                    std::max(bulk_load_max_ingestion_time_ms, rep->ingestion_duration_ms());
+                bulk_load_max_duration_time_ms =
+                    std::max(bulk_load_max_duration_time_ms, rep->get_bulk_loader()->duration_ms());
+            }
         }
     }
 
@@ -1742,6 +1804,9 @@ void replica_stub::on_gc()
     _counter_cold_backup_running_count->set(cold_backup_running_count);
     _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
     _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);
+    _counter_bulk_load_running_count->set(bulk_load_running_count);
+    _counter_bulk_load_max_ingestion_time_ms->set(bulk_load_max_ingestion_time_ms);
+    _counter_bulk_load_max_duration_time_ms->set(bulk_load_max_duration_time_ms);
 
     ddebug("finish to garbage collection, time_used_ns = %" PRIu64, dsn_now_ns() - start);
 }

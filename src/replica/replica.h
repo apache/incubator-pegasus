@@ -189,6 +189,12 @@ public:
     // Bulk load
     //
     replica_bulk_loader *get_bulk_loader() const { return _bulk_loader.get(); }
+    inline uint64_t ingestion_duration_ms() const
+    {
+        return _bulk_load_ingestion_start_time_ms > 0
+                   ? (dsn_now_ms() - _bulk_load_ingestion_start_time_ms)
+                   : 0;
+    }
 
     //
     // Statistics
@@ -543,6 +549,7 @@ private:
     std::unique_ptr<replica_bulk_loader> _bulk_loader;
     // if replica in bulk load ingestion 2pc, will reject other write requests
     bool _is_bulk_load_ingestion{false};
+    uint64_t _bulk_load_ingestion_start_time_ms{0};
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;

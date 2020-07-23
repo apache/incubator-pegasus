@@ -76,7 +76,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 
     if (_is_bulk_load_ingestion) {
         // reject write requests during ingestion
-        // TODO(heyuchen): add perf-counter here
+        _stub->_counter_bulk_load_ingestion_reject_write_count->increment();
         response_client_write(request, ERR_OPERATION_DISABLED);
         return;
     }
@@ -91,7 +91,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
             return;
         }
         _is_bulk_load_ingestion = true;
-        // TODO(heyuchen): set _bulk_load_ingestion_start_time_ms for perf-counter
+        _bulk_load_ingestion_start_time_ms = dsn_now_ms();
     }
 
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 <

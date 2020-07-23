@@ -263,7 +263,7 @@ error_code replica_bulk_loader::do_bulk_load(const std::string &app_name,
         break;
     case bulk_load_status::BLS_FAILED:
         handle_bulk_load_finish(bulk_load_status::BLS_FAILED);
-        // TODO(heyuchen): add perf-counter here
+        _stub->_counter_bulk_load_failed_count->increment();
         break;
     default:
         break;
@@ -345,7 +345,8 @@ error_code replica_bulk_loader::start_download(const std::string &app_name,
     ddebug_replica("node[{}] has {} replica executing downloading",
                    _stub->_primary_address_str,
                    _stub->_bulk_load_downloading_count.load());
-    // TODO(heyuchen): add perf-counter
+    _bulk_load_start_time_ms = dsn_now_ms();
+    _stub->_counter_bulk_load_downloading_count->increment();
 
     // start download
     ddebug_replica("start to download sst files");
@@ -418,12 +419,13 @@ error_code replica_bulk_loader::download_sst_files(const std::string &app_name,
                     _download_status.store(ec);
                     derror_replica(
                         "failed to download file({}), error = {}", f_meta.name, ec.to_string());
-                    // TODO(heyuchen): add perf-counter
+                    _stub->_counter_bulk_load_download_file_fail_count->increment();
                     return;
                 }
                 // download file succeed, update progress
                 update_bulk_load_download_progress(f_size, f_meta.name);
-                // TODO(heyuchen): add perf-counter
+                _stub->_counter_bulk_load_download_file_succ_count->increment();
+                _stub->_counter_bulk_load_download_file_size->add(f_size);
             });
         _download_task[f_meta.name] = bulk_load_download_task;
     }
@@ -507,7 +509,7 @@ void replica_bulk_loader::check_download_finish()
 void replica_bulk_loader::start_ingestion()
 {
     _status = bulk_load_status::BLS_INGESTING;
-    // TODO(heyuchen): add perf-counter
+    _stub->_counter_bulk_load_ingestion_count->increment();
     if (status() == partition_status::PS_PRIMARY) {
         _replica->_primary_states.ingestion_is_empty_prepare_sent = false;
     }
@@ -540,7 +542,7 @@ void replica_bulk_loader::handle_bulk_load_succeed()
 
     _replica->_app->set_ingestion_status(ingestion_status::IS_INVALID);
     _status = bulk_load_status::BLS_SUCCEED;
-    // TODO(heyuchen): add perf-counter
+    _stub->_counter_bulk_load_succeed_count->increment();
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -613,7 +615,8 @@ void replica_bulk_loader::clear_bulk_load_states()
     _replica->_is_bulk_load_ingestion = false;
     _replica->_app->set_ingestion_status(ingestion_status::IS_INVALID);
 
-    // TODO(heyuchen): clear other states for perf-counter
+    _bulk_load_start_time_ms = 0;
+    _replica->_bulk_load_ingestion_start_time_ms = 0;
 
     _status = bulk_load_status::BLS_INVALID;
 }
@@ -771,7 +774,7 @@ void replica_bulk_loader::report_group_ingestion_status(/*out*/ bulk_load_respon
     if (is_group_ingestion_finish) {
         ddebug_replica("finish ingestion, recover write");
         _replica->_is_bulk_load_ingestion = false;
-        // TODO(heyuchen): reset perf-counter
+        _replica->_bulk_load_ingestion_start_time_ms = 0;
     }
 }
 
