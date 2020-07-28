@@ -2,6 +2,7 @@ package com.xiaomi.infra.pegasus.spark.analyser;
 
 import com.xiaomi.infra.pegasus.spark.PegasusSparkException;
 import com.xiaomi.infra.pegasus.spark.RemoteFileSystem;
+import com.xiaomi.infra.pegasus.spark.RocksDBOptions;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -11,6 +12,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
 
 public class ColdBackupLoader implements PegasusLoader {
@@ -37,7 +40,7 @@ public class ColdBackupLoader implements PegasusLoader {
             + "/";
 
     String idPath =
-        config.getColdBackupTime().isEmpty()
+        config.getColdBackupTime() == null
             ? getLatestPolicyId(idPrefix)
             : getPolicyId(idPrefix, config.getColdBackupTime());
     String tableNameAndId = getTableNameAndId(idPath, coldBackupConfig.getTableName());
@@ -50,23 +53,27 @@ public class ColdBackupLoader implements PegasusLoader {
   }
 
   @Override
-  public ColdBackupConfig getConfig() {
-    return coldBackupConfig;
-  }
-
-  @Override
   public int getPartitionCount() {
     return partitionCount;
   }
 
   @Override
-  public Map<Integer, String> getCheckpointUrls() {
-    return checkpointUrls;
+  public ColdBackupConfig getConfig() {
+    return coldBackupConfig;
   }
 
   @Override
-  public PegasusRecord restoreRecord(RocksIterator rocksIterator) {
-    return coldBackupConfig.getDataVersion().getPegasusRecord(rocksIterator);
+  public PegasusScanner getScanner(int pid) throws PegasusSparkException, RocksDBException {
+    RocksDBOptions rocksDBOptions =
+        new RocksDBOptions(
+            coldBackupConfig.getRemoteFileSystemURL(), coldBackupConfig.getRemoteFileSystemPort());
+    rocksDBOptions.options.setMaxOpenFiles(coldBackupConfig.getFileOpenCount());
+    rocksDBOptions.readOptions.setReadaheadSize(coldBackupConfig.getReadAheadSize());
+
+    RocksDB rocksDB = RocksDB.openReadOnly(rocksDBOptions.options, checkpointUrls.get(pid));
+    RocksIterator rocksIterator = rocksDB.newIterator();
+    return new ColdBackupScanner(
+        coldBackupConfig.getDataVersion(), rocksDBOptions, rocksDB, rocksIterator);
   }
 
   private void initCheckpointUrls(String prefix, int count) throws PegasusSparkException {
@@ -159,5 +166,50 @@ public class ColdBackupLoader implements PegasusLoader {
     }
     throw new PegasusSparkException(
         "can't find the partition count failed, [url: " + appMetaDataUrl + "]");
+  }
+
+  static class ColdBackupScanner implements PegasusScanner {
+    DataVersion scannerVersion;
+    RocksDBOptions rocksDBOptions;
+    RocksDB rocksDB;
+    RocksIterator rocksIterator;
+
+    ColdBackupScanner(
+        DataVersion scannerVersion,
+        RocksDBOptions rocksDBOptions,
+        RocksDB rocksDB,
+        RocksIterator rocksIterator) {
+      this.scannerVersion = scannerVersion;
+      this.rocksDBOptions = rocksDBOptions;
+      this.rocksDB = rocksDB;
+      this.rocksIterator = rocksIterator;
+    }
+
+    @Override
+    public boolean isValid() {
+      return rocksIterator.isValid();
+    }
+
+    @Override
+    public void seekToFirst() {
+      rocksIterator.seekToFirst();
+    }
+
+    @Override
+    public void next() {
+      rocksIterator.next();
+    }
+
+    @Override
+    public PegasusRecord restore() {
+      return scannerVersion.getPegasusRecord(rocksIterator);
+    }
+
+    @Override
+    public void close() {
+      rocksIterator.close();
+      rocksDB.close();
+      rocksDBOptions.close();
+    }
   }
 }

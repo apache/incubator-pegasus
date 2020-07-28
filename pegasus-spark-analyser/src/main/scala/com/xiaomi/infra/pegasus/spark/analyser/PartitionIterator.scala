@@ -1,9 +1,7 @@
 package com.xiaomi.infra.pegasus.spark.analyser
 
-import com.xiaomi.infra.pegasus.spark.RocksDBOptions
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.TaskContext
-import org.rocksdb.{RocksDB, RocksIterator}
 
 /**
   * Iterator of a pegasus partition. It's used to load the entire partition sequentially
@@ -16,15 +14,11 @@ private[analyser] class PartitionIterator private (
 
   private val LOG = LogFactory.getLog(classOf[PartitionIterator])
 
-  private var rocksIterator: RocksIterator = _
-  private var rocksDB: RocksDB = _
-  private var rocksDBOptions: RocksDBOptions = _
+  private var pegasusScanner: PegasusScanner = _
 
   private var closed = false
   private var thisRecord: PegasusRecord = _
   private var nextRecord: PegasusRecord = _
-
-  private var pegasusLoader: PegasusLoader = _
 
   private var name: String = _
   // TODO(wutao1): add metrics for counting the number of iterated records.
@@ -32,26 +26,12 @@ private[analyser] class PartitionIterator private (
   def this(context: TaskContext, snapshotLoader: PegasusLoader, pid: Int) {
     this(context, pid)
 
-    pegasusLoader = snapshotLoader
-    rocksDBOptions = new RocksDBOptions(
-      snapshotLoader.getConfig.getRemoteFileSystemURL,
-      snapshotLoader.getConfig.getRemoteFileSystemPort
-    )
-    rocksDBOptions.options.setMaxOpenFiles(
-      snapshotLoader.getConfig.getFileOpenCount
-    )
-    rocksDBOptions.readOptions.setReadaheadSize(
-      snapshotLoader.getConfig.getReadAheadSize
-    )
-    val checkPointUrls = snapshotLoader.getCheckpointUrls
-    val dbPath = checkPointUrls.get(pid)
-    rocksDB = RocksDB.openReadOnly(rocksDBOptions.options, dbPath)
-    rocksIterator = rocksDB.newIterator(rocksDBOptions.readOptions)
-    rocksIterator.seekToFirst()
-    assert(rocksIterator.isValid)
-    rocksIterator.next() // skip the first record
-    if (rocksIterator.isValid) {
-      nextRecord = pegasusLoader.restoreRecord(rocksIterator)
+    pegasusScanner = snapshotLoader.getScanner(pid)
+    pegasusScanner.seekToFirst()
+    assert(pegasusScanner.isValid)
+    pegasusScanner.next() // skip the first record
+    if (pegasusScanner.isValid) {
+      nextRecord = pegasusScanner.restore()
     }
     name = "PartitionIterator[pid=%d]".format(pid)
 
@@ -64,9 +44,7 @@ private[analyser] class PartitionIterator private (
   private def close() {
     if (!closed) {
       // release the C++ pointers
-      rocksIterator.close()
-      rocksDB.close()
-      rocksDBOptions.close()
+      pegasusScanner.close()
       closed = true
       LOG.info(toString() + " closed")
     }
@@ -78,9 +56,9 @@ private[analyser] class PartitionIterator private (
 
   override def next(): PegasusRecord = {
     thisRecord = nextRecord
-    rocksIterator.next()
-    if (rocksIterator.isValid) {
-      nextRecord = pegasusLoader.restoreRecord(rocksIterator)
+    pegasusScanner.next()
+    if (pegasusScanner.isValid) {
+      nextRecord = pegasusScanner.restore()
     } else {
       nextRecord = null
     }
