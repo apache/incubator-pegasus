@@ -47,7 +47,6 @@ function usage_build()
     echo "                         e.g., \"gcc,g++\" or \"clang-3.9,clang++-3.9\""
     echo "                         default is \"gcc,g++\""
     echo "   -j|--jobs <num>       the number of jobs to run simultaneously, default 8"
-    echo "   -b|--boost_dir <dir>  specify customized boost directory, use system boost if not set"
     echo "   --enable_gcov         generate gcov code coverage report, default no"
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --notest              build without building unit tests, default no"
@@ -75,7 +74,6 @@ function run_build()
     CLEAR=NO
     CLEAR_THIRDPARTY=NO
     JOB_NUM=8
-    BOOST_DIR=""
     ENABLE_GCOV=NO
     RUN_VERBOSE=NO
     NO_TEST=NO
@@ -114,10 +112,6 @@ function run_build()
                 ;;
             -j|--jobs)
                 JOB_NUM="$2"
-                shift
-                ;;
-            -b|--boost_dir)
-                BOOST_DIR="$2"
                 shift
                 ;;
             --enable_gcov)
@@ -175,25 +169,21 @@ function run_build()
     fi
 
     if [[ ${SKIP_THIRDPARTY} == "YES" ]]; then
-        echo "Skip building thirdparty..."
+        echo "Skip building third-parties..."
     else
-        # build thirdparty first
         cd thirdparty
         if [[ "$CLEAR_THIRDPARTY" == "YES" ]]; then
-            echo "Clear thirdparty..."
-            rm -rf src build output &>/dev/null
-            CLEAR=YES
+            echo "Clear third-parties..."
+            rm -rf build
+            rm -rf output
         fi
-        echo "Start building thirdparty..."
-        ./download-thirdparty.sh
+        echo "Start building third-parties..."
+        mkdir -p build
+        pushd build
+        cmake .. -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DCMAKE_BUILD_TYPE=Release
+        make -j$JOB_NUM
         exit_if_fail $?
-        if [[ "x"$BOOST_DIR != "x" ]]; then
-            ./build-thirdparty.sh -b $BOOST_DIR
-            exit_if_fail $?
-        else
-            ./build-thirdparty.sh
-            exit_if_fail $?
-        fi
+        popd
         cd ..
     fi
 
@@ -212,7 +202,7 @@ function run_build()
     fi
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
-        BOOST_DIR="$BOOST_DIR" ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
+        ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" \
         DISABLE_GPERF="$DISABLE_GPERF" $scripts_dir/build.sh
 }

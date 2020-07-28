@@ -296,7 +296,7 @@ function(dsn_setup_thirdparty_libs)
     set(DEFAULT_THIRDPARTY_LIBS ${THRIFT_LIB} fmt::fmt CACHE STRING "default thirdparty libs" FORCE)
 
     # rocksdb
-    file(GLOB ROCKSDB_DEPENDS_MODULE_PATH ${DSN_PROJECT_DIR}/thirdparty/src/*/cmake/modules)
+    file(GLOB ROCKSDB_DEPENDS_MODULE_PATH ${DSN_PROJECT_DIR}/thirdparty/build/Source/rocksdb/cmake/modules)
     if(NOT ROCKSDB_DEPENDS_MODULE_PATH)
         message(WARNING "Cannot find RocksDB depends cmake modules path, might not find snappy, zstd, lz4")
     endif()
