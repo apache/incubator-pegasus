@@ -34,6 +34,7 @@
  *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor
  */
 
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/tool-api/task.h>
@@ -2341,6 +2342,11 @@ bool server_state::check_all_partitions()
                    app->app_name.c_str(),
                    app->app_id,
                    ::dsn::enum_to_string(app->status));
+            continue;
+        }
+        if (app->is_bulk_loading) {
+            ddebug_f(
+                "ignore app({})({}) because it's executing bulk load", app->app_name, app->app_id);
             continue;
         }
         for (unsigned int i = 0; i != app->partition_count; ++i) {
