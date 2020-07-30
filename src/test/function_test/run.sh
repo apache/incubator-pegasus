@@ -53,4 +53,6 @@ if [ $on_travis == "NO" ]; then
     exit_if_fail $? "run test restore_test failed: $test_case $config_file $table_name"
     GTEST_OUTPUT="xml:$REPORT_DIR/recovery.xml" GTEST_FILTER="recovery_test.*" ./$test_case $config_file $table_name
     exit_if_fail $? "run test recovery failed: $test_case $config_file $table_name"
+    GTEST_OUTPUT="xml:$REPORT_DIR/bulk_load.xml" GTEST_FILTER="bulk_load_test.*" ./$test_case $config_file $table_name
+    exit_if_fail $? "run test bulk load failed: $test_case $config_file $table_name"
 fi
