@@ -40,7 +40,8 @@ protected:
     {
         pegasus_root_dir = global_env::instance()._pegasus_root;
         working_root_dir = global_env::instance()._working_dir;
-        bulk_load_local_root = utils::filesystem::path_combine("onebox/block_service/local_service/", LOCAL_ROOT);
+        bulk_load_local_root =
+            utils::filesystem::path_combine("onebox/block_service/local_service/", LOCAL_ROOT);
 
         // copy bulk_load files
         copy_bulk_load_files();
