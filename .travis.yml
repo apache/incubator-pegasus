@@ -11,7 +11,7 @@ cache:
     - apt
 
 before_install:
-    - sudo apt-get -y install libboost-all-dev libaio-dev clang-format-3.9
+    - sudo apt-get -y install libaio-dev clang-format-3.9
 
 before_script:
     - cd thirdparty

@@ -95,8 +95,6 @@ else
     echo "Build without sanitizer"
 fi
 
-CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=${ROOT}/thirdparty/output -DBoost_NO_SYSTEM_PATHS=ON"
-
 echo "CMAKE_OPTIONS=$CMAKE_OPTIONS"
 echo "MAKE_OPTIONS=$MAKE_OPTIONS"
 
@@ -151,14 +149,14 @@ then
 fi
 
 cd $BUILD_DIR
-echo "Building..."
+echo "[$(date)] Building..."
 make install $MAKE_OPTIONS
 if [ $? -ne 0 ]
 then
     echo "ERROR: build failed"
     exit 1
 else
-    echo "Build succeed"
+    echo "[$(date)] Build succeed"
 fi
 cd ..
 
