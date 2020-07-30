@@ -7,7 +7,6 @@ function usage()
     echo "Options for subcommand 'pack_server':"
     echo "  -h"
     echo "  -p|--update-package-template <minos-package-template-file-path>"
-    echo "  -b|--custom-boost-lib"
     echo "  -g|--custom-gcc"
     exit 0
 }
@@ -63,7 +62,6 @@ if [ -n "$MINOS_CONFIG_FILE" ]; then
     pack_template=`dirname $MINOS_CONFIG_FILE`/xiaomi-config/package/pegasus.yaml
 fi
 
-custom_boost_lib="false"
 custom_gcc="false"
 
 while [[ $# > 0 ]]; do
@@ -72,9 +70,6 @@ while [[ $# > 0 ]]; do
         -p|--update-package-template)
             pack_template="$2"
             shift
-            ;;
-        -b|--custom-boost-lib)
-            custom_boost_lib="true"
             ;;
         -g|--custom-gcc)
             custom_gcc="true"
