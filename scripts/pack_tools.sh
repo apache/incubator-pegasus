@@ -7,7 +7,6 @@ function usage()
     echo "Options for subcommand 'pack_tools':"
     echo "  -h"
     echo "  -p|--update-package-template <minos-package-template-file-path>"
-    echo "  -b|--custom-boost-lib"
     echo "  -g|--custom-gcc"
     exit 0
 }
@@ -63,7 +62,6 @@ if [ -n "$MINOS_CONFIG_FILE" ]; then
     pack_template=`dirname $MINOS_CONFIG_FILE`/xiaomi-config/package/pegasus.yaml
 fi
 
-custom_boost_lib="false"
 custom_gcc="false"
 
 while [[ $# > 0 ]]; do
@@ -72,9 +70,6 @@ while [[ $# > 0 ]]; do
         -p|--update-package-template)
             pack_template="$2"
             shift
-            ;;
-        -b|--custom-boost-lib)
-            custom_boost_lib="true"
             ;;
         -g|--custom-gcc)
             custom_gcc="true"
@@ -101,9 +96,7 @@ mkdir -p ${pack}/DSN_ROOT/lib
 copy_file ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/DSN_ROOT/lib/
-copy_file `get_boost_lib $custom_boost_lib system` ${pack}/DSN_ROOT/lib/
-copy_file `get_boost_lib $custom_boost_lib filesystem` ${pack}/DSN_ROOT/lib/
-copy_file `get_boost_lib $custom_boost_lib regex` ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/DSN_ROOT/lib/
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
 copy_file `get_system_lib shell snappy` ${pack}/DSN_ROOT/lib/`get_system_libname shell snappy`
 copy_file `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/`get_system_libname shell crypto`
