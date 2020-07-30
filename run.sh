@@ -6,7 +6,7 @@ LOCAL_IP=`scripts/get_local_ip`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export DSN_THIRDPARTY_ROOT=$ROOT/rdsn/thirdparty/output
-export LD_LIBRARY_PATH=$DSN_ROOT/lib:$DSN_THIRDPARTY_ROOT/lib:$BOOST_DIR/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$DSN_ROOT/lib:$DSN_THIRDPARTY_ROOT/lib:$LD_LIBRARY_PATH
 
 function usage()
 {
@@ -65,7 +65,6 @@ function usage_build()
     echo "                         e.g., \"gcc,g++\" or \"clang-3.9,clang++-3.9\""
     echo "                         default is \"gcc,g++\""
     echo "   -j|--jobs <num>       the number of jobs to run simultaneously, default 8"
-    echo "   -b|--boost_dir <dir>  specify customized boost directory, use system boost if not set"
     echo "   -w|--warning_all      open all warnings when building, default no"
     echo "   --enable_gcov         generate gcov code coverage report, default no"
     echo "   -v|--verbose          build in verbose mode, default no"
@@ -88,7 +87,6 @@ function run_build()
     PART_CLEAR=NO
     CLEAR_THIRDPARTY=NO
     JOB_NUM=8
-    BOOST_DIR=""
     WARNING_ALL=NO
     ENABLE_GCOV=NO
     RUN_VERBOSE=NO
@@ -129,10 +127,6 @@ function run_build()
                 ;;
             -j|--jobs)
                 JOB_NUM="$2"
-                shift
-                ;;
-            -b|--boost_dir)
-                BOOST_DIR="$2"
                 shift
                 ;;
             -w|--warning_all)
@@ -193,9 +187,6 @@ function run_build()
     echo "INFO: start build rdsn..."
     cd $ROOT/rdsn
     OPT="-t $BUILD_TYPE -j $JOB_NUM --compiler $C_COMPILER,$CXX_COMPILER"
-    if [ "$BOOST_DIR" != "" ]; then
-        OPT="$OPT -b $BOOST_DIR"
-    fi
     if [ "$CLEAR" == "YES" ]; then
         OPT="$OPT -c"
     fi
@@ -230,7 +221,7 @@ function run_build()
     cd $ROOT/src
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
-        BOOST_DIR="$BOOST_DIR" WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER"\
+        WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER"\
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" DISABLE_GPERF="$DISABLE_GPERF" ./build.sh
     if [ $? -ne 0 ]; then
         echo "ERROR: build pegasus failed"
