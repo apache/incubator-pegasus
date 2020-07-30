@@ -12,13 +12,16 @@ addons:
       - libsnappy-dev
       - liblz4-dev
       - clang-format-3.9
-      - libboost-all-dev
       - libaio-dev
       - libzstd-dev
 
 cache:
     - ccache
     - apt
+
+before_install:
+  - python --version
+  - pip install -U cmake # use the latest version of cmake
 
 before_script:
     - cd rdsn/thirdparty
