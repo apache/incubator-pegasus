@@ -22,9 +22,9 @@ cache:
 
 before_script:
     - cd rdsn/thirdparty
-    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-thirdparty-prebuild.zip
-    - unzip pegasus-thirdparty-prebuild.zip
-    - rm -f pegasus-thirdparty-prebuild.zip
+    - wget https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-thirdparty-prebuild-bionic.zip
+    - unzip pegasus-thirdparty-prebuild-bionic.zip
+    - rm -f pegasus-thirdparty-prebuild-bionic.zip
     - cd ../..
     - ulimit -c unlimited -S
 
