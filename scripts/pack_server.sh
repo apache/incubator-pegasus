@@ -93,12 +93,10 @@ copy_file ./DSN_ROOT/lib/libdsn_replica_server.so ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_utils.so ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
+copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 
-copy_file `get_boost_lib $custom_boost_lib system` ${pack}/bin
-copy_file `get_boost_lib $custom_boost_lib filesystem` ${pack}/bin
-copy_file `get_boost_lib $custom_boost_lib regex` ${pack}/bin
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/bin
 copy_file `get_system_lib server snappy` ${pack}/bin/`get_system_libname server snappy`
 copy_file `get_system_lib server crypto` ${pack}/bin/`get_system_libname server crypto`
