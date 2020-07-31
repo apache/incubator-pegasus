@@ -444,8 +444,8 @@ task_ptr meta_state_service_simple::node_exist(const std::string &node,
     error_code err;
     {
         zauto_lock _(_state_lock);
-        err =
-            _quick_map.find(normalize_path(node)) != _quick_map.end() ? ERR_OK : ERR_PATH_NOT_FOUND;
+        err = _quick_map.find(normalize_path(node)) != _quick_map.end() ? ERR_OK
+                                                                        : ERR_OBJECT_NOT_FOUND;
     }
     return tasking::enqueue(cb_code, tracker, [=]() { cb_exist(err); });
 }
