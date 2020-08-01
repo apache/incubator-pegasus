@@ -2835,5 +2835,5 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
                    new_envs.c_str());
         });
 }
-}
-}
+} // namespace replication
+} // namespace dsn

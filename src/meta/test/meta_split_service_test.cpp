@@ -29,6 +29,7 @@
 
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
+#include "meta/meta_split_service.h"
 
 namespace dsn {
 namespace replication {

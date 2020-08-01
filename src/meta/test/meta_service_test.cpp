@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "meta_test_base.h"
+#include "meta/meta_service.h"
 
 #include <dsn/utility/fail_point.h>
 

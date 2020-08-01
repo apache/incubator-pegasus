@@ -25,7 +25,9 @@
  */
 
 #include <dsn/dist/replication/replica_envs.h>
+#include <dsn/dist/replication/replication_types.h>
 #include "meta_test_base.h"
+#include "meta/meta_service.h"
 
 namespace dsn {
 namespace replication {

@@ -7,6 +7,10 @@
 #include <dsn/utility/fail_point.h>
 
 #include "meta_test_base.h"
+#include "meta_service_test_app.h"
+#include "meta/meta_bulk_load_service.h"
+#include "meta/meta_data.h"
+#include "meta/meta_server_failure_detector.h"
 
 namespace dsn {
 namespace replication {

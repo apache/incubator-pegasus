@@ -527,8 +527,8 @@ inline bool has_milliseconds_expired(uint64_t milliseconds_ts)
 {
     return milliseconds_ts < dsn_now_ms();
 }
-}
-}
+} // namespace replication
+} // namespace dsn
 
 namespace dsn {
 namespace json {
@@ -542,5 +542,5 @@ inline bool json_decode(const dsn::json::JsonObject &in, replication::app_state 
 {
     return json_forwarder<dsn::app_info>::decode(in, (dsn::app_info &)state);
 }
-}
-}
+} // namespace json
+} // namespace dsn

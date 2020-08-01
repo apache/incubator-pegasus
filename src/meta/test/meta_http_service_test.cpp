@@ -7,7 +7,9 @@
 #include <dsn/tool-api/http_server.h>
 
 #include "meta/meta_http_service.h"
+#include "meta/meta_service.h"
 #include "meta_test_base.h"
+#include "meta_service_test_app.h"
 
 namespace dsn {
 namespace replication {
