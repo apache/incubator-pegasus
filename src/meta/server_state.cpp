@@ -2344,11 +2344,6 @@ bool server_state::check_all_partitions()
                    ::dsn::enum_to_string(app->status));
             continue;
         }
-        if (app->is_bulk_loading) {
-            ddebug_f(
-                "ignore app({})({}) because it's executing bulk load", app->app_name, app->app_id);
-            continue;
-        }
         for (unsigned int i = 0; i != app->partition_count; ++i) {
             partition_configuration &pc = app->partitions[i];
             config_context &cc = app->helpers->contexts[i];
