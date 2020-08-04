@@ -191,6 +191,11 @@ protected:
 /*!
   session managements (both client and server types)
 */
+
+namespace security {
+class negotiation;
+}
+
 class rpc_client_matcher;
 class rpc_session : public ref_counter
 {
@@ -227,6 +232,9 @@ public:
     bool delay_recv(int delay_ms);
     bool on_recv_message(message_ex *msg, int delay_ms);
 
+    /// for negotiation
+    void start_negotiation();
+
 public:
     ///
     /// for subclass to implement receiving message
@@ -256,6 +264,7 @@ protected:
     enum session_state
     {
         SS_CONNECTING,
+        SS_NEGOTIATING,
         SS_CONNECTED,
         SS_DISCONNECTED
     };
@@ -286,6 +295,7 @@ protected:
     bool set_connecting();
     // return true when it is permitted
     bool set_disconnected();
+    void set_negotiation();
     void set_connected();
 
     void clear_send_queue(bool resend_msgs);
@@ -300,10 +310,15 @@ protected:
     message_parser_ptr _parser;
 
 private:
+    void auth_negotiation();
+
+private:
     const bool _is_client;
     rpc_client_matcher *_matcher;
 
     std::atomic_int _delay_server_receive_ms;
+
+    std::unique_ptr<security::negotiation> _negotiation;
 };
 
 // --------- inline implementation --------------

@@ -24,16 +24,22 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/tool-api/network.h>
-#include <dsn/utility/factory_store.h>
+#include "runtime/security/negotiation.h"
 #include "message_parser_manager.h"
 #include "runtime/rpc/rpc_engine.h"
+
+#include <dsn/tool-api/network.h>
+#include <dsn/utility/factory_store.h>
 
 namespace dsn {
 /*static*/ join_point<void, rpc_session *>
     rpc_session::on_rpc_session_connected("rpc.session.connected");
 /*static*/ join_point<void, rpc_session *>
     rpc_session::on_rpc_session_disconnected("rpc.session.disconnected");
+
+namespace security {
+extern bool FLAGS_enable_auth;
+} // namespace security
 
 rpc_session::~rpc_session()
 {
@@ -65,7 +71,9 @@ void rpc_session::set_connected()
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        dassert(_connect_state == SS_CONNECTING, "session must be connecting");
+        dassert((_connect_state == SS_NEGOTIATING && security::FLAGS_enable_auth) ||
+                    (_connect_state == SS_CONNECTING && !security::FLAGS_enable_auth),
+                "wrong session state");
         _connect_state = SS_CONNECTED;
     }
 
@@ -73,6 +81,17 @@ void rpc_session::set_connected()
     _net.on_client_session_connected(sp);
 
     on_rpc_session_connected.execute(this);
+}
+
+void rpc_session::set_negotiation()
+{
+    dassert(is_client(), "must be client session");
+
+    {
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
+        dassert(_connect_state == SS_CONNECTING, "session must be connecting");
+        _connect_state = SS_NEGOTIATING;
+    }
 }
 
 bool rpc_session::set_disconnected()
@@ -414,6 +433,24 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
     return true;
 }
 
+void rpc_session::start_negotiation()
+{
+    if (security::FLAGS_enable_auth) {
+        // set the negotiation state if it's a client rpc_session
+        if (is_client()) {
+            set_negotiation();
+        }
+
+        auth_negotiation();
+    }
+}
+
+void rpc_session::auth_negotiation()
+{
+    _negotiation = security::create_negotiation(is_client(), this);
+    _negotiation->start_negotiate();
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 network::network(rpc_engine *srv, network *inner_provider)
     : _engine(srv), _client_hdr_format(NET_HDR_DSN), _unknown_msg_header_format(NET_HDR_INVALID)
@@ -720,4 +757,5 @@ void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr
                scount);
     }
 }
+
 } // namespace dsn
