@@ -750,7 +750,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
             max_prepared_decree(),
             last_committed_decree());
 
-    _bulk_loader->clear_bulk_load_states_if_needed(config.status);
+    _bulk_loader->clear_bulk_load_states_if_needed(old_status, config.status);
 
     // Notice: there has five ways that primary can change its partition_status
     //   1, primary change partition config, such as add/remove secondary

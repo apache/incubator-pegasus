@@ -89,7 +89,8 @@ private:
                                             /*out*/ group_bulk_load_response &response);
 
     // called by `update_local_configuration` to do possible states cleaning up
-    void clear_bulk_load_states_if_needed(partition_status::type new_status);
+    void clear_bulk_load_states_if_needed(partition_status::type old_status,
+                                          partition_status::type new_status);
 
     ///
     /// bulk load path on remote file provider:
