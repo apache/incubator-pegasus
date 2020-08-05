@@ -3,7 +3,11 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
+import static com.xiaomi.infra.pegasus.client.PConfigUtil.loadConfiguration;
+
 import java.time.Duration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.ConfigurationConverter;
 
 /**
  * Client Options to control the behavior of {@link PegasusClientInterface}.
@@ -30,6 +34,16 @@ import java.time.Duration;
  * }</pre>
  */
 public class ClientOptions {
+
+  public static final int MIN_SOCK_CONNECT_TIMEOUT = 1000;
+
+  public static final String PEGASUS_META_SERVERS_KEY = "meta_servers";
+  public static final String PEGASUS_OPERATION_TIMEOUT_KEY = "operation_timeout";
+  public static final String PEGASUS_ASYNC_WORKERS_KEY = "async_workers";
+  public static final String PEGASUS_ENABLE_PERF_COUNTER_KEY = "enable_perf_counter";
+  public static final String PEGASUS_PERF_COUNTER_TAGS_KEY = "perf_counter_tags";
+  public static final String PEGASUS_PUSH_COUNTER_INTERVAL_SECS_KEY = "push_counter_interval_secs";
+  public static final String PEGASUS_META_QUERY_TIMEOUT_KEY = "meta_query_timeout";
 
   public static final String DEFAULT_META_SERVERS =
       "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
@@ -98,6 +112,47 @@ public class ClientOptions {
    */
   public static ClientOptions create() {
     return builder().build();
+  }
+
+  public static ClientOptions create(String configPath) throws PException {
+    Configuration config = ConfigurationConverter.getConfiguration(loadConfiguration(configPath));
+
+    String metaList = config.getString(PEGASUS_META_SERVERS_KEY);
+    if (metaList == null) {
+      throw new IllegalArgumentException("no property set: " + PEGASUS_META_SERVERS_KEY);
+    }
+    metaList = metaList.trim();
+    if (metaList.isEmpty()) {
+      throw new IllegalArgumentException("invalid property: " + PEGASUS_META_SERVERS_KEY);
+    }
+
+    int asyncWorkers = config.getInt(PEGASUS_ASYNC_WORKERS_KEY, DEFAULT_ASYNC_WORKERS);
+    boolean enablePerfCounter =
+        config.getBoolean(PEGASUS_ENABLE_PERF_COUNTER_KEY, DEFAULT_ENABLE_PERF_COUNTER);
+    String perfCounterTags =
+        enablePerfCounter
+            ? config.getString(PEGASUS_PERF_COUNTER_TAGS_KEY, DEFAULT_FALCON_PERF_COUNTER_TAGS)
+            : null;
+    Duration pushIntervalSecs =
+        Duration.ofSeconds(
+            config.getLong(
+                PEGASUS_PUSH_COUNTER_INTERVAL_SECS_KEY, DEFAULT_FALCON_PUSH_INTERVAL.getSeconds()));
+    Duration operationTimeOut =
+        Duration.ofMillis(
+            config.getLong(PEGASUS_OPERATION_TIMEOUT_KEY, DEFAULT_OPERATION_TIMEOUT.toMillis()));
+    Duration metaQueryTimeout =
+        Duration.ofMillis(
+            config.getLong(PEGASUS_META_QUERY_TIMEOUT_KEY, DEFAULT_META_QUERY_TIMEOUT.toMillis()));
+
+    return ClientOptions.builder()
+        .metaServers(metaList)
+        .operationTimeout(operationTimeOut)
+        .asyncWorkers(asyncWorkers)
+        .enablePerfCounter(enablePerfCounter)
+        .falconPerfCounterTags(perfCounterTags)
+        .falconPushInterval(pushIntervalSecs)
+        .metaQueryTimeout(metaQueryTimeout)
+        .build();
   }
 
   @Override

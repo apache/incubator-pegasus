@@ -3,14 +3,16 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.rpc;
 
+import com.xiaomi.infra.pegasus.client.ClientOptions;
+import com.xiaomi.infra.pegasus.client.PException;
 import com.xiaomi.infra.pegasus.rpc.async.ClusterManager;
-import java.util.Properties;
 import org.apache.thrift.TException;
 
 public abstract class Cluster {
 
-  public static Cluster createCluster(Properties config) throws IllegalArgumentException {
-    return new ClusterManager(ClusterOptions.create(config));
+  public static Cluster createCluster(ClientOptions clientOptions)
+      throws IllegalArgumentException, PException {
+    return new ClusterManager(clientOptions);
   }
 
   public abstract String[] getMetaList();

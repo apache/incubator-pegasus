@@ -8,9 +8,7 @@ import com.xiaomi.infra.pegasus.tools.Tools;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -25,14 +23,10 @@ import org.slf4j.LoggerFactory;
 public class PegasusClient implements PegasusClientInterface {
   private static final Logger LOGGER = LoggerFactory.getLogger(PegasusClient.class);
 
-  public static final String PEGASUS_ENABLE_WRITE_LIMIT = "enable_write_limit";
-  public static final String PEGASUS_ENABLE_WRITE_LIMIT_DEF = "true";
+  private final ClientOptions clientOptions;
 
-  private boolean enableWriteLimit;
-  private final Properties config;
   private final ConcurrentHashMap<String, PegasusTable> tableMap;
   private final Object tableMapLock;
-  private final String[] metaList;
   private Cluster cluster;
 
   private static class PegasusHasher implements KeyHasher {
@@ -72,36 +66,28 @@ public class PegasusClient implements PegasusClientInterface {
     return table;
   }
 
-  // pegasus client configuration keys
-  public static final String[] PEGASUS_CLIENT_CONFIG_KEYS =
-      ArrayUtils.add(ClusterOptions.allKeys(), PEGASUS_ENABLE_WRITE_LIMIT);
-
   // configPath could be:
   // - zk path: zk://host1:port1,host2:port2,host3:port3/path/to/config
   // - local file path: file:///path/to/config
   // - resource path: resource:///path/to/config
   public PegasusClient(String configPath) throws PException {
-    this(PConfigUtil.loadConfiguration(configPath));
+    this(ClientOptions.create(configPath));
   }
 
-  public PegasusClient(Properties config) throws PException {
-    this.config = config;
-    this.cluster = Cluster.createCluster(config);
+  public PegasusClient(ClientOptions clientOptions) throws PException {
+    this.clientOptions = clientOptions;
+    this.cluster = Cluster.createCluster(clientOptions);
     this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
     this.tableMapLock = new Object();
-    this.metaList = cluster.getMetaList();
-    this.enableWriteLimit =
-        Boolean.parseBoolean(
-            config.getProperty(PEGASUS_ENABLE_WRITE_LIMIT, PEGASUS_ENABLE_WRITE_LIMIT_DEF));
     LOGGER.info(getConfigurationString());
   }
 
   public boolean isWriteLimitEnabled() {
-    return enableWriteLimit;
+    return clientOptions.isWriteLimitEnabled();
   }
 
   String getMetaList() {
-    return Arrays.toString(metaList);
+    return clientOptions.getMetaServers();
   }
 
   @Override
@@ -181,18 +167,7 @@ public class PegasusClient implements PegasusClientInterface {
   }
 
   public String getConfigurationString() {
-    String configString = "PegasusClient Configuration:\n";
-    if (this.config == null) {
-      return configString;
-    }
-    for (int i = 0; i < PEGASUS_CLIENT_CONFIG_KEYS.length; ++i) {
-      configString +=
-          (PEGASUS_CLIENT_CONFIG_KEYS[i]
-              + "="
-              + this.config.getProperty(PEGASUS_CLIENT_CONFIG_KEYS[i], "")
-              + "\n");
-    }
-    return configString;
+    return clientOptions.toString();
   }
 
   @Override
@@ -220,8 +195,8 @@ public class PegasusClient implements PegasusClientInterface {
   }
 
   @Override
-  public Properties getConfiguration() {
-    return config;
+  public ClientOptions getConfiguration() {
+    return clientOptions;
   }
 
   @Override

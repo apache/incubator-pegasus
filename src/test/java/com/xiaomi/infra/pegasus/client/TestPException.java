@@ -11,7 +11,6 @@ import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.gpid;
 import com.xiaomi.infra.pegasus.client.PegasusTable.Request;
 import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
-import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
 import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import com.xiaomi.infra.pegasus.rpc.async.ClusterManager;
 import com.xiaomi.infra.pegasus.rpc.async.TableHandler;
@@ -57,8 +56,9 @@ public class TestPException {
 
   @Test
   public void testHandleReplicationException() throws Exception {
-    String[] metaList = {"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"};
-    ClusterManager manager = new ClusterManager(ClusterOptions.forTest(metaList));
+    String metaList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
+    ClusterManager manager =
+        new ClusterManager(ClientOptions.builder().metaServers(metaList).build());
     TableHandler table = manager.openTable("temp", TableOptions.forTest());
     DefaultPromise<Void> promise = table.newPromise();
     update_request req = new update_request(new blob(), new blob(), 100);
@@ -94,8 +94,9 @@ public class TestPException {
   public void testTimeOutIsZero() throws Exception {
     // ensure "PException ERR_TIMEOUT" is thrown with the real timeout value, when user given
     // timeout is 0.
-    String[] metaList = {"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"};
-    ClusterManager manager = new ClusterManager(ClusterOptions.forTest(metaList));
+    String metaList = "127.0.0.1:34601,127.0.0.1:34602, 127.0.0.1:34603";
+    ClusterManager manager =
+        new ClusterManager(ClientOptions.builder().metaServers(metaList).build());
     TableHandler table = manager.openTable("temp", TableOptions.forTest());
     DefaultPromise<Void> promise = table.newPromise();
     update_request req = new update_request(new blob(), new blob(), 100);

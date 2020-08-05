@@ -16,7 +16,7 @@ public interface PegasusClientInterface {
    *
    * @return config
    */
-  public Properties getConfiguration();
+  public ClientOptions getConfiguration();
 
   /** Close the client. The client can not be used again after closed. */
   public void close();

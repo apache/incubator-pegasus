@@ -3,7 +3,6 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
-import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,24 +39,12 @@ public class PegasusClientFactory {
    * Create a client instance instance with {@link ClientOptions}. After used, should call
    * client.close() to release resource.
    *
-   * @param options The client option
+   * @param clientOptions The client option
    * @return PegasusClientInterface {@link PegasusClientInterface}
    * @throws PException throws exception if any error occurs.
    */
-  public static PegasusClientInterface createClient(ClientOptions options) throws PException {
-    Properties pegasusConfig = new Properties();
-    pegasusConfig.setProperty("meta_servers", options.getMetaServers());
-    pegasusConfig.setProperty(
-        "operation_timeout", String.valueOf(options.getOperationTimeout().toMillis()));
-    pegasusConfig.setProperty("async_workers", String.valueOf(options.getAsyncWorkers()));
-    pegasusConfig.setProperty("enable_perf_counter", String.valueOf(options.isEnablePerfCounter()));
-    pegasusConfig.setProperty("perf_counter_tags", String.valueOf(options.isEnablePerfCounter()));
-    pegasusConfig.setProperty(
-        "push_counter_interval_secs", String.valueOf(options.getFalconPushInterval().getSeconds()));
-    pegasusConfig.setProperty("enable_write_limit", String.valueOf(options.isWriteLimitEnabled()));
-    pegasusConfig.setProperty(
-        "meta_query_timeout", String.valueOf(options.getMetaQueryTimeout().toMillis()));
-    return new PegasusClient(pegasusConfig);
+  public static PegasusClientInterface createClient(ClientOptions clientOptions) throws PException {
+    return new PegasusClient(clientOptions);
   }
 
   /**

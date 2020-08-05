@@ -7,14 +7,15 @@ import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.gpid;
 import com.xiaomi.infra.pegasus.base.rpc_address;
+import com.xiaomi.infra.pegasus.client.ClientOptions;
 import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.operator.query_cfg_operator;
 import com.xiaomi.infra.pegasus.replication.partition_configuration;
 import com.xiaomi.infra.pegasus.replication.query_cfg_request;
 import com.xiaomi.infra.pegasus.replication.query_cfg_response;
-import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import com.xiaomi.infra.pegasus.tools.Tools;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -64,8 +65,9 @@ public class MetaSessionTest {
     // test: first connect to a wrong server
     // then it forward to the right server
     // then the wrong server crashed
-    String[] addr_list = {"127.0.0.1:34602", "127.0.0.1:34603", "127.0.0.1:34601"};
-    ClusterManager manager = new ClusterManager(ClusterOptions.forTest(addr_list));
+    String address_list = "127.0.0.1:34602,127.0.0.1:34603,127.0.0.1:34601";
+    ClusterManager manager =
+        new ClusterManager(ClientOptions.builder().metaServers(address_list).build());
     MetaSession session = manager.getMetaSession();
 
     rpc_address addr = new rpc_address();
@@ -113,10 +115,10 @@ public class MetaSessionTest {
   @Test
   public void testDNSResolveHost() throws Exception {
     // ensure meta list keeps consistent with dns.
+
+    String address_list = "127.0.0.1:34602, 127.0.0.1:34603, 127.0.0.1:34601";
     ClusterManager manager =
-        new ClusterManager(
-            ClusterOptions.forTest(
-                new String[] {"127.0.0.1:34602", "127.0.0.1:34603", "127.0.0.1:34601"}));
+        new ClusterManager(ClientOptions.builder().metaServers(address_list).build());
     MetaSession session = manager.getMetaSession();
     MetaSession meta = Mockito.spy(session);
     ReplicaSession meta2 = meta.getMetaList().get(0); // 127.0.0.1:34602
@@ -156,7 +158,7 @@ public class MetaSessionTest {
   @Test
   public void testDNSMetaAllChanged() throws Exception {
     ClusterManager manager =
-        new ClusterManager(ClusterOptions.forTest(new String[] {"localhost:34601"}));
+        new ClusterManager(ClientOptions.builder().metaServers("localhost:34601").build());
     MetaSession session = manager.getMetaSession();
     MetaSession meta = Mockito.spy(session);
     // curLeader=0, hostPort="localhost:34601"
@@ -218,7 +220,7 @@ public class MetaSessionTest {
     // into local meta list, and set it to current leader.
 
     ClusterManager manager =
-        new ClusterManager(ClusterOptions.forTest(new String[] {"localhost:34601"}));
+        new ClusterManager(ClientOptions.builder().metaServers("localhost:34601").build());
     MetaSession session = manager.getMetaSession();
     MetaSession meta = Mockito.spy(session);
     // curLeader=0, hostPort="localhost:34601"
@@ -268,7 +270,7 @@ public class MetaSessionTest {
   @Test
   public void testDNSResetMetaMaxQueryCount() {
     ClusterManager manager =
-        new ClusterManager(ClusterOptions.forTest(new String[] {"localhost:34601"}));
+        new ClusterManager(ClientOptions.builder().metaServers("localhost:34601").build());
     MetaSession metaMock = Mockito.spy(manager.getMetaSession());
 
     List<ReplicaSession> metaList = metaMock.getMetaList();
@@ -303,7 +305,11 @@ public class MetaSessionTest {
   public void testDNSMetaUnavailable() {
     // Ensures when the DNS returns meta all unavailable, finally the query will timeout.
     ClusterManager manager =
-        new ClusterManager(ClusterOptions.forTest(new String[] {"localhost:34601"}));
+        new ClusterManager(
+            ClientOptions.builder()
+                .metaServers("localhost:34601")
+                .metaQueryTimeout(Duration.ofMillis(1000))
+                .build());
     MetaSession metaMock = Mockito.spy(manager.getMetaSession());
     List<ReplicaSession> metaList = metaMock.getMetaList();
     metaList.remove(0); // del the "localhost:34601"

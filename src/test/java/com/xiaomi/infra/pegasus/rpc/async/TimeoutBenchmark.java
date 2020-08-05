@@ -5,7 +5,7 @@ package com.xiaomi.infra.pegasus.rpc.async;
 
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.gpid;
-import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
+import com.xiaomi.infra.pegasus.client.ClientOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import com.xiaomi.infra.pegasus.tools.Toollet;
@@ -62,8 +62,9 @@ public class TimeoutBenchmark {
 
   @Test
   public void timeoutChecker() {
-    String[] metaList = {"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"};
-    ClusterManager manager = new ClusterManager(ClusterOptions.forTest(metaList));
+    String metaList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
+    ClusterManager manager =
+        new ClusterManager(ClientOptions.builder().metaServers(metaList).build());
 
     TableHandler handle;
     try {

@@ -8,11 +8,11 @@ import com.xiaomi.infra.pegasus.base.blob;
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.gpid;
 import com.xiaomi.infra.pegasus.base.rpc_address;
+import com.xiaomi.infra.pegasus.client.ClientOptions;
 import com.xiaomi.infra.pegasus.client.PegasusClient;
 import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.operator.rrdb_get_operator;
 import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
-import com.xiaomi.infra.pegasus.rpc.ClusterOptions;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.rpc.async.ReplicaSession.ConnState;
 import com.xiaomi.infra.pegasus.tools.Toollet;
@@ -35,13 +35,13 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 
 public class ReplicaSessionTest {
-  private String[] metaList = {"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"};
+  private String metaList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
   private final Logger logger = org.slf4j.LoggerFactory.getLogger(ReplicaSessionTest.class);
   private ClusterManager manager;
 
   @Before
   public void before() throws Exception {
-    manager = new ClusterManager(ClusterOptions.forTest(metaList));
+    manager = new ClusterManager(ClientOptions.builder().metaServers(metaList).build());
   }
 
   @After
