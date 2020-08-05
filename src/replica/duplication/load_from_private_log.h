@@ -22,9 +22,9 @@ class replica_stub;
 /// It works in THREAD_POOL_REPLICATION_LONG (LPC_DUPLICATION_LOAD_MUTATIONS),
 /// which permits tasks to be executed in a blocking way.
 /// NOTE: The resulted `mutation_tuple_set` may be empty.
-class load_from_private_log : public replica_base,
-                              public pipeline::when<>,
-                              public pipeline::result<decree, mutation_tuple_set>
+class load_from_private_log final : public replica_base,
+                                    public pipeline::when<>,
+                                    public pipeline::result<decree, mutation_tuple_set>
 {
 public:
     load_from_private_log(replica *r, replica_duplicator *dup);

@@ -38,7 +38,7 @@ native_linux_aio_provider::native_linux_aio_provider(disk_engine *disk) : aio_pr
     dassert(ret == 0, "io_setup error, ret = %d", ret);
 
     _is_running = true;
-    _worker = std::thread([this, disk]() {
+    _worker = std::thread([this]() {
         task::set_tls_dsn_context(node(), nullptr);
         get_event();
     });

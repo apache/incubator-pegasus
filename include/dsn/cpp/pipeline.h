@@ -290,6 +290,8 @@ struct do_when : when<Args...>
 
     void run(Args &&... args) override { _cb(std::forward<Args>(args)...); }
 
+    virtual ~do_when() = default;
+
 private:
     std::function<void(Args &&...)> _cb;
 };

@@ -233,8 +233,8 @@ TEST(replication, log_file)
     lf->reset_stream();
     for (int i = 0; i < 100; i++) {
         blob bb;
-        auto err = lf->read_next_log_block(bb);
-        ASSERT_EQ(ERR_OK, err);
+        auto err2 = lf->read_next_log_block(bb);
+        ASSERT_EQ(ERR_OK, err2);
 
         binary_reader reader(bb);
 
@@ -280,7 +280,7 @@ public:
 
     void TearDown() override { utils::filesystem::remove_path(_log_dir); }
 
-    mutation_ptr create_test_mutation(const std::string &data, decree d)
+    mutation_ptr create_test_mutation(decree d, const std::string &data) override
     {
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
@@ -316,7 +316,7 @@ public:
             mutation_log_ptr mlog = create_private_log();
             for (int i = 1; i <= 10; i++) {
                 std::string msg = "hello!";
-                mutation_ptr mu = create_test_mutation(msg, 10 * f + i);
+                mutation_ptr mu = create_test_mutation(10 * f + i, msg);
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             }
             mlog->tracker()->wait_outstanding_tasks();
@@ -358,7 +358,7 @@ public:
             mutation_log_ptr mlog = create_private_log();
 
             for (int i = 0; i < num_entries; i++) {
-                mutation_ptr mu = create_test_mutation("hello!", 2 + i);
+                mutation_ptr mu = create_test_mutation(2 + i, "hello!");
                 mutations.push_back(mu);
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             }
@@ -396,7 +396,7 @@ public:
         { // writing logs
             mutation_log_ptr mlog = create_private_log(private_log_file_size_mb);
             for (int i = 0; i < num_entries; i++) {
-                mutation_ptr mu = create_test_mutation("hello!", 2 + i);
+                mutation_ptr mu = create_test_mutation(2 + i, "hello!");
                 mutations.push_back(mu);
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             }
@@ -450,7 +450,7 @@ TEST_F(mutation_log_test, open)
         mutation_log_ptr mlog = create_private_log(4);
 
         for (int i = 0; i < 1000; i++) {
-            mutation_ptr mu = create_test_mutation("hello!", 2 + i);
+            mutation_ptr mu = create_test_mutation(2 + i, "hello!");
             mutations.push_back(mu);
             mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
         }

@@ -42,6 +42,7 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 
 #include "common/replication_common.h"
+#include "meta_rpc_types.h"
 #include "meta_options.h"
 #include "meta_backup_service.h"
 #include "meta_state_service_utils.h"
@@ -61,33 +62,6 @@ class test_checker;
 }
 
 DEFINE_TASK_CODE(LPC_DEFAULT_CALLBACK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
-
-typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
-    app_env_rpc;
-typedef rpc_holder<ddd_diagnose_request, ddd_diagnose_response> ddd_diagnose_rpc;
-typedef rpc_holder<app_partition_split_request, app_partition_split_response>
-    app_partition_split_rpc;
-typedef rpc_holder<configuration_query_by_node_request, configuration_query_by_node_response>
-    configuration_query_by_node_rpc;
-typedef rpc_holder<configuration_query_by_index_request, configuration_query_by_index_response>
-    configuration_query_by_index_rpc;
-typedef rpc_holder<configuration_list_apps_request, configuration_list_apps_response>
-    configuration_list_apps_rpc;
-typedef rpc_holder<configuration_list_nodes_request, configuration_list_nodes_response>
-    configuration_list_nodes_rpc;
-typedef rpc_holder<configuration_cluster_info_request, configuration_cluster_info_response>
-    configuration_cluster_info_rpc;
-typedef rpc_holder<configuration_balancer_request, configuration_balancer_response>
-    configuration_balancer_rpc;
-typedef rpc_holder<configuration_meta_control_request, configuration_meta_control_response>
-    configuration_meta_control_rpc;
-typedef rpc_holder<configuration_recovery_request, configuration_recovery_response>
-    configuration_recovery_rpc;
-typedef rpc_holder<configuration_report_restore_status_request,
-                   configuration_report_restore_status_response>
-    configuration_report_restore_status_rpc;
-typedef rpc_holder<configuration_query_restore_request, configuration_query_restore_response>
-    configuration_query_restore_rpc;
 
 class meta_service : public serverlet<meta_service>
 {

@@ -16,8 +16,9 @@ struct mock_stage : pipeline::when<>
     void run() override {}
 };
 
-struct ship_mutation_test : public duplication_test_base
+class ship_mutation_test : public duplication_test_base
 {
+public:
     ship_mutation_test()
     {
         _replica->init_private_log(_log_dir);

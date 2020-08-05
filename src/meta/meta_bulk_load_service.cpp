@@ -11,9 +11,8 @@ namespace dsn {
 namespace replication {
 
 bulk_load_service::bulk_load_service(meta_service *meta_svc, const std::string &bulk_load_dir)
-    : _meta_svc(meta_svc), _bulk_load_root(bulk_load_dir)
+    : _meta_svc(meta_svc), _state(meta_svc->get_server_state()), _bulk_load_root(bulk_load_dir)
 {
-    _state = _meta_svc->get_server_state();
 }
 
 // ThreadPool: THREAD_POOL_META_SERVER
@@ -1254,14 +1253,14 @@ void bulk_load_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
     response.app_status = get_app_bulk_load_status_unlocked(app_id);
 
     response.partitions_status.resize(partition_count);
-    for (const auto kv : _partition_bulk_load_info) {
+    for (const auto &kv : _partition_bulk_load_info) {
         if (kv.first.get_app_id() == app_id) {
             response.partitions_status[kv.first.get_partition_index()] = kv.second.status;
         }
     }
 
     response.bulk_load_states.resize(partition_count);
-    for (const auto kv : _partitions_bulk_load_state) {
+    for (const auto &kv : _partitions_bulk_load_state) {
         if (kv.first.get_app_id() == app_id) {
             response.bulk_load_states[kv.first.get_partition_index()] = kv.second;
         }

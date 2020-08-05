@@ -135,7 +135,7 @@ TEST(RefCountedUnitTest, TestSelfAssignment)
 {
     SelfAssign *p = new SelfAssign;
     dsn::ref_ptr<SelfAssign> var(p);
-    var = var;
+    // var = var;
     EXPECT_EQ(var.get(), p);
     // comment the following two lines because clang compiler would complain with "-Wself-move"
     // var = std::move(var);

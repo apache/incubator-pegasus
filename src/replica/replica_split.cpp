@@ -353,7 +353,7 @@ error_code replica::child_apply_private_logs(std::vector<std::string> plog_files
 
     // replay private log
     ec = mutation_log::replay(plog_files,
-                              [this, &plist](int log_length, mutation_ptr &mu) {
+                              [&plist](int log_length, mutation_ptr &mu) {
                                   decree d = mu->data.header.decree;
                                   if (d <= plist.last_committed_decree()) {
                                       return false;

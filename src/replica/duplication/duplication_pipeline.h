@@ -19,9 +19,9 @@ using namespace literals::chrono_literals;
 // load_mutation is a pipeline stage for loading mutations, aka mutation_tuple_set,
 // to the next stage, `ship_mutation`.
 // ThreadPool: THREAD_POOL_REPLICATION
-class load_mutation : public replica_base,
-                      public pipeline::when<>,
-                      public pipeline::result<decree, mutation_tuple_set>
+class load_mutation final : public replica_base,
+                            public pipeline::when<>,
+                            public pipeline::result<decree, mutation_tuple_set>
 {
 public:
     void run() override;
@@ -44,9 +44,9 @@ private:
 // sending them to the remote cluster. After finished, the pipeline
 // will restart from load_mutation.
 // ThreadPool: THREAD_POOL_REPLICATION
-class ship_mutation : public replica_base,
-                      public pipeline::when<decree, mutation_tuple_set>,
-                      public pipeline::result<>
+class ship_mutation final : public replica_base,
+                            public pipeline::when<decree, mutation_tuple_set>,
+                            public pipeline::result<>
 {
 public:
     void run(decree &&last_decree, mutation_tuple_set &&in) override;
@@ -60,7 +60,7 @@ public:
 private:
     void update_progress();
 
-    friend struct ship_mutation_test;
+    friend class ship_mutation_test;
     friend class replica_duplicator_test;
 
     std::unique_ptr<mutation_duplicator> _mutation_duplicator;
