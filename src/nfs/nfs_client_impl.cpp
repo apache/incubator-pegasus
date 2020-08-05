@@ -39,6 +39,7 @@
 
 namespace dsn {
 namespace service {
+static uint32_t current_max_copy_rate_megabytes = 0;
 
 DSN_DEFINE_uint32("nfs",
                   nfs_copy_block_bytes,
@@ -110,6 +111,7 @@ nfs_client_impl::nfs_client_impl()
     dassert(max_copy_rate_bytes > FLAGS_nfs_copy_block_bytes,
             "max_copy_rate_bytes should be greater than nfs_copy_block_bytes");
     _copy_token_bucket.reset(new TokenBucket(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes));
+    current_max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
 
     register_cli_commands();
 }
@@ -567,12 +569,13 @@ void nfs_client_impl::register_cli_commands()
                 std::string result("OK");
 
                 if (args.empty()) {
-                    return std::to_string(FLAGS_max_copy_rate_megabytes);
+                    return std::to_string(current_max_copy_rate_megabytes);
                 }
 
                 if (args[0] == "DEFAULT") {
                     uint32_t max_copy_rate_bytes = FLAGS_max_copy_rate_megabytes << 20;
                     _copy_token_bucket->reset(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes);
+                    current_max_copy_rate_megabytes = FLAGS_max_copy_rate_megabytes;
                     return result;
                 }
 
@@ -590,7 +593,7 @@ void nfs_client_impl::register_cli_commands()
                     return result;
                 }
                 _copy_token_bucket->reset(max_copy_rate_bytes, 1.5 * max_copy_rate_bytes);
-                FLAGS_max_copy_rate_megabytes = max_copy_rate_megabytes;
+                current_max_copy_rate_megabytes = max_copy_rate_megabytes;
                 return result;
             });
     });
