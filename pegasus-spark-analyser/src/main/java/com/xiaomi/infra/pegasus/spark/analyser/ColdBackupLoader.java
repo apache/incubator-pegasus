@@ -71,7 +71,7 @@ public class ColdBackupLoader implements PegasusLoader {
     rocksDBOptions.readOptions.setReadaheadSize(coldBackupConfig.getReadAheadSize());
 
     RocksDB rocksDB = RocksDB.openReadOnly(rocksDBOptions.options, checkpointUrls.get(pid));
-    RocksIterator rocksIterator = rocksDB.newIterator();
+    RocksIterator rocksIterator = rocksDB.newIterator(rocksDBOptions.readOptions);
     return new ColdBackupScanner(
         coldBackupConfig.getDataVersion(), rocksDBOptions, rocksDB, rocksIterator);
   }

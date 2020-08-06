@@ -6,12 +6,13 @@ cd "${PROJECT_DIR}" || exit 1
 
 SRC_FILES=(pegasus-spark-common/src/main/java/com/xiaomi/infra/pegasus/spark/*.java
            pegasus-spark-analyser/src/main/java/com/xiaomi/infra/pegasus/spark/analyser/*.java
+           pegasus-spark-bulkloader/src/main/java/com/xiaomi/infra/pegasus/spark/bulkloader/*.java
            )
 
-if [[ ! -f "${PROJECT_DIR}"/google-java-format-1.8-all-deps.jar ]]; then
-    wget https://github.com/google/google-java-format/releases/download/google-java-format-1.8/google-java-format-1.8-all-deps.jar
+if [[ ! -f "${PROJECT_DIR}"/google-java-format-1.7-all-deps.jar ]]; then
+    wget https://github.com/google/google-java-format/releases/download/google-java-format-1.7/google-java-format-1.7-all-deps.jar
 fi
-if ! java -jar "${PROJECT_DIR}"/google-java-format-1.8-all-deps.jar --replace "${SRC_FILES[@]}"; then
+if ! java -jar "${PROJECT_DIR}"/google-java-format-1.7-all-deps.jar --replace "${SRC_FILES[@]}"; then
     echo "ERROR: failed to format java codes"
     exit 1
 fi

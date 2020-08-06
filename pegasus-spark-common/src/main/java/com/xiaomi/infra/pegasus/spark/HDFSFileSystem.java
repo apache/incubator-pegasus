@@ -9,18 +9,12 @@ import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 public class HDFSFileSystem implements RemoteFileSystem {
-
-  HDFSFileSystem() {}
-
-  private static final Log LOG = LogFactory.getLog(RemoteFileSystem.class);
 
   public BufferedReader getReader(String filePath) throws PegasusSparkException {
     try {
@@ -48,10 +42,29 @@ public class HDFSFileSystem implements RemoteFileSystem {
   public FileStatus[] getFileStatus(String path) throws PegasusSparkException {
     try {
       FileSystem fs = FileSystem.get(URI.create(path), new Configuration());
-      Path Path = new Path(path);
-      return fs.listStatus(Path);
+      return fs.listStatus(new Path(path));
     } catch (IOException e) {
       throw new PegasusSparkException("get file status failed:", e);
+    }
+  }
+
+  public boolean exist(String path) throws PegasusSparkException {
+    FileSystem fs = null;
+    try {
+      fs = FileSystem.get(URI.create(path), new Configuration());
+      return fs.exists(new Path(path));
+    } catch (IOException e) {
+      throw new PegasusSparkException("check the file existed failed:", e);
+    }
+  }
+
+  public boolean delete(String path, boolean recursive) throws PegasusSparkException {
+    FileSystem fs = null;
+    try {
+      fs = FileSystem.get(URI.create(path), new Configuration());
+      return fs.delete(new Path(path), recursive);
+    } catch (IOException e) {
+      throw new PegasusSparkException("delete the file existed failed:", e);
     }
   }
 

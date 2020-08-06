@@ -8,7 +8,7 @@ public class ColdBackupConfig extends CommonConfig {
   private static final long MB_UNIT = 1024 * 1024L;
 
   private static final int DEFAULT_FILE_OPEN_COUNT = 50;
-  private static final long DEFAULT_READ_AHEAD_SIZE_MB = 1;
+  private static final long DEFAULT_READ_AHEAD_SIZE_MB = MB_UNIT;
 
   private long readAheadSize;
   private int fileOpenCount;

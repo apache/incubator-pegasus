@@ -13,5 +13,9 @@ public interface RemoteFileSystem extends Serializable {
 
   FileStatus[] getFileStatus(String path) throws PegasusSparkException;
 
+  boolean exist(String path) throws PegasusSparkException;
+
+  boolean delete(String path, boolean recursive) throws PegasusSparkException;
+
   String getFileMD5(String filePath) throws PegasusSparkException;
 }

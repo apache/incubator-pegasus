@@ -16,6 +16,7 @@ public class RocksDBOptions {
   public Options options = new Options();
   public ReadOptions readOptions = new ReadOptions();
   private Env env;
+  public EnvOptions envOptions = new EnvOptions();
 
   public RocksDBOptions(String remoteFsUrl, String remoteFsPort) throws PegasusSparkException {
     if (remoteFsUrl.startsWith("fds://")) {
