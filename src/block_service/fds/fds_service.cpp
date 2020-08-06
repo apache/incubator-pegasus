@@ -37,9 +37,11 @@ DSN_DEFINE_uint64("pegasus.server",
                   64 << 20,
                   "rocksdb options.write_buffer_size");
 
-DSN_DEFINE_uint32("replication", fds_write_limit_rate, 100, "rate limit of fds(MB/s)");
+DSN_DEFINE_uint32("replication", fds_write_limit_rate, 100, "write rate limit of fds(MB/s)");
 
-DSN_DEFINE_uint32("replication", fds_read_limit_rate, 100, "rate limit of fds(MB/s)");
+DSN_DEFINE_uint32("replication", fds_read_limit_rate, 100, "read rate limit of fds(MB/s)");
+
+DSN_DEFINE_uint32("replication", fds_read_batch_size, 100, "read batch size of fds(MB)");
 
 class utils
 {
@@ -567,7 +569,8 @@ error_code fds_file_object::get_content_in_batches(uint64_t start,
                                                    /*out*/ uint64_t &transfered_bytes)
 {
     // the max batch size is 1MB
-    const uint64_t BATCH_MAX = 1 << 20;
+    const uint64_t BATCH_SIZE = std::min(FLAGS_fds_read_limit_rate, FLAGS_fds_read_batch_size)
+                                << 20;
     error_code err = ERR_OK;
     transfered_bytes = 0;
 
@@ -585,7 +588,7 @@ error_code fds_file_object::get_content_in_batches(uint64_t start,
     uint64_t pos = start;
     uint64_t once_transfered_bytes = 0;
     while (pos < start + to_transfer_bytes) {
-        uint64_t batch_len = std::min(BATCH_MAX, start + to_transfer_bytes - pos);
+        uint64_t batch_len = std::min(BATCH_SIZE, start + to_transfer_bytes - pos);
         // get tokens from token bucket
         _service->_read_token_bucket->consumeWithBorrowAndWait(batch_len);
 
