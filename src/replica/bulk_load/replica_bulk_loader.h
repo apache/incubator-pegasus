@@ -142,6 +142,7 @@ private:
 
     bulk_load_status::type _status{bulk_load_status::BLS_INVALID};
     bulk_load_metadata _metadata;
+    std::atomic<bool> _is_downloading{false};
     std::atomic<uint64_t> _cur_downloaded_size{0};
     std::atomic<int32_t> _download_progress{0};
     std::atomic<error_code> _download_status{ERR_OK};

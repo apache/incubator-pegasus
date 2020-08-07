@@ -349,6 +349,7 @@ error_code replica_bulk_loader::start_download(const std::string &app_name,
     _stub->_counter_bulk_load_downloading_count->increment();
 
     // start download
+    _is_downloading.store(true);
     ddebug_replica("start to download sst files");
     error_code err = download_sst_files(app_name, cluster_name, provider_name);
     if (err != ERR_OK) {
@@ -487,7 +488,11 @@ void replica_bulk_loader::update_bulk_load_download_progress(uint64_t file_size,
 // ThreadPool: THREAD_POOL_REPLICATION, THREAD_POOL_REPLICATION_LONG
 void replica_bulk_loader::try_decrease_bulk_load_download_count()
 {
+    if (!_is_downloading.load()) {
+        return;
+    }
     --_stub->_bulk_load_downloading_count;
+    _is_downloading.store(false);
     ddebug_replica("node[{}] has {} replica executing downloading",
                    _stub->_primary_address_str,
                    _stub->_bulk_load_downloading_count.load());

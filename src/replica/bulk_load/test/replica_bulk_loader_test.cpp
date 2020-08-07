@@ -74,6 +74,7 @@ public:
 
     void test_update_download_progress(uint64_t file_size)
     {
+        _bulk_loader->_is_downloading.store(true);
         _bulk_loader->update_bulk_load_download_progress(file_size, "test_file_name");
         _bulk_loader->tracker()->wait_outstanding_tasks();
     }
@@ -91,9 +92,10 @@ public:
         _bulk_loader->handle_bulk_load_finish(req_status);
     }
 
-    void test_pause_bulk_load(bulk_load_status::type status, int32_t progress)
+    void test_pause_bulk_load(bulk_load_status::type status, int32_t progress, bool is_downloading)
     {
-        mock_replica_bulk_load_varieties(status, progress, ingestion_status::IS_INVALID);
+        mock_replica_bulk_load_varieties(
+            status, progress, ingestion_status::IS_INVALID, false, is_downloading);
         _bulk_loader->pause_bulk_load();
     }
 
@@ -289,10 +291,12 @@ public:
     void mock_replica_bulk_load_varieties(bulk_load_status::type status,
                                           int32_t download_progress,
                                           ingestion_status::type istatus,
-                                          bool is_ingestion = false)
+                                          bool is_ingestion = false,
+                                          bool is_downloading = false)
     {
         _bulk_loader->_status = status;
         _bulk_loader->_download_progress = download_progress;
+        _bulk_loader->_is_downloading.store(is_downloading);
         _replica->set_is_ingestion(is_ingestion);
         _replica->set_ingestion_status(istatus);
     }
@@ -639,6 +643,7 @@ TEST_F(replica_bulk_loader_test, bulk_load_finish_test)
 // pause_bulk_load unit tests
 TEST_F(replica_bulk_loader_test, pause_bulk_load_test)
 {
+    const int32_t stub_downloading_count = 3;
     // Test cases:
     // pausing while not bulk load
     // pausing during downloading
@@ -647,17 +652,22 @@ TEST_F(replica_bulk_loader_test, pause_bulk_load_test)
     {
         bulk_load_status::type status;
         int32_t progress;
+        bool is_downloading;
         int32_t expected_progress;
+        int32_t expected_downloading_count;
     } tests[]{
-        {bulk_load_status::BLS_INVALID, 0, 0},
-        {bulk_load_status::BLS_DOWNLOADING, 10, 10},
-        {bulk_load_status::BLS_DOWNLOADED, 100, 100},
+        {bulk_load_status::BLS_INVALID, 0, false, 0, stub_downloading_count},
+        {bulk_load_status::BLS_DOWNLOADING, 10, true, 10, stub_downloading_count - 1},
+        {bulk_load_status::BLS_DOWNLOADING, 0, false, 0, stub_downloading_count},
+        {bulk_load_status::BLS_DOWNLOADED, 100, false, 100, stub_downloading_count},
     };
 
     for (auto test : tests) {
-        test_pause_bulk_load(test.status, test.progress);
+        stub->set_bulk_load_downloading_count(stub_downloading_count);
+        test_pause_bulk_load(test.status, test.progress, test.is_downloading);
         ASSERT_EQ(get_bulk_load_status(), bulk_load_status::BLS_PAUSED);
         ASSERT_EQ(get_download_progress(), test.expected_progress);
+        ASSERT_EQ(stub->get_bulk_load_downloading_count(), test.expected_downloading_count);
     }
 }
 
