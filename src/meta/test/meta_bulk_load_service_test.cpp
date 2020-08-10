@@ -695,6 +695,20 @@ TEST_F(bulk_load_process_test, ingest_rpc_error)
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_DOWNLOADING);
 }
 
+TEST_F(bulk_load_process_test, repeated_ingest_rpc)
+{
+    mock_ingestion_context(ERR_OK, 1, _partition_count);
+    test_on_partition_ingestion_reply(_ingestion_resp, gpid(_app_id, _pidx), ERR_NO_NEED_OPERATE);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
+}
+
+TEST_F(bulk_load_process_test, ingest_wrong_state)
+{
+    mock_ingestion_context(ERR_OK, 1, _partition_count);
+    test_on_partition_ingestion_reply(_ingestion_resp, gpid(_app_id, _pidx), ERR_INVALID_STATE);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_DOWNLOADING);
+}
+
 TEST_F(bulk_load_process_test, ingest_empty_write_error)
 {
     fail::cfg("meta_bulk_load_partition_ingestion", "return()");

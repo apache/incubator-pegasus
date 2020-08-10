@@ -1019,6 +1019,14 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
                                                      const std::string &app_name,
                                                      const gpid &pid)
 {
+    if (err == ERR_NO_NEED_OPERATE) {
+        dwarn_f(
+            "app({}) partition({}) has already executing ingestion, ignore this repeated request",
+            app_name,
+            pid);
+        return;
+    }
+
     // if meet 2pc error, ingesting will rollback to downloading, no need to retry here
     if (err != ERR_OK) {
         derror_f("app({}) partition({}) ingestion files failed, error = {}", app_name, pid, err);

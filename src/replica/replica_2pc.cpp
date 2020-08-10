@@ -28,6 +28,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include "bulk_load/replica_bulk_loader.h"
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/fmt_logging.h>
 
@@ -75,13 +76,25 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     if (_is_bulk_load_ingestion) {
-        // reject write requests during ingestion
-        _stub->_counter_bulk_load_ingestion_reject_write_count->increment();
-        response_client_write(request, ERR_OPERATION_DISABLED);
+        if (request->rpc_code() != dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
+            // reject write requests during ingestion
+            _stub->_counter_bulk_load_ingestion_reject_write_count->increment();
+            response_client_write(request, ERR_OPERATION_DISABLED);
+        } else {
+            response_client_write(request, ERR_NO_NEED_OPERATE);
+        }
         return;
     }
 
     if (request->rpc_code() == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
+        auto cur_bulk_load_status = _bulk_loader->get_bulk_load_status();
+        if (cur_bulk_load_status != bulk_load_status::BLS_DOWNLOADED &&
+            cur_bulk_load_status != bulk_load_status::BLS_INGESTING) {
+            derror_replica("receive bulk load ingestion request with wrong status({})",
+                           enum_to_string(cur_bulk_load_status));
+            response_client_write(request, ERR_INVALID_STATE);
+            return;
+        }
         ddebug_replica("receive bulk load ingestion request");
 
         // bulk load ingestion request requires that all secondaries should be alive
