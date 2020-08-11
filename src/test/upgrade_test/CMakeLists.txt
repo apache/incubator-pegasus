@@ -13,9 +13,10 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
     pegasus_base
     pegasus_client_static
-    dsn.replication.ddlclient
+    dsn_client
     dsn_replication_common
     dsn_runtime
+    dsn_utils
     )
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 

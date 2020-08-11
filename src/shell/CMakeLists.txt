@@ -15,12 +15,12 @@ set(MY_PROJ_LIBS
     dsn.replication.tool
     dsn_replica_server
     dsn_replication_common
-    dsn.replication.ddlclient
+    dsn_client
+    dsn_utils
     dsn.block_service.local
     dsn.block_service.fds
     dsn.block_service
     dsn.failure_detector
-    dsn.failure_detector.multimaster
     pegasus_client_static
     galaxy-fds-sdk-cpp
     PocoNet

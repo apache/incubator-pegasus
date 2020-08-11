@@ -312,9 +312,10 @@ private:
         return false;
     }
 
-    ::dsn::error_code check_meta_cf(const std::string &path, bool *need_create_meta_cf);
+    ::dsn::error_code check_meta_cf(const std::string &path, bool *missing_meta_cf);
 
     void release_db();
+    void release_db(rocksdb::DB *db, const std::vector<rocksdb::ColumnFamilyHandle *> &handles);
 
     ::dsn::error_code flush_all_family_columns(bool wait);
 

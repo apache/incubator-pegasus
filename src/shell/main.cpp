@@ -451,6 +451,30 @@ static command_executor commands[] = {
      "<app_name> <dup_id> <slow|skip>",
      set_dup_fail_mode},
     {
+        "start_bulk_load",
+        "start app bulk load",
+        "<-a --app_name str> <-c --cluster_name str> <-p --file_provider_type str>",
+        start_bulk_load,
+    },
+    {
+        "query_bulk_load_status",
+        "query app bulk load status",
+        "<-a --app_name str> [-i --partition_index num] [-d --detailed]",
+        query_bulk_load_status,
+    },
+    {
+        "pause_bulk_load", "pause app bulk load", "<-a --app_name str>", pause_bulk_load,
+    },
+    {
+        "restart_bulk_load", "restart app bulk load", "<-a --app_name str>", restart_bulk_load,
+    },
+    {
+        "cancel_bulk_load",
+        "cancel app bulk load",
+        "<-a --app_name str> [-f --forced]",
+        cancel_bulk_load,
+    },
+    {
         "exit", "exit shell", "", exit_shell,
     },
     {
