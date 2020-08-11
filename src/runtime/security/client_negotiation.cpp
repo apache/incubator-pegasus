@@ -16,15 +16,36 @@
 // under the License.
 
 #include "client_negotiation.h"
+#include "negotiation_utils.h"
+
+#include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
 namespace security {
 
-client_negotiation::client_negotiation(rpc_session *session) : negotiation(session) {}
-
-void client_negotiation::start_negotiate()
+client_negotiation::client_negotiation(rpc_session *session) : negotiation(session)
 {
-    // TBD(zlw)
+    _name = fmt::format("CLIENT_NEGOTIATION(SERVER={})", _session->remote_address().to_string());
+}
+
+void client_negotiation::start()
+{
+    ddebug_f("{}: start negotiation", _name);
+    list_mechanisms();
+}
+
+void client_negotiation::list_mechanisms()
+{
+    negotiation_request request;
+    _status = request.status = negotiation_status::type::SASL_LIST_MECHANISMS;
+    send(request);
+}
+
+void client_negotiation::send(const negotiation_request &request)
+{
+    message_ptr req = message_ex::create_request(RPC_NEGOTIATION);
+    dsn::marshall(req, request);
+    _session->send_message(req);
 }
 
 } // namespace security

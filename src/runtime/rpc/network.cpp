@@ -448,7 +448,7 @@ void rpc_session::start_negotiation()
 void rpc_session::auth_negotiation()
 {
     _negotiation = security::create_negotiation(is_client(), this);
-    _negotiation->start_negotiate();
+    _negotiation->start();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////

@@ -17,14 +17,20 @@
 
 #include "server_negotiation.h"
 
+#include <dsn/dist/fmt_logging.h>
+
 namespace dsn {
 namespace security {
 
-server_negotiation::server_negotiation(rpc_session *session) : negotiation(session) {}
-
-void server_negotiation::start_negotiate()
+server_negotiation::server_negotiation(rpc_session *session) : negotiation(session)
 {
-    // TBD(zlw)
+    _name = fmt::format("SERVER_NEGOTIATION(CLIENT={})", _session->remote_address().to_string());
+}
+
+void server_negotiation::start()
+{
+    _status = negotiation_status::type::SASL_LIST_MECHANISMS;
+    ddebug_f("{}: start negotiation", _name);
 }
 
 } // namespace security

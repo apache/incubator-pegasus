@@ -26,7 +26,8 @@ class server_negotiation : public negotiation
 {
 public:
     server_negotiation(rpc_session *session);
-    void start_negotiate();
+
+    void start();
 };
 
 } // namespace security

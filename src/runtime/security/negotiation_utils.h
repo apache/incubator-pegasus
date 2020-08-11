@@ -17,22 +17,10 @@
 
 #pragma once
 
-#include "negotiation.h"
-
 namespace dsn {
 namespace security {
 
-class client_negotiation : public negotiation
-{
-public:
-    client_negotiation(rpc_session *session);
-
-    void start();
-
-private:
-    void list_mechanisms();
-    void send(const negotiation_request &request);
-};
+DEFINE_TASK_CODE_RPC(RPC_NEGOTIATION, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
 
 } // namespace security
 } // namespace dsn

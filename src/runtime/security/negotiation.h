@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "security_types.h"
 #include <memory>
 
 namespace dsn {
@@ -27,15 +28,20 @@ namespace security {
 class negotiation
 {
 public:
-    negotiation(rpc_session *session) : _session(session) {}
+    negotiation(rpc_session *session)
+        : _session(session), _status(negotiation_status::type::INVALID)
+    {
+    }
     virtual ~negotiation() = 0;
 
-    virtual void start_negotiate() = 0;
+    virtual void start() = 0;
 
 protected:
     // The ownership of the negotiation instance is held by rpc_session.
     // So negotiation keeps only a raw pointer.
     rpc_session *_session;
+    std::string _name;
+    negotiation_status::type _status;
 };
 
 std::unique_ptr<negotiation> create_negotiation(bool is_client, rpc_session *session);
