@@ -88,7 +88,7 @@ void hotkey_collector::stop()
     derror_replica("{} hotkey stopped, cache cleared", hotkey_type_to_string(_hotkey_type));
 }
 
-std::string hotkey_collector::get_status()
+std::string hotkey_collector::get_status() const
 {
     switch (_state.load()) {
     case collector_state::COARSE:
