@@ -314,8 +314,6 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
     std::unique_ptr<hotspot_policy> policy;
     if (_hotspot_detect_algorithm == "hotspot_algo_qps_variance") {
         policy.reset(new hotspot_algo_qps_variance());
-    } else if (_hotspot_detect_algorithm == "hotspot_algo_qps_skew") {
-        policy.reset(new hotspot_algo_qps_skew());
     } else {
         dwarn("hotspot detection is disabled");
         _hotspot_calculator_store[app_name_pcount] = nullptr;

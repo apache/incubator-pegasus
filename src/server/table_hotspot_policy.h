@@ -25,25 +25,6 @@ public:
                           std::vector<::dsn::perf_counter_wrapper> &perf_counters) = 0;
 };
 
-class hotspot_algo_qps_skew : public hotspot_policy
-{
-public:
-    void analysis(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
-                  std::vector<::dsn::perf_counter_wrapper> &perf_counters)
-    {
-        const auto &anly_data = hotspot_app_data.back();
-        double min_total_qps = INT_MAX;
-        for (auto partition_anly_data : anly_data) {
-            min_total_qps = std::min(min_total_qps, partition_anly_data.total_qps);
-        }
-        min_total_qps = std::max(1.0, min_total_qps);
-        dassert(anly_data.size() == perf_counters.size(), "partition counts error, please check");
-        for (int i = 0; i < perf_counters.size(); i++) {
-            perf_counters[i]->set(anly_data[i].total_qps / min_total_qps);
-        }
-    }
-};
-
 // PauTa Criterion
 class hotspot_algo_qps_variance : public hotspot_policy
 {
@@ -114,7 +95,6 @@ private:
     static const int kMaxQueueSize = 100;
 
     FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_variance);
-    FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_skew);
 };
 } // namespace server
 } // namespace pegasus
