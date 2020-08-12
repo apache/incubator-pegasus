@@ -1,14 +1,26 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
-
-#include <boost/lexical_cast.hpp>
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
 #include <dsn/service_api_c.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/utility/filesystem.h>
 
 #include <pegasus/client.h>
+#include <pegasus/error.h>
 #include <gtest/gtest.h>
 
 #include "base/pegasus_const.h"
@@ -20,7 +32,7 @@ using namespace pegasus;
 
 ///
 /// Files:
-/// `bulk_load_files` directory under `function_test` stores sst files and metadata files used for
+/// `pegasus-bulk-load-function-test-files` folder stores sst files and metadata files used for
 /// bulk load function tests
 ///  - `mock_bulk_load_info` sub-directory stores stores wrong bulk_load_info
 ///  - `bulk_load_root` sub-directory stores right data
@@ -83,8 +95,9 @@ public:
         chdir(pegasus_root_dir.c_str());
         system("mkdir onebox/block_service");
         system("mkdir onebox/block_service/local_service");
-        std::string copy_file_cmd = "cp -r src/test/function_test/bulk_load_files/" + LOCAL_ROOT +
-                                    " onebox/block_service/local_service";
+        std::string copy_file_cmd =
+            "cp -r src/test/function_test/pegasus-bulk-load-function-test-files/" + LOCAL_ROOT +
+            " onebox/block_service/local_service";
         system(copy_file_cmd.c_str());
     }
 
@@ -103,44 +116,51 @@ public:
     void replace_bulk_load_info()
     {
         chdir(pegasus_root_dir.c_str());
-        std::string cmd = "cp -R src/test/function_test/bulk_load_files/mock_bulk_load_info/. " +
+        std::string cmd = "cp -R "
+                          "src/test/function_test/pegasus-bulk-load-function-test-files/"
+                          "mock_bulk_load_info/. " +
                           bulk_load_local_root + "/" + CLUSTER + "/" + APP_NAME + "/";
         system(cmd.c_str());
     }
 
-    void wait_bulk_load_finish(int64_t seconds)
+    bulk_load_status::type wait_bulk_load_finish(int64_t seconds)
     {
         int64_t sleep_time = 5;
         error_code err = ERR_OK;
 
+        bulk_load_status::type last_status = bulk_load_status::BLS_INVALID;
+        // when bulk load end, err will be ERR_INVALID_STATE
         while (seconds > 0 && err == ERR_OK) {
             sleep_time = sleep_time > seconds ? seconds : sleep_time;
             seconds -= sleep_time;
             std::cout << "sleep " << sleep_time << "s to query bulk status" << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
 
-            err = ddl_client->query_bulk_load(APP_NAME).get_value().err;
+            auto resp = ddl_client->query_bulk_load(APP_NAME).get_value();
+            err = resp.err;
+            if (err == ERR_OK) {
+                last_status = resp.app_status;
+            }
         }
+        return last_status;
     }
 
-    bool verify_bulk_load_data()
+    void verify_bulk_load_data()
     {
-        if (!verify_data("hashkey", "sortkey")) {
-            return false;
-        }
-        return verify_data(HASHKEY_PREFIX, SORTKEY_PREFIX);
+        ASSERT_TRUE(verify_data("hashkey", "sortkey"));
+        ASSERT_TRUE(verify_data(HASHKEY_PREFIX, SORTKEY_PREFIX));
     }
 
     bool verify_data(const std::string &hashkey_prefix, const std::string &sortkey_prefix)
     {
         const std::string &expected_value = VALUE;
         for (int i = 0; i < COUNT; ++i) {
-            std::string hash_key = hashkey_prefix + boost::lexical_cast<std::string>(i);
+            std::string hash_key = hashkey_prefix + std::to_string(i);
             for (int j = 0; j < COUNT; ++j) {
-                std::string sort_key = sortkey_prefix + boost::lexical_cast<std::string>(j);
+                std::string sort_key = sortkey_prefix + std::to_string(j);
                 std::string act_value;
                 int ret = pg_client->get(hash_key, sort_key, act_value);
-                if (ret != 0) {
+                if (ret != PERR_OK) {
                     std::cout << "Failed to get [" << hash_key << "," << sort_key << "], error is "
                               << ret << std::endl;
                     return false;
@@ -159,30 +179,27 @@ public:
     void operate_data(bulk_load_test::operation op, const std::string &value, int count)
     {
         for (int i = 0; i < count; ++i) {
-            std::string hash_key = HASHKEY_PREFIX + boost::lexical_cast<std::string>(i);
-            std::string sort_key = SORTKEY_PREFIX + boost::lexical_cast<std::string>(i);
+            std::string hash_key = HASHKEY_PREFIX + std::to_string(i);
+            std::string sort_key = SORTKEY_PREFIX + std::to_string(i);
             switch (op) {
             case bulk_load_test::operation::GET: {
                 std::string act_value;
                 int ret = pg_client->get(hash_key, sort_key, act_value);
-                ASSERT_EQ(ret, 0);
+                ASSERT_EQ(ret, PERR_OK);
                 ASSERT_EQ(act_value, value);
             } break;
             case bulk_load_test::operation::DEL: {
-                int ret = pg_client->del(hash_key, sort_key);
-                ASSERT_EQ(0, ret);
+                ASSERT_EQ(pg_client->del(hash_key, sort_key), PERR_OK);
             } break;
             case bulk_load_test::operation::SET: {
-                int ret = pg_client->set(hash_key, sort_key, value);
-                ASSERT_EQ(0, ret);
+                ASSERT_EQ(pg_client->set(hash_key, sort_key, value), PERR_OK);
             } break;
             case bulk_load_test::operation::NO_VALUE: {
                 std::string act_value;
-                int ret = pg_client->get(hash_key, sort_key, act_value);
-                // -1001 means value not found
-                ASSERT_EQ(ret, -1001);
+                ASSERT_EQ(pg_client->get(hash_key, sort_key, act_value), PERR_NOT_FOUND);
             } break;
             default:
+                ASSERT_TRUE(false);
                 break;
             }
         }
@@ -227,7 +244,7 @@ TEST_F(bulk_load_test, bulk_load_tests)
     remove_file(bulk_load_local_root + "/" + CLUSTER + "/" + APP_NAME + "/0/bulk_load_metadata");
     ASSERT_EQ(start_bulk_load(), ERR_OK);
     // bulk load will get FAILED
-    wait_bulk_load_finish(300);
+    ASSERT_EQ(wait_bulk_load_finish(300), bulk_load_status::BLS_FAILED);
 
     // recover complete files
     copy_bulk_load_files();
@@ -237,9 +254,9 @@ TEST_F(bulk_load_test, bulk_load_tests)
     operate_data(operation::GET, "oldValue", 10);
 
     ASSERT_EQ(start_bulk_load(), ERR_OK);
-    wait_bulk_load_finish(300);
+    ASSERT_EQ(wait_bulk_load_finish(300), bulk_load_status::BLS_SUCCEED);
     std::cout << "Start to verify data..." << std::endl;
-    ASSERT_TRUE(verify_bulk_load_data());
+    verify_bulk_load_data();
 
     // value overide by bulk_loaded_data
     operate_data(operation::GET, VALUE, 10);
