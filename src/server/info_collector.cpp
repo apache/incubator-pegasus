@@ -320,7 +320,7 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
         return nullptr;
     }
     hotspot_calculator *calculator =
-        new hotspot_calculator(app_name_pcount, partition_num, std::move(policy));
+        new hotspot_calculator(app_name, partition_num, std::move(policy));
     _hotspot_calculator_store[app_name_pcount] = calculator;
     return calculator;
 }
