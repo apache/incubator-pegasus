@@ -13,6 +13,7 @@
 #include <dsn/dist/fmt_logging.h>
 
 #include "base/pegasus_const.h"
+#include "hotspot_algo_qps_variance.h"
 #include "result_writer.h"
 
 using namespace ::dsn;
