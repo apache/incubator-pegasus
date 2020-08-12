@@ -48,7 +48,7 @@ public:
 
     bool handle_operation(dsn::apps::hotkey_collector_operation::type op, std::string &err_hint);
 
-    std::string get_status();
+    std::string get_status() const;
     // true: result = hotkey, false: can't find hotkey
     bool get_result(std::string &result) const;
     static int variance_calc(const std::vector<uint64_t> &data_samples, int threshold);
