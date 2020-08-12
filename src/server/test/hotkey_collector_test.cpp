@@ -353,5 +353,16 @@ TEST_F(hotkey_collector_test, detection_exceeds_work_time)
     FLAGS_hotkey_collector_max_work_time = old_config;
 }
 
+TEST_F(hotkey_collector_test, variance_calc)
+{
+    ASSERT_EQ(hotkey_collector::variance_calc({}, 0), -1);
+    ASSERT_EQ(hotkey_collector::variance_calc({1, 2}, 0), -1);
+    ASSERT_EQ(hotkey_collector::variance_calc({1, 2, 1}, 3), 1);
+    ASSERT_EQ(hotkey_collector::variance_calc({1, 2, 3}, 0), 2);
+    ASSERT_EQ(hotkey_collector::variance_calc({1, 2, 3}, 3), -1);
+    ASSERT_EQ(hotkey_collector::variance_calc({1, 2, 3, 666}, 3), 3);
+    ASSERT_EQ(hotkey_collector::variance_calc({1, 2, 3, 1, 3, 3, 4, 1, 2, 666, 555}, 3), 9);
+}
+
 } // namespace server
 } // namespace pegasus
