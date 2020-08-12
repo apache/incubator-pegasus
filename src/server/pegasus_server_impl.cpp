@@ -245,7 +245,6 @@ void pegasus_server_impl::on_get(get_rpc rpc)
 
     const auto &key = rpc.request();
     auto &resp = rpc.response();
-
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -1339,14 +1338,13 @@ void pegasus_server_impl::on_detect_hotkey(detect_hotkey_rpc rpc)
                     return ::dsn::ERR_FILE_OPERATION_FAILED;
                 } else {
                     db_exist = false;
-                    dwarn("%s: try to restore and restore_dir(%s) isn't exist, but we don't "
-                          "force "
-                          "it, the role of this replica must not primary, so we open a new db "
-                          "on the "
-                          "path(%s)",
-                          replica_name(),
-                          restore_dir.c_str(),
-                          path.c_str());
+                    dwarn(
+                        "%s: try to restore and restore_dir(%s) isn't exist, but we don't force "
+                        "it, the role of this replica must not primary, so we open a new db on the "
+                        "path(%s)",
+                        replica_name(),
+                        restore_dir.c_str(),
+                        path.c_str());
                 }
             }
         }

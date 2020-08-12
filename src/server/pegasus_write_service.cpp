@@ -139,6 +139,7 @@ int pegasus_write_service::multi_put(const db_write_context &ctx,
     uint64_t start_time = dsn_now_ns();
     _pfc_multi_put_qps->increment();
     int err = _impl->multi_put(ctx, update, resp);
+
     if (_server->is_primary()) {
         _cu_calculator->add_multi_put_cu(resp.error, update.hash_key, update.kvs);
     }
@@ -233,6 +234,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
     _batch_qps_perfcounters.push_back(_pfc_put_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
     int err = _impl->batch_put(ctx, update, resp);
+
     if (_server->is_primary()) {
         _cu_calculator->add_put_cu(resp.error, update.key, update.value);
     }
@@ -245,6 +247,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
                                         dsn::apps::update_response &resp)
 {
     dassert(_batch_start_time != 0, "batch_remove must be called after batch_prepare");
+
     _batch_qps_perfcounters.push_back(_pfc_remove_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_remove_latency.get());
     int err = _impl->batch_remove(decree, key, resp);

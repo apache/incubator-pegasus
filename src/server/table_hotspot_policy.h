@@ -18,8 +18,7 @@ namespace server {
 
 const int kMaxQueueSize = 100;
 typedef std::list<std::vector<hotspot_partition_data>> partition_data_list;
-typedef std::vector<std::vector<std::unique_ptr<::dsn::perf_counter_wrapper>>>
-    hot_partition_counters;
+typedef std::vector<std::vector<std::unique_ptr<dsn::perf_counter_wrapper>>> hot_partition_counters;
 
 enum hotkey_detect_type
 {
