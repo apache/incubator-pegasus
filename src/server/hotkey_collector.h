@@ -39,6 +39,7 @@ public:
     hotkey_collector(dsn::apps::hotkey_type::type hotkey_type,
                      dsn::replication::replica_base *r_base);
 
+    // size: the cu size of raw_key/hash_key calculated by `capacity_unit_calculator`
     void capture_raw_key(const ::dsn::blob &raw_key, uint64_t size);
     void capture_hash_key(const dsn::blob &hash_key, uint64_t size);
 
