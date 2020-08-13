@@ -380,6 +380,8 @@ private:
     std::unordered_map<gpid, bool> _partitions_cleaned_up;
     // Used for bulk load failed and app unavailable to avoid duplicated clean up
     std::unordered_map<app_id, bool> _apps_cleaning_up;
+    // Used for bulk load rolling back to downloading
+    std::unordered_map<app_id, bool> _apps_rolling_back;
 };
 
 } // namespace replication
