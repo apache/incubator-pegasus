@@ -32,7 +32,7 @@ DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_P
 static std::string chkpt_get_dir_name(int64_t decree)
 {
     char buffer[256];
-    sprintf(buffer, "checkpoint.%" PRId64 "", decree);
+    snprintf(buffer, 256, "checkpoint.%" PRId64 "", decree);
     return std::string(buffer);
 }
 
