@@ -279,42 +279,7 @@ if [ "$type" = "all" ]; then
   echo "Rolling update collectors done."
   echo
 
-  echo "Set meta level to lively..."
-  echo "set_meta_level lively" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.set_meta_level
-  set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.rolling_update.set_meta_level | wc -l`
-  if [ $set_ok -ne 1 ]; then
-    echo "ERROR: set meta level to lively failed"
-    exit 1
-  fi
-  echo
-
-  echo "Wait cluster to become balanced..."
-  echo "Wait for 3 minutes to do load balance..."
-  sleep 180
-  while true
-  do
-    op_count=`echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2`
-    if [ -z "op_count" ]; then
-      break
-    fi
-    if [ $op_count -eq 0 ]; then
-      echo "Cluster becomes balanced."
-      break
-    else
-      echo "Still $op_count balance operations to do..."
-      sleep 10
-    fi
-  done
-  echo
-
-  echo "Set meta level to steady..."
-  echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.set_meta_level
-  set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.rolling_update.set_meta_level | wc -l`
-  if [ $set_ok -ne 1 ]; then
-    echo "ERROR: set meta level to steady failed"
-    exit 1
-  fi
-  echo
+  source ./scripts/pegasus_rebalance_cluster $cluster $meta_list true
 fi
 
 echo "Finish time: `date`"
