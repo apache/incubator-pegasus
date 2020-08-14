@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/perf_counter/perf_counters.h>
-#include <dsn/tool-api/http_server.h>
+#include <dsn/http/http_server.h>
 #include <http/perf_counter_http_service.h>
 
 namespace dsn {

@@ -2,7 +2,7 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include <dsn/tool-api/http_server.h>
+#include <dsn/http/http_server.h>
 
 #include "replica_stub.h"
 

@@ -1,7 +1,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/time_utils.h>
 #include <dsn/utility/output_utils.h>
-#include <dsn/tool-api/http_server.h>
+#include <dsn/http/http_server.h>
 
 #include "meta_backup_service.h"
 #include "meta_service.h"

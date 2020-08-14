@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/http_server.h>
+#include <dsn/http/http_server.h>
 
 #include "meta/meta_http_service.h"
 #include "meta/meta_service.h"

@@ -25,7 +25,7 @@
  */
 
 #include <dsn/dist/replication/replication_service_app.h>
-#include <dsn/tool-api/http_server.h>
+#include <dsn/http/http_server.h>
 
 #include "common/replication_common.h"
 #include "http/server_info_http_services.h"

@@ -31,7 +31,7 @@
 #include <dsn/tool-api/rpc_message.h>
 #include <dsn/cpp/serialization.h>
 #include <dsn/c/api_layer1.h>
-#include <dsn/tool-api/http_server.h>
+#include <dsn/http/http_server.h>
 #include <iomanip>
 
 namespace dsn {

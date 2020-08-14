@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <dsn/tool-api/http_server.h>
+#include <dsn/http/http_server.h>
 
 namespace dsn {
 
