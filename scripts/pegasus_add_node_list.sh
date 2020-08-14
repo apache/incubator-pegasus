@@ -14,6 +14,12 @@ if [ $# -le 2 ]; then
   exit 1
 fi
 
+echo "UID=$UID"
+echo "PID=$PID"
+echo "Start time: `date`"
+add_node_start_time=$((`date +%s`))
+echo
+
 cluster=$1
 meta_list=$2
 replica_task_id_list=$3
@@ -52,7 +58,7 @@ done
 source ./scripts/pegasus_rebalance_cluster $cluster $meta_list true
 
 echo "Finish time: `date`"
-all_finish_time=$((`date +%s`))
-echo "add node list done, elasped time is $((all_finish_time - all_start_time)) seconds."
+add_node_finish_time=$((`date +%s`))
+echo "add node list done, elasped time is $((add_node_finish_time - add_node_start_time)) seconds."
 
 rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

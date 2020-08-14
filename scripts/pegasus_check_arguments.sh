@@ -31,12 +31,6 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-echo "UID=$UID"
-echo "PID=$PID"
-echo "Start time: `date`"
-all_start_time=$((`date +%s`))
-echo
-
 id_list_file="/tmp/$UID.$PID.pegasus.$check_type.id_list"
 echo "Generating $id_list_file..."
 minos_show_replica $cluster $id_list_file

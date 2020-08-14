@@ -28,7 +28,7 @@ fi
 echo "UID=$UID"
 echo "PID=$PID"
 echo "Start time: `date`"
-all_start_time=$((`date +%s`))
+rebalance_start_time=$((`date +%s`))
 echo
 
 echo "Generating /tmp/$UID.$PID.pegasus.rebalance.cluster_info..."
@@ -109,3 +109,9 @@ if [ "$only_move_primary" == "true"]; then
   fi
   echo
 fi
+
+echo "Finish time: `date`"
+rebalance_finish_time=$((`date +%s`))
+echo "rebalance done, elasped time is $((rebalance_finish_time - rebalance_start_time)) seconds."
+
+rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

@@ -23,6 +23,13 @@ if [ -z ${TMUX} ]; then
   exit 1
 fi
 
+
+echo "UID=$UID"
+echo "PID=$PID"
+echo "Start time: `date`"
+rolling_start_time=$((`date +%s`))
+echo
+
 cluster=$1
 meta_list=$2
 type=$3
@@ -42,12 +49,6 @@ if [ $? -ne 0 ]; then
   echo "ERROR: cluster \"$cluster\" not found"
   exit 1
 fi
-
-echo "UID=$UID"
-echo "PID=$PID"
-echo "Start time: `date`"
-all_start_time=$((`date +%s`))
-echo
 
 rs_list_file="/tmp/$UID.$PID.pegasus.rolling_update.rs.list"
 echo "Generating $rs_list_file..."
@@ -283,7 +284,7 @@ if [ "$type" = "all" ]; then
 fi
 
 echo "Finish time: `date`"
-all_finish_time=$((`date +%s`))
-echo "Rolling update $type done, elasped time is $((all_finish_time - all_start_time)) seconds."
+rolling_finish_time=$((`date +%s`))
+echo "Rolling update $type done, elasped time is $((rolling_finish_time - rolling_start_time)) seconds."
 
 rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null
