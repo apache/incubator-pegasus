@@ -18,6 +18,10 @@ cluster=$1
 meta_list=$2
 only_move_primary=$3
 
+pwd="$( cd "$( dirname "$0"  )" && pwd )"
+shell_dir="$( cd $pwd/.. && pwd )"
+cd $shell_dir
+
 source ./scripts/minos_common.sh
 find_cluster $cluster
 if [ $? -ne 0 ]; then
