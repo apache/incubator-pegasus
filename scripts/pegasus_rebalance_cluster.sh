@@ -48,7 +48,7 @@ if [ "$pmeta" == "" ]; then
   exit 1
 fi
 
-if [ "$only_move_primary" == "true"]; then
+if [ "$only_move_primary" == "true" ]; then
   echo "Set meta.lb.only_move_primary true"
   echo "This remote-command tells the meta-server to ignore copying primaries during rebalancing."
   echo "So the following steps only include move_primary and copy_secondary."
