@@ -83,7 +83,7 @@ while true; do
         break
     fi
 
-    if [ $op_count -eq 0 && op_count_check_time -gt 0]; then
+    if [ $op_count -eq 0 && op_count_check_time -gt 0 ]; then
         echo "Cluster may be balanced, try wait 30 seconds..."
         $op_count_check_time--
         sleep 30
