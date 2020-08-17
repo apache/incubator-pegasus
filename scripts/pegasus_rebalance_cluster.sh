@@ -102,7 +102,7 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
-if [ "$only_move_primary" == "true"]; then
+if [ "$only_move_primary" == "true" ]; then
   echo "Set meta.lb.only_move_primary false"
   echo "This remote-command tells the meta-server to rebalance with copying primaries."
   echo "remote_command -l $pmeta meta.lb.only_move_primary false" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance.only_move_primary
