@@ -55,7 +55,7 @@ do
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 done
 
-source ./scripts/pegasus_rebalance_cluster $cluster $meta_list true
+source ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list true
 
 echo "Finish time: `date`"
 add_node_finish_time=$((`date +%s`))
