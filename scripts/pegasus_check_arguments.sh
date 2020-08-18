@@ -19,10 +19,6 @@ cluster=$2
 meta_list=$3
 replica_task_id_list=$4
 
-pwd="$( cd "$( dirname "$0"  )" && pwd )"
-shell_dir="$( cd $pwd/.. && pwd )"
-cd $shell_dir
-
 if [ "$check_type" != "add_node_list" -a "$check_type" != "offline_node_list" ]; then
   echo "ERROR: $check_type is invalid, only support \"add_node_list\" and \"offline_node_list\""
   exit 1
