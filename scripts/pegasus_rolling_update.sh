@@ -32,15 +32,15 @@ if [ "$type" != "one" -a "$type" != "all" ]; then
   exit 1
 fi
 
+pwd="$( cd "$( dirname "$0"  )" && pwd )"
+shell_dir="$( cd $pwd/.. && pwd )"
+cd $shell_dir
+
 echo "UID=$UID"
 echo "PID=$PID"
 echo "Start time: `date`"
 rolling_start_time=$((`date +%s`))
 echo
-
-pwd="$( cd "$( dirname "$0"  )" && pwd )"
-shell_dir="$( cd $pwd/.. && pwd )"
-cd $shell_dir
 
 source ./scripts/minos_common.sh
 find_cluster $cluster
