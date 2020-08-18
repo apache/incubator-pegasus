@@ -23,13 +23,6 @@ if [ -z ${TMUX} ]; then
   exit 1
 fi
 
-
-echo "UID=$UID"
-echo "PID=$PID"
-echo "Start time: `date`"
-rolling_start_time=$((`date +%s`))
-echo
-
 cluster=$1
 meta_list=$2
 type=$3
@@ -38,6 +31,12 @@ if [ "$type" != "one" -a "$type" != "all" ]; then
   echo "ERROR: invalid type, should be one or all"
   exit 1
 fi
+
+echo "UID=$UID"
+echo "PID=$PID"
+echo "Start time: `date`"
+rolling_start_time=$((`date +%s`))
+echo
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
@@ -280,7 +279,7 @@ if [ "$type" = "all" ]; then
   echo "Rolling update collectors done."
   echo
 
-  ./scripts/pegasus_rebalance_cluster $cluster $meta_list false
+  ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list false
 fi
 
 echo "Finish time: `date`"
