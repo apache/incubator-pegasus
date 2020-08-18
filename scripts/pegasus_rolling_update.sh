@@ -36,18 +36,18 @@ pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
 
-echo "UID=$UID"
-echo "PID=$PID"
-echo "Start time: `date`"
-rolling_start_time=$((`date +%s`))
-echo
-
 source ./scripts/minos_common.sh
 find_cluster $cluster
 if [ $? -ne 0 ]; then
   echo "ERROR: cluster \"$cluster\" not found"
   exit 1
 fi
+
+echo "UID=$UID"
+echo "PID=$PID"
+echo "Start time: `date`"
+rolling_start_time=$((`date +%s`))
+echo
 
 rs_list_file="/tmp/$UID.$PID.pegasus.rolling_update.rs.list"
 echo "Generating $rs_list_file..."
