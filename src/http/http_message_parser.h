@@ -47,6 +47,7 @@ DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_HTTP)
 //    msg->buffers[0] = header
 //    msg->buffers[1] = body
 //    msg->buffers[2] = url
+//    msg->buffers[3] = content-type
 //
 
 enum http_parser_stage
@@ -90,6 +91,7 @@ private:
     http_parser_settings _parser_setting;
     http_parser _parser;
 
+    bool _is_field_content_type{false};
     std::unique_ptr<message_ex> _current_message;
     http_parser_stage _stage{HTTP_INVALID};
     std::string _url;

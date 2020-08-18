@@ -77,11 +77,12 @@ http_message_parser::http_message_parser()
         // msg->buffers[0] = header
         // msg->buffers[1] = body (blob())
         msg.reset(message_ex::create_receive_message_with_standalone_header(blob()));
+        msg->buffers.resize(4);
 
         message_header *header = msg->header;
         header->hdr_length = sizeof(message_header);
         header->hdr_crc32 = header->body_crc32 = CRC_INVALID;
-        strcpy(header->rpc_name, RPC_HTTP_SERVICE.to_string());
+        strcpy(header->rpc_name, "RPC_HTTP_SERVICE");
         return 0;
     };
 
@@ -96,6 +97,9 @@ http_message_parser::http_message_parser()
         [](http_parser *parser, const char *at, size_t length) -> int {
         http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
         msg_parser->_stage = HTTP_ON_HEADER_FIELD;
+        if (strncmp(at, "Content-Type", length) == 0) {
+            msg_parser->_is_field_content_type = true;
+        }
         return 0;
     };
 
@@ -103,6 +107,12 @@ http_message_parser::http_message_parser()
         [](http_parser *parser, const char *at, size_t length) -> int {
         http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
         msg_parser->_stage = HTTP_ON_HEADER_VALUE;
+        if (msg_parser->_is_field_content_type) {
+            auto &msg = msg_parser->_current_message;
+            // msg->buffers[3] = content-type
+            msg->buffers[3] = blob::create_from_bytes(at, length);
+            msg_parser->_is_field_content_type = false;
+        }
         return 0;
     };
 
@@ -113,7 +123,7 @@ http_message_parser::http_message_parser()
         auto &msg = msg_parser->_current_message;
 
         // msg->buffers[2] = url
-        msg->buffers.emplace_back(blob::create_from_bytes(std::move(msg_parser->_url)));
+        msg->buffers[2] = blob::create_from_bytes(std::move(msg_parser->_url));
 
         message_header *header = msg->header;
         if (parser->type == HTTP_REQUEST && parser->method == HTTP_GET) {

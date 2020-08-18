@@ -125,7 +125,7 @@ public:
             ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
             ASSERT_EQ(msg->header->hdr_type, http_method::HTTP_METHOD_GET);
             ASSERT_EQ(msg->header->context.u.is_request, 1);
-            ASSERT_EQ(msg->buffers.size(), 3);
+            ASSERT_EQ(msg->buffers.size(), 4);
             ASSERT_EQ(msg->buffers[2].size(), 1); // url
 
             // ensure states are reset
@@ -167,11 +167,12 @@ TEST_F(http_message_parser_test, parse_request)
     ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
     ASSERT_EQ(msg->header->hdr_type, http_method::HTTP_METHOD_POST);
     ASSERT_EQ(msg->header->context.u.is_request, 1);
-    ASSERT_EQ(msg->buffers.size(), 3);
+    ASSERT_EQ(msg->buffers.size(), 4);
     ASSERT_EQ(msg->buffers[1].to_string(), "Message Body sdfsdf"); // body
     ASSERT_EQ(                                                     // url
         msg->buffers[2].to_string(),
         std::string("/path/file.html?sdfsdf=sdfs&sldf1=sdf"));
+    ASSERT_EQ(msg->buffers[3].to_string(), std::string("json"));
 }
 
 TEST_F(http_message_parser_test, eof)
@@ -217,7 +218,7 @@ TEST_F(http_message_parser_test, eof)
     ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
     ASSERT_EQ(msg->header->hdr_type, http_method::HTTP_METHOD_GET);
     ASSERT_EQ(msg->header->context.u.is_request, 1);
-    ASSERT_EQ(msg->buffers.size(), 3);
+    ASSERT_EQ(msg->buffers.size(), 4);
     ASSERT_EQ(msg->buffers[1].to_string(), ""); // body
     ASSERT_EQ(                                  // url
         msg->buffers[2].to_string(),
@@ -225,6 +226,7 @@ TEST_F(http_message_parser_test, eof)
                     "weather?location=%E6%B5%B7%E5%8D%97%E7%9C%81%E7%9B%B4%E8%BE%96%E5%8E%BF%E7%BA%"
                     "A7%E8%A1%8C%"
                     "E6%94%BF%E5%8D%95%E4%BD%8D&output=json&ak=0l3FSP6qA0WbOzGRaafbmczS"));
+    ASSERT_EQ(msg->buffers[3].to_string(), std::string("application/json;charset=utf8"));
 }
 
 TEST_F(http_message_parser_test, parse_bad_request) { parse_bad_request(); }
@@ -247,7 +249,7 @@ TEST_F(http_message_parser_test, parse_long_url)
     ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
     ASSERT_EQ(msg->header->hdr_type, http_method::HTTP_METHOD_GET);
     ASSERT_EQ(msg->header->context.u.is_request, 1);
-    ASSERT_EQ(msg->buffers.size(), 3);
+    ASSERT_EQ(msg->buffers.size(), 4);
     ASSERT_EQ(msg->buffers[2].size(), 4097); // url
 }
 
