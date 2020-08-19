@@ -6,7 +6,7 @@
 PID=$$
 
 if [ $# -le 2 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only_move_primary>"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>"
   echo
   echo "for example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 true"
