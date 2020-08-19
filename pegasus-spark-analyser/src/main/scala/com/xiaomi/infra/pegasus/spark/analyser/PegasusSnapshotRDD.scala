@@ -14,9 +14,13 @@ import org.rocksdb.RocksDB
 // TODO(jiashuo1) refactor rdd/iterator for adding pegasus online data
 class PegasusContext(private val sc: SparkContext) extends Serializable {
 
-  def pegasusSnapshotRDD(snapshotLoader: PegasusLoader): PegasusSnapshotRDD = {
+  def pegasusSnapshotRDD(config: Config): PegasusSnapshotRDD = {
 
-    new PegasusSnapshotRDD(this, snapshotLoader, sc)
+    new PegasusSnapshotRDD(
+      this,
+      PegasusLoaderFactory.createDataLoader(config),
+      sc
+    )
   }
 }
 

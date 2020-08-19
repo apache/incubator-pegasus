@@ -22,8 +22,7 @@ object CSVBulkLoader {
         "accessKey",
         "accessSecret",
         "bucketName",
-        "endPoint",
-        "80"
+        "endPoint"
       ),
       "clusterName",
       "tableName"

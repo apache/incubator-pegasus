@@ -16,6 +16,10 @@ public class FDSConfig extends HDFSConfig {
     this.endPoint = endPoint;
   }
 
+  public FDSConfig(String accessKey, String accessSecret, String bucketName, String endPoint) {
+    this(accessKey, accessSecret, bucketName, endPoint, "80");
+  }
+
   public void setBucketName(String bucketName) {
     this.bucketName = bucketName;
   }

@@ -69,8 +69,8 @@ class DuplicationVerifier(opts: DuplicationVerifierOptions) {
       new ColdBackupConfig(fdsConfig, options.cluster1, options.tableName)
 
     val pc = new PegasusContext(sc)
-    val rdd1 = pc.pegasusSnapshotRDD(new ColdBackupLoader(coldBackupConfig1))
-    val rdd2 = pc.pegasusSnapshotRDD(new ColdBackupLoader(coldBackupConfig2))
+    val rdd1 = pc.pegasusSnapshotRDD(coldBackupConfig1)
+    val rdd2 = pc.pegasusSnapshotRDD(coldBackupConfig2)
     val partitionCount1 = rdd1.getPartitionCount
     val partitionCount2 = rdd2.getPartitionCount
     if (partitionCount1 != partitionCount2) {

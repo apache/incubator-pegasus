@@ -1,11 +1,8 @@
 package com.xiaomi.infra.pegasus.spark.analyser.examples.parquet
 
 import com.xiaomi.infra.pegasus.spark.FDSConfig
-import com.xiaomi.infra.pegasus.spark.analyser.{
-  ColdBackupConfig,
-  ColdBackupLoader,
-  PegasusContext
-}
+import com.xiaomi.infra.pegasus.spark.analyser.ColdBackupConfig
+import com.xiaomi.infra.pegasus.spark.analyser.CustomImplicits._
 import org.apache.spark.sql.{Row, SaveMode, SparkSession}
 
 object ConvertParquet {
@@ -23,8 +20,7 @@ object ConvertParquet {
     val coldBackupConfig =
       new ColdBackupConfig(new FDSConfig("", "", "", "", ""), "onebox", "temp")
 
-    val pc = new PegasusContext(spark.sparkContext)
-    val rdd = pc.pegasusSnapshotRDD(new ColdBackupLoader(coldBackupConfig))
+    val rdd = spark.sparkContext.pegasusSnapshotRDD(coldBackupConfig)
 
     // please make sure data can be converted valid string value
     val dataFrame = spark.createDataFrame(
