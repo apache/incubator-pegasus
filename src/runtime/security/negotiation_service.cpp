@@ -15,29 +15,36 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "negotiation.h"
-#include "client_negotiation.h"
+#include "negotiation_service.h"
+#include "negotiation_utils.h"
 #include "server_negotiation.h"
-
-#include <dsn/utility/flags.h>
-#include <dsn/utility/smart_pointers.h>
 
 namespace dsn {
 namespace security {
-/// TODO(zlw):we can't get string list from cflags now,
-/// so we should get supported mechanisms from config in the later
-const std::set<std::string> supported_mechanisms{"GSSAPI"};
-DSN_DEFINE_bool("security", enable_auth, false, "whether open auth or not");
+extern bool FLAGS_enable_auth;
 
-negotiation::~negotiation() {}
+negotiation_service::negotiation_service() : serverlet("negotiation_service") {}
 
-std::unique_ptr<negotiation> create_negotiation(bool is_client, rpc_session *session)
+void negotiation_service::open_service()
 {
-    if (is_client) {
-        return make_unique<client_negotiation>(session);
-    } else {
-        return make_unique<server_negotiation>(session);
+    register_rpc_handler_with_rpc_holder(
+        RPC_NEGOTIATION, "Negotiation", &negotiation_service::on_negotiation_request);
+}
+
+void negotiation_service::on_negotiation_request(negotiation_rpc rpc)
+{
+    dassert(!rpc.dsn_request()->io_session->is_client(),
+            "only server session receive negotiation request");
+
+    // reply SASL_AUTH_DISABLE if auth is not enable
+    if (!security::FLAGS_enable_auth) {
+        rpc.response().status = negotiation_status::type::SASL_AUTH_DISABLE;
+        return;
     }
+
+    server_negotiation *srv_negotiation =
+        static_cast<server_negotiation *>(rpc.dsn_request()->io_session->get_negotiation());
+    srv_negotiation->handle_request(rpc);
 }
 
 } // namespace security

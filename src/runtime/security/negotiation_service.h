@@ -17,36 +17,24 @@
 
 #pragma once
 
-#include "security_types.h"
+#include "server_negotiation.h"
 
-#include <memory>
-#include <dsn/cpp/rpc_holder.h>
+#include <dsn/cpp/serverlet.h>
 
 namespace dsn {
-class rpc_session;
-
 namespace security {
-typedef rpc_holder<negotiation_request, negotiation_response> negotiation_rpc;
 
-class negotiation
+class negotiation_service : public serverlet<negotiation_service>,
+                            public utils::singleton<negotiation_service>
 {
 public:
-    negotiation(rpc_session *session)
-        : _session(session), _status(negotiation_status::type::INVALID)
-    {
-    }
-    virtual ~negotiation() = 0;
+    void open_service();
 
-    virtual void start() = 0;
-
-protected:
-    // The ownership of the negotiation instance is held by rpc_session.
-    // So negotiation keeps only a raw pointer.
-    rpc_session *_session;
-    std::string _name;
-    negotiation_status::type _status;
+private:
+    negotiation_service();
+    void on_negotiation_request(negotiation_rpc rpc);
+    friend class utils::singleton<negotiation_service>;
 };
 
-std::unique_ptr<negotiation> create_negotiation(bool is_client, rpc_session *session);
 } // namespace security
 } // namespace dsn

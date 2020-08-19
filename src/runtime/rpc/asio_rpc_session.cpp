@@ -167,13 +167,6 @@ asio_rpc_session::asio_rpc_session(asio_network_provider &net,
     set_options();
 }
 
-void asio_rpc_session::on_failure(bool is_write)
-{
-    if (on_disconnected(is_write)) {
-        close();
-    }
-}
-
 void asio_rpc_session::close()
 {
     utils::auto_write_lock socket_guard(_socket_lock);
@@ -202,9 +195,6 @@ void asio_rpc_session::connect()
 
                 // start auth negotiation when client is connecting to server
                 start_negotiation();
-
-                set_connected();
-                on_send_completed();
                 start_read_next();
             } else {
                 derror("client session connect to %s failed, error = %s",

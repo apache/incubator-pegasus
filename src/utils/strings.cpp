@@ -183,5 +183,5 @@ std::string string_md5(const char *buffer, unsigned length)
 
     return result;
 }
-}
-}
+} // namespace utils
+} // namespace dsn

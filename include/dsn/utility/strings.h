@@ -49,5 +49,5 @@ char *trim_string(char *s);
 
 // calculate the md5 checksum of buffer
 std::string string_md5(const char *buffer, unsigned int length);
-}
-}
+} // namespace utils
+} // namespace dsn

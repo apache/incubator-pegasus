@@ -16,7 +16,10 @@
 // under the License.
 
 #include "server_negotiation.h"
+#include "negotiation_utils.h"
 
+#include <boost/algorithm/string/join.hpp>
+#include <dsn/utility/strings.h>
 #include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
@@ -31,6 +34,38 @@ void server_negotiation::start()
 {
     _status = negotiation_status::type::SASL_LIST_MECHANISMS;
     ddebug_f("{}: start negotiation", _name);
+}
+
+void server_negotiation::handle_request(negotiation_rpc rpc)
+{
+    if (_status == negotiation_status::type::SASL_LIST_MECHANISMS) {
+        on_list_mechanisms(rpc);
+        return;
+    }
+}
+
+void server_negotiation::on_list_mechanisms(negotiation_rpc rpc)
+{
+    if (rpc.request().status == negotiation_status::type::SASL_LIST_MECHANISMS) {
+        std::string mech_list = boost::join(supported_mechanisms, ",");
+        negotiation_response &response = rpc.response();
+        _status = response.status = negotiation_status::type::SASL_LIST_MECHANISMS_RESP;
+        response.msg = std::move(mech_list);
+    } else {
+        ddebug_f("{}: got message({}) while expect({})",
+                 _name,
+                 enum_to_string(rpc.request().status),
+                 enum_to_string(negotiation_status::type::SASL_LIST_MECHANISMS));
+        fail_negotiation(rpc, "invalid_client_message_status");
+    }
+    return;
+}
+
+void server_negotiation::fail_negotiation(negotiation_rpc rpc, const std::string &reason)
+{
+    negotiation_response &response = rpc.response();
+    _status = response.status = negotiation_status::type::SASL_AUTH_FAIL;
+    response.msg = reason;
 }
 
 } // namespace security

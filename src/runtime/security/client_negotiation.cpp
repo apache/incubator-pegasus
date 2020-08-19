@@ -19,6 +19,8 @@
 #include "negotiation_utils.h"
 
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/tool-api/async_calls.h>
+#include <dsn/utility/smart_pointers.h>
 
 namespace dsn {
 namespace security {
@@ -34,18 +36,24 @@ void client_negotiation::start()
     list_mechanisms();
 }
 
-void client_negotiation::list_mechanisms()
+void client_negotiation::handle_response(error_code err, const negotiation_response &&response)
 {
-    negotiation_request request;
-    _status = request.status = negotiation_status::type::SASL_LIST_MECHANISMS;
-    send(request);
+    // TBD(zlw)
 }
 
-void client_negotiation::send(const negotiation_request &request)
+void client_negotiation::list_mechanisms()
 {
-    message_ptr req = message_ex::create_request(RPC_NEGOTIATION);
-    dsn::marshall(req, request);
-    _session->send_message(req);
+    auto request = dsn::make_unique<negotiation_request>();
+    _status = request->status = negotiation_status::type::SASL_LIST_MECHANISMS;
+    send(std::move(request));
+}
+
+void client_negotiation::send(std::unique_ptr<negotiation_request> request)
+{
+    negotiation_rpc rpc(std::move(request), RPC_NEGOTIATION);
+    rpc.call(_session->remote_address(), nullptr, [this, rpc](error_code err) mutable {
+        handle_response(err, std::move(rpc.response()));
+    });
 }
 
 } // namespace security

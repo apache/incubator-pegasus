@@ -21,6 +21,7 @@
 
 namespace dsn {
 namespace security {
+extern const std::set<std::string> supported_mechanisms;
 
 class server_negotiation : public negotiation
 {
@@ -28,6 +29,11 @@ public:
     server_negotiation(rpc_session *session);
 
     void start();
+    void handle_request(negotiation_rpc rpc);
+
+private:
+    void on_list_mechanisms(negotiation_rpc rpc);
+    void fail_negotiation(negotiation_rpc rpc, const std::string &reason);
 };
 
 } // namespace security

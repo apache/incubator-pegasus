@@ -56,7 +56,6 @@ public:
 
 private:
     void do_read(int read_next) override;
-    void on_failure(bool is_write = false);
     void set_options();
     void on_message_read(message_ex *msg)
     {

@@ -234,6 +234,7 @@ public:
 
     /// for negotiation
     void start_negotiation();
+    security::negotiation *get_negotiation() const;
 
 public:
     ///
@@ -300,6 +301,8 @@ protected:
 
     void clear_send_queue(bool resend_msgs);
     bool on_disconnected(bool is_write);
+    void on_failure(bool is_write = false);
+    void on_success();
 
 protected:
     // constant info
