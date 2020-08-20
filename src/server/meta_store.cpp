@@ -13,9 +13,9 @@ namespace server {
 DSN_DEFINE_string("pegasus.server",
                   get_meta_store_type,
                   "manifest",
-                  "Where to get meta data, now support 'manifest' and 'metacf'");
+                  "Where to get meta data, now support 'manifest', 'metacf' and 'prefer_metacf'");
 DSN_DEFINE_validator(get_meta_store_type, [](const char *type) {
-    return strcmp(type, "manifest") == 0 || strcmp(type, "metacf") == 0;
+    return strcmp(type, "manifest") == 0 || strcmp(type, "metacf") == 0 || strcmp(type, "prefer_metacf") == 0;
 });
 
 const std::string meta_store::DATA_VERSION = "pegasus_data_version";
@@ -30,9 +30,20 @@ meta_store::meta_store(pegasus_server_impl *server,
 {
     // disable write ahead logging as replication handles logging instead now
     _wt_opts.disableWAL = true;
-    _get_meta_store_type =
-        (strcmp(FLAGS_get_meta_store_type, "manifest") == 0 ? meta_store_type::kManifestOnly
-                                                            : meta_store_type::kMetaCFOnly);
+    _get_meta_store_type = parse_meta_store_type(FLAGS_get_meta_store_type);
+}
+
+meta_store_type meta_store::parse_meta_store_type(const char* type) const {
+    if (strcmp(FLAGS_get_meta_store_type, "manifest") == 0) {
+        return meta_store_type::kManifestOnly;
+    }
+    if (strcmp(FLAGS_get_meta_store_type, "metacf") == 0) {
+        return meta_store_type::kMetaCFOnly;
+    }
+    if (strcmp(FLAGS_get_meta_store_type, "prefer_metacf") == 0) {
+        return meta_store_type::kPreferMetaCF;
+    }
+    __builtin_unreachable();
 }
 
 uint64_t meta_store::get_last_flushed_decree() const
@@ -40,10 +51,15 @@ uint64_t meta_store::get_last_flushed_decree() const
     switch (_get_meta_store_type) {
     case meta_store_type::kManifestOnly:
         return _db->GetLastFlushedDecree();
-    case meta_store_type::kMetaCFOnly: {
+    case meta_store_type::kMetaCFOnly:
+    case meta_store_type::kPreferMetaCF: {
         uint64_t last_flushed_decree = 0;
         auto ec = get_value_from_meta_cf(true, LAST_FLUSHED_DECREE, &last_flushed_decree);
-        dcheck_eq_replica(::dsn::ERR_OK, ec);
+        if (::dsn::ERR_OBJECT_NOT_FOUND == ec && _get_meta_store_type == meta_store_type::kPreferMetaCF) {
+            last_flushed_decree = _db->GetLastFlushedDecree();
+        } else {
+            dcheck_eq_replica(::dsn::ERR_OK, ec);
+        }
         return last_flushed_decree;
     }
     default:
@@ -56,10 +72,15 @@ uint32_t meta_store::get_data_version() const
     switch (_get_meta_store_type) {
     case meta_store_type::kManifestOnly:
         return _db->GetPegasusDataVersion();
-    case meta_store_type::kMetaCFOnly: {
+    case meta_store_type::kMetaCFOnly:
+    case meta_store_type::kPreferMetaCF: {
         uint64_t pegasus_data_version = 0;
         auto ec = get_value_from_meta_cf(false, DATA_VERSION, &pegasus_data_version);
-        dcheck_eq_replica(::dsn::ERR_OK, ec);
+        if (::dsn::ERR_OBJECT_NOT_FOUND == ec && _get_meta_store_type == meta_store_type::kPreferMetaCF) {
+            last_flushed_decree = _db->GetPegasusDataVersion();
+        } else {
+            dcheck_eq_replica(::dsn::ERR_OK, ec);
+        }
         return static_cast<uint32_t>(pegasus_data_version);
     }
     default:
@@ -72,11 +93,16 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
     switch (_get_meta_store_type) {
     case meta_store_type::kManifestOnly:
         return _db->GetLastManualCompactFinishTime();
-    case meta_store_type::kMetaCFOnly: {
+    case meta_store_type::kMetaCFOnly:
+    case meta_store_type::kPreferMetaCF: {
         uint64_t last_manual_compact_finish_time = 0;
         auto ec = get_value_from_meta_cf(
             false, LAST_MANUAL_COMPACT_FINISH_TIME, &last_manual_compact_finish_time);
-        dcheck_eq_replica(::dsn::ERR_OK, ec);
+        if (::dsn::ERR_OBJECT_NOT_FOUND == ec && _get_meta_store_type == meta_store_type::kPreferMetaCF) {
+            last_flushed_decree = _db->GetLastManualCompactFinishTime();
+        } else {
+            dcheck_eq_replica(::dsn::ERR_OK, ec);
+        }
         return last_manual_compact_finish_time;
     }
     default:
@@ -108,6 +134,10 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
     if (status.IsNotFound()) {
         return ::dsn::ERR_OBJECT_NOT_FOUND;
     }
+
+    dwarn_f("rocksdb {} get {} from meta column family got error, status=", _db->GetName(),
+            key,
+            status.ToString());
 
     // TODO(yingchun): add a rocksdb io error.
     return ::dsn::ERR_LOCAL_APP_FAILURE;
