@@ -41,7 +41,7 @@ public:
     void set_last_manual_compact_finish_time(uint64_t last_manual_compact_finish_time) const;
 
 private:
-    meta_store_type parse_meta_store_type(const char* type) const;
+    meta_store_type parse_meta_store_type(const char *type) const;
     ::dsn::error_code
     get_value_from_meta_cf(bool read_flushed_data, const std::string &key, uint64_t *value) const;
     ::dsn::error_code set_value_to_meta_cf(const std::string &key, uint64_t value) const;

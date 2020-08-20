@@ -15,7 +15,8 @@ DSN_DEFINE_string("pegasus.server",
                   "manifest",
                   "Where to get meta data, now support 'manifest', 'metacf' and 'prefer_metacf'");
 DSN_DEFINE_validator(get_meta_store_type, [](const char *type) {
-    return strcmp(type, "manifest") == 0 || strcmp(type, "metacf") == 0 || strcmp(type, "prefer_metacf") == 0;
+    return strcmp(type, "manifest") == 0 || strcmp(type, "metacf") == 0 ||
+           strcmp(type, "prefer_metacf") == 0;
 });
 
 const std::string meta_store::DATA_VERSION = "pegasus_data_version";
@@ -33,7 +34,8 @@ meta_store::meta_store(pegasus_server_impl *server,
     _get_meta_store_type = parse_meta_store_type(FLAGS_get_meta_store_type);
 }
 
-meta_store_type meta_store::parse_meta_store_type(const char* type) const {
+meta_store_type meta_store::parse_meta_store_type(const char *type) const
+{
     if (strcmp(FLAGS_get_meta_store_type, "manifest") == 0) {
         return meta_store_type::kManifestOnly;
     }
@@ -55,7 +57,8 @@ uint64_t meta_store::get_last_flushed_decree() const
     case meta_store_type::kPreferMetaCF: {
         uint64_t last_flushed_decree = 0;
         auto ec = get_value_from_meta_cf(true, LAST_FLUSHED_DECREE, &last_flushed_decree);
-        if (::dsn::ERR_OBJECT_NOT_FOUND == ec && _get_meta_store_type == meta_store_type::kPreferMetaCF) {
+        if (::dsn::ERR_OBJECT_NOT_FOUND == ec &&
+            _get_meta_store_type == meta_store_type::kPreferMetaCF) {
             last_flushed_decree = _db->GetLastFlushedDecree();
         } else {
             dcheck_eq_replica(::dsn::ERR_OK, ec);
@@ -76,7 +79,8 @@ uint32_t meta_store::get_data_version() const
     case meta_store_type::kPreferMetaCF: {
         uint64_t pegasus_data_version = 0;
         auto ec = get_value_from_meta_cf(false, DATA_VERSION, &pegasus_data_version);
-        if (::dsn::ERR_OBJECT_NOT_FOUND == ec && _get_meta_store_type == meta_store_type::kPreferMetaCF) {
+        if (::dsn::ERR_OBJECT_NOT_FOUND == ec &&
+            _get_meta_store_type == meta_store_type::kPreferMetaCF) {
             last_flushed_decree = _db->GetPegasusDataVersion();
         } else {
             dcheck_eq_replica(::dsn::ERR_OK, ec);
@@ -98,7 +102,8 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
         uint64_t last_manual_compact_finish_time = 0;
         auto ec = get_value_from_meta_cf(
             false, LAST_MANUAL_COMPACT_FINISH_TIME, &last_manual_compact_finish_time);
-        if (::dsn::ERR_OBJECT_NOT_FOUND == ec && _get_meta_store_type == meta_store_type::kPreferMetaCF) {
+        if (::dsn::ERR_OBJECT_NOT_FOUND == ec &&
+            _get_meta_store_type == meta_store_type::kPreferMetaCF) {
             last_flushed_decree = _db->GetLastManualCompactFinishTime();
         } else {
             dcheck_eq_replica(::dsn::ERR_OK, ec);
@@ -135,7 +140,8 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
         return ::dsn::ERR_OBJECT_NOT_FOUND;
     }
 
-    dwarn_f("rocksdb {} get {} from meta column family got error, status=", _db->GetName(),
+    dwarn_f("rocksdb {} get {} from meta column family got error, status=",
+            _db->GetName(),
             key,
             status.ToString());
 
