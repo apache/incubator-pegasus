@@ -61,18 +61,18 @@ extern DSN_API bool dsn_mimic_app(const char *app_role, int index);
  start the system with given configuration
 
  \param config           the configuration file for this run
- \param sleep_after_init whether to sleep after rDSN initialization, default is false
+ \param is_server whether it is server or not, default is false
 
  \return true if it succeeds, false if it fails.
  */
-extern DSN_API bool dsn_run_config(const char *config, bool sleep_after_init DEFAULT(false));
+extern DSN_API bool dsn_run_config(const char *config, bool is_server DEFAULT(false));
 
 /*!
  start the system with given arguments
 
  \param argc             argc in C main convention
  \param argv             argv in C main convention
- \param sleep_after_init whether to sleep after rDSN initialization, default is false
+ \param is_server whether it is server or not, default is false
 
  \return true if it succeeds, false if it fails.
 
@@ -89,7 +89,7 @@ extern DSN_API bool dsn_run_config(const char *config, bool sleep_after_init DEF
 
  Note the argc, argv folllows the C main convention that argv[0] is the executable name.
  */
-extern DSN_API void dsn_run(int argc, char **argv, bool sleep_after_init DEFAULT(false));
+extern DSN_API void dsn_run(int argc, char **argv, bool is_server DEFAULT(false));
 
 /*!
  exit the process with the given exit code

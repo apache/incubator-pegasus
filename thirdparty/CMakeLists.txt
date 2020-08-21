@@ -296,6 +296,31 @@ ExternalProject_Add(rocksdb
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         )
 
+# kerberos
+ExternalProject_Add(krb5
+        URL ${OSS_URL_PREFIX}/krb5-1.16.1.tar.gz
+        http://web.mit.edu/kerberos/dist/krb5/1.16/krb5-1.16.1.tar.gz
+        URL_MD5 848e9b80d6aaaa798e3f3df24b83c407
+        CONFIGURE_COMMAND cd src && ./configure --prefix=${TP_OUTPUT}
+        BUILD_COMMAND cd src && make
+        INSTALL_COMMAND cd src && make install
+        BUILD_IN_SOURCE 1
+        )
+
+# cyrus-sasl
+ExternalProject_Add(cyrus-sasl
+        URL ${OSS_URL_PREFIX}/cyrus-sasl-2.1.27.tar.gz
+        http://www.cyrusimap.org/releases/cyrus-sasl-2.1.27.tar.gz
+        URL_MD5 a33820c66e0622222c5aefafa1581083
+        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+        --enable-gssapi=$TP_OUTPUT
+        --enable-scram=no
+        --enable-digest=no
+        --enable-cram=no
+        --enable-otp=no
+        BUILD_IN_SOURCE 1
+        )
+
 ExternalProject_Add(http-parser
         URL ${OSS_URL_PREFIX}/http-parser-2.9.4.zip
         https://github.com/nodejs/http-parser/archive/v2.9.4.zip

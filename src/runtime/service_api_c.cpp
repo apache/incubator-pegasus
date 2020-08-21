@@ -24,15 +24,24 @@
  * THE SOFTWARE.
  */
 
+#include "service_engine.h"
+#include "utils/coredump.h"
+#include "runtime/rpc/rpc_engine.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/security/init.h"
+
+#include <fstream>
+
 #include <dsn/service_api_c.h>
 #include <dsn/tool_api.h>
+#include <dsn/tool-api/command_manager.h>
 #include <dsn/cpp/serialization.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/process_utils.h>
 #include <dsn/utility/flags.h>
-#include <dsn/tool-api/command_manager.h>
-#include <fstream>
 #include <dsn/utility/time_utils.h>
+#include <dsn/utility/errors.h>
+#include <dsn/dist/fmt_logging.h>
 
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
@@ -44,6 +53,11 @@
 #include "utils/coredump.h"
 #include "runtime/security/negotiation_service.h"
 
+namespace dsn {
+namespace security {
+DSN_DECLARE_bool(enable_auth);
+} // namespace security
+} // namespace dsn
 //
 // global state
 //
@@ -160,15 +174,13 @@ DSN_API void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr)
 //
 //------------------------------------------------------------------------------
 
-static bool run(const char *config_file,
-                const char *config_arguments,
-                bool sleep_after_init,
-                std::string &app_list);
+static bool
+run(const char *config_file, const char *config_arguments, bool is_server, std::string &app_list);
 
-DSN_API bool dsn_run_config(const char *config, bool sleep_after_init)
+DSN_API bool dsn_run_config(const char *config, bool is_server)
 {
     std::string name;
-    return run(config, nullptr, sleep_after_init, name);
+    return run(config, nullptr, is_server, name);
 }
 
 NORETURN DSN_API void dsn_exit(int code)
@@ -219,7 +231,7 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
 //       port variable specified in config.ini
 //       config.ini to start ALL apps as a new process
 //
-DSN_API void dsn_run(int argc, char **argv, bool sleep_after_init)
+DSN_API void dsn_run(int argc, char **argv, bool is_server)
 {
     if (argc < 2) {
         printf(
@@ -258,10 +270,7 @@ DSN_API void dsn_run(int argc, char **argv, bool sleep_after_init)
         }
     }
 
-    if (!run(config,
-             config_args.size() > 0 ? config_args.c_str() : nullptr,
-             sleep_after_init,
-             app_list)) {
+    if (!run(config, config_args.size() > 0 ? config_args.c_str() : nullptr, is_server, app_list)) {
         printf("run the system failed\n");
         dsn_exit(-1);
         return;
@@ -334,7 +343,7 @@ static std::string dsn_log_prefixed_message_func()
 
 bool run(const char *config_file,
          const char *config_arguments,
-         bool sleep_after_init,
+         bool is_server,
          std::string &app_list)
 {
     dsn_global_init();
@@ -459,6 +468,13 @@ bool run(const char *config_file,
 
     dsn_all.engine_ready = true;
 
+    // init security if FLAGS_enable_auth == true
+    if (dsn::security::FLAGS_enable_auth) {
+        if (!dsn::security::init(is_server)) {
+            return false;
+        }
+    }
+
     // split app_name and app_index
     std::list<std::string> applistkvs;
     ::dsn::utils::split_args(app_list.c_str(), applistkvs, ';');
@@ -524,7 +540,7 @@ bool run(const char *config_file,
     // start the tool
     dsn_all.tool->run();
 
-    if (sleep_after_init) {
+    if (is_server) {
         while (true) {
             std::this_thread::sleep_for(std::chrono::hours(1));
         }

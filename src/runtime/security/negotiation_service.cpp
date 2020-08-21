@@ -19,9 +19,11 @@
 #include "negotiation_utils.h"
 #include "server_negotiation.h"
 
+#include <dsn/utility/flags.h>
+
 namespace dsn {
 namespace security {
-extern bool FLAGS_enable_auth;
+DSN_DECLARE_bool(enable_auth);
 
 negotiation_service::negotiation_service() : serverlet("negotiation_service") {}
 
