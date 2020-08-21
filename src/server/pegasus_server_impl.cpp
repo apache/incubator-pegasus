@@ -1366,20 +1366,24 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     // Create _meta_store which provide Pegasus meta data read and write.
     _meta_store = dsn::make_unique<meta_store>(this, _db, _meta_cf);
 
-    _last_committed_decree = _meta_store->get_last_flushed_decree();
-    _pegasus_data_version = _meta_store->get_data_version();
-    uint64_t last_manual_compact_finish_time = _meta_store->get_last_manual_compact_finish_time();
-    if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
-        derror_replica("open app failed, unsupported data version {}", _pegasus_data_version);
-        release_db();
-        return ::dsn::ERR_LOCAL_APP_FAILURE;
+    uint64_t last_manual_compact_finish_time = 0;
+    if (db_exist || (!db_exist && _meta_store->is_get_value_from_manifest())) {
+        _last_committed_decree = _meta_store->get_last_flushed_decree();
+        _pegasus_data_version = _meta_store->get_data_version();
+        last_manual_compact_finish_time = _meta_store->get_last_manual_compact_finish_time();
+        if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
+            derror_replica("open app failed, unsupported data version {}", _pegasus_data_version);
+            release_db();
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
     }
 
     if (need_create_meta_cf) {
-        // Write meta data to meta CF according to manifest.
+        // Write meta data to meta CF according to manifest or default value
         _meta_store->set_data_version(_pegasus_data_version);
         _meta_store->set_last_flushed_decree(_last_committed_decree);
         _meta_store->set_last_manual_compact_finish_time(last_manual_compact_finish_time);
+        flush_all_family_columns(!_meta_store->is_get_value_from_manifest());
     }
 
     // only enable filter after correct pegasus_data_version set

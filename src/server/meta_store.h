@@ -40,6 +40,11 @@ public:
     void set_data_version(uint32_t version) const;
     void set_last_manual_compact_finish_time(uint64_t last_manual_compact_finish_time) const;
 
+    bool is_get_value_from_manifest() const
+    {
+        return _get_meta_store_type == meta_store_type::kManifestOnly;
+    }
+
 private:
     ::dsn::error_code
     get_value_from_meta_cf(bool read_flushed_data, const std::string &key, uint64_t *value) const;
