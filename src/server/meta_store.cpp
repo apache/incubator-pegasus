@@ -34,7 +34,7 @@ meta_store::meta_store(pegasus_server_impl *server,
     _get_meta_store_type = parse_meta_store_type(FLAGS_get_meta_store_type);
 }
 
-meta_store_type meta_store::parse_meta_store_type(const char *type) const
+meta_store::meta_store_type meta_store::parse_meta_store_type(const char *type) const
 {
     if (strcmp(FLAGS_get_meta_store_type, "manifest") == 0) {
         return meta_store_type::kManifestOnly;
@@ -81,7 +81,7 @@ uint32_t meta_store::get_data_version() const
         auto ec = get_value_from_meta_cf(false, DATA_VERSION, &pegasus_data_version);
         if (::dsn::ERR_OBJECT_NOT_FOUND == ec &&
             _get_meta_store_type == meta_store_type::kPreferMetaCF) {
-            last_flushed_decree = _db->GetPegasusDataVersion();
+            pegasus_data_version = _db->GetPegasusDataVersion();
         } else {
             dcheck_eq_replica(::dsn::ERR_OK, ec);
         }
@@ -104,7 +104,7 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
             false, LAST_MANUAL_COMPACT_FINISH_TIME, &last_manual_compact_finish_time);
         if (::dsn::ERR_OBJECT_NOT_FOUND == ec &&
             _get_meta_store_type == meta_store_type::kPreferMetaCF) {
-            last_flushed_decree = _db->GetLastManualCompactFinishTime();
+            last_manual_compact_finish_time = _db->GetLastManualCompactFinishTime();
         } else {
             dcheck_eq_replica(::dsn::ERR_OK, ec);
         }
