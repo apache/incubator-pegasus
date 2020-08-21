@@ -86,6 +86,7 @@ while true; do
            echo "Cluster may be balanced, try wait 30 seconds..."
            ((op_count_check_remain_times--))
            sleep 30
+        fi
     else
         echo "Still $op_count balance operations to do..."
         sleep 10
