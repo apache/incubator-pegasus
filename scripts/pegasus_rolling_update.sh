@@ -279,7 +279,7 @@ if [ "$type" = "all" ]; then
   echo "Rolling update collectors done."
   echo
 
-  ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list false
+  ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list
 fi
 
 echo "Finish time: `date`"

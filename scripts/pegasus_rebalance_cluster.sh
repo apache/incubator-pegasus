@@ -5,9 +5,9 @@
 
 PID=$$
 
-if [ $# -le 2 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>"
-  echo
+if [ $# -le 1 ]; then
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false)"
+  echo 
   echo "for example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 true"
   echo
@@ -16,7 +16,12 @@ fi
 
 cluster=$1
 meta_list=$2
-only_move_primary=$3
+
+if [ -z $3 ]; then
+  only_move_primary=false
+else
+  only_move_primary=$3
+fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
@@ -72,10 +77,12 @@ fi
 echo "Wait cluster to become balanced..."
 echo "Wait for 3 minutes to do load balance..."
 sleep 180
+## Number of check times for balanced state, in case that op_count is 0 but
+## the cluster is in fact unbalanced. Each check waits for 30 secs.
 op_count_check_remain_times=1
 while true; do
     op_count=$(echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2)
-    if [ -z "op_count" ]; then
+    if [ -z $op_count ]; then
         break
     fi
 
