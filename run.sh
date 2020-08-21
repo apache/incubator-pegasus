@@ -284,6 +284,14 @@ function run_test()
         test_modules="pegasus_unit_test pegasus_function_test"
     fi
 
+    if [[ "$test_modules" =~ "pegasus_function_test" && "$on_travis" == "" && ! -d "$ROOT/src/test/function_test/pegasus-bulk-load-function-test-files" ]]; then
+        echo "Start to download files used for bulk load function test"
+        wget "https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-bulk-load-function-test-files.zip"
+        unzip "pegasus-bulk-load-function-test-files.zip" -d "$ROOT/src/test/function_test"
+        rm "pegasus-bulk-load-function-test-files.zip"
+        echo "Prepare files used for bulk load function test succeed"
+    fi
+
     echo "Test start time: `date`"
     start_time=`date +%s`
 
