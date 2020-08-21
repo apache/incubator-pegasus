@@ -52,5 +52,11 @@ inline const char *enum_to_string(negotiation_status::type s)
 }
 
 DEFINE_TASK_CODE_RPC(RPC_NEGOTIATION, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
+
+inline bool is_negotiation_message(dsn::task_code code)
+{
+    return code == RPC_NEGOTIATION || code == RPC_NEGOTIATION_ACK;
+}
+
 } // namespace security
 } // namespace dsn

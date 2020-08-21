@@ -301,6 +301,7 @@ protected:
 
     void clear_send_queue(bool resend_msgs);
     bool on_disconnected(bool is_write);
+    bool is_auth_success(message_ex *msg);
     void on_failure(bool is_write = false);
     void on_success();
 

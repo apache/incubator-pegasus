@@ -38,6 +38,7 @@ public:
     virtual ~negotiation() = 0;
 
     virtual void start() = 0;
+    bool negotiation_succeed() const { return _status == negotiation_status::type::SASL_SUCC; }
 
 protected:
     // The ownership of the negotiation instance is held by rpc_session.

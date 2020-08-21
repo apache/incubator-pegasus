@@ -25,12 +25,14 @@
  */
 
 #include "runtime/security/negotiation.h"
+#include "runtime/security/negotiation_utils.h"
 #include "message_parser_manager.h"
 #include "runtime/rpc/rpc_engine.h"
 
 #include <dsn/tool-api/network.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/flags.h>
+#include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
 /*static*/ join_point<void, rpc_session *>
@@ -276,7 +278,11 @@ void rpc_session::send_message(message_ex *msg)
         msg->dl.insert_before(&_messages);
         ++_message_count;
 
-        if (SS_CONNECTED == _connect_state && !_is_sending_next) {
+        // Attention: here we only allow two cases to send message:
+        //  case 1: session's state is SS_CONNECTED
+        //  case 2: session is sending negotiation message
+        if ((SS_CONNECTED == _connect_state || security::is_negotiation_message(msg->rpc_code())) &&
+            !_is_sending_next) {
             _is_sending_next = true;
             sig = _message_sent + 1;
             unlink_message_for_send();
@@ -392,6 +398,19 @@ bool rpc_session::on_disconnected(bool is_write)
     return ret;
 }
 
+bool rpc_session::is_auth_success(message_ex *msg)
+{
+    if (security::FLAGS_enable_auth && !_negotiation->negotiation_succeed()) {
+        dwarn_f("reject message({}) from {}, session {} client",
+                msg->rpc_code().to_string(),
+                _remote_addr.to_string(),
+                is_client() ? "is" : "isn't");
+        return false;
+    }
+
+    return true;
+}
+
 void rpc_session::on_failure(bool is_write)
 {
     if (on_disconnected(is_write)) {
@@ -413,6 +432,16 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
         msg->header->from_address = _remote_addr;
     msg->to_address = _net.address();
     msg->io_session = this;
+
+    // return false if msg is negotiation message and auth is not success
+    if (!security::is_negotiation_message(msg->rpc_code()) && !is_auth_success(msg)) {
+        // reply response with ERR_UNAUTHENTICATED if msg is request
+        if (msg->header->context.u.is_request) {
+            _net.engine()->reply(msg->create_response(), ERR_UNAUTHENTICATED);
+        }
+        delete msg;
+        return false;
+    }
 
     if (msg->header->context.u.is_request) {
         // ATTENTION: need to check if self connection occurred.
