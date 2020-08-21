@@ -79,14 +79,13 @@ while true; do
         break
     fi
 
-    if [ $op_count -eq 0 -a $op_count_check_remain_times -eq 0 ]; then
-        break
-    fi
-
     if [ $op_count -eq 0 ]; then
-        echo "Cluster may be balanced, try wait 30 seconds..."
-        ((op_count_check_remain_times--))
-        sleep 30
+        if [ $op_count_check_remain_times -eq 0 ]; then
+          break
+        else
+           echo "Cluster may be balanced, try wait 30 seconds..."
+           ((op_count_check_remain_times--))
+           sleep 30
     else
         echo "Still $op_count balance operations to do..."
         sleep 10
