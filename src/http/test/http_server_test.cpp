@@ -141,8 +141,7 @@ public:
 
 TEST_F(http_message_parser_test, parse_request)
 {
-    std::string http_request = "POST /path/file.html?sdfsdf=sdfs&sldf1=sdf HTTP/12.34\r\n"
-                               "From: someuser@jmarshall.com\r\n"
+    std::string http_request = "POST /path/file.html?sdfsdf=sdfs&sldf1=sdf HTTP/1.1\r\n"
                                "User-Agent: HTTPTool/1.0  \r\n" // intended ending spaces
                                "Content-Type: json\r\n"
                                "Content-Length: 19\r\n"

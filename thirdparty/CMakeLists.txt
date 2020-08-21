@@ -295,3 +295,13 @@ ExternalProject_Add(rocksdb
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         )
+
+ExternalProject_Add(http-parser
+        URL ${OSS_URL_PREFIX}/http-parser-2.9.4.zip
+        https://github.com/nodejs/http-parser/archive/v2.9.4.zip
+        URL_MD5 f6900b9209d3d6b80c70e050ac33b834
+        CONFIGURE_COMMAND mkdir -p ${TP_OUTPUT}/include/nodejs
+        BUILD_COMMAND ""
+        INSTALL_COMMAND cp -R http_parser.h ${TP_OUTPUT}/include/nodejs/http_parser.h
+        BUILD_IN_SOURCE 1
+        )

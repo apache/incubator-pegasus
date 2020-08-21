@@ -1,6 +1,6 @@
 set(MY_PROJ_NAME dsn_http)
 
-set(MY_PROJ_SRC "")
+set(MY_PROJ_SRC ${PROJECT_SOURCE_DIR}/thirdparty/build/Source/http-parser/http_parser.c)
 
 set(MY_SRC_SEARCH_MODE "GLOB")
 
