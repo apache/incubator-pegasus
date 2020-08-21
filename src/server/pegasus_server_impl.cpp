@@ -1366,8 +1366,9 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     // Create _meta_store which provide Pegasus meta data read and write.
     _meta_store = dsn::make_unique<meta_store>(this, _db, _meta_cf);
 
+    // When db_exist, read meta data firstly
     uint64_t last_manual_compact_finish_time = 0;
-    if (db_exist || (!db_exist && _meta_store->is_get_value_from_manifest())) {
+    if (db_exist) {
         _last_committed_decree = _meta_store->get_last_flushed_decree();
         _pegasus_data_version = _meta_store->get_data_version();
         last_manual_compact_finish_time = _meta_store->get_last_manual_compact_finish_time();
@@ -1383,7 +1384,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _meta_store->set_data_version(_pegasus_data_version);
         _meta_store->set_last_flushed_decree(_last_committed_decree);
         _meta_store->set_last_manual_compact_finish_time(last_manual_compact_finish_time);
-        flush_all_family_columns(!_meta_store->is_get_value_from_manifest());
+        flush_all_family_columns(_meta_store->is_get_value_from_meta_cf());
     }
 
     // only enable filter after correct pegasus_data_version set

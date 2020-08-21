@@ -40,9 +40,9 @@ public:
     void set_data_version(uint32_t version) const;
     void set_last_manual_compact_finish_time(uint64_t last_manual_compact_finish_time) const;
 
-    bool is_get_value_from_manifest() const
+    bool is_get_value_from_meta_cf() const
     {
-        return _get_meta_store_type == meta_store_type::kManifestOnly;
+        return _get_meta_store_type == meta_store_type::kMetaCFOnly;
     }
 
 private:
