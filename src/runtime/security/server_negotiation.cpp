@@ -38,9 +38,19 @@ void server_negotiation::start()
 
 void server_negotiation::handle_request(negotiation_rpc rpc)
 {
-    if (_status == negotiation_status::type::SASL_LIST_MECHANISMS) {
+    switch (_status) {
+    case negotiation_status::type::SASL_LIST_MECHANISMS:
         on_list_mechanisms(rpc);
-        return;
+        break;
+    case negotiation_status::type::SASL_LIST_MECHANISMS_RESP:
+        on_select_mechanism(rpc);
+        break;
+    case negotiation_status::type::SASL_SELECT_MECHANISMS_RESP:
+    case negotiation_status::type::SASL_CHALLENGE:
+        // TBD(zlw)
+        break;
+    default:
+        fail_negotiation(rpc, "wrong status");
     }
 }
 
@@ -59,6 +69,47 @@ void server_negotiation::on_list_mechanisms(negotiation_rpc rpc)
         fail_negotiation(rpc, "invalid_client_message_status");
     }
     return;
+}
+
+void server_negotiation::on_select_mechanism(negotiation_rpc rpc)
+{
+    const negotiation_request &request = rpc.request();
+    if (request.status == negotiation_status::type::SASL_SELECT_MECHANISMS) {
+        _selected_mechanism = request.msg;
+        if (supported_mechanisms.find(_selected_mechanism) == supported_mechanisms.end()) {
+            std::string error_msg =
+                fmt::format("the mechanism of {} is not supported", _selected_mechanism);
+            dwarn_f("{}", error_msg);
+            fail_negotiation(rpc, error_msg);
+            return;
+        }
+
+        error_s err_s = do_sasl_server_init();
+        if (!err_s.is_ok()) {
+            dwarn_f("{}: server initialize sasl failed, error = {}, msg = {}",
+                    _name,
+                    err_s.code().to_string(),
+                    err_s.description());
+            fail_negotiation(rpc, err_s.description());
+            return;
+        }
+
+        negotiation_response &response = rpc.response();
+        _status = response.status = negotiation_status::type::SASL_SELECT_MECHANISMS_RESP;
+    } else {
+        dwarn_f("{}: got message({}) while expect({})",
+                _name,
+                enum_to_string(request.status),
+                negotiation_status::type::SASL_SELECT_MECHANISMS);
+        fail_negotiation(rpc, "invalid_client_message_status");
+        return;
+    }
+}
+
+error_s server_negotiation::do_sasl_server_init()
+{
+    // TBD(zlw)
+    return error_s::make(ERR_OK);
 }
 
 void server_negotiation::fail_negotiation(negotiation_rpc rpc, const std::string &reason)
