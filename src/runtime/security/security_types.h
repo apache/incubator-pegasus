@@ -28,7 +28,7 @@ struct negotiation_status
         SASL_LIST_MECHANISMS = 1,
         SASL_LIST_MECHANISMS_RESP = 2,
         SASL_SELECT_MECHANISMS = 3,
-        SASL_SELECT_MECHANISMS_OK = 4,
+        SASL_SELECT_MECHANISMS_RESP = 4,
         SASL_INITIATE = 5,
         SASL_CHALLENGE = 6,
         SASL_CHALLENGE_RESP = 7,

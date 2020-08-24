@@ -27,7 +27,9 @@ namespace security {
 /// TODO(zlw):we can't get string list from cflags now,
 /// so we should get supported mechanisms from config in the later
 const std::set<std::string> supported_mechanisms{"GSSAPI"};
+
 DSN_DEFINE_bool("security", enable_auth, false, "whether open auth or not");
+DSN_DEFINE_bool("security", mandatory_auth, false, "wheter to do authertication mandatorily");
 
 negotiation::~negotiation() {}
 

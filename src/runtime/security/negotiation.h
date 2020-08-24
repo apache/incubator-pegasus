@@ -46,6 +46,7 @@ protected:
     rpc_session *_session;
     std::string _name;
     negotiation_status::type _status;
+    std::string _selected_mechanism;
 };
 
 std::unique_ptr<negotiation> create_negotiation(bool is_client, rpc_session *session);
