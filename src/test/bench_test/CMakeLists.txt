@@ -14,6 +14,9 @@ set(MY_PROJ_LIBS
         pegasus_client_static
         dsn_utils
         RocksDB::rocksdb
+        sasl2
+        gssapi_krb5
+        krb5
         )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
