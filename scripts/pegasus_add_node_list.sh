@@ -14,6 +14,12 @@ if [ $# -le 2 ]; then
   exit 1
 fi
 
+echo "UID=$UID"
+echo "PID=$PID"
+echo "Start time: `date`"
+add_node_start_time=$((`date +%s`))
+echo
+
 cluster=$1
 meta_list=$2
 replica_task_id_list=$3
@@ -49,70 +55,10 @@ do
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 done
 
-echo "Set meta.lb.only_move_primary true"
-echo "This remote-command tells the meta-server to ignore copying primaries during rebalancing."
-echo "So the following steps only include move_primary and copy_secondary."
-echo "remote_command -l $pmeta meta.lb.only_move_primary true" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.add_node_list.only_move_primary
-set_ok=`grep OK /tmp/$UID.$PID.pegasus.add_node_list.only_move_primary | wc -l`
-if [ $set_ok -ne 1 ]; then
-  echo "ERROR: meta.lb.only_move_primary true"
-  exit 1
-fi
-echo
-
-echo "Set meta level to lively..."
-echo "set_meta_level lively" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.add_node_list.set_meta_level
-set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.add_node_list.set_meta_level | wc -l`
-if [ $set_ok -ne 1 ]; then
-  echo "ERROR: set meta level to lively failed"
-  exit 1
-fi
-
-echo "Wait cluster to become balanced..."
-echo "Wait for 3 minutes to do load balance..."
-sleep 180
-while true; do
-    op_count=$(echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2)
-    if [ -z "op_count" ]; then
-        break
-    fi
-    if [ $op_count -eq 0 ]; then
-        echo "Cluster may be balanced, try wait 30 seconds..."
-        sleep 30
-        op_count=$(echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2)
-        if [ $op_count -eq 0 ]; then
-            echo "Cluster becomes balanced."
-            break
-        fi
-    else
-        echo "Still $op_count balance operations to do..."
-        sleep 1
-    fi
-done
-echo
-
-
-
-echo "Set meta level to steady..."
-echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.add_node_list.set_meta_level
-set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.add_node_list.set_meta_level | wc -l`
-if [ $set_ok -ne 1 ]; then
-  echo "ERROR: set meta level to steady failed"
-  exit 1
-fi
-
-echo "Set meta.lb.only_move_primary false"
-echo "This remote-command tells the meta-server to rebalance with copying primaries."
-echo "remote_command -l $pmeta meta.lb.only_move_primary false" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.add_node_list.only_move_primary
-set_ok=`grep OK /tmp/$UID.$PID.pegasus.add_node_list.only_move_primary | wc -l`
-if [ $set_ok -ne 1 ]; then
-  echo "ERROR: meta.lb.only_move_primary false"
-  exit 1
-fi
-echo
+./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list true
 
 echo "Finish time: `date`"
-all_finish_time=$((`date +%s`))
-echo "add node list done, elasped time is $((all_finish_time - all_start_time)) seconds."
+add_node_finish_time=$((`date +%s`))
+echo "add node list done, elasped time is $((add_node_finish_time - add_node_start_time)) seconds."
 
 rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null
