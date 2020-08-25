@@ -18,6 +18,9 @@ set(MY_PROJ_LIBS
     dsn_dist_cmd
     dsn_runtime
     dsn_utils
+    sasl2
+    gssapi_krb5
+    krb5
     )
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
