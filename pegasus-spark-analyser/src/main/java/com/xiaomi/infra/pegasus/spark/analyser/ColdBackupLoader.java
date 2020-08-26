@@ -23,7 +23,7 @@ class ColdBackupLoader implements PegasusLoader {
   private ColdBackupConfig coldBackupConfig;
   private RemoteFileSystem remoteFileSystem;
   private Map<Integer, String> checkpointUrls = new HashMap<>();
-  private int partitionCount;
+  private final int partitionCount;
 
   private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
 

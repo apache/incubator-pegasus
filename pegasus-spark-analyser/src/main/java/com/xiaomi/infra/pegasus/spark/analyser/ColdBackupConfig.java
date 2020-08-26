@@ -4,8 +4,14 @@ import com.xiaomi.infra.pegasus.spark.CommonConfig;
 import com.xiaomi.infra.pegasus.spark.FDSConfig;
 import com.xiaomi.infra.pegasus.spark.HDFSConfig;
 
+/**
+ * ColdBackupConfig is used when you manipulate the cold-backup data. <br>
+ * <br>
+ * A pegasus cold-backup is a couple of well-organized files dumped from a pegasus table.<br>
+ * It's a complete snapshot of the moment.
+ */
 public class ColdBackupConfig extends CommonConfig implements Config {
-  public static final DataType dataType = DataType.COLD_BACKUP;
+  private static final DataType dataType = DataType.COLD_BACKUP;
 
   private static final long MB_UNIT = 1024 * 1024L;
 
@@ -37,7 +43,7 @@ public class ColdBackupConfig extends CommonConfig implements Config {
    * cold backup policy name
    *
    * @param policyName policyName is pegasus server cold backup concept which is set when creating
-   *     cold backup, see https://pegasus-kv.github.io/administration/cold-backup, here default is
+   *     cold backup, see https://pegasus.apache.org/administration/cold-backup, here default is
    *     "every_day", you may need change it base your pegasus server config
    * @return this
    */
