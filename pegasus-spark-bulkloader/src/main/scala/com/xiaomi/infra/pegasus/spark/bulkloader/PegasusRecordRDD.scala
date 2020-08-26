@@ -1,9 +1,9 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader
 
 import CustomImplicits._
+import com.xiaomi.infra.pegasus.spark.JNILibraryLoader
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
-import org.rocksdb.RocksDB
 import scala.collection.JavaConverters._
 
 class PegasusRecordRDD(data: RDD[(PegasusKey, PegasusValue)]) {
@@ -25,7 +25,7 @@ class PegasusRecordRDD(data: RDD[(PegasusKey, PegasusValue)]) {
     }
 
     rdd.foreachPartition(i => {
-      RocksDB.loadLibrary()
+      JNILibraryLoader.load()
       new BulkLoader(config, i.asJava, TaskContext.getPartitionId()).start()
     })
   }

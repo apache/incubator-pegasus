@@ -1,5 +1,6 @@
 package com.xiaomi.infra.pegasus.spark.analyser
 
+import com.xiaomi.infra.pegasus.spark.JNILibraryLoader
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, SparkContext, TaskContext}
@@ -42,7 +43,7 @@ class PegasusSnapshotRDD private[analyser] (
       context: TaskContext
   ): Iterator[PegasusRecord] = {
     // Loads the librocksdb library into jvm.
-    RocksDB.loadLibrary()
+    JNILibraryLoader.load()
 
     LOG.info(
       "Create iterator for \"%s\" \"%s\" [pid: %d]"
