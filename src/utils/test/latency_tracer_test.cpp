@@ -15,10 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/latency_tracer.h"
-
 #include <gtest/gtest.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utils/latency_tracer.h>
 
 namespace dsn {
 namespace utils {
@@ -42,24 +41,24 @@ public:
 
     void init_trace_points()
     {
-        _tracer1 = std::make_shared<latency_tracer>("name1");
+        _tracer1 = std::make_shared<latency_tracer>("name1", true);
         for (int i = 0; i < _tracer1_stage_count; i++) {
-            _tracer1->add_point(fmt::format("stage{}", i));
+            ADD_CUSTOM_POINT(_tracer1, fmt::format("stage{}", i));
         }
 
-        _tracer2 = std::make_shared<latency_tracer>("name2");
+        _tracer2 = std::make_shared<latency_tracer>("name2", true);
 
         for (int i = 0; i < _tracer2_stage_count; i++) {
-            _tracer2->add_point(fmt::format("stage{}", i));
+            ADD_CUSTOM_POINT(_tracer2, fmt::format("stage{}", i));
         }
 
-        _sub_tracer = std::make_shared<latency_tracer>("sub");
+        _sub_tracer = std::make_shared<latency_tracer>("sub", true);
 
         _tracer1->set_sub_tracer(_sub_tracer);
         _tracer2->set_sub_tracer(_sub_tracer);
 
         for (int i = 0; i < _sub_tracer_stage_count; i++) {
-            _sub_tracer->add_point(fmt::format("stage{}", i));
+            ADD_CUSTOM_POINT(_sub_tracer, fmt::format("stage{}", i));
         }
     }
 
@@ -80,14 +79,16 @@ TEST_F(latency_tracer_test, add_point)
     ASSERT_EQ(tracer1_points.size(), _tracer1_stage_count);
     int count1 = 0;
     for (auto point : tracer1_points) {
-        ASSERT_EQ(point.second, fmt::format("stage{}", count1++));
+        ASSERT_EQ(point.second,
+                  fmt::format("latency_tracer_test.cpp:46:init_trace_points[stage{}]", count1++));
     }
 
     auto tracer2_points = get_points(_tracer2);
     ASSERT_EQ(tracer2_points.size(), _tracer2_stage_count);
     int count2 = 0;
     for (auto point : tracer2_points) {
-        ASSERT_EQ(point.second, fmt::format("stage{}", count2++));
+        ASSERT_EQ(point.second,
+                  fmt::format("latency_tracer_test.cpp:52:init_trace_points[stage{}]", count2++));
     }
 
     auto tracer1_sub_tracer = get_sub_tracer(_tracer1);
@@ -99,11 +100,9 @@ TEST_F(latency_tracer_test, add_point)
     ASSERT_EQ(points.size(), _sub_tracer_stage_count);
     int count3 = 0;
     for (auto point : points) {
-        ASSERT_EQ(point.second, fmt::format("stage{}", count3++));
+        ASSERT_EQ(point.second,
+                  fmt::format("latency_tracer_test.cpp:61:init_trace_points[stage{}]", count3++));
     }
-
-    _tracer1->dump_trace_points(0);
-    _tracer2->dump_trace_points(0);
 }
 } // namespace utils
 } // namespace dsn

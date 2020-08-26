@@ -15,8 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "latency_tracer.h"
-
+#include <dsn/utils/latency_tracer.h>
 #include <dsn/service_api_c.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
@@ -26,7 +25,20 @@ namespace utils {
 
 DSN_DEFINE_bool("replication", enable_latency_tracer, false, "whether enable the latency tracer");
 
-latency_tracer::latency_tracer(const std::string &name) : _name(name), _start_time(dsn_now_ns()) {}
+latency_tracer::latency_tracer(const std::string &name, uint64_t threshold)
+    : _name(name), _threshold(threshold), _is_sub(false), _start_time(dsn_now_ns())
+{
+}
+
+latency_tracer::~latency_tracer()
+{
+    if (_is_sub) {
+        return;
+    }
+
+    std::string traces;
+    dump_trace_points(traces);
+}
 
 void latency_tracer::add_point(const std::string &stage_name)
 {
@@ -41,22 +53,16 @@ void latency_tracer::add_point(const std::string &stage_name)
 
 void latency_tracer::set_sub_tracer(const std::shared_ptr<latency_tracer> &tracer)
 {
+    if (!FLAGS_enable_latency_tracer) {
+        return;
+    }
+    tracer->_is_sub = true;
     _sub_tracer = tracer;
 }
 
-void latency_tracer::dump_trace_points(int threshold)
+void latency_tracer::dump_trace_points(/*out*/ std::string &traces)
 {
-    std::string traces;
-    dump_trace_points(threshold, traces);
-}
-
-void latency_tracer::dump_trace_points(int threshold, /*out*/ std::string &traces)
-{
-    if (threshold < 0 || !FLAGS_enable_latency_tracer) {
-        return;
-    }
-
-    if (_points.empty()) {
+    if (!FLAGS_enable_latency_tracer || _threshold < 0 || _points.empty()) {
         return;
     }
 
@@ -64,14 +70,14 @@ void latency_tracer::dump_trace_points(int threshold, /*out*/ std::string &trace
 
     uint64_t time_used = _points.rbegin()->first - _start_time;
 
-    if (time_used < threshold) {
+    if (time_used < _threshold) {
         return;
     }
 
     traces.append(fmt::format("\t***************[TRACE:{}]***************\n", _name));
     uint64_t previous_time = _start_time;
     for (const auto &point : _points) {
-        std::string trace = fmt::format("\tTRACE:name={:<50}, span={:<20}, total={:<20}, "
+        std::string trace = fmt::format("\tTRACE:name={:<70}, span={:>20}, total={:>20}, "
                                         "ts={:<20}\n",
                                         point.second,
                                         point.first - previous_time,
@@ -86,7 +92,7 @@ void latency_tracer::dump_trace_points(int threshold, /*out*/ std::string &trace
         return;
     }
 
-    _sub_tracer->dump_trace_points(0, traces);
+    _sub_tracer->dump_trace_points(traces);
 }
 
 } // namespace utils

@@ -26,6 +26,7 @@
 
 #include "prepare_list.h"
 
+#include <dsn/utils/latency_tracer.h>
 #include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
@@ -74,6 +75,7 @@ error_code prepare_list::prepare(mutation_ptr &mu,
     decree d = mu->data.header.decree;
     dcheck_gt_replica(d, last_committed_decree());
 
+    ADD_POINT(mu->tracer);
     error_code err;
     switch (status) {
     case partition_status::PS_PRIMARY:

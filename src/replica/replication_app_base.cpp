@@ -26,6 +26,7 @@
 
 #include "replica.h"
 #include "mutation.h"
+#include <dsn/utils/latency_tracer.h>
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/filesystem.h>
@@ -471,6 +472,8 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
             (int)mu->data.updates.size(),
             (int)mu->client_requests.size());
     dassert(mu->data.updates.size() > 0, "");
+
+    ADD_POINT(mu->tracer);
 
     bool has_ingestion_request = false;
     int request_count = static_cast<int>(mu->client_requests.size());

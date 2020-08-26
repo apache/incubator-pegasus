@@ -39,6 +39,7 @@
 #include <list>
 #include <atomic>
 #include <dsn/utility/link.h>
+#include <dsn/utils/latency_tracer.h>
 
 #ifndef __linux__
 #pragma warning(disable : 4201)
@@ -141,6 +142,8 @@ public:
 
     // used by pending mutation queue only
     mutation *next;
+
+    std::shared_ptr<dsn::utils::latency_tracer> tracer;
 
     void set_is_sync_to_child(bool sync_to_child) { _is_sync_to_child = sync_to_child; }
     bool is_sync_to_child() { return _is_sync_to_child; }

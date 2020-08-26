@@ -29,6 +29,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "bulk_load/replica_bulk_loader.h"
+#include <dsn/utils/latency_tracer.h>
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/fmt_logging.h>
 
@@ -134,6 +135,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     dassert(partition_status::PS_PRIMARY == status(),
             "invalid partition_status, status = %s",
             enum_to_string(status()));
+
+    ADD_POINT(mu->tracer);
 
     error_code err = ERR_OK;
     uint8_t count = 0;
@@ -282,6 +285,7 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
                                    bool pop_all_committed_mutations,
                                    int64_t learn_signature)
 {
+    ADD_CUSTOM_POINT(mu->tracer, addr.to_string());
     dsn::message_ex *msg = dsn::message_ex::create_request(
         RPC_PREPARE, timeout_milliseconds, get_gpid().thread_hash());
     replica_configuration rconfig;
@@ -321,6 +325,7 @@ void replica::do_possible_commit_on_primary(mutation_ptr &mu)
             "invalid partition_status, status = %s",
             enum_to_string(status()));
 
+    ADD_POINT(mu->tracer);
     if (mu->is_ready_for_commit()) {
         _prepare_list->commit(mu->data.header.decree, COMMIT_ALL_READY);
     }
@@ -338,6 +343,8 @@ void replica::on_prepare(dsn::message_ex *request)
         unmarshall(reader, rconfig, DSF_THRIFT_BINARY);
         mu = mutation::read_from(reader, request);
     }
+
+    ADD_POINT(mu->tracer);
 
     decree decree = mu->data.header.decree;
 
@@ -491,6 +498,8 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
           size,
           err.to_string());
 
+    ADD_POINT(mu->tracer);
+
     if (err == ERR_OK) {
         mu->set_logged();
     } else {
@@ -547,6 +556,8 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     mutation_ptr mu = pr.first;
     partition_status::type target_status = pr.second;
 
+    ADD_CUSTOM_POINT(mu->tracer, request->to_address.to_string());
+
     // skip callback for old mutations
     if (partition_status::PS_PRIMARY != status() || mu->data.header.ballot < get_ballot() ||
         mu->get_decree() <= last_committed_decree())
@@ -581,6 +592,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
               enum_to_string(target_status),
               resp.err.to_string());
     } else {
+        ADD_CUSTOM_POINT(mu->tracer, fmt::format("error:{}", request->to_address.to_string()));
         derror("%s: mutation %s on_prepare_reply from %s, appro_data_bytes = %d, "
                "target_status = %s, err = %s",
                name(),
@@ -702,6 +714,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
 
 void replica::ack_prepare_message(error_code err, mutation_ptr &mu)
 {
+    ADD_CUSTOM_POINT(mu->tracer, name());
     prepare_ack resp;
     resp.pid = get_gpid();
     resp.err = err;

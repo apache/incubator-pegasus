@@ -32,6 +32,7 @@
 #include "backup/replica_backup_manager.h"
 #include "bulk_load/replica_bulk_loader.h"
 
+#include <dsn/utils/latency_tracer.h>
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/fmt_logging.h>
@@ -223,6 +224,7 @@ void replica::execute_mutation(mutation_ptr &mu)
           name(),
           mu->name(),
           static_cast<int>(mu->client_requests.size()));
+    ADD_POINT(mu->tracer);
 
     error_code err = ERR_OK;
     decree d = mu->data.header.decree;
@@ -313,6 +315,7 @@ void replica::execute_mutation(mutation_ptr &mu)
     }
 
     // update table level latency perf-counters for primary partition
+    ADD_CUSTOM_POINT(mu->tracer, "completed");
     if (partition_status::PS_PRIMARY == status()) {
         uint64_t now_ns = dsn_now_ns();
         for (auto update : mu->data.updates) {

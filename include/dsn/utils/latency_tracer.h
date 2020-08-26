@@ -17,15 +17,24 @@
 
 #pragma once
 #include <dsn/utility/synchronize.h>
+#include <dsn/utility/flags.h>
+#include <dsn/dist/fmt_logging.h>
 
 namespace dsn {
 namespace utils {
+
+#define ADD_POINT(tracer)                                                                          \
+    (tracer)->add_point(fmt::format("{}:{}:{}", __FILENAME__, __LINE__, __FUNCTION__))
+#define ADD_CUSTOM_POINT(tracer, message)                                                          \
+    (tracer)->add_point(                                                                           \
+        fmt::format("{}:{}:{}[{}]", __FILENAME__, __LINE__, __FUNCTION__, (message)))
 
 /**
  * latency_tracer is a tool for tracking the time spent in each of the stages during request
  * execution. It can help users to figure out where the latency bottleneck is located. User needs to
  * use `add_point` before entering one stage, which will record the name of this stage and its start
- * time. When the request is finished, you can dump the formatted result by `dump_trace_points`.
+ * time. When the request is finished, the formatted result can be dumped automatically in
+ * deconstructer
  *
  * For example, given a request with a 4-stage pipeline (the `latency_tracer` need to
  * be held by this request throughout the execution):
@@ -53,14 +62,19 @@ namespace utils {
  *    |         |           |         |
  *  start---->stageA----->stageB---->end
  *
- * "request.tracer" will record the time duration among all tracepoints.
+ * "request.tracer" will record the time duration among all trace points.
 **/
-extern bool FLAGS_enable_latency_tracer;
+DSN_DECLARE_bool(enable_latency_tracer);
 
 class latency_tracer
 {
 public:
-    latency_tracer(const std::string &name);
+    //  threshold < 0: don't dump any trace points
+    //  threshold = 0: dump all trace points
+    //  threshold > 0: dump the trace point when time_used > threshold
+    latency_tracer(const std::string &name, uint64_t threshold = 0);
+
+    ~latency_tracer();
 
     // add a trace point to the tracer
     // -name: user specified name of the trace point
@@ -75,17 +89,14 @@ public:
     // stageA[rpc_message]--stageB[rpc_message]--
     void set_sub_tracer(const std::shared_ptr<latency_tracer> &tracer);
 
-    //  threshold < 0: don't dump any trace points
-    //  threshold = 0: dump all trace points
-    //  threshold > 0: dump the trace point when time_used > threshold
-    void dump_trace_points(int threshold);
-
 private:
-    void dump_trace_points(int threshold, /*out*/ std::string &traces);
+    void dump_trace_points(/*out*/ std::string &traces);
 
     utils::rw_lock_nr _lock;
 
     const std::string _name;
+    const uint64_t _threshold;
+    bool _is_sub;
     const uint64_t _start_time;
     std::map<int64_t, std::string> _points;
     std::shared_ptr<latency_tracer> _sub_tracer;
