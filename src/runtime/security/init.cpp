@@ -16,6 +16,7 @@
 // under the License.
 
 #include "kinit_context.h"
+#include "sasl_utils.h"
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
@@ -55,7 +56,12 @@ bool init(bool is_server)
     }
     ddebug("initialize kerberos succeed");
 
-    // TODO(zlw): init sasl
+    err = init_sasl(is_server);
+    if (!err.is_ok()) {
+        derror_f("initialize sasl failed, with err = {}", err.description());
+        return false;
+    }
+    ddebug("initialize sasl succeed");
 
     return true;
 }

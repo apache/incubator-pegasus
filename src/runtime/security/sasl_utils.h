@@ -21,7 +21,7 @@
 
 namespace dsn {
 namespace security {
-extern error_s run_kinit();
-extern const std::string &get_username();
+// you must have already initialized kerberos before call init_sasl
+error_s init_sasl(bool is_server);
 } // namespace security
 } // namespace dsn
