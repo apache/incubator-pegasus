@@ -166,6 +166,7 @@ private:
     friend class pegasus_compression_options_test;
     friend class pegasus_server_impl_test;
     FRIEND_TEST(pegasus_server_impl_test, default_data_version);
+    FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_latest_options);
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
@@ -260,6 +261,9 @@ private:
     // return true if successfully changed
     bool set_usage_scenario(const std::string &usage_scenario);
 
+    void reset_usage_scenario_options(const rocksdb::ColumnFamilyOptions &base_opts,
+                                      rocksdb::ColumnFamilyOptions *target_opts);
+
     // return true if successfully set
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
 
@@ -304,8 +308,6 @@ private:
 
         return false;
     }
-
-    ::dsn::error_code check_meta_cf(const std::string &path, bool *missing_meta_cf);
 
     void release_db();
     void release_db(rocksdb::DB *db, const std::vector<rocksdb::ColumnFamilyHandle *> &handles);

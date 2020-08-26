@@ -8,6 +8,7 @@
 #include <boost/lexical_cast.hpp>
 #include <rocksdb/convenience.h>
 #include <rocksdb/utilities/checkpoint.h>
+#include <rocksdb/utilities/options_util.h>
 #include <dsn/utility/chrono_literals.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
@@ -1326,14 +1327,45 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
     ddebug("%s: start to open rocksDB's rdb(%s)", replica_name(), path.c_str());
 
+    // Here we create a 'tmp_data_cf_opts' because we don't want to modify '_data_cf_opts', which
+    // will be used elsewhere.
+    rocksdb::ColumnFamilyOptions tmp_data_cf_opts = _data_cf_opts;
     if (db_exist) {
-        // When DB exist, meta CF must be present.
         bool missing_meta_cf = true;
-        if (check_meta_cf(path, &missing_meta_cf) != ::dsn::ERR_OK) {
-            derror_replica("check meta column family failed");
+        bool missing_data_cf = true;
+        // Load latest options from option file stored in the db directory.
+        rocksdb::DBOptions loaded_db_opt;
+        std::vector<rocksdb::ColumnFamilyDescriptor> loaded_cf_descs;
+        rocksdb::ColumnFamilyOptions loaded_data_cf_opts;
+        // Set 'ignore_unknown_options' true for forward compatibility.
+        auto status = rocksdb::LoadLatestOptions(path,
+                                                 rocksdb::Env::Default(),
+                                                 &loaded_db_opt,
+                                                 &loaded_cf_descs,
+                                                 /*ignore_unknown_options*/ true);
+        if (!status.ok()) {
+            derror_replica("load latest option file failed.");
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
+        for (int i = 0; i < loaded_cf_descs.size(); ++i) {
+            if (loaded_cf_descs[i].name == META_COLUMN_FAMILY_NAME) {
+                missing_meta_cf = false;
+            } else if (loaded_cf_descs[i].name == DATA_COLUMN_FAMILY_NAME) {
+                missing_data_cf = false;
+                loaded_data_cf_opts = loaded_cf_descs[i].options;
+            } else {
+                derror_replica("unkown column family name.");
+                return ::dsn::ERR_LOCAL_APP_FAILURE;
+            }
+        }
+        // When DB exist, meta CF and default CF must be present.
         dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
+        dassert_replica(!missing_data_cf, "Missing default column family");
+        // Reset usage scenario related options according to loaded_data_cf_opts.
+        // We don't use 'loaded_data_cf_opts' directly because pointer-typed options will only be
+        // initialized with default values when calling 'LoadLatestOptions', see
+        // 'rocksdb/utilities/options_util.h'.
+        reset_usage_scenario_options(loaded_data_cf_opts, &tmp_data_cf_opts);
     } else {
         // When create new DB, we have to create a new column family to store meta data (meta column
         // family).
@@ -1341,7 +1373,13 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     }
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-        {{DATA_COLUMN_FAMILY_NAME, _data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
+        {{DATA_COLUMN_FAMILY_NAME, tmp_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
+    auto s = rocksdb::CheckOptionsCompatibility(
+        path, rocksdb::Env::Default(), _db_opts, column_families, /*ignore_unknown_options*/ true);
+    if (!s.ok() && !s.IsNotFound()) {
+        derror_replica("rocksdb::CheckOptionsCompatibility failed, error = {}", s.ToString());
+        return ::dsn::ERR_LOCAL_APP_FAILURE;
+    }
     std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
     auto status = rocksdb::DB::Open(_db_opts, path, column_families, &handles_opened, &_db);
     if (!status.ok()) {
@@ -1406,9 +1444,6 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                    last_durable_decree());
 
     _is_open = true;
-
-    // set default usage scenario after db opened.
-    set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
 
     dinfo_replica("start the update rocksdb statistics timer task");
     _update_replica_rdb_stat =
@@ -2483,6 +2518,23 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
     }
 }
 
+void pegasus_server_impl::reset_usage_scenario_options(
+    const rocksdb::ColumnFamilyOptions &base_opts, rocksdb::ColumnFamilyOptions *target_opts)
+{
+    // reset usage scenario related options, refer to options set in 'set_usage_scenario' function.
+    target_opts->level0_file_num_compaction_trigger = base_opts.level0_file_num_compaction_trigger;
+    target_opts->level0_slowdown_writes_trigger = base_opts.level0_slowdown_writes_trigger;
+    target_opts->level0_stop_writes_trigger = base_opts.level0_stop_writes_trigger;
+    target_opts->soft_pending_compaction_bytes_limit =
+        base_opts.soft_pending_compaction_bytes_limit;
+    target_opts->hard_pending_compaction_bytes_limit =
+        base_opts.hard_pending_compaction_bytes_limit;
+    target_opts->disable_auto_compactions = base_opts.disable_auto_compactions;
+    target_opts->max_compaction_bytes = base_opts.max_compaction_bytes;
+    target_opts->write_buffer_size = base_opts.write_buffer_size;
+    target_opts->max_write_buffer_number = base_opts.max_write_buffer_number;
+}
+
 bool pegasus_server_impl::set_options(
     const std::unordered_map<std::string, std::string> &new_options)
 {
@@ -2605,25 +2657,6 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
         "update partition version from {} to {}", old_partition_version, partition_version);
 
     // TODO(heyuchen): set filter _partition_version in further pr
-}
-
-::dsn::error_code pegasus_server_impl::check_meta_cf(const std::string &path, bool *missing_meta_cf)
-{
-    *missing_meta_cf = true;
-    std::vector<std::string> column_families;
-    auto s = rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), path, &column_families);
-    if (!s.ok()) {
-        derror_replica("rocksdb::DB::ListColumnFamilies failed, error = {}", s.ToString());
-        return ::dsn::ERR_LOCAL_APP_FAILURE;
-    }
-
-    for (const auto &column_family : column_families) {
-        if (column_family == META_COLUMN_FAMILY_NAME) {
-            *missing_meta_cf = false;
-            break;
-        }
-    }
-    return ::dsn::ERR_OK;
 }
 
 ::dsn::error_code pegasus_server_impl::flush_all_family_columns(bool wait)

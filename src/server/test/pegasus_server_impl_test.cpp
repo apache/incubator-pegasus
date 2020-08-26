@@ -66,5 +66,18 @@ TEST_F(pegasus_server_impl_test, default_data_version)
     ASSERT_EQ(_server->_pegasus_data_version, 1);
 }
 
+TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
+{
+    ASSERT_TRUE(_server->set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD));
+    rocksdb::Options opts = _server->_db->GetOptions();
+    ASSERT_EQ(1000000000, opts.level0_file_num_compaction_trigger);
+    ASSERT_EQ(true, opts.disable_auto_compactions);
+    _server->stop(false);
+    start();
+    ASSERT_EQ(opts.level0_file_num_compaction_trigger,
+              _server->_db->GetOptions().level0_file_num_compaction_trigger);
+    ASSERT_EQ(opts.disable_auto_compactions, _server->_db->GetOptions().disable_auto_compactions);
+}
+
 } // namespace server
 } // namespace pegasus
