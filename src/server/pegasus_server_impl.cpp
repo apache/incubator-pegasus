@@ -1398,6 +1398,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     if (db_exist) {
         _last_committed_decree = _meta_store->get_last_flushed_decree();
         _pegasus_data_version = _meta_store->get_data_version();
+        _usage_scenario = _meta_store->get_usage_scenario();
         uint64_t last_manual_compact_finish_time =
             _meta_store->get_last_manual_compact_finish_time();
         if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
@@ -1413,6 +1414,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _meta_store->set_data_version(PEGASUS_DATA_VERSION_MAX);
         _meta_store->set_last_flushed_decree(0);
         _meta_store->set_last_manual_compact_finish_time(0);
+        _meta_store->set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
         flush_all_family_columns(true);
     }
 
@@ -2507,6 +2509,7 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
         return false;
     }
     if (set_options(new_options)) {
+        _meta_store->set_usage_scenario(usage_scenario);
         _usage_scenario = usage_scenario;
         ddebug_replica(
             "set usage scenario from \"{}\" to \"{}\" succeed", old_usage_scenario, usage_scenario);
