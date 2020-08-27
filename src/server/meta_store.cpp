@@ -58,8 +58,9 @@ uint64_t meta_store::get_decree_from_readonly_db(rocksdb::DB *db,
         db, meta_cf, true, LAST_FLUSHED_DECREE, &str_last_flushed_decree);
     dcheck_eq_replica(::dsn::ERR_OK, ec);
     dassert_f(dsn::buf2uint64(str_last_flushed_decree, last_flushed_decree),
-              "rocksdb {} get LAST_FLUSHED_DECREE from meta column family got error value {}",
+              "rocksdb {} get {} from meta column family got error value {}",
               db->GetName(),
+              LAST_FLUSHED_DECREE,
               str_last_flushed_decree);
     return last_flushed_decree;
 }
