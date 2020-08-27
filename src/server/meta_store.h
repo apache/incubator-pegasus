@@ -47,6 +47,11 @@ private:
     ::dsn::error_code set_string_value_to_meta_cf(const std::string &key,
                                                   const std::string &value) const;
 
+    static ::dsn::error_code get_value_from_meta_cf(rocksdb::DB *db,
+                                                    rocksdb::ColumnFamilyHandle *cf,
+                                                    bool read_flushed_data,
+                                                    const std::string &key,
+                                                    uint64_t *value);
     static ::dsn::error_code get_string_value_from_meta_cf(rocksdb::DB *db,
                                                            rocksdb::ColumnFamilyHandle *cf,
                                                            bool read_flushed_data,

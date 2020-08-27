@@ -52,24 +52,21 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
 uint64_t meta_store::get_decree_from_readonly_db(rocksdb::DB *db,
                                                  rocksdb::ColumnFamilyHandle *meta_cf) const
 {
-    std::string str_last_flushed_decree;
     uint64_t last_flushed_decree = 0;
-    auto ec = get_string_value_from_meta_cf(
-        db, meta_cf, true, LAST_FLUSHED_DECREE, &str_last_flushed_decree);
+    auto ec = get_value_from_meta_cf(db, meta_cf, true, LAST_FLUSHED_DECREE, &last_flushed_decree);
     dcheck_eq_replica(::dsn::ERR_OK, ec);
-    dassert_f(dsn::buf2uint64(str_last_flushed_decree, last_flushed_decree),
-              "rocksdb {} get {} from meta column family got error value {}",
-              db->GetName(),
-              LAST_FLUSHED_DECREE,
-              str_last_flushed_decree);
     return last_flushed_decree;
 }
 
 std::string meta_store::get_usage_scenario() const
 {
-    std::string usage_scenario;
+    // If couldn't find rocksdb usage scenario in meta column family, return normal in default.
+    std::string usage_scenario = ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
     auto ec = get_string_value_from_meta_cf(false, ROCKSDB_ENV_USAGE_SCENARIO_KEY, &usage_scenario);
-    dcheck_eq_replica(::dsn::ERR_OK, ec);
+    dassert_replica(ec == ::dsn::ERR_OK || ec == ::dsn::ERR_OBJECT_NOT_FOUND,
+                    "rocksdb {} get {} from meta column family failed",
+                    _db->GetName(),
+                    ROCKSDB_ENV_USAGE_SCENARIO_KEY);
     return usage_scenario;
 }
 
@@ -77,14 +74,23 @@ std::string meta_store::get_usage_scenario() const
                                                      const std::string &key,
                                                      uint64_t *value) const
 {
+    return get_value_from_meta_cf(_db, _meta_cf, read_flushed_data, key, value);
+}
+
+::dsn::error_code meta_store::get_value_from_meta_cf(rocksdb::DB *db,
+                                                     rocksdb::ColumnFamilyHandle *cf,
+                                                     bool read_flushed_data,
+                                                     const std::string &key,
+                                                     uint64_t *value)
+{
     std::string data;
-    auto ec = get_string_value_from_meta_cf(_db, _meta_cf, read_flushed_data, key, &data);
+    auto ec = get_string_value_from_meta_cf(db, cf, read_flushed_data, key, &data);
     if (ec != ::dsn::ERR_OK) {
         return ec;
     }
     dassert_f(dsn::buf2uint64(data, *value),
               "rocksdb {} get {} from meta column family got error value {}",
-              _db->GetName(),
+              db->GetName(),
               key,
               data);
     return ::dsn::ERR_OK;

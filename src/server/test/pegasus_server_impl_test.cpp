@@ -68,11 +68,15 @@ TEST_F(pegasus_server_impl_test, default_data_version)
 
 TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
 {
+    // open a new db
+    ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL, _server->_usage_scenario);
+    // set bulk_load scenario for the db
     ASSERT_TRUE(_server->set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD));
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
     rocksdb::Options opts = _server->_db->GetOptions();
     ASSERT_EQ(1000000000, opts.level0_file_num_compaction_trigger);
     ASSERT_EQ(true, opts.disable_auto_compactions);
+    // reopen the db
     _server->stop(false);
     start();
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
