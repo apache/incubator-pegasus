@@ -1354,7 +1354,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                 missing_data_cf = false;
                 loaded_data_cf_opts = loaded_cf_descs[i].options;
             } else {
-                derror_replica("unkown column family name.");
+                derror_replica("unknown column family name.");
                 return ::dsn::ERR_LOCAL_APP_FAILURE;
             }
         }
