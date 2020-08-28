@@ -1342,7 +1342,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                                                  rocksdb::Env::Default(),
                                                  &loaded_db_opt,
                                                  &loaded_cf_descs,
-                                                 /*ignore_unknown_options*/ true);
+                                                 /*ignore_unknown_options=*/true);
         if (!status.ok()) {
             derror_replica("load latest option file failed.");
             return ::dsn::ERR_LOCAL_APP_FAILURE;
@@ -1359,7 +1359,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             }
         }
         // When DB exists, meta CF and data CF must be present.
-        dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0"
+        dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
         dassert_replica(!missing_data_cf, "Missing data column family");
         // Reset usage scenario related options according to loaded_data_cf_opts.
         // We don't use `loaded_data_cf_opts` directly because pointer-typed options will only be
@@ -1375,7 +1375,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
         {{DATA_COLUMN_FAMILY_NAME, tmp_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
     auto s = rocksdb::CheckOptionsCompatibility(
-        path, rocksdb::Env::Default(), _db_opts, column_families, /*ignore_unknown_options*/ true);
+        path, rocksdb::Env::Default(), _db_opts, column_families, /*ignore_unknown_options=*/true);
     if (!s.ok() && !s.IsNotFound()) {
         derror_replica("rocksdb::CheckOptionsCompatibility failed, error = {}", s.ToString());
         return ::dsn::ERR_LOCAL_APP_FAILURE;
@@ -1414,12 +1414,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _meta_store->set_data_version(PEGASUS_DATA_VERSION_MAX);
         _meta_store->set_last_flushed_decree(0);
         _meta_store->set_last_manual_compact_finish_time(0);
-        _meta_store->set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
         flush_all_family_columns(true);
-        // Since ROCKSDB_ENV_USAGE_SCENARIO_NORMAL corresponds to the default options in
-        // `_data_cf_opts`(see set_usage_scenario()), initializing `_usage_scenario` to normal could
-        // avoid unnecessary `set_options` calls when open a new db.
-        _usage_scenario = ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
     }
 
     // only enable filter after correct pegasus_data_version set
@@ -1450,6 +1445,11 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                    last_durable_decree());
 
     _is_open = true;
+
+    if (!db_exist) {
+        // When create a new db, update usage scenario according to app envs.
+        update_usage_scenario(envs);
+    }
 
     dinfo_replica("start the update rocksdb statistics timer task");
     _update_replica_rdb_stat =

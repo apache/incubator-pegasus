@@ -11,7 +11,7 @@ namespace server {
 class pegasus_server_impl_test : public pegasus_server_test_base
 {
 public:
-    pegasus_server_impl_test() : pegasus_server_test_base() { start(); }
+    pegasus_server_impl_test() : pegasus_server_test_base() {}
 
     void test_table_level_slow_query()
     {
@@ -59,30 +59,44 @@ public:
     }
 };
 
-TEST_F(pegasus_server_impl_test, test_table_level_slow_query) { test_table_level_slow_query(); }
+TEST_F(pegasus_server_impl_test, test_table_level_slow_query)
+{
+    start();
+    test_table_level_slow_query();
+}
 
 TEST_F(pegasus_server_impl_test, default_data_version)
 {
+    start();
     ASSERT_EQ(_server->_pegasus_data_version, 1);
 }
 
 TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
 {
-    // open a new db
+    // open a new db with no app env.
+    start();
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL, _server->_usage_scenario);
-    // set bulk_load scenario for the db
+    // set bulk_load scenario for the db.
     ASSERT_TRUE(_server->set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD));
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
     rocksdb::Options opts = _server->_db->GetOptions();
     ASSERT_EQ(1000000000, opts.level0_file_num_compaction_trigger);
     ASSERT_EQ(true, opts.disable_auto_compactions);
-    // reopen the db
+    // reopen the db.
     _server->stop(false);
     start();
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
     ASSERT_EQ(opts.level0_file_num_compaction_trigger,
               _server->_db->GetOptions().level0_file_num_compaction_trigger);
     ASSERT_EQ(opts.disable_auto_compactions, _server->_db->GetOptions().disable_auto_compactions);
+}
+
+TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
+{
+    std::map<std::string, std::string> envs;
+    envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE;
+    start(envs);
+    ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE, _server->_usage_scenario);
 }
 
 } // namespace server

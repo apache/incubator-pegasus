@@ -92,7 +92,6 @@ std::string meta_store::get_usage_scenario() const
     dassert_f(dsn::buf2uint64(data, *value),
               "rocksdb {} get \"{}\" from meta column family failed to parse into uint64",
               db->GetName(),
-              key,
               data);
     return ::dsn::ERR_OK;
 }
