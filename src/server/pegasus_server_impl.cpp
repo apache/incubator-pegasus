@@ -1358,9 +1358,9 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                 return ::dsn::ERR_LOCAL_APP_FAILURE;
             }
         }
-        // When DB exist, meta CF and default CF must be present.
-        dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
-        dassert_replica(!missing_data_cf, "Missing default column family");
+        // When DB exists, meta CF and data CF must be present.
+        dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0"
+        dassert_replica(!missing_data_cf, "Missing data column family");
         // Reset usage scenario related options according to loaded_data_cf_opts.
         // We don't use `loaded_data_cf_opts` directly because pointer-typed options will only be
         // initialized with default values when calling 'LoadLatestOptions', see
