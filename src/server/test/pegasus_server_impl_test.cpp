@@ -94,9 +94,9 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
 TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
 {
     std::map<std::string, std::string> envs;
-    envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE;
+    envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
     start(envs);
-    ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE, _server->_usage_scenario);
+    ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
 }
 
 } // namespace server
