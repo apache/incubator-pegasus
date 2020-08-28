@@ -63,7 +63,7 @@ void client_negotiation::handle_response(error_code err, const negotiation_respo
 
     switch (_status) {
     case negotiation_status::type::SASL_LIST_MECHANISMS:
-        recv_mechanisms(response);
+        on_recv_mechanisms(response);
         break;
     case negotiation_status::type::SASL_SELECT_MECHANISMS:
         // TBD(zlw)
@@ -77,7 +77,7 @@ void client_negotiation::handle_response(error_code err, const negotiation_respo
     }
 }
 
-void client_negotiation::recv_mechanisms(const negotiation_response &resp)
+void client_negotiation::on_recv_mechanisms(const negotiation_response &resp)
 {
     if (resp.status != negotiation_status::type::SASL_LIST_MECHANISMS_RESP) {
         dwarn_f("{}: get message({}) while expect({})",
@@ -127,12 +127,6 @@ void client_negotiation::send(std::unique_ptr<negotiation_request> request)
     rpc.call(_session->remote_address(), nullptr, [this, rpc](error_code err) mutable {
         handle_response(err, std::move(rpc.response()));
     });
-}
-
-void client_negotiation::fail_negotiation()
-{
-    _status = negotiation_status::type::SASL_AUTH_FAIL;
-    _session->on_failure(true);
 }
 
 void client_negotiation::succ_negotiation()
