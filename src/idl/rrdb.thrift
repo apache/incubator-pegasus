@@ -46,6 +46,20 @@ enum mutate_operation
     MO_DELETE
 }
 
+enum hotkey_type
+{
+    READ,
+    WRITE
+}
+
+enum hotkey_collector_operation
+{
+    START,
+    STOP
+}
+
+
+
 struct update_request
 {
     1:dsn.blob      key;
@@ -275,6 +289,20 @@ struct duplicate_response
 
     // hints on the reason why this duplicate failed.
     2: optional string error_hint;
+}
+
+struct hotkey_detect_request {
+    1: hotkey_type type
+    2: hotkey_collector_operation operation
+}
+
+struct hotkey_detect_response {
+    // Possible error:
+    // - ERR_OK: start/stop hotkey detect succeed
+    // - ERR_SERVICE_NOT_FOUND: wrong rpc type
+    // - ERR_SERVICE_ALREADY_EXIST: hotkey detection is running now
+    1: i32 err;
+    2: optional string err_hint;
 }
 
 service rrdb
