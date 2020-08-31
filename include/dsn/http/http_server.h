@@ -8,8 +8,11 @@
 #include <dsn/tool-api/rpc_message.h>
 #include <dsn/cpp/serverlet.h>
 #include <dsn/utility/errors.h>
+#include <dsn/utility/flags.h>
 
 namespace dsn {
+
+DSN_DECLARE_bool(enable_http_server);
 
 enum http_method
 {
@@ -21,8 +24,7 @@ struct http_request
 {
     static error_with<http_request> parse(dsn::message_ex *m);
 
-    // http://ip:port/<service>/<method>
-    std::pair<std::string, std::string> service_method;
+    std::string path;
     // <args_name, args_val>
     std::unordered_map<std::string, std::string> query_args;
     blob body;
@@ -51,77 +53,36 @@ struct http_response
     message_ptr to_message(message_ex *req) const;
 };
 
+typedef std::function<void(const http_request &req, http_response &resp)> http_callback;
+
+// Defines the structure of an HTTP call.
+struct http_call
+{
+    std::string path;
+    std::string help;
+    http_callback callback;
+};
+
 class http_service
 {
 public:
-    typedef std::function<void(const http_request &req, http_response &resp)> http_callback;
-
     virtual ~http_service() = default;
 
     virtual std::string path() const = 0;
 
-    void register_handler(std::string path, http_callback cb, std::string help)
-    {
-        _cb_map.emplace(std::move(path), std::make_pair(std::move(cb), std::move(help)));
-    }
-
-    void call(const http_request &req, http_response &resp)
-    {
-        auto it = _cb_map.find(req.service_method.second);
-        if (it != _cb_map.end()) {
-            it->second.first(req, resp);
-        } else {
-            resp.status_code = http_status_code::not_found;
-            resp.body = std::string("method not found for \"") + req.service_method.second + "\"";
-        }
-    }
-
-    struct method_help_entry
-    {
-        std::string name;
-        std::string help;
-    };
-    std::vector<method_help_entry> get_help() const
-    {
-        std::vector<method_help_entry> ret;
-        ret.reserve(_cb_map.size());
-        for (const auto &method : _cb_map) {
-            ret.push_back({method.first, method.second.second});
-        }
-        return ret;
-    }
-
-private:
-    std::map<std::string, std::pair<http_callback, std::string>> _cb_map;
+    void register_handler(std::string path, http_callback cb, std::string help);
 };
 
 class http_server : public serverlet<http_server>
 {
 public:
-    explicit http_server(bool start = true);
+    explicit http_server();
 
     ~http_server() override = default;
 
     void add_service(http_service *service);
 
     void serve(message_ex *msg);
-
-    struct service_method_help_entry
-    {
-        std::string name;
-        std::string method;
-        std::string help;
-    };
-    std::vector<service_method_help_entry> get_help() const
-    {
-        std::vector<service_method_help_entry> ret;
-        for (const auto &service : _service_map) {
-            for (const auto &method : service.second->get_help()) {
-                ret.push_back({service.first, method.name, method.help});
-            }
-        }
-        return ret;
-    }
 
 private:
     std::map<std::string, std::unique_ptr<http_service>> _service_map;

@@ -38,9 +38,11 @@
 #include "case.h"
 #include "client.h"
 #include "simple_kv.server.impl.h"
+#include <dsn/http/http_server.h>
 
 void dsn_app_registration_simple_kv()
 {
+    dsn::FLAGS_enable_http_server = false;
     dsn::replication::test::simple_kv_service_impl::register_service();
 
     dsn::service::meta_service_app::register_all();

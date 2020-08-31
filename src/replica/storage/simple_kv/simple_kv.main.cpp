@@ -40,9 +40,12 @@
 // framework specific tools
 #include <dsn/dist/replication/meta_service_app.h>
 #include <dsn/dist/replication/replication_service_app.h>
+#include <dsn/http/http_server.h>
 
 static void dsn_app_registration_simple_kv()
 {
+    dsn::FLAGS_enable_http_server = false; // disable http server
+
     dsn::replication::application::simple_kv_service_impl::register_service();
 
     dsn::service::meta_service_app::register_all();

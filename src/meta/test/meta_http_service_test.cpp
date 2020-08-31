@@ -20,6 +20,7 @@ public:
     void SetUp() override
     {
         meta_test_base::SetUp();
+        FLAGS_enable_http_server = false; // disable http server
         _mhs = dsn::make_unique<meta_http_service>(_ms.get());
         create_app(test_app);
     }
@@ -54,8 +55,7 @@ public:
         _mhs->get_app_envs_handler(fake_req, fake_resp);
 
         // env (value_version, 1) was set by create_app
-        std::string fake_json = R"({")" + env_key + R"(":)" +
-                                R"(")" + env_value + R"(",)" +
+        std::string fake_json = R"({")" + env_key + R"(":)" + R"(")" + env_value + R"(",)" +
                                 R"("value_version":"1"})" + "\n";
         ASSERT_EQ(fake_resp.status_code, http_status_code::ok)
             << http_status_code_to_string(fake_resp.status_code);

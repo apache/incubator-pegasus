@@ -619,9 +619,7 @@ bool meta_http_service::redirect_if_not_primary(const http_request &req, http_re
     if (_service->_failure_detector->get_leader(&leader))
         return true;
     // set redirect response
-    const std::string &service_name = req.service_method.first;
-    const std::string &method_name = req.service_method.second;
-    resp.location = "http://" + leader.to_std_string() + '/' + service_name + '/' + method_name;
+    resp.location = "http://" + leader.to_std_string() + '/' + req.path;
     if (!req.query_args.empty()) {
         resp.location += '?';
         for (const auto &i : req.query_args) {
