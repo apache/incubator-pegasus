@@ -365,7 +365,7 @@ public class TableHandler extends Table {
 
     if (handle.primarySession != null) {
       // if backup request is enabled, schedule to send to secondary
-      if (round.operator.enableBackupRequest && isBackupRequestEnabled()) {
+      if (round.operator.supportBackupRequest() && isBackupRequestEnabled()) {
         backupCall(round, tryId);
       }
 

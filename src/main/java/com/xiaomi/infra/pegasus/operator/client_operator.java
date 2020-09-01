@@ -12,8 +12,15 @@ import org.apache.thrift.protocol.TProtocol;
 
 public abstract class client_operator {
 
-  public client_operator(
-      gpid gpid, String tableName, long partitionHash, boolean enableBackupRequest) {
+  /**
+   * Whether does this RPC support backup request.<br>
+   * Generally, only read-operations support backup-request which sacrifices strong-consistency.
+   */
+  public boolean supportBackupRequest() {
+    return false;
+  }
+
+  public client_operator(gpid gpid, String tableName, long partitionHash) {
     this.header = new ThriftHeader();
     this.meta = new request_meta();
     this.meta.setApp_id(gpid.get_app_id());
@@ -22,11 +29,6 @@ public abstract class client_operator {
     this.pid = gpid;
     this.tableName = tableName;
     this.rpc_error = new error_code();
-    this.enableBackupRequest = enableBackupRequest;
-  }
-
-  public client_operator(gpid gpid, String tableName, long partitionHash) {
-    this(gpid, tableName, partitionHash, false);
   }
 
   public final byte[] prepare_thrift_header(int meta_length, int body_length) {
@@ -93,5 +95,4 @@ public abstract class client_operator {
   public gpid pid;
   public String tableName; // only for metrics
   public error_code rpc_error;
-  public boolean enableBackupRequest;
 }

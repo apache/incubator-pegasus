@@ -28,8 +28,8 @@ fi
 
 # The new version of pegasus client is not compatible with old version server which contains old rpc protocol,
 # So we use snapshot version of pegasus-tools, because we don`t have a new release version, which contains the new version of rpc protocol,
-PEGASUS_PKG="pegasus-tools-1.13.SNAPSHOT-695b366-glibc2.17-release"
-PEGASUS_PKG_URL="https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-tools-1.13.SNAPSHOT-695b366-glibc2.17-release.tar.gz"
+PEGASUS_PKG="pegasus-tools-2.0.0-5d969e8-glibc2.12-release"
+PEGASUS_PKG_URL="https://github.com/apache/incubator-pegasus/releases/download/v2.0.0/pegasus-tools-2.0.0-5d969e8-glibc2.12-release.tar.gz"
 
 # start pegasus onebox environment
 if [ ! -f $PEGASUS_PKG.tar.gz ]; then
@@ -38,7 +38,6 @@ if [ ! -f $PEGASUS_PKG.tar.gz ]; then
 fi
 cd $PEGASUS_PKG
 
-sed -i "s#https://github.com/xiaomi/pegasus-common/raw/master/zookeeper-3.4.6.tar.gz#https://github.com/XiaoMi/pegasus-common/releases/download/deps/zookeeper-3.4.6.tar.gz#" scripts/start_zk.sh
 ./run.sh start_onebox -w
 cd ../
 

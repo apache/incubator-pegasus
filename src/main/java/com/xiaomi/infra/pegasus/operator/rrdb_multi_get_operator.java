@@ -10,13 +10,13 @@ import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 
-public class rrdb_multi_get_operator extends client_operator {
+public class rrdb_multi_get_operator extends read_operator {
   public rrdb_multi_get_operator(
       com.xiaomi.infra.pegasus.base.gpid gpid,
       String tableName,
       multi_get_request request,
       long partitionHash) {
-    super(gpid, tableName, partitionHash, true);
+    super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
