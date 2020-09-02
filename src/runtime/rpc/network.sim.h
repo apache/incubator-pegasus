@@ -93,6 +93,13 @@ public:
         return rpc_session_ptr(new sim_client_session(*this, server_addr, parser));
     }
 
+    virtual rpc_session_ptr create_server_session(::dsn::rpc_address client_addr,
+                                                  rpc_session_ptr client_session)
+    {
+        message_parser_ptr parser(new_message_parser(_client_hdr_format));
+        return rpc_session_ptr(new sim_server_session(*this, client_addr, client_session, parser));
+    }
+
     uint32_t net_delay_milliseconds() const;
 
 private:
@@ -102,5 +109,5 @@ private:
 };
 
 //------------- inline implementations -------------
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

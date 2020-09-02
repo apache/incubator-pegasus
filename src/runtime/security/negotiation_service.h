@@ -34,6 +34,7 @@ private:
     negotiation_service();
     void on_negotiation_request(negotiation_rpc rpc);
     friend class utils::singleton<negotiation_service>;
+    friend class negotiation_service_test;
 };
 
 } // namespace security
