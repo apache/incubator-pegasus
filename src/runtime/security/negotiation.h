@@ -18,6 +18,7 @@
 #pragma once
 
 #include "security_types.h"
+#include "sasl_wrapper.h"
 
 #include <memory>
 #include <dsn/cpp/rpc_holder.h>
@@ -34,6 +35,7 @@ public:
     negotiation(rpc_session *session)
         : _session(session), _status(negotiation_status::type::INVALID)
     {
+        _sasl = create_sasl_wrapper(_session->is_client());
     }
     virtual ~negotiation() = 0;
 
@@ -48,6 +50,7 @@ protected:
     std::string _name;
     negotiation_status::type _status;
     std::string _selected_mechanism;
+    std::unique_ptr<sasl_wrapper> _sasl;
 };
 
 std::unique_ptr<negotiation> create_negotiation(bool is_client, rpc_session *session);

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "sasl_utils.h"
+#include "sasl_init.h"
 #include "kinit_context.h"
 
 #include <sasl/sasl.h>

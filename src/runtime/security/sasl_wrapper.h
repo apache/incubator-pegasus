@@ -17,28 +17,28 @@
 
 #pragma once
 
-#include "negotiation.h"
-
 #include <dsn/utility/errors.h>
+
+typedef struct sasl_conn sasl_conn_t;
 
 namespace dsn {
 namespace security {
-extern const std::set<std::string> supported_mechanisms;
-
-class server_negotiation : public negotiation
+class sasl_wrapper
 {
 public:
-    server_negotiation(rpc_session *session);
+    virtual ~sasl_wrapper();
 
-    void start();
-    void handle_request(negotiation_rpc rpc);
+    virtual error_s init() = 0;
+    virtual error_s
+    start(const std::string &mechanism, const std::string &input, std::string &output) = 0;
+    virtual error_s step(const std::string &input, std::string &output) = 0;
 
-private:
-    void on_list_mechanisms(negotiation_rpc rpc);
-    void on_select_mechanism(negotiation_rpc rpc);
-
-    friend class server_negotiation_test;
+protected:
+    sasl_wrapper() = default;
+    error_s wrap_error(int sasl_err);
+    sasl_conn_t *_conn = nullptr;
 };
 
+std::unique_ptr<sasl_wrapper> create_sasl_wrapper(bool is_client);
 } // namespace security
 } // namespace dsn

@@ -16,7 +16,7 @@
 // under the License.
 
 #include "kinit_context.h"
-#include "sasl_utils.h"
+#include "sasl_init.h"
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>

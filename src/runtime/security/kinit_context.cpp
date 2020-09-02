@@ -45,6 +45,8 @@ DSN_DECLARE_bool(enable_auth);
 DSN_DEFINE_string("security", krb5_keytab, "", "absolute path of keytab file");
 DSN_DEFINE_string("security", krb5_config, "", "absolute path of krb5_config file");
 DSN_DEFINE_string("security", krb5_principal, "", "kerberos principal");
+DSN_DEFINE_string("security", service_fqdn, "", "the fully qualified domain name of the server");
+DSN_DEFINE_string("security", service_name, "", "service name");
 
 // Attention: we can't do these check work by `DSN_DEFINE_validator`, because somebody may don't
 // want to use security, so these configuration may not setted. In this situation, these checks
