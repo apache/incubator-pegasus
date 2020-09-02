@@ -105,20 +105,28 @@ void meta_duplication_service::do_modify_duplication(std::shared_ptr<app_state> 
                                                      duplication_info_s_ptr &dup,
                                                      duplication_modify_rpc &rpc)
 {
+    if (rpc.request().status == duplication_status::DS_REMOVED) {
+        _meta_svc->get_meta_storage()->delete_node_recursively(
+            std::string(dup->store_path), [rpc, this, app, dup]() {
+                dup->persist_status();
+                rpc.response().err = ERR_OK;
+                rpc.response().appid = app->app_id;
+
+                if (rpc.request().status == duplication_status::DS_REMOVED) {
+                    zauto_write_lock l(app_lock());
+                    app->duplications.erase(dup->id);
+                    refresh_duplicating_no_lock(app);
+                }
+            });
+        return;
+    }
     // store the duplication in requested status.
     blob value = dup->to_json_blob();
-
     _meta_svc->get_meta_storage()->set_data(
-        std::string(dup->store_path), std::move(value), [rpc, this, app, dup]() {
+        std::string(dup->store_path), std::move(value), [rpc, app, dup]() {
             dup->persist_status();
             rpc.response().err = ERR_OK;
             rpc.response().appid = app->app_id;
-
-            if (rpc.request().status == duplication_status::DS_REMOVED) {
-                zauto_write_lock l(app_lock());
-                app->duplications.erase(dup->id);
-                refresh_duplicating_no_lock(app);
-            }
         });
 }
 

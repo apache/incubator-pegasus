@@ -481,17 +481,28 @@ TEST_F(meta_duplication_service_test, remove_dup)
     dupid_t dupid1 = resp.dupid;
 
     ASSERT_EQ(app->duplicating, true);
+    auto dup = app->duplications.find(dupid1)->second;
 
     auto resp2 = change_dup_status(test_app, dupid1, duplication_status::DS_REMOVED);
     ASSERT_EQ(ERR_OK, resp2.err);
+    // though this duplication is unreferenced, its status still updated correctly
+    ASSERT_EQ(dup->status(), duplication_status::DS_REMOVED);
 
     ASSERT_EQ(app->duplicating, false);
+    // ensure duplication removed
+    ASSERT_EQ(app->duplications.find(dupid1), app->duplications.end());
+    _ms->get_meta_storage()->get_children(std::string(dup->store_path),
+                                          [](bool node_exists, const std::vector<std::string> &) {
+                                              // ensure node cleaned up
+                                              ASSERT_FALSE(node_exists);
+                                          });
 
     // reset meta server states
     SetUp();
     recover_from_meta_state();
 
     ASSERT_EQ(app->duplicating, false);
+    ASSERT_EQ(app->duplications.find(dupid1), app->duplications.end());
 }
 
 TEST_F(meta_duplication_service_test, duplication_sync)
