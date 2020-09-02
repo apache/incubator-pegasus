@@ -1330,9 +1330,18 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     // Here we create a `tmp_data_cf_opts` because we don't want to modify `_data_cf_opts`, which
     // will be used elsewhere.
     rocksdb::ColumnFamilyOptions tmp_data_cf_opts = _data_cf_opts;
+    bool has_uncompatible_db_options = false;
     if (db_exist) {
+        // When DB exists, meta CF and data CF must be present.
         bool missing_meta_cf = true;
         bool missing_data_cf = true;
+        if (check_column_families(path, &missing_meta_cf, &missing_data_cf) != ::dsn::ERR_OK) {
+            derror_replica("check column families failed");
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
+        dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
+        dassert_replica(!missing_data_cf, "Missing data column family");
+
         // Load latest options from option file stored in the db directory.
         rocksdb::DBOptions loaded_db_opt;
         std::vector<rocksdb::ColumnFamilyDescriptor> loaded_cf_descs;
@@ -1344,28 +1353,28 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                                                  &loaded_cf_descs,
                                                  /*ignore_unknown_options=*/true);
         if (!status.ok()) {
-            derror_replica("load latest option file failed.");
-            return ::dsn::ERR_LOCAL_APP_FAILURE;
-        }
-        for (int i = 0; i < loaded_cf_descs.size(); ++i) {
-            if (loaded_cf_descs[i].name == META_COLUMN_FAMILY_NAME) {
-                missing_meta_cf = false;
-            } else if (loaded_cf_descs[i].name == DATA_COLUMN_FAMILY_NAME) {
-                missing_data_cf = false;
-                loaded_data_cf_opts = loaded_cf_descs[i].options;
-            } else {
-                derror_replica("unknown column family name.");
+            if (status.ToString().find("pegasus") == std::string::npos) {
+                derror_replica("load latest option file failed: {}.", status.ToString());
                 return ::dsn::ERR_LOCAL_APP_FAILURE;
             }
+            has_uncompatible_db_options = true;
+            dwarn_replica("The latest option file has uncompatible db options: {}, use default "
+                          "options to open db.",
+                          status.ToString());
         }
-        // When DB exists, meta CF and data CF must be present.
-        dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
-        dassert_replica(!missing_data_cf, "Missing data column family");
-        // Reset usage scenario related options according to loaded_data_cf_opts.
-        // We don't use `loaded_data_cf_opts` directly because pointer-typed options will only be
-        // initialized with default values when calling 'LoadLatestOptions', see
-        // 'rocksdb/utilities/options_util.h'.
-        reset_usage_scenario_options(loaded_data_cf_opts, &tmp_data_cf_opts);
+
+        if (!has_uncompatible_db_options) {
+            for (int i = 0; i < loaded_cf_descs.size(); ++i) {
+                if (loaded_cf_descs[i].name == DATA_COLUMN_FAMILY_NAME) {
+                    loaded_data_cf_opts = loaded_cf_descs[i].options;
+                }
+            }
+            // Reset usage scenario related options according to loaded_data_cf_opts.
+            // We don't use `loaded_data_cf_opts` directly because pointer-typed options will
+            // only be initialized with default values when calling 'LoadLatestOptions', see
+            // 'rocksdb/utilities/options_util.h'.
+            reset_usage_scenario_options(loaded_data_cf_opts, &tmp_data_cf_opts);
+        }
     } else {
         // When create new DB, we have to create a new column family to store meta data (meta column
         // family).
@@ -1376,7 +1385,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         {{DATA_COLUMN_FAMILY_NAME, tmp_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
     auto s = rocksdb::CheckOptionsCompatibility(
         path, rocksdb::Env::Default(), _db_opts, column_families, /*ignore_unknown_options=*/true);
-    if (!s.ok() && !s.IsNotFound()) {
+    if (!s.ok() && !s.IsNotFound() && !has_uncompatible_db_options) {
         derror_replica("rocksdb::CheckOptionsCompatibility failed, error = {}", s.ToString());
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
@@ -2572,6 +2581,32 @@ bool pegasus_server_impl::set_options(
                oss.str().c_str());
         return false;
     }
+}
+
+::dsn::error_code pegasus_server_impl::check_column_families(const std::string &path,
+                                                             bool *missing_meta_cf,
+                                                             bool *missing_data_cf)
+{
+    *missing_meta_cf = true;
+    *missing_data_cf = true;
+    std::vector<std::string> column_families;
+    auto s = rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), path, &column_families);
+    if (!s.ok()) {
+        derror_replica("rocksdb::DB::ListColumnFamilies failed, error = {}", s.ToString());
+        return ::dsn::ERR_LOCAL_APP_FAILURE;
+    }
+
+    for (const auto &column_family : column_families) {
+        if (column_family == META_COLUMN_FAMILY_NAME) {
+            *missing_meta_cf = false;
+        } else if (column_family == DATA_COLUMN_FAMILY_NAME) {
+            *missing_data_cf = false;
+        } else {
+            derror_replica("unknown column family name: {}", column_family);
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
+    }
+    return ::dsn::ERR_OK;
 }
 
 uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options)
