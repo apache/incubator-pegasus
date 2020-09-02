@@ -21,6 +21,7 @@
 #include <boost/algorithm/string/join.hpp>
 #include <dsn/utility/strings.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/fail_point.h>
 
 namespace dsn {
 namespace security {
@@ -108,6 +109,9 @@ void server_negotiation::on_select_mechanism(negotiation_rpc rpc)
 
 error_s server_negotiation::do_sasl_server_init()
 {
+    FAIL_POINT_INJECT_F("server_negotiation_sasl_server_init",
+                        [](dsn::string_view str) { return error_s::make(ERR_OK); });
+
     // TBD(zlw)
     return error_s::make(ERR_OK);
 }
