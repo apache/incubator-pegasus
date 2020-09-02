@@ -16,12 +16,12 @@ import com.xiaomi.infra.pegasus.replication.query_cfg_response;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.Table;
 import com.xiaomi.infra.pegasus.rpc.TableOptions;
+import com.xiaomi.infra.pegasus.rpc.interceptor.InterceptorManger;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.EventExecutor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,6 +51,7 @@ public class TableHandler extends Table {
   AtomicBoolean inQuerying_;
   long lastQueryTime_;
   int backupRequestDelayMs;
+  private InterceptorManger interceptorManger;
 
   public TableHandler(ClusterManager mgr, String name, TableOptions options)
       throws ReplicationException {
@@ -107,6 +108,8 @@ public class TableHandler extends Table {
 
     inQuerying_ = new AtomicBoolean(false);
     lastQueryTime_ = 0;
+
+    this.interceptorManger = new InterceptorManger(options);
   }
 
   public ReplicaConfiguration getReplicaConfig(int index) {
@@ -237,13 +240,12 @@ public class TableHandler extends Table {
     return true;
   }
 
-  void onRpcReply(
-      ClientRequestRound round, int tryId, long cachedConfigVersion, String serverAddr) {
+  public void onRpcReply(ClientRequestRound round, long cachedConfigVersion, String serverAddr) {
     // judge if it is the first response
     if (round.isCompleted) {
       return;
     } else {
-      synchronized (round) {
+      synchronized (TableHandler.class) {
         // the fastest response has been received
         if (round.isCompleted) {
           return;
@@ -252,12 +254,8 @@ public class TableHandler extends Table {
       }
     }
 
-    // cancel the backup request task
-    if (round.backupRequestTask != null) {
-      round.backupRequestTask.cancel(true);
-    }
-
     client_operator operator = round.getOperator();
+    interceptorManger.after(round, operator.rpc_error.errno, this);
     boolean needQueryMeta = false;
     switch (operator.rpc_error.errno) {
       case ERR_OK:
@@ -272,7 +270,7 @@ public class TableHandler extends Table {
             serverAddr,
             operator.get_gpid().toString(),
             operator,
-            tryId,
+            round.tryId,
             operator.rpc_error.errno.toString());
         break;
 
@@ -286,7 +284,7 @@ public class TableHandler extends Table {
             serverAddr,
             operator.get_gpid().toString(),
             operator,
-            tryId,
+            round.tryId,
             operator.rpc_error.errno.toString());
         needQueryMeta = true;
         break;
@@ -300,7 +298,7 @@ public class TableHandler extends Table {
             serverAddr,
             operator.get_gpid().toString(),
             operator,
-            tryId,
+            round.tryId,
             operator.rpc_error.errno.toString());
         break;
 
@@ -312,7 +310,7 @@ public class TableHandler extends Table {
             serverAddr,
             operator.get_gpid().toString(),
             operator,
-            tryId,
+            round.tryId,
             operator.rpc_error.errno.toString());
         round.thisRoundCompletion();
         return;
@@ -332,17 +330,18 @@ public class TableHandler extends Table {
             round.enableCounter,
             round.expireNanoTime,
             round.timeoutMs);
-    tryDelayCall(delayRequestRound, tryId + 1);
+    tryDelayCall(delayRequestRound);
   }
 
-  void tryDelayCall(final ClientRequestRound round, final int tryId) {
+  void tryDelayCall(final ClientRequestRound round) {
+    round.tryId++;
     long nanoDelay = manager_.getRetryDelay(round.timeoutMs) * 1000000L;
     if (round.expireNanoTime - System.nanoTime() > nanoDelay) {
       executor_.schedule(
           new Runnable() {
             @Override
             public void run() {
-              call(round, tryId);
+              call(round);
             }
           },
           nanoDelay,
@@ -357,25 +356,21 @@ public class TableHandler extends Table {
     }
   }
 
-  void call(final ClientRequestRound round, final int tryId) {
+  void call(final ClientRequestRound round) {
     // tableConfig & handle is initialized in constructor, so both shouldn't be null
     final TableConfiguration tableConfig = tableConfig_.get();
     final ReplicaConfiguration handle =
         tableConfig.replicas.get(round.getOperator().get_gpid().get_pidx());
 
     if (handle.primarySession != null) {
-      // if backup request is enabled, schedule to send to secondary
-      if (round.operator.supportBackupRequest() && isBackupRequestEnabled()) {
-        backupCall(round, tryId);
-      }
-
+      interceptorManger.before(round, this);
       // send request to primary
       handle.primarySession.asyncSend(
           round.getOperator(),
           new Runnable() {
             @Override
             public void run() {
-              onRpcReply(round, tryId, tableConfig.updateVersion, handle.primarySession.name());
+              onRpcReply(round, tableConfig.updateVersion, handle.primarySession.name());
             }
           },
           round.timeoutMs,
@@ -386,41 +381,10 @@ public class TableHandler extends Table {
           tableName_,
           round.getOperator().get_gpid().toString(),
           round.getOperator(),
-          tryId);
+          round.tryId);
       tryQueryMeta(tableConfig.updateVersion);
-      tryDelayCall(round, tryId + 1);
+      tryDelayCall(round);
     }
-  }
-
-  void backupCall(final ClientRequestRound round, final int tryId) {
-    final TableConfiguration tableConfig = tableConfig_.get();
-    final ReplicaConfiguration handle =
-        tableConfig.replicas.get(round.getOperator().get_gpid().get_pidx());
-
-    round.backupRequestTask =
-        executor_.schedule(
-            new Runnable() {
-              @Override
-              public void run() {
-                // pick a secondary at random
-                ReplicaSession secondarySession =
-                    handle.secondarySessions.get(
-                        new Random().nextInt(handle.secondarySessions.size()));
-                secondarySession.asyncSend(
-                    round.getOperator(),
-                    new Runnable() {
-                      @Override
-                      public void run() {
-                        onRpcReply(
-                            round, tryId, tableConfig.updateVersion, secondarySession.name());
-                      }
-                    },
-                    round.timeoutMs,
-                    true);
-              }
-            },
-            backupRequestDelayMs,
-            TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -465,6 +429,14 @@ public class TableHandler extends Table {
     }
   }
 
+  public int backupRequestDelayMs() {
+    return backupRequestDelayMs;
+  }
+
+  public long updateVersion() {
+    return tableConfig_.get().updateVersion;
+  }
+
   @Override
   public EventExecutor getExecutor() {
     return executor_;
@@ -483,7 +455,7 @@ public class TableHandler extends Table {
 
     ClientRequestRound round =
         new ClientRequestRound(op, callback, manager_.counterEnabled(), (long) timeoutMs);
-    call(round, 1);
+    call(round);
   }
 
   private void handleMetaException(error_types err_type, ClusterManager mgr, String name)

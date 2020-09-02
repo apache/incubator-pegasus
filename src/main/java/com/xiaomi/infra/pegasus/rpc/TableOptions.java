@@ -24,4 +24,8 @@ public class TableOptions {
     this.keyHasher = h;
     this.backupRequestDelayMs = backupRequestDelay;
   }
+
+  public boolean enableBackupRequest() {
+    return backupRequestDelayMs > 0;
+  }
 }
