@@ -37,6 +37,8 @@ private:
     void select_mechanism(const std::string &mechanism);
     void send(std::unique_ptr<negotiation_request> request);
     void succ_negotiation();
+
+    friend class client_negotiation_test;
 };
 
 } // namespace security

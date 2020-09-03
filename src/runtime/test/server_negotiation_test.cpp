@@ -17,10 +17,10 @@
 
 #include "runtime/security/server_negotiation.h"
 #include "runtime/security/negotiation_utils.h"
+#include "runtime/rpc/network.sim.h"
 
 #include <gtest/gtest.h>
 #include <dsn/utility/fail_point.h>
-#include <runtime/rpc/network.sim.h>
 
 namespace dsn {
 namespace security {
@@ -31,8 +31,9 @@ public:
     {
         std::unique_ptr<tools::sim_network_provider> sim_net(
             new tools::sim_network_provider(nullptr, nullptr));
-        auto sim_session = sim_net->create_client_session(rpc_address("localhost", 10086));
-        _srv_negotiation = new server_negotiation(sim_session);
+        _sim_session =
+            sim_net->create_server_session(rpc_address("localhost", 10086), rpc_session_ptr());
+        _srv_negotiation = make_unique<server_negotiation>(_sim_session);
     }
 
     negotiation_rpc create_negotiation_rpc(negotiation_status::type status, const std::string &msg)
@@ -47,7 +48,12 @@ public:
 
     void on_select_mechanism(negotiation_rpc rpc) { _srv_negotiation->on_select_mechanism(rpc); }
 
-    server_negotiation *_srv_negotiation;
+    negotiation_status::type get_negotiation_status() { return _srv_negotiation->_status; }
+
+    // _sim_session is used for holding the sim_rpc_session which is created in ctor,
+    // in case it is released. Because negotiation keeps only a raw pointer.
+    rpc_session_ptr _sim_session;
+    std::unique_ptr<server_negotiation> _srv_negotiation;
 };
 
 TEST_F(server_negotiation_test, on_list_mechanisms)
@@ -75,6 +81,7 @@ TEST_F(server_negotiation_test, on_list_mechanisms)
 
             ASSERT_EQ(rpc.response().status, test.resp_status);
             ASSERT_EQ(rpc.response().msg, test.resp_msg);
+            ASSERT_EQ(get_negotiation_status(), test.nego_status);
         }
     }
 }
@@ -95,14 +102,15 @@ TEST_F(server_negotiation_test, on_select_mechanism)
                  },
                  {negotiation_status::type::SASL_SELECT_MECHANISMS,
                   "TEST",
-                  negotiation_status::type::INVALID},
+                  negotiation_status::type::INVALID,
+                  negotiation_status::type::SASL_AUTH_FAIL},
                  {negotiation_status::type::SASL_INITIATE,
                   "GSSAPI",
                   negotiation_status::type::INVALID,
                   negotiation_status::type::SASL_AUTH_FAIL}};
 
     fail::setup();
-    fail::cfg("server_negotiation_sasl_server_init", "return()");
+    fail::cfg("sasl_server_wrapper_init", "return()");
     RPC_MOCKING(negotiation_rpc)
     {
         for (const auto &test : tests) {
@@ -110,6 +118,7 @@ TEST_F(server_negotiation_test, on_select_mechanism)
             on_select_mechanism(rpc);
 
             ASSERT_EQ(rpc.response().status, test.resp_status);
+            ASSERT_EQ(get_negotiation_status(), test.nego_status);
         }
     }
     fail::teardown();

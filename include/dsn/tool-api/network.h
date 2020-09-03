@@ -257,8 +257,8 @@ public:
     bool unlink_message_for_send();
     virtual void send(uint64_t signature) = 0;
     void on_send_completed(uint64_t signature = 0);
-    void on_failure(bool is_write = false);
-    void on_success();
+    virtual void on_failure(bool is_write = false);
+    virtual void on_success();
 
 protected:
     ///

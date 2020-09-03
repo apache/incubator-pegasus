@@ -81,9 +81,7 @@ void server_negotiation::on_select_mechanism(negotiation_rpc rpc)
     if (request.status == negotiation_status::type::SASL_SELECT_MECHANISMS) {
         _selected_mechanism = request.msg;
         if (supported_mechanisms.find(_selected_mechanism) == supported_mechanisms.end()) {
-            std::string error_msg =
-                fmt::format("the mechanism of {} is not supported", _selected_mechanism);
-            dwarn_f("{}", error_msg);
+            dwarn_f("the mechanism of {} is not supported", _selected_mechanism);
             fail_negotiation();
             return;
         }

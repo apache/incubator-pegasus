@@ -102,8 +102,8 @@ void client_negotiation::on_recv_mechanisms(const negotiation_response &resp)
 
     if (match_mechanism.empty()) {
         dwarn_f("server only support mechanisms of ({}), can't find expected ({})",
-                resp_string,
-                boost::join(supported_mechanisms, ","));
+                boost::join(supported_mechanisms, ","),
+                resp_string);
         fail_negotiation();
         return;
     }
