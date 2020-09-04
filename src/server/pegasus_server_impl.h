@@ -311,7 +311,6 @@ private:
     }
 
     void release_db();
-    void release_db(rocksdb::DB *db, const std::vector<rocksdb::ColumnFamilyHandle *> &handles);
 
     ::dsn::error_code flush_all_family_columns(bool wait);
 

@@ -1801,7 +1801,16 @@ private:
             if (remove_checkpoint && !::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
                 derror_replica("remove checkpoint directory {} failed", checkpoint_dir);
             }
-            release_db(snapshot_db, handles_opened);
+            if (snapshot_db) {
+                for (auto handle : handles_opened) {
+                    if (handle) {
+                        snapshot_db->DestroyColumnFamilyHandle(handle);
+                        handle = nullptr;
+                    }
+                }
+                delete snapshot_db;
+                snapshot_db = nullptr;
+            }
         };
 
         // Because of RocksDB's restriction, we have to to open default column family even though
@@ -2678,19 +2687,16 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
     return ::dsn::ERR_OK;
 }
 
-void pegasus_server_impl::release_db() { release_db(_db, {_data_cf, _meta_cf}); }
-
-void pegasus_server_impl::release_db(rocksdb::DB *db,
-                                     const std::vector<rocksdb::ColumnFamilyHandle *> &handles)
+void pegasus_server_impl::release_db()
 {
-    if (db) {
-        for (auto handle : handles) {
-            dassert_replica(handle != nullptr, "");
-            db->DestroyColumnFamilyHandle(handle);
-            handle = nullptr;
-        }
-        delete db;
-        db = nullptr;
+    if (_db) {
+        dassert_replica(_data_cf != nullptr && _meta_cf != nullptr, "");
+        _db->DestroyColumnFamilyHandle(_data_cf);
+        _data_cf = nullptr;
+        _db->DestroyColumnFamilyHandle(_meta_cf);
+        _meta_cf = nullptr;
+        delete _db;
+        _db = nullptr;
     }
 }
 
