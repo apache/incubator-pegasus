@@ -8,8 +8,8 @@ import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.client.ClientOptions;
 import com.xiaomi.infra.pegasus.operator.client_operator;
+import com.xiaomi.infra.pegasus.rpc.InternalTableOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
-import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import com.xiaomi.infra.pegasus.rpc.async.TableHandler.ReplicaConfiguration;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import java.util.ArrayList;
@@ -61,7 +61,7 @@ public class TableHandlerTest {
     System.out.println("TableHandlerTest#testOperateOp");
     TableHandler table = null;
     try {
-      table = testManager.openTable("temp", TableOptions.forTest());
+      table = testManager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.fail();
     }
@@ -148,7 +148,7 @@ public class TableHandlerTest {
     TableHandler table = null;
 
     try {
-      table = testManager.openTable("temp", TableOptions.forTest());
+      table = testManager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.fail();
     }
@@ -192,7 +192,7 @@ public class TableHandlerTest {
     TableHandler table = null;
 
     try {
-      table = testManager.openTable("temp", TableOptions.forTest());
+      table = testManager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.fail();
     }

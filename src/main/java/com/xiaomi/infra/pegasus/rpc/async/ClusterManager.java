@@ -9,8 +9,8 @@ import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.client.ClientOptions;
 import com.xiaomi.infra.pegasus.metrics.MetricsManager;
 import com.xiaomi.infra.pegasus.rpc.Cluster;
+import com.xiaomi.infra.pegasus.rpc.InternalTableOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
-import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -126,8 +126,9 @@ public class ClusterManager extends Cluster {
   }
 
   @Override
-  public TableHandler openTable(String name, TableOptions options) throws ReplicationException {
-    return new TableHandler(this, name, options);
+  public TableHandler openTable(String name, InternalTableOptions internalTableOptions)
+      throws ReplicationException {
+    return new TableHandler(this, name, internalTableOptions);
   }
 
   @Override

@@ -6,8 +6,8 @@ package com.xiaomi.infra.pegasus.rpc.async;
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.client.ClientOptions;
+import com.xiaomi.infra.pegasus.rpc.InternalTableOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
-import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -50,7 +50,7 @@ public class ClusterManagerTest {
 
     TableHandler result = null;
     try {
-      result = testManager.openTable("testName", TableOptions.forTest());
+      result = testManager.openTable("testName", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.assertEquals(error_code.error_types.ERR_SESSION_RESET, e.getErrorType());
     } finally {
@@ -62,7 +62,7 @@ public class ClusterManagerTest {
     String address_list2 = "127.0.0.1:123,127.0.0.1:34603,127.0.0.1:34601,127.0.0.1:34602";
     testManager = new ClusterManager(ClientOptions.builder().metaServers(address_list2).build());
     try {
-      result = testManager.openTable("hehe", TableOptions.forTest());
+      result = testManager.openTable("hehe", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.assertEquals(error_code.error_types.ERR_OBJECT_NOT_FOUND, e.getErrorType());
     } finally {
@@ -71,7 +71,7 @@ public class ClusterManagerTest {
 
     // test open an valid table
     try {
-      result = testManager.openTable("temp", TableOptions.forTest());
+      result = testManager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
       Assert.fail();
     } finally {

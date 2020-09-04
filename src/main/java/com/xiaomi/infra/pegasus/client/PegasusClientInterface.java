@@ -44,6 +44,17 @@ public interface PegasusClientInterface {
   /**
    * Open a table, and prepare the sessions and route-table to the replica-servers.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest interface please see {@link PegasusClientInterface#openTable(String,
+   *     TableOptions)}
+   */
+  @Deprecated
+  public PegasusTableInterface openTable(String tableName, int backupRequestDelayMs)
+      throws PException;
+
+  /**
+   * Open a table, and prepare the sessions and route-table to the replica-servers.
+   *
    * <p>Please notice that pegasus support two kinds of API: 1. the client-interface way, which is
    * provided in this class. 2. the table-interface way, which is provided by {@link
    * PegasusTableInterface}. With the client-interface, you don't need to create
@@ -55,13 +66,13 @@ public interface PegasusClientInterface {
    * 4. You can't specify a per-operation timeout. So we recommend you to use the table-interface.
    *
    * @param tableName the table should be exist on the server, which is created before by the system
-   *     administrator
-   * @param backupRequestDelayMs the delay time to send backup request. If backupRequestDelayMs <=
-   *     0, The backup request is disabled.
-   * @return the table handler
-   * @throws PException throws exception if any error occurs.
+   *     * administrator
+   * @param tableOptions control the table feature, such as open backup-request, compress and etc,
+   *     see {@link TableOptions}
+   * @return
+   * @throws PException
    */
-  public PegasusTableInterface openTable(String tableName, int backupRequestDelayMs)
+  public PegasusTableInterface openTable(String tableName, TableOptions tableOptions)
       throws PException;
 
   /**

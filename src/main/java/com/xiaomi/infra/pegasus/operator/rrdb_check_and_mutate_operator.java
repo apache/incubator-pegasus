@@ -47,6 +47,10 @@ public class rrdb_check_and_mutate_operator extends client_operator {
     return resp;
   }
 
+  public check_and_mutate_request get_request() {
+    return request;
+  }
+
   private check_and_mutate_request request;
   private check_and_mutate_response resp;
 }

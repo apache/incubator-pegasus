@@ -13,9 +13,9 @@ import com.xiaomi.infra.pegasus.operator.query_cfg_operator;
 import com.xiaomi.infra.pegasus.replication.partition_configuration;
 import com.xiaomi.infra.pegasus.replication.query_cfg_request;
 import com.xiaomi.infra.pegasus.replication.query_cfg_response;
+import com.xiaomi.infra.pegasus.rpc.InternalTableOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.Table;
-import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import com.xiaomi.infra.pegasus.rpc.interceptor.InterceptorManger;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.EventExecutor;
@@ -53,7 +53,7 @@ public class TableHandler extends Table {
   int backupRequestDelayMs;
   private InterceptorManger interceptorManger;
 
-  public TableHandler(ClusterManager mgr, String name, TableOptions options)
+  public TableHandler(ClusterManager mgr, String name, InternalTableOptions internalTableOptions)
       throws ReplicationException {
     int i = 0;
     for (; i < name.length(); i++) {
@@ -93,12 +93,12 @@ public class TableHandler extends Table {
     // superclass members
     tableName_ = name;
     appID_ = resp.app_id;
-    hasher_ = options.keyHasher();
+    hasher_ = internalTableOptions.keyHasher();
 
     // members of this
     manager_ = mgr;
     executor_ = manager_.getExecutor();
-    this.backupRequestDelayMs = options.backupRequestDelayMs();
+    this.backupRequestDelayMs = internalTableOptions.tableOptions().backupRequestDelayMs();
     if (backupRequestDelayMs > 0) {
       logger.info("the delay time of backup request is \"{}\"", backupRequestDelayMs);
     }
@@ -109,7 +109,7 @@ public class TableHandler extends Table {
     inQuerying_ = new AtomicBoolean(false);
     lastQueryTime_ = 0;
 
-    this.interceptorManger = new InterceptorManger(options);
+    this.interceptorManger = new InterceptorManger(internalTableOptions.tableOptions());
   }
 
   public ReplicaConfiguration getReplicaConfig(int index) {

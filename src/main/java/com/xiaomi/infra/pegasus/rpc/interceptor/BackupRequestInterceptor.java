@@ -10,11 +10,10 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class BackupRequestInterceptor implements TableInterceptor {
+  private final long backupRequestDelayMs;
 
-  private boolean isOpen;
-
-  public BackupRequestInterceptor(boolean isOpen) {
-    this.isOpen = isOpen;
+  public BackupRequestInterceptor(long backupRequestDelayMs) {
+    this.backupRequestDelayMs = backupRequestDelayMs;
   }
 
   @Override
@@ -33,7 +32,7 @@ public class BackupRequestInterceptor implements TableInterceptor {
   }
 
   private void backupCall(ClientRequestRound clientRequestRound, TableHandler tableHandler) {
-    if (!isOpen || !clientRequestRound.getOperator().supportBackupRequest()) {
+    if (!clientRequestRound.getOperator().supportBackupRequest()) {
       return;
     }
 
@@ -59,7 +58,7 @@ public class BackupRequestInterceptor implements TableInterceptor {
                       clientRequestRound.timeoutMs(),
                       true);
                 },
-                tableHandler.backupRequestDelayMs(),
+                backupRequestDelayMs,
                 TimeUnit.MILLISECONDS));
   }
 }

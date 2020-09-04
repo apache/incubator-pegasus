@@ -6,8 +6,8 @@ package com.xiaomi.infra.pegasus.rpc.async;
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.base.gpid;
 import com.xiaomi.infra.pegasus.client.ClientOptions;
+import com.xiaomi.infra.pegasus.rpc.InternalTableOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
-import com.xiaomi.infra.pegasus.rpc.TableOptions;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Assert;
@@ -68,7 +68,7 @@ public class TimeoutBenchmark {
 
     TableHandler handle;
     try {
-      handle = manager.openTable("temp", TableOptions.forTest());
+      handle = manager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
       e.printStackTrace();
       Assert.fail();

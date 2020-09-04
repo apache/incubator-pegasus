@@ -46,6 +46,10 @@ public class rrdb_put_operator extends client_operator {
     return resp;
   }
 
+  public update_request get_request() {
+    return request;
+  }
+
   private update_request request;
   private update_response resp;
 }

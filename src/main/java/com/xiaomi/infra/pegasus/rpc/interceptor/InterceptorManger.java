@@ -1,7 +1,7 @@
 package com.xiaomi.infra.pegasus.rpc.interceptor;
 
 import com.xiaomi.infra.pegasus.base.error_code.error_types;
-import com.xiaomi.infra.pegasus.rpc.TableOptions;
+import com.xiaomi.infra.pegasus.client.TableOptions;
 import com.xiaomi.infra.pegasus.rpc.async.ClientRequestRound;
 import com.xiaomi.infra.pegasus.rpc.async.TableHandler;
 import java.util.ArrayList;
@@ -12,12 +12,13 @@ public class InterceptorManger {
   private List<TableInterceptor> interceptors = new ArrayList<>();
 
   public InterceptorManger(TableOptions options) {
-    register(new BackupRequestInterceptor(options.enableBackupRequest()));
-  }
+    if (options.enableBackupRequest()) {
+      interceptors.add(new BackupRequestInterceptor(options.backupRequestDelayMs()));
+    }
 
-  private InterceptorManger register(TableInterceptor interceptor) {
-    interceptors.add(interceptor);
-    return this;
+    if (options.enableCompression()) {
+      interceptors.add(new CompressionInterceptor());
+    }
   }
 
   public void before(ClientRequestRound clientRequestRound, TableHandler tableHandler) {
