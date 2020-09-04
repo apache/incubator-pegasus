@@ -17,7 +17,9 @@
 
 #include "sasl_client_wrapper.h"
 
+#include <sasl/sasl.h>
 #include <dsn/utility/flags.h>
+#include <dsn/utility/fail_point.h>
 
 namespace dsn {
 namespace security {
@@ -26,16 +28,33 @@ DSN_DECLARE_string(service_name);
 
 error_s sasl_client_wrapper::init()
 {
-    // TBD(zlw)
-    return error_s::make(ERR_OK);
+    FAIL_POINT_INJECT_F("sasl_client_wrapper_init", [](dsn::string_view str) {
+        error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
+        return error_s::make(err);
+    });
+
+    int sasl_err = sasl_client_new(
+        FLAGS_service_name, FLAGS_service_fqdn, nullptr, nullptr, nullptr, 0, &_conn);
+    return wrap_error(sasl_err);
 }
 
 error_s sasl_client_wrapper::start(const std::string &mechanism,
                                    const std::string &input,
                                    std::string &output)
 {
-    // TBD(zlw)
-    return error_s::make(ERR_OK);
+    FAIL_POINT_INJECT_F("sasl_client_wrapper_start", [](dsn::string_view str) {
+        error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
+        return error_s::make(err);
+    });
+
+    const char *msg = nullptr;
+    unsigned msg_len = 0;
+    const char *client_mech = nullptr;
+    int sasl_err =
+        sasl_client_start(_conn, mechanism.c_str(), nullptr, &msg, &msg_len, &client_mech);
+
+    output.assign(msg, msg_len);
+    return wrap_error(sasl_err);
 }
 
 error_s sasl_client_wrapper::step(const std::string &input, std::string &output)

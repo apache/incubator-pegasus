@@ -46,7 +46,7 @@ error_s sasl_wrapper::wrap_error(int sasl_err)
     case SASL_OK:
         return error_s::make(ERR_OK);
     case SASL_CONTINUE:
-        return error_s::make(ERR_NOT_IMPLEMENTED);
+        return error_s::make(ERR_SASL_INCOMPLETE);
     case SASL_FAIL:      // Generic failure (encompasses missing krb5 credentials).
     case SASL_BADAUTH:   // Authentication failure.
     case SASL_BADMAC:    // Decode failure.

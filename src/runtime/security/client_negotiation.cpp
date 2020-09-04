@@ -66,7 +66,7 @@ void client_negotiation::handle_response(error_code err, const negotiation_respo
         on_recv_mechanisms(response);
         break;
     case negotiation_status::type::SASL_SELECT_MECHANISMS:
-        // TBD(zlw)
+        on_mechanism_selected(response);
         break;
     case negotiation_status::type::SASL_INITIATE:
     case negotiation_status::type::SASL_CHALLENGE_RESP:
@@ -79,11 +79,7 @@ void client_negotiation::handle_response(error_code err, const negotiation_respo
 
 void client_negotiation::on_recv_mechanisms(const negotiation_response &resp)
 {
-    if (resp.status != negotiation_status::type::SASL_LIST_MECHANISMS_RESP) {
-        dwarn_f("{}: get message({}) while expect({})",
-                _name,
-                enum_to_string(resp.status),
-                enum_to_string(negotiation_status::type::SASL_LIST_MECHANISMS_RESP));
+    if (!check_status(resp.status, negotiation_status::type::SASL_LIST_MECHANISMS_RESP)) {
         fail_negotiation();
         return;
     }
@@ -109,6 +105,41 @@ void client_negotiation::on_recv_mechanisms(const negotiation_response &resp)
     }
 
     select_mechanism(match_mechanism);
+}
+
+void client_negotiation::on_mechanism_selected(const negotiation_response &resp)
+{
+    if (!check_status(resp.status, negotiation_status::type::SASL_SELECT_MECHANISMS_RESP)) {
+        fail_negotiation();
+        return;
+    }
+
+    // init client sasl
+    auto err_s = _sasl->init();
+    if (!err_s.is_ok()) {
+        dwarn_f("{}: initialize sasl client failed, error = {}, reason = {}",
+                _name,
+                err_s.code().to_string(),
+                err_s.description());
+        fail_negotiation();
+        return;
+    }
+
+    // start client sasl, and send `SASL_INITIATE` to `server_negotiation` if everything is ok
+    std::string start_output;
+    err_s = _sasl->start(_selected_mechanism, "", start_output);
+    if (err_s.is_ok() || ERR_SASL_INCOMPLETE == err_s.code()) {
+        auto req = dsn::make_unique<negotiation_request>();
+        _status = req->status = negotiation_status::type::SASL_INITIATE;
+        req->msg = start_output;
+        send(std::move(req));
+    } else {
+        dwarn_f("{}: start sasl client failed, error = {}, reason = {}",
+                _name,
+                err_s.code().to_string(),
+                err_s.description());
+        fail_negotiation();
+    }
 }
 
 void client_negotiation::select_mechanism(const std::string &mechanism)

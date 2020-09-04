@@ -21,6 +21,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/utility/flags.h>
+#include <dsn/utility/fail_point.h>
 
 namespace dsn {
 namespace security {
@@ -43,6 +44,11 @@ public:
     void handle_response(error_code err, const negotiation_response &resp)
     {
         _client_negotiation->handle_response(err, std::move(resp));
+    }
+
+    void on_mechanism_selected(const negotiation_response &resp)
+    {
+        _client_negotiation->on_mechanism_selected(resp);
     }
 
     const std::string &get_selected_mechanism() { return _client_negotiation->_selected_mechanism; }
@@ -110,6 +116,52 @@ TEST_F(client_negotiation_test, handle_response)
         handle_response(test.resp_err, resp);
 
         ASSERT_EQ(get_negotiation_status(), test.neg_status);
+    }
+}
+
+TEST_F(client_negotiation_test, on_mechanism_selected)
+{
+    struct
+    {
+        std::string sasl_init_result;
+        std::string sasl_start_result;
+        negotiation_status::type resp_status;
+        negotiation_status::type neg_status;
+    } tests[] = {{"ERR_OK",
+                  "ERR_OK",
+                  negotiation_status::type::SASL_SELECT_MECHANISMS_RESP,
+                  negotiation_status::type::SASL_INITIATE},
+                 {"ERR_OK",
+                  "ERR_SASL_INCOMPLETE",
+                  negotiation_status::type::SASL_SELECT_MECHANISMS_RESP,
+                  negotiation_status::type::SASL_INITIATE},
+                 {"ERR_OK",
+                  "ERR_TIMEOUT",
+                  negotiation_status::type::SASL_SELECT_MECHANISMS_RESP,
+                  negotiation_status::type::SASL_AUTH_FAIL},
+                 {"ERR_TIMEOUT",
+                  "ERR_OK",
+                  negotiation_status::type::SASL_SELECT_MECHANISMS_RESP,
+                  negotiation_status::type::SASL_AUTH_FAIL},
+                 {"ERR_OK",
+                  "ERR_OK",
+                  negotiation_status::type::SASL_SELECT_MECHANISMS,
+                  negotiation_status::type::SASL_AUTH_FAIL}};
+
+    RPC_MOCKING(negotiation_rpc)
+    {
+        for (const auto &test : tests) {
+            fail::setup();
+            fail::cfg("sasl_client_wrapper_init", "return(" + test.sasl_init_result + ")");
+            fail::cfg("sasl_client_wrapper_start", "return(" + test.sasl_start_result + ")");
+
+            negotiation_response resp;
+            resp.status = test.resp_status;
+            on_mechanism_selected(resp);
+            ASSERT_EQ(get_negotiation_status(), test.neg_status);
+
+            fail::teardown();
+        }
     }
 }
 } // namespace security

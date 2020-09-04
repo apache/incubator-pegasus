@@ -60,52 +60,44 @@ void server_negotiation::handle_request(negotiation_rpc rpc)
 
 void server_negotiation::on_list_mechanisms(negotiation_rpc rpc)
 {
-    if (rpc.request().status == negotiation_status::type::SASL_LIST_MECHANISMS) {
-        std::string mech_list = boost::join(supported_mechanisms, ",");
-        negotiation_response &response = rpc.response();
-        _status = response.status = negotiation_status::type::SASL_LIST_MECHANISMS_RESP;
-        response.msg = std::move(mech_list);
-    } else {
-        ddebug_f("{}: got message({}) while expect({})",
-                 _name,
-                 enum_to_string(rpc.request().status),
-                 enum_to_string(negotiation_status::type::SASL_LIST_MECHANISMS));
+    if (!check_status(rpc.request().status, negotiation_status::type::SASL_LIST_MECHANISMS)) {
         fail_negotiation();
+        return;
     }
-    return;
+
+    std::string mech_list = boost::join(supported_mechanisms, ",");
+    negotiation_response &response = rpc.response();
+    _status = response.status = negotiation_status::type::SASL_LIST_MECHANISMS_RESP;
+    response.msg = std::move(mech_list);
 }
 
 void server_negotiation::on_select_mechanism(negotiation_rpc rpc)
 {
     const negotiation_request &request = rpc.request();
-    if (request.status == negotiation_status::type::SASL_SELECT_MECHANISMS) {
-        _selected_mechanism = request.msg;
-        if (supported_mechanisms.find(_selected_mechanism) == supported_mechanisms.end()) {
-            dwarn_f("the mechanism of {} is not supported", _selected_mechanism);
-            fail_negotiation();
-            return;
-        }
-
-        error_s err_s = _sasl->init();
-        if (!err_s.is_ok()) {
-            dwarn_f("{}: server initialize sasl failed, error = {}, msg = {}",
-                    _name,
-                    err_s.code().to_string(),
-                    err_s.description());
-            fail_negotiation();
-            return;
-        }
-
-        negotiation_response &response = rpc.response();
-        _status = response.status = negotiation_status::type::SASL_SELECT_MECHANISMS_RESP;
-    } else {
-        dwarn_f("{}: got message({}) while expect({})",
-                _name,
-                enum_to_string(request.status),
-                negotiation_status::type::SASL_SELECT_MECHANISMS);
+    if (!check_status(rpc.request().status, negotiation_status::type::SASL_SELECT_MECHANISMS)) {
         fail_negotiation();
         return;
     }
+
+    _selected_mechanism = request.msg;
+    if (supported_mechanisms.find(_selected_mechanism) == supported_mechanisms.end()) {
+        dwarn_f("the mechanism of {} is not supported", _selected_mechanism);
+        fail_negotiation();
+        return;
+    }
+
+    error_s err_s = _sasl->init();
+    if (!err_s.is_ok()) {
+        dwarn_f("{}: server initialize sasl failed, error = {}, msg = {}",
+                _name,
+                err_s.code().to_string(),
+                err_s.description());
+        fail_negotiation();
+        return;
+    }
+
+    negotiation_response &response = rpc.response();
+    _status = response.status = negotiation_status::type::SASL_SELECT_MECHANISMS_RESP;
 }
 } // namespace security
 } // namespace dsn

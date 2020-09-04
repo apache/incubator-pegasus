@@ -32,6 +32,7 @@ public:
 private:
     void handle_response(error_code err, const negotiation_response &&response);
     void on_recv_mechanisms(const negotiation_response &resp);
+    void on_mechanism_selected(const negotiation_response &resp);
 
     void list_mechanisms();
     void select_mechanism(const std::string &mechanism);
