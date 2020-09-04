@@ -1353,7 +1353,10 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                                                  &loaded_cf_descs,
                                                  /*ignore_unknown_options=*/true);
         if (!status.ok()) {
-            if (status.ToString().find("pegasus") == std::string::npos) {
+            // Here we ignore an invalid argument error related to `pegasus_data_version` and
+            // `pegasus_data` options, which were used in old version rocksdbs (before 2.1.0).
+            if (status.code() != rocksdb::Status::kInvalidArgument ||
+                status.ToString().find("pegasus_data") == std::string::npos) {
                 derror_replica("load latest option file failed: {}.", status.ToString());
                 return ::dsn::ERR_LOCAL_APP_FAILURE;
             }
