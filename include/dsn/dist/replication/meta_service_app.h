@@ -23,16 +23,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <dsn/cpp/service_app.h>
@@ -50,8 +40,6 @@ class test_checker;
 } // namespace dsn
 
 namespace dsn {
-
-class http_server;
 
 namespace service {
 
@@ -71,7 +59,6 @@ public:
 private:
     friend class ::dsn::replication::test::test_checker;
     std::unique_ptr<dsn::replication::meta_service> _service;
-    std::unique_ptr<http_server> _http_server;
     version_http_service *_version_http_service;
 };
 } // namespace service

@@ -13,6 +13,7 @@
 #include "perf_counter_http_service.h"
 #include "uri_decoder.h"
 #include "http_call_registry.h"
+#include "http_server_impl.h"
 
 namespace dsn {
 
@@ -63,13 +64,13 @@ http_server::http_server() : serverlet<http_server>("http_server")
     tools::register_message_header_parser<http_message_parser>(NET_HDR_HTTP, {"GET ", "POST"});
 
     // add builtin services
-    add_service(new root_http_service());
+    register_http_service(new root_http_service());
 
 #ifdef DSN_ENABLE_GPERF
-    add_service(new pprof_http_service());
+    register_http_service(new pprof_http_service());
 #endif // DSN_ENABLE_GPERF
 
-    add_service(new perf_counter_http_service());
+    register_http_service(new perf_counter_http_service());
 }
 
 void http_server::serve(message_ex *msg)
@@ -90,14 +91,7 @@ void http_server::serve(message_ex *msg)
         }
     }
 
-    message_ptr resp_msg = resp.to_message(msg);
-    dsn_rpc_reply(resp_msg.get());
-}
-
-void http_server::add_service(http_service *service)
-{
-    dassert(service != nullptr, "");
-    _service_map.emplace(service->path(), std::unique_ptr<http_service>(service));
+    http_response_reply(resp, msg);
 }
 
 /*static*/ error_with<http_request> http_request::parse(message_ex *m)
@@ -178,25 +172,41 @@ void http_server::add_service(http_service *service)
     return ret;
 }
 
-message_ptr http_response::to_message(message_ex *req) const
+/*extern*/ void http_response_reply(const http_response &resp, message_ex *req)
 {
-    message_ptr resp = req->create_response();
+    message_ptr resp_msg = req->create_response();
 
     std::ostringstream os;
-    os << "HTTP/1.1 " << http_status_code_to_string(status_code) << "\r\n";
-    os << "Content-Type: " << content_type << "\r\n";
-    os << "Content-Length: " << body.length() << "\r\n";
-    if (!location.empty()) {
-        os << "Location: " << location << "\r\n";
+    os << "HTTP/1.1 " << http_status_code_to_string(resp.status_code) << "\r\n";
+    os << "Content-Type: " << resp.content_type << "\r\n";
+    os << "Content-Length: " << resp.body.length() << "\r\n";
+    if (!resp.location.empty()) {
+        os << "Location: " << resp.location << "\r\n";
     }
     os << "\r\n";
-    os << body;
+    os << resp.body;
 
-    rpc_write_stream writer(resp.get());
+    rpc_write_stream writer(resp_msg.get());
     writer.write(os.str().data(), os.str().length());
     writer.flush();
 
-    return resp;
+    dsn_rpc_reply(resp_msg.get());
+}
+
+/*extern*/ void start_http_server()
+{
+    // starts http server as a singleton
+    static http_server server;
+}
+
+/*extern*/ void register_http_service(http_service *svc)
+{
+    // simply hosting the memory of these http services.
+    static std::vector<std::unique_ptr<http_service>> services_holder;
+    static std::mutex mu;
+
+    std::lock_guard<std::mutex> guard(mu);
+    services_holder.push_back(std::unique_ptr<http_service>(svc));
 }
 
 } // namespace dsn

@@ -49,8 +49,6 @@ struct http_response
     http_status_code status_code{http_status_code::ok};
     std::string content_type = "text/plain";
     std::string location;
-
-    message_ptr to_message(message_ex *req) const;
 };
 
 typedef std::function<void(const http_request &req, http_response &resp)> http_callback;
@@ -63,6 +61,9 @@ struct http_call
     http_callback callback;
 };
 
+// A suite of HTTP handlers coupled using the same prefix of the service.
+// If a handler is registered with path 'app/duplication', its real path is
+// "/<root_path>/app/duplication".
 class http_service
 {
 public:
@@ -73,23 +74,12 @@ public:
     void register_handler(std::string path, http_callback cb, std::string help);
 };
 
-class http_server : public serverlet<http_server>
-{
-public:
-    explicit http_server();
+// Starts serving HTTP requests.
+// The internal HTTP server will reuse the rDSN server port.
+extern void start_http_server();
 
-    ~http_server() override = default;
-
-    void add_service(http_service *service);
-
-    void serve(message_ex *msg);
-
-private:
-    std::map<std::string, std::unique_ptr<http_service>> _service_map;
-};
-
-/// The rpc code for all the HTTP RPCs.
-/// Since http is used only for system monitoring, it is restricted to lowest priority.
-DEFINE_TASK_CODE_RPC(RPC_HTTP_SERVICE, TASK_PRIORITY_LOW, THREAD_POOL_DEFAULT);
+// NOTE: the memory of `svc` will be transfered to the underlying registry.
+// TODO(wutao): pass `svc` as a std::unique_ptr.
+extern void register_http_service(http_service *svc);
 
 } // namespace dsn

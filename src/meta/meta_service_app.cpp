@@ -81,17 +81,17 @@ void meta_service_app::register_all()
     register_components();
 }
 
-meta_service_app::meta_service_app(const service_app_info *info)
-    : service_app(info), _http_server(new http_server())
+meta_service_app::meta_service_app(const service_app_info *info) : service_app(info)
 {
     // create in constructor because it may be used in checker before started
     _service.reset(new replication::meta_service());
 
     // add http service
     _version_http_service = new version_http_service();
-    _http_server->add_service(new replication::meta_http_service(_service.get()));
-    _http_server->add_service(new recent_start_time_http_service());
-    _http_server->add_service(_version_http_service);
+    register_http_service(new replication::meta_http_service(_service.get()));
+    register_http_service(new recent_start_time_http_service());
+    register_http_service(_version_http_service);
+    start_http_server();
 }
 
 meta_service_app::~meta_service_app() {}

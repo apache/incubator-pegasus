@@ -8,6 +8,7 @@
 #include "http/http_message_parser.h"
 #include "http/root_http_service.h"
 #include "http/server_info_http_services.h"
+#include "http/http_server_impl.h"
 
 namespace dsn {
 

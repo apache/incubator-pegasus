@@ -40,16 +40,15 @@ void replication_service_app::register_all()
     dsn::service_app::register_factory<replication_service_app>("replica");
 }
 
-replication_service_app::replication_service_app(const service_app_info *info)
-    : service_app(info), _http_server(new http_server())
+replication_service_app::replication_service_app(const service_app_info *info) : service_app(info)
 {
     _stub = new replica_stub();
 
     // add http service
     _version_http_service = new version_http_service();
-    _http_server->add_service(_version_http_service);
-    _http_server->add_service(new recent_start_time_http_service());
-    _http_server->add_service(new replica_http_service(_stub.get()));
+    register_http_service(_version_http_service);
+    register_http_service(new recent_start_time_http_service());
+    register_http_service(new replica_http_service(_stub.get()));
 }
 
 replication_service_app::~replication_service_app(void) {}
