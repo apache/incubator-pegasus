@@ -1330,7 +1330,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     // Here we create a `tmp_data_cf_opts` because we don't want to modify `_data_cf_opts`, which
     // will be used elsewhere.
     rocksdb::ColumnFamilyOptions tmp_data_cf_opts = _data_cf_opts;
-    bool has_uncompatible_db_options = false;
+    bool has_incompatible_db_options = false;
     if (db_exist) {
         // When DB exists, meta CF and data CF must be present.
         bool missing_meta_cf = true;
@@ -1357,13 +1357,13 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                 derror_replica("load latest option file failed: {}.", status.ToString());
                 return ::dsn::ERR_LOCAL_APP_FAILURE;
             }
-            has_uncompatible_db_options = true;
-            dwarn_replica("The latest option file has uncompatible db options: {}, use default "
+            has_incompatible_db_options = true;
+            dwarn_replica("The latest option file has incompatible db options: {}, use default "
                           "options to open db.",
                           status.ToString());
         }
 
-        if (!has_uncompatible_db_options) {
+        if (!has_incompatible_db_options) {
             for (int i = 0; i < loaded_cf_descs.size(); ++i) {
                 if (loaded_cf_descs[i].name == DATA_COLUMN_FAMILY_NAME) {
                     loaded_data_cf_opts = loaded_cf_descs[i].options;
@@ -1385,7 +1385,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         {{DATA_COLUMN_FAMILY_NAME, tmp_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
     auto s = rocksdb::CheckOptionsCompatibility(
         path, rocksdb::Env::Default(), _db_opts, column_families, /*ignore_unknown_options=*/true);
-    if (!s.ok() && !s.IsNotFound() && !has_uncompatible_db_options) {
+    if (!s.ok() && !s.IsNotFound() && !has_incompatible_db_options) {
         derror_replica("rocksdb::CheckOptionsCompatibility failed, error = {}", s.ToString());
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
