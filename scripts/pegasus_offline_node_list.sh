@@ -14,6 +14,12 @@ if [ $# -le 2 ]; then
   exit 1
 fi
 
+echo "UID=$UID"
+echo "PID=$PID"
+echo "Start time: `date`"
+offline_node_start_time=$((`date +%s`))
+echo
+
 cluster=$1
 meta_list=$2
 replica_task_id_list=$3
@@ -68,8 +74,8 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
-all_finish_time=$((`date +%s`))
+offline_finish_time=$((`date +%s`))
 echo "Offline replica server task list done."
-echo "Elapsed time is $((all_finish_time - all_start_time)) seconds."
+echo "Elapsed time is $((offline_finish_time - offline_node_start_time)) seconds."
 
 rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null
