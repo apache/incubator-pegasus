@@ -76,13 +76,10 @@ const std::map<int, const char *> _hotkey_type_VALUES_TO_NAMES(
     ::apache::thrift::TEnumIterator(2, _khotkey_typeValues, _khotkey_typeNames),
     ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
-int _khotkey_collector_operationValues[] = {hotkey_collector_operation::START,
-                                            hotkey_collector_operation::STOP};
-const char *_khotkey_collector_operationNames[] = {"START", "STOP"};
-const std::map<int, const char *> _hotkey_collector_operation_VALUES_TO_NAMES(
-    ::apache::thrift::TEnumIterator(2,
-                                    _khotkey_collector_operationValues,
-                                    _khotkey_collector_operationNames),
+int _khotkey_detect_actionValues[] = {hotkey_detect_action::START, hotkey_detect_action::STOP};
+const char *_khotkey_detect_actionNames[] = {"START", "STOP"};
+const std::map<int, const char *> _hotkey_detect_action_VALUES_TO_NAMES(
+    ::apache::thrift::TEnumIterator(2, _khotkey_detect_actionValues, _khotkey_detect_actionNames),
     ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
 update_request::~update_request() throw() {}
@@ -4611,7 +4608,7 @@ hotkey_detect_request::~hotkey_detect_request() throw() {}
 
 void hotkey_detect_request::__set_type(const hotkey_type::type val) { this->type = val; }
 
-void hotkey_detect_request::__set_operation(const hotkey_collector_operation::type val)
+void hotkey_detect_request::__set_operation(const hotkey_detect_action::type val)
 {
     this->operation = val;
 }
@@ -4649,7 +4646,7 @@ uint32_t hotkey_detect_request::read(::apache::thrift::protocol::TProtocol *ipro
             if (ftype == ::apache::thrift::protocol::T_I32) {
                 int32_t ecast135;
                 xfer += iprot->readI32(ecast135);
-                this->operation = (hotkey_collector_operation::type)ecast135;
+                this->operation = (hotkey_detect_action::type)ecast135;
                 this->__isset.operation = true;
             } else {
                 xfer += iprot->skip(ftype);

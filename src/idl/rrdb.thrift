@@ -52,7 +52,7 @@ enum hotkey_type
     WRITE
 }
 
-enum hotkey_collector_operation
+enum hotkey_detect_action
 {
     START,
     STOP
@@ -293,7 +293,7 @@ struct duplicate_response
 
 struct hotkey_detect_request {
     1: hotkey_type type
-    2: hotkey_collector_operation operation
+    2: hotkey_detect_action operation
 }
 
 struct hotkey_detect_response {

@@ -82,7 +82,7 @@ struct hotkey_type
 
 extern const std::map<int, const char *> _hotkey_type_VALUES_TO_NAMES;
 
-struct hotkey_collector_operation
+struct hotkey_detect_action
 {
     enum type
     {
@@ -91,7 +91,7 @@ struct hotkey_collector_operation
     };
 };
 
-extern const std::map<int, const char *> _hotkey_collector_operation_VALUES_TO_NAMES;
+extern const std::map<int, const char *> _hotkey_detect_action_VALUES_TO_NAMES;
 
 class update_request;
 
@@ -1979,20 +1979,19 @@ public:
     hotkey_detect_request(hotkey_detect_request &&);
     hotkey_detect_request &operator=(const hotkey_detect_request &);
     hotkey_detect_request &operator=(hotkey_detect_request &&);
-    hotkey_detect_request()
-        : type((hotkey_type::type)0), operation((hotkey_collector_operation::type)0)
+    hotkey_detect_request() : type((hotkey_type::type)0), operation((hotkey_detect_action::type)0)
     {
     }
 
     virtual ~hotkey_detect_request() throw();
     hotkey_type::type type;
-    hotkey_collector_operation::type operation;
+    hotkey_detect_action::type operation;
 
     _hotkey_detect_request__isset __isset;
 
     void __set_type(const hotkey_type::type val);
 
-    void __set_operation(const hotkey_collector_operation::type val);
+    void __set_operation(const hotkey_detect_action::type val);
 
     bool operator==(const hotkey_detect_request &rhs) const
     {
