@@ -310,6 +310,9 @@ private:
         return false;
     }
 
+    ::dsn::error_code
+    check_column_families(const std::string &path, bool *missing_meta_cf, bool *miss_data_cf);
+
     void release_db();
     void release_db(rocksdb::DB *db, const std::vector<rocksdb::ColumnFamilyHandle *> &handles);
 
