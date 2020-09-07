@@ -78,10 +78,6 @@ info_collector::info_collector()
                                               "storage_size_fetch_interval_seconds",
                                               3600, // default value 1h
                                               "storage size fetch interval seconds");
-    _hotspot_detect_algorithm = dsn_config_get_value_string("pegasus.collector",
-                                                            "hotspot_detect_algorithm",
-                                                            "hotspot_algo_qps_variance",
-                                                            "hotspot_detect_algorithm");
     // _storage_size_retry_wait_seconds is in range of [1, 60]
     _storage_size_retry_wait_seconds =
         std::min(60u, std::max(1u, _storage_size_fetch_interval_seconds / 10));
@@ -150,15 +146,15 @@ void info_collector::on_app_stat()
         // get row data statistics for all of the apps
         all_stats.merge(app_stats);
 
-        // hotspot_calculator is to detect hotspots
-        hotspot_calculator *hotspot_calculator =
+        // hotspot_partition_calculator is to detect hotspots
+        hotspot_partition_calculator *hotspot_partition_calculator =
             get_hotspot_calculator(app_rows.first, app_rows.second.size());
-        if (!hotspot_calculator) {
+        if (!hotspot_partition_calculator) {
             continue;
         }
-        hotspot_calculator->aggregate(app_rows.second);
+        hotspot_partition_calculator->aggregate(app_rows.second);
         // new policy can be designed by strategy pattern in hotspot_partition_data.h
-        hotspot_calculator->start_alg();
+        hotspot_partition_calculator->start_alg();
     }
     get_app_counters(all_stats.app_name)->set(all_stats);
 
@@ -302,8 +298,8 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
     _result_writer->set_result(st_stat.timestamp, "ss", st_stat.dump_to_json());
 }
 
-hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &app_name,
-                                                           const int partition_num)
+hotspot_partition_calculator *info_collector::get_hotspot_calculator(const std::string &app_name,
+                                                                     const int partition_num)
 {
     // use appname+partition_num as a key can prevent the impact of dynamic partition changes
     std::string app_name_pcount = fmt::format("{}.{}", app_name, partition_num);
@@ -311,16 +307,8 @@ hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &ap
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
-    std::unique_ptr<hotspot_policy> policy;
-    if (_hotspot_detect_algorithm == "hotspot_algo_qps_variance") {
-        policy.reset(new hotspot_algo_qps_variance());
-    } else {
-        dwarn("hotspot detection is disabled");
-        _hotspot_calculator_store[app_name_pcount] = nullptr;
-        return nullptr;
-    }
-    hotspot_calculator *calculator =
-        new hotspot_calculator(app_name, partition_num, std::move(policy));
+    hotspot_partition_calculator *calculator = new hotspot_partition_calculator(
+        app_name, partition_num, std::make_unique<hotspot_partition_policy>());
     _hotspot_calculator_store[app_name_pcount] = calculator;
     return calculator;
 }

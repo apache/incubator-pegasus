@@ -2,14 +2,15 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "server/table_hotspot_policy.h"
+#include "server/hotspot_partition_policy.h"
+#include "server/hotspot_partition_calculator.h"
 
 #include <gtest/gtest.h>
 
 namespace pegasus {
 namespace server {
 
-TEST(table_hotspot_policy, hotspot_algo_qps_variance)
+TEST(hotspot_partition_calculator, hotspot_partition_policy)
 {
     std::vector<row_data> test_rows(8);
     test_rows[0].get_qps = 1000.0;
@@ -20,8 +21,8 @@ TEST(table_hotspot_policy, hotspot_algo_qps_variance)
     test_rows[5].get_qps = 1000.0;
     test_rows[6].get_qps = 1000.0;
     test_rows[7].get_qps = 5000.0;
-    std::unique_ptr<hotspot_policy> policy(new hotspot_algo_qps_variance());
-    hotspot_calculator test_hotspot_calculator("TEST", 8, std::move(policy));
+    hotspot_partition_calculator test_hotspot_calculator(
+        "TEST", 8, std::make_unique<hotspot_partition_policy>());
     test_hotspot_calculator.aggregate(test_rows);
     test_hotspot_calculator.start_alg();
     std::vector<double> result(8);

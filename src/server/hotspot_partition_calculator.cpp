@@ -2,14 +2,14 @@
 // This source code is licensed under the Apache License Version 2.0, which
 // can be found in the LICENSE file in the root directory of this source tree.
 
-#include "table_hotspot_policy.h"
+#include "hotspot_partition_calculator.h"
 
 #include <dsn/dist/fmt_logging.h>
 
 namespace pegasus {
 namespace server {
 
-void hotspot_calculator::aggregate(const std::vector<row_data> &partitions)
+void hotspot_partition_calculator::aggregate(const std::vector<row_data> &partitions)
 {
     while (_app_data.size() > kMaxQueueSize - 1) {
         _app_data.pop();
@@ -21,7 +21,7 @@ void hotspot_calculator::aggregate(const std::vector<row_data> &partitions)
     _app_data.emplace(temp);
 }
 
-void hotspot_calculator::init_perf_counter(const int perf_counter_count)
+void hotspot_partition_calculator::init_perf_counter(const int perf_counter_count)
 {
     std::string counter_name;
     std::string counter_desc;
@@ -34,7 +34,7 @@ void hotspot_calculator::init_perf_counter(const int perf_counter_count)
     }
 }
 
-void hotspot_calculator::start_alg() { _policy->analysis(_app_data, _points); }
+void hotspot_partition_calculator::start_alg() { _policy->analysis(_app_data, _points); }
 
 } // namespace server
 } // namespace pegasus

@@ -14,19 +14,8 @@
 
 namespace pegasus {
 namespace server {
-class hotspot_policy
-{
-public:
-    // hotspot_app_data store the historical data which related to hotspot
-    // it uses rolling queue to save one app's data
-    // vector is used to save the partitions' data of this app
-    // hotspot_partition_data is used to save data of one partition
-    virtual void analysis(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
-                          std::vector<::dsn::perf_counter_wrapper> &perf_counters) = 0;
-};
-
 // PauTa Criterion
-class hotspot_algo_qps_variance : public hotspot_policy
+class hotspot_partition_policy
 {
 public:
     void analysis(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
@@ -72,29 +61,5 @@ public:
     }
 };
 
-// hotspot_calculator is used to find the hotspot in Pegasus
-class hotspot_calculator
-{
-public:
-    hotspot_calculator(const std::string &app_name,
-                       const int partition_num,
-                       std::unique_ptr<hotspot_policy> policy)
-        : _app_name(app_name), _points(partition_num), _policy(std::move(policy))
-    {
-        init_perf_counter(partition_num);
-    }
-    void aggregate(const std::vector<row_data> &partitions);
-    void start_alg();
-    void init_perf_counter(const int perf_counter_count);
-
-private:
-    const std::string _app_name;
-    std::vector<::dsn::perf_counter_wrapper> _points;
-    std::queue<std::vector<hotspot_partition_data>> _app_data;
-    std::unique_ptr<hotspot_policy> _policy;
-    static const int kMaxQueueSize = 100;
-
-    FRIEND_TEST(table_hotspot_policy, hotspot_algo_qps_variance);
-};
 } // namespace server
 } // namespace pegasus
