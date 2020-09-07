@@ -11,7 +11,6 @@ install/
 test_reports/
 Dockerfile
 include/thrift/
-include/dsn/git_commit.h
 DSN_ROOT
 
 rdsn.github.config

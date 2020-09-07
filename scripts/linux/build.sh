@@ -131,23 +131,6 @@ then
     cd ..
 fi
 
-cd $ROOT
-DSN_GIT_COMMIT=`git log | head -n 1 | awk '{print $2}'`
-if [ $? -ne 0 ] || [ -z "$DSN_GIT_COMMIT" ] 
-then
-    echo "ERROR: get DSN_GIT_COMMIT failed"
-    echo "HINT: check if rdsn is a git repo"
-    echo "   or check gitdir in .git (edit it or use \"git --git-dir='../.git/modules/rdsn' log\" to get commit)"
-    exit 1
-fi
-GIT_COMMIT_FILE=include/dsn/git_commit.h
-if [ ! -f $GIT_COMMIT_FILE ] || ! grep $DSN_GIT_COMMIT $GIT_COMMIT_FILE
-then
-    echo "Generating $GIT_COMMIT_FILE..."
-    echo "#pragma once" >$GIT_COMMIT_FILE
-    echo "#define DSN_GIT_COMMIT \"$DSN_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
-fi
-
 cd $BUILD_DIR
 echo "[$(date)] Building..."
 make install $MAKE_OPTIONS

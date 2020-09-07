@@ -61,18 +61,6 @@ void dsn_core_init()
 }
 
 #if defined(__linux__)
-#include <dsn/git_commit.h>
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
-static char const rcsid[] =
-    "$Version: rDSN (" DSN_GIT_COMMIT ")"
-#if defined(DSN_BUILD_TYPE)
-    " " STR(DSN_BUILD_TYPE)
-#endif
-        ", built by gcc " STR(__GNUC__) "." STR(__GNUC_MINOR__) "." STR(__GNUC_PATCHLEVEL__)
-#if defined(DSN_BUILD_HOSTNAME)
-            ", built on " STR(DSN_BUILD_HOSTNAME)
-#endif
-                ", built at " __DATE__ " " __TIME__ " $";
-const char *dsn_rcsid() { return rcsid; }
 #endif
