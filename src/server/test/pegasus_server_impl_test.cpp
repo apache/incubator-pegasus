@@ -99,5 +99,21 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
 }
 
+TEST_F(pegasus_server_impl_test, test_stop_db_twice)
+{
+    start();
+    ASSERT_TRUE(_server->_is_open);
+    ASSERT_TRUE(_server->_db != nullptr);
+
+    _server->stop(false);
+    ASSERT_FALSE(_server->_is_open);
+    ASSERT_TRUE(_server->_db == nullptr);
+
+    // stop again
+    _server->stop(false);
+    ASSERT_FALSE(_server->_is_open);
+    ASSERT_TRUE(_server->_db == nullptr);
+}
+
 } // namespace server
 } // namespace pegasus
