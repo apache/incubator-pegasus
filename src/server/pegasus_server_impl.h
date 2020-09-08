@@ -168,6 +168,7 @@ private:
     FRIEND_TEST(pegasus_server_impl_test, default_data_version);
     FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_latest_options);
     FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_app_envs);
+    FRIEND_TEST(pegasus_server_impl_test, test_stop_db_twice);
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
