@@ -37,8 +37,8 @@ TEST(hotspot_partition_calculator, hotspot_partition_policy)
     test_hotspot_calculator.hotspot_partition_data_aggregate(test_rows);
     test_hotspot_calculator.hotspot_partition_data_analyse();
     std::vector<double> result(8);
-    for (int i = 0; i < test_hotspot_calculator._hotspot_partition_points.size(); i++) {
-        result[i] = test_hotspot_calculator._hotspot_partition_points[i]->get_value();
+    for (int i = 0; i < test_hotspot_calculator._hot_points.size(); i++) {
+        result[i] = test_hotspot_calculator._hot_points[i]->get_value();
     }
     std::vector<double> expect_vector{0, 0, 0, 0, 0, 0, 0, 3};
     ASSERT_EQ(expect_vector, result);

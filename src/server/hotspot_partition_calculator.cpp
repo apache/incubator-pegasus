@@ -32,14 +32,14 @@ DSN_DEFINE_int64("pegasus.hotspot",
 void hotspot_partition_calculator::hotspot_partition_data_aggregate(
     const std::vector<row_data> &partitions)
 {
-    while (_hotspot_partition_historical_data.size() > FLAGS_max_hotspot_store_size - 1) {
-        _hotspot_partition_historical_data.pop();
+    while (_historical_data.size() > FLAGS_max_hotspot_store_size - 1) {
+        _historical_data.pop();
     }
     std::vector<hotspot_partition_data> temp(partitions.size());
     for (int i = 0; i < partitions.size(); i++) {
         temp[i] = std::move(hotspot_partition_data(partitions[i]));
     }
-    _hotspot_partition_historical_data.emplace(temp);
+    _historical_data.emplace(temp);
 }
 
 void hotspot_partition_calculator::init_perf_counter(const int perf_counter_count)
@@ -50,7 +50,7 @@ void hotspot_partition_calculator::init_perf_counter(const int perf_counter_coun
         string paritition_desc = _app_name + '.' + std::to_string(i);
         counter_name = fmt::format("app.stat.hotspots@{}", paritition_desc);
         counter_desc = fmt::format("statistic the hotspots of app {}", paritition_desc);
-        _hotspot_partition_points[i].init_app_counter(
+        _hot_points[i].init_app_counter(
             "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
     }
 }
@@ -97,7 +97,7 @@ void hotspot_partition_calculator::analysis(
 
 void hotspot_partition_calculator::hotspot_partition_data_analyse()
 {
-    analysis(_hotspot_partition_historical_data, _hotspot_partition_points);
+    analysis(_historical_data, _hot_points);
 }
 
 } // namespace server
