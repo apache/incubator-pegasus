@@ -25,7 +25,6 @@ private:
     info_collector _collector;
     available_detector _detector;
     bool _updater_started;
-    std::unique_ptr<::dsn::http_server> _http_server;
 };
 }
 } // namespace
