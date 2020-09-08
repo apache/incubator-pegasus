@@ -52,6 +52,22 @@ public:
 
         SetUp();
     }
+
+    int db_get(dsn::string_view raw_key, db_get_context *get_ctx)
+    {
+        return _write_impl->db_get(raw_key, get_ctx);
+    }
+
+    void single_set(dsn::blob raw_key, dsn::blob user_value)
+    {
+        dsn::apps::update_request put;
+        put.key = raw_key;
+        put.value = user_value;
+        db_write_context write_ctx;
+        dsn::apps::update_response put_resp;
+        _write_impl->batch_put(write_ctx, put, put_resp);
+        ASSERT_EQ(_write_impl->batch_commit(0), 0);
+    }
 };
 
 TEST_F(pegasus_write_service_impl_test, put_verify_timetag)
@@ -138,6 +154,67 @@ TEST_F(pegasus_write_service_impl_test, verify_timetag_compatible_with_version_0
     _write_impl->clear_up_batch_states(decree, 0);
 
     dsn::fail::teardown();
+}
+
+TEST_F(pegasus_write_service_impl_test, incr_on_absent_record)
+{
+    dsn::apps::incr_request req;
+    req.increment = 100;
+    pegasus::pegasus_generate_key(
+        req.key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
+
+    db_get_context get_ctx;
+    db_get(req.key, &get_ctx);
+    ASSERT_FALSE(get_ctx.found);
+
+    dsn::apps::incr_response resp;
+    _write_impl->incr(0, req, resp);
+    ASSERT_EQ(resp.new_value, 100);
+
+    db_get(req.key, &get_ctx);
+    ASSERT_TRUE(get_ctx.found);
+}
+
+TEST_F(pegasus_write_service_impl_test, negative_incr_and_zero_incr)
+{
+    dsn::apps::incr_request req;
+    req.increment = -100;
+    pegasus::pegasus_generate_key(
+        req.key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
+    dsn::apps::incr_response resp;
+    int err = _write_impl->incr(0, req, resp);
+    ASSERT_EQ(err, 0);
+    ASSERT_EQ(resp.new_value, -100);
+
+    req.increment = -1;
+    err = _write_impl->incr(0, req, resp);
+    ASSERT_EQ(err, 0);
+    ASSERT_EQ(resp.new_value, -101);
+
+    req.increment = 0;
+    err = _write_impl->incr(0, req, resp);
+    ASSERT_EQ(err, 0);
+    ASSERT_EQ(resp.new_value, -101);
+}
+
+TEST_F(pegasus_write_service_impl_test, invalid_incr)
+{
+    dsn::apps::incr_request req;
+    req.increment = 10;
+    pegasus::pegasus_generate_key(
+        req.key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
+    dsn::apps::incr_response resp;
+
+    single_set(req.key, dsn::blob::create_from_bytes("abc"));
+    _write_impl->incr(1, req, resp);
+    ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);
+    ASSERT_EQ(resp.new_value, 0);
+
+    single_set(req.key, dsn::blob::create_from_bytes("100"));
+    req.increment = std::numeric_limits<int64_t>::max();
+    _write_impl->incr(1, req, resp);
+    ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);
+    ASSERT_EQ(resp.new_value, 100);
 }
 
 } // namespace server
