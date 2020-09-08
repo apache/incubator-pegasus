@@ -28,8 +28,10 @@ DSN_DECLARE_string(service_name);
 
 error_s sasl_server_wrapper::init()
 {
-    FAIL_POINT_INJECT_F("sasl_server_wrapper_init",
-                        [](dsn::string_view) { return error_s::make(ERR_OK); });
+    FAIL_POINT_INJECT_F("sasl_server_wrapper_init", [](dsn::string_view str) {
+        error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
+        return error_s::make(err);
+    });
 
     int sasl_err = sasl_server_new(
         FLAGS_service_name, FLAGS_service_fqdn, nullptr, nullptr, nullptr, nullptr, 0, &_conn);
@@ -40,8 +42,18 @@ error_s sasl_server_wrapper::start(const std::string &mechanism,
                                    const std::string &input,
                                    std::string &output)
 {
-    // TBD(zlw)
-    return error_s::make(ERR_OK);
+    FAIL_POINT_INJECT_F("sasl_server_wrapper_start", [](dsn::string_view str) {
+        error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
+        return error_s::make(err);
+    });
+
+    const char *msg = nullptr;
+    unsigned msg_len = 0;
+    int sasl_err =
+        sasl_server_start(_conn, mechanism.c_str(), input.c_str(), input.length(), &msg, &msg_len);
+
+    output.assign(msg, msg_len);
+    return wrap_error(sasl_err);
 }
 
 error_s sasl_server_wrapper::step(const std::string &input, std::string &output)

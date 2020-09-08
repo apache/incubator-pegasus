@@ -50,6 +50,8 @@ void server_negotiation::handle_request(negotiation_rpc rpc)
         on_select_mechanism(rpc);
         break;
     case negotiation_status::type::SASL_SELECT_MECHANISMS_RESP:
+        on_initiate(rpc);
+        break;
     case negotiation_status::type::SASL_CHALLENGE:
         // TBD(zlw)
         break;
@@ -98,6 +100,42 @@ void server_negotiation::on_select_mechanism(negotiation_rpc rpc)
 
     negotiation_response &response = rpc.response();
     _status = response.status = negotiation_status::type::SASL_SELECT_MECHANISMS_RESP;
+}
+
+void server_negotiation::on_initiate(negotiation_rpc rpc)
+{
+    const negotiation_request &request = rpc.request();
+    if (!check_status(request.status, negotiation_status::type::SASL_INITIATE)) {
+        fail_negotiation();
+        return;
+    }
+
+    std::string start_output;
+    error_s err_s = _sasl->start(_selected_mechanism, request.msg, start_output);
+    return do_challenge(rpc, err_s, start_output);
+}
+
+void server_negotiation::do_challenge(negotiation_rpc rpc,
+                                      error_s err_s,
+                                      const std::string &resp_msg)
+{
+    if (!err_s.is_ok() && err_s.code() != ERR_SASL_INCOMPLETE) {
+        dwarn_f("{}: negotiation failed, with err = {}, msg = {}",
+                _name,
+                err_s.code().to_string(),
+                err_s.description());
+        fail_negotiation();
+        return;
+    }
+
+    if (err_s.is_ok()) {
+        negotiation_response &response = rpc.response();
+        _status = response.status = negotiation_status::type::SASL_SUCC;
+    } else {
+        negotiation_response &challenge = rpc.response();
+        _status = challenge.status = negotiation_status::type::SASL_CHALLENGE;
+        challenge.msg = resp_msg;
+    }
 }
 } // namespace security
 } // namespace dsn

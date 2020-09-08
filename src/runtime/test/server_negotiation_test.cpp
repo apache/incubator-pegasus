@@ -48,6 +48,8 @@ public:
 
     void on_select_mechanism(negotiation_rpc rpc) { _srv_negotiation->on_select_mechanism(rpc); }
 
+    void on_initiate(negotiation_rpc rpc) { _srv_negotiation->on_initiate(rpc); }
+
     negotiation_status::type get_negotiation_status() { return _srv_negotiation->_status; }
 
     // _sim_session is used for holding the sim_rpc_session which is created in ctor,
@@ -90,38 +92,91 @@ TEST_F(server_negotiation_test, on_select_mechanism)
 {
     struct
     {
+        std::string sasl_init_result;
         negotiation_status::type req_status;
         std::string req_msg;
         negotiation_status::type resp_status;
         negotiation_status::type nego_status;
     } tests[] = {{
+                     "ERR_OK",
                      negotiation_status::type::SASL_SELECT_MECHANISMS,
                      "GSSAPI",
                      negotiation_status::type::SASL_SELECT_MECHANISMS_RESP,
                      negotiation_status::type::SASL_SELECT_MECHANISMS_RESP,
                  },
-                 {negotiation_status::type::SASL_SELECT_MECHANISMS,
+                 {"ERR_OK",
+                  negotiation_status::type::SASL_SELECT_MECHANISMS,
                   "TEST",
                   negotiation_status::type::INVALID,
                   negotiation_status::type::SASL_AUTH_FAIL},
-                 {negotiation_status::type::SASL_INITIATE,
+                 {"ERR_TIMEOUT",
+                  negotiation_status::type::SASL_SELECT_MECHANISMS,
+                  "GSSAPI",
+                  negotiation_status::type::INVALID,
+                  negotiation_status::type::SASL_AUTH_FAIL},
+                 {"ERR_OK",
+                  negotiation_status::type::SASL_INITIATE,
                   "GSSAPI",
                   negotiation_status::type::INVALID,
                   negotiation_status::type::SASL_AUTH_FAIL}};
 
-    fail::setup();
-    fail::cfg("sasl_server_wrapper_init", "return()");
     RPC_MOCKING(negotiation_rpc)
     {
         for (const auto &test : tests) {
+            fail::setup();
+            fail::cfg("sasl_server_wrapper_init", "return(" + test.sasl_init_result + ")");
+
             auto rpc = create_negotiation_rpc(test.req_status, test.req_msg);
             on_select_mechanism(rpc);
-
             ASSERT_EQ(rpc.response().status, test.resp_status);
             ASSERT_EQ(get_negotiation_status(), test.nego_status);
+
+            fail::teardown();
         }
     }
-    fail::teardown();
+}
+
+TEST_F(server_negotiation_test, on_initiate)
+{
+    struct
+    {
+        std::string sasl_start_result;
+        negotiation_status::type req_status;
+        negotiation_status::type resp_status;
+        negotiation_status::type nego_status;
+    } tests[] = {
+        {"ERR_TIMEOUT",
+         negotiation_status::type::SASL_INITIATE,
+         negotiation_status::type::INVALID,
+         negotiation_status::type::SASL_AUTH_FAIL},
+        {"ERR_OK",
+         negotiation_status::type::SASL_SELECT_MECHANISMS,
+         negotiation_status::type::INVALID,
+         negotiation_status::type::SASL_AUTH_FAIL},
+        {"ERR_SASL_INCOMPLETE",
+         negotiation_status::type::SASL_INITIATE,
+         negotiation_status::type::SASL_CHALLENGE,
+         negotiation_status::type::SASL_CHALLENGE},
+        {"ERR_OK",
+         negotiation_status::type::SASL_INITIATE,
+         negotiation_status::type::SASL_SUCC,
+         negotiation_status::type::SASL_SUCC},
+    };
+
+    RPC_MOCKING(negotiation_rpc)
+    {
+        for (const auto &test : tests) {
+            fail::setup();
+            fail::cfg("sasl_server_wrapper_start", "return(" + test.sasl_start_result + ")");
+
+            auto rpc = create_negotiation_rpc(test.req_status, "");
+            on_initiate(rpc);
+            ASSERT_EQ(rpc.response().status, test.resp_status);
+            ASSERT_EQ(get_negotiation_status(), test.nego_status);
+
+            fail::teardown();
+        }
+    }
 }
 } // namespace security
 } // namespace dsn
