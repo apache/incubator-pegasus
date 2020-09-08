@@ -9,7 +9,6 @@ set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
                 "../capacity_unit_calculator.cpp"
                 "../pegasus_mutation_duplicator.cpp"
                 "../hotspot_partition_calculator.cpp"
-                "../hotspot_partition_policy.cpp"
                 "../meta_store.cpp"
 )
 

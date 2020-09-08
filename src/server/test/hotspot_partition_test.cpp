@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "server/hotspot_partition_policy.h"
 #include "server/hotspot_partition_calculator.h"
 
 #include <gtest/gtest.h>
@@ -34,8 +33,7 @@ TEST(hotspot_partition_calculator, hotspot_partition_policy)
     test_rows[5].get_qps = 1000.0;
     test_rows[6].get_qps = 1000.0;
     test_rows[7].get_qps = 5000.0;
-    hotspot_partition_calculator test_hotspot_calculator(
-        "TEST", 8, std::make_unique<hotspot_partition_policy>());
+    hotspot_partition_calculator test_hotspot_calculator("TEST", 8);
     test_hotspot_calculator.aggregate(test_rows);
     test_hotspot_calculator.start_alg();
     std::vector<double> result(8);

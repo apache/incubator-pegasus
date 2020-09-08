@@ -149,11 +149,8 @@ void info_collector::on_app_stat()
         // hotspot_partition_calculator is to detect hotspots
         hotspot_partition_calculator *hotspot_partition_calculator =
             get_hotspot_calculator(app_rows.first, app_rows.second.size());
-        if (!hotspot_partition_calculator) {
-            continue;
-        }
+        dassert(hotspot_partition_calculator != nullptr, "hotspot_partition_calculator is NULL");
         hotspot_partition_calculator->aggregate(app_rows.second);
-        // new policy can be designed by strategy pattern in hotspot_partition_data.h
         hotspot_partition_calculator->start_alg();
     }
     get_app_counters(all_stats.app_name)->set(all_stats);
@@ -307,8 +304,8 @@ hotspot_partition_calculator *info_collector::get_hotspot_calculator(const std::
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
-    hotspot_partition_calculator *calculator = new hotspot_partition_calculator(
-        app_name, partition_num, std::make_unique<hotspot_partition_policy>());
+    hotspot_partition_calculator *calculator =
+        new hotspot_partition_calculator(app_name, partition_num);
     _hotspot_calculator_store[app_name_pcount] = calculator;
     return calculator;
 }

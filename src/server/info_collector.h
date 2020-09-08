@@ -20,7 +20,6 @@
 #include "../shell/commands.h"
 #include "table_stats.h"
 #include "hotspot_partition_calculator.h"
-#include "hotspot_partition_policy.h"
 
 namespace pegasus {
 namespace server {
