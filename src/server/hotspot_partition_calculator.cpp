@@ -54,7 +54,7 @@ void hotspot_partition_calculator::init_perf_counter(const int perf_counter_coun
     }
 }
 
-void hotspot_partition_calculator::analysis(
+void hotspot_partition_calculator::_data_analyse(
     const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
     std::vector<::dsn::perf_counter_wrapper> &perf_counters)
 {
@@ -94,7 +94,7 @@ void hotspot_partition_calculator::analysis(
     }
 }
 
-void hotspot_partition_calculator::data_analyse() { analysis(_historical_data, _hot_points); }
+void hotspot_partition_calculator::data_analyse() { _data_analyse(_historical_data, _hot_points); }
 
 } // namespace server
 } // namespace pegasus
