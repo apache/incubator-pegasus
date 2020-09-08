@@ -194,7 +194,8 @@ public:
                 new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
             } else {
                 ::dsn::blob old_value;
-                pegasus_extract_user_data(_pegasus_data_version, std::move(get_ctx.raw_value), old_value);
+                pegasus_extract_user_data(
+                    _pegasus_data_version, std::move(get_ctx.raw_value), old_value);
                 if (old_value.length() == 0) {
                     // empty old value, set to 0 before increment
                     new_value = update.increment;
