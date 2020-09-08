@@ -37,6 +37,11 @@ public:
     void set_last_manual_compact_finish_time(uint64_t last_manual_compact_finish_time) const;
     void set_usage_scenario(const std::string &usage_scenario) const;
 
+    // Keys of meta data wrote into meta column family.
+    static const std::string DATA_VERSION;
+    static const std::string LAST_FLUSHED_DECREE;
+    static const std::string LAST_MANUAL_COMPACT_FINISH_TIME;
+
 private:
     ::dsn::error_code
     get_value_from_meta_cf(bool read_flushed_data, const std::string &key, uint64_t *value) const;
@@ -57,13 +62,6 @@ private:
                                                            bool read_flushed_data,
                                                            const std::string &key,
                                                            std::string *value);
-
-    friend class pegasus_write_service;
-
-    // Keys of meta data wrote into meta column family.
-    static const std::string DATA_VERSION;
-    static const std::string LAST_FLUSHED_DECREE;
-    static const std::string LAST_MANUAL_COMPACT_FINISH_TIME;
 
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_meta_cf;
