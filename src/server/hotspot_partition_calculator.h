@@ -18,11 +18,7 @@
 #pragma once
 
 #include "hotspot_partition_data.h"
-
-#include <algorithm>
 #include <gtest/gtest_prod.h>
-#include <math.h>
-
 #include <dsn/perf_counter/perf_counter.h>
 
 namespace pegasus {

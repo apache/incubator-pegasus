@@ -17,6 +17,8 @@
 
 #include "hotspot_partition_calculator.h"
 
+#include <algorithm>
+#include <math.h>
 #include <dsn/dist/fmt_logging.h>
 
 namespace pegasus {
