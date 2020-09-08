@@ -24,16 +24,22 @@
 namespace pegasus {
 namespace server {
 
-void hotspot_partition_calculator::aggregate(const std::vector<row_data> &partitions)
+DSN_DEFINE_int64("pegasus.hotspot",
+                 max_hotspot_store_size,
+                 100,
+                 "the max count of historical data stored in calculator, in order to same Mem");
+
+void hotspot_partition_calculator::hotspot_partition_data_aggregate(
+    const std::vector<row_data> &partitions)
 {
-    while (_app_data.size() > kMaxQueueSize - 1) {
-        _app_data.pop();
+    while (_hotspot_partition_historical_data.size() > FLAGS_max_hotspot_store_size - 1) {
+        _hotspot_partition_historical_data.pop();
     }
     std::vector<hotspot_partition_data> temp(partitions.size());
     for (int i = 0; i < partitions.size(); i++) {
         temp[i] = std::move(hotspot_partition_data(partitions[i]));
     }
-    _app_data.emplace(temp);
+    _hotspot_partition_historical_data.emplace(temp);
 }
 
 void hotspot_partition_calculator::init_perf_counter(const int perf_counter_count)
@@ -44,7 +50,7 @@ void hotspot_partition_calculator::init_perf_counter(const int perf_counter_coun
         string paritition_desc = _app_name + '.' + std::to_string(i);
         counter_name = fmt::format("app.stat.hotspots@{}", paritition_desc);
         counter_desc = fmt::format("statistic the hotspots of app {}", paritition_desc);
-        _points[i].init_app_counter(
+        _hotspot_partition_points[i].init_app_counter(
             "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
     }
 }
@@ -58,13 +64,10 @@ void hotspot_partition_calculator::analysis(
     std::vector<double> data_samples;
     data_samples.reserve(hotspot_app_data.size() * perf_counters.size());
     auto temp_data = hotspot_app_data;
-    double total = 0, sd = 0, avg = 0;
+    double total = 0, standard_deviation = 0, average_number = 0;
     int sample_count = 0;
-    // avg: Average number
-    // sd: Standard deviation
-    // sample_count: Number of samples
     while (!temp_data.empty()) {
-        for (auto partition_data : temp_data.front()) {
+        for (const auto &partition_data : temp_data.front()) {
             if (partition_data.total_qps - 1.00 > 0) {
                 data_samples.push_back(partition_data.total_qps);
                 total += partition_data.total_qps;
@@ -77,14 +80,14 @@ void hotspot_partition_calculator::analysis(
         ddebug("hotspot_app_data size == 0");
         return;
     }
-    avg = total / sample_count;
-    for (auto data_sample : data_samples) {
-        sd += pow((data_sample - avg), 2);
+    average_number = total / sample_count;
+    for (const auto &data_sample : data_samples) {
+        standard_deviation += pow((data_sample - average_number), 2);
     }
-    sd = sqrt(sd / sample_count);
+    standard_deviation = sqrt(standard_deviation / sample_count);
     const auto &anly_data = hotspot_app_data.back();
     for (int i = 0; i < perf_counters.size(); i++) {
-        double hot_point = (anly_data[i].total_qps - avg) / sd;
+        double hot_point = (anly_data[i].total_qps - average_number) / standard_deviation;
         // perf_counter->set can only be unsigned __int64
         // use ceil to guarantee conversion results
         hot_point = ceil(std::max(hot_point, double(0)));
@@ -92,7 +95,10 @@ void hotspot_partition_calculator::analysis(
     }
 }
 
-void hotspot_partition_calculator::start_alg() { analysis(_app_data, _points); }
+void hotspot_partition_calculator::hotspot_partition_data_analyse()
+{
+    analysis(_hotspot_partition_historical_data, _hotspot_partition_points);
+}
 
 } // namespace server
 } // namespace pegasus

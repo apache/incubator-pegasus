@@ -92,9 +92,6 @@ info_collector::~info_collector()
     for (auto kv : _app_stat_counters) {
         delete kv.second;
     }
-    for (auto store : _hotspot_calculator_store) {
-        delete store.second;
-    }
 }
 
 void info_collector::start()
@@ -146,12 +143,11 @@ void info_collector::on_app_stat()
         // get row data statistics for all of the apps
         all_stats.merge(app_stats);
 
-        // hotspot_partition_calculator is to detect hotspots
-        hotspot_partition_calculator *hotspot_partition_calculator =
+        // hotspot_partition_calculator is used for detecting hotspots
+        auto hotspot_partition_calculator =
             get_hotspot_calculator(app_rows.first, app_rows.second.size());
-        dassert(hotspot_partition_calculator != nullptr, "hotspot_partition_calculator is NULL");
-        hotspot_partition_calculator->aggregate(app_rows.second);
-        hotspot_partition_calculator->start_alg();
+        hotspot_partition_calculator->hotspot_partition_data_aggregate(app_rows.second);
+        hotspot_partition_calculator->hotspot_partition_data_analyse();
     }
     get_app_counters(all_stats.app_name)->set(all_stats);
 
@@ -295,17 +291,16 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
     _result_writer->set_result(st_stat.timestamp, "ss", st_stat.dump_to_json());
 }
 
-hotspot_partition_calculator *info_collector::get_hotspot_calculator(const std::string &app_name,
-                                                                     const int partition_num)
+std::shared_ptr<hotspot_partition_calculator>
+info_collector::get_hotspot_calculator(const std::string &app_name, const int partition_count)
 {
-    // use appname+partition_num as a key can prevent the impact of dynamic partition changes
-    std::string app_name_pcount = fmt::format("{}.{}", app_name, partition_num);
+    // use appname+partition_count as a key can prevent the impact of dynamic partition changes
+    std::string app_name_pcount = fmt::format("{}.{}", app_name, partition_count);
     auto iter = _hotspot_calculator_store.find(app_name_pcount);
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
-    hotspot_partition_calculator *calculator =
-        new hotspot_partition_calculator(app_name, partition_num);
+    auto calculator = std::make_shared<hotspot_partition_calculator>(app_name, partition_count);
     _hotspot_calculator_store[app_name_pcount] = calculator;
     return calculator;
 }

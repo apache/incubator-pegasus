@@ -34,11 +34,11 @@ TEST(hotspot_partition_calculator, hotspot_partition_policy)
     test_rows[6].get_qps = 1000.0;
     test_rows[7].get_qps = 5000.0;
     hotspot_partition_calculator test_hotspot_calculator("TEST", 8);
-    test_hotspot_calculator.aggregate(test_rows);
-    test_hotspot_calculator.start_alg();
+    test_hotspot_calculator.hotspot_partition_data_aggregate(test_rows);
+    test_hotspot_calculator.hotspot_partition_data_analyse();
     std::vector<double> result(8);
-    for (int i = 0; i < test_hotspot_calculator._points.size(); i++) {
-        result[i] = test_hotspot_calculator._points[i]->get_value();
+    for (int i = 0; i < test_hotspot_calculator._hotspot_partition_points.size(); i++) {
+        result[i] = test_hotspot_calculator._hotspot_partition_points[i]->get_value();
     }
     std::vector<double> expect_vector{0, 0, 0, 0, 0, 0, 0, 3};
     ASSERT_EQ(expect_vector, result);

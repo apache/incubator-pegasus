@@ -181,10 +181,12 @@ private:
     ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
-    std::map<std::string, hotspot_partition_calculator *> _hotspot_calculator_store;
-
-    hotspot_partition_calculator *get_hotspot_calculator(const std::string &app_name,
-                                                         const int partition_num);
+    // _hotspot_calculator_store is to save hotspot_partition_calculator for each table, a
+    // hotspot_partition_calculator saves historical hotspot data and alert perf_counters of
+    // corresponding table
+    std::map<std::string, std::shared_ptr<hotspot_partition_calculator>> _hotspot_calculator_store;
+    std::shared_ptr<hotspot_partition_calculator>
+    get_hotspot_calculator(const std::string &app_name, const int partition_count);
 };
 
 } // namespace server

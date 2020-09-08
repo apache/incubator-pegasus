@@ -20,6 +20,7 @@
 #include "hotspot_partition_data.h"
 #include <gtest/gtest_prod.h>
 #include <dsn/perf_counter/perf_counter.h>
+#include <dsn/utility/flags.h>
 
 namespace pegasus {
 namespace server {
@@ -28,22 +29,26 @@ namespace server {
 class hotspot_partition_calculator
 {
 public:
-    hotspot_partition_calculator(const std::string &app_name, const int partition_num)
-        : _app_name(app_name), _points(partition_num)
+    hotspot_partition_calculator(const std::string &app_name, const int partition_count)
+        : _app_name(app_name), _hotspot_partition_points(partition_count)
     {
-        init_perf_counter(partition_num);
+        init_perf_counter(partition_count);
     }
-    void aggregate(const std::vector<row_data> &partitions);
-    void start_alg();
+    // aggregate related data of hotspot detection
+    void hotspot_partition_data_aggregate(const std::vector<row_data> &partitions);
+    // analyse the saved data to find hotspot partition
+    void hotspot_partition_data_analyse();
     void init_perf_counter(const int perf_counter_count);
 
 private:
     void analysis(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
                   std::vector<::dsn::perf_counter_wrapper> &perf_counters);
     const std::string _app_name;
-    std::vector<::dsn::perf_counter_wrapper> _points;
-    std::queue<std::vector<hotspot_partition_data>> _app_data;
-    static const int kMaxQueueSize = 100;
+
+    // usually _hotspot_partition_points >= 3 can be considered as a hotspot partition
+    std::vector<dsn::perf_counter_wrapper> _hotspot_partition_points;
+    // save historical data can improve accuracy
+    std::queue<std::vector<hotspot_partition_data>> _hotspot_partition_historical_data;
 
     FRIEND_TEST(hotspot_partition_calculator, hotspot_partition_policy);
 };
