@@ -146,8 +146,8 @@ void info_collector::on_app_stat()
         // hotspot_partition_calculator is used for detecting hotspots
         auto hotspot_partition_calculator =
             get_hotspot_calculator(app_rows.first, app_rows.second.size());
-        hotspot_partition_calculator->hotspot_partition_data_aggregate(app_rows.second);
-        hotspot_partition_calculator->hotspot_partition_data_analyse();
+        hotspot_partition_calculator->data_aggregate(app_rows.second);
+        hotspot_partition_calculator->data_analyse();
     }
     get_app_counters(all_stats.app_name)->set(all_stats);
 

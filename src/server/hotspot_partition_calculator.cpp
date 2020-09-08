@@ -29,8 +29,7 @@ DSN_DEFINE_int64("pegasus.hotspot",
                  100,
                  "the max count of historical data stored in calculator, in order to same Mem");
 
-void hotspot_partition_calculator::hotspot_partition_data_aggregate(
-    const std::vector<row_data> &partitions)
+void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partitions)
 {
     while (_historical_data.size() > FLAGS_max_hotspot_store_size - 1) {
         _historical_data.pop();
@@ -95,10 +94,7 @@ void hotspot_partition_calculator::analysis(
     }
 }
 
-void hotspot_partition_calculator::hotspot_partition_data_analyse()
-{
-    analysis(_historical_data, _hot_points);
-}
+void hotspot_partition_calculator::data_analyse() { analysis(_historical_data, _hot_points); }
 
 } // namespace server
 } // namespace pegasus

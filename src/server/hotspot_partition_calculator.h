@@ -35,9 +35,9 @@ public:
         init_perf_counter(partition_count);
     }
     // aggregate related data of hotspot detection
-    void hotspot_partition_data_aggregate(const std::vector<row_data> &partitions);
+    void data_aggregate(const std::vector<row_data> &partitions);
     // analyse the saved data to find hotspot partition
-    void hotspot_partition_data_analyse();
+    void data_analyse();
     void init_perf_counter(const int perf_counter_count);
 
 private:
