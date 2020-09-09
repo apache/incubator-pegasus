@@ -20,6 +20,7 @@
 #include "hotspot_partition_data.h"
 #include <gtest/gtest_prod.h>
 #include <dsn/perf_counter/perf_counter.h>
+#include <dsn/utility/flags.h>
 
 namespace pegasus {
 namespace server {
