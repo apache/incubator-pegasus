@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <math.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/flags.h>
 
 namespace pegasus {
 namespace server {

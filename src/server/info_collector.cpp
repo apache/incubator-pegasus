@@ -14,6 +14,7 @@
 
 #include "base/pegasus_const.h"
 #include "result_writer.h"
+#include "hotspot_partition_calculator.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "shell/commands.h"
+#include "shell/command_helper.h"
 
 namespace pegasus {
 namespace server {

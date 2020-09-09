@@ -19,12 +19,12 @@
 
 #include "../shell/commands.h"
 #include "table_stats.h"
-#include "hotspot_partition_calculator.h"
 
 namespace pegasus {
 namespace server {
 
 class result_writer;
+class hotspot_partition_calculator;
 
 class info_collector
 {
