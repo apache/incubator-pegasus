@@ -45,7 +45,7 @@ private:
                        std::vector<::dsn::perf_counter_wrapper> &perf_counters);
     const std::string _app_name;
 
-    // usually _hot_points >= 3 can be considered as a hotspot partition
+    // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
     std::vector<dsn::perf_counter_wrapper> _hot_points;
     // save historical data can improve accuracy
     std::queue<std::vector<hotspot_partition_data>> _historical_data;
