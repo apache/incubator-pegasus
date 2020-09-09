@@ -115,8 +115,6 @@ replication_options::replication_options()
 
     learn_app_max_concurrent_count = 5;
 
-    max_concurrent_uploading_file_count = 10;
-
     cold_backup_checkpoint_reserve_minutes = 10;
 }
 
@@ -509,12 +507,6 @@ void replication_options::initialize()
 
     cold_backup_root = dsn_config_get_value_string(
         "replication", "cold_backup_root", "", "cold backup remote storage path prefix");
-
-    max_concurrent_uploading_file_count =
-        (int32_t)dsn_config_get_value_uint64("replication",
-                                             "max_concurrent_uploading_file_count",
-                                             max_concurrent_uploading_file_count,
-                                             "concurrent uploading file count");
 
     cold_backup_checkpoint_reserve_minutes =
         (int)dsn_config_get_value_uint64("replication",

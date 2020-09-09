@@ -30,6 +30,7 @@
 #include "replica_stub.h"
 #include "duplication/replica_duplicator_manager.h"
 #include "backup/replica_backup_manager.h"
+#include "backup/cold_backup_context.h"
 #include "bulk_load/replica_bulk_loader.h"
 
 #include <dsn/utils/latency_tracer.h>

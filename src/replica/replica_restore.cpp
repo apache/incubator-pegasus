@@ -13,6 +13,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "block_service/block_service_manager.h"
+#include "backup/cold_backup_context.h"
 
 using namespace dsn::dist::block_service;
 

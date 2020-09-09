@@ -116,7 +116,6 @@ public:
     int32_t learn_app_max_concurrent_count;
 
     std::string cold_backup_root;
-    int32_t max_concurrent_uploading_file_count;
     int32_t cold_backup_checkpoint_reserve_minutes;
 
     std::string bulk_load_provider_root;

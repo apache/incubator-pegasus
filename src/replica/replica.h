@@ -65,6 +65,10 @@ class replica_duplicator_manager;
 class replica_backup_manager;
 class replica_bulk_loader;
 
+class cold_backup_context;
+typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
+class cold_backup_metadata;
+
 namespace test {
 class test_checker;
 }
@@ -339,7 +343,6 @@ private:
     void send_backup_request_to_secondary(const backup_request &request);
     // set all cold_backup_state cancel/pause
     void set_backup_context_cancel();
-    void set_backup_context_pause();
     void clear_cold_backup_state();
 
     /////////////////////////////////////////////////////////////////

@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "backup_block_service_mock.h"
+#include "replica/backup/cold_backup_context.h"
 
 ref_ptr<block_file_mock> current_chkpt_file = new block_file_mock("", 0, "");
 ref_ptr<block_file_mock> backup_metadata_file = new block_file_mock("", 0, "");

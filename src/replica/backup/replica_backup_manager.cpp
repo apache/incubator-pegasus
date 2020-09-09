@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "replica_backup_manager.h"
+#include "cold_backup_context.h"
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/filesystem.h>

@@ -4,17 +4,22 @@
 #include <dsn/utility/time_utils.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
+#include <dsn/utility/flags.h>
 
 #include "block_service/block_service_manager.h"
 #include "backup/replica_backup_manager.h"
+#include "backup/cold_backup_context.h"
 
 #include "replica.h"
-#include "mutation.h"
-#include "mutation_log.h"
 #include "replica_stub.h"
 
 namespace dsn {
 namespace replication {
+
+DSN_DEFINE_uint64("replication",
+                  max_concurrent_uploading_file_count,
+                  10,
+                  "concurrent uploading file count to block service");
 
 void replica::on_cold_backup(const backup_request &request, /*out*/ backup_response &response)
 {
@@ -23,7 +28,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
     const std::string &policy_name = request.policy.policy_name;
     auto backup_id = request.backup_id;
     cold_backup_context_ptr new_context(
-        new cold_backup_context(this, request, _options->max_concurrent_uploading_file_count));
+        new cold_backup_context(this, request, FLAGS_max_concurrent_uploading_file_count));
 
     ddebug_replica("{}: received cold backup request, partition_status = {}",
                    new_context->name,
@@ -55,11 +60,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
             backup_context->backup_root = _options->cold_backup_root;
         }
 
-        dassert(backup_context != nullptr, "");
-        dassert(backup_context->request.policy.policy_name == policy_name,
-                "%s VS %s",
-                backup_context->request.policy.policy_name.c_str(),
-                policy_name.c_str());
+        dcheck_eq_replica(backup_context->request.policy.policy_name, policy_name);
         cold_backup_status backup_status = backup_context->status();
 
         if (backup_context->request.backup_id < backup_id || backup_status == ColdBackupCanceled) {
@@ -76,6 +77,8 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                                  get_gpid().thread_hash(),
                                  std::chrono::seconds(100));
             } else {
+                // TODO(wutao1): deleting cold backup context should be
+                //               extracted as a function like try_delete_cold_backup_context;
                 // clear obsoleted backup context firstly
                 ddebug("%s: clear obsoleted cold backup context, old_backup_id = %" PRId64
                        ", old_backup_status = %s",
@@ -692,16 +695,6 @@ void replica::set_backup_context_cancel()
     }
 }
 
-void replica::set_backup_context_pause()
-{
-    for (auto &pair : _cold_backup_contexts) {
-        pair.second->pause_upload();
-        ddebug("%s: pause backup progress, backup_request = %s",
-               name(),
-               boost::lexical_cast<std::string>(pair.second->request).c_str());
-    }
-}
-
 void replica::clear_cold_backup_state() { _cold_backup_contexts.clear(); }
-}
-} // namespace
+} // namespace replication
+} // namespace dsn
