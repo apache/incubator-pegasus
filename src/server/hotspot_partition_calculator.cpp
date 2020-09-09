@@ -41,7 +41,7 @@ void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &p
     _historical_data.emplace(temp);
 }
 
-void hotspot_partition_calculator::init_perf_counter(const int perf_counter_count)
+void hotspot_partition_calculator::init_perf_counter(int partition_count)
 {
     std::string counter_name;
     std::string counter_desc;
