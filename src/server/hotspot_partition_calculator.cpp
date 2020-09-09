@@ -25,10 +25,11 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int64("pegasus.hotspot",
-                 max_hotspot_store_size,
-                 100,
-                 "the max count of historical data stored in calculator, in order to same Mem");
+DSN_DEFINE_int64("pegasus.hotspot", max_hotspot_store_size, 100, "the max count of historical data "
+                                                                 "stored in calculator, The FIFO "
+                                                                 "queue design is used to "
+                                                                 "eliminate outdated historical "
+                                                                 "data");
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partitions)
 {
@@ -55,15 +56,13 @@ void hotspot_partition_calculator::init_perf_counter(const int perf_counter_coun
     }
 }
 
-void hotspot_partition_calculator::_data_analyse(
-    const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
-    std::vector<::dsn::perf_counter_wrapper> &perf_counters)
+void hotspot_partition_calculator::data_analyse()
 {
-    dassert(hotspot_app_data.back().size() == perf_counters.size(),
+    dassert(_historical_data.back().size() == _hot_points.size(),
             "partition counts error, please check");
     std::vector<double> data_samples;
-    data_samples.reserve(hotspot_app_data.size() * perf_counters.size());
-    auto temp_data = hotspot_app_data;
+    data_samples.reserve(_historical_data.size() * _hot_points.size());
+    auto temp_data = _historical_data;
     double total = 0, standard_deviation = 0, average_number = 0;
     int sample_count = 0;
     while (!temp_data.empty()) {
@@ -77,7 +76,7 @@ void hotspot_partition_calculator::_data_analyse(
         temp_data.pop();
     }
     if (sample_count == 0) {
-        ddebug("hotspot_app_data size == 0");
+        ddebug("_historical_data size == 0");
         return;
     }
     average_number = total / sample_count;
@@ -85,17 +84,15 @@ void hotspot_partition_calculator::_data_analyse(
         standard_deviation += pow((data_sample - average_number), 2);
     }
     standard_deviation = sqrt(standard_deviation / sample_count);
-    const auto &anly_data = hotspot_app_data.back();
-    for (int i = 0; i < perf_counters.size(); i++) {
+    const auto &anly_data = _historical_data.back();
+    for (int i = 0; i < _hot_points.size(); i++) {
         double hot_point = (anly_data[i].total_qps - average_number) / standard_deviation;
         // perf_counter->set can only be unsigned __int64
         // use ceil to guarantee conversion results
         hot_point = ceil(std::max(hot_point, double(0)));
-        perf_counters[i]->set(hot_point);
+        _hot_points[i]->set(hot_point);
     }
 }
-
-void hotspot_partition_calculator::data_analyse() { }
 
 } // namespace server
 } // namespace pegasus
