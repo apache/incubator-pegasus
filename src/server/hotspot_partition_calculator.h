@@ -29,7 +29,7 @@ namespace server {
 class hotspot_partition_calculator
 {
 public:
-    hotspot_partition_calculator(const std::string &app_name, const int partition_count)
+    hotspot_partition_calculator(const std::string &app_name, int partition_count)
         : _app_name(app_name), _hot_points(partition_count)
     {
         init_perf_counter(partition_count);
