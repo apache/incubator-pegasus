@@ -25,11 +25,14 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int64("pegasus.hotspot", max_hotspot_store_size, 100, "the max count of historical data "
-                                                                 "stored in calculator, The FIFO "
-                                                                 "queue design is used to "
-                                                                 "eliminate outdated historical "
-                                                                 "data");
+DSN_DEFINE_int64("pegasus.hotspot",
+                 max_hotspot_store_size,
+                 100,
+                 "the max count of historical data "
+                 "stored in calculator, The FIFO "
+                 "queue design is used to "
+                 "eliminate outdated historical "
+                 "data");
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partitions)
 {
