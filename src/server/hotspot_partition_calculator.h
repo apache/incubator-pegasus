@@ -25,7 +25,7 @@
 namespace pegasus {
 namespace server {
 
-// hotspot_partition_calculator is used to find the hotspot in Pegasus
+// hotspot_partition_calculator is used to find the hot partition in a table.
 class hotspot_partition_calculator
 {
 public:
