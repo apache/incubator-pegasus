@@ -36,12 +36,12 @@ public:
     // aggregate related data of hotspot detection
     void data_aggregate(const std::vector<row_data> &partitions);
     // analyse the saved data to find hotspot partition
-    void data_analyse();
-    void init_perf_counter(int perf_counter_count);
+    void data_analyse()
 
 private:
     const std::string _app_name;
 
+    void init_perf_counter(int perf_counter_count);
     // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
     std::vector<dsn::perf_counter_wrapper> _hot_points;
     // save historical data can improve accuracy
