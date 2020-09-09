@@ -38,7 +38,7 @@ public:
     void data_aggregate(const std::vector<row_data> &partitions);
     // analyse the saved data to find hotspot partition
     void data_analyse();
-    void init_perf_counter(const int perf_counter_count);
+    void init_perf_counter(int perf_counter_count);
 
 private:
     void _data_analyse(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
