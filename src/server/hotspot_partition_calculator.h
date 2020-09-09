@@ -41,7 +41,7 @@ public:
     void init_perf_counter(int perf_counter_count);
 
 private:
-    void _data_analyse(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
+    void data_analyse(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
                        std::vector<::dsn::perf_counter_wrapper> &perf_counters);
     const std::string _app_name;
 
