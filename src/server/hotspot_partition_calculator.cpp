@@ -72,7 +72,7 @@ void hotspot_partition_calculator::data_analyse()
         for (const auto &partition_data : temp_data.front()) {
             if (partition_data.total_qps - 1.00 > 0) {
                 data_samples.push_back(partition_data.total_qps);
-                total += partition_data.total_qps;
+                table_qps_sum += partition_data.total_qps;
                 sample_count++;
             }
         }
@@ -82,14 +82,14 @@ void hotspot_partition_calculator::data_analyse()
         ddebug("_historical_data size == 0");
         return;
     }
-    average_number = total / sample_count;
+    table_qps_avg = table_qps_sum / sample_count;
     for (const auto &data_sample : data_samples) {
-        standard_deviation += pow((data_sample - average_number), 2);
+        standard_deviation += pow((data_sample - table_qps_avg), 2);
     }
     standard_deviation = sqrt(standard_deviation / sample_count);
     const auto &anly_data = _historical_data.back();
     for (int i = 0; i < _hot_points.size(); i++) {
-        double hot_point = (anly_data[i].total_qps - average_number) / standard_deviation;
+        double hot_point = (anly_data[i].total_qps - table_qps_avg) / standard_deviation;
         // perf_counter->set can only be unsigned __int64
         // use ceil to guarantee conversion results
         hot_point = ceil(std::max(hot_point, double(0)));
