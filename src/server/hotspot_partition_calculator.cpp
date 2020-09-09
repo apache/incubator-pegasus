@@ -25,7 +25,7 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int64("pegasus.hotspot",
+DSN_DEFINE_int64("pegasus.collector",
                  max_hotspot_store_size,
                  100,
                  "the max count of historical data "
