@@ -42,7 +42,7 @@ public:
 
 private:
     void _data_analyse(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
-                  std::vector<::dsn::perf_counter_wrapper> &perf_counters);
+                       std::vector<::dsn::perf_counter_wrapper> &perf_counters);
     const std::string _app_name;
 
     // usually _hot_points >= 3 can be considered as a hotspot partition
