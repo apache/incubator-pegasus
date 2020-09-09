@@ -47,7 +47,7 @@ private:
 
     // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
     std::vector<dsn::perf_counter_wrapper> _hot_points;
-    // save historical data can improve accuracy
+    // saving historical data can improve accuracy
     std::queue<std::vector<hotspot_partition_data>> _historical_data;
 
     FRIEND_TEST(hotspot_partition_calculator, hotspot_partition_policy);
