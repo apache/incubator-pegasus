@@ -24,7 +24,7 @@
 namespace pegasus {
 namespace server {
 
-// hotspot_partition_calculator is used to find the hotspot in Pegasus
+// hotspot_partition_calculator is used to find the hot partition in a table.
 class hotspot_partition_calculator
 {
 public:
@@ -44,7 +44,7 @@ private:
     void init_perf_counter(int perf_counter_count);
     // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
     std::vector<dsn::perf_counter_wrapper> _hot_points;
-    // save historical data can improve accuracy
+    // saving historical data can improve accuracy
     std::queue<std::vector<hotspot_partition_data>> _historical_data;
 
     FRIEND_TEST(hotspot_partition_calculator, hotspot_partition_policy);
