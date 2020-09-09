@@ -59,8 +59,17 @@ error_s sasl_client_wrapper::start(const std::string &mechanism,
 
 error_s sasl_client_wrapper::step(const std::string &input, std::string &output)
 {
-    // TBD(zlw)
-    return error_s::make(ERR_OK);
+    FAIL_POINT_INJECT_F("sasl_client_wrapper_step", [](dsn::string_view str) {
+        error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
+        return error_s::make(err);
+    });
+
+    const char *msg = nullptr;
+    unsigned msg_len = 0;
+    int sasl_err = sasl_client_step(_conn, input.c_str(), input.length(), nullptr, &msg, &msg_len);
+
+    output.assign(msg, msg_len);
+    return wrap_error(sasl_err);
 }
 } // namespace security
 } // namespace dsn

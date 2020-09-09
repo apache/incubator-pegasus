@@ -51,6 +51,8 @@ public:
         _client_negotiation->on_mechanism_selected(resp);
     }
 
+    void on_challenge(const negotiation_response &resp) { _client_negotiation->on_challenge(resp); }
+
     const std::string &get_selected_mechanism() { return _client_negotiation->_selected_mechanism; }
 
     negotiation_status::type get_negotiation_status() { return _client_negotiation->_status; }
@@ -158,6 +160,41 @@ TEST_F(client_negotiation_test, on_mechanism_selected)
             negotiation_response resp;
             resp.status = test.resp_status;
             on_mechanism_selected(resp);
+            ASSERT_EQ(get_negotiation_status(), test.neg_status);
+
+            fail::teardown();
+        }
+    }
+}
+
+TEST_F(client_negotiation_test, on_challenge)
+{
+    struct
+    {
+        std::string sasl_step_result;
+        negotiation_status::type resp_status;
+        negotiation_status::type neg_status;
+    } tests[] = {
+        {"ERR_OK",
+         negotiation_status::type::SASL_CHALLENGE,
+         negotiation_status::type::SASL_CHALLENGE_RESP},
+        {"ERR_SASL_INCOMPLETE",
+         negotiation_status::type::SASL_CHALLENGE,
+         negotiation_status::type::SASL_CHALLENGE_RESP},
+        {"ERR_TIMEOUT",
+         negotiation_status::type::SASL_CHALLENGE,
+         negotiation_status::type::SASL_AUTH_FAIL},
+        {"ERR_OK", negotiation_status::type::SASL_SUCC, negotiation_status::type::SASL_SUCC}};
+
+    RPC_MOCKING(negotiation_rpc)
+    {
+        for (const auto &test : tests) {
+            fail::setup();
+            fail::cfg("sasl_client_wrapper_step", "return(" + test.sasl_step_result + ")");
+
+            negotiation_response resp;
+            resp.status = test.resp_status;
+            on_challenge(resp);
             ASSERT_EQ(get_negotiation_status(), test.neg_status);
 
             fail::teardown();

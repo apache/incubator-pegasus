@@ -70,7 +70,7 @@ void client_negotiation::handle_response(error_code err, const negotiation_respo
         break;
     case negotiation_status::type::SASL_INITIATE:
     case negotiation_status::type::SASL_CHALLENGE_RESP:
-        // TBD(zlw)
+        on_challenge(response);
         break;
     default:
         fail_negotiation();
@@ -140,6 +140,33 @@ void client_negotiation::on_mechanism_selected(const negotiation_response &resp)
                 err_s.description());
         fail_negotiation();
     }
+}
+
+void client_negotiation::on_challenge(const negotiation_response &challenge)
+{
+    if (challenge.status == negotiation_status::type::SASL_CHALLENGE) {
+        std::string response_msg;
+        auto err = _sasl->step(challenge.msg, response_msg);
+        if (!err.is_ok() && err.code() != ERR_SASL_INCOMPLETE) {
+            dwarn_f("{}: negotiation failed, reason = {}", _name, err.description());
+            fail_negotiation();
+            return;
+        }
+
+        auto req = dsn::make_unique<negotiation_request>();
+        _status = req->status = negotiation_status::type::SASL_CHALLENGE_RESP;
+        req->msg = response_msg;
+        send(std::move(req));
+        return;
+    }
+
+    if (challenge.status == negotiation_status::type::SASL_SUCC) {
+        succ_negotiation();
+        return;
+    }
+
+    dwarn_f("{}: recv wrong negotiation msg type: {}", _name, enum_to_string(challenge.status));
+    fail_negotiation();
 }
 
 void client_negotiation::select_mechanism(const std::string &mechanism)
