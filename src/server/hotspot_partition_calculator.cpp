@@ -66,7 +66,7 @@ void hotspot_partition_calculator::data_analyse()
     std::vector<double> data_samples;
     data_samples.reserve(_historical_data.size() * _hot_points.size());
     auto temp_data = _historical_data;
-    double total = 0, standard_deviation = 0, average_number = 0;
+    double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
     int sample_count = 0;
     while (!temp_data.empty()) {
         for (const auto &partition_data : temp_data.front()) {
