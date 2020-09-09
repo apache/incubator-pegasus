@@ -53,7 +53,7 @@ void server_negotiation::handle_request(negotiation_rpc rpc)
         on_initiate(rpc);
         break;
     case negotiation_status::type::SASL_CHALLENGE:
-        // TBD(zlw)
+        on_challenge_resp(rpc);
         break;
     default:
         fail_negotiation();
@@ -113,6 +113,19 @@ void server_negotiation::on_initiate(negotiation_rpc rpc)
     std::string start_output;
     error_s err_s = _sasl->start(_selected_mechanism, request.msg, start_output);
     return do_challenge(rpc, err_s, start_output);
+}
+
+void server_negotiation::on_challenge_resp(negotiation_rpc rpc)
+{
+    const negotiation_request &request = rpc.request();
+    if (!check_status(request.status, negotiation_status::type::SASL_CHALLENGE_RESP)) {
+        fail_negotiation();
+        return;
+    }
+
+    std::string resp_msg;
+    error_s err_s = _sasl->step(request.msg, resp_msg);
+    return do_challenge(rpc, err_s, resp_msg);
 }
 
 void server_negotiation::do_challenge(negotiation_rpc rpc,

@@ -50,6 +50,8 @@ public:
 
     void on_initiate(negotiation_rpc rpc) { _srv_negotiation->on_initiate(rpc); }
 
+    void on_challenge_resp(negotiation_rpc rpc) { _srv_negotiation->on_challenge_resp(rpc); }
+
     negotiation_status::type get_negotiation_status() { return _srv_negotiation->_status; }
 
     // _sim_session is used for holding the sim_rpc_session which is created in ctor,
@@ -171,6 +173,47 @@ TEST_F(server_negotiation_test, on_initiate)
 
             auto rpc = create_negotiation_rpc(test.req_status, "");
             on_initiate(rpc);
+            ASSERT_EQ(rpc.response().status, test.resp_status);
+            ASSERT_EQ(get_negotiation_status(), test.nego_status);
+
+            fail::teardown();
+        }
+    }
+}
+
+TEST_F(server_negotiation_test, on_challenge_resp)
+{
+    struct
+    {
+        std::string sasl_step_result;
+        negotiation_status::type req_status;
+        negotiation_status::type resp_status;
+        negotiation_status::type nego_status;
+    } tests[] = {{"ERR_TIMEOUT",
+                  negotiation_status::type::SASL_CHALLENGE_RESP,
+                  negotiation_status::type::INVALID,
+                  negotiation_status::type::SASL_AUTH_FAIL},
+                 {"ERR_OK",
+                  negotiation_status::type::SASL_SELECT_MECHANISMS,
+                  negotiation_status::type::INVALID,
+                  negotiation_status::type::SASL_AUTH_FAIL},
+                 {"ERR_SASL_INCOMPLETE",
+                  negotiation_status::type::SASL_CHALLENGE_RESP,
+                  negotiation_status::type::SASL_CHALLENGE,
+                  negotiation_status::type::SASL_CHALLENGE},
+                 {"ERR_OK",
+                  negotiation_status::type::SASL_CHALLENGE_RESP,
+                  negotiation_status::type::SASL_SUCC,
+                  negotiation_status::type::SASL_SUCC}};
+
+    RPC_MOCKING(negotiation_rpc)
+    {
+        for (const auto &test : tests) {
+            fail::setup();
+            fail::cfg("sasl_server_wrapper_step", "return(" + test.sasl_step_result + ")");
+
+            auto rpc = create_negotiation_rpc(test.req_status, "");
+            on_challenge_resp(rpc);
             ASSERT_EQ(rpc.response().status, test.resp_status);
             ASSERT_EQ(get_negotiation_status(), test.nego_status);
 
