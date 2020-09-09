@@ -3,12 +3,11 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include <dsn/utility/output_utils.h>
-#include "perf_counter_http_service.h"
+#include "builtin_http_calls.h"
 
 namespace dsn {
 
-void perf_counter_http_service::get_perf_counter_handler(const http_request &req,
-                                                         http_response &resp)
+void get_perf_counter_handler(const http_request &req, http_response &resp)
 {
     std::string perf_counter_name;
     for (const auto &p : req.query_args) {

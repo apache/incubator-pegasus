@@ -28,7 +28,6 @@
 #include <dsn/http/http_server.h>
 
 #include "common/replication_common.h"
-#include "http/server_info_http_services.h"
 #include "replica_stub.h"
 #include "replica_http_service.h"
 
@@ -45,10 +44,8 @@ replication_service_app::replication_service_app(const service_app_info *info) :
     _stub = new replica_stub();
 
     // add http service
-    _version_http_service = new version_http_service();
-    register_http_service(_version_http_service);
-    register_http_service(new recent_start_time_http_service());
     register_http_service(new replica_http_service(_stub.get()));
+    start_http_server();
 }
 
 replication_service_app::~replication_service_app(void) {}
@@ -60,14 +57,6 @@ error_code replication_service_app::start(const std::vector<std::string> &args)
 
     _stub->initialize(opts);
     _stub->open_service();
-
-    // add http service
-    if (args.size() >= 2) {
-        auto it_ver = args.end() - 2;
-        auto it_git = args.end() - 1;
-        _version_http_service->set_version(*it_ver);
-        _version_http_service->set_git_commit(*it_git);
-    }
 
     return ERR_OK;
 }

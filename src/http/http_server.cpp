@@ -4,13 +4,13 @@
 
 #include <dsn/http/http_server.h>
 #include <dsn/tool_api.h>
+#include <dsn/utility/time_utils.h>
 #include <boost/algorithm/string.hpp>
 #include <fmt/ostream.h>
 
 #include "http_message_parser.h"
-#include "root_http_service.h"
 #include "pprof_http_service.h"
-#include "perf_counter_http_service.h"
+#include "builtin_http_calls.h"
 #include "uri_decoder.h"
 #include "http_call_registry.h"
 #include "http_server_impl.h"
@@ -36,6 +36,20 @@ DSN_DEFINE_bool("http", enable_http_server, true, "whether to enable the embedde
         dfatal("invalid code: %d", code);
         __builtin_unreachable();
     }
+}
+
+/*extern*/ http_call &register_http_call(std::string full_path)
+{
+    auto call_ptr = dsn::make_unique<http_call>();
+    call_ptr->path = std::move(full_path);
+    http_call &call = *call_ptr;
+    http_call_registry::instance().add(std::move(call_ptr));
+    return call;
+}
+
+/*extern*/ void deregister_http_call(const std::string &full_path)
+{
+    http_call_registry::instance().remove(full_path);
 }
 
 void http_service::register_handler(std::string path, http_callback cb, std::string help)
@@ -64,13 +78,7 @@ http_server::http_server() : serverlet<http_server>("http_server")
     tools::register_message_header_parser<http_message_parser>(NET_HDR_HTTP, {"GET ", "POST"});
 
     // add builtin services
-    register_http_service(new root_http_service());
-
-#ifdef DSN_ENABLE_GPERF
-    register_http_service(new pprof_http_service());
-#endif // DSN_ENABLE_GPERF
-
-    register_http_service(new perf_counter_http_service());
+    register_builtin_http_calls();
 }
 
 void http_server::serve(message_ex *msg)

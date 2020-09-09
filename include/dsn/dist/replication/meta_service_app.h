@@ -59,7 +59,6 @@ public:
 private:
     friend class ::dsn::replication::test::test_checker;
     std::unique_ptr<dsn::replication::meta_service> _service;
-    version_http_service *_version_http_service;
 };
 } // namespace service
 } // namespace dsn

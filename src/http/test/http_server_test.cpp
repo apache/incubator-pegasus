@@ -6,9 +6,8 @@
 #include <gtest/gtest.h>
 
 #include "http/http_message_parser.h"
-#include "http/root_http_service.h"
-#include "http/server_info_http_services.h"
-#include "http/http_server_impl.h"
+#include "http/builtin_http_calls.h"
+#include "http/http_call_registry.h"
 
 namespace dsn {
 
@@ -46,22 +45,31 @@ TEST(http_server, parse_url)
     }
 }
 
-TEST(root_http_service_test, get_help)
+TEST(bultin_http_calls_test, get_help)
 {
     for (const auto &call : http_call_registry::instance().list_all_calls()) {
         http_call_registry::instance().remove(call->path);
     }
 
-    root_http_service root;
+    register_http_call("")
+        .with_callback(
+            [](const http_request &req, http_response &resp) { get_help_handler(req, resp); })
+        .with_help("ip:port/");
+
     http_request req;
     http_response resp;
-    root.default_handler(req, resp);
+    get_help_handler(req, resp);
     ASSERT_EQ(resp.status_code, http_status_code::ok);
     ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\"}\n");
 
-    version_http_service ver;
-    root.default_handler(req, resp);
-    ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\",\"/version\":\"ip:port/version\"}\n");
+    register_http_call("recentStartTime")
+        .with_callback([](const http_request &req, http_response &resp) {
+            get_recent_start_time_handler(req, resp);
+        })
+        .with_help("ip:port/recentStartTime");
+
+    get_help_handler(req, resp);
+    ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\",\"/recentStartTime\":\"ip:port/recentStartTime\"}\n");
 
     for (const auto &call : http_call_registry::instance().list_all_calls()) {
         http_call_registry::instance().remove(call->path);

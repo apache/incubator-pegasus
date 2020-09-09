@@ -26,6 +26,8 @@
 #include "pprof_http_service.h"
 
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/c/api_layer1.h>
+#include <dsn/utility/process_utils.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/utility/defer.h>
 #include <dsn/utility/timer.h>

@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <dsn/c/api_common.h>
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/cpp/serverlet.h>
 #include <dsn/utility/errors.h>
 #include <dsn/utility/flags.h>
 
@@ -20,6 +17,7 @@ enum http_method
     HTTP_METHOD_POST = 2,
 };
 
+class message_ex;
 struct http_request
 {
     static error_with<http_request> parse(dsn::message_ex *m);
@@ -59,6 +57,17 @@ struct http_call
     std::string path;
     std::string help;
     http_callback callback;
+
+    http_call &with_callback(http_callback cb)
+    {
+        callback = std::move(cb);
+        return *this;
+    }
+    http_call &with_help(std::string hp)
+    {
+        help = std::move(hp);
+        return *this;
+    }
 };
 
 // A suite of HTTP handlers coupled using the same prefix of the service.
@@ -74,11 +83,24 @@ public:
     void register_handler(std::string path, http_callback cb, std::string help);
 };
 
+// Example:
+//
+// ```
+// register_http_call("/meta/app")
+//     .with_callback(std::bind(&meta_http_service::get_app_handler,
+//                              this,
+//                              std::placeholders::_1,
+//                              std::placeholders::_2))
+//     .with_help("Gets the app information")
+//     .add_argument("app_name", HTTP_ARG_STRING);
+// ```
+extern http_call &register_http_call(std::string full_path);
+
 // Starts serving HTTP requests.
 // The internal HTTP server will reuse the rDSN server port.
 extern void start_http_server();
 
-// NOTE: the memory of `svc` will be transfered to the underlying registry.
+// NOTE: the memory of `svc` will be transferred to the underlying registry.
 // TODO(wutao): pass `svc` as a std::unique_ptr.
 extern void register_http_service(http_service *svc);
 
