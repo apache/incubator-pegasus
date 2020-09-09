@@ -36,7 +36,7 @@ public:
     // aggregate related data of hotspot detection
     void data_aggregate(const std::vector<row_data> &partitions);
     // analyse the saved data to find hotspot partition
-    void data_analyse()
+    void data_analyse();
 
 private:
     const std::string _app_name;
