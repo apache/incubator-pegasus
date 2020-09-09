@@ -28,7 +28,7 @@ namespace server {
 class hotspot_partition_calculator
 {
 public:
-    hotspot_partition_calculator(const std::string &app_name, const int partition_count)
+    hotspot_partition_calculator(const std::string &app_name, int partition_count)
         : _app_name(app_name), _hot_points(partition_count)
     {
         init_perf_counter(partition_count);
@@ -37,14 +37,14 @@ public:
     void data_aggregate(const std::vector<row_data> &partitions);
     // analyse the saved data to find hotspot partition
     void data_analyse();
-    void init_perf_counter(const int perf_counter_count);
+    void init_perf_counter(int perf_counter_count);
 
 private:
-    void _data_analyse(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
+    void data_analyse(const std::queue<std::vector<hotspot_partition_data>> &hotspot_app_data,
                        std::vector<::dsn::perf_counter_wrapper> &perf_counters);
     const std::string _app_name;
 
-    // usually _hot_points >= 3 can be considered as a hotspot partition
+    // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
     std::vector<dsn::perf_counter_wrapper> _hot_points;
     // save historical data can improve accuracy
     std::queue<std::vector<hotspot_partition_data>> _historical_data;

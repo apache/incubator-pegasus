@@ -95,7 +95,7 @@ void hotspot_partition_calculator::_data_analyse(
     }
 }
 
-void hotspot_partition_calculator::data_analyse() { _data_analyse(_historical_data, _hot_points); }
+void hotspot_partition_calculator::data_analyse() { }
 
 } // namespace server
 } // namespace pegasus
