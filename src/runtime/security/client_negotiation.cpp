@@ -85,7 +85,7 @@ void client_negotiation::on_recv_mechanisms(const negotiation_response &resp)
 
     std::string match_mechanism;
     std::vector<std::string> server_support_mechanisms;
-    std::string resp_string = resp.msg;
+    std::string resp_string = resp.msg.to_string();
     utils::split_args(resp_string.c_str(), server_support_mechanisms, ',');
 
     for (const std::string &server_support_mechanism : server_support_mechanisms) {
@@ -125,8 +125,8 @@ void client_negotiation::on_mechanism_selected(const negotiation_response &resp)
     }
 
     // start client sasl, and send `SASL_INITIATE` to `server_negotiation` if everything is ok
-    std::string start_output;
-    err_s = _sasl->start(_selected_mechanism, "", start_output);
+    blob start_output;
+    err_s = _sasl->start(_selected_mechanism, blob(), start_output);
     if (err_s.is_ok() || ERR_SASL_INCOMPLETE == err_s.code()) {
         _status = negotiation_status::type::SASL_INITIATE;
         send(_status, std::move(start_output));
@@ -142,7 +142,7 @@ void client_negotiation::on_mechanism_selected(const negotiation_response &resp)
 void client_negotiation::on_challenge(const negotiation_response &challenge)
 {
     if (challenge.status == negotiation_status::type::SASL_CHALLENGE) {
-        std::string response_msg;
+        blob response_msg;
         auto err = _sasl->step(challenge.msg, response_msg);
         if (!err.is_ok() && err.code() != ERR_SASL_INCOMPLETE) {
             dwarn_f("{}: negotiation failed, reason = {}", _name, err.description());
@@ -169,10 +169,10 @@ void client_negotiation::select_mechanism(const std::string &mechanism)
     _selected_mechanism = mechanism;
     _status = negotiation_status::type::SASL_SELECT_MECHANISMS;
 
-    send(_status, std::move(mechanism));
+    send(_status, blob::create_from_bytes(mechanism.data(), mechanism.length()));
 }
 
-void client_negotiation::send(negotiation_status::type status, const std::string &&msg)
+void client_negotiation::send(negotiation_status::type status, const blob &msg)
 {
     auto req = dsn::make_unique<negotiation_request>();
     req->status = status;

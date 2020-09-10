@@ -37,7 +37,7 @@ private:
 
     void list_mechanisms();
     void select_mechanism(const std::string &mechanism);
-    void send(negotiation_status::type status, const std::string &&msg = "");
+    void send(negotiation_status::type status, const blob &msg = blob());
     void succ_negotiation();
 
     friend class client_negotiation_test;

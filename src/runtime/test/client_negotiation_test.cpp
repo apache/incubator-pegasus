@@ -81,7 +81,7 @@ TEST_F(client_negotiation_test, on_recv_mechanisms)
         for (const auto &test : tests) {
             negotiation_response resp;
             resp.status = test.resp_status;
-            resp.msg = test.resp_msg;
+            resp.msg = blob::create_from_bytes(test.resp_msg.data(), test.resp_msg.length());
             on_recv_mechanism(resp);
 
             ASSERT_EQ(get_selected_mechanism(), test.selected_mechanism);

@@ -43,10 +43,10 @@ enum negotiation_status {
 
 struct negotiation_request {
     1: negotiation_status status;
-    2: string msg;
+    2: dsn.blob msg;
 }
 
 struct negotiation_response {
     1: negotiation_status status;
-    2: string msg;
+    2: dsn.blob msg;
 }

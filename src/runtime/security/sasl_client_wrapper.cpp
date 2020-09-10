@@ -38,9 +38,7 @@ error_s sasl_client_wrapper::init()
     return wrap_error(sasl_err);
 }
 
-error_s sasl_client_wrapper::start(const std::string &mechanism,
-                                   const std::string &input,
-                                   std::string &output)
+error_s sasl_client_wrapper::start(const std::string &mechanism, const blob &input, blob &output)
 {
     FAIL_POINT_INJECT_F("sasl_client_wrapper_start", [](dsn::string_view str) {
         error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
@@ -53,11 +51,11 @@ error_s sasl_client_wrapper::start(const std::string &mechanism,
     int sasl_err =
         sasl_client_start(_conn, mechanism.c_str(), nullptr, &msg, &msg_len, &client_mech);
 
-    output.assign(msg, msg_len);
+    output = blob::create_from_bytes(msg, msg_len);
     return wrap_error(sasl_err);
 }
 
-error_s sasl_client_wrapper::step(const std::string &input, std::string &output)
+error_s sasl_client_wrapper::step(const blob &input, blob &output)
 {
     FAIL_POINT_INJECT_F("sasl_client_wrapper_step", [](dsn::string_view str) {
         error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
@@ -66,9 +64,9 @@ error_s sasl_client_wrapper::step(const std::string &input, std::string &output)
 
     const char *msg = nullptr;
     unsigned msg_len = 0;
-    int sasl_err = sasl_client_step(_conn, input.c_str(), input.length(), nullptr, &msg, &msg_len);
+    int sasl_err = sasl_client_step(_conn, input.data(), input.length(), nullptr, &msg, &msg_len);
 
-    output.assign(msg, msg_len);
+    output = blob::create_from_bytes(msg, msg_len);
     return wrap_error(sasl_err);
 }
 } // namespace security

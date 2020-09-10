@@ -29,9 +29,8 @@ public:
     virtual ~sasl_wrapper();
 
     virtual error_s init() = 0;
-    virtual error_s
-    start(const std::string &mechanism, const std::string &input, std::string &output) = 0;
-    virtual error_s step(const std::string &input, std::string &output) = 0;
+    virtual error_s start(const std::string &mechanism, const blob &input, blob &output) = 0;
+    virtual error_s step(const blob &input, blob &output) = 0;
 
 protected:
     sasl_wrapper() = default;

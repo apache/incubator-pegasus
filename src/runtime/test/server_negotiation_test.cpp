@@ -40,7 +40,7 @@ public:
     {
         auto request = make_unique<negotiation_request>();
         request->status = status;
-        request->msg = msg;
+        request->msg = dsn::blob::create_from_bytes(msg.data(), msg.length());
         return negotiation_rpc(std::move(request), RPC_NEGOTIATION);
     }
 
@@ -84,7 +84,7 @@ TEST_F(server_negotiation_test, on_list_mechanisms)
             on_list_mechanisms(rpc);
 
             ASSERT_EQ(rpc.response().status, test.resp_status);
-            ASSERT_EQ(rpc.response().msg, test.resp_msg);
+            ASSERT_EQ(rpc.response().msg.to_string(), test.resp_msg);
             ASSERT_EQ(get_negotiation_status(), test.nego_status);
         }
     }

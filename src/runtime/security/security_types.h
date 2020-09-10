@@ -58,17 +58,17 @@ public:
     negotiation_request(negotiation_request &&);
     negotiation_request &operator=(const negotiation_request &);
     negotiation_request &operator=(negotiation_request &&);
-    negotiation_request() : status((negotiation_status::type)0), msg() {}
+    negotiation_request() : status((negotiation_status::type)0) {}
 
     virtual ~negotiation_request() throw();
     negotiation_status::type status;
-    std::string msg;
+    ::dsn::blob msg;
 
     _negotiation_request__isset __isset;
 
     void __set_status(const negotiation_status::type val);
 
-    void __set_msg(const std::string &val);
+    void __set_msg(const ::dsn::blob &val);
 
     bool operator==(const negotiation_request &rhs) const
     {
@@ -110,17 +110,17 @@ public:
     negotiation_response(negotiation_response &&);
     negotiation_response &operator=(const negotiation_response &);
     negotiation_response &operator=(negotiation_response &&);
-    negotiation_response() : status((negotiation_status::type)0), msg() {}
+    negotiation_response() : status((negotiation_status::type)0) {}
 
     virtual ~negotiation_response() throw();
     negotiation_status::type status;
-    std::string msg;
+    ::dsn::blob msg;
 
     _negotiation_response__isset __isset;
 
     void __set_status(const negotiation_status::type val);
 
-    void __set_msg(const std::string &val);
+    void __set_msg(const ::dsn::blob &val);
 
     bool operator==(const negotiation_response &rhs) const
     {
