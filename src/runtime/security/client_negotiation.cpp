@@ -42,9 +42,8 @@ void client_negotiation::start()
 
 void client_negotiation::list_mechanisms()
 {
-    auto request = dsn::make_unique<negotiation_request>();
-    _status = request->status = negotiation_status::type::SASL_LIST_MECHANISMS;
-    send(std::move(request));
+    _status = negotiation_status::type::SASL_LIST_MECHANISMS;
+    send(_status);
 }
 
 void client_negotiation::handle_response(error_code err, const negotiation_response &&response)
@@ -129,10 +128,8 @@ void client_negotiation::on_mechanism_selected(const negotiation_response &resp)
     std::string start_output;
     err_s = _sasl->start(_selected_mechanism, "", start_output);
     if (err_s.is_ok() || ERR_SASL_INCOMPLETE == err_s.code()) {
-        auto req = dsn::make_unique<negotiation_request>();
-        _status = req->status = negotiation_status::type::SASL_INITIATE;
-        req->msg = start_output;
-        send(std::move(req));
+        _status = negotiation_status::type::SASL_INITIATE;
+        send(_status, std::move(start_output));
     } else {
         dwarn_f("{}: start sasl client failed, error = {}, reason = {}",
                 _name,
@@ -153,10 +150,8 @@ void client_negotiation::on_challenge(const negotiation_response &challenge)
             return;
         }
 
-        auto req = dsn::make_unique<negotiation_request>();
-        _status = req->status = negotiation_status::type::SASL_CHALLENGE_RESP;
-        req->msg = response_msg;
-        send(std::move(req));
+        _status = negotiation_status::type::SASL_CHALLENGE_RESP;
+        send(_status, std::move(response_msg));
         return;
     }
 
@@ -172,16 +167,18 @@ void client_negotiation::on_challenge(const negotiation_response &challenge)
 void client_negotiation::select_mechanism(const std::string &mechanism)
 {
     _selected_mechanism = mechanism;
+    _status = negotiation_status::type::SASL_SELECT_MECHANISMS;
 
-    auto req = dsn::make_unique<negotiation_request>();
-    _status = req->status = negotiation_status::type::SASL_SELECT_MECHANISMS;
-    req->msg = mechanism;
-    send(std::move(req));
+    send(_status, std::move(mechanism));
 }
 
-void client_negotiation::send(std::unique_ptr<negotiation_request> request)
+void client_negotiation::send(negotiation_status::type status, const std::string &&msg)
 {
-    negotiation_rpc rpc(std::move(request), RPC_NEGOTIATION);
+    auto req = dsn::make_unique<negotiation_request>();
+    req->status = status;
+    req->msg = msg;
+
+    negotiation_rpc rpc(std::move(req), RPC_NEGOTIATION);
     rpc.call(_session->remote_address(), nullptr, [this, rpc](error_code err) mutable {
         handle_response(err, std::move(rpc.response()));
     });
