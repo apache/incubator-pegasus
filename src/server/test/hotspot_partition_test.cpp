@@ -24,6 +24,7 @@ namespace server {
 
 TEST(hotspot_partition_calculator, hotspot_partition_policy)
 {
+    // TODO: refactor the unit test
     std::vector<row_data> test_rows(8);
     test_rows[0].get_qps = 1000.0;
     test_rows[1].get_qps = 1000.0;

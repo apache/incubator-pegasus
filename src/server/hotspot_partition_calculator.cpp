@@ -40,6 +40,7 @@ void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &p
         _partition_stat_histories.pop();
     }
     std::vector<hotspot_partition_data> temp(partitions.size());
+    // TODO refactor the data structure
     for (int i = 0; i < partitions.size(); i++) {
         temp[i] = std::move(hotspot_partition_data(partitions[i]));
     }
