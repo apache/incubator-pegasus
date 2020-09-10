@@ -22,8 +22,8 @@
 namespace pegasus {
 namespace server {
 
-const int HOT_SCENARIO_0_READ_HOT_PARTITION=7;
-const int HOT_SCENARIO_0_WRITE_HOT_PARTITION=0;
+const int HOT_SCENARIO_0_READ_HOT_PARTITION = 7;
+const int HOT_SCENARIO_0_WRITE_HOT_PARTITION = 0;
 std::vector<row_data> generate_hot_scenario_0()
 {
     std::vector<row_data> test_rows;
@@ -37,8 +37,8 @@ std::vector<row_data> generate_hot_scenario_0()
     return test_rows;
 }
 
-const int HOT_SCENARIO_1_READ_HOT_PARTITION=3;
-const int HOT_SCENARIO_1_WRITE_HOT_PARTITION=2;
+const int HOT_SCENARIO_1_READ_HOT_PARTITION = 3;
+const int HOT_SCENARIO_1_WRITE_HOT_PARTITION = 2;
 std::vector<row_data> generate_hot_scenario_1()
 {
     std::vector<row_data> test_rows;
