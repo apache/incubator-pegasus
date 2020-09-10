@@ -36,14 +36,14 @@ DSN_DEFINE_int64("pegasus.collector",
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partitions)
 {
-    while (_historical_data.size() > FLAGS_max_hotspot_store_size - 1) {
-        _historical_data.pop();
+    while (_partition_stat_histories.size() > FLAGS_max_hotspot_store_size - 1) {
+        _partition_stat_histories.pop();
     }
     std::vector<hotspot_partition_data> temp(partitions.size());
     for (int i = 0; i < partitions.size(); i++) {
         temp[i] = std::move(hotspot_partition_data(partitions[i]));
     }
-    _historical_data.emplace(temp);
+    _partition_stat_histories.emplace(temp);
 }
 
 void hotspot_partition_calculator::init_perf_counter(int partition_count)
@@ -61,11 +61,11 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
 
 void hotspot_partition_calculator::data_analyse()
 {
-    dassert(_historical_data.back().size() == _hot_points.size(),
+    dassert(_partition_stat_histories.back().size() == _hot_points.size(),
             "partition counts error, please check");
     std::vector<double> data_samples;
-    data_samples.reserve(_historical_data.size() * _hot_points.size());
-    auto temp_data = _historical_data;
+    data_samples.reserve(_partition_stat_histories.size() * _hot_points.size());
+    auto temp_data = _partition_stat_histories;
     double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
     int sample_count = 0;
     while (!temp_data.empty()) {
@@ -79,7 +79,7 @@ void hotspot_partition_calculator::data_analyse()
         temp_data.pop();
     }
     if (sample_count == 0) {
-        ddebug("_historical_data size == 0");
+        ddebug("_partition_stat_histories size == 0");
         return;
     }
     table_qps_avg = table_qps_sum / sample_count;
@@ -87,7 +87,7 @@ void hotspot_partition_calculator::data_analyse()
         standard_deviation += pow((data_sample - table_qps_avg), 2);
     }
     standard_deviation = sqrt(standard_deviation / sample_count);
-    const auto &anly_data = _historical_data.back();
+    const auto &anly_data = _partition_stat_histories.back();
     for (int i = 0; i < _hot_points.size(); i++) {
         double hot_point = (anly_data[i].total_qps - table_qps_avg) / standard_deviation;
         // perf_counter->set can only be unsigned __int64
