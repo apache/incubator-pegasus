@@ -78,12 +78,9 @@ void hotspot_partition_calculator::data_analyse()
         // 0: READ_HOTSPOT_DATA; 1: WRITE_HOTSPOT_DATA
         double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
         int sample_count = 0;
-        std::vector<double> data_samples;
-        data_samples.reserve(_partition_stat_histories.size() * _hot_points.size());
         for (const auto &partition_datas : _partition_stat_histories) {
             for (const auto &partition_data : partition_datas) {
                 if (partition_data.total_qps[data_type] > 1.00) {
-                    data_samples.push_back(partition_data.total_qps[data_type]);
                     table_qps_sum += partition_data.total_qps[data_type];
                     sample_count++;
                 }
@@ -95,8 +92,13 @@ void hotspot_partition_calculator::data_analyse()
             return;
         }
         table_qps_avg = table_qps_sum / sample_count;
-        for (const auto &data_sample : data_samples) {
-            standard_deviation += pow((data_sample - table_qps_avg), 2);
+        for (const auto &partition_datas : _partition_stat_histories) {
+            for (const auto &partition_data : partition_datas) {
+                if (partition_data.total_qps[data_type] > 1.00) {
+                    standard_deviation +=
+                        pow((partition_data.total_qps[data_type] - table_qps_avg), 2);
+                }
+            }
         }
         standard_deviation = sqrt(standard_deviation / (sample_count - 1));
         const auto &anly_data = _partition_stat_histories.back();
