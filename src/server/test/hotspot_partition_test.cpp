@@ -22,6 +22,8 @@
 namespace pegasus {
 namespace server {
 
+const int HOT_SCENARIO_0_READ_HOT_PARTITION=7;
+const int HOT_SCENARIO_0_WRITE_HOT_PARTITION=0;
 std::vector<row_data> generate_hot_scenario_0()
 {
     std::vector<row_data> test_rows;
@@ -30,11 +32,13 @@ std::vector<row_data> generate_hot_scenario_0()
         test_rows[i].get_qps = 1000.0;
         test_rows[i].put_qps = 1000.0;
     }
-    test_rows[7].get_qps = 5000.0;
-    test_rows[0].put_qps = 5000.0;
+    test_rows[HOT_SCENARIO_0_READ_HOT_PARTITION].get_qps = 5000.0;
+    test_rows[HOT_SCENARIO_0_WRITE_HOT_PARTITION].put_qps = 5000.0;
     return test_rows;
 }
 
+const int HOT_SCENARIO_1_READ_HOT_PARTITION=3;
+const int HOT_SCENARIO_1_WRITE_HOT_PARTITION=2;
 std::vector<row_data> generate_hot_scenario_1()
 {
     std::vector<row_data> test_rows;
@@ -43,8 +47,8 @@ std::vector<row_data> generate_hot_scenario_1()
         test_rows[i].get_qps = 1000.0;
         test_rows[i].put_qps = 1000.0;
     }
-    test_rows[3].get_qps = 5000.0;
-    test_rows[2].put_qps = 5000.0;
+    test_rows[HOT_SCENARIO_1_READ_HOT_PARTITION].get_qps = 5000.0;
+    test_rows[HOT_SCENARIO_1_WRITE_HOT_PARTITION].put_qps = 5000.0;
     return test_rows;
 }
 

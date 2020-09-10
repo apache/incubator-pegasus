@@ -43,7 +43,6 @@ public:
 
 private:
     const std::string _app_name;
-    // analyse the saved data to find hotspot partition
     void init_perf_counter(int perf_counter_count);
     // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
     hot_partition_counters _hot_points;
