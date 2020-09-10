@@ -79,5 +79,5 @@ Data import/export tools:
 
 ## License
 
-Copyright 2015-now Xiaomi, Inc. Licensed under the Apache License, Version 2.0:
+Copyright 2020 The Apache Software Foundation. Licensed under the Apache License, Version 2.0:
 <http://www.apache.org/licenses/LICENSE-2.0>
