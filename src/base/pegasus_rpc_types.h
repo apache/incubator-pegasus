@@ -31,4 +31,6 @@ using check_and_mutate_rpc =
 using ingestion_rpc =
     dsn::rpc_holder<dsn::replication::ingestion_request, dsn::replication::ingestion_response>;
 
+using detect_hotkey_rpc= dsn::rpc_holder<dsn::apps::hotkey_detect_request, dsn::apps::hotkey_detect_response>;
+
 } // namespace pegasus

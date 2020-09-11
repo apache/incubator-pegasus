@@ -21,6 +21,11 @@
 #include <math.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
+#include <dsn/tool-api/rpc_address.h>
+#include <dsn/tool-api/group_address.h>
+#include <dsn/utility/error_code.h>
+#include <rrdb/rrdb_types.h>
+#include <dsn/dist/replication/duplication_common.h>
 
 namespace pegasus {
 namespace server {
@@ -96,6 +101,50 @@ void hotspot_partition_calculator::data_analyse()
         hot_point = ceil(std::max(hot_point, double(0)));
         _hot_points[i]->set(hot_point);
     }
+}
+
+/*static*/ void
+hotspot_partition_calculator::server_hotkey_detect_send(const std::string &app_name,
+                                   const int partition_index,
+                                   const hotkey_detect_type write_hotkey_detect,
+                                   const hotkey_detect_action stop_detect_hotkey)
+{
+    ::dsn::apps::hotkey_detect_request req;
+    req.type = write_hotkey_detect ? dsn::apps::hotkey_type::WRITE : dsn::apps::hotkey_type::READ;
+    req.operation = stop_detect_hotkey ? dsn::apps::hotkey_detect_action::STOP
+                                       : dsn::apps::hotkey_detect_action::START;
+    derror_f("{} {} hotkey detection",
+             stop_detect_hotkey ? "Stop" : "Start",
+             write_hotkey_detect ? "write" : "read");
+    dsn::rpc_address meta_server;
+    meta_server.assign_group("meta-servers");
+    std::vector<dsn::rpc_address> meta_servers;
+    replica_helper::load_meta_servers(meta_servers);
+    for (auto &address : meta_servers) {
+        meta_server.group_address()->add(address);
+    }
+    auto cluster_name = dsn::replication::get_current_cluster_name();
+    auto resolver = partition_resolver::get_resolver(cluster_name, meta_servers, app_name.c_str());
+    resolver->call_op(RPC_DETECT_HOTKEY,
+                      req,
+                      nullptr,
+                      [app_name, partition_index](
+                          dsn::error_code err, dsn::message_ex *request, dsn::message_ex *resp) {
+                        if (err == dsn::ERR_OK) {
+                            ::dsn::apps::hotkey_detect_response response;
+                            ::dsn::unmarshall(resp, response);
+                            if (response.err == dsn::ERR_OK) {
+                                ddebug("Hotkey detect rpc sending successed");
+                            } else {
+                                ddebug("Hotkey detect rpc sending failed");
+                            }
+                        } else {
+                            ddebug_f("Hotkey detect rpc sending failed, {}", err.to_string());
+                        }
+                      },
+                      std::chrono::seconds(10),
+                      partition_index,
+                      0);
 }
 
 } // namespace server

@@ -24,6 +24,18 @@
 namespace pegasus {
 namespace server {
 
+enum hotkey_detect_type
+{
+    READ_HOTKEY_DETECT = 0,
+    WRITE_HOTKEY_DETECT
+};
+
+enum hotkey_detect_action
+{
+    START_HOTKEY_DETECT = 0,
+    STOP_HOTKEY_DETECT
+};
+
 // hotspot_partition_calculator is used to find the hot partition in a table.
 class hotspot_partition_calculator
 {
@@ -37,6 +49,10 @@ public:
     void data_aggregate(const std::vector<row_data> &partitions);
     // analyse the saved data to find hotspot partition
     void data_analyse();
+    static void server_hotkey_detect_send(const std::string &app_name,
+                               const int partition_index,
+                               const hotkey_detect_type type,
+                               const hotkey_detect_action operation);
 
 private:
     const std::string _app_name;
