@@ -15,14 +15,14 @@ enum partition_qps_type
     WRITE_HOTSPOT_DATA
 };
 
-struct hotspot_partition_data
+struct hotspot_partition_stat
 {
-    hotspot_partition_data(const row_data &row)
+    hotspot_partition_stat(const row_data &row)
     {
         total_qps[READ_HOTSPOT_DATA] = row.get_total_read_qps();
         total_qps[WRITE_HOTSPOT_DATA] = row.get_total_write_qps();
     }
-    hotspot_partition_data() {}
+    hotspot_partition_stat() {}
     double total_qps[2];
 };
 

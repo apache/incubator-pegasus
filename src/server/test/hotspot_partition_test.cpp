@@ -17,113 +17,81 @@
 
 #include "server/hotspot_partition_calculator.h"
 
+#include "pegasus_server_test_base.h"
 #include <gtest/gtest.h>
 
 namespace pegasus {
 namespace server {
 
-const int HOT_SCENARIO_0_READ_HOT_PARTITION = 7;
-const int HOT_SCENARIO_0_WRITE_HOT_PARTITION = 0;
-std::vector<row_data> generate_hot_scenario_0()
+class hotspot_partition_test : public pegasus_server_test_base
 {
-    std::vector<row_data> test_rows;
-    test_rows.resize(8);
-    for (int i = 0; i < 8; i++) {
-        test_rows[i].get_qps = 1000.0;
-        test_rows[i].put_qps = 1000.0;
+public:
+    hotspot_partition_test() : calculator("TEST", 8){};
+    hotspot_partition_calculator calculator;
+    std::vector<row_data> generate_row_data()
+    {
+        std::vector<row_data> test_rows;
+        test_rows.resize(8);
+        for (int i = 0; i < 8; i++) {
+            test_rows[i].get_qps = 1000.0;
+            test_rows[i].put_qps = 1000.0;
+        }
+        return test_rows;
     }
+    std::vector<std::vector<double>> get_calculator_result(const hot_partition_counters &counters)
+    {
+        std::vector<std::vector<double>> result;
+        result.resize(2);
+        for (int i = 0; i < counters.size(); i++) {
+            result[READ_HOTSPOT_DATA].push_back(counters[i][READ_HOTSPOT_DATA]->get()->get_value());
+            result[WRITE_HOTSPOT_DATA].push_back(
+                counters[i][WRITE_HOTSPOT_DATA]->get()->get_value());
+        }
+        return result;
+    }
+    void test_policy_in_scenarios(std::vector<row_data> scenario,
+                                  std::vector<std::vector<double>> &expect_result,
+                                  hotspot_partition_calculator &calculator)
+    {
+        calculator.data_aggregate(std::move(scenario));
+        calculator.data_analyse();
+        std::vector<std::vector<double>> result = get_calculator_result(calculator._hot_points);
+        ASSERT_EQ(result, expect_result);
+    }
+};
+
+TEST_F(hotspot_partition_test, hotspot_partition_policy)
+{
+    // Insert normal scenario data to test
+    std::vector<row_data> test_rows = generate_row_data();
+    std::vector<std::vector<double>> expect_vector = {{0, 0, 0, 0, 0, 0, 0, 0},
+                                                      {0, 0, 0, 0, 0, 0, 0, 0}};
+    test_policy_in_scenarios(test_rows, expect_vector, calculator);
+
+    // Insert hotspot scenario_0 data to test
+    test_rows = generate_row_data();
+    const int HOT_SCENARIO_0_READ_HOT_PARTITION = 7;
+    const int HOT_SCENARIO_0_WRITE_HOT_PARTITION = 0;
     test_rows[HOT_SCENARIO_0_READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[HOT_SCENARIO_0_WRITE_HOT_PARTITION].put_qps = 5000.0;
-    return test_rows;
-}
+    expect_vector = {{0, 0, 0, 0, 0, 0, 0, 4}, {4, 0, 0, 0, 0, 0, 0, 0}};
+    test_policy_in_scenarios(test_rows, expect_vector, calculator);
 
-const int HOT_SCENARIO_1_READ_HOT_PARTITION = 3;
-const int HOT_SCENARIO_1_WRITE_HOT_PARTITION = 2;
-std::vector<row_data> generate_hot_scenario_1()
-{
-    std::vector<row_data> test_rows;
-    test_rows.resize(8);
-    for (int i = 0; i < 8; i++) {
-        test_rows[i].get_qps = 1000.0;
-        test_rows[i].put_qps = 1000.0;
-    }
+    // Insert hotspot scenario_0 data to test again
+    test_rows = generate_row_data();
+    test_rows[HOT_SCENARIO_0_READ_HOT_PARTITION].get_qps = 5000.0;
+    test_rows[HOT_SCENARIO_0_WRITE_HOT_PARTITION].put_qps = 5000.0;
+    expect_vector = {{0, 0, 0, 0, 0, 0, 0, 4}, {4, 0, 0, 0, 0, 0, 0, 0}};
+    test_policy_in_scenarios(test_rows, expect_vector, calculator);
+
+    // Insert hotspot scenario_1 data to test again
+    test_rows = generate_row_data();
+    const int HOT_SCENARIO_1_READ_HOT_PARTITION = 3;
+    const int HOT_SCENARIO_1_WRITE_HOT_PARTITION = 2;
     test_rows[HOT_SCENARIO_1_READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[HOT_SCENARIO_1_WRITE_HOT_PARTITION].put_qps = 5000.0;
-    return test_rows;
-}
-
-std::vector<row_data> generate_normal_scenario_0()
-{
-    std::vector<row_data> test_rows;
-    test_rows.resize(8);
-    for (int i = 0; i < 8; i++) {
-        test_rows[i].get_qps = 1000.0;
-        test_rows[i].put_qps = 1000.0;
-    }
-    return test_rows;
-}
-
-std::vector<std::vector<double>> get_calculator_result(const hot_partition_counters &counters)
-{
-    std::vector<std::vector<double>> result;
-    result.resize(2);
-    for (int i = 0; i < counters.size(); i++) {
-        result[READ_HOTSPOT_DATA].push_back(counters[i][READ_HOTSPOT_DATA]->get()->get_value());
-        result[WRITE_HOTSPOT_DATA].push_back(counters[i][WRITE_HOTSPOT_DATA]->get()->get_value());
-    }
-    return result;
-}
-
-TEST(hotspot_partition_calculator, hotspot_partition_policy)
-{
-    hotspot_partition_calculator test_hotspot_calculator("TEST", 8);
-    {
-        // Insert normal scenario data to test
-        test_hotspot_calculator.data_aggregate(std::move(generate_normal_scenario_0()));
-        test_hotspot_calculator.data_analyse();
-        std::vector<std::vector<double>> result =
-            get_calculator_result(test_hotspot_calculator._hot_points);
-        std::vector<double> read_expect_vector{0, 0, 0, 0, 0, 0, 0, 0};
-        std::vector<double> write_expect_vector{0, 0, 0, 0, 0, 0, 0, 0};
-        ASSERT_EQ(result[READ_HOTSPOT_DATA], read_expect_vector);
-        ASSERT_EQ(result[WRITE_HOTSPOT_DATA], write_expect_vector);
-    }
-
-    {
-        // Insert hot scenario 0 data to test
-        test_hotspot_calculator.data_aggregate(std::move(generate_hot_scenario_0()));
-        test_hotspot_calculator.data_analyse();
-        std::vector<std::vector<double>> result =
-            get_calculator_result(test_hotspot_calculator._hot_points);
-        std::vector<double> read_expect_vector{0, 0, 0, 0, 0, 0, 0, 4};
-        std::vector<double> write_expect_vector{4, 0, 0, 0, 0, 0, 0, 0};
-        ASSERT_EQ(result[READ_HOTSPOT_DATA], read_expect_vector);
-        ASSERT_EQ(result[WRITE_HOTSPOT_DATA], write_expect_vector);
-    }
-
-    {
-        // Insert hot scenario 0 data to test again
-        test_hotspot_calculator.data_aggregate(std::move(generate_hot_scenario_0()));
-        test_hotspot_calculator.data_analyse();
-        std::vector<std::vector<double>> result =
-            get_calculator_result(test_hotspot_calculator._hot_points);
-        std::vector<double> read_expect_vector{0, 0, 0, 0, 0, 0, 0, 4};
-        std::vector<double> write_expect_vector{4, 0, 0, 0, 0, 0, 0, 0};
-        ASSERT_EQ(result[READ_HOTSPOT_DATA], read_expect_vector);
-        ASSERT_EQ(result[WRITE_HOTSPOT_DATA], write_expect_vector);
-    }
-
-    {
-        // Insert hot scenario 1 data to test
-        test_hotspot_calculator.data_aggregate(std::move(generate_hot_scenario_1()));
-        test_hotspot_calculator.data_analyse();
-        std::vector<std::vector<double>> result =
-            get_calculator_result(test_hotspot_calculator._hot_points);
-        std::vector<double> read_expect_vector{0, 0, 0, 4, 0, 0, 0, 0};
-        std::vector<double> write_expect_vector{0, 0, 4, 0, 0, 0, 0, 0};
-        ASSERT_EQ(result[READ_HOTSPOT_DATA], read_expect_vector);
-        ASSERT_EQ(result[WRITE_HOTSPOT_DATA], write_expect_vector);
-    }
+    expect_vector = {{0, 0, 0, 4, 0, 0, 0, 0}, {0, 0, 4, 0, 0, 0, 0, 0}};
+    test_policy_in_scenarios(test_rows, expect_vector, calculator);
 }
 
 } // namespace server

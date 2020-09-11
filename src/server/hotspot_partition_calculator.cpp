@@ -37,14 +37,14 @@ DSN_DEFINE_int64("pegasus.collector",
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
-    while (_partition_stat_histories.size() > FLAGS_max_hotspot_store_size - 1) {
-        _partition_stat_histories.pop_front();
+    while (_partitions_stat_histories.size() >= FLAGS_max_hotspot_store_size) {
+        _partitions_stat_histories.pop_front();
     }
-    std::vector<hotspot_partition_data> temp;
+    std::vector<hotspot_partition_stat> temp;
     for (const auto &partition_stat : partition_stats) {
-        temp.emplace_back(hotspot_partition_data(partition_stat));
+        temp.emplace_back(hotspot_partition_stat(partition_stat));
     }
-    _partition_stat_histories.emplace_back(temp);
+    _partitions_stat_histories.emplace_back(temp);
 }
 
 void hotspot_partition_calculator::init_perf_counter(int partition_count)
@@ -73,42 +73,42 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
 
 void hotspot_partition_calculator::data_analyse()
 {
-    dcheck_eq(_partition_stat_histories.back().size(), _hot_points.size());
+    dcheck_eq(_partitions_stat_histories.back().size(), _hot_points.size());
     for (int data_type = 0; data_type <= 1; data_type++) {
         // 0: READ_HOTSPOT_DATA; 1: WRITE_HOTSPOT_DATA
         double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
         int sample_count = 0;
-        for (const auto &partition_datas : _partition_stat_histories) {
-            for (const auto &partition_data : partition_datas) {
-                if (partition_data.total_qps[data_type] > 1.00) {
-                    table_qps_sum += partition_data.total_qps[data_type];
+        for (const auto &one_partition_stat_histories : _partitions_stat_histories) {
+            for (const auto &partition_stat : one_partition_stat_histories) {
+                if (partition_stat.total_qps[data_type] > 1.00) {
+                    table_qps_sum += partition_stat.total_qps[data_type];
                     sample_count++;
                 }
             }
         }
 
         if (sample_count <= 1) {
-            ddebug("_partition_stat_histories size <= 1");
+            ddebug("_partitions_stat_histories size <= 1");
             return;
         }
         table_qps_avg = table_qps_sum / sample_count;
-        for (const auto &partition_datas : _partition_stat_histories) {
-            for (const auto &partition_data : partition_datas) {
-                if (partition_data.total_qps[data_type] > 1.00) {
+        for (const auto &one_partition_stat_histories : _partitions_stat_histories) {
+            for (const auto &partition_stat : one_partition_stat_histories) {
+                if (partition_stat.total_qps[data_type] > 1.00) {
                     standard_deviation +=
-                        pow((partition_data.total_qps[data_type] - table_qps_avg), 2);
+                        pow((partition_stat.total_qps[data_type] - table_qps_avg), 2);
                 }
             }
         }
         standard_deviation = sqrt(standard_deviation / (sample_count - 1));
-        const auto &anly_data = _partition_stat_histories.back();
+        const auto &anly_data = _partitions_stat_histories.back();
         for (int i = 0; i < _hot_points.size(); i++) {
             double hot_point = 0;
             if (standard_deviation != 0) {
                 hot_point =
                     (anly_data[i].total_qps[data_type] - table_qps_avg) / standard_deviation;
             }
-            // perf_counter->set can only be unsigned __int64
+            // perf_counter->set can only be unsigned uint64_t
             // use ceil to guarantee conversion results
             hot_point = ceil(std::max(hot_point, double(0)));
             _hot_points[i][data_type]->get()->set(hot_point);
