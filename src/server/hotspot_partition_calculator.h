@@ -50,9 +50,9 @@ public:
     // analyse the saved data to find hotspot partition
     void data_analyse();
     static void server_hotkey_detect_send(const std::string &app_name,
-                               const int partition_index,
-                               const hotkey_detect_type type,
-                               const hotkey_detect_action operation);
+                                          const int partition_index,
+                                          const hotkey_detect_type type,
+                                          const hotkey_detect_action operation);
 
 private:
     const std::string _app_name;
