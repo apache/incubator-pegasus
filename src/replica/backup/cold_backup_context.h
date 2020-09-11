@@ -21,7 +21,7 @@
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/block_service.h>
 
-#include "common/replication_common.h"
+#include "common/backup_utils.h"
 
 class replication_service_test_app;
 
@@ -208,12 +208,6 @@ public:
         return _status.compare_exchange_strong(checkpointed, ColdBackupUploading) ||
                _status.compare_exchange_strong(paused, ColdBackupUploading);
     }
-
-    // pause uploading checkpoint to remote.
-    //   ColdBackupUploading --> ColdBackupPaused
-    // Returns:
-    //   - true if status is successfully changed to ColdBackupPaused.
-    bool pause_upload();
 
     // mark failed when uploading checkpoint to remote.
     //   { ColdBackupUploading | ColdBackupPaused } --> ColdBackupFailed

@@ -16,6 +16,7 @@
 // under the License.
 
 #include "cold_backup_context.h"
+#include "common/backup_utils.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "block_service/block_service_manager.h"
@@ -136,21 +137,6 @@ bool cold_backup_context::complete_checkpoint()
         return false;
     }
 }
-
-bool cold_backup_context::pause_upload()
-{
-    int uploading = ColdBackupUploading;
-    if (_status.compare_exchange_strong(uploading, ColdBackupPaused)) {
-        if (_owner_replica != nullptr) {
-            _owner_replica->get_replica_stub()
-                ->_counter_cold_backup_recent_pause_count->increment();
-        }
-        return true;
-    } else {
-        return false;
-    }
-}
-
 bool cold_backup_context::fail_upload(const char *failure_reason)
 {
     int uploading = ColdBackupUploading;
