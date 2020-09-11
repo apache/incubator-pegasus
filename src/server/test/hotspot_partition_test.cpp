@@ -19,9 +19,6 @@
 
 #include <gtest/gtest.h>
 
-#include "message_utils.h"
-#include "base/pegasus_rpc_types.h"
-
 namespace pegasus {
 namespace server {
 
@@ -46,14 +43,6 @@ TEST(hotspot_partition_calculator, hotspot_partition_policy)
     }
     std::vector<double> expect_vector{0, 0, 0, 0, 0, 0, 0, 3};
     ASSERT_EQ(expect_vector, result);
-}
-
-TEST(hotspot_partition_calculator, server_hotkey_detect_send)
-{
-    RPC_MOCKING(detect_hotkey_rpc)
-    {
-
-    }
 }
 
 } // namespace server
