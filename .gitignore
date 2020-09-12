@@ -1,0 +1,4 @@
+bin/
+.*-history
+*.log
+.idea
