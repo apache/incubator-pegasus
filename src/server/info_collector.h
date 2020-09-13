@@ -19,12 +19,12 @@
 
 #include "../shell/commands.h"
 #include "table_stats.h"
-#include "table_hotspot_policy.h"
 
 namespace pegasus {
 namespace server {
 
 class result_writer;
+class hotspot_partition_calculator;
 
 class info_collector
 {
@@ -177,15 +177,16 @@ private:
     uint32_t _storage_size_fetch_interval_seconds;
     uint32_t _storage_size_retry_wait_seconds;
     uint32_t _storage_size_retry_max_count;
-    std::string _hotspot_detect_algorithm;
     ::dsn::task_ptr _storage_size_stat_timer_task;
     ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
-    std::map<std::string, hotspot_calculator *> _hotspot_calculator_store;
-
-    hotspot_calculator *get_hotspot_calculator(const std::string &app_name,
-                                               const int partition_num);
+    // _hotspot_calculator_store is to save hotspot_partition_calculator for each table, a
+    // hotspot_partition_calculator saves historical hotspot data and alert perf_counters of
+    // corresponding table
+    std::map<std::string, std::shared_ptr<hotspot_partition_calculator>> _hotspot_calculator_store;
+    std::shared_ptr<hotspot_partition_calculator>
+    get_hotspot_calculator(const std::string &app_name, const int partition_count);
 };
 
 } // namespace server
