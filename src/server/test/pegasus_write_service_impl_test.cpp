@@ -156,18 +156,28 @@ TEST_F(pegasus_write_service_impl_test, verify_timetag_compatible_with_version_0
     dsn::fail::teardown();
 }
 
-TEST_F(pegasus_write_service_impl_test, incr_on_absent_record)
+class incr_test : public pegasus_write_service_impl_test
 {
-    dsn::apps::incr_request req;
-    req.increment = 100;
-    pegasus::pegasus_generate_key(
-        req.key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
+public:
+    void SetUp() override
+    {
+        pegasus_write_service_impl_test::SetUp();
+        pegasus::pegasus_generate_key(
+            req.key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
+    }
 
+    dsn::apps::incr_request req;
+    dsn::apps::incr_response resp;
+};
+
+TEST_F(incr_test, incr_on_absent_record)
+{
+    // ensure key is absent
     db_get_context get_ctx;
     db_get(req.key, &get_ctx);
     ASSERT_FALSE(get_ctx.found);
 
-    dsn::apps::incr_response resp;
+    req.increment = 100;
     _write_impl->incr(0, req, resp);
     ASSERT_EQ(resp.new_value, 100);
 
@@ -175,42 +185,32 @@ TEST_F(pegasus_write_service_impl_test, incr_on_absent_record)
     ASSERT_TRUE(get_ctx.found);
 }
 
-TEST_F(pegasus_write_service_impl_test, negative_incr_and_zero_incr)
+TEST_F(incr_test, negative_incr_and_zero_incr)
 {
-    dsn::apps::incr_request req;
     req.increment = -100;
-    pegasus::pegasus_generate_key(
-        req.key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
-    dsn::apps::incr_response resp;
-    int err = _write_impl->incr(0, req, resp);
-    ASSERT_EQ(err, 0);
+    ASSERT_EQ(0, _write_impl->incr(0, req, resp));
     ASSERT_EQ(resp.new_value, -100);
 
     req.increment = -1;
-    err = _write_impl->incr(0, req, resp);
-    ASSERT_EQ(err, 0);
+    ASSERT_EQ(0, _write_impl->incr(0, req, resp));
     ASSERT_EQ(resp.new_value, -101);
 
     req.increment = 0;
-    err = _write_impl->incr(0, req, resp);
-    ASSERT_EQ(err, 0);
+    ASSERT_EQ(0, _write_impl->incr(0, req, resp));
     ASSERT_EQ(resp.new_value, -101);
 }
 
-TEST_F(pegasus_write_service_impl_test, invalid_incr)
+TEST_F(incr_test, invalid_incr)
 {
-    dsn::apps::incr_request req;
-    req.increment = 10;
-    pegasus::pegasus_generate_key(
-        req.key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
-    dsn::apps::incr_response resp;
-
     single_set(req.key, dsn::blob::create_from_bytes("abc"));
+
+    req.increment = 10;
     _write_impl->incr(1, req, resp);
     ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);
     ASSERT_EQ(resp.new_value, 0);
 
     single_set(req.key, dsn::blob::create_from_bytes("100"));
+
     req.increment = std::numeric_limits<int64_t>::max();
     _write_impl->incr(1, req, resp);
     ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);
