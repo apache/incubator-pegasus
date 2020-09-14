@@ -1967,9 +1967,9 @@ inline std::ostream &operator<<(std::ostream &out, const duplicate_response &obj
 
 typedef struct _hotkey_detect_request__isset
 {
-    _hotkey_detect_request__isset() : type(false), operation(false) {}
+    _hotkey_detect_request__isset() : type(false), action(false) {}
     bool type : 1;
-    bool operation : 1;
+    bool action : 1;
 } _hotkey_detect_request__isset;
 
 class hotkey_detect_request
@@ -1979,25 +1979,23 @@ public:
     hotkey_detect_request(hotkey_detect_request &&);
     hotkey_detect_request &operator=(const hotkey_detect_request &);
     hotkey_detect_request &operator=(hotkey_detect_request &&);
-    hotkey_detect_request() : type((hotkey_type::type)0), operation((hotkey_detect_action::type)0)
-    {
-    }
+    hotkey_detect_request() : type((hotkey_type::type)0), action((hotkey_detect_action::type)0) {}
 
     virtual ~hotkey_detect_request() throw();
     hotkey_type::type type;
-    hotkey_detect_action::type operation;
+    hotkey_detect_action::type action;
 
     _hotkey_detect_request__isset __isset;
 
     void __set_type(const hotkey_type::type val);
 
-    void __set_operation(const hotkey_detect_action::type val);
+    void __set_action(const hotkey_detect_action::type val);
 
     bool operator==(const hotkey_detect_request &rhs) const
     {
         if (!(type == rhs.type))
             return false;
-        if (!(operation == rhs.operation))
+        if (!(action == rhs.action))
             return false;
         return true;
     }
