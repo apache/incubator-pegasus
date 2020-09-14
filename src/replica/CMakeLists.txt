@@ -10,7 +10,9 @@ set(DUPLICATION_SRC
 )
 
 set(BACKUP_SRC backup/replica_backup_manager.cpp
-               backup/cold_backup_context.cpp)
+               backup/cold_backup_context.cpp
+               backup/replica_backup_server.cpp
+)
 
 set(BULK_LOAD_SRC bulk_load/replica_bulk_loader.cpp)
 

@@ -4,11 +4,13 @@
 
 #pragma once
 
-#include "replica/replica.h"
+#include <dsn/dist/replication/replica_base.h>
+#include <dsn/dist/replication/replication_types.h>
 
 namespace dsn {
 namespace replication {
 
+class replica;
 class replica_backup_manager : replica_base
 {
 public:

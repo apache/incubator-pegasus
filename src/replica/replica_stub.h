@@ -54,7 +54,6 @@ typedef rpc_holder<query_replica_info_request, query_replica_info_response> quer
 typedef rpc_holder<replica_configuration, learn_response> copy_checkpoint_rpc;
 typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;
 typedef rpc_holder<query_app_info_request, query_app_info_response> query_app_info_rpc;
-typedef rpc_holder<backup_request, backup_response> backup_rpc;
 typedef rpc_holder<notify_catch_up_request, notify_cacth_up_response> notify_catch_up_rpc;
 typedef rpc_holder<group_bulk_load_request, group_bulk_load_response> group_bulk_load_rpc;
 
@@ -74,6 +73,7 @@ typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
 class duplication_sync_timer;
 class replica_bulk_loader;
+class replica_backup_server;
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:
@@ -106,8 +106,6 @@ public:
     void on_query_replica_info(query_replica_info_rpc rpc);
     void on_query_disk_info(query_disk_info_rpc rpc);
     void on_query_app_info(query_app_info_rpc rpc);
-    void on_cold_backup(backup_rpc rpc);
-    void on_clear_cold_backup(const backup_clear_request &request);
     void on_bulk_load(bulk_load_rpc rpc);
 
     //
@@ -152,8 +150,9 @@ public:
     //
     // common routines for inquiry
     //
-    replica_ptr get_replica(gpid id);
+    replica_ptr get_replica(gpid id) const;
     replication_options &options() { return _options; }
+    const replication_options &options() const { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
     virtual rpc_address get_meta_server_address() const { return _failure_detector->get_servers(); }
     rpc_address primary_address() const { return _primary_address; }
@@ -328,6 +327,7 @@ private:
     ::dsn::task_ptr _mem_release_timer_task;
 
     std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
+    std::unique_ptr<replica_backup_server> _backup_server;
 
     // command_handlers
     dsn_handle_t _kill_partition_command;

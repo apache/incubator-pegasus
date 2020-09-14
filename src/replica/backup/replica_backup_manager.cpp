@@ -4,6 +4,7 @@
 
 #include "replica_backup_manager.h"
 #include "cold_backup_context.h"
+#include "replica/replica.h"
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/filesystem.h>

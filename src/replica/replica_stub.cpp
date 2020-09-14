@@ -39,7 +39,7 @@
 #include "mutation.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "duplication/duplication_sync_timer.h"
-#include "backup/replica_backup_manager.h"
+#include "backup/replica_backup_server.h"
 
 #include <dsn/cpp/json_helper.h>
 #include <dsn/utility/filesystem.h>
@@ -758,6 +758,8 @@ void replica_stub::initialize_start()
         _duplication_sync_timer->start();
     }
 
+    _backup_server = dsn::make_unique<replica_backup_server>(this);
+
     // init liveness monitor
     dassert(NS_Disconnected == _state, "");
     if (_options.fd_disabled == false) {
@@ -806,7 +808,7 @@ dsn::error_code replica_stub::on_kill_replica(gpid id)
     }
 }
 
-replica_ptr replica_stub::get_replica(gpid id)
+replica_ptr replica_stub::get_replica(gpid id) const
 {
     zauto_read_lock l(_replicas_lock);
     auto it = _replicas.find(id);
@@ -1047,53 +1049,6 @@ void replica_stub::on_query_app_info(query_app_info_rpc rpc)
                 visited_apps.insert(info.app_id);
             }
         }
-    }
-}
-
-void replica_stub::on_cold_backup(backup_rpc rpc)
-{
-    const backup_request &request = rpc.request();
-    backup_response &response = rpc.response();
-
-    ddebug("received cold backup request: backup{%s.%s.%" PRId64 "}",
-           request.pid.to_string(),
-           request.policy.policy_name.c_str(),
-           request.backup_id);
-    response.pid = request.pid;
-    response.policy_name = request.policy.policy_name;
-    response.backup_id = request.backup_id;
-
-    if (_options.cold_backup_root.empty()) {
-        derror("backup{%s.%s.%" PRId64
-               "}: cold_backup_root is empty, response ERR_OPERATION_DISABLED",
-               request.pid.to_string(),
-               request.policy.policy_name.c_str(),
-               request.backup_id);
-        response.err = ERR_OPERATION_DISABLED;
-        return;
-    }
-
-    replica_ptr rep = get_replica(request.pid);
-    if (rep != nullptr) {
-        rep->on_cold_backup(request, response);
-    } else {
-        derror("backup{%s.%s.%" PRId64 "}: replica not found, response ERR_OBJECT_NOT_FOUND",
-               request.pid.to_string(),
-               request.policy.policy_name.c_str(),
-               request.backup_id);
-        response.err = ERR_OBJECT_NOT_FOUND;
-    }
-}
-
-void replica_stub::on_clear_cold_backup(const backup_clear_request &request)
-{
-    ddebug_f("receive clear cold backup request: backup({}.{})",
-             request.pid.to_string(),
-             request.policy_name.c_str());
-
-    replica_ptr rep = get_replica(request.pid);
-    if (rep != nullptr) {
-        rep->get_backup_manager()->on_clear_cold_backup(request);
     }
 }
 
@@ -2136,10 +2091,6 @@ void replica_stub::open_service()
         RPC_QUERY_DISK_INFO, "query_disk_info", &replica_stub::on_query_disk_info);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_APP_INFO, "query_app_info", &replica_stub::on_query_app_info);
-    register_rpc_handler_with_rpc_holder(
-        RPC_COLD_BACKUP, "cold_backup", &replica_stub::on_cold_backup);
-    register_rpc_handler(
-        RPC_CLEAR_COLD_BACKUP, "clear_cold_backup", &replica_stub::on_clear_cold_backup);
     register_rpc_handler_with_rpc_holder(RPC_SPLIT_NOTIFY_CATCH_UP,
                                          "child_notify_catch_up",
                                          &replica_stub::on_notify_primary_split_catch_up);
