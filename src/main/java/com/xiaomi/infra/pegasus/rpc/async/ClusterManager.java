@@ -34,6 +34,7 @@ public class ClusterManager extends Cluster {
   private EventLoopGroup tableGroup; // group used for handle table logic
   private String[] metaList;
   private MetaSession metaSession;
+  private boolean enableAuth;
 
   private static final String osName;
 
@@ -61,6 +62,8 @@ public class ClusterManager extends Cluster {
     // so the replicaSessions should be initialized earlier
     metaSession =
         new MetaSession(this, metaList, (int) opts.getMetaQueryTimeout().toMillis(), 10, metaGroup);
+
+    this.enableAuth = opts.isEnableAuth();
   }
 
   public EventExecutor getExecutor() {
@@ -82,7 +85,10 @@ public class ClusterManager extends Cluster {
       if (ss != null) return ss;
       ss =
           new ReplicaSession(
-              address, replicaGroup, max(operationTimeout, ClientOptions.MIN_SOCK_CONNECT_TIMEOUT));
+              address,
+              replicaGroup,
+              max(operationTimeout, ClientOptions.MIN_SOCK_CONNECT_TIMEOUT),
+              enableAuth);
       replicaSessions.put(address, ss);
       return ss;
     }

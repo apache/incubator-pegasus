@@ -7,11 +7,11 @@ import com.xiaomi.infra.pegasus.rpc.async.TableHandler;
 import java.util.ArrayList;
 import java.util.List;
 
-public class InterceptorManger {
+public class InterceptorManager {
 
   private List<TableInterceptor> interceptors = new ArrayList<>();
 
-  public InterceptorManger(TableOptions options) {
+  public InterceptorManager(TableOptions options) {
     if (options.enableBackupRequest()) {
       interceptors.add(new BackupRequestInterceptor(options.backupRequestDelayMs()));
     }

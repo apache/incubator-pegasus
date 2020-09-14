@@ -279,7 +279,7 @@ public class ReplicaSessionTest {
 
     long start = System.currentTimeMillis();
     EventLoopGroup rpcGroup = new NioEventLoopGroup(4);
-    ReplicaSession rs = new ReplicaSession(addr, rpcGroup, 1000);
+    ReplicaSession rs = new ReplicaSession(addr, rpcGroup, 1000, false);
     rs.tryConnect().awaitUninterruptibly();
     long end = System.currentTimeMillis();
     Assert.assertEquals((end - start) / 1000, 1); // ensure connect failed within 1sec

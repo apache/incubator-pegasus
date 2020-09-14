@@ -30,6 +30,7 @@ import org.apache.commons.configuration2.ConfigurationConverter;
  *          .falconPerfCounterTags("")
  *          .falconPushInterval(Duration.ofSeconds(10))
  *          .metaQueryTimeout(Duration.ofMillis(5000))
+ *          .enableAuth(false)
  *          .build();
  * }</pre>
  */
@@ -44,6 +45,7 @@ public class ClientOptions {
   public static final String PEGASUS_PERF_COUNTER_TAGS_KEY = "perf_counter_tags";
   public static final String PEGASUS_PUSH_COUNTER_INTERVAL_SECS_KEY = "push_counter_interval_secs";
   public static final String PEGASUS_META_QUERY_TIMEOUT_KEY = "meta_query_timeout";
+  public static final String PEGASUS_ENABLE_AUTH_KEY = "enable_auth";
 
   public static final String DEFAULT_META_SERVERS =
       "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
@@ -54,6 +56,7 @@ public class ClientOptions {
   public static final Duration DEFAULT_FALCON_PUSH_INTERVAL = Duration.ofSeconds(10);
   public static final boolean DEFAULT_ENABLE_WRITE_LIMIT = true;
   public static final Duration DEFAULT_META_QUERY_TIMEOUT = Duration.ofMillis(5000);
+  public static final boolean DEFAULT_ENABLE_AUTH = false;
 
   private final String metaServers;
   private final Duration operationTimeout;
@@ -63,6 +66,7 @@ public class ClientOptions {
   private final Duration falconPushInterval;
   private final boolean enableWriteLimit;
   private final Duration metaQueryTimeout;
+  private final boolean enableAuth;
 
   protected ClientOptions(Builder builder) {
     this.metaServers = builder.metaServers;
@@ -73,6 +77,7 @@ public class ClientOptions {
     this.falconPushInterval = builder.falconPushInterval;
     this.enableWriteLimit = builder.enableWriteLimit;
     this.metaQueryTimeout = builder.metaQueryTimeout;
+    this.enableAuth = builder.enableAuth;
   }
 
   protected ClientOptions(ClientOptions original) {
@@ -84,6 +89,7 @@ public class ClientOptions {
     this.falconPushInterval = original.getFalconPushInterval();
     this.enableWriteLimit = original.isWriteLimitEnabled();
     this.metaQueryTimeout = original.getMetaQueryTimeout();
+    this.enableAuth = original.enableAuth;
   }
 
   /**
@@ -143,6 +149,7 @@ public class ClientOptions {
     Duration metaQueryTimeout =
         Duration.ofMillis(
             config.getLong(PEGASUS_META_QUERY_TIMEOUT_KEY, DEFAULT_META_QUERY_TIMEOUT.toMillis()));
+    boolean enableAuth = config.getBoolean(PEGASUS_ENABLE_AUTH_KEY, DEFAULT_ENABLE_AUTH);
 
     return ClientOptions.builder()
         .metaServers(metaList)
@@ -152,6 +159,7 @@ public class ClientOptions {
         .falconPerfCounterTags(perfCounterTags)
         .falconPushInterval(pushIntervalSecs)
         .metaQueryTimeout(metaQueryTimeout)
+        .enableAuth(enableAuth)
         .build();
   }
 
@@ -169,7 +177,8 @@ public class ClientOptions {
           && this.falconPerfCounterTags.equals(clientOptions.falconPerfCounterTags)
           && this.falconPushInterval.toMillis() == clientOptions.falconPushInterval.toMillis()
           && this.enableWriteLimit == clientOptions.enableWriteLimit
-          && this.metaQueryTimeout.toMillis() == clientOptions.metaQueryTimeout.toMillis();
+          && this.metaQueryTimeout.toMillis() == clientOptions.metaQueryTimeout.toMillis()
+          && this.enableAuth == clientOptions.enableAuth;
     }
     return false;
   }
@@ -195,6 +204,8 @@ public class ClientOptions {
         + enableWriteLimit
         + ", metaQueryTimeout(ms)="
         + metaQueryTimeout.toMillis()
+        + ", enableAuth="
+        + enableAuth
         + '}';
   }
 
@@ -208,6 +219,7 @@ public class ClientOptions {
     private Duration falconPushInterval = DEFAULT_FALCON_PUSH_INTERVAL;
     private boolean enableWriteLimit = DEFAULT_ENABLE_WRITE_LIMIT;
     private Duration metaQueryTimeout = DEFAULT_META_QUERY_TIMEOUT;
+    private boolean enableAuth = DEFAULT_ENABLE_AUTH;
 
     protected Builder() {}
 
@@ -311,6 +323,18 @@ public class ClientOptions {
     }
 
     /**
+     * Whether to enable authentication. Defaults to {@literal false}, see {@link
+     * #DEFAULT_ENABLE_AUTH}.
+     *
+     * @param enableAuth
+     * @return {@code this}
+     */
+    public Builder enableAuth(boolean enableAuth) {
+      this.enableAuth = enableAuth;
+      return this;
+    }
+
+    /**
      * Create a new instance of {@link ClientOptions}.
      *
      * @return new instance of {@link ClientOptions}.
@@ -337,7 +361,8 @@ public class ClientOptions {
         .falconPerfCounterTags(getFalconPerfCounterTags())
         .falconPushInterval(getFalconPushInterval())
         .enableWriteLimit(isWriteLimitEnabled())
-        .metaQueryTimeout(getMetaQueryTimeout());
+        .metaQueryTimeout(getMetaQueryTimeout())
+        .enableAuth(isEnableAuth());
     return builder;
   }
 
@@ -416,5 +441,14 @@ public class ClientOptions {
    */
   public Duration getMetaQueryTimeout() {
     return metaQueryTimeout;
+  }
+
+  /**
+   * Whether to enable authentication. Defaults to {@literal false}.
+   *
+   * @return whether to enable authentication.
+   */
+  public boolean isEnableAuth() {
+    return enableAuth;
   }
 }

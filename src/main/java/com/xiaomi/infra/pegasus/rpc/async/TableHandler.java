@@ -16,7 +16,7 @@ import com.xiaomi.infra.pegasus.replication.query_cfg_response;
 import com.xiaomi.infra.pegasus.rpc.InternalTableOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.Table;
-import com.xiaomi.infra.pegasus.rpc.interceptor.InterceptorManger;
+import com.xiaomi.infra.pegasus.rpc.interceptor.InterceptorManager;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.EventExecutor;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public class TableHandler extends Table {
   AtomicBoolean inQuerying_;
   long lastQueryTime_;
   int backupRequestDelayMs;
-  private InterceptorManger interceptorManger;
+  private InterceptorManager interceptorManager;
 
   public TableHandler(ClusterManager mgr, String name, InternalTableOptions internalTableOptions)
       throws ReplicationException {
@@ -109,7 +109,7 @@ public class TableHandler extends Table {
     inQuerying_ = new AtomicBoolean(false);
     lastQueryTime_ = 0;
 
-    this.interceptorManger = new InterceptorManger(internalTableOptions.tableOptions());
+    this.interceptorManager = new InterceptorManager(internalTableOptions.tableOptions());
   }
 
   public ReplicaConfiguration getReplicaConfig(int index) {
@@ -255,7 +255,7 @@ public class TableHandler extends Table {
     }
 
     client_operator operator = round.getOperator();
-    interceptorManger.after(round, operator.rpc_error.errno, this);
+    interceptorManager.after(round, operator.rpc_error.errno, this);
     boolean needQueryMeta = false;
     switch (operator.rpc_error.errno) {
       case ERR_OK:
@@ -363,7 +363,7 @@ public class TableHandler extends Table {
         tableConfig.replicas.get(round.getOperator().get_gpid().get_pidx());
 
     if (handle.primarySession != null) {
-      interceptorManger.before(round, this);
+      interceptorManager.before(round, this);
       // send request to primary
       handle.primarySession.asyncSend(
           round.getOperator(),
