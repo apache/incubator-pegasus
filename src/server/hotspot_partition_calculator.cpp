@@ -71,48 +71,61 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
     }
 }
 
+void hotspot_partition_calculator::stat_histories_analyse(int data_type,
+                                                          std::vector<int> &hot_points)
+{
+    double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
+    int sample_count = 0;
+    for (const auto &one_partition_stat_histories : _partitions_stat_histories) {
+        for (const auto &partition_stat : one_partition_stat_histories) {
+            table_qps_sum += partition_stat.total_qps[data_type];
+            sample_count++;
+        }
+    }
+    if (sample_count <= 1) {
+        ddebug("_partitions_stat_histories size <= 1, not enough data for calculation");
+        return;
+    }
+    table_qps_avg = table_qps_sum / sample_count;
+    for (const auto &one_partition_stat_histories : _partitions_stat_histories) {
+        for (const auto &partition_stat : one_partition_stat_histories) {
+            standard_deviation += pow((partition_stat.total_qps[data_type] - table_qps_avg), 2);
+        }
+    }
+    standard_deviation = sqrt(standard_deviation / (sample_count - 1));
+    const auto &anly_data = _partitions_stat_histories.back();
+    int hot_point_size = _hot_points.size();
+    hot_points.resize(hot_point_size);
+    for (int i = 0; i < hot_point_size; i++) {
+        double hot_point = 0;
+        if (standard_deviation != 0) {
+            hot_point = (anly_data[i].total_qps[data_type] - table_qps_avg) / standard_deviation;
+        }
+        // perf_counter->set can only be unsigned uint64_t
+        // use ceil to guarantee conversion results
+        hot_points[i] = ceil(std::max(hot_point, double(0)));
+    }
+}
+
+void hotspot_partition_calculator::update_hot_point(int data_type, std::vector<int> &hot_points)
+{
+    dcheck_eq(_hot_points.size(), hot_points.size());
+    int size = hot_points.size();
+    for (int i = 0; i < size; i++) {
+        _hot_points[i][data_type]->get()->set(hot_points[i]);
+    }
+}
+
 void hotspot_partition_calculator::data_analyse()
 {
-    dcheck_eq(_partitions_stat_histories.back().size(), _hot_points.size());
+    dassert(_partitions_stat_histories.back().size() == _hot_points.size(),
+            "The number of partitions in this table has changed, and hotspot analysis cannot be "
+            "performed");
     for (int data_type = 0; data_type <= 1; data_type++) {
-        // 0: READ_HOTSPOT_DATA; 1: WRITE_HOTSPOT_DATA
-        double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
-        int sample_count = 0;
-        for (const auto &one_partition_stat_histories : _partitions_stat_histories) {
-            for (const auto &partition_stat : one_partition_stat_histories) {
-                if (partition_stat.total_qps[data_type] > 1.00) {
-                    table_qps_sum += partition_stat.total_qps[data_type];
-                    sample_count++;
-                }
-            }
-        }
-
-        if (sample_count <= 1) {
-            ddebug("_partitions_stat_histories size <= 1");
-            return;
-        }
-        table_qps_avg = table_qps_sum / sample_count;
-        for (const auto &one_partition_stat_histories : _partitions_stat_histories) {
-            for (const auto &partition_stat : one_partition_stat_histories) {
-                if (partition_stat.total_qps[data_type] > 1.00) {
-                    standard_deviation +=
-                        pow((partition_stat.total_qps[data_type] - table_qps_avg), 2);
-                }
-            }
-        }
-        standard_deviation = sqrt(standard_deviation / (sample_count - 1));
-        const auto &anly_data = _partitions_stat_histories.back();
-        for (int i = 0; i < _hot_points.size(); i++) {
-            double hot_point = 0;
-            if (standard_deviation != 0) {
-                hot_point =
-                    (anly_data[i].total_qps[data_type] - table_qps_avg) / standard_deviation;
-            }
-            // perf_counter->set can only be unsigned uint64_t
-            // use ceil to guarantee conversion results
-            hot_point = ceil(std::max(hot_point, double(0)));
-            _hot_points[i][data_type]->get()->set(hot_point);
-        }
+        // data_type 0: READ_HOTSPOT_DATA; 1: WRITE_HOTSPOT_DATA
+        std::vector<int> hot_points;
+        stat_histories_analyse(data_type, hot_points);
+        update_hot_point(data_type, hot_points);
     }
 }
 

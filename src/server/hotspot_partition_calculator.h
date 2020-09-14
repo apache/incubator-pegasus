@@ -46,6 +46,11 @@ public:
     void data_analyse();
 
 private:
+    // 3σ rule to calculate hot point of each partition
+    void stat_histories_analyse(int data_type, std::vector<int> &hot_points);
+    // set hot_point to corresponding perf_counter
+    void update_hot_point(int data_type, std::vector<int> &hot_points);
+
     const std::string _app_name;
     void init_perf_counter(int perf_counter_count);
     // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
@@ -54,7 +59,6 @@ private:
     stat_histories _partitions_stat_histories;
 
     friend class hotspot_partition_test;
-    FRIEND_TEST(hotspot_partition_test, hotspot_partition_policy);
 };
 
 } // namespace server
