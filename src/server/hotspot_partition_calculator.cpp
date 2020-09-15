@@ -120,7 +120,8 @@ void hotspot_partition_calculator::data_analyse()
 {
     dassert(_partitions_stat_histories.back().size() == _hot_points.size(),
             "The number of partitions in this table has changed, and hotspot analysis cannot be "
-            "performed");
+            "performed,in %s",
+            _app_name.c_str());
     for (int data_type = 0; data_type <= 1; data_type++) {
         // data_type 0: READ_HOTSPOT_DATA; 1: WRITE_HOTSPOT_DATA
         std::vector<int> hot_points;
