@@ -135,11 +135,11 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
                       &tracker,
                       [app_name, partition_index](dsn::error_code error,
                                                   dsn::message_ex *request,
-                                                  dsn::message_ex *response_msg) {
+                                                  dsn::message_ex *response) {
                           if (error == dsn::ERR_OK) {
-                              ::dsn::apps::hotkey_detect_response response;
-                              ::dsn::unmarshall(response_msg, response);
-                              if (response.err == dsn::ERR_OK) {
+                              dsn::apps::hotkey_detect_response resp;
+                              dsn::unmarshall(response, resp);
+                              if (resp.err == dsn::ERR_OK) {
                                   ddebug("Hotkey detect rpc sending successed");
                               } else {
                                   ddebug("Hotkey detect rpc sending failed");
