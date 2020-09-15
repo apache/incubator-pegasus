@@ -110,13 +110,13 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
                                                          const hotkey_detect_type hotkey_type,
                                                          const hotkey_detect_action action)
 {
-    ::dsn::apps::hotkey_detect_request req;
-    req.type = (hotkey_type == hotkey_detect_type::WRITE_HOTKEY_DETECT)
-                   ? dsn::apps::hotkey_type::WRITE
-                   : dsn::apps::hotkey_type::READ;
-    req.action = (action == hotkey_detect_action::STOP_HOTKEY_DETECT)
-                     ? dsn::apps::hotkey_detect_action::STOP
-                     : dsn::apps::hotkey_detect_action::START;
+    ::dsn::apps::hotkey_detect_request request;
+    request.type = (hotkey_type == hotkey_detect_type::WRITE_HOTKEY_DETECT)
+                       ? dsn::apps::hotkey_type::WRITE
+                       : dsn::apps::hotkey_type::READ;
+    request.action = (action == hotkey_detect_action::STOP_HOTKEY_DETECT)
+                         ? dsn::apps::hotkey_detect_action::STOP
+                         : dsn::apps::hotkey_detect_action::START;
     ddebug_f("{} {} hotkey detection",
              (action == hotkey_detect_action::STOP_HOTKEY_DETECT) ? "Stop" : "Start",
              (hotkey_type == hotkey_detect_type::WRITE_HOTKEY_DETECT) ? "write" : "read");
@@ -131,7 +131,7 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
     auto resolver = partition_resolver::get_resolver(cluster_name, meta_servers, app_name.c_str());
     dsn::task_tracker tracker;
     resolver->call_op(RPC_DETECT_HOTKEY,
-                      req,
+                      request,
                       &tracker,
                       [app_name, partition_index](dsn::error_code error,
                                                   dsn::message_ex *request,
