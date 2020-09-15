@@ -110,21 +110,23 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
                                                          const hotkey_detect_type hotkey_type,
                                                          const hotkey_detect_action action)
 {
-    ::dsn::apps::hotkey_detect_request request;
+    dsn::apps::hotkey_detect_request request;
     request.type = (hotkey_type == hotkey_detect_type::WRITE_HOTKEY_DETECT)
                        ? dsn::apps::hotkey_type::WRITE
                        : dsn::apps::hotkey_type::READ;
     request.action = (action == hotkey_detect_action::STOP_HOTKEY_DETECT)
                          ? dsn::apps::hotkey_detect_action::STOP
                          : dsn::apps::hotkey_detect_action::START;
-    ddebug_f("{} {} hotkey detection",
+    ddebug_f("{} {} hotkey detection in {}.{}",
              (action == hotkey_detect_action::STOP_HOTKEY_DETECT) ? "Stop" : "Start",
-             (hotkey_type == hotkey_detect_type::WRITE_HOTKEY_DETECT) ? "write" : "read");
+             (hotkey_type == hotkey_detect_type::WRITE_HOTKEY_DETECT) ? "write" : "read",
+             app_name,
+             partition_index);
     dsn::rpc_address meta_server;
     meta_server.assign_group("meta-servers");
     std::vector<dsn::rpc_address> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
-    for (auto &address : meta_servers) {
+    for (const auto &address : meta_servers) {
         meta_server.group_address()->add(address);
     }
     auto cluster_name = dsn::replication::get_current_cluster_name();
@@ -139,13 +141,11 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
                           if (error == dsn::ERR_OK) {
                               dsn::apps::hotkey_detect_response resp;
                               dsn::unmarshall(response, resp);
-                              if (resp.err == dsn::ERR_OK) {
-                                  ddebug("Hotkey detect rpc sending successed");
-                              } else {
-                                  ddebug("Hotkey detect rpc sending failed");
+                              if (resp.err != dsn::ERR_OK) {
+                                  derror_f("Hotkey detect rpc sending failed", resp.err_hint);
                               }
                           } else {
-                              ddebug_f("Hotkey detect rpc sending failed, {}", error.to_string());
+                              derror_f("Hotkey detect rpc sending failed, {}", error.to_string());
                           }
                       },
                       std::chrono::seconds(10),

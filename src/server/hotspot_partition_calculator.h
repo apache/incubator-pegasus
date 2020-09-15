@@ -24,12 +24,14 @@
 namespace pegasus {
 namespace server {
 
+// determines whether capture read data or write data on the server side
 enum class hotkey_detect_type
 {
     READ_HOTKEY_DETECT = 0,
     WRITE_HOTKEY_DETECT
 };
 
+// determines whether start or stop capture data on the server side
 enum class hotkey_detect_action
 {
     START_HOTKEY_DETECT = 0,
