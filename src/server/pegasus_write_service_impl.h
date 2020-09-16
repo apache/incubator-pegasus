@@ -177,21 +177,25 @@ public:
         resp.decree = decree;
         resp.server = _primary_address;
 
-        rocksdb::Slice raw_key(update.key.data(), update.key.length());
-        std::string raw_value;
+        dsn::string_view raw_key(update.key.data(), update.key.length());
         int64_t new_value = 0;
         uint32_t new_expire_ts = 0;
-        rocksdb::Status s = _db->Get(_rd_opts, raw_key, &raw_value);
-        if (s.ok()) {
-            uint32_t old_expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, raw_value);
-            if (check_if_ts_expired(utils::epoch_now(), old_expire_ts)) {
+        db_get_context get_ctx;
+        int err = db_get(raw_key, &get_ctx);
+        if (err == 0) {
+            if (!get_ctx.found) {
+                // old value is not found, set to 0 before increment
+                new_value = update.increment;
+                new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
+            } else if (get_ctx.expired) {
                 // ttl timeout, set to 0 before increment
                 _pfc_recent_expire_count->increment();
                 new_value = update.increment;
                 new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
             } else {
                 ::dsn::blob old_value;
-                pegasus_extract_user_data(_pegasus_data_version, std::move(raw_value), old_value);
+                pegasus_extract_user_data(
+                    _pegasus_data_version, std::move(get_ctx.raw_value), old_value);
                 if (old_value.length() == 0) {
                     // empty old value, set to 0 before increment
                     new_value = update.increment;
@@ -223,29 +227,14 @@ public:
                     }
                 }
                 // set new ttl
-                if (update.expire_ts_seconds == 0)
-                    new_expire_ts = old_expire_ts;
-                else if (update.expire_ts_seconds < 0)
+                if (update.expire_ts_seconds == 0) {
+                    new_expire_ts = get_ctx.expire_ts;
+                } else if (update.expire_ts_seconds < 0) {
                     new_expire_ts = 0;
-                else // update.expire_ts_seconds > 0
+                } else { // update.expire_ts_seconds > 0
                     new_expire_ts = update.expire_ts_seconds;
+                }
             }
-        } else if (s.IsNotFound()) {
-            // old value is not found, set to 0 before increment
-            new_value = update.increment;
-            new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
-        } else {
-            // read old value failed
-            ::dsn::blob hash_key, sort_key;
-            pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-            derror_rocksdb("Get for Incr",
-                           s.ToString(),
-                           "decree: {}, hash_key: {}, sort_key: {}",
-                           decree,
-                           utils::c_escape_string(hash_key),
-                           utils::c_escape_string(sort_key));
-            resp.error = s.code();
-            return resp.error;
         }
 
         resp.error =
@@ -675,7 +664,10 @@ private:
         return status.code();
     }
 
-    // The resulted `expire_ts` is -1 if record is expired.
+    /// Calls RocksDB Get and store the result into `db_get_context`.
+    /// \returns 0 if Get succeeded. On failure, a non-zero rocksdb status code is returned.
+    /// \result ctx.expired=true if record expired. Still 0 is returned.
+    /// \result ctx.found=false if record is not found. Still 0 is returned.
     int db_get(dsn::string_view raw_key,
                /*out*/ db_get_context *ctx)
     {
