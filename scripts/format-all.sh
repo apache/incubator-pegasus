@@ -11,6 +11,7 @@ SRC_FILES=(src/main/java/com/xiaomi/infra/pegasus/client/*.java
            src/main/java/com/xiaomi/infra/pegasus/operator/*.java
            src/main/java/com/xiaomi/infra/pegasus/tools/*.java
            src/main/java/com/xiaomi/infra/pegasus/rpc/interceptor/*.java
+           src/main/java/com/xiaomi/infra/pegasus/client/request/*.java
            src/main/java/com/xiaomi/infra/pegasus/base/*.java
            src/main/java/com/xiaomi/infra/pegasus/example/*.java
            src/test/java/com/xiaomi/infra/pegasus/client/*.java

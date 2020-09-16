@@ -15,6 +15,8 @@
             <Package name="com.xiaomi.infra.pegasus.client"/>
             <Package name="com.xiaomi.infra.pegasus.metrics"/>
             <Package name="com.xiaomi.infra.pegasus.tools"/>
+            <Package name="com.xiaomi.infra.pegasus.client.request"/>
+            <Package name="com.xiaomi.infra.pegasus.example"/>
         </Or>
     </Match>
 

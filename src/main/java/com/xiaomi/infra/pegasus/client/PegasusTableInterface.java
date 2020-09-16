@@ -729,6 +729,9 @@ public interface PegasusTableInterface {
   /**
    * Batch get values of different keys. Will terminate immediately if any error occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.BatchWithResponse#commit(List, List)}
    * @param keys hashKey and sortKey pair list.
    * @param values output values; should be created by caller; if succeed, the size of values will
    *     be same with keys; the value of keys[i] is stored in values[i]; if the value of keys[i] is
@@ -740,12 +743,17 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public void batchGet(List<Pair<byte[], byte[]>> keys, List<byte[]> values, int timeout /*ms*/)
       throws PException;
 
   /**
    * Batch get values of different keys. Will wait for all requests done even if some error occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.BatchWithResponse#commitWaitAllComplete(List,
+   *     List)}
    * @param keys hashKey and sortKey pair list.
    * @param results output results; should be created by caller; after call done, the size of
    *     results will be same with keys; the results[i] is a Pair: - if Pair.left != null : means
@@ -759,6 +767,7 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public int batchGet2(
       List<Pair<byte[], byte[]>> keys, List<Pair<PException, byte[]>> results, int timeout /*ms*/)
       throws PException;
@@ -805,6 +814,9 @@ public interface PegasusTableInterface {
    * Batch get multiple values under the same hash key. Will terminate immediately if any error
    * occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.BatchWithResponse#commit(List, List)}
    * @param keys List{hashKey,List{sortKey}}
    * @param values output values; should be created by caller; if succeed, the size of values will
    *     be same with keys; the data for keys[i] is stored in values[i].
@@ -815,6 +827,7 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public void batchMultiGet(
       List<Pair<byte[], List<byte[]>>> keys, List<HashKeyData> values, int timeout /*ms*/)
       throws PException;
@@ -823,6 +836,9 @@ public interface PegasusTableInterface {
    * Batch get multiple values under the same hash key. Will wait for all requests done even if some
    * error occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.BatchWithResponse#commit(List, List)}
    * @param keys List{hashKey,List{sortKey}}; if List{sortKey} is null or empty, means fetch all
    *     sortKeys under the hashKey.
    * @param results output results; should be created by caller; after call done, the size of
@@ -834,6 +850,7 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public int batchMultiGet2(
       List<Pair<byte[], List<byte[]>>> keys,
       List<Pair<PException, HashKeyData>> results,
@@ -863,6 +880,9 @@ public interface PegasusTableInterface {
   /**
    * Batch set lots of values. Will terminate immediately if any error occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.Batch#commit(List)}
    * @param items list of items.
    * @param timeout how long will the operation timeout in milliseconds. if timeout > 0, it is a
    *     timeout value for current op, else the timeout value in the configuration file will be
@@ -871,11 +891,15 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public void batchSet(List<SetItem> items, int timeout /*ms*/) throws PException;
 
   /**
    * Batch set lots of values. Will wait for all requests done even if some error occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.Batch#commitWaitAllComplete(List, List)}
    * @param items list of items.
    * @param results output results; should be created by caller; after call done, the size of
    *     results will be same with items; the results[i] is a PException: - if results[i] != null :
@@ -889,6 +913,7 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public int batchSet2(List<SetItem> items, List<PException> results, int timeout /*ms*/)
       throws PException;
 
@@ -907,6 +932,9 @@ public interface PegasusTableInterface {
    * Batch set multiple value under the same hash key. Will terminate immediately if any error
    * occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.Batch#commit(List)}
    * @param items list of items.
    * @param ttlSeconds time to live in seconds, 0 means no ttl.
    * @param timeout how long will the operation timeout in milliseconds. if timeout > 0, it is a
@@ -916,6 +944,7 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public void batchMultiSet(List<HashKeyData> items, int ttlSeconds, int timeout /*ms*/)
       throws PException;
 
@@ -923,6 +952,9 @@ public interface PegasusTableInterface {
    * Batch set multiple value under the same hash key. Will wait for all requests done even if some
    * error occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.Batch#commitWaitAllComplete(List, List)}
    * @param items list of items.
    * @param ttlSeconds time to live in seconds, 0 means no ttl. default value is 0.
    * @param results output results; should be created by caller; after call done, the size of
@@ -937,6 +969,7 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public int batchMultiSet2(
       List<HashKeyData> items, int ttlSeconds, List<PException> results, int timeout /*ms*/)
       throws PException;
@@ -949,6 +982,9 @@ public interface PegasusTableInterface {
   /**
    * Batch delete values of different keys. Will terminate immediately if any error occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.Batch#commit(List)}
    * @param keys hashKey and sortKey pair list.
    * @param timeout how long will the operation timeout in milliseconds. if timeout > 0, it is a
    *     timeout value for current op, else the timeout value in the configuration file will be
@@ -957,12 +993,16 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public void batchDel(List<Pair<byte[], byte[]>> keys, int timeout /*ms*/) throws PException;
 
   /**
    * Batch delete values of different keys. Will wait for all requests done even if some error
    * occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.Batch#commitWaitAllComplete(List, List)}
    * @param keys hashKey and sortKey pair list.
    * @param results output results; should be created by caller; after call done, the size of
    *     results will be same with keys; the results[i] is a PException: - if results[i] != null :
@@ -976,6 +1016,7 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public int batchDel2(
       List<Pair<byte[], byte[]>> keys, List<PException> results, int timeout /*ms*/)
       throws PException;
@@ -1011,6 +1052,9 @@ public interface PegasusTableInterface {
    * Batch delete specified sort keys under the same hash key. Will terminate immediately if any
    * error occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.Batch#commit(List)}
    * @param keys List{hashKey,List{sortKey}}
    * @param timeout how long will the operation timeout in milliseconds. if timeout > 0, it is a
    *     timeout value for current op, else the timeout value in the configuration file will be
@@ -1019,6 +1063,7 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public void batchMultiDel(List<Pair<byte[], List<byte[]>>> keys, int timeout /*ms*/)
       throws PException;
 
@@ -1026,6 +1071,9 @@ public interface PegasusTableInterface {
    * Batch delete specified sort keys under the same hash key. Will wait for all requests done even
    * if some error occurs.
    *
+   * @deprecated Retained only for backward compatibility, will be removed later. Don't use it any
+   *     more. The latest batch operation please see {@link
+   *     com.xiaomi.infra.pegasus.client.request.Batch#commitWaitAllComplete(List, List)}
    * @param keys List{hashKey,List{sortKey}}
    * @param results output results; should be created by caller; after call done, the size of
    *     results will be same with keys; the results[i] is a PException: - if results[i] != null :
@@ -1039,6 +1087,7 @@ public interface PegasusTableInterface {
    *     <p>Notice: the method is not atomic, that means, maybe some keys succeed but some keys
    *     failed.
    */
+  @Deprecated
   public int batchMultiDel2(
       List<Pair<byte[], List<byte[]>>> keys, List<PException> results, int timeout /*ms*/)
       throws PException;
