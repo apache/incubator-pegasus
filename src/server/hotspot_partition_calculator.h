@@ -46,7 +46,8 @@ public:
     void data_analyse();
 
 private:
-    // 3σ rule to calculate hot point of each partition
+    // empirical rule to calculate hot point of each partition
+    // ref: https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule
     void stat_histories_analyse(int data_type, std::vector<int> &hot_points);
     // set hot_point to corresponding perf_counter
     void update_hot_point(int data_type, std::vector<int> &hot_points);
