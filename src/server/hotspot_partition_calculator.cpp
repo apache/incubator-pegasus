@@ -132,25 +132,31 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
     auto cluster_name = dsn::replication::get_current_cluster_name();
     auto resolver = partition_resolver::get_resolver(cluster_name, meta_servers, app_name.c_str());
     dsn::task_tracker tracker;
-    resolver->call_op(RPC_DETECT_HOTKEY,
-                      request,
-                      &tracker,
-                      [app_name, partition_index](dsn::error_code error,
-                                                  dsn::message_ex *request,
-                                                  dsn::message_ex *response) {
-                          if (error == dsn::ERR_OK) {
-                              dsn::apps::hotkey_detect_response resp;
-                              dsn::unmarshall(response, resp);
-                              if (resp.err != dsn::ERR_OK) {
-                                  derror_f("Hotkey detect rpc sending failed", resp.err_hint);
-                              }
-                          } else {
-                              derror_f("Hotkey detect rpc sending failed, {}", error.to_string());
-                          }
-                      },
-                      std::chrono::seconds(10),
-                      partition_index,
-                      0);
+    resolver->call_op(
+        RPC_DETECT_HOTKEY,
+        request,
+        &tracker,
+        [app_name, partition_index](
+            dsn::error_code error, dsn::message_ex *request, dsn::message_ex *response) {
+            if (error == dsn::ERR_OK) {
+                dsn::apps::hotkey_detect_response resp;
+                dsn::unmarshall(response, resp);
+                if (resp.err != dsn::ERR_OK) {
+                    derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
+                             app_name,
+                             partition_index,
+                             resp.err_hint);
+                }
+            } else {
+                derror_f("Hotkey detect rpc sending failed, in {}.{}, {}",
+                         app_name,
+                         partition_index,
+                         error.to_string());
+            }
+        },
+        std::chrono::seconds(10),
+        partition_index,
+        0);
 }
 
 } // namespace server
