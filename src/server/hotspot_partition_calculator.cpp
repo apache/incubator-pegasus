@@ -148,7 +148,7 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
                              resp.err_hint);
                 }
             } else {
-                derror_f("Hotkey detect rpc sending failed, in {}.{}, {}",
+                derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
                          app_name,
                          partition_index,
                          error.to_string());
