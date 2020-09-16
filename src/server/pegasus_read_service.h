@@ -32,6 +32,8 @@ typedef ::dsn::rpc_holder<::dsn::blob, dsn::apps::ttl_response> ttl_rpc;
 typedef ::dsn::rpc_holder<::dsn::apps::get_scanner_request, dsn::apps::scan_response>
     get_scanner_rpc;
 typedef ::dsn::rpc_holder<::dsn::apps::scan_request, dsn::apps::scan_response> scan_rpc;
+typedef ::dsn::rpc_holder<::dsn::apps::hotkey_detect_request, dsn::apps::hotkey_detect_response>
+    detect_hotkey_rpc;
 
 class pegasus_read_service : public dsn::replication::replication_app_base,
                              public dsn::replication::storage_serverlet<pegasus_read_service>
