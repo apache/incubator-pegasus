@@ -133,6 +133,7 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
     auto cluster_name = dsn::replication::get_current_cluster_name();
     auto resolver = partition_resolver::get_resolver(cluster_name, meta_servers, app_name.c_str());
     dsn::task_tracker tracker;
+    // TODO:（TangYanzhao) refactor it with rpc_holder
     resolver->call_op(
         RPC_DETECT_HOTKEY,
         request,
