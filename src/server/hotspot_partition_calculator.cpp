@@ -49,25 +49,17 @@ void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &p
 
 void hotspot_partition_calculator::init_perf_counter(int partition_count)
 {
-    std::string read_counter_name, write_counter_name;
-    std::string read_counter_desc, write_counter_desc;
-    for (int i = 0; i < partition_count; i++) {
-        string read_partition_desc = _app_name + '.' + "read." + std::to_string(i);
-        read_counter_name = fmt::format("app.stat.hotspots@{}", read_partition_desc);
-        read_counter_desc = fmt::format("statistic the hotspots of app {}", read_partition_desc);
-        _hot_points[i].emplace_back(std::make_unique<dsn::perf_counter_wrapper>());
-        _hot_points[i][READ_HOTSPOT_DATA]->init_app_counter("app.pegasus",
-                                                            read_counter_name.c_str(),
-                                                            COUNTER_TYPE_NUMBER,
-                                                            read_counter_desc.c_str());
-        string write_partition_desc = _app_name + '.' + "write." + std::to_string(i);
-        write_counter_name = fmt::format("app.stat.hotspots@{}", write_partition_desc);
-        write_counter_desc = fmt::format("statistic the hotspots of app {}", write_partition_desc);
-        _hot_points[i].emplace_back(std::make_unique<dsn::perf_counter_wrapper>());
-        _hot_points[i][WRITE_HOTSPOT_DATA]->init_app_counter("app.pegasus",
-                                                             write_counter_name.c_str(),
-                                                             COUNTER_TYPE_NUMBER,
-                                                             write_counter_desc.c_str());
+    for (int data_type = 0; data_type < 1; data_type++) {
+        for (int i = 0; i < partition_count; i++) {
+            string partition_desc =
+                _app_name + '.' + (data_type ? "write." : "read.") + std::to_string(i);
+            std::string counter_name = fmt::format("app.stat.hotspots@{}", partition_desc);
+            std::string counter_desc =
+                fmt::format("statistic the hotspots of app {}", partition_desc);
+            _hot_points[i].emplace_back(std::make_unique<dsn::perf_counter_wrapper>());
+            _hot_points[i][data_type]->init_app_counter(
+                "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
+        }
     }
 }
 
