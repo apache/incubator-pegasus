@@ -104,6 +104,7 @@ void hotspot_partition_calculator::data_analyse()
     }
 }
 
+// TODO:（TangYanzhao) call this function to start hotkey detection
 /*static*/ void
 hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_name,
                                                          const int partition_index,
@@ -142,9 +143,10 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
                 dsn::apps::hotkey_detect_response resp;
                 dsn::unmarshall(response, resp);
                 if (resp.err != dsn::ERR_OK) {
-                    derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
+                    derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{} {}",
                              app_name,
                              partition_index,
+                             resp.err,
                              resp.err_hint);
                 }
             } else {
