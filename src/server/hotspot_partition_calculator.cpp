@@ -27,6 +27,7 @@
 #include <rrdb/rrdb_types.h>
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/tool-api/task_tracker.h>
+#include "pegasus_read_service.h"
 
 namespace pegasus {
 namespace server {
@@ -105,22 +106,18 @@ void hotspot_partition_calculator::data_analyse()
 }
 
 // TODO:（TangYanzhao) call this function to start hotkey detection
-/*static*/ void
-hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_name,
-                                                         const int partition_index,
-                                                         const hotkey_detect_type hotkey_type,
-                                                         const hotkey_detect_action action)
+/*static*/ void hotspot_partition_calculator::send_hotkey_detect_request(
+    const std::string &app_name,
+    const uint64_t partition_index,
+    const dsn::apps::hotkey_type::type hotkey_type,
+    const dsn::apps::hotkey_detect_action::type action)
 {
-    dsn::apps::hotkey_detect_request request;
-    request.type = (hotkey_type == hotkey_detect_type::WRITE_HOTKEY_DETECT)
-                       ? dsn::apps::hotkey_type::WRITE
-                       : dsn::apps::hotkey_type::READ;
-    request.action = (action == hotkey_detect_action::STOP_HOTKEY_DETECT)
-                         ? dsn::apps::hotkey_detect_action::STOP
-                         : dsn::apps::hotkey_detect_action::START;
+    auto request = std::make_unique<dsn::apps::hotkey_detect_request>();
+    request->type = hotkey_type;
+    request->action = action;
     ddebug_f("{} {} hotkey detection in {}.{}",
-             (action == hotkey_detect_action::STOP_HOTKEY_DETECT) ? "Stop" : "Start",
-             (hotkey_type == hotkey_detect_type::WRITE_HOTKEY_DETECT) ? "write" : "read",
+             (action == dsn::apps::hotkey_detect_action::STOP) ? "Stop" : "Start",
+             (hotkey_type == dsn::apps::hotkey_type::WRITE) ? "write" : "read",
              app_name,
              partition_index);
     dsn::rpc_address meta_server;
@@ -133,33 +130,26 @@ hotspot_partition_calculator::send_hotkey_detect_request(const std::string &app_
     auto cluster_name = dsn::replication::get_current_cluster_name();
     auto resolver = partition_resolver::get_resolver(cluster_name, meta_servers, app_name.c_str());
     dsn::task_tracker tracker;
-    // TODO:（TangYanzhao) refactor it with rpc_holder
-    resolver->call_op(
-        RPC_DETECT_HOTKEY,
-        request,
-        &tracker,
-        [app_name, partition_index](
-            dsn::error_code error, dsn::message_ex *request, dsn::message_ex *response) {
-            if (error == dsn::ERR_OK) {
-                dsn::apps::hotkey_detect_response resp;
-                dsn::unmarshall(response, resp);
-                if (resp.err != dsn::ERR_OK) {
-                    derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{} {}",
-                             app_name,
-                             partition_index,
-                             resp.err,
-                             resp.err_hint);
-                }
-            } else {
-                derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
-                         app_name,
-                         partition_index,
-                         error.to_string());
-            }
-        },
-        std::chrono::seconds(10),
-        partition_index,
-        0);
+    detect_hotkey_rpc rpc(
+        std::move(request), RPC_DETECT_HOTKEY, std::chrono::milliseconds(10), partition_index);
+    rpc.call(resolver,
+             &tracker,
+             [app_name, partition_index](dsn::error_code error) {
+                 if (error != dsn::ERR_OK) {
+                     derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
+                              app_name,
+                              partition_index,
+                              error.to_string());
+                 }
+             })
+        ->wait();
+    if (rpc.response().err != dsn::ERR_OK) {
+        derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{} {}",
+                 app_name,
+                 partition_index,
+                 rpc.response().err,
+                 rpc.response().err_hint);
+    }
 }
 
 } // namespace server

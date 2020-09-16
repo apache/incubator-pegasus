@@ -52,9 +52,9 @@ public:
     // analyse the saved data to find hotspot partition
     void data_analyse();
     static void send_hotkey_detect_request(const std::string &app_name,
-                                           const int partition_index,
-                                           const hotkey_detect_type type,
-                                           const hotkey_detect_action action);
+                                           const uint64_t partition_index,
+                                           const dsn::apps::hotkey_type::type hotkey_type,
+                                           const dsn::apps::hotkey_detect_action::type action);
 
 private:
     const std::string _app_name;
