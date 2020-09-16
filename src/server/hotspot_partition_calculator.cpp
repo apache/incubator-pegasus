@@ -131,7 +131,7 @@ void hotspot_partition_calculator::data_analyse()
     auto resolver = partition_resolver::get_resolver(cluster_name, meta_servers, app_name.c_str());
     dsn::task_tracker tracker;
     detect_hotkey_rpc rpc(
-        std::move(request), RPC_DETECT_HOTKEY, std::chrono::milliseconds(10), partition_index);
+        std::move(request), RPC_DETECT_HOTKEY, std::chrono::seconds(10), partition_index);
     rpc.call(resolver,
              &tracker,
              [app_name, partition_index](dsn::error_code error) {
