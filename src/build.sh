@@ -133,12 +133,13 @@ fi
 cd $ROOT
 PEGASUS_GIT_COMMIT="None"
 if ! git rev-parse HEAD; then
-    if [ -f "${shell_dir}"/GIT_COMMIT ]; then
-        PEGASUS_GIT_COMMIT=$(cat "${shell_dir}"/GIT_COMMIT)
+    if [ -f "$(dirname ${ROOT})"/GIT_COMMIT ]; then
+        PEGASUS_GIT_COMMIT=$(cat $(dirname ${ROOT})/GIT_COMMIT)
     fi
 else
     PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
 fi
+echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
 GIT_COMMIT_FILE=include/pegasus/git_commit.h
 echo "Generating $GIT_COMMIT_FILE..."
 echo "#pragma once" >$GIT_COMMIT_FILE
