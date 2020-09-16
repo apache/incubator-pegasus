@@ -664,7 +664,10 @@ private:
         return status.code();
     }
 
-    /// \returns 0 if success.
+    /// Calls RocksDB Get and store the result into `db_get_context`.
+    /// \returns 0 if Get succeeded. On failure, a non-zero rocksdb status code is returned.
+    /// \result ctx.expired=true if record expired. Still 0 is returned.
+    /// \result ctx.found=false if record is not found. Still 0 is returned.
     int db_get(dsn::string_view raw_key,
                /*out*/ db_get_context *ctx)
     {
