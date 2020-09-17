@@ -271,7 +271,6 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
     return t;
 }
 
-// TODO(zhaoliwei) refactor these code, because there have same code in get_file_meta()
 dsn::task_ptr fds_service::create_file(const create_file_request &req,
                                        dsn::task_code code,
                                        const create_file_callback &cb,
@@ -286,54 +285,25 @@ dsn::task_ptr fds_service::create_file(const create_file_request &req,
             new fds_file_object(this, req.file_name, utils::path_to_fds(req.file_name, false));
         t->enqueue_with(resp);
         return t;
-    } else {
-        auto create_file_in_background = [this, req, t]() {
-            create_file_response resp;
-            resp.err = ERR_IO_PENDING;
-            std::string fds_path = utils::path_to_fds(req.file_name, false);
-            try {
-                std::shared_ptr<galaxy::fds::FDSObjectMetadata> metadata =
-                    _client->getObjectMetadata(_bucket_name, fds_path);
-                // if we get the object metadata succeed, we expect to get the content-md5 and the
-                // content-length
-                const std::map<std::string, std::string> &meta_map = metadata->metadata();
-                auto iter = meta_map.find(FILE_MD5_KEY);
-                dassert(iter != meta_map.end(),
-                        "can't find %s in object(%s)'s metadata",
-                        FILE_MD5_KEY.c_str(),
-                        fds_path.c_str());
-                const std::string &md5 = iter->second;
-
-                // in a head http-request, the file length is in the x-xiaomi-meta-content-length
-                // while in a get http-request, the file length is in the contentLength
-                iter = meta_map.find(FILE_LENGTH_CUSTOM_KEY);
-                dassert(iter != meta_map.end(),
-                        "can't find %s in object(%s)'s metadata",
-                        FILE_LENGTH_CUSTOM_KEY.c_str(),
-                        fds_path.c_str());
-                uint64_t size = (uint64_t)atol(iter->second.c_str());
-                resp.err = dsn::ERR_OK;
-                resp.file_handle = new fds_file_object(this, req.file_name, fds_path, md5, size);
-            } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-                if (ex.code() == Poco::Net::HTTPResponse::HTTP_NOT_FOUND) {
-                    resp.err = dsn::ERR_OK;
-                    resp.file_handle = new fds_file_object(this, req.file_name, fds_path, "", 0);
-                } else {
-                    derror("fds getObjectMetadata failed: parameter(%s), code(%d), msg(%s)",
-                           req.file_name.c_str(),
-                           ex.code(),
-                           ex.what());
-                    resp.err = ERR_FS_INTERNAL;
-                }
-            }
-            FDS_EXCEPTION_HANDLE(resp.err, "getObjectMetadata", req.file_name.c_str());
-
-            t->enqueue_with(resp);
-        };
-
-        dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, create_file_in_background);
-        return t;
     }
+
+    auto create_file_in_background = [this, req, t]() {
+        create_file_response resp;
+        resp.err = ERR_IO_PENDING;
+        std::string fds_path = utils::path_to_fds(req.file_name, false);
+
+        dsn::ref_ptr<fds_file_object> f = new fds_file_object(this, req.file_name, fds_path);
+        resp.err = f->get_file_meta();
+        if (resp.err == ERR_OK || resp.err == ERR_OBJECT_NOT_FOUND) {
+            resp.err = ERR_OK;
+            resp.file_handle = f;
+        }
+
+        t->enqueue_with(resp);
+    };
+
+    dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, create_file_in_background);
+    return t;
 }
 
 dsn::task_ptr fds_service::delete_file(const delete_file_request &req,
@@ -503,7 +473,7 @@ fds_file_object::fds_file_object(fds_service *s,
     : block_file(name),
       _service(s),
       _fds_path(fds_path),
-      _md5sum(),
+      _md5sum(""),
       _size(0),
       _has_meta_synced(false)
 {
@@ -527,6 +497,7 @@ fds_file_object::~fds_file_object() {}
 
 error_code fds_file_object::get_file_meta()
 {
+    error_code err = ERR_OK;
     galaxy::fds::GalaxyFDSClient *c = _service->get_client();
     try {
         auto meta = c->getObjectMetadata(_service->get_bucket_name(), _fds_path)->metadata();
@@ -549,18 +520,19 @@ error_code fds_file_object::get_file_meta()
         _md5sum = iter->second;
 
         _has_meta_synced = true;
-        return ERR_OK;
     } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
         if (ex.code() == Poco::Net::HTTPResponse::HTTP_NOT_FOUND) {
-            return ERR_OBJECT_NOT_FOUND;
+            err = ERR_OBJECT_NOT_FOUND;
         } else {
             derror_f("fds getObjectMetadata failed: parameter({}), code({}), msg({})",
                      _name.c_str(),
                      ex.code(),
                      ex.what());
-            return ERR_FS_INTERNAL;
+            err = ERR_FS_INTERNAL;
         }
     }
+    FDS_EXCEPTION_HANDLE(err, "getObjectMetadata", _fds_path.c_str());
+    return err;
 }
 
 error_code fds_file_object::get_content_in_batches(uint64_t start,
@@ -681,36 +653,11 @@ error_code fds_file_object::put_content(/*in-out*/ std::istream &is,
         return err;
     }
 
-    try {
-        // Get Object meta data
-        std::shared_ptr<galaxy::fds::FDSObjectMetadata> metadata =
-            c->getObjectMetadata(_service->get_bucket_name(), _fds_path);
-        const std::map<std::string, std::string> metaMap = metadata->metadata();
-
-        auto iter = metaMap.find(fds_service::FILE_MD5_KEY);
-        dassert(iter != metaMap.end(),
-                "can't find %s in object(%s)'s metadata",
-                fds_service::FILE_MD5_KEY.c_str(),
-                _fds_path.c_str());
-        _md5sum = iter->second;
-
-        // in a head http-request, the file length is in the x-xiaomi-meta-content-length
-        // while in a get http-request, the file length is in the contentLength
-        iter = metaMap.find(fds_service::FILE_LENGTH_CUSTOM_KEY);
-        dassert(iter != metaMap.end(),
-                "can't find %s in object(%s) metadata",
-                fds_service::FILE_LENGTH_CUSTOM_KEY.c_str(),
-                _fds_path.c_str());
-        _size = (uint64_t)atoll(iter->second.c_str());
+    ddebug("start to check meta data after successfully wrote data to fds");
+    err = get_file_meta();
+    if (err == ERR_OK) {
         transfered_bytes = _size;
-    } catch (const galaxy::fds::GalaxyFDSClientException &ex) {
-        derror("fds getObjectMetadata after put failed: remote_file(%s), code(%d), msg(%s)",
-               file_name().c_str(),
-               ex.code(),
-               ex.what());
-        err = ERR_FS_INTERNAL;
     }
-    FDS_EXCEPTION_HANDLE(err, "getObjectMetadata_after_put", file_name().c_str())
     return err;
 }
 
