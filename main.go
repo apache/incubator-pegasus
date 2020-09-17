@@ -23,7 +23,7 @@ func callerPrettifier(f *runtime.Frame) (function string, file string) {
 	return function, file
 }
 
-// setupSignalHandler setup signal handler for TiDB Server
+// setupSignalHandler setup signal handler for collector
 func setupSignalHandler(shutdownFunc func()) {
 	closeSignalChan := make(chan os.Signal, 1)
 	signal.Notify(closeSignalChan,
@@ -46,10 +46,10 @@ func main() {
 		FullTimestamp:    true,
 		CallerPrettyfier: callerPrettifier,
 	})
-	log.SetOutput(&lumberjack.Logger{
+	log.SetOutput(&lumberjack.Logger{ // rolling log
 		Filename:  "./pegasus.log",
-		MaxSize:   500, // MegaBytes
-		MaxAge:    5,   // days
+		MaxSize:   50, // MegaBytes
+		MaxAge:    2,  // days
 		LocalTime: true,
 	})
 	log.SetReportCaller(true)

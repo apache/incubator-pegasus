@@ -10,7 +10,7 @@ import (
 
 // MetaClient has methods to query the MetaServer for metadata.
 type MetaClient interface {
-	GetTableInfo() (TableInfo, error)
+	GetTableInfo(tableName string) (*TableInfo, error)
 
 	ListNodes() ([]*NodeInfo, error)
 }
@@ -26,30 +26,47 @@ type NodeInfo struct {
 	Addr string
 }
 
-// NewMetaClient returns a HTTP-based MetaServer Client.
-func NewMetaClient(metaAddrs []string) MetaClient {
-	if metaAddrs == nil || len(metaAddrs) == 0 {
-		panic("given metaAddrs is empty")
+// NewMetaClient returns an HTTP-based MetaServer Client.
+func NewMetaClient(metaAddr string) MetaClient {
+	if metaAddr == "" {
+		panic("the given metaAddr is empty")
 	}
 	return &httpMetaClient{
-		metaIPAddresses: metaAddrs,
-		hclient:         http.DefaultClient,
+		metaAddr: metaAddr,
+		hclient:  http.DefaultClient,
 	}
 }
 
 // httpMetaClient queries MetaServer via the HTTP interface.
 type httpMetaClient struct {
-	metaIPAddresses []string
+	metaAddr string
 
 	hclient *http.Client
 }
 
-func (*httpMetaClient) GetTableInfo() (TableInfo, error) {
-	return TableInfo{}, nil
+func (h *httpMetaClient) GetTableInfo(tableName string) (*TableInfo, error) {
+	resp, err := h.hclient.Get(fmt.Sprintf("http://%s/meta/app=\"%s\"", h.metaAddr, tableName))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get table info: %s", err.Error())
+	}
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	partitionCount, found := gjson.GetBytes(body, "general").Map()["partition_count"]
+	if !found {
+		return nil, fmt.Errorf("invalid table info from meta server: %s", string(body))
+	}
+	appID, found := gjson.GetBytes(body, "general").Map()["app_id"]
+	if !found {
+		return nil, fmt.Errorf("invalid table info from meta server: %s", string(body))
+	}
+	return &TableInfo{
+		PartitionCount: int(partitionCount.Int()),
+		AppID:          int(appID.Int()),
+	}, nil
 }
 
 func (h *httpMetaClient) ListNodes() ([]*NodeInfo, error) {
-	resp, err := h.hclient.Get(fmt.Sprintf("http://%s/meta/nodes?detail", h.metaIPAddresses[0]))
+	resp, err := h.hclient.Get(fmt.Sprintf("http://%s/meta/nodes?detail", h.metaAddr))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list nodes: %s", err.Error())
 	}
