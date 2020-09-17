@@ -22,16 +22,20 @@ public class ColdBackupConfig extends CommonConfig implements Config {
   private int fileOpenCount;
   private String policyName;
   private String coldBackupTime;
-  private DataVersion dataVersion = new DataVersion1();
+  private DataVersion dataVersion;
 
   public ColdBackupConfig(HDFSConfig hdfsConfig, String clusterName, String tableName) {
     super(hdfsConfig, clusterName, tableName);
     setReadOptions(DEFAULT_FILE_OPEN_COUNT, DEFAULT_READ_AHEAD_SIZE_MB);
+    setPolicyName(tableName);
+    setDataVersion(new DataVersion1());
   }
 
   public ColdBackupConfig(FDSConfig fdsConfig, String clusterName, String tableName) {
     super(fdsConfig, clusterName, tableName);
     setReadOptions(DEFAULT_FILE_OPEN_COUNT, DEFAULT_READ_AHEAD_SIZE_MB);
+    setPolicyName(tableName);
+    setDataVersion(new DataVersion1());
   }
 
   @Override
