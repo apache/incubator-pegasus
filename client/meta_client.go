@@ -45,7 +45,7 @@ type httpMetaClient struct {
 }
 
 func (h *httpMetaClient) GetTableInfo(tableName string) (*TableInfo, error) {
-	resp, err := h.hclient.Get(fmt.Sprintf("http://%s/meta/app=\"%s\"", h.metaAddr, tableName))
+	resp, err := h.hclient.Get(fmt.Sprintf("http://%s/meta/app?name=%s", h.metaAddr, tableName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get table info: %s", err.Error())
 	}
@@ -53,11 +53,11 @@ func (h *httpMetaClient) GetTableInfo(tableName string) (*TableInfo, error) {
 
 	partitionCount, found := gjson.GetBytes(body, "general").Map()["partition_count"]
 	if !found {
-		return nil, fmt.Errorf("invalid table info from meta server: %s", string(body))
+		return nil, fmt.Errorf("invalid partition_count from meta server: %s", string(body))
 	}
 	appID, found := gjson.GetBytes(body, "general").Map()["app_id"]
 	if !found {
-		return nil, fmt.Errorf("invalid table info from meta server: %s", string(body))
+		return nil, fmt.Errorf("invalid app_id from meta server: %s", string(body))
 	}
 	return &TableInfo{
 		PartitionCount: int(partitionCount.Int()),
