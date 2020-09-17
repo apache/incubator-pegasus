@@ -22,6 +22,13 @@
 #include <dsn/dist/fmt_logging.h>
 #include <rrdb/rrdb_types.h>
 #include <dsn/utility/flags.h>
+#include <dsn/tool-api/rpc_address.h>
+#include <dsn/tool-api/group_address.h>
+#include <dsn/utility/error_code.h>
+#include <rrdb/rrdb_types.h>
+#include <dsn/dist/replication/duplication_common.h>
+#include <dsn/tool-api/task_tracker.h>
+#include "pegasus_read_service.h"
 
 namespace pegasus {
 namespace server {
@@ -120,6 +127,53 @@ void hotspot_partition_calculator::data_analyse()
         std::vector<int> hot_points;
         stat_histories_analyse(data_type, hot_points);
         update_hot_point(data_type, hot_points);
+    }
+}
+
+// TODO:（TangYanzhao) call this function to start hotkey detection
+/*static*/ void hotspot_partition_calculator::send_hotkey_detect_request(
+    const std::string &app_name,
+    const uint64_t partition_index,
+    const dsn::apps::hotkey_type::type hotkey_type,
+    const dsn::apps::hotkey_detect_action::type action)
+{
+    auto request = std::make_unique<dsn::apps::hotkey_detect_request>();
+    request->type = hotkey_type;
+    request->action = action;
+    ddebug_f("{} {} hotkey detection in {}.{}",
+             (action == dsn::apps::hotkey_detect_action::STOP) ? "Stop" : "Start",
+             (hotkey_type == dsn::apps::hotkey_type::WRITE) ? "write" : "read",
+             app_name,
+             partition_index);
+    dsn::rpc_address meta_server;
+    meta_server.assign_group("meta-servers");
+    std::vector<dsn::rpc_address> meta_servers;
+    replica_helper::load_meta_servers(meta_servers);
+    for (const auto &address : meta_servers) {
+        meta_server.group_address()->add(address);
+    }
+    auto cluster_name = dsn::replication::get_current_cluster_name();
+    auto resolver = partition_resolver::get_resolver(cluster_name, meta_servers, app_name.c_str());
+    dsn::task_tracker tracker;
+    detect_hotkey_rpc rpc(
+        std::move(request), RPC_DETECT_HOTKEY, std::chrono::seconds(10), partition_index);
+    rpc.call(resolver,
+             &tracker,
+             [app_name, partition_index](dsn::error_code error) {
+                 if (error != dsn::ERR_OK) {
+                     derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
+                              app_name,
+                              partition_index,
+                              error.to_string());
+                 }
+             })
+        ->wait();
+    if (rpc.response().err != dsn::ERR_OK) {
+        derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{} {}",
+                 app_name,
+                 partition_index,
+                 rpc.response().err,
+                 rpc.response().err_hint);
     }
 }
 

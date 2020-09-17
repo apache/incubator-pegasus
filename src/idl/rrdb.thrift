@@ -293,7 +293,7 @@ struct duplicate_response
 
 struct hotkey_detect_request {
     1: hotkey_type type
-    2: hotkey_detect_action operation
+    2: hotkey_detect_action action
 }
 
 struct hotkey_detect_response {
