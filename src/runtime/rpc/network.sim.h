@@ -57,8 +57,6 @@ public:
     virtual void close() override {}
 
     virtual void on_failure(bool is_write = false) override {}
-
-    virtual void on_success() override {}
 };
 
 class sim_server_session : public rpc_session
@@ -78,8 +76,6 @@ public:
     virtual void close() override {}
 
     virtual void on_failure(bool is_write = false) override {}
-
-    virtual void on_success() override {}
 
 private:
     rpc_session_ptr _client;

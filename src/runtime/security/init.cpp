@@ -17,6 +17,7 @@
 
 #include "kinit_context.h"
 #include "sasl_init.h"
+#include "negotiation_service.h"
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
@@ -63,6 +64,7 @@ bool init(bool is_server)
     }
     ddebug("initialize sasl succeed");
 
+    init_join_point();
     return true;
 }
 

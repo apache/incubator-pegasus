@@ -187,7 +187,7 @@ void client_negotiation::send(negotiation_status::type status, const blob &msg)
 void client_negotiation::succ_negotiation()
 {
     _status = negotiation_status::type::SASL_SUCC;
-    _session->on_success();
+    _session->set_negotiation_succeed();
 }
 } // namespace security
 } // namespace dsn

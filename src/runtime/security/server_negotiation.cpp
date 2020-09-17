@@ -140,13 +140,19 @@ void server_negotiation::do_challenge(negotiation_rpc rpc, error_s err_s, const 
     }
 
     if (err_s.is_ok()) {
-        negotiation_response &response = rpc.response();
-        _status = response.status = negotiation_status::type::SASL_SUCC;
+        succ_negotiation(rpc);
     } else {
         negotiation_response &challenge = rpc.response();
         _status = challenge.status = negotiation_status::type::SASL_CHALLENGE;
         challenge.msg = resp_msg;
     }
+}
+
+void server_negotiation::succ_negotiation(negotiation_rpc rpc)
+{
+    negotiation_response &response = rpc.response();
+    _status = response.status = negotiation_status::type::SASL_SUCC;
+    _session->set_negotiation_succeed();
 }
 } // namespace security
 } // namespace dsn

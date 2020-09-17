@@ -232,9 +232,10 @@ public:
     bool delay_recv(int delay_ms);
     bool on_recv_message(message_ex *msg, int delay_ms);
 
-    /// for negotiation
-    void start_negotiation();
-    security::negotiation *get_negotiation() const;
+    /// interfaces for security authentication,
+    /// you can ignore them if you don't enable auth
+    void set_negotiation_succeed();
+    bool is_negotiation_succeed() const;
 
 public:
     ///
@@ -258,7 +259,6 @@ public:
     virtual void send(uint64_t signature) = 0;
     void on_send_completed(uint64_t signature = 0);
     virtual void on_failure(bool is_write = false);
-    virtual void on_success();
 
 protected:
     ///
@@ -267,12 +267,14 @@ protected:
     enum session_state
     {
         SS_CONNECTING,
-        SS_NEGOTIATING,
         SS_CONNECTED,
         SS_DISCONNECTED
     };
-    ::dsn::utils::ex_lock_nr _lock; // [
+    mutable utils::ex_lock_nr _lock; // [
     volatile session_state _connect_state;
+
+    bool negotiation_succeed = false;
+    // TODO(zlw): add send pending message
 
     // messages are sent in batch, firstly all messages are linked together
     // in a doubly-linked list "_messages".
@@ -298,7 +300,6 @@ protected:
     bool set_connecting();
     // return true when it is permitted
     bool set_disconnected();
-    void set_negotiation();
     void set_connected();
 
     void clear_send_queue(bool resend_msgs);
@@ -314,15 +315,10 @@ protected:
     message_parser_ptr _parser;
 
 private:
-    void auth_negotiation();
-
-private:
     const bool _is_client;
     rpc_client_matcher *_matcher;
 
     std::atomic_int _delay_server_receive_ms;
-
-    std::unique_ptr<security::negotiation> _negotiation;
 };
 
 // --------- inline implementation --------------

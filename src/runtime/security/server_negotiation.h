@@ -40,6 +40,7 @@ private:
     void on_challenge_resp(negotiation_rpc rpc);
 
     void do_challenge(negotiation_rpc rpc, error_s err_s, const blob &resp_msg);
+    void succ_negotiation(negotiation_rpc rpc);
 
     friend class server_negotiation_test;
 };
