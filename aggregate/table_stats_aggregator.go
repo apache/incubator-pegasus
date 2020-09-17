@@ -3,6 +3,7 @@ package aggregate
 import (
 	"time"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/pegasus-kv/collector/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -53,9 +54,32 @@ func (ag *tableStatsAggregator) aggregate() {
 
 	for _, n := range nodes {
 		rcmdClient := client.NewRemoteCmdClient(n.Addr)
-		perfCounters := rcmdClient.GetAllPerfCounters()
-
+		perfCounters, err := rcmdClient.GetPerfCounters(".*@.*")
+		if err != nil {
+			log.Errorf("unable to query perf-counters: %s", err)
+			return
+		}
 		for _, p := range perfCounters {
+			ag.decodePartitionStat(p)
 		}
 	}
+}
+
+func (ag *tableStatsAggregator) decodePartitionStat(counter *client.PerfCounter) {
+
+}
+
+type partitionStats struct {
+	gpid base.Gpid
+
+	// perfCounter's name -> the value.
+	stats map[string]float64
+}
+
+type tableStats struct {
+	appID      int
+	partitions map[int]*partitionStats
+
+	// perfCounter's name -> the value.
+	stats map[string]float64
 }

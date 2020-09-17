@@ -28,8 +28,12 @@ type NodeInfo struct {
 
 // NewMetaClient returns a HTTP-based MetaServer Client.
 func NewMetaClient(metaAddrs []string) MetaClient {
+	if metaAddrs == nil || len(metaAddrs) == 0 {
+		panic("given metaAddrs is empty")
+	}
 	return &httpMetaClient{
 		metaIPAddresses: metaAddrs,
+		hclient:         http.DefaultClient,
 	}
 }
 

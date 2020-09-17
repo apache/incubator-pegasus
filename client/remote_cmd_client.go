@@ -27,9 +27,9 @@ func NewRemoteCmdClient(addr string) *RemoteCmdClient {
 	}
 }
 
-// GetAllPerfCounters retrieves all perf-counters from the remote node.
-func (c *RemoteCmdClient) GetAllPerfCounters() ([]*PerfCounter, error) {
-	result, err := c.call("perf-counters", []string{".*@.*"})
+// GetPerfCounters retrieves all perf-counters matched with `filter` from the remote node.
+func (c *RemoteCmdClient) GetPerfCounters(filter string) ([]*PerfCounter, error) {
+	result, err := c.call("perf-counters", []string{filter})
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +44,12 @@ func (c *RemoteCmdClient) GetAllPerfCounters() ([]*PerfCounter, error) {
 	return ret, nil
 }
 
-func (c *RemoteCmdClient) call(cmd string, args []string) (result string, err error) {
+func (c *RemoteCmdClient) call(cmd string, args []string) (cmdResult string, err error) {
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
-	resp, err := c.session.CallWithGpid(ctx, &base.Gpid{}, &Command{Cmd: cmd, Arguments: args}, "RPC_CLI_CLI_CALL")
+	res, err := c.session.CallWithGpid(ctx, &base.Gpid{}, &Command{Cmd: cmd, Arguments: args}, "RPC_CLI_CLI_CALL")
 	if err != nil {
 		return "", err
 	}
-	ret, _ := resp.(*RrdbGetResult)
+	ret, _ := res.(*RemoteCmdServiceCallCommandResult)
 	return ret.GetSuccess(), nil
 }

@@ -32,6 +32,9 @@ func (d *pegasusDetector) Start(rootCtx context.Context) error {
 	var err error
 	ctx, _ := context.WithTimeout(rootCtx, d.detectTimeout)
 	d.detectTable, err = d.client.OpenTable(ctx, d.detectTableName)
+	if err != nil {
+		return err
+	}
 
 	ticker := time.NewTicker(d.detectInterval)
 	for {
