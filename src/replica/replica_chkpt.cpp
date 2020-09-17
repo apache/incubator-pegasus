@@ -38,6 +38,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "duplication/replica_duplicator_manager.h"
+#include "split/replica_split_manager.h"
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/chrono_literals.h>
 #include <dsn/dist/replication/replication_app_base.h>
@@ -373,11 +374,11 @@ void replica::catch_up_with_private_logs(partition_status::type s)
                                  get_gpid().thread_hash());
         _potential_secondary_states.learn_remote_files_completed_task->enqueue();
     } else if (s == partition_status::PS_PARTITION_SPLIT) {
-        _split_states.async_learn_task =
-            tasking::enqueue(LPC_PARTITION_SPLIT,
-                             tracker(),
-                             std::bind(&replica::child_catch_up_states, this),
-                             get_gpid().thread_hash());
+        _split_states.async_learn_task = tasking::enqueue(
+            LPC_PARTITION_SPLIT,
+            tracker(),
+            std::bind(&replica_split_manager::child_catch_up_states, get_split_manager()),
+            get_gpid().thread_hash());
     } else {
         _secondary_states.checkpoint_completed_task =
             tasking::create_task(LPC_CHECKPOINT_REPLICA_COMPLETED,

@@ -1089,5 +1089,10 @@ void replica::replay_prepare_list()
     }
 }
 
+error_code replica::update_init_info_ballot_and_decree()
+{
+    return _app->update_init_info_ballot_and_decree(this);
+}
+
 } // namespace replication
 } // namespace dsn

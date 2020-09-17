@@ -74,6 +74,8 @@ typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 class duplication_sync_timer;
 class replica_bulk_loader;
 class replica_backup_server;
+class replica_split_manager;
+
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:
@@ -193,7 +195,7 @@ public:
     replica_ptr
     create_child_replica_if_not_found(gpid child_pid, app_info *app, const std::string &parent_dir);
 
-    typedef std::function<void(::dsn::replication::replica *rep)> local_execution;
+    typedef std::function<void(replica_split_manager *split_mgr)> local_execution;
 
     // This function is used for partition split, caller(replica)
     // parent/child may want child/parent to execute function during partition split
@@ -285,6 +287,7 @@ private:
     friend class replica_duplicator;
     friend class replica_http_service;
     friend class replica_bulk_loader;
+    friend class replica_split_manager;
 
     friend class mock_replica_stub;
     friend class duplication_sync_timer;

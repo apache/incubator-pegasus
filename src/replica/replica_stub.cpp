@@ -40,6 +40,7 @@
 #include "bulk_load/replica_bulk_loader.h"
 #include "duplication/duplication_sync_timer.h"
 #include "backup/replica_backup_server.h"
+#include "split/replica_split_manager.h"
 
 #include <dsn/cpp/json_helper.h>
 #include <dsn/utility/filesystem.h>
@@ -2618,16 +2619,17 @@ void replica_stub::create_child_replica(rpc_address primary_address,
         ddebug_f("create child replica ({}) succeed", child_gpid);
         tasking::enqueue(LPC_PARTITION_SPLIT,
                          child_replica->tracker(),
-                         std::bind(&replica::child_init_replica,
-                                   child_replica,
+                         std::bind(&replica_split_manager::child_init_replica,
+                                   child_replica->get_split_manager(),
                                    parent_gpid,
                                    primary_address,
                                    init_ballot),
                          child_gpid.thread_hash());
     } else {
         dwarn_f("failed to create child replica ({}), ignore it and wait next run", child_gpid);
-        split_replica_error_handler(parent_gpid,
-                                    [](replica_ptr r) { r->_child_gpid.set_app_id(0); });
+        split_replica_error_handler(
+            parent_gpid,
+            std::bind(&replica_split_manager::parent_cleanup_split_context, std::placeholders::_1));
     }
 }
 
@@ -2683,7 +2685,7 @@ replica_stub::split_replica_exec(dsn::task_code code, gpid pid, local_execution 
     if (replica && handler) {
         tasking::enqueue(code,
                          replica.get()->tracker(),
-                         [handler, replica]() { handler(replica); },
+                         [handler, replica]() { handler(replica->get_split_manager()); },
                          pid.thread_hash());
         return ERR_OK;
     }
@@ -2698,7 +2700,7 @@ void replica_stub::on_notify_primary_split_catch_up(notify_catch_up_rpc rpc)
     notify_cacth_up_response &response = rpc.response();
     replica_ptr replica = get_replica(request.parent_gpid);
     if (replica != nullptr) {
-        replica->parent_handle_child_catch_up(request, response);
+        replica->get_split_manager()->parent_handle_child_catch_up(request, response);
     } else {
         response.err = ERR_OBJECT_NOT_FOUND;
     }

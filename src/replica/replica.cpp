@@ -32,6 +32,7 @@
 #include "backup/replica_backup_manager.h"
 #include "backup/cold_backup_context.h"
 #include "bulk_load/replica_bulk_loader.h"
+#include "split/replica_split_manager.h"
 
 #include <dsn/utils/latency_tracer.h>
 #include <dsn/cpp/json_helper.h>
@@ -71,8 +72,8 @@ replica::replica(
     _options = &stub->options();
     init_state();
     _config.pid = gpid;
-    _partition_version = app.partition_count - 1;
     _bulk_loader = make_unique<replica_bulk_loader>(this);
+    _split_mgr = make_unique<replica_split_manager>(this);
 
     std::string counter_str = fmt::format("private.log.size(MB)@{}", gpid);
     _counter_private_log_size.init_app_counter(
@@ -421,6 +422,8 @@ void replica::close()
     _backup_mgr.reset();
 
     _bulk_loader.reset();
+
+    _split_mgr.reset();
 
     ddebug("%s: replica closed, time_used = %" PRIu64 "ms", name(), dsn_now_ms() - start_time);
 }

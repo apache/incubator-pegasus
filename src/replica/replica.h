@@ -64,6 +64,7 @@ class replica_stub;
 class replica_duplicator_manager;
 class replica_backup_manager;
 class replica_bulk_loader;
+class replica_split_manager;
 
 class cold_backup_context;
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
@@ -201,6 +202,11 @@ public:
     }
 
     //
+    // Partition Split
+    //
+    replica_split_manager *get_split_manager() const { return _split_mgr.get(); }
+
+    //
     // Statistics
     //
     void update_commit_qps(int count);
@@ -309,6 +315,7 @@ private:
 
     bool update_configuration(const partition_configuration &config);
     bool update_local_configuration(const replica_configuration &config, bool same_ballot = false);
+    error_code update_init_info_ballot_and_decree();
 
     /////////////////////////////////////////////////////////////////
     // group check
@@ -374,76 +381,6 @@ private:
 
     std::string query_compact_state() const;
 
-    /////////////////////////////////////////////////////////////////
-    // partition split
-    // parent partition create child
-    void on_add_child(const group_check_request &request);
-
-    // child replica initialize config and state info
-    void child_init_replica(gpid parent_gpid, dsn::rpc_address primary_address, ballot init_ballot);
-
-    void parent_prepare_states(const std::string &dir);
-
-    // child copy parent prepare list and call child_learn_states
-    void child_copy_prepare_list(learn_state lstate,
-                                 std::vector<mutation_ptr> mutation_list,
-                                 std::vector<std::string> plog_files,
-                                 uint64_t total_file_size,
-                                 std::shared_ptr<prepare_list> plist);
-
-    // child learn states(including checkpoint, private logs, in-memory mutations)
-    void child_learn_states(learn_state lstate,
-                            std::vector<mutation_ptr> mutation_list,
-                            std::vector<std::string> plog_files,
-                            uint64_t total_file_size,
-                            decree last_committed_decree);
-
-    // TODO(heyuchen): total_file_size is used for split perf-counter in further pull request
-    // Applies mutation logs that were learned from the parent of this child.
-    // This stage follows after that child applies the checkpoint of parent, and begins to apply the
-    // mutations.
-    // \param last_committed_decree: parent's last_committed_decree when the checkpoint was
-    // generated.
-    error_code child_apply_private_logs(std::vector<std::string> plog_files,
-                                        std::vector<mutation_ptr> mutation_list,
-                                        uint64_t total_file_size,
-                                        decree last_committed_decree);
-
-    // child catch up parent states while executing async learn task
-    void child_catch_up_states();
-
-    // child send notification to primary parent when it finish async learn
-    void child_notify_catch_up();
-
-    // primary parent handle child catch_up request
-    void parent_handle_child_catch_up(const notify_catch_up_request &request,
-                                      notify_cacth_up_response &response);
-
-    // primary parent check if sync_point has been committed
-    // sync_point is the first decree after parent send write request to child synchronously
-    void parent_check_sync_point_commit(decree sync_point);
-
-    // primary parent register children on meta_server
-    void register_child_on_meta(ballot b);
-    void on_register_child_on_meta_reply(dsn::error_code ec,
-                                         const register_child_request &request,
-                                         const register_child_response &response);
-    // primary sends register request to meta_server
-    void parent_send_register_request(const register_child_request &request);
-
-    // child partition has been registered on meta_server, could be active
-    void child_partition_active(const partition_configuration &config);
-
-    // return true if parent status is valid
-    bool parent_check_states();
-
-    // parent reset child information when partition split failed
-    void parent_cleanup_split_context();
-    // child suicide when partition split failed
-    void child_handle_split_error(const std::string &error_msg);
-    // child handle error while async learn parent states
-    void child_handle_async_learn_error();
-
     void init_table_level_latency_counters();
 
 private:
@@ -459,6 +396,7 @@ private:
     friend class replica_test;
     friend class replica_backup_manager;
     friend class replica_bulk_loader;
+    friend class replica_split_manager;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -537,22 +475,14 @@ private:
     // backup
     std::unique_ptr<replica_backup_manager> _backup_mgr;
 
-    // partition split
-    // _child_gpid = gpid({app_id},{pidx}+{old_partition_count}) for parent partition
-    // _child_gpid.app_id = 0 for parent partition not in partition split and child partition
-    dsn::gpid _child_gpid{0, 0};
-    // ballot when starting partition split and split will stop if ballot changed
-    // _child_init_ballot = 0 if partition not in partition split
-    ballot _child_init_ballot{0};
-    // in normal cases, _partition_version = partition_count-1
-    // when replica reject client read write request, partition_version = -1
-    std::atomic<int32_t> _partition_version;
-
     // bulk load
     std::unique_ptr<replica_bulk_loader> _bulk_loader;
     // if replica in bulk load ingestion 2pc, will reject other write requests
     bool _is_bulk_load_ingestion{false};
     uint64_t _bulk_load_ingestion_start_time_ms{0};
+
+    // partition split
+    std::unique_ptr<replica_split_manager> _split_mgr;
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;
