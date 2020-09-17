@@ -43,9 +43,9 @@ public:
         std::vector<std::vector<double>> result;
         result.resize(2);
         for (int i = 0; i < counters.size(); i++) {
-            result[READ_HOTSPOT_DATA].push_back(counters[i][READ_HOTSPOT_DATA]->get()->get_value());
+            result[READ_HOTSPOT_DATA].push_back(counters[i][READ_HOTSPOT_DATA].get()->get_value());
             result[WRITE_HOTSPOT_DATA].push_back(
-                counters[i][WRITE_HOTSPOT_DATA]->get()->get_value());
+                counters[i][WRITE_HOTSPOT_DATA].get()->get_value());
         }
         return result;
     }

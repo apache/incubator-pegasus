@@ -29,7 +29,7 @@ typedef std::list<std::vector<hotspot_partition_stat>> stat_histories;
 // hot_partition_counters c[index_of_partitions][type_of_read(0)/write(1)_stat]
 // so if we have n partitions, we will get 2*n hot_partition_counters, to demonstrate both
 // read/write hotspot value
-typedef std::vector<std::vector<std::unique_ptr<dsn::perf_counter_wrapper>>> hot_partition_counters;
+typedef std::vector<std::array<dsn::perf_counter_wrapper, 2>> hot_partition_counters;
 
 // hotspot_partition_calculator is used to find the hot partition in a table.
 class hotspot_partition_calculator
