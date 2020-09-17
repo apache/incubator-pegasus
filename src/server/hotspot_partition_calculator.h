@@ -17,12 +17,19 @@
 
 #pragma once
 
-#include "hotspot_partition_data.h"
+#include "hotspot_partition_stat.h"
 #include <gtest/gtest_prod.h>
 #include <dsn/perf_counter/perf_counter.h>
 
 namespace pegasus {
 namespace server {
+
+// stores the whole histories of all partitions in one table
+typedef std::list<std::vector<hotspot_partition_stat>> stat_histories;
+// hot_partition_counters c[index_of_partitions][type_of_read(0)/write(1)_stat]
+// so if we have n partitions, we will get 2*n hot_partition_counters, to demonstrate both
+// read/write hotspot value
+typedef std::vector<std::array<dsn::perf_counter_wrapper, 2>> hot_partition_counters;
 
 // hotspot_partition_calculator is used to find the hot partition in a table.
 class hotspot_partition_calculator
@@ -43,15 +50,20 @@ public:
                                            const dsn::apps::hotkey_detect_action::type action);
 
 private:
-    const std::string _app_name;
+    // empirical rule to calculate hot point of each partition
+    // ref: https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule
+    void stat_histories_analyse(int data_type, std::vector<int> &hot_points);
+    // set hot_point to corresponding perf_counter
+    void update_hot_point(int data_type, std::vector<int> &hot_points);
 
+    const std::string _app_name;
     void init_perf_counter(int perf_counter_count);
     // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
-    std::vector<dsn::perf_counter_wrapper> _hot_points;
+    hot_partition_counters _hot_points;
     // saving historical data can improve accuracy
-    std::queue<std::vector<hotspot_partition_data>> _partition_stat_histories;
+    stat_histories _partitions_stat_histories;
 
-    FRIEND_TEST(hotspot_partition_calculator, hotspot_partition_policy);
+    friend class hotspot_partition_test;
 };
 
 } // namespace server
